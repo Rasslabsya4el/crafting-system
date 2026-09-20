@@ -52,5 +52,5 @@ implicit-pair event has conditional probability 1/10 within the implicit categor
 probability is 1/40. The 1/10 is invented arithmetic input, not a game fact.
 
 ## Open questions
-Q3 target ruleset; Q9 legality; Q12 implicit pools, special cases and detailed transitions;
+Q9 legality; Q12 implicit pools, special cases and detailed transitions;
 Q18 pre/post-3.29 socket difference. No corruption engine exists yet.

@@ -42,5 +42,5 @@ If selected mods conflict, CoE keeps receiver m1 with probability 1; the Wiki de
 discard without specifying equal odds. The discrepancy is recorded, not averaged away.
 
 ## Open questions
-Q3 target; Q9 legality and ilvl gate; Q12 full fill/pool behavior; Q16 family semantics; Q20
+Q9 legality and ilvl gate; Q12 full fill/pool behavior; Q16 family semantics; Q20
 conflict survivor. No action/calculator implementation is approved for conflicting inputs.

@@ -36,7 +36,7 @@ utilities 2/7/4 and threshold 6 chooses 7 deterministically; no offer probabilit
 S34 agrees with remove-then-add; S35 with the reforge effect. Three choices do not imply equal
 mod weights or three independent draws. Do not reuse ordinary weights. Current-game pool
 weights, item-level gates and crafted equivalence still need independent review.
-Q3 ruleset; Q9 flag matrix; Q12 offer algorithm/weights/signatures. No action implementation.
+Q9 flag matrix; Q12 offer algorithm/weights/signatures. No action implementation.
 
 ## Frozen CoE offer algorithm reviewed
 S3 `poec_simUnveilMod` 2841-2857, read 2026-09-20 (`reimplemented-from-CoE`):

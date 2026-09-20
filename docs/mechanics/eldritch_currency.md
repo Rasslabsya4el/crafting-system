@@ -45,7 +45,7 @@ still needs a complete documented table.
 
 S17/S14 say Eldritch Chaos ignores side locks; S17 says it respects cannot-roll attack/caster.
 See [bench_metamods.md](bench_metamods.md). This does not establish identical behavior for all
-Eldritch actions. Q3/Q9/Q11 remain open; no action implementation is authorized by this partial sheet.
+Eldritch actions. Q9/Q11 remain open; no action implementation is authorized by this partial sheet.
 
 ## Independent Wiki conditions and examples
 S52 Eldritch implicit modifier and S53-S55 currency tooltips, read 2026-09-20:

@@ -33,4 +33,4 @@ one target give p=1/6. These are arithmetic consequences of S3, not game measure
 A repeat policy must price a replacement base and its preparation after an unwanted fracture.
 
 ## Open questions
-Q3 target ruleset; Q9 remaining flags; Q12 independent odds and bench/veiled target eligibility.
+Q9 remaining flags; Q12 independent odds and bench/veiled target eligibility.

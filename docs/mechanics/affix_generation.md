@@ -62,5 +62,5 @@ Our future engine must use unbiased draws; no source code has been transplanted.
   This is a hand-computed acceptance example, not a game pool and not a measurement from CoE.
 
 ## Open questions
-Q2 (sampling discrepancy), Q3 (target patch), Q4 (count corroboration), Q8 (PoB revision).
+Q2 (sampling discrepancy), Q4 (count corroboration), Q8 (PoB revision).
 Action implementation and rule tests have not started; these examples become worker specs first.

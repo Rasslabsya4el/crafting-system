@@ -56,6 +56,6 @@ literal table; semantics/units for general use still require a source. A sample 
 does not validate other weapons or dynamic tag transitions.
 
 ## Open questions
-Q3 target patch; Q8 upstream revision; Q9 eligibility; Q16 exclusion-family correspondence;
+Q8 upstream revision; Q9 eligibility; Q16 exclusion-family correspondence;
 Q17 generated tags and weight multipliers. No no-match default, tier ranking, or general resolver
 behavior is guessed here.

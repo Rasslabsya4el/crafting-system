@@ -73,4 +73,4 @@ modifier-type restrictions; this does not supply the missing flag-retention algo
   removes the suffix lock. The lock does not protect its own side (S11 plus S3).
 
 ## Open questions
-Q3, Q5, Q6, Q7, Q9. No current-patch matrix or bench price table has been implemented.
+Q6, Q7, Q9. No current-patch matrix or bench price table has been implemented.

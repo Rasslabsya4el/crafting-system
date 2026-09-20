@@ -49,4 +49,4 @@ Craft of Exile's dispatch in `sources/raw/coe/package.js` calls the essence rero
 - `datamined`: `sources/pob/Data/Essence.lua`, S22.
 - `reimplemented-from-CoE`: `sources/raw/coe/package.js`, S3, essence dispatch.
 
-Open questions: Q3 target patch, Q9 full eligibility, Q10 recorded CoE disagreement.
+Open questions: Q9 full eligibility, Q10 recorded CoE disagreement.

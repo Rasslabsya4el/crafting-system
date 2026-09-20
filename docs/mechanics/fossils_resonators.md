@@ -51,7 +51,7 @@ fracturing a random modifier and excludes fractured/influenced inputs. The froze
 path must not be treated as a current 3.29 rule. See patch_3_29.md and Q19; ordinary weight
 examples above do not implement this special fossil.
 
-Q3 target patch; Q9 item eligibility; Q13 stacking mode and named fossil multipliers; Q2 literal
+Q9 item eligibility; Q13 stacking mode and named fossil multipliers; Q2 literal
 RNG issue for special forced-mod draws. Price inputs and rare-input availability belong to the
 loadout, not game constants in this sheet. No fossil action has been implemented.
 

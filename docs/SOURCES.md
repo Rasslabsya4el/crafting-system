@@ -62,6 +62,8 @@
 | S55 | https://www.poewiki.net/index.php?title=Eldritch_Orb_of_Annulment&oldid=1683051 | 2026-09-20, browser | Magic or rare rarity, dominant-side removal | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S56 | https://www.poewiki.net/index.php?title=Fossil&oldid=1702302 | 2026-09-20, browser | Community-interpreted tag multipliers and explicit additive/multiplicative dispute | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 
+| S57 | https://www.poewiki.net/index.php?title=Crafting&oldid=1697718 | 2026-09-20, browser | Catalogue completeness: socket/enchantment, unique, Memory, Allflame and other families; overview wording conflicts Q29 | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+
 Download policy: one GET per URL, no automatic retries; use the local copy thereafter.
 Cached third-party bytes are ignored by Git. Their presence does not establish that every field has been reviewed.
 

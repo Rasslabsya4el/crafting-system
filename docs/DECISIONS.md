@@ -78,3 +78,16 @@ silently refreshing CoE, deleting old inventory entries, or treating every cache
 current. Q3 still determines target; scoped 3.29 facts can be documented before that answer.
 Awakener group-conflict resolution is an additional non-version-resolved disagreement (Q20),
 so its implementation remains unsupported rather than inheriting CoE receiver preference.
+
+
+## D11 — 2026-09-20 — Target ordinary PoE 3.29 and retain epistemic boundaries
+Owner explicitly answered yes to PoE 3.29 / ordinary mode (not Ruthless). Q3 is resolved.
+Use the official 3.29 changes when classifying current actions; retain legacy source notes as
+historical evidence. This supersedes D10's pending-target sentence, not its source discipline.
+Choosing a patch does not settle disputed odds, complete missing eligibility matrices, or
+convert CoE algorithms into datamined facts. Reject silent compatibility with every cached mode.
+
+Phase 0 closes against the BRIEF's researched-sheet/data criteria, with unsupported branches
+listed by question ID. It does not promise a simulator for every catalogue entry. BRIEF 3b
+remains binding for the next implementation slice; CoE rounding/action-count shortcuts Q28
+are not acceptable substitutes for exact mean and p90 cost.

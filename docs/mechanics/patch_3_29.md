@@ -2,8 +2,7 @@
 
 Status: documented patch deltas, incomplete action algorithms. Read 2026-09-20.
 Source: S39, official 3.29.0 notes, https://www.pathofexile.com/forum/view-thread/3985332.
-Confidence: `documented`. These conditions apply to 3.29; Q3 still asks which patch the
-prototype targets. A cached CoE action name does not establish current availability.
+Confidence: `documented`. These conditions apply to the confirmed ordinary PoE 3.29 target (Q3 / D11). A cached CoE action name does not establish current availability.
 
 | family | change in 3.29 | exact algorithm still needed |
 |---|---|---|

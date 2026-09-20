@@ -1,5 +1,6 @@
 # Action catalogue
 
+Target: ordinary PoE 3.29, confirmed by the owner on 2026-09-20 (Q3 / D11).
 The catalogue records the intended scope. Loadout tiers are planning guesses from BRIEF, not
 game facts. A `partial` sheet permits only explicitly scoped, sourced worker specs; unknown
 paths remain unsupported. An inventory-only sheet approves no game rule. The complete frozen
@@ -26,10 +27,14 @@ method tree (95 named nodes, including legacy/mixed-game entries and options) is
 | Catalysts and quality | later | [quality_catalysts.md](quality_catalysts.md) | reviewed; increment conflict Q23 | documented + reimplemented-from-CoE |
 | Synthesis implicits | endgame | [synthesis.md](synthesis.md) | reviewed 3.29 conditions; generation weights open | documented + datamined definitions |
 | Item/mod levels, base tags and influence pools | all | [pool_resolution.md](pool_resolution.md), affix sheet | ordered weights/gates reviewed; families/multipliers/influence incomplete | documented + datamined; Q16/Q17 |
-| Tainted/Scourge, vendor, legacy Harvest, Foulborn and other mixed-game entries | undecided | mechanical inventory only | classify against Q3 before inclusion | unsourced current availability |
+| Tainted/Scourge, vendor, legacy Harvest, Foulborn and other mixed-game entries | undecided | mechanical inventory only | catalogue-only; action-specific 3.29 validation required | unsourced current availability |
 | 3.29 bench rerolls, Talisman fracture/imprint and changed Fractured Fossil | undecided | [patch_3_29.md](patch_3_29.md) | availability/gates recorded; algorithms open | documented patch deltas |
 
 For a 3.29 target, read [patch_3_29.md](patch_3_29.md) before using the older beast/synthesis/
 socket inventory. S39 removes or replaces several actions still present in S3 (Q18/Q19).
 
 No probability or eligibility not backed by a source is implied by a row. Unresolved claims remain in `docs/OPEN_QUESTIONS.md`.
+
+The [phase-0 coverage audit](../research/phase0-coverage.md) maps all required sheets and the
+additional families found in S57 Wiki Crafting. Socket/enchantment/unique, Memory, Allflame,
+Rog and Genesis families are explicitly catalogue-only backlog, not omitted implicit support.

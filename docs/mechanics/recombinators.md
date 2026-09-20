@@ -4,7 +4,7 @@ Status: reviewed, partial; contemporary transition probabilities not approved. R
 Confidence: `documented` for S41 Wiki mode descriptions; `player-report` for its estimated
 unpredictable count table (linked player guide); `reimplemented-from-CoE` for S3 algorithm.
 S41 explicitly warns its predictable-mode documentation needs updating. Never collapse the
-currency item, predictable device and unpredictable device into one action without Q3.
+currency item, predictable device and unpredictable device into one action without identifying the mode; Q3 pins ordinary PoE 3.29.
 
 ## Effect and preconditions
 S41 describes two magic/rare equipment inputs of the same class. Both are consumed and the
@@ -62,5 +62,5 @@ has item mass 1/4 and destroyed-input/no-item mass 3/4. That probability is inve
 for the BRIEF 3b risk example; no in-game predictable odds have been sourced.
 
 ## Open questions
-Q3 version/mode; Q9 item flags; Q12 precise pools and exclusions; Q21 internal Wiki estimate;
+Q9 item flags; Q12 precise pools and exclusions; Q21 internal Wiki estimate;
 Q22 Wiki/CoE algorithm differences. No recombination calculator or policy is implemented.

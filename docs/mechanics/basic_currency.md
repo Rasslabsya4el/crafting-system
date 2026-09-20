@@ -50,7 +50,7 @@ No currency exchange rates are asserted.
 ## Differences and worked examples
 S13 describes Scouring/Chaos as removing all explicits. S3/S14 retain specific protected mods:
 the prose is an unprotected-item explanation, not an override of the conditional rules above.
-Current-game validation is pending (Q3/Q5/Q9); intended weighted probabilities must not copy Q2.
+Current-game validation is pending (Q9); intended weighted probabilities must not copy Q2.
 
 1. A magic item with 1 prefix and no suffix, ordinary 1+1 caps: Augment leaves 2 explicits,
    with the added mod a suffix. Source S3 `poec_simRollAffix` and caps in S13 Item rarity.
@@ -65,4 +65,4 @@ Current-game validation is pending (Q3/Q5/Q9); intended weighted probabilities m
    range sampler; tier changes 0. Range chosen for arithmetic, not a PoE modifier claim.
 
 ## Open questions
-Q2, Q3, Q4, Q5 and Q9. Engine/test implementation waits for a bounded worker spec.
+Q2, Q4 and Q9. Engine/test implementation waits for a bounded worker spec.
