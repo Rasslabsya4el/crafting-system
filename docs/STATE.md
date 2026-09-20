@@ -1,70 +1,102 @@
 # State — 2026-09-20
 
+## Current milestone and target
+
+Phase 0 knowledge harvest is complete against the BRIEF exit criteria (acceptance 68dd82d;
+checklist in `docs/research/phase0-coverage.md`). Target: ordinary PoE 3.29, explicitly
+confirmed by the owner (Q3/D11). No crafting engine, item model, calculator or ranker exists yet.
+Completion means reviewed source material and selected data, not resolved odds for every action.
+
 ## What works and how to reproduce it
-Phase 0 remains in progress. No crafting engine, item model, calculator or ranker exists yet.
-The commands below are offline and need the ignored source snapshots listed in SOURCES.
+
+Run in crafting/. Commands are offline; snapshot tests require the ignored local inputs in SOURCES.
 
 | command / artifact | verified result | acceptance |
 |---|---|---|
-| `python -m pytest -q` | 48 passed, under one minute | lead ran after both merges |
-| `python tools/build_pob_explicit.py` | 4310 literal records, zero skips/errors | b0a19ae |
-| `python tools/build_pob_bases.py` | 375 records / 371 names, 5 files (95/29/48/123/80) | 3cb707d |
-| `python tools/mod_crosscheck.py` | 54 mods, 5 classes; level/weight/range/side each 54 agreements; 33 matching groups, 21 label differences, 0 missing triples | d440ffd |
+| `python -m pytest -q` | 78 passed, under one minute, no skips in this checkout | lead ran combined main after both merges |
+| `python tools/build_pob_mod_families.py` | 10555 records: Explicit 4310 / Veiled 258 / Eldritch 4086 / Corrupted 371 / Delve 186 / Synthesis 1344; zero skips/errors | 375528a |
+| `python tools/build_pob_recipes.py` | 732 bench rows, 105 essence rows, 2310 class mappings / 622 distinct referenced mod IDs, none missing | 8d49e8f |
+| `python tools/build_pob_explicit.py` | initial narrow projection, 4310 records, zero skips/errors | b0a19ae |
+| `python tools/build_pob_bases.py` | 375 source occurrences / 371 names, 5 files (95/29/48/123/80) | 3cb707d |
+| `python tools/mod_crosscheck.py` | 54 mods / 5 classes; 54 agreements each for level, weight, range and side; group labels 33 equal / 21 different; missing triples 0 | d440ffd |
 | `python tools/coe_inventory.py --source sources/raw/coe/package.js --output docs/research/coe-method-inventory.md` | 95 nodes / 84 leaves / 13 custom subsets | cd5e976 |
 
-Lead independently matched every projected field in all 375 base records to raw files and
-independently checked all 54 comparison rows against raw PoB, CoE and PoEDB. Repeated base
-names are source occurrences, not collapsed identities. JSON metadata retains owner-supplied
-PoB 2.67.2 / PoE 3.29; upstream revision remains unverified (Q8).
-Base output SHA-256: 4d7b1ac6c1c51bd692b622bf0b01e0e7199b66ef37e03762844c29b1a89d75ad.
-Cross-check report byte SHA-256 in main: 4a5dd86f014dd3dafb4e3a204d0d5e77e0343a4685a5915f339d6b8bec5adb68.
-The report also carries a separately defined canonical self-reference hash. Main uses LF
-builder output; worker checkout used CRLF, so regeneration changed only input/output byte
-hashes, not any of the 54 comparison results. Rebuild explicit JSON before regenerating report
-if a future checkout converts line endings. Byte hashes intentionally describe actual inputs.
+The lead independently matched every projected field of all 10555 family records, all 837
+recipe records and all 375 base occurrences to the raw sources, and checked every raw-source
+row of the 54-mod comparison. Builders preserve source hashes, order and lines. Repeated base
+names are occurrences, not collapsed identities. Source version is owner-supplied PoB 2.67.2 /
+PoE 3.29; upstream revision remains unverified (Q8).
+
+Full family data retains literal stat strings, ordered weights, optional tags/multipliers and
+six fractional statOrder values. It does not infer game stat IDs, tiers or group equivalence.
+The initial explicit JSON remains for the existing cross-check consumer (D12).
+
+Reproducible UTF-8 LF output SHA-256 values:
+
+- Family: a37bd981e34e1d43cbb12c1b7009ab86cc63fa357bdaba41ad20d8d2ba39aee4.
+- Bench: ed9666c32a65744efe0428ccf5876d20b2523e3efdc7ffc3db3aae8a4251c4b5.
+- Essence: 280dc5026636cd7551337ad49b8e5abda082edbf99aae9f1fd3f9004cf9503c3.
+- Bases: 4d7b1ac6c1c51bd692b622bf0b01e0e7199b66ef37e03762844c29b1a89d75ad.
+
+The cross-check byte hash in main is 4a5dd86f014dd3dafb4e3a204d0d5e77e0343a4685a5915f339d6b8bec5adb68.
+It also carries a separate canonical self-reference hash. Git may convert checkout line endings;
+regenerate explicit JSON before regenerating that report. Byte hashes describe actual bytes.
 
 ## Sources and mechanics
-- Twelve CoE files cached once; no new CoE requests in this session. SOURCES has 41 entries.
-  Raw third-party files and supplied PoB input remain ignored. No CoE code/data copied to src/data.
-- Wiki works in the owner's existing Codex browser after authorization. No cookies exported,
-  no challenge bypass. Selected observations are local paraphrases with permanent revision URLs.
-- Five families expanded beyond inventory: fracture, veiled, corruption, Awakener, recombinators.
-  Sheets retain preconditions, confidence, numerical examples and explicit unknowns. They are
-  still partial; existence of a sheet does not mean a complete executable rule.
-- S39 official 3.29 notes establish changed corruption socket outcomes and removed/replaced
-  synthesis, beast split and Fractured Fossil actions. Q18/Q19 and patch_3_29.md preserve old CoE
-  differences. New bench/Talisman actions have gates/costs, not complete algorithms.
-- Awakener conflict survivor differs (Q20). Wiki recombinator count table conflicts with its own
-  example (70 versus 72 percent, Q21); CoE and Wiki disagree on ilvl, count table and selection
-  order/weighting (Q22). No current recombinator odds are approved for implementation.
-- CoE per-action execution/routing read at 3365-3399: loop retains changed item; restart restores
-  initial snapshot while action counters persist. Simulator snapshot reset is not free in-game
-  recovery. Batch/budget/result aggregation and calculator group factorization remain unaudited.
-- All 21 sample group discrepancies are separate rows Q16.01-Q16.21. Single PoB group is not
-  proven equivalent to all exclusion families; multiplier/generated-tag semantics remain Q17.
 
-## Build-system contract and blockers
-BRIEF 3b was read before design and remains mandatory: stage outcome distributions; required
-mods OR utility-table/threshold specs; policies with stopping rules; expected utility/cost,
-p90 cost, irreversible risk and rare inputs. D7 and docs/design/build_contract.md give invented
-hand-computed cases. Do not reduce state to a scalar when future transitions depend on it.
+- 12 public CoE files cached once; this session read only their frozen copies. 62 source rows
+  and 20 fact sheets plus INDEX. Raw third-party material and supplied PoB inputs remain ignored;
+  no CoE code or compiled data copied into src/data.
+- Wiki works through the owner's existing authorized Codex browser. Selected paraphrases and
+  permanent revision URLs are cached locally; these are not full-page captures. No cookies exported.
+- All required BRIEF action families have source-qualified preconditions, steps, numerical
+  examples, confidence labels and open questions. Additional sheets cover beasts, Dominance,
+  influence orbs, Blessed, synthesis and quality. Optional catalogue families remain backlog.
+- Official 3.29 changes take precedence over old frozen actions: changed corruption sockets,
+  synthesis availability, beast split replacements and Fractured Fossil (Q18/Q19). Ordinary
+  resonators require rare inputs; legacy/Ruthless Alchemical inputs are separately scoped (Q30).
+- CoE calculator exact/extrapolated branches and simulator routing, reset, batch, success,
+  resource and cost aggregation are reviewed. Its displayed mean rounds quantities up, and its
+  cheapest/costliest sort is by action count, not price (Q28); neither defines our future metrics.
+- S7 contains 52 guide references (37 video / 15 written), not guide bodies. Linked contents
+  were not claimed as read. CoE inventory entries are not proof of current availability.
 
-Q3 target patch unanswered; Q6/Q9/Q11/Q12/Q13/Q14/Q16/Q17/Q20-Q22 constrain dependent rules.
-Unknown paths must fail explicitly, not guess. Other PoB family builders, complete stat/range
-projection and general pool resolver remain unimplemented. These gaps do not block research.
+## What remains unsupported
+
+Source conflicts remain explicit: Harvest retention Q6; Conflict odds Q11; special eligibility
+Q9/Q12; fossil stacking Q13; CoE exactness on overlapping groups Q14; canonical groups and
+multiplier/generated-tag semantics Q16/Q17; Awakener conflict survivor Q20; recombinator
+counts/algorithm Q21/Q22; current quality increments/rounding Q23; Blessed exclusion Q24;
+beast exchange details Q25. Other questions and overview discrepancies remain in OPEN_QUESTIONS.
+
+Extraction is complete for the selected Phase 0 tables, but numeric stat/range interpretation,
+complete base identity, other item classes and a general pool resolver are future work. A rule
+with an unsourced dependency must raise NotImplementedError with its question ID when reached;
+source uncertainty is not permission to guess or advertise an exact full-game calculator.
+
+## Mandatory next-stage contract
+
+BRIEF 3b, D7 and `docs/design/build_contract.md`: return stage outcome distributions, accept
+required mods OR a utility table with threshold, retain states needed by later decisions, and
+evaluate policies with stopping rules. Report expected utility/cost, p90 cost, irreversible
+risk and rare inputs. CoE success-only frequencies or rounded display costs are insufficient.
 
 ## Worker and process status
-Two new bounded worker specs prepared: pob-mod-families (about 30 minutes) and pob-recipes
-(about 25 minutes). Longer than 10 minutes is justified by strict literal parsing, malformed-input
-tests and deterministic snapshot verification; each command remains short, at most two workers.
-Previous workers finished, lead reviewed and ran
-branch tests, merged with no-ff, saved reports under out/workers and removed worktrees without
-force. Only main checkout remains. WORKERS has acceptance rows. No external directories used.
+
+Both new workers completed. The lead reviewed full diffs, requested parser corrections, ran
+each final branch suite, checked all specified numbers, merged with no-ff and saved reports in
+out/workers. WORKERS has both acceptance rows. All worker worktrees were removed without force;
+only main remains. No worker jobs or background processes were left running. No external
+filesystem paths were used. Implementation stays delegated under a bounded spec, at most two
+workers. The completed 25/30-minute budgets covered literal parsing and malformed-input checks;
+no individual command approached ten minutes.
 
 ## Next three actions
-1. Pin target patch/mode (Q3), then resolve high-impact conflicts: Harvest retention Q6,
-   Awakener survivor Q20 and recombinator probabilities Q21/Q22. Use existing Wiki browser.
-2. Source remaining beast, Dominance, influence, synthesis, catalyst/quality and level conditions;
-   complete special-action eligibility matrices. Review CoE batch/cost/result aggregation.
-3. Specify missing PoB fields/family builders, then a bounded distribution-first exact
-   calculator with sourced group assumptions and BRIEF 3b fixtures. Delegate implementation.
+
+1. Design a bounded Phase 1 item/outcome representation and exact draw contract using BRIEF 3b
+   and the existing synthetic fixtures; specify preserved state and unsupported source branches.
+2. Resolve Q16/Q17 for the first concrete item-class pool, then write a sourced resolver spec.
+   Until then, use explicitly synthetic pools only; do not claim real-item probabilities.
+3. Delegate exact distributions and spam-policy costs with hand-computed acceptance numbers,
+   followed by a seeded Monte Carlo check. Keep optional catalogue work and unresolved special
+   actions visible in TASKS, outside the first executable slice.
