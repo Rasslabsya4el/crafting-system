@@ -20,7 +20,7 @@ Mechanical comparison of the lead-selected correspondences from `docs/specs/2026
 | group-label differences (fully comparable triples) | 21 |
 | uncomparable source rows | 0 |
 | deterministic two-run equality | true; CLI re-renders after re-reading all inputs before write |
-| output SHA-256 | `10cd30510fa2c7e86222e60124b07608f57294e249ee50b678c9d6b9b28be6dc` |
+| output SHA-256 | `c0619a8e6899c0c011a59421edcf90e595ed2ca07e52f4517ed12b46f95c789f` |
 
 The output hash is SHA-256 of this UTF-8/LF report after replacing the value in its self-reference row with `<OUTPUT-SHA256-CANONICALIZED>`.
 
@@ -29,7 +29,7 @@ The output hash is SHA-256 of this UTF-8/LF report after replacing the value in 
 | snapshot | path | SHA-256 | source count / role |
 | --- | --- | --- | --- |
 | S24 | `sources/pob/Data/ModExplicit.lua` | `6d400101f60ec48f854daad9a5ca2479b43e9e405f92724e80631b276eaf4568` | 4315 source lines |
-| S24 | `data/pob_mod_explicit.json` | `23145ee027c0c7158921c5d02b920b9149227dcf653722b3550fc15bfdaa6050` | 4310 projected mod records |
+| S24 | `data/pob_mod_explicit.json` | `e09344ce07c248bfef894aaf85141b5ec9be87f10da1709527d29e657bb92fb9` | 4310 projected mod records |
 | S4 | `sources/raw/coe/poec_data.json` | `2c770512d134fafc82f689fa65cc83a583cc63d9e9994b76aa7f17f8a896923a` | 4911 modifier rows; 4539 tier modifier IDs |
 | S27 | `sources/pob/Data/Bases/helmet.lua` | `bb5f8a66c491ae5073350d9c5b0c45edafc137712d5a555435a9421d0419db8e` | provenance pointer; active tags remain fixed by the lead-supplied selection |
 | S27 | `sources/pob/Data/Bases/bow.lua` | `ad420096d028a4aadaef230e880f7b9d5feb57fbe8613d8e3722b3b4238e38f0` | provenance pointer; active tags remain fixed by the lead-supplied selection |

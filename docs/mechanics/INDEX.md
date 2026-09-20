@@ -17,7 +17,7 @@ method tree (95 named nodes, including legacy/mixed-game entries and options) is
 | Awakener's Orb | endgame | [awakener_orb.md](awakener_orb.md) | eligibility and selection reviewed; Q20 conflict discrepancy | documented + reimplemented-from-CoE |
 | Fracturing Orb | endgame | [fracturing.md](fracturing.md) | eligibility and selection reviewed, partial | documented + reimplemented-from-CoE |
 | Veiled Exalted, Veiled Chaos and unveiling | endgame | [veiled.md](veiled.md) | effects and side selection reviewed; offer probabilities open | documented + datamined + reimplemented-from-CoE |
-| Recombinators | endgame | [recombinators.md](recombinators.md) | inventory only | reimplemented-from-CoE |
+| Recombinators | endgame | [recombinators.md](recombinators.md) | modes and source differences reviewed; exact odds open | documented + player-report + reimplemented-from-CoE |
 | Corruption (Vaal and Locus) | endgame | [corruption.md](corruption.md) | category distribution reviewed; detailed transitions partial; Q18 version difference | documented + reimplemented-from-CoE |
 | Beast crafts: imprint, restore, prefix/suffix swap, aspects | later | pending; inventory `beast_crafting.*` | not reviewed | unsourced rules; S3 names only |
 | Orb of Dominance / elevated modifiers | endgame | pending; inventory `currency.maven` | not reviewed | unsourced rules; S3 names only |

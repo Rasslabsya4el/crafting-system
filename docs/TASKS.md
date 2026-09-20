@@ -8,18 +8,19 @@
 - [~] Fact sheets: basic currency (Transmute .. Divine) (`1aa58e9` reviewed ordinary branches; eligibility matrix Q9 incomplete)
 - [~] Fact sheets: bench crafts and metamods (`1aa58e9`; Q6/Q7/Q9 incomplete)
 - [~] Fact sheets: essences; fossils and resonators; harvest (`b313a2d`, `ebe5ab9`; numeric essence/fossil examples recorded, Harvest steps and special fossils pending)
-- [~] Fact sheets: eldritch currency; Awakener's Orb; fracturing; veiled mods; recombinators; corruption (`b313a2d`, `ebe5ab9`; explicit status per sheet; Q11 Conflict disagreement; fracture/veiled/corruption/Awakener expanded with S33-S40; recombinator still inventory-only)
-- [~] How Craft of Exile's calculator computes probabilities; how its simulator chains steps (`ebe5ab9`, `docs/research/coe-calculator-and-policies.md`; exact/extrapolation and configuration read, execution loop and Q14 verification pending)
+- [~] Fact sheets: eldritch currency; Awakener's Orb; fracturing; veiled mods; recombinators; corruption (`b313a2d`, `ebe5ab9`; explicit status per sheet; Q11 Conflict disagreement; `5900774` fracture/veiled/corruption/Awakener expanded with S33-S40; recombinator now has sourced mode/count/ilvl notes with Q21/Q22; complete algorithms still open)
+- [~] How Craft of Exile's calculator computes probabilities; how its simulator chains steps (`ebe5ab9`, `docs/research/coe-calculator-and-policies.md`; exact/extrapolation and configuration read, per-action routing read at 3365-3399; batch/cost aggregation and Q14 verification pending)
 - [~] Data builders from Path of Building's data files into `data/*.json` (PoB version recorded; explicit projection `b0a19ae`; other tables and complete stat/range coverage pending)
 - [x] Full ModExplicit literal projection: 4310 records with source lines and hash, no inferred rules (`b0a19ae`; 19 tests pass)
 - [~] Base tags and bench/essence/veiled/eldritch/corruption/Delve/synthesis builders (base projection accepted `3cb707d`; remaining tables not started)
 - [x] Five-file base projection: 375 records / 371 names, 34 tests, all fields checked by lead (`3cb707d`)
-- [~] Cross-check of 50+ mods over 5 item classes against Craft of Exile and PoEDB; frozen 54-row spec, Q16 group differences; results pending worker acceptance
+- [x] Cross-check of 54 mods over 5 item classes against CoE and PoEDB (`d440ffd`; 54 level/weight/range/side agreements each, 21 group-label differences retained as Q16.01-Q16.21; combined suite 48 tests)
 - [ ] Review beast crafts, Dominance, influence orbs, synthesis implicits, catalysts/quality and item/mod-level gates (catalogue now exposes gaps; `ebe5ab9`)
 - [ ] Complete inventory-only sheets with preconditions, rule steps, numbers, conditions, examples and explicit source comparisons before implementation
 - [x] Read BRIEF 3b before engine design and record outcome-distribution/value contract (`970745a`, D7 and `docs/design/build_contract.md`)
 
 - [~] Classify 3.29 changes from official patch notes: socket corruption, synthesis, beast splits, Fractured Fossil and bench rerolls (S39, Q18/Q19; full replacement algorithms pending)
+- [!] Resolve recombinator Wiki internal 70/72 count disagreement and Wiki/CoE formula differences before implementation (Q21/Q22)
 - [!] Resolve Awakener conflicting-mod survivor before implementing that branch (Q20; Wiki random discard versus CoE receiver preference)
 
 ## Phase 1 -- engine core

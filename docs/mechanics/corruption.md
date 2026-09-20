@@ -43,7 +43,7 @@ implicit. Full pool, exclusions and weighted RNG need further audit (Q2/Q12/Q16)
 These observations do not validate special-item behavior or the complete CoE transition.
 
 ## Worked examples
-A legal ordinary socketless item, excluding special transformations, has Vaal category mass
+A legal ordinary normal-rarity socketless item, excluding special transformations, has Vaal category mass
 1/4 each. Combining the socket and no-change categories yields 1/2 for unchanged properties
 plus the corrupted flag; implicit and rare-reroll categories retain 1/4 each (S37).
 For Locus, destruction risk is 1/4 and survival probability 3/4 (S38). A policy must report

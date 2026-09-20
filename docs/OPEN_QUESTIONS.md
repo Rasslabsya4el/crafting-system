@@ -22,3 +22,35 @@
 | Q18 | Do Vaal/Locus socket outcomes still produce white sockets in 3.29 (yes/no)? | S3 line 1777 has old white-socket categories; S37/S38 now say non-white. Official S39 Gem Socket Changes explicitly replaces the old outcomes. | resolved no for 3.29: one random white socket (Vaal), all white sockets (Locus) become non-white. Earlier rules remain version-scoped; colour weights/no-white edge cases unsourced |
 | Q19 | Are CoE's synthesis and split actions valid for newly crafted non-unique equipment in 3.29 (yes/no)? | S39 Item Changes removes Harvest synthesis, restricts synthesis-implicit beast rerolls to uniques, replaces two/three-way splitting with rare-Talisman fracture crafts, and changes Fractured Fossils. Frozen S3 retains older action names/paths. | resolved no as a blanket claim; retain legacy entries for provenance and classify each replacement separately in patch_3_29.md; Q3 still controls prototype target |
 | Q20 | On an Awakener merge with conflicting selected mod groups, is the receiver's mod always kept (yes/no)? | S3 poec_simRerollItem 2443-2446 always keeps m1 and drops conflicting donor m2; S40 Mechanics describes a random discard, with uncertain additional exclusions. | contradiction; conflict branch is unsupported until independently resolved. Non-conflicting pair example remains scoped to CoE |
+| Q21 | For six pooled mods in unpredictable recombination, is the three-mod count chance 70% (yes/no)? | S41 estimated table says 70%; its later modifier-selection example says 72%. Page cites player research and needs updating. | internal source contradiction; neither number accepted as exact game odds |
+| Q22 | Does frozen CoE implement the current unpredictable Recombinator algorithm (yes/no)? | S3 1895 gives floor mean ilvl, S41 adds 2 capped at max; S3 fills prefixes first uniformly, S41 uses a 50/50 side order and unknown weighted selection. Counts also differ for pools 1/3/4/5; both tables retained in recombinators.md. | cross-source discrepancy; current transition unsupported until patch/mode and formulas are independently established |
+
+## Q16 — individual discrepancies in the 54-row sample
+
+Lead independently checked all raw-source fields on 2026-09-20. Only group labels differ in
+these rows. Do not infer canonical exclusion equivalence from level/weight/range agreements.
+The full three-source pointer table is `docs/research/mod-crosscheck.md`.
+
+| observation | PoB ID / source line | PoB group | CoE / PoEDB group | source pointers | status |
+|---|---|---|---|---|---|
+| Q16.01 | LocalAddedFireDamageTwoHand1 / ModExplicit.lua:438 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[34] | label discrepancy; semantics unresolved |
+| Q16.02 | LocalAddedFireDamageTwoHand2 / ModExplicit.lua:439 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[35] | label discrepancy; semantics unresolved |
+| Q16.03 | LocalAddedFireDamageTwoHand3 / ModExplicit.lua:440 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[36] | label discrepancy; semantics unresolved |
+| Q16.04 | LocalAddedFireDamageTwoHand4 / ModExplicit.lua:441 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[37] | label discrepancy; semantics unresolved |
+| Q16.05 | LocalAddedFireDamageTwoHand5 / ModExplicit.lua:442 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[38] | label discrepancy; semantics unresolved |
+| Q16.06 | LocalAddedFireDamageTwoHand6 / ModExplicit.lua:443 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[39] | label discrepancy; semantics unresolved |
+| Q16.07 | LocalAddedFireDamageTwoHand7 / ModExplicit.lua:444 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[40] | label discrepancy; semantics unresolved |
+| Q16.08 | LocalAddedFireDamageTwoHand8_ / ModExplicit.lua:445 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[41] | label discrepancy; semantics unresolved |
+| Q16.09 | LocalAddedFireDamageTwoHand9 / ModExplicit.lua:446 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[42] | label discrepancy; semantics unresolved |
+| Q16.10 | LocalAddedFireDamageTwoHand10 / ModExplicit.lua:447 | LocalFireDamageTwoHand | FireDamage / FireDamage | S4 modifier/base 1972/20; S29 normal[43] | label discrepancy; semantics unresolved |
+| Q16.11 | LocalIncreasedEnergyShield1 / ModExplicit.lua:129 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[34] | label discrepancy; semantics unresolved |
+| Q16.12 | LocalIncreasedEnergyShield2 / ModExplicit.lua:130 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[35] | label discrepancy; semantics unresolved |
+| Q16.13 | LocalIncreasedEnergyShield3 / ModExplicit.lua:131 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[36] | label discrepancy; semantics unresolved |
+| Q16.14 | LocalIncreasedEnergyShield4 / ModExplicit.lua:132 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[37] | label discrepancy; semantics unresolved |
+| Q16.15 | LocalIncreasedEnergyShield5 / ModExplicit.lua:133 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[38] | label discrepancy; semantics unresolved |
+| Q16.16 | LocalIncreasedEnergyShield6 / ModExplicit.lua:134 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[39] | label discrepancy; semantics unresolved |
+| Q16.17 | LocalIncreasedEnergyShield7 / ModExplicit.lua:135 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[40] | label discrepancy; semantics unresolved |
+| Q16.18 | LocalIncreasedEnergyShield8 / ModExplicit.lua:136 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[41] | label discrepancy; semantics unresolved |
+| Q16.19 | LocalIncreasedEnergyShield9 / ModExplicit.lua:137 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[42] | label discrepancy; semantics unresolved |
+| Q16.20 | LocalIncreasedEnergyShield10 / ModExplicit.lua:138 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[43] | label discrepancy; semantics unresolved |
+| Q16.21 | LocalIncreasedEnergyShield11 / ModExplicit.lua:139 | LocalEnergyShield | BaseLocalDefences / BaseLocalDefences | S4 modifier/base 2007/47; S31 normal[44] | label discrepancy; semantics unresolved |

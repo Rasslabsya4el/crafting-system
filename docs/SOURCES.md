@@ -43,6 +43,7 @@
 | S38 | https://www.poewiki.net/index.php?title=Locus_of_Corruption&oldid=1673917 | 2026-09-20, browser | Four category outcomes, destruction, eligibility, replacement and version conditions | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
 | S39 | https://www.pathofexile.com/forum/view-thread/3985332 | 2026-09-20 | Official 3.29.0 notes: Gem Socket Changes, Talisman Revamp, Item Changes, new bench options | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md; full page not downloaded |
 | S40 | https://www.poewiki.net/index.php?title=Awakener%27s_Orb&oldid=1697721 | 2026-09-20, browser | Input conditions, receiver properties, tier/value retention, metamods, conflict survivor discrepancy | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
+| S41 | https://www.poewiki.net/index.php?title=Recombinator&oldid=1701130 | 2026-09-20, browser | Two operating modes, input destruction, ilvl formula, estimated count table and internal 70/72 conflict; page update warning retained | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
 
 Download policy: one GET per URL, no automatic retries; use the local copy thereafter.
 Cached third-party bytes are ignored by Git. Their presence does not establish that every field has been reviewed.
@@ -51,3 +52,7 @@ Additional S3 review on 2026-09-20: fossil weights (`poec_workoutFOMTypes`, `poe
 calculator exact/extrapolation paths (`poec_computePermutationsV2`, `poec_computeFinalProbsV2`),
 and simulator configuration (`poec_nsimBuildConfig`, `poec_nsimRelayConfigData`). Notes in
 `docs/research/coe-calculator-and-policies.md`; no new download.
+
+Further S3 review: Awakener pair/conflict selection (1926-1933, 2443-2446), corruption
+(2805-2822), recombination (1886-1925), and per-action policy execution (3365-3399).
+Source-local algorithms and cross-source differences are recorded in their sheets; no JS executed.

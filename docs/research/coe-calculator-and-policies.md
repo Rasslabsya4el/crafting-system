@@ -49,8 +49,34 @@ for open slots, mod counts, tags and tiers, including AND/OR and threshold-of-gr
 
 This supports policies with explicit stopping and restart decisions rather than an unconditional
 action list. The method name `poec_nsimExecute` requested in the first inventory is absent;
-do not invent it as an execution anchor. The full run loop, budget accounting and distribution
-aggregation remain unaudited. The source UI/configuration has not been automated at scale.
+do not invent it as an execution anchor. The source UI/configuration has not been automated
+at scale. Budget accounting, batch scheduling and final distribution aggregation remain
+unaudited; the per-action execution and routing below have now been read.
+
+`poec_simExecuteAction` (3365-3399) snapshots the preceding state, checks constraints, dispatches
+the action, evaluates the resulting item, increments per-step/action counters and routes:
+
+| result / route | observed transition at 3398 |
+|---|---|
+| success / next | advance one step |
+| success / end | move beyond final step |
+| success or failure / step | go to explicit one-based route minus one |
+| failure / loop | keep current step AND changed item |
+| failure / restart | step zero AND restore initial `nsim_sdata` snapshot |
+
+At 3399, a completed policy records action/step counts and calls `poec_simActionSucceed`.
+Restart does not reset those current-craft counters in the observed branch. A policy costing
+model must charge consumed actions and replacement/preparation inputs; restoring a simulator
+snapshot is not evidence that the game restores a destroyed or modified item for free.
+
+Conditions at 3384-3397 inspect affix tiers or stored value sums, fracture flags, free slots,
+mod counts, tags and pseudos. The labels AND/OR are insufficient to infer all semantics: both
+group branches compare passing-condition counts with an explicit threshold or their group
+size, then group-level pass logic applies. Future specs must state boolean semantics directly.
+Unveiling at 3361-3371 picks the first preferred offered ID; when none matches, a method option
+controls whether a fallback offer is taken. Player choice and random offer generation are
+distinct stages. The blanket corrupted-item rejection at 3365 is a simulator limitation,
+not proof against the documented bench/tainted exceptions (S37, corruption.md).
 
 ## Consequences for BRIEF 3b
 
