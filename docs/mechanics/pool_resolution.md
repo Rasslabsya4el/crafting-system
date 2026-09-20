@@ -22,8 +22,9 @@ eligibility. Base tags and modifier tags are separate inputs, not interchangeabl
    `Group/family` allows one or more families per modifier and only one member of a family on
    the object. A literal PoB `group` string has not yet been proven to preserve all game families.
 5. Action rules can change weights/eligibility and existing mods can change item tags. The
-   current limited projection omits generated tags and weight multipliers. It must not be used
-   as a complete ordinary weapon pool without resolving Q16/Q17.
+   accepted 15-field projection preserves generated tags and weight multipliers literally.
+   Their semantics remain unverified; it must not be used as a complete ordinary weapon pool
+   without resolving Q16/Q17.
 
 ## Numbers and worked examples
 These examples resolve one mod's raw spawn weight, not the probability of rolling it.
@@ -51,9 +52,18 @@ rename them or use the PoB group as the canonical game exclusion family. The cro
 report these differences separately from numerical agreement.
 
 Q17: S24 LocalAddedFireDamageTwoHand1 (line 438) has `weightMultiplierKey/Val` and generated
-`tags = { has_attack_mod }`, absent from our projection. Bow default multiplier is 100 in the
+`tags = { has_attack_mod }`, now retained in `data/pob_mod_families.json`. Bow default multiplier is 100 in the
 literal table; semantics/units for general use still require a source. A sample match for bows
 does not validate other weapons or dynamic tag transitions.
+
+## Accepted literal data
+`tools/build_pob_mod_families.py` projects 10555 records from six files (merge 375528a):
+Explicit 4310, Veiled 258, Eldritch 4086, Corrupted 371, Delve 186, Synthesis 1344.
+Sources S24/S25/S59-S62 retain per-file byte hashes and source lines. The lead independently
+matched all 15 projected fields in every record to raw input. Stat strings preserve ranges
+as text; `statOrder` is an ordering literal, not an asserted game stat ID or tier.
+Optional generated tags/multiplier arrays occur in 364 Explicit and 2 Delve rows; absent
+fields remain null. Empty and all-zero source weights are preserved without interpretation.
 
 ## Open questions
 Q8 upstream revision; Q9 eligibility; Q16 exclusion-family correspondence;

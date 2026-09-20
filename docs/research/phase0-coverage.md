@@ -42,8 +42,13 @@ Q23-Q25/Q27 retain source conflicts found during this expansion.
   scope needed for the helmet/bow demo and five-class cross-check, not all PoB Bases files.
 - Cross-check: 54 modifiers over five classes, all numeric/side comparisons agree; 21 group
   label differences remain separate question rows. Raw PoB single group is not canonical proof.
-- Remaining weighted-family and bench/essence builders are governed by the two 2026-09-20 specs.
-  Acceptance and final counts are recorded in WORKERS/STATE after lead verification.
+- Weighted families accepted in 375528a: 10555 records / six tables, all 15 fields independently
+  checked by the lead. Literal stat strings, optional tags/multipliers and fractional statOrder
+  retained; full stat/range interpretation and group semantics remain future resolver work.
+- Bench/essence accepted in 8d49e8f: 732 bench rows, 105 essence rows, 2310 class-to-mod links;
+  622 distinct referenced ModExplicit IDs, none missing. Every record independently checked.
+- Combined main suite: 78 tests passed in under one minute. Worker reports and acceptance are
+  recorded in WORKERS/STATE. Ignored snapshots are required for the snapshot checks.
 
 ## Catalogue expansion from the Wiki Crafting overview
 S57 https://www.poewiki.net/index.php?title=Crafting&oldid=1697718, read 2026-09-20.
@@ -67,3 +72,13 @@ Research closure therefore means the required sheets/data are reviewable and unk
 have named blockers. It does not mark all optional families or source contradictions resolved.
 Before Phase 1, any used rule receives a bounded tests-first spec with the BRIEF 3b distribution
 contract; uncertain paths must raise NotImplementedError with their question ID.
+
+## Exit review
+Phase 0 knowledge-harvest exit met on 2026-09-20: 20 fact sheets plus INDEX, 62 registered
+sources, the required named families, deterministic selected-data builders and the 54-mod /
+five-class comparison. Target ordinary PoE 3.29 confirmed by the owner (Q3/D11). The original
+54-row comparison still uses the initial narrow explicit projection; the new literal family
+projection adds fields without retroactively claiming new cross-source agreement.
+
+This is a reviewed research baseline. Optional catalogue expansion and unresolved rules stay
+visible in TASKS/OPEN_QUESTIONS; no general item resolver or crafting calculator is implemented.

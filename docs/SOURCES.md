@@ -34,7 +34,6 @@
 | S30 | https://poedb.tw/us/Rings | 2026-09-20 | Ordinary cold resistance 8 tiers and chaos resistance 6 tiers | `sources/raw/poedb/Rings.html`; SHA-256 `cd2a59059e375817c34062b1b71fe0c162c765c5e21fde2a45d2e1680273b929` |
 | S31 | https://poedb.tw/us/Body_Armours_int | 2026-09-20 | Ordinary flat energy shield, 11 tiers, group discrepancy versus PoB | `sources/raw/poedb/Body_Armours_int.html`; SHA-256 `4ec519836677852231b21d5bc38c402e0aa5549516edc0f30d84c2919e29ba2b` |
 | S32 | https://poedb.tw/us/Gloves_str | 2026-09-20 | Ordinary Strength, 9 tiers | `sources/raw/poedb/Gloves_str.html`; SHA-256 `082f4aaa7cad9b5ae1dfab63d12c1775fe1fad11c7a30c00611c9fb2de81fc0f` |
-
 | S33 | https://www.poewiki.net/index.php?title=Fracturing_Orb&oldid=1681353 | 2026-09-20, browser before restart | Mechanics and 3.29 tooltip/synthesis condition; no independent equal-odds proof | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
 | S34 | https://www.poewiki.net/index.php?title=Veiled_Exalted_Orb&oldid=1681145 | 2026-09-20, browser before restart | Remove/add order, metamods, signature exclusion and 3.26 naming | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
 | S35 | https://www.poewiki.net/index.php?title=Veiled_Chaos_Orb&oldid=1681146 | 2026-09-20, browser before restart | Rare reforge, forced veil, signature exclusion, 3.26 reintroduction | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
@@ -44,7 +43,6 @@
 | S39 | https://www.pathofexile.com/forum/view-thread/3985332 | 2026-09-20 | Official 3.29.0 notes: Gem Socket Changes, Talisman Revamp, Item Changes, new bench options | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md; full page not downloaded |
 | S40 | https://www.poewiki.net/index.php?title=Awakener%27s_Orb&oldid=1697721 | 2026-09-20, browser | Input conditions, receiver properties, tier/value retention, metamods, conflict survivor discrepancy | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
 | S41 | https://www.poewiki.net/index.php?title=Recombinator&oldid=1701130 | 2026-09-20, browser | Two operating modes, input destruction, ilvl formula, estimated count table and internal 70/72 conflict; page update warning retained | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
-
 | S42 | https://www.poewiki.net/index.php?title=Harvest_crafting&oldid=1699145 | 2026-09-20, browser | Current tag reforges and add/remove recipes; metamod conditions and resource amounts | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S43 | https://www.poewiki.net/index.php?title=Orb_of_Dominance&oldid=1699839 | 2026-09-20, browser | Class/rarity gates, tier transformation and protection | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S44 | https://www.poewiki.net/index.php?title=Beastcrafting&oldid=1673867 | 2026-09-20, browser | Beast-level exchange, current recipes, Matron singleton and synthesis unique restriction | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
@@ -55,16 +53,17 @@
 | S49 | https://www.poewiki.net/index.php?title=Influenced_item&oldid=1635654 | 2026-09-20, browser | Influence persistence, 15 pairs, Astrolabe exception and ambiguous orb wording | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S50 | https://www.poewiki.net/index.php?title=Synthesised_item&oldid=1675552 | 2026-09-20, browser | 3.29 availability, implicit replacement, retained base status and level distinction | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S51 | https://www.poewiki.net/index.php?title=Blessed_Orb&oldid=1681166 | 2026-09-20, browser | Rollable implicit gate and old-value exclusion conflicting with CoE | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
-
 | S52 | https://www.poewiki.net/index.php?title=Eldritch_implicit_modifier&oldid=1697697 | 2026-09-20, browser | Six tiers, ordinary classes, dominance and exceptional amulets | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S53 | https://www.poewiki.net/index.php?title=Eldritch_Chaos_Orb&oldid=1683049 | 2026-09-20, browser | Rare rarity, dominant side and equal-tier rejection | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S54 | https://www.poewiki.net/index.php?title=Eldritch_Exalted_Orb&oldid=1683050 | 2026-09-20, browser | Rare rarity, Exarch prefix / Eater suffix addition | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S55 | https://www.poewiki.net/index.php?title=Eldritch_Orb_of_Annulment&oldid=1683051 | 2026-09-20, browser | Magic or rare rarity, dominant-side removal | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S56 | https://www.poewiki.net/index.php?title=Fossil&oldid=1702302 | 2026-09-20, browser | Community-interpreted tag multipliers and explicit additive/multiplicative dispute | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
-
 | S57 | https://www.poewiki.net/index.php?title=Crafting&oldid=1697718 | 2026-09-20, browser | Catalogue completeness: socket/enchantment, unique, Memory, Allflame and other families; overview wording conflicts Q29 | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
-
 | S58 | https://www.poewiki.net/index.php?title=Resonator&oldid=1675208 | 2026-09-20, browser | Chaotic rare gate, Ruthless alchemical distinction, fossil uniqueness and block precedence | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S59 | `sources/pob/Data/ModEldritch.lua`, all rows, first key `IncreasedAttackSpeedEldritchImplicit1` line 5 | 2026-09-20 | 4086 literal definitions: Exarch 2016 / Eater 2070; no inferred transition odds | Local S1 snapshot; SHA-256 `39619b75effd511c3a28438fc3f79d75974a97b6056f4e282801a7215f13e22f`; own projection `data/pob_mod_families.json` |
+| S60 | `sources/pob/Data/ModCorrupted.lua`, all rows | 2026-09-20 | 371 literal corruption modifier definitions; no inferred outcome distribution | Local S1 snapshot; SHA-256 `de8ca9043284925a18a617c15a9d3f26b5b1b039239935ff0c1741e76a8ae8ba`; own projection `data/pob_mod_families.json` |
+| S61 | `sources/pob/Data/ModDelve.lua`, all rows | 2026-09-20 | 186 literal definitions: DelveImplicit 9 / Prefix 74 / Suffix 103; optional arrays preserved | Local S1 snapshot; SHA-256 `7721301d4cc1b95d7722b224e09c8da8a80c2da1969323d0fff9038b0ad21d56`; own projection `data/pob_mod_families.json` |
+| S62 | `sources/pob/Data/ModSynthesis.lua`, all rows, first key `SynthesisImplicitLife1` line 5 | 2026-09-20 | 1344 literal definitions, including empty weight arrays; not synthesis selection probabilities | Local S1 snapshot; SHA-256 `dba033ff1d884f1500ae3ce99520f4a4d5b4162ac6885eaa97cf88b759eb351c`; own projection `data/pob_mod_families.json` |
 
 Download policy: one GET per URL, no automatic retries; use the local copy thereafter.
 Cached third-party bytes are ignored by Git. Their presence does not establish that every field has been reviewed.
@@ -88,3 +87,13 @@ ModExplicit IDs; all references found. Source SHA-256
 Own projection data/pob_essences.json. Version pin remains owner-supplied (Q8).
 S7 guide-directory review: 52 references (37 video / 15 written), date field spans
 2022-01-23 through 2023-09-26. No embedded article bodies; no linked recipe treated as read.
+
+S24/S25/S59-S62 full-family acceptance on 2026-09-20 (merge 375528a): all 15 fields of
+10555 records independently matched to raw source. S25 has 258 rows (Prefix 162 / Suffix 96),
+SHA-256 72dd5ce5e5ed5e00ace5a69700e522ce23fde692b5cc37d97c706811ce309460.
+S24's full projection now includes stat_text/statOrder and optional generated tags/multipliers;
+the earlier limited projection remains for its existing cross-check consumer.
+`tools/build_pob_mod_families.py` output: 7755518 bytes, SHA-256
+a37bd981e34e1d43cbb12c1b7009ab86cc63fa357bdaba41ad20d8d2ba39aee4 (UTF-8 LF).
+Ranges remain literal strings, no tiers or numeric game stat IDs inferred. Metadata still
+records the owner-supplied version rather than an invented upstream commit (Q8).

@@ -91,3 +91,16 @@ Phase 0 closes against the BRIEF's researched-sheet/data criteria, with unsuppor
 listed by question ID. It does not promise a simulator for every catalogue entry. BRIEF 3b
 remains binding for the next implementation slice; CoE rounding/action-count shortcuts Q28
 are not acceptable substitutes for exact mean and p90 cost.
+
+## D12 — 2026-09-20 — Preserve source literals before interpreting stats
+The six-table projection adds stat_text/statOrder and optional tag/multiplier arrays to the
+fields needed for future resolver work. Source ranges remain strings; fractional statOrder
+values stay numeric literals (S24 SpiritMinionEssence1 [774,774.1], S11 bench line 308
+[857,857.1]). They are not invented integer game stat IDs. Missing fields stay null, empty
+weight arrays stay empty, and record identities include the source file.
+
+Keep the accepted initial explicit projection for the existing comparison tool; new family
+data is the fuller source projection, not a second canonical ruleset. A future refactor may
+share parsing primitives after a separate spec. Rejected: silently changing the comparison
+schema during acceptance, rounding ordering values, deriving tiers from display affixes, or
+treating retained multipliers as understood percentage rules (Q17).
