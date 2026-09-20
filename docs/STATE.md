@@ -54,7 +54,10 @@ Unknown paths must fail explicitly, not guess. Other PoB family builders, comple
 projection and general pool resolver remain unimplemented. These gaps do not block research.
 
 ## Worker and process status
-No active workers or background jobs. Both resumed workers finished, lead reviewed and ran
+Two new bounded worker specs prepared: pob-mod-families (about 30 minutes) and pob-recipes
+(about 25 minutes). Longer than 10 minutes is justified by strict literal parsing, malformed-input
+tests and deterministic snapshot verification; each command remains short, at most two workers.
+Previous workers finished, lead reviewed and ran
 branch tests, merged with no-ff, saved reports under out/workers and removed worktrees without
 force. Only main checkout remains. WORKERS has acceptance rows. No external directories used.
 
