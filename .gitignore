@@ -1,0 +1,5 @@
+sources/raw/
+__pycache__/
+.pytest_cache/
+out/
+*.pyc
