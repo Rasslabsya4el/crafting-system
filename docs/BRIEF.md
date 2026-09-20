@@ -1,7 +1,8 @@
 # Brief: a crafting oracle for Path of Exile 1 (prototype)
 
 Written 2026-09-20 by the lead of the parent project for the agent that builds the prototype. Read `AGENTS.md` first (the
-rules of work), then this file, then `C:\Coding\poe-junkroan-v2\docs\research\2026-09-20-crafting-oracle-brainstorm.md`.
+rules of work), then this file, then `docs/background/2026-09-20-crafting-oracle-brainstorm.md`. If you have a subagent /
+task tool, you are the LEAD and delegate code to workers exactly as `AGENTS.md` section 6 says.
 
 ## 1. Why this exists
 
