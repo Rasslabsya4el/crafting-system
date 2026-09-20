@@ -19,12 +19,12 @@ method tree (95 named nodes, including legacy/mixed-game entries and options) is
 | Veiled Exalted, Veiled Chaos and unveiling | endgame | [veiled.md](veiled.md) | effects and side selection reviewed; offer probabilities open | documented + datamined + reimplemented-from-CoE |
 | Recombinators | endgame | [recombinators.md](recombinators.md) | modes and source differences reviewed; exact odds open | documented + player-report + reimplemented-from-CoE |
 | Corruption (Vaal and Locus) | endgame | [corruption.md](corruption.md) | category distribution reviewed; detailed transitions partial; Q18 version difference | documented + reimplemented-from-CoE |
-| Beast crafts: imprint, restore, prefix/suffix swap, aspects | later | pending; inventory `beast_crafting.*` | not reviewed | unsourced rules; S3 names only |
-| Orb of Dominance / elevated modifiers | endgame | pending; inventory `currency.maven` | not reviewed | unsourced rules; S3 names only |
-| Influence Exalted orbs | endgame | pending; inventory `currency.shaper` through `currency.warlord` | not reviewed | unsourced rules; S3 names only |
-| Blessed Orb | day 1 / later | pending; inventory `currency.blessed` | not reviewed | unsourced rules; S3 names only |
-| Catalysts and quality | later | pending; inventory `catalyst`; BRIEF phase 0 | not reviewed | unsourced |
-| Synthesis implicits | endgame | pending; BRIEF phase 0 / S1 ModSynthesis data | not reviewed | unsourced rules |
+| Beast crafts: imprint, restore, prefix/suffix swap, aspects | later | [beast_crafting.md](beast_crafting.md) | reviewed conditions and source differences; Q25 | documented + reimplemented-from-CoE |
+| Orb of Dominance / elevated modifiers | endgame | [dominance.md](dominance.md) | reviewed transformation/CoE selection; full mapping open | documented + reimplemented-from-CoE |
+| Influence Exalted orbs | endgame | [influence_orbs.md](influence_orbs.md) | reviewed, item-specific gates partial; Q27 | documented + reimplemented-from-CoE |
+| Blessed Orb | day 1 / later | [blessed_orb.md](blessed_orb.md) | reviewed; old-value conflict Q24 | documented + reimplemented-from-CoE |
+| Catalysts and quality | later | [quality_catalysts.md](quality_catalysts.md) | reviewed; increment conflict Q23 | documented + reimplemented-from-CoE |
+| Synthesis implicits | endgame | [synthesis.md](synthesis.md) | reviewed 3.29 conditions; generation weights open | documented + datamined definitions |
 | Item/mod levels, base tags and influence pools | all | [pool_resolution.md](pool_resolution.md), affix sheet | ordered weights/gates reviewed; families/multipliers/influence incomplete | documented + datamined; Q16/Q17 |
 | Tainted/Scourge, vendor, legacy Harvest, Foulborn and other mixed-game entries | undecided | mechanical inventory only | classify against Q3 before inclusion | unsourced current availability |
 | 3.29 bench rerolls, Talisman fracture/imprint and changed Fractured Fossil | undecided | [patch_3_29.md](patch_3_29.md) | availability/gates recorded; algorithms open | documented patch deltas |

@@ -25,6 +25,14 @@
 | Q21 | For six pooled mods in unpredictable recombination, is the three-mod count chance 70% (yes/no)? | S41 estimated table says 70%; its later modifier-selection example says 72%. Page cites player research and needs updating. | internal source contradiction; neither number accepted as exact game odds |
 | Q22 | Does frozen CoE implement the current unpredictable Recombinator algorithm (yes/no)? | S3 1895 gives floor mean ilvl, S41 adds 2 capped at max; S3 fills prefixes first uniformly, S41 uses a 50/50 side order and unknown weighted selection. Counts also differ for pools 1/3/4/5; both tables retained in recombinators.md. | cross-source discrepancy; current transition unsupported until patch/mode and formulas are independently established |
 
+| Q23 | Does ordinary catalyst quality currently depend on item level rather than rarity (yes/no)? | S46/S47 say item-level dependent, unique +1; S3:2319 uses normal/magic/rare +5/+2/+1. | documented current level dependence; CoE increment model rejected for current use; fractional increment distribution/magnitude rounding still unsourced |
+| Q24 | Can Blessed Orb repeat the previous single implicit value (yes/no)? | S51 says no; S3:2546-2553 samples full inclusive range without excluding old values. | contradiction; multi-value exclusion and exact current probabilities unsupported |
+| Q25 | For beast prefix/suffix exchange, does the beast level gate the added mod (yes/no)? | S44 explicitly says beast level; S3:2393-2394 draws from shared item pool without a beast-level argument. | documented beast-level rule; frozen CoE branch incomplete for differing levels; full removal/metamod matrix unsourced |
+| Q26 | Are the additional Rancour Harvest tags part of the target loadout (yes/no)? | S42 current table adds minion/elemental/attribute/mana/drop reforges with Rancour; frozen S3 options are narrower/legacy. | availability documented on current page; include only when version/loadout permits; exact generation algorithms unsourced |
+| Q27 | Can an influence Exalted Orb be applied to an item already bearing that same influence (yes/no)? | S48 item-specific tooltip requires no influence, S49 broad sentence only excludes a different influence. | wording discrepancy; use strict item-specific condition, no same-influence permission; numerical ilvl gates for all six orbs remain unverified |
+
+| Q28 | Is CoE displayed cost per success an exact mean, and are its cheapest/costliest labels actual price extrema (yes/no)? | S3:3466 rounds each resource quantity up before pricing; 3478/3486 sort completed crafts by action count. Counterexamples in research/coe-calculator-and-policies.md. | resolved no in frozen source; do not copy these display shortcuts into BRIEF 3b cost metrics |
+
 ## Q16 — individual discrepancies in the 54-row sample
 
 Lead independently checked all raw-source fields on 2026-09-20. Only group labels differ in

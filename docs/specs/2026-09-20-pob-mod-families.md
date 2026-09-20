@@ -14,7 +14,7 @@ Budget: about 30 minutes; no single command over 10 minutes. All inputs are copi
    ModDelve and ModSynthesis in sources/pob/Data. Never execute Lua or use network.
 2. Preserve source order and exact IDs. Every record contains source_path/source_line,
    id/type/affix/level/group, ordered weightKey/weightVal/modTags, ordered top-level unnamed
-   stat strings as stat_text, and ordered statOrder integers. Preserve optional tags,
+   stat strings as stat_text, and ordered statOrder literal numbers (int or float). Preserve optional tags,
    weightMultiplierKey/weightMultiplierVal literally; use null for absent fields, not invented defaults.
    Numeric ranges remain literal text; do not infer numeric stat IDs, tiers or exclusions.
 3. Read fields at the row's top level; nested tradeHashes strings are NOT stat_text.
@@ -49,6 +49,9 @@ Lead counted literal rows from source on 2026-09-20:
 - An authored fixture with one top-level stat 'Adds (1-2), {test}' and one nested tradeHashes
   text projects exactly 1 stat string; duplicate IDs and mismatched arrays each raise ValueError.
 - Two independent builds produce byte-identical output.
+- Source correction verified by lead: ModExplicit.lua:1637 SpiritMinionEssence1 has
+  statOrder [774,774.1]. Preserve 774.1 exactly as a JSON number; do not round it or infer
+  that statOrder is a list of integer game stat IDs.
 
 ## Numbers to report
 Counts per file and total; type counts above; first-row fixture values; skipped/malformed rows;

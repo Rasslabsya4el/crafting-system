@@ -45,6 +45,23 @@
 | S40 | https://www.poewiki.net/index.php?title=Awakener%27s_Orb&oldid=1697721 | 2026-09-20, browser | Input conditions, receiver properties, tier/value retention, metamods, conflict survivor discrepancy | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
 | S41 | https://www.poewiki.net/index.php?title=Recombinator&oldid=1701130 | 2026-09-20, browser | Two operating modes, input destruction, ilvl formula, estimated count table and internal 70/72 conflict; page update warning retained | Selected paraphrases in sources/raw/wiki/browser-observations-2026-09-20.md |
 
+| S42 | https://www.poewiki.net/index.php?title=Harvest_crafting&oldid=1699145 | 2026-09-20, browser | Current tag reforges and add/remove recipes; metamod conditions and resource amounts | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S43 | https://www.poewiki.net/index.php?title=Orb_of_Dominance&oldid=1699839 | 2026-09-20, browser | Class/rarity gates, tier transformation and protection | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S44 | https://www.poewiki.net/index.php?title=Beastcrafting&oldid=1673867 | 2026-09-20, browser | Beast-level exchange, current recipes, Matron singleton and synthesis unique restriction | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S45 | https://www.poewiki.net/index.php?title=Imprint&oldid=1702288 | 2026-09-20, browser | Restoration identity, stored properties and fracture/corruption exceptions | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S46 | https://www.poewiki.net/index.php?title=Catalyst&oldid=1675910 | 2026-09-20, browser | Level-dependent quality, type reset, special catalysts | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S47 | https://www.poewiki.net/index.php?title=Quality&oldid=1673652 | 2026-09-20, browser | Quality amount conditions and worked armour example 342 | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S48 | https://www.poewiki.net/index.php?title=Crusader%27s_Exalted_Orb&oldid=1683018 | 2026-09-20, browser | Rare/no-influence gate and excluded item flags | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S49 | https://www.poewiki.net/index.php?title=Influenced_item&oldid=1635654 | 2026-09-20, browser | Influence persistence, 15 pairs, Astrolabe exception and ambiguous orb wording | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S50 | https://www.poewiki.net/index.php?title=Synthesised_item&oldid=1675552 | 2026-09-20, browser | 3.29 availability, implicit replacement, retained base status and level distinction | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S51 | https://www.poewiki.net/index.php?title=Blessed_Orb&oldid=1681166 | 2026-09-20, browser | Rollable implicit gate and old-value exclusion conflicting with CoE | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+
+| S52 | https://www.poewiki.net/index.php?title=Eldritch_implicit_modifier&oldid=1697697 | 2026-09-20, browser | Six tiers, ordinary classes, dominance and exceptional amulets | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S53 | https://www.poewiki.net/index.php?title=Eldritch_Chaos_Orb&oldid=1683049 | 2026-09-20, browser | Rare rarity, dominant side and equal-tier rejection | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S54 | https://www.poewiki.net/index.php?title=Eldritch_Exalted_Orb&oldid=1683050 | 2026-09-20, browser | Rare rarity, Exarch prefix / Eater suffix addition | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S55 | https://www.poewiki.net/index.php?title=Eldritch_Orb_of_Annulment&oldid=1683051 | 2026-09-20, browser | Magic or rare rarity, dominant-side removal | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S56 | https://www.poewiki.net/index.php?title=Fossil&oldid=1702302 | 2026-09-20, browser | Community-interpreted tag multipliers and explicit additive/multiplicative dispute | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+
 Download policy: one GET per URL, no automatic retries; use the local copy thereafter.
 Cached third-party bytes are ignored by Git. Their presence does not establish that every field has been reviewed.
 

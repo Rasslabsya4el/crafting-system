@@ -91,3 +91,36 @@ two sequential draws without replacement give unordered outcomes AB=1/6, AC=5/12
 (sum 1). For example AC=(1/4)*(2/3)+(2/4)*(1/2)=5/12. Therefore P(A present)=7/12.
 These hand-derived values extend the existing affix-generation example; they are invented
 test inputs, not a real mod pool. They test a distribution, not merely one target probability.
+
+## Batch execution and cost/result aggregation (read 2026-09-20)
+Source: S3 package.js, poec_simLoopAction 3308-3312, poec_simActionSucceed 3405-3410,
+poec_simOutputResultsTbl 3435-3485, poec_sortByActions 3486. Confidence:
+`reimplemented-from-CoE`; this is program behavior, not a game mechanic.
+
+- Fixed mode stops after either a requested action count or a requested completed-item count.
+  Real-time/debug modes use different scheduling. No monetary-budget stop appears in the
+  reviewed loop; fixed action count must not be described as a currency budget.
+- Success storage is optional and capped by nsim_maxitems. Affix/count distributions are
+  accumulated only for completed items. Success resets the item to the starting snapshot,
+  resets the step index and increments completed count; a restart is not a free in-game item.
+- Per-step frequency is passed/count; the displayed reciprocal uses ceil(1/p). Separate
+  success-only mod frequencies divide by completed count. Those conditional frequencies
+  cannot substitute for an unconditional stage outcome distribution (BRIEF 3b).
+- Currency quantities multiply executed step counts by recipe quantities. Fossils additionally
+  count one resonator of the chosen socket size (3437-3438); removed bench crafts add a
+  separate scour quantity (3464-3465). Restore-imprint/unveil are excluded as currency tokens,
+  but their necessary prior inputs must still be represented in a player's policy.
+- Cost-per-success uses ceil(total quantity/completed count) **for each resource separately**
+  before multiplying by its price (3466,3477). This is a display estimate with rounding bias,
+  not the unrounded sample mean. Example (invented): 5 units over 2 completed items gives
+  display 3 units rather than mean 2.5; at price 4, display 12 versus mean cost 10.
+- 'Cheapest' and 'Costliest' select first/last after sorting by **action count**, then price
+  the selected path (3478,3486). These need not be price extrema. Synthetic counterexample:
+  one action costing 10 versus two actions costing 1 each; fewer actions costs 10, more costs 2.
+- No p90 cost computation is in this reviewed output routine. Min/max selected paths or a
+  rounded per-success quantity must not be relabelled as p90 or a confidence interval.
+
+Q28 records both cost-display limitations. Our later policy implementation must retain complete
+resource/cost totals and distributions, charge replacement starting inputs, and distinguish
+success-conditioned terminal utility from unconditional outcomes. None of CoE's code is executed
+or copied; these findings constrain our own specifications.

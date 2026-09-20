@@ -34,6 +34,25 @@ utilities 2/7/4 and threshold 6 chooses 7 deterministically; no offer probabilit
 
 ## Comparison, conditions and gaps
 S34 agrees with remove-then-add; S35 with the reforge effect. Three choices do not imply equal
-mod weights or three independent draws. Do not reuse ordinary weights. Full `poec_simUnveilMod`
-(S3 2841 onward), group blocking, tags, item-level gates and crafted equivalence need review.
+mod weights or three independent draws. Do not reuse ordinary weights. Current-game pool
+weights, item-level gates and crafted equivalence still need independent review.
 Q3 ruleset; Q9 flag matrix; Q12 offer algorithm/weights/signatures. No action implementation.
+
+## Frozen CoE offer algorithm reviewed
+S3 `poec_simUnveilMod` 2841-2857, read 2026-09-20 (`reimplemented-from-CoE`):
+1. Gather existing explicit modgroups and additional mod groups; choose the veiled placeholder
+   and its prefix/suffix side. The ordinary PoE1 branch is separate from PoE2 desecration.
+2. Use that side's veiled pool; remove existing-group conflicts and `vex != 0` entries. Read
+   the candidate's first tier weight. This is CoE's curated offer pool, not directly PoB spawn weights.
+3. Request 3 choices, stopping early if the pool is empty. Pick via integer [0,total) with
+   half-open cumulative ranges, then remove the chosen entry and every candidate sharing any
+   chosen modgroup. Unlike Q2's other sampler, these endpoints are internally consistent.
+4. Present the choices; the user's policy selects one (2868-2875). The source filters additional
+   mod groups initially, but the compact candidate records do not carry `amg`; do not assume
+   that later `amg` checks establish complete pairwise exclusion between offered choices.
+
+Synthetic fixtures under this algorithm: 4 equal-weight independent groups yield a specified
+mod in 3 offers with probability 3/4; each unordered offer triple has probability 1/4.
+If only 2 compatible groups exist, it returns at most 2 choices rather than duplicating one.
+These are source-algorithm arithmetic fixtures; S36's usual three-offer rule does not independently
+prove how the live game handles an exhausted offer pool. Q12 retains that edge case and mapping.

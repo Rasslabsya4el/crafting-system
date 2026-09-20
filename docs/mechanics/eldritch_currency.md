@@ -47,5 +47,27 @@ S17/S14 say Eldritch Chaos ignores side locks; S17 says it respects cannot-roll 
 See [bench_metamods.md](bench_metamods.md). This does not establish identical behavior for all
 Eldritch actions. Q3/Q9/Q11 remain open; no action implementation is authorized by this partial sheet.
 
+## Independent Wiki conditions and examples
+S52 Eldritch implicit modifier and S53-S55 currency tooltips, read 2026-09-20:
+- Ordinary Ember/Ichor application concerns non-unique helmets, gloves, boots and body armours;
+  conventional influence is incompatible. Fractured items can carry these implicits. Amulet
+  exceptions exist, but the page explicitly says Embers/Ichors cannot add them to amulets.
+- Six named tiers run Lesser, Greater, Grand, Exceptional, Exquisite, Perfect. The first four
+  are currency tiers; the last two require Conflict. First application replaces ordinary base
+  implicits; the item can then hold one of each eldritch side. S50 separately covers synthesis.
+- Higher tier dominates, a sole side dominates, equal tiers have no dominance. S53/S54
+  require rare rarity for Chaos/Exalted; S55 Annul permits magic or rare.
+- Independent tooltips confirm Exarch -> prefixes and Eater -> suffixes for all three actions.
+  Example: Greater Exarch plus Lesser Eater targets prefixes; two Greater implicits cannot
+  use a dominance-dependent action. With one legal prefix candidate, successful Exalted
+  adds exactly 1 prefix and 0 suffixes; count limits still apply.
+- A synthetic Annul candidate set of two removable prefixes under Exarch dominance gives
+  intended 1/2 each under S3's equal candidate weights. Wiki establishes the side, not the
+  equal-odds distribution; protected/fractured candidates must be excluded first.
+
+S52 still mentions historical splitting/synthesising; S39's 3.29 removal/replacement conditions
+override availability claims for those actions (Q19). Ember/Ichor pool weights and all special
+base exceptions need a future bounded spec; data definitions alone do not resolve Q9/Q12.
+
 Sources: S3 `sources/raw/coe/package.js` functions/lines above, S17 Wiki Metamod, S23
 https://www.poewiki.net/wiki/Orb_of_Conflict (read 2026-09-20 through the existing browser).
