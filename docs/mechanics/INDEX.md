@@ -25,7 +25,7 @@ method tree (95 named nodes, including legacy/mixed-game entries and options) is
 | Blessed Orb | day 1 / later | pending; inventory `currency.blessed` | not reviewed | unsourced rules; S3 names only |
 | Catalysts and quality | later | pending; inventory `catalyst`; BRIEF phase 0 | not reviewed | unsourced |
 | Synthesis implicits | endgame | pending; BRIEF phase 0 / S1 ModSynthesis data | not reviewed | unsourced rules |
-| Item/mod levels, base tags and influence pools | all | affix sheet partial; resolver sheet pending | data build started, rules pending | datamined fields; unsourced resolver semantics |
+| Item/mod levels, base tags and influence pools | all | [pool_resolution.md](pool_resolution.md), affix sheet | ordered weights/gates reviewed; families/multipliers/influence incomplete | documented + datamined; Q16/Q17 |
 | Tainted/Scourge, vendor, legacy Harvest, Foulborn and other mixed-game entries | undecided | mechanical inventory only | classify against Q3 before inclusion | unsourced current availability |
 
 No probability or eligibility not backed by a source is implied by a row. Unresolved claims remain in `docs/OPEN_QUESTIONS.md`.

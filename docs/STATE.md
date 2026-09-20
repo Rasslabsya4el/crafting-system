@@ -52,7 +52,7 @@ in WORKERS. The accepted worktree was removed without force.
 Work continues after the checkpoint; phase 0 was not completed. Starting `pob-base-tags`
 (Terra/xhigh) in its own worktree: 15-minute allowance for balanced parsing and five-file
 provenance checks, commands light and bounded. Lead concurrently sources pool semantics and
-prepares the 50-mod / five-class cross-check. One worker; no services.
+prepares the 50-mod / five-class cross-check. Two workers maximum; no services. A second bounded worker `mod-crosscheck` receives a 20-minute allowance for offline comparison/report tests across five HTML caches; no single command should approach ten minutes. Lead has found group-label differences (Q16) and omitted multiplier/generated-tag fields (Q17).
 
 1. Source base-tag/weight precedence and group/tier/range semantics; then specify the next PoB
    builder without claiming the current eight-field projection is a complete resolver.

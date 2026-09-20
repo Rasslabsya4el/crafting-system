@@ -12,8 +12,8 @@
 - [~] How Craft of Exile's calculator computes probabilities; how its simulator chains steps (`ebe5ab9`, `docs/research/coe-calculator-and-policies.md`; exact/extrapolation and configuration read, execution loop and Q14 verification pending)
 - [~] Data builders from Path of Building's data files into `data/*.json` (PoB version recorded; explicit projection `b0a19ae`; other tables and complete stat/range coverage pending)
 - [x] Full ModExplicit literal projection: 4310 records with source lines and hash, no inferred rules (`b0a19ae`; 19 tests pass)
-- [ ] Base tags and bench/essence/veiled/eldritch/corruption/Delve/synthesis builders (separate bounded specs)
-- [ ] Cross-check of 50+ mods over 5 item classes against Craft of Exile and PoEDB; discrepancies into `OPEN_QUESTIONS.md`
+- [~] Base tags and bench/essence/veiled/eldritch/corruption/Delve/synthesis builders (base spec `18b59f4` active; remaining tables not started)
+- [~] Cross-check of 50+ mods over 5 item classes against Craft of Exile and PoEDB; frozen 54-row spec, Q16 group differences; results pending worker acceptance
 - [ ] Review beast crafts, Dominance, influence orbs, synthesis implicits, catalysts/quality and item/mod-level gates (catalogue now exposes gaps; `ebe5ab9`)
 - [ ] Complete inventory-only sheets with preconditions, rule steps, numbers, conditions, examples and explicit source comparisons before implementation
 - [x] Read BRIEF 3b before engine design and record outcome-distribution/value contract (`970745a`, D7 and `docs/design/build_contract.md`)

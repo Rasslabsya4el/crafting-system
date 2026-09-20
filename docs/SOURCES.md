@@ -28,6 +28,14 @@
 | S24 | `sources/pob/Data/ModExplicit.lua`, all rows, keys `Strength1`, `Strength8`, `DeepwaterSwordGrantedSkillGhostCannons` | 2026-09-20 | Builder acceptance: 4310 rows/IDs, zero skipped rows; lines 5, 12, 4314 | Local S1 snapshot; same SHA-256 as S10. Own limited projection `data/pob_mod_explicit.json` from `tools/build_pob_explicit.py`, hash `e09344ce07c248bfef894aaf85141b5ec9be87f10da1709527d29e657bb92fb9` |
 | S25 | `sources/pob/Data/ModVeiled.lua`, keys `JunMasterAvoidStunAndElementalStatusAilments1`, `JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted`, lines 5-6 | 2026-09-20 | Verify definitions and literal fields; not an unveiling probability model | Local S1 snapshot (ignored) |
 
+| S26 | https://www.poewiki.net/index.php?title=Modifier&oldid=1697362 | 2026-09-20, user-opened browser | Mod Level, Group/family, Spawn weight tag, Mod tag; first matching spawn weight and multiple exclusion families | Selected observations in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+| S27 | `sources/pob/Data/Bases/{helmet,bow,ring,body,gloves}.lua` | 2026-09-20 | Five-class literal base projection; keys Iron Hat line 6, Crude Bow line 5, Iron Ring line 6, Simple Robe line 412, Iron Gauntlets line 6 | Local S1 snapshot; per-file hashes and 375-record specification in `docs/specs/2026-09-20-pob-base-tags.md` |
+| S28 | https://poedb.tw/us/Helmets_str | 2026-09-20 | Ordinary life family, 10 tiers, for cross-check with Iron Hat | `sources/raw/poedb/Helmets_str.html`; SHA-256 `41b793f58fb74c3ae8d3bb450db69d31f68b05c1cdfc8b1f8620939d792ad20b` |
+| S29 | https://poedb.tw/us/Bows | 2026-09-20 | Ordinary flat fire family, 10 tiers, group discrepancy versus PoB | `sources/raw/poedb/Bows.html`; SHA-256 `bb515fa6f35eaa471472a7866cf5eb97d1a0c93d3b1e0af12346fd03a39e98c2` |
+| S30 | https://poedb.tw/us/Rings | 2026-09-20 | Ordinary cold resistance 8 tiers and chaos resistance 6 tiers | `sources/raw/poedb/Rings.html`; SHA-256 `cd2a59059e375817c34062b1b71fe0c162c765c5e21fde2a45d2e1680273b929` |
+| S31 | https://poedb.tw/us/Body_Armours_int | 2026-09-20 | Ordinary flat energy shield, 11 tiers, group discrepancy versus PoB | `sources/raw/poedb/Body_Armours_int.html`; SHA-256 `4ec519836677852231b21d5bc38c402e0aa5549516edc0f30d84c2919e29ba2b` |
+| S32 | https://poedb.tw/us/Gloves_str | 2026-09-20 | Ordinary Strength, 9 tiers | `sources/raw/poedb/Gloves_str.html`; SHA-256 `082f4aaa7cad9b5ae1dfab63d12c1775fe1fad11c7a30c00611c9fb2de81fc0f` |
+
 Download policy: one GET per URL, no automatic retries; use the local copy thereafter.
 Cached third-party bytes are ignored by Git. Their presence does not establish that every field has been reviewed.
 
