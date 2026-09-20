@@ -99570,8 +99570,6 @@
       ]
     }
   ],
-  "pob_version": "2.67.2",
-  "poe_version": "3.29",
   "projection_fields": [
     "id",
     "type",
@@ -99583,11 +99581,13 @@
     "modTags",
     "source_line"
   ],
-  "record_count": 4310,
   "schema_version": 1,
   "source": {
     "path": "sources/pob/Data/ModExplicit.lua",
-    "sha256": "6d400101f60ec48f854daad9a5ca2479b43e9e405f92724e80631b276eaf4568"
-  },
-  "version_authority": "AGENTS.md section 1 (owner supplied; upstream revision unverified)"
+    "pob_version": "2.67.2",
+    "poe_version": "3.29",
+    "record_count": 4310,
+    "sha256": "6d400101f60ec48f854daad9a5ca2479b43e9e405f92724e80631b276eaf4568",
+    "version_authority": "AGENTS.md section 1 (owner supplied; upstream revision unverified)"
+  }
 }

@@ -47,9 +47,12 @@ def test_authored_wrapper_preserves_order_and_source_lines() -> None:
         (_fixture().replace("return {", "return {\nunexpected", 1), 3),
         (_fixture().replace("return {", "return"), 2),
         (_fixture().replace('affix = "first", ', ""), 3),
+        ("", 1),
+        ("return {\n", 1),
+        (_fixture() + '\n["After"] = { type = "Prefix", affix = "after", level = 1, group = "AfterGroup", weightKey = { "ring", }, weightVal = { 1 }, modTags = { }, },', 6),
     ],
 )
-def test_rejects_duplicate_unexpected_bad_wrapper_and_malformed_rows(
+def test_rejects_invalid_source_shapes(
     source: str, line: int
 ) -> None:
     with pytest.raises(ValueError, match=rf"line {line}:"):
@@ -71,8 +74,20 @@ def test_serialization_is_deterministic_utf8_lf_and_trailing_newline() -> None:
     loaded = json.loads(first)
     assert loaded["schema_version"] == 1
     assert loaded["projection_fields"] == list(PROJECTION_FIELDS)
-    assert loaded["record_count"] == 2
     assert loaded["source"]["path"] == "sources/pob/Data/ModExplicit.lua"
+    assert loaded["source"]["sha256"] == hashlib.sha256(
+        source.encode("utf-8")
+    ).hexdigest()
+    assert loaded["source"]["pob_version"] == "2.67.2"
+    assert loaded["source"]["poe_version"] == "3.29"
+    assert loaded["source"]["version_authority"] == (
+        "AGENTS.md section 1 (owner supplied; upstream revision unverified)"
+    )
+    assert loaded["source"]["record_count"] == 2
+    assert "pob_version" not in loaded
+    assert "poe_version" not in loaded
+    assert "version_authority" not in loaded
+    assert "record_count" not in loaded
 
 
 def test_full_s1_snapshot_has_all_expected_literal_projection_values() -> None:

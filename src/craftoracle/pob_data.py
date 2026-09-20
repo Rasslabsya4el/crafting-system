@@ -106,11 +106,14 @@ def build_pob_explicit_projection(source_text: str, source_sha256: str) -> dict:
     return {
         "schema_version": 1,
         "projection_fields": list(PROJECTION_FIELDS),
-        "source": {"path": _SOURCE_PATH, "sha256": source_sha256},
-        "pob_version": "2.67.2",
-        "poe_version": "3.29",
-        "version_authority": _VERSION_AUTHORITY,
-        "record_count": len(rows),
+        "source": {
+            "path": _SOURCE_PATH,
+            "sha256": source_sha256,
+            "pob_version": "2.67.2",
+            "poe_version": "3.29",
+            "version_authority": _VERSION_AUTHORITY,
+            "record_count": len(rows),
+        },
         "mods": rows,
     }
 
