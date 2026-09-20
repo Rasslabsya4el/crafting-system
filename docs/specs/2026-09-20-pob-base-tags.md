@@ -22,7 +22,7 @@ contract: these data must not be filtered to a particular desired item or utilit
 3. Extract literal `name`, `type`, optional `subType` (absent -> null), optional `socketLimit`
    (absent -> null), `tags` (string -> bool map), `influenceTags` (string -> string map),
    and `source` with relative file path and one-based line of assignment. Only top-level fields
-   count. Required fields absent/duplicate, duplicate names across the selected files and malformed
+   count. Required fields absent/duplicate, duplicate source path/line identities and malformed
    projected values must fail. Do not assign default sockets or infer class from the filename.
 4. Retain every record, including unusual/legacy/not_for_sale tags; do not filter availability.
    Document the limited projection (no defence/weapon properties, implicit text, reqs or resolver).
@@ -33,7 +33,7 @@ contract: these data must not be filtered to a particular desired item or utilit
    bases in file/source order. Deterministic sorted keys, UTF-8/LF/trailing newline, no timestamps.
    Validate all inputs before replacing output. Nothing from CoE is copied.
 6. Tests first with authored tiny fixtures: nested ignored tables, quoted braces, order/provenance,
-   absent optional fields, duplicate identifiers, bad required maps, unclosed record and unexpected
+   absent optional fields, repeated names retained, duplicate source identities, bad required maps, unclosed record and unexpected
    outside content. Source lines must refer to text.splitlines() positions (raw decoded source).
    Real build twice, byte compare. Existing suite remains green. Do not change lead docs.
 7. Commit allowed explicit paths only; final report with hash, tests, elapsed minutes, all numbers,
@@ -52,7 +52,11 @@ Counts / first / last / raw SHA-256:
   b764b6065a41af36d8433dd26838a6290ce0abd17431c3b7090ab935534f9557
 - gloves: 80, Iron Gauntlets / Golden Bracers,
   6c251c4582062109de151ad9c7b5bf9583c4b51fb6fa27e7f9d1648d6ead2217
-Total 375 records, no skips; verify unique-name count and report any duplicate as blocker.
+Total 375 records, no skips; 371 distinct display names. Ring has 48 records / 44 names:
+Two-Stone Ring occurs at lines 105/114/123, Shadowed Ring at 312/321/330.
+Retain all occurrences: identity is (source.path, source.line), not display name. No Lua execution
+or overwrite semantics are inferred. Duplicate source identities fail. This correction was made
+after worker found the counterexample and lead verified the raw file; D9 records the choice.
 Iron Hat: type Helmet, subType Armour, sockets 4, exactly 4 tags
 {armour:true, default:true, helmet:true, str_armour:true}; 8 influence tags,
 shaper -> helmet_shaper. Crude Bow: type Bow, null subType, sockets 6,
@@ -61,5 +65,6 @@ Iron Ring: type Ring, null subType and socketLimit, tags {default:true,ring:true
 Missing subType counts: 1/29/48/0/1 for helmet/bow/ring/body/gloves (79 total).
 Missing socketLimit counts: 0/0/48/0/0 (48 total).
 Synthetic one comment/header/record layout: assert exact assignment line and 2 ordered records;
-4 invalid classes minimum (duplicate name, malformed tags, unclosed record, unexpected outside).
+4 invalid classes minimum (duplicate source identity, malformed tags, unclosed record, unexpected outside).
+A repeated-name fixture must yield 2 records with different source lines; never collapse them.
 Report source hashes, output hash, all counts/keys above, deterministic comparison result.
