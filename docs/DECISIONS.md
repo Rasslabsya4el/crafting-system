@@ -32,3 +32,23 @@ Q2 records CoE's half-open random API combined with inclusive weighted intervals
 weighted draws will use all weight units, with tiny hand-computed tests before implementation.
 Reference implementation quirks must be reported separately from intended probabilities.
 Q6 and Q7 show that the same site's prose and code/data can disagree; neither is silently discarded.
+
+## 2026-09-20 D7. Outcome distributions precede target tests
+Source: owner instruction and `docs/BRIEF.md` section 3b, read 2026-09-20. This is a design
+requirement, not a game mechanic. Exact calculators and Monte Carlo summaries must expose an
+outcome distribution over resulting mod sets or explicitly defined scored classes. Required-mod
+predicates and utility thresholds consume that distribution; a scalar target probability alone
+is not the calculator contract. A scoring table is supplied by the caller and is a fast estimate,
+especially for weapon local-mod interactions; it is not an exact PoB evaluation.
+
+A policy includes its stopping rule and decisions to continue, restart, or stop after failure.
+Evaluation reports expected utility, expected cost, 90th-percentile cost, irreversible-failure
+risk, and required rare inputs. The ranker returns a Pareto frontier among evaluated templates,
+not a claim of globally optimal crafting. Cost quantiles are not confidence intervals.
+Do not merge states merely because their scores match if future legal actions or transitions
+differ. Any coarse distribution must state what information is lost before policies use it.
+
+Rejected: designing a success-only engine and bolting utility onto the ranker later; treating
+an additive value table as exact weapon damage; dropping failed outcomes and renormalizing
+without reporting their probability. No parent-system integration or general policy solver
+is introduced. Contract acceptance examples are in `docs/design/build_contract.md`.
