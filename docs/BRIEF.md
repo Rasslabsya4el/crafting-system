@@ -121,6 +121,24 @@ does not know is worth more than a complete-looking guess.
 - Speed target: a plan for one item in under a minute on 2 processes. If a template cannot be evaluated in that time, say so
   in the output instead of silently skipping it.
 
+### 3b. The contract with the build system (added 2026-09-20 evening; shapes the CORE, not an extra feature)
+
+The build system will not always ask for one exact item. It will hand over a VALUE FUNCTION for a slot -- first as an affix value
+table (mod group + tier -> how much it gives THIS build, measured by Path of Building; on weapons local mods multiply, so the
+table is only a fast estimate and the exact value of a concrete item is a separate Path of Building call the lead wires later)
+-- and wants back a FRONTIER, not one recipe: several policies with their expected value, expected cost, bad-case cost (90th
+percentile), steps / decision points, risk of an irreversible failure, rare inputs needed. "Triple T1 flat + attack speed" at
+100 units and "essence + two T2 + a crafted attack speed" at 93% of the value for 12 units are both answers; the build system
+then splits a loadout's budget across slots. Players stop at "good enough": the stopping rule is part of the policy.
+
+What this means for the prototype NOW: (1) calculators return the DISTRIBUTION of outcomes of a stage (probability per
+resulting mod set, or at least per scored class), not only the probability of one exact target; "success" is then a predicate
+or a score threshold over that distribution; (2) the item spec accepts either required mods OR a scoring table + a threshold
+("stop when score >= X"); (3) the ranker's output already carries expected cost, 90th-percentile cost, steps and decision
+points per strategy. The owner's helmet example stays the demo; add a second example with a scoring table
+(`examples/bow_value_table.yaml`, numbers invented and marked as such). Terms to use in docs: policy (the sequence of actions
+with conditions), outcome distribution, utility / value function, stopping rule, Pareto frontier.
+
 ### Not in the prototype
 
 A general optimal-policy solver; trade prices; a user interface; Path of Exile 2; integration with the parent's gear optimizer
