@@ -8,10 +8,14 @@ from pathlib import Path
 import pytest
 
 from tools.mod_crosscheck import (
+    ComparedRow,
+    ReportData,
+    SELECTIONS,
     SourceValues,
     build_report_data,
     canonical_output_hash,
     differing_fields,
+    group_comparison_counts,
     parse_coe_assignment,
     parse_coe_ranges,
     parse_poedb_mods_view,
@@ -70,6 +74,41 @@ def test_missing_and_ambiguous_source_matches_are_explicit() -> None:
     assert tier_missing.issue == "missing CoE fixture ilvl match"
 
 
+def test_missing_source_row_is_uncomparable_not_a_group_difference() -> None:
+    missing_coe = ComparedRow(
+        selection=SELECTIONS[0],
+        pob_id="FixtureMissingCoe",
+        source_line=1,
+        coe_modifier_id="fixture",
+        coe_base_id="fixture",
+        poedb_file="fixture.html",
+        poedb_index=0,
+        poedb_name="Fixture",
+        poedb_level=1,
+        pob=_values(group=("PoBGroup",)),
+        coe=None,
+        poedb=_values(group=("PoEDBGroup",)),
+        differing_fields=("coe-tier-match",),
+        observations=("missing CoE fixture ilvl match",),
+    )
+    data = ReportData(
+        inputs=(),
+        rows=(missing_coe,),
+        class_counts=(("Fixture", 1),),
+        selected_count=1,
+        unique_count=1,
+        pob_version="fixture",
+        poe_version="fixture",
+        pob_version_authority="fixture",
+    )
+    report = render_report(data)
+
+    assert group_comparison_counts(data.rows) == (0, 0, 1)
+    assert "| group-label differences (fully comparable triples) | 0 |" in report
+    assert "| uncomparable source rows | 1 |" in report
+    assert "missing CoE fixture ilvl match" in report
+
+
 def test_spawn_weight_uses_first_active_tag_including_zero() -> None:
     keys = ["blocked", "default"]
     values = [0, 1000]
@@ -110,6 +149,11 @@ def test_frozen_snapshot_reproduces_specified_counts_and_spot_checks() -> None:
 
     assert len(data.rows) == 54
     assert data.selected_count == data.unique_count == 54
+    assert data.pob_version == "2.67.2"
+    assert data.poe_version == "3.29"
+    assert data.pob_version_authority == (
+        "AGENTS.md section 1 (owner supplied; upstream revision unverified)"
+    )
     assert data.class_counts == (
         ("Helmet", 10),
         ("Bow", 10),
@@ -249,6 +293,7 @@ def test_frozen_snapshot_reproduces_specified_counts_and_spot_checks() -> None:
     differing = [row for row in data.rows if row.differing_fields]
     assert len(differing) == 21
     assert all(row.differing_fields == ("group",) for row in differing)
+    assert group_comparison_counts(data.rows) == (33, 21, 0)
 
 
 def test_report_rendering_is_deterministic_and_has_a_verifiable_hash() -> None:
@@ -260,3 +305,5 @@ def test_report_rendering_is_deterministic_and_has_a_verifiable_hash() -> None:
     declared = re.search(r"(?m)^\| output SHA-256 \| `([0-9a-f]{64})` \|$", first)
     assert declared is not None
     assert declared.group(1) == canonical_output_hash(first)
+    assert "PoB 2.67.2 / PoE 3.29" in first
+    assert "S4 = CoE snapshot" in first

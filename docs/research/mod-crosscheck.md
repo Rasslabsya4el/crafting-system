@@ -5,7 +5,8 @@ Mechanical comparison of the lead-selected correspondences from `docs/specs/2026
 | field | value |
 | --- | --- |
 | date read | 2026-09-20 |
-| snapshot labels | owner-supplied S24, S4, S27, S28-S32 |
+| PoB version metadata (S24) | PoB 2.67.2 / PoE 3.29; AGENTS.md section 1 (owner supplied; upstream revision unverified) |
+| source IDs | S4 = CoE snapshot; S27 = PoB base-tag sources; S28-S32 = PoEDB snapshots |
 | selected PoB IDs | 54 |
 | unique PoB IDs | 54 |
 | emitted comparison rows | 54 |
@@ -15,10 +16,11 @@ Mechanical comparison of the lead-selected correspondences from `docs/specs/2026
 | weight agreements | 54 |
 | range agreements | 54 |
 | side agreements | 54 |
-| group agreements | 33 |
-| group-label differences | 21 |
+| group agreements (fully comparable triples) | 33 |
+| group-label differences (fully comparable triples) | 21 |
+| uncomparable source rows | 0 |
 | deterministic two-run equality | true; CLI re-renders after re-reading all inputs before write |
-| output SHA-256 | `1d180284f4926bbb0497c48adf901e8c4e4295c937a2a69602fe7027915d3218` |
+| output SHA-256 | `10cd30510fa2c7e86222e60124b07608f57294e249ee50b678c9d6b9b28be6dc` |
 
 The output hash is SHA-256 of this UTF-8/LF report after replacing the value in its self-reference row with `<OUTPUT-SHA256-CANONICALIZED>`.
 

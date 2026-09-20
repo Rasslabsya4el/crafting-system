@@ -176,6 +176,9 @@ class ReportData:
     class_counts: tuple[tuple[str, int], ...]
     selected_count: int
     unique_count: int
+    pob_version: str
+    poe_version: str
+    pob_version_authority: str
 
 
 class _TextCollector(HTMLParser):
@@ -481,6 +484,14 @@ def build_report_data(root: Path = WORKTREE_ROOT) -> ReportData:
     projection_mods = projection.get("mods")
     if not isinstance(projection_mods, list):
         raise ValueError("PoB projection lacks a mods list")
+    projection_source = projection.get("source")
+    if not isinstance(projection_source, dict):
+        raise ValueError("PoB projection lacks source metadata")
+    pob_version = _required_str(projection_source, "pob_version", "PoB projection source")
+    poe_version = _required_str(projection_source, "poe_version", "PoB projection source")
+    pob_version_authority = _required_str(
+        projection_source, "version_authority", "PoB projection source"
+    )
     pob_by_id: dict[str, Mapping[str, Any]] = {}
     for mod in projection_mods:
         if not isinstance(mod, dict) or not isinstance(mod.get("id"), str):
@@ -699,6 +710,9 @@ def build_report_data(root: Path = WORKTREE_ROOT) -> ReportData:
         class_counts=_class_counts(),
         selected_count=len(selected_ids),
         unique_count=len(set(selected_ids)),
+        pob_version=pob_version,
+        poe_version=poe_version,
+        pob_version_authority=pob_version_authority,
     )
 
 
@@ -735,6 +749,22 @@ def _all_equal(row: ComparedRow, field: str) -> bool:
     return values[0] == values[1] == values[2]
 
 
+def group_comparison_counts(rows: Iterable[ComparedRow]) -> tuple[int, int, int]:
+    """Return equal, unequal, and uncomparable native-group triple counts."""
+
+    equal = 0
+    unequal = 0
+    uncomparable = 0
+    for row in rows:
+        if row.coe is None or row.poedb is None:
+            uncomparable += 1
+        elif _all_equal(row, "group"):
+            equal += 1
+        else:
+            unequal += 1
+    return equal, unequal, uncomparable
+
+
 def canonical_output_hash(report: str) -> str:
     """Hash report bytes after replacing its self-reference with the fixed marker."""
 
@@ -752,7 +782,7 @@ def render_report(data: ReportData) -> str:
     weight_matches = sum(_all_equal(row, "weight") for row in data.rows)
     range_matches = sum(_all_equal(row, "ranges") for row in data.rows)
     side_matches = sum(_all_equal(row, "side") for row in data.rows)
-    group_matches = sum(_all_equal(row, "group") for row in data.rows)
+    group_matches, group_differences, uncomparable_rows = group_comparison_counts(data.rows)
     coe_tier_matches = sum(row.coe is not None for row in data.rows)
     poedb_matches = sum(row.poedb is not None for row in data.rows)
     discrepancies = [row for row in data.rows if row.differing_fields or row.observations]
@@ -767,7 +797,9 @@ def render_report(data: ReportData) -> str:
         "| field | value |",
         "| --- | --- |",
         f"| date read | {DATE_READ} |",
-        "| snapshot labels | owner-supplied S24, S4, S27, S28-S32 |",
+        f"| PoB version metadata (S24) | PoB {data.pob_version} / PoE {data.poe_version}; "
+        f"{data.pob_version_authority} |",
+        "| source IDs | S4 = CoE snapshot; S27 = PoB base-tag sources; S28-S32 = PoEDB snapshots |",
         f"| selected PoB IDs | {data.selected_count} |",
         f"| unique PoB IDs | {data.unique_count} |",
         f"| emitted comparison rows | {len(data.rows)} |",
@@ -777,8 +809,9 @@ def render_report(data: ReportData) -> str:
         f"| weight agreements | {weight_matches} |",
         f"| range agreements | {range_matches} |",
         f"| side agreements | {side_matches} |",
-        f"| group agreements | {group_matches} |",
-        f"| group-label differences | {len(data.rows) - group_matches} |",
+        f"| group agreements (fully comparable triples) | {group_matches} |",
+        f"| group-label differences (fully comparable triples) | {group_differences} |",
+        f"| uncomparable source rows | {uncomparable_rows} |",
         "| deterministic two-run equality | true; CLI re-renders after re-reading all inputs before write |",
         "| output SHA-256 | `" + OUTPUT_HASH_TOKEN + "` |",
         "",
