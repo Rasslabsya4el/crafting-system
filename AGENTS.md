@@ -7,12 +7,12 @@ learn, decide or leave unfinished must be findable in the docs without asking yo
 
 ## 1. Boundaries
 
-- Never create, edit, move or delete anything outside `crafting/`. The parent repository is READ-ONLY for you, and only these
-  parts of it: `vendor/pob/source/src/Data/` (Path of Building's data files: `ModExplicit.lua`, `ModMaster.lua` (bench),
-  `ModVeiled.lua`, `ModEldritch.lua`, `ModCorrupted.lua`, `ModDelve.lua`, `ModSynthesis.lua`, `ModJewel*.lua`, `ModFlask.lua`,
-  `Essence.lua`, `ClusterJewels.lua`, `Bases/*.lua`), `docs/research/2026-09-20-crafting-oracle-brainstorm.md` (why this exists)
-  and `CLAUDE.md` (the parent's principles, for context). Do NOT read `reference/legacy/`: it is unverified machine-written
-  material and must not become a source of anything.
+- Never create, edit, move, delete OR READ anything outside `crafting/` (the harness denies external directories on purpose).
+  What you need from the parent is already copied in: `sources/pob/Data/` = Path of Building v2.67.2 (PoE 3.29) data files,
+  MIT-licensed, not committed here (`ModExplicit.lua`, `ModMaster.lua` (bench), `ModVeiled.lua`, `ModEldritch.lua`,
+  `ModCorrupted.lua`, `ModDelve.lua`, `ModSynthesis.lua`, `ModJewel*.lua`, `ModFlask.lua`, `ModItemExclusive.lua`,
+  `Essence.lua`, `ClusterJewels.lua`, `Crucible.lua`, `Bases/*.lua`); `docs/background/` = why this project exists. The
+  parent's `reference/legacy/` is unverified machine-written material and must never become a source of anything.
 - Never touch the parent's `var/`, `artifacts/`, `vendor/` contents, `.claude/worktrees/` or any running process. Never run Path
   of Building, the parent's scripts or its tests. Never run `git` commands against the parent repository.
 - Git here: commit early and often with a message that says what changed and why. Never `git add -A` / `git add .` -- add
@@ -70,3 +70,37 @@ learn, decide or leave unfinished must be findable in the docs without asking yo
   under a minute. Exact calculators are tested against hand-computed cases; Monte Carlo against the exact calculator.
 - No speculative architecture: no plugin systems, no config frameworks, no abstract base classes "for later". The prototype
   is judged by whether its numbers are right and its docs are honest, not by its size.
+
+## 6. You are the LEAD; code that is not crafting logic goes to workers (no third party in between)
+
+You work the way the parent project's lead works: YOU read the sources, decide what a rule is, write fact sheets, design the
+strategy templates, write specs, review and merge. WORKERS (the same model as you, `codex-sale-oai/gpt-5.6-terra` at
+reasoning `xhigh`, configured in `opencode.json`) write code from your written spec. There is no reviewer between you and
+them: you verify their work yourself.
+
+- **Delegate:** data builders and parsers (PoB's Lua tables -> our JSON), mechanical extraction from cached files ("list every
+  crafting method in package.js with its options and the function that implements it" -- a TABLE with pointers, no
+  interpretation), calculators and simulators from a formula or a fact sheet you wrote, tests, refactors, command-line glue.
+- **Never delegate:** what a rule IS (reading a source and deciding), confidence labels, resolving contradictions between
+  sources, the design of a strategy template, anything the owner asked you personally, `docs/STATE.md` / `TASKS.md` /
+  `DECISIONS.md` / `OPEN_QUESTIONS.md`.
+- **The spec** (`docs/specs/<date>-<slug>.md`, template in `docs/specs/TEMPLATE.md`): why; the files the worker may touch;
+  numbered requirements; the fact sheets it implements; the NUMBERS A TEST MUST REPRODUCE (a spec without checkable numbers is
+  not ready); what to report. One spec = one worker = at most ~90 minutes of work; bigger means split it.
+- **Isolation:** one git worktree per worker: `git worktree add .worktrees/<slug> -b w-<slug>` (`.worktrees/` is ignored).
+  Leftover worktrees cost nothing: after the merge use `git worktree remove .worktrees/<slug>` WITHOUT `--force`, and never
+  delete a worktree directory by hand or recursively.
+- **How to start a worker:** with your harness's subagent tool, agent `worker` (defined in `.opencode/agent/worker.md`), prompt
+  = "Spec: docs/specs/<file>. Worktree: .worktrees/<slug>." If the subagent tool is not available, start it as a separate
+  process with a deadline and wait for it to end (never poll in an endless loop):
+  `opencode run --dir .worktrees/<slug> -m codex-sale-oai/gpt-5.6-terra -f docs/specs/<file> "Do the task in the attached spec."`
+  and save its output to `out/workers/<slug>.md`.
+- **At most 2 workers at a time** (the owner works on this PC and the parent project's benchmark queue owns 5 of its 12
+  cores; a worker's tests are light, its process is not free). Non-overlapping files only.
+- **Acceptance is yours, item by item:** (1) the worker's tree is committed (commit leftovers as "WIP (lead)" on its branch);
+  (2) run the tests on its branch YOURSELF -- never trust a reported summary line; (3) read the WHOLE diff against the spec's
+  numbered requirements; (4) check every "number to report" against the value the spec asked for; (5) a fact that appeared
+  in code without a source = rejected, send it back or fix the fact sheet first; (6) merge with `git merge --no-ff w-<slug>`
+  and a message that carries the numbers; (7) one row in `docs/WORKERS.md`. A worker that died twice on one spec means the
+  spec is too big or too vague: rewrite it, do not retry a third time.
+

@@ -64,7 +64,7 @@ Goal: everything about how crafting works, in one place, as fact sheets with sou
    mod level gates, influence mod pools, anything the wiki's "Crafting" pages list that the catalogue misses. Sources: PoEDB
    (https://poedb.tw/us/), the community wiki (https://www.poewiki.net/ -- it may refuse automated fetchers; then say so in
    `OPEN_QUESTIONS.md`, the lead can read it through a browser), official patch notes, GGG staff posts.
-3. **The data**: mod pools and weights from Path of Building's data files (paths in `AGENTS.md` 1; format: `ModExplicit.lua`
+3. **The data**: mod pools and weights from Path of Building's data files (`sources/pob/Data/`, see `AGENTS.md` 1; format: `ModExplicit.lua`
    rows carry `type` Prefix / Suffix, `level`, `group`, `weightKey` / `weightVal` per base tag, `modTags`); base item tags from
    `Bases/*.lua`; essences from `Essence.lua`; bench crafts from `ModMaster.lua`; veiled, eldritch, corrupted, delve, synthesis
    mods from their files. Write `data/` builders that convert what we need into our own JSON (with the PoB version recorded).

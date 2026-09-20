@@ -1,5 +1,7 @@
 sources/raw/
+sources/pob/
+.worktrees/
+out/
 __pycache__/
 .pytest_cache/
-out/
 *.pyc
