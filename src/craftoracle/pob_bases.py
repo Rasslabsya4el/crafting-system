@@ -61,8 +61,15 @@ def _skip_space_and_comments(text: str, index: int = 0) -> int:
     return index
 
 
-def _read_string(text: str, index: int) -> tuple[str, int]:
-    """Read a quoted Lua string without evaluating Lua source."""
+def _read_string(
+    text: str, index: int, *, strict: bool = False
+) -> tuple[str, int]:
+    """Read a quoted short string without evaluating Lua source.
+
+    The structural reader accepts ignored-field strings sufficiently to find a
+    matching quote.  Projected strings use ``strict=True`` so unsupported
+    escapes and literal newlines fail instead of being silently changed.
+    """
     if index >= len(text) or text[index] not in "\"'":
         raise ValueError("expected quoted string")
     quote = text[index]
@@ -76,6 +83,8 @@ def _read_string(text: str, index: int) -> tuple[str, int]:
         character = text[index]
         if character == quote:
             return "".join(value), index + 1
+        if strict and character in "\r\n":
+            raise ValueError("literal newline in projected string")
         if character != "\\":
             value.append(character)
             index += 1
@@ -88,11 +97,20 @@ def _read_string(text: str, index: int) -> tuple[str, int]:
         if escaped.isdigit():
             digits = text[index:index + 3]
             digits = digits[: len(digits) - len(digits.lstrip("0123456789"))]
-            value.append(chr(int(digits, 10)))
+            number = int(digits, 10)
+            if strict and number > 255:
+                raise ValueError("decimal string escape exceeds 255")
+            value.append(chr(number))
             index += len(digits)
-        else:
-            value.append(escapes.get(escaped, escaped))
+            continue
+        if escaped in escapes:
+            value.append(escapes[escaped])
             index += 1
+            continue
+        if strict:
+            raise ValueError("unknown string escape")
+        value.append(escaped)
+        index += 1
     raise ValueError("unclosed quoted string")
 
 
@@ -159,10 +177,10 @@ def _only_space_or_comments(text: str, index: int) -> bool:
 
 def _read_map_key(text: str, index: int) -> tuple[str, int]:
     if index < len(text) and text[index] in "\"'":
-        return _read_string(text, index)
+        return _read_string(text, index, strict=True)
     if index < len(text) and text[index] == "[":
         index = _skip_space_and_comments(text, index + 1)
-        key, index = _read_string(text, index)
+        key, index = _read_string(text, index, strict=True)
         index = _skip_space_and_comments(text, index)
         if index >= len(text) or text[index] != "]":
             raise ValueError("malformed map key")
@@ -183,10 +201,13 @@ def _parse_map(value: str, expected_value: str) -> dict[str, object]:
         raise ValueError("unexpected text after projected map")
     inner = value[index + 1:end - 1]
     result: dict[str, object] = {}
-    for part in _split_top_level(inner):
+    parts = _split_top_level(inner)
+    for part_number, part in enumerate(parts):
         part_index = _skip_space_and_comments(part)
         if part_index == len(part):
-            continue
+            if len(parts) == 1 or part_number == len(parts) - 1:
+                continue
+            raise ValueError("empty projected map entry")
         key, part_index = _read_map_key(part, part_index)
         part_index = _skip_space_and_comments(part, part_index)
         if part_index >= len(part) or part[part_index] != "=":
@@ -200,9 +221,11 @@ def _parse_map(value: str, expected_value: str) -> dict[str, object]:
             part_index = match.end()
         else:
             try:
-                parsed, part_index = _read_string(part, part_index)
+                parsed, part_index = _read_string(part, part_index, strict=True)
             except ValueError as error:
-                raise ValueError("influenceTags values must be strings") from error
+                raise ValueError(
+                    f"influenceTags values must be strings: {error}"
+                ) from error
         if not _only_space_or_comments(part, part_index):
             raise ValueError("malformed projected map entry")
         if key in result:
@@ -214,9 +237,9 @@ def _parse_map(value: str, expected_value: str) -> dict[str, object]:
 def _parse_string(value: str, field: str) -> str:
     index = _skip_space_and_comments(value)
     try:
-        parsed, index = _read_string(value, index)
+        parsed, index = _read_string(value, index, strict=True)
     except ValueError as error:
-        raise ValueError(f"{field} must be a quoted string") from error
+        raise ValueError(f"{field} must be a quoted string: {error}") from error
     if not _only_space_or_comments(value, index):
         raise ValueError(f"malformed {field}")
     return parsed
@@ -282,7 +305,7 @@ def _parse_assignment_start(source_text: str, index: int) -> tuple[str, int]:
     if match is None:
         raise ValueError("malformed record assignment")
     try:
-        name, index = _read_string(source_text, match.end())
+        name, index = _read_string(source_text, match.end(), strict=True)
     except ValueError as error:
         raise ValueError("malformed record name") from error
     index = _skip_space_and_comments(source_text, index)

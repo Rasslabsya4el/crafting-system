@@ -32,8 +32,10 @@ def _fixture() -> str:
             '\ttype = "Helmet",',
             '\tsubType = "Armour",',
             "\tsocketLimit = 4,",
-            "\ttags = { armour = true, default = true, },",
+            "\ttags = { armour = true, -- line comment with } and {",
+            "\t\tdefault = true, },",
             '\tinfluenceTags = { shaper = "helmet_shaper", },',
+            "\t-- record comment with } and {",
             '\tignored = { nested = { text = "a } brace { stays quoted", }, },',
             "}",
             "",
@@ -52,7 +54,7 @@ def test_authored_fixture_preserves_order_provenance_and_optional_fields() -> No
     assert [base["name"] for base in bases] == ["First", "Second"]
     assert [base["source"] for base in bases] == [
         {"path": "sources/pob/Data/Bases/example.lua", "line": 4},
-        {"path": "sources/pob/Data/Bases/example.lua", "line": 13},
+        {"path": "sources/pob/Data/Bases/example.lua", "line": 15},
     ]
     assert bases[0] == {
         "name": "First",
@@ -72,9 +74,13 @@ def test_authored_fixture_preserves_order_provenance_and_optional_fields() -> No
     ("source", "message"),
     [
         (_fixture().replace("armour = true", 'armour = "true"'), "tags"),
+        (_fixture().replace("armour = true,", ",", 1), "empty projected map entry"),
+        (_fixture().replace("armour = true, --", "armour = true,, --"), "empty projected map entry"),
         (_fixture().replace('"helmet_shaper"', "true"), "influenceTags"),
-        (_fixture().replace("\ttags = { armour = true, default = true, },\n", ""), "missing required"),
-        (_fixture().replace("\ttags = { armour = true, default = true, },\n", "\ttags = { armour = true, },\n\ttags = { default = true, },\n"), "duplicate projected field"),
+        (_fixture().replace('"Helmet"', '"Hel\\qmet"'), "unknown string escape"),
+        (_fixture().replace('"Helmet"', '"Hel\nmet"'), "literal newline"),
+        (_fixture().replace("\ttags = { armour = true, -- line comment with } and {\n\t\tdefault = true, },\n", ""), "missing required"),
+        (_fixture().replace("\ttags = { armour = true, -- line comment with } and {\n\t\tdefault = true, },\n", "\ttags = { armour = true, },\n\ttags = { default = true, },\n"), "duplicate projected field"),
         (_fixture().replace("\n}\n\nitemBases[\"Second\"]", "\n\nitemBases[\"Second\"]", 1), "unclosed record"),
         (_fixture().replace("\n\nitemBases[\"Second\"]", "\nunexpected\nitemBases[\"Second\"]"), "unexpected outside content"),
     ],
@@ -88,7 +94,7 @@ def test_repeated_display_names_are_retained_with_distinct_source_lines() -> Non
     source = _fixture().replace('itemBases["Second"]', 'itemBases["First"]')
     bases = parse_base_source(source, "sources/pob/Data/Bases/example.lua")
     assert [base["name"] for base in bases] == ["First", "First"]
-    assert [base["source"]["line"] for base in bases] == [4, 13]
+    assert [base["source"]["line"] for base in bases] == [4, 15]
 
 
 def test_rejects_duplicate_source_identity_across_inputs() -> None:
