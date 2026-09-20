@@ -120,8 +120,12 @@ def _tokenize(source_text: str, source_path: str) -> list[_Token]:
                     index += 1
                     tokens.append(_Token("STRING", "".join(characters), string_line))
                     break
-                if current == "\n":
-                    raise _error(source_path, string_line, "unterminated string literal")
+                if current in "\r\n":
+                    raise _error(
+                        source_path,
+                        string_line,
+                        "literal line break in string literal",
+                    )
                 if current != "\\":
                     characters.append(current)
                     index += 1
@@ -277,7 +281,7 @@ class _LiteralParser:
                 else:
                     self._skip_value()
             elif self.current.kind == "LBRACKET":
-                self._skip_keyed_entry()
+                self._fail("bracket-keyed field is not allowed in a modifier row")
             else:
                 self._fail("unsupported expression in modifier row")
             self._after_table_entry("modifier row entry")

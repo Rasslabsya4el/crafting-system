@@ -86,6 +86,7 @@ def test_fixture_preserves_top_level_literals_and_ignores_nested_trade_text() ->
         (_fixture().replace('weightVal = { 100, 0, },', 'weightVal = { 100, },'), "lengths differ"),
         (_fixture().replace('statOrder = { 7, 8, },', 'statOrder = { "bad", },'), "number"),
         (_fixture().replace('level = 12,', 'level = untrusted(),'), "unsupported"),
+        (_fixture().replace('level = 12,', 'level = 12, ["level"] = 99,'), "bracket-keyed"),
         (_fixture() + "unexpected", "unexpected content"),
         ("return {\n", "missing closing"),
     ],
@@ -106,6 +107,19 @@ def test_duplicate_ids_are_rejected_with_the_second_row_line() -> None:
 
     with pytest.raises(ValueError, match=r"fixture\.lua:18: duplicate id 'TopLevel'"):
         parse_mod_source(duplicate, "fixture.lua")
+
+
+def test_rejects_literal_carriage_return_inside_a_quoted_string() -> None:
+    malformed = (
+        "return {\n"
+        '["CR"] = { type = "Prefix", affix = "bad\rvalue", "stat", '
+        'statOrder = { 1 }, level = 1, group = "group", weightKey = { }, '
+        "weightVal = { }, modTags = { }, },\n"
+        "}\n"
+    )
+
+    with pytest.raises(ValueError, match=r"fixture\.lua:2: literal line break"):
+        parse_mod_source(malformed, "fixture.lua")
 
 
 def test_all_optional_fields_are_null_when_absent() -> None:
