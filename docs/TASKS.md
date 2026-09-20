@@ -1,10 +1,12 @@
 # Tasks (`[x]` done + commit, `[~]` in progress, `[ ]` not started, `[!]` blocked + question id; never delete, strike with a reason)
 
 ## Phase 0 -- knowledge harvest
-- [ ] Cache Craft of Exile's application and data files once; list them in `docs/SOURCES.md`
-- [ ] Action catalogue `docs/mechanics/INDEX.md` (action, loadout tier guess, sheet status, confidence)
-- [ ] Fact sheets: basic currency (Transmute .. Divine)
-- [ ] Fact sheets: bench crafts and metamods
+- [x] Cache Craft of Exile's application and data files once; list them in `docs/SOURCES.md` (`f51e468`: seven requested files plus PoE 1 homepage)
+- [x] Worker delegation smoke: one PoB row and two tests, own worktree, lead acceptance (`c1df1b6`; spec `6b4f0fe`)
+- [~] Mechanical offline method inventory from frozen CoE code (spec `f51e468`, worker active)
+- [~] Action catalogue `docs/mechanics/INDEX.md` (action, loadout tier guess, sheet status, confidence)
+- [~] Fact sheets: basic currency (Transmute .. Divine)
+- [~] Fact sheets: bench crafts and metamods
 - [ ] Fact sheets: essences; fossils and resonators; harvest
 - [ ] Fact sheets: eldritch currency; Awakener's Orb; fracturing; veiled mods; recombinators; corruption
 - [ ] How Craft of Exile's calculator computes probabilities; how its simulator chains steps (notes with pointers)

@@ -20,3 +20,15 @@ The first worker gets one PoB row, eight projected fields, and two tests. This v
 source traceability and lead acceptance before a full data builder is specified. It does not establish
 general Lua parsing or crafting eligibility. Workers use GPT-5.6 Terra with xhigh reasoning, with
 at most two active workers, each in an ignored worktree contained in this repository.
+
+## 2026-09-20 D5. Separate an observed CoE branch from a current-game claim
+S3 is shared between games; S12 supplies PoE 1 overrides. Use named PoE 1 branches and keep
+legacy/toggle conditions. CoE prose does not get the `documented` label reserved here for wiki/GGG:
+reviewed CoE code/text uses `reimplemented-from-CoE`. PoB field facts use `datamined`.
+Unknown current-patch behavior stays `unsourced`; the cache date alone proves no patch compatibility.
+
+## 2026-09-20 D6. Do not reproduce apparent reference bugs in the future exact engine
+Q2 records CoE's half-open random API combined with inclusive weighted intervals. Mathematical
+weighted draws will use all weight units, with tiny hand-computed tests before implementation.
+Reference implementation quirks must be reported separately from intended probabilities.
+Q6 and Q7 show that the same site's prose and code/data can disagree; neither is silently discarded.
