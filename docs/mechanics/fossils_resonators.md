@@ -98,3 +98,19 @@ S3 special branches read independently:
 
 S56 corroborates the nature of the Q13 dispute; it does not resolve it. All special recipes
 still require current patch/eligibility evidence, especially the S39 Fractured Fossil replacement.
+
+
+## Ordinary-mode resonator gate clarified
+S58 https://www.poewiki.net/index.php?title=Resonator&oldid=1675208, Mechanics/List/Ruthless,
+read 2026-09-20 (`documented`): ordinary-mode obtainable Chaotic resonators reforge rare
+items. Alchemical resonators target normal items and are now obtained in Ruthless; existing
+legacy ones still work. Thus frozen CoE's broad non-magic gate is not sufficient for the confirmed
+ordinary 3.29 loadout. Normal-item fossil starts require an explicitly available legacy input,
+not an assumed current Alchemical resonator. Record the source-local difference as Q30.
+
+The resonator must be full; no duplicate fossil type is allowed within it. A blocked modifier
+tag overrides a more-weight effect, and all socketed fossils contribute their use restrictions.
+Example: a Fire-tag candidate remains weight 0 when Frigid blocks Fire, even if another fossil
+boosts Fire (S58 precedence, S56 tag interpretation). A 2-slot resonator with only 1 fossil is
+not usable. Completed sockets lock in the fossils; this preparation can consume rare inputs
+before the random item outcome, so a later policy must count the complete resonator recipe.

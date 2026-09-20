@@ -37,6 +37,8 @@
 | Q29.02 | Do ordinary catalysts choose a random quality type (yes/no)? | S57 summary says random type; S46 distinguishes chosen ordinary catalyst types from Tainted random type. | overview wording conflict; use S46 item-family rule, not random ordinary types |
 | Q29.03 | Does Conflict require both Eldritch implicits (yes/no)? | S57 says and/or; S23 item text explicitly requires both. | overview wording conflict; use specific S23 condition, no one-sided Conflict permission |
 
+| Q30 | Can an ordinary 3.29 newly obtained resonator be used on a normal item (yes/no)? | S58 ordinary Chaotic resonators target rares; Alchemical acquisition is Ruthless-only, with legacy items still functional. S3 broad fossil metadata excludes magic but permits normal. | resolved no for the current ordinary obtainable-input loadout; legacy Alchemical input must be separately allowed |
+
 ## Q16 — individual discrepancies in the 54-row sample
 
 Lead independently checked all raw-source fields on 2026-09-20. Only group labels differ in

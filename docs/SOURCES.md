@@ -64,6 +64,8 @@
 
 | S57 | https://www.poewiki.net/index.php?title=Crafting&oldid=1697718 | 2026-09-20, browser | Catalogue completeness: socket/enchantment, unique, Memory, Allflame and other families; overview wording conflicts Q29 | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 
+| S58 | https://www.poewiki.net/index.php?title=Resonator&oldid=1675208 | 2026-09-20, browser | Chaotic rare gate, Ruthless alchemical distinction, fossil uniqueness and block precedence | Selected paraphrases in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+
 Download policy: one GET per URL, no automatic retries; use the local copy thereafter.
 Cached third-party bytes are ignored by Git. Their presence does not establish that every field has been reviewed.
 
