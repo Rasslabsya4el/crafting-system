@@ -47,6 +47,8 @@ Bench group is a PoB label, not independently proven complete exclusion families
 - Authored duplicated class key or essence ID and missing required field each raise ValueError.
   Authored one stat string containing a comma/brace remains exactly one stat string.
 - Two builds produce byte-identical outputs for both files.
+- Lead-verified source correction: ModMaster.lua:308 has statOrder [857,857.1]. This array
+  contains literal numbers, not only integers; preserve the fractional value without rounding.
 
 ## Numbers to report
 All counts/fixture values above; zero skips/errors; source hashes; output bytes/SHA-256;
