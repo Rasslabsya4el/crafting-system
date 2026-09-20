@@ -14,11 +14,11 @@ method tree (95 named nodes, including legacy/mixed-game entries and options) is
 | Fossils and resonators | mapping / endgame | [fossils_resonators.md](fossils_resonators.md) | weight path reviewed, partial | reimplemented-from-CoE + documented metamod exception |
 | Harvest reforges and augments | endgame | [harvest.md](harvest.md) | partial | documented + reimplemented-from-CoE |
 | Eldritch currency and Orb of Conflict | endgame | [eldritch_currency.md](eldritch_currency.md) | partial | documented + reimplemented-from-CoE |
-| Awakener's Orb | endgame | [awakener_orb.md](awakener_orb.md) | partial dispatch notes | reimplemented-from-CoE |
-| Fracturing Orb | endgame | [fracturing.md](fracturing.md) | inventory only | reimplemented-from-CoE |
-| Veiled modifiers and Veiled Chaos | endgame | [veiled.md](veiled.md) | data example / inventory only | datamined + reimplemented-from-CoE |
+| Awakener's Orb | endgame | [awakener_orb.md](awakener_orb.md) | eligibility and selection reviewed; Q20 conflict discrepancy | documented + reimplemented-from-CoE |
+| Fracturing Orb | endgame | [fracturing.md](fracturing.md) | eligibility and selection reviewed, partial | documented + reimplemented-from-CoE |
+| Veiled Exalted, Veiled Chaos and unveiling | endgame | [veiled.md](veiled.md) | effects and side selection reviewed; offer probabilities open | documented + datamined + reimplemented-from-CoE |
 | Recombinators | endgame | [recombinators.md](recombinators.md) | inventory only | reimplemented-from-CoE |
-| Corruption (Vaal and Locus) | endgame | [corruption.md](corruption.md) | inventory only | reimplemented-from-CoE |
+| Corruption (Vaal and Locus) | endgame | [corruption.md](corruption.md) | category distribution reviewed; detailed transitions partial; Q18 version difference | documented + reimplemented-from-CoE |
 | Beast crafts: imprint, restore, prefix/suffix swap, aspects | later | pending; inventory `beast_crafting.*` | not reviewed | unsourced rules; S3 names only |
 | Orb of Dominance / elevated modifiers | endgame | pending; inventory `currency.maven` | not reviewed | unsourced rules; S3 names only |
 | Influence Exalted orbs | endgame | pending; inventory `currency.shaper` through `currency.warlord` | not reviewed | unsourced rules; S3 names only |
@@ -27,5 +27,9 @@ method tree (95 named nodes, including legacy/mixed-game entries and options) is
 | Synthesis implicits | endgame | pending; BRIEF phase 0 / S1 ModSynthesis data | not reviewed | unsourced rules |
 | Item/mod levels, base tags and influence pools | all | [pool_resolution.md](pool_resolution.md), affix sheet | ordered weights/gates reviewed; families/multipliers/influence incomplete | documented + datamined; Q16/Q17 |
 | Tainted/Scourge, vendor, legacy Harvest, Foulborn and other mixed-game entries | undecided | mechanical inventory only | classify against Q3 before inclusion | unsourced current availability |
+| 3.29 bench rerolls, Talisman fracture/imprint and changed Fractured Fossil | undecided | [patch_3_29.md](patch_3_29.md) | availability/gates recorded; algorithms open | documented patch deltas |
+
+For a 3.29 target, read [patch_3_29.md](patch_3_29.md) before using the older beast/synthesis/
+socket inventory. S39 removes or replaces several actions still present in S3 (Q18/Q19).
 
 No probability or eligibility not backed by a source is implied by a row. Unresolved claims remain in `docs/OPEN_QUESTIONS.md`.

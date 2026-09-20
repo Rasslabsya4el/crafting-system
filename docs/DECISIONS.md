@@ -69,3 +69,12 @@ and does not execute Lua or claim which variant would be live after runtime eval
 Rejected: silently overwriting variants by name, dropping them, or inventing game IDs. The
 first spec incorrectly required unique names; worker stopped and lead corrected it before
 acceptance. Full base identity and availability remain future resolver work.
+
+## D10 — 2026-09-20 — Cache freshness does not establish one ruleset
+Official 3.29 notes (S39) disagree with frozen CoE action labels/paths for corruption sockets,
+synthesis, beast splits and Fractured Fossils. Keep the mechanical inventory as historical
+source evidence; classify version deltas in patch_3_29.md and per-action sheets. Rejected:
+silently refreshing CoE, deleting old inventory entries, or treating every cached path as
+current. Q3 still determines target; scoped 3.29 facts can be documented before that answer.
+Awakener group-conflict resolution is an additional non-version-resolved disagreement (Q20),
+so its implementation remains unsupported rather than inheriting CoE receiver preference.
