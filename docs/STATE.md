@@ -100,3 +100,6 @@ no individual command approached ten minutes.
 3. Delegate exact distributions and spam-policy costs with hand-computed acceptance numbers,
    followed by a seeded Monte Carlo check. Keep optional catalogue work and unresolved special
    actions visible in TASKS, outside the first executable slice.
+
+## Night log
+- 00:05 — read GOAL and repository rules; item-model pool spec written, worker launch next.

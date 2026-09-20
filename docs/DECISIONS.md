@@ -104,3 +104,10 @@ data is the fuller source projection, not a second canonical ruleset. A future r
 share parsing primitives after a separate spec. Rejected: silently changing the comparison
 schema during acceptance, rounding ordering values, deriving tiers from display affixes, or
 treating retained multipliers as understood percentage rules (Q17).
+
+## D13 — 2026-09-21 — Provisional ordinary pool boundary for the vertical slice
+The night goal uses the accepted PoB literal projection with first matching base-tag weight,
+PoB group exclusion, level gates and ordinary prefix/suffix caps. Generated tags and weight
+multipliers remain retained data but are not applied (Q16/Q17). Non-ordinary flags raise the
+exact Q9 error. Rejected: silently modelling blocked action families, inferred tier parsing,
+or a resolver that treats all cached modifier tables as one pool.

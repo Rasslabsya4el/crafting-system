@@ -60,3 +60,5 @@ all game mechanics. No dependent path may silently guess.
 - [ ] Strategy templates 1-6 as policies with stopping/restart rules and decision points
 - [ ] The ranker and `python -m craftoracle plan ...`: Pareto frontier of evaluated policies with expected utility, expected cost, p90 cost, irreversible-failure risk and rare inputs
 - [ ] Validate two thresholds on one distribution, conditional terminal value, and dominance filtering; distinguish cost quantiles from confidence intervals
+
+- [~] Night vertical slice: item model and ordinary PoB pool resolver (spec `2026-09-21-item-model-pool.md`; worker launch next)
