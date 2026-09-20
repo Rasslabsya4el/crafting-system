@@ -42,12 +42,17 @@ transition odds, Q12 incomplete families, Q13 fossil stacking/data and Q14 calcu
 remain unresolved. Builders for other PoB tables and the 50-mod/5-class CoE+PoEDB comparison
 are not done. These gaps do not block source research; dependent engine paths must not guess.
 
-## Handover and next three actions
+## Active work and next three actions
 
 Worker `pob-explicit-projection` (Terra/xhigh) accepted after one metadata correction. Commits
 `a25c58b` / `a15925c`, acceptance merge `b0a19ae`; report and checklist in
 `out/workers/pob-explicit-projection.md` (ignored). Prior inventory recovery provenance corrected
-in WORKERS. No active worker jobs/services remain; worker worktrees removed without force.
+in WORKERS. The accepted worktree was removed without force.
+
+Work continues after the checkpoint; phase 0 was not completed. Starting `pob-base-tags`
+(Terra/xhigh) in its own worktree: 15-minute allowance for balanced parsing and five-file
+provenance checks, commands light and bounded. Lead concurrently sources pool semantics and
+prepares the 50-mod / five-class cross-check. One worker; no services.
 
 1. Source base-tag/weight precedence and group/tier/range semantics; then specify the next PoB
    builder without claiming the current eight-field projection is a complete resolver.
