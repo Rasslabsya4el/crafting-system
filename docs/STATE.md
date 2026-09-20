@@ -59,3 +59,7 @@ prepares the 50-mod / five-class cross-check. Two workers maximum; no services. 
 2. Cross-check at least 50 mods over five item classes against CoE and PoEDB; log discrepancies.
 3. Finish high-priority rule gaps and calculator/run-loop notes before a bounded distribution-first
    engine spec; retain all BRIEF 3b tasks, including the invented bow value-table example.
+
+Base worker source counterexample: 375 records / 371 names (repeated ring variants).
+Lead verified and corrected spec to preserve (path,line) identities, D9. Up to ten additional
+minutes allowed for the bounded test/schema correction; no unbounded job or service.

@@ -60,3 +60,12 @@ key/value arrays ordered and retain zero weights. It supplies neither inferred t
 item model, stat ranges, first-match weight resolution or influence rules. Rejected: advertising
 this partial projection as an engine-ready mod pool, or filtering it for the helmet target.
 Other PoB tables, base tags and cross-source comparisons remain separate phase-0 work.
+
+## 2026-09-20 D9. Preserve base source occurrences, not unique display names
+S27 ring.lua contains Two-Stone Ring assignments at 105/114/123 and Shadowed Ring at
+312/321/330: 48 ring records but 44 names, 375 records / 371 names across the five files.
+The literal projection identifies an occurrence by (source.path, source.line), retains all,
+and does not execute Lua or claim which variant would be live after runtime evaluation.
+Rejected: silently overwriting variants by name, dropping them, or inventing game IDs. The
+first spec incorrectly required unique names; worker stopped and lead corrected it before
+acceptance. Full base identity and availability remain future resolver work.
