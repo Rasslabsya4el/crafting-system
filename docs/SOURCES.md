@@ -24,7 +24,14 @@
 | S20 | https://www.poewiki.net/wiki/Chaos_Orb | 2026-09-20, browser | Mechanics review; no independent count weights obtained from the reviewed section | Selected observations in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S21 | https://www.poewiki.net/index.php?title=Essence&oldid=1700895 | 2026-09-20, browser | Crafting section: rare reforge tier threshold and low-tier random-mod level caps | Selected observations in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S22 | `sources/pob/Data/Essence.lua`, key `Metadata/Items/Currency/CurrencyEssenceRage4` | 2026-09-20 | Shrieking Rage tier 6, Helmet -> Strength8 mapping | Local S1 snapshot (ignored); read directly, no builder yet |
+| S23 | https://www.poewiki.net/wiki/Orb_of_Conflict | 2026-09-20, browser | Non-unique / dual-implicit eligibility, Lesser removal, relative-tier odds; approximate odds cite a player post on the page | Selected observation in `sources/raw/wiki/browser-observations-2026-09-20.md`; last edited 2026-07-26 |
+| S24 | `sources/pob/Data/ModExplicit.lua`, all rows, keys `Strength1`, `Strength8`, `DeepwaterSwordGrantedSkillGhostCannons` | 2026-09-20 | Builder acceptance: 4310 rows/IDs, zero smoke-parser failures; lines 5, 12, 4314 | Local S1 snapshot; same SHA-256 as S10 |
+| S25 | `sources/pob/Data/ModVeiled.lua`, keys `JunMasterAvoidStunAndElementalStatusAilments1`, `JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted`, lines 5-6 | 2026-09-20 | Verify definitions and literal fields; not an unveiling probability model | Local S1 snapshot (ignored) |
 
 Download policy: one GET per URL, no automatic retries; use the local copy thereafter.
 Cached third-party bytes are ignored by Git. Their presence does not establish that every field has been reviewed.
-| S23 | https://www.poewiki.net/wiki/Orb_of_Conflict | 2026-09-20, browser | Eligibility, relative-strength direction and equal-tier split for Orb of Conflict | Selected observation in `sources/raw/wiki/browser-observations-2026-09-20.md` |
+
+Additional S3 review on 2026-09-20: fossil weights (`poec_workoutFOMTypes`, `poec_getModdedWeight`),
+calculator exact/extrapolation paths (`poec_computePermutationsV2`, `poec_computeFinalProbsV2`),
+and simulator configuration (`poec_nsimBuildConfig`, `poec_nsimRelayConfigData`). Notes in
+`docs/research/coe-calculator-and-policies.md`; no new download.

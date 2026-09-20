@@ -4,7 +4,7 @@
 
 An essence upgrades a normal item to rare and applies one guaranteed affix. Tier 5 (Screaming) and higher can reforge a rare item in the same broad manner as Chaos while retaining the guaranteed affix. Lower tiers do not have that rare-item reforge operation. The Wiki page also says lower tiers cap the random modifier level when the item level is above that tier's cap.
 
-| Tier | Name | Maximum random-mod level | Minimum crafted item level | Rare reforge |
+| Tier | Name | Maximum random-mod level | Result's minimum required level (Wiki column) | Rare reforge |
 |---:|---|---:|---:|---|
 | 1 | Whispering | 35 | 1 | no |
 | 2 | Muttering | 45 | 8 | no |
@@ -14,7 +14,28 @@ An essence upgrades a normal item to rare and applies one guaranteed affix. Tier
 | 6 | Shrieking | no cap | 59 | yes |
 | 7 | Deafening | no cap | 65 | yes |
 
-Essences cannot be used on an item carrying a meta-crafting modifier such as Prefixes Cannot Be Changed or Cannot roll Caster Modifiers. This is an eligibility rule observed on the Wiki page and must be represented as a rejection, not as a silent reroll.
+The Wiki column is **minimum required level of the crafted item**, not a minimum input item
+level. The earlier draft abbreviated it ambiguously. Do not use 1/8/20/33/46/59/65 as input
+eligibility gates. Rechecked S21's rendered table on 2026-09-20.
+
+S21 warns against meta-crafting modifiers such as Prefixes Cannot Be Changed and Cannot roll
+Caster Modifiers. S17's specific Essence/Fossil example explicitly exempts multimod alone.
+Apply the prohibition to outcome-affecting metamods; do not silently extend it to that exception.
+S3 `poec_cmethods.essence` additionally excludes magic rarity and requires `is_essence` base
+support. Full corrupted/mirrored/fractured legality remains Q9.
+
+## Observed steps and numeric examples
+
+S3 `poec_simApplyCraftGO`, essence branch, selects a forced mod/tier from the essence and base
+mapping, rejects a conflicting fractured group, and calls a rare reroll with that forced mod.
+The remaining pool and count are conditional on [affix generation](affix_generation.md).
+The precise special-essence and item-flag matrix is not complete.
+
+- For ordinary tier 4, a synthetic ilvl 86 input has random-mod cap min(86,75)=75; at ilvl 60
+  the cap is min(60,75)=60. Arithmetic from S21, not actual item samples.
+- Tier 4 rare reforge: rejected; tier 5 rare reforge: allowed by S21's tier condition, provided
+  the other item eligibility checks pass. This does not claim all rare items are valid.
+- S22 Helmet mapping for Shrieking Rage resolves to exactly 1 forced modifier ID, `Strength8`.
 
 ## Data mapping
 
@@ -28,4 +49,4 @@ Craft of Exile's dispatch in `sources/raw/coe/package.js` calls the essence rero
 - `datamined`: `sources/pob/Data/Essence.lua`, S22.
 - `reimplemented-from-CoE`: `sources/raw/coe/package.js`, S3, essence dispatch.
 
-Open questions: exact interaction with every metamod, forced-mod tier selection for every base, and post-3.29 changes are not inferred here.
+Open questions: Q3 target patch, Q9 full eligibility, Q10 recorded CoE disagreement.

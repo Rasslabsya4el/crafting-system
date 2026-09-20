@@ -15,4 +15,7 @@ Do not implement a Harvest probability or lock interaction until the exact actio
 - `documented`: S18 Wiki version 3.27.0 and S19 official patch notes.
 - `reimplemented-from-CoE`: S3 `package.js`, Harvest dispatch and nerf toggle.
 
-Open questions Q3 and Q6 in `docs/OPEN_QUESTIONS.md` remain active.
+Read 2026-09-20. Source pointers: S3 `poec_cmethods.harvest` line 5,
+`crsim_hnerf` line 1777, `poec_simToggleHarvestNerf` line 1848, augment dispatch near
+line 2341. This is a partial source map, not a completed step-by-step action specification.
+Preconditions, exact probabilities and numeric worked examples remain unapproved under Q3/Q6/Q9.
