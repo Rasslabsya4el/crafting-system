@@ -27,3 +27,4 @@
 
 Download policy: one GET per URL, no automatic retries; use the local copy thereafter.
 Cached third-party bytes are ignored by Git. Their presence does not establish that every field has been reviewed.
+| S23 | https://www.poewiki.net/wiki/Orb_of_Conflict | 2026-09-20, browser | Eligibility, relative-strength direction and equal-tier split for Orb of Conflict | Selected observation in `sources/raw/wiki/browser-observations-2026-09-20.md` |
