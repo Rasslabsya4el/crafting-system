@@ -17,7 +17,7 @@ Global corruption/mirroring and unlock availability remain Q9; unlocks belong in
 ## Datamined identities
 All five rows have a PoB `level` field of 1 and empty `modTags`; this is not a claim about
 character level or recipe unlock level. Their `types` maps list supported equipment classes
-including Helmet, Ring, Amulet and Belt; use the complete source map in a future builder.
+including Helmet, Ring, Amulet and Belt; the accepted literal builder retains all maps in `data/pob_bench.json` (732 records, 8d49e8f).
 
 | modifier | affix side | PoB group / source line |
 |---|---|---|

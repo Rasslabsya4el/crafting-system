@@ -39,7 +39,7 @@ The precise special-essence and item-flag matrix is not complete.
 
 ## Data mapping
 
-`PoB data: sources/pob/Data/Essence.lua`, for example `Metadata/Items/Currency/CurrencyEssenceRage4`, identifies tier 6 Shrieking Essence of Rage and maps each base class to a forced modifier (`Helmet -> Strength8`). The full table is the input for a future builder; this sheet does not copy the table into the engine.
+`PoB data: sources/pob/Data/Essence.lua`, for example `Metadata/Items/Currency/CurrencyEssenceRage4`, identifies tier 6 Shrieking Essence of Rage and maps each base class to a forced modifier (`Helmet -> Strength8`). The accepted literal builder exports 105 records and 2310 class mappings to `data/pob_essences.json` (8d49e8f). All 622 distinct referenced IDs occur in local ModExplicit; this verifies links, not every action gate or probability.
 
 Craft of Exile's dispatch in `sources/raw/coe/package.js` calls the essence reroll path with one forced modifier and a tier. That is implementation evidence, not a replacement for the PoB mapping. Its old prose says only Shrieking and Deafening can reforge rare items; the higher-ranked Wiki observation includes Screaming, so the disagreement is recorded as Q10.
 

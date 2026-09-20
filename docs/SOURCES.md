@@ -23,7 +23,7 @@
 | S19 | https://www.pathofexile.com/forum/view-thread/3869068 | 2026-09-20, browser | Official Content Update 3.27.0, League Changes: Harvest respects modifier-type restrictions | Selected observations in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S20 | https://www.poewiki.net/wiki/Chaos_Orb | 2026-09-20, browser | Mechanics review; no independent count weights obtained from the reviewed section | Selected observations in `sources/raw/wiki/browser-observations-2026-09-20.md` |
 | S21 | https://www.poewiki.net/index.php?title=Essence&oldid=1700895 | 2026-09-20, browser | Crafting section: rare reforge tier threshold and low-tier random-mod level caps | Selected observations in `sources/raw/wiki/browser-observations-2026-09-20.md` |
-| S22 | `sources/pob/Data/Essence.lua`, key `Metadata/Items/Currency/CurrencyEssenceRage4` | 2026-09-20 | Shrieking Rage tier 6, Helmet -> Strength8 mapping | Local S1 snapshot (ignored); read directly, no builder yet |
+| S22 | `sources/pob/Data/Essence.lua`, key `Metadata/Items/Currency/CurrencyEssenceRage4` | 2026-09-20 | Shrieking Rage tier 6, Helmet -> Strength8 mapping | Local S1 snapshot (ignored); own projection `data/pob_essences.json` accepted in `8d49e8f` |
 | S23 | https://www.poewiki.net/wiki/Orb_of_Conflict | 2026-09-20, browser | Non-unique / dual-implicit eligibility, Lesser removal, relative-tier odds; approximate odds cite a player post on the page | Selected observation in `sources/raw/wiki/browser-observations-2026-09-20.md`; last edited 2026-07-26 |
 | S24 | `sources/pob/Data/ModExplicit.lua`, all rows, keys `Strength1`, `Strength8`, `DeepwaterSwordGrantedSkillGhostCannons` | 2026-09-20 | Builder acceptance: 4310 rows/IDs, zero skipped rows; lines 5, 12, 4314 | Local S1 snapshot; same SHA-256 as S10. Own limited projection `data/pob_mod_explicit.json` from `tools/build_pob_explicit.py`, hash `e09344ce07c248bfef894aaf85141b5ec9be87f10da1709527d29e657bb92fb9` |
 | S25 | `sources/pob/Data/ModVeiled.lua`, keys `JunMasterAvoidStunAndElementalStatusAilments1`, `JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted`, lines 5-6 | 2026-09-20 | Verify definitions and literal fields; not an unveiling probability model | Local S1 snapshot (ignored) |
@@ -75,3 +75,14 @@ and simulator configuration (`poec_nsimBuildConfig`, `poec_nsimRelayConfigData`)
 Further S3 review: Awakener pair/conflict selection (1926-1933, 2443-2446), corruption
 (2805-2822), recombination (1886-1925), and per-action policy execution (3365-3399).
 Source-local algorithms and cross-source differences are recorded in their sheets; no JS executed.
+
+S11 full-file acceptance on 2026-09-20: 732 anonymous ModMaster rows, lines 5-736;
+SHA-256 ddf3fb7499539db0596678d9527c433cc043fa68555f2ea47687b6ffd94cd301.
+Own projection data/pob_bench.json, builder tools/build_pob_recipes.py; statOrder:308
+contains [857,857.1]. These are ordering literals, not asserted integer game stat IDs.
+S22 full-file acceptance: 105 Essence rows, lines 5-109, 2310 class mappings / 622 referenced
+ModExplicit IDs; all references found. Source SHA-256
+977d1d744bade2d16092511e2d86771b7a3ae7df72a74d97461ebeb310aa1b20.
+Own projection data/pob_essences.json. Version pin remains owner-supplied (Q8).
+S7 guide-directory review: 52 references (37 video / 15 written), date field spans
+2022-01-23 through 2023-09-26. No embedded article bodies; no linked recipe treated as read.
