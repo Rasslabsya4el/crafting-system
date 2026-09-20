@@ -52,3 +52,11 @@ Rejected: designing a success-only engine and bolting utility onto the ranker la
 an additive value table as exact weapon damage; dropping failed outcomes and renormalizing
 without reporting their probability. No parent-system integration or general policy solver
 is introduced. Contract acceptance examples are in `docs/design/build_contract.md`.
+
+## 2026-09-20 D8. A literal PoB projection before a resolver
+The first full-file builder exports all 4310 ModExplicit rows, the existing eight projected
+fields plus source_line, raw-byte hash and owner-supplied version provenance (S24). Keep weight
+key/value arrays ordered and retain zero weights. It supplies neither inferred tiers nor an
+item model, stat ranges, first-match weight resolution or influence rules. Rejected: advertising
+this partial projection as an engine-ready mod pool, or filtering it for the helmet target.
+Other PoB tables, base tags and cross-source comparisons remain separate phase-0 work.
