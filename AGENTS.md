@@ -74,9 +74,10 @@ learn, decide or leave unfinished must be findable in the docs without asking yo
 ## 6. You are the LEAD; code that is not crafting logic goes to workers (no third party in between)
 
 You work the way the parent project's lead works: YOU read the sources, decide what a rule is, write fact sheets, design the
-strategy templates, write specs, review and merge. WORKERS (the same model as you, `codex-sale-oai/gpt-5.6-terra` at
-reasoning `xhigh`, configured in `opencode.json`) write code from your written spec. There is no reviewer between you and
-them: you verify their work yourself.
+strategy templates, write specs, review and merge. WORKERS (subagents you start in the Codex desktop app: the same model as
+you, GPT-5.6 Terra at extra-high reasoning -- the owner sets the model in the app) write code from your written spec. There is
+no reviewer between you and them: you verify their work yourself. If you ARE a worker (your prompt names a spec and a
+worktree), this section does not apply to you: `docs/WORKER_RULES.md` does.
 
 - **Delegate:** data builders and parsers (PoB's Lua tables -> our JSON), mechanical extraction from cached files ("list every
   crafting method in package.js with its options and the function that implements it" -- a TABLE with pointers, no
@@ -90,11 +91,15 @@ them: you verify their work yourself.
 - **Isolation:** one git worktree per worker: `git worktree add .worktrees/<slug> -b w-<slug>` (`.worktrees/` is ignored).
   Leftover worktrees cost nothing: after the merge use `git worktree remove .worktrees/<slug>` WITHOUT `--force`, and never
   delete a worktree directory by hand or recursively.
-- **How to start a worker:** with your harness's subagent tool, agent `worker` (defined in `.opencode/agent/worker.md`), prompt
-  = "Spec: docs/specs/<file>. Worktree: .worktrees/<slug>." If the subagent tool is not available, start it as a separate
-  process with a deadline and wait for it to end (never poll in an endless loop):
-  `opencode run --dir .worktrees/<slug> -m codex-sale-oai/gpt-5.6-terra -f docs/specs/<file> "Do the task in the attached spec."`
-  and save its output to `out/workers/<slug>.md`.
+- **How to start a worker:** with the Codex desktop app's own way of starting a subagent / parallel task. The worker's prompt
+  is always exactly this shape: "You are a WORKER. Read docs/WORKER_RULES.md first, then AGENTS.md sections 1, 2, 3, 5. Spec:
+  docs/specs/<file>. Your worktree: .worktrees/<slug> (branch w-<slug>) -- work only there." Save each worker's final report
+  to `out/workers/<slug>.md`. The FIRST delegation is a smoke test: a five-minute spec (for example "a function that parses
+  one row of `sources/pob/Data/ModExplicit.lua` into a dict + two tests") to prove that a subagent starts, works in its
+  worktree, commits and reports. If subagents cannot be started in your environment, say so in `docs/STATE.md`, tell the
+  owner in one line, and do the code yourself under the same spec-and-tests discipline -- never stop the project for it.
+- **Network:** if your sandbox blocks web access, do not fight it: write the exact list of URLs you need into
+  `docs/OPEN_QUESTIONS.md` and ask the owner in chat to allow the network or to drop the files into `sources/raw/coe/`.
 - **At most 2 workers at a time** (the owner works on this PC and the parent project's benchmark queue owns 5 of its 12
   cores; a worker's tests are light, its process is not free). Non-overlapping files only.
 - **Acceptance is yours, item by item:** (1) the worker's tree is committed (commit leftovers as "WIP (lead)" on its branch);
