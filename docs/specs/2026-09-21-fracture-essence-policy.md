@@ -3,7 +3,7 @@
 Worktree: `.worktrees/fracture-essence-policy` (branch `w-fracture-essence-policy`).
 May touch ONLY `src/craftoracle/fracture_policies.py`, `src/craftoracle/optimizer.py`,
 `src/craftoracle/plan_inputs.py`, `data/loadouts/endgame.json`, `data/prices.example.json`,
-`tests/test_fracture_policies.py`, `tests/test_plan_inputs.py`.
+`tests/test_fracture_policies.py`, `tests/test_plan_inputs.py`, `tests/test_plan_cli.py`.
 Dependencies: accepted fractured-item-actions, template optimizer and fossil policy
 integration (shared files). Bounded60minutes; no independent source decisions.
 
@@ -39,6 +39,8 @@ eligibility is documented. Prices/salvage assumptions are caller inputs.
    missing permission/price, no-target/unreachable and base-price scaling tests. Use one
    shared real fixture; no repeated expensive full plan grids in ordinary unit tests.
    Keep source/model confidence visible, especially uniform CoE selection.
+   Update existing CLI integration assertions for the added helmet policy and explicit
+   bow exclusion using existing result fixtures; do not add duplicate full plan runs.
 
 ## Numbers to reproduce/report
 - u0,v.5,f.25,p.5,B3,A2,S1,F5,E4 ->mean60.

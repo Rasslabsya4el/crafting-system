@@ -23,7 +23,9 @@ python -m pytest -q
 Latest focused lead acceptance:39 Harvest/policy/input/CLI tests passed in0.54minute
 on55c8191. Accepted Harvest adapter:26 tests, exact Life9=.07950823245417578,
 820/10000 seeded samples within Hoeffding .019494746, zero suffix violations.
-Full main regression at3712602:285 passed in49.74s (0.83minute). Full source-tool tests require the ignored local snapshots;
+Full main regression at2b1d36a:329 passed in60.62s (1.01minutes); under-minute acceptance
+is not yet met. Optimizer correction2 includes reducing repeated expensive test work while
+preserving numerical coverage. Full source-tool tests require the ignored local snapshots;
 worker focused tests do not require unrelated snapshots. Pytest temp stays in .pytest_tmp.
 
 Source research is now S1-S79. Fifteen owner rows corrected inffcf869; no owner test is

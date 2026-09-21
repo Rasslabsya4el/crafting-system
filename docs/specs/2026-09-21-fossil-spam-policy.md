@@ -3,7 +3,7 @@
 Worktree: `.worktrees/fossil-spam-policy` (branch `w-fossil-spam-policy`).
 May touch ONLY `src/craftoracle/fossil_policies.py`, `src/craftoracle/plan_inputs.py`,
 `src/craftoracle/optimizer.py`, `data/loadouts/endgame.json`, `data/prices.example.json`,
-`tests/test_fossil_policies.py`, `tests/test_plan_inputs.py`.
+`tests/test_fossil_policies.py`, `tests/test_plan_inputs.py`, `tests/test_plan_cli.py`.
 Dependencies: accepted fossil adapter AND template optimizer; start only after their merges.
 Bounded60minutes. No source research or changes to other action rules.
 
@@ -39,6 +39,8 @@ availability domain; the worker implements its mathematics, not new game facts.
    One shared real helmet/bow fixture exercises the accepted adapter and integration;
    do not rerun all15 large grids per assertion. Tests stay below the global one-minute
    target; avoid unrelated full CLI subprocess repetitions. Explicit caller caches only.
+   Update existing CLI integration assertions for the added policy/frontier using their
+   existing shared result fixtures; adding a family must not leave obsolete policy counts.
 
 ## Numbers to reproduce/report
 - Design:a.25,p.5,A2,c3,B0 ->mean6.5,p90 11,CDF8=.8125/CDF11=.90625.
