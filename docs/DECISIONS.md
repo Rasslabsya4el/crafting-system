@@ -168,3 +168,18 @@ selection is ordinary Divine: existing sheet already sources integer rerolls. Im
 integer range per affix with side locks, explicit unsupported shapes and an enumeration limit;
 do not infer all numeric stat semantics or add a general parser. New spec records75 real
 Life9/Chaos6 outcomes and hand event2/15. Other special families remain question-ID stubs.
+
+## D18 — 2026-09-21 — Frontier compares completed policies and explicit stopping rules
+BRIEF3b requires both value and cost. Compare expected terminal utility (conditional on
+completion), expected cost, cost p90 and irreversible item-destruction risk. A dominating
+candidate is no worse in every dimension and strictly better in at least one; identical
+points both remain. Rare-input permissions constrain candidates before comparison, without
+inventing a numeric ordering on input names. Keep dominated policies visible in the full
+ranked table and mark frontier membership separately, so the helmet demo retains its recipes.
+
+Compare bow thresholds60/100 by reusing caller-owned raw distributions and recalculating
+stopping probability, conditional utility and cost for each threshold. Do not reuse a score
+projection as a transition state or turn threshold100 into the user's minimum requirement60.
+Single-threshold IDs stay stable; comparison IDs include their stopping threshold. Rejected:
+one scalar value/cost ratio, dropping all but the cheapest helmet policy, and a global cache
+whose result could survive changed pool weights. Risk remains distinct from overspending.
