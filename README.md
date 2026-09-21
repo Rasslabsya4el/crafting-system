@@ -29,6 +29,18 @@ python -m craftoracle plan examples/bow_value_table.yaml --loadout data/loadouts
 
 `data/prices.example.json` contains invented chaos-equivalent prototype inputs, not trade prices. p90 is the 90th-percentile total cost, while an estimated p90 prints its DKW uncertainty interval, sample count, seed, and error bound. Results are exact only under the stated provisional ordinary-crafting assumptions; each plan prints those assumptions and the source notes from the selected inputs.
 
+The default planner searches the documented finite choices within each template and prints
+the selected parameters and candidate audit. Protected Exalt cycles try one, two or three
+slams, with paid preparation after a full-prefix failure. Magic stage gates and early
+stopping are part of the policy. This is a minimum-cost search within those grids, not a
+global optimum over every possible crafting route. `policies.evaluate_fixed_policies`
+retains the earlier fixed recipes for explicit benchmark comparisons.
+
+Item level stays fixed unless `--item-level-range MIN:MAX` is supplied. The optional search
+uses distinct eligible PoB pools, keeps the target tier IDs and holds the supplied base
+price constant. An incomplete grid or level interval is reported explicitly. Combined
+threshold searches keep separate level-search status for each stopping threshold.
+
 The helmet plan includes protected-suffix Harvest Life with repeated lock costs and paid recovery after a full-prefix failure. Ordinary Harvest and 18 ordinary fossil types also have exact-distribution and seeded-sampling APIs. Harvest type blocking uses an explicit `first_only` model; `all_draws` is a sensitivity option while that narrower rule remains unresolved. Fossil positive factors use the owner's selected CoE additive model; multiplicative sensitivity remains available. Unsupported special recipes and item states raise an explicit error. Current exact recombination, Awakener conflict selection, unequal-tier Conflict, veiled offers, corruption and beast replacement rules retain the specific research gates in `docs/OPEN_QUESTIONS.md`.
 
 `fracturing.fracture_distribution(item, data)` returns concrete item states for an ordinary
