@@ -14,6 +14,11 @@
 - [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
 - [x] Locate matching recombinator Reddit/diagram chain S66-S69 and document classic and selected-mod modes separately (`ffcf869`); current exact odds remain open.
 - [~] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy: Harvest55c8191; ordinary fossil adapter worker active; fracture/catalyst specs ready.
+- [~] Ordinary fossil adapter:18 supported fossils, additive default and explicit multiplicative sensitivity; spec `eb6ae28`/`7c95d90`, worker active.
+- [ ] Ordinary fossil policy: caller allowlist up to4 fossils/15 combinations, complete resonator pricing and terminal mixture; design/spec `2fc0f9d`.
+- [ ] Concrete fracture identity and retained-mod basic actions; spec `14ce845`; follows fossil adapter.
+- [ ] Fracture-Life then Envy policy with every failed base/preparation paid and two early-stop choices; design/spec `2fc0f9d`.
+- [ ] Catalyst quality distribution and supplied-jewellery finishing policy; spec `7c95d90`; follows fracture state fields.
 - [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
 
 ## Phase 0 -- knowledge harvest

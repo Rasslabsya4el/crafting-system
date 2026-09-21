@@ -1,4 +1,4 @@
-# Current state — GOAL 2 active (2026-09-21, 12:41 CEST)
+# Current state — GOAL 2 active (2026-09-21, 12:52 CEST)
 
 1. Ordinary PoE3.29 is the owner-confirmed target; GOAL2 is incomplete and work continues.
 2. Harvest exact/sampler merged527efa7; protected-suffix helmet policy merged55c8191.
@@ -9,7 +9,7 @@
 7. Twelve cached-CoE cases accepted3712602;25 correspondences, max relative difference2.08735%, none above5%.
 8. Optimizer pending: protected k1 baseline8357.19; legal fixed k2 measurement4693.13, k3 paid-reset4787.90.
 9. General solver pending: no state-count/runtime/optimum result exists yet; bow recheck follows optimizer.
-10. Next: accept12-case report; accept attempt kernel and optimize templates; run bounded solver/family policies.
+10. Next: accept attempt kernel and optimize templates; accept fossil adapter; run bounded solver/family policies.
 
 ## Working commands and evidence
 
@@ -74,3 +74,4 @@ lead-selected Terra reasoning, or Luna for very light tasks. No orchestration sk
 - 10:29 CEST — core,41 known answers and Pareto merged;244 tests green; final bounded Divine worker in progress.
 - 10:41 CEST — all core/stretch work accepted;248 tests green; worker-model instruction updated; final handover committed.
 - 11:52 CEST — matrix132cells and bases561 merged; Harvest correction1 and offline12-case validation in progress; optimiser/solver pending.
+- 12:52 CEST — Harvest55c8191 and12-case CoE3712602 accepted;285 tests0.83minute. Attempt kernel/fossil adapter active; optimizer/solver and paid family policy specs ready.
