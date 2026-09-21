@@ -31,6 +31,14 @@ python -m craftoracle plan examples/bow_value_table.yaml --loadout data/loadouts
 
 The helmet plan includes protected-suffix Harvest Life with repeated lock costs and paid recovery after a full-prefix failure. Ordinary Harvest and 18 ordinary fossil types also have exact-distribution and seeded-sampling APIs. Harvest type blocking uses an explicit `first_only` model; `all_draws` is a sensitivity option while that narrower rule remains unresolved. Fossil positive factors use the owner's selected CoE additive model; multiplicative sensitivity remains available. Unsupported special recipes and item states raise an explicit error. Current exact recombination, Awakener conflict selection, unequal-tier Conflict, veiled offers, corruption and beast replacement rules retain the specific research gates in `docs/OPEN_QUESTIONS.md`.
 
+`fracturing.fracture_distribution(item, data)` returns concrete item states for an ordinary
+rare with at least four ordinary modifiers, including the selected `fractured_mod_id`.
+`apply_fracturing(item, data, rng)` samples that same uniform CoE model directly. Basic
+currency, Essence and Divine retain the identified fracture. For repeated roll samples,
+prepare an immutable `actions.prepare_roll_plan(...)`, then call `sample_roll(plan, rng)`;
+preparing a new plan reflects changed caller data. Fractured Harvest/fossil inputs remain
+explicitly unsupported. A wrong fracture is a different resulting item, never a free retry.
+
 The twelve-case independent comparison against the frozen Craft of Exile calculator is documented in `docs/validation/coe_cases.md`. Reproduce it locally, with the ignored source cache present and no network requests:
 
 ```powershell
