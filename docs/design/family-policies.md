@@ -80,3 +80,11 @@ demonstration, not a guessed model for preparation's unknown junk. After fractur
 roll removes all nonfractured explicit identities, so its distribution only depends on
 retained Life9, the forced Chaos6 and the ordinary pool. Use a validated Life9-only fractured
 rare state to calculate that reroll. Never continue from an identity-free OutcomeClass.
+
+Independent lead calculation at2f30602 before the fracture adapter: the accepted grouped
+DP with retained Life9/Chaos6, both groups excluded, and total-2 remaining draws gives
+30 terminal classes and finish probability .06101200110346221. Default prices/base0
+give early-off mean4244.571170153949 versus early-on4227.736691448135. The early-on
+preparation masses are u=.000024282088455126462 and v=.02428733447648724. These are
+acceptance references for the forthcoming adapter/policy, not proof of its implementation.
+Reproduction details and measured counts: out/lead-fracture-reference.json (local output).

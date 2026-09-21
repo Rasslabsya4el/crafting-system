@@ -46,6 +46,12 @@ eligibility is documented. Prices/salvage assumptions are caller inputs.
 - u0,v1,f.25,p1,B1,A1,S0,F2,E3 ->cost4Geom(.25)+3,mean19,p90 39.
 - Early off has4 expected Fracturing and4 fresh bases; raising base price by7 raises
   its mean by28, not7. Early-on follows expected-base multiplier s/z.
+- Lead independent DP/renewal reference at2f30602, default prices/base0:
+  finishing p=.06101200110346221,30 terminal classes. Early-off v=.024298372342207553,
+  mean4244.571170153949. Early-on u=.000024282088455126462,v=.02428733447648724,
+  mean4227.736691448135; expected bases3.988050380133888,Alchemy164.0388811447735,
+  Scour160.05083076463964,Fracturing3.9840671735118507,Envy16.324932396315752.
+  Reproduce through your actual adapter/policy; these are checks, not implementation constants.
 - Real selected u,v,f,p, mean,p90+interval, expected counts, candidate early-stop choice,
   terminal mass1; best helmet before/after at invented Fracturing1000; bow unavailable.
 - Focused tests/commits/files; questions and limitations; report starts `=== FINAL REPORT ===`.

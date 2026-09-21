@@ -63,6 +63,10 @@ Real Royal Burgonet86 input IncreasedLife9/ChaosResist6/FireResist8/ColdResist8:
 outcomes each1/4; desired fracture IncreasedLife9. On that successful outcome, Envy3
 retains Life9 and forces Chaos6; compute final exact target probability for any T1 elemental
 resistance and compare direct seeded draws to it. No guessed probability is supplied.
+Lead independent grouped-DP reference at2f30602 (before this adapter exists): retaining
+Life9+Chaos6 and blocking both groups, with remaining counts2/3/4 weighted8/3/1,
+gives30 terminal classes and final target p=.06101200110346221. Reproduce through your
+actual fractured-item adapter, not by inserting this value.
 Life9 numerical value132 remains132 under a Divine of the fractured item while another
 supported integer-range affix rerolls over its existing accepted range.
 
