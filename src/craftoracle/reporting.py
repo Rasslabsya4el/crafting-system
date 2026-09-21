@@ -196,7 +196,34 @@ def _route(route: Mapping[str, Any], plan: Mapping[str, Any], context: Mapping[s
         attempts = _first_stage(route)
         if attempts is not None and _number(attempts.get("expected_attempts"), "magic expected_attempts") > 0:
             metadata["success_probability"] = 1 / _number(attempts.get("expected_attempts"), "magic expected_attempts")
-    return {"key": f"{identifier}-{threshold if threshold is not None else 'base'}-{index}", "id": identifier, "name": str(route.get("name", identifier)), "expected_cost": route.get("expected_cost"), "cost_p90": route.get("cost_p90"), "cost_label": "приблизительно" if route.get("cost_p90_interval") else "точно", "expected_utility": route.get("expected_utility"), "frontier": bool(route.get("frontier", False)), "stopping_threshold": threshold, "stages": stages, "parameters": dict(_mapping(route.get("parameters", {}), "parameters")), "decisions": list(route.get("decision_points", [])), "metadata": metadata, "source": {"assumptions": list(route.get("assumptions", [])), "design": ["docs/design/route-report.md", "docs/design/parameter-search.md", "docs/design/family-policies.md"], "generation": context.get("generation", {})}, "audit": {"parameter_audit": list(route.get("parameter_audit", [])), "terminal_distribution": list(route.get("terminal_distribution", []))}, "instructions": _instructions(identifier, route, context), "accounting": material_accounting(route, plan, context)}
+    title = _route_title(identifier, route, context)
+    return {"key": f"{identifier}-{threshold if threshold is not None else 'base'}-{index}", "id": identifier, "name": str(route.get("name", identifier)), "title": title, "search_text": f"{title} {identifier} {route.get('name', '')}", "expected_cost": route.get("expected_cost"), "cost_p90": route.get("cost_p90"), "cost_label": "приблизительно" if route.get("cost_p90_interval") else "точно", "expected_utility": route.get("expected_utility"), "frontier": bool(route.get("frontier", False)), "stopping_threshold": threshold, "stages": stages, "parameters": dict(_mapping(route.get("parameters", {}), "parameters")), "decisions": list(route.get("decision_points", [])), "metadata": metadata, "source": {"assumptions": list(route.get("assumptions", [])), "design": ["docs/design/route-report.md", "docs/design/parameter-search.md", "docs/design/family-policies.md"], "generation": context.get("generation", {})}, "audit": {"parameter_audit": list(route.get("parameter_audit", [])), "terminal_distribution": list(route.get("terminal_distribution", []))}, "instructions": _instructions(identifier, route, context), "accounting": material_accounting(route, plan, context)}
+
+
+def _route_title(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any]) -> str:
+    parameters = _mapping(route.get("parameters", {}), "parameters")
+    if identifier == "suffix-protected-life-bench-131":
+        return "Envy → защита суффиксов → Exalted Orb → верстак"
+    if identifier == "suffix-protected-life":
+        return "Envy → защита суффиксов → Exalted Orb"
+    if identifier == "suffix-protected-harvest-life":
+        return "Envy → защита суффиксов → Harvest Life"
+    if identifier == "fracture-life-envy":
+        return "Фрактура здоровья T1 → Envy"
+    if identifier.startswith("fossil"):
+        names = _mapping(context.get("fossil_names", {}), "fossil_names")
+        selected = ", ".join(str(names.get(str(value), names.get(value, f"fossil {value}"))) for value in parameters.get("fossil_ids", []))
+        return "Fossil: " + selected
+    if identifier.startswith("alchemy-scour"):
+        return "Alchemy → Scouring"
+    if identifier.startswith("chaos"):
+        return "Alchemy → Chaos Orb"
+    if identifier.startswith("magic"):
+        return "Alteration → Regal → Exalted Orb"
+    if identifier.startswith("essence"):
+        essence_id = parameters.get("forced_essence_id", parameters.get("essence_id"))
+        return str(_mapping(context.get("essence_names", {}), "essence_names").get(essence_id, essence_id or route.get("name", identifier)))
+    return str(route.get("name", identifier))
 
 
 def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any]) -> list[str]:
@@ -218,25 +245,32 @@ def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[st
         return ["Примените Orb of Alchemy и немедленно проверьте цель.", f"При неудаче заполните один {sockets}-socket Chaotic Resonator: {selected}; примените его к rare-предмету.", "Повторяйте полный рецепт и проверяйте после каждого применения."]
     if identifier.startswith("fracture"):
         early = bool(parameters.get("alchemy_early_stop", False))
-        return ["На каждой новой normal-базе примените Orb of Alchemy." + (" После каждого Alchemy проверьте раннее завершение." if early else " Ранняя проверка намеренно отключена."), f"Если цель не готова, но ровно четыре ordinary explicit уже включают {life}, немедленно примените Fracturing Orb. Иначе применяйте Orb of Scouring + Orb of Alchemy до этого условия.", "Неверную фрактуру отложите с salvage 0 и купите новую базу; отмены нет.", f"При фрактуре {life} повторяйте Deafening Essence of Envy до цели."]
+        return ["На каждой новой обычной базе примените Orb of Alchemy." + (" После каждого Alchemy проверьте раннее завершение." if early else " Ранняя проверка намеренно отключена."), f"Если цель не готова, но ровно четыре обычных явных модификатора уже включают {life}, немедленно примените Fracturing Orb. Иначе применяйте Orb of Scouring + Orb of Alchemy до этого условия.", "Неверную фрактуру отложите без выручки от продажи в этом расчёте и купите новую базу; отмены нет.", f"При фрактуре {life} повторяйте Deafening Essence of Envy до цели."]
     if identifier.startswith("suffix-protected-harvest"):
-        return _protected_preparation(parameters) + ["Создайте Suffixes Cannot Be Changed (729), затем примените Harvest reforge Life с first_only; attack/caster blocker не используется.", "Life9 завершает маршрут. При свободном префиксе повторите оплаченный lock + reforge; при трёх префиксах вернитесь к Envy-подготовке. Scour здесь нет."]
+        return _protected_preparation(parameters) + ["Примените Harvest reforge Life с Suffixes Cannot Be Changed; attack/caster blocker не используется.", f"{life} завершает маршрут. При свободном префиксе повторите оплаченные защиту суффиксов и reforge; при трёх префиксах вернитесь к Envy-подготовке. Scour здесь нет."]
     if identifier.startswith("suffix-protected"):
         max_exalts = _integer(parameters.get("max_exalts", 0), "max_exalts")
-        steps = _protected_preparation(parameters) + ["Создайте Suffixes Cannot Be Changed (729) и примените Orb of Scouring."]
+        steps = _protected_preparation(parameters) + ["Примените Suffixes Cannot Be Changed и Orb of Scouring."]
         if max_exalts:
-            steps.append(f"Сделайте до {max_exalts} Exalt Orb; остановитесь после первого {life}. Только после неудачи всех {max_exalts} slam: при свободном префиксе повторите оплаченные lock + Scour, при трёх префиксах вернитесь к Envy.")
+            steps.append(f"Сделайте до {max_exalts} Exalted Orb; остановитесь после первого {life}. Только после неудачи всех {max_exalts} применений: при свободном префиксе повторите оплаченные защиту суффиксов и Scour, при трёх префиксах вернитесь к Envy.")
         if parameters.get("bench_finish_id") is not None:
             bench = _mapping(context.get("bench_names", {}), "bench_names").get(str(parameters["bench_finish_id"]), f"bench {parameters['bench_finish_id']}")
-            steps.append(f"Завершите {bench}; это не заменяет требуемый Life9.")
+            steps.append(f"Завершите {bench}; это не заменяет требуемый {life}.")
         return steps
     if identifier.startswith("magic"):
         max_exalts = _integer(parameters.get("max_exalts", 0), "max_exalts")
         early = bool(parameters.get("early_stop", False))
         magic_gate, regal_gate = parameters.get("magic_min_desired"), parameters.get("regal_min_desired")
-        steps = ["Примените Orb of Transmutation; это оплачиваемый setup без проверки.", "Примените Orb of Alteration; только при одном модификаторе добавьте Orb of Augmentation.", f"{'Сначала проверяйте цель на каждом этапе.' if early else 'Проверяйте цель только на последнем настроенном этапе.'} Затем требуется не менее {magic_gate} желаемых модификаторов: моды из цели или тиры с положительной ценностью из входной таблицы; неудача сбрасывается Orb of Scouring + Transmutation.", f"Затем примените Regal Orb; после проверки цели требуется не менее {regal_gate} желаемых модификаторов, иначе сброс Orb of Scouring + Transmutation."]
+        steps = ["Примените Orb of Transmutation; это оплачиваемая подготовка без проверки.", "Примените Orb of Alteration; только при одном модификаторе добавьте Orb of Augmentation.", f"{'Сначала проверяйте цель на каждом этапе.' if early else 'Проверяйте цель только на последнем настроенном этапе.'} Затем требуется не менее {magic_gate} желаемых модификаторов: моды из цели или тиры с положительной ценностью из входной таблицы; неудача сбрасывается Orb of Scouring + Transmutation."]
         if max_exalts:
-            steps.append(f"После Regal сделайте до {max_exalts} Exalt Orb; {'после каждого Exalt сначала проверяйте цель и готовое останавливайте.' if early else 'проверьте цель после последнего Exalt.'} При неудаче сбросьте Orb of Scouring + Transmutation.")
+            if early:
+                steps.append(f"Затем примените Regal Orb. Сначала проверьте цель: готово — остановитесь. Иначе продолжайте только при не менее {regal_gate} желаемых модификаторах; при меньшем числе Orb of Scouring + Orb of Transmutation и возврат к Alteration.")
+            else:
+                steps.append(f"Затем примените Regal Orb. После Regal продолжайте только при не менее {regal_gate} желаемых модификаторах; при меньшем числе Orb of Scouring + Orb of Transmutation и возврат к Alteration.")
+        else:
+            steps.append(f"Затем примените Regal Orb; после проверки цели требуется не менее {regal_gate} желаемых модификаторов, иначе сброс Orb of Scouring + Transmutation.")
+        if max_exalts:
+            steps.append(f"После Regal сделайте до {max_exalts} Exalted Orb; {'после каждого применения сначала проверяйте цель и готовое останавливайте.' if early else 'проверьте цель после последнего применения.'} При неудаче сбросьте Orb of Scouring + Transmutation.")
         else:
             steps.append("После Regal проверьте цель: готово — остановитесь; иначе Orb of Scouring + Orb of Transmutation и вернитесь к Alteration.")
         return steps
@@ -248,20 +282,20 @@ def _protected_preparation(parameters: Mapping[str, Any]) -> list[str]:
     suffixes = parameters.get("minimum_desired_elemental_suffixes", "?")
     prefixes = parameters.get("max_prefixes", "?")
     first = "Повторяйте Deafening Essence of Envy." + (" Цель, готовая во время подготовки, сразу завершает маршрут." if early else " Ранняя готовая цель здесь намеренно не останавливает маршрут.")
-    return [first, f"Примите только ровно 3 суффикса, минимум {suffixes} желаемых elemental suffixes и не более {prefixes} префиксов; остальные Envy-результаты повторите."]
+    return [first, f"Примите только ровно 3 суффикса, минимум {suffixes} суффиксов сопротивления стихиям из цели и не более {prefixes} префиксов; остальные Envy-результаты повторите."]
 
 
 def _life_target_text(context: Mapping[str, Any]) -> str:
     target = _mapping(context.get("target", {}), "target")
     labels = _mapping(target.get("labels", {}), "target labels")
     value = labels.get("IncreasedLife:1")
-    return f"Life9 ({value})" if isinstance(value, str) else "Life9"
+    return f"здоровье T1 ({value})" if isinstance(value, str) else "здоровье T1"
 
 
 def _stage_meaning(identifier: str, name: str) -> str:
     lower = name.lower()
     if "preparation" in lower:
-        return "Вход в gate подготовки или раннюю остановку"
+        return "Вход в условие отбора подготовки или раннюю остановку"
     if "protected" in lower:
         return "Условный шанс цели в одном защищённом цикле"
     if identifier.startswith(("essence", "alchemy", "chaos", "fossil")):

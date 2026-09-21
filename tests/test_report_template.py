@@ -34,6 +34,7 @@ def test_pure_javascript_formats_probabilities_escapes_values_and_keeps_duplicat
       const result = {
         probability: t.probability(0.000024282),
         zero: t.probability(0),
+        rounded_zero: t.numeric(-1e-12),
         cost: t.numeric(1927.479966),
         escaped: t.escapeText('</script><img src=x onerror=1>'),
         valid: t.safeLocalPath('proof/pytest.xml'),
@@ -48,6 +49,7 @@ def test_pure_javascript_formats_probabilities_escapes_values_and_keeps_duplicat
     result = json.loads(completed.stdout)
     assert result["probability"] == "&lt;0,1% (примерно 1 из 41\u00a0183)"
     assert result["zero"] == "0,0%"
+    assert result["rounded_zero"] == "0,0"
     assert result["cost"] == "1\u00a0927,5"
     assert result["escaped"] == "&lt;/script&gt;&lt;img src=x onerror=1&gt;"
     assert result["valid"] == "proof/pytest.xml"

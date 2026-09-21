@@ -41,6 +41,15 @@ def test_magic_counts_and_stage_reach_label() -> None:
     assert magic["stages"][0]["meaning"] == "Шанс дойти до этапа"
     assert any("Exalt" in step for step in magic["instructions"])
 
+    for early, expects_goal_check in ((True, True), (False, False)):
+        magic_plan = _plan()["ranked"][2]
+        magic_plan["parameters"] = {"max_exalts": 3, "early_stop": early, "magic_min_desired": 1, "regal_min_desired": 2}
+        instructions = build_report({**_plan(), "ranked": [magic_plan]}, {})["routes"][0]["instructions"]
+        regal_step = next(step for step in instructions if "После Regal" in step or "Сначала проверьте цель" in step)
+        assert "не менее 2 желаемых модификатор" in regal_step
+        assert "примените Regal Orb" in regal_step
+        assert ("Сначала проверьте цель" in regal_step) is expects_goal_check
+
 
 def test_report_retains_unavailable_marks_missing_evidence_and_escapes_html() -> None:
     report = build_report(_plan(), {}, {"schema_version": 1, "pytest": {"status": "unavailable"}, "coe": {"status": "unavailable"}})

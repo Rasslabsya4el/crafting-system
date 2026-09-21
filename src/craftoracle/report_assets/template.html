@@ -43,7 +43,7 @@
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", "\"": "&quot;"
   })[char]);
   const numeric = value => Number.isFinite(value)
-    ? value.toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    ? (Object.is(Math.round(value * 10) / 10, -0) ? 0 : Math.round(value * 10) / 10).toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
     : escapeText(value ?? "-");
   const integer = value => Number.isFinite(value) ? Math.round(value).toLocaleString("ru-RU") : escapeText(value ?? "-");
   const probability = value => {
@@ -66,14 +66,15 @@
   const cheapestRoute = () => (report.routes || []).slice().sort((a, b) => (a.expected_cost ?? Infinity) - (b.expected_cost ?? Infinity))[0];
   const parameterRows = parameters => Object.entries(parameters || {}).map(([name, value]) =>
     `<tr><td>${escapeText(name)}</td><td>${escapeText(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`).join("");
-  const routeTitle = route => { const id = route.parameters?.forced_essence_id; const name = report.context?.essence_names?.[id]; return name || route.name || route.id || route.key; };
+  const routeTitle = route => route.title || route.name || route.id || route.key;
 
   function targetHtml() {
     const target = report.context?.target || {};
-    const criteria = (target.criteria || []).map(item => `<li>${escapeText(item.text)} <span class="pill">tier ${integer(item.max_tier)}</span></li>`).join("");
-    const anyOf = (target.any_of || []).map(group => `<li>Одно из: ${group.map(item => `${escapeText(item.text)} <span class="pill">tier ${integer(item.max_tier)}</span>`).join("; ")}</li>`).join("");
-    const values = target.value_table ? `<div class="table-wrap"><table><thead><tr><th>Группа</th><th>Tier</th><th>Utility</th></tr></thead><tbody>${Object.entries(target.value_table).flatMap(([group, value]) => Object.entries(value || {}).map(([tier, score]) => `<tr><td>${escapeText(target.labels?.[`${group}:${tier}`] || target.labels?.[group] || group)}</td><td>${integer(tier)}</td><td>${numeric(score)}</td></tr>`)).join("")}</tbody></table></div>` : "";
-    const threshold = target.threshold == null ? "" : `<p>Выбранный порог: <strong>${numeric(target.threshold)}</strong>${target.values_note ? `; ${escapeText(target.values_note)}` : ""}.</p>`;
+    const criteria = (target.criteria || []).map(item => `<li>${escapeText(item.text)} <span class="pill">тир ${integer(item.max_tier)}</span></li>`).join("");
+    const anyOf = (target.any_of || []).map(group => `<li>Одно из: ${group.map(item => `${escapeText(item.text)} <span class="pill">тир ${integer(item.max_tier)}</span>`).join("; ")}</li>`).join("");
+    const values = target.value_table ? `<div class="table-wrap"><table><thead><tr><th>Группа</th><th>Тир</th><th>Ценность</th></tr></thead><tbody>${Object.entries(target.value_table).flatMap(([group, value]) => Object.entries(value || {}).map(([tier, score]) => `<tr><td>${escapeText(target.labels?.[`${group}:${tier}`] || target.labels?.[group] || group)}</td><td>${integer(tier)}</td><td>${numeric(score)}</td></tr>`)).join("")}</tbody></table></div>` : "";
+    const selectedThreshold = activeRoute()?.stopping_threshold ?? target.threshold;
+    const threshold = selectedThreshold == null ? "" : `<p>Порог остановки выбранного маршрута: <strong>${numeric(selectedThreshold)}</strong>${target.values_note ? `; ${escapeText(target.values_note)}` : ""}.</p>`;
     return `<section><h2>Цель</h2>${threshold}${values || `<ul>${criteria}${anyOf}</ul>`}</section>`;
   }
 
@@ -87,10 +88,10 @@
       ["Успех Magic за попытку (1/T)", metadata.success_probability],
       ["Доля завершённых крафтов, готовых уже на этапе Envy", metadata.early_completion_probability],
       ["Риск необратимой потери", metadata.irreversible_failure_risk],
-      ["Ожидаемые discarded bases", metadata.expected_discarded_bases],
+      ["Среднее число отложенных баз", metadata.expected_discarded_bases],
       ["Риск неверной фрактуры за попытку", metadata.wrong_fracture_risk_per_trial],
       ["Риск уничтожения предмета", metadata.irreversible_item_destruction_risk]
-    ].filter(([, value]) => value != null).map(([name, value]) => `<li>${escapeText(name)}: ${name.includes("bases") ? numeric(value) : probability(value)}</li>`).join("");
+    ].filter(([, value]) => value != null).map(([name, value]) => `<li>${escapeText(name)}: ${name === "Среднее число отложенных баз" ? numeric(value) : probability(value)}</li>`).join("");
     const p90 = route.cost_p90 == null ? "p90 не предоставлен" : `${numeric(route.cost_p90)} ${escapeText(report.prices?.unit)} (${escapeText(route.cost_label || "нет метки")})`;
     const p90Audit = metadata.cost_p90_interval || metadata.cost_confidence || metadata.cost_sample_count || metadata.cost_seed ?
       `<p>Оценка p90: интервал ${Array.isArray(metadata.cost_p90_interval) ? metadata.cost_p90_interval.map(numeric).join(" - ") : "не предоставлен"}; confidence ${probability(metadata.cost_confidence)}; выборка ${integer(metadata.cost_sample_count)}; seed ${integer(metadata.cost_seed)}. Это неопределённость оценки, а не разброс затрат игрока.</p>` : "";
@@ -98,25 +99,25 @@
       <p>Средняя стоимость: <strong>${numeric(route.expected_cost)} ${escapeText(report.prices?.unit)}</strong>. p90: <strong>${p90}</strong>.${route.stopping_threshold == null ? "" : ` Выбранный порог: <strong>${numeric(route.stopping_threshold)}</strong>.`}</p>
       <p class="muted">Средняя стоимость - математическое ожидание. p90 - порог затрат для 90% завершённых запусков, не обещанный бюджет.</p>${p90Audit}
       <h3>Инструкция</h3><ol>${(route.instructions || []).map(step => `<li>${escapeText(step)}</li>`).join("") || "<li>Инструкции не предоставлены.</li>"}</ol>
-      <h3>Этапы</h3><div class="table-wrap"><table><thead><tr><th>Этап</th><th>Вероятность</th><th>Ожидаемые оплаты</th><th>Смысл</th></tr></thead><tbody>${stages}</tbody></table></div>
+      <h3>Этапы</h3><div class="table-wrap"><table><thead><tr><th>Этап</th><th>Вероятность</th><th>Среднее число применений</th><th>Смысл</th></tr></thead><tbody>${stages}</tbody></table></div>
       ${recovery ? `<h3>Условия и риски</h3><ul>${recovery}</ul>` : ""}
-      <h3>Материалы <span class="muted">(количество, цена за единицу, расход; ${escapeText(report.prices?.unit)} указана в заголовке)</span></h3>
-      <div class="table-wrap"><table><thead><tr><th>Материал</th><th>Количество</th><th>Цена</th><th>Расход</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <h3>Материалы</h3>
+      <div class="table-wrap"><table><thead><tr><th>Материал</th><th>Количество</th><th>Цена (${escapeText(report.prices?.unit)})</th><th>Расход (${escapeText(report.prices?.unit)})</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="${accounting.complete ? "good" : "bad"}">${accounting.complete ? "Учёт материалов согласован с ожидаемой стоимостью." : `Неполный учёт: ${escapeText(accounting.reason || "причина не предоставлена")}`}</p>
       <p>Итого материалов: ${numeric(accounting.total)} ${escapeText(report.prices?.unit)}; план: ${numeric(route.expected_cost)} ${escapeText(report.prices?.unit)}.</p>
-      <details id="route-audit"><summary>Параметры, решения, источники и исходы</summary><div class="table-wrap"><table><tbody>${parameterRows(route.parameters)}</tbody></table></div>${raw({ decisions: route.decisions, source: route.source, metadata, outcome: route.outcome })}</details>
+      <details id="route-audit"><summary>Параметры, решения, источники и исходы</summary><div class="table-wrap"><table><tbody>${parameterRows(route.parameters)}</tbody></table></div>${raw({ decisions: route.decisions, source: route.source, metadata, audit: route.audit })}</details>
     </section>`;
   }
 
   function comparisonHtml(query) {
     const normalized = query.toLocaleLowerCase("ru-RU");
     const selected = activeRoute()?.key;
-    const routes = (report.routes || []).filter(route => `${route.id || ""} ${route.name || ""} ${route.key || ""}`.toLocaleLowerCase("ru-RU").includes(normalized));
+    const routes = (report.routes || []).filter(route => `${route.search_text || ""} ${route.id || ""} ${route.name || ""} ${route.key || ""}`.toLocaleLowerCase("ru-RU").includes(normalized));
     const routeRows = routes.map(route => `<tr class="${route.key === selected ? "selected" : ""}"><td><button class="route" data-route-key="${escapeText(route.key)}">${escapeText(routeTitle(route))}</button></td><td>${route.stopping_threshold == null ? "-" : numeric(route.stopping_threshold)}</td><td>${numeric(route.expected_cost)}</td><td>${route.cost_p90 == null ? "-" : numeric(route.cost_p90)}</td><td>${escapeText(route.cost_label || "-")}</td><td>${numeric(route.expected_utility)}</td><td>${route.frontier ? "да" : "нет"}</td></tr>`).join("");
-    const unavailable = (report.unavailable || []).map(route => `<li><strong>${escapeText(route.name || route.id || "маршрут")}</strong>: ${escapeText((route.reasons || [route.reason || "причина не предоставлена"]).join("; "))}</li>`).join("") || "<li>Нет недоступных маршрутов.</li>";
+    const unavailable = (report.unavailable || []).map(route => { const id = route.id || route.name || "маршрут"; const bare = id.split("@")[0]; const titleMap = {"suffix-protected-life": "Envy → защита суффиксов → Exalted Orb", "suffix-protected-harvest-life": "Envy → защита суффиксов → Harvest Life", "fracture-life-envy": "Фрактура здоровья T1 → Envy", "alchemy-scour": "Alchemy → Scouring", "chaos": "Alchemy → Chaos Orb", "magic-regal-exalt": "Alteration → Regal → Exalted Orb"}; const reasonMap = {"target is unreachable from this forced essence mapping": "Цель недостижима с этой обязательной эссенс-модификацией", "fracture-Life policy only supports the ordinary Royal Burgonet86 helmet target": "Этот маршрут реализован только для обычного Royal Burgonet ilvl86 с целью из примера", "suffix-protected policy only implements the exact required-mod helmet target": "Этот маршрут реализован только для точной цели шлема из примера"}; const reasons = (route.reasons || [route.reason || "причина не предоставлена"]).map(reason => reasonMap[reason] || reason).join("; "); const parsedThreshold = id.match(/@(\d+(?:\.\d+)?)$/)?.[1]; const thresholdValue = route.stopping_threshold ?? (parsedThreshold == null ? null : Number(parsedThreshold)); const threshold = thresholdValue == null ? "" : `, порог ${numeric(thresholdValue)}`; return `<li><strong>${escapeText(route.title || titleMap[bare] || route.name || id)}${threshold}</strong>: ${escapeText(reasons)}</li>`; }).join("") || "<li>Нет недоступных маршрутов.</li>";
     return `<section id="comparison"><h2>Сравнение маршрутов</h2><label class="no-print" for="route-search">Поиск маршрута</label><input class="no-print" id="route-search" value="${escapeText(query)}" autocomplete="off">
-      <div class="table-wrap"><table><thead><tr><th>Маршрут</th><th>Порог</th><th>Среднее (${escapeText(report.prices?.unit)})</th><th>p90 (${escapeText(report.prices?.unit)})</th><th>Метка p90</th><th>Utility</th><th>Frontier</th></tr></thead><tbody>${routeRows || "<tr><td colspan=\"7\">Нет совпадений.</td></tr>"}</tbody></table></div>
-      <p class="muted">Frontier показывает лучший доступный обмен ожидаемой цены и utility. Таблица прокручивается горизонтально на узком экране.</p><h3>Недоступные маршруты</h3><ul>${unavailable}</ul></section>`;
+      <div class="table-wrap"><table><thead><tr><th>Маршрут</th><th>Порог</th><th>Среднее (${escapeText(report.prices?.unit)})</th><th>p90 (${escapeText(report.prices?.unit)})</th><th>Метка p90</th><th>Ценность</th><th>Лучший обмен цены и ценности</th></tr></thead><tbody>${routeRows || "<tr><td colspan=\"7\">Нет совпадений.</td></tr>"}</tbody></table></div>
+      <p class="muted">Лучший обмен цены и ценности показывает лучший доступный баланс ожидаемой цены и ценности.</p><h3>Недоступные маршруты</h3><ul>${unavailable}</ul></section>`;
   }
 
   function evidenceHtml(testQuery = "") {
@@ -124,16 +125,17 @@
     if (!evidence) return "<section><h2>Доказательства</h2><p class=\"bad\">Доказательства не предоставлены.</p></section>";
     const pytest = evidence.pytest || {};
     const coe = evidence.coe || {};
+    const statusLabel = status => ({ passed: "пройдено", failed: "ошибка", unavailable: "недоступно" }[status] || status || "недоступно");
     const grouped = (pytest.cases || []).filter(item => `${item.name || ""} ${item.file || ""}`.toLocaleLowerCase("ru-RU").includes(testQuery.toLocaleLowerCase("ru-RU"))).reduce((groups, item) => { (groups[item.file || "неизвестный файл"] ||= []).push(item); return groups; }, {});
     const cases = Object.entries(grouped).map(([file, entries]) => `<h3>${escapeText(file)}</h3><div class="table-wrap"><table><thead><tr><th>Тест</th><th>Статус</th><th>Минуты</th><th>Сообщение</th></tr></thead><tbody>${entries.map(item => `<tr><td>${escapeText(item.name)}</td><td>${escapeText(item.status)}</td><td>${numeric(item.duration_minutes)}</td><td>${escapeText(item.message || "-")}</td></tr>`).join("")}</tbody></table></div>`).join("") || "<p>Список тестов отсутствует.</p>";
     const coeRows = (coe.cases || []).map(item => `<tr><td>${escapeText(item.id)}</td><td>${escapeText(item.action)}</td><td>${escapeText(item.base)}</td><td>${escapeText((item.targets || []).join(", "))}</td><td title="${escapeText(item.ours)}">${probability(item.ours)}</td><td title="${escapeText(item.coe)}">${probability(item.coe)}</td><td>${item.relative_difference == null ? "-" : `${numeric(item.relative_difference * 100)}%`}</td></tr>`).join("") || "<tr><td colspan=\"7\">CoE cases отсутствуют.</td></tr>";
     const commands = (evidence.commands || []).map(item => `<li><strong>${escapeText(item.name)}</strong>: ${escapeText((item.argv || []).join(" "))}; exit ${integer(item.exit_code)}; ${numeric(item.duration_minutes)} мин.; ${link(item.stdout_file, "stdout")} / ${link(item.stderr_file, "stderr")}</li>`).join("") || "<li>Команды не предоставлены.</li>";
     const artifacts = Object.entries(evidence.artifacts || {}).map(([name, path]) => `<li>${escapeText(name)}: ${link(path)}</li>`).join("") || "<li>Артефакты не предоставлены.</li>";
     const revision = evidence.git_commit && report.context?.generation?.commit && evidence.git_commit !== report.context.generation.commit ? "Проверки другой ревизии." : "";
-    return `<section><h2>Доказательства</h2><p>${revision ? `<span class="bad">${revision}</span>` : ""} Статус pytest: <strong>${escapeText(pytest.status || "unavailable")}</strong>; CoE: <strong>${escapeText(coe.status || "unavailable")}</strong>; dirty tree: ${evidence.working_tree_dirty == null ? "неизвестно" : evidence.working_tree_dirty ? "да" : "нет"}; ревизия ${escapeText(evidence.git_commit || "не предоставлена")}; время ${escapeText(evidence.generated_at || "не предоставлено")}.</p>
-      <p class="muted">Тесты и CoE cases проверяют компоненты, а не полный маршрут и не живую игру.</p><p>Итоги pytest: tests ${integer(pytest.tests)}, passed ${integer(pytest.passed)}, failures ${integer(pytest.failures)}, errors ${integer(pytest.errors)}, skipped ${integer(pytest.skipped)}.</p>
-      <details id="test-cases"><summary>Тестовые случаи по файлам</summary><label class="no-print" for="test-search">Поиск теста</label><input class="no-print" id="test-search" value="${escapeText(testQuery)}" autocomplete="off">${cases}</details><h3>Сравнение CoE</h3><div class="table-wrap"><table><thead><tr><th>ID</th><th>Action</th><th>Base</th><th>Targets</th><th>Наше</th><th>CoE</th><th>Разница</th></tr></thead><tbody>${coeRows}</tbody></table></div>
-      <details id="evidence-artifacts"><summary>Команды и артефакты</summary><ul>${commands}</ul><ul>${artifacts}</ul><p>Сырой план: ${link(evidence.plan_json || "plan.json", "plan.json")}</p></details></section>`;
+    return `<section><h2>Доказательства</h2><p>${revision ? `<span class="bad">${revision}</span>` : ""} Статус pytest: <strong>${escapeText(statusLabel(pytest.status))}</strong>; CoE: <strong>${escapeText(statusLabel(coe.status))}</strong>; дерево с изменениями: ${evidence.working_tree_dirty == null ? "неизвестно" : evidence.working_tree_dirty ? "да" : "нет"}; ревизия ${escapeText(evidence.git_commit || "не предоставлена")}; время ${escapeText(evidence.generated_at || "не предоставлено")}.</p>
+      <p class="muted">Тесты и случаи CoE проверяют компоненты, а не полный маршрут и не живую игру.</p><p>Итоги pytest: тестов ${integer(pytest.tests)}, пройдено ${integer(pytest.passed)}, ошибок выполнения ${integer(pytest.failures)}, ошибок ${integer(pytest.errors)}, пропущено ${integer(pytest.skipped)}.</p>
+      <details id="test-cases"><summary>Тестовые случаи по файлам</summary><label class="no-print" for="test-search">Поиск теста</label><input class="no-print" id="test-search" value="${escapeText(testQuery)}" autocomplete="off">${cases}</details><h3>Сравнение CoE</h3><div class="table-wrap"><table><thead><tr><th>ID</th><th>Действие</th><th>База</th><th>Цели</th><th>Наше</th><th>CoE</th><th>Разница</th></tr></thead><tbody>${coeRows}</tbody></table></div>
+      <details id="evidence-artifacts"><summary>Команды и артефакты</summary><p>Полный proof: ${link(evidence.proof_link, "proof.json")}</p><ul>${commands}</ul><ul>${artifacts}</ul><p>Сырой план: ${link(evidence.plan_json || "plan.json", "plan.json")}</p></details></section>`;
   }
 
   function render(query = "", testQuery = "") {
@@ -142,8 +144,8 @@
     const caret = focused ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : [null, null];
     const input = report.input || {};
     const generation = report.context?.generation || {};
-    document.getElementById("app").innerHTML = `<div class="meta"><span>${escapeText(input.base)}</span><span>ilvl ${integer(input.item_level)}</span><span>качество ${integer(input.quality)} (поставляется, цена базы ${numeric(report.prices?.base_cost)})</span><span>commit ${escapeText(generation.commit || "не предоставлен")}</span><span>${escapeText(generation.generated_at || "время не предоставлено")}</span></div>
-      <p class="notice"><strong>Цены вымышлены.</strong> Это не торговые цены.</p><details id="price-note"><summary>Источник и допущения цен</summary><p>${escapeText(report.prices?.note || "Цены предоставлены входом.")}</p></details>${targetHtml()}${comparisonHtml(query)}${routeDetail(activeRoute())}${evidenceHtml(testQuery)}<details id="raw-audit"><summary>Raw audit, assumptions and sources</summary>${raw({ assumptions: report.assumptions, input_sources: input.sources, price_sources: report.prices?.sources, raw_plan: report })}</details>`;
+    document.getElementById("app").innerHTML = `<div class="meta"><span>${escapeText(input.base)}</span><span>ilvl ${integer(input.item_level)}</span><span>качество ${integer(input.quality)} (поставляется, цена базы ${numeric(report.prices?.base_cost)})</span></div>
+      <p class="notice"><strong>Цены вымышлены.</strong> Это не торговые цены.</p><details id="price-note"><summary>Источник и допущения цен</summary><p>${escapeText(report.prices?.note || "Цены предоставлены входом.")}</p></details>${targetHtml()}${comparisonHtml(query)}${routeDetail(activeRoute())}${evidenceHtml(testQuery)}<details id="raw-audit"><summary>Проверка исходных данных, допущений и источников</summary>${raw({ assumptions: report.assumptions, input_sources: input.sources, price_sources: report.prices?.sources, raw_plan: report })}</details>`;
     bindInteractions(query);
     openDetails.forEach(id => { const node = document.getElementById(id); if (node) node.open = true; });
     if (focused) { const node = document.getElementById(focused); if (node) { node.focus(); if (caret[0] != null) node.setSelectionRange(caret[0], caret[1]); } }
