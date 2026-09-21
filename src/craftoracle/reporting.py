@@ -21,6 +21,7 @@ def build_report(plan: Mapping[str, Any], context: Mapping[str, Any], evidence: 
     unavailable = _list(plan, "unavailable")
     routes = [_route(_mapping(route, "ranked route"), plan, context, index) for index, route in enumerate(ranked)]
     evidence_data = _evidence(evidence, context.get("generation", {}).get("commit"))
+    routes = [_route(_mapping(route, "ranked route"), plan, context, index) for index, route in enumerate(ranked)]
     return {
         "schema_version": 1,
         "input": dict(_mapping(plan.get("input"), "input")),
@@ -196,7 +197,7 @@ def _route(route: Mapping[str, Any], plan: Mapping[str, Any], context: Mapping[s
         attempts = _first_stage(route)
         if attempts is not None and _number(attempts.get("expected_attempts"), "magic expected_attempts") > 0:
             metadata["success_probability"] = 1 / _number(attempts.get("expected_attempts"), "magic expected_attempts")
-    return {"key": f"{identifier}-{threshold if threshold is not None else 'base'}-{index}", "id": identifier, "name": str(route.get("name", identifier)), "expected_cost": route.get("expected_cost"), "cost_p90": route.get("cost_p90"), "cost_label": "приблизительно" if route.get("cost_p90_interval") else "точно", "expected_utility": route.get("expected_utility"), "frontier": bool(route.get("frontier", False)), "stopping_threshold": threshold, "stages": stages, "parameters": dict(_mapping(route.get("parameters", {}), "parameters")), "decisions": list(route.get("decision_points", [])), "metadata": metadata, "source": {"assumptions": list(route.get("assumptions", [])), "generation": context.get("generation", {})}, "instructions": _instructions(identifier, route, context), "accounting": material_accounting(route, plan, context)}
+    return {"key": f"{identifier}-{threshold if threshold is not None else 'base'}-{index}", "id": identifier, "name": str(route.get("name", identifier)), "expected_cost": route.get("expected_cost"), "cost_p90": route.get("cost_p90"), "cost_label": "приблизительно" if route.get("cost_p90_interval") else "точно", "expected_utility": route.get("expected_utility"), "frontier": bool(route.get("frontier", False)), "stopping_threshold": threshold, "stages": stages, "parameters": dict(_mapping(route.get("parameters", {}), "parameters")), "decisions": list(route.get("decision_points", [])), "metadata": metadata, "source": {"assumptions": list(route.get("assumptions", [])), "design": ["docs/design/route-report.md", "docs/design/parameter-search.md", "docs/design/family-policies.md"], "generation": context.get("generation", {})}, "audit": {"parameter_audit": list(route.get("parameter_audit", [])), "terminal_distribution": list(route.get("terminal_distribution", []))}, "instructions": _instructions(identifier, route, context), "accounting": material_accounting(route, plan, context)}
 
 
 def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any]) -> list[str]:
@@ -218,14 +219,14 @@ def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[st
         return ["Примените Orb of Alchemy и немедленно проверьте цель.", f"При неудаче заполните один {sockets}-socket Chaotic Resonator: {selected}; примените его к rare-предмету.", "Повторяйте полный рецепт и проверяйте после каждого применения."]
     if identifier.startswith("fracture"):
         early = bool(parameters.get("alchemy_early_stop", False))
-        return ["На каждой новой normal-базе примените Orb of Alchemy." + (" После каждого Alchemy проверьте раннее завершение." if early else " Ранняя проверка намеренно отключена."), f"При неудаче применяйте Orb of Scouring + Orb of Alchemy, пока ровно четыре ordinary explicit не включат {life}.", "Примените Fracturing Orb. Неверную фрактуру отложите с salvage 0 и купите новую базу; отмены нет.", f"При фрактуре {life} повторяйте Deafening Essence of Envy до цели."]
+        return ["На каждой новой normal-базе примените Orb of Alchemy." + (" После каждого Alchemy проверьте раннее завершение." if early else " Ранняя проверка намеренно отключена."), f"Если цель не готова, но ровно четыре ordinary explicit уже включают {life}, немедленно примените Fracturing Orb. Иначе применяйте Orb of Scouring + Orb of Alchemy до этого условия.", "Неверную фрактуру отложите с salvage 0 и купите новую базу; отмены нет.", f"При фрактуре {life} повторяйте Deafening Essence of Envy до цели."]
     if identifier.startswith("suffix-protected-harvest"):
         return _protected_preparation(parameters) + ["Создайте Suffixes Cannot Be Changed (729), затем примените Harvest reforge Life с first_only; attack/caster blocker не используется.", "Life9 завершает маршрут. При свободном префиксе повторите оплаченный lock + reforge; при трёх префиксах вернитесь к Envy-подготовке. Scour здесь нет."]
     if identifier.startswith("suffix-protected"):
         max_exalts = _integer(parameters.get("max_exalts", 0), "max_exalts")
         steps = _protected_preparation(parameters) + ["Создайте Suffixes Cannot Be Changed (729) и примените Orb of Scouring."]
         if max_exalts:
-            steps.append(f"Сделайте до {max_exalts} Exalt Orb; остановитесь после первого {life}. При свободном префиксе повторите оплаченные lock + Scour; при трёх префиксах вернитесь к Envy.")
+            steps.append(f"Сделайте до {max_exalts} Exalt Orb; остановитесь после первого {life}. Только после неудачи всех {max_exalts} slam: при свободном префиксе повторите оплаченные lock + Scour, при трёх префиксах вернитесь к Envy.")
         if parameters.get("bench_finish_id") is not None:
             bench = _mapping(context.get("bench_names", {}), "bench_names").get(str(parameters["bench_finish_id"]), f"bench {parameters['bench_finish_id']}")
             steps.append(f"Завершите {bench}; это не заменяет требуемый Life9.")
@@ -234,9 +235,11 @@ def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[st
         max_exalts = _integer(parameters.get("max_exalts", 0), "max_exalts")
         early = bool(parameters.get("early_stop", False))
         magic_gate, regal_gate = parameters.get("magic_min_desired"), parameters.get("regal_min_desired")
-        steps = ["Примените Orb of Transmutation; это оплачиваемый setup без проверки.", "Примените Orb of Alteration; только при одном модификаторе добавьте Orb of Augmentation.", f"{'Проверяйте цель на каждом этапе.' if early else 'Проверяйте цель только на последнем настроенном этапе.'} Иначе требуется не менее {magic_gate} желаемых модификаторов (required target label или положительный tier caller utility); неудача сбрасывается Orb of Scouring + Transmutation.", f"Затем примените Regal Orb; требуется не менее {regal_gate} желаемых модификаторов, иначе сброс Orb of Scouring + Transmutation."]
+        steps = ["Примените Orb of Transmutation; это оплачиваемый setup без проверки.", "Примените Orb of Alteration; только при одном модификаторе добавьте Orb of Augmentation.", f"{'Сначала проверяйте цель на каждом этапе.' if early else 'Проверяйте цель только на последнем настроенном этапе.'} Затем требуется не менее {magic_gate} желаемых модификаторов: моды из цели или тиры с положительной ценностью из входной таблицы; неудача сбрасывается Orb of Scouring + Transmutation.", f"Затем примените Regal Orb; после проверки цели требуется не менее {regal_gate} желаемых модификаторов, иначе сброс Orb of Scouring + Transmutation."]
         if max_exalts:
-            steps.append(f"После Regal сделайте до {max_exalts} Exalt Orb; после последнего Exalt проверьте цель, а при неудаче сбросьте Orb of Scouring + Transmutation.")
+            steps.append(f"После Regal сделайте до {max_exalts} Exalt Orb; {'после каждого Exalt сначала проверяйте цель и готовое останавливайте.' if early else 'проверьте цель после последнего Exalt.'} При неудаче сбросьте Orb of Scouring + Transmutation.")
+        else:
+            steps.append("После Regal проверьте цель: готово — остановитесь; иначе Orb of Scouring + Orb of Transmutation и вернитесь к Alteration.")
         return steps
     return [str(step) for step in route.get("steps", [])] or ["Для этого маршрута нет перевода инструкций."]
 
@@ -274,7 +277,10 @@ def _evidence(evidence: Mapping[str, Any] | None, report_commit: Any) -> dict[st
     coe = _mapping(evidence.get("coe", {}), "evidence coe")
     status = "passed" if pytest.get("status") == "passed" and coe.get("status") == "passed" else "unavailable" if "unavailable" in {pytest.get("status"), coe.get("status")} else "failed"
     mismatch = isinstance(report_commit, str) and evidence.get("git_commit") != report_commit
-    return {"status": status, "pytest": dict(pytest), "coe": dict(coe), "commands": list(evidence.get("commands", [])), "artifacts": dict(evidence.get("artifacts", {})), "git_commit": evidence.get("git_commit"), "generated_at": evidence.get("generated_at"), "revision_message": "Проверки другой ревизии" if mismatch else None}
+    def link(path: Any) -> Any:
+        return f"evidence/{path}" if isinstance(path, str) else path
+    commands = [{**dict(command), "stdout_file": link(command.get("stdout_file")), "stderr_file": link(command.get("stderr_file"))} if isinstance(command, Mapping) else command for command in evidence.get("commands", [])]
+    return {"status": status, "message": evidence.get("message"), "pytest": dict(pytest), "coe": dict(coe), "commands": commands, "artifacts": {key: link(value) for key, value in _mapping(evidence.get("artifacts", {}), "artifacts").items()}, "proof_link": "evidence/proof.json", "git_commit": evidence.get("git_commit"), "generated_at": evidence.get("generated_at"), "working_tree_dirty": evidence.get("working_tree_dirty"), "revision_message": "Проверки другой ревизии" if mismatch else None}
 
 
 def _find_stage(route: Mapping[str, Any], needle: str) -> Mapping[str, Any] | None:

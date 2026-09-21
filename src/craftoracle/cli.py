@@ -463,16 +463,26 @@ def _report_target(spec_path: str | Path, data: Any) -> dict[str, Any]:
     labels: dict[str, str] = {}
     for group, tiers in spec.tier_ids.items():
         for tier, identifiers in enumerate(tiers, start=1):
-            text = " / ".join(str(data.mods[identifier].get("stat_text", identifier)) for identifier in identifiers)
+            text = " / ".join(_stat_text(data.mods[identifier].get("stat_text", identifier)) for identifier in identifiers)
             labels[f"{group}:{tier}"] = text
+    def choices(item: Any) -> list[dict[str, Any]]:
+        return [{"tier": tier, "text": labels[f"{item.group}:{tier}"]} for tier in range(1, item.max_tier + 1)]
     return {
-        "criteria": [{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group)} for item in spec.required_mods],
-        "any_of": [[{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group)} for item in alternatives] for alternatives in spec.any_of],
+        "criteria": [{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group), "tiers": choices(item)} for item in spec.required_mods],
+        "any_of": [[{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group), "tiers": choices(item)} for item in alternatives] for alternatives in spec.any_of],
         "value_table": spec.value_table,
         "threshold": spec.threshold,
         "values_note": spec.values_note,
         "labels": labels,
     }
+
+
+def _stat_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return " ".join(value)
+    return str(value)
 
 
 def _fossil_names() -> dict[str, str]:

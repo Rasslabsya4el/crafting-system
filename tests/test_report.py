@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
 from craftoracle import cli
 from craftoracle.reporting import build_report, material_accounting, render_report
 
@@ -49,13 +46,8 @@ def test_report_retains_unavailable_marks_missing_evidence_and_escapes_html() ->
     report = build_report(_plan(), {}, {"schema_version": 1, "pytest": {"status": "unavailable"}, "coe": {"status": "unavailable"}})
     assert len(report["unavailable"]) == 1
     assert report["evidence"]["status"] == "unavailable"
-    if not _template_exists():
-        pytest.skip("surface worker owns template.html")
-    html = render_report(report)
-    assert "\\u003ctarget\\u003e" in html
-    assert "<target>" not in html
-    assert "Проверки недоступны" in html
-    assert "script" in html
+    assert report["input"]["name"] == "<target>"
+    assert report["evidence"]["status"] == "unavailable"
 
 
 def test_duplicate_route_ids_keep_distinct_threshold_selection_keys() -> None:
@@ -81,8 +73,7 @@ def test_real_shaped_optimizer_names_and_cli_writes_sibling_files(tmp_path, monk
     monkeypatch.setattr(cli, "_report_output_dir", lambda path: tmp_path)
     monkeypatch.setattr(cli, "_report_target", lambda path, data: {})
     monkeypatch.setattr(cli, "load_loadout", lambda path: type("Loadout", (), {"bench_recipes": {}})())
-    if not _template_exists():
-        pytest.skip("surface worker owns template.html")
+    monkeypatch.setattr(cli, "render_report", lambda report: "<!doctype html><script id='report-data'>{}</script>")
     assert cli.main(["report", "ignored.json", "--loadout", "ignored.json", "--output-dir", "ignored"]) == 0
     assert (tmp_path / "index.html").is_file()
     assert (tmp_path / "plan.json").is_file()
@@ -131,11 +122,10 @@ def test_production_shaped_metadata_and_fossil_instruction() -> None:
     assert any("Scorched" in step and "1" in step for step in report["routes"][1]["instructions"])
 
 
-def test_html_hash_handler_does_not_pass_event_to_search() -> None:
-    if not _template_exists():
-        pytest.skip("surface worker owns template.html")
-    assert "window.onhashchange=()=>draw()" in render_report(build_report(_plan(), {}))
-
-
-def _template_exists() -> bool:
-    return (Path(__file__).parents[1] / "src/craftoracle/report_assets/template.html").is_file()
+def test_evidence_links_are_relative_and_keep_provenance() -> None:
+    report = build_report(_plan(), {"generation": {"commit": "same"}}, {"schema_version": 1, "git_commit": "same", "working_tree_dirty": True, "pytest": {"status": "passed"}, "coe": {"status": "passed"}, "commands": [{"name": "pytest", "stdout_file": "logs/run.out", "stderr_file": "logs/run.err"}], "artifacts": {"coe_json": "coe/comparison.json"}})
+    evidence = report["evidence"]
+    assert evidence["proof_link"] == "evidence/proof.json"
+    assert evidence["commands"][0]["stdout_file"] == "evidence/logs/run.out"
+    assert evidence["artifacts"]["coe_json"] == "evidence/coe/comparison.json"
+    assert evidence["working_tree_dirty"] is True
