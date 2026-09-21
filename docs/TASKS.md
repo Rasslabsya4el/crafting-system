@@ -63,7 +63,8 @@ all game mechanics. No dependent path may silently guess.
 
 - [x] Night vertical slice: item model and ordinary PoB pool resolver (`d07a1b5`; 21 focused tests; corrected ordinary pool totals)
 - [x] Night exact grouped distribution kernel (`4ee0641`;17 focused tests)
-- [~] Night ordinary action adapters (`2026-09-21-ordinary-actions.md`; worker running)
+- [x] Night ordinary action adapters (`51b386f`;15 focused tests; one correction round)
 - [x] Night loop costs exact geometric/chain/compound arithmetic (`8eeee53`;13 focused tests; explicit work limits)
 - [~] Night independent Monte Carlo and p90 cost estimator (`2026-09-21-monte-carlo.md`; worker running)
+- [~] Night item specs, invented prices and loadouts (`2026-09-21-plan-inputs.md`; worker running)
 - [ ] Night Monte Carlo, loop costs, inputs, real policy templates and CLI (GOAL order; specs being prepared)
