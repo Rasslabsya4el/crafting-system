@@ -34,13 +34,30 @@ def _run_cli(*arguments: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _bounded_loadout(tmp_path: Path, fossils: list[int]) -> str:
+    """Keep routine CLI regression on real kernels without the 15-recipe/Magic grids."""
+    prices = json.loads((ROOT / "data/prices.example.json").read_text(encoding="utf-8"))
+    (tmp_path / "prices.json").write_text(json.dumps(prices), encoding="utf-8")
+    loadout = json.loads((ROOT / "data/loadouts/endgame.json").read_text(encoding="utf-8"))
+    loadout["allowed_fossils"] = fossils
+    loadout["allowed_actions"] = [
+        action for action in loadout["allowed_actions"]
+        if action not in {"transmute", "alteration", "augmentation"}
+    ]
+    loadout["prices_file"] = "prices.json"
+    path = tmp_path / "bounded-loadout.json"
+    path.write_text(json.dumps(loadout), encoding="utf-8")
+    return str(path.relative_to(ROOT))
+
+
 @pytest.fixture(scope="module")
-def real_bow_comparison_document() -> dict:
+def real_bow_comparison_document(tmp_path_factory: pytest.TempPathFactory) -> dict:
+    loadout = _bounded_loadout(tmp_path_factory.mktemp("bow-loadout"), [13])
     completed = _run_cli(
         "plan",
         "examples/bow_value_table.yaml",
         "--loadout",
-        "data/loadouts/endgame.json",
+        loadout,
         "--compare-thresholds",
         "60,100",
         "--json",
@@ -204,12 +221,13 @@ def test_estimated_p90_metadata_is_preserved_and_shown() -> None:
     assert "samples=50000, seed=20260921, error bound=0.01" in output
 
 
-def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
+def test_real_helmet_json_subprocess_has_all_ranked_policies(tmp_path: Path) -> None:
+    loadout = _bounded_loadout(tmp_path, [1])
     completed = _run_cli(
         "plan",
         "examples/helmet_life_chaos_res.yaml",
         "--loadout",
-        "data/loadouts/endgame.json",
+        loadout,
         "--json",
     )
 
@@ -219,15 +237,17 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
     assert document["input"]["base"] == "Royal Burgonet"
     assert document["input"]["item_level"] == 86
     assert document["prices"]["unit"] == "chaos-equivalent"
-    assert document["unavailable"] == []
+    assert {policy["id"] for policy in document["unavailable"]} == {"magic-regal-exalt"}
     policies = {policy["id"]: policy for policy in document["ranked"]}
     assert "suffix-protected-harvest-life" in policies
     assert policies["chaos-spam"]["stages"][-1]["probability"] == pytest.approx(HELMET_PROBABILITY)
     assert policies["alchemy-scour"]["stages"][-1]["probability"] == pytest.approx(HELMET_PROBABILITY)
     assert policies["essence-CurrencyEssenceEnvy3"]["stages"][-1]["probability"] == pytest.approx(ENVY_PROBABILITY)
-    assert policies["magic-regal-exalt"]["cost_method"] == "sampled correlated finite attempt p90; exact mean"
-    assert policies["magic-regal-exalt"]["cost_p90_interval"]
-    assert policies["magic-regal-exalt"]["cost_sample_count"] == 50_000
+    fossil = policies["fossil-spam"]
+    assert fossil["parameters"]["fossil_ids"] == [1]
+    assert fossil["candidate_count"] == 1
+    assert fossil["source"].startswith("data/rules/fossils.json")
+    assert fossil["confidence"] == "reimplemented-from-CoE"
     harvest = policies["suffix-protected-harvest-life"]
     harvest_stage = next(stage for stage in harvest["stages"] if stage["name"] == "protected Harvest life cycle")
     assert harvest_stage["probability"] > 1 / 13
@@ -283,7 +303,6 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
     text = cli.format_plan(document)
     assert "2.42820884551e-05" in text
     assert "protected Exalt life cycle" in text
-    assert "Estimated p90 uncertainty:" in text
     assert "Selected parameters:" in text
 
 
@@ -302,6 +321,8 @@ def test_real_bow_threshold_comparison_changes_utility_stop_rule(real_bow_compar
     policies = {policy["id"]: policy for policy in document["ranked"]}
     alchemy_sixty = policies["alchemy-scour@60"]
     alchemy_hundred = policies["alchemy-scour@100"]
+    fossil_sixty = policies["fossil-spam@60"]
+    fossil_hundred = policies["fossil-spam@100"]
     assert alchemy_sixty["stopping_threshold"] == 60
     assert alchemy_hundred["stopping_threshold"] == 100
     assert alchemy_sixty["stages"][-1]["probability"] == pytest.approx(0.0053171974267639515)
@@ -309,12 +330,13 @@ def test_real_bow_threshold_comparison_changes_utility_stop_rule(real_bow_compar
     assert alchemy_hundred["stages"][-1]["probability"] <= alchemy_sixty["stages"][-1]["probability"]
     assert alchemy_hundred["expected_cost"] >= alchemy_sixty["expected_cost"]
     assert alchemy_hundred["expected_utility"] >= alchemy_sixty["expected_utility"]
+    assert fossil_sixty["parameters"]["fossil_ids"] == [13]
+    assert fossil_hundred["parameters"]["fossil_ids"] == [13]
+    assert fossil_sixty["frontier"]
+    assert fossil_hundred["frontier"]
     assert all(policy["stages"][-1]["probability"] > 0 for policy in document["ranked"])
-    assert {policy["id"] for policy in document["ranked"] if policy["frontier"]} == {
-        "alchemy-scour@60",
-        "alchemy-scour@100",
-        "chaos-spam@60",
-        "chaos-spam@100",
+    assert {"fossil-spam@60", "fossil-spam@100"} <= {
+        policy["id"] for policy in document["ranked"] if policy["frontier"]
     }
 
     text = cli.format_plan(document)

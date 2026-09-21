@@ -233,3 +233,15 @@ Example fossil prices1 each, resonator prices1/2/3/4 and Fracturing1000 are inve
 Fracture-Life then Envy pays each failed base and preparation, salvage0 explicitly. Comparing
 early completion off/on preserves useful already-complete Alchemy results. Catalyst policy
 finishes a supplied jewellery item; no inferred damage value or whole-jewellery craft added.
+
+## D23 — 2026-09-21 — Bound regression fixtures and measure complete plans separately
+Adding full fossil and Magic grids to every real CLI regression would exceed the under-one-
+minute pytest contract without increasing each assertion's evidence. Routine real CLI tests
+therefore use explicit smaller loadouts: helmet fossil1, bow fossil13, Magic permissions
+disabled. They retain the real action kernels and protected/Harvest/bench assertions.
+Small synthetic exhaustive grids cover combination choice and Magic cost/seed/terminal
+behavior. The existing fixed Magic real benchmark is retained. Complete default helmet
+and bow commands, including all15 fossils and96 Magic variants, are still mandatory
+outside pytest; save their complete outputs and report their separate timings. Rejected:
+calling a bounded-loadout result the default plan, dropping numerical assertions, or
+weakening the production search domain merely to make regression faster.

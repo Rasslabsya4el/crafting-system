@@ -29,16 +29,22 @@ preserving numerical coverage. Full source-tool tests require the ignored local 
 worker focused tests do not require unrelated snapshots. Pytest temp stays in .pytest_tmp.
 
 Source research is now S1-S79. Fifteen owner rows corrected inffcf869; no owner test is
-needed. Wiki browser access works through Playwright. Official GGG resolves behavior;
+needed. Wiki access rechecked at15:17CEST through Playwright extension: the Vaal Orb page
+and article heading loaded. The separate Codex browser API still reports apikey failure;
+it is not a research blocker because the extension works. Official GGG resolves behavior;
 Reddit is retained with version/sample/player-report conditions. Q6 first/all Harvest
 filter scope is unresolved: explicit first_only default, all_draws sensitivity. Current
 policy has no attack/caster restriction, so that uncertainty does not change its number.
 
 ## In progress and bounded backlog
 
-At most two workers. Current:fossil-spam-policy (Terra high, fromc9afb36) and
-catalyst-quality-policy (Terra high, CLI handed off after optimizer merge).
-Quality core22b6119 has48 lead tests0.036minute; CLI/final report still pending.
+At most two workers. Current:fossil-spam-policy (Terra high, fromc9afb36; correction1) and
+fracture-essence-policy (Terra high, core556bc59; lead6 tests passed, correction1).
+Shared-file handoff follows fossil acceptance. Accepted GOAL2 comparisons and outstanding
+full-plan evidence are collected in docs/research/goal2-results.md (ec5e70a).
+Quality policy14be5e9 accepted:48 lead core tests plus19 final quality/CLI checks0.057minute;
+mean14.42372357 applications,p90 16; price2 mean28.84744714/p90 32. The Paua Amulet86
+text command also passed at main. Clean optimizer and quality worktrees were removed.
 Fracture identity accepted d348533:74 lead tests0.074minute; real Envy finish
 .06101200110346221/30classes,627 of10000 seeded hits, identity loss0, Divine Life9
 value132 retained. Paid fracture policy follows optimizer; Harvest/fossil fracture inputs
