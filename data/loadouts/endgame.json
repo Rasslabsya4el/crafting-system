@@ -27,8 +27,10 @@
     "harvest_reforge:minion",
     "harvest_reforge:elemental",
     "harvest_reforge:attribute",
-    "harvest_reforge:mana"
+    "harvest_reforge:mana",
+    "fossil"
   ],
+  "allowed_fossils": [1, 12, 13, 14],
   "allowed_essences": [
     "Metadata/Items/Currency/CurrencyEssenceEnvy3",
     "Metadata/Items/Currency/CurrencyEssenceHatred7",

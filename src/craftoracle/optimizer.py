@@ -30,6 +30,7 @@ from craftoracle.policy_attempts import (
     terminal_cost_atoms,
 )
 import craftoracle.policies as _fixed
+from craftoracle.fossil_policies import fossil_spam_policy
 
 
 _ENVY = "Metadata/Items/Currency/CurrencyEssenceEnvy3"
@@ -161,6 +162,7 @@ def _optimize_one_level(
 
     for candidate in (
         _optimized_chaos(spec, loadout, data, cache),
+        fossil_spam_policy(spec, loadout, data, cache, deadline=deadline),
         _optimized_magic(spec, loadout, data, cache, deadline=deadline),
         _optimized_protected(spec, loadout, data, cache),
         _optimized_harvest(spec, loadout, data, cache),
