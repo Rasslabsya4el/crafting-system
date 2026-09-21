@@ -141,9 +141,11 @@ def test_chaos_keeps_only_the_locked_side_and_special_families_are_explicit(synt
     chaos = action_distribution("chaos", locked, synthetic)
     assert all(out.prefixes >= 2 for out in chaos)
     assert all(out.suffixes <= 3 for out in chaos)
-    for action, question in (("harvest", "Q6"), ("fossil", "Q13"), ("fossils", "Q13"), ("eldritch", "Q11"), ("awakener", "Q20"), ("recombinator", "Q21"), ("fracture", "Q12"), ("veiled", "Q12"), ("corruption", "Q18"), ("beasts", "Q25"), ("catalysts", "Q23")):
+    for action, question in (("harvest", "Q6"), ("fossils", "Q13"), ("eldritch", "Q11"), ("awakener", "Q20"), ("recombinator", "Q21"), ("fracture", "Q12"), ("veiled", "Q12"), ("corruption", "Q18"), ("beasts", "Q25"), ("catalysts", "Q23")):
         with pytest.raises(NotImplementedError, match=question):
             action_distribution(action, ItemState("Base", 1, "normal"), synthetic)
+    with pytest.raises(ValueError, match="fossil_ids"):
+        action_distribution("fossil", ItemState("Base", 1, "normal"), synthetic)
     with pytest.raises(ValueError, match="unknown action"):
         action_distribution("divine", ItemState("Base", 1, "normal"), synthetic)
 
