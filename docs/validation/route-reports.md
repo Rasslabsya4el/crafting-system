@@ -51,5 +51,20 @@ hash selection works and bow threshold100 selects mean9739.87719/p9022426.5. No 
 errors occurred. Dark background is rgb(12,21,22). At390px the page fits the viewport and
 wide tables scroll inside their wrappers; the temporary viewport override was reset.
 
-Final player-wording and per-route audit polish (spec2026-09-21-report-labels.md) is in
-acceptance. No numeric policy change is authorized by that spec.
+Final player-wording/audit polish accepted02bceff (worker1bea718/8ebd55b/da863b6).
+Lead independently ran13 focused branch tests and read every correction. The Regal
+gate2/three-Exalt instructions retain early-stop true/false and an explicit Regal action.
+Negative rounded zero displays0,0. Missing evidence has no invented proof link.
+
+Final clean02bceff proof:423 passed in55.23s (0.9minute), failures/errors/skips0,
+12 offline CoE cases, maximum relative difference2.08735%. Both complete default CLI
+reports were regenerated at02bceff and embed matching proof revision/dirty=false.
+All26 material totals and copied artifacts were rechecked. In-app browser confirmed
+translated titles, gate2 instructions, searchable concrete test cases, proof.json link,
+and the target block changing to100 with the selected bow route. Script errors0.
+
+The temporary server was stopped after acceptance. Both browsers rendered via
+localhost; the browser tool disallows file URLs, so direct file-URL opening was not
+tool-tested. The HTML embeds all data/scripts/styles and the companion files are saved
+beside it; it is intended for ordinary local browser opening without a running server.
+Subsequent commits update documentation only, not the tested implementation.

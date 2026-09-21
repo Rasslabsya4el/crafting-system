@@ -7,8 +7,10 @@
   Dark theme/one decimal;12 helmet/14 bow routes, all26 material totals reconcile.
 - [x] Fresh visible evidence bundle (`5565ea7`): all423 pytest cases/logs and12 offline CoE
   comparisons atc77414e, command/revision/dirty provenance, real browser selection/search checks.
-- [~] Final player-wording/audit correction (`5646e02` spec): preserve Regal gates/early stops,
-  show selected threshold consistently and link complete per-route audit; refresh final proof.
+- [x] Final player-wording/audit correction (`02bceff`, worker `da863b6`): preserve Regal
+  gates/early stops, show selected threshold and complete per-route audit/proof links.
+  Clean final proof:423 passed in0.9minute,12 CoE cases; both real reports regenerated
+  at the same revision, all26 totals agree, browser script errors0.
 
 - [x] Owner-unblocked Harvest: adapter `527efa7`; protected-half helmet policy `55c8191` (39 focused tests), exact mean2703.61 with full-prefix recovery cost.
 - [x] Complete S14 metamod matrix as data and tests (`614c9c3`): 33 actions x 4 columns = 132 cells, 33 notes, 10 passing tests.

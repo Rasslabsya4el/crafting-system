@@ -23,8 +23,9 @@ All pytest temporary files remain in .pytest_tmp. No third-party raw files are c
 ## Current acceptance
 
 Report model/CLI:3ea7424/c77414e; dark HTML:ecdde54; evidence collector:5565ea7.
-Lead ran29 focused checks. Fresh c77414e proof recorded423 passing tests,0 failures,
-0 errors,0 skips in0.86minute and12 offline CoE cases. Maximum absolute relative
+Final wording/audit corrections:02bceff. Lead ran13 final worker-branch checks and
+read every diff. Fresh clean02bceff proof recorded423 passing tests,0 failures,
+0 errors,0 skips in0.9minute and12 offline CoE cases. Maximum absolute relative
 CoE difference2.08735%, none above5%; this validates selected action components,
 not empirical execution of every full crafting route in the live game.
 
@@ -32,7 +33,9 @@ Real CLI reports contain12 helmet routes and14 bow variants at thresholds60/100.
 All26 material totals independently reconcile to the planner means. Browser checks
 cover search/focus, hash selection, correct100-threshold detail and dark rendering.
 At390px wide tables scroll inside their wrappers and do not widen the page. Zero
-JavaScript errors. Detailed acceptance:docs/validation/route-reports.md.
+JavaScript errors. Final reports and proof share revision02bceff with dirty=false;
+subsequent commits only record this acceptance in docs. Detailed acceptance:
+docs/validation/route-reports.md.
 
 Example inputs use INVENTED prices and bow utility; quality20 is supplied and base0
 means the example does not price the base. Best helmet is Envy:mean1927.47997,
@@ -41,12 +44,14 @@ mean9739.87719/p9022426.5. All display rounding occurs after calculation.
 
 ## In progress / process ownership
 
-Final presentation wording/audit cleanup is delegated under
-specs/2026-09-21-report-labels.md to Luna/medium in .worktrees/report-labels.
-No numeric policy changes are in scope. Its lead acceptance and final proof refresh
-remain. One temporary preview server serves only out/ on127.0.0.1:8766; it must be
-stopped before this session ends. Earlier report worker worktrees were removed without
-force. No other work is active.
+No work is active. All report workers are accepted; their committed worktrees were
+removed without force. Final worker was Luna/medium, specs/2026-09-21-report-labels.md;
+two review corrections restored the exact Regal gate and explicit action instruction.
+Fresh full proof and both default reports completed. The temporary127.0.0.1:8766
+preview server was stopped. No owned background service, test job or worker remains.
+The HTML contains all rendering data/scripts; local file opening is the durable
+delivery. The browser tool blocks file URLs, so visual acceptance used a temporary
+localhost preview. Existing local artifact links remain available from the saved files.
 
 ## Boundaries and outstanding gates
 
@@ -76,8 +81,8 @@ completed; no global optimum is claimed (docs/research/solver-experiment.md).
 
 ## Next three actions
 
-1. Accept final wording/audit cleanup, refresh proof and reports, stop preview server.
-2. Receiving lead reviews the concrete reports and chooses the next bounded policy/source gate.
+1. Owner/receiving lead reviews the concrete helmet and bow reports and evidence links.
+2. Choose the next bounded policy/source gate from TASKS and OPEN_QUESTIONS.
 3. Resolve that gate with ranked evidence, then sheet -> spec -> tests -> policy.
 
 AGENTS/D19 allow lead-selected Terra reasoning and Luna for very light tasks. No
