@@ -67,3 +67,4 @@ completion of one task is not a stopping condition. Corrections capped at two pe
 - 00:05 — read GOAL and rules; item-model spec prepared, worker launch next.
 - 08:18 CEST — item model merged d07a1b5; exact DP in progress; goal/demo incomplete.
 - 08:28 CEST — exact DP merged4ee0641; actions/costs running; all downstream specs prepared.
+- 09:29 CEST — GOAL1-5 merged,170 tests green; policy/CLI first review corrections in progress; stretch specs ready.
