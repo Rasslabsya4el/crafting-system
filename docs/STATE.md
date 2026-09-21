@@ -9,7 +9,7 @@
 5. Royal Burgonet86 has 41 eligible prefixes / 84 suffixes, weights39275/78400.
 6. Model Chaos target chance is0.0000242820884551; Deafening Envy0.00259406068444.
 7. Ordinary actions (51b386f,15 tests) and exact loop costs (8eeee53,13 tests) are merged.
-8. MC and input workers are running; policy evaluator and direct CLI remain next.
+8. MC is merged (70fcadb,14 tests); input worker is running; policies and CLI next.
 9. Source uncertainties are provisionally bounded by GOAL/D14; blocked special families stay out.
 10. The required plan command does not exist yet; do not claim the morning demo is complete.
 
@@ -19,7 +19,7 @@
 - `python -m pytest -q tests/test_distributions.py`:17 passed on accepted branch.
 - `python -m pytest -q tests/test_actions.py`:15 passed on accepted branch.
 - `python -m pytest -q tests/test_costs.py`:13 passed on accepted branch.
-- Existing Phase0 suite was78 tests; full combined suite will be run after integration.
+- Combined main suite before MC merge:144 passed in12.00s; MC focused14 passed in3.73s.
 - Exact six-draw helmet distribution:14 classes,mass0.9999999999999984,target0.0000535457934229.
 - Exact mixture count4/5/6 weights8/3/1:Chaos p0.000024282088455126466; Envy
   p0.0025940606844434217; suffix preparation p0.05567530208498237; final life slam1000/39275.
@@ -44,8 +44,8 @@ path is ignored. All subsequent fixture runs must use that setting; no external 
 
 ## Workers / current work
 
-At most two workers: monte-carlo and plan-inputs, each in its own ignored worktree. Their
-25-minute budgets cover independent sampling validation and strict input fixtures; no individual
+Currently one worker: plan-inputs in its own ignored worktree. Its25-minute budget covers
+strict input fixtures; next policy/CLI workers may overlap within the two-worker cap. No individual
 command may exceed10minutes. Item-model, exact-distributions, actions and cost trees were accepted
 and removed without force. Initial item worker's service429 retry succeeded; no duplicate worker
 was launched. Dependent policy and CLI work waits for merged APIs.
@@ -56,8 +56,8 @@ completion of one task is not a stopping condition. Corrections capped at two pe
 
 ## Next three actions
 
-1. Accept independent Monte Carlo on five real pools and cost p90 estimation.
-2. Accept validated item/price/loadout inputs and delegate the policy evaluator.
+1. Accept validated item/price/loadout inputs.
+2. Delegate the policy evaluator, then CLI integration against its concrete API.
 3. Evaluate the designed real policies, wire direct module CLI, validate the helmet and bow,
    then execute the stretch list; record final ten-line morning summary and full-suite timing.
 
