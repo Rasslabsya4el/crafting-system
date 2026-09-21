@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import math
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -12,6 +14,24 @@ from craftoracle.distributions import OutcomeClass
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# Accepted provisional-model predictions, not game measurements:
+# docs/specs/2026-09-21-policy-evaluation.md, Acceptance numbers / source.
+HELMET_PROBABILITY = 0.000024282088455126466
+ENVY_PROBABILITY = 0.0025940606844434217
+
+
+def _run_cli(*arguments: str) -> subprocess.CompletedProcess[str]:
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    return subprocess.run(
+        [sys.executable, "-m", "craftoracle", *arguments],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
 
 
 def _distribution() -> dict[OutcomeClass, float]:
@@ -70,15 +90,7 @@ def _evaluate(spec, loadout, data):
 
 
 def test_root_module_bootstrap_needs_no_pythonpath() -> None:
-    environment = {key: value for key, value in __import__("os").environ.items() if key != "PYTHONPATH"}
-    completed = subprocess.run(
-        [sys.executable, "-m", "craftoracle", "--help"],
-        cwd=ROOT,
-        env=environment,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    completed = _run_cli("--help")
 
     assert completed.returncode == 0
     assert "plan" in completed.stdout
@@ -174,6 +186,70 @@ def test_estimated_p90_metadata_is_preserved_and_shown() -> None:
     output = cli.format_plan(document)
     assert "Estimated p90 uncertainty: 80-120 chaos-equivalent" in output
     assert "samples=50000, seed=20260921, error bound=0.01" in output
+
+
+def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
+    completed = _run_cli(
+        "plan",
+        "examples/helmet_life_chaos_res.yaml",
+        "--loadout",
+        "data/loadouts/endgame.json",
+        "--json",
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
+    assert document["schema_version"] == 1
+    assert document["input"]["base"] == "Royal Burgonet"
+    assert document["input"]["item_level"] == 86
+    assert document["prices"]["unit"] == "chaos-equivalent"
+    assert len(document["ranked"]) == 9
+    assert document["unavailable"] == []
+    policies = {policy["id"]: policy for policy in document["ranked"]}
+    assert policies["chaos-spam"]["stages"][-1]["probability"] == pytest.approx(HELMET_PROBABILITY)
+    assert policies["alchemy-scour"]["stages"][-1]["probability"] == pytest.approx(HELMET_PROBABILITY)
+    assert policies["essence-CurrencyEssenceEnvy3"]["stages"][-1]["probability"] == pytest.approx(ENVY_PROBABILITY)
+    assert policies["magic-regal-exalt"]["cost_method"] == "estimated p90; exact mean"
+    assert policies["magic-regal-exalt"]["cost_p90_interval"]
+    assert policies["magic-regal-exalt"]["cost_sample_count"] == 50_000
+    for policy in document["ranked"]:
+        assert math.isfinite(policy["expected_cost"])
+        assert math.isfinite(policy["cost_p90"])
+        assert policy["steps"] and policy["decision_points"] and policy["assumptions"]
+        assert isinstance(policy["within_budget"], bool)
+        assert isinstance(policy["p90_over_budget"], bool)
+        assert sum(row["probability"] for row in policy["terminal_distribution"]) == pytest.approx(1)
+        for stage in policy["stages"]:
+            assert 0 <= stage["probability"] <= 1
+            assert stage["expected_attempts"] > 0
+            assert stage["actions"] and stage["decisions"]
+            assert sum(row["probability"] for row in stage["attempt_distribution"]) == pytest.approx(1)
+
+    text = cli.format_plan(document)
+    assert "2.42820884551e-05" in text
+    assert "roll protected life prefix" in text
+    assert "Estimated p90 uncertainty:" in text
+
+
+def test_real_bow_threshold_subprocess_changes_utility_stop_rule() -> None:
+    completed = _run_cli(
+        "plan",
+        "examples/bow_value_table.yaml",
+        "--loadout",
+        "data/loadouts/endgame.json",
+        "--threshold",
+        "100",
+        "--json",
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
+    assert document["input"]["utility_threshold"] == 100
+    assert document["input"]["values_note"].startswith("Invented additive utility")
+    assert len(document["ranked"]) == 6
+    assert len(document["unavailable"]) == 3
+    assert all(policy["expected_utility"] == pytest.approx(100) for policy in document["ranked"])
+    assert all(policy["stages"][-1]["probability"] > 0 for policy in document["ranked"])
 
 
 def test_utility_threshold_override_replaces_only_the_stop_rule() -> None:
