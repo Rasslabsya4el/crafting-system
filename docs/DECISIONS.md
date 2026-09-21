@@ -245,3 +245,18 @@ and bow commands, including all15 fossils and96 Magic variants, are still mandat
 outside pytest; save their complete outputs and report their separate timings. Rejected:
 calling a bounded-loadout result the default plan, dropping numerical assertions, or
 weakening the production search domain merely to make regression faster.
+
+## D24 — 2026-09-21 — Show executable routes and evidence to the owner
+The owner requests readable step-by-step routes, costs and probabilities plus visible
+proof of system execution. This authorizes a bounded local HTML report despite the
+brief's earlier no-UI scope. Generate it from actual planner output, keep every route and
+unavailable reason, and retain the raw JSON. Russian player instructions use the exact
+selected policy gates; no new craft mechanics are inferred during translation.
+
+Mean material counts derive from accepted stage/renewal outputs and reconcile to total
+mean cost. Magic stage reach probabilities are labelled as reach, not success; p90 and
+its estimation interval remain distinct. Evidence comes from fresh pytest JUnit/logs and
+the offline CoE comparison, with revision/time and scope visible. Tests establish model/
+implementation behavior, not empirical whole-route game odds. See design/route-report.md.
+Rejected: screenshots of a claimed green summary, manually typed demonstration prices/
+probabilities, a framework/server requirement or a dashboard that hides unsupported routes.
