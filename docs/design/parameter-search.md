@@ -106,3 +106,19 @@ keys for conditional schedules. No speculative classes/frameworks or multiproces
 Target labels+junk counts are generally not Markov: two junk prefixes can remove unequal
 future group weights. Any later general-solver experiment must retain group-profile counts
 or prove lumpability. A terminal OutcomeClass is suitable for scoring, not arbitrary actions.
+
+## Measured helmet baseline for acceptance
+
+Lead evaluated the accepted grouped prefix DP at527efa7,2026-09-21. With existing Envy
+preparation probability0.0556753020849824 and example prices:
+
+| Max Exalts | Cycle success | Mean cycle price | Full-reset probability | Total mean |
+|---:|---:|---:|---:|---:|
+| 1 | 0.02546148949713558 | 210.5 | 0 | 8357.193927854994 |
+| 2 | 0.04784485723504098 | 220.24538510502865 | 0 | 4693.130543194264 |
+| 3 | 0.06674609236085167 | 229.76693653267824 | 0.9332539076391483 | 4787.896236081543 |
+
+The third-slam full-failure reset is charged. Before preparation early-stop optimization,
+two slams win this three-choice Exalt comparison. Accepted Harvest has p0.07950823245417578,
+b0.07592833649031873 and baseline mean2703.6093795549086. Envy spam remains1927.479966
+under these invented prices; no new best-policy claim precedes the full grid measurement.

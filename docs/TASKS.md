@@ -7,12 +7,12 @@
 - [ ] Record answered source gates: rare counts, multimod, essence rarity boundary and extra Harvest tags.
 - [ ] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots; explain deviations above 5% (Q14).
 - [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
-- [x] Correct the 15-row owner question sheet without re-asking answered questions (GOAL2 source update commit; S63-S79 and owner answers).
+- [x] Correct the 15-row owner question sheet without re-asking answered questions (`ffcf869`; S63-S79 and owner answers).
 - [ ] Expose and optimise template parameters; report protected-life expected cost before/after.
 - [ ] Bounded general solver experiment on helmet and three hand optima; report states/time and result or measured failure.
 - [ ] Verify bow distribution/threshold/frontier path after new policies.
-- [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (GOAL2 source update commit): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
-- [x] Locate matching recombinator Reddit/diagram chain S66-S69 and document classic and selected-mod modes separately (GOAL2 source update commit); current exact odds remain open.
+- [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
+- [x] Locate matching recombinator Reddit/diagram chain S66-S69 and document classic and selected-mod modes separately (`ffcf869`); current exact odds remain open.
 - [ ] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy.
 - [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
 

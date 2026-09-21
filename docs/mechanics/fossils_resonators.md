@@ -161,3 +161,8 @@ an absent negative-factor entry; trace that separately before authorizing its ex
 Glyphic20,Hollow18,Sanctified19 have separate rules, not an empty ordinary transform.
 Ordinary nonhybrid combinations can now be implemented with explicit CoE confidence and
 real pool tests; unresolved specials do not block them.
+
+S3 `poec_getModdedWeight`,1559-1570, returns the multiplication result without integer
+rounding. Example126*0.15=18.9, not18 or19. Our integer DP can preserve this rational
+probability law by scaling ALL transformed pool weights by one common denominator and
+then reducing their common gcd. This is mathematical representation, not game rounding.
