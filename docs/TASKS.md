@@ -46,19 +46,19 @@ all game mechanics. No dependent path may silently guess.
 ## Phase 1 -- engine core
 
 - [~] Item model and mod-pool resolver (`d07a1b5` ordinary slice accepted; Q16/Q17 provisionally bounded by GOAL/D14; full model still out of scope)
-- [ ] Actions as pure functions, one module per rule family
-- [~] Exact stage outcome distributions (`4ee0641` grouped draw kernel accepted; action adapters/CLI pending); predicates and thresholds reduce the same distribution
-- [ ] Expected cost of spam loops, attempt/cost distribution and p90; hand-computed fixtures in `docs/design/build_contract.md`; reject Q28 display shortcuts
-- [ ] Monte Carlo outcome frequencies agreeing with exact distributions; seed, sample count and estimated-method labels
+- [~] Ordinary action distributions and deterministic transitions (`51b386f`); special families explicitly blocked; bounded Divine remains stretch
+- [x] Ordinary exact stage outcome distributions (`4ee0641`,`51b386f`); predicates/thresholds reduce the same distribution (`f3cf7c2`); unsupported families remain explicit
+- [x] Exact geometric/chain/compound loop costs and p90 (`8eeee53`), bounded estimated p90 fallback (`70fcadb`); hand fixtures, no Q28 display shortcuts
+- [x] Monte Carlo agrees with exact over five real pools (`70fcadb`); seed, sample counts and error bounds explicit
 - [ ] 30+ known-answer tests with their sources (the current 78 tests validate data tooling, not 78 crafting probabilities)
 
 ## Phase 2 -- item spec -> ranked strategies
 
-- [ ] Item spec format accepting required mods OR a group/tier value table + stopping threshold; preserve owner's helmet example
-- [ ] `examples/bow_value_table.yaml` with explicitly invented values and threshold (BRIEF 3b)
-- [ ] Price table and loadout files
-- [ ] Strategy templates 1-6 as policies with stopping/restart rules and decision points
-- [ ] The ranker and `python -m craftoracle plan ...`: Pareto frontier of evaluated policies with expected utility, expected cost, p90 cost, irreversible-failure risk and rare inputs
+- [x] Item spec accepts required mods OR a group/tier value table + stopping threshold; helmet example (`f3cf7c2`)
+- [x] `examples/bow_value_table.yaml` with explicitly invented values and threshold (BRIEF 3b; `f3cf7c2`)
+- [x] Price table and loadout files (`f3cf7c2`; invented prices, explicit permissions and sourced bench quantities)
+- [~] Strategy templates1-3 within ordinary night slice, with stopping/restart rules and decisions; templates4-6 remain future/blocked-family work
+- [~] The ranker and `python -m craftoracle plan ...`: Pareto frontier of evaluated policies with expected utility, expected cost, p90 cost, irreversible-failure risk and rare inputs
 - [ ] Validate two thresholds on one distribution, conditional terminal value, and dominance filtering; distinguish cost quantiles from confidence intervals
 
 - [x] Night vertical slice: item model and ordinary PoB pool resolver (`d07a1b5`; 21 focused tests; corrected ordinary pool totals)
@@ -68,4 +68,4 @@ all game mechanics. No dependent path may silently guess.
 - [x] Night independent Monte Carlo and p90 cost estimator (`70fcadb`;14 tests, five real pools within stated bounds)
 - [x] Night item specs, invented prices and loadouts (`f3cf7c2`;12 tests; two examples and sourced bench finish)
 - [~] Night concrete policies and direct CLI (`2026-09-21-policy-evaluation.md`, `2026-09-21-plan-cli.md`; workers running)
-- [ ] Night Monte Carlo, loop costs, inputs, real policy templates and CLI (GOAL order; specs being prepared)
+- [~] Night core integration umbrella: GOAL1-5 merged; real policies/CLI in progress; known-answer/frontier/Divine specs prepared but not dispatched before core acceptance

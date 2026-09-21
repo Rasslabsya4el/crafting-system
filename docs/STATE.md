@@ -19,7 +19,7 @@
 - `python -m pytest -q tests/test_distributions.py`:17 passed on accepted branch.
 - `python -m pytest -q tests/test_actions.py`:15 passed on accepted branch.
 - `python -m pytest -q tests/test_costs.py`:13 passed on accepted branch.
-- Combined main suite before MC merge:144 passed in12.00s; MC focused14 passed in3.73s.
+- Combined main suite after MC and input merges:`python -m pytest -q` ->170 passed in12.92s (0.22minute).
 - Exact six-draw helmet distribution:14 classes,mass0.9999999999999984,target0.0000535457934229.
 - Exact mixture count4/5/6 weights8/3/1:Chaos p0.000024282088455126466; Envy
   p0.0025940606844434217; suffix preparation p0.05567530208498237; final life slam1000/39275.
