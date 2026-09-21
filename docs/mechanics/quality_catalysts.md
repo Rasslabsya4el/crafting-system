@@ -53,6 +53,17 @@ Use the formula, not the four-decimal printed probabilities, for calculations. Q
 rounding and subsequent modifier-magnitude rounding are distinct; the latter remains Q23.
 S3's5/2/1 rarity increments are a historical discrepancy, not an alternative current default.
 
+S46 re-read at the same revision1675910 on2026-09-21. Its3.15 version note states that
+catalyst quality no longer changes modifier-generation chances and is no longer removed
+by the formerly consuming currency actions. Therefore current ordinary rolls preserve this
+quality metadata without a weight boost. Its regular catalyst list is: Abrasive(Attack),
+Accelerating(Speed), Fertile(Life/Mana), Imbued(Caster), Intrinsic(Attribute),
+Noxious(Physical/Chaos Damage), Prismatic(Resistance), Tempering(Defence),
+Turbulent(Elemental Damage), Unstable(Critical). Dextral/Sinistral target suffixes/prefixes
+and have separate Mirage acquisition conditions. These displayed effect descriptions do
+not establish exact stat-magnitude rounding or every internal tag mapping.
+Full rendered text cached at `sources/raw/research/wiki-catalyst-2026-09-21.txt`.
+
 Sources: S46 https://www.poewiki.net/index.php?title=Catalyst&oldid=1675910;
 S47 https://www.poewiki.net/index.php?title=Quality&oldid=1673652, Amount/Effect on items;
 S3 package.js:2318-2325. Read 2026-09-20.

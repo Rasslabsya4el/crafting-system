@@ -125,3 +125,5 @@ Rechecks2026-09-21: S17 same revision1700578 read through Playwright, full rende
 100-row increment table in `wiki-quality-2026-09-21.txt` and `wiki-quality-table-2026-09-21.txt`.
 S58 same revision1675208 in `wiki-resonator-2026-09-21.txt`; S33 same revision1681353 in
 `wiki-fracturing-2026-09-21.txt`, all under sources/raw/research/. No CoE file was refetched.
+S46 same revision1675910 re-read2026-09-21, including the3.15 removal of catalyst weight
+boost/quality consumption: `sources/raw/research/wiki-catalyst-2026-09-21.txt`.
