@@ -29,4 +29,23 @@ python -m craftoracle plan examples/bow_value_table.yaml --loadout data/loadouts
 
 `data/prices.example.json` contains invented chaos-equivalent prototype inputs, not trade prices. p90 is the 90th-percentile total cost, while an estimated p90 prints its DKW uncertainty interval, sample count, seed, and error bound. Results are exact only under the stated provisional ordinary-crafting assumptions; each plan prints those assumptions and the source notes from the selected inputs. Families outside the reviewed slice, including harvest, fossils, eldritch, awakened, recombinator, veiled, corruption, beast, catalyst, and other Q9-bound item states, remain explicitly blocked rather than estimated.
 
+For bounded value-specific Divine outcomes, construct a `RolledItem` with one current integer value for each ranged affix. From the repository root, the reviewed Royal Burgonet example is:
+
+```python
+from pathlib import Path
+
+from craftoracle.actions import load_action_data
+from craftoracle.divine import RolledItem, divine_distribution
+from craftoracle.item_model import ItemState, ModRef
+
+data = load_action_data(Path.cwd())
+life = ModRef("IncreasedLife9", "Prefix", "IncreasedLife")
+chaos = ModRef("ChaosResist6", "Suffix", "ChaosResistance")
+item = ItemState("Royal Burgonet", 86, "rare", (life, chaos))
+rolled = RolledItem(item, (("IncreasedLife9", 130), ("ChaosResist6", 31)))
+assert len(divine_distribution(rolled, data)) == 75
+```
+
+`divine_distribution(rolled, data)` enumerates at most 100,000 joint states. `apply_divine(rolled, data, rng=random.Random(seed))` remains available for reproducible samples beyond that bound. This API only accepts one inclusive integer range in one projected `stat_text` string per modifier; fixed numeric values, decimal values, and multi-stat shapes raise an explicit unsupported-shape error rather than being interpreted.
+
 Start project work with `AGENTS.md`, then `docs/BRIEF.md` and `docs/STATE.md`.
