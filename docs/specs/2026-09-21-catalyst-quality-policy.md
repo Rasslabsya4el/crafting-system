@@ -3,8 +3,11 @@
 Worktree: `.worktrees/catalyst-quality-policy` (branch `w-catalyst-quality-policy`).
 May touch ONLY `src/craftoracle/item_model.py`, `src/craftoracle/actions.py`,
 `src/craftoracle/quality.py`, `src/craftoracle/cli.py`, `tests/test_quality.py`.
-Dependency: fractured-item-actions and optimizer accepted first, so shared model/CLI files
-have no concurrent writer. Bounded45minute task. No modifier-value evaluator or market data.
+Dependency: fractured-item-actions accepted first. Core quality/model/action work may run
+alongside optimizer because those files are disjoint. Do not edit cli.py until the lead
+reports optimizer accepted and merges it into this worktree; commit the core first so that
+handoff is clean. Only then implement requirement5 and its CLI test. No concurrent CLI
+writer. Bounded45minute task. No modifier-value evaluator or market data.
 
 ## Why
 Owner14 is resolved by S74/S47. Provide a usable quality-finishing policy with exact
