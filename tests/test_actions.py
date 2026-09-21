@@ -15,6 +15,7 @@ from craftoracle.actions import (
     action_distribution,
     bench_item,
     load_action_data,
+    prepare_roll,
     scour_item,
 )
 from craftoracle.distributions import OutcomeClass, expected_value, probability
@@ -24,12 +25,12 @@ from craftoracle.item_model import ItemState, ModRef
 ROOT = Path(__file__).parents[1]
 
 
-def _mod(mod_id: str, side: str, group: str, *, weight: int = 1, tags=()) -> dict:
+def _mod(mod_id: str, side: str, group: str, *, weight: int = 1, level: int = 1, tags=()) -> dict:
     return {
         "id": mod_id,
         "type": side,
         "group": group,
-        "level": 1,
+        "level": level,
         "weightKey": ["default"],
         "weightVal": [weight],
         "modTags": list(tags),
@@ -48,8 +49,10 @@ def synthetic() -> ActionData:
             "B": _mod("B", "Suffix", "B", weight=3),
             "E": _mod("E", "Suffix", "E"),
             "F": _mod("F", "Suffix", "F"),
+            "Attack": _mod("Attack", "Prefix", "Attack", tags=("attack",)),
         },
         bench={
+            700: {"source_index": 700, "type": "Prefix", "group": "BenchPrefix", "types": {"Helmet": True}, "modTags": []},
             728: {"source_index": 728, "type": "Suffix", "group": "ItemGenerationCannotChangePrefixes", "types": {"Helmet": True}, "modTags": []},
             729: {"source_index": 729, "type": "Prefix", "group": "ItemGenerationCannotChangeSuffixes", "types": {"Helmet": True}, "modTags": []},
             730: {"source_index": 730, "type": "Suffix", "group": "ItemGenerationCanHaveMultipleCraftedMods", "types": {"Helmet": True}, "modTags": []},
@@ -111,6 +114,12 @@ def test_annul_uniform_and_scour_locks(synthetic: ActionData) -> None:
     suffix_locked = scour_item(ItemState("Base", 1, "rare", (ref("B", "Suffix", "B"), ref("bench:729", "Prefix", "ItemGenerationCannotChangeSuffixes"))), synthetic)
     assert suffix_locked.rarity == "magic"
     assert suffix_locked.mods == (ref("B", "Suffix", "B"),)
+    crafted_prefix = scour_item(ItemState("Base", 1, "rare", (
+        ref("bench:730", "Suffix", "ItemGenerationCanHaveMultipleCraftedMods"),
+        ref("bench:700", "Prefix", "BenchPrefix"),
+        ref("bench:728", "Suffix", "ItemGenerationCannotChangePrefixes"),
+    )), synthetic)
+    assert crafted_prefix.mods == (ref("bench:700", "Prefix", "BenchPrefix"),)
 
 
 def test_bench_identity_slots_and_multimod(synthetic: ActionData) -> None:
@@ -132,11 +141,80 @@ def test_chaos_keeps_only_the_locked_side_and_special_families_are_explicit(synt
     chaos = action_distribution("chaos", locked, synthetic)
     assert all(out.prefixes >= 2 for out in chaos)
     assert all(out.suffixes <= 3 for out in chaos)
-    for action, question in (("harvest", "Q6"), ("fossil", "Q13"), ("eldritch", "Q11"), ("awakener", "Q20")):
+    for action, question in (("harvest", "Q6"), ("fossil", "Q13"), ("fossils", "Q13"), ("eldritch", "Q11"), ("awakener", "Q20"), ("recombinator", "Q21"), ("fracture", "Q12"), ("veiled", "Q12"), ("corruption", "Q18"), ("beasts", "Q25"), ("catalysts", "Q23")):
         with pytest.raises(NotImplementedError, match=question):
             action_distribution(action, ItemState("Base", 1, "normal"), synthetic)
     with pytest.raises(ValueError, match="unknown action"):
         action_distribution("divine", ItemState("Base", 1, "normal"), synthetic)
+
+
+def test_additions_and_removals_respect_full_sides_and_attack_lock(synthetic: ActionData) -> None:
+    prefix_only = ActionData(synthetic.bases, {key: synthetic.mods[key] for key in ("A", "C")}, synthetic.bench, {}, synthetic.rules)
+    with pytest.raises(ValueError, match="no eligible"):
+        action_distribution("augmentation", ItemState("Base", 1, "magic", (ref("A", "Prefix", "A"),)), prefix_only)
+
+    retained_no_attack = ItemState("Base", 1, "rare", (
+        ref("bench:730", "Suffix", "ItemGenerationCanHaveMultipleCraftedMods"),
+        ref("bench:729", "Prefix", "ItemGenerationCannotChangeSuffixes"),
+        ref("bench:731", "Suffix", "ItemGenerationCannotRollAttackAffixes"),
+    ))
+    assert "Attack" not in {entry.mod_id for entry in prepare_roll("chaos", retained_no_attack, synthetic).entries}
+    removed_no_attack = ItemState("Base", 1, "rare", (
+        ref("bench:730", "Suffix", "ItemGenerationCanHaveMultipleCraftedMods"),
+        ref("bench:731", "Suffix", "ItemGenerationCannotRollAttackAffixes"),
+    ))
+    assert "Attack" in {entry.mod_id for entry in prepare_roll("chaos", removed_no_attack, synthetic).entries}
+
+    exalt_input = ItemState("Base", 1, "rare", (
+        ref("A", "Prefix", "A"), ref("bench:730", "Suffix", "ItemGenerationCanHaveMultipleCraftedMods"),
+        ref("bench:731", "Suffix", "ItemGenerationCannotRollAttackAffixes"),
+    ))
+    assert "Attack" not in {entry.mod_id for entry in prepare_roll("exalted", exalt_input, synthetic).entries}
+    annul_input = ItemState("Base", 1, "rare", (
+        ref("Attack", "Prefix", "Attack"), ref("B", "Suffix", "B"),
+        ref("bench:730", "Suffix", "ItemGenerationCanHaveMultipleCraftedMods"),
+        ref("bench:731", "Suffix", "ItemGenerationCannotRollAttackAffixes"),
+    ))
+    annul = action_distribution("annul", annul_input, synthetic, {"Attack": "attack"})
+    assert all("attack" in outcome.labels for outcome in annul)
+
+
+@pytest.mark.parametrize("flag", ("corrupted", "influenced", "fractured", "synthesised", "mirrored", "split"))
+def test_q9_flags_are_rejected_by_actions(synthetic: ActionData, flag: str) -> None:
+    with pytest.raises(NotImplementedError, match=r"^out of tonight's slice: Q9$"):
+        action_distribution("transmute", ItemState("Base", 1, "normal", **{flag: True}), synthetic)
+
+
+def test_essence_tier_cap_and_metamod_rules(synthetic: ActionData) -> None:
+    essence_data = ActionData(
+        synthetic.bases,
+        {
+            "Forced": _mod("Forced", "Prefix", "Forced", level=100),
+            "Low": _mod("Low", "Suffix", "Low", level=35),
+            "High": _mod("High", "Suffix", "High", level=36),
+        },
+        synthetic.bench,
+        {
+            "low": {"id": "low", "tier": 1, "mods": {"Helmet": "Forced"}},
+            "high": {"id": "high", "tier": 5, "mods": {"Helmet": "Forced"}},
+        },
+        synthetic.rules,
+    )
+    with pytest.raises(ValueError, match="tier 1-4"):
+        action_distribution("essence", ItemState("Base", 100, "rare"), essence_data, essence_id="low")
+    scenario = prepare_roll("essence", ItemState("Base", 100, "normal"), essence_data, essence_id="low")
+    assert {entry.mod_id for entry in scenario.entries} == {"Low"}
+    with pytest.raises(ValueError, match="metamod"):
+        action_distribution("essence", ItemState("Base", 100, "rare", (ref("bench:728", "Suffix", "ItemGenerationCannotChangePrefixes"),)), essence_data, essence_id="high")
+    assert sum(action_distribution("essence", ItemState("Base", 100, "rare", (ref("bench:730", "Suffix", "ItemGenerationCanHaveMultipleCraftedMods"),)), essence_data, essence_id="high").values()) == pytest.approx(1)
+
+
+def test_existing_bench_must_support_the_item_class(synthetic: ActionData) -> None:
+    unsupported = dict(synthetic.bench)
+    unsupported[999] = {"source_index": 999, "type": "Suffix", "group": "Unsupported", "types": {"Ring": True}, "modTags": []}
+    data = ActionData(synthetic.bases, synthetic.mods, unsupported, {}, synthetic.rules)
+    with pytest.raises(ValueError, match="does not support"):
+        action_distribution("scour", ItemState("Base", 1, "magic", (ref("bench:999", "Suffix", "Unsupported"),)), data)
 
 
 def test_rare_mixture_and_real_essence_mapping() -> None:

@@ -25,7 +25,7 @@ _NO_ATTACK = "ItemGenerationCannotRollAttackAffixes"
 _NO_CASTER = "ItemGenerationCannotRollCasterAffixes"
 _ESSENCE_LEVEL_CAPS = {1: 35, 2: 45, 3: 60, 4: 75}  # S21, docs/mechanics/essences.md
 _BLOCKED_ACTIONS = {
-    "harvest": "Q6", "fossil": "Q13", "eldritch": "Q11", "awakener": "Q20",
+    "harvest": "Q6", "fossil": "Q13", "fossils": "Q13", "eldritch": "Q11", "awakener": "Q20",
     "recombinator": "Q21", "fracture": "Q12", "veiled": "Q12", "corruption": "Q18",
     "beasts": "Q25", "catalysts": "Q23",
 }
@@ -172,7 +172,7 @@ def scour_item(item: ItemState, data: ActionData) -> ItemState:
     _validate_item(item, data)
     if item.rarity == _NORMAL:
         raise ValueError("scour requires non-normal item")
-    retained = tuple(mod for mod in _retained_for_reroll(item) if not _is_bench(mod))
+    retained = _retained_for_reroll(item)
     prefixes, suffixes = _counts(retained)
     rarity = _NORMAL if not retained else _MAGIC if prefixes <= 1 and suffixes <= 1 else _RARE
     return _replace_item(item, rarity, retained)
@@ -220,6 +220,11 @@ def _addition_scenario(item, data, labels, resulting_rarity) -> RollScenario:
     if prefixes >= cap[0] and suffixes >= cap[1]:
         raise ValueError("item is full")
     entries = _candidate_entries(item, data, item.mods, _meta_flags(item.mods), None)
+    entries = tuple(
+        entry for entry in entries
+        if (entry.type == "Prefix" and prefixes < cap[0])
+        or (entry.type == "Suffix" and suffixes < cap[1])
+    )
     if not entries:
         raise ValueError("no eligible modifier can be added")
     return RollScenario(entries, ((1, 1),), cap[0], cap[1], prefixes, suffixes, _labels_for(item.mods, labels), tuple(mod.group for mod in item.mods))
@@ -320,7 +325,7 @@ def _validate_item(item, data):
         raise NotImplementedError(_Q9_ERROR)
     if item.rarity not in {_NORMAL, _MAGIC, _RARE}:
         raise ValueError(f"invalid rarity: {item.rarity}")
-    _base_for(item, data)
+    base = _base_for(item, data)
     if isinstance(item.item_level, bool) or not isinstance(item.item_level, int) or item.item_level <= 0:
         raise ValueError("item level must be a positive integer")
     seen_groups = set()
@@ -333,6 +338,8 @@ def _validate_item(item, data):
         row = _row_for(mod, data)
         if mod.type != row["type"] or mod.group != row["group"]:
             raise ValueError(f"existing mod ref differs from source row: {mod.id}")
+        if _is_bench(mod) and row["types"].get(base["type"]) is not True:
+            raise ValueError(f"existing bench modifier does not support base type {base['type']}")
         seen_ids.add(mod.id)
         seen_groups.add(mod.group)
     prefixes, suffixes = _counts(item.mods)
