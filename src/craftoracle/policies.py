@@ -636,7 +636,10 @@ def _success_probability(spec, distribution):
 
 
 def _selected_mass(spec, distribution):
-    return probability(distribution, lambda outcome: _completes(spec, outcome))
+    # ``probability`` validates kernel mass and outcome classes.  Sum selected
+    # and total mass with the same stable primitive before handing p to costs.
+    probability(distribution, lambda outcome: _completes(spec, outcome))
+    return math.fsum(mass for outcome, mass in distribution.items() if _completes(spec, outcome))
 
 
 def _normalized_mass(distribution, selected_mass):

@@ -11,7 +11,7 @@ from craftoracle.actions import ActionData, load_action_data
 from craftoracle.costs import geometric_cost
 from craftoracle.distributions import OutcomeClass
 from craftoracle.plan_inputs import load_loadout, load_spec
-from craftoracle.policies import _conditional_distribution, _success_probability, evaluate_policies
+from craftoracle.policies import _conditional_distribution, _selected_mass, _success_probability, evaluate_policies
 
 
 ROOT = Path(__file__).parents[1]
@@ -304,6 +304,17 @@ def test_kernel_tolerance_normalizes_an_all_success_probability_before_costs() -
     assert success == 1
     assert geometric_cost(success, 2).expected_cost == 2
     assert sum(_conditional_distribution(AllSuccess(), distribution).values()) == 1
+
+    multiclass = {
+        OutcomeClass(("target-a",), 1, 0): 0.2,
+        OutcomeClass(("target-b",), 0, 1): 0.2,
+        OutcomeClass(("target-c",), 1, 1): 0.2,
+        OutcomeClass(("target-d",), 2, 1): 0.2,
+        OutcomeClass(("target-e",), 1, 2): 0.2,
+    }
+    assert _selected_mass(AllSuccess(), multiclass) == pytest.approx(1)
+    assert _success_probability(AllSuccess(), multiclass) == 1
+    assert geometric_cost(_success_probability(AllSuccess(), multiclass), 2).expected_cost == 2
 
 
 def test_accepted_planner_inputs_share_the_same_contract(action_data: ActionData, distribution_cache: dict) -> None:
