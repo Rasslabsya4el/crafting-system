@@ -29,14 +29,15 @@ Forced mod consumes a slot and removes its entire group from the random pool. Al
 the count-mixture distribution from the parameter file; every plan prints its assumption.
 
 ## (b) Magic core followed by Regal and Exalted additions
-A bounded valid fixed-cycle template: start each attempt normal, Transmute; if result has one
-mod, Augment to two; Regal; Exalt three times to six mods. Then stop on target or Scour and
-restart. For efficiency this is not claimed best, but it is a real template with explicit
+A bounded valid fixed-cycle template: first Transmute the normal base as setup. Each attempt
+uses Alteration; if result has one mod, Augment to two; Regal; Exalt three times to six mods.
+Then stop on target or Scour, Transmute back to magic and restart. For efficiency this is not claimed best, but it is a real template with explicit
 decisions and no paid action after the final stop. The draw schedule is (2,1,1),(4,3,3).
-The 1/2 augmentation coin from Transmute's count is independent of this final draw law:
+The 1/2 augmentation coin from Alteration's count is independent of this final draw law:
 the one-mod branch plus Augment makes the same two sequential capped draws as the two-mod
-branch. Thus per-attempt costs are c0=transmute+regal+3*exalt or c0+augment, weights1/2 each,
-independent of terminal success; failure additionally pays scour. Use a compound-geometric
+branch. Thus per-attempt costs are c0=alteration+regal+3*exalt or c0+augment, weights1/2 each,
+independent of terminal success; failure additionally pays scour+transmute. Initial setup pays transmute once; the
+policy deliberately replaces that setup roll with Alteration, an explicit inefficiency. Use a compound-geometric
 cost distribution, not fixed mean cost multiplied by a geometric quantile. Setup/base cost once.
 Optional bench finisher only if its concrete sourced modifier can satisfy the remaining
 requirement and slot/group gates; never count a low bench life mod as ordinary T1 life.
