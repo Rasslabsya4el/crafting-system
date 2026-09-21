@@ -65,3 +65,4 @@ under10minutes. Pytest uses repository-local .pytest_tmp. No background process 
 - 08:18 CEST — item model merged d07a1b5; exact DP in progress; goal/demo incomplete.
 - 08:28 CEST — exact DP merged4ee0641; actions/costs running; all downstream specs prepared.
 - 09:29 CEST — GOAL1-5 merged,170 tests green; policy/CLI first review corrections in progress; stretch specs ready.
+- 10:29 CEST — core,41 known answers and Pareto merged;244 tests green; final bounded Divine worker in progress.
