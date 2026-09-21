@@ -1,4 +1,4 @@
-# Current state — GOAL 2 active (2026-09-21, 14:56 CEST)
+# Current state — GOAL 2 active (2026-09-21, 15:34 CEST)
 
 1. Ordinary PoE3.29 is the owner-confirmed target; GOAL2 is incomplete and work continues.
 2. Harvest exact/sampler merged527efa7; protected-suffix helmet policy merged55c8191.
@@ -9,7 +9,7 @@
 7. Twelve cached-CoE cases accepted3712602;25 correspondences, max relative difference2.08735%, none above5%.
 8. Optimizer560f8c2 accepted: protected8357.19→1948.60, Harvest2703.61→1986.20; grids24/8/96/4.
 9. Solver b89f775: hand optima8/4/4.75; helmet100000-state limit in0.23022minute, no optimum claimed.
-10. Fracture adapter d348533 accepted; next: family policies, complete bow reports, full pytest under one minute.
+10. Fossil policy2c069fc:bow means162.38/9739.88;373 tests0.863minute. Paid fracture policy is the last active integration.
 
 ## Working commands and evidence
 
@@ -20,12 +20,11 @@ python -m tools.coe_validation
 python -m pytest -q
 ```
 
-Latest focused lead acceptance:39 Harvest/policy/input/CLI tests passed in0.54minute
-on55c8191. Accepted Harvest adapter:26 tests, exact Life9=.07950823245417578,
-820/10000 seeded samples within Hoeffding .019494746, zero suffix violations.
-Full main regression at2b1d36a:329 passed in60.62s (1.01minutes); under-minute acceptance
-is not yet met. Optimizer correction2 includes reducing repeated expensive test work while
-preserving numerical coverage. Full source-tool tests require the ignored local snapshots;
+Latest full main regression after2c069fc:373 passed in51.77s (0.863minute), including
+the ignored local source snapshots. Lead fossil acceptance:48 affected tests0.235minute
+and26 final changed tests0.008minute. Complete default plans take0.44minute (helmet)
+and0.85minute (bow60/100), all15 fossil and96 Magic candidates complete. Final fracture
+integration requires one further full run. Full source-tool tests require the ignored local snapshots;
 worker focused tests do not require unrelated snapshots. Pytest temp stays in .pytest_tmp.
 
 Source research is now S1-S79. Fifteen owner rows corrected inffcf869; no owner test is
@@ -38,10 +37,10 @@ policy has no attack/caster restriction, so that uncertainty does not change its
 
 ## In progress and bounded backlog
 
-At most two workers. Current:fossil-spam-policy (Terra high, fromc9afb36; correction1) and
-fracture-essence-policy (Terra high, core556bc59; lead6 tests passed, correction1).
-Shared-file handoff follows fossil acceptance. Accepted GOAL2 comparisons and outstanding
-full-plan evidence are collected in docs/research/goal2-results.md (ec5e70a).
+Only fracture-essence-policy remains active (Terra high, core556bc59/1a389e1 reviewed).
+Final correction and shared-file handoff authorized after fossil merge2c069fc. Fossil
+worktree removed cleanly; report and full outputs preserved in out/workers and out/goal2.
+Accepted comparisons and default-plan evidence:docs/research/goal2-results.md (901b9c9/6eeeef4).
 Quality policy14be5e9 accepted:48 lead core tests plus19 final quality/CLI checks0.057minute;
 mean14.42372357 applications,p90 16; price2 mean28.84744714/p90 32. The Paua Amulet86
 text command also passed at main. Clean optimizer and quality worktrees were removed.
