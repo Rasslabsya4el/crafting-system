@@ -108,3 +108,5 @@ Night goal active: first worker failed before writing files due to service 429, 
 same handle once with corrected spec. If delegation remains unavailable, lead implements
 under the same spec/test discipline per AGENTS 6. Tasks may span 30–60 minutes due to
 exact-DP and acceptance work; individual commands are bounded and no background job remains.
+
+- 08:18 CEST — item-model-pool merged d07a1b5 (21 tests); exact DP in progress; action/MC/cost specs prepared. Goal still active, demo not complete. No fabricated intermediate hourly observations.

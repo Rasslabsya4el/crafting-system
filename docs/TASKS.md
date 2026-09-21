@@ -61,4 +61,6 @@ all game mechanics. No dependent path may silently guess.
 - [ ] The ranker and `python -m craftoracle plan ...`: Pareto frontier of evaluated policies with expected utility, expected cost, p90 cost, irreversible-failure risk and rare inputs
 - [ ] Validate two thresholds on one distribution, conditional terminal value, and dominance filtering; distinguish cost quantiles from confidence intervals
 
-- [~] Night vertical slice: item model and ordinary PoB pool resolver (spec `2026-09-21-item-model-pool.md`; worker launch next)
+- [x] Night vertical slice: item model and ordinary PoB pool resolver (`d07a1b5`; 21 focused tests; corrected ordinary pool totals)
+- [~] Night exact grouped distributions and action adapters (specs 2026-09-21-exact-distributions.md / ordinary-actions.md)
+- [ ] Night Monte Carlo, loop costs, inputs, real policy templates and CLI (GOAL order; specs being prepared)
