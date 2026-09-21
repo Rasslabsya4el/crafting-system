@@ -114,6 +114,11 @@ records the owner-supplied version rather than an invented upstream commit (Q8).
 | S72 | https://poedb.tw/us/Resonator | 2026-09-21 | Four Chaotic resonator tooltips all target rare items; S58 corroboration | sources/raw/research/goal2-browser-findings.md |
 | S73 | sources/pob/Data/Bases/amulet.lua; sources/pob/Data/Bases/boots.lua | 2026-09-21 | Literal105/81 source records for external-validation classes | Ignored S1 snapshots; hashes and examples in specs/2026-09-21-validation-base-classes.md |
 | S74 | https://www.pathofexile.com/forum/view-thread/3531661 | 2026-09-21, browser | Official3.25 Item Quality rework explicitly includes Catalysts; non-unique increments depend on ilvl | sources/raw/research/official-quality-3.25.txt |
+| S75 | https://www.pathofexile.com/forum/view-thread/3787013 | 2026-09-21 | Official3.26 selected-mod mode and destruction; classic mode retained; unnatural-mod count nerf | sources/raw/research/conflict-recomb-awakener-search.txt; mechanics/recombinators*.md observations |
+| S76 | https://www.reddit.com/r/pathofexile/comments/13y05ag/orb_of_conflict_rates_50_11n_to_upgrade_per_n/ | 2026-09-21 | blvcksvn/Prohibited Library2023 Conflict experiments, sample sizes and fitted tier adjustment; player evidence, not exact odds | sources/raw/research/conflict-recomb-awakener-search.txt; mechanics/eldritch_currency.md observation table |
+| S77 | https://www.reddit.com/r/pathofexile/comments/fpoppb/used_awakener_orb_and_lost_a_influenced_mod/ | 2026-09-21 | March2020 player reports donor mod surviving conflict on receiver base; historical counterexample, not current rate | sources/raw/research/conflict-recomb-awakener-search.txt |
+| S78 | https://docs.google.com/spreadsheets/d/1l811uI5eXML-Iw_vNNouah9XRWZVGiLjzZOBWObxKpI/edit | 2026-09-21 | S67 linked mutable spreadsheet now titled poe2(0.4)recombinator; R1Backend formula/rounding and version limits | sources/raw/research/recomb-poe2-0.4.xlsx |
+| S79 | https://docs.google.com/spreadsheets/d/19bW-LKWn1uYEThSSyE4PW9DzjhAnNWZNI9ilAwY7GZ4/edit | 2026-09-21 | Only title inspected: poe2 weights (OUTDATED0.2); no data adopted | mechanics/recombinators_selected.md title observation |
 
 Rechecks2026-09-21: S17 same revision1700578 read through Playwright, full rendered text in
 `sources/raw/research/wiki-metamod-2026-09-21.txt`; S47 same revision1673652, full text and

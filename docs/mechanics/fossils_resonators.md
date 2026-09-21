@@ -1,7 +1,7 @@
 # Fossils and resonators
 
-Status: partial, ordinary weight-transform path reviewed; named fossil data and special outcomes
-still need corroboration. Read 2026-09-20. Confidence: `reimplemented-from-CoE`; the metamod
+Status: ordinary nonhybrid weight-transform model accepted under owner D21; special outcomes
+remain partial. Read 2026-09-20, rechecked2026-09-21. Confidence: `reimplemented-from-CoE`; the metamod
 exception is additionally `documented` by S17. Sources: S3 `package.js` line 5 (`fossil`),
 `poec_workoutFOMTypes` lines 1500-1508, `poec_getModdedWeight` lines 1559-1570,
 `poec_simApplyCraftGO` lines 2328-2338; S17 Wiki Metamod.
@@ -20,7 +20,8 @@ and tracks one resonator of the selected fossil count (`poec_simUpdateSpending`,
    stored percentage by 100 to get a factor (S3 line 1504). This describes CoE's encoding only.
 2. Aggregate positive and negative factors separately. Positive factors add in mode `a` and
    multiply in the alternate mode; negative factors multiply. Mode `a` is the cached default
-   (`poec_cFosMode`, line 435), and can be changed. Current-game stacking is still Q13.
+   (`poec_cFosMode`, line 435), and can be changed. D21 selects this default for the prototype,
+   with multiplicative sensitivity retained; Q13 preserves its evidence limits.
 3. Hybrid tag entries require all listed tags and bypass the corresponding single-tag factors
    in `poec_getModdedWeight`; a matched block makes effective weight zero.
 4. With no block, missing positive/negative factors default to 1 and effective weight is base
@@ -37,7 +38,7 @@ Synthetic inputs, chosen for arithmetic, not claims about any named fossil:
 - Base weight 100, one applicable encoded value 300, negative value 50: factors 3 and 0.5,
   effective weight 150. Matching blocked tag: 0 regardless of those factors.
 - Two applicable positive factors 3 and 4: mode `a` gives 700 from base 100; multiplicative mode
-  gives 1200. This proves the mode matters; it does not select the game's current rule.
+  gives1200. D21 selects700 as the CoE-derived default, not a datamined game assertion.
 - Base weight 100 with no matched factor and no Opulent untagged override remains 100.
 
 Group conflicts, tier availability and count distributions still come from the pool/reroll
@@ -51,7 +52,7 @@ fracturing a random modifier and excludes fractured/influenced inputs. The froze
 path must not be treated as a current 3.29 rule. See patch_3_29.md and Q19; ordinary weight
 examples above do not implement this special fossil.
 
-Q9 item eligibility; Q13 stacking mode and named fossil multipliers; Q2 literal
+Q9 special-item eligibility; Q13 evidence conflicts and special fossil factors; Q2 literal
 RNG issue for special forced-mod draws. Price inputs and rare-input availability belong to the
 loadout, not game constants in this sheet. No fossil action has been implemented.
 
@@ -78,9 +79,11 @@ multipliers is `player-report` (Wiki-reported community interpretation), not ind
 | Prismatic | Elemental OR Fire OR Cold OR Lightning x6 | (Physical AND Ailment) OR (Chaos AND Ailment) blocked |
 | Corroded | (Physical AND Ailment) OR (Chaos AND Ailment) x10 | Elemental OR Fire OR Cold OR Lightning blocked |
 
-A fossil affects a mod once even if multiple of its tags match (S56). Thus a base-weight-100
-mod matching both Minion and Aura becomes 1000 under the single Bound interpretation, not
-10000. Multiple distinct fossils remain the disputed Q13, not repeated independent tag products.
+S56's interpretation applies a fossil once even if multiple tags match: a base-weight100
+Minion/Aura mod becomes1000 under Bound. Cached CoE instead adds matching positive tag
+factors and gives2000 in its default mode. This is Q13.01, not a silent agreement.
+S56 calls these numbers community interpretation; D21 selects the observed CoE default
+over this player interpretation, with both results preserved for review.
 S56 reports Sanctified factor 1 + .01*(required mod level - 40); a level-80 fixture gives 1.4.
 This is a reported formula, not a new mod-level gate. Tangled uses a random boosted tag x30
 and a different blocked tag; overlapping-other-fossil restrictions are marked unconfirmed.
@@ -96,7 +99,8 @@ S3 special branches read independently:
 - S56 says weights do not affect Bloodstained corrupted-implicit outcomes or Fractured Fossil
   fracture selection. Their exact transition distributions remain Q12, not ordinary weight draws.
 
-S56 corroborates the nature of the Q13 dispute; it does not resolve it. All special recipes
+S56 corroborates the nature of the Q13 dispute; D21 chooses the implementation default.
+All special recipes
 still require current patch/eligibility evidence, especially the S39 Fractured Fossil replacement.
 
 
@@ -114,3 +118,46 @@ Example: a Fire-tag candidate remains weight 0 when Frigid blocks Fire, even if 
 boosts Fire (S58 precedence, S56 tag interpretation). A 2-slot resonator with only 1 fossil is
 not usable. Completed sockets lock in the fossils; this preparation can consume rare inputs
 before the random item outcome, so a later policy must count the complete resonator recipe.
+
+## Owner follow-up: type, overlap and adopted numbers (2026-09-21)
+S58 recheck and S72 tooltips resolve owner row6: Primitive/Potent/Powerful/Prime **Chaotic**
+resonators all target rare items, with1/2/3/4 sockets respectively. **Alchemical** targets
+normal items; current acquisition is Ruthless, or an explicitly allowed legacy input.
+Rarity depends on type, not socket count. No owner test is needed.
+
+Two different fossils can affect the same MOD through different tags. PoB
+`ModExplicit.lua:447`, `LocalAddedFireDamageTwoHand10`, has bow weight126 and tags including
+fire and attack. S4 fossils13(Scorched) and14(Serrated) respectively encode fire1000 and
+attack1000; neither of their cold/caster restrictions matches this mod. Default S3 mode
+adds10+10: effective weight2520. Multiplicative sensitivity gives12600. These are weights,
+not hit probabilities. Duplicate fossil types in one resonator remain forbidden.
+
+Read S4 `fossils.seq[].mod_data` with S3's percentage decoding; the ordinary nonhybrid
+table below is an independently described set of facts, not a copied compiled table.
+
+| CoE fossil ID/name | Positive tag factor | Reduced/blocked tag |
+|---|---|---|
+| 1 Aberrant | chaos10 | lightning0 |
+| 2 Aetheric | caster10 | attack0.15 |
+| 3 Bound | minion10,aura10,curse10 | none |
+| 22 Deft | critical10 | attribute0 |
+| 5 Dense | defences10 | life0 |
+| 6 Faceted | gem10 | none |
+| 7 Frigid | cold10 | fire0 |
+| 21 Fundamental | attribute10 | critical0 |
+| 8 Jagged | physical10 | chaos0 |
+| 9 Lucent | mana10 | speed0 |
+| 10 Metallic | lightning10 | physical0 |
+| 23 Opulent | drop10 | tagless0 (special matching rule) |
+| 12 Pristine | life10 | defences0 |
+| 13 Scorched | fire10 | cold0 |
+| 14 Serrated | attack10 | caster0.15 |
+| 15 Shuddering | speed10 | mana0 |
+
+S4 Prismatic11 boosts **elemental only** by6, unlike S56's broader OR description; it
+blocks physical+ailment and chaos+ailment conjunctions. Corroded4 boosts those conjunctions
+by10 and blocks elemental/fire/cold/lightning. The literal hybrid branch can encounter
+an absent negative-factor entry; trace that separately before authorizing its exact adapter.
+Glyphic20,Hollow18,Sanctified19 have separate rules, not an empty ordinary transform.
+Ordinary nonhybrid combinations can now be implemented with explicit CoE confidence and
+real pool tests; unresolved specials do not block them.

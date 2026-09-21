@@ -2,17 +2,17 @@
 
 ## GOAL 2 — trusted numbers and optimised policies
 
-- [~] Owner-unblocked Harvest tagged reforges and protected-half helmet policy; preserve full-prefix recovery cost.
+- [~] Owner-unblocked Harvest: adapter merged `527efa7` (26 tests); protected-half helmet policy worker active, includes full-prefix recovery cost.
 - [x] Complete S14 metamod matrix as data and tests (`614c9c3`): 33 actions x 4 columns = 132 cells, 33 notes, 10 passing tests.
 - [ ] Record answered source gates: rare counts, multimod, essence rarity boundary and extra Harvest tags.
 - [ ] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots; explain deviations above 5% (Q14).
 - [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
-- [ ] Correct the 15-row owner question sheet without re-asking answered questions.
+- [x] Correct the 15-row owner question sheet without re-asking answered questions (GOAL2 source update commit; S63-S79 and owner answers).
 - [ ] Expose and optimise template parameters; report protected-life expected cost before/after.
 - [ ] Bounded general solver experiment on helmet and three hand optima; report states/time and result or measured failure.
 - [ ] Verify bow distribution/threshold/frontier path after new policies.
-- [ ] Timeboxed research for owner rows 2,6,7,9,10,12,13,14; apply the latest instruction to use CoE fossil stacking.
-- [ ] Locate the owner's recombinator Reddit/diagram source and document classic and selected-mod modes separately.
+- [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (GOAL2 source update commit): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
+- [x] Locate matching recombinator Reddit/diagram chain S66-S69 and document classic and selected-mod modes separately (GOAL2 source update commit); current exact odds remain open.
 - [ ] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy.
 - [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
 
@@ -51,8 +51,8 @@ all game mechanics. No dependent path may silently guess.
 - [!] Resolve Awakener conflicting-mod survivor before implementing that branch (Q20; Wiki random discard versus CoE receiver preference)
 - [!] Validate canonical exclusion families, generated tags and weight multiplier semantics for a general pool resolver (Q16/Q17)
 - [!] Complete action-specific special-item eligibility and replacement-action algorithms before enabling them (Q9/Q12/Q18/Q19; include new bench/Talisman branches)
-- [!] Resolve post-3.27 Harvest retained-flag behavior (Q6) and applicable Rancour tag/loadout rules (Q26)
-- [!] Establish Conflict tier-transition odds (Q11), fossil stacking (Q13), current quality rounding (Q23), Blessed reroll exclusion (Q24) and beast exchange details (Q25)
+- [~] Q6 first/all-draw research remains open; owner-authorized first_only adapter merged527efa7. Q26 four extra tags provisionally accepted; loadout worker active.
+- [~] Conflict exact odds(Q11), special fossils(Q13), quality magnitude/Tainted gaps(Q23), Blessed exclusion(Q24) and beast exchanges(Q25) remain. Ordinary CoE fossil stacking and catalyst gain distribution are accepted for implementation.
 - [!] Test CoE exact-labelled formulas against independent overlapping-group enumeration before using them as an exact oracle (Q14)
 - [ ] Obtain independent corroboration of rare reroll count weights (Q4) and pin supplied PoB bytes to an upstream revision (Q8); current confidence/provenance must stay visible
 - [ ] Research numeric stat/range interpretation and base identity; expand beyond the five selected classes only when a concrete item slice needs it

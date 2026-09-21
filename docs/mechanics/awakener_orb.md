@@ -44,3 +44,13 @@ discard without specifying equal odds. The discrepancy is recorded, not averaged
 ## Open questions
 Q9 legality and ilvl gate; Q12 full fill/pool behavior; Q16 family semantics; Q20
 conflict survivor. No action/calculator implementation is approved for conflicting inputs.
+
+## Bounded research result (2026-09-21)
+S77 is a March2020 player report: the receiver was a Warlord Astral Plate with physical
+damage taken as fire, the donor Hunter armour had physical damage taken as chaos, and
+the surviving influenced mod on the receiver base was the donor's. Confidence `player-report`.
+This is a historical counterexample to universal receiver preference; it gives no current
+survivor frequency. S40's random-discard statement also does not establish50/50.
+No current controlled sample or GGG rule settling the conflict was found in the bounded
+pass. Q20 keeps deterministic receiver preference (frozen CoE) and non-deterministic survivor
+(Wiki/historical report) as distinct alternatives; conflicting merges stay unsupported.

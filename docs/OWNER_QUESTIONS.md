@@ -1,25 +1,25 @@
 # Questions for the owner (yes / no or one number; answer in the last column or in chat; "не знаю" is a valid answer)
 
-First version written by the project lead on 2026-09-21 from `OPEN_QUESTIONS.md`; the agent corrects wording where the lead
-misread a question and appends what is missing. Ordered by how much an answer unblocks. Target: ordinary PoE 3.29.
+Corrected2026-09-21 after the owner answers and bounded source research. The original fifteen-row order is preserved;
+the answers below remain historical records. No unanswered question currently requires an owner test. Target: ordinary PoE3.29.
 
-| # | question (Russian, as asked) | unblocks | assumed if unanswered | answer |
+| # | question (Russian, corrected) | unblocks | adopted assumption | answer / research result |
 |---|---|---|---|---|
-| 1 | Харвест-рефордж (например «reforge life») на предмете с бенч-крафтом «Suffixes cannot be changed»: суффиксы гарантированно сохраняются в 3.29? (Q6) | the route players actually use: protect one half, reforge the other with a tag | family stays blocked | |
-| 2 | Харвест-рефордж на предмете с «Cannot roll Attack Modifiers»: атак-моды исключаются из ВСЕХ модов рефорджа, а не только из первого гарантированного? (Q6) | harvest + metamod blocking | only the first mod is filtered (Craft of Exile's text) | |
-| 3 | Доступны ли в обычной 3.29 (не Ruthless, не легаси) дополнительные харвест-рефорджи по тегам minion / elemental / attribute / mana? (Q26) | which harvest tags the loadouts may use | only the classic tags | |
-| 4 | Хаос / алхимка дают рару 4, 5 или 6 модов с шансами примерно 2/3, 1/4, 1/12 -- это сходится с твоим опытом? (Q4) | every reroll number in the oracle | yes (8 / 3 / 1) | |
-| 5 | Мультимод («Can have up to 3 Crafted Modifiers») на бенче стоит 2 Divine Orb? (Q7) | default price file | yes | |
-| 6 | Можно ли применить резонатор с фоссилами к белому (normal) предмету в обычной 3.29? (Q30) | fossil routes from a white base | no: rare items only | |
-| 7 | Два фоссила, оба увеличивающие шанс одного тега: их множители перемножаются (а не складываются)? (Q13) | fossil-combination calculator | blocked | |
-| 8 | Эссенцию уровня Screaming и выше можно применить к magic-предмету (она сделает его раром)? (Q29.01) | essence routes after an Alteration stage | no: normal or rare only | |
-| 9 | Fracturing Orb: нужен рар минимум с 4 модами, без инфлюенса, фрактурится один случайный мод -- всё верно? (Q12) | fracture-then-spam routes | blocked | |
-| 10 | Veiled Orb в 3.29: снимает случайный мод и добавляет veiled-мод (префикс или суффикс случайно)? Работает ли с «prefixes / suffixes cannot be changed»? (Q12) | veiled finishing | blocked | |
-| 11 | Influence Exalted Orb (Crusader's и т.п.) можно применить ТОЛЬКО к предмету без инфлюенса? (Q27) | influence routes | yes, only without influence | |
-| 12 | Awakener's Orb: если выбранные моды двух предметов конфликтуют по группе, остаётся мод предмета-получателя (а не случайный)? (Q20) | double-influence routes | blocked | |
-| 13 | Orb of Conflict при разных тирах двух имплицитов: шансы повышения / понижения зависят от тиров (не 50 / 50)? (Q11) | eldritch implicit routes | blocked | |
-| 14 | Катализаторы: прирост качества за один катализатор зависит от уровня предмета (ilvl), а не от его редкости? (Q23) | jewellery quality steps | item level (the wiki) | |
-| 15 | Рекомбинаторы в 3.29: какому источнику по шансам ты доверяешь (ссылка или «70% на 3 мода из пула в 6»)? (Q21 / Q22) | recombinator ladders | blocked | |
+| 1 | Защита суффиксов сохраняется при Harvest reforge life? | protected-half Harvest policy | accepted side protection, S14/S17/S42 | YES; owner-confirmed and documented; exact adapter merged527efa7 |
+| 2 | Cannot roll Attack фильтрует все добавляемые моды Harvest? | type-blocking Harvest policies | first forced draw only; explicit all_draws sensitivity | UNKNOWN after bounded research; S19 proves support, not first/all scope; S17/S64/S71 do not settle it |
+| 3 | Дополнительные теги minion/elemental/attribute/mana доступны в эндгейме? | four additional Harvest permissions | owner-provisional availability and Sacred placeholder equality | YES; each price100, same invented placeholder as Sacred add/remove; policy/loadout worker active |
+| 4 | Для рары принять 4/5/6 модов с весами 8/3/1? | ordinary reroll count law | 8/3/1 with source labels | YES; owner-confirmed + reimplemented-from-CoE, not datamined |
+| 5 | Цена мультимода — 2 Divine? | bench quantity and supplied-price calculation | 2 Divine | YES; owner plus S2/S3; stale S13 prose rejected |
+| 6 | Все четыре Chaotic резонатора требуют rare-предмет? | ordinary fossil preparation | yes; Alchemical normal-only requires explicit legacy/Ruthless availability | RESOLVED S58/S72: type, not socket count, determines rarity; no owner test needed |
+| 7 | Положительные множители двух фоссилов складывать по умолчанию CoE? | ordinary fossil combination calculator | CoE additive default, retain multiplicative sensitivity | Latest owner instruction: YES; Serrated+Scorched on fire/attack mod gives x20 vs x100; Q13.01 retains Bound conflict |
+| 8 | Screaming и выше работают на normal и rare, но никогда на magic? | essence input rarity gates | normal/rare for Screaming+, normal below | RESOLVED YES by S21/S63; corrects the uncertain only-rares recollection below; magic never allowed |
+| 9 | Fracturing: rare, минимум 4 мода, без обычного influence/synthesised/уже fracture? | ordinary fracture-then-spam | documented ordinary eligibility; CoE uniform selection | YES with S33 conditions: eldritch implicits and Split are allowed; 3.29 tooltip omission does not permit legacy synthesised items |
+| 10 | Veiled Exalted уважает защиту стороны и игнорирует cannot-roll типы? | veiled finishing and metamod data | S14/S17 side protection, no type protection; offers require explicit model | S14 matrix merged614c9c3:132 cells/33 notes; rename and Veiled Chaos distinguished; S71 staff post concerns Wiki affiliation only |
+| 11 | Influence Exalted требует предмет совсем без influence? | influence routes | strict specific tooltip | YES from S48; no permission for same-influence input |
+| 12 | В конфликте Awakener всегда остаётся мод получателя? | conflicting double-influence route | unsupported; receiver-only CoE vs random-discard Wiki | UNRESOLVED current odds; S77 historical donor-survival report contradicts a universal receiver rule |
+| 13 | Шанс Orb of Conflict зависит от разницы тиров? | eldritch tier transitions | yes; no exact unequal-tier odds inferred | YES condition S23; S76 empirical (50-11*n)% fit and sample sizes recorded; exact current table remains open |
+| 14 | Прирост обычного катализатора зависит от ilvl? | jewellery quality preparation | S47 fractional increment formula, cap20; unique+1 | RESOLVED YES by official S74; S47 supplies floor/ceil distribution; no owner test needed |
+| 15 | Найден источник с NNN и схемами рекомбинации? | classic and selected-mode research | retain game/version and empirical uncertainty | Matching chain S66/S67 -> S68 -> S69 cached; selected mode exists in PoE1(S75), formulas S70/S78 are PoE2/player evidence; current exact odds remain open |
 
 ## The owner's answers, 2026-09-21 (verbatim sense, recorded by the lead; label facts taken from here `owner-confirmed`)
 

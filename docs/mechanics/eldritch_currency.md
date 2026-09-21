@@ -71,3 +71,28 @@ base exceptions need a future bounded spec; data definitions alone do not resolv
 
 Sources: S3 `sources/raw/coe/package.js` functions/lines above, S17 Wiki Metamod, S23
 https://www.poewiki.net/wiki/Orb_of_Conflict (read 2026-09-20 through the existing browser).
+
+## Bounded research: original Conflict experiment (2026-09-21)
+S76 is blvcksvn's Prohibited Library report, posted2023-06-02, from Standard experiments.
+Confidence `player-report`. Its rank convention is1 weakest through6 strongest, opposite
+the internal CoE index. Observed probability of upgrading the first implicit:
+
+| Starting ranks | Observed upgrade fraction | Sample count |
+|---|---:|---:|
+| 1/3 | 0.67 | 21 |
+| 2/3 | 0.57 | 49 |
+| 3/3 | 0.61 | 89 |
+| 4/3 | 0.40 | 101 |
+| 5/3 | 0.28 | 40 |
+| 5/4 | 0.41 | 100 |
+| 4/1 | 0.12 | 50 |
+| 4/2 | 0.28 | 50 |
+
+At6/4 the report observes6/3 in0.32 of25 cases and5/5 in0.68. These rounded observations
+are not exact fractions or independent probability constants. The author's approximate
+fit `(50-11*n)%` uses tier difference n;5/1 and5/2 were untested. The equal-tier sample
+0.61 is explicitly discussed as sampling uncertainty, not a replacement for nominal0.5.
+The report finds no dependence on which modifier/stat is present. It directly challenges
+CoE's unconditional50/50. Q11 therefore retains the source-backed relative-tier condition
+and parks an exact current table; the fit may only be used as a named experimental model.
+The bounded research pass ended without a current datamined or official probability table.
