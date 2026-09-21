@@ -130,6 +130,10 @@ def test_loadout_price_and_permissions(tmp_path: Path) -> None:
     assert loadout.price("harvest_reforge:life") == 1
     assert all(loadout.price(f"harvest_reforge:{tag}") == 100 for tag in extra_tags)
     assert loadout.price("harvest_add_remove_sacred") == 100
+    assert loadout.allowed_fossils == frozenset({1, 12, 13, 14})
+    assert loadout.permits("fossil")
+    assert loadout.price("fossil:1") == 1
+    assert loadout.price("resonator:4") == 4
     assert not loadout.permits("divine")  # A listed price never grants permission.
     assert loadout.permits("essence", essence_id="Metadata/Items/Currency/CurrencyEssenceEnvy3")
 
@@ -142,6 +146,30 @@ def test_loadout_price_and_permissions(tmp_path: Path) -> None:
     assert adjusted.bench_cost(729) == 4
     with pytest.raises(ValueError, match="missing price"):
         loadout.price("harvest_lifeforce")
+
+    legacy = json.loads((ROOT / "data/loadouts/endgame.json").read_text(encoding="utf-8"))
+    legacy.pop("allowed_fossils")
+    legacy["prices_file"] = "legacy-prices.json"
+    _write_json(tmp_path / "legacy-prices.json", prices)
+    old_loadout = load_loadout(_write_json(tmp_path / "legacy-loadout.json", legacy))
+    assert old_loadout.allowed_fossils == frozenset()
+
+
+@pytest.mark.parametrize(
+    ("allowed_fossils", "error"),
+    [
+        ([1, 1], "duplicates"),
+        ([1, 2, 3, 4, 5], "at most four"),
+        ([True], "positive integer"),
+        ([18], "unsupported special"),
+        ("13", "list"),
+    ],
+)
+def test_loadout_rejects_malformed_or_unsupported_fossil_allowlists(tmp_path: Path, allowed_fossils, error: str) -> None:
+    document = json.loads((ROOT / "data/loadouts/endgame.json").read_text(encoding="utf-8"))
+    document["allowed_fossils"] = allowed_fossils
+    with pytest.raises(ValueError, match=error):
+        load_loadout(_write_json(tmp_path / "loadout.json", document))
 
 
 @pytest.mark.parametrize(

@@ -55,6 +55,7 @@ _SUPPORTED_ACTIONS = frozenset(
         "harvest_reforge:elemental",
         "harvest_reforge:attribute",
         "harvest_reforge:mana",
+        "fossil",
     )
 )
 _ESSENCE_ID_PREFIX = "Metadata/Items/Currency/"
@@ -76,7 +77,7 @@ _SPEC_KEYS = _SPEC_REQUIRED_KEYS | {
     "threshold",
     "values_note",
 }
-_LOADOUT_KEYS = {
+_LOADOUT_REQUIRED_KEYS = {
     "schema_version",
     "name",
     "allowed_actions",
@@ -86,6 +87,8 @@ _LOADOUT_KEYS = {
     "budget",
     "base_cost",
 }
+_LOADOUT_KEYS = _LOADOUT_REQUIRED_KEYS | {"allowed_fossils"}
+_SUPPORTED_FOSSIL_IDS = frozenset((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 21, 22, 23))
 _PRICE_KEYS = {
     "schema_version",
     "unit",
@@ -163,6 +166,7 @@ class Loadout:
     bench_recipes: dict[int, dict[str, float]]
     note: str
     sources: tuple[str, ...]
+    allowed_fossils: frozenset[int] = frozenset()
 
     def price(self, currency: str) -> float:
         """Return a quoted input price; an absent quote is always an error."""
@@ -278,13 +282,14 @@ def load_loadout(path: str | Path) -> Loadout:
     """Load a loadout and its relative price file without leaving the repository."""
     resolved_path = _resolve_under_root(path, _REPOSITORY_ROOT)
     document = _read_json(resolved_path, "loadout")
-    _exact_document_keys(document, _LOADOUT_KEYS, _LOADOUT_KEYS, "loadout")
+    _exact_document_keys(document, _LOADOUT_REQUIRED_KEYS, _LOADOUT_KEYS, "loadout")
     _schema_version(document, "loadout")
 
     name = _nonempty_string(document["name"], "loadout name")
     allowed_actions = frozenset(_allowed_actions(document["allowed_actions"]))
     allowed_essences = frozenset(_essence_ids(document["allowed_essences"]))
     allowed_bench = frozenset(_bench_indices(document["allowed_bench"]))
+    allowed_fossils = frozenset(_allowed_fossils(document.get("allowed_fossils", [])))
     prices_file_name = _nonempty_string(document["prices_file"], "prices_file")
     prices_file = _resolve_under_root(prices_file_name, resolved_path.parent)
     budget = _finite_nonnegative(document["budget"], "budget")
@@ -312,6 +317,7 @@ def load_loadout(path: str | Path) -> Loadout:
         bench_recipes,
         note,
         sources,
+        allowed_fossils,
     )
 
 
@@ -615,6 +621,20 @@ def _bench_indices(value: object) -> tuple[int, ...]:
     result = tuple(_positive_integer(index, "allowed_bench index") for index in value)
     if len(set(result)) != len(result):
         raise ValueError("allowed_bench must not contain duplicates")
+    return result
+
+
+def _allowed_fossils(value: object) -> tuple[int, ...]:
+    if not isinstance(value, list):
+        raise ValueError("allowed_fossils must be a list of supported integer IDs")
+    if len(value) > 4:
+        raise ValueError("allowed_fossils supports at most four fossils")
+    result = tuple(_positive_integer(fossil, "allowed_fossils id") for fossil in value)
+    if len(set(result)) != len(result):
+        raise ValueError("allowed_fossils must not contain duplicates")
+    unsupported = set(result) - _SUPPORTED_FOSSIL_IDS
+    if unsupported:
+        raise ValueError(f"allowed_fossils has unsupported special or unknown IDs: {', '.join(str(value) for value in sorted(unsupported))}")
     return result
 
 

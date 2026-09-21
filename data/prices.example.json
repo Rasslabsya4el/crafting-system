@@ -30,7 +30,15 @@
     "harvest_reforge:elemental": 100,
     "harvest_reforge:attribute": 100,
     "harvest_reforge:mana": 100,
-    "harvest_add_remove_sacred": 100
+    "harvest_add_remove_sacred": 100,
+    "fossil:1": 1,
+    "fossil:12": 1,
+    "fossil:13": 1,
+    "fossil:14": 1,
+    "resonator:1": 1,
+    "resonator:2": 2,
+    "resonator:3": 3,
+    "resonator:4": 4
   },
   "bench_recipes": {
     "131": {"chaos": 2},
@@ -40,7 +48,7 @@
     "731": {"divine": 1},
     "732": {"divine": 1}
   },
-  "note": "Invented chaos-equivalent prototype inputs, not trade prices. D21: eleven classic Harvest reforges are set to 1 each; Minion, Elemental, Attribute, and Mana are owner-provisional equal to the Harvest add/remove Sacred placeholder (100 each).",
+  "note": "Invented chaos-equivalent prototype inputs, not trade prices. D21: eleven classic Harvest reforges are set to 1 each; Minion, Elemental, Attribute, and Mana are owner-provisional equal to the Harvest add/remove Sacred placeholder (100 each). Fossil and full Chaotic resonator prices are invented caller inputs for the bounded four-fossil policy.",
   "sources": [
     "Owner BRIEF: ordinary-currency, essence, budget, and metamod prices are invented chaos-equivalent inputs.",
     "S1: sources/pob/Data/ModMaster.lua source_index 131, line 135; Prefix LocalPhysicalDamageReductionRatingPercent, Helmet supported, (56-74)% increased Armour.",
@@ -49,6 +57,7 @@
     "S4: tiers['2775']['52'][2] confirms the source-index 131 range and level 75; its quantity is reimplemented-from-CoE, read 2026-09-21.",
     "docs/mechanics/bench_metamods.md: source-index identities for recipes 728 through 732.",
     "docs/OWNER_QUESTIONS.md answer 5, 2026-09-21: multimod recipe 730 costs 2 Divine Orbs, owner-confirmed; Divine price remains invented.",
-    "D21 / docs/mechanics/harvest.md, read 2026-09-21: classic reforge action keys are prototype price inputs; Minion, Elemental, Attribute, and Mana availability and equality to the Sacred placeholder are owner-provisional."
+    "D21 / docs/mechanics/harvest.md, read 2026-09-21: classic reforge action keys are prototype price inputs; Minion, Elemental, Attribute, and Mana availability and equality to the Sacred placeholder are owner-provisional.",
+    "docs/design/family-policies.md fossil section, read 2026-09-21: fossil:<id> and resonator:<socket_count> are invented prototype inputs; the whole selected resonator recipe is charged once per reroll."
   ]
 }
