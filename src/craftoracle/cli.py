@@ -5,10 +5,14 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
+from datetime import datetime, timezone
 import json
 import math
 from numbers import Real
+import os
 from pathlib import Path
+import subprocess
+import shutil
 from typing import Any
 
 from craftoracle.actions import load_action_data
@@ -16,6 +20,7 @@ from craftoracle.distributions import OutcomeClass
 from craftoracle.item_model import ItemState
 from craftoracle.plan_inputs import ItemSpec, Loadout, load_loadout, load_spec
 from craftoracle.quality import plan_catalyst
+from craftoracle.reporting import build_report, render_report
 
 
 _SCHEMA_VERSION = 1
@@ -42,7 +47,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 arguments.price,
             )
             renderer = format_quality
-        else:
+        elif arguments.command == "plan":
             document = evaluate_plan(
                 arguments.spec,
                 arguments.loadout,
@@ -51,6 +56,40 @@ def main(argv: Sequence[str] | None = None) -> int:
                 item_level_range=arguments.item_level_range,
             )
             renderer = format_plan
+        else:
+            _repository_path(arguments.spec, "spec")
+            _repository_path(arguments.loadout, "loadout")
+            _report_output_dir(arguments.output_dir)
+            if arguments.evidence_dir:
+                _repository_path(arguments.evidence_dir, "evidence")
+            document = evaluate_plan(
+                arguments.spec, arguments.loadout, arguments.threshold,
+                compare_thresholds=arguments.compare_thresholds,
+            )
+            output_dir = _report_output_dir(arguments.output_dir)
+            evidence = _load_evidence(arguments.evidence_dir) if arguments.evidence_dir else None
+            data = load_action_data(Path(__file__).resolve().parents[2])
+            report_loadout = load_loadout(arguments.loadout)
+            context = {
+                "action_rules": data.rules,
+                "essence_names": {key: row.get("name", key) for key, row in data.essences.items()},
+                "envy_id": "Metadata/Items/Currency/CurrencyEssenceEnvy3",
+                "bench_recipes": report_loadout.bench_recipes,
+                "fossil_names": _fossil_names(),
+                "bench_names": {str(index): str(row.get("stat_text", f"bench {index}")) for index, row in data.bench.items()},
+                "generation": {"commit": _git_commit(), "generated_at": datetime.now(timezone.utc).isoformat()},
+                "target": _report_target(arguments.spec, data),
+            }
+            report = build_report(document, context, evidence)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            if arguments.evidence_dir:
+                _copy_evidence_artifacts(_repository_path(arguments.evidence_dir, "evidence"), output_dir, evidence or {})
+            plan_path, index_path = output_dir / "plan.json", output_dir / "index.html"
+            plan_path.write_text(json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
+            index_path.write_text(render_report(report), encoding="utf-8")
+            print(index_path)
+            print(plan_path)
+            return 0
         if arguments.json:
             print(json.dumps(document, indent=2, sort_keys=True, allow_nan=False))
         else:
@@ -346,6 +385,14 @@ def _parser() -> argparse.ArgumentParser:
         metavar="MIN:MAX",
         help="opt in to an inclusive item-level search over PoB modifier breakpoints",
     )
+    report = commands.add_parser("report", help="render an offline Russian route report")
+    report.add_argument("spec", metavar="SPEC", help="JSON-compatible YAML item specification")
+    report.add_argument("--loadout", required=True, metavar="LOADOUT", help="loadout JSON file")
+    report.add_argument("--output-dir", required=True, metavar="DIR", help="repository-local output directory")
+    report.add_argument("--evidence-dir", metavar="DIR", help="repository-local evidence directory containing proof.json")
+    threshold_group = report.add_mutually_exclusive_group()
+    threshold_group.add_argument("--threshold", type=float, metavar="UTILITY", help="override a utility target threshold")
+    threshold_group.add_argument("--compare-thresholds", metavar="UTILITY,UTILITY", help="evaluate comparison thresholds")
     quality = commands.add_parser("quality", help="plan an ordinary catalyst quality finish")
     quality.add_argument("--base", default="Vermillion Ring", help="PoB jewellery base name")
     quality.add_argument("--item-level", type=int, default=86, help="positive item level")
@@ -354,6 +401,94 @@ def _parser() -> argparse.ArgumentParser:
     quality.add_argument("--price", type=float, required=True, help="non-negative caller-supplied unit price")
     quality.add_argument("--json", action="store_true", help="emit machine-readable exact distributions")
     return parser
+
+
+def _report_output_dir(path: str) -> Path:
+    return _repository_path(path, "report output")
+
+
+def _repository_path(path: str | Path, name: str) -> Path:
+    root = Path(__file__).resolve().parents[2].resolve()
+    candidate = Path(os.path.normpath(path))
+    target = candidate.resolve() if candidate.is_absolute() else (root / candidate).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError as error:
+        raise PlanInputError(f"{name} path escapes the repository root") from error
+    return target
+
+
+def _load_evidence(directory: str) -> dict[str, Any]:
+    target = _repository_path(directory, "evidence")
+    try:
+        document = json.loads((target / "proof.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        return {"schema_version": 1, "pytest": {"status": "unavailable"}, "coe": {"status": "unavailable"}, "message": f"proof.json unavailable: {error}"}
+    if not isinstance(document, dict) or document.get("schema_version") != 1:
+        raise PlanInputError("unsupported evidence proof.json schema")
+    return document
+
+
+def _git_commit() -> str | None:
+    root = Path(__file__).resolve().parents[2]
+    completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=False, timeout=10)
+    return completed.stdout.strip() if completed.returncode == 0 else None
+
+
+def _copy_evidence_artifacts(source: Path, output: Path, evidence: Mapping[str, Any]) -> None:
+    artifacts = evidence.get("artifacts", {})
+    paths = ["proof.json", *artifacts.values()] if isinstance(artifacts, Mapping) else ["proof.json"]
+    for command in evidence.get("commands", []) if isinstance(evidence.get("commands"), list) else []:
+        if isinstance(command, Mapping):
+            paths.extend((command.get("stdout_file"), command.get("stderr_file")))
+    for raw in paths:
+        if not isinstance(raw, str):
+            continue
+        candidate = (source / raw).resolve()
+        try:
+            candidate.relative_to(source)
+        except ValueError:
+            continue
+        if candidate.is_file():
+            relative = candidate.relative_to(source)
+            target = output / "evidence" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if candidate != target:
+                shutil.copy2(candidate, target)
+
+
+def _report_target(spec_path: str | Path, data: Any) -> dict[str, Any]:
+    """Expose source-backed target wording without adding it to planner output."""
+    spec = load_spec(spec_path, data.mods)
+    labels: dict[str, str] = {}
+    for group, tiers in spec.tier_ids.items():
+        for tier, identifiers in enumerate(tiers, start=1):
+            text = " / ".join(_stat_text(data.mods[identifier].get("stat_text", identifier)) for identifier in identifiers)
+            labels[f"{group}:{tier}"] = text
+    def choices(item: Any) -> list[dict[str, Any]]:
+        return [{"tier": tier, "text": labels[f"{item.group}:{tier}"]} for tier in range(1, item.max_tier + 1)]
+    return {
+        "criteria": [{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group), "tiers": choices(item)} for item in spec.required_mods],
+        "any_of": [[{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group), "tiers": choices(item)} for item in alternatives] for alternatives in spec.any_of],
+        "value_table": spec.value_table,
+        "threshold": spec.threshold,
+        "values_note": spec.values_note,
+        "labels": labels,
+    }
+
+
+def _stat_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return " ".join(value)
+    return str(value)
+
+
+def _fossil_names() -> dict[str, str]:
+    root = Path(__file__).resolve().parents[2]
+    document = json.loads((root / "data/rules/fossils.json").read_text(encoding="utf-8"))
+    return {str(row["id"]): str(row["name"]) for row in document["ordinary"]}
 
 
 def _load_evaluator():
