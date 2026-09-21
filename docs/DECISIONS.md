@@ -197,3 +197,25 @@ for very light tasks where Terra would be excessive. The lead independently choo
 reasoning level supported by that model according to task scope and complexity. The earlier
 workers' recorded settings remain historical facts; no completed work is rerun. Isolation,
 written specs, direct lead acceptance and the two-worker limit remain the governing workflow.
+
+## D20 — 2026-09-21 — Apply owner answers and authoritative behaviour sources
+Official GGG behaviour statements resolve the question they actually address. S19 establishes
+type-restriction support for tagged Harvest reforges in3.27; side protection also has S14/S17/S42
+and owner row1. Do not keep the entire family blocked over the narrower first/later-draw gap.
+Owner row2 authorizes S14's first-only interpretation, printed as an assumption, until better
+evidence resolves it. The alternative all-draws branch is a sensitivity model only.
+Rare4/5/6 weights8/3/1 and multimod2 Divine now have owner confirmation in addition to CoE.
+S21 and S63 resolve the essence boundary: Screaming+ adds rare eligibility while retaining
+normal eligibility; magic is never allowed. Preserve the owner's uncertain recollection in
+OWNER_QUESTIONS rather than silently rewriting what was answered.
+
+## D21 — 2026-09-21 — Preserve CoE observations and separate input prices
+The owner explicitly requests all132 S14 interaction cells, their notes and patch-lag warning.
+The JSON is our factual observation schema with source pointers, not a copied compiled CoE
+database or a universal executable permission matrix. Historical rows and source typos remain.
+The latest owner instruction selects CoE's default additive positive fossil-factor model
+where stronger sources do not decide the question; retain multiplicative sensitivity evidence.
+Example prices are invented inputs: use harvest_reforge:<tag> as atomic craft price keys,
+normal tagged reforge1, Sacred add/remove placeholder100, and minion/elemental/attribute/mana
+100 each. The latter equality and availability are owner-provisional (row3); no exchange rate
+or actual Sacred price is claimed. The planner must disclose these assumptions.

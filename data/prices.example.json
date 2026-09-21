@@ -32,5 +32,6 @@
     "S3: poec_constants.indexes.currency.bench[2] is chaos for recipe 131; currency index 10 is divine for recipes 728 through 732.",
     "S4: tiers['2775']['52'][2] confirms the source-index 131 range and level 75; its quantity is reimplemented-from-CoE, read 2026-09-21.",
     "docs/mechanics/bench_metamods.md: source-index identities for recipes 728 through 732."
+    ,"docs/OWNER_QUESTIONS.md answer 5, 2026-09-21: multimod recipe 730 costs 2 Divine Orbs, owner-confirmed; Divine price remains invented."
   ]
 }

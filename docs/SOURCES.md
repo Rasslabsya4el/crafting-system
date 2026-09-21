@@ -97,3 +97,11 @@ the earlier limited projection remains for its existing cross-check consumer.
 a37bd981e34e1d43cbb12c1b7009ab86cc63fa357bdaba41ad20d8d2ba39aee4 (UTF-8 LF).
 Ranges remain literal strings, no tiers or numeric game stat IDs inferred. Metadata still
 records the owner-supplied version rather than an invented upstream commit (Q8).
+
+## Goal 2 source additions — read 2026-09-21
+
+| id | URL or path | date read | used for | cached copy |
+|---|---|---|---|---|
+| S63 | https://poedb.tw/us/Screaming_Essence_of_Sorrow | 2026-09-21 | Tier5 item tooltip permits normal upgrade OR rare reforge; S21 corroboration | sources/raw/research/goal2-observations.md |
+| S64 | https://www.pathofexile.com/forum/view-thread/3877954 | 2026-09-21 | Historical player bug report, Warlord amulet; no staff reply and no draw-by-draw evidence | sources/raw/research/goal2-observations.md |
+| S65 | docs/OWNER_QUESTIONS.md, answers1-15; goal attachment read2026-09-21 | 2026-09-21 | Owner confirmations, provisional prices, CoE fossil default authorization | Tracked owner answers; D20/D21 record decisions |

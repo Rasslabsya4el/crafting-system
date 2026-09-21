@@ -54,7 +54,7 @@ except for the actual slot occupied by their carrier mod. A blank source cell me
 | Eldritch Chaos | S14/S17 say not respected | S17 says respected; S14 cells are blank |
 
 ## Numbers, conditions and differences
-Multimod cost conflicts: S13 prose says 2 Exalted, S2/S3 mapping says 2 Divine (Q7).
+Multimod cost: owner row5 confirms S2/S3's 2 Divine. S13's 2 Exalted is stale prose (Q7 resolved).
 Do not convert either to a market price. S14 explicitly warns that undocumented game changes
 can make its matrix lag. PoB supplies modifier identity/side, not the whole interaction matrix.
 
@@ -73,4 +73,7 @@ modifier-type restrictions; this does not supply the missing flag-retention algo
   removes the suffix lock. The lock does not protect its own side (S11 plus S3).
 
 ## Open questions
-Q6, Q7, Q9. No current-patch matrix or bench price table has been implemented.
+Q6 retains only the exact first/later-draw type-filter question; side protection is enabled.
+Q7 is resolved by owner confirmation of2 Divine. Q9 remains action-specific. The full S14
+matrix is being extracted as source observations; the ordinary bench quantity table already
+exists in data/prices.example.json. Neither implies all special actions are implemented.
