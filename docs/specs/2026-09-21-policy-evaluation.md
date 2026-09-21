@@ -5,6 +5,12 @@ Allowed `src/craftoracle/policies.py`, `tests/test_policies.py`.
 Budget60 minutes. Read accepted actions/distributions/costs/plan_inputs modules; do not modify
 them unless lead explicitly authorizes an integration correction. No new game decisions.
 
+Parallel start: plan_inputs is being finished independently. Read its spec for the public
+contract and implement policy mathematics using accepted actions/costs/MC meanwhile. Do not
+create a substitute production input module. Lead will supply and merge the accepted input
+commit into this worktree before final integration tests. If ready first, commit your allowed
+files and report the precise dependency; no polling loop or wait longer than a25-minute deadline.
+
 ## Required behavior
 1. Implement `evaluate_policies(spec,loadout,data)` returning plain result with ranked policy
    records and explicitly unavailable candidates/reasons. Read docs/design/night-policies.md

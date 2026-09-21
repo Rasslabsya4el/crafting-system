@@ -44,8 +44,9 @@ path is ignored. All subsequent fixture runs must use that setting; no external 
 
 ## Workers / current work
 
-Currently one worker: plan-inputs in its own ignored worktree. Its25-minute budget covers
-strict input fixtures; next policy/CLI workers may overlap within the two-worker cap. No individual
+At most two workers: plan-inputs and policy-evaluation in separate ignored worktrees. Budgets
+25/60minutes cover strict inputs and exact multi-stage integration. Policy maths can be written
+against the input spec; accepted input code must be integrated before final policy tests. No individual
 command may exceed10minutes. Item-model, exact-distributions, actions and cost trees were accepted
 and removed without force. Initial item worker's service429 retry succeeded; no duplicate worker
 was launched. Dependent policy and CLI work waits for merged APIs.
