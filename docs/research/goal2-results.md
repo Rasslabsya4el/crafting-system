@@ -80,8 +80,9 @@ that satisfy each selected stopping rule.
 ## Paid fracture preparation
 
 The default helmet output after fracture integration is saved locally as
-`out/goal2/helmet-final.json` (worker644b032; lead47 affected tests passed). It contains12
-ranked routes and no unavailable route. The chosen fracture policy stops immediately on
+`out/goal2/helmet-final.json` (accepted000e8d9; lead47 affected tests plus17 final input
+tests passed). The full command took0.51minute and contains12 ranked routes and no
+unavailable route. The chosen fracture policy stops immediately on
 a complete Alchemy result; otherwise it prepares exactly four ordinary modifiers including
 Life9, tries the uniform CoE fracture model and uses Deafening Envy after Life9 is retained.
 Every wrong fracture is set aside at supplied salvage0 and another paid base is prepared.
@@ -106,7 +107,7 @@ so the best helmet policy is unchanged. The utility bow is explicitly outside th
 Life9/Chaos6/elemental8 helmet template. Sources and derivation:
 `../mechanics/fracturing.md`, `../mechanics/essences.md`, `../design/family-policies.md`.
 
-Final merge bookkeeping and the integrated full-suite runtime remain pending.
+Both family policies are merged. The integrated full-suite runtime is the final check.
 
 ## Quality finishing
 

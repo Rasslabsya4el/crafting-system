@@ -3,6 +3,12 @@
 Status: reviewed, partial. Read 2026-09-20. Confidence: `documented` for S33 eligibility and
 effect; `reimplemented-from-CoE` for uniform selection. Ordinary identity adapter accepted
 in d348533: exact concrete states, direct sampler and retained-mod basic actions.
+The paid Life9-then-Envy helmet policy is accepted000e8d9; it compares early Alchemy
+completion on/off and pays for every failed fracture's replacement base and preparation.
+Its uniform selection remains `reimplemented-from-CoE`. The exact mean, estimated p90,
+counts and source scope are in docs/research/goal2-results.md; derivation and hand examples
+are in docs/design/family-policies.md. Wrong fractures are discarded at caller salvage0,
+not treated as destroyed items or free retries.
 
 ## Effect and preconditions
 A Fracturing Orb locks one explicit modifier on a rare item with at least four explicit

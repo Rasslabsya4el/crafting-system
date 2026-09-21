@@ -59,6 +59,12 @@ prepare an immutable `actions.prepare_roll_plan(...)`, then call `sample_roll(pl
 preparing a new plan reflects changed caller data. Fractured Harvest/fossil inputs remain
 explicitly unsupported. A wrong fracture is a different resulting item, never a free retry.
 
+The exact helmet demo also offers `fracture-life-envy`: prepare four modifiers including
+Life9, fracture, then reroll with Deafening Envy. It pays for every replacement base after
+a wrong fracture and compares early completion during Alchemy preparation. At the invented
+Fracturing price1000, mean cost is4227.74 and estimated p90 is8744 [8500,9353.5]; direct
+Envy remains cheaper. This template explicitly excludes other targets and item levels.
+
 The twelve-case independent comparison against the frozen Craft of Exile calculator is documented in `docs/validation/coe_cases.md`. Reproduce it locally, with the ignored source cache present and no network requests:
 
 ```powershell
