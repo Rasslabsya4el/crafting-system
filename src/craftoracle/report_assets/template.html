@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{REPORT_TITLE}}</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0c1516; --panel: #142325; --panel-2: #102021; --ink: #edf8f7; --muted: #aac0bd; --line: #385856; --teal: #4bd1c0; --warn: #f2c85c; --bad: #ff9f9f; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 1480px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0; font-size: 1.8rem; } h2 { margin: 0 0 12px; font-size: 1.25rem; } h3 { font-size: 1rem; margin: 22px 0 8px; }
+    section { margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+    .notice { margin: 18px 0; padding: 12px 14px; border-left: 4px solid var(--warn); background: #42381a; }
+    .muted { color: var(--muted); } .good { color: var(--teal); } .bad { color: var(--bad); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 12px 0; color: var(--muted); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
+    table { width: 100%; min-width: 820px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 9px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); white-space: normal; }
+    th { color: var(--muted); font-size: .9rem; font-weight: 650; }
+    tr:last-child td { border-bottom: 0; } tr.selected { background: #1c3a39; }
+    button { font: inherit; color: inherit; cursor: pointer; } button.route { border: 0; background: transparent; text-align: left; padding: 0; color: var(--ink); }
+    button.route:hover, button.route:focus-visible { color: var(--teal); outline: 2px solid var(--teal); outline-offset: 3px; }
+    input { width: min(480px, 100%); padding: 9px 10px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink); background: #0b1516; font: inherit; }
+    .detail { scroll-margin-top: 16px; } ol, ul { padding-left: 23px; } li + li { margin-top: 8px; }
+    details { margin-top: 14px; } summary { cursor: pointer; color: var(--teal); } pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: #0b1516; border: 1px solid var(--line); }
+    a { color: var(--teal); } .pill { display: inline-block; padding: 1px 7px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); }
+    @media (max-width: 900px) { main { padding: 16px; } }
+    @media print { :root { color-scheme: light; } body { background: #fff; color: #111; } section { background: #fff; } .no-print { display: none; } main { max-width: none; padding: 0; } a { color: #111; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{{REPORT_TITLE}}</h1>
+    <div id="app"></div>
+  </main>
+  <script id="report-data" type="application/json">{{REPORT_DATA}}</script>
+  <script>
+  "use strict";
+  const report = JSON.parse(document.getElementById("report-data").textContent);
+
+  const escapeText = value => String(value ?? "").replace(/[&<>'"]/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", "\"": "&quot;"
+  })[char]);
+  const numeric = value => Number.isFinite(value)
+    ? value.toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    : escapeText(value ?? "-");
+  const integer = value => Number.isFinite(value) ? Math.round(value).toLocaleString("ru-RU") : escapeText(value ?? "-");
+  const probability = value => {
+    if (!Number.isFinite(value)) return escapeText(value ?? "-");
+    if (value > 0 && value < 0.001) return "&lt;0,1% (примерно 1 из " + integer(1 / value) + ")";
+    return numeric(value * 100) + "%";
+  };
+  const safeLocalPath = value => typeof value === "string" &&
+    !/^[a-z][a-z0-9+.-]*:/i.test(value) && !value.startsWith("/") && !value.startsWith("\\") &&
+    value.split(/[\\/]/).every(part => part && part !== "." && part !== "..") ? value : null;
+  const link = (value, label) => {
+    const path = safeLocalPath(value);
+    return path ? `<a href="${escapeText(path)}">${escapeText(label || path)}</a>` : "<span class=\"muted\">нет локального файла</span>";
+  };
+  const raw = value => `<pre>${escapeText(JSON.stringify(value ?? null, null, 2))}</pre>`;
+  const routeByKey = key => (report.routes || []).find(route => route.key === key);
+  let selectedKey = null;
+  const currentHashKey = () => { try { return decodeURIComponent(location.hash.slice(1)); } catch { return ""; } };
+  const activeRoute = () => routeByKey(currentHashKey()) || routeByKey(selectedKey) || cheapestRoute();
+  const cheapestRoute = () => (report.routes || []).slice().sort((a, b) => (a.expected_cost ?? Infinity) - (b.expected_cost ?? Infinity))[0];
+  const parameterRows = parameters => Object.entries(parameters || {}).map(([name, value]) =>
+    `<tr><td>${escapeText(name)}</td><td>${escapeText(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`).join("");
+  const routeTitle = route => { const id = route.parameters?.forced_essence_id; const name = report.context?.essence_names?.[id]; return name || route.name || route.id || route.key; };
+
+  function targetHtml() {
+    const target = report.context?.target || {};
+    const criteria = (target.criteria || []).map(item => `<li>${escapeText(item.text)} <span class="pill">tier ${integer(item.max_tier)}</span></li>`).join("");
+    const anyOf = (target.any_of || []).map(group => `<li>Одно из: ${group.map(item => `${escapeText(item.text)} <span class="pill">tier ${integer(item.max_tier)}</span>`).join("; ")}</li>`).join("");
+    const values = target.value_table ? `<div class="table-wrap"><table><thead><tr><th>Группа</th><th>Tier</th><th>Utility</th></tr></thead><tbody>${Object.entries(target.value_table).flatMap(([group, value]) => Object.entries(value || {}).map(([tier, score]) => `<tr><td>${escapeText(target.labels?.[`${group}:${tier}`] || target.labels?.[group] || group)}</td><td>${integer(tier)}</td><td>${numeric(score)}</td></tr>`)).join("")}</tbody></table></div>` : "";
+    const threshold = target.threshold == null ? "" : `<p>Выбранный порог: <strong>${numeric(target.threshold)}</strong>${target.values_note ? `; ${escapeText(target.values_note)}` : ""}.</p>`;
+    return `<section><h2>Цель</h2>${threshold}${values || `<ul>${criteria}${anyOf}</ul>`}</section>`;
+  }
+
+  function routeDetail(route) {
+    if (!route) return "<section class=\"detail\"><h2>Нет доступного маршрута</h2></section>";
+    const accounting = route.accounting || {};
+    const metadata = route.metadata || {};
+    const rows = (accounting.rows || []).map(row => `<tr><td>${escapeText(row.currency)}</td><td>${numeric(row.count)}</td><td>${numeric(row.unit_price)}</td><td>${numeric(row.spend)}</td></tr>`).join("");
+    const stages = (route.stages || []).map(stage => `<tr><td>${escapeText(stage.name)}</td><td>${probability(stage.probability)}</td><td>${numeric(stage.expected_attempts)}</td><td>${escapeText(stage.meaning)}</td></tr>`).join("");
+    const recovery = [
+      ["Успех Magic за попытку (1/T)", metadata.success_probability],
+      ["Доля завершённых крафтов, готовых уже на этапе Envy", metadata.early_completion_probability],
+      ["Риск необратимой потери", metadata.irreversible_failure_risk],
+      ["Ожидаемые discarded bases", metadata.expected_discarded_bases],
+      ["Риск неверной фрактуры за попытку", metadata.wrong_fracture_risk_per_trial],
+      ["Риск уничтожения предмета", metadata.irreversible_item_destruction_risk]
+    ].filter(([, value]) => value != null).map(([name, value]) => `<li>${escapeText(name)}: ${name.includes("bases") ? numeric(value) : probability(value)}</li>`).join("");
+    const p90 = route.cost_p90 == null ? "p90 не предоставлен" : `${numeric(route.cost_p90)} ${escapeText(report.prices?.unit)} (${escapeText(route.cost_label || "нет метки")})`;
+    const p90Audit = metadata.cost_p90_interval || metadata.cost_confidence || metadata.cost_sample_count || metadata.cost_seed ?
+      `<p>Оценка p90: интервал ${Array.isArray(metadata.cost_p90_interval) ? metadata.cost_p90_interval.map(numeric).join(" - ") : "не предоставлен"}; confidence ${probability(metadata.cost_confidence)}; выборка ${integer(metadata.cost_sample_count)}; seed ${integer(metadata.cost_seed)}. Это неопределённость оценки, а не разброс затрат игрока.</p>` : "";
+    return `<section class="detail" id="route-detail"><p><a href="#comparison">К сравнению маршрутов</a></p><h2>${escapeText(routeTitle(route))}</h2>
+      <p>Средняя стоимость: <strong>${numeric(route.expected_cost)} ${escapeText(report.prices?.unit)}</strong>. p90: <strong>${p90}</strong>.${route.stopping_threshold == null ? "" : ` Выбранный порог: <strong>${numeric(route.stopping_threshold)}</strong>.`}</p>
+      <p class="muted">Средняя стоимость - математическое ожидание. p90 - порог затрат для 90% завершённых запусков, не обещанный бюджет.</p>${p90Audit}
+      <h3>Инструкция</h3><ol>${(route.instructions || []).map(step => `<li>${escapeText(step)}</li>`).join("") || "<li>Инструкции не предоставлены.</li>"}</ol>
+      <h3>Этапы</h3><div class="table-wrap"><table><thead><tr><th>Этап</th><th>Вероятность</th><th>Ожидаемые оплаты</th><th>Смысл</th></tr></thead><tbody>${stages}</tbody></table></div>
+      ${recovery ? `<h3>Условия и риски</h3><ul>${recovery}</ul>` : ""}
+      <h3>Материалы <span class="muted">(количество, цена за единицу, расход; ${escapeText(report.prices?.unit)} указана в заголовке)</span></h3>
+      <div class="table-wrap"><table><thead><tr><th>Материал</th><th>Количество</th><th>Цена</th><th>Расход</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="${accounting.complete ? "good" : "bad"}">${accounting.complete ? "Учёт материалов согласован с ожидаемой стоимостью." : `Неполный учёт: ${escapeText(accounting.reason || "причина не предоставлена")}`}</p>
+      <p>Итого материалов: ${numeric(accounting.total)} ${escapeText(report.prices?.unit)}; план: ${numeric(route.expected_cost)} ${escapeText(report.prices?.unit)}.</p>
+      <details id="route-audit"><summary>Параметры, решения, источники и исходы</summary><div class="table-wrap"><table><tbody>${parameterRows(route.parameters)}</tbody></table></div>${raw({ decisions: route.decisions, source: route.source, metadata, outcome: route.outcome })}</details>
+    </section>`;
+  }
+
+  function comparisonHtml(query) {
+    const normalized = query.toLocaleLowerCase("ru-RU");
+    const selected = activeRoute()?.key;
+    const routes = (report.routes || []).filter(route => `${route.id || ""} ${route.name || ""} ${route.key || ""}`.toLocaleLowerCase("ru-RU").includes(normalized));
+    const routeRows = routes.map(route => `<tr class="${route.key === selected ? "selected" : ""}"><td><button class="route" data-route-key="${escapeText(route.key)}">${escapeText(routeTitle(route))}</button></td><td>${route.stopping_threshold == null ? "-" : numeric(route.stopping_threshold)}</td><td>${numeric(route.expected_cost)}</td><td>${route.cost_p90 == null ? "-" : numeric(route.cost_p90)}</td><td>${escapeText(route.cost_label || "-")}</td><td>${numeric(route.expected_utility)}</td><td>${route.frontier ? "да" : "нет"}</td></tr>`).join("");
+    const unavailable = (report.unavailable || []).map(route => `<li><strong>${escapeText(route.name || route.id || "маршрут")}</strong>: ${escapeText((route.reasons || [route.reason || "причина не предоставлена"]).join("; "))}</li>`).join("") || "<li>Нет недоступных маршрутов.</li>";
+    return `<section id="comparison"><h2>Сравнение маршрутов</h2><label class="no-print" for="route-search">Поиск маршрута</label><input class="no-print" id="route-search" value="${escapeText(query)}" autocomplete="off">
+      <div class="table-wrap"><table><thead><tr><th>Маршрут</th><th>Порог</th><th>Среднее (${escapeText(report.prices?.unit)})</th><th>p90 (${escapeText(report.prices?.unit)})</th><th>Метка p90</th><th>Utility</th><th>Frontier</th></tr></thead><tbody>${routeRows || "<tr><td colspan=\"7\">Нет совпадений.</td></tr>"}</tbody></table></div>
+      <p class="muted">Frontier показывает лучший доступный обмен ожидаемой цены и utility. Таблица прокручивается горизонтально на узком экране.</p><h3>Недоступные маршруты</h3><ul>${unavailable}</ul></section>`;
+  }
+
+  function evidenceHtml(testQuery = "") {
+    const evidence = report.evidence;
+    if (!evidence) return "<section><h2>Доказательства</h2><p class=\"bad\">Доказательства не предоставлены.</p></section>";
+    const pytest = evidence.pytest || {};
+    const coe = evidence.coe || {};
+    const grouped = (pytest.cases || []).filter(item => `${item.name || ""} ${item.file || ""}`.toLocaleLowerCase("ru-RU").includes(testQuery.toLocaleLowerCase("ru-RU"))).reduce((groups, item) => { (groups[item.file || "неизвестный файл"] ||= []).push(item); return groups; }, {});
+    const cases = Object.entries(grouped).map(([file, entries]) => `<h3>${escapeText(file)}</h3><div class="table-wrap"><table><thead><tr><th>Тест</th><th>Статус</th><th>Минуты</th><th>Сообщение</th></tr></thead><tbody>${entries.map(item => `<tr><td>${escapeText(item.name)}</td><td>${escapeText(item.status)}</td><td>${numeric(item.duration_minutes)}</td><td>${escapeText(item.message || "-")}</td></tr>`).join("")}</tbody></table></div>`).join("") || "<p>Список тестов отсутствует.</p>";
+    const coeRows = (coe.cases || []).map(item => `<tr><td>${escapeText(item.id)}</td><td>${escapeText(item.action)}</td><td>${escapeText(item.base)}</td><td>${escapeText((item.targets || []).join(", "))}</td><td title="${escapeText(item.ours)}">${probability(item.ours)}</td><td title="${escapeText(item.coe)}">${probability(item.coe)}</td><td>${item.relative_difference == null ? "-" : `${numeric(item.relative_difference * 100)}%`}</td></tr>`).join("") || "<tr><td colspan=\"7\">CoE cases отсутствуют.</td></tr>";
+    const commands = (evidence.commands || []).map(item => `<li><strong>${escapeText(item.name)}</strong>: ${escapeText((item.argv || []).join(" "))}; exit ${integer(item.exit_code)}; ${numeric(item.duration_minutes)} мин.; ${link(item.stdout_file, "stdout")} / ${link(item.stderr_file, "stderr")}</li>`).join("") || "<li>Команды не предоставлены.</li>";
+    const artifacts = Object.entries(evidence.artifacts || {}).map(([name, path]) => `<li>${escapeText(name)}: ${link(path)}</li>`).join("") || "<li>Артефакты не предоставлены.</li>";
+    const revision = evidence.git_commit && report.context?.generation?.commit && evidence.git_commit !== report.context.generation.commit ? "Проверки другой ревизии." : "";
+    return `<section><h2>Доказательства</h2><p>${revision ? `<span class="bad">${revision}</span>` : ""} Статус pytest: <strong>${escapeText(pytest.status || "unavailable")}</strong>; CoE: <strong>${escapeText(coe.status || "unavailable")}</strong>; dirty tree: ${evidence.working_tree_dirty == null ? "неизвестно" : evidence.working_tree_dirty ? "да" : "нет"}; ревизия ${escapeText(evidence.git_commit || "не предоставлена")}; время ${escapeText(evidence.generated_at || "не предоставлено")}.</p>
+      <p class="muted">Тесты и CoE cases проверяют компоненты, а не полный маршрут и не живую игру.</p><p>Итоги pytest: tests ${integer(pytest.tests)}, passed ${integer(pytest.passed)}, failures ${integer(pytest.failures)}, errors ${integer(pytest.errors)}, skipped ${integer(pytest.skipped)}.</p>
+      <details id="test-cases"><summary>Тестовые случаи по файлам</summary><label class="no-print" for="test-search">Поиск теста</label><input class="no-print" id="test-search" value="${escapeText(testQuery)}" autocomplete="off">${cases}</details><h3>Сравнение CoE</h3><div class="table-wrap"><table><thead><tr><th>ID</th><th>Action</th><th>Base</th><th>Targets</th><th>Наше</th><th>CoE</th><th>Разница</th></tr></thead><tbody>${coeRows}</tbody></table></div>
+      <details id="evidence-artifacts"><summary>Команды и артефакты</summary><ul>${commands}</ul><ul>${artifacts}</ul><p>Сырой план: ${link(evidence.plan_json || "plan.json", "plan.json")}</p></details></section>`;
+  }
+
+  function render(query = "", testQuery = "") {
+    const openDetails = [...document.querySelectorAll("details[id]")].filter(item => item.open).map(item => item.id);
+    const focused = document.activeElement?.id;
+    const caret = focused ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : [null, null];
+    const input = report.input || {};
+    const generation = report.context?.generation || {};
+    document.getElementById("app").innerHTML = `<div class="meta"><span>${escapeText(input.base)}</span><span>ilvl ${integer(input.item_level)}</span><span>качество ${integer(input.quality)} (поставляется, цена базы ${numeric(report.prices?.base_cost)})</span><span>commit ${escapeText(generation.commit || "не предоставлен")}</span><span>${escapeText(generation.generated_at || "время не предоставлено")}</span></div>
+      <p class="notice"><strong>Цены вымышлены.</strong> Это не торговые цены.</p><details id="price-note"><summary>Источник и допущения цен</summary><p>${escapeText(report.prices?.note || "Цены предоставлены входом.")}</p></details>${targetHtml()}${comparisonHtml(query)}${routeDetail(activeRoute())}${evidenceHtml(testQuery)}<details id="raw-audit"><summary>Raw audit, assumptions and sources</summary>${raw({ assumptions: report.assumptions, input_sources: input.sources, price_sources: report.prices?.sources, raw_plan: report })}</details>`;
+    bindInteractions(query);
+    openDetails.forEach(id => { const node = document.getElementById(id); if (node) node.open = true; });
+    if (focused) { const node = document.getElementById(focused); if (node) { node.focus(); if (caret[0] != null) node.setSelectionRange(caret[0], caret[1]); } }
+  }
+
+  function bindInteractions(query) {
+    const search = document.getElementById("route-search");
+    if (search) search.addEventListener("input", event => {
+      const caret = event.target.selectionStart;
+      render(event.target.value, document.getElementById("test-search")?.value || "");
+      const next = document.getElementById("route-search");
+      next.focus(); next.setSelectionRange(caret, caret);
+    });
+    const testSearch = document.getElementById("test-search");
+    if (testSearch) testSearch.addEventListener("input", event => render(document.getElementById("route-search")?.value || "", event.target.value));
+    document.querySelectorAll("[data-route-key]").forEach(button => button.addEventListener("click", () => {
+      selectedKey = button.dataset.routeKey;
+      location.hash = encodeURIComponent(button.dataset.routeKey);
+      document.getElementById("route-detail")?.scrollIntoView({ block: "start" });
+    }));
+  }
+
+  globalThis.ReportTemplate = { escapeText, numeric, integer, probability, safeLocalPath, routeByKey };
+  // START_APP
+  window.addEventListener("hashchange", () => render(document.getElementById("route-search")?.value || "", document.getElementById("test-search")?.value || ""));
+  render("", "");
+  </script>
+</body>
+</html>
