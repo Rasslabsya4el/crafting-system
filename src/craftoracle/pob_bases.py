@@ -1,4 +1,4 @@
-"""Literal, deliberately limited projection of five PoB item-base files.
+"""Literal, deliberately limited projection of seven PoB item-base files.
 
 The parser recognizes generated ``itemBases[\"Name\"] = { ... }`` records
 without executing Lua.  It projects only the literal base tags needed for the
@@ -7,8 +7,8 @@ influenceTags, and assignment provenance.  Defence and weapon properties,
 implicit text, requirements, and all eligibility/resolver behavior deliberately
 remain unprojected.
 
-Source: PoB data ``Data/Bases/{helmet,bow,ring,body,gloves}.lua``, supplied by
-the owner as described in AGENTS.md section 1, read 2026-09-20.
+Source: PoB data ``Data/Bases/{helmet,bow,ring,body,gloves,amulet,boots}.lua``, supplied by
+the owner as described in AGENTS.md section 1, read 2026-09-21.
 """
 
 from __future__ import annotations

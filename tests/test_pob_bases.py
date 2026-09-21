@@ -148,6 +148,8 @@ def test_full_s1_projection_and_real_build_are_deterministic() -> None:
         ("ring.lua", 48, "Iron Ring", "Jet Ring", "6db93137a173e81f2e16374ba96e845536004903bc01f12443bd754785bca86d"),
         ("body.lua", 123, "Plate Vest", "Golden Mantle", "b764b6065a41af36d8433dd26838a6290ce0abd17431c3b7090ab935534f9557"),
         ("gloves.lua", 80, "Iron Gauntlets", "Golden Bracers", "6c251c4582062109de151ad9c7b5bf9583c4b51fb6fa27e7f9d1648d6ead2217"),
+        ("amulet.lua", 105, "Paua Amulet", "Monkey Paw Talisman (Frenzy)", "dcc6f48d8a7aaea4d75a18b0557ca1f8bfceaf6e83e5b83638b7745d03cf850c"),
+        ("boots.lua", 81, "Iron Greaves", "Golden Caligae", "7634f2c366c79a83614520dbee74239fd3a742a4297d1e1c166a78610be68eb7"),
     ]
     raw_sources = []
     for filename, count, first_name, last_name, sha256 in expected:
@@ -158,25 +160,25 @@ def test_full_s1_projection_and_real_build_are_deterministic() -> None:
     projection = build_pob_bases_projection(raw_sources)
     bases = projection["bases"]
     sources = projection["sources"]
-    assert [source["record_count"] for source in sources] == [95, 29, 48, 123, 80]
+    assert [source["record_count"] for source in sources] == [95, 29, 48, 123, 80, 105, 81]
     offset = 0
     for (_, count, first_name, last_name, _), source in zip(expected, sources, strict=True):
         assert bases[offset]["name"] == first_name
         assert bases[offset + count - 1]["name"] == last_name
         offset += count
 
-    assert len(bases) == 375
-    assert len({base["name"] for base in bases}) == 371
+    assert len(bases) == 561
+    assert len({base["name"] for base in bases}) == 548
     assert [base["source"]["line"] for base in bases if base["name"] == "Two-Stone Ring"] == [105, 114, 123]
     assert [base["source"]["line"] for base in bases if base["name"] == "Shadowed Ring"] == [312, 321, 330]
     assert [
         sum(base["subType"] is None for base in bases[offset:offset + count])
-        for offset, (_, count, _, _, _) in zip((0, 95, 124, 172, 295), expected, strict=True)
-    ] == [1, 29, 48, 0, 1]
+        for offset, (_, count, _, _, _) in zip((0, 95, 124, 172, 295, 375, 480), expected, strict=True)
+    ] == [1, 29, 48, 0, 1, 20, 1]
     assert [
         sum(base["socketLimit"] is None for base in bases[offset:offset + count])
-        for offset, (_, count, _, _, _) in zip((0, 95, 124, 172, 295), expected, strict=True)
-    ] == [0, 0, 48, 0, 0]
+        for offset, (_, count, _, _, _) in zip((0, 95, 124, 172, 295, 375, 480), expected, strict=True)
+    ] == [0, 0, 48, 0, 0, 105, 0]
 
     by_name = {base["name"]: base for base in bases}
     assert by_name["Iron Hat"]["type"] == "Helmet"
@@ -199,6 +201,25 @@ def test_full_s1_projection_and_real_build_are_deterministic() -> None:
     assert by_name["Iron Ring"]["subType"] is None
     assert by_name["Iron Ring"]["socketLimit"] is None
     assert by_name["Iron Ring"]["tags"] == {"default": True, "ring": True}
+    assert by_name["Paua Amulet"]["type"] == "Amulet"
+    assert by_name["Paua Amulet"]["subType"] is None
+    assert by_name["Paua Amulet"]["socketLimit"] is None
+    assert by_name["Paua Amulet"]["tags"] == {"amulet": True, "default": True}
+    assert len(by_name["Paua Amulet"]["influenceTags"]) == 8
+    assert by_name["Paua Amulet"]["influenceTags"]["shaper"] == "amulet_shaper"
+    assert by_name["Iron Greaves"]["type"] == "Boots"
+    assert by_name["Iron Greaves"]["subType"] == "Armour"
+    assert by_name["Iron Greaves"]["socketLimit"] == 4
+    assert by_name["Iron Greaves"]["tags"] == {
+        "armour": True, "boots": True, "default": True, "str_armour": True,
+    }
+    assert len(by_name["Iron Greaves"]["influenceTags"]) == 8
+    assert by_name["Iron Greaves"]["influenceTags"]["shaper"] == "boots_shaper"
+
+    five_sources = raw_sources[:5]
+    five_projection = build_pob_bases_projection(five_sources)
+    assert projection["sources"][:5] == five_projection["sources"]
+    assert projection["bases"][:375] == five_projection["bases"]
 
     first_output = build().read_bytes()
     second_output = build().read_bytes()
