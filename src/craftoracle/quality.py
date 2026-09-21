@@ -11,12 +11,9 @@ from dataclasses import replace
 import math
 from numbers import Real
 import random
-from typing import TYPE_CHECKING
 
+from craftoracle.actions import ActionData, _validate_item
 from craftoracle.item_model import ItemState
-
-if TYPE_CHECKING:
-    from craftoracle.actions import ActionData
 
 
 CATALYST_SOURCES = {
@@ -32,6 +29,7 @@ REGULAR_CATALYSTS = frozenset((
 ))
 _JEWELLERY_TYPES = frozenset(("Ring", "Amulet", "Belt"))
 _Q9_FLAGS = ("corrupted", "influenced", "fractured", "synthesised", "mirrored", "split")
+_CATALYST_NAMES = {name.casefold(): name for name in REGULAR_CATALYSTS}
 
 
 def catalyst_distribution(
@@ -44,6 +42,7 @@ def catalyst_distribution(
     It deliberately preserves all affixes and item identity. The result is
     keyed by ``ItemState`` rather than a modifier-only outcome projection.
     """
+    catalyst_type = _normalise_catalyst_type(catalyst_type)
     _validate_catalyst_input(item, data, catalyst_type)
     current_quality = item.quality if item.catalyst_type == catalyst_type else 0
     result: dict[ItemState, float] = {}
@@ -67,14 +66,11 @@ def apply_catalyst(
     """Sample one ordinary catalyst application from its exact distribution."""
     if not isinstance(rng, random.Random):
         raise ValueError("rng must be random.Random")
-    outcomes = catalyst_distribution(item, data, catalyst_type)
-    ticket = rng.random()
-    cumulative = 0.0
-    for outcome, probability in sorted(outcomes.items(), key=lambda part: part[0].quality):
-        cumulative += probability
-        if ticket < cumulative:
-            return outcome
-    raise AssertionError("catalyst probability mass did not cover the random ticket")
+    catalyst_type = _normalise_catalyst_type(catalyst_type)
+    _validate_catalyst_input(item, data, catalyst_type)
+    current_quality = item.quality if item.catalyst_type == catalyst_type else 0
+    gain = _sample_increment(item.item_level, rng)
+    return replace(item, quality=min(20, current_quality + gain), catalyst_type=catalyst_type)
 
 
 def plan_catalyst(
@@ -85,6 +81,7 @@ def plan_catalyst(
     unit_price: Real,
 ) -> dict[str, object]:
     """Return an exact finite repeat-until-target ordinary-catalyst policy."""
+    catalyst_type = _normalise_catalyst_type(catalyst_type)
     _validate_catalyst_input(item, data, catalyst_type)
     if isinstance(target_quality, bool) or not isinstance(target_quality, int) or not 1 <= target_quality <= 20:
         raise ValueError("target_quality must be an integer from 1 through 20")
@@ -96,7 +93,13 @@ def plan_catalyst(
     expected = _backward_expected_applications(start.quality, item.item_level, target_quality)
     count_distribution, final_distribution = _forward_finish_distributions(start, data, catalyst_type, target_quality)
     p90 = _quantile_count(count_distribution, 0.9)
-    cost_distribution = {count * price: probability for count, probability in count_distribution.items()}
+    if price == 0.0:
+        cost_distribution = {0.0: 1.0}
+    else:
+        cost_distribution: dict[float, float] = {}
+        for count, probability in count_distribution.items():
+            cost = count * price
+            cost_distribution[cost] = cost_distribution.get(cost, 0.0) + probability
     return {
         "count_distribution": count_distribution,
         "final_quality_distribution": final_distribution,
@@ -119,6 +122,14 @@ def _increment_distribution(item_level: int) -> dict[int, float]:
     if lower == upper:
         return {lower: 1.0}
     return {lower: upper - f_value, upper: f_value - lower}
+
+
+def _sample_increment(item_level: int, rng: random.Random) -> int:
+    increments = _increment_distribution(item_level)
+    if len(increments) == 1:
+        return next(iter(increments))
+    lower, upper = sorted(increments)
+    return upper if rng.random() < increments[upper] else lower
 
 
 def _backward_expected_applications(start_quality: int, item_level: int, target_quality: int) -> float:
@@ -171,18 +182,13 @@ def _quantile_count(distribution: dict[int, float], percentile: float) -> int:
 
 
 def _validate_catalyst_input(item: ItemState, data: ActionData, catalyst_type: str) -> None:
-    from craftoracle.actions import ActionData
-
     if not isinstance(item, ItemState):
         raise ValueError("item must be an ItemState")
     if not isinstance(data, ActionData):
         raise ValueError("data must be ActionData")
-    if catalyst_type not in REGULAR_CATALYSTS:
-        raise ValueError("supported regular catalyst is required; Tainted, Dextral, and Sinistral are unsupported")
+    _validate_item(item, data)
     if any(getattr(item, flag) for flag in _Q9_FLAGS):
         raise NotImplementedError("out of tonight's slice: Q9")
-    if item.rarity not in {"normal", "magic", "rare"}:
-        raise ValueError("invalid rarity for ordinary catalyst: requires normal, magic, or rare")
     if isinstance(item.item_level, bool) or not isinstance(item.item_level, int) or item.item_level <= 0:
         raise ValueError("item level must be a positive integer")
     if isinstance(item.quality, bool) or not isinstance(item.quality, int) or not 0 <= item.quality <= 20:
@@ -196,3 +202,11 @@ def _validate_catalyst_input(item: ItemState, data: ActionData, catalyst_type: s
         raise ValueError("base must be present in ActionData")
     if base.get("type") not in _JEWELLERY_TYPES:
         raise ValueError("catalyst requires a Ring, Amulet, or Belt jewellery base")
+
+
+def _normalise_catalyst_type(catalyst_type: str) -> str:
+    if isinstance(catalyst_type, str):
+        canonical = _CATALYST_NAMES.get(catalyst_type.casefold())
+        if canonical is not None:
+            return canonical
+    raise ValueError("supported regular catalyst is required; Tainted, Dextral, and Sinistral are unsupported")

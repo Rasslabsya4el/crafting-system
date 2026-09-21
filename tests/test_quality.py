@@ -1,3 +1,5 @@
+"""S46/S47 catalyst policy checks from docs/mechanics/quality_catalysts.md."""
+
 from __future__ import annotations
 
 import math
@@ -7,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from craftoracle.actions import load_action_data, scour_item
-from craftoracle.item_model import ItemState
+from craftoracle.item_model import ItemState, ModRef, resolve_pool
 from craftoracle.quality import apply_catalyst, catalyst_distribution, plan_catalyst
 
 
@@ -21,6 +23,11 @@ def action_data():
 
 def ring(level: int = 86, **changes) -> ItemState:
     return ItemState("Vermillion Ring", level, "rare", **changes)
+
+
+def valid_mod(action_data) -> ModRef:
+    entry = next(iter(resolve_pool(ring(), action_data.bases, action_data.mods)))
+    return ModRef(entry.mod_id, entry.type, entry.group)
 
 
 def test_increment_formula_and_cap_are_exact(action_data) -> None:
@@ -38,16 +45,23 @@ def test_increment_formula_and_cap_are_exact(action_data) -> None:
     assert probabilities[1] == pytest.approx(0.5933528496169547)
     assert probabilities[2] == pytest.approx(0.40664715038304533)
     assert sum(at_86.values()) == pytest.approx(1.0)
+    assert catalyst_distribution(ring(11), action_data, "Abrasive") == {
+        ItemState("Vermillion Ring", 11, "rare", quality=20, catalyst_type="Abrasive"): 1.0
+    }
+    assert catalyst_distribution(ring(100), action_data, "Abrasive") == {
+        ItemState("Vermillion Ring", 100, "rare", quality=1, catalyst_type="Abrasive"): 1.0
+    }
 
 
 def test_validation_switching_and_metadata_preservation(action_data) -> None:
-    original = ring(quality=20, catalyst_type="Abrasive")
+    original = ring(mods=(valid_mod(action_data),), quality=20, catalyst_type="Abrasive")
     switched = catalyst_distribution(original, action_data, "Prismatic")
     assert {(state.quality, state.catalyst_type): probability for state, probability in switched.items()} == {
         (1, "Prismatic"): pytest.approx(0.5933528496169547),
         (2, "Prismatic"): pytest.approx(0.40664715038304533),
     }
     assert all(state.base_name == original.base_name and state.rarity == original.rarity for state in switched)
+    assert all(state.mods == original.mods for state in switched)
     assert all(state.quality <= 20 for state in switched)
 
     with pytest.raises(ValueError, match="jewellery"):
@@ -62,6 +76,14 @@ def test_validation_switching_and_metadata_preservation(action_data) -> None:
         catalyst_distribution(ring(quality=21), action_data, "Abrasive")
     with pytest.raises(ValueError, match="catalyst_type"):
         catalyst_distribution(ring(quality=1), action_data, "Abrasive")
+    with pytest.raises(ValueError, match="fractured_mod_id"):
+        catalyst_distribution(ring(fractured_mod_id="missing"), action_data, "Abrasive")
+
+
+@pytest.mark.parametrize("flag", ("corrupted", "influenced", "fractured", "synthesised", "mirrored", "split"))
+def test_all_q9_flags_are_explicitly_unsupported(action_data, flag: str) -> None:
+    with pytest.raises(NotImplementedError, match="Q9"):
+        catalyst_distribution(ring(**{flag: True}), action_data, "Abrasive")
 
 
 def test_seeded_sampling_and_ordinary_action_keep_quality_metadata(action_data) -> None:
@@ -69,6 +91,9 @@ def test_seeded_sampling_and_ordinary_action_keep_quality_metadata(action_data) 
     result = apply_catalyst(item, action_data, "Abrasive", rng=random.Random(20260921))
     assert result.quality == 20
     assert result.catalyst_type == "Abrasive"
+    assert apply_catalyst(item, action_data, "abrasive", rng=random.Random(20260921)).catalyst_type == "Abrasive"
+    with pytest.raises(ValueError, match="rng"):
+        apply_catalyst(item, action_data, "Abrasive", rng=object())  # type: ignore[arg-type]
     assert scour_item(item, action_data) == ItemState(
         "Vermillion Ring", 86, "normal", quality=19, catalyst_type="Abrasive"
     )
@@ -94,6 +119,10 @@ def test_finite_plan_exact_edges_and_costs(action_data, monkeypatch) -> None:
     assert complete["expected_cost"] == 0.0
     switched = plan_catalyst(ring(quality=20, catalyst_type="Prismatic"), action_data, "Abrasive", 20, 2)
     assert switched["count_distribution"] == plan["count_distribution"]
+    free = plan_catalyst(ring(), action_data, "Abrasive", 20, 0)
+    assert free["cost_distribution"] == {0.0: 1.0}
+    assert free["expected_cost"] == 0.0
+    assert free["cost_p90"] == 0.0
 
     one_step = plan_catalyst(ring(quality=19, catalyst_type="Abrasive"), action_data, "Abrasive", 20, 2)
     assert one_step["count_distribution"] == {1: 1.0}
@@ -107,8 +136,9 @@ def test_finite_plan_exact_edges_and_costs(action_data, monkeypatch) -> None:
 
     with pytest.raises(ValueError, match="target_quality"):
         plan_catalyst(ring(), action_data, "Abrasive", 0, 1)
-    with pytest.raises(ValueError, match="unit_price"):
-        plan_catalyst(ring(), action_data, "Abrasive", 20, math.inf)
+    for price in (-1, math.nan, math.inf, -math.inf):
+        with pytest.raises(ValueError, match="unit_price"):
+            plan_catalyst(ring(), action_data, "Abrasive", 20, price)
 
 
 def test_independent_seeded_repeated_application_cdf_matches_exact_bound(action_data) -> None:
