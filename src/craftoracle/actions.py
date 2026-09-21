@@ -130,10 +130,14 @@ def action_distribution(
     *,
     essence_id: str | None = None,
     bench_index: int | None = None,
+    harvest_tag: str | None = None,
+    harvest_type_filter: str = "first_only",
 ) -> dict[OutcomeClass, float]:
     """Return terminal-only exact outcomes; do not use the projection for a later action."""
     checked_labels = _validate_labels(labels)
     if action in _DRAW_ACTIONS:
+        if harvest_tag is not None or harvest_type_filter != "first_only":
+            raise ValueError("harvest options are only valid for harvest_reforge")
         if bench_index is not None:
             raise ValueError("bench_index is only valid for bench")
         scenario = prepare_roll(action, item, data, checked_labels, essence_id=essence_id)
@@ -146,8 +150,20 @@ def action_distribution(
                 initial_labels=scenario.initial_labels, blocked_groups=scenario.blocked_groups,
             )))
         return mixture_distribution(parts)
+    if action == "harvest_reforge":
+        if essence_id is not None:
+            raise ValueError("essence_id is only valid for essence")
+        if bench_index is not None:
+            raise ValueError("bench_index is only valid for bench")
+        if harvest_tag is None:
+            raise ValueError("harvest_reforge requires harvest_tag")
+        # Harvest imports ActionData from this module, so keep the adapter import local.
+        from craftoracle.harvest import harvest_distribution
+        return harvest_distribution(item, data, harvest_tag, checked_labels, type_filter=harvest_type_filter)
     if essence_id is not None:
         raise ValueError("essence_id is only valid for essence")
+    if harvest_tag is not None or harvest_type_filter != "first_only":
+        raise ValueError("harvest options are only valid for harvest_reforge")
     _validate_action_data(data)
     _validate_item(item, data)
     if action == "annul":
