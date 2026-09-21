@@ -14,7 +14,7 @@ threshold when present, exact mean, p90, exact/estimated label, expected utility
 Selecting a row opens its full instructions, stage probabilities, expected materials/costs,
 repeat/reset branches and supporting evidence. Search/filter and keyboard-accessible details
 must work offline. Include unavailable routes with their actual reasons, not hidden omissions.
-Default to the cheapest route open. Use a light readable layout, restrained teal accents,
+Default to the cheapest route open. Use a dark readable layout, restrained teal accents,
 tabular numbers, comfortable spacing and a print stylesheet. No generic landing-page filler.
 
 Every number comes from the plan or the accounting derivations below, never a canned demo.
@@ -26,6 +26,11 @@ against the game or live CoE. Per-route links identify component tests explicitl
 Mean cost is an expectation, not guaranteed budget. Explain p90 as the model's cost threshold
 covering90% of completed runs; an estimated p90 is marked approximate. Its99% DKW bracket
 is uncertainty of the estimate, not a player's90% cost interval. No currency icon downloads.
+Owner correction, 2026-09-21: show costs, expected counts, utility and percentages with
+one decimal place. Keep intrinsic integer fields (item level, tier, test count) as integers.
+A positive probability below0.1% must display "<0,1%" plus an approximate one-in-N value,
+not zero. Full precision remains in raw JSON or expanded audit. Dark theme supersedes the
+original light-layout request in this design.
 Full metadata, sources, sample size/seed, parameter audit and terminal distributions may be
 collapsed below the player instructions. The original JSON remains available for inspection.
 
