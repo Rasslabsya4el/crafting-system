@@ -3,7 +3,8 @@
 Worktree: `.worktrees/fossil-spam-policy` (branch `w-fossil-spam-policy`).
 May touch ONLY `src/craftoracle/fossil_policies.py`, `src/craftoracle/plan_inputs.py`,
 `src/craftoracle/optimizer.py`, `data/loadouts/endgame.json`, `data/prices.example.json`,
-`tests/test_fossil_policies.py`, `tests/test_plan_inputs.py`, `tests/test_plan_cli.py`.
+`tests/test_fossil_policies.py`, `tests/test_plan_inputs.py`, `tests/test_plan_cli.py`,
+`tests/test_optimizer.py`.
 Dependencies: accepted fossil adapter AND template optimizer; start only after their merges.
 Bounded60minutes. No source research or changes to other action rules.
 
@@ -41,6 +42,15 @@ availability domain; the worker implements its mathematics, not new game facts.
    target; avoid unrelated full CLI subprocess repetitions. Explicit caller caches only.
    Update existing CLI integration assertions for the added policy/frontier using their
    existing shared result fixtures; adding a family must not leave obsolete policy counts.
+6. Keep routine pytest bounded as families grow: real CLI fixtures may use an explicit
+   smaller loadout (helmet fossil[1], bow fossil[13], with expensive Magic grid disabled
+   through its action permission). Preserve their protected/Harvest/bench numerical
+   assertions. Move Magic optimizer seed/method/terminal assertions to a small real-kernel
+   synthetic fixture in test_optimizer.py, without mocking the cost estimator. Existing
+   fixed Magic real benchmark remains. Full default helmet and bow commands are still
+   mandatory once outside pytest for acceptance/report, with all15 combinations and the
+   complete Magic grid. This separates routine regression cost from full plan measurement;
+   never substitute a bounded-loadout result for the reported default plan.
 
 ## Numbers to reproduce/report
 - Design:a.25,p.5,A2,c3,B0 ->mean6.5,p90 11,CDF8=.8125/CDF11=.90625.
