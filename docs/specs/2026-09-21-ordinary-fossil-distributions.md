@@ -2,7 +2,8 @@
 
 Worktree: `.worktrees/ordinary-fossil-distributions` (branch `w-ordinary-fossil-distributions`).
 May touch ONLY `src/craftoracle/fossils.py`, `src/craftoracle/actions.py`,
-`data/rules/fossils.json`, `tests/test_fossils.py`.
+`data/rules/fossils.json`, `tests/test_fossils.py`, `tests/test_actions.py`
+(existing blocked-action expectation update authorized by the lead).
 
 ## Why
 Owner D21 unblocks CoE's ordinary additive model. Implement facts already interpreted in

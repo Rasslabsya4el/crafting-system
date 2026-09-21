@@ -21,6 +21,11 @@ rules or changing the planner. This is one bounded pure-function slice, at most6
    stage tests success. No initial groups needed beyond the existing blocked_groups and
    initial counts/labels contract. Empty/bad schedules/predicates/weights must fail explicitly;
    preserve deterministic state cap. Return peak live state count for later bounded research.
+   Clarification: caps cannot shrink in this add-only schedule. If no future stage can
+   draw, evaluate the target at the current actual terminal state even when early_stop=False;
+   absorb there without charging impossible later stages. Keep the state live if later
+   expanded caps do permit a draw. Sample-count integer overflow/negative costs are explicit
+   errors, never finite-looking results; all returned mean/count metrics must be finite.
 3. Add pure correlated-attempt cost functions accepting weighted success/failure cost atoms,
    nonnegative reset and setup costs. Exact mean = setup+(Eattempt+(1-P)*reset)/P. P=0
    raises explicit unreachable, P=1 valid. Cost p90 uses explicit NumPy Generator: failed
@@ -56,6 +61,19 @@ Renewal u0,v.5,e5,p.25,b.25,constant cycle2 ->mean28, prep4, cycles4; b0 ->18.
 u.1,v.4 otherwise same ->mean22, prep10/3, cycles8/3. Base7 adds7 once.
 P=1 constant attempt2 setup7 ->mean/p90 9. Deterministic cost fixture should give a zero-width
 quantile interval when all samples equal. N50000, delta.01 DKW epsilon=sqrt(log(200)/(100000)).
+
+Independent cost-CDF references derived by the lead2026-09-21 from generating functions:
+- Correlated gated fixture above, no setup: G(z)=(z^5/6)/(1-3z^3/4-z^6/12).
+  Exact p90=44; CDF43=.8841585481908151, CDF44=.9017383732824877.
+- Renewal u.1,v.4,e5,p.25,b.25,constant cycle2:
+  G(z)=(.1z^5+.05z^7)/(1-.5z^2-.5z^5+.15z^7).
+  Exact mean22,p90=45; CDF44=.8965019744873047,CDF45=.9019973991088868.
+- Protected k2 fixture e5 with success cycle costs12/14 equally likely, failure14:
+  G(z)=(z^17+z^19)/12 / (1-.5z^5-(2/3)z^14+(1/3)z^19).
+  Exact mean51,p90=97; CDF96=.8986572140038259,CDF97=.9014381387760283.
+Coefficient recurrence gives a bounded independent check of sampled quantile intervals;
+the empirical p90 need not always equal the true quantile exactly. Do not mirror N/H/J/K
+sampling to call a second stochastic implementation an independent CDF.
 
 ## Numbers to report
 All listed probabilities/means; synthetic p90 and independent CDF bracket; test summary;
