@@ -2,10 +2,13 @@
 
 ## GOAL 2 — trusted numbers and optimised policies
 
-- [~] Owner-facing route report: standalone Russian HTML with every route's steps, conditions,
-  mean material costs, probability conditioning and raw results (`9278e9b` specs).
-- [~] Fresh visible evidence bundle: all pytest cases/logs and12 offline CoE comparisons,
-  command/revision provenance; wire into report and inspect the real helmet/bow in browser.
+- [x] Owner-facing route report: standalone Russian HTML with every route's steps, conditions,
+  mean material costs, probability conditioning and raw results (`3ea7424`, `c77414e`, `ecdde54`).
+  Dark theme/one decimal;12 helmet/14 bow routes, all26 material totals reconcile.
+- [x] Fresh visible evidence bundle (`5565ea7`): all423 pytest cases/logs and12 offline CoE
+  comparisons atc77414e, command/revision/dirty provenance, real browser selection/search checks.
+- [~] Final player-wording/audit correction (`5646e02` spec): preserve Regal gates/early stops,
+  show selected threshold consistently and link complete per-route audit; refresh final proof.
 
 - [x] Owner-unblocked Harvest: adapter `527efa7`; protected-half helmet policy `55c8191` (39 focused tests), exact mean2703.61 with full-prefix recovery cost.
 - [x] Complete S14 metamod matrix as data and tests (`614c9c3`): 33 actions x 4 columns = 132 cells, 33 notes, 10 passing tests.
