@@ -6,6 +6,13 @@ exception is additionally `documented` by S17. Sources: S3 `package.js` line 5 (
 `poec_workoutFOMTypes` lines 1500-1508, `poec_getModdedWeight` lines 1559-1570,
 `poec_simApplyCraftGO` lines 2328-2338; S17 Wiki Metamod.
 
+Ordinary adapter accepted0de86dd; bounded Alchemy-then-Chaotic policy accepted2c069fc.
+The policy compares every nonempty subset of up to four caller-available fossils, prices
+the whole resonator recipe, and retains both raw and conditional terminal distributions.
+This availability limit and the example prices are prototype inputs (D22), not game facts.
+Policy derivation and hand cases: docs/design/family-policies.md; measured helmet/bow
+comparisons: docs/research/goal2-results.md.
+
 ## Effect and preconditions
 
 The observed ordinary path rerolls an item as rare with fossil-adjusted weights. The method

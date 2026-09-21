@@ -39,8 +39,9 @@ incomplete search explicitly. These are finite search domains, not all possible 
 Full default CLI output from fossil worker commit817a040 is preserved locally in
 `out/goal2/helmet-before-fracture.json` and `out/goal2/bow-thresholds.json`. All15 fossil
 combinations and all96 Magic candidates completed for the helmet and each bow threshold;
-there was no work-limit status. The new fossil policy's final test acceptance and the
-fracture-policy integration are still pending.
+there was no work-limit status. Fossil policy accepted2c069fc after48 lead affected tests
+and26 final changed tests. Full default command times were0.44minute for the helmet and
+0.85minute for the two-threshold bow. The fracture-policy integration is still pending.
 
 Helmet Magic falls from mean583612.105255 to29449.032048; estimated p90 falls from
 1345699.5 to67889.5, with final99% DKW interval[65799.2,70159.9]. Its selected gates require

@@ -43,6 +43,14 @@ threshold searches keep separate level-search status for each stopping threshold
 
 The helmet plan includes protected-suffix Harvest Life with repeated lock costs and paid recovery after a full-prefix failure. Ordinary Harvest and 18 ordinary fossil types also have exact-distribution and seeded-sampling APIs. Harvest type blocking uses an explicit `first_only` model; `all_draws` is a sensitivity option while that narrower rule remains unresolved. Fossil positive factors use the owner's selected CoE additive model; multiplicative sensitivity remains available. Unsupported special recipes and item states raise an explicit error. Current exact recombination, Awakener conflict selection, unequal-tier Conflict, veiled offers, corruption and beast replacement rules retain the specific research gates in `docs/OPEN_QUESTIONS.md`.
 
+The fossil policy compares every nonempty subset of the loadout's optional `allowed_fossils`
+list (at most four supported IDs). Price each fossil with `fossil:<id>` and the whole
+resonator with `resonator:<socket_count>`. It first tries Alchemy, stops on success, then
+repeats the chosen full Chaotic recipe. The default four-fossil domain has15 combinations.
+For the bow's invented utility thresholds60/100, Scorched is selected with mean costs
+162.38/9739.88 and exact p90 costs372.5/22426.5. Full comparisons and limitations are in
+`docs/research/goal2-results.md`.
+
 `fracturing.fracture_distribution(item, data)` returns concrete item states for an ordinary
 rare with at least four ordinary modifiers, including the selected `fractured_mod_id`.
 `apply_fracturing(item, data, rng)` samples that same uniform CoE model directly. Basic
