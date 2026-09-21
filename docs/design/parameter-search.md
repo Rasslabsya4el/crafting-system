@@ -144,3 +144,9 @@ Exalt2=4480.326415, Exalt3=2807.303177 and Harvest=2476.341782. Strict preparati
 cheaper here because more successes end during Envy and fewer items enter an expensive
 protected cycle. Pure Envy1927.48 remains cheaper than every protected instance. A minimum
 within a named template must not be described as a reason to choose it over the whole library.
+For that selected Exalt3 gate, terminal mass .9860565798144074 finishes during Envy,
+and .01394342018559255 after prefix crafting; expected prefix cycles .2089024194886161.
+The selected Harvest gate instead finishes early with mass .9022275259266133 and uses
+expected1.2297151006310874 prefix cycles. These are the same renewal equations above.
+Most of the protected-template price reduction therefore comes from preserving complete
+preparation outcomes, not from claiming that expensive prefix crafting beats pure Envy.
