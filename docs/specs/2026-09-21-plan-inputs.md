@@ -51,6 +51,12 @@ Budget25 minutes. Existing engine modules read-only. Standard library only.
    Endgame budget100000,base_cost0 (invented placeholder), allowed ordinary actions including
    bench, all listed four Deafening essences, bench728..732. Unsupported families not allowed.
    Names in allowed_essences use full Metadata/Items/Currency/... IDs from data.
+7. Include allowed bench131 and recipe131={chaos:2} for a real optional helmet finish.
+   PoB ModMaster.lua source_index131,line135: Prefix LocalPhysicalDamageReductionRatingPercent,
+   Helmet supported, (56-74)% increased Armour. Quantity: S2 benchcosts['2775b52'][2]={'2':2};
+   S4 tiers['2775']['52'][2] same range/level75, base52 Helmet(STR); S3
+   poec_constants.indexes.currency.bench[2]='chaos'. Lead read2026-09-21, quantity confidence
+   reimplemented-from-CoE. Test bench_cost(131)==2 with default input pricechaos1.
 
 ## Tests / numbers
 - Load committed helmet, outcome(labels IncreasedLife:1,ChaosResistance:1,ColdResistance:1)

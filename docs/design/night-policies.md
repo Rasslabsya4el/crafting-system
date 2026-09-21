@@ -68,3 +68,17 @@ does not erase distinct policies; frontier marking can remove dominated entries 
 without preventing the requested ranked table of at least3 available policies.
 Loadout must actually allow every action and recipe used. Budget constraints are explicit,
 not a promise that expectation guarantees affordability. No parent files or PoB process used.
+# Concrete bench finish (lead addition, 2026-09-21)
+
+The protected policy ends with one known life prefix and three ordinary suffixes. An additional
+bench131 prefix (56-74)% Armour is provably compatible if its PoB group is absent from all possible
+suffix groups and differs from IncreasedLife. No old craft survives the lock/scour cycle. Offer
+both stop-now and bench-finished variants; the extra armour gets no invented utility value.
+The latter adds one deterministic step and2chaos at example prices, shifting mean/p90 by2.
+It requires explicit recipe permission and price. Other projected spam outcomes cannot receive
+a guessed bench finish because their junk prefix identities are absent.
+
+Sources read2026-09-21: S11 ModMaster.lua index131,line135 (identity/range/class); S4 modifier2775,
+base52 Helmet(STR), tiers[2775][52][2] (range56..74,level75); S2 benchcosts[2775b52][2]={'2':2};
+S3 poec_constants.indexes.currency.bench[2]='chaos'. Quantity confidence reimplemented-from-CoE;
+PoB identity/range datamined. These are facts interpreted here, not copied compiled tables.

@@ -46,12 +46,21 @@ them unless lead explicitly authorizes an integration correction. No new game de
    intentionally scoured. Chain independent geometric costs with base cost once, recipe729
    per stage2 attempt. Terminal suffix label classes from conditional stage1, remove any old
    life label, add target life label, counts1prefix/3suffixes. Costs from current input prices.
-6. Optional deterministic `finish_bench_index` as evaluate_policies keyword may append a bench
-   craft ONLY when the final concrete group/side legality is knowable for every retained terminal
-   state. Default None. If junk group identities are absent, raise NotImplementedError with a
-   clear projection-information reason; never guess compatibility from a score/count class.
-   The strict T1 helmet needs no final bench substitute; say this. Full bench_item action is
-   already implemented/tested separately. Later utility policy can retain group details if needed.
+6. Retain the unbench-finished protected policy and additionally offer a deterministic bench
+   finish variant using allowed bench131 (example recipe2chaos). Optional keyword
+   `finish_bench_index` may select a different recipe for this VARIANT, default None selects131.
+   Apply only to the protected policy, not arbitrary projected rerolls. Prove legality using
+   its known one life prefix, three ordinary suffixes and zero retained crafts: proposed bench
+   must support the base, be Prefix, have group different from life and absent from EVERY possible
+   ordinary suffix group. There are two open prefixes, so no junk-prefix ambiguity remains.
+   Otherwise mark variant unavailable with explicit projection/legality reason. Use current
+   loadout permission and recipe price, never assume the default ID is always permitted.
+   Append certain stage probability1, attempts1 and both cost metrics shifted by benchprice;
+   terminal outcomes have2prefixes/3suffixes, original target labels retained plus bench label
+   only if caller explicitly mapped it. No invented utility for extra armour. Test accepted
+   default131 and rejected conflicting-life/suffix/disallowed recipes. Existing base policy
+   remains valid without a bench substitute for T1 life. Quantity/identity source is requirement7
+   of plan-inputs spec, lead read2026-09-21. This supplies GOAL's real bench-finished template.
 7. Rank reachable candidates by expected_cost then cost_p90 then id. Return all available
    ranked entries to CLI so >=3 remain visible even if Pareto dominated. Unsupported candidates
    retain reasons; no swallowed errors, missing target tier or impossible essence advertised as
@@ -78,6 +87,7 @@ tolerance. Target predicate can use spec.labels; elemental alternatives must be 
 For exampleprice Chaos1/Alchemy.5/Scour.5/Envy5/base0:
 Chaos Ecost=.5+1/p; AlchScour Ecost=1/p-.5; Envy Ecost=5/p.
 Protected Ecost=5/p_suffix+(2*100+.5+10)/p_life. Read example prices rather than code constants.
+Bench131 variant adds2: default expected8359.193927854994,p90 18987; underlying probabilities unchanged.
 Changing allprices by2 doubles cost/p90, leaves probabilities and attempts unchanged.
 Removing essence permission excludes correspondingpolicies; removing bench729 excludesprotected.
 Reranking pricechanges changes order, never target probabilities. Show all distributions normalized.
