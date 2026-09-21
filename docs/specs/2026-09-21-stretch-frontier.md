@@ -2,8 +2,10 @@
 
 Dispatch ONLY after GOAL steps1-6 and required helmet CLI are merged/green.
 Worktree `.worktrees/stretch-frontier`, branch `w-stretch-frontier`.
-Allowed `src/craftoracle/frontier.py`, `tests/test_frontier.py`; policy/CLI integration paths
-may be added by lead after inspecting their accepted API. Budget20minutes, no refactor.
+Allowed `src/craftoracle/frontier.py`, `tests/test_frontier.py`, `src/craftoracle/cli.py`,
+`tests/test_plan_cli.py`, README frontier usage paragraph. Budget20minutes, no refactor.
+Accepted engine result contract is a dict ranked/unavailable/assumptions, with JSON-ready
+policy records. Use its optional caller-owned distribution_cache for repeated thresholds.
 
 ## Requirements / design authority
 BRIEF3b, D7, build_contract.md and GOAL stretch. Pure `pareto_frontier(records)` returns
@@ -30,7 +32,25 @@ with threshold IDs and compute conditional terminal utility separately from stag
   FireT1only score60;bothT2 score65;bothT1 score100. Threshold60vs100 must return different
   positive success chances, p100<=p60, mean100>=mean60 and conditionalutility100>=utility60.
   Real probabilities come from accepted exact kernel, no externalclaim. Print frontier and
-  boththresholds throughCLI; quality20/fixedvalues remain assumptions.
+boththresholds throughCLI; quality20/fixedvalues remain assumptions.
+
+## Concrete integration contract
+Expose `evaluate_frontier(spec,loadout,data,*,thresholds=None)` returning the existing result
+shape. One evaluation without thresholds preserves every policy ID; add frontier flags to
+the full ranked list. With thresholds, require utility mode, a nonempty list of distinct finite
+numbers each>=spec.threshold. Use dataclasses.replace and the SAME distribution_cache dict
+for evaluate_policies calls; never mutate the caller spec. Policy IDs gain @threshold only
+in comparison mode; add stopping_threshold field so equal policy mechanisms stay identifiable.
+Pool/exclusion/value labels remain unchanged; only stopping predicate/cost/conditional utility
+changes. Sort combined ranked list by cost,p90,id before marking nondomination.
+
+CLI uses this wrapper and accepts `--compare-thresholds 60,100`; show threshold and frontier
+membership in table/JSON, preserve all earlier fields and the mandatory helmet command.
+No new global cache or copying policy cost formulas into frontier. A test spy can count exact
+raw-distribution calls to verify the second threshold reuses the first computation.
+Test single-threshold IDs remain backward compatible and malformed/lower/criteria thresholds
+return the normal CLI input error. Keep full suite below a minute; do not duplicate expensive
+same-input evaluations merely to assert formatting.
 
 ## Report
 Focused tests, real bow probabilities/costs/utilities, nondominated IDs, same-distribution
