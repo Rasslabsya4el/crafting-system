@@ -1,4 +1,4 @@
-# Current state — GOAL 2 active (2026-09-21, 13:36 CEST)
+# Current state — GOAL 2 active (2026-09-21, 13:52 CEST)
 
 1. Ordinary PoE3.29 is the owner-confirmed target; GOAL2 is incomplete and work continues.
 2. Harvest exact/sampler merged527efa7; protected-suffix helmet policy merged55c8191.
@@ -34,7 +34,10 @@ policy has no attack/caster restriction, so that uncertainty does not change its
 
 ## In progress and bounded backlog
 
-At most two workers. Current:template-optimizer and fractured-item-actions.
+At most two workers. Current:template-optimizer (consolidated correction1) and
+fractured-item-actions (tests-first implementation; reference-label/MC-cost clarification).
+Optimizer's first measured means match the lead references; terminal-stage distributions,
+legal bench candidate selection and complete grid/level reporting are still under review.
 Conditional attempt kernel accepted0f012a1:10 tests; exact hand means21.5/22,
 independent true p90 fixtures44/45/97 with seeded DKW intervals containing each.
 Ordinary fossil adapter accepted0de86dd:43 focused tests,18 supported fossils,93 real entries/
@@ -83,3 +86,4 @@ lead-selected Terra reasoning, or Luna for very light tasks. No orchestration sk
 - 10:41 CEST — all core/stretch work accepted;248 tests green; worker-model instruction updated; final handover committed.
 - 11:52 CEST — matrix132cells and bases561 merged; Harvest correction1 and offline12-case validation in progress; optimiser/solver pending.
 - 12:52 CEST — Harvest55c8191 and12-case CoE3712602 accepted;285 tests0.83minute. Attempt kernel/fossil adapter active; optimizer/solver and paid family policy specs ready.
+- 13:52 CEST — attempt0f012a1,fossil0de86dd,solverb89f775 accepted; solver100000-state limit0.23022minute. Optimizer correction1 and fracture implementation active; family policies next.

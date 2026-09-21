@@ -9,7 +9,7 @@
 - [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
 - [x] Correct the 15-row owner question sheet without re-asking answered questions (`ffcf869`; S63-S79 and owner answers).
 - [x] Conditional attempt kernel and paid-restart costs (`0f012a1`):10 lead tests; means21.5/22; independent exact p90 fixtures44/45/97.
-- [~] Expose and optimise template parameters; optimizer worker active from `0f012a1`. Baseline8357.19; legal fixed k2 mean4693.13, k3 with paid restart4787.90. Independent full gate-grid reference: protected1948.60, Harvest1986.20 (`ce27b44`); planner integration pending.
+- [~] Expose and optimise template parameters; optimizer worker active from `0f012a1`, consolidated correction1. Baseline8357.19; legal fixed k2 mean4693.13, k3 with paid restart4787.90. Independent full gate-grid reference: protected1948.60, Harvest1986.20 (`ce27b44`), reproduced in worker's first run; terminal distributions/grid reporting still under acceptance.
 - [x] Bounded solver experiment (`b89f775`):11 lead tests, hand optima8/4/4.75; real helmet reaches100000 states in0.23022minute before first Alchemy row completes. Negative result accepted; further graph solving parked, docs/research/solver-experiment.md.
 - [ ] Verify bow distribution/threshold/frontier path after new policies.
 - [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
