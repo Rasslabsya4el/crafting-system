@@ -13,7 +13,7 @@ import math
 from numbers import Real
 from typing import Any
 
-from craftoracle.policies import evaluate_policies
+from craftoracle.optimizer import optimize_policies as evaluate_policies
 
 
 _METRICS = (
@@ -43,7 +43,14 @@ def pareto_frontier(records: Iterable[Mapping[str, Any]]) -> list[Mapping[str, A
     ]
 
 
-def evaluate_frontier(spec: object, loadout: object, data: object, *, thresholds: Sequence[float] | None = None) -> dict[str, object]:
+def evaluate_frontier(
+    spec: object,
+    loadout: object,
+    data: object,
+    *,
+    thresholds: Sequence[float] | None = None,
+    item_level_range: str | Sequence[int] | None = None,
+) -> dict[str, object]:
     """Evaluate policies and mark their Pareto frontier.
 
     A comparison evaluates each requested utility stopping rule against one
@@ -51,7 +58,7 @@ def evaluate_frontier(spec: object, loadout: object, data: object, *, thresholds
     per threshold rather than modified in place.
     """
     if thresholds is None:
-        return _mark_frontier(evaluate_policies(spec, loadout, data, distribution_cache={}))
+        return _mark_frontier(_evaluate(spec, loadout, data, {}, item_level_range))
 
     parsed_thresholds = _comparison_thresholds(spec, thresholds)
     distribution_cache: dict[object, object] = {}
@@ -62,7 +69,7 @@ def evaluate_frontier(spec: object, loadout: object, data: object, *, thresholds
 
     for threshold in parsed_thresholds:
         variant_spec = replace(spec, threshold=threshold)
-        result = evaluate_policies(variant_spec, loadout, data, distribution_cache=distribution_cache)
+        result = _evaluate(variant_spec, loadout, data, distribution_cache, item_level_range)
         ranked, unavailable, result_assumptions = _result_records(result)
         if assumptions is None:
             assumptions = list(result_assumptions)
@@ -78,6 +85,13 @@ def evaluate_frontier(spec: object, loadout: object, data: object, *, thresholds
         "assumptions": [] if assumptions is None else assumptions,
     }
     return _mark_frontier(combined)
+
+
+def _evaluate(spec, loadout, data, distribution_cache, item_level_range):
+    arguments = {"distribution_cache": distribution_cache}
+    if item_level_range is not None:
+        arguments["item_level_range"] = item_level_range
+    return evaluate_policies(spec, loadout, data, **arguments)
 
 
 def _mark_frontier(result: Mapping[str, object]) -> dict[str, object]:

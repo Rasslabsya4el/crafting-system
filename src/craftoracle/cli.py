@@ -36,6 +36,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             arguments.loadout,
             arguments.threshold,
             compare_thresholds=arguments.compare_thresholds,
+            item_level_range=arguments.item_level_range,
         )
         if arguments.json:
             print(json.dumps(document, indent=2, sort_keys=True, allow_nan=False))
@@ -52,6 +53,7 @@ def evaluate_plan(
     threshold: float | None = None,
     *,
     compare_thresholds: str | Sequence[float] | None = None,
+    item_level_range: str | Sequence[int] | None = None,
     evaluator: Evaluator | None = None,
 ) -> dict[str, Any]:
     """Load validated inputs, evaluate policies, and return the JSON document."""
@@ -67,9 +69,11 @@ def evaluate_plan(
     if evaluator is not None:
         if thresholds is not None:
             raise PlanInputError("threshold comparison requires the frontier evaluator")
+        if item_level_range is not None:
+            raise PlanInputError("item-level search requires the optimizer evaluator")
         result = evaluator(spec, loadout, data)
     else:
-        result = _load_evaluator()(spec, loadout, data, thresholds=thresholds)
+        result = _load_evaluator()(spec, loadout, data, thresholds=thresholds, item_level_range=item_level_range)
     return plan_document(spec, loadout, result)
 
 
@@ -238,6 +242,11 @@ def _parser() -> argparse.ArgumentParser:
         "--compare-thresholds",
         metavar="UTILITY,UTILITY",
         help="evaluate distinct utility stopping thresholds from the item specification",
+    )
+    plan.add_argument(
+        "--item-level-range",
+        metavar="MIN:MAX",
+        help="opt in to an inclusive item-level search over PoB modifier breakpoints",
     )
     return parser
 

@@ -225,19 +225,50 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
     assert policies["chaos-spam"]["stages"][-1]["probability"] == pytest.approx(HELMET_PROBABILITY)
     assert policies["alchemy-scour"]["stages"][-1]["probability"] == pytest.approx(HELMET_PROBABILITY)
     assert policies["essence-CurrencyEssenceEnvy3"]["stages"][-1]["probability"] == pytest.approx(ENVY_PROBABILITY)
-    assert policies["magic-regal-exalt"]["cost_method"] == "estimated p90; exact mean"
+    assert policies["magic-regal-exalt"]["cost_method"] == "sampled correlated finite attempt p90; exact mean"
     assert policies["magic-regal-exalt"]["cost_p90_interval"]
     assert policies["magic-regal-exalt"]["cost_sample_count"] == 50_000
     harvest = policies["suffix-protected-harvest-life"]
-    harvest_stage = next(stage for stage in harvest["stages"] if stage["name"] == "roll protected Harvest life prefix")
+    harvest_stage = next(stage for stage in harvest["stages"] if stage["name"] == "protected Harvest life cycle")
     assert harvest_stage["probability"] > 1 / 13
     assert harvest["full_prefix_failure_probability"] > 0
     assert harvest["cost_confidence"] == .99
     assert harvest["cost_p90_interval"][0] <= harvest["cost_p90"] <= harvest["cost_p90_interval"][1]
+    protected = policies["suffix-protected-life"]
+    bench = policies["suffix-protected-life-bench-131"]
+    assert protected["expected_cost"] == pytest.approx(1948.603171950813)
+    assert protected["expected_cost"] <= 4693.130543194264
+    assert protected["candidate_count"] == 24
+    assert {key: protected["parameters"][key] for key in (
+        "item_level", "max_prefixes", "minimum_desired_elemental_suffixes",
+        "preparation_early_stop", "cycle_kind", "max_exalts", "bench_finish_id",
+    )} == {
+        "item_level": 86,
+        "max_prefixes": 1,
+        "minimum_desired_elemental_suffixes": 2,
+        "preparation_early_stop": True,
+        "cycle_kind": "protected_exalt",
+        "max_exalts": 3,
+        "bench_finish_id": None,
+    }
+    assert protected["parameters"]["target_left_to_bench"] is None
+    assert "not counted as Life9" in protected["parameters"]["target_left_to_bench_reason"]
+    assert protected["recovery"]["full_prefix_failure_probability"] == pytest.approx(
+        1 - 0.06674609236085167
+    )
+    assert harvest["expected_cost"] == pytest.approx(1986.1982162752881)
+    assert harvest["expected_cost"] <= 2703.6093795549086
+    assert harvest["candidate_count"] == 8
+    assert harvest["parameters"]["harvest_type_filter"] == "first_only"
+    assert bench["candidate_count"] == 4
+    assert bench["parameters"]["max_exalts"] == 1
+    assert bench["parameters"]["preparation_early_stop"] is False
+    assert all(row["prefixes"] == 2 for row in bench["terminal_distribution"])
     for policy in document["ranked"]:
         assert math.isfinite(policy["expected_cost"])
         assert math.isfinite(policy["cost_p90"])
         assert policy["steps"] and policy["decision_points"] and policy["assumptions"]
+        assert policy["parameters"] and policy["candidate_count"] >= 1
         assert isinstance(policy["within_budget"], bool)
         assert isinstance(policy["p90_over_budget"], bool)
         assert sum(row["probability"] for row in policy["terminal_distribution"]) == pytest.approx(1)
@@ -249,8 +280,9 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
 
     text = cli.format_plan(document)
     assert "2.42820884551e-05" in text
-    assert "roll protected life prefix" in text
+    assert "protected Exalt life cycle" in text
     assert "Estimated p90 uncertainty:" in text
+    assert "Selected parameters:" in text
 
 
 def test_real_bow_threshold_comparison_changes_utility_stop_rule(real_bow_comparison_document: dict) -> None:
@@ -278,8 +310,9 @@ def test_real_bow_threshold_comparison_changes_utility_stop_rule(real_bow_compar
     assert all(policy["stages"][-1]["probability"] > 0 for policy in document["ranked"])
     assert {policy["id"] for policy in document["ranked"] if policy["frontier"]} == {
         "alchemy-scour@60",
-        "magic-regal-exalt@60",
         "alchemy-scour@100",
+        "chaos-spam@60",
+        "chaos-spam@100",
     }
 
     text = cli.format_plan(document)
