@@ -167,7 +167,7 @@ def _forward_finish_distributions(
                 else:
                     next_active[outcome] = next_active.get(outcome, 0.0) + mass
         if not next_active:
-            return count_distribution, final_distribution
+            return _normalise_distribution(count_distribution), _normalise_distribution(final_distribution)
         active = next_active
     raise AssertionError("ordinary catalyst path exceeded its 20-application bound")
 
@@ -179,6 +179,13 @@ def _quantile_count(distribution: dict[int, float], percentile: float) -> int:
         if cumulative >= percentile:
             return count
     raise AssertionError("finite catalyst count distribution has insufficient mass")
+
+
+def _normalise_distribution(distribution: dict) -> dict:
+    total = sum(distribution.values())
+    if total <= 0.0:
+        raise AssertionError("finite catalyst distribution has no probability mass")
+    return {outcome: probability / total for outcome, probability in distribution.items()}
 
 
 def _validate_catalyst_input(item: ItemState, data: ActionData, catalyst_type: str) -> None:

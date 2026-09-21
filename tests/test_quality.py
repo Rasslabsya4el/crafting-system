@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import json
 import math
+import os
 import random
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
 from craftoracle.actions import load_action_data, scour_item
+from craftoracle import cli
 from craftoracle.item_model import ItemState, ModRef, resolve_pool
 from craftoracle.quality import apply_catalyst, catalyst_distribution, plan_catalyst
 
@@ -159,3 +164,38 @@ def test_independent_seeded_repeated_application_cdf_matches_exact_bound(action_
     bound = math.sqrt(math.log(2000) / (2 * samples))
     assert bound == pytest.approx(0.019494746035204052)
     assert abs(completed_by_16 / samples - exact_cdf) <= bound
+
+
+def test_quality_cli_defaults_emit_exact_policy_json() -> None:
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    completed = subprocess.run(
+        [sys.executable, "-m", "craftoracle", "quality", "--catalyst", "fertile", "--price", "2", "--json"],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
+    assert document["input"] == {
+        "base": "Vermillion Ring",
+        "item_level": 86,
+        "rarity": "rare",
+        "quality": 0,
+        "catalyst": "fertile",
+        "target_quality": 20,
+        "unit_price": 2.0,
+    }
+    assert document["steps"] == ["Apply Fertile Catalyst until quality is at least 20%."]
+    assert document["expected_applications"] == pytest.approx(14.423723570517014)
+    assert document["applications_p90"] == 16
+    assert document["expected_cost"] == pytest.approx(28.847447141034028)
+    assert document["cost_p90"] == 32.0
+    assert sum(entry["probability"] for entry in document["count_distribution"]) == pytest.approx(1.0)
+    assert sum(entry["probability"] for entry in document["final_quality_distribution"]) == pytest.approx(1.0)
+    text = cli.format_quality(cli.evaluate_quality(catalyst="fertile", price=2))
+    assert "Apply Fertile Catalyst until quality is at least 20%." in text
+    assert "p90 cost: 32" in text
