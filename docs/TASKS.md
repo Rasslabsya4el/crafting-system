@@ -67,8 +67,8 @@ all game mechanics. No dependent path may silently guess.
 - [x] Night loop costs exact geometric/chain/compound arithmetic (`8eeee53`;13 focused tests; explicit work limits)
 - [x] Night independent Monte Carlo and p90 cost estimator (`70fcadb`;14 tests, five real pools within stated bounds)
 - [x] Night item specs, invented prices and loadouts (`f3cf7c2`;12 tests; two examples and sourced bench finish)
-- [~] Night concrete policies (`5eeefd3`,8 tests,9 helmet policies) accepted; direct CLI real subprocess acceptance in progress (`2026-09-21-plan-cli.md`)
-- [~] Night core integration umbrella: GOAL1-5 merged; real policies/CLI in progress; known-answer/frontier/Divine specs prepared but not dispatched before core acceptance
-- [ ] Night stretch1: 41 individually collected hand-computed cases (`specs/2026-09-21-known-answers.md`); dispatch after core green
+- [x] Night concrete policies (`5eeefd3`,8 tests,9 helmet policies) and direct CLI (`d344054`,`0acb192`,9 focused tests; real helmet/bow subprocesses)
+- [x] Night core integration umbrella: GOAL1-6 merged (`d344054`,`0acb192`);187 main tests in0.71minute, mandatory helmet command succeeds
+- [~] Night stretch1: 41 individually collected hand-computed cases (`specs/2026-09-21-known-answers.md`); dispatch after core green
 - [ ] Night stretch2: Pareto membership and two bow stopping thresholds over shared raw distributions (`specs/2026-09-21-stretch-frontier.md`)
 - [ ] Night stretch3: bounded Divine integer rerolls with side locks (`specs/2026-09-21-divine-values.md`); selected unblocked family, D17

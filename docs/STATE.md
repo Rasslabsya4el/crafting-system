@@ -1,67 +1,55 @@
 # State — 2026-09-21
 
-## Current progress (night goal active; not DONE)
+## Morning summary (core works; ordered stretch in progress)
 
-1. Phase 0 remains accepted; ordinary PoE 3.29 target is confirmed.
-2. GOAL.md now requires the working helmet planner plus stretch work; this goal is active.
-3. Ordinary item/pool model is merged (d07a1b5), 21 focused tests passed.
-4. Exact grouped distributions are merged (4ee0641), 17 focused tests passed.
-5. Royal Burgonet86 has 41 eligible prefixes / 84 suffixes, weights39275/78400.
-6. Model Chaos target chance is0.0000242820884551; Deafening Envy0.00259406068444.
-7. Ordinary actions (51b386f,15 tests) and exact loop costs (8eeee53,13 tests) are merged.
-8. MC (70fcadb,14 tests) and inputs (f3cf7c2,12 tests) are merged; policies accepted5eeefd3; CLI real integration running.
-9. Source uncertainties are provisionally bounded by GOAL/D14; blocked special families stay out.
-10. The required plan command does not exist yet; do not claim the morning demo is complete.
+1. Target: ordinary PoE3.29; Q3 confirmed, Phase0 accepted.
+2. Helmet command below runs without installation and prints9 real ranked policies.
+3. Envy target p=0.00259406068444; expected cost1927.48, p90=4435 chaos-equivalent.
+4. Protected suffix/life mean8357.19,p90=18985; optional bench131 mean8359.19,p90=18987.
+5. Chaos mean41183.12,p90=94826.5; Alchemy+Scour mean41182.12,p90=94825.5.
+6. Magic/Regal/Exalt mean583612.11; estimated p90=1345699.5 with explicit99%DKW interval.
+7. Main suite187 passed in0.71minute; hand exact cases and five real-pool MC comparisons included.
+8. Bow value-table threshold100 produces6 reachable policies; prices/utility are invented inputs.
+9. Special families remain parked by GOAL/D14 and question-ID stubs; no new owner answer needed.
+10. Continue ordered stretch:41 known answers, Pareto/two bow thresholds, bounded Divine; do not stop yet.
 
-## Working commands / evidence
+## Reproduce
 
-- `python -m pytest -q tests/test_item_model.py`:21 passed on accepted branch.
-- `python -m pytest -q tests/test_distributions.py`:17 passed on accepted branch.
-- `python -m pytest -q tests/test_actions.py`:15 passed on accepted branch.
-- `python -m pytest -q tests/test_costs.py`:13 passed on accepted branch.
-- Combined main suite after MC and input merges:`python -m pytest -q` ->170 passed in12.92s (0.22minute).
-- Exact six-draw helmet distribution:14 classes,mass0.9999999999999984,target0.0000535457934229.
-- Exact mixture count4/5/6 weights8/3/1:Chaos p0.000024282088455126466; Envy
-  p0.0025940606844434217; suffix preparation p0.05567530208498237; final life slam1000/39275.
-  These are predictions under the declared provisional model, not independent game measurements.
+```powershell
+python -m craftoracle plan examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json
+python -m craftoracle plan examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json --json
+python -m craftoracle plan examples/bow_value_table.yaml --loadout data/loadouts/endgame.json --threshold 100 --json
+python -m pytest -q
+```
 
-The exact DP retains group-removal state internally and projects to labelled terminal classes
-only after the whole draw schedule. It does not turn junk into a reusable aggregate weight.
-Outcome classes must not be reused for arbitrary transitions requiring lost group identities.
+Mandatory text command personally run by lead:exit0,9 policies,0.08minute. CLI focused9 tests
+passed0.18minute. Main187 tests passed42.82s (0.71minute) atd344054; final0acb192 adds only
+subprocess error-test coverage, personally checked1 test. Core cost/probability evidence is
+in policy-evaluation spec and out/workers reports. All5 acceptance probabilities passed.
 
-## Implementation and evidence boundaries
+## Boundaries and current work
 
-See docs/GOAL.md, D14/D15 and docs/design/night-policies.md. Prices are invented caller inputs;
-rare count assumptions and PoB group/first-match weights will be printed on every plan.
-Generated tags and multipliers are deliberately omitted per the owner's provisional decision.
-No third-party code/data copied into src/data. Existing own projections and cached source
-acceptance remain in SOURCES, WORKERS and research/phase0-coverage.md (62 sources/20 sheets).
-No new fact sheets or broad research tonight; no record-by-record re-verification.
+Exact under declared provisional rules, not externally measured game odds: rare4/5/6 weights
+8/3/1 from CoE, PoB group/first-tag weights, no generated tags or multipliers (Q16/Q17).
+Quality is fixed input. Prices are invented, no trade lookup. Terminal scored classes cannot
+be reused for arbitrary transitions needing lost group identities. Bench finish uses a proved
+known-prefix state. Source confidence and parked contradictions remain in the existing62-source/
+20-sheet corpus; no new fact sheets or research expansion tonight.
 
-The first nightly focused acceptance inherited pytest's default temporary-directory setting.
-It has now been corrected: pytest.ini sets --basetemp=.pytest_tmp and that repository-local
-path is ignored. All subsequent fixture runs must use that setting; no external cleanup/read.
+MC cost fallback applies only to the expensive fixed magic cycle:50000 samples,seed20260921,
+p90 interval[1304082.1,1390479.3] at99%DKW. This uncertainty interval differs from cost p90.
+Other listed policies have exact geometric/convolved p90. Policies are fixed templates, not
+an optimal-policy search. Budget flags use mean cost and separately expose p90 over budget.
 
-## Workers / current work
-
-Policy evaluator accepted5eeefd3:8 tests passed in0.32minute;9 real helmet policies.
-Only plan-cli remains active, with accepted policies integrated into its isolated worktree. Budgets
-60/25minutes cover exact multi-stage integration and direct CLI. Accepted inputs are integrated
-into the policy worktree; CLI starts against its documented JSON-ready result contract. No individual
-command may exceed10minutes. Item-model, exact-distributions, actions and cost trees were accepted
-and removed without force. Initial item worker's service429 retry succeeded; no duplicate worker
-was launched. Dependent policy and CLI work waits for merged APIs.
-
-Prepared specs: ordinary-actions, monte-carlo, loop-costs, plan-inputs, policy-evaluation, plan-cli.
-All are bounded and include acceptance numbers. Work continues through DONE and unblocked stretch;
-completion of one task is not a stopping condition. Corrections capped at two per task.
+Accepted worker trees removed without force. Next worker:known-answers,15minute budget,
+followed by frontier20minutes and Divine20minutes in order. At most2 workers; each command
+under10minutes. Pytest uses repository-local .pytest_tmp. No background process is required.
 
 ## Next three actions
 
-1. Accept the real policy evaluator and its exact/estimated cost evidence.
-2. Integrate and accept the CLI against the real policy module.
-3. Evaluate the designed real policies, wire direct module CLI, validate the helmet and bow,
-   then execute the stretch list; record final ten-line morning summary and full-suite timing.
+1. Accept41 indexed hand-computed cases, then read GOAL and merge.
+2. Implement Pareto comparison for thresholds60/100 over shared bow distributions.
+3. Implement bounded Divine integer rerolls; rerun integrated suite, finish handover and commit.
 
 ## Night log
 
