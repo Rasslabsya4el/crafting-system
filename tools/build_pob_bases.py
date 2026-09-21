@@ -1,4 +1,4 @@
-"""Build the literal, limited PoB item-base tag projection for five classes."""
+"""Build the literal, limited PoB item-base tag projection for seven classes."""
 
 from __future__ import annotations
 
@@ -13,13 +13,16 @@ if str(WORKTREE_ROOT / "src") not in sys.path:
 from craftoracle.pob_bases import build_pob_bases_projection, serialize_projection
 
 
-SOURCE_FILENAMES = ("helmet.lua", "bow.lua", "ring.lua", "body.lua", "gloves.lua")
+SOURCE_FILENAMES = (
+    "helmet.lua", "bow.lua", "ring.lua", "body.lua", "gloves.lua",
+    "amulet.lua", "boots.lua",
+)
 BASES_DIRECTORY = WORKTREE_ROOT / "sources/pob/Data/Bases"
 OUTPUT_PATH = WORKTREE_ROOT / "data/pob_bases.json"
 
 
 def build() -> Path:
-    """Validate all five sources before replacing the deterministic JSON file."""
+    """Validate all seven sources before replacing the deterministic JSON file."""
     sources = [
         (f"sources/pob/Data/Bases/{filename}", (BASES_DIRECTORY / filename).read_bytes())
         for filename in SOURCE_FILENAMES

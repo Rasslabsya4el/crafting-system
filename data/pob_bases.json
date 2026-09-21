@@ -9967,6 +9967,4797 @@
         "not_for_sale": true
       },
       "type": "Gloves"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Paua Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 6,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Coral Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 15,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Amber Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 24,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Jade Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 33,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Lapis Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 42,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Gold Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 51,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Onyx Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 60,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Turquoise Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 69,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Agate Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 78,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Citrine Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 87,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Ruby Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 96,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Unset Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 105,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Pearlescent Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 114,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Blue Pearl Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 123,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "amuletatlas1": true,
+        "atlas_base_type": true,
+        "default": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Marble Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 132,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "amuletatlas2": true,
+        "atlas_base_type": true,
+        "default": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Seaglass Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 141,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "amuletatlas3": true,
+        "atlas_base_type": true,
+        "default": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Astrolabe Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 150,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "experimental_base": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Simplex Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 159,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "experimental_base": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Focused Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 168,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "experimental_base": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Jet Amulet",
+      "socketLimit": null,
+      "source": {
+        "line": 177,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": null,
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "demigods": true,
+        "not_for_sale": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Black Maw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 187,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Bonespire Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 203,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Ashscale Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 218,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Lone Antler Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 234,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Deep One Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 250,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Breakrib Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 266,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Deadhand Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 282,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Undying Flesh Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 298,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Rot Head Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 314,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Mandible Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 330,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Chrysalis Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 346,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Writhing Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 362,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Hexclaw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 378,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Primal Skull Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 394,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Wereclaw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 410,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Splitnewt Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 426,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Clutching Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 442,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 458,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 474,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 490,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 506,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 522,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 538,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Fangjaw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 554,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Horned Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 570,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Spinefuse Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 586,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Three Rat Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 602,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Monkey Twins Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 618,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Longtooth Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 634,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Rotfeather Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 650,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Monkey Paw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 666,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Monkey Paw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 682,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Monkey Paw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 698,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Three Hands Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 714,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Greatwolf Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 730,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Chieftain Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 744,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Gargantuan Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 762,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Goliath Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 779,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Rhoa Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 797,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Blood Viper Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 815,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Chimeral Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 833,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Squid Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 851,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Sand Spitter Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 869,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Shield Crab Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 887,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Goatman Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 905,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Devourer Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 923,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Plagued Arachnid Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 941,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Watcher Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 959,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Savage Crab Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 977,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Flame Hellion Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 995,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Frost Hellion Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1013,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Lynx Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1031,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Ape Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1049,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Wolf Alpha Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1067,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Magma Hound Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1085,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Pitbull Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1103,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Ursa Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1121,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Taurus Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1139,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Retch Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1157,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Cobra Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1175,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Carrion Queen Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1193,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Scrabbler Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1211,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Black Widow Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1229,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Scorpion Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1247,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Tiger Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1265,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Vulture Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1283,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Rhex Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1301,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Hybrid Arachnid Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1319,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Octopus Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1337,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Spider Crab Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1355,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Great Maw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1373,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Croaker Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1391,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Craicic Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1409,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Fenumal Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1427,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Saqawine Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1445,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Farric Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1463,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Greatwolf Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1482,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Black Maw Talisman",
+      "socketLimit": null,
+      "source": {
+        "line": 1500,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman (Fire-To-Cold)",
+      "socketLimit": null,
+      "source": {
+        "line": 1518,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman (Fire-To-Lightning)",
+      "socketLimit": null,
+      "source": {
+        "line": 1534,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman (Cold-To-Lightning)",
+      "socketLimit": null,
+      "source": {
+        "line": 1550,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman (Cold-To-Fire)",
+      "socketLimit": null,
+      "source": {
+        "line": 1566,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Avian Twins Talisman (Lightning-To-Cold)",
+      "socketLimit": null,
+      "source": {
+        "line": 1582,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Monkey Paw Talisman (Power)",
+      "socketLimit": null,
+      "source": {
+        "line": 1598,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "amulet_adjudicator",
+        "basilisk": "amulet_basilisk",
+        "cleansing": "amulet_cleansing",
+        "crusader": "amulet_crusader",
+        "elder": "amulet_elder",
+        "eyrie": "amulet_eyrie",
+        "shaper": "amulet_shaper",
+        "tangle": "amulet_tangle"
+      },
+      "name": "Monkey Paw Talisman (Frenzy)",
+      "socketLimit": null,
+      "source": {
+        "line": 1614,
+        "path": "sources/pob/Data/Bases/amulet.lua"
+      },
+      "subType": "Talisman",
+      "tags": {
+        "amulet": true,
+        "default": true,
+        "talisman": true
+      },
+      "type": "Amulet"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Iron Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 6,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Steel Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 16,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Plated Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 26,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Reinforced Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 36,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Antique Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 46,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Ancient Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 56,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Goliath Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 66,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Vaal Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 76,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Titan Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 86,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Precursor Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 96,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Leviathan Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 106,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Basemetal Treads",
+      "socketLimit": 4,
+      "source": {
+        "line": 116,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Darksteel Treads",
+      "socketLimit": 4,
+      "source": {
+        "line": 128,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Brimstone Treads",
+      "socketLimit": 4,
+      "source": {
+        "line": 140,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Rawhide Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 153,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Goathide Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 163,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Deerskin Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 173,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Nubuck Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 183,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Eelskin Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 193,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Sharkskin Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 203,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Shagreen Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 213,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Stealth Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 223,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Slink Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 233,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Harpyskin Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 243,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true,
+        "not_for_sale": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Velour Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 253,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true,
+        "not_for_sale": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Cloudwhisper Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 263,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Windbreak Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 275,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Stormrider Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 287,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_armour": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Wool Shoes",
+      "socketLimit": 4,
+      "source": {
+        "line": 300,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Velvet Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 310,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Silk Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 320,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Scholar Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 330,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Satin Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 340,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Samite Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 350,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Conjurer Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 360,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Arcanist Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 370,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Sorcerer Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 380,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Sage Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 390,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true,
+        "not_for_sale": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Warlock Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 400,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true,
+        "not_for_sale": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Duskwalk Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 410,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Nightwind Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 422,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Dreamquest Slippers",
+      "socketLimit": 4,
+      "source": {
+        "line": 434,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "int_armour": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Leatherscale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 447,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Ironscale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 457,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Bronzescale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 467,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Steelscale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 477,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Serpentscale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 487,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Wyrmscale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 497,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Hydrascale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 507,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_dex_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Dragonscale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 517,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_dex_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Chimerascale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 527,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_dex_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Wyvernscale Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 537,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_dex_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Two-Toned Boots (Armour/Evasion)",
+      "socketLimit": 4,
+      "source": {
+        "line": 547,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Evasion",
+      "tags": {
+        "armour": true,
+        "atlas_base_type": true,
+        "boots": true,
+        "bootsatlas2": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_dex_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Chain Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 560,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Ringmail Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 570,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Mesh Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 580,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Riveted Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 590,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Zealot Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 600,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Soldier Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 610,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Legion Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 620,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_int_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Crusader Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 630,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "str_int_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Martyr Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 640,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_int_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Paladin Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 650,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_int_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Two-Toned Boots (Armour/Energy Shield)",
+      "socketLimit": 4,
+      "source": {
+        "line": 660,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Armour/Energy Shield",
+      "tags": {
+        "armour": true,
+        "atlas_base_type": true,
+        "boots": true,
+        "bootsatlas3": true,
+        "default": true,
+        "not_for_sale": true,
+        "str_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Wrapped Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 673,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Strapped Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 683,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Clasped Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 693,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Shackled Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 703,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Trapper Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 713,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Ambush Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 723,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Carnal Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 733,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Assassin's Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 743,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Murder Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 753,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Infiltrator Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 763,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true,
+        "not_for_sale": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Phantom Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 773,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "dex_int_armour": true,
+        "not_for_sale": true,
+        "top_tier_base_item_type": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Fugitive Boots",
+      "socketLimit": 4,
+      "source": {
+        "line": 783,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "atlas_base_type": true,
+        "boots": true,
+        "bootsatlasdexint": true,
+        "default": true,
+        "dex_int_armour": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Two-Toned Boots (Evasion/Energy Shield)",
+      "socketLimit": 4,
+      "source": {
+        "line": 795,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Evasion/Energy Shield",
+      "tags": {
+        "armour": true,
+        "atlas_base_type": true,
+        "boots": true,
+        "bootsatlas1": true,
+        "default": true,
+        "dex_int_armour": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Runic Greaves",
+      "socketLimit": 4,
+      "source": {
+        "line": 808,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Ward",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "ward_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Runic Sollerets",
+      "socketLimit": 4,
+      "source": {
+        "line": 818,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Ward",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "ward_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Runic Sabatons",
+      "socketLimit": 4,
+      "source": {
+        "line": 828,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": "Ward",
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "not_for_sale": true,
+        "ward_armour": true
+      },
+      "type": "Boots"
+    },
+    {
+      "influenceTags": {
+        "adjudicator": "boots_adjudicator",
+        "basilisk": "boots_basilisk",
+        "cleansing": "boots_cleansing",
+        "crusader": "boots_crusader",
+        "elder": "boots_elder",
+        "eyrie": "boots_eyrie",
+        "shaper": "boots_shaper",
+        "tangle": "boots_tangle"
+      },
+      "name": "Golden Caligae",
+      "socketLimit": 4,
+      "source": {
+        "line": 839,
+        "path": "sources/pob/Data/Bases/boots.lua"
+      },
+      "subType": null,
+      "tags": {
+        "armour": true,
+        "boots": true,
+        "default": true,
+        "demigods": true,
+        "not_for_sale": true
+      },
+      "type": "Boots"
     }
   ],
   "pob_version": "2.67.2",
@@ -10006,6 +14797,16 @@
       "path": "sources/pob/Data/Bases/gloves.lua",
       "record_count": 80,
       "sha256": "6c251c4582062109de151ad9c7b5bf9583c4b51fb6fa27e7f9d1648d6ead2217"
+    },
+    {
+      "path": "sources/pob/Data/Bases/amulet.lua",
+      "record_count": 105,
+      "sha256": "dcc6f48d8a7aaea4d75a18b0557ca1f8bfceaf6e83e5b83638b7745d03cf850c"
+    },
+    {
+      "path": "sources/pob/Data/Bases/boots.lua",
+      "record_count": 81,
+      "sha256": "7634f2c366c79a83614520dbee74239fd3a742a4297d1e1c166a78610be68eb7"
     }
   ],
   "version_authority": "AGENTS.md section 1 (owner supplied; upstream revision unverified)"
