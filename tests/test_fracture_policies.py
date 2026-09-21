@@ -10,12 +10,14 @@ import random
 import numpy as np
 import pytest
 
-from craftoracle.actions import load_action_data
+import craftoracle.fracture_policies as fracture_policies
+from craftoracle.actions import ActionData, load_action_data
 from craftoracle.fracture_policies import (
     estimate_fracture_life_cost_p90,
     fracture_life_distributions,
     fracture_life_metrics,
 )
+from craftoracle.item_model import ItemState
 from craftoracle.plan_inputs import load_spec
 
 
@@ -70,6 +72,10 @@ def test_seeded_p90_law_matches_bounded_fixture_and_replays() -> None:
 def test_independent_direct_simulation_agrees_with_hand_mean() -> None:
     costs = _direct_hand_costs(samples=50_000, seed=20260921)
     assert sum(costs) / len(costs) == pytest.approx(34, abs=0.5)
+    estimate = estimate_fracture_life_cost_p90(0.1, 0.4, 0.25, 0.5, 3, 2, 1, 5, 4)
+    direct_p90 = _higher_quantile(costs, 0.9)
+    assert estimate.sample_mean == pytest.approx(34, abs=4 * estimate.sample_standard_error)
+    assert estimate.interval_lower <= direct_p90 <= estimate.interval_upper
 
 
 def test_base_price_scales_by_expected_base_count() -> None:
@@ -150,24 +156,44 @@ def test_invalid_probability_inputs_are_rejected(inputs: tuple[float, float, flo
 
 
 def test_caller_cache_tracks_resolved_weight_changes() -> None:
-    data = load_action_data(ROOT)
-    spec = load_spec(ROOT / "examples/helmet_life_chaos_res.yaml", data.mods)
+    data = _tiny_action_data()
     cache: dict[object, object] = {}
-    first = fracture_life_distributions(spec, data, distribution_cache=cache)
-    initial_cache_entries = len(cache)
-    row = data.mods[_NON_TARGET_ID]
-    original = row["weightVal"][-1]
-    row["weightVal"][-1] = original + 1
+    item = ItemState("Base", 1, "normal")
+    labels = {"A": "target"}
+    first = fracture_policies._cached_distribution(cache, "alchemy", item, data, labels)
+    original = data.mods["A"]["weightVal"][0]
+    data.mods["A"]["weightVal"][0] = original + 1
     try:
-        second = fracture_life_distributions(spec, data, distribution_cache=cache)
+        second = fracture_policies._cached_distribution(cache, "alchemy", item, data, labels)
     finally:
-        row["weightVal"][-1] = original
+        data.mods["A"]["weightVal"][0] = original
 
-    assert len(cache) == initial_cache_entries + 1
-    assert second.preparation_distribution != first.preparation_distribution
+    assert len(cache) == 2
+    assert second != first
 
 
-_NON_TARGET_ID = "IncreasedLife9"
+def _tiny_action_data() -> ActionData:
+    def mod(mod_id: str, side: str) -> dict:
+        return {
+            "id": mod_id, "type": side, "group": mod_id, "level": 1,
+            "weightKey": ["default"], "weightVal": [1], "modTags": [],
+            "source_path": "ModExplicit.lua",
+        }
+
+    return ActionData(
+        bases={"Base": {"name": "Base", "type": "Helmet", "tags": {"default": True}}},
+        mods={
+            "A": mod("A", "Prefix"), "B": mod("B", "Suffix"),
+            "C": mod("C", "Prefix"), "D": mod("D", "Suffix"),
+            "E": mod("E", "Prefix"),
+        },
+        bench={}, essences={},
+        rules={
+            "magic_caps": [1, 1], "rare_caps": [3, 3],
+            "magic_count_weights": {"1": 1, "2": 1},
+            "rare_count_weights": {"4": 8, "5": 3, "6": 1},
+        },
+    )
 
 
 def _direct_hand_costs(*, samples: int, seed: int) -> list[float]:
@@ -198,3 +224,7 @@ def _direct_hand_costs(*, samples: int, seed: int) -> list[float]:
             if len(costs) == _ + 1:
                 break
     return costs
+
+
+def _higher_quantile(values: list[float], probability: float) -> float:
+    return sorted(values)[math.ceil(probability * len(values)) - 1]
