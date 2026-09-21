@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "Royal Burgonet T1 life, chaos resistance, and elemental resistance",
+  "base": "Royal Burgonet",
+  "item_level": 86,
+  "quality": 20,
+  "flags": {
+    "corrupted": false,
+    "influenced": false,
+    "fractured": false,
+    "synthesised": false,
+    "mirrored": false,
+    "split": false
+  },
+  "tier_ids": {
+    "IncreasedLife": [["IncreasedLife9"]],
+    "ChaosResistance": [["ChaosResist6"]],
+    "FireResistance": [["FireResist8"]],
+    "ColdResistance": [["ColdResist8"]],
+    "LightningResistance": [["LightningResist8"]]
+  },
+  "required_mods": [
+    {"group": "IncreasedLife", "max_tier": 1},
+    {"group": "ChaosResistance", "max_tier": 1}
+  ],
+  "any_of": [[
+    {"group": "FireResistance", "max_tier": 1},
+    {"group": "ColdResistance", "max_tier": 1},
+    {"group": "LightningResistance", "max_tier": 1}
+  ]],
+  "sources": [
+    "S24: data/pob_mod_families.json accepted explicit-mod IDs; these are source-qualified exact-ID tiers for this base, not a general tier inference.",
+    "S27: sources/pob/Data/Bases/helmet.lua, Royal Burgonet base identity.",
+    "Owner BRIEF: target requires T1 life, T1 chaos resistance, and one T1 elemental resistance; no bench substitute satisfies those required T1 mods."
+  ]
+}
