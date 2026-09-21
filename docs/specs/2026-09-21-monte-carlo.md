@@ -31,8 +31,25 @@ Budget25 minutes. Depends only on accepted item_model and distributions, read-on
 5. Hand cases for A/B/C weights1/1/2 two draws: A inclusion7/12 and AB1/6. Test zero/one
    empirical hits Wilson behavior, exact replay same seed, invalid input. No probabilistic
    assertion without an explicit error bound; no network or raw-source builder tests.
+6. Needed exact-cost-limit fallback: `estimate_compound_cost_p90(p, low_cost, high_cost,
+   high_probability, *, reset_cost=0, setup_cost=0, samples=50000, seed=20260921,
+   confidence=.99)` uses a local numpy.random.default_rng(seed), draws attempt count N from
+   geometric(p), then K~Binomial(N,high_probability). Cost=setup+N*low+(high-low)*K+
+   reset*(N-1). This is independent per-attempt price randomness, NOT a replacement for exact
+   crafting success probabilities. Return estimated p90, interval endpoints, samples,seed,
+   confidence and explicit method. DKW epsilon=sqrt(log(2/(1-confidence))/(2*N_samples));
+   interval uses empirical quantiles at .9-epsilon and .9+epsilon (clip0..1). Empirical quantile
+   is inverse ECDF/higher order statistic, not interpolation. Report probability-space bound
+   epsilon, not an invented standard error in currency. Validate finite costs, low<=high,
+   p>0, probabilities0..1, confidence0..1, samples enough to bracket .9. Expected cost remains
+   exact in caller via E[C]=setup+(low+(high-low)*h)/p+reset*(1-p)/p.
+   Tests same-seed equality; constant-cost p=.5,c2 exact p90=8 lies in reported interval;
+   p=1 with zero cost variation deterministic; reject p0,NaN,negative prices. Numpy is explicitly
+   allowed by AGENTS and available; never pip-install or write outside repo.
 
 ## Report
 Focused pytest with --basetemp=.pytest_tmp, commits, five case IDs/draws/N/seed, exact and
 estimated target probabilities, per-class bound and observed max deviation, runtime.
+Also report compound cost p90/interval for p=.000053545793422886104, low30.6,high30.7,
+high_probability=.5,reset.6,setup.1; exact expectation formula above for comparison.
 No game rule decisions. At most two corrections.

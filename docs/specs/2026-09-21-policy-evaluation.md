@@ -56,7 +56,11 @@ them unless lead explicitly authorizes an integration correction. No new game de
    ranked entries to CLI so >=3 remain visible even if Pareto dominated. Unsupported candidates
    retain reasons; no swallowed errors, missing target tier or impossible essence advertised as
    success. Numeric exact means floating tolerance only; cost-convolution limits may mark a
-   candidate unavailable until an explicit estimated fallback is added, never fake p90.
+   candidate unavailable except the specified compound-cost fallback: if cost convolution
+   raises its explicit work-limit error for magic policy, call monte_carlo.estimate_compound_cost_p90
+   using actual two trial costs and reset/setup,50000 samples,seed20260921,99% DKW interval.
+   Keep mean/attempts/stage probabilities exact, label cost_method='estimated p90; exact mean',
+   include p90 interval/samplecount/seed/error bound. Never catch unrelated exceptions as a limit.
 8. Printed assumptions stored on every policy: ordinary3.29/Q9 scope; PoB group/first-match
    weight provisional Q16/Q17; no generated tags/multipliers; rare4/5/6 weights8/3/1 sourceCoE;
    prices invented inputs and no base market price; tiers exact-ID mappings for selected base;
