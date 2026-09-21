@@ -1,109 +1,70 @@
-# State — 2026-09-21
+# Current state — GOAL 2 active (2026-09-21, 12:41 CEST)
 
-## Active work — GOAL 2 (updated11:52 CEST)
+1. Ordinary PoE3.29 is the owner-confirmed target; GOAL2 is incomplete and work continues.
+2. Harvest exact/sampler merged527efa7; protected-suffix helmet policy merged55c8191.
+3. Harvest Life: p=.07950823245417574; full-prefix failure=.0759283364903187.
+4. Its exact mean2703.61 and estimated p90 5987 [5808,6185] include repeated locks and paid restarts.
+5. Best helmet remains Envy: mean1927.48, p90 4435, at invented example prices.
+6. Metamod matrix has132 cells/33 notes; base projection561 records/548 names, seven classes.
+7. Twelve cached-CoE cases reproduced; largest relative difference2.08735%; final correction acceptance in progress.
+8. Optimizer pending: protected k1 baseline8357.19; legal fixed k2 measurement4693.13, k3 paid-reset4787.90.
+9. General solver pending: no state-count/runtime/optimum result exists yet; bow recheck follows optimizer.
+10. Next: accept12-case report; accept attempt kernel and optimize templates; run bounded solver/family policies.
 
-1. GOAL1 remains accepted; GOAL2 is active and incomplete.
-2. S14 full metamod matrix merged614c9c3:132 cells,33 notes,2 blank statuses;10 tests pass.
-3. Seven-class PoB bases mergeddeae811:561 records/548 names;15 focused tests pass.
-4. Harvest exact/sampler worker has a first result p(Life9)=0.0795082324542; correction1 pending.
-5. The legal protected-Harvest helmet policy spec is ready; CLI still has the old9 policies.
-6. Twelve independent CoE comparisons run in a second worker, entirely from cached source.
-7. Browser access works via Playwright; Wiki, GGG and Reddit research is being recorded.
-8. S74 official3.25 confirms catalyst ilvl scaling; S47 supplies the fractional-gain distribution.
-9. Template optimiser and bounded solver are not implemented; do not claim GOAL2 complete.
-10. Next: accept Harvest correction, add helmet policy, accept/interpret12 CoE cases.
-
-At most two workers are active: harvest-distributions and offline-coe-validation. Each spec
-is bounded; no long CPU job is authorized. Research has a30minute ceiling per requested topic.
-No new full-suite result is claimed since the accepted248-test baseline below.
-
-## Accepted baseline — GOAL 1 and all three stretch tasks complete
-
-1. Target is ordinary PoE 3.29; owner reconfirmed Q3. Phase 0 and the night goal are complete.
-2. The helmet CLI runs from the repository root and prints 9 ranked policies with stages and decisions.
-3. Envy target probability: 0.00259406068444; mean cost 1927.48, p90 cost 4435 chaos-equivalent.
-4. Protected suffix/life mean 8357.19, p90 18985; with bench131: mean 8359.19, p90 18987.
-5. Chaos mean 41183.12, p90 94826.5; Alchemy+Scour mean 41182.12, p90 94825.5.
-6. Final `python -m pytest -q`: 248 passed in 0.84 minutes on Python 3.12.4.
-7. Validation includes 41 indexed hand answers and independent seeded Monte Carlo on five real pools.
-8. Bow thresholds 60/100 produce 12 reachable policies and 3 Pareto points over shared distributions.
-9. Divine API: 75/225 real outcomes, event probability 2/15; side locks and seeded sampling tested.
-10. Prices/utility are invented inputs; special families remain parked below. No owner answer is needed now.
-
-## Reproduce from crafting/
+## Working commands and evidence
 
 ```powershell
 python -m craftoracle plan examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json
-python -m craftoracle plan examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json --json
 python -m craftoracle plan examples/bow_value_table.yaml --loadout data/loadouts/endgame.json --compare-thresholds 60,100 --json
+python -m tools.coe_validation
 python -m pytest -q
 ```
 
-Final main test result: `248 passed in 50.30s` (0.84 minutes), implementation at `d332f60`.
-The final helmet text command returned 9 policies in about 0.09 minutes. README's runnable
-Divine example also passed its 75-outcome assertion. Python 3.12, pytest and NumPy are used;
-the local package needs no installation. Planner inputs use committed own projections; full
-source-tooling tests also need the ignored snapshots already present in sources/pob/ and
-sources/raw/. Isolated worker trees ran focused tests; raw snapshots are not copied into them.
+Latest focused lead acceptance:39 Harvest/policy/input/CLI tests passed in0.54minute
+on55c8191. Accepted Harvest adapter:26 tests, exact Life9=.07950823245417578,
+820/10000 seeded samples within Hoeffding .019494746, zero suffix violations.
+No new full-suite result is claimed yet: previous accepted full baseline248 tests in
+0.84minute atd332f60. Full source-tool tests require the ignored local snapshots;
+worker focused tests do not require unrelated snapshots. Pytest temp stays in .pytest_tmp.
 
-## Numerical evidence and limits
+Source research is now S1-S79. Fifteen owner rows corrected inffcf869; no owner test is
+needed. Wiki browser access works through Playwright. Official GGG resolves behavior;
+Reddit is retained with version/sample/player-report conditions. Q6 first/all Harvest
+filter scope is unresolved: explicit first_only default, all_draws sensitivity. Current
+policy has no attack/caster restriction, so that uncertainty does not change its number.
 
-The 9 helmet policies include four essence choices, Alchemy+Scour, Chaos, the fixed magic/
-Regal/three-Exalt cycle, protected life and its optional bench finish. Probabilities, attempts,
-mean/p90 costs, distributions, steps and assumptions are in JSON. Fixed templates are ranked;
-there is no general optimal-policy solver or parent build-system integration.
+## In progress and bounded backlog
 
-The magic cycle has exact mean 583612.11 and estimated p90 1345699.5. Its 99% DKW interval
-is [1304082.1, 1390479.3], with 50000 samples and seed 20260921. This estimation uncertainty
-is distinct from the 90th percentile of total cost. Other listed helmet policies use exact
-geometric or convolved quantiles. Mean-budget eligibility and p90-over-budget are separate.
+At most two workers. Current:policy-attempt-kernel; offline-coe-validation has returned
+correction1 for acceptance. Ordinary fossil adapter is next available independent slice.
+Specs ready:template optimizer, bounded solver, ordinary fossils, concrete fracture identity,
+and catalyst quality finishing. New family policy specs follow their accepted adapters.
+No background CPU job or unbounded wait is left. Worker scope at most90minutes; individual
+CPU jobs at most10minutes. Solver experiment caps graph building and solution at2minutes
+each,100000 states/2000000 edges; negative measured findings are acceptable per GOAL2.
 
-| Bow Pareto policy | Success probability | Mean cost | p90 cost | Conditional utility |
-|---|---:|---:|---:|---:|
-| Alchemy+Scour, threshold60 | 0.005317197426764 | 187.57 | 431.5 | 62.6361 |
-| Magic/Regal/Exalt, threshold60 | 0.007701811732828 | 4056.99 | 9342.4 | 63.5061 |
-| Alchemy+Scour, threshold100 | 0.000086404089951 | 11573.03 | 26647.5 | 100 |
+Resolved for implementation: rare counts8/3/1, multimod2Divine, normal/rare Screaming+
+essences (magic never), protected Harvest, ordinary CoE additive fossils including two
+hybrid definitions, ordinary uniform fracture model, catalyst fractional quality gains.
+Still explicitly gated: current exact recombination/selected-mode odds(Q21/Q22), Awakener
+conflict survivor(Q20), Conflict exact unequal-tier table(Q11), veiled offers(Q12), special
+fossils(Q13), unsupported quality magnitude/Tainted(Q23), other special-state/action gaps.
+These gates do not excuse stopping the answered ordinary family implementations.
 
-These are predictions under the declared model and invented inputs. The real restricted-bow
-cache test measures two raw action calculations across two thresholds, one per Alchemy/Chaos.
-Constant utility stays exactly constant; strict Pareto comparison keeps identical points.
+Price and utility tables are invented inputs, not market/game facts. D14/Q16/Q17 pool
+semantics remain explicitly provisional. Terminal scored classes cannot be reused for
+arbitrary future transitions that require lost modifier-group identity. The general solver
+must retain that identity or demonstrate an exact equivalent grouping.
 
-Divine is a separate value API, not an added CLI strategy. It supports one inclusive integer
-range per affix, source-item value order and prefix/suffix locks. Life9/Chaos6 give 75 outcomes,
-expected values 137/33 and P(life>=140, chaos>=34)=2/15; adding Fire8 gives 225. Locks leave
-5 or 15 outcomes. Exact enumeration stops above 100000 states; direct sampling remains usable.
-Fixed numeric, decimal and multiple-range/stat shapes explicitly raise unsupported-shape errors.
+## Accepted baseline retained for comparison
 
-## Source and implementation boundaries
-
-D14/GOAL authorize unbiased draws, rare 4/5/6 counts with CoE weights 8/3/1, PoB group and
-first-matching-tag weights, and omission of generated tags/multipliers (Q16/Q17). Confidence
-and conditions remain visible. Quality is fixed input. Terminal scored classes cannot be
-reused for arbitrary transitions requiring lost modifier-group identities. Bench finish uses
-a provable known-prefix state. Source corpus remains 62 sources / 20 sheets; no new fact sheets
-or broad source re-audit were added during the night implementation.
-
-Parked: Harvest(Q6), fossils(Q13), eldritch(Q11), Awakener(Q20), recombination(Q21/Q22),
-fracturing/veiled(Q12), corruption(Q18 plus outcome/eligibility gaps), beasts(Q25), catalysts(Q23).
-Source disagreements or incomplete current rules block these families; GOAL excludes them.
-The general Q9 eligibility matrix and Q16/Q17 pool semantics remain research dependencies.
-Supported ordinary states exclude corrupted/influenced/fractured/synthesised/mirrored/split
-items and raise the exact Q9 error. No market prices or PoB damage valuation are inferred.
-
-## Handover and next three actions (outside the completed night goal)
-
-1. The incoming lead reviews provisional D14 against the preserved source questions.
-2. Select one broader item/policy slice and settle only the source gates it needs.
-3. Wire the reviewed distribution/value/cost contract into the parent project in a separately authorized task.
-
-At the GOAL1 handover no workers remained. GOAL2's active workers are listed above.
-Reports are in out/workers/; committed acceptance evidence is in WORKERS.md, specs and tests.
-New owner instruction is recorded in AGENTS section6 and D19 (`7748e73`): choose any supported
-Terra reasoning per task; use GPT-5.6 Luna for very light tasks and choose its reasoning too.
-All worker trees and explicit file operations used this repository; raw snapshots remain ignored.
-Current pytest runs use repository-local `.pytest_tmp`. The initial pool acceptance inherited
-pytest's default temporary directory before that setting was corrected; no external cleanup
-was attempted. Keep the repository-local setting for future test runs.
+GOAL1 complete:41 indexed hand answers; bounded Divine75/225 outcomes and event2/15;
+bow60/100 previously12 reachable policies/3 frontier points. Fixed magic route mean583612.11,
+estimated p90 1345699.5 [1304082.1,1390479.3],50000 samples,seed20260921. These are baseline
+measurements, not claims about the forthcoming optimized policies. Reports live in
+out/workers; committed acceptance ledger is docs/WORKERS.md. All worker worktrees and data
+operations remain inside crafting; third-party snapshots remain ignored. AGENTS/D19 allow
+lead-selected Terra reasoning, or Luna for very light tasks. No orchestration skills used.
 
 ## Night log
 

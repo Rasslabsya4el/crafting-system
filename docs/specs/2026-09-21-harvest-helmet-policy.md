@@ -3,7 +3,8 @@
 Worktree: `.worktrees/harvest-helmet-policy` (branch `w-harvest-helmet-policy`).
 You may touch ONLY `src/craftoracle/harvest_policies.py`, `src/craftoracle/policies.py`,
 `src/craftoracle/plan_inputs.py`, `data/prices.example.json`, `data/loadouts/endgame.json`,
-`tests/test_harvest_policies.py`, `tests/test_plan_inputs.py`, `tests/test_plan_cli.py`.
+`tests/test_harvest_policies.py`, `tests/test_plan_inputs.py`, `tests/test_plan_cli.py`,
+`tests/test_policies.py` (lead-authorized correction and existing policy regression tests).
 Dependency: accepted harvest.py/action adapter must be present before this worker starts.
 
 ## Why

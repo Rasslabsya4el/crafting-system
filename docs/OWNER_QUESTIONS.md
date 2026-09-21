@@ -7,7 +7,7 @@ the answers below remain historical records. No unanswered question currently re
 |---|---|---|---|---|
 | 1 | Защита суффиксов сохраняется при Harvest reforge life? | protected-half Harvest policy | accepted side protection, S14/S17/S42 | YES; owner-confirmed and documented; exact adapter merged527efa7 |
 | 2 | Cannot roll Attack фильтрует все добавляемые моды Harvest? | type-blocking Harvest policies | first forced draw only; explicit all_draws sensitivity | UNKNOWN after bounded research; S19 proves support, not first/all scope; S17/S64/S71 do not settle it |
-| 3 | Дополнительные теги minion/elemental/attribute/mana доступны в эндгейме? | four additional Harvest permissions | owner-provisional availability and Sacred placeholder equality | YES; each price100, same invented placeholder as Sacred add/remove; policy/loadout worker active |
+| 3 | Дополнительные теги minion/elemental/attribute/mana доступны в эндгейме? | four additional Harvest permissions | owner-provisional availability and Sacred placeholder equality | YES; each price100, same invented placeholder as Sacred add/remove; policy/loadout merged55c8191 |
 | 4 | Для рары принять 4/5/6 модов с весами 8/3/1? | ordinary reroll count law | 8/3/1 with source labels | YES; owner-confirmed + reimplemented-from-CoE, not datamined |
 | 5 | Цена мультимода — 2 Divine? | bench quantity and supplied-price calculation | 2 Divine | YES; owner plus S2/S3; stale S13 prose rejected |
 | 6 | Все четыре Chaotic резонатора требуют rare-предмет? | ordinary fossil preparation | yes; Alchemical normal-only requires explicit legacy/Ruthless availability | RESOLVED S58/S72: type, not socket count, determines rarity; no owner test needed |

@@ -2,13 +2,13 @@
 
 ## GOAL 2 — trusted numbers and optimised policies
 
-- [~] Owner-unblocked Harvest: adapter merged `527efa7` (26 tests); protected-half helmet policy worker active, includes full-prefix recovery cost.
+- [x] Owner-unblocked Harvest: adapter `527efa7`; protected-half helmet policy `55c8191` (39 focused tests), exact mean2703.61 with full-prefix recovery cost.
 - [x] Complete S14 metamod matrix as data and tests (`614c9c3`): 33 actions x 4 columns = 132 cells, 33 notes, 10 passing tests.
-- [ ] Record answered source gates: rare counts, multimod, essence rarity boundary and extra Harvest tags.
+- [x] Record answered source gates: rare counts, multimod and essence rarity boundary (`ffcf869`); fifteen Harvest tags/prices in loadout (`55c8191`).
 - [ ] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots; explain deviations above 5% (Q14).
 - [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
 - [x] Correct the 15-row owner question sheet without re-asking answered questions (`ffcf869`; S63-S79 and owner answers).
-- [ ] Expose and optimise template parameters; report protected-life expected cost before/after.
+- [~] Expose and optimise template parameters; design/specs `0ae6f5b`/`47d98af`; finite attempt-kernel worker active. Baseline8357.19; legal fixed k2 measurement4693.13, k3 with paid restart4787.90.
 - [ ] Bounded general solver experiment on helmet and three hand optima; report states/time and result or measured failure.
 - [ ] Verify bow distribution/threshold/frontier path after new policies.
 - [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
@@ -51,7 +51,7 @@ all game mechanics. No dependent path may silently guess.
 - [!] Resolve Awakener conflicting-mod survivor before implementing that branch (Q20; Wiki random discard versus CoE receiver preference)
 - [!] Validate canonical exclusion families, generated tags and weight multiplier semantics for a general pool resolver (Q16/Q17)
 - [!] Complete action-specific special-item eligibility and replacement-action algorithms before enabling them (Q9/Q12/Q18/Q19; include new bench/Talisman branches)
-- [~] Q6 first/all-draw research remains open; owner-authorized first_only adapter merged527efa7. Q26 four extra tags provisionally accepted; loadout worker active.
+- [~] Q6 first/all-draw research remains open; owner-authorized first_only adapter merged527efa7. Q26 four extra tags provisionally accepted and loadout merged55c8191.
 - [~] Conflict exact odds(Q11), special fossils(Q13), quality magnitude/Tainted gaps(Q23), Blessed exclusion(Q24) and beast exchanges(Q25) remain. Ordinary CoE fossil stacking and catalyst gain distribution are accepted for implementation.
 - [!] Test CoE exact-labelled formulas against independent overlapping-group enumeration before using them as an exact oracle (Q14)
 - [ ] Obtain independent corroboration of rare reroll count weights (Q4) and pin supplied PoB bytes to an upstream revision (Q8); current confidence/provenance must stay visible
