@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
 import subprocess
 import sys
 import time
@@ -63,6 +64,18 @@ def _as_text(value: str | bytes | None) -> str:
     return value
 
 
+def _junit_file(case: element_tree.Element) -> str:
+    explicit_file = case.get("file")
+    if explicit_file:
+        return explicit_file
+    classname = case.get("classname", "")
+    parts = classname.split(".")
+    for index, part in enumerate(parts):
+        if part.startswith("test_"):
+            return "/".join(parts[:index + 1]) + ".py"
+    return classname.replace(".", "/") + ".py" if classname else ""
+
+
 def execute_command(
     name: str,
     argv: list[str],
@@ -97,6 +110,9 @@ def execute_command(
         if stderr:
             stderr += "\n"
         stderr += f"timed out after {timeout_seconds / 60:g} minutes"
+    except OSError as error:
+        exit_code = None
+        stderr = f"process startup failed: {error}"
     duration_seconds = time.monotonic() - started
     (output_dir / f"{name}.stdout.log").write_text(stdout, encoding="utf-8")
     (output_dir / f"{name}.stderr.log").write_text(stderr, encoding="utf-8")
@@ -136,14 +152,18 @@ def parse_junit(path: Path) -> dict[str, Any]:
             duration_seconds = float(case.get("time", "0"))
         except ValueError as error:
             raise ValueError(f"testcase {case.get('name', '<unnamed>')} has invalid time") from error
+        if not math.isfinite(duration_seconds) or duration_seconds < 0:
+            raise ValueError(f"testcase {case.get('name', '<unnamed>')} has non-finite or negative time")
         cases.append({
             "name": case.get("name", ""),
             "classname": case.get("classname", ""),
-            "file": case.get("file") or case.get("classname", ""),
+            "file": _junit_file(case),
             "status": status,
             "duration_minutes": duration_seconds / 60,
             "message": _case_message(case, status),
         })
+    if not cases:
+        raise ValueError("JUnit XML contains no testcase elements")
     failures = sum(case["status"] == "failure" for case in cases)
     errors = sum(case["status"] == "error" for case in cases)
     skipped = sum(case["status"] == "skipped" for case in cases)
@@ -169,9 +189,14 @@ def parse_coe_comparison(path: Path) -> dict[str, Any]:
         if not isinstance(case, dict):
             raise ValueError(f"comparison case {index} is not an object")
         try:
-            differences.append(abs(float(case["relative_difference"])))
+            difference = float(case["relative_difference"])
         except (KeyError, TypeError, ValueError) as error:
             raise ValueError(f"comparison case {index} has invalid relative_difference") from error
+        if not math.isfinite(difference):
+            raise ValueError(f"comparison case {index} has non-finite relative_difference")
+        differences.append(abs(difference))
+    if not cases:
+        raise ValueError("comparison JSON contains no cases")
     source_hashes = document.get("source_hashes", {})
     if not isinstance(source_hashes, dict):
         raise ValueError("comparison source_hashes must be an object")

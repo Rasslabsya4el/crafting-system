@@ -30,13 +30,29 @@ def test_parse_junit_counts_testcases_once_not_nested_suite_totals(tmp_path: Pat
     assert report["cases"][0] == {
         "name": "ok_one",
         "classname": "tests.test_alpha",
-        "file": "tests.test_alpha",
+        "file": "tests/test_alpha.py",
         "status": "passed",
         "duration_minutes": pytest.approx(0.01),
         "message": None,
     }
     assert report["cases"][2]["message"] == "expected 4"
     assert report["cases"][3]["status"] == "skipped"
+
+
+@pytest.mark.parametrize("time_value", ["NaN", "inf", "-1"])
+def test_parse_junit_rejects_empty_or_nonfinite_case_evidence(tmp_path: Path, time_value: str) -> None:
+    xml = tmp_path / "pytest.xml"
+    xml.write_text(
+        f'<testsuite><testcase name="invalid" classname="tests.test_invalid" time="{time_value}" /></testsuite>',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="non-finite or negative time"):
+        collect_evidence.parse_junit(xml)
+
+    xml.write_text("<testsuite />", encoding="utf-8")
+    with pytest.raises(ValueError, match="no testcase"):
+        collect_evidence.parse_junit(xml)
 
 
 def test_parse_junit_records_error_case_separately(tmp_path: Path) -> None:
@@ -72,6 +88,19 @@ def test_parse_coe_comparison_derives_maximum_absolute_difference(tmp_path: Path
     assert report["cases"][0]["relative_difference"] == -0.02
 
 
+@pytest.mark.parametrize("difference", ["NaN", "Infinity", "-Infinity"])
+def test_parse_coe_comparison_rejects_empty_or_nonfinite_evidence(tmp_path: Path, difference: str) -> None:
+    path = tmp_path / "comparison.json"
+    path.write_text(json.dumps({"cases": [{"relative_difference": difference}]}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="non-finite"):
+        collect_evidence.parse_coe_comparison(path)
+
+    path.write_text(json.dumps({"cases": []}), encoding="utf-8")
+    with pytest.raises(ValueError, match="no cases"):
+        collect_evidence.parse_coe_comparison(path)
+
+
 def test_execute_command_records_timeout_and_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     def timeout(*args: object, **kwargs: object) -> None:
         raise subprocess.TimeoutExpired(["python", "-m", "pytest"], 120, output=b"partial", stderr=b"late")
@@ -87,6 +116,27 @@ def test_execute_command_records_timeout_and_logs(tmp_path: Path, monkeypatch: p
     assert (tmp_path / "pytest.stdout.log").read_text(encoding="utf-8") == "partial"
     assert "late" in (tmp_path / "pytest.stderr.log").read_text(encoding="utf-8")
     assert "timed out after 2 minutes" in (tmp_path / "pytest.stderr.log").read_text(encoding="utf-8")
+
+
+def test_collect_replaces_old_proof_when_process_startup_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    output = root / "out" / "evidence"
+    output.mkdir(parents=True)
+    (output / "proof.json").write_text('{"old": "green"}', encoding="utf-8")
+
+    def startup_failure(*args: object, **kwargs: object) -> None:
+        raise OSError("interpreter unavailable")
+
+    monkeypatch.setattr(collect_evidence.subprocess, "run", startup_failure)
+
+    proof = collect_evidence.collect_evidence(output, root=root)
+
+    assert [command["exit_code"] for command in proof["commands"]] == [None, None]
+    assert proof["pytest"]["status"] == "unavailable"
+    assert proof["coe"]["status"] == "unavailable"
+    assert "startup failed" in (output / "pytest.stderr.log").read_text(encoding="utf-8")
+    assert json.loads((output / "proof.json").read_text(encoding="utf-8"))["schema_version"] == 1
 
 
 def test_collect_marks_missing_pytest_artifact_unavailable_after_failed_command(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
