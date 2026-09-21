@@ -1,5 +1,13 @@
 # Open questions (numbered; for the lead and the owner; concrete, answerable)
 
+Implementation status2026-09-21: owner GOAL.md and D14 provisionally unblock the ordinary
+slice for Q2/Q4/Q7/Q9/Q14/Q16/Q17. These research questions are not silently resolved:
+use unbiased draws, sourced CoE count parameters, caller prices, ordinary-only Q9 state,
+PoB group/first-match weights and no generated tags/multipliers. Q9 engine paths currently
+raise `NotImplementedError("out of tonight's slice: Q9")`; the general matrix stays open.
+Q3 was reconfirmed by the owner on2026-09-21: PoE3.29, ordinary/non-Ruthless. No owner answer
+is required to complete the authorized night core and stretch tasks.
+
 | id | question | why it matters | status |
 |---|---|---|---|
 | Q1 | Does Craft of Exile implement Awakener's Orb and the eldritch currencies (the owner doubts it)? | decides where those rules are sourced from | resolved yes: S3 `poec_cmethods.currency.woke` and `poec_cmethods.eldritch`; dispatch in `poec_simApplyCraftGO`; availability is not proof of accuracy |

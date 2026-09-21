@@ -41,6 +41,12 @@ p90 interval[1304082.1,1390479.3] at99%DKW. This uncertainty interval differs fr
 Other listed policies have exact geometric/convolved p90. Policies are fixed templates, not
 an optimal-policy search. Budget flags use mean cost and separately expose p90 over budget.
 
+Parked families: Harvest(Q6), fossils(Q13), eldritch(Q11), Awakener(Q20), recombination
+(Q21/Q22), fracturing/veiled(Q12), corruption(Q18 plus outcome/eligibility gaps), beasts(Q25)
+and catalysts(Q23). Reasons are source disagreements or incomplete current rules; the night
+goal explicitly excludes them. The broader Q9 eligibility matrix and Q16/Q17 general pools
+remain research work after this bounded ordinary prototype, not silent inferred behavior.
+
 Accepted worker trees removed without force. Known-answer worker accepted41 cases,0.06s; no production changes.
 Next worker:frontier20minutes, then Divine20minutes in order. At most2 workers; each command
 under10minutes. Pytest uses repository-local .pytest_tmp. No background process is required.
