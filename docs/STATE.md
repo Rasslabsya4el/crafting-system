@@ -1,4 +1,4 @@
-# Current state — GOAL 2 active (2026-09-21, 13:52 CEST)
+# Current state — GOAL 2 active (2026-09-21, 14:15 CEST)
 
 1. Ordinary PoE3.29 is the owner-confirmed target; GOAL2 is incomplete and work continues.
 2. Harvest exact/sampler merged527efa7; protected-suffix helmet policy merged55c8191.
@@ -9,7 +9,7 @@
 7. Twelve cached-CoE cases accepted3712602;25 correspondences, max relative difference2.08735%, none above5%.
 8. Optimizer active on accepted attempt kernel0f012a1; independent mean-grid references: Exalt1948.60, Harvest1986.20.
 9. Solver b89f775: hand optima8/4/4.75; helmet100000-state limit in0.23022minute, no optimum claimed.
-10. Next: accept optimizer/fracture identity; integrate fossil/fracture/catalyst policies; rerun bow/full tests.
+10. Fracture adapter d348533 accepted; next: optimizer, fossil/fracture/catalyst policies, bow/full tests.
 
 ## Working commands and evidence
 
@@ -34,10 +34,13 @@ policy has no attack/caster restriction, so that uncertainty does not change its
 
 ## In progress and bounded backlog
 
-At most two workers. Current:template-optimizer (consolidated correction1) and
-fractured-item-actions (tests-first implementation; reference-label/MC-cost clarification).
-Optimizer's first measured means match the lead references; terminal-stage distributions,
-legal bench candidate selection and complete grid/level reporting are still under review.
+At most two workers. Current:template-optimizer (correction1 complete, final validation/report).
+Fracture identity accepted d348533:74 lead tests0.074minute; real Envy finish
+.06101200110346221/30classes,627 of10000 seeded hits, identity loss0, Divine Life9
+value132 retained. Paid fracture policy follows optimizer; Harvest/fossil fracture inputs
+remain explicitly unsupported.
+Optimizer's measured means match the lead references; final acceptance of terminal-stage
+distributions, legal bench candidates and complete grid/level reporting is next.
 Conditional attempt kernel accepted0f012a1:10 tests; exact hand means21.5/22,
 independent true p90 fixtures44/45/97 with seeded DKW intervals containing each.
 Ordinary fossil adapter accepted0de86dd:43 focused tests,18 supported fossils,93 real entries/

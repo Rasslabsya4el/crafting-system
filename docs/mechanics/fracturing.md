@@ -1,7 +1,8 @@
 # Fracturing Orb
 
 Status: reviewed, partial. Read 2026-09-20. Confidence: `documented` for S33 eligibility and
-effect; `reimplemented-from-CoE` for uniform selection. No engine implementation.
+effect; `reimplemented-from-CoE` for uniform selection. Ordinary identity adapter accepted
+in d348533: exact concrete states, direct sampler and retained-mod basic actions.
 
 ## Effect and preconditions
 A Fracturing Orb locks one explicit modifier on a rare item with at least four explicit
@@ -38,5 +39,13 @@ A repeat policy must price a replacement base and its preparation after an unwan
 Q9 remaining flags; Q12 independent odds and bench/veiled target eligibility.
 Owner9 and S33 unblock a first ordinary, non-corrupted/non-mirrored/non-influenced slice
 with four or more ordinary explicits, uniform CoE1/n, failed-target fracture retained.
-The engine needs the concrete fractured mod identity; a boolean alone cannot preserve it
-through future rerolls. Broad special-item support is a separate implementation.
+The engine now stores the concrete fractured mod identity; a boolean alone remains
+unsupported. Harvest/fossil wrappers still reject fractured input. Broad special-item
+support is a separate implementation. The paid fracture-then-Envy policy is next.
+
+Implementation check: Royal Burgonet86 with Life9/Chaos6/Fire8/Cold8 has Life9 fracture
+probability1/4. Envy3 on that outcome retains Life9 and forces Chaos6; ordinary PoB pool
+enumeration gives30 scored classes and target probability .06101200110346221. Independent
+seeded draws give627/10000 (seed20260921), within Hoeffding .019494746035204052; identity
+loss0. These are model calculations, not observed in-game frequencies. Tests also preserve
+fractured Life9 numeric value132 through Divine while an ordinary value rerolls.

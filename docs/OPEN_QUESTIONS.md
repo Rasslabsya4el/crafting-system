@@ -3,8 +3,11 @@
 Implementation status2026-09-21: owner GOAL.md and D14 provisionally unblock the ordinary
 slice for Q2/Q4/Q7/Q9/Q14/Q16/Q17. These research questions are not silently resolved:
 use unbiased draws, sourced CoE count parameters, caller prices, ordinary-only Q9 state,
-PoB group/first-match weights and no generated tags/multipliers. Q9 engine paths currently
+PoB group/first-match weights and no generated tags/multipliers. Unsupported Q9 engine paths
 raise `NotImplementedError("out of tonight's slice: Q9")`; the general matrix stays open.
+Scoped exception d348533: an identified ordinary fracture is retained by basic currency,
+Essence and Divine; ordinary Fracturing Orb returns concrete uniform1/n states. Other
+special flags and fractured Harvest/fossil inputs remain rejected.
 Q3 was reconfirmed by the owner on2026-09-21: PoE3.29, ordinary/non-Ruthless. No owner answer
 is required to complete the authorized night core and stretch tasks.
 

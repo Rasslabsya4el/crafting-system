@@ -17,7 +17,7 @@
 - [~] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy: Harvest55c8191; fossil adapter0de86dd; fossil/fracture/catalyst policy specs ready.
 - [x] Ordinary fossil adapter (`0de86dd`):18 supported fossils, additive default/multiplicative sensitivity,43 focused tests;93 real entries/84 classes, seeded common marginal agrees.
 - [ ] Ordinary fossil policy: caller allowlist up to4 fossils/15 combinations, complete resonator pricing and terminal mixture; design/spec `2fc0f9d`.
-- [~] Concrete fracture identity and retained-mod basic actions; worker active from `7ad3e8b`; sourced spec and independent finish p=.06101200110346221 reference.
+- [x] Concrete fracture identity and retained-mod basic actions (`d348533`):74 lead tests; finish p=.06101200110346221/30 classes,627 of10000 seeded successes, identity loss0 and Divine Life9 value132 retained.
 - [ ] Fracture-Life then Envy policy with every failed base/preparation paid and two early-stop choices; design/spec `2fc0f9d`.
 - [ ] Catalyst quality distribution and supplied-jewellery finishing policy; spec `7c95d90`; follows fracture state fields.
 - [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
