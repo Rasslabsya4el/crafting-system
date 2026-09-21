@@ -11,6 +11,7 @@ from html import escape
 import json
 import math
 from numbers import Real
+from pathlib import Path
 from typing import Any
 
 
@@ -100,7 +101,11 @@ def material_accounting(route: Mapping[str, Any], plan: Mapping[str, Any], conte
             envy_id = context.get("envy_id")
             for action, currency in (("bases", "Base"), ("alchemy", "Alchemy"), ("scour", "Scour"), ("fracturing", "Fracturing Orb"), ("envy", "Envy")):
                 if action in counts:
-                    add(currency, _number(counts[action], action), envy_id if action == "envy" and isinstance(envy_id, str) else None)
+                    count = _number(counts[action], action)
+                    if action == "bases":
+                        rows.append({"currency": "Base", "count": count, "unit_price": base_cost, "spend": count * base_cost})
+                    else:
+                        add(currency, count, envy_id if action == "envy" and isinstance(envy_id, str) else None)
     elif identifier.startswith("suffix-protected"):
         recovery = _mapping(route.get("recovery", {}), "recovery")
         parameters = _mapping(route.get("parameters", {}), "parameters")
@@ -168,23 +173,13 @@ def material_accounting(route: Mapping[str, Any], plan: Mapping[str, Any], conte
 
 
 def render_report(report: Mapping[str, Any]) -> str:
-    """Render a standalone, CSP-free report which operates entirely offline."""
+    """Fill the standalone report template with safely embedded JSON data."""
     title = escape(str(_mapping(report.get("input"), "input").get("name", "Crafting route report")))
     payload = json.dumps(_json_value(report), ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
-    return f'''<!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title><style>
-:root{{color-scheme:dark;--ink:#eef8f7;--muted:#aabdbc;--teal:#42c9bb;--line:#35504e;--bg:#101a1b;--panel:#182526}}*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}}main{{max-width:1220px;margin:auto;padding:28px}}h1{{margin:0}}h2{{font-size:1.2rem;margin-top:0}}.notice{{background:#483710;border-left:4px solid #f2bb43;padding:10px 14px;margin:18px 0}}.layout{{display:grid;grid-template-columns:minmax(360px,1fr) minmax(0,1.35fr);gap:18px}}section{{background:var(--panel);border:1px solid var(--line);padding:18px;border-radius:6px}}table{{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}}th,td{{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}}button{{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left;padding:0}}button.route{{width:100%}}button.route:hover,button.route:focus{{color:var(--teal);outline:2px solid var(--teal);outline-offset:2px}}input{{width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;background:#0f1718;color:var(--ink)}}.muted{{color:var(--muted)}}.bad{{color:#ff9d9d}}.good{{color:#65ddcf}}details{{margin-top:12px}}pre{{white-space:pre-wrap;overflow-wrap:anywhere;background:#0f1718;padding:10px}}@media print{{body{{background:#fff;color:#111}}section{{background:#fff;border:0}}main{{max-width:none;padding:0}}.no-print{{display:none}}section{{break-inside:avoid}}.layout{{display:block}}}}@media(max-width:800px){{.layout{{grid-template-columns:1fr}}main{{padding:14px}}}}
-</style></head><body><main><h1>{title}</h1><div id="app"></div></main><script id="report-data" type="application/json">{payload}</script><script>
-const R=JSON.parse(document.getElementById('report-data').textContent),e=s=>String(s??'').replace(/[&<>\"]/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
-const n=x=>typeof x==='number'?x.toLocaleString('ru-RU',{{minimumFractionDigits:1,maximumFractionDigits:1}}):e(x), p=x=>typeof x==='number'?(x>0&&x<.001?'<0,1% (примерно 1 из '+Math.round(1/x).toLocaleString('ru-RU')+')':(x*100).toLocaleString('ru-RU',{{minimumFractionDigits:1,maximumFractionDigits:1}})+'%'):e(x), route=()=>R.routes.find(x=>x.key===location.hash.slice(1))||R.routes[0];
-function detail(x){{if(!x)return '<p>Нет доступных маршрутов.</p>';const a=x.accounting, rows=a.rows.map(r=>`<tr><td>${{e(r.currency)}}</td><td>${{n(r.count)}}</td><td>${{r.unit_price==null?'нет цены':n(r.unit_price)}}</td><td>${{r.spend==null?'—':n(r.spend)}}</td></tr>`).join('');return `<h2>${{e(x.name)}}</h2><p class="${{a.complete?'good':'bad'}}">${{a.complete?'Учёт сходится с ожидаемой стоимостью.':'Неполный учёт: '+e(a.reason||'нет данных')}}</p><h3>Инструкция</h3><ol>${{x.instructions.map(s=>'<li>'+e(s)+'</li>').join('')}}</ol><h3>Вероятности этапов</h3><table><tr><th>Этап</th><th>Значение</th><th>Смысл</th></tr>${{x.stages.map(s=>`<tr><td>${{e(s.name)}}</td><td>${{p(s.probability)}}</td><td>${{e(s.meaning)}}</td></tr>`).join('')}}</table><h3>Материалы (${{e(R.prices.unit)}})</h3><table><tr><th>Валюта</th><th>Количество</th><th>Цена</th><th>Расход</th></tr>${{rows}}</table><p>Итого: ${{n(a.total)}} ${{e(R.prices.unit)}}; план: ${{n(x.expected_cost)}} ${{e(R.prices.unit)}}.</p><details><summary>Параметры, решения и источники</summary><pre>${{e(JSON.stringify({{parameters:x.parameters,decisions:x.decisions,source:x.source}},null,2))}}</pre></details>`}}
-function target(){{const t=R.context.target||{{}}, c=(t.criteria||[]).map(x=>`<li>${{e(x.text)}} (tier ${{n(x.max_tier)}})</li>`).join(''), a=(t.any_of||[]).map(g=>`<li>одно из: ${{g.map(x=>e(x.text)+' (tier '+n(x.max_tier)+')').join('; ')}}</li>`).join('');if(t.value_table){{const rows=Object.entries(t.value_table).map(([g,v])=>`<tr><td>${{e(g)}}</td><td>${{e(Object.entries(v).map(([tier,p])=>'tier '+tier+': '+p).join('; '))}}</td></tr>`).join('');return `<section><h2>Цель</h2><p>Вымышленная таблица utility, не DPS. Остановиться при ${{n(t.threshold)}} очках.</p><table><tr><th>Группа</th><th>Очки по tier</th></tr>${{rows}}</table></section>`}}return `<section><h2>Цель</h2><ul>${{c+a}}</ul></section>`}}
-function evidence(){{const v=R.evidence, py=v.pytest||{{}}, co=v.coe||{{}}, cases=(py.cases||[]).map(x=>`<tr><td>${{e(x.name)}}</td><td>${{e(x.file)}}</td><td>${{e(x.status)}}</td></tr>`).join(''), rows=(co.cases||[]).map(x=>`<tr><td>${{e(x.name||x.id)}}</td><td>${{e(x.status||'')}}</td><td>${{n(x.max_abs_relative_difference??'')}}</td></tr>`).join('');return `<details><summary>Доказательства</summary><p>${{v.status==='unavailable'?'Проверки недоступны':v.status==='passed'?'Компонентные проверки и CoE-сравнение доступны.':'Проверки завершились с ошибкой.'}}</p><p>${{e(v.revision_message||'')}}</p><h3>Тесты: ${{e(py.status||'unavailable')}}</h3><table><tr><th>Case</th><th>Файл</th><th>Статус</th></tr>${{cases}}</table><h3>CoE: ${{e(co.status||'unavailable')}}</h3><table><tr><th>Case</th><th>Статус</th><th>Разница</th></tr>${{rows}}</table><pre>${{e(JSON.stringify(v.commands||[],null,2))}}</pre></details>`}}
-function draw(forced){{const q=(forced??document.getElementById('q')?.value??'').toLowerCase(), rs=R.routes.filter(x=>(x.id+x.name).toLowerCase().includes(q));document.getElementById('app').innerHTML=`<p>${{e(R.input.base)}} · ilvl ${{n(R.input.item_level)}} · качество ${{n(R.input.quality)}}</p>${{target()}}<p class="notice"><strong>Цены вымышлены.</strong> ${{e(R.prices.note||'Цены предоставлены входным loadout.')}}</p><div class="layout"><section><label class="no-print">Поиск <input id="q" value="${{e(q)}}"></label><table><tr><th>Маршрут</th><th>Порог</th><th>Среднее</th><th>p90</th><th>Ценность</th><th title="Лучший обмен цены и ценности">На границе</th></tr>${{rs.map(x=>`<tr><td><button class="route" data-key="${{e(x.key)}}">${{e(x.name)}}</button></td><td>${{n(x.stopping_threshold??'—')}}</td><td>${{n(x.expected_cost)}} ${{e(R.prices.unit)}}</td><td>${{n(x.cost_p90)}} ${{e(x.cost_label)}}</td><td>${{n(x.expected_utility)}}</td><td>${{x.frontier?'да':'нет'}}</td></tr>`).join('')}}</table><p class="muted">«На границе» означает лучший доступный обмен ожидаемой цены и ценности.</p><h3>Недоступные</h3>${{R.unavailable.map(x=>`<p><b>${{e(x.name||x.id)}}</b>: ${{e((x.reasons||[]).join('; '))}}</p>`).join('')}}${{evidence()}}</section><section id="detail">${{detail(route())}}</section></div>`;document.getElementById('q').oninput=function(){{const value=this.value, caret=this.selectionStart;draw(value);const next=document.getElementById('q');next.focus();next.setSelectionRange(caret,caret)}};document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{{location.hash=b.dataset.key;document.getElementById('detail').innerHTML=detail(route())}})}}draw();window.onhashchange=draw;
-</script></body></html>'''
-
-
+    template = (Path(__file__).with_name("report_assets") / "template.html").read_text(encoding="utf-8")
+    if "{{REPORT_TITLE}}" not in template or "{{REPORT_DATA}}" not in template:
+        raise ValueError("report template is missing required placeholders")
+    return template.replace("{{REPORT_TITLE}}", title).replace("{{REPORT_DATA}}", payload)
 def _route(route: Mapping[str, Any], plan: Mapping[str, Any], context: Mapping[str, Any], index: int) -> dict[str, Any]:
     stages = []
     identifier = _string(route.get("id", ""), "route id")
@@ -194,11 +189,19 @@ def _route(route: Mapping[str, Any], plan: Mapping[str, Any], context: Mapping[s
         meaning = "Шанс дойти до этапа" if identifier.startswith("magic") else _stage_meaning(identifier, name)
         stages.append({"name": name, "probability": row.get("probability"), "expected_attempts": row.get("expected_attempts"), "meaning": meaning})
     threshold = route.get("stopping_threshold", _mapping(plan.get("input"), "input").get("utility_threshold"))
-    return {"key": f"{identifier}-{threshold if threshold is not None else 'base'}-{index}", "id": identifier, "name": str(route.get("name", identifier)), "expected_cost": route.get("expected_cost"), "cost_p90": route.get("cost_p90"), "cost_label": "приблизительно" if route.get("cost_p90_interval") else "точно", "expected_utility": route.get("expected_utility"), "frontier": bool(route.get("frontier", False)), "stopping_threshold": threshold, "stages": stages, "parameters": dict(_mapping(route.get("parameters", {}), "parameters")), "decisions": list(route.get("decision_points", [])), "source": {"assumptions": list(route.get("assumptions", [])), "generation": context.get("generation", {})}, "instructions": _instructions(identifier, route, context), "accounting": material_accounting(route, plan, context)}
+    recovery = dict(_mapping(route.get("recovery", {}), "recovery"))
+    metadata = {key: route.get(key) for key in ("cost_p90_interval", "cost_sample_count", "cost_seed", "cost_error_bound", "cost_confidence", "irreversible_failure_risk", "wrong_fracture_risk_per_trial", "expected_discarded_bases", "irreversible_item_destruction_risk", "expected_attempts") if key in route}
+    metadata.update(recovery)
+    if identifier.startswith("magic"):
+        attempts = _first_stage(route)
+        if attempts is not None and _number(attempts.get("expected_attempts"), "magic expected_attempts") > 0:
+            metadata["success_probability"] = 1 / _number(attempts.get("expected_attempts"), "magic expected_attempts")
+    return {"key": f"{identifier}-{threshold if threshold is not None else 'base'}-{index}", "id": identifier, "name": str(route.get("name", identifier)), "expected_cost": route.get("expected_cost"), "cost_p90": route.get("cost_p90"), "cost_label": "приблизительно" if route.get("cost_p90_interval") else "точно", "expected_utility": route.get("expected_utility"), "frontier": bool(route.get("frontier", False)), "stopping_threshold": threshold, "stages": stages, "parameters": dict(_mapping(route.get("parameters", {}), "parameters")), "decisions": list(route.get("decision_points", [])), "metadata": metadata, "source": {"assumptions": list(route.get("assumptions", [])), "generation": context.get("generation", {})}, "instructions": _instructions(identifier, route, context), "accounting": material_accounting(route, plan, context)}
 
 
 def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any]) -> list[str]:
     parameters = _mapping(route.get("parameters", {}), "parameters")
+    life = _life_target_text(context)
     if identifier.startswith("essence"):
         essence_id = parameters.get("forced_essence_id", parameters.get("essence_id"))
         essence = _mapping(context.get("essence_names", {}), "essence_names").get(essence_id, essence_id or "Essence")
@@ -209,26 +212,48 @@ def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[st
         early = bool(parameters.get("alchemy_early_stop", True))
         return ["Сначала примените Orb of Alchemy." + (" Проверьте раннюю остановку." if early else " Результат намеренно не используется."), "Затем повторяйте Chaos Orb до цели без Scour между применениями."]
     if identifier.startswith("fossil"):
-        return ["Примените Orb of Alchemy и немедленно проверьте цель.", "При неудаче заполните один Chaotic Resonator выбранными fossil и примените его к rare-предмету.", "Повторяйте полный рецепт и проверяйте после каждого применения."]
+        fossils = _mapping(context.get("fossil_names", {}), "fossil_names")
+        selected = ", ".join(str(fossils.get(str(value), f"fossil {value}")) for value in parameters.get("fossil_ids", []))
+        sockets = parameters.get("socket_count", "?")
+        return ["Примените Orb of Alchemy и немедленно проверьте цель.", f"При неудаче заполните один {sockets}-socket Chaotic Resonator: {selected}; примените его к rare-предмету.", "Повторяйте полный рецепт и проверяйте после каждого применения."]
     if identifier.startswith("fracture"):
-        return ["На новой normal-базе подготовьте ровно четыре ordinary explicit с Life9.", "Примените Fracturing Orb.", "Неверную фрактуру отложите с salvage 0 и купите новую базу; верную Life9 завершайте Deafening Envy."]
+        early = bool(parameters.get("alchemy_early_stop", False))
+        return ["На каждой новой normal-базе примените Orb of Alchemy." + (" После каждого Alchemy проверьте раннее завершение." if early else " Ранняя проверка намеренно отключена."), f"При неудаче применяйте Orb of Scouring + Orb of Alchemy, пока ровно четыре ordinary explicit не включат {life}.", "Примените Fracturing Orb. Неверную фрактуру отложите с salvage 0 и купите новую базу; отмены нет.", f"При фрактуре {life} повторяйте Deafening Essence of Envy до цели."]
     if identifier.startswith("suffix-protected-harvest"):
-        return ["Подготовьте выбранные суффиксы Deafening Envy.", "Создайте Suffixes Cannot Be Changed и примените Harvest reforge Life.", "При заполненных префиксах вернитесь к подготовке; иначе повторите lock + reforge."]
+        return _protected_preparation(parameters) + ["Создайте Suffixes Cannot Be Changed (729), затем примените Harvest reforge Life с first_only; attack/caster blocker не используется.", "Life9 завершает маршрут. При свободном префиксе повторите оплаченный lock + reforge; при трёх префиксах вернитесь к Envy-подготовке. Scour здесь нет."]
     if identifier.startswith("suffix-protected"):
         max_exalts = _integer(parameters.get("max_exalts", 0), "max_exalts")
-        steps = ["Подготовьте выбранные суффиксы Deafening Envy.", "Создайте Suffixes Cannot Be Changed и примените Orb of Scouring."]
+        steps = _protected_preparation(parameters) + ["Создайте Suffixes Cannot Be Changed (729) и примените Orb of Scouring."]
         if max_exalts:
-            steps.append(f"Сделайте до {max_exalts} Exalt Orb; остановитесь после первого Life9.")
+            steps.append(f"Сделайте до {max_exalts} Exalt Orb; остановитесь после первого {life}. При свободном префиксе повторите оплаченные lock + Scour; при трёх префиксах вернитесь к Envy.")
         if parameters.get("bench_finish_id") is not None:
-            steps.append("Завершите выбранным armour bench craft.")
+            bench = _mapping(context.get("bench_names", {}), "bench_names").get(str(parameters["bench_finish_id"]), f"bench {parameters['bench_finish_id']}")
+            steps.append(f"Завершите {bench}; это не заменяет требуемый Life9.")
         return steps
     if identifier.startswith("magic"):
         max_exalts = _integer(parameters.get("max_exalts", 0), "max_exalts")
-        steps = ["Примените Orb of Transmutation; этот setup не проверяется.", "Используйте Orb of Alteration; при одном модификаторе добавьте Orb of Augmentation.", "При неудаче сбросьте Orb of Scouring + Transmutation, затем примените Regal Orb."]
+        early = bool(parameters.get("early_stop", False))
+        magic_gate, regal_gate = parameters.get("magic_min_desired"), parameters.get("regal_min_desired")
+        steps = ["Примените Orb of Transmutation; это оплачиваемый setup без проверки.", "Примените Orb of Alteration; только при одном модификаторе добавьте Orb of Augmentation.", f"{'Проверяйте цель на каждом этапе.' if early else 'Проверяйте цель только на последнем настроенном этапе.'} Иначе требуется не менее {magic_gate} желаемых модификаторов (required target label или положительный tier caller utility); неудача сбрасывается Orb of Scouring + Transmutation.", f"Затем примените Regal Orb; требуется не менее {regal_gate} желаемых модификаторов, иначе сброс Orb of Scouring + Transmutation."]
         if max_exalts:
-            steps.append(f"После Regal сделайте до {max_exalts} Exalt Orb.")
+            steps.append(f"После Regal сделайте до {max_exalts} Exalt Orb; после последнего Exalt проверьте цель, а при неудаче сбросьте Orb of Scouring + Transmutation.")
         return steps
     return [str(step) for step in route.get("steps", [])] or ["Для этого маршрута нет перевода инструкций."]
+
+
+def _protected_preparation(parameters: Mapping[str, Any]) -> list[str]:
+    early = bool(parameters.get("preparation_early_stop", False))
+    suffixes = parameters.get("minimum_desired_elemental_suffixes", "?")
+    prefixes = parameters.get("max_prefixes", "?")
+    first = "Повторяйте Deafening Essence of Envy." + (" Цель, готовая во время подготовки, сразу завершает маршрут." if early else " Ранняя готовая цель здесь намеренно не останавливает маршрут.")
+    return [first, f"Примите только ровно 3 суффикса, минимум {suffixes} желаемых elemental suffixes и не более {prefixes} префиксов; остальные Envy-результаты повторите."]
+
+
+def _life_target_text(context: Mapping[str, Any]) -> str:
+    target = _mapping(context.get("target", {}), "target")
+    labels = _mapping(target.get("labels", {}), "target labels")
+    value = labels.get("IncreasedLife:1")
+    return f"Life9 ({value})" if isinstance(value, str) else "Life9"
 
 
 def _stage_meaning(identifier: str, name: str) -> str:
@@ -249,7 +274,7 @@ def _evidence(evidence: Mapping[str, Any] | None, report_commit: Any) -> dict[st
     coe = _mapping(evidence.get("coe", {}), "evidence coe")
     status = "passed" if pytest.get("status") == "passed" and coe.get("status") == "passed" else "unavailable" if "unavailable" in {pytest.get("status"), coe.get("status")} else "failed"
     mismatch = isinstance(report_commit, str) and evidence.get("git_commit") != report_commit
-    return {"status": status, "pytest": dict(pytest), "coe": dict(coe), "commands": list(evidence.get("commands", [])), "git_commit": evidence.get("git_commit"), "generated_at": evidence.get("generated_at"), "revision_message": "Проверки другой ревизии" if mismatch else None}
+    return {"status": status, "pytest": dict(pytest), "coe": dict(coe), "commands": list(evidence.get("commands", [])), "artifacts": dict(evidence.get("artifacts", {})), "git_commit": evidence.get("git_commit"), "generated_at": evidence.get("generated_at"), "revision_message": "Проверки другой ревизии" if mismatch else None}
 
 
 def _find_stage(route: Mapping[str, Any], needle: str) -> Mapping[str, Any] | None:

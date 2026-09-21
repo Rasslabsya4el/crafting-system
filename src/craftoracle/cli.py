@@ -5,12 +5,14 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
+from datetime import datetime, timezone
 import json
 import math
 from numbers import Real
 import os
 from pathlib import Path
 import subprocess
+import shutil
 from typing import Any
 
 from craftoracle.actions import load_action_data
@@ -73,11 +75,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "essence_names": {key: row.get("name", key) for key, row in data.essences.items()},
                 "envy_id": "Metadata/Items/Currency/CurrencyEssenceEnvy3",
                 "bench_recipes": report_loadout.bench_recipes,
-                "generation": {"commit": _git_commit()},
+                "fossil_names": _fossil_names(),
+                "bench_names": {str(index): str(row.get("stat_text", f"bench {index}")) for index, row in data.bench.items()},
+                "generation": {"commit": _git_commit(), "generated_at": datetime.now(timezone.utc).isoformat()},
                 "target": _report_target(arguments.spec, data),
             }
             report = build_report(document, context, evidence)
             output_dir.mkdir(parents=True, exist_ok=True)
+            if arguments.evidence_dir:
+                _copy_evidence_artifacts(_repository_path(arguments.evidence_dir, "evidence"), output_dir, evidence or {})
             plan_path, index_path = output_dir / "plan.json", output_dir / "index.html"
             plan_path.write_text(json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
             index_path.write_text(render_report(report), encoding="utf-8")
@@ -417,7 +423,7 @@ def _load_evidence(directory: str) -> dict[str, Any]:
     try:
         document = json.loads((target / "proof.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        raise PlanInputError("unable to read evidence proof.json") from error
+        return {"schema_version": 1, "pytest": {"status": "unavailable"}, "coe": {"status": "unavailable"}, "message": f"proof.json unavailable: {error}"}
     if not isinstance(document, dict) or document.get("schema_version") != 1:
         raise PlanInputError("unsupported evidence proof.json schema")
     return document
@@ -427,6 +433,28 @@ def _git_commit() -> str | None:
     root = Path(__file__).resolve().parents[2]
     completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=False, timeout=10)
     return completed.stdout.strip() if completed.returncode == 0 else None
+
+
+def _copy_evidence_artifacts(source: Path, output: Path, evidence: Mapping[str, Any]) -> None:
+    artifacts = evidence.get("artifacts", {})
+    paths = ["proof.json", *artifacts.values()] if isinstance(artifacts, Mapping) else ["proof.json"]
+    for command in evidence.get("commands", []) if isinstance(evidence.get("commands"), list) else []:
+        if isinstance(command, Mapping):
+            paths.extend((command.get("stdout_file"), command.get("stderr_file")))
+    for raw in paths:
+        if not isinstance(raw, str):
+            continue
+        candidate = (source / raw).resolve()
+        try:
+            candidate.relative_to(source)
+        except ValueError:
+            continue
+        if candidate.is_file():
+            relative = candidate.relative_to(source)
+            target = output / "evidence" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if candidate != target:
+                shutil.copy2(candidate, target)
 
 
 def _report_target(spec_path: str | Path, data: Any) -> dict[str, Any]:
@@ -443,7 +471,14 @@ def _report_target(spec_path: str | Path, data: Any) -> dict[str, Any]:
         "value_table": spec.value_table,
         "threshold": spec.threshold,
         "values_note": spec.values_note,
+        "labels": labels,
     }
+
+
+def _fossil_names() -> dict[str, str]:
+    root = Path(__file__).resolve().parents[2]
+    document = json.loads((root / "data/rules/fossils.json").read_text(encoding="utf-8"))
+    return {str(row["id"]): str(row["name"]) for row in document["ordinary"]}
 
 
 def _load_evaluator():
