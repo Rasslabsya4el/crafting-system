@@ -1,0 +1,26 @@
+{
+  "confidence": "documented",
+  "sources": [
+    "docs/mechanics/harvest.md: Accepted ordinary reforge model (2026-09-21)",
+    "S19 official 3.27 patch notes: modifier-type restrictions",
+    "S42 https://www.poewiki.net/index.php?title=Harvest_crafting&oldid=1699145 (read 2026-09-21)",
+    "PoB data: ModExplicit.lua:115+ literal modTag defences (defence API spelling), and literal modTags/weights/groups"
+  ],
+  "supported_tags": [
+    "fire", "cold", "lightning", "physical", "life", "defence", "chaos",
+    "attack", "caster", "speed", "critical", "minion", "elemental",
+    "attribute", "mana"
+  ],
+  "tag_literals": {
+    "defence": "defences"
+  },
+  "ordinary_reforge": {
+    "rarity": "rare",
+    "selection": "one tagged weighted individual modifier first; then independent ordinary weighted draws",
+    "tag_mapping": "public defence maps to literal PoB modTag defences; all other public tags match literally",
+    "count_weights_source": "ActionData.rules.rare_count_weights; accepted D14 4/5/6 weights 8/3/1",
+    "type_filter_default": "first_only",
+    "type_filter_modes": ["first_only", "all_draws"],
+    "protected_side": "retain all affixes on the side protected by its bench metamod"
+  }
+}
