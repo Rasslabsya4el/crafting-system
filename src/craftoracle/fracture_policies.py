@@ -161,13 +161,21 @@ def estimate_fracture_life_cost_p90(
 
     s, z = u + v, u + v * f
     rng = np.random.default_rng(parsed_seed)
+    _validate_sampler_probability(s, "early_probability + preparation_probability")
+    _validate_sampler_probability(z / s, "completion probability per prepared base")
+    if v * f:
+        _validate_sampler_probability(p, "finishing_probability")
     bases = rng.geometric(z / s, size=count)
     alchemies = rng.negative_binomial(bases, s) + bases
+    if np.any(bases < 1) or np.any(alchemies < bases):
+        raise ValueError("int64 Monte Carlo count overflow")
     fracture_finishes = rng.binomial(1, v * f / z, size=count)
     envy_counts = np.zeros(count, dtype=np.int64)
     finish_count = int(fracture_finishes.sum())
     if finish_count:
         envy_counts[fracture_finishes.astype(bool)] = rng.geometric(p, size=finish_count)
+    if np.any(envy_counts < 0):
+        raise ValueError("int64 Monte Carlo count overflow")
     costs = (
         base_price * bases
         + alchemy_price * alchemies
@@ -273,8 +281,39 @@ def _validate_selected_target(spec: object, data: ActionData) -> None:
     }
     if any(labels.get(mod_id) != label for mod_id, label in required.items()):
         raise ValueError("fracture-Life policy only supports Life9/Chaos6/any elemental8")
+    expected_tiers = {
+        "IncreasedLife": ((_LIFE,),),
+        "ChaosResistance": (("ChaosResist6",),),
+        "FireResistance": (("FireResist8",),),
+        "ColdResistance": (("ColdResist8",),),
+        "LightningResistance": (("LightningResist8",),),
+    }
+    if dict(tier_ids) != expected_tiers or not _selected_predicate(spec):
+        raise ValueError("fracture-Life policy only supports Life9/Chaos6/any elemental8")
     if any(mod_id not in data.mods for mod_id in _FRACTURE_DEMONSTRATION) or _ENVY not in data.essences:
         raise ValueError("fracture-Life policy requires accepted Life9, resistance, and Envy data")
+
+
+def _selected_predicate(spec: object) -> bool:
+    if getattr(spec, "value_table", None) is not None or getattr(spec, "threshold", None) is not None:
+        return False
+    required = _criteria_signature(getattr(spec, "required_mods", ()))
+    alternatives = getattr(spec, "any_of", ())
+    return (
+        required == {("IncreasedLife", 1), ("ChaosResistance", 1)}
+        and isinstance(alternatives, tuple)
+        and len(alternatives) == 1
+        and _criteria_signature(alternatives[0]) == {
+            ("FireResistance", 1), ("ColdResistance", 1), ("LightningResistance", 1),
+        }
+    )
+
+
+def _criteria_signature(criteria: object) -> set[tuple[object, object]] | None:
+    if not isinstance(criteria, tuple):
+        return None
+    result = {(getattr(criterion, "group", None), getattr(criterion, "max_tier", None)) for criterion in criteria}
+    return result if len(result) == len(criteria) else None
 
 
 def _mod_ref(data: ActionData, mod_id: str) -> ModRef:
@@ -287,7 +326,7 @@ def _inputs(u_raw, v_raw, f_raw, p_raw) -> tuple[float, float, float, float]:
     v = _probability(v_raw, "preparation_probability")
     f = _probability(f_raw, "fracture_probability")
     p = _probability(p_raw, "finishing_probability")
-    if u + v > 1 + 1e-12:
+    if u + v > 1:
         raise ValueError("early_probability + preparation_probability must not exceed one")
     return u, v, f, p
 
@@ -323,3 +362,10 @@ def _integer(value: object, name: str) -> int:
 def _higher_quantile(ordered: np.ndarray, chance: float) -> float:
     rank = max(0, min(len(ordered) - 1, math.ceil(chance * len(ordered)) - 1))
     return float(ordered[rank])
+
+
+def _validate_sampler_probability(chance: float, name: str) -> None:
+    """Reject tails whose integer count representation could overflow NumPy."""
+    minimum = 1.0 / np.iinfo(np.int64).max
+    if chance < minimum:
+        raise ValueError(f"{name} is too small for int64 Monte Carlo sampling")
