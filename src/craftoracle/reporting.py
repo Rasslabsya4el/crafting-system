@@ -264,9 +264,9 @@ def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[st
         steps = ["Примените Orb of Transmutation; это оплачиваемая подготовка без проверки.", "Примените Orb of Alteration; только при одном модификаторе добавьте Orb of Augmentation.", f"{'Сначала проверяйте цель на каждом этапе.' if early else 'Проверяйте цель только на последнем настроенном этапе.'} Затем требуется не менее {magic_gate} желаемых модификаторов: моды из цели или тиры с положительной ценностью из входной таблицы; неудача сбрасывается Orb of Scouring + Transmutation."]
         if max_exalts:
             if early:
-                steps.append(f"Сначала проверьте цель: готово — остановитесь. Иначе продолжайте только при не менее {regal_gate} желаемых модификаторах; при меньшем числе Orb of Scouring + Orb of Transmutation и возврат к Alteration.")
+                steps.append(f"Затем примените Regal Orb. Сначала проверьте цель: готово — остановитесь. Иначе продолжайте только при не менее {regal_gate} желаемых модификаторах; при меньшем числе Orb of Scouring + Orb of Transmutation и возврат к Alteration.")
             else:
-                steps.append(f"После Regal продолжайте только при не менее {regal_gate} желаемых модификаторах; при меньшем числе Orb of Scouring + Orb of Transmutation и возврат к Alteration.")
+                steps.append(f"Затем примените Regal Orb. После Regal продолжайте только при не менее {regal_gate} желаемых модификаторах; при меньшем числе Orb of Scouring + Orb of Transmutation и возврат к Alteration.")
         else:
             steps.append(f"Затем примените Regal Orb; после проверки цели требуется не менее {regal_gate} желаемых модификаторов, иначе сброс Orb of Scouring + Transmutation.")
         if max_exalts:

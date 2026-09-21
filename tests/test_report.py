@@ -47,6 +47,7 @@ def test_magic_counts_and_stage_reach_label() -> None:
         instructions = build_report({**_plan(), "ranked": [magic_plan]}, {})["routes"][0]["instructions"]
         regal_step = next(step for step in instructions if "После Regal" in step or "Сначала проверьте цель" in step)
         assert "не менее 2 желаемых модификатор" in regal_step
+        assert "примените Regal Orb" in regal_step
         assert ("Сначала проверьте цель" in regal_step) is expects_goal_check
 
 
