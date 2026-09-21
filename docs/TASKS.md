@@ -21,7 +21,7 @@
 - [x] Fracture-Life then Envy policy (`000e8d9`):47 lead affected tests plus17 final input tests, exact mean4227.73669,p908744[8500,9353.5], all replacement/preparation costs paid; two-candidate audit, exact target guards, distributions and explicit bow exclusion. Full default helmet0.51minute,12 routes, Envy still best.
 - [x] Catalyst quality distribution and supplied-jewellery finishing policy (`14be5e9`):48 lead core tests and19 final CLI checks; mean14.42372357 applications,p90 16; independent binomial CDF/MC agree. Ordinary jewellery only, no damage-value inference.
 - [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
-- [~] Final runtime gate:394 tests pass in1.036minute; bound only the rule-mutation cache regression to a hand pool (`d713ab7` spec, Luna medium). Keep production and real helmet assertions unchanged.
+- [x] Bound only the rule-mutation cache regression to a hand pool (`593d5be`, Luna medium):lead test passes,p1/2→1,mean2.5→1.5,four cache entries. Production and real helmet assertions unchanged; final full-suite measurement follows.
 
 ## Phase 0 -- knowledge harvest
 
