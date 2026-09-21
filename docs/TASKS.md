@@ -62,5 +62,7 @@ all game mechanics. No dependent path may silently guess.
 - [ ] Validate two thresholds on one distribution, conditional terminal value, and dominance filtering; distinguish cost quantiles from confidence intervals
 
 - [x] Night vertical slice: item model and ordinary PoB pool resolver (`d07a1b5`; 21 focused tests; corrected ordinary pool totals)
-- [~] Night exact grouped distributions and action adapters (specs 2026-09-21-exact-distributions.md / ordinary-actions.md)
+- [x] Night exact grouped distribution kernel (`4ee0641`;17 focused tests)
+- [~] Night ordinary action adapters (`2026-09-21-ordinary-actions.md`; worker running)
+- [~] Night loop costs independent mathematical implementation (`2026-09-21-loop-costs.md`; worker running)
 - [ ] Night Monte Carlo, loop costs, inputs, real policy templates and CLI (GOAL order; specs being prepared)
