@@ -83,7 +83,10 @@ No active workers or background jobs remain; worker worktrees were removed witho
 Reports are in out/workers/; committed acceptance evidence is in WORKERS.md, specs and tests.
 New owner instruction is recorded in AGENTS section6 and D19 (`7748e73`): choose any supported
 Terra reasoning per task; use GPT-5.6 Luna for very light tasks and choose its reasoning too.
-All work stayed inside this repository; raw third-party snapshots remain ignored.
+All worker trees and explicit file operations used this repository; raw snapshots remain ignored.
+Current pytest runs use repository-local `.pytest_tmp`. The initial pool acceptance inherited
+pytest's default temporary directory before that setting was corrected; no external cleanup
+was attempted. Keep the repository-local setting for future test runs.
 
 ## Night log
 
