@@ -209,7 +209,7 @@ def _route_title(identifier: str, route: Mapping[str, Any], context: Mapping[str
     if identifier == "suffix-protected-harvest-life":
         return "Envy → защита суффиксов → Harvest Life"
     if identifier == "fracture-life-envy":
-        return "Фрактура здоровья T1 → Envy"
+        return "Fractured Life T1 → Envy"
     if identifier.startswith("fossil"):
         names = _mapping(context.get("fossil_names", {}), "fossil_names")
         selected = ", ".join(str(names.get(str(value), names.get(value, f"fossil {value}"))) for value in parameters.get("fossil_ids", []))
@@ -289,7 +289,7 @@ def _life_target_text(context: Mapping[str, Any]) -> str:
     target = _mapping(context.get("target", {}), "target")
     labels = _mapping(target.get("labels", {}), "target labels")
     value = labels.get("IncreasedLife:1")
-    return f"здоровье T1 ({value})" if isinstance(value, str) else "здоровье T1"
+    return f"Life T1 ({value})" if isinstance(value, str) else "Life T1"
 
 
 def _stage_meaning(identifier: str, name: str) -> str:
