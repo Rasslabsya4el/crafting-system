@@ -183,3 +183,9 @@ projection as a transition state or turn threshold100 into the user's minimum re
 Single-threshold IDs stay stable; comparison IDs include their stopping threshold. Rejected:
 one scalar value/cost ratio, dropping all but the cheapest helmet policy, and a global cache
 whose result could survive changed pool weights. Risk remains distinct from overspending.
+
+The real bow baseline exposed constant utility100 as99.99999999999999 for one mechanism
+and100 for another. Center the conditional weighted mean on one observed utility before
+summing differences: constant values then remain exactly constant. Do not invent a risk/
+cost/utility comparison epsilon that could hide genuine small differences. This bounded
+integration correction belongs to the frontier spec, not a general numerical refactor.

@@ -4,6 +4,14 @@ Dispatch ONLY after GOAL steps1-6 and required helmet CLI are merged/green.
 Worktree `.worktrees/stretch-frontier`, branch `w-stretch-frontier`.
 Allowed `src/craftoracle/frontier.py`, `tests/test_frontier.py`, `src/craftoracle/cli.py`,
 `tests/test_plan_cli.py`, README frontier usage paragraph. Budget20minutes, no refactor.
+One bounded integration correction is also authorized in `src/craftoracle/policies.py`:
+the conditional utility mean currently evaluates a constant100 as99.99999999999999 for some
+distributions and100 for others, which would invent Pareto improvements. In
+`_conditional_expected_utility` center the weighted mean on the first selected utility:
+`anchor + fsum(mass * (utility-anchor)) / selected_mass`. This preserves exact constant
+utility and does not apply an arbitrary tolerance to genuine utility/risk/cost differences.
+Regression in test_frontier.py must cover unequal masses with all accepted utilities100.
+No other policy implementation change is authorized.
 Accepted engine result contract is a dict ranked/unavailable/assumptions, with JSON-ready
 policy records. Use its optional caller-owned distribution_cache for repeated thresholds.
 
@@ -51,6 +59,14 @@ raw-distribution calls to verify the second threshold reuses the first computati
 Test single-threshold IDs remain backward compatible and malformed/lower/criteria thresholds
 return the normal CLI input error. Keep full suite below a minute; do not duplicate expensive
 same-input evaluations merely to assert formatting.
+
+Lead baseline from accepted engine, read2026-09-21 (model predictions, invented inputs):
+AlchemyScour threshold60:p0.0053171974267639515,mean187.568999463238,p90=431.5,
+conditionalutility62.636099876666925; threshold100:p0.00008640408995079098,
+mean11573.026213510517,p90=26647.5,conditionalutility100 (within float rounding).
+With the constant-utility correction, expected real comparison frontier IDs are
+alchemy-scour@60,magic-regal-exalt@60,alchemy-scour@100. All12 reachable records stay visible.
+This is an acceptance baseline from our model, not external evidence of game probabilities.
 
 ## Report
 Focused tests, real bow probabilities/costs/utilities, nondominated IDs, same-distribution
