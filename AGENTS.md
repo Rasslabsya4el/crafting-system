@@ -41,6 +41,8 @@ learn, decide or leave unfinished must be findable in the docs without asking yo
 - You may download Craft of Exile's public files ONCE each and cache them under `sources/raw/coe/` (gitignored) to READ them:
   how each crafting action is implemented, which numbers it uses, what its guides say. Polite fetching only: one request per
   file, a pause between requests, no loops against the site, no automation of its UI at scale, never in a test or a benchmark.
+  Its calculator runs in the visitor's browser: for VALIDATION you may execute the cached files offline (zero load on the
+  site), or, failing that, enter a dozen cases by hand-like browser actions in one session. That is cross-checking, not copying.
 - You do NOT copy their code or their compiled data files into `src/` or `data/`. You read, understand, write a fact sheet
   that cites the place you learned it from, and implement it yourself in Python. Game facts (weights, tiers, tags) come from
   the datamined sources; where only Craft of Exile has a number (harvest weights, mod-count distributions), it is recorded as

@@ -15,12 +15,17 @@ and the most valuable blocked families need their questions answered.
 
 ## Order of work
 
-1. **External validation pack** `docs/validation/coe_cases.md`: 12 cases on real pools (helmet, body armour, ring, amulet,
-   boots; Chaos, Alchemy, essence, Exalted on a prepared item, Alteration / Regal), each with OUR exact number and the exact
-   inputs to click in Craft of Exile's calculator, and an empty column for its number (the owner fills 3-5 of them by hand; do
-   not automate the site). If the cached code lets you reproduce Craft of Exile's formula offline for a case, add that number
-   too and explain any relative difference above 5% (Q14) -- two correction rounds at most, then record and move on.
-2. **The owner's question sheet** `docs/OWNER_QUESTIONS.md`: at most 15 yes / no (or one-number) questions, ordered by how
+1. **External validation pack** `docs/validation/coe_cases.md`, produced by YOU, not by the owner: 12 cases on real pools
+   (helmet, body armour, ring, amulet, boots; Chaos, Alchemy, essence, Exalted on a prepared item, Alteration / Regal), each
+   with OUR exact number next to Craft of Exile's number. Craft of Exile computes in the visitor's browser, so its number can
+   be obtained with ZERO load on its server: run the CACHED `package.js` + data files offline (Node, or a headless browser
+   opening a local page that loads the cached files) and call its calculator functions for the same inputs. Only if that
+   proves impossible within two correction rounds: open the live site in a browser session ONCE and enter the 12 cases there
+   (a dozen client-side calculations is not "automation at scale"; no loops, no scraping of pages beyond what is cached).
+   Explain every relative difference above 5% (Q14), then record and move on. Running their code for this private check is
+   allowed; copying it into `src/` or `data/` is still not.
+2. **The owner's question sheet** `docs/OWNER_QUESTIONS.md` (the lead already wrote a first version from your open
+   questions -- correct its wording where he misread you, keep his order, add what is missing): at most 15 yes / no (or one-number) questions, ordered by how
    much each unblocks: harvest reforges with metamods first, then fossils, fracturing, veiled mods, eldritch implicits,
    recombinators, Awakener's Orb. Per row: the question, what it unblocks, what you will assume if there is no answer. Tell the
    owner in chat that the sheet exists. Do NOT wait for the answers.
