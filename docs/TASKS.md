@@ -3,7 +3,7 @@
 ## GOAL 2 — trusted numbers and optimised policies
 
 - [~] Owner-unblocked Harvest tagged reforges and protected-half helmet policy; preserve full-prefix recovery cost.
-- [~] Complete S14 metamod matrix as data and tests: 33 actions x 4 columns = 132 cells.
+- [x] Complete S14 metamod matrix as data and tests (`614c9c3`): 33 actions x 4 columns = 132 cells, 33 notes, 10 passing tests.
 - [ ] Record answered source gates: rare counts, multimod, essence rarity boundary and extra Harvest tags.
 - [ ] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots; explain deviations above 5% (Q14).
 - [ ] Correct the 15-row owner question sheet without re-asking answered questions.

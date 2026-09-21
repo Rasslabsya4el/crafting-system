@@ -22,8 +22,10 @@ contract so a later policy can correctly price failed full-prefix reforges.
    Never infer universal current validity from source table cells. Reject unknown tags/modes,
    empty tagged pool, no available slot, bad RNG, bad labels and invalid items explicitly.
 3. Supported tags: fire,cold,lightning,physical,life,defence,chaos,attack,caster,speed,critical,
-   minion,elemental,attribute,mana (S42 and owner row3). Match literal PoB modTags; do not
-   synthesize tags. Store tags, model selection and source/confidence metadata in harvest.json.
+   minion,elemental,attribute,mana (S42 and owner row3). Match literal PoB modTags, except the
+   public spelling `defence` maps explicitly to PoB `defences` (ModExplicit.lua:115+,
+   IncreasedEnergyShield1..8). Test a real defence draw has eligible mods. Do not synthesize
+   tags. Store the mapping, tags, model selection and source/confidence metadata in harvest.json.
 4. Exact terminal OutcomeClass distribution retains group identity internally across the
    forced and ordinary draws. May enumerate each forced mod and call accepted draw_distribution
    for the rest; share equivalent computations where needed. Never continue an ordinary

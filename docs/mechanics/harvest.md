@@ -17,6 +17,8 @@ Speed/Critical and additional Minion/Elemental/Attribute/Mana/Drop reforges usin
 Minion/Elemental/Attribute/Mana availability in the endgame loadout is owner-confirmed
 (OWNER_QUESTIONS row 3). Their example price is owner-provisional, equal to the chosen
 Sacred-lifeforce add/remove placeholder. Drop is not enabled by that answer.
+Public recipe spelling `defence` maps to literal PoB `defences`; this is a label translation,
+not a generated-tag rule (PoB ModExplicit.lua:115+, IncreasedEnergyShield1..8, read 2026-09-21).
 S3's modern-toggle augment rejects full items and requires a legal tagged addition plus a
 removable old modifier (2707-2708,2342-2344). Remaining item flags are Q9.
 
