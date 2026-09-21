@@ -64,6 +64,13 @@ and have separate Mirage acquisition conditions. These displayed effect descript
 not establish exact stat-magnitude rounding or every internal tag mapping.
 Full rendered text cached at `sources/raw/research/wiki-catalyst-2026-09-21.txt`.
 
+Lead-derived policy arithmetic from S47 (2026-09-21): at ilvl86, increment mean
+1.4066471503830453; P(+1)=0.5933528496169547, P(+2)=0.40664715038304533. Repeatedly apply
+the same type from quality0 to20, clipping at20. A backward finite recurrence on quality
+states gives expected14.423723570517014 applications and exact p90 of16. At quality19,
+one application certainly reaches20. These are formula-derived results, not player tests.
+With price c, expected spend is14.423723570517014*c and p90 spend16*c; the price is an input.
+
 Sources: S46 https://www.poewiki.net/index.php?title=Catalyst&oldid=1675910;
 S47 https://www.poewiki.net/index.php?title=Quality&oldid=1673652, Amount/Effect on items;
 S3 package.js:2318-2325. Read 2026-09-20.
