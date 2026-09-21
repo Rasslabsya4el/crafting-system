@@ -36,13 +36,15 @@ policy has no attack/caster restriction, so that uncertainty does not change its
 
 ## In progress and bounded backlog
 
-At most two workers. Current:template-optimizer (correction1 complete, final validation/report).
+At most two workers. Current:template-optimizer (final correction2) and catalyst-quality-policy
+(Terra high, independent model/actions/quality files; CLI handoff only after optimizer merge).
 Fracture identity accepted d348533:74 lead tests0.074minute; real Envy finish
 .06101200110346221/30classes,627 of10000 seeded hits, identity loss0, Divine Life9
 value132 retained. Paid fracture policy follows optimizer; Harvest/fossil fracture inputs
 remain explicitly unsupported.
-Optimizer's measured means match the lead references; final acceptance of terminal-stage
-distributions, legal bench candidates and complete grid/level reporting is next.
+Optimizer's measured means match the lead references. Final corrections cover an omitted
+incomplete-level row, unreachable stages, threshold-specific search metadata and small
+optimizer fixtures; the two-round limit then requires acceptance or an explicit gate.
 Conditional attempt kernel accepted0f012a1:10 tests; exact hand means21.5/22,
 independent true p90 fixtures44/45/97 with seeded DKW intervals containing each.
 Ordinary fossil adapter accepted0de86dd:43 focused tests,18 supported fossils,93 real entries/
