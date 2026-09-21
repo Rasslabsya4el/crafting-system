@@ -153,3 +153,18 @@ Report estimated p90 with a99% DKW quantile interval, sample count and seed. Nev
 mean attempt cost by geometric p90 or silently label sampled p90 exact. Ordinary fixed-price
 loops and affordable independent-chain convolutions retain exact quantiles. This is GOAL's
 permitted labelled estimation for an infeasible exact calculation, not a different policy.
+
+## D17 — 2026-09-21 — Provable bench finish and bounded Divine stretch
+The protected helmet policy's final prefix identity is known (Life9); only suffix junk is lost.
+A compatible ordinary prefix bench craft can therefore be proved legal by excluding every
+possible suffix group, without pretending the terminal class contains full item identities.
+Offer an additional bench131 armour variant with sourced recipe2chaos (S2 benchcosts2775b52
+tier index2, S3 currency index2, S4 range56..74 matching S11 index131). Keep the unbench-finished
+policy because the target itself needs no armour craft. Reject guessed finishes on spam results.
+
+Focused cached-source lookup on2026-09-21 took under15minutes and addressed this one required
+finish quantity plus Divine's existing range sampler, not a Phase0 re-audit. Stretch family
+selection is ordinary Divine: existing sheet already sources integer rerolls. Implement one
+integer range per affix with side locks, explicit unsupported shapes and an enumeration limit;
+do not infer all numeric stat semantics or add a general parser. New spec records75 real
+Life9/Chaos6 outcomes and hand event2/15. Other special families remain question-ID stubs.
