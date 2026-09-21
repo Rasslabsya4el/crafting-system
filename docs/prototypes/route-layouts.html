@@ -206,15 +206,15 @@
       },
       states: {
         freshBase: ["empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто"],
-        preparation: ["muted|произвольный, не life T1", "empty|пусто", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
-        protected: ["muted|произвольный, не life T1", "crafted|Suffixes Cannot Be Changed", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
-        scoured: ["empty|пусто", "empty|пусто", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
-        miss1: ["muted|произвольный, не цель", "empty|пусто", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
-        miss2: ["muted|произвольный, не цель", "muted|произвольный, не цель", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
-        finished1: ["required|+(130–144) к максимуму здоровья · T1", "empty|пусто", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
-        finished2: ["muted|произвольный, не цель", "required|+(130–144) к максимуму здоровья · T1", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
-        finished3: ["muted|произвольный, не цель", "muted|произвольный, не цель", "required|+(130–144) к максимуму здоровья · T1", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
-        failed: ["muted|произвольный, не цель", "muted|произвольный, не цель", "muted|произвольный, не цель", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"]
+        preparation: ["muted|произвольный, не life T1", "empty|пусто", "empty|пусто", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"],
+        protected: ["muted|произвольный, не life T1", "crafted|Suffixes Cannot Be Changed", "empty|пусто", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"],
+        scoured: ["empty|пусто", "empty|пусто", "empty|пусто", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"],
+        miss1: ["muted|произвольный, не цель", "empty|пусто", "empty|пусто", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"],
+        miss2: ["muted|произвольный, не цель", "muted|произвольный, не цель", "empty|пусто", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"],
+        finished1: ["required|+(130-144) to maximum Life", "empty|пусто", "empty|пусто", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"],
+        finished2: ["muted|произвольный, не цель", "required|+(130-144) to maximum Life", "empty|пусто", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"],
+        finished3: ["muted|произвольный, не цель", "muted|произвольный, не цель", "required|+(130-144) to maximum Life", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"],
+        failed: ["muted|произвольный, не цель", "muted|произвольный, не цель", "muted|произвольный, не цель", "essence|+(31-35)% to Chaos Resistance", "required|+(46-48)% to Fire Resistance", "required|+(46-48)% to Cold Resistance"]
       },
       steps: [
         { id: "envy", no: "1", action: "Спам Deafening Essence of Envy", chip: "Deafening Essence of Envy · 5,0 chaos-equiv. · выдуманная цена", goal: "Найти <strong>готовую цель</strong> или точную подготовку: заняты все 3 суффикса, есть <strong>2 сопротивления стихиям T1 И Envy chaos</strong>, и не более 1 префикса.", before: "Свежая normal base без аффиксов", after: "Пример подготовки: fire/cold — лишь один допустимый пример двух разных нужных элементов", state: "preparation", outcomes: [
