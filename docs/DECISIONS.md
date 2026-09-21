@@ -127,3 +127,19 @@ A lead spec arithmetic error counted extra tables; corrected BEFORE implementati
 ModExplicit rows: Royal Burgonet level 86 prefix/suffix 41/84, weights 39275/78400.
 Existing duplicate base display names use explicit source occurrence identities (D9), not
 a loader that rejects the accepted snapshot. No earlier accepted projection is re-audited.
+
+## D15 — 2026-09-21 — Terminal projection, concrete policies and input tiers
+Use an exact grouped-draw DP retaining every group's removal effect internally, then project
+to labelled target/scored classes and affix counts only at terminal output. Exchangeable
+groups share side, totalweight and full label-weight histogram; all junk is never pooled into
+a reusable weight. Arbitrary later transitions cannot consume these lossy classes. Fixed
+magic-to-rare schedules keep group state through the full schedule. Sources: GOAL/BRIEF3b
+and mathematical spec 2026-09-21-exact-distributions.md.
+
+Policy designs live in docs/design/night-policies.md. In particular suffix protection requires
+three suffixes and a free prefix, then lock/scour/one-exalt loops to avoid a full-prefix dead
+end. Costs include every paid reset; chain p90 is convolved, never sum of stagequantiles.
+Strict helmet tier IDs are explicit base-qualified source mappings. Greed essence91..105life
+is below ordinary target130..144 and cannot count as T1 success. Envy guarantees ChaosResist6.
+Example utility/price values are invented caller inputs. JSON-compatible YAML avoids an
+extra dependency; unsupported YAML syntax fails clearly. No inferred general tier framework.
