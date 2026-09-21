@@ -13,7 +13,7 @@ import math
 from numbers import Real
 from typing import Any
 
-from craftoracle.policies import evaluate_policies
+from craftoracle.optimizer import optimize_policies as evaluate_policies
 
 
 _METRICS = (
@@ -43,7 +43,14 @@ def pareto_frontier(records: Iterable[Mapping[str, Any]]) -> list[Mapping[str, A
     ]
 
 
-def evaluate_frontier(spec: object, loadout: object, data: object, *, thresholds: Sequence[float] | None = None) -> dict[str, object]:
+def evaluate_frontier(
+    spec: object,
+    loadout: object,
+    data: object,
+    *,
+    thresholds: Sequence[float] | None = None,
+    item_level_range: str | Sequence[int] | None = None,
+) -> dict[str, object]:
     """Evaluate policies and mark their Pareto frontier.
 
     A comparison evaluates each requested utility stopping rule against one
@@ -51,7 +58,7 @@ def evaluate_frontier(spec: object, loadout: object, data: object, *, thresholds
     per threshold rather than modified in place.
     """
     if thresholds is None:
-        return _mark_frontier(evaluate_policies(spec, loadout, data, distribution_cache={}))
+        return _mark_frontier(_evaluate(spec, loadout, data, {}, item_level_range))
 
     parsed_thresholds = _comparison_thresholds(spec, thresholds)
     distribution_cache: dict[object, object] = {}
@@ -59,25 +66,36 @@ def evaluate_frontier(spec: object, loadout: object, data: object, *, thresholds
     combined_unavailable: list[Mapping[str, Any]] = []
     assumptions: list[Any] | None = None
     extras: dict[str, object] | None = None
+    level_search_by_threshold: list[dict[str, object]] = []
 
     for threshold in parsed_thresholds:
         variant_spec = replace(spec, threshold=threshold)
-        result = evaluate_policies(variant_spec, loadout, data, distribution_cache=distribution_cache)
+        result = _evaluate(variant_spec, loadout, data, distribution_cache, item_level_range)
         ranked, unavailable, result_assumptions = _result_records(result)
         if assumptions is None:
             assumptions = list(result_assumptions)
-            extras = {key: value for key, value in result.items() if key not in {"ranked", "unavailable", "assumptions"}}
+            extras = {key: value for key, value in result.items() if key not in {"ranked", "unavailable", "assumptions", "item_level_search"}}
+        if "item_level_search" in result:
+            level_search_by_threshold.append({"threshold": threshold, "search": result["item_level_search"]})
         combined_ranked.extend(_tag_threshold(record, threshold) for record in ranked)
         combined_unavailable.extend(_tag_threshold(record, threshold) for record in unavailable)
 
     combined_ranked.sort(key=lambda record: (*_sort_metrics(record), _record_id(record)))
     combined: dict[str, object] = {
         **({} if extras is None else extras),
+        **({} if not level_search_by_threshold else {"item_level_search_by_threshold": level_search_by_threshold}),
         "ranked": combined_ranked,
         "unavailable": combined_unavailable,
         "assumptions": [] if assumptions is None else assumptions,
     }
     return _mark_frontier(combined)
+
+
+def _evaluate(spec, loadout, data, distribution_cache, item_level_range):
+    arguments = {"distribution_cache": distribution_cache}
+    if item_level_range is not None:
+        arguments["item_level_range"] = item_level_range
+    return evaluate_policies(spec, loadout, data, **arguments)
 
 
 def _mark_frontier(result: Mapping[str, object]) -> dict[str, object]:

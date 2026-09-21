@@ -4,8 +4,11 @@ Worktree: `.worktrees/fracture-essence-policy` (branch `w-fracture-essence-polic
 May touch ONLY `src/craftoracle/fracture_policies.py`, `src/craftoracle/optimizer.py`,
 `src/craftoracle/plan_inputs.py`, `data/loadouts/endgame.json`, `data/prices.example.json`,
 `tests/test_fracture_policies.py`, `tests/test_plan_inputs.py`, `tests/test_plan_cli.py`.
-Dependencies: accepted fractured-item-actions, template optimizer and fossil policy
-integration (shared files). Bounded60minutes; no independent source decisions.
+Dependencies: accepted fractured-item-actions and template optimizer. Core new module/tests
+may run alongside fossil policy; do not edit optimizer.py, plan_inputs.py, the loadout,
+prices or existing CLI/input tests until the lead accepts fossil policy and merges it into
+this worktree. Commit the independent core first; the lead then hands off those shared
+files. Bounded60minutes; no independent source decisions.
 
 ## Why and source
 GOAL2 owner row9 unblocks fracture-then-spam. Read docs/design/family-policies.md's fracture

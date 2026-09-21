@@ -34,7 +34,7 @@ _BASE_ASSUMPTIONS = (
 )
 
 
-def evaluate_policies(
+def evaluate_fixed_policies(
     spec: object,
     loadout: object,
     data: ActionData,
@@ -42,7 +42,7 @@ def evaluate_policies(
     finish_bench_index: int | None = None,
     distribution_cache: MutableMapping[object, dict[OutcomeClass, float]] | None = None,
 ) -> dict[str, object]:
-    """Return ranked available policies and explicit unavailable candidates.
+    """Return the explicit fixed-policy benchmark and unavailable candidates.
 
     ``distribution_cache`` is an optional caller-owned cache of *raw* exact
     stage distributions.  Its keys include all draw-affecting inputs and omit
@@ -88,6 +88,29 @@ def evaluate_policies(
 
     available.sort(key=lambda policy: (policy["expected_cost"], policy["cost_p90"], policy["id"]))
     return _result(available, unavailable, data, getattr(loadout, "unit"))
+
+
+def evaluate_policies(
+    spec: object,
+    loadout: object,
+    data: ActionData,
+    *,
+    finish_bench_index: int | None = None,
+    distribution_cache: MutableMapping[object, dict[OutcomeClass, float]] | None = None,
+) -> dict[str, object]:
+    """Backward-compatible name for the explicit fixed-policy benchmark.
+
+    Production planning imports :func:`craftoracle.optimizer.optimize_policies`.
+    Keeping this wrapper makes benchmark comparisons and older callers explicit
+    without creating an optimizer-to-fixed-evaluator recursion.
+    """
+    return evaluate_fixed_policies(
+        spec,
+        loadout,
+        data,
+        finish_bench_index=finish_bench_index,
+        distribution_cache=distribution_cache,
+    )
 
 
 def _chaos_policy(spec, loadout, data, normal, rare, labels, cache):

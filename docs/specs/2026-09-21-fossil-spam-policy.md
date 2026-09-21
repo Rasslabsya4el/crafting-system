@@ -55,5 +55,13 @@ availability domain; the worker implements its mathematics, not new game facts.
   in one process. These are acceptance references, never insert them as implementation.
 - Report real selected helmet combination, probability, mean/p90, terminal mass1, candidate
   count, plan time and best overall route before/after; report bow60/100 frontier effects.
+- Lead bow reference at23f1cf9, one raw15-combination batch shared across both thresholds
+  (0.4461minute): Scorched13 wins both. Threshold60 p=.012289507645152398,
+  mean162.3751265378136,p90=372.5,terminal utility62.710028255669975; threshold100
+  p=.00020533419675207822,mean9739.877188275668,p90=22426.5,utility100.
+  Initial Alchemy probabilities .005317197426763952 and .00008640408995079099.
+  Raw evidence out/lead-fossil-bow-reference.json. Do not rerun this15-grid batch in
+  every pytest fixture: prove combination search on tiny pools and use a bounded real
+  subset for routine regression; run the complete real plans once for acceptance/report.
 - Run focused tests plus affected input tests. Fixed source adapter tests need no duplicate
   re-audit. Final report starts `=== FINAL REPORT ===`, commits/files, questions/limits.
