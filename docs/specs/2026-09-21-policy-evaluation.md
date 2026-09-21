@@ -27,10 +27,11 @@ them unless lead explicitly authorizes an integration correction. No new game de
    permission must be checked, base cost charged once. No price lookup default0. Missingprices
    reject that candidate with explicit reason or input error. Distinct essences distinct policies.
 4. Candidate (b) first Transmute setup; attempt Alteration, optional Augmentation if1mod, Regal,
-   three Exalted additions. Use scheduled DP (2,1,1),(4,3,3); maps actual labels. Expose intermediate
-   stage cumulative target probabilities for after magic completion, Regal and final six draws
-   (probability of final target at earlier stage can0, do not turn into infinite stage attempts;
-   expected execution count is outer loop1/p). The single cycle target probability determines
+   three Exalted additions. Use scheduled DP (2,1,1),(4,3,3); maps actual labels. For magic completion and Regal, stage probability1 denotes legal completion (the real
+   pool has sufficient groups); the final evaluation stage probability is the target chance.
+   Also expose `target_probability_after_stage` for after magic completion, Regal and final
+   six draws (it can0, never turn that into infinite stage attempts). Every stage execution
+   count is outer loop1/p, not independent 1/intermediate-target-probability. The single cycle target probability determines
    renewal success. Costs use compound_geometric_cost with half augmentation coin, paid failure
    Scour+Transmute. No multiplication of mean trialcost by geometric p90. Under loadout lacking
    one of these actions it is unavailable. No claim optimal or early stopping before cycle end.
