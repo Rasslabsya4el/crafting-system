@@ -66,5 +66,6 @@ all game mechanics. No dependent path may silently guess.
 - [x] Night ordinary action adapters (`51b386f`;15 focused tests; one correction round)
 - [x] Night loop costs exact geometric/chain/compound arithmetic (`8eeee53`;13 focused tests; explicit work limits)
 - [x] Night independent Monte Carlo and p90 cost estimator (`70fcadb`;14 tests, five real pools within stated bounds)
-- [~] Night item specs, invented prices and loadouts (`2026-09-21-plan-inputs.md`; worker running)
+- [x] Night item specs, invented prices and loadouts (`f3cf7c2`;12 tests; two examples and sourced bench finish)
+- [~] Night concrete policies and direct CLI (`2026-09-21-policy-evaluation.md`, `2026-09-21-plan-cli.md`; workers running)
 - [ ] Night Monte Carlo, loop costs, inputs, real policy templates and CLI (GOAL order; specs being prepared)

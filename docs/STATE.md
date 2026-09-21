@@ -9,7 +9,7 @@
 5. Royal Burgonet86 has 41 eligible prefixes / 84 suffixes, weights39275/78400.
 6. Model Chaos target chance is0.0000242820884551; Deafening Envy0.00259406068444.
 7. Ordinary actions (51b386f,15 tests) and exact loop costs (8eeee53,13 tests) are merged.
-8. MC is merged (70fcadb,14 tests); input worker is running; policies and CLI next.
+8. MC (70fcadb,14 tests) and inputs (f3cf7c2,12 tests) are merged; policies and CLI running.
 9. Source uncertainties are provisionally bounded by GOAL/D14; blocked special families stay out.
 10. The required plan command does not exist yet; do not claim the morning demo is complete.
 
@@ -44,9 +44,9 @@ path is ignored. All subsequent fixture runs must use that setting; no external 
 
 ## Workers / current work
 
-At most two workers: plan-inputs and policy-evaluation in separate ignored worktrees. Budgets
-25/60minutes cover strict inputs and exact multi-stage integration. Policy maths can be written
-against the input spec; accepted input code must be integrated before final policy tests. No individual
+At most two workers: policy-evaluation and plan-cli in separate ignored worktrees. Budgets
+60/25minutes cover exact multi-stage integration and direct CLI. Accepted inputs are integrated
+into the policy worktree; CLI starts against its documented JSON-ready result contract. No individual
 command may exceed10minutes. Item-model, exact-distributions, actions and cost trees were accepted
 and removed without force. Initial item worker's service429 retry succeeded; no duplicate worker
 was launched. Dependent policy and CLI work waits for merged APIs.
@@ -57,8 +57,8 @@ completion of one task is not a stopping condition. Corrections capped at two pe
 
 ## Next three actions
 
-1. Accept validated item/price/loadout inputs.
-2. Delegate the policy evaluator, then CLI integration against its concrete API.
+1. Accept the real policy evaluator and its exact/estimated cost evidence.
+2. Integrate and accept the CLI against the real policy module.
 3. Evaluate the designed real policies, wire direct module CLI, validate the helmet and bow,
    then execute the stretch list; record final ten-line morning summary and full-suite timing.
 
