@@ -2,7 +2,9 @@
 
 Read 2026-09-20 from S3, frozen `sources/raw/coe/package.js`, SHA-256 in SOURCES.md. This is
 `reimplemented-from-CoE` evidence, not a proof that every branch matches the current game.
-No downloaded JavaScript was executed. All function names and line numbers refer to this cache.
+The initial2026-09-20 review did not execute JavaScript. On2026-09-21 the GOAL2 offline
+validation executed cached unchanged functions; see validation/coe_cases.md for twelve
+cases and limits. All function names and line numbers refer to this cache.
 
 ## Calculator paths actually reviewed
 
@@ -84,7 +86,8 @@ The reviewed CoE calculator centers on one requested target and returns aggregat
 Our stage calculators instead retain an outcome distribution, then apply a target predicate or
 utility threshold. See D7 and `docs/design/build_contract.md`. Exact enumeration must keep
 all legal outcome mass, including undesirable outcomes; it cannot only enumerate successful
-combinations and claim that is the whole distribution. No calculator has been implemented yet.
+combinations and claim that is the whole distribution. This requirement preceded the
+accepted GOAL1 grouped calculator; the source note describes its design constraint.
 
 Synthetic independent entries A/B/C with weights 1/1/2 and no group conflicts:
 two sequential draws without replacement give unordered outcomes AB=1/6, AC=5/12, BC=5/12
@@ -122,5 +125,6 @@ poec_simOutputResultsTbl 3435-3485, poec_sortByActions 3486. Confidence:
 
 Q28 records both cost-display limitations. Our later policy implementation must retain complete
 resource/cost totals and distributions, charge replacement starting inputs, and distinguish
-success-conditioned terminal utility from unconditional outcomes. None of CoE's code is executed
-or copied; these findings constrain our own specifications.
+success-conditioned terminal utility from unconditional outcomes. This initial prose review
+did not execute CoE code; the later offline pack does. No CoE implementation is copied into
+our production modules; these findings constrain our own specifications.

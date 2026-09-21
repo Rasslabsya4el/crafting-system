@@ -5,7 +5,7 @@
 - [x] Owner-unblocked Harvest: adapter `527efa7`; protected-half helmet policy `55c8191` (39 focused tests), exact mean2703.61 with full-prefix recovery cost.
 - [x] Complete S14 metamod matrix as data and tests (`614c9c3`): 33 actions x 4 columns = 132 cells, 33 notes, 10 passing tests.
 - [x] Record answered source gates: rare counts, multimod and essence rarity boundary (`ffcf869`); fifteen Harvest tags/prices in loadout (`55c8191`).
-- [ ] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots; explain deviations above 5% (Q14).
+- [x] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots (`3712602`; docs/validation/coe_cases.md):25 correspondences, max difference2.08735%, none above5%. Broader Q14 proof stays separate.
 - [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
 - [x] Correct the 15-row owner question sheet without re-asking answered questions (`ffcf869`; S63-S79 and owner answers).
 - [~] Expose and optimise template parameters; design/specs `0ae6f5b`/`47d98af`; finite attempt-kernel worker active. Baseline8357.19; legal fixed k2 measurement4693.13, k3 with paid restart4787.90.
@@ -13,7 +13,7 @@
 - [ ] Verify bow distribution/threshold/frontier path after new policies.
 - [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
 - [x] Locate matching recombinator Reddit/diagram chain S66-S69 and document classic and selected-mod modes separately (`ffcf869`); current exact odds remain open.
-- [ ] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy.
+- [~] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy: Harvest55c8191; ordinary fossil adapter worker active; fracture/catalyst specs ready.
 - [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
 
 ## Phase 0 -- knowledge harvest

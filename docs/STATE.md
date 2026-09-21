@@ -6,7 +6,7 @@
 4. Its exact mean2703.61 and estimated p90 5987 [5808,6185] include repeated locks and paid restarts.
 5. Best helmet remains Envy: mean1927.48, p90 4435, at invented example prices.
 6. Metamod matrix has132 cells/33 notes; base projection561 records/548 names, seven classes.
-7. Twelve cached-CoE cases reproduced; largest relative difference2.08735%; final correction acceptance in progress.
+7. Twelve cached-CoE cases accepted3712602;25 correspondences, max relative difference2.08735%, none above5%.
 8. Optimizer pending: protected k1 baseline8357.19; legal fixed k2 measurement4693.13, k3 paid-reset4787.90.
 9. General solver pending: no state-count/runtime/optimum result exists yet; bow recheck follows optimizer.
 10. Next: accept12-case report; accept attempt kernel and optimize templates; run bounded solver/family policies.
@@ -23,8 +23,7 @@ python -m pytest -q
 Latest focused lead acceptance:39 Harvest/policy/input/CLI tests passed in0.54minute
 on55c8191. Accepted Harvest adapter:26 tests, exact Life9=.07950823245417578,
 820/10000 seeded samples within Hoeffding .019494746, zero suffix violations.
-No new full-suite result is claimed yet: previous accepted full baseline248 tests in
-0.84minute atd332f60. Full source-tool tests require the ignored local snapshots;
+Full main regression at3712602:285 passed in49.74s (0.83minute). Full source-tool tests require the ignored local snapshots;
 worker focused tests do not require unrelated snapshots. Pytest temp stays in .pytest_tmp.
 
 Source research is now S1-S79. Fifteen owner rows corrected inffcf869; no owner test is
@@ -35,8 +34,8 @@ policy has no attack/caster restriction, so that uncertainty does not change its
 
 ## In progress and bounded backlog
 
-At most two workers. Current:policy-attempt-kernel; offline-coe-validation has returned
-correction1 for acceptance. Ordinary fossil adapter is next available independent slice.
+At most two workers. Current:policy-attempt-kernel and ordinary-fossil-distributions.
+Offline validation and Harvest policy are accepted; their clean worktrees were removed.
 Specs ready:template optimizer, bounded solver, ordinary fossils, concrete fracture identity,
 and catalyst quality finishing. New family policy specs follow their accepted adapters.
 No background CPU job or unbounded wait is left. Worker scope at most90minutes; individual
