@@ -1,5 +1,20 @@
 # Tasks (`[x]` done + commit, `[~]` in progress, `[ ]` not started, `[!]` blocked + question id; never delete, strike with a reason)
 
+## GOAL 2 — trusted numbers and optimised policies
+
+- [~] Owner-unblocked Harvest tagged reforges and protected-half helmet policy; preserve full-prefix recovery cost.
+- [~] Complete S14 metamod matrix as data and tests: 33 actions x 4 columns = 132 cells.
+- [ ] Record answered source gates: rare counts, multimod, essence rarity boundary and extra Harvest tags.
+- [ ] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots; explain deviations above 5% (Q14).
+- [ ] Correct the 15-row owner question sheet without re-asking answered questions.
+- [ ] Expose and optimise template parameters; report protected-life expected cost before/after.
+- [ ] Bounded general solver experiment on helmet and three hand optima; report states/time and result or measured failure.
+- [ ] Verify bow distribution/threshold/frontier path after new policies.
+- [ ] Timeboxed research for owner rows 2,6,7,9,10,12,13,14; apply the latest instruction to use CoE fossil stacking.
+- [ ] Locate the owner's recombinator Reddit/diagram source and document classic and selected-mod modes separately.
+- [ ] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy.
+- [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
+
 ## Phase 0 -- knowledge harvest
 
 Exit review completed in 68dd82d. Completed research tasks below do not certify unsupported

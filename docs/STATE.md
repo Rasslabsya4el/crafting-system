@@ -1,6 +1,16 @@
 # State — 2026-09-21
 
-## Morning summary — GOAL and all three stretch tasks complete
+## Active work — GOAL 2
+
+Goal 1 and its three stretch tasks are accepted below; GOAL 2 is active and not yet achieved.
+Priority: implement owner-unblocked Harvest and the full 132-cell CoE metamod matrix, then
+12 offline CoE validation cases, template optimisation, and the bounded solver experiment.
+Owner answers are in OWNER_QUESTIONS.md; official GGG behaviour statements are authoritative.
+Research runs alongside at most two workers, with a 30-minute ceiling per requested question.
+Current next three actions: accept the full matrix extraction; implement tagged Harvest
+distributions and a legal protected-half policy; run offline CoE validation on five classes.
+
+## Accepted baseline — GOAL 1 and all three stretch tasks complete
 
 1. Target is ordinary PoE 3.29; owner reconfirmed Q3. Phase 0 and the night goal are complete.
 2. The helmet CLI runs from the repository root and prints 9 ranked policies with stages and decisions.
