@@ -83,3 +83,10 @@ Bound on Minion+Aura, base100, gives1000. S3/S4 default sums matching positive t
 10+10 ->2000. D21/latest owner instruction chooses the latter as CoE-derived, while preserving
 the disagreement. Neither result is relabelled datamined. The lead subsequently traced both ordinary hybrid fossils against unchanged cached JS;
 Corroded/Prismatic are accepted. Genuinely special recipes remain separate.
+
+## Q31 — Owner approval of the crafting instruction layout
+
+Q31 (layout approval, separate from mechanic truth): which view should become the main
+crafting output:1 step cards,2 transition map,3 execution guide, or1+2? Status: owner
+review pending. Concrete preview:docs/prototypes/route-layouts.html; contract in
+docs/design/route-layout-proposals.md. This does not block preparing the proposals.

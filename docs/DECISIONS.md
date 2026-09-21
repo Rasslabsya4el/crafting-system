@@ -260,3 +260,23 @@ the offline CoE comparison, with revision/time and scope visible. Tests establis
 implementation behavior, not empirical whole-route game odds. See design/route-report.md.
 Rejected: screenshots of a claimed green summary, manually typed demonstration prices/
 probabilities, a framework/server requirement or a dashboard that hides unsupported routes.
+
+## D25 — 2026-09-21 — Approve a state-and-transition layout before integration
+
+Owner requests visible3-prefix/3-suffix states, action purpose, successful results,
+stop/skip/retry branches and event-conditioned odds. Prepare three standalone views of
+the SAME saved protected Envy route: step cards, directed map and manual execution
+guide. Use historical02bceff output and sourced slot/metamod behavior; do not rerun
+craft calculations or change strategies. Recommended composition: main cards plus a
+compact map. Selection is the owner's design approval(Q31), not a crafting truth gate.
+
+Preparation follows the actual selected gate(all3 suffixes occupied,2 desired elemental
+T1 suffixes, at most1 prefix), not the owner's illustrative empty-suffix sketch. Early
+target completion takes precedence.6.7% belongs to the whole up-to3 Exalt series;
+no per-sphere conditional odds are invented.
+
+Evidence distinguishes whole-route validation, same-base component checks and global
+regressions. C01..C03 use the helmet but do not validate the entire route; C04..C12 are
+other-base engine cases. The latter belong in a separate collapsed section. Do not
+expand policy coverage while output is under review. Currency artwork is deferred;
+text action chips suffice to choose layout. No external skills used.

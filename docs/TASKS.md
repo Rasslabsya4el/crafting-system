@@ -2,6 +2,14 @@
 
 ## GOAL 2 — trusted numbers and optimised policies
 
+- [~] Owner layout review (`549ac70` spec, D25): three visual proposals for the saved
+  protected Envy route,6 affix slots, event odds, skips/retries and evidence scope.
+  No new crafting calculations; selection pendingQ31 before production integration.
+- [ ] AfterQ31 approval, apply the selected layout to production report and distinguish
+  selected-route/same-base component evidence from global engine cases.
+- [ ] Later: expand multi-action strategy discovery beyond the current template library;
+  owner explicitly defers this until output is readable. Keep current source gates intact.
+
 - [x] Owner-facing route report: standalone Russian HTML with every route's steps, conditions,
   mean material costs, probability conditioning and raw results (`3ea7424`, `c77414e`, `ecdde54`).
   Dark theme/one decimal;12 helmet/14 bow routes, all26 material totals reconcile.
