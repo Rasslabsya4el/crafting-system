@@ -107,7 +107,9 @@ so the best helmet policy is unchanged. The utility bow is explicitly outside th
 Life9/Chaos6/elemental8 helmet template. Sources and derivation:
 `../mechanics/fracturing.md`, `../mechanics/essences.md`, `../design/family-policies.md`.
 
-Both family policies are merged. The integrated full-suite runtime is the final check.
+Both family policies are merged. The integrated394-test suite is green in1.036minute;
+the remaining acceptance task narrows one expensive cache-mutation test fixture, retaining
+its real production path and hand-checkable numbers, before measuring the suite again.
 
 ## Quality finishing
 
