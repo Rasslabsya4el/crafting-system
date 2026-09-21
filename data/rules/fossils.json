@@ -26,5 +26,5 @@
     {"id": 22, "name": "Deft", "positive": {"critical": "10"}, "negative": {"attribute": "0"}},
     {"id": 23, "name": "Opulent", "positive": {"drop": "10"}, "negative": {}, "untagged_factor": "0"}
   ],
-  "excluded_special_ids": [16, 17, 18, 19, 20, 24, 25]
+  "excluded_special_ids": [18, 19, 20]
 }
