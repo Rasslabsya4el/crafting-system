@@ -39,6 +39,8 @@ class ItemState:
     mirrored: bool = False
     split: bool = False
     fractured_mod_id: str | None = None
+    quality: int = 0
+    catalyst_type: str | None = None
 
 
 @dataclass(frozen=True)
