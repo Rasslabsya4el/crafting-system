@@ -46,7 +46,7 @@ all game mechanics. No dependent path may silently guess.
 ## Phase 1 -- engine core
 
 - [~] Item model and mod-pool resolver (`d07a1b5` ordinary slice accepted; Q16/Q17 provisionally bounded by GOAL/D14; full model still out of scope)
-- [~] Ordinary action distributions and deterministic transitions (`51b386f`); special families explicitly blocked; bounded Divine remains stretch
+- [x] Ordinary action distributions and deterministic transitions (`51b386f`); bounded Divine value API (`d332f60`); unsupported value shapes and special families remain explicit
 - [x] Ordinary exact stage outcome distributions (`4ee0641`,`51b386f`); predicates/thresholds reduce the same distribution (`f3cf7c2`); unsupported families remain explicit
 - [x] Exact geometric/chain/compound loop costs and p90 (`8eeee53`), bounded estimated p90 fallback (`70fcadb`); hand fixtures, no Q28 display shortcuts
 - [x] Monte Carlo agrees with exact over five real pools (`70fcadb`); seed, sample counts and error bounds explicit
@@ -72,4 +72,7 @@ all game mechanics. No dependent path may silently guess.
 - [x] Night core integration umbrella: GOAL1-6 merged (`d344054`,`0acb192`);187 main tests in0.71minute, mandatory helmet command succeeds
 - [x] Night stretch1:41 individually collected hand-computed cases (`8ac207c`,41 passed), indexed in docs/research/known-answers.md
 - [x] Night stretch2: Pareto membership and two bow stopping thresholds over shared raw distributions (`242091f`,33 affected tests, full244 green)
-- [~] Night stretch3: bounded Divine integer rerolls with side locks (`specs/2026-09-21-divine-values.md`); selected unblocked family, D17
+- [x] Night stretch3: bounded Divine integer rerolls with side locks (`d332f60`,4 tests;75/225 outcomes,event2/15); selected unblocked family, D17
+
+- [x] Owner worker-model update (`7748e73`): lead selects Terra reasoning; GPT-5.6 Luna for very light tasks with lead-selected reasoning
+- [x] Final GOAL acceptance: core plus all three stretch tasks complete (`d332f60`);248 tests in0.84minutes; commands and ten-line morning summary in STATE.md
