@@ -60,15 +60,23 @@ def optimize_policies(
     results: list[dict[str, object]] = []
     evaluated_levels: list[int] = []
     started = time.monotonic()
+    deadline = started + _LEVEL_SEARCH_WORK_SECONDS
     incomplete_levels: list[int] = []
     for index, level in enumerate(levels):
-        if item_level_range is not None and time.monotonic() - started > _LEVEL_SEARCH_WORK_SECONDS:
+        if item_level_range is not None and time.monotonic() >= deadline:
             incomplete_levels = levels[index:]
             break
         results.append(_optimize_one_level(
-            _with_item_level(spec, level), loadout, data, cache, finish_bench_index
+            _with_item_level(spec, level), loadout, data, cache, finish_bench_index,
+            deadline=deadline if item_level_range is not None else None,
         ))
         evaluated_levels.append(level)
+    incomplete_grid = any(
+        isinstance(row.get("optimization_status"), Mapping)
+        and row["optimization_status"].get("complete") is False
+        for result in results
+        for row in result["unavailable"]
+    )
     merged = _merge_level_results(results)
     merged["item_level_search"] = {
         "requested_interval": list(requested_interval),
@@ -85,15 +93,20 @@ def optimize_policies(
         ],
         "distinct_pool_count": distinct_pool_count,
         "base_price_assumption": "The supplied base price is held constant at every allowed item level.",
-        "complete": not incomplete_levels,
+        "complete": not incomplete_levels and not incomplete_grid,
         "uncomputed_item_levels": incomplete_levels,
     }
-    if incomplete_levels:
+    if incomplete_levels or incomplete_grid:
         for policy in merged["ranked"]:
             policy["item_level_search_status"] = "incomplete"
+        detail = (
+            f"stopped after {len(evaluated_levels)}/{len(levels)} distinct pools"
+            if incomplete_levels
+            else "contains an incomplete per-level parameter grid"
+        )
         merged["assumptions"] = [
             *merged["assumptions"],
-            f"Item-level search stopped after {len(evaluated_levels)}/{len(levels)} distinct pools; displayed rows are not interval optima.",
+            f"Item-level search {detail}; displayed rows are not interval optima.",
         ]
     merged["assumptions"] = [
         *merged["assumptions"],
@@ -133,6 +146,8 @@ def _optimize_one_level(
     data: ActionData,
     cache: MutableMapping[object, object],
     finish_bench_index: int | None,
+    *,
+    deadline: float | None = None,
 ) -> dict[str, object]:
     # Production keeps only ordinary fixed templates.  The legacy fixed
     # magic/protected p90 calculations are benchmarks and would otherwise be
@@ -146,7 +161,7 @@ def _optimize_one_level(
 
     for candidate in (
         _optimized_chaos(spec, loadout, data, cache),
-        _optimized_magic(spec, loadout, data, cache),
+        _optimized_magic(spec, loadout, data, cache, deadline=deadline),
         _optimized_protected(spec, loadout, data, cache),
         _optimized_harvest(spec, loadout, data, cache),
     ):
@@ -212,19 +227,40 @@ def _optimized_chaos(spec: object, loadout: object, data: ActionData, cache: Mut
     alchemy = _fixed._action_distribution(cache, data, "alchemy", normal, labels)
     chaos = _fixed._action_distribution(cache, data, "chaos", rare, labels)
     a, p = _fixed._success_probability(spec, alchemy), _fixed._success_probability(spec, chaos)
+    parameter_rows = [
+        {
+            "item_level": getattr(spec, "item_level"),
+            "alchemy_early_stop": early_stop,
+            **_bench_target_parameters(spec, loadout, data),
+        }
+        for early_stop in (False, True)
+    ]
     if p == 0:
-        return _fixed._unavailable(policy_id, name, ["target is unreachable from the Chaos trial distribution"])
+        blocked = _fixed._unavailable(policy_id, name, ["target is unreachable from the Chaos trial distribution"])
+        blocked["candidate_count"] = len(parameter_rows)
+        blocked["parameter_audit"] = [
+            {"parameters": parameters, "unavailable_reason": "target probability is zero"}
+            for parameters in parameter_rows
+        ]
+        return blocked
 
     candidates: list[dict[str, object]] = []
-    for early_stop in (False, True):
-        mean = _fixed._base_cost(loadout) + prices["alchemy"] + (1 - a if early_stop else 1) * prices["chaos"] / p
+    for parameters in parameter_rows:
+        early_stop = bool(parameters["alchemy_early_stop"])
+        mean = _chaos_mean(
+            a,
+            p,
+            _fixed._base_cost(loadout) + prices["alchemy"],
+            prices["chaos"],
+            early_stop,
+        )
         p90 = _chaos_p90(
             a if early_stop else 0.0,
             p,
             _fixed._base_cost(loadout) + prices["alchemy"],
             prices["chaos"],
         )
-        candidates.append({"parameters": {"item_level": getattr(spec, "item_level"), "alchemy_early_stop": early_stop, **_bench_target_parameters(spec, loadout, data)}, "mean": mean, "p90": p90})
+        candidates.append({"parameters": parameters, "mean": mean, "p90": p90})
     selected = min(candidates, key=lambda row: (float(row["mean"]), float(row["p90"]), str(row["parameters"])))
     early_stop = bool(selected["parameters"]["alchemy_early_stop"])
     final = _mix_completion_distributions(spec,
@@ -251,6 +287,17 @@ def _optimized_chaos(spec: object, loadout: object, data: ActionData, cache: Mut
     return _attach_search(policy, selected, candidates)
 
 
+def _chaos_mean(
+    alchemy_success: float,
+    chaos_success: float,
+    setup: float,
+    chaos_price: float,
+    early_stop: bool,
+) -> float:
+    """Exact mean for the selected Alchemy/conditional-Chaos rule."""
+    return setup + (1 - alchemy_success if early_stop else 1) * chaos_price / chaos_success
+
+
 def _chaos_p90(alchemy_success: float, chaos_success: float, setup: float, chaos_price: float) -> float:
     if alchemy_success >= 0.9:
         return setup
@@ -261,7 +308,14 @@ def _chaos_p90(alchemy_success: float, chaos_success: float, setup: float, chaos
     return setup + draws * chaos_price
 
 
-def _optimized_magic(spec: object, loadout: object, data: ActionData, cache: MutableMapping[object, object]) -> dict[str, object]:
+def _optimized_magic(
+    spec: object,
+    loadout: object,
+    data: ActionData,
+    cache: MutableMapping[object, object],
+    *,
+    deadline: float | None = None,
+) -> dict[str, object]:
     policy_id = "magic-regal-exalt"
     name = "Magic, Regal, and bounded Exalt schedule"
     currencies = ("transmute", "alteration", "augmentation", "regal", "exalted", "scour")
@@ -280,12 +334,13 @@ def _optimized_magic(spec: object, loadout: object, data: ActionData, cache: Mut
     candidates: list[dict[str, object]] = []
     audit: list[dict[str, object]] = []
     started = time.monotonic()
+    work_deadline = min(started + _MAGIC_WORK_SECONDS, deadline) if deadline is not None else started + _MAGIC_WORK_SECONDS
     total = 2 * 3 * 4 * 4
     for early_stop in (False, True):
         for magic_gate in range(3):
             for regal_gate in range(4):
                 for exalts in range(4):
-                    if time.monotonic() - started > _MAGIC_WORK_SECONDS:
+                    if time.monotonic() >= work_deadline:
                         blocked = _fixed._unavailable(
                             policy_id,
                             name,
@@ -350,7 +405,7 @@ def _optimized_magic(spec: object, loadout: object, data: ActionData, cache: Mut
     selected = min(tied, key=lambda row: (float(row["mean"]), float(row["p90"]), str(row["parameters"])))
     schedule = selected["schedule"]
     assert hasattr(schedule, "success_by_stage")
-    terminal = _normalized_distribution(_merge_distributions(schedule.success_by_stage))
+    terminal = _magic_terminal_distribution(schedule)
     stages = _magic_policy_stages(schedule, selected, prices, spec, labels, cache, loadout, data, scenario.entries, desired)
     policy = _fixed._policy(
         spec,
@@ -434,22 +489,26 @@ def _magic_policy_stages(schedule, selected, prices, spec, labels, cache, loadou
         *(None,) * exalts,
     )
     stage_specs = ((2, 1, 1), (1, 3, 3), *((1, 3, 3),) * exalts)
-    stage_distributions = [
-        _magic_prefix_distribution(
+    reached = _reached_stage_indices(schedule)
+    stage_distributions = {
+        index: _magic_prefix_distribution(
             cache, entries, labels, desired, stage_specs, gates, spec,
             bool(parameters["early_stop"]), index,
         )
-        for index in range(len(stage_specs))
-    ]
+        for index in reached
+    }
     transmute = _fixed._action_distribution(cache, data, "transmute", _fixed._item(spec, "normal"), labels)
-    stages = [
-        _fixed._stage("transmute setup/reset", 1, attempts, ("transmute",), ("First Transmute is setup; every failed attempt pays Scour then Transmute.",), transmute),
-        _fixed._stage("magic two-mod gate", schedule.stage_reach_probabilities[0], attempts * schedule.stage_reach_probabilities[0], ("alteration", "augmentation?"), (f"Keep only states with at least {parameters['magic_min_desired']} desired labels unless the selected early stop completes the target.",), stage_distributions[0]),
-        _fixed._stage("Regal gate", schedule.stage_reach_probabilities[1], attempts * schedule.stage_reach_probabilities[1], ("regal",), (f"Keep only states with at least {parameters['regal_min_desired']} desired labels unless the selected early stop completes the target.",), stage_distributions[1]),
-    ]
+    stages = [_fixed._stage("transmute setup/reset", 1, attempts, ("transmute",), ("First Transmute is setup; every failed attempt pays Scour then Transmute.",), transmute)]
+    if 0 in stage_distributions:
+        stages.append(_fixed._stage("magic two-mod gate", schedule.stage_reach_probabilities[0], attempts * schedule.stage_reach_probabilities[0], ("alteration", "augmentation?"), (f"Keep only states with at least {parameters['magic_min_desired']} desired labels unless the selected early stop completes the target.",), stage_distributions[0]))
+    if 1 in stage_distributions:
+        stages.append(_fixed._stage("Regal gate", schedule.stage_reach_probabilities[1], attempts * schedule.stage_reach_probabilities[1], ("regal",), (f"Keep only states with at least {parameters['regal_min_desired']} desired labels unless the selected early stop completes the target.",), stage_distributions[1]))
     for index in range(exalts):
-        reaches = schedule.stage_reach_probabilities[index + 2]
-        stages.append(_fixed._stage(f"Exalt {index + 1}", reaches, attempts * reaches, ("exalted",), ("Stop when the selected rule permits; otherwise continue only while an Exalt remains.",), stage_distributions[index + 2]))
+        stage_index = index + 2
+        if stage_index not in stage_distributions:
+            continue
+        reaches = schedule.stage_reach_probabilities[stage_index]
+        stages.append(_fixed._stage(f"Exalt {index + 1}", reaches, attempts * reaches, ("exalted",), ("Stop when the selected rule permits; otherwise continue only while an Exalt remains.",), stage_distributions[stage_index]))
     return stages
 
 
@@ -467,6 +526,15 @@ def _magic_prefix_distribution(cache, entries, labels, desired, stages, gates, s
     return _normalized_distribution(_merge_distributions((
         prefix_schedule.success_by_stage[-1], prefix_schedule.failure_by_stage[-1],
     )))
+
+
+def _magic_terminal_distribution(schedule) -> dict[OutcomeClass, float]:
+    """Return only accepted schedule terminals, normalized for a retry policy."""
+    return _normalized_distribution(_merge_distributions(schedule.success_by_stage))
+
+
+def _reached_stage_indices(schedule) -> tuple[int, ...]:
+    return tuple(index for index, mass in enumerate(schedule.stage_reach_probabilities) if mass > 0)
 
 
 def _optimized_protected(spec: object, loadout: object, data: ActionData, cache: MutableMapping[object, object]) -> dict[str, object]:
@@ -850,9 +918,19 @@ def _optimized_bench_finish(spec, loadout, data, cache, requested_index):
         raise AssertionError("bench candidate retained a non-one-prefix terminal state")
     result = _fixed._protected_bench_policy(spec, loadout, data, protected, index)
     if "reasons" not in result:
+        bench_price, price_reason = _fixed._bench_price(loadout, index)
+        if price_reason is not None or bench_price is None:
+            raise AssertionError("available bench finish must have a quoted bench price")
         result["parameters"] = dict(protected["parameters"])
         result["candidate_count"] = len(audit)
-        result["parameter_audit"] = audit
+        result["parameter_audit"] = [
+            {
+                **row,
+                **({"expected_cost": float(row["expected_cost"]) + bench_price}
+                   if "expected_cost" in row else {}),
+            }
+            for row in audit
+        ]
         result["steps"] = [f"Selected parameters: {_parameter_text(result['parameters'])}.", *result["steps"]]
     return result
 
@@ -1015,6 +1093,7 @@ def _merge_level_results(results: Sequence[Mapping[str, object]]) -> dict[str, o
         for row in result["unavailable"]:
             unavailable[row["id"]].append(dict(row))
     selected: list[dict[str, object]] = []
+    incomplete_ids: set[str] = set()
     for identifier, rows in available.items():
         incomplete = [
             row for row in unavailable.get(identifier, [])
@@ -1028,6 +1107,7 @@ def _merge_level_results(results: Sequence[Mapping[str, object]]) -> dict[str, o
                 "item-level search is incomplete for this template; no cross-level optimum is reported",
             ]
             unavailable[identifier] = [blocked]
+            incomplete_ids.add(identifier)
             continue
         winner = min(rows, key=lambda row: (row["expected_cost"], row["cost_p90"], repr(row.get("parameters", {}))))
         audits = [entry for row in rows for entry in row.get("parameter_audit", [])]
@@ -1037,7 +1117,10 @@ def _merge_level_results(results: Sequence[Mapping[str, object]]) -> dict[str, o
         if skipped:
             winner["unavailable_level_rows"] = skipped
         selected.append(winner)
-    blocked = [rows[0] for identifier, rows in unavailable.items() if identifier not in available]
+    blocked = [
+        rows[0] for identifier, rows in unavailable.items()
+        if identifier not in available or identifier in incomplete_ids
+    ]
     selected.sort(key=lambda row: (row["expected_cost"], row["cost_p90"], row["id"]))
     blocked.sort(key=lambda row: row["id"])
     first = results[0]

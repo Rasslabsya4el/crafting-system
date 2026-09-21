@@ -14,8 +14,11 @@ from craftoracle.item_model import ItemState, ModRef
 from craftoracle.plan_inputs import load_loadout, load_spec
 from craftoracle.policies import (
     _conditional_distribution,
+    _chaos_policy,
     _harvest_distribution,
     _harvest_suffix_representatives,
+    _item,
+    _labels,
     _selected_mass,
     _success_probability,
     evaluate_policies,
@@ -360,12 +363,14 @@ def test_cache_key_changes_when_action_rules_change(action_data: ActionData) -> 
     rules["rare_count_weights"] = dict(action_data.rules["rare_count_weights"])
     mutable_data = ActionData(action_data.bases, action_data.mods, action_data.bench, action_data.essences, rules)
     cache: dict = {}
-    first = evaluate_policies(HelmetSpec(), _loadout(), mutable_data, distribution_cache=cache)
+    spec = HelmetSpec()
+    labels = _labels(spec)
+    first = _chaos_policy(spec, _loadout(), mutable_data, _item(spec, "normal"), _item(spec, "rare"), labels, cache)
     rules["rare_count_weights"] = {"4": 1, "5": 1, "6": 10}
-    second = evaluate_policies(HelmetSpec(), _loadout(), mutable_data, distribution_cache=cache)
+    second = _chaos_policy(spec, _loadout(), mutable_data, _item(spec, "normal"), _item(spec, "rare"), labels, cache)
 
-    assert _stage(_policy(first, "chaos-spam"), "chaos trial")["probability"] != pytest.approx(
-        _stage(_policy(second, "chaos-spam"), "chaos trial")["probability"]
+    assert _stage(first, "chaos trial")["probability"] != pytest.approx(
+        _stage(second, "chaos trial")["probability"]
     )
 
 

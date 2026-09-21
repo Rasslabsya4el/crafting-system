@@ -66,6 +66,7 @@ def evaluate_frontier(
     combined_unavailable: list[Mapping[str, Any]] = []
     assumptions: list[Any] | None = None
     extras: dict[str, object] | None = None
+    level_search_by_threshold: list[dict[str, object]] = []
 
     for threshold in parsed_thresholds:
         variant_spec = replace(spec, threshold=threshold)
@@ -73,13 +74,16 @@ def evaluate_frontier(
         ranked, unavailable, result_assumptions = _result_records(result)
         if assumptions is None:
             assumptions = list(result_assumptions)
-            extras = {key: value for key, value in result.items() if key not in {"ranked", "unavailable", "assumptions"}}
+            extras = {key: value for key, value in result.items() if key not in {"ranked", "unavailable", "assumptions", "item_level_search"}}
+        if "item_level_search" in result:
+            level_search_by_threshold.append({"threshold": threshold, "search": result["item_level_search"]})
         combined_ranked.extend(_tag_threshold(record, threshold) for record in ranked)
         combined_unavailable.extend(_tag_threshold(record, threshold) for record in unavailable)
 
     combined_ranked.sort(key=lambda record: (*_sort_metrics(record), _record_id(record)))
     combined: dict[str, object] = {
         **({} if extras is None else extras),
+        **({} if not level_search_by_threshold else {"item_level_search_by_threshold": level_search_by_threshold}),
         "ranked": combined_ranked,
         "unavailable": combined_unavailable,
         "assumptions": [] if assumptions is None else assumptions,

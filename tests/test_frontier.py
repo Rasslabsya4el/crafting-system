@@ -219,6 +219,30 @@ def test_evaluate_frontier_keeps_single_threshold_ids(monkeypatch: pytest.Monkey
     assert "stopping_threshold" not in result["ranked"][0]
 
 
+def test_threshold_sweep_keeps_each_item_level_search_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_evaluate_policies(spec, loadout, data, *, distribution_cache, item_level_range):
+        return {
+            "ranked": [_record("spam", 4, 8, 22 / 3)],
+            "unavailable": [],
+            "assumptions": ["fixture"],
+            "item_level_search": {
+                "requested_interval": list(item_level_range),
+                "complete": spec.threshold == 6,
+            },
+        }
+
+    monkeypatch.setattr("craftoracle.frontier.evaluate_policies", fake_evaluate_policies)
+    result = evaluate_frontier(
+        _UtilitySpec({"value": {1: 10}}, 6), object(), object(),
+        thresholds=(6, 10), item_level_range=(10, 20),
+    )
+
+    assert result["item_level_search_by_threshold"] == [
+        {"threshold": 6.0, "search": {"requested_interval": [10, 20], "complete": True}},
+        {"threshold": 10.0, "search": {"requested_interval": [10, 20], "complete": False}},
+    ]
+
+
 @dataclass(frozen=True)
 class _ConstantUtilitySpec:
     value_table: dict[str, dict[int, float]]

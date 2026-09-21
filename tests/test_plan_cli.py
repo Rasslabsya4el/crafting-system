@@ -264,6 +264,8 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
     assert bench["parameters"]["max_exalts"] == 1
     assert bench["parameters"]["preparation_early_stop"] is False
     assert all(row["prefixes"] == 2 for row in bench["terminal_distribution"])
+    selected_bench_audit = next(row for row in bench["parameter_audit"] if row["parameters"] == bench["parameters"])
+    assert selected_bench_audit["expected_cost"] == pytest.approx(bench["expected_cost"])
     for policy in document["ranked"]:
         assert math.isfinite(policy["expected_cost"])
         assert math.isfinite(policy["cost_p90"])
