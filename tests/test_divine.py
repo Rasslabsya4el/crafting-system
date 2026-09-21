@@ -124,6 +124,15 @@ def test_real_ranges_locks_and_no_ranged_value(real_data: ActionData) -> None:
     assert {outcome.values[0][1] for outcome in locked_prefix_distribution} == {132}
     assert {outcome.values[1][1] for outcome in locked_prefix_distribution} == set(range(31, 36))
 
+    fractured_life = RolledItem(
+        ItemState("Royal Burgonet", 86, "rare", (life, chaos), fractured=True, fractured_mod_id=life.id),
+        ((life.id, 132), (chaos.id, 31)),
+    )
+    fractured_life_distribution = divine_distribution(fractured_life, real_data)
+    assert len(fractured_life_distribution) == 5
+    assert {outcome.values[0][1] for outcome in fractured_life_distribution} == {132}
+    assert {outcome.values[1][1] for outcome in fractured_life_distribution} == set(range(31, 36))
+
     suffix_lock = _ref("bench:729", "Prefix", "ItemGenerationCannotChangeSuffixes")
     locked_suffixes = RolledItem(ItemState("Royal Burgonet", 86, "rare", (life, chaos, suffix_lock)), (
         (life.id, 130), (chaos.id, 31),
@@ -181,9 +190,14 @@ def test_validation_boundaries_and_large_sampling() -> None:
     ))
     with pytest.raises(ValueError, match="source-item order"):
         divine_distribution(RolledItem(two_range_item, (("Second", 1), ("Range", 10))), two_ranges)
-    for flag in ("corrupted", "influenced", "fractured", "synthesised", "mirrored", "split"):
+    for flag in ("corrupted", "influenced", "synthesised", "mirrored", "split"):
         with pytest.raises(NotImplementedError, match=r"^out of tonight's slice: Q9$"):
             divine_distribution(RolledItem(ItemState("Base", 1, "rare", (_ref("Range", "Prefix", "Range"),), **{flag: True}), (("Range", 10),)), data)
+
+    fractured_item = ItemState("Base", 1, "rare", (_ref("Range", "Prefix", "Range"),), fractured=True, fractured_mod_id="Range")
+    fractured = RolledItem(fractured_item, (("Range", 10),))
+    assert divine_distribution(fractured, data) == {fractured: 1.0}
+    assert apply_divine(fractured, data, rng=random.Random(20260921)) == fractured
 
     for stat_text in (
         ["+(1.5-2.5) to Value"],

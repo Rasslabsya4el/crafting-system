@@ -6,6 +6,7 @@ affix_generation.md, bench_metamods.md, and essences.md.
 
 from __future__ import annotations
 
+import random
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ import pytest
 from craftoracle.actions import (
     ActionData,
     action_distribution,
+    apply_roll,
     bench_item,
     load_action_data,
     prepare_roll,
@@ -181,10 +183,64 @@ def test_additions_and_removals_respect_full_sides_and_attack_lock(synthetic: Ac
     assert all("attack" in outcome.labels for outcome in annul)
 
 
-@pytest.mark.parametrize("flag", ("corrupted", "influenced", "fractured", "synthesised", "mirrored", "split"))
+@pytest.mark.parametrize("flag", ("corrupted", "influenced", "synthesised", "mirrored", "split"))
 def test_q9_flags_are_rejected_by_actions(synthetic: ActionData, flag: str) -> None:
     with pytest.raises(NotImplementedError, match=r"^out of tonight's slice: Q9$"):
         action_distribution("transmute", ItemState("Base", 1, "normal", **{flag: True}), synthetic)
+
+
+def test_fractured_basic_actions_retain_identity_and_reject_malformed_state(synthetic: ActionData) -> None:
+    fractured = ItemState("Base", 1, "rare", (
+        ref("A", "Prefix", "A"), ref("B", "Suffix", "B"), ref("C", "Prefix", "C"), ref("E", "Suffix", "E"),
+    ), fractured=True, fractured_mod_id="A")
+    chaos = prepare_roll("chaos", fractured, synthetic, {"A": "fracture"})
+    assert chaos.draw_counts == ((3, 8), (4, 3), (5, 1))
+    assert chaos.initial_prefixes == 1
+    assert chaos.initial_suffixes == 0
+    assert chaos.blocked_groups == ("A",)
+    assert chaos.initial_labels == ("fracture",)
+
+    scoured = scour_item(fractured, synthetic)
+    assert scoured.rarity == "magic"
+    assert scoured.mods == (ref("A", "Prefix", "A"),)
+    assert scoured.fractured is True
+    assert scoured.fractured_mod_id == "A"
+
+    annul = action_distribution("annul", fractured, synthetic, {"A": "fracture", "B": "B", "C": "C", "E": "E"})
+    assert all("fracture" in outcome.labels for outcome in annul)
+    assert sum(1 for outcome in annul if "B" not in outcome.labels) == 1
+    assert all(mass == pytest.approx(1 / 3) for mass in annul.values())
+
+    magic = ItemState("Base", 1, "magic", (ref("A", "Prefix", "A"),), fractured=True, fractured_mod_id="A")
+    augmented = apply_roll("augmentation", magic, synthetic, rng=random.Random(1))
+    regaled = apply_roll("regal", augmented, synthetic, rng=random.Random(2))
+    assert augmented.fractured_mod_id == regaled.fractured_mod_id == "A"
+    assert augmented.rarity == "magic"
+    assert len(augmented.mods) == 2
+    assert len(regaled.mods) == 3
+    assert all(mod.group != "A" for mod in augmented.mods[1:])
+    assert regaled.rarity == "rare"
+
+    locked = bench_item(
+        ItemState("Base", 1, "rare", (ref("A", "Prefix", "A"), ref("C", "Prefix", "C")), fractured=True, fractured_mod_id="A"),
+        synthetic,
+        728,
+    )
+    assert locked.fractured_mod_id == "A"
+    assert prepare_roll("chaos", locked, synthetic).retained == (ref("A", "Prefix", "A"), ref("C", "Prefix", "C"))
+    assert scour_item(locked, synthetic).mods == (ref("A", "Prefix", "A"), ref("C", "Prefix", "C"))
+
+    with pytest.raises(ValueError, match="requires fractured=True"):
+        action_distribution("chaos", ItemState("Base", 1, "rare", (ref("A", "Prefix", "A"),), fractured_mod_id="A"), synthetic)
+    with pytest.raises(NotImplementedError, match="Q9"):
+        action_distribution("chaos", ItemState("Base", 1, "rare", (ref("A", "Prefix", "A"),), fractured=True), synthetic)
+    with pytest.raises(ValueError, match="exactly once"):
+        action_distribution("chaos", ItemState("Base", 1, "rare", (ref("A", "Prefix", "A"), ref("A", "Prefix", "A")), fractured=True, fractured_mod_id="A"), synthetic)
+    bench_fracture = ItemState("Base", 1, "rare", (ref("bench:728", "Suffix", "ItemGenerationCannotChangePrefixes"),), fractured=True, fractured_mod_id="bench:728")
+    with pytest.raises(ValueError, match="ordinary explicit"):
+        action_distribution("chaos", bench_fracture, synthetic)
+    with pytest.raises(ValueError, match="ModRef"):
+        action_distribution("chaos", ItemState("Base", 1, "rare", (object(),), fractured=True, fractured_mod_id="A"), synthetic)  # type: ignore[arg-type]
 
 
 def test_essence_tier_cap_and_metamod_rules(synthetic: ActionData) -> None:

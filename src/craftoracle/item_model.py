@@ -38,6 +38,7 @@ class ItemState:
     synthesised: bool = False
     mirrored: bool = False
     split: bool = False
+    fractured_mod_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -111,8 +112,9 @@ def resolve_pool(
     side: str | None = None,
 ) -> tuple[PoolEntry, ...]:
     """Return ordered, positive ordinary-explicit candidates for an item state."""
-    if any((item.corrupted, item.influenced, item.fractured, item.synthesised, item.mirrored, item.split)):
+    if any((item.corrupted, item.influenced, item.synthesised, item.mirrored, item.split)):
         raise NotImplementedError(_Q9_ERROR)
+    _validate_fractured_metadata(item)
     if item.rarity not in _RARITY_CAPS:
         raise ValueError(f"invalid rarity: {item.rarity}")
     if side is not None and side not in _SIDES:
@@ -125,6 +127,7 @@ def resolve_pool(
         raise ValueError(f"malformed base row for {item.base_name}: tags must be an object")
     active_tags = {tag for tag, enabled in tags.items() if isinstance(tag, str) and enabled is True}
     _validate_existing_mods(item, mod_rows)
+    _validate_fractured_identity(item, mod_rows)
     cap = _RARITY_CAPS[item.rarity]
     counts = {candidate_side: sum(mod.type == candidate_side for mod in item.mods) for candidate_side in _SIDES}
     excluded_groups = {mod.group for mod in item.mods}
@@ -214,6 +217,32 @@ def _validate_existing_mods(item: ItemState, mod_rows: dict[str, dict]) -> None:
     for side, count in counts.items():
         if count > cap:
             raise ValueError(f"existing {side} mods exceed {item.rarity} side cap")
+
+
+def _validate_fractured_metadata(item: ItemState) -> None:
+    """Check the bounded concrete-fracture representation at pool entry."""
+    if any(not isinstance(mod, ModRef) for mod in item.mods):
+        raise ValueError("existing modifiers must be ModRef values")
+    if not item.fractured:
+        if item.fractured_mod_id is not None:
+            raise ValueError("fractured_mod_id requires fractured=True")
+        return
+    if item.fractured_mod_id is None:
+        raise NotImplementedError(_Q9_ERROR)
+    if not isinstance(item.fractured_mod_id, str):
+        raise ValueError("fractured_mod_id must be a string")
+    selected = tuple(mod for mod in item.mods if mod.id == item.fractured_mod_id)
+    if len(selected) != 1:
+        raise ValueError("fractured modifier identity must appear exactly once")
+
+
+def _validate_fractured_identity(item: ItemState, mod_rows: dict[str, dict]) -> None:
+    _validate_fractured_metadata(item)
+    if not item.fractured:
+        return
+    source_path = mod_rows[item.fractured_mod_id].get("source_path")
+    if not isinstance(source_path, str) or not source_path.endswith("ModExplicit.lua"):
+        raise ValueError("fractured modifier must be an ordinary explicit mod")
 
 
 def _validate_mod_row(mod_id: str, row: dict) -> tuple[str, str, int, list[Any], list[Any], str]:
