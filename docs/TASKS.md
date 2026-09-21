@@ -2,9 +2,18 @@
 
 ## GOAL 2 — trusted numbers and optimised policies
 
-- [~] Owner layout review (`549ac70` spec, D25): three visual proposals for the saved
-  protected Envy route,6 affix slots, event odds, skips/retries and evidence scope.
-  No new crafting calculations; selection pendingQ31 before production integration.
+- [x] Three owner layout proposals (`cd8df6c`, spec `549ac70`, D25): saved protected Envy
+  route,4 actions,10 six-slot states, event odds and skip/retry branches. Node syntax
+  and browser paths accepted; no new crafting calculations. Artifact:docs/prototypes/route-layouts.html.
+- [x] ~~Choose A/B/C~~ superseded by owner rejection (D27): the three-view output was
+  too verbose, vague and repetitive. Technical checks do not imply owner approval.
+- [x] Replace rejected prototype with one direct Envy -> bench/Scour -> Exalt flow
+  (`bab7b7d`, lead wording `0e4491d`, spec `a2dc357`,D27).3 steps/2 cards/12 slots;
+  explicit finish/pass/repeat, no before/after duplication, one closed cost/proof block.
+  Browser links and390px checked. Q31 owner readability approval remains pending.
+- [x] English modifier names/stat text throughout project (`f1cbaf8`, `6340fbe`, `9b0ab99`, D26).
+  Rules, prototype and report formatter updated;13 focused tests passed. Saved12/14-route
+  HTML reports refreshed from unchanged plans; probabilities/costs/evidence unchanged.
 - [ ] AfterQ31 approval, apply the selected layout to production report and distinguish
   selected-route/same-base component evidence from global engine cases.
 - [ ] Later: expand multi-action strategy discovery beyond the current template library;

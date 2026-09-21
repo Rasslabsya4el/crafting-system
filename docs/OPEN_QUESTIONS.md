@@ -86,7 +86,10 @@ Corroded/Prismatic are accepted. Genuinely special recipes remain separate.
 
 ## Q31 — Owner approval of the crafting instruction layout
 
-Q31 (layout approval, separate from mechanic truth): which view should become the main
-crafting output:1 step cards,2 transition map,3 execution guide, or1+2? Status: owner
-review pending. Concrete preview:docs/prototypes/route-layouts.html; contract in
-docs/design/route-layout-proposals.md. This does not block preparing the proposals.
+Q31 (layout approval, separate from mechanic truth): status REJECTED first A/B/C
+prototype; revised flow pending review. Owner requires explicit pass/repeat/finish
+conditions, no generic preparation language, no before/after duplication, no long
+explanations. D27 supersedes the earlier format-choice question; do not ask it again.
+Concrete preview:docs/prototypes/route-layouts.html. Revised contract:
+docs/specs/2026-09-21-simple-route-flow.md. Future concise question when appropriate:
+is this instruction format readable enough to apply to the real reports:yes/no?

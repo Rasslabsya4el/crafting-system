@@ -289,3 +289,19 @@ modifier text must come from existing English source labels, never a translation
 Apply to the prototype and current report formatter, and refresh saved presentation
 from existing plan/context/evidence without rerunning craft calculations. Rejected:
 localized modifier descriptions or a Russian-only option for modifier text.
+
+## D27 — 2026-09-21 — Owner rejected the verbose layout; use direct branches
+
+D25's three-view prototype failed owner review despite passing technical checks. The
+owner could not identify what to hit, what passes and what repeats: generic words
+such as preparation/state search and tiny rule subtitles obscured those conditions.
+Repeated before/after item cards also made the flow harder to follow. Technical
+acceptance must not be recorded as product approval.
+
+Replace with ONE compact flow: Envy -> bench plus Scour -> Exalt. Every branch states
+its actual condition and destination. Two item states lie on connecting edges and
+serve as the next step's input; never repeat before/after pairs. Conditional finish
+comes first. Details about costs, assumptions and evidence live in one closed footer.
+Original English modifiers required byD26. No new craft calculations or strategy work.
+Implementation contract:docs/specs/2026-09-21-simple-route-flow.md. Q31 remains output
+review, but the rejected A/B/C format-selection question is superseded.

@@ -1,5 +1,9 @@
 # Route layout proposals — lead design, 2026-09-21
 
+SUPERSEDED PRESENTATION: owner rejected the A/B/C interface as verbose and unclear.
+D27 and docs/specs/2026-09-21-simple-route-flow.md now define the output. The sourced
+recipe and frozen numbers below remain valid inputs; these are not product approval.
+
 Owner requests DESIGN APPROVAL ONLY: compare visual layouts for the existing protected
 Envy helmet route, with affix slots, event goals, transition odds, skips and paid resets.
 Do not rerun planners, Monte Carlo, full tests or CoE. Do not change the recipe or renderer

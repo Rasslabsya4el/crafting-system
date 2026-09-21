@@ -1,75 +1,70 @@
-# Current state — crafting output layout review (2026-09-21)
+# Current state — simplify crafting instructions (2026-09-21)
 
-## Active owner request
+## Owner request and current output
 
-Prepare visual TEMPLATES for approval before production integration. The owner wants
-six visible affix slots, action purpose, desired result, event probabilities and explicit
-stop/skip/retry transitions. Do not run new crafting calculations, simulations or CoE.
-Design:D25 and docs/design/route-layout-proposals.md. Worker spec549ac70:
-docs/specs/2026-09-21-route-layout-prototype.md, Terra/high,30minute bound, one isolated
-worktree .worktrees/route-layout-prototype. Only docs/prototypes/route-layouts.html is
-owned by the worker. Lead owns the recipe interpretation, review and documentation.
+Owner rejected the first three-view prototype: too much prose, vague preparation/state
+labels, important rules in tiny subtitles, duplicate before/after items. Technical QA
+passed but usability failed. D27 supersedes D25 presentation; do not ask for an A/B/C
+choice again. Revised artifact completed: one direct three-step flow, Envy -> bench plus Scour ->
+Exalt. Branches say exactly what finishes, passes or repeats. Two item cards are shared
+results feeding the next step; no before/after pairs. Costs/evidence stay collapsed.
+Contract:docs/specs/2026-09-21-simple-route-flow.md. Q31 is owner readability review.
+Artifact:docs/prototypes/route-layouts.html. Worker66a8c4c/9723cef/bab7b7d; lead0e4491d
+clarifies minimum2 open prefixes. Lead reviewed whole HTML and verified3 steps,2 cards,
+12 slot rows,1 closed disclosure,0 tabs/scripts. Browser links1->2->3->1 pass;390px
+no document overflow,0 script errors. Owner readability approval still pending.
+No new crafting calculations in this task.
 
-Three views of the SAME saved protected Envy helmet route:1 step cards,2 directed
-transition map,3 manual execution guide. Recommended final composition:1 plus a compact2.
-QuestionQ31 asks the owner to choose after inspecting the concrete output. Currency
-artwork and strategy expansion are deferred; no production renderer change is in scope.
+D26: ALL modifier names and stat text remain original English everywhere. Rules
+f1cbaf8; prototype6340fbe; production label formatter9b0ab99 (worker285cc34). Lead
+ran13 existing focused report tests in under0.1minute. Saved12 helmet/14 bow report
+rows refreshed from existing plans/context/evidence; only labels/instructions changed.
+Every other route field and saved plan bytes remained identical.
 
-## Accepted implementation baseline
+## What works and proof
 
-Ordinary PoE3.29 distributions, exact/seeded policy costs, bounded parameter search,
-terminal utility and ranked finite templates work. Production reports have dark theme,
-one decimal,12 helmet routes/14 bow variants, material costs and historical evidence.
-Report implementation02bceff; handover docs8d9da78. Last FULL proof at clean02bceff:
-423 passing tests,0 failures/errors/skips,0.9minute;12 offline CoE component cases,
-maximum relative difference2.08735%. No fresh engine check is claimed during layout work.
+Calculation baseline02bceff: ordinary PoE3.29 distributions, exact/seeded policy costs,
+bounded parameter search, terminal utility and finite template ranking. Last FULL
+proof:423 tests passed in0.9minute;12 offline CoE component cases across5 bases,
+max relative difference2.08735%. This is historical proof, not a new check of the UI.
+Saved reports:out/reports/helmet/index.html and out/reports/bow/index.html. All26 material
+totals agree with saved expected costs. Proof:out/evidence-final/proof.json.
 
-Existing saved reports:out/reports/helmet/index.html and out/reports/bow/index.html.
-Each folder contains plan.json and copied evidence. All26 material totals reconcile.
-Historical proof:out/evidence-final/proof.json. Existing reproduction commands (do not
-run them merely for the current layout task):
+Focused presentation check:
+`python -m pytest -q tests/test_report.py tests/test_report_template.py`
 
-```powershell
-python -m tools.collect_evidence --output-dir out/evidence-final
-python -m craftoracle report examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json --output-dir out/reports/helmet --evidence-dir out/evidence-final
-python -m craftoracle report examples/bow_value_table.yaml --loadout data/loadouts/endgame.json --compare-thresholds 60,100 --output-dir out/reports/bow --evidence-dir out/evidence-final
-```
+Full historical reproduction (DO NOT run for this output-only task):
+`python -m tools.collect_evidence --output-dir out/evidence-final`
+`python -m craftoracle report examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json --output-dir out/reports/helmet --evidence-dir out/evidence-final`
+`python -m craftoracle report examples/bow_value_table.yaml --loadout data/loadouts/endgame.json --compare-thresholds 60,100 --output-dir out/reports/bow --evidence-dir out/evidence-final`
 
-## Facts the new layout must preserve
+## Facts and limits to preserve
 
-Prototype inputs are the02bceff protected Envy route. Preparation:exactly3 suffixes,
-2 desired elemental T1 suffixes and<=1 prefix; finished items stop first. Envy forces
-ChaosResist6 on Helmet (PoB Essence.lua:104). Bench729 occupies a prefix. Protected
-Scour clears all prefixes, including the bench craft. Up to3 Exalts check lifeT1 after
-each; three failed full prefixes return to Envy, not another impossible prefix bench.
+Frozen protected Envy recipe/odds:docs/design/route-layout-proposals.md. Early finish
+wins; passing Envy has3 occupied suffixes (Envy ChaosResist6 plus2 elemental T1), at
+most1 prefix. Bench729 is a prefix; protected Scour clears all prefixes including it.
+Up to3 Exalts check LifeT1 each time; full3 misses reset toEnvy.6.7% is WHOLE-series
+success, not per-Orb chance.98.6% is completed-route share ending duringEnvy, not per-use.
 
-Mean1948.6031719508137/p904450.5 at invented prices; immediate Envy success probability
-.0025940606844434212, preparation-only.0005495684166343902; series success.06674609236085169.
-These are saved values, not new evaluations.6.7% describes the WHOLE Exalt series;
-98.6% is the share of completed routes finishing during Envy, not per-use probability.
+C01..C03 are same-helmet COMPONENT checks; C04..C12 other-base engine regressions.
+None validates the whole protected route. See docs/validation/coe_cases.md.
 
-The owner's other-base CoE concern is valid UX feedback. C01..C03 are helmet component
-checks; C04..C12 are engine cases on other bases. None certifies this whole protected
-route. The prototype separates route scope, same-base examples and collapsed global
-regressions. docs/validation/coe_cases.md holds the exact case scope.
-
-## Remaining boundaries
-
-Finite template library, not a general route discovery engine or proven global optimum.
-The benchmark solver reached100000 states before a full Alchemy row and is parked.
-Price/bow utility are invented; quality supplied; base0 unpriced. D14/Q16/Q17 pool semantics
-remain provisional. Harvest first_only/Q6 sensitivity explicit. Source-dependent gaps:
-recombinationQ21/Q22, Awakener conflictQ20, unequal-tier ConflictQ11, veiledQ12, special
-fossilsQ13, quality/TaintedQ23, selected special eligibility/replacementQ9/Q18/Q19.
+Finite template library, not general arbitrary multi-step discovery/global optimum.
+100000-state benchmark solver is parked. Prices/bow utility invented; quality supplied;
+base0 unpriced. D14/Q16/Q17 pool semantics provisional. Harvest first_only/Q6 sensitivity
+explicit. Source gates:recombinationQ21/Q22, AwakenerQ20, unequal-tier ConflictQ11,
+veiledQ12, special fossilsQ13, quality/TaintedQ23, special eligibilityQ9/Q18/Q19.
 
 ## Next three actions
 
-1. Accept the standalone prototype by full diff, Node syntax and manual browser branches.
-2. Present the three actual views and get a concreteQ31 layout choice.
-3. Implement only the selected production output contract, then revisit strategy breadth.
+1. Receive owner readability feedback on the displayed simplified D27 flow.
+2. Apply the readable output contract to real reports after owner feedback.
+3. Revisit deeper strategy discovery only after the output is readable.
 
-All files/worktrees are inside crafting. No orchestration skills. All earlier workers
-finished and worktrees removed; only the one layout worker is active. No preview server
-is running yet. A temporary localhost preview may be used for browser QA and must stop
-before handover. Durable artifact is the standalone HTML; browser file URLs are blocked
-by the browser tool. Sources and process ledgers:docs/SOURCES.md,docs/WORKERS.md.
+No orchestration skills; all work remains inside crafting. All workers finished and
+their committed worktrees removed without force. Temporary preview server stopped.
+Preview command:
+`python -m http.server 8766 --bind 127.0.0.1 --directory docs/prototypes`
+Browser tool blocks local file URLs; owner can open the standalone HTML directly.
+Loaded inline preview remains interactive after server stops; refresh needs restart.
+Worker ledger:docs/WORKERS.md. Validation:docs/validation/route-layout-prototype.md.
