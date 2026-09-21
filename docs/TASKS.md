@@ -10,14 +10,14 @@
 - [x] Correct the 15-row owner question sheet without re-asking answered questions (`ffcf869`; S63-S79 and owner answers).
 - [x] Conditional attempt kernel and paid-restart costs (`0f012a1`):10 lead tests; means21.5/22; independent exact p90 fixtures44/45/97.
 - [~] Expose and optimise template parameters; optimizer worker active from `0f012a1`. Baseline8357.19; legal fixed k2 mean4693.13, k3 with paid restart4787.90. Independent full gate-grid reference: protected1948.60, Harvest1986.20 (`ce27b44`); planner integration pending.
-- [~] Bounded general solver experiment on helmet and three hand optima; worker active from0de86dd; hard states/edges/time limits in spec.
+- [x] Bounded solver experiment (`b89f775`):11 lead tests, hand optima8/4/4.75; real helmet reaches100000 states in0.23022minute before first Alchemy row completes. Negative result accepted; further graph solving parked, docs/research/solver-experiment.md.
 - [ ] Verify bow distribution/threshold/frontier path after new policies.
 - [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
 - [x] Locate matching recombinator Reddit/diagram chain S66-S69 and document classic and selected-mod modes separately (`ffcf869`); current exact odds remain open.
 - [~] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy: Harvest55c8191; fossil adapter0de86dd; fossil/fracture/catalyst policy specs ready.
 - [x] Ordinary fossil adapter (`0de86dd`):18 supported fossils, additive default/multiplicative sensitivity,43 focused tests;93 real entries/84 classes, seeded common marginal agrees.
 - [ ] Ordinary fossil policy: caller allowlist up to4 fossils/15 combinations, complete resonator pricing and terminal mixture; design/spec `2fc0f9d`.
-- [ ] Concrete fracture identity and retained-mod basic actions; spec `14ce845`; follows fossil adapter.
+- [~] Concrete fracture identity and retained-mod basic actions; worker active from `7ad3e8b`; sourced spec and independent finish p=.06101200110346221 reference.
 - [ ] Fracture-Life then Envy policy with every failed base/preparation paid and two early-stop choices; design/spec `2fc0f9d`.
 - [ ] Catalyst quality distribution and supplied-jewellery finishing policy; spec `7c95d90`; follows fracture state fields.
 - [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
