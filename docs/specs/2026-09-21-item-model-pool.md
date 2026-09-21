@@ -3,7 +3,8 @@
 Worktree: `.worktrees/item-model-pool` (branch `w-item-model-pool`).
 
 You may touch ONLY:
-`src/craftoracle/item_model.py`, `tests/test_item_model.py`.
+`src/craftoracle/item_model.py`, `tests/test_item_model.py`; acceptance correction also permits
+`pytest.ini` and `.gitignore` solely to keep pytest temporary directories under `.pytest_tmp/`.
 
 ## Why
 
@@ -112,3 +113,9 @@ exclusion, side caps, malformed input, ordering, and all Q9 flags. Do not add te
 families. Run `python -m pytest -q tests/test_item_model.py` and report the exact line. Commit
 only the two allowed files. Final report begins `=== FINAL REPORT ===` and includes commits,
 tests, each number above, files, and QUESTIONS FOR THE LEAD.
+
+## Acceptance correction 1
+Reject forged ModRef side/group, duplicate existing groups/IDs, over-cap/normal-with-mods
+states, bool/nonpositive item levels, bool/negative weights. Add input regression tests and
+source pointers in module/tests. Configure pytest --basetemp=.pytest_tmp and ignore that path;
+no tests may create fixtures outside crafting. Lead's first focused run:16 passed.
