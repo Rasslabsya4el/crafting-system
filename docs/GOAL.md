@@ -1,75 +1,55 @@
-# GOAL for the night of 2026-09-20 -> 21 (written by the project lead after reading STATE, TASKS, OPEN_QUESTIONS, WORKERS)
+# GOAL 2 (2026-09-21; written by the project lead after running the helmet plan: 9 policies, 248 tests, goal 1 accepted)
 
-Re-read this file whenever you finish a task, lose track, or feel like stopping. It outranks your own plan for tonight.
+Re-read this file whenever you finish a task, lose track, or feel like stopping. It outranks your own plan.
 
 ## The goal in one sentence
 
-By morning `python -m craftoracle plan examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json` prints a
-ranked table of real crafting policies for the owner's helmet (item level 86: T1 life prefix, T1 chaos resistance and one T1
-elemental resistance suffix) with EXACT stage probabilities, expected cost, 90th-percentile cost, steps and assumptions -- built
-on an engine whose numbers are tested. A VERTICAL SLICE that works end to end beats any amount of further research.
+Turn the working slice into an oracle whose numbers can be TRUSTED and whose policies are OPTIMISED, and line up the blocked
+crafting families so that one sitting of the owner's yes / no answers unblocks them.
 
-Phase 0 is accepted. It was thorough; it also shows your risk: 30 open questions and a habit of re-verifying everything.
-Tonight you BUILD. Research is allowed only when a task below needs one specific number, for at most 15 minutes, recorded as usual.
+What the lead saw in goal 1's output (keep it in mind): the essence-spam number (p = 0.26% per Deafening Envy) is plausible;
+the protected-life route is evaluated with ONE Exalted Orb per "suffixes cannot be changed" cycle, although after the Scour
+three prefixes are open -- a player would slam up to three times per cycle; and the route a player would really use
+(protect suffixes, then a harvest "reforge life") is blocked by Q6. Templates need PARAMETERS and an optimiser over them,
+and the most valuable blocked families need their questions answered.
 
-## Lead's provisional decisions (label them `lead-provisional 2026-09-20` in DECISIONS.md; they unblock the slice, the lead revisits them on Thursday)
+## Order of work
 
-- Q2: probabilities are mathematically exact weighted draws. Craft of Exile's random-integer boundary quirk is an
-  implementation artifact, not a game rule.
-- Q4: a rare reroll yields 4 / 5 / 6 mods with weights 8 / 3 / 1 -- accepted with the label `reimplemented-from-CoE`
-  (it is also the long-standing community figure). It is DATA (a parameter file), never a constant in code; every plan prints
-  it under "assumptions".
-- Q7 and every other price: prices are inputs from the price table / loadout file, not facts. Use the cached bench costs as
-  the example file's defaults and move on.
-- Q9: tonight's engine accepts ONLY normal / magic / rare items that are not corrupted, influenced, fractured, synthesised,
-  mirrored or split. Anything else raises `NotImplementedError("out of tonight's slice: Q9")`.
-- Q16 / Q17: tonight the exclusion family of a mod is PoB's `group`, weights are PoB's `weightVal` by the base's tags;
-  `weightMultiplier` and generated tags are NOT applied unless a fact sheet holds a sourced rule. The demo stays inside the item
-  classes where your cross-check agreed 54 / 54. Printed under "assumptions".
-- Q14: do not try to prove or disprove Craft of Exile's "exact" path tonight. OUR exact calculator is validated against OUR
-  Monte Carlo and against hand-computed tiny pools; agreement with Craft of Exile is a later, separate check.
-- Everything in the families that are blocked by questions (recombinators, Awakener's Orb, harvest, fossils, eldritch
-  currency, corruption, beasts, veiled, fracturing, catalysts) stays OUT tonight: a stub that raises with the question id.
+1. **External validation pack** `docs/validation/coe_cases.md`: 12 cases on real pools (helmet, body armour, ring, amulet,
+   boots; Chaos, Alchemy, essence, Exalted on a prepared item, Alteration / Regal), each with OUR exact number and the exact
+   inputs to click in Craft of Exile's calculator, and an empty column for its number (the owner fills 3-5 of them by hand; do
+   not automate the site). If the cached code lets you reproduce Craft of Exile's formula offline for a case, add that number
+   too and explain any relative difference above 5% (Q14) -- two correction rounds at most, then record and move on.
+2. **The owner's question sheet** `docs/OWNER_QUESTIONS.md`: at most 15 yes / no (or one-number) questions, ordered by how
+   much each unblocks: harvest reforges with metamods first, then fossils, fracturing, veiled mods, eldritch implicits,
+   recombinators, Awakener's Orb. Per row: the question, what it unblocks, what you will assume if there is no answer. Tell the
+   owner in chat that the sheet exists. Do NOT wait for the answers.
+3. **Template parameters + an optimiser**: every template exposes its real choices (Exalted Orbs per protected cycle, the
+   acceptance rule of each stage, which target mod is forced / left to the bench, the base's item level where it changes the
+   pool); a small exhaustive or grid search picks the best instance per template; the plan prints the chosen parameters.
+   Number to report: the protected-life route's expected cost before / after.
+4. **Research test -- a general solver**: value iteration (or policy iteration) over the abstract state space (per target
+   group none / tier class, junk prefix / suffix counts, rarity, crafted and metamod flags) using ONLY the implemented actions
+   and the price table. Accept when, on the helmet and on three tiny synthetic cases with hand-checkable optima, its expected
+   cost matches or beats the best template, and the policy it found prints as readable steps. Report the number of states,
+   the run time, and where it differs from the templates. Two correction rounds; if it does not converge or explodes, park it
+   with the findings -- a negative result with numbers is a result.
+5. **The value-table path end to end** on the bow example (if any part is missing): one outcome distribution per stage, the
+   stop threshold swept over it, the frontier table (expected value, expected cost, 90th-percentile cost per point).
+6. **When the owner's answers arrive**: for each unblocked family, in the sheet's order: update the fact sheet -> spec ->
+   worker -> hand-computed tests + exact-vs-Monte-Carlo -> a template that uses it -> the helmet / bow plans re-run, with the
+   change in the best policy reported.
 
-## Order of work (each line = one spec -> one worker -> your acceptance -> merge -> TASKS / WORKERS rows -> next)
+## DONE when
 
-1. **Item model + mod-pool resolver** for armour / jewellery bases: (base, item level, existing mods) -> legal prefixes and
-   suffixes with weights; level gate, group exclusion, 3 / 3 limits for rares and 1 / 1 for magic. Numbers a test must
-   reproduce: at least 10 spot checks of single-mod weights and pool totals against your own cross-check data.
-2. **Outcome distributions, exact**: Transmutation, Alteration, Augmentation, Regal, Alchemy, Chaos, Exalted, Annulment,
-   Scouring, essences (forced mod + the random rest), bench crafts (deterministic), the metamods "prefixes / suffixes cannot be
-   changed" combined with Scouring and reroll actions. A calculator returns the DISTRIBUTION over outcome classes relevant
-   to a target (BRIEF 3b), by dynamic programming over "target groups vs everything else", not by enumerating every mod set.
-   Tiny synthetic pools (3-5 mods) with hand-computed answers are the first tests.
-3. **Monte Carlo harness** with explicit seeds; it must agree with (2) within its stated sampling error on at least five
-   real-pool cases. Where exact is infeasible, the plan says "estimated" and gives the error.
-4. **Loop costs**: expected attempts, expected cost, 90th-percentile cost of a spam loop (geometric distribution), chaining of
-   independent stages.
-5. **Item spec, price table, loadout files**; the helmet example; the second example with an (invented, marked) value table.
-6. **Policy templates** in this order: (a) one-action spam -- Chaos, Alchemy + Scouring, essence; (b) Alteration ->
-   Augmentation -> Regal -> Exalted / bench; (c) make one half, protect it with a metamod, reroll the other half, finish with a
-   bench craft. Then **the ranker and the CLI**.
-7. Stretch, only after 1-6 are merged and green, in this order: 30+ known-answer tests with sources; the Pareto filter and
-   the value-table threshold (BRIEF 3b) on the bow example; then the cheapest unblocked family from your own catalogue.
-
-## DONE when (all true)
-
-- the command in the first section prints at least three ranked policies for the helmet, each with per-stage probability,
-  expected attempts, expected cost, 90th-percentile cost, steps, decision points and the assumptions used;
-- `python -m pytest -q` is green and under a minute, and contains hand-computed exact cases AND exact-vs-Monte-Carlo cases;
-- `docs/STATE.md`, `TASKS.md`, `WORKERS.md`, `DECISIONS.md` are current, and a morning summary for the owner exists in
-  `docs/STATE.md` (top section, ten lines) and in chat in Russian: what works (commands), the helmet's numbers, what is parked
-  and why, questions that need a yes / no.
-If DONE is reached early, continue down the stretch list; do not stop.
+Items 1-5 are merged and green (`python -m pytest -q` under a minute), `docs/STATE.md` has a ten-line summary on top with the
+numbers of items 3 and 4, everything is committed with explicit paths, and the owner got a short Russian message: what
+changed, the two numbers, the question sheet's path. Item 6 continues whenever answers exist.
 
 ## STOP only when
 
-- DONE is reached and the stretch list has nothing unblocked left; or
-- nothing in the order of work is unblocked (say exactly which question blocks what); or
-- the owner tells you to.
-Never stop because a task "feels finished", because a worker is running (write the next spec meanwhile), or to ask a question
-that has a provisional answer above. A question without a provisional answer: write it to OPEN_QUESTIONS.md, take the most
-conservative option, mark the code path, keep going.
+DONE and no answered question is left to implement; or nothing in the order of work is unblocked (name the blocker); or the
+owner says stop. Never stop because a task "feels finished" or to wait for a worker or for the owner.
 
 ## Token discipline (the owner pays for every one of them)
 
