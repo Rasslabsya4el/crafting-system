@@ -18,6 +18,7 @@ from craftoracle.actions import ActionData, action_distribution, prepare_roll
 from craftoracle.distributions import OutcomeClass, probability
 from craftoracle.fracturing import fracture_distribution
 from craftoracle.item_model import ItemState, ModRef
+import craftoracle.policies as _fixed
 
 
 _ENVY = "Metadata/Items/Currency/CurrencyEssenceEnvy3"
@@ -71,6 +72,7 @@ class FractureLifeDistributions:
 
     preparation_distribution: Mapping[OutcomeClass, float]
     preparation_early_probability: float
+    preparation_full_gate_probability: float
     preparation_probability: float
     fracture_probability: float
     finishing_distribution: Mapping[OutcomeClass, float]
@@ -219,6 +221,7 @@ def fracture_life_distributions(
     early = probability(preparation, getattr(spec, "matches"))
     life_label = labels[_LIFE]
     gate = lambda outcome: outcome.prefixes + outcome.suffixes == 4 and life_label in outcome.labels
+    full_gate = probability(preparation, gate)
     prepared = probability(preparation, lambda outcome: gate(outcome) and not getattr(spec, "matches")(outcome))
 
     demonstration = ItemState(
@@ -236,11 +239,122 @@ def fracture_life_distributions(
     return FractureLifeDistributions(
         preparation,
         early,
+        full_gate,
         prepared,
         fracture,
         finishing,
         probability(finishing, getattr(spec, "matches")),
     )
+
+
+def fracture_life_envy_policy(spec: object, loadout: object, data: ActionData, cache: MutableMapping[object, object]) -> dict[str, object]:
+    """Compare the two documented Alchemy early-completion choices."""
+    policy_id = "fracture-life-envy"
+    name = "Paid Life9 fracture then Deafening Envy"
+    try:
+        _validate_selected_target(spec, data)
+    except (ValueError, NotImplementedError) as error:
+        return _fixed._unavailable(policy_id, name, [str(error)])
+    prices, reasons = _fixed._requirements(
+        loadout, ("alchemy", "scour", "fracturing", "essence"),
+        ("alchemy", "scour", "fracturing", _ENVY), essence_id=_ENVY,
+    )
+    if reasons:
+        return _fixed._unavailable(policy_id, name, reasons)
+    try:
+        distributions = fracture_life_distributions(spec, data, distribution_cache=cache)
+    except (ValueError, NotImplementedError) as error:
+        return _fixed._unavailable(policy_id, name, [str(error)])
+    candidates: list[dict[str, object]] = []
+    for early_stop in (False, True):
+        u = distributions.preparation_early_probability if early_stop else 0.0
+        v = distributions.preparation_probability if early_stop else distributions.preparation_full_gate_probability
+        try:
+            metrics = fracture_life_metrics(
+                u, v, distributions.fracture_probability,
+                distributions.finishing_probability, _fixed._base_cost(loadout), prices["alchemy"],
+                prices["scour"], prices["fracturing"], prices[_ENVY],
+            )
+            estimate = estimate_fracture_life_cost_p90(
+                u, v, distributions.fracture_probability,
+                distributions.finishing_probability, _fixed._base_cost(loadout), prices["alchemy"],
+                prices["scour"], prices["fracturing"], prices[_ENVY],
+            )
+        except ValueError as error:
+            return _fixed._unavailable(policy_id, name, [str(error)])
+        candidates.append({"early_stop": early_stop, "preparation_probability": v, "metrics": metrics, "estimate": estimate})
+    selected = min(candidates, key=lambda row: (row["metrics"].mean_cost, row["estimate"].p90, not row["early_stop"]))
+    u = distributions.preparation_early_probability if selected["early_stop"] else 0.0
+    v = selected["preparation_probability"]
+    z = u + v * distributions.fracture_probability
+    final = _terminal_mixture(
+        spec, distributions.preparation_distribution, u / z,
+        distributions.finishing_distribution, v * distributions.fracture_probability / z,
+    )
+    metrics = selected["metrics"]
+    estimate = selected["estimate"]
+    stages = [
+        _fixed._stage(
+            "Alchemy preparation", v + u, metrics.expected_alchemies,
+            ("alchemy", "scour"),
+            ("Stop on a complete Alchemy outcome." if selected["early_stop"] else "Discard complete Alchemy outcomes until the four-mod Life9 gate.",),
+            distributions.preparation_distribution,
+        ),
+        _fracture_stage(distributions.fracture_probability, metrics.expected_fracturings),
+        _fixed._stage("Deafening Envy finish", distributions.finishing_probability, metrics.expected_envies,
+                      (_ENVY,), ("Envy rerolls non-fractured identities; only retained Life9 continues.",), distributions.finishing_distribution),
+    ]
+    policy = _fixed._policy(
+        spec, loadout, policy_id, name, stages, metrics.mean_cost, estimate.p90,
+        estimate.method, final, ("alchemy", "scour", "fracturing", _ENVY),
+        ("Prepare exactly four ordinary explicits including Life9.", "Fracture uniformly, replacing wrong-fracture items.", "Repeat Deafening Envy after the desired Life9 fracture."),
+        ("Uniform fracture selection is reimplemented-from-CoE; wrong fractures have caller salvage 0.", "Irreversible item-destruction risk is 0; discarded bases are reported separately."),
+    )
+    policy.update({
+        "parameters": {"item_level": 86, "alchemy_early_stop": selected["early_stop"]},
+        "candidate_count": 2,
+        "parameter_audit": [{"parameters": {"item_level": 86, "alchemy_early_stop": row["early_stop"]}, "four_mod_life9": row["preparation_probability"], "expected_cost": row["metrics"].mean_cost, "cost_p90": row["estimate"].p90} for row in candidates],
+        "gates": {"early_completion": u, "four_mod_life9": v, "life9_fracture": distributions.fracture_probability, "envy_finish": distributions.finishing_probability},
+        "expected_action_counts": {"bases": metrics.expected_bases, "alchemy": metrics.expected_alchemies, "scour": metrics.expected_scours, "fracturing": metrics.expected_fracturings, "envy": metrics.expected_envies},
+        "wrong_fracture_risk_per_trial": metrics.wrong_fracture_risk_per_trial,
+        "expected_discarded_bases": metrics.expected_discarded_bases,
+        "irreversible_item_destruction_risk": 0.0,
+        "cost_p90_interval": [estimate.interval_lower, estimate.interval_upper],
+        "cost_sample_count": estimate.samples, "cost_seed": estimate.seed, "cost_error_bound": estimate.dkw_epsilon,
+        "cost_confidence": estimate.confidence,
+        "cost_method_detail": "exact renewal mean; seeded DKW Monte Carlo p90 estimate",
+        "source_confidence": "reimplemented-from-CoE",
+        "sources": ["docs/design/family-policies.md fracture section", "docs/mechanics/fracturing.md uniform CoE 1/n", "docs/mechanics/essences.md Envy rare reroll"],
+    })
+    return policy
+
+
+def _fracture_stage(fracture_probability: float, expected_attempts: float) -> dict[str, object]:
+    """Represent desired/wrong scores without inventing real preparation identities."""
+    return {
+        "name": "uniform Life9 fracture",
+        "probability": fracture_probability,
+        "expected_attempts": expected_attempts,
+        "actions": ["fracturing"],
+        "decisions": ["Set aside every wrong-fracture item at salvage 0 and buy a replacement base."],
+        "attempt_distribution": [
+            {"labels": ["fracture:desired-Life9"], "probability": fracture_probability},
+            {"labels": ["fracture:wrong"], "probability": 1 - fracture_probability},
+        ],
+        "attempt_distribution_condition": "score-only desired/wrong fracture outcomes; preparation affix identities and counts are intentionally not projected",
+    }
+
+
+def _terminal_mixture(spec, first, first_weight, second, second_weight):
+    result: dict[OutcomeClass, float] = {}
+    for distribution, weight in ((first, first_weight), (second, second_weight)):
+        if not weight:
+            continue
+        selected = _fixed._selected_mass(spec, distribution)
+        for outcome, mass in distribution.items():
+            if _fixed._completes(spec, outcome):
+                result[outcome] = result.get(outcome, 0.0) + weight * mass / selected
+    return result
 
 
 def _cached_distribution(cache, action, item, data, labels, *, essence_id=None):

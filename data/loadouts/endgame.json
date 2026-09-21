@@ -29,6 +29,7 @@
     "harvest_reforge:attribute",
     "harvest_reforge:mana",
     "fossil"
+    ,"fracturing"
   ],
   "allowed_fossils": [1, 12, 13, 14],
   "allowed_essences": [

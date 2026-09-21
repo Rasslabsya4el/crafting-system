@@ -18,10 +18,19 @@ from craftoracle.fracture_policies import (
     fracture_life_metrics,
 )
 from craftoracle.item_model import ItemState
-from craftoracle.plan_inputs import load_spec
+from craftoracle.plan_inputs import load_loadout, load_spec
 
 
 ROOT = Path(__file__).parents[1]
+
+
+@pytest.fixture(scope="module")
+def real_inputs():
+    data = load_action_data(ROOT)
+    spec = load_spec(ROOT / "examples/helmet_life_chaos_res.yaml", data.mods)
+    loadout = load_loadout(ROOT / "data/loadouts/endgame.json")
+    cache: dict[object, object] = {}
+    return data, spec, loadout, cache, fracture_life_distributions(spec, data, distribution_cache=cache)
 
 
 def test_hand_case_exact_mean_and_counts_without_early_stop() -> None:
@@ -85,10 +94,8 @@ def test_base_price_scales_by_expected_base_count() -> None:
     assert raised.mean_cost - zero.mean_cost == pytest.approx(28)
 
 
-def test_real_selected_adapter_reproduces_accepted_action_values() -> None:
-    data = load_action_data(ROOT)
-    spec = load_spec(ROOT / "examples/helmet_life_chaos_res.yaml", data.mods)
-    result = fracture_life_distributions(spec, data)
+def test_real_selected_adapter_reproduces_accepted_action_values(real_inputs) -> None:
+    _data, _spec, _loadout, _cache, result = real_inputs
 
     assert result.fracture_probability == pytest.approx(0.25)
     assert result.finishing_probability == pytest.approx(0.06101200110346221)
@@ -104,6 +111,47 @@ def test_adapter_rejects_another_base_without_guessing_tier_mapping() -> None:
 
     with pytest.raises(ValueError, match="ordinary Royal Burgonet86"):
         fracture_life_distributions(spec, data)
+
+
+def test_real_wrapper_reports_both_candidates_counts_and_terminal_mixture(real_inputs) -> None:
+    data, spec, loadout, cache, _distributions = real_inputs
+    policy = fracture_policies.fracture_life_envy_policy(spec, loadout, data, cache)
+
+    audit = {row["parameters"]["alchemy_early_stop"]: row for row in policy["parameter_audit"]}
+    assert audit[False]["four_mod_life9"] == pytest.approx(0.024298372342207553)
+    assert audit[False]["expected_cost"] == pytest.approx(4244.571170153949)
+    assert audit[True]["expected_cost"] == pytest.approx(4227.736691448135)
+    assert policy["parameters"]["alchemy_early_stop"] is True
+    assert policy["expected_action_counts"] == pytest.approx({
+        "bases": 3.988050380133888, "alchemy": 164.0388811447735,
+        "scour": 160.05083076463964, "fracturing": 3.9840671735118507,
+        "envy": 16.324932396315752,
+    })
+    assert sum(row["probability"] for row in policy["terminal_distribution"]) == pytest.approx(1)
+    fracture_stage = policy["stages"][1]
+    assert fracture_stage["probability"] == pytest.approx(0.25)
+    assert sum(row["probability"] for row in fracture_stage["attempt_distribution"]) == pytest.approx(1)
+    assert policy["cost_confidence"] == 0.99
+    assert policy["irreversible_item_destruction_risk"] == 0
+
+
+@pytest.mark.parametrize("missing", ("fracturing", "Metadata/Items/Currency/CurrencyEssenceEnvy3"))
+def test_wrapper_rejects_missing_permission_or_price_before_distribution(
+    monkeypatch: pytest.MonkeyPatch, missing: str
+) -> None:
+    data = load_action_data(ROOT)
+    spec = load_spec(ROOT / "examples/helmet_life_chaos_res.yaml", data.mods)
+    base = load_loadout(ROOT / "data/loadouts/endgame.json")
+    actions = base.allowed_actions - ({"fracturing"} if missing == "fracturing" else set())
+    values = dict(base.values)
+    if missing != "fracturing":
+        values.pop(missing)
+    loadout = replace(base, allowed_actions=frozenset(actions), values=values)
+    monkeypatch.setattr(fracture_policies, "fracture_life_distributions", lambda *_args, **_kwargs: pytest.fail("distribution should not run"))
+
+    policy = fracture_policies.fracture_life_envy_policy(spec, loadout, data, {})
+    assert "reasons" in policy
+    assert any("permit" in reason or "missing price" in reason for reason in policy["reasons"])
 
 
 @pytest.mark.parametrize(

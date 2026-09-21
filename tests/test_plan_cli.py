@@ -248,6 +248,12 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies(tmp_path: Path) -> 
     assert fossil["candidate_count"] == 1
     assert fossil["source"].startswith("data/rules/fossils.json")
     assert fossil["confidence"] == "reimplemented-from-CoE"
+    fracture = policies["fracture-life-envy"]
+    assert fracture["parameters"]["alchemy_early_stop"] is True
+    assert fracture["candidate_count"] == 2
+    assert fracture["expected_cost"] == pytest.approx(4227.736691448135)
+    assert fracture["expected_action_counts"]["fracturing"] == pytest.approx(3.9840671735118507)
+    assert fracture["cost_confidence"] == .99
     harvest = policies["suffix-protected-harvest-life"]
     harvest_stage = next(stage for stage in harvest["stages"] if stage["name"] == "protected Harvest life cycle")
     assert harvest_stage["probability"] > 1 / 13
@@ -316,6 +322,7 @@ def test_real_bow_threshold_comparison_changes_utility_stop_rule(real_bow_compar
     assert {policy["id"] for policy in document["unavailable"]} >= {
         "suffix-protected-life@60", "suffix-protected-harvest-life@60",
         "suffix-protected-life@100", "suffix-protected-harvest-life@100",
+        "fracture-life-envy@60", "fracture-life-envy@100",
     }
 
     policies = {policy["id"]: policy for policy in document["ranked"]}
