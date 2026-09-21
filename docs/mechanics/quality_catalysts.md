@@ -4,6 +4,13 @@ Read 2026-09-20. Confidence: `documented` S46/S47; old increment implementation
 `reimplemented-from-CoE` S3. Quality affects item value as well as later socket/link actions;
 it must not be omitted from a policy state merely because an affix target ignores it.
 
+Ordinary jewellery quality-state API and finite finishing policy accepted14be5e9.
+It implements the S47 law below, with an independent direct sampler and exact application,
+final-state and cost distributions. `python -m craftoracle quality --base "Paua Amulet"
+--item-level 86 --catalyst fertile --target-quality 20 --price 2 --json` exposes the policy.
+Special flags, unique/Tainted/side-specific catalysts and modifier-magnitude evaluation
+remain outside that implementation; supplied prices are not game or market facts.
+
 ## Effect, preconditions and steps
 S46 catalysts apply a quality type to rings, amulets and belts, increasing matching implicit
 and explicit modifier magnitudes according to mod tags. Ordinary cap is 20%. Switching catalyst
