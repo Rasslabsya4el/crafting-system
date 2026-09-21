@@ -36,9 +36,47 @@ Harvest, Magic and bench grids have 24, 8, 96 and 4 candidates respectively. Opt
 level search keeps caller target IDs and the supplied base price unchanged; it reports an
 incomplete search explicitly. These are finite search domains, not all possible policies.
 
-Final full-plan Magic parameters/p90, fossil and fracture comparisons, and the bow frontier
-are pending the two family-policy integrations. This section must be completed from saved
-default CLI results, not from the smaller loadouts used for routine regression tests.
+Full default CLI output from fossil worker commit817a040 is preserved locally in
+`out/goal2/helmet-before-fracture.json` and `out/goal2/bow-thresholds.json`. All15 fossil
+combinations and all96 Magic candidates completed for the helmet and each bow threshold;
+there was no work-limit status. The new fossil policy's final test acceptance and the
+fracture-policy integration are still pending.
+
+Helmet Magic falls from mean583612.105255 to29449.032048; estimated p90 falls from
+1345699.5 to67889.5, with final99% DKW interval[65799.2,70159.9]. Its selected gates require
+at least one desired modifier after the magic stage and two after Regal, allow three
+Exalted Orbs and stop early on completion. Estimated p90 uses50000 samples, seed20260921.
+Protected Exalt p90 is4450.5 [4310.5,4600]; Harvest p90 is4590 [4440,4740]. These
+brackets describe uncertainty in the p90 estimate, not a player's90% cost interval.
+
+## Fossils and the bow value path
+
+The four-fossil availability input offers Aberrant1, Pristine12, Scorched13 and Serrated14;
+all15 nonempty subsets are compared. A selected fossil costs1 and the resonator costs its
+socket count, so complete recipes cost2/4/6/8. These are invented price/availability inputs.
+The initial Alchemy can finish immediately; all later fossil rerolls include the full
+recipe price and require a rare item. Sources/model: `../mechanics/fossils_resonators.md`.
+
+On the helmet, Aberrant1 alone has success probability.0001432502308634093 per fossil
+reroll, mean13961.7440676, p9032146.5 and6980.6220338 expected resonators. The overall
+best helmet route remains Envy at1927.47996606/4435.
+
+The complete bow result has14 reachable policy/threshold pairs. Its two Pareto points are:
+
+| Stop threshold | Selected recipe | Expected terminal utility | Expected cost | Exact cost p90 |
+|---:|---|---:|---:|---:|
+| 60 | Scorched13 | 62.71002826 | 162.37512654 | 372.5 |
+| 100 | Scorched13 | 100 | 9739.87718828 | 22426.5 |
+
+The corresponding fossil probabilities are.012289507645152398 and.00020533419675207822.
+The earlier best Alchemy/Chaos costs were187.56899946 and11573.02621351. The new points
+also beat those routes' p90 costs431.5 and26647.5; the threshold60 terminal utility rises
+from62.63609988. Every other evaluated pair is dominated. Utility numbers are the invented
+bow table from the brief, not a Path of Building damage calculation. The raw stage
+distributions are shared between thresholds; terminal distributions retain only outcomes
+that satisfy each selected stopping rule.
+
+The paid fracture route and final integrated test runtime remain to be measured.
 
 ## Quality finishing
 
