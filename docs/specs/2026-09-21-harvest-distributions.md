@@ -22,8 +22,10 @@ contract so a later policy can correctly price failed full-prefix reforges.
    Never infer universal current validity from source table cells. Reject unknown tags/modes,
    empty tagged pool, no available slot, bad RNG, bad labels and invalid items explicitly.
 3. Supported tags: fire,cold,lightning,physical,life,defence,chaos,attack,caster,speed,critical,
-   minion,elemental,attribute,mana (S42 and owner row3). Match literal PoB modTags; do not
-   synthesize tags. Store tags, model selection and source/confidence metadata in harvest.json.
+   minion,elemental,attribute,mana (S42 and owner row3). Match literal PoB modTags, except the
+   public spelling `defence` maps explicitly to PoB `defences` (ModExplicit.lua:115+,
+   IncreasedEnergyShield1..8). Test a real defence draw has eligible mods. Do not synthesize
+   tags. Store the mapping, tags, model selection and source/confidence metadata in harvest.json.
 4. Exact terminal OutcomeClass distribution retains group identity internally across the
    forced and ordinary draws. May enumerate each forced mod and call accepted draw_distribution
    for the rest; share equivalent computations where needed. Never continue an ordinary
@@ -52,6 +54,14 @@ frequency agrees with exact within Hoeffding two-sided delta=0.001 bound
 sqrt(log(2/0.001)/(2*N)); all original three suffixes survive every sample.
 
 ## Numbers to report
+Acceptance clarification2026-09-21: ActionData is mutable. An implicit identity-only sampler
+cache is forbidden; a separately prepared immutable plan may be reused explicitly. The public
+apply_harvest wrapper must reflect current input data. Use real suffixes ChaosResist6,
+FireResist8,ColdResist8. Add prefix-lock mirror, no-tag/no-slot rejection and unprotected
+draws>2 exact-versus-sampling coverage. Rule metadata must distinguish documented protection,
+CoE/owner-confirmed counts, provisional first_only, unsourced all_draws sensitivity and
+owner-provisional extra tags. S42 was read2026-09-20.
+
 Synthetic probabilities above, real pool weight and final Life9 probability, number of real
 terminal classes, MC successes/N and bound, preserved-suffix violations (0), test summary,
 commits/files. Final message starts `=== FINAL REPORT ===`.
