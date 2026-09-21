@@ -82,6 +82,8 @@ def prepare_fossils(
     """Resolve a new immutable pool; mutable ``data`` is never cache-keyed."""
     _validate_action_data(data)
     _validate_item(item, data)
+    if item.fractured:
+        raise NotImplementedError("out of tonight's slice: Q9")
     checked_labels = _checked_labels(labels)
     selected = _validate_selection(fossils, socket_count)
     if mode not in {"additive", "multiplicative"}:

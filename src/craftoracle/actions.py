@@ -8,6 +8,7 @@ the lead-provisional rules recorded in docs/GOAL.md and data/rules/ordinary.json
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -53,6 +54,16 @@ class RollScenario:
     initial_suffixes: int
     initial_labels: tuple[str, ...]
     blocked_groups: tuple[str, ...]
+    retained: tuple[ModRef, ...] = ()
+
+
+@dataclass(frozen=True)
+class RollPlan:
+    """One resolved direct-sampling plan for an ordinary currency action."""
+
+    item: ItemState
+    scenario: RollScenario
+    resulting_rarity: str
 
 
 def load_action_data(root: Path) -> ActionData:
@@ -202,6 +213,61 @@ def action_distribution(
     raise AssertionError("unreachable")
 
 
+def apply_roll(
+    action: str,
+    item: ItemState,
+    data: ActionData,
+    *,
+    rng: random.Random,
+    essence_id: str | None = None,
+) -> ItemState:
+    """Sample one ordinary currency outcome as a concrete immutable item.
+
+    This uses the same resolved scenario as :func:`action_distribution`, but
+    retains modifier identity for a subsequent supported action.
+    """
+    if not isinstance(rng, random.Random):
+        raise ValueError("rng must be random.Random")
+    return sample_roll(prepare_roll_plan(action, item, data, essence_id=essence_id), rng)
+
+
+def prepare_roll_plan(
+    action: str,
+    item: ItemState,
+    data: ActionData,
+    *,
+    essence_id: str | None = None,
+) -> RollPlan:
+    """Resolve a reusable immutable direct-sampling plan without caching data."""
+    scenario = prepare_roll(action, item, data, essence_id=essence_id)
+    resulting_rarity = _MAGIC if action in {"transmute", "alteration", "augmentation"} else _RARE
+    return RollPlan(item, scenario, resulting_rarity)
+
+
+def sample_roll(plan: RollPlan, rng: random.Random) -> ItemState:
+    """Sample a previously resolved ordinary currency plan with one RNG."""
+    if not isinstance(plan, RollPlan):
+        raise ValueError("plan must be a RollPlan")
+    if not isinstance(rng, random.Random):
+        raise ValueError("rng must be random.Random")
+    draws = _weighted_choice(plan.scenario.draw_counts, rng)[0]
+    current = list(plan.scenario.retained)
+    for _ in range(draws):
+        prefixes, suffixes = _counts(current)
+        occupied_groups = {mod.group for mod in current}
+        eligible = tuple(
+            entry for entry in plan.scenario.entries
+            if entry.group not in occupied_groups
+            and ((entry.type == "Prefix" and prefixes < plan.scenario.prefix_cap)
+                 or (entry.type == "Suffix" and suffixes < plan.scenario.suffix_cap))
+        )
+        if not eligible:
+            break
+        selected = _weighted_choice(eligible, rng)
+        current.append(ModRef(selected.mod_id, selected.type, selected.group))
+    return _replace_item(plan.item, plan.resulting_rarity, current)
+
+
 def scour_item(item: ItemState, data: ActionData) -> ItemState:
     """Apply the deterministic Scouring transition without mutating ``item``."""
     _validate_action_data(data)
@@ -247,7 +313,10 @@ def _reroll_scenario(item, data, labels, rarity, retained, count_weights) -> Rol
     entries = _candidate_entries(item, data, retained, _meta_flags(retained), None)
     blocked = tuple(mod.group for mod in retained)
     draw_counts = tuple((max(0, target - len(retained)), weight) for target, weight in count_weights)
-    return RollScenario(entries, draw_counts, cap[0], cap[1], prefix_count, suffix_count, _labels_for(retained, labels), blocked)
+    return RollScenario(
+        entries, draw_counts, cap[0], cap[1], prefix_count, suffix_count,
+        _labels_for(retained, labels), blocked, tuple(retained),
+    )
 
 
 def _addition_scenario(item, data, labels, resulting_rarity) -> RollScenario:
@@ -263,7 +332,10 @@ def _addition_scenario(item, data, labels, resulting_rarity) -> RollScenario:
     )
     if not entries:
         raise ValueError("no eligible modifier can be added")
-    return RollScenario(entries, ((1, 1),), cap[0], cap[1], prefixes, suffixes, _labels_for(item.mods, labels), tuple(mod.group for mod in item.mods))
+    return RollScenario(
+        entries, ((1, 1),), cap[0], cap[1], prefixes, suffixes,
+        _labels_for(item.mods, labels), tuple(mod.group for mod in item.mods), tuple(item.mods),
+    )
 
 
 def _prepare_essence(item, data, labels, essence_id) -> RollScenario:
@@ -284,14 +356,20 @@ def _prepare_essence(item, data, labels, essence_id) -> RollScenario:
     except KeyError as error:
         raise ValueError("essence has no mapped ordinary modifier for this base") from error
     forced = _mod_ref_from_row(forced_id, forced_row)
+    retained = _retained_for_reroll(item)
+    if any(mod.group == forced.group for mod in retained):
+        raise ValueError("essence forced modifier conflicts with fractured modifier")
+    retained_and_forced = (*retained, forced)
     cap = _caps(data, _RARE)
     level_cap = _ESSENCE_LEVEL_CAPS.get(tier)
-    entries = _candidate_entries(item, data, (forced,), (False, False), level_cap)
-    labels_forced = _labels_for((forced,), labels)
-    prefixes, suffixes = _counts((forced,))
+    entries = _candidate_entries(item, data, retained_and_forced, (False, False), level_cap)
+    labels_forced = _labels_for(retained_and_forced, labels)
+    prefixes, suffixes = _counts(retained_and_forced)
     return RollScenario(
-        entries, tuple((max(0, target - 1), weight) for target, weight in _count_weights(data, _RARE)),
-        cap[0], cap[1], prefixes, suffixes, labels_forced, (forced.group,),
+        entries,
+        tuple((max(0, target - len(retained_and_forced)), weight) for target, weight in _count_weights(data, _RARE)),
+        cap[0], cap[1], prefixes, suffixes, labels_forced,
+        tuple(mod.group for mod in retained_and_forced), tuple(retained_and_forced),
     )
 
 
@@ -303,6 +381,8 @@ def _annul_distribution(item, data, labels):
     protected_suffixes = any(mod.group == _LOCK_SUFFIXES for mod in item.mods)
     candidates = []
     for mod in item.mods:
+        if mod.id == item.fractured_mod_id:
+            continue
         if (mod.type == "Prefix" and protected_prefixes) or (mod.type == "Suffix" and protected_suffixes):
             continue
         row = _row_for(mod, data)
@@ -327,8 +407,10 @@ def _item_outcome(item, labels):
 
 def _candidate_entries(item, data, existing, flags, level_cap):
     # Start from an empty rare item so bench refs do not enter item_model validation.
-    empty = ItemState(item.base_name, item.item_level, _RARE, corrupted=item.corrupted, influenced=item.influenced,
-                      fractured=item.fractured, synthesised=item.synthesised, mirrored=item.mirrored, split=item.split)
+    empty = ItemState(
+        item.base_name, item.item_level, _RARE, corrupted=item.corrupted, influenced=item.influenced,
+        synthesised=item.synthesised, mirrored=item.mirrored, split=item.split,
+    )
     entries = []
     attack_block, caster_block = flags
     blocked = {mod.group for mod in existing}
@@ -346,7 +428,12 @@ def _candidate_entries(item, data, existing, flags, level_cap):
 def _retained_for_reroll(item):
     lock_prefixes = any(mod.group == _LOCK_PREFIXES for mod in item.mods)
     lock_suffixes = any(mod.group == _LOCK_SUFFIXES for mod in item.mods)
-    return tuple(mod for mod in item.mods if (lock_prefixes and mod.type == "Prefix") or (lock_suffixes and mod.type == "Suffix"))
+    return tuple(
+        mod for mod in item.mods
+        if mod.id == item.fractured_mod_id
+        or (lock_prefixes and mod.type == "Prefix")
+        or (lock_suffixes and mod.type == "Suffix")
+    )
 
 
 def _meta_flags(mods):
@@ -357,8 +444,19 @@ def _meta_flags(mods):
 def _validate_item(item, data):
     if not isinstance(item, ItemState):
         raise ValueError("item must be an ItemState")
-    if any((item.corrupted, item.influenced, item.fractured, item.synthesised, item.mirrored, item.split)):
+    if any((item.corrupted, item.influenced, item.synthesised, item.mirrored, item.split)):
         raise NotImplementedError(_Q9_ERROR)
+    if any(not isinstance(mod, ModRef) for mod in item.mods):
+        raise ValueError("existing modifiers must be ModRef values")
+    if item.fractured:
+        if item.fractured_mod_id is None:
+            raise NotImplementedError(_Q9_ERROR)
+        if not isinstance(item.fractured_mod_id, str):
+            raise ValueError("fractured_mod_id must be a string")
+        if sum(mod.id == item.fractured_mod_id for mod in item.mods) != 1:
+            raise ValueError("fractured modifier identity must appear exactly once")
+    elif item.fractured_mod_id is not None:
+        raise ValueError("fractured_mod_id requires fractured=True")
     if item.rarity not in {_NORMAL, _MAGIC, _RARE}:
         raise ValueError(f"invalid rarity: {item.rarity}")
     base = _base_for(item, data)
@@ -378,6 +476,16 @@ def _validate_item(item, data):
             raise ValueError(f"existing bench modifier does not support base type {base['type']}")
         seen_ids.add(mod.id)
         seen_groups.add(mod.group)
+    if item.fractured:
+        fractured_mod = next(mod for mod in item.mods if mod.id == item.fractured_mod_id)
+        fracture_row = _row_for(fractured_mod, data)
+        ordinary = (
+            not _is_bench(fractured_mod)
+            and isinstance(fracture_row.get("source_path"), str)
+            and fracture_row["source_path"].endswith("ModExplicit.lua")
+        )
+        if not ordinary:
+            raise ValueError("fractured modifier must be an ordinary explicit mod")
     prefixes, suffixes = _counts(item.mods)
     cap = _caps(data, item.rarity)
     if prefixes > cap[0] or suffixes > cap[1]:
@@ -457,7 +565,18 @@ def _labels_for(mods, labels):
 
 def _replace_item(item, rarity, mods):
     return ItemState(item.base_name, item.item_level, rarity, tuple(mods), item.corrupted, item.influenced,
-                     item.fractured, item.synthesised, item.mirrored, item.split)
+                     item.fractured, item.synthesised, item.mirrored, item.split, item.fractured_mod_id)
+
+
+def _weighted_choice(entries, rng):
+    total = sum(entry.weight if hasattr(entry, "weight") else entry[1] for entry in entries)
+    ticket = rng.randrange(total)
+    for entry in entries:
+        weight = entry.weight if hasattr(entry, "weight") else entry[1]
+        if ticket < weight:
+            return entry
+        ticket -= weight
+    raise AssertionError("weighted ticket fell outside its entries")
 
 
 def _mod_ref_from_row(mod_id, row):

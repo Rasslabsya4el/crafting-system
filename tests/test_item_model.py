@@ -99,6 +99,21 @@ def test_group_exclusion_and_side_caps(item_data) -> None:
     assert not resolve_pool(ItemState("Royal Burgonet", 86, "normal"), bases, mods)
 
 
+def test_fractured_identity_is_validated_and_still_blocks_its_group(item_data) -> None:
+    bases, mods = item_data
+    life = ModRef("IncreasedLife9", "Prefix", "IncreasedLife")
+    fractured = ItemState("Royal Burgonet", 86, "rare", (life,), fractured=True, fractured_mod_id=life.id)
+    assert all(entry.group != life.group for entry in resolve_pool(fractured, bases, mods))
+    with pytest.raises(ValueError, match="requires fractured=True"):
+        resolve_pool(ItemState("Royal Burgonet", 86, "rare", (life,), fractured_mod_id=life.id), bases, mods)
+    with pytest.raises(NotImplementedError, match=r"^out of tonight's slice: Q9$"):
+        resolve_pool(ItemState("Royal Burgonet", 86, "rare", (life,), fractured=True), bases, mods)
+    with pytest.raises(ValueError, match="exactly once"):
+        resolve_pool(ItemState("Royal Burgonet", 86, "rare", (life, life), fractured=True, fractured_mod_id=life.id), bases, mods)
+    with pytest.raises(ValueError, match="ModRef"):
+        resolve_pool(ItemState("Royal Burgonet", 86, "rare", (object(),), fractured=True, fractured_mod_id=life.id), bases, mods)  # type: ignore[arg-type]
+
+
 @pytest.mark.parametrize("flag", ["corrupted", "influenced", "fractured", "synthesised", "mirrored", "split"])
 def test_q9_flags_fail_before_pool_access(item_data, flag) -> None:
     bases, mods = item_data

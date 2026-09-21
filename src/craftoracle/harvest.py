@@ -156,6 +156,8 @@ def sample_harvest(plan: HarvestPlan, rng: random.Random) -> ItemState:
 def _prepare(item, data, tag, labels, type_filter):
     _validate_action_data(data)
     _validate_item(item, data)
+    if item.fractured:
+        raise NotImplementedError("out of tonight's slice: Q9")
     checked_labels = _validate_labels(labels)
     rules = _rules()
     if item.rarity != rules["ordinary_reforge"]["rarity"]:
