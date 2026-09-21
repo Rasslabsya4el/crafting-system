@@ -54,6 +54,14 @@ frequency agrees with exact within Hoeffding two-sided delta=0.001 bound
 sqrt(log(2/0.001)/(2*N)); all original three suffixes survive every sample.
 
 ## Numbers to report
+Acceptance clarification2026-09-21: ActionData is mutable. An implicit identity-only sampler
+cache is forbidden; a separately prepared immutable plan may be reused explicitly. The public
+apply_harvest wrapper must reflect current input data. Use real suffixes ChaosResist6,
+FireResist8,ColdResist8. Add prefix-lock mirror, no-tag/no-slot rejection and unprotected
+draws>2 exact-versus-sampling coverage. Rule metadata must distinguish documented protection,
+CoE/owner-confirmed counts, provisional first_only, unsourced all_draws sensitivity and
+owner-provisional extra tags. S42 was read2026-09-20.
+
 Synthetic probabilities above, real pool weight and final Life9 probability, number of real
 terminal classes, MC successes/N and bound, preserved-suffix violations (0), test summary,
 commits/files. Final message starts `=== FINAL REPORT ===`.

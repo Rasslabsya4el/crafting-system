@@ -1,14 +1,21 @@
 # State — 2026-09-21
 
-## Active work — GOAL 2
+## Active work — GOAL 2 (updated11:52 CEST)
 
-Goal 1 and its three stretch tasks are accepted below; GOAL 2 is active and not yet achieved.
-Priority: implement owner-unblocked Harvest and the full 132-cell CoE metamod matrix, then
-12 offline CoE validation cases, template optimisation, and the bounded solver experiment.
-Owner answers are in OWNER_QUESTIONS.md; official GGG behaviour statements are authoritative.
-Research runs alongside at most two workers, with a 30-minute ceiling per requested question.
-Current next three actions: accept the full matrix extraction; implement tagged Harvest
-distributions and a legal protected-half policy; run offline CoE validation on five classes.
+1. GOAL1 remains accepted; GOAL2 is active and incomplete.
+2. S14 full metamod matrix merged614c9c3:132 cells,33 notes,2 blank statuses;10 tests pass.
+3. Seven-class PoB bases mergeddeae811:561 records/548 names;15 focused tests pass.
+4. Harvest exact/sampler worker has a first result p(Life9)=0.0795082324542; correction1 pending.
+5. The legal protected-Harvest helmet policy spec is ready; CLI still has the old9 policies.
+6. Twelve independent CoE comparisons run in a second worker, entirely from cached source.
+7. Browser access works via Playwright; Wiki, GGG and Reddit research is being recorded.
+8. S74 official3.25 confirms catalyst ilvl scaling; S47 supplies the fractional-gain distribution.
+9. Template optimiser and bounded solver are not implemented; do not claim GOAL2 complete.
+10. Next: accept Harvest correction, add helmet policy, accept/interpret12 CoE cases.
+
+At most two workers are active: harvest-distributions and offline-coe-validation. Each spec
+is bounded; no long CPU job is authorized. Research has a30minute ceiling per requested topic.
+No new full-suite result is claimed since the accepted248-test baseline below.
 
 ## Accepted baseline — GOAL 1 and all three stretch tasks complete
 
@@ -89,7 +96,7 @@ items and raise the exact Q9 error. No market prices or PoB damage valuation are
 2. Select one broader item/policy slice and settle only the source gates it needs.
 3. Wire the reviewed distribution/value/cost contract into the parent project in a separately authorized task.
 
-No active workers or background jobs remain; worker worktrees were removed without force.
+At the GOAL1 handover no workers remained. GOAL2's active workers are listed above.
 Reports are in out/workers/; committed acceptance evidence is in WORKERS.md, specs and tests.
 New owner instruction is recorded in AGENTS section6 and D19 (`7748e73`): choose any supported
 Terra reasoning per task; use GPT-5.6 Luna for very light tasks and choose its reasoning too.
@@ -106,3 +113,4 @@ was attempted. Keep the repository-local setting for future test runs.
 - 09:29 CEST — GOAL1-5 merged,170 tests green; policy/CLI first review corrections in progress; stretch specs ready.
 - 10:29 CEST — core,41 known answers and Pareto merged;244 tests green; final bounded Divine worker in progress.
 - 10:41 CEST — all core/stretch work accepted;248 tests green; worker-model instruction updated; final handover committed.
+- 11:52 CEST — matrix132cells and bases561 merged; Harvest correction1 and offline12-case validation in progress; optimiser/solver pending.
