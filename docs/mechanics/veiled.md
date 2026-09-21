@@ -38,6 +38,13 @@ mod weights or three independent draws. Do not reuse ordinary weights. Current-g
 weights, item-level gates and crafted equivalence still need independent review.
 Q9 flag matrix; Q12 offer algorithm/weights/signatures. No action implementation.
 
+Recheck2026-09-21: S14's complete encoded matrix has side locks yes/yes and attack/caster
+no/no for its historical Veiled orb row. S17 current Wiki has the same side-lock distinction
+for Veiled Exalted. Its linked forum S71 was read in full: Guy_GGG discusses Wiki affiliation,
+not the mechanic; do not promote the neighbouring player explanations to official evidence.
+This confirms the existing documented interaction scope, while offer weights/mappings remain
+the next numerical dependency. A supported removal alone is not a complete unveiling policy.
+
 ## Frozen CoE offer algorithm reviewed
 S3 `poec_simUnveilMod` 2841-2857, read 2026-09-20 (`reimplemented-from-CoE`):
 1. Gather existing explicit modgroups and additional mod groups; choose the veiled placeholder

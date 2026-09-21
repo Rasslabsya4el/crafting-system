@@ -105,3 +105,18 @@ records the owner-supplied version rather than an invented upstream commit (Q8).
 | S63 | https://poedb.tw/us/Screaming_Essence_of_Sorrow | 2026-09-21 | Tier5 item tooltip permits normal upgrade OR rare reforge; S21 corroboration | sources/raw/research/goal2-observations.md |
 | S64 | https://www.pathofexile.com/forum/view-thread/3877954 | 2026-09-21 | Historical player bug report, Warlord amulet; no staff reply and no draw-by-draw evidence | sources/raw/research/goal2-observations.md |
 | S65 | docs/OWNER_QUESTIONS.md, answers1-15; goal attachment read2026-09-21 | 2026-09-21 | Owner confirmations, provisional prices, CoE fossil default authorization | Tracked owner answers; D20/D21 record decisions |
+| S66 | https://www.reddit.com/r/pathofexile/comments/1exyavx/325_updated_guide_to_recombinators/ | 2026-09-21 | Butsicles3.25 empirical counts, exclusives and NNN notation; historical baseline | sources/raw/research/recomb-reddit-3.25-and-links.txt |
+| S67 | https://www.reddit.com/r/pathofexile/comments/1ldc3lz/326_recomb_psas_a_few_useful_tipsconfirmations/ | 2026-09-21 | Butsicles3.26 corrections, limited tests and cross-game predictable-mode claim | sources/raw/research/recomb-reddit-3.26-and-links.txt |
+| S68 | https://www.reddit.com/r/pathofexile/comments/1lfyxxd/326_recombinators_analysisguide/ | 2026-09-21 | statistically-typed post linking the circles/arrows guide; author discussion | sources/raw/research/recomb-reddit-3.26-and-links.txt |
+| S69 | https://codeberg.org/poe_notes/poe_notes/src/branch/main/Recombinators.md | 2026-09-21 | Overexplained Guide, ten diagram references/descriptions, stated assumptions and recipe comparisons | sources/raw/research/recombinators-codeberg.md; diagram descriptions in recombinator-diagrams.md |
+| S70 | https://www.reddit.com/r/PathOfExile2/comments/1jzu2py/poe_2_patch_020_guide_to_recombinators_part_1/ | 2026-09-21 | PoE2 patch0.2.0 two-selected-mod experiments/formula; not direct PoE1 proof | sources/raw/research/recomb-poe2-and-links.txt |
+| S71 | https://www.pathofexile.com/forum/view-thread/3315559 | 2026-09-21, browser | Guy_GGG corrects Wiki affiliation; mechanics claims in this thread are PLAYERS, not a GGG ruling | sources/raw/research/goal2-browser-findings.md |
+| S72 | https://poedb.tw/us/Resonator | 2026-09-21 | Four Chaotic resonator tooltips all target rare items; S58 corroboration | sources/raw/research/goal2-browser-findings.md |
+| S73 | sources/pob/Data/Bases/amulet.lua; sources/pob/Data/Bases/boots.lua | 2026-09-21 | Literal105/81 source records for external-validation classes | Ignored S1 snapshots; hashes and examples in specs/2026-09-21-validation-base-classes.md |
+| S74 | https://www.pathofexile.com/forum/view-thread/3531661 | 2026-09-21, browser | Official3.25 Item Quality rework explicitly includes Catalysts; non-unique increments depend on ilvl | sources/raw/research/official-quality-3.25.txt |
+
+Rechecks2026-09-21: S17 same revision1700578 read through Playwright, full rendered text in
+`sources/raw/research/wiki-metamod-2026-09-21.txt`; S47 same revision1673652, full text and
+100-row increment table in `wiki-quality-2026-09-21.txt` and `wiki-quality-table-2026-09-21.txt`.
+S58 same revision1675208 in `wiki-resonator-2026-09-21.txt`; S33 same revision1681353 in
+`wiki-fracturing-2026-09-21.txt`, all under sources/raw/research/. No CoE file was refetched.

@@ -6,6 +6,7 @@
 - [x] Complete S14 metamod matrix as data and tests (`614c9c3`): 33 actions x 4 columns = 132 cells, 33 notes, 10 passing tests.
 - [ ] Record answered source gates: rare counts, multimod, essence rarity boundary and extra Harvest tags.
 - [ ] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots; explain deviations above 5% (Q14).
+- [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
 - [ ] Correct the 15-row owner question sheet without re-asking answered questions.
 - [ ] Expose and optimise template parameters; report protected-life expected cost before/after.
 - [ ] Bounded general solver experiment on helmet and three hand optima; report states/time and result or measured failure.

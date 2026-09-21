@@ -7,7 +7,9 @@ effect; `reimplemented-from-CoE` for uniform selection. No engine implementation
 A Fracturing Orb locks one explicit modifier on a rare item with at least four explicit
 modifiers without rerolling the others (S33 item text and Mechanics). S33 excludes influenced,
 synthesised and already fractured items, allows eldritch implicits and Split, and excludes
-strongboxes. Its version history says 3.29 removed synthesised from item text but retained the
+strongboxes. Rechecked the full S33 page2026-09-21: these conditions remain explicit.
+Eldritch implicits must be a separate state property from the prohibited influence flag.
+Its version history says 3.29 removed synthesised from item text but retained the
 restriction on existing Standard items. Corrupted/mirrored eligibility remains in Q9.
 
 ## Rule steps and probabilities
@@ -34,3 +36,7 @@ A repeat policy must price a replacement base and its preparation after an unwan
 
 ## Open questions
 Q9 remaining flags; Q12 independent odds and bench/veiled target eligibility.
+Owner9 and S33 unblock a first ordinary, non-corrupted/non-mirrored/non-influenced slice
+with four or more ordinary explicits, uniform CoE1/n, failed-target fracture retained.
+The engine needs the concrete fractured mod identity; a boolean alone cannot preserve it
+through future rerolls. Broad special-item support is a separate implementation.
