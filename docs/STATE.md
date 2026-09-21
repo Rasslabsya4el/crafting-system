@@ -34,8 +34,11 @@ policy has no attack/caster restriction, so that uncertainty does not change its
 
 ## In progress and bounded backlog
 
-At most two workers. Current:policy-attempt-kernel and ordinary-fossil-distributions.
-Offline validation and Harvest policy are accepted; their clean worktrees were removed.
+At most two workers. Current:policy-attempt-kernel (correction1) and bounded-policy-solver.
+Ordinary fossil adapter accepted0de86dd:43 focused tests,18 supported fossils,93 real entries/
+84 classes; triple target .00010020977755731918,Life marginal .09844673121656489;
+seeded1/1032 of10000,zero blocked/group violations. Policy integration follows optimizer.
+Offline validation, Harvest policy and fossil adapter are accepted; clean trees are removed.
 Specs ready:template optimizer, bounded solver, ordinary fossils, concrete fracture identity,
 and catalyst quality finishing. New family policy specs follow their accepted adapters.
 No background CPU job or unbounded wait is left. Worker scope at most90minutes; individual

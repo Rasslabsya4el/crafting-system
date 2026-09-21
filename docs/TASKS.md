@@ -9,12 +9,12 @@
 - [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
 - [x] Correct the 15-row owner question sheet without re-asking answered questions (`ffcf869`; S63-S79 and owner answers).
 - [~] Expose and optimise template parameters; design/specs `0ae6f5b`/`47d98af`; finite attempt-kernel worker active. Baseline8357.19; legal fixed k2 measurement4693.13, k3 with paid restart4787.90.
-- [ ] Bounded general solver experiment on helmet and three hand optima; report states/time and result or measured failure.
+- [~] Bounded general solver experiment on helmet and three hand optima; worker active from0de86dd; hard states/edges/time limits in spec.
 - [ ] Verify bow distribution/threshold/frontier path after new policies.
 - [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
 - [x] Locate matching recombinator Reddit/diagram chain S66-S69 and document classic and selected-mod modes separately (`ffcf869`); current exact odds remain open.
-- [~] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy: Harvest55c8191; ordinary fossil adapter worker active; fracture/catalyst specs ready.
-- [~] Ordinary fossil adapter:18 supported fossils, additive default and explicit multiplicative sensitivity; spec `eb6ae28`/`7c95d90`, worker active.
+- [~] Implement each newly unblocked family in owner-sheet order with sourced tests and a usable policy: Harvest55c8191; fossil adapter0de86dd; fossil/fracture/catalyst policy specs ready.
+- [x] Ordinary fossil adapter (`0de86dd`):18 supported fossils, additive default/multiplicative sensitivity,43 focused tests;93 real entries/84 classes, seeded common marginal agrees.
 - [ ] Ordinary fossil policy: caller allowlist up to4 fossils/15 combinations, complete resonator pricing and terminal mixture; design/spec `2fc0f9d`.
 - [ ] Concrete fracture identity and retained-mod basic actions; spec `14ce845`; follows fossil adapter.
 - [ ] Fracture-Life then Envy policy with every failed base/preparation paid and two early-stop choices; design/spec `2fc0f9d`.

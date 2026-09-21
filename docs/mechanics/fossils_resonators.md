@@ -54,7 +54,9 @@ examples above do not implement this special fossil.
 
 Q9 special-item eligibility; Q13 evidence conflicts and special fossil factors; Q2 literal
 RNG issue for special forced-mod draws. Price inputs and rare-input availability belong to the
-loadout, not game constants in this sheet. No fossil action has been implemented.
+loadout, not game constants in this sheet. Ordinary adapter accepted0de86dd2026-09-21:
+18 supported fossils with exact rational transforms and seeded independent sampling;
+special recipes remain unsupported. Planner combination policy is a separate next step.
 
 
 ## Named multiplier evidence and special branches
