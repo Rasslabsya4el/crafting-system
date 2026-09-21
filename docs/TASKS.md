@@ -19,7 +19,7 @@
 - [ ] Ordinary fossil policy: caller allowlist up to4 fossils/15 combinations, complete resonator pricing and terminal mixture; design/spec `2fc0f9d`.
 - [x] Concrete fracture identity and retained-mod basic actions (`d348533`):74 lead tests; finish p=.06101200110346221/30 classes,627 of10000 seeded successes, identity loss0 and Divine Life9 value132 retained.
 - [ ] Fracture-Life then Envy policy with every failed base/preparation paid and two early-stop choices; design/spec `2fc0f9d`.
-- [ ] Catalyst quality distribution and supplied-jewellery finishing policy; spec `7c95d90`; follows fracture state fields.
+- [~] Catalyst quality distribution and supplied-jewellery finishing policy; Terra-high worker active from `e26d95c`, core first and CLI handoff after optimizer acceptance; independent CDF references `8568204`.
 - [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
 
 ## Phase 0 -- knowledge harvest
