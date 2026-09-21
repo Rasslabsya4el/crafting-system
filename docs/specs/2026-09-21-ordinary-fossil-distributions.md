@@ -1,4 +1,4 @@
-# Spec: sourced ordinary nonhybrid fossil transforms and outcome distributions
+# Spec: sourced ordinary fossil transforms and outcome distributions
 
 Worktree: `.worktrees/ordinary-fossil-distributions` (branch `w-ordinary-fossil-distributions`).
 May touch ONLY `src/craftoracle/fossils.py`, `src/craftoracle/actions.py`,
@@ -6,18 +6,21 @@ May touch ONLY `src/craftoracle/fossils.py`, `src/craftoracle/actions.py`,
 
 ## Why
 Owner D21 unblocks CoE's ordinary additive model. Implement facts already interpreted in
-docs/mechanics/fossils_resonators.md; unresolved hybrid/special recipes do not block this slice.
+docs/mechanics/fossils_resonators.md, including the lead's offline hybrid trace. Special recipes remain separate.
 No new source research, pricing, loadout or policy changes. Bounded45minute worker task.
 
 ## Requirements
-1. Encode the sixteen listed ordinary nonhybrid fossil IDs/names/tag factors in OUR small
+1. Encode the sixteen listed single-tag fossil IDs plus Corroded4 and Prismatic11 in OUR small
    rule schema, with source pointers S3 functions/lines and S4 fossil IDs, read2026-09-21,
    confidence reimplemented-from-CoE and D21 default choice. Preserve the Bound/S56
    disagreement in metadata. Do not copy CoE compiled records or code. Unknown IDs and
-   known excluded hybrid/special IDs reject with explicit Q13 or Q19 reason.
+   known excluded special IDs reject with explicit Q13 or Q19 reason.
 2. Exact transform uses Fraction arithmetic: per-tag positive sum (default) or product
    (explicit sensitivity); negative factors multiply; then matched positive tags again
-   sum/product. Any matching block wins. No match means factor1. Opulent blocks tagless.
+   sum/product. Matching hybrid conjunctions require ALL tags, contribute their factors
+   and bypass positive/negative single factors of constituent tags; single-tag blocks
+   still win. Implement the six exact offline trace fixtures in the sheet. No match means
+   factor1. Opulent blocks tagless.
    S3 does NOT round;126*.15=18.9. Convert transformed positive pool weights to common
    integer units preserving exact ratios for accepted DrawEntry DP. Report the scale or
    expose rational effective weights for inspection. Never round independently per entry.

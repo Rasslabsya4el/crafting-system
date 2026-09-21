@@ -12,7 +12,7 @@ method tree (95 named nodes, including legacy/mixed-game entries and options) is
 | Transmutation, Alteration, Augmentation, Regal, Alchemy, Chaos, Exalted, Annul, Scour, Divine | day 1 / mapping | [basic_currency.md](basic_currency.md), [affix_generation.md](affix_generation.md) | reviewed, partial | reimplemented-from-CoE |
 | Bench crafts and metamods | day 1 / endgame | [bench_metamods.md](bench_metamods.md) | reviewed, partial | datamined + documented + reimplemented-from-CoE |
 | Essences | day 1 / mapping | [essences.md](essences.md) | reviewed, partial | documented + datamined + reimplemented-from-CoE |
-| Fossils and resonators | mapping / endgame | [fossils_resonators.md](fossils_resonators.md) | ordinary nonhybrid CoE additive model accepted; specials open | reimplemented-from-CoE + documented; player interpretation conflict retained |
+| Fossils and resonators | mapping / endgame | [fossils_resonators.md](fossils_resonators.md) | ordinary CoE additive model including traced hybrid tags accepted; specials open | reimplemented-from-CoE + documented; player interpretation conflict retained |
 | Harvest reforges and augments | endgame | [harvest.md](harvest.md) | partial | documented + reimplemented-from-CoE |
 | Eldritch currency and Orb of Conflict | endgame | [eldritch_currency.md](eldritch_currency.md) | partial | documented + reimplemented-from-CoE |
 | Awakener's Orb | endgame | [awakener_orb.md](awakener_orb.md) | eligibility and selection reviewed; Q20 conflict discrepancy | documented + reimplemented-from-CoE |

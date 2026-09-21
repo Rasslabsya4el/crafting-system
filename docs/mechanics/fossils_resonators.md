@@ -1,6 +1,6 @@
 # Fossils and resonators
 
-Status: ordinary nonhybrid weight-transform model accepted under owner D21; special outcomes
+Status: ordinary weight-transform model including the two sourced hybrid-tag fossils accepted under D21; special outcomes
 remain partial. Read 2026-09-20, rechecked2026-09-21. Confidence: `reimplemented-from-CoE`; the metamod
 exception is additionally `documented` by S17. Sources: S3 `package.js` line 5 (`fossil`),
 `poec_workoutFOMTypes` lines 1500-1508, `poec_getModdedWeight` lines 1559-1570,
@@ -156,13 +156,34 @@ table below is an independently described set of facts, not a copied compiled ta
 
 S4 Prismatic11 boosts **elemental only** by6, unlike S56's broader OR description; it
 blocks physical+ailment and chaos+ailment conjunctions. Corroded4 boosts those conjunctions
-by10 and blocks elemental/fire/cold/lightning. The literal hybrid branch can encounter
-an absent negative-factor entry; trace that separately before authorizing its exact adapter.
+by10 and blocks elemental/fire/cold/lightning. The literal hybrid branch's absent negative
+entry defaults to1 through JavaScript's null/undefined check; the offline trace below
+confirms this for these source records. These two hybrid recipes are also accepted.
 Glyphic20,Hollow18,Sanctified19 have separate rules, not an empty ordinary transform.
-Ordinary nonhybrid combinations can now be implemented with explicit CoE confidence and
+Ordinary combinations can now be implemented with explicit CoE confidence and
 real pool tests; unresolved specials do not block them.
 
 S3 `poec_getModdedWeight`,1559-1570, returns the multiplication result without integer
 rounding. Example126*0.15=18.9, not18 or19. Our integer DP can preserve this rational
 probability law by scaling ALL transformed pool weights by one common denominator and
 then reducing their common gcd. This is mathematical representation, not game rounding.
+
+## Offline hybrid trace (2026-09-21)
+The lead executed unchanged S3 `poec_workoutFOMTypes`1500-1508 and
+`poec_getModdedWeight`1559-1570 against S4 in a local Node VM, with base weight100.
+Only JSON parsing/iteration helpers were supplied; no source arithmetic was rewritten.
+
+| Fossils | Mod tags | Effective weight |
+|---|---|---:|
+| Corroded4 | physical,ailment | 1000 |
+| Corroded4 | physical | 100 |
+| Prismatic11,Jagged8 | physical,ailment | 0 |
+| Corroded4,Jagged8 | physical,ailment | 1000 |
+| Corroded4,Serrated14 | physical,ailment,attack | 2000 |
+| Prismatic11,Scorched13 | elemental,fire | 1600 |
+
+A matching conjunction bypasses positive AND negative factors of its constituent single
+tags; single-tag blocks still win. Thus Corroded+Jagged is1000, not2000, for physical
+ailment: the hybrid's physical component suppresses the extra single physical boost.
+An unrelated attack boost still adds. This narrows Q13 to historical confidence/conflicts
+and genuinely special recipes; lack of datamined corroboration does not block CoE-derived use.
