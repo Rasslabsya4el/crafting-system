@@ -65,6 +65,6 @@ all game mechanics. No dependent path may silently guess.
 - [x] Night exact grouped distribution kernel (`4ee0641`;17 focused tests)
 - [x] Night ordinary action adapters (`51b386f`;15 focused tests; one correction round)
 - [x] Night loop costs exact geometric/chain/compound arithmetic (`8eeee53`;13 focused tests; explicit work limits)
-- [~] Night independent Monte Carlo and p90 cost estimator (`2026-09-21-monte-carlo.md`; worker running)
+- [x] Night independent Monte Carlo and p90 cost estimator (`70fcadb`;14 tests, five real pools within stated bounds)
 - [~] Night item specs, invented prices and loadouts (`2026-09-21-plan-inputs.md`; worker running)
 - [ ] Night Monte Carlo, loop costs, inputs, real policy templates and CLI (GOAL order; specs being prepared)
