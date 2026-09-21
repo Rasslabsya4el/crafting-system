@@ -57,6 +57,17 @@ The twelve-case independent comparison against the frozen Craft of Exile calcula
 python -m tools.coe_validation
 ```
 
+For ordinary jewellery quality finishing, provide the catalyst price in your chosen unit:
+
+```powershell
+python -m craftoracle quality --base "Paua Amulet" --item-level 86 --catalyst fertile --target-quality 20 --price 2 --json
+```
+
+The result gives exact distributions of application count, cost and final quality. At
+ilvl86 the mean is14.42372357 applications and p90 is16; at the supplied price2, mean cost
+is28.84744714 and p90 is32. This API covers quality/type state on ordinary jewellery;
+modifier-magnitude valuation and special catalysts retain their documented limitations.
+
 For bounded value-specific Divine outcomes, construct a `RolledItem` with one current integer value for each ranged affix. From the repository root, the reviewed Royal Burgonet example is:
 
 ```python

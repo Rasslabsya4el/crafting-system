@@ -37,8 +37,10 @@ policy has no attack/caster restriction, so that uncertainty does not change its
 ## In progress and bounded backlog
 
 At most two workers. Current:fossil-spam-policy (Terra high, fromc9afb36) and
-catalyst-quality-policy (Terra high, CLI handed off after optimizer merge).
-Quality core22b6119 has48 lead tests0.036minute; CLI/final report still pending.
+fracture-essence-policy (Terra high, from211080a; core first, shared-file handoff after fossil).
+Quality policy14be5e9 accepted:48 lead core tests plus19 final quality/CLI checks0.057minute;
+mean14.42372357 applications,p90 16; price2 mean28.84744714/p90 32. The Paua Amulet86
+text command also passed at main. Clean optimizer and quality worktrees were removed.
 Fracture identity accepted d348533:74 lead tests0.074minute; real Envy finish
 .06101200110346221/30classes,627 of10000 seeded hits, identity loss0, Divine Life9
 value132 retained. Paid fracture policy follows optimizer; Harvest/fossil fracture inputs
