@@ -40,6 +40,21 @@ _SUPPORTED_ACTIONS = frozenset(
         "scour",
         "essence",
         "bench",
+        "harvest_reforge:fire",
+        "harvest_reforge:cold",
+        "harvest_reforge:lightning",
+        "harvest_reforge:physical",
+        "harvest_reforge:life",
+        "harvest_reforge:defence",
+        "harvest_reforge:chaos",
+        "harvest_reforge:attack",
+        "harvest_reforge:caster",
+        "harvest_reforge:speed",
+        "harvest_reforge:critical",
+        "harvest_reforge:minion",
+        "harvest_reforge:elemental",
+        "harvest_reforge:attribute",
+        "harvest_reforge:mana",
     )
 )
 _ESSENCE_ID_PREFIX = "Metadata/Items/Currency/"

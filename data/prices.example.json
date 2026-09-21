@@ -14,7 +14,23 @@
     "Metadata/Items/Currency/CurrencyEssenceEnvy3": 5,
     "Metadata/Items/Currency/CurrencyEssenceHatred7": 3,
     "Metadata/Items/Currency/CurrencyEssenceAnger6": 3,
-    "Metadata/Items/Currency/CurrencyEssenceWrath5": 3
+    "Metadata/Items/Currency/CurrencyEssenceWrath5": 3,
+    "harvest_reforge:fire": 1,
+    "harvest_reforge:cold": 1,
+    "harvest_reforge:lightning": 1,
+    "harvest_reforge:physical": 1,
+    "harvest_reforge:life": 1,
+    "harvest_reforge:defence": 1,
+    "harvest_reforge:chaos": 1,
+    "harvest_reforge:attack": 1,
+    "harvest_reforge:caster": 1,
+    "harvest_reforge:speed": 1,
+    "harvest_reforge:critical": 1,
+    "harvest_reforge:minion": 100,
+    "harvest_reforge:elemental": 100,
+    "harvest_reforge:attribute": 100,
+    "harvest_reforge:mana": 100,
+    "harvest_add_remove_sacred": 100
   },
   "bench_recipes": {
     "131": {"chaos": 2},
@@ -24,14 +40,15 @@
     "731": {"divine": 1},
     "732": {"divine": 1}
   },
-  "note": "Invented chaos-equivalent prototype inputs, not trade prices.",
+  "note": "Invented chaos-equivalent prototype inputs, not trade prices. D21: eleven classic Harvest reforges are set to 1 each; Minion, Elemental, Attribute, and Mana are owner-provisional equal to the Harvest add/remove Sacred placeholder (100 each).",
   "sources": [
     "Owner BRIEF: ordinary-currency, essence, budget, and metamod prices are invented chaos-equivalent inputs.",
     "S1: sources/pob/Data/ModMaster.lua source_index 131, line 135; Prefix LocalPhysicalDamageReductionRatingPercent, Helmet supported, (56-74)% increased Armour.",
     "S2: poecc.benchcosts['2775b52'][2] gives {'2': 2}; poecc.benchcosts 2962/2963/2964/2965/2966 gives the recipes for 728/729/730/731/732.",
     "S3: poec_constants.indexes.currency.bench[2] is chaos for recipe 131; currency index 10 is divine for recipes 728 through 732.",
     "S4: tiers['2775']['52'][2] confirms the source-index 131 range and level 75; its quantity is reimplemented-from-CoE, read 2026-09-21.",
-    "docs/mechanics/bench_metamods.md: source-index identities for recipes 728 through 732."
-    ,"docs/OWNER_QUESTIONS.md answer 5, 2026-09-21: multimod recipe 730 costs 2 Divine Orbs, owner-confirmed; Divine price remains invented."
+    "docs/mechanics/bench_metamods.md: source-index identities for recipes 728 through 732.",
+    "docs/OWNER_QUESTIONS.md answer 5, 2026-09-21: multimod recipe 730 costs 2 Divine Orbs, owner-confirmed; Divine price remains invented.",
+    "D21 / docs/mechanics/harvest.md, read 2026-09-21: classic reforge action keys are prototype price inputs; Minion, Elemental, Attribute, and Mana availability and equality to the Sacred placeholder are owner-provisional."
   ]
 }

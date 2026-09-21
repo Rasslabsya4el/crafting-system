@@ -121,6 +121,15 @@ def test_loadout_price_and_permissions(tmp_path: Path) -> None:
     assert loadout.permits("bench", bench_index=131)
     assert loadout.permits("bench", bench_index=729)
     assert not loadout.permits("harvest")
+    classic_tags = {
+        "fire", "cold", "lightning", "physical", "life", "defence", "chaos",
+        "attack", "caster", "speed", "critical",
+    }
+    extra_tags = {"minion", "elemental", "attribute", "mana"}
+    assert all(loadout.permits(f"harvest_reforge:{tag}") for tag in classic_tags | extra_tags)
+    assert loadout.price("harvest_reforge:life") == 1
+    assert all(loadout.price(f"harvest_reforge:{tag}") == 100 for tag in extra_tags)
+    assert loadout.price("harvest_add_remove_sacred") == 100
     assert not loadout.permits("divine")  # A listed price never grants permission.
     assert loadout.permits("essence", essence_id="Metadata/Items/Currency/CurrencyEssenceEnvy3")
 

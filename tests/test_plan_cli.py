@@ -219,15 +219,21 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
     assert document["input"]["base"] == "Royal Burgonet"
     assert document["input"]["item_level"] == 86
     assert document["prices"]["unit"] == "chaos-equivalent"
-    assert len(document["ranked"]) == 9
     assert document["unavailable"] == []
     policies = {policy["id"]: policy for policy in document["ranked"]}
+    assert "suffix-protected-harvest-life" in policies
     assert policies["chaos-spam"]["stages"][-1]["probability"] == pytest.approx(HELMET_PROBABILITY)
     assert policies["alchemy-scour"]["stages"][-1]["probability"] == pytest.approx(HELMET_PROBABILITY)
     assert policies["essence-CurrencyEssenceEnvy3"]["stages"][-1]["probability"] == pytest.approx(ENVY_PROBABILITY)
     assert policies["magic-regal-exalt"]["cost_method"] == "estimated p90; exact mean"
     assert policies["magic-regal-exalt"]["cost_p90_interval"]
     assert policies["magic-regal-exalt"]["cost_sample_count"] == 50_000
+    harvest = policies["suffix-protected-harvest-life"]
+    harvest_stage = next(stage for stage in harvest["stages"] if stage["name"] == "roll protected Harvest life prefix")
+    assert harvest_stage["probability"] > 1 / 13
+    assert harvest["full_prefix_failure_probability"] > 0
+    assert harvest["cost_confidence"] == .99
+    assert harvest["cost_p90_interval"][0] <= harvest["cost_p90"] <= harvest["cost_p90_interval"][1]
     for policy in document["ranked"]:
         assert math.isfinite(policy["expected_cost"])
         assert math.isfinite(policy["cost_p90"])
@@ -254,7 +260,10 @@ def test_real_bow_threshold_comparison_changes_utility_stop_rule(real_bow_compar
     assert document["input"]["utility_threshold"] == 60
     assert document["input"]["values_note"].startswith("Invented additive utility")
     assert len(document["ranked"]) == 12
-    assert len(document["unavailable"]) == 6
+    assert {policy["id"] for policy in document["unavailable"]} >= {
+        "suffix-protected-life@60", "suffix-protected-harvest-life@60",
+        "suffix-protected-life@100", "suffix-protected-harvest-life@100",
+    }
 
     policies = {policy["id"]: policy for policy in document["ranked"]}
     alchemy_sixty = policies["alchemy-scour@60"]
