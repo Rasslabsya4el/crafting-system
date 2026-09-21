@@ -9,9 +9,17 @@ import pytest
 
 from craftoracle.actions import ActionData, load_action_data
 from craftoracle.costs import geometric_cost
-from craftoracle.distributions import OutcomeClass
+from craftoracle.distributions import OutcomeClass, probability
+from craftoracle.item_model import ItemState, ModRef
 from craftoracle.plan_inputs import load_loadout, load_spec
-from craftoracle.policies import _conditional_distribution, _selected_mass, _success_probability, evaluate_policies
+from craftoracle.policies import (
+    _conditional_distribution,
+    _harvest_distribution,
+    _harvest_suffix_representatives,
+    _selected_mass,
+    _success_probability,
+    evaluate_policies,
+)
 
 
 ROOT = Path(__file__).parents[1]
@@ -177,7 +185,10 @@ def test_helmet_policy_kernel_probabilities_and_costs(evaluated: dict) -> None:
     assert harvest["expected_cost"] < protected["expected_cost"]
     assert harvest["cost_sample_count"] == 50_000
     assert harvest["cost_seed"] == 20260921
+    assert harvest["cost_confidence"] == .99
     assert harvest["cost_p90_interval"][0] <= harvest["cost_p90"] <= harvest["cost_p90_interval"][1]
+    assert "Before each Life reforge" in harvest["steps"][1]
+    assert any("harvest_reforge:life=1 is an invented D21" in assumption for assumption in harvest["assumptions"])
 
     chaos_p = _stage(chaos, "chaos trial")["probability"]
     envy_p = _stage(envy, "essence trial")["probability"]
@@ -221,6 +232,45 @@ def test_harvest_policy_reports_missing_permission_or_price(action_data: ActionD
     )
     assert any(row["id"] == "suffix-protected-harvest-life" and "missing price" in " ".join(row["reasons"])
                for row in result["unavailable"])
+
+
+def test_harvest_distribution_cache_tracks_a_mutated_resolved_plan(action_data: ActionData) -> None:
+    mods = {
+        mod_id: {
+            **row,
+            "weightKey": list(row["weightKey"]),
+            "weightVal": list(row["weightVal"]),
+            "modTags": list(row.get("modTags") or []),
+        }
+        for mod_id, row in action_data.mods.items()
+    }
+    mutable = ActionData(action_data.bases, mods, action_data.bench, action_data.essences, action_data.rules)
+    suffixes = tuple(
+        ModRef(mod_id, mods[mod_id]["type"], mods[mod_id]["group"])
+        for mod_id in ("ChaosResist6", "FireResist8", "ColdResist8")
+    )
+    lock = mutable.bench[729]
+    item = ItemState("Royal Burgonet", 86, "rare", (*suffixes, ModRef("bench:729", lock["type"], lock["group"])))
+    cache: dict = {}
+    before = _harvest_distribution(cache, mutable, item, {"IncreasedLife9": "Life9"})
+    before_p = probability(before, lambda outcome: "Life9" in outcome.labels)
+    mods["IncreasedLife9"]["weightVal"][-1] = 1
+    after = _harvest_distribution(cache, mutable, item, {"IncreasedLife9": "Life9"})
+    after_p = probability(after, lambda outcome: "Life9" in outcome.labels)
+
+    assert len(cache) == 2
+    assert after_p != pytest.approx(before_p)
+
+
+def test_harvest_representative_suffixes_must_be_in_the_eligible_pool(action_data: ActionData) -> None:
+    mods = {mod_id: {**row} for mod_id, row in action_data.mods.items()}
+    mods["ColdResist8"]["level"] = 87
+    unavailable = ActionData(action_data.bases, mods, action_data.bench, action_data.essences, action_data.rules)
+
+    representatives, reason = _harvest_suffix_representatives(HelmetSpec(), unavailable)
+
+    assert representatives is None
+    assert reason == "representative protected suffix ColdResist8 is not in the eligible ordinary suffix pool"
 
 
 def test_magic_stages_use_outer_cycle_count_and_keep_intermediate_probability(evaluated: dict) -> None:

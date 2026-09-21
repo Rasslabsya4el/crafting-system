@@ -15,6 +15,7 @@ from craftoracle.actions import ActionData, action_distribution, prepare_roll
 from craftoracle.costs import chain_cost, compound_geometric_cost, geometric_cost
 from craftoracle.distributions import OutcomeClass, probability, scheduled_distribution
 from craftoracle.item_model import ItemState, ModRef, resolve_pool
+from craftoracle.harvest import prepare_harvest
 from craftoracle.harvest_policies import estimate_renewal_cost_p90, renewal_metrics
 from craftoracle.monte_carlo import estimate_compound_cost_p90
 
@@ -482,7 +483,8 @@ def _harvest_protected_policy(spec, loadout, data, normal, labels, cache):
             metrics.reforge_attempts,
             ("bench:729", "harvest_reforge:life"),
             (
-                "On a non-full failure, retain the suffixes and reforge again.",
+                "Before every Life reforge, craft a fresh Suffixes Cannot Be Changed lock; the reforge consumes that lock.",
+                "On a non-full failure, retain the suffixes, relock them, and reforge again.",
                 "On a failed three-prefix result, restart Envy preparation on the same base.",
             ),
             terminal_attempt,
@@ -502,7 +504,7 @@ def _harvest_protected_policy(spec, loadout, data, normal, labels, cache):
         (_ENVY, "bench:729", "harvest_reforge:life"),
         (
             "Repeat Deafening Envy until the stated three-suffix preparation occurs.",
-            "Craft Suffixes Cannot Be Changed, then reforge Life.",
+            "Before each Life reforge, craft Suffixes Cannot Be Changed; the prefix lock is consumed by that reforge.",
             "Keep non-full failures protected; a failed full-prefix result returns to Envy preparation on the same base.",
         ),
         (
@@ -519,12 +521,13 @@ def _harvest_protected_policy(spec, loadout, data, normal, labels, cache):
         "cost_p90_interval": [estimate.interval_lower, estimate.interval_upper],
         "cost_sample_count": estimate.samples,
         "cost_seed": estimate.seed,
+        "cost_confidence": estimate.confidence,
         "cost_error_bound": estimate.dkw_epsilon,
         "_assumptions": (
             "Harvest uses the adopted S14 first-draw-only modifier-type filtering and S19 type-restriction support.",
             "The lock has no attack/caster blocker; only ordinary Q9-free items are evaluated.",
             "All ordinary suffix groups are checked against prefix groups before one concrete sourced suffix representative is reused.",
-            "harvest_reforge:life is an owner-provisional invented price input.",
+            "harvest_reforge:life=1 is an invented D21 price input; owner-provisional Sacred-price equality applies only to Minion, Elemental, Attribute, and Mana.",
         ),
     })
     return policy
@@ -548,18 +551,23 @@ def _suffix_lock_reason(spec, data):
 
 def _harvest_suffix_representatives(spec, data):
     selected = ("ChaosResist6", "FireResist8", "ColdResist8")
+    ordinary = _item(spec, "rare")
+    suffix_entries = resolve_pool(ordinary, data.bases, data.mods, "Suffix")
+    eligible_suffixes = {entry.mod_id: entry for entry in suffix_entries}
     refs = []
     for mod_id in selected:
         row = data.mods.get(mod_id)
         if row is None or row.get("type") != "Suffix" or not isinstance(row.get("group"), str):
             return None, f"representative protected suffix {mod_id} is not an ordinary suffix with a source group"
-        refs.append((mod_id, row["group"]))
+        entry = eligible_suffixes.get(mod_id)
+        if entry is None:
+            return None, f"representative protected suffix {mod_id} is not in the eligible ordinary suffix pool"
+        refs.append((mod_id, entry.group))
     suffix_groups = {group for _, group in refs}
     if len(suffix_groups) != len(refs):
         return None, "representative protected suffixes do not have distinct source groups"
-    ordinary = _item(spec, "rare")
     prefix_groups = {entry.group for entry in resolve_pool(ordinary, data.bases, data.mods, "Prefix")}
-    all_suffix_groups = {entry.group for entry in resolve_pool(ordinary, data.bases, data.mods, "Suffix")}
+    all_suffix_groups = {entry.group for entry in suffix_entries}
     overlap = prefix_groups & all_suffix_groups
     if overlap:
         return None, "prefix/suffix group intersection prevents independent protected Harvest prefix calculation"
@@ -586,17 +594,29 @@ def _prepared_suffixes(stage_one, labels):
 
 
 def _harvest_distribution(cache, data, item, labels):
+    plan = prepare_harvest(item, data, "life", type_filter="first_only")
     key = (
         "harvest_reforge",
-        item,
+        _harvest_plan_signature(plan),
         "life",
         "first_only",
         tuple(sorted(labels.items())),
-        tuple(sorted(data.rules["rare_count_weights"].items())),
     )
     if key not in cache:
         cache[key] = action_distribution("harvest_reforge", item, data, labels, harvest_tag="life")
     return cache[key]
+
+
+def _harvest_plan_signature(plan):
+    return (
+        plan.item,
+        plan.retained,
+        tuple((entry.mod_id, entry.type, entry.group, entry.weight) for entry in plan.forced),
+        tuple((entry.mod_id, entry.type, entry.group, entry.weight) for entry in plan.ordinary),
+        plan.counts,
+        plan.prefix_cap,
+        plan.suffix_cap,
+    )
 
 
 def _combine_harvest_prefixes(prepared, preparation_p, prefixes, life_label):

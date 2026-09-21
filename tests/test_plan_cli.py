@@ -232,6 +232,7 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
     harvest_stage = next(stage for stage in harvest["stages"] if stage["name"] == "roll protected Harvest life prefix")
     assert harvest_stage["probability"] > 1 / 13
     assert harvest["full_prefix_failure_probability"] > 0
+    assert harvest["cost_confidence"] == .99
     assert harvest["cost_p90_interval"][0] <= harvest["cost_p90"] <= harvest["cost_p90_interval"][1]
     for policy in document["ranked"]:
         assert math.isfinite(policy["expected_cost"])
