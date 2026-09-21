@@ -71,7 +71,7 @@ def test_real_shaped_optimizer_names_and_cli_writes_sibling_files(tmp_path, monk
     assert material_accounting(plan["ranked"][2], plan, {"action_rules": {"magic_count_weights": {"1": 1, "2": 1}}})["rows"][0]["count"] == 4
     monkeypatch.setattr(cli, "evaluate_plan", lambda *args, **kwargs: plan)
     monkeypatch.setattr(cli, "_report_output_dir", lambda path: tmp_path)
-    monkeypatch.setattr(cli, "_report_target", lambda path, data: {})
+    monkeypatch.setattr(cli, "_report_target", lambda path, data, threshold=None: {})
     monkeypatch.setattr(cli, "load_loadout", lambda path: type("Loadout", (), {"bench_recipes": {}})())
     monkeypatch.setattr(cli, "render_report", lambda report: "<!doctype html><script id='report-data'>{}</script>")
     assert cli.main(["report", "ignored.json", "--loadout", "ignored.json", "--output-dir", "ignored"]) == 0
@@ -92,11 +92,12 @@ def test_report_rejects_paths_outside_repository_before_evaluation(monkeypatch) 
 def test_fracture_base_count_uses_production_keys_and_no_exalt_when_k_zero() -> None:
     plan = _plan()
     plan["prices"]["base_cost"] = 7
-    fracture = {"id": "fracture-life-envy", "expected_cost": 2034, "stages": [], "parameters": {"alchemy_early_stop": False}, "expected_action_counts": {"bases": 2, "alchemy": 4, "scour": 3, "fracturing": 2, "envy": 4}}
+    fracture = {"id": "fracture-life-envy", "expected_cost": 2036, "stages": [], "parameters": {"alchemy_early_stop": False}, "expected_action_counts": {"bases": 2, "alchemy": 4, "scour": 3, "fracturing": 2, "envy": 4}}
     plan["prices"]["values"] = {"alchemy": 1, "scour": 2, "fracturing": 1000, "Metadata/Items/Currency/CurrencyEssenceEnvy3": 3}
     actual = material_accounting(fracture, plan, {"envy_id": "Metadata/Items/Currency/CurrencyEssenceEnvy3"})
     assert next(row for row in actual["rows"] if row["currency"] == "Base")["count"] == 2
     assert actual["total"] == 2036
+    assert actual["complete"]
     magic = dict(_plan()["ranked"][2])
     magic["parameters"] = {"max_exalts": 0, "early_stop": False, "magic_min_desired": 1, "regal_min_desired": 1}
     magic["stages"] = [{"name": "transmute setup/reset", "probability": 1, "expected_attempts": 4}, {"name": "Regal gate", "probability": .5, "expected_attempts": 2}]
@@ -129,3 +130,16 @@ def test_evidence_links_are_relative_and_keep_provenance() -> None:
     assert evidence["commands"][0]["stdout_file"] == "evidence/logs/run.out"
     assert evidence["artifacts"]["coe_json"] == "evidence/coe/comparison.json"
     assert evidence["working_tree_dirty"] is True
+
+
+def test_copy_evidence_artifacts_preserves_relative_links(tmp_path) -> None:
+    source = tmp_path / "source"
+    output = tmp_path / "output"
+    (source / "coe").mkdir(parents=True)
+    (source / "logs").mkdir()
+    for relative in ("proof.json", "coe/comparison.json", "logs/run.out"):
+        (source / relative).write_text(relative, encoding="utf-8")
+    cli._copy_evidence_artifacts(source.resolve(), output.resolve(), {"artifacts": {"coe_json": "coe/comparison.json"}, "commands": [{"stdout_file": "logs/run.out"}]})
+    assert (output / "evidence/proof.json").is_file()
+    assert (output / "evidence/coe/comparison.json").is_file()
+    assert (output / "evidence/logs/run.out").is_file()

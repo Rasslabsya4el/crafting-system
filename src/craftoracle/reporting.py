@@ -19,7 +19,6 @@ def build_report(plan: Mapping[str, Any], context: Mapping[str, Any], evidence: 
     """Return a JSON-safe report model without evaluating a crafting policy."""
     ranked = _list(plan, "ranked")
     unavailable = _list(plan, "unavailable")
-    routes = [_route(_mapping(route, "ranked route"), plan, context, index) for index, route in enumerate(ranked)]
     evidence_data = _evidence(evidence, context.get("generation", {}).get("commit"))
     routes = [_route(_mapping(route, "ranked route"), plan, context, index) for index, route in enumerate(ranked)]
     return {

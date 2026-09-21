@@ -76,9 +76,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "envy_id": "Metadata/Items/Currency/CurrencyEssenceEnvy3",
                 "bench_recipes": report_loadout.bench_recipes,
                 "fossil_names": _fossil_names(),
-                "bench_names": {str(index): str(row.get("stat_text", f"bench {index}")) for index, row in data.bench.items()},
+                "bench_names": {str(index): _stat_text(row.get("stat_text", f"bench {index}")) for index, row in data.bench.items()},
                 "generation": {"commit": _git_commit(), "generated_at": datetime.now(timezone.utc).isoformat()},
-                "target": _report_target(arguments.spec, data),
+                "target": _report_target(arguments.spec, data, arguments.threshold),
             }
             report = build_report(document, context, evidence)
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -457,7 +457,7 @@ def _copy_evidence_artifacts(source: Path, output: Path, evidence: Mapping[str, 
                 shutil.copy2(candidate, target)
 
 
-def _report_target(spec_path: str | Path, data: Any) -> dict[str, Any]:
+def _report_target(spec_path: str | Path, data: Any, threshold: float | None = None) -> dict[str, Any]:
     """Expose source-backed target wording without adding it to planner output."""
     spec = load_spec(spec_path, data.mods)
     labels: dict[str, str] = {}
@@ -471,7 +471,7 @@ def _report_target(spec_path: str | Path, data: Any) -> dict[str, Any]:
         "criteria": [{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group), "tiers": choices(item)} for item in spec.required_mods],
         "any_of": [[{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group), "tiers": choices(item)} for item in alternatives] for alternatives in spec.any_of],
         "value_table": spec.value_table,
-        "threshold": spec.threshold,
+        "threshold": threshold if threshold is not None else spec.threshold,
         "values_note": spec.values_note,
         "labels": labels,
     }
