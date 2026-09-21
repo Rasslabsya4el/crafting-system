@@ -46,7 +46,9 @@ availability domain; the worker implements its mathematics, not new game facts.
 - Example four available fossils yield15 subsets; recipe costs2/4/6/8 by size.
 - Independent lead reference from accepted adapter0de86dd and the design formula:
   Royal Burgonet86 best of these15 combinations is Aberrant1 alone, p=.0001432502308634093,
-  recipe price2, mean13961.744067592923. Pristine12+Aberrant1 costs4 and gives
+  recipe price2, mean13961.744067592923, exact p90=32146.5 and expected resonators
+  6980.622033796461 (initial Alchemy target chance .0000242820884551265).
+  Pristine12+Aberrant1 costs4 and gives
   p=.00010020977755731915, mean39915.79538480682. The15 distributions took0.159minute
   in one process. These are acceptance references, never insert them as implementation.
 - Report real selected helmet combination, probability, mean/p90, terminal mass1, candidate
