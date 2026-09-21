@@ -223,6 +223,63 @@ def test_chaos_early_setup_formula_matches_the_documented_fixture() -> None:
     assert _chaos_mean(0.25, 0.5, 2.0, 3.0, True) == pytest.approx(6.5)
 
 
+def test_magic_optimizer_small_real_kernel_keeps_seeded_cost_and_terminal_contract() -> None:
+    """A real small pool replaces routine CLI dependence on the full Magic grid."""
+    def row(side: str, group: str) -> dict[str, object]:
+        return {
+            "type": side, "group": group, "level": 1,
+            "weightKey": ["fixture"], "weightVal": [1], "modTags": [],
+            "source_path": "Data/ModExplicit.lua",
+        }
+
+    data = ActionData(
+        {"Fixture": {"name": "Fixture", "type": "Helmet", "tags": {"fixture": True}}},
+        {"A": row("Prefix", "A"), "B": row("Suffix", "B")}, {}, {},
+        {"magic_caps": [1, 1], "rare_caps": [3, 3], "magic_count_weights": {"1": 1, "2": 1}, "rare_count_weights": {"1": 1}},
+    )
+
+    class Target:
+        base = "Fixture"
+        item_level = 1
+        flags: dict[str, bool] = {}
+        labels = {"A": "A:1", "B": "B:1"}
+        required_mods = ()
+        any_of = ()
+        tier_ids: dict[str, tuple[tuple[str, ...], ...]] = {}
+        value_table = {"A": {1: 1.0}}
+        threshold = 1.0
+
+        @staticmethod
+        def utility(outcome: OutcomeClass) -> float:
+            return float("A:1" in outcome.labels)
+
+        @staticmethod
+        def matches(outcome: OutcomeClass) -> bool:
+            return Target.utility(outcome) >= Target.threshold
+
+    class Loadout:
+        allowed_bench = frozenset()
+        base_cost = 0.0
+        budget = 10_000.0
+        unit = "fixture"
+
+        @staticmethod
+        def permits(*_args, **_kwargs) -> bool:
+            return True
+
+        @staticmethod
+        def price(_currency: str) -> float:
+            return 1.0
+
+    policy = optimizer._optimized_magic(Target(), Loadout(), data, {})
+    assert policy["cost_method"] == "sampled correlated finite attempt p90; exact mean"
+    assert policy["cost_seed"] == 20260921
+    assert policy["cost_sample_count"] == 50_000
+    assert policy["candidate_count"] == 96
+    assert sum(row["probability"] for row in policy["terminal_distribution"]) == pytest.approx(1.0)
+    assert policy["cost_p90_interval"][0] <= policy["cost_p90"] <= policy["cost_p90_interval"][1]
+
+
 @dataclass(frozen=True)
 class _LevelSpec:
     base: str = "Fixture"

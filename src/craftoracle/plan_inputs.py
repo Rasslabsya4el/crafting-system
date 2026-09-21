@@ -88,6 +88,8 @@ _LOADOUT_REQUIRED_KEYS = {
     "base_cost",
 }
 _LOADOUT_KEYS = _LOADOUT_REQUIRED_KEYS | {"allowed_fossils"}
+# Ordinary IDs are the supported set in data/rules/fossils.json (S3/S4,
+# reimplemented-from-CoE); its excluded_special_ids remain out of this input domain.
 _SUPPORTED_FOSSIL_IDS = frozenset((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 21, 22, 23))
 _PRICE_KEYS = {
     "schema_version",

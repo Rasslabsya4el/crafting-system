@@ -52,6 +52,22 @@ def test_design_quantiles_match_the_documented_early_alchemy_mixture() -> None:
     assert fossil_spam_p90(0.0, .5, 2.0, 3.0) == pytest.approx(14.0)
 
 
+def test_design_means_and_p90_are_real_policy_outputs(monkeypatch: pytest.MonkeyPatch) -> None:
+    alchemy = {OutcomeClass(("A",), 1, 0): .25, OutcomeClass((), 0, 0): .75}
+    fossils = {OutcomeClass(("A",), 1, 0): .5, OutcomeClass((), 0, 0): .5}
+    monkeypatch.setattr(fixed, "_action_distribution", lambda *_args, **_kwargs: alchemy)
+    monkeypatch.setattr(fossil_policies, "_fossil_distribution", lambda *_args: fossils)
+    policy = fossil_spam_policy(_spec(), _loadout(fossils=frozenset({13}), values={**_loadout().values, "alchemy": 2.0, "fossil:13": 2.0, "resonator:1": 1.0}), _data(), {})
+    assert policy["expected_cost"] == pytest.approx(6.5)
+    assert policy["cost_p90"] == pytest.approx(11.0)
+
+    no_early = {OutcomeClass((), 0, 0): 1.0}
+    monkeypatch.setattr(fixed, "_action_distribution", lambda *_args, **_kwargs: no_early)
+    policy = fossil_spam_policy(_spec(), _loadout(fossils=frozenset({13}), values={**_loadout().values, "alchemy": 2.0, "fossil:13": 2.0, "resonator:1": 1.0}), _data(), {})
+    assert policy["expected_cost"] == pytest.approx(8.0)
+    assert policy["cost_p90"] == pytest.approx(14.0)
+
+
 def test_policy_prices_full_recipe_selects_cheapest_mean_and_keeps_terminal_mixture() -> None:
     policy = fossil_spam_policy(_spec(), _loadout(), _data(), {})
 
@@ -141,6 +157,25 @@ def test_cache_reuses_raw_distribution_across_prices_and_invalidates_mutated_poo
     assert third["stages"][-1]["probability"] != first["stages"][-1]["probability"]
 
 
+def test_cache_reuses_raw_distribution_across_changed_target_thresholds() -> None:
+    data = _data()
+    cache: dict = {}
+    first = _spec()
+    first.value_table = {"A": {1: 1.0}}
+    first.threshold = 1.0
+    first.utility = lambda outcome: float("A" in outcome.labels)
+    first.matches = lambda outcome: first.utility(outcome) >= first.threshold
+    fossil_spam_policy(first, _loadout(fossils=frozenset({13})), data, cache)
+    changed = _spec()
+    changed.value_table = {"A": {1: 1.0}}
+    changed.threshold = 2.0
+    changed.utility = lambda outcome: float("A" in outcome.labels)
+    changed.matches = lambda outcome: changed.utility(outcome) >= changed.threshold
+    second = fossil_spam_policy(changed, _loadout(fossils=frozenset({13})), data, cache)
+    assert second["reasons"] == ["no permitted fossil recipe can complete the target"]
+    assert len(cache) == 2
+
+
 def test_work_limit_never_ranks_a_partial_subset_search(monkeypatch: pytest.MonkeyPatch) -> None:
     ticks = iter((0.0, 1.0))
     monkeypatch.setattr(fossil_policies.time, "monotonic", lambda: next(ticks))
@@ -150,3 +185,10 @@ def test_work_limit_never_ranks_a_partial_subset_search(monkeypatch: pytest.Monk
     assert len(policy["parameter_audit"]) == 3
     assert policy["parameter_audit"][0]["parameters"]["fossil_ids"] == [13]
     assert all(row.get("unavailable_reason") == "work limit" for row in policy["parameter_audit"][1:])
+
+
+def test_work_limit_before_the_first_candidate_is_explicit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(fossil_policies.time, "monotonic", lambda: 1.0)
+    policy = fossil_spam_policy(_spec(), _loadout(), _data(), {}, deadline=.5)
+    assert policy["reasons"] == ["work limit"]
+    assert all(row.get("unavailable_reason") == "work limit" for row in policy["parameter_audit"])
