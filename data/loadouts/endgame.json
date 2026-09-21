@@ -28,8 +28,8 @@
     "harvest_reforge:elemental",
     "harvest_reforge:attribute",
     "harvest_reforge:mana",
-    "fossil"
-    ,"fracturing"
+    "fossil",
+    "fracturing"
   ],
   "allowed_fossils": [1, 12, 13, 14],
   "allowed_essences": [

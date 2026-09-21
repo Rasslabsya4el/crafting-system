@@ -134,6 +134,8 @@ def test_loadout_price_and_permissions(tmp_path: Path) -> None:
     assert loadout.permits("fossil")
     assert loadout.price("fossil:1") == 1
     assert loadout.price("resonator:4") == 4
+    assert loadout.permits("fracturing")
+    assert loadout.price("fracturing") == 1000
     assert not loadout.permits("divine")  # A listed price never grants permission.
     assert loadout.permits("essence", essence_id="Metadata/Items/Currency/CurrencyEssenceEnvy3")
 

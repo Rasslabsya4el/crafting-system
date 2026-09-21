@@ -38,8 +38,8 @@
     "resonator:1": 1,
     "resonator:2": 2,
     "resonator:3": 3,
-    "resonator:4": 4
-    ,"fracturing": 1000
+    "resonator:4": 4,
+    "fracturing": 1000
   },
   "bench_recipes": {
     "131": {"chaos": 2},
