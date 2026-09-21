@@ -50,7 +50,7 @@ all game mechanics. No dependent path may silently guess.
 - [x] Ordinary exact stage outcome distributions (`4ee0641`,`51b386f`); predicates/thresholds reduce the same distribution (`f3cf7c2`); unsupported families remain explicit
 - [x] Exact geometric/chain/compound loop costs and p90 (`8eeee53`), bounded estimated p90 fallback (`70fcadb`); hand fixtures, no Q28 display shortcuts
 - [x] Monte Carlo agrees with exact over five real pools (`70fcadb`); seed, sample counts and error bounds explicit
-- [ ] 30+ known-answer tests with their sources (the current 78 tests validate data tooling, not 78 crafting probabilities)
+- [x] 41 indexed hand-computed known-answer tests with sources (`8ac207c`, KA01..KA41); these are mathematical cases, distinct from data-tooling tests
 
 ## Phase 2 -- item spec -> ranked strategies
 
@@ -69,6 +69,6 @@ all game mechanics. No dependent path may silently guess.
 - [x] Night item specs, invented prices and loadouts (`f3cf7c2`;12 tests; two examples and sourced bench finish)
 - [x] Night concrete policies (`5eeefd3`,8 tests,9 helmet policies) and direct CLI (`d344054`,`0acb192`,9 focused tests; real helmet/bow subprocesses)
 - [x] Night core integration umbrella: GOAL1-6 merged (`d344054`,`0acb192`);187 main tests in0.71minute, mandatory helmet command succeeds
-- [~] Night stretch1: 41 individually collected hand-computed cases (`specs/2026-09-21-known-answers.md`); dispatch after core green
-- [ ] Night stretch2: Pareto membership and two bow stopping thresholds over shared raw distributions (`specs/2026-09-21-stretch-frontier.md`)
+- [x] Night stretch1:41 individually collected hand-computed cases (`8ac207c`,41 passed), indexed in docs/research/known-answers.md
+- [~] Night stretch2: Pareto membership and two bow stopping thresholds over shared raw distributions (`specs/2026-09-21-stretch-frontier.md`)
 - [ ] Night stretch3: bounded Divine integer rerolls with side locks (`specs/2026-09-21-divine-values.md`); selected unblocked family, D17

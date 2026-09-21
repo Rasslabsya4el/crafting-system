@@ -11,7 +11,7 @@
 7. Main suite187 passed in0.71minute; hand exact cases and five real-pool MC comparisons included.
 8. Bow value-table threshold100 produces6 reachable policies; prices/utility are invented inputs.
 9. Special families remain parked by GOAL/D14 and question-ID stubs; no new owner answer needed.
-10. Continue ordered stretch:41 known answers, Pareto/two bow thresholds, bounded Divine; do not stop yet.
+10. 41 known answers accepted8ac207c; Pareto/two bow thresholds next, then bounded Divine.
 
 ## Reproduce
 
@@ -41,15 +41,15 @@ p90 interval[1304082.1,1390479.3] at99%DKW. This uncertainty interval differs fr
 Other listed policies have exact geometric/convolved p90. Policies are fixed templates, not
 an optimal-policy search. Budget flags use mean cost and separately expose p90 over budget.
 
-Accepted worker trees removed without force. Next worker:known-answers,15minute budget,
-followed by frontier20minutes and Divine20minutes in order. At most2 workers; each command
+Accepted worker trees removed without force. Known-answer worker accepted41 cases,0.06s; no production changes.
+Next worker:frontier20minutes, then Divine20minutes in order. At most2 workers; each command
 under10minutes. Pytest uses repository-local .pytest_tmp. No background process is required.
 
 ## Next three actions
 
-1. Accept41 indexed hand-computed cases, then read GOAL and merge.
-2. Implement Pareto comparison for thresholds60/100 over shared bow distributions.
-3. Implement bounded Divine integer rerolls; rerun integrated suite, finish handover and commit.
+1. Accept Pareto comparison for thresholds60/100 over shared bow distributions.
+2. Implement bounded Divine integer rerolls with side locks.
+3. Rerun integrated suite, finish the handover and commit.
 
 ## Night log
 
