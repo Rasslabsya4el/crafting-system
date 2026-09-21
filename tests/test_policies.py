@@ -358,20 +358,66 @@ def test_policy_guards_reject_illegal_repeat_target_cycle_and_q9(
         evaluate_policies(HelmetSpec(flags={"corrupted": True}), _loadout(), action_data)
 
 
-def test_cache_key_changes_when_action_rules_change(action_data: ActionData) -> None:
-    rules = dict(action_data.rules)
-    rules["rare_count_weights"] = dict(action_data.rules["rare_count_weights"])
-    mutable_data = ActionData(action_data.bases, action_data.mods, action_data.bench, action_data.essences, rules)
-    cache: dict = {}
-    spec = HelmetSpec()
-    labels = _labels(spec)
-    first = _chaos_policy(spec, _loadout(), mutable_data, _item(spec, "normal"), _item(spec, "rare"), labels, cache)
-    rules["rare_count_weights"] = {"4": 1, "5": 1, "6": 10}
-    second = _chaos_policy(spec, _loadout(), mutable_data, _item(spec, "normal"), _item(spec, "rare"), labels, cache)
+def test_cache_key_changes_when_action_rules_change() -> None:
+    """Regression for resolved draw-count cache freshness (spec 2026-09-21-bound-cache-regression).
 
-    assert _stage(first, "chaos trial")["probability"] != pytest.approx(
-        _stage(second, "chaos trial")["probability"]
+    With one rare draw, equal-weight A/B gives p(A)=1/2 and Chaos mean
+    0.5 + 1/(1/2) = 2.5.  Mutating the same rules mapping to two draws makes
+    every complete outcome contain A and B, so p(A)=1 and the mean is
+    0.5 + 1/1 = 1.5.
+    """
+    rules = {
+        "magic_caps": [1, 1],
+        "rare_caps": [3, 3],
+        "magic_count_weights": {"1": 1},
+        "rare_count_weights": {"1": 1},
+    }
+    mods = {
+        "A": {"type": "Prefix", "group": "GroupA", "level": 1,
+              "weightKey": ["default"], "weightVal": [1],
+              "source_path": "Data/ModExplicit.lua"},
+        "B": {"type": "Prefix", "group": "GroupB", "level": 1,
+              "weightKey": ["default"], "weightVal": [1],
+              "source_path": "Data/ModExplicit.lua"},
+    }
+    mutable_data = ActionData(
+        {"Tiny Base": {"name": "Tiny Base", "type": "Helmet", "tags": {"default": True}}},
+        mods,
+        {},
+        {},
+        rules,
     )
+    cache: dict = {}
+    class TinySpec:
+        base = "Tiny Base"
+        item_level = 1
+        flags = {}
+        labels = {"A": "A", "B": "B"}
+
+        @staticmethod
+        def matches(outcome: object) -> bool:
+            return "A" in outcome.labels
+
+        @staticmethod
+        def utility(outcome: object) -> float:
+            return 1.0 if TinySpec.matches(outcome) else 0.0
+
+    spec = TinySpec()
+    labels = _labels(spec)
+    loadout = _loadout()
+    first = _chaos_policy(spec, loadout, mutable_data, _item(spec, "normal"), _item(spec, "rare"), labels, cache)
+    rules["rare_count_weights"] = {"2": 1}
+    second = _chaos_policy(spec, loadout, mutable_data, _item(spec, "normal"), _item(spec, "rare"), labels, cache)
+
+    first_stage = _stage(first, "chaos trial")
+    second_stage = _stage(second, "chaos trial")
+    assert first_stage["probability"] == pytest.approx(1 / 2)
+    assert second_stage["probability"] == pytest.approx(1)
+    assert first["expected_cost"] == pytest.approx(2.5)
+    assert second["expected_cost"] == pytest.approx(1.5)
+    assert first_stage["attempt_distribution"] != second_stage["attempt_distribution"]
+    assert len(cache) == 4
+    assert len({id(distribution) for distribution in cache.values()}) == 4
 
 
 def test_kernel_tolerance_normalizes_an_all_success_probability_before_costs() -> None:
