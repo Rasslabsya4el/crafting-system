@@ -64,6 +64,8 @@ learn, decide or leave unfinished must be findable in the docs without asking yo
 - `docs/OPEN_QUESTIONS.md` -- numbered questions for the lead / the owner: unsourced facts, contradictions, judgement calls.
   The owner is an expert player: questions to him are concrete ("does X work on fractured items: yes / no?"), never essays.
 - Docs and code comments in English. Reports to the owner in chat: Russian, short, tables with numbers, plain language.
+  Modifier names and modifier stat text MUST remain in their original English throughout the project, including reports,
+  prototypes, target labels, item cards and route instructions. Never translate modifiers; surrounding explanations may be Russian.
   Durations for humans in minutes / hours, never large numbers of seconds.
 
 ## 5. Code

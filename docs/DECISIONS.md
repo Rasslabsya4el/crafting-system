@@ -280,3 +280,12 @@ regressions. C01..C03 use the helmet but do not validate the entire route; C04..
 other-base engine cases. The latter belong in a separate collapsed section. Do not
 expand policy coverage while output is under review. Currency artwork is deferred;
 text action chips suffice to choose layout. No external skills used.
+
+## D26 — 2026-09-21 — Preserve original English modifiers everywhere
+
+Owner explicitly requires all modifier names and stat descriptions in original English
+throughout the project. Russian instructions and UI explanations remain acceptable;
+modifier text must come from existing English source labels, never a translation.
+Apply to the prototype and current report formatter, and refresh saved presentation
+from existing plan/context/evidence without rerunning craft calculations. Rejected:
+localized modifier descriptions or a Russian-only option for modifier text.
