@@ -1,0 +1,19 @@
+{
+  "confidence": "reimplemented-from-CoE",
+  "magic_caps": [1, 1],
+  "magic_count_weights": {
+    "1": 1,
+    "2": 1
+  },
+  "rare_caps": [3, 3],
+  "rare_count_weights": {
+    "4": 8,
+    "5": 3,
+    "6": 1
+  },
+  "sources": [
+    "S3 numOfAffixes line 993",
+    "docs/mechanics/affix_generation.md",
+    "GOAL lead-provisional 2026-09-20"
+  ]
+}
