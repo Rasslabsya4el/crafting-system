@@ -143,3 +143,13 @@ Strict helmet tier IDs are explicit base-qualified source mappings. Greed essenc
 is below ordinary target130..144 and cannot count as T1 success. Envy guarantees ChaosResist6.
 Example utility/price values are invented caller inputs. JSON-compatible YAML avoids an
 extra dependency; unsupported YAML syntax fails clearly. No inferred general tier framework.
+
+## D16 — 2026-09-21 — Exact means and explicit bounded p90 estimation
+The fixed magic sequence can require millions of lattice cost points because Augmentation
+is conditionally paid. Keep exact mean/attempts and exact stage probabilities. If the exact
+compound-cost convolution reaches its documented work limit, an explicit seeded Monte Carlo
+samples geometric attempt count then the binomial count of extra Augmentation charges.
+Report estimated p90 with a99% DKW quantile interval, sample count and seed. Never multiply
+mean attempt cost by geometric p90 or silently label sampled p90 exact. Ordinary fixed-price
+loops and affordable independent-chain convolutions retain exact quantiles. This is GOAL's
+permitted labelled estimation for an infeasible exact calculation, not a different policy.
