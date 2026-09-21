@@ -98,7 +98,8 @@ python -m craftoracle quality --base "Paua Amulet" --item-level 86 --catalyst fe
 python -m pytest -q
 ```
 
-The full-suite under-one-minute target is still pending final integration. Routine CLI
+The full main suite after fossil integration passed373 tests in0.863minute. The final
+fracture integration still requires a full-suite run. Routine CLI
 tests use explicitly bounded fossil availability and disable the expensive Magic grid;
 small exhaustive fixtures retain optimization and sampled-cost coverage. Full default
 commands, including all 15 fossil combinations and the complete Magic grid, are measured
