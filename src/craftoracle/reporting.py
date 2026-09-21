@@ -263,7 +263,10 @@ def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[st
         magic_gate, regal_gate = parameters.get("magic_min_desired"), parameters.get("regal_min_desired")
         steps = ["Примените Orb of Transmutation; это оплачиваемая подготовка без проверки.", "Примените Orb of Alteration; только при одном модификаторе добавьте Orb of Augmentation.", f"{'Сначала проверяйте цель на каждом этапе.' if early else 'Проверяйте цель только на последнем настроенном этапе.'} Затем требуется не менее {magic_gate} желаемых модификаторов: моды из цели или тиры с положительной ценностью из входной таблицы; неудача сбрасывается Orb of Scouring + Transmutation."]
         if max_exalts:
-            steps.append(f"Затем примените Regal Orb; продолжайте без промежуточной проверки цели, иначе сброс Orb of Scouring + Transmutation.")
+            if early:
+                steps.append(f"Сначала проверьте цель: готово — остановитесь. Иначе продолжайте только при не менее {regal_gate} желаемых модификаторах; при меньшем числе Orb of Scouring + Orb of Transmutation и возврат к Alteration.")
+            else:
+                steps.append(f"После Regal продолжайте только при не менее {regal_gate} желаемых модификаторах; при меньшем числе Orb of Scouring + Orb of Transmutation и возврат к Alteration.")
         else:
             steps.append(f"Затем примените Regal Orb; после проверки цели требуется не менее {regal_gate} желаемых модификаторов, иначе сброс Orb of Scouring + Transmutation.")
         if max_exalts:
@@ -302,7 +305,7 @@ def _stage_meaning(identifier: str, name: str) -> str:
 
 def _evidence(evidence: Mapping[str, Any] | None, report_commit: Any) -> dict[str, Any]:
     if not isinstance(evidence, Mapping):
-        return {"status": "unavailable", "message": "Проверки недоступны: proof.json не предоставлен.", "proof_link": "evidence/proof.json"}
+        return {"status": "unavailable", "message": "Проверки недоступны: proof.json не предоставлен."}
     pytest = _mapping(evidence.get("pytest", {}), "evidence pytest")
     coe = _mapping(evidence.get("coe", {}), "evidence coe")
     status = "passed" if pytest.get("status") == "passed" and coe.get("status") == "passed" else "unavailable" if "unavailable" in {pytest.get("status"), coe.get("status")} else "failed"
