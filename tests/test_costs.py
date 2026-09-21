@@ -7,6 +7,8 @@ import math
 import pytest
 
 from craftoracle.costs import (
+    _chain_distribution,
+    _compound_distribution,
     chain_cost,
     compound_geometric_cost,
     geometric_cdf,
@@ -73,6 +75,9 @@ def test_chain_uses_exact_joint_quantile_not_sum_of_marginals() -> None:
     unit = chain_cost([(0.5, 1, 0, 0), (0.5, 1, 0, 0)])
     assert unit.expected_cost == 4
     assert unit.cost_p90 == 7
+    distribution = _chain_distribution([(0.5, 1, 1), (0.5, 1, 1)], 7)
+    assert math.fsum(distribution[:7]) == 57 / 64
+    assert math.fsum(distribution[:8]) == 15 / 16
 
     doubled = chain_cost([(0.5, 2, 0, 0), (0.5, 2, 0, 0)])
     assert doubled.expected_cost == 8
@@ -104,6 +109,10 @@ def test_compound_geometric_cost_acceptance_pmf_and_quantile() -> None:
     assert result.expected_attempts == 2
     assert result.expected_cost == 3
     assert result.cost_p90 == 6
+    distribution = _compound_distribution(0.5, {1: 0.5, 2: 0.5}, 0, 6)
+    assert distribution[1:] == [0.25, 0.3125, 0.140625, 0.11328125, 0.0634765625, 0.044189453125]
+    assert math.fsum(distribution[:6]) == 0.8798828125
+    assert math.fsum(distribution[:7]) == 0.924072265625
 
     constant = compound_geometric_cost(0.5, [(2, 1)])
     assert constant.expected_cost == 4

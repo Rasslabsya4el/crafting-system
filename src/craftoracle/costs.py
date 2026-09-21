@@ -184,41 +184,53 @@ def _stage_fractions(
 def _chain_crossing(stages: list[tuple[float, int, int]]) -> int:
     bound = 16
     while bound <= _MAX_GRID_POINTS:
-        _check_work(bound, len(stages))
-        distribution = [1.0] + [0.0] * bound
-        for probability, base, step in stages:
-            next_distribution = [0.0] * (bound + 1)
-            failure = 1 - probability
-            for cost in range(bound + 1):
-                mass = probability * (distribution[cost - base] if cost >= base else 0.0)
-                if cost >= step:
-                    mass += failure * next_distribution[cost - step]
-                next_distribution[cost] = mass
-            distribution = next_distribution
+        distribution = _chain_distribution(stages, bound)
         if math.fsum(distribution) >= 0.9:
             return _first_crossing(distribution, 0.9)
         bound *= 2
     raise NotImplementedError("cost convolution work limit")
+
+
+def _chain_distribution(stages: list[tuple[float, int, int]], bound: int) -> list[float]:
+    """Return the truncated exact chain PMF for tests and the p90 search."""
+    _check_work(bound, len(stages))
+    distribution = [1.0] + [0.0] * bound
+    for probability, base, step in stages:
+        next_distribution = [0.0] * (bound + 1)
+        failure = 1 - probability
+        for cost in range(bound + 1):
+            mass = probability * (distribution[cost - base] if cost >= base else 0.0)
+            if cost >= step:
+                mass += failure * next_distribution[cost - step]
+            next_distribution[cost] = mass
+        distribution = next_distribution
+    return distribution
 
 
 def _compound_crossing(probability: float, costs: dict[int, float], reset: int) -> int:
-    positive = [(cost + reset, weight) for cost, weight in costs.items() if cost + reset > 0]
-    zero_weight = sum(weight for cost, weight in costs.items() if cost + reset == 0)
-    denominator = 1 - (1 - probability) * zero_weight
     bound = 16
     while bound <= _MAX_GRID_POINTS:
-        _check_work(bound, len(positive) + 1)
-        distribution = [0.0] * (bound + 1)
-        for total in range(bound + 1):
-            attempt_mass = probability * costs.get(total, 0.0)
-            continuation = math.fsum(
-                weight * distribution[total - step] for step, weight in positive if total >= step
-            )
-            distribution[total] = (attempt_mass + (1 - probability) * continuation) / denominator
+        distribution = _compound_distribution(probability, costs, reset, bound)
         if math.fsum(distribution) >= 0.9:
             return _first_crossing(distribution, 0.9)
         bound *= 2
     raise NotImplementedError("cost convolution work limit")
+
+
+def _compound_distribution(probability: float, costs: dict[int, float], reset: int, bound: int) -> list[float]:
+    """Return the truncated compound-loop PMF using its zero-step algebra."""
+    positive = [(cost + reset, weight) for cost, weight in costs.items() if cost + reset > 0]
+    zero_weight = sum(weight for cost, weight in costs.items() if cost + reset == 0)
+    denominator = 1 - (1 - probability) * zero_weight
+    _check_work(bound, len(positive) + 1)
+    distribution = [0.0] * (bound + 1)
+    for total in range(bound + 1):
+        attempt_mass = probability * costs.get(total, 0.0)
+        continuation = math.fsum(
+            weight * distribution[total - step] for step, weight in positive if total >= step
+        )
+        distribution[total] = (attempt_mass + (1 - probability) * continuation) / denominator
+    return distribution
 
 
 def _weighted_costs(costs: Iterable[tuple[float, float]]) -> list[tuple[float, float, Fraction]]:
