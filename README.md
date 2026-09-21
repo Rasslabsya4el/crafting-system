@@ -2,6 +2,27 @@
 
 Given a Path of Exile 1 item spec, the prototype evaluates its reviewed ordinary-currency policies from a white base and reports their odds, expected cost, p90 cost, decisions, and input assumptions.
 
+Generate readable, standalone Russian reports with fresh local validation evidence:
+
+```powershell
+python -m tools.collect_evidence --output-dir out/evidence
+python -m craftoracle report examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json --output-dir out/reports/helmet --evidence-dir out/evidence
+python -m craftoracle report examples/bow_value_table.yaml --loadout data/loadouts/endgame.json --compare-thresholds 60,100 --output-dir out/reports/bow --evidence-dir out/evidence
+```
+
+Open `out/reports/helmet/index.html` or `out/reports/bow/index.html` in a browser.
+No server or network is needed to read the report. Select a route to inspect its ordered
+actions, stopping/restart rules, conditional probabilities and expected currency bill.
+The report retains all candidates and provides the raw `plan.json`. Its evidence area
+lists individual pytest cases, command logs and twelve offline Craft of Exile comparisons.
+The ignored local PoB and CoE source snapshots are required to reproduce that evidence.
+Missing evidence and evidence from another revision are explicitly labelled.
+
+The example prices and bow utility points are invented inputs, not current market prices
+or DPS. Mean cost is not a guaranteed budget. An estimated p90 is separate from its
+uncertainty interval. Tests check the implementation and the documented model; the CoE
+cases compare individual actions, not every complete multi-step route against the game.
+
 From the repository root, run:
 
 ```powershell
