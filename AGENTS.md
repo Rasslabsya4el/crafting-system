@@ -25,8 +25,11 @@ learn, decide or leave unfinished must be findable in the docs without asking yo
 
 - **A number or a rule without a source does not exist.** Every mechanic, probability, weight, limit or exception you write
   into code or docs carries its source: a URL with the date you read it, or a file + function / line of cached material, or
-  "PoB data: <file>, key <id>". Sources are ranked: the game's own datamined data (PoB's data files, PoEDB, RePoE) > the
-  community wiki (poewiki.net) > Craft of Exile's code and texts > forum / Reddit posts by GGG staff > other player reports.
+  "PoB data: <file>, key <id>". Sources are ranked: for NUMBERS the game's own datamined data (PoB's data files, PoEDB,
+  RePoE); for BEHAVIOUR official GGG statements (patch notes, staff posts) rank equally high and DECIDE a question when they
+  speak to it (the owner, 2026-09-21: "they did this in 3.27 -- why is that source not 100%?"); then the community wiki
+  (poewiki.net) > Craft of Exile's code and texts > the owner's answers in `docs/OWNER_QUESTIONS.md` (`owner-confirmed`) >
+  other player reports. Do not ask the owner what a ranked source already answers; ask only real contradictions.
   When sources disagree, record BOTH and the disagreement in `docs/OPEN_QUESTIONS.md`; do not pick silently.
 - **Never type a game fact from your own memory.** Your memory of Path of Exile is a hypothesis generator, not a source. If
   you cannot find a source, the item goes to `docs/OPEN_QUESTIONS.md` with status `unsourced` and the code path that needs it
