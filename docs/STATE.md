@@ -1,4 +1,4 @@
-# Current state — GOAL 2 active (2026-09-21, 12:52 CEST)
+# Current state — GOAL 2 active (2026-09-21, 13:21 CEST)
 
 1. Ordinary PoE3.29 is the owner-confirmed target; GOAL2 is incomplete and work continues.
 2. Harvest exact/sampler merged527efa7; protected-suffix helmet policy merged55c8191.
@@ -7,9 +7,9 @@
 5. Best helmet remains Envy: mean1927.48, p90 4435, at invented example prices.
 6. Metamod matrix has132 cells/33 notes; base projection561 records/548 names, seven classes.
 7. Twelve cached-CoE cases accepted3712602;25 correspondences, max relative difference2.08735%, none above5%.
-8. Optimizer pending: protected k1 baseline8357.19; legal fixed k2 measurement4693.13, k3 paid-reset4787.90.
+8. Optimizer active on accepted attempt kernel0f012a1; independent mean-grid references: Exalt1948.60, Harvest1986.20.
 9. General solver pending: no state-count/runtime/optimum result exists yet; bow recheck follows optimizer.
-10. Next: accept attempt kernel and optimize templates; accept fossil adapter; run bounded solver/family policies.
+10. Next: accept optimized templates/solver; implement fracture identity; integrate fossil/fracture/catalyst policies.
 
 ## Working commands and evidence
 
@@ -34,7 +34,9 @@ policy has no attack/caster restriction, so that uncertainty does not change its
 
 ## In progress and bounded backlog
 
-At most two workers. Current:policy-attempt-kernel (correction1) and bounded-policy-solver.
+At most two workers. Current:template-optimizer and bounded-policy-solver.
+Conditional attempt kernel accepted0f012a1:10 tests; exact hand means21.5/22,
+independent true p90 fixtures44/45/97 with seeded DKW intervals containing each.
 Ordinary fossil adapter accepted0de86dd:43 focused tests,18 supported fossils,93 real entries/
 84 classes; triple target .00010020977755731918,Life marginal .09844673121656489;
 seeded1/1032 of10000,zero blocked/group violations. Policy integration follows optimizer.

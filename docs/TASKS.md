@@ -8,7 +8,8 @@
 - [x] Produce 12 offline CoE validation cases over helmet/body/ring/amulet/boots (`3712602`; docs/validation/coe_cases.md):25 correspondences, max difference2.08735%, none above5%. Broader Q14 proof stays separate.
 - [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
 - [x] Correct the 15-row owner question sheet without re-asking answered questions (`ffcf869`; S63-S79 and owner answers).
-- [~] Expose and optimise template parameters; design/specs `0ae6f5b`/`47d98af`; finite attempt-kernel worker active. Baseline8357.19; legal fixed k2 measurement4693.13, k3 with paid restart4787.90.
+- [x] Conditional attempt kernel and paid-restart costs (`0f012a1`):10 lead tests; means21.5/22; independent exact p90 fixtures44/45/97.
+- [~] Expose and optimise template parameters; optimizer worker active from `0f012a1`. Baseline8357.19; legal fixed k2 mean4693.13, k3 with paid restart4787.90. Independent full gate-grid reference: protected1948.60, Harvest1986.20 (`ce27b44`); planner integration pending.
 - [~] Bounded general solver experiment on helmet and three hand optima; worker active from0de86dd; hard states/edges/time limits in spec.
 - [ ] Verify bow distribution/threshold/frontier path after new policies.
 - [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
