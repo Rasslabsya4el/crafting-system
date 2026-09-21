@@ -56,6 +56,10 @@ at20 needs2 applications. Source item/mod IDs do not change. Final quality never
 CDF P(applications<=16) from exact count law must match independent MC within
 sqrt(log(2000)/(2*10000))=.019494746035204052. Uniform unique+1 is documented in the sheet
 but outside this non-unique API slice; no unsourced unique item-model extension.
+Independent binomial check: with r=P(+2) at86, reaching20 by n applications is
+Binomial(n,r)>=20-n. Thus CDF15=.7978286383138568 and CDF16=.9413199321203.
+Verify the finite recurrence against these numbers; do not use its own output as its
+only expected CDF value. The binomial relation is arithmetic, not a new game rule.
 
 ## Numbers to report
 Exact formula probabilities, real ilvl86 count mean/p90/costs and MC CDF/bound; deterministic
