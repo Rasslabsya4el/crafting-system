@@ -74,6 +74,11 @@ laws. The task changes planner behaviour; it is not a new game-rule research tas
 - Harvest fixed mean2703.6093795549086, p.07950823245417578,b.07592833649031873;
   optimized mean must be no higher under the same prices. Envy baseline1927.479966
   remains a comparison; measure the actual best policy after the grid.
+- Lead's independent mean-only grid reference at3712602: best protected Exalt k3,
+  maxP1/minElem2/early=true, u=.002594060684443422,v=.0005495684166343905,
+  mean1948.603171950813. Harvest same gate mean1986.1982162752881. Reproduce through
+  your implemented grid, not by inserting these values. This does not preselect the
+  overall best (pure Envy remains cheaper); terminal distributions/p90 still require tests.
 - Design tiny protected fixture: e5 selects k3 mean50 versus k2=51; e50 selects k2=141
   versus k3=230. Synthetic renewal early completion case mean22 versus28 without it.
 - Chaos setup a.25,p.5,alchemy2,chaos3,base0: ignored setup mean8; early-stop mean6.5.

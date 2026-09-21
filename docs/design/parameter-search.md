@@ -122,3 +122,25 @@ The third-slam full-failure reset is charged. Before preparation early-stop opti
 two slams win this three-choice Exalt comparison. Accepted Harvest has p0.07950823245417578,
 b0.07592833649031873 and baseline mean2703.6093795549086. Envy spam remains1927.479966
 under these invented prices; no new best-policy claim precedes the full grid measurement.
+
+## Preparation-grid reference measured by the lead
+
+At3712602, using one accepted Envy distribution and the renewal equations above, all32
+protected Exalt/Harvest mean candidates were evaluated independently of the forthcoming
+optimizer. The best in each bounded cycle family has max_prefixes1, min_elemental2 and
+early_stop=true. It has u=.002594060684443422 and v=.0005495684166343905.
+
+| Cycle | Mean under that gate |
+|---|---:|
+| Exalt1 | 3035.8209417281146 |
+| Exalt2 | 2395.2703398566505 |
+| Exalt3 with paid full reset | 1948.603171950813 |
+| Harvest Life | 1986.1982162752881 |
+
+These are exact-mean references under D14 and invented prices, not new probability sources.
+They do not certify the optimizer, its p90 or terminal distributions. The full grid is
+preserved in ignored out/lead-protected-grid.json. Gate maxP2/minElem1 with early stop gives
+Exalt2=4480.326415, Exalt3=2807.303177 and Harvest=2476.341782. Strict preparation becomes
+cheaper here because more successes end during Envy and fewer items enter an expensive
+protected cycle. Pure Envy1927.48 remains cheaper than every protected instance. A minimum
+within a named template must not be described as a reason to choose it over the whole library.
