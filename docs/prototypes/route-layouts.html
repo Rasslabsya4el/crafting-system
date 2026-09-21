@@ -80,6 +80,8 @@
     .goal strong { color: var(--green); }
     .outcomes { display: grid; gap: 7px; }
     .outcome { border-left: 3px solid var(--line); padding: 8px 10px; background: #141a20; font-size: 13px; }
+    .outcome.route-button { width: 100%; border-top: 0; border-right: 0; border-bottom: 0; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+    .outcome.route-button:hover { background: #202a34; }
     .outcome.success { border-left-color: var(--green); }
     .outcome.loop { border-left-color: var(--violet); }
     .outcome.fail { border-left-color: var(--red); }
@@ -92,10 +94,10 @@
     .connector { height: 17px; margin-left: 30px; border-left: 1px dashed #5d6b76; position: relative; }
     .connector::after { content: "↓"; position: absolute; left: -6px; bottom: -8px; color: var(--violet); background: var(--bg); font-size: 15px; }
     .graph-frame { border: 1px solid var(--line); border-radius: var(--radius); background: #11161c; overflow-x: auto; }
-    .route-graph { min-width: 875px; display: block; width: 100%; height: 445px; }
+    .route-graph { min-width: 1020px; display: block; width: 100%; height: 470px; }
     .route-graph .edge { stroke: #778793; stroke-width: 2; fill: none; marker-end: url(#arrow); }
     .route-graph .edge.loop { stroke: var(--violet); }.route-graph .edge.fail { stroke: var(--red); }.route-graph .edge.ok { stroke: var(--green); }
-    .route-graph .edge-label { fill: #cbd5dc; font-size: 13px; }.route-graph .edge-label.small { fill: #9daab5; font-size: 11px; }
+    .route-graph .edge-label { fill: #cbd5dc; font-size: 13px; paint-order: stroke; stroke: #11161c; stroke-width: 5px; stroke-linejoin: round; }.route-graph .edge-label.small { fill: #9daab5; font-size: 11px; }
     .route-graph .node { cursor: pointer; }.route-graph .node rect { fill: #202831; stroke: #536270; stroke-width: 1.5; rx: 6; }.route-graph .node:hover rect, .route-graph .node.selected rect { stroke: var(--blue); stroke-width: 3; }.route-graph .node.finish rect { fill: var(--green-bg); stroke: var(--green); }.route-graph .node text.title { fill: #edf2f5; font-size: 15px; font-weight: 750; }.route-graph .node text.sub { fill: #aab7c1; font-size: 12px; }
     .graph-hint { padding: 10px 13px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
     .detail-panel { margin-top: 16px; padding: 16px; }
@@ -111,12 +113,12 @@
     .choice { padding: 9px 11px; background: #202831; color: var(--text); border: 1px solid #52606d; border-radius: 4px; cursor: pointer; text-align: left; }.choice:hover { border-color: var(--blue); background: #263543; }.choice.danger { border-color: #8e4e51; }.choice.success { border-color: #4d8d60; }
     .reset { padding: 8px 10px; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }.reset:hover{color:var(--text);border-color:#71808c}
     .history { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 13px; }.history h3{margin-bottom:7px}.history ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: 13px; }.history li{margin:3px 0}.history .current{color:var(--text)}
-    .evidence { margin-top: 25px; overflow: hidden; }.evidence > header { padding: 15px 17px; border-bottom: 1px solid var(--line); }.evidence > header p { color: var(--muted); font-size: 13px; margin-top: 4px; }.evidence-body { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; padding: 14px 17px 17px; }.evidence-block { background: #12171d; padding: 12px; border-left: 3px solid var(--blue); font-size: 13px; }.evidence-block.closed { border-left-color: var(--green); }.evidence-block b { display: block; margin-bottom: 4px; }.evidence-block span { color: var(--muted); }
+    .evidence { margin-top: 25px; overflow: hidden; }.evidence > header { padding: 15px 17px; border-bottom: 1px solid var(--line); }.evidence > header p { color: var(--muted); font-size: 13px; margin-top: 4px; }.evidence-body { padding: 14px 17px 17px; }.evidence-block { background: #12171d; padding: 12px; border-left: 3px solid var(--blue); font-size: 13px; }.evidence-block b { display: block; margin-bottom: 4px; }.evidence-block span { color: var(--muted); }.evidence-global { border-top: 1px solid var(--line); background: #131b17; }.evidence-global summary { color: #b6e4c1; }
     details { border-top: 1px solid var(--line); padding: 12px 17px; color: var(--muted); font-size: 12px; } summary { cursor: pointer; color: #c6d3dc; font-weight: 700; } details p { margin-top: 8px; }
     .context { display: grid; grid-template-columns: 1fr auto; gap: 16px; margin-top: 18px; padding: 14px 16px; }.context h2{font-size:16px}.context p{color:var(--muted);font-size:13px;margin-top:4px}.stat-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.stat{font-size:13px}.stat b{display:block;color:var(--gold);font-size:16px}.stat span{color:var(--muted);font-size:11px}
     .smallprint { color: var(--dim); font-size: 11px; margin-top: 14px; }
     @media (max-width: 720px) {
-      .shell { padding: 20px 14px 42px; }.step-strip { grid-template-columns: repeat(2, 1fr); }.step-grid, .detail-content, .manual-grid, .evidence-body, .context { grid-template-columns: 1fr; }.step-head { flex-wrap: wrap; }.action-chip { margin-left: 40px; }.context { gap: 10px; }.route-graph { height: 420px; }.mode-note { margin-bottom: 18px; }
+      .shell { padding: 20px 14px 42px; }.step-strip { grid-template-columns: repeat(2, 1fr); }.step-grid, .detail-content, .manual-grid, .context { grid-template-columns: 1fr; }.step-head { flex-wrap: wrap; }.action-chip { margin-left: 40px; }.context { gap: 10px; }.route-graph { height: 440px; }.mode-note { margin-bottom: 18px; }
     }
   </style>
 </head>
@@ -141,27 +143,28 @@
         <button class="jump" data-jump="step-4"><b>04 · Exalt ×3</b><span>остановиться на life T1</span></button>
       </nav>
       <div class="timeline" id="timeline"></div>
+      <article class="detail-panel" id="finished-panel" hidden aria-live="polite"><header><h2>Готово · целевое состояние</h2><button class="reset" type="button" id="close-finished">Закрыть</button></header><div id="finished-panel-state"></div></article>
       <div class="context" id="context-panel"></div>
     </section>
 
     <section class="view" id="view-b" role="tabpanel" aria-labelledby="tab-b">
       <div class="graph-frame">
-        <svg class="route-graph" viewBox="0 0 920 445" role="img" aria-labelledby="graph-title graph-desc">
+        <svg class="route-graph" viewBox="0 0 1080 470" role="img" aria-labelledby="graph-title graph-desc">
           <title id="graph-title">Карта переходов маршрута защищённых суффиксов Envy</title>
           <desc id="graph-desc">Четыре действия, завершение, повтор Envy и возврат после трёх неудачных Exalt.</desc>
           <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="currentColor"></path></marker></defs>
-          <path class="edge loop" d="M182 277 C78 333 65 178 183 208"></path><text class="edge-label" x="35" y="264">99,7% · повторить</text>
-          <path class="edge ok" d="M245 180 C270 73 564 62 670 142"></path><text class="edge-label" x="398" y="81">0,3% · готово</text>
-          <path class="edge" d="M310 231 L382 231"></path><text class="edge-label" x="316" y="217">&lt;0,1% · подготовка</text>
-          <path class="edge" d="M510 231 L580 231"></path><text class="edge-label small" x="514" y="217">100,0% при условиях</text>
-          <path class="edge" d="M705 231 L760 231"></path><text class="edge-label small" x="694" y="272">100,0% при защите</text>
-          <path class="edge ok" d="M832 189 C868 139 832 102 783 131"></path><text class="edge-label" x="816" y="100">6,7% за серию</text>
-          <path class="edge fail" d="M788 285 C692 393 313 390 220 286"></path><text class="edge-label" x="434" y="393">93,3% · 3 префикса заняты → Envy</text>
-          <g class="node selected" tabindex="0" role="button" aria-label="Шаг 1: Envy" data-node="envy"><rect x="120" y="181" width="125" height="101"></rect><text class="title" x="140" y="218">1 · Envy</text><text class="sub" x="140" y="241">5,0 chaos-equiv.</text><text class="sub" x="140" y="260">поиск состояния</text></g>
-          <g class="node" tabindex="0" role="button" aria-label="Шаг 2: Bench" data-node="bench"><rect x="383" y="181" width="127" height="101"></rect><text class="title" x="403" y="218">2 · Bench</text><text class="sub" x="403" y="241">2 Divine</text><text class="sub" x="403" y="260">защита</text></g>
-          <g class="node" tabindex="0" role="button" aria-label="Шаг 3: Scour" data-node="scour"><rect x="580" y="181" width="125" height="101"></rect><text class="title" x="600" y="218">3 · Scour</text><text class="sub" x="600" y="241">0,5 chaos-equiv.</text><text class="sub" x="600" y="260">очистка</text></g>
-          <g class="node" tabindex="0" role="button" aria-label="Шаг 4: Exalt" data-node="exalt"><rect x="759" y="181" width="129" height="101"></rect><text class="title" x="779" y="218">4 · Exalt ×3</text><text class="sub" x="779" y="241">10,0 за сферу</text><text class="sub" x="779" y="260">проверка после каждой</text></g>
-          <g class="node finish" tabindex="0" role="button" aria-label="Завершённый предмет" data-node="finished"><rect x="660" y="102" width="125" height="55"></rect><text class="title" x="681" y="136">Готово</text></g>
+          <path class="edge loop" d="M100 257 C20 257 25 355 145 310"></path><text class="edge-label" x="22" y="365">99,7% · повторить</text>
+          <path class="edge ok" d="M250 213 C370 80 608 87 710 124"></path><text class="edge-label" x="455" y="76">0,3% · готово</text>
+          <path class="edge" d="M250 257 L365 257"></path><text class="edge-label" x="272" y="188">&lt;0,1% · подготовка</text>
+          <path class="edge" d="M510 257 L625 257"></path><text class="edge-label small" x="523" y="188">100,0% при условиях</text>
+          <path class="edge" d="M770 257 L885 257"></path><text class="edge-label small" x="784" y="188">100,0% при защите</text>
+          <path class="edge ok" d="M957 205 C990 123 906 118 850 126"></path><text class="edge-label" x="874" y="102">6,7% за серию</text>
+          <path class="edge fail" d="M957 310 C950 432 245 440 185 310"></path><text class="edge-label" x="470" y="448">93,3% · 3 префикса заняты → Envy</text>
+          <g class="node selected" tabindex="0" role="button" aria-label="Шаг 1: Envy" data-node="envy"><rect x="100" y="205" width="150" height="105"></rect><text class="title" x="120" y="239">1 · Envy</text><text class="sub" x="120" y="263">5,0 chaos-equiv.</text><text class="sub" x="120" y="282">поиск состояния</text></g>
+          <g class="node" tabindex="0" role="button" aria-label="Шаг 2: Bench" data-node="bench"><rect x="365" y="205" width="145" height="105"></rect><text class="title" x="385" y="239">2 · Bench</text><text class="sub" x="385" y="263">2 Divine</text><text class="sub" x="385" y="282">защита</text></g>
+          <g class="node" tabindex="0" role="button" aria-label="Шаг 3: Scour" data-node="scour"><rect x="625" y="205" width="145" height="105"></rect><text class="title" x="645" y="239">3 · Scour</text><text class="sub" x="645" y="263">0,5 chaos-equiv.</text><text class="sub" x="645" y="282">очистка</text></g>
+          <g class="node" tabindex="0" role="button" aria-label="Шаг 4: Exalt" data-node="exalt"><rect x="885" y="205" width="145" height="105"></rect><text class="title" x="905" y="239">4 · Exalt ×3</text><text class="sub" x="905" y="263">10,0 за сферу</text><text class="sub" x="905" y="282">после каждой</text></g>
+          <g class="node finish" tabindex="0" role="button" aria-label="Завершённый предмет" data-node="finished"><rect x="710" y="95" width="140" height="55"></rect><text class="title" x="735" y="129">Готово</text></g>
         </svg>
         <div class="graph-hint">Выберите узел мышью или клавишами Tab / Enter / Пробел: ниже откроется его состояние и назначение. На узком экране карта прокручивается внутри рамки.</div>
       </div>
@@ -180,10 +183,8 @@
 
     <section class="evidence" aria-labelledby="evidence-heading">
       <header><h2 id="evidence-heading">Проверка этого маршрута</h2><p>Границы проверки отображены намеренно: это не новый запуск валидатора и не заявление об оптимальности.</p></header>
-      <div class="evidence-body">
-        <div class="evidence-block"><b>Полный маршрут не сравнивался с CoE</b><span>C01 / C02 / C03 на той же базе проверяют компоненты действий. Это не доказательство полного рецепта; целевой предмет C02 отличается от запрошенного здесь.</span></div>
-        <div class="evidence-block closed"><b>Общие тесты движка: 12 случаев, 5 баз</b><span>Закрытый общий набор объясняет прежние упоминания body armour, ring, amulet и boots. Он не является таблицей доказательств этого маршрута.</span></div>
-      </div>
+      <div class="evidence-body"><div class="evidence-block"><b>Полный маршрут не сравнивался с CoE</b><span>C01 / C02 / C03 на той же базе проверяют компоненты действий. Это не доказательство полного рецепта; целевой предмет C02 отличается от запрошенного здесь.</span></div></div>
+      <details class="evidence-global"><summary>Общие тесты движка: 12 случаев, 5 баз</summary><p>Закрытый общий набор объясняет прежние упоминания body armour, ring, amulet и boots. Он не является таблицей доказательств этого маршрута.</p></details>
       <details><summary>Снимок источника и историческая ревизия</summary><p>Сохранённый вход: <code>out/reports/helmet/plan.json</code>, route id <code>suffix-protected-life</code>; исходная реализация и доказательство: revision <code>02bceff</code>. Историческая сводка 423 тестов относится к этой ревизии и здесь не запускалась. Поведение: <code>docs/mechanics/essences.md</code>, <code>bench_metamods.md</code>, <code>basic_currency.md</code>. Данные: PoB Essence.lua:104; ModMaster.lua:733; data/pob_essences.json и data/pob_bench.json.</p></details>
     </section>
     <p class="smallprint">Для согласования владельцем: выбрать A, B, C или A с небольшой обзорной картой B. Слабые маршруты зависят от конечной библиотеки шаблонов, ограниченной сетки параметров, не реализованных специальных семейств и закрытых источников; текущая цель и выдуманная таблица цен влияют на ранжирование.</p>
@@ -204,27 +205,29 @@
         p90: "4450.5"
       },
       states: {
-        rejected: ["empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто"],
-        preparation: ["muted|произвольный, не life T1", "empty|пусто", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
-        protected: ["muted|произвольный, не life T1", "crafted|Suffixes Cannot Be Changed", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
-        scoured: ["empty|пусто", "empty|пусто", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
-        miss1: ["muted|произвольный, не цель", "empty|пусто", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
-        miss2: ["muted|произвольный, не цель", "muted|произвольный, не цель", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
-        finished: ["required|life 130–144", "empty|пусто", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
-        failed: ["muted|произвольный, не цель", "muted|произвольный, не цель", "muted|произвольный, не цель", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"]
+        freshBase: ["empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто"],
+        preparation: ["muted|произвольный, не life T1", "empty|пусто", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
+        protected: ["muted|произвольный, не life T1", "crafted|Suffixes Cannot Be Changed", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
+        scoured: ["empty|пусто", "empty|пусто", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
+        miss1: ["muted|произвольный, не цель", "empty|пусто", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
+        miss2: ["muted|произвольный, не цель", "muted|произвольный, не цель", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
+        finished1: ["required|+(130–144) к максимуму здоровья · T1", "empty|пусто", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
+        finished2: ["muted|произвольный, не цель", "required|+(130–144) к максимуму здоровья · T1", "empty|пусто", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
+        finished3: ["muted|произвольный, не цель", "muted|произвольный, не цель", "required|+(130–144) к максимуму здоровья · T1", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"],
+        failed: ["muted|произвольный, не цель", "muted|произвольный, не цель", "muted|произвольный, не цель", "essence|+(31–35)% к сопротивлению хаосу · Envy", "required|+(46–48)% к сопротивлению огню · T1", "required|+(46–48)% к сопротивлению холоду · T1"]
       },
       steps: [
-        { id: "envy", no: "1", action: "Спам Deafening Essence of Envy", chip: "Deafening Essence of Envy · 5,0 chaos-equiv.", goal: "Найти <strong>готовую цель</strong> или точную подготовку: все 3 суффикса заняты, минимум 2 нужных elemental T1, включая принудительный Envy chaos, и не более 1 префикса.", before: "Обычная пустая база или отклонённый rare-предмет", after: "Пример подготовки: fire/cold — лишь один допустимый пример двух разных нужных элементов", state: "preparation", outcomes: [
-          ["success", "Готово → финиш", "0,3% за эссенцию · сначала всегда проверяется готовая цель"],
-          ["loop", "Подготовка готова → шаг 2", "<0,1% · ~1 из 1 820 за эссенцию"],
-          ["fail", "Не подходит → повторить шаг 1", "99,7% за эссенцию"]
+        { id: "envy", no: "1", action: "Спам Deafening Essence of Envy", chip: "Deafening Essence of Envy · 5,0 chaos-equiv. · выдуманная цена", goal: "Найти <strong>готовую цель</strong> или точную подготовку: заняты все 3 суффикса, есть <strong>2 сопротивления стихиям T1 И Envy chaos</strong>, и не более 1 префикса.", before: "Свежая normal base без аффиксов", after: "Пример подготовки: fire/cold — лишь один допустимый пример двух разных нужных элементов", state: "preparation", outcomes: [
+          ["success", "Готово → финиш", "0,3% за эссенцию · сначала всегда проверяется готовая цель", "finish"],
+          ["loop", "Подготовка готова → шаг 2", "<0,1% · ~1 из 1 820 за эссенцию", "step-2"],
+          ["fail", "Не подходит → повторить шаг 1", "99,7% за эссенцию", "step-1"]
         ], note: "Ветви взаимоисключающие: готовая цель исключается из подготовки. Это пример состояния, не симуляция броска." },
-        { id: "bench", no: "2", action: "Верстак: Suffixes Cannot Be Changed", chip: "Bench craft · 2 Divine", goal: "Защитить принятые 3 суффикса перед Scour. Крафт добавляется в свободный префикс.", before: "До верстака", after: "После верстака: один префикс занят крафтом", state: "protected", beforeState: "preparation", outcomes: [["success", "Защита установлена → шаг 3", "100,0% при показанных условиях · действие без случайного броска"]], note: "Цена за применение: 2 Divine, выдуманная цена 100 за Divine. Это цена действия, не ожидаемая цена всего маршрута." },
-        { id: "scour", no: "3", action: "Orb of Scouring", chip: "Orb of Scouring · 0,5 chaos-equiv.", goal: "Очистить префиксы, оставив 3 принятых суффикса. Защитный крафт исчезает вместе с префиксами.", before: "До Scour: крафт занимает P2", after: "После Scour: все префиксы очищены", state: "scoured", beforeState: "protected", outcomes: [["success", "Префиксы очищены → шаг 4", "100,0% при защите"]], note: "Защита оплачена именно для этого Scour; это не отдельный остающийся модификатор." },
-        { id: "exalt", no: "4", action: "До 3 Exalted Orb, проверка после каждой", chip: "Exalted Orb · 10,0 за сферу", goal: "Добавлять префикс и останавливаться сразу при <strong>life T1</strong>. Старт: 3 свободных префикса и 3 подготовленных суффикса.", before: "Перед первой сферой", after: "После первого попадания: финальный пример", state: "finished", beforeState: "scoured", outcomes: [
-          ["success", "Готово", "6,7% за всю серию до 3 Exalt"],
-          ["loop", "Промах + свободный префикс → следующая сфера", "Промежуточному промаху не присвоена вероятность в снимке; 6,7% относится к полной серии."],
-          ["fail", "3 префикса заняты → шаг 1", "93,3% за всю серию · у верстака нет свободного префикса, подготовка суффиксов сдана"]
+        { id: "bench", no: "2", action: "Верстак: Suffixes Cannot Be Changed", chip: "Bench craft · 2 Divine · выдуманная цена", goal: "Защитить принятые 3 суффикса перед Scour. Крафт добавляется в свободный префикс.", before: "До верстака", after: "После верстака: один префикс занят крафтом", state: "protected", beforeState: "preparation", outcomes: [["success", "Защита установлена → шаг 3", "100,0% при показанных условиях · действие без случайного броска", "step-3"]], note: "Цена за применение: 2 Divine, выдуманная цена 100 за Divine. Это цена действия, не ожидаемая цена всего маршрута." },
+        { id: "scour", no: "3", action: "Orb of Scouring", chip: "Orb of Scouring · 0,5 chaos-equiv. · выдуманная цена", goal: "Очистить префиксы, оставив 3 принятых суффикса. Защитный крафт исчезает вместе с префиксами.", before: "До Scour: крафт занимает P2", after: "После Scour: все префиксы очищены", state: "scoured", beforeState: "protected", outcomes: [["success", "Префиксы очищены → шаг 4", "100,0% при защите", "step-4"]], note: "Защита оплачена именно для этого Scour; это не отдельный остающийся модификатор." },
+        { id: "exalt", no: "4", action: "До 3 Exalted Orb, проверка после каждой", chip: "Exalted Orb · 10,0 за сферу · выдуманная цена", goal: "Добавлять префикс и останавливаться сразу при <strong>life T1</strong>. Старт: 3 свободных префикса и 3 подготовленных суффикса.", before: "Перед первой сферой", after: "После первого попадания: финальный пример", state: "finished1", beforeState: "scoured", outcomes: [
+          ["success", "Готово", "6,7% за всю серию до 3 Exalt", "finish"],
+          ["loop", "Промах + свободный префикс → следующая сфера", "Промежуточному промаху не присвоена вероятность в снимке; 6,7% относится к полной серии.", "step-4"],
+          ["fail", "3 префикса заняты → шаг 1", "93,3% за всю серию · у верстака нет свободного префикса, подготовка суффиксов сдана", "step-1"]
         ], note: "Первый Exalt сам по себе попадает с вероятностью 2,5% (деталь снимка). При трёх промахах нельзя делать bench/Scour: маршрут возвращается к Envy." }
       ]
     };
@@ -236,16 +239,21 @@
         return `<div class="slot ${kind}${i === 3 ? " prefix-divider" : ""}"><span class="slot-id">${slotNames[i]}</span><span>${text}</span></div>`;
       }).join("")}</section>`;
     }
-    function outcomeCard([kind, title, text]) { return `<div class="outcome ${kind}"><b>${title}</b><span>${text}</span></div>`; }
+    function outcomeCard([kind, title, text, target]) {
+      const inner = `<b>${title}</b><span>${text}</span>`;
+      return target ? `<button class="outcome ${kind} route-button" type="button" data-route="${target}">${inner}</button>` : `<div class="outcome ${kind}">${inner}</div>`;
+    }
     function stepMarkup(step) {
-      const before = step.beforeState ? stateCard("До", step.before, step.beforeState) : stateCard("Вход", step.before, "rejected");
+      const states = step.beforeState
+        ? `${stateCard("До", step.before, step.beforeState)}${stateCard("После / образец", step.after, step.state)}`
+        : `${stateCard("После / образец", step.after, step.state)}<details><summary>Возможный вход: свежая normal base</summary>${stateCard("До Envy", step.before, "freshBase")}<p class="smallprint">Отклонённый rare-предмет тоже может войти в шаг 1, но его аффиксы здесь не показаны.</p></details>`;
       return `<article class="step-card" id="step-${step.no}">
         <header class="step-head"><span class="step-no">${step.no}</span><div class="step-title"><h2>${step.action}</h2><p>${step.goal}</p></div><span class="action-chip">${step.chip}</span></header>
-        <div class="step-body"><div class="step-grid"><div class="state-group">${before}${stateCard("После / образец", step.after, step.state)}</div><div class="transition-area"><div class="outcomes">${step.outcomes.map(outcomeCard).join("")}</div><div class="inline-note">${step.note}</div></div></div></div>
+        <div class="step-body"><div class="step-grid"><div class="state-group">${states}</div><div class="transition-area"><div class="outcomes">${step.outcomes.map(outcomeCard).join("")}</div><div class="inline-note">${step.note}</div></div></div></div>
       </article>`;
     }
     document.getElementById("timeline").innerHTML = route.steps.map((step, index) => `${index ? '<div class="connector" aria-hidden="true"></div>' : ""}${stepMarkup(step)}`).join("");
-    const legend = `<div class="legend" aria-label="Легенда слотов"><span><i class="l-empty"></i>пусто</span><span><i class="l-muted"></i>произвольный</span><span><i class="l-essence"></i>эссенция</span><span><i class="l-required"></i>требуется</span><span><i class="l-crafted"></i>верстак</span></div>`;
+    const legend = `<div class="legend" aria-label="Легенда слотов"><span><b>P</b> = префикс; <b>S</b> = суффикс</span><span><i class="l-empty"></i>пусто</span><span><i class="l-muted"></i>произвольный</span><span><i class="l-essence"></i>эссенция</span><span><i class="l-required"></i>требуется</span><span><i class="l-crafted"></i>верстак</span></div>`;
     document.querySelector("#step-1 .step-body").insertAdjacentHTML("beforeend", legend);
 
     const contextHtml = `<div><h2>Контекст маршрута</h2><p>Средняя стоимость и p90 — сохранённые исторические оценки при выдуманных ценах. 98,6% завершившихся предметов закончили во время Envy; это не доказывает оптимальность и не является шансом за одну эссенцию.</p></div><div class="stat-row"><div class="stat"><b>1948,6</b><span>среднее по снимку</span></div><div class="stat"><b>4450,5</b><span>p90 по снимку</span></div><div class="stat"><b>98,6%</b><span>доля завершений в Envy</span></div></div>`;
@@ -262,14 +270,26 @@
       document.getElementById("mode-note").innerHTML = `<span class="mode-letter">${modeNotes[mode][0]}</span><p>${modeNotes[mode][1]}</p>`;
     }
     document.querySelectorAll(".mode-button").forEach(button => button.addEventListener("click", () => chooseMode(button.dataset.mode)));
-    document.querySelectorAll(".jump").forEach(button => button.addEventListener("click", () => document.getElementById(button.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" })));
+    function showRoute(target) {
+      if (target === "finish") {
+        const panel = document.getElementById("finished-panel");
+        document.getElementById("finished-panel-state").innerHTML = stateCard("Репрезентативный готовый снимок", "финиш после Envy или Exalt", "finished1");
+        panel.hidden = false;
+        panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        return;
+      }
+      document.getElementById(target).scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    document.querySelectorAll(".jump").forEach(button => button.addEventListener("click", () => showRoute(button.dataset.jump)));
+    document.querySelectorAll(".route-button").forEach(button => button.addEventListener("click", () => showRoute(button.dataset.route)));
+    document.getElementById("close-finished").addEventListener("click", () => { document.getElementById("finished-panel").hidden = true; });
 
     const graphDetails = {
-      envy: { title: "1 · Спам Deafening Essence of Envy", chip: route.prices.envy, state: "preparation", label: "Образец точной подготовки", copy: "Сначала всегда проверить готовую цель. Только затем принимать подготовку: ровно 3 суффикса, минимум 2 нужных elemental T1, принудительный chaos Envy и максимум 1 префикс.", edge: "Петля: 99,7% — повторить Envy. Ветка к финишу: 0,3% за эссенцию. Ветка подготовки: <0,1% · ~1 из 1 820." },
+      envy: { title: "1 · Спам Deafening Essence of Envy", chip: route.prices.envy, state: "preparation", label: "Образец точной подготовки", copy: "Сначала всегда проверить готовую цель. Только затем принимать подготовку: ровно 3 суффикса, 2 сопротивления стихиям T1 И Envy chaos, максимум 1 префикс.", edge: "Петля: 99,7% — повторить Envy. Ветка к финишу: 0,3% за эссенцию. Ветка подготовки: <0,1% · ~1 из 1 820." },
       bench: { title: "2 · Верстак: Suffixes Cannot Be Changed", chip: route.prices.bench, state: "protected", label: "После установки защиты", copy: "Крафт занимает свободный префикс и защищает принятые суффиксы перед Scour.", edge: "Переход к Scour: 100,0% при показанных условиях. Цена действия: 2 Divine, выдуманная цена." },
       scour: { title: "3 · Orb of Scouring", chip: route.prices.scour, state: "scoured", label: "После очистки", copy: "Все префиксы очищены, три суффикса остаются. Верстачный крафт исчезает как префикс.", edge: "Переход к Exalt: 100,0% при защите." },
       exalt: { title: "4 · До 3 Exalted Orb", chip: route.prices.exalt, state: "failed", label: "После третьего промаха", copy: "Проверяйте после каждой сферы и остановитесь на life T1. Промах с пустым префиксом продолжает к следующей сфере; отдельная вероятность в снимке отсутствует.", edge: "К финишу: 6,7% за всю серию. После трёх промахов: 93,3% за серию → Envy; у верстака уже нет места." },
-      finished: { title: "Готово", chip: "Целевое состояние", state: "finished", label: "Финальный образец", copy: "Или готово прямо после Envy, или получено после одного из Exalt. Оба исхода пропускают все последующие действия.", edge: "Финиш маршрута. Сохранённая доля завершений в Envy: 98,6% от всех завершившихся предметов." }
+      finished: { title: "Готово", chip: "Целевое состояние", state: "finished1", label: "Репрезентативный готовый снимок", copy: "Или готово прямо после Envy, или получено после одного из Exalt. Оба исхода пропускают все последующие действия.", edge: "Финиш маршрута. Сохранённая доля завершений в Envy: 98,6% от всех завершившихся предметов." }
     };
     function renderDetail(key) {
       const detail = graphDetails[key];
@@ -284,40 +304,42 @@
     });
     renderDetail("envy");
 
-    const manual = { state: "envy", exalt: 0, history: [] };
+    const manual = { state: "envy", exalt: 0, finishSource: "", history: [] };
     const manualScreens = {
-      envy: { title: "Шаг 1 · Deafening Essence of Envy", state: "rejected", label: "До Envy: база или отклонённый rare", status: "Примените Envy и вручную укажите наблюдаемый результат.", note: "Цель пропускает оставшиеся шаги. Подготовка принимается только при 3 занятых суффиксах, 2 elemental T1, Envy chaos и не более 1 префиксе.", choices: [["ready", "Готово: цель уже есть", "success"], ["prepare", "Подготовка совпала", ""], ["reroll", "Не подходит: ещё Envy", "danger"]] },
+      envy: { title: "Шаг 1 · Deafening Essence of Envy", state: "freshBase", label: "Свежая normal base без аффиксов", status: "Примените Envy и вручную укажите наблюдаемый результат.", note: "Цель пропускает оставшиеся шаги. Подготовка: 3 занятых суффикса, 2 сопротивления стихиям T1 И Envy chaos, не более 1 префикса. Отклонённый rare тоже возможен, но не показан как пустая база.", choices: [["ready", "Готово: цель уже есть · 0,3% за эссенцию", "success"], ["prepare", "Подготовка совпала · <0,1% · ~1 из 1 820", ""], ["reroll", "Не подходит: ещё Envy · 99,7% за эссенцию", "danger"]] },
       bench: { title: "Шаг 2 · Suffixes Cannot Be Changed", state: "preparation", label: "Принятая подготовка", status: "Установите защиту в свободный префикс: 2 Divine (выдуманная цена).", note: "При показанных условиях переход детерминирован: 100,0%. После установки крафт будет виден в P2.", choices: [["bench-next", "Защита установлена → Scour", "success"]] },
       scour: { title: "Шаг 3 · Orb of Scouring", state: "protected", label: "Защита в P2", status: "Используйте Scour, чтобы очистить все префиксы, сохранив 3 суффикса.", note: "При защите переход детерминирован: 100,0%. Верстачный крафт исчезает вместе с префиксами.", choices: [["scour-next", "Префиксы очищены → Exalt", "success"]] },
-      exalt: { title: "Шаг 4 · Exalted Orb", state: "scoured", label: "Перед Exalt", status: "Проверяйте результат после каждой сферы. Остановитесь при life T1.", note: "6,7% относится только ко всей серии до 3 Exalt. Для единичного промежуточного промаха в снимке нет отдельной вероятности.", choices: [["hit", "Есть life T1 → готово", "success"], ["miss", "Промах, есть свободный префикс", "danger"]] },
-      finished: { title: "Готово", state: "finished", label: "Целевой предмет", status: "Маршрут завершён. Следующих действий не требуется.", note: "Финиш после Envy или любого успешного Exalt пропускает все последующие шаги.", choices: [] },
+      exalt: { title: "Шаг 4 · Exalted Orb", state: "scoured", label: "Перед Exalt", status: "Проверяйте результат после каждой сферы. Остановитесь при life T1.", note: "Полная серия до 3 Exalt: 6,7% готово и 93,3% три промаха. Для единичного промежуточного промаха в снимке нет отдельной вероятности.", choices: [["hit", "Есть life T1 → готово", "success"], ["miss", "Промах, есть свободный префикс", "danger"]] },
+      finished: { title: "Готово", state: "finished1", label: "Целевой предмет", status: "Маршрут завершён. Следующих действий не требуется.", note: "Финиш после Envy или любого успешного Exalt пропускает все последующие шаги.", choices: [] },
       miss3: { title: "Третий промах · возврат", state: "failed", label: "3 префикса заняты", status: "Нет свободного префикса для bench craft. Текущая подготовка суффиксов сдаётся.", note: "Ветка всей серии: 93,3%. Вернитесь к Envy; bench и Scour здесь не предлагаются.", choices: [["restart", "Вернуться к Envy", "danger"]] }
     };
     function log(text) { manual.history.push(text); }
     function handleChoice(choice) {
-      if (choice === "ready") { log("Envy: готовая цель → финиш"); manual.state = "finished"; }
+      if (choice === "ready") { log("Envy: готовая цель → финиш"); manual.finishSource = "envy"; manual.state = "finished"; }
       if (choice === "prepare") { log("Envy: подготовка совпала → Bench"); manual.state = "bench"; }
       if (choice === "reroll") { log("Envy: не подходит → повторить Envy"); }
       if (choice === "bench-next") { log("Bench: защита установлена → Scour"); manual.state = "scour"; }
-      if (choice === "scour-next") { log("Scour: префиксы очищены → Exalt"); manual.state = "exalt"; manual.exalt = 0; }
-      if (choice === "hit") { manual.exalt += 1; log(`Exalt ${manual.exalt}/3: life T1 → финиш`); manual.state = "finished"; }
+      if (choice === "scour-next") { log("Scour: префиксы очищены → Exalt"); manual.state = "exalt"; manual.exalt = 0; manual.finishSource = ""; }
+      if (choice === "hit") { manual.exalt += 1; manual.finishSource = `exalt${manual.exalt}`; log(`Exalt ${manual.exalt}/3: life T1 → финиш`); manual.state = "finished"; }
       if (choice === "miss") { manual.exalt += 1; if (manual.exalt < 3) { log(`Exalt ${manual.exalt}/3: промах → следующая сфера`); } else { log("Exalt 3/3: промах → возврат к Envy"); manual.state = "miss3"; } }
-      if (choice === "restart") { log("Возврат: начать снова с Envy"); manual.state = "envy"; manual.exalt = 0; }
+      if (choice === "restart") { log("Возврат: начать снова с Envy"); manual.state = "envy"; manual.exalt = 0; manual.finishSource = ""; }
       renderManual();
     }
     function renderManual() {
       const screen = manualScreens[manual.state];
       const use = manual.state === "exalt" ? ` · Exalt ${manual.exalt + 1}/3` : "";
-      const stateKey = manual.state === "exalt" && manual.exalt ? `miss${manual.exalt}` : screen.state;
-      const stateLabel = manual.state === "exalt" && manual.exalt ? `После промаха ${manual.exalt}` : screen.label;
+      const isFinished = manual.state === "finished";
+      const stateKey = isFinished ? (manual.finishSource === "envy" ? "finished1" : `finished${manual.exalt}`) : (manual.state === "exalt" && manual.exalt ? `miss${manual.exalt}` : screen.state);
+      const stateLabel = isFinished ? (manual.finishSource === "envy" ? "Репрезентативный готовый снимок после Envy" : `Life T1 на Exalt ${manual.exalt}/3`) : (manual.state === "exalt" && manual.exalt ? `После промаха ${manual.exalt}` : screen.label);
       document.getElementById("manual-state").innerHTML = stateCard(screen.title, `${stateLabel}${use}`, stateKey);
       document.getElementById("manual-status").innerHTML = `<b>${screen.status}</b><span>${manual.state === "exalt" ? `Текущий выбор: сфера ${manual.exalt + 1} из 3.` : ""}</span>`;
       document.getElementById("manual-note").textContent = screen.note;
-      document.getElementById("manual-choices").innerHTML = screen.choices.map(([value, label, cls]) => `<button class="choice ${cls}" type="button" data-choice="${value}">${label}</button>`).join("");
+      const choices = screen.choices.map(([value, label, cls]) => manual.state === "exalt" && manual.exalt === 2 && value === "miss" ? [value, "Третий промах — все префиксы заняты", cls] : [value, label, cls]);
+      document.getElementById("manual-choices").innerHTML = choices.map(([value, label, cls]) => `<button class="choice ${cls}" type="button" data-choice="${value}">${label}</button>`).join("");
       document.querySelectorAll("[data-choice]").forEach(button => button.addEventListener("click", () => handleChoice(button.dataset.choice)));
       document.getElementById("history-list").innerHTML = manual.history.length ? manual.history.map((entry, index) => `<li class="${index === manual.history.length - 1 ? "current" : ""}">${entry}</li>`).join("") : "<li class=\"current\">Ожидание первого решения.</li>";
     }
-    document.getElementById("reset-c").addEventListener("click", () => { manual.state = "envy"; manual.exalt = 0; manual.history = ["Маршрут сброшен."]; renderManual(); });
+    document.getElementById("reset-c").addEventListener("click", () => { manual.state = "envy"; manual.exalt = 0; manual.finishSource = ""; manual.history = ["Маршрут сброшен."]; renderManual(); });
     renderManual();
   </script>
 </body>
