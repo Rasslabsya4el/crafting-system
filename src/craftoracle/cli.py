@@ -31,7 +31,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     arguments = parser.parse_args(argv)
     try:
-        document = evaluate_plan(arguments.spec, arguments.loadout, arguments.threshold)
+        document = evaluate_plan(
+            arguments.spec,
+            arguments.loadout,
+            arguments.threshold,
+            compare_thresholds=arguments.compare_thresholds,
+        )
         if arguments.json:
             print(json.dumps(document, indent=2, sort_keys=True, allow_nan=False))
         else:
@@ -46,6 +51,7 @@ def evaluate_plan(
     loadout_path: str | Path,
     threshold: float | None = None,
     *,
+    compare_thresholds: str | Sequence[float] | None = None,
     evaluator: Evaluator | None = None,
 ) -> dict[str, Any]:
     """Load validated inputs, evaluate policies, and return the JSON document."""
@@ -54,11 +60,16 @@ def evaluate_plan(
     spec = load_spec(spec_path, data.mods)
     loadout = load_loadout(loadout_path)
     spec = _with_threshold(spec, threshold)
+    thresholds = _parse_comparison_thresholds(spec, compare_thresholds)
     if not loadout.allowed_actions:
         raise PlanInputError("loadout permits no crafting actions")
 
-    policy_evaluator = evaluator if evaluator is not None else _load_evaluator()
-    result = policy_evaluator(spec, loadout, data)
+    if evaluator is not None:
+        if thresholds is not None:
+            raise PlanInputError("threshold comparison requires the frontier evaluator")
+        result = evaluator(spec, loadout, data)
+    else:
+        result = _load_evaluator()(spec, loadout, data, thresholds=thresholds)
     return plan_document(spec, loadout, result)
 
 
@@ -128,7 +139,7 @@ def format_plan(document: Mapping[str, Any]) -> str:
         f"Budget: {_number_text(_number_value(prices, 'budget'))} {unit} (mean-cost criterion)",
         "",
         "Ranked policies",
-        "id | name | success probabilities | expected attempts | expected cost | p90 cost | method | within budget | p90 over budget",
+        "id | name | success probabilities | expected attempts | expected cost | p90 cost | stopping threshold | frontier | method | within budget | p90 over budget",
     ]
     for policy in ranked:
         policy = _mapping(policy, "ranked policy")
@@ -148,6 +159,8 @@ def format_plan(document: Mapping[str, Any]) -> str:
             attempts,
             f"{_number_text(_number_value(policy, 'expected_cost'))} {unit}",
             f"{_number_text(_number_value(policy, 'cost_p90'))} {unit}",
+            _stopping_threshold_text(policy, input_data),
+            _yes_no(policy.get("frontier")),
             str(policy.get("cost_method", policy.get("method", "unspecified"))),
             _yes_no(policy.get("within_budget")),
             _yes_no(policy.get("p90_over_budget")),
@@ -161,6 +174,10 @@ def format_plan(document: Mapping[str, Any]) -> str:
         decisions = _list_value(policy, "decision_points")
         lines.extend(f"  - {decision}" for decision in decisions)
         lines.append(f"Expected terminal utility: {_number_text(_number_value(policy, 'expected_utility'))}")
+        stopping_threshold = policy.get("stopping_threshold")
+        if stopping_threshold is not None:
+            lines.append(f"Stopping threshold: {_number_text(_number_value(policy, 'stopping_threshold'))}")
+        lines.append(f"Pareto frontier: {_yes_no(policy.get('frontier'))}")
         lines.append(f"Irreversible failure risk: {_probability_text(_number_value(policy, 'irreversible_failure_risk'))}")
         rare_inputs = _list_value(policy, "rare_inputs")
         lines.append("Rare inputs: " + (", ".join(map(str, rare_inputs)) if rare_inputs else "none"))
@@ -215,18 +232,24 @@ def _parser() -> argparse.ArgumentParser:
     plan.add_argument("spec", metavar="SPEC", help="JSON-compatible YAML item specification")
     plan.add_argument("--loadout", required=True, metavar="LOADOUT", help="loadout JSON file")
     plan.add_argument("--json", action="store_true", help="emit machine-readable plan JSON")
-    plan.add_argument("--threshold", type=float, metavar="UTILITY", help="override a utility target threshold")
+    threshold_group = plan.add_mutually_exclusive_group()
+    threshold_group.add_argument("--threshold", type=float, metavar="UTILITY", help="override a utility target threshold")
+    threshold_group.add_argument(
+        "--compare-thresholds",
+        metavar="UTILITY,UTILITY",
+        help="evaluate distinct utility stopping thresholds from the item specification",
+    )
     return parser
 
 
-def _load_evaluator() -> Evaluator:
+def _load_evaluator():
     try:
-        from craftoracle.policies import evaluate_policies
+        from craftoracle.frontier import evaluate_frontier
     except ModuleNotFoundError as error:
-        if error.name != "craftoracle.policies":
+        if error.name != "craftoracle.frontier":
             raise
-        raise PlanInputError("policy evaluator is not available in this checkout") from error
-    return evaluate_policies
+        raise PlanInputError("frontier evaluator is not available in this checkout") from error
+    return evaluate_frontier
 
 
 def _with_threshold(spec: ItemSpec, threshold: float | None) -> ItemSpec:
@@ -237,6 +260,47 @@ def _with_threshold(spec: ItemSpec, threshold: float | None) -> ItemSpec:
     if isinstance(threshold, bool) or not isinstance(threshold, Real) or not math.isfinite(threshold):
         raise PlanInputError("--threshold must be a finite number")
     return replace(spec, threshold=float(threshold))
+
+
+def _parse_comparison_thresholds(spec: ItemSpec, requested: str | Sequence[float] | None) -> tuple[float, ...] | None:
+    if requested is None:
+        return None
+    if spec.value_table is None:
+        raise PlanInputError("--compare-thresholds is only valid for a utility item specification")
+    if isinstance(requested, str):
+        pieces = requested.split(",")
+        if not pieces or any(not piece.strip() for piece in pieces):
+            raise PlanInputError("--compare-thresholds must be a non-empty comma-separated list")
+        try:
+            values = tuple(float(piece) for piece in pieces)
+        except ValueError as error:
+            raise PlanInputError("--compare-thresholds must be a comma-separated list of finite numbers") from error
+    else:
+        if isinstance(requested, (bytes, bytearray)):
+            raise PlanInputError("--compare-thresholds must be a non-empty comma-separated list")
+        values = tuple(requested)
+    if not values:
+        raise PlanInputError("--compare-thresholds must be non-empty")
+    if any(isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(value) for value in values):
+        raise PlanInputError("--compare-thresholds must contain finite numbers")
+    parsed = tuple(float(value) for value in values)
+    if len(set(parsed)) != len(parsed):
+        raise PlanInputError("--compare-thresholds must contain distinct values")
+    assert spec.threshold is not None
+    if any(value < spec.threshold for value in parsed):
+        raise PlanInputError("--compare-thresholds values must be at least the item specification threshold")
+    return parsed
+
+
+def _stopping_threshold_text(policy: Mapping[str, Any], input_data: Mapping[str, Any]) -> str:
+    value = policy.get("stopping_threshold")
+    if value is None:
+        value = input_data.get("utility_threshold")
+    if value is None:
+        return "-"
+    if isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(value):
+        raise PlanInputError("stopping_threshold must be a finite number")
+    return _number_text(float(value))
 
 
 def _json_ready(value: Any) -> Any:

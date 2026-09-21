@@ -34,6 +34,22 @@ def _run_cli(*arguments: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+@pytest.fixture(scope="module")
+def real_bow_comparison_document() -> dict:
+    completed = _run_cli(
+        "plan",
+        "examples/bow_value_table.yaml",
+        "--loadout",
+        "data/loadouts/endgame.json",
+        "--compare-thresholds",
+        "60,100",
+        "--json",
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
 def _distribution() -> dict[OutcomeClass, float]:
     return {
         OutcomeClass(("IncreasedLife:1", "ChaosResistance:1", "ColdResistance:1"), 1, 3): 0.5,
@@ -231,25 +247,35 @@ def test_real_helmet_json_subprocess_has_all_ranked_policies() -> None:
     assert "Estimated p90 uncertainty:" in text
 
 
-def test_real_bow_threshold_subprocess_changes_utility_stop_rule() -> None:
-    completed = _run_cli(
-        "plan",
-        "examples/bow_value_table.yaml",
-        "--loadout",
-        "data/loadouts/endgame.json",
-        "--threshold",
-        "100",
-        "--json",
-    )
-
-    assert completed.returncode == 0, completed.stderr
-    document = json.loads(completed.stdout)
-    assert document["input"]["utility_threshold"] == 100
+def test_real_bow_threshold_comparison_changes_utility_stop_rule(real_bow_comparison_document: dict) -> None:
+    # Source: docs/specs/2026-09-21-stretch-frontier.md, lead baseline.
+    # The numbers are accepted model predictions, not game measurements.
+    document = real_bow_comparison_document
+    assert document["input"]["utility_threshold"] == 60
     assert document["input"]["values_note"].startswith("Invented additive utility")
-    assert len(document["ranked"]) == 6
-    assert len(document["unavailable"]) == 3
-    assert all(policy["expected_utility"] == pytest.approx(100) for policy in document["ranked"])
+    assert len(document["ranked"]) == 12
+    assert len(document["unavailable"]) == 6
+
+    policies = {policy["id"]: policy for policy in document["ranked"]}
+    alchemy_sixty = policies["alchemy-scour@60"]
+    alchemy_hundred = policies["alchemy-scour@100"]
+    assert alchemy_sixty["stopping_threshold"] == 60
+    assert alchemy_hundred["stopping_threshold"] == 100
+    assert alchemy_sixty["stages"][-1]["probability"] == pytest.approx(0.0053171974267639515)
+    assert alchemy_hundred["stages"][-1]["probability"] == pytest.approx(0.00008640408995079098)
+    assert alchemy_hundred["stages"][-1]["probability"] <= alchemy_sixty["stages"][-1]["probability"]
+    assert alchemy_hundred["expected_cost"] >= alchemy_sixty["expected_cost"]
+    assert alchemy_hundred["expected_utility"] >= alchemy_sixty["expected_utility"]
     assert all(policy["stages"][-1]["probability"] > 0 for policy in document["ranked"])
+    assert {policy["id"] for policy in document["ranked"] if policy["frontier"]} == {
+        "alchemy-scour@60",
+        "magic-regal-exalt@60",
+        "alchemy-scour@100",
+    }
+
+    text = cli.format_plan(document)
+    assert "stopping threshold" in text
+    assert "Pareto frontier: yes" in text
 
 
 def test_utility_threshold_override_replaces_only_the_stop_rule() -> None:
@@ -259,7 +285,7 @@ def test_utility_threshold_override_replaces_only_the_stop_rule() -> None:
         recorded.append(spec)
         return _result()
 
-    cli.evaluate_plan(
+    document = cli.evaluate_plan(
         "examples/bow_value_table.yaml",
         "data/loadouts/endgame.json",
         threshold=100,
@@ -273,6 +299,7 @@ def test_utility_threshold_override_replaces_only_the_stop_rule() -> None:
     assert changed.base == "Crude Bow"
     assert changed.required_mods == ()
     assert changed.values_note is not None
+    assert " | 100 | " in cli.format_plan(document)
     with pytest.raises(cli.PlanInputError, match="utility"):
         cli.evaluate_plan(
             "examples/helmet_life_chaos_res.yaml",
