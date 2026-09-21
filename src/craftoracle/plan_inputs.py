@@ -56,6 +56,7 @@ _SUPPORTED_ACTIONS = frozenset(
         "harvest_reforge:attribute",
         "harvest_reforge:mana",
         "fossil",
+        "fracturing",
     )
 )
 _ESSENCE_ID_PREFIX = "Metadata/Items/Currency/"
