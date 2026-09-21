@@ -107,9 +107,10 @@ so the best helmet policy is unchanged. The utility bow is explicitly outside th
 Life9/Chaos6/elemental8 helmet template. Sources and derivation:
 `../mechanics/fracturing.md`, `../mechanics/essences.md`, `../design/family-policies.md`.
 
-Both family policies are merged. The integrated394-test suite is green in1.036minute;
-the remaining acceptance task narrows one expensive cache-mutation test fixture, retaining
-its real production path and hand-checkable numbers, before measuring the suite again.
+Both family policies are merged. Final integrated394-test suite passes in54.90s
+(0.915minute) after593d5be. One expensive cache-mutation fixture was narrowed to a
+hand pool, retaining its production path: probability1/2 ->1, mean2.5 ->1.5, four distinct
+Alchemy/Chaos cache entries. All real helmet assertions remain.
 
 ## Quality finishing
 
@@ -130,8 +131,7 @@ python -m craftoracle quality --base "Paua Amulet" --item-level 86 --catalyst fe
 python -m pytest -q
 ```
 
-The full main suite after fossil integration passed373 tests in0.863minute. The final
-fracture integration still requires a full-suite run. Routine CLI
+The final full main suite passes394 tests in0.915minute. Routine CLI
 tests use explicitly bounded fossil availability and disable the expensive Magic grid;
 small exhaustive fixtures retain optimization and sampled-cost coverage. Full default
 commands, including all 15 fossil combinations and the complete Magic grid, are measured

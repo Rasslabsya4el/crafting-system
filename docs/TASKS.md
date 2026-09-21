@@ -9,7 +9,7 @@
 - [x] Add amulet/boots literal projection for those cases (`deae811`):561 records/548 names,15 focused tests.
 - [x] Correct the 15-row owner question sheet without re-asking answered questions (`ffcf869`; S63-S79 and owner answers).
 - [x] Conditional attempt kernel and paid-restart costs (`0f012a1`):10 lead tests; means21.5/22; independent exact p90 fixtures44/45/97.
-- [x] Expose and optimise template parameters (`560f8c2`):56 lead tests including real CLI; protected8357.19→1948.60, Harvest2703.61→1986.20; grids24/8/96/4. Two correction rounds accepted; full-suite runtime and final default-plan reports remain final integration work.
+- [x] Expose and optimise template parameters (`560f8c2`):56 lead tests including real CLI; protected8357.19→1948.60, Harvest2703.61→1986.20; grids24/8/96/4. Final default plans and timings recorded in docs/research/goal2-results.md; full394-test suite0.915minute after593d5be.
 - [x] Bounded solver experiment (`b89f775`):11 lead tests, hand optima8/4/4.75; real helmet reaches100000 states in0.23022minute before first Alchemy row completes. Negative result accepted; further graph solving parked, docs/research/solver-experiment.md.
 - [x] Verify bow distribution/threshold/frontier path after fossils (`2c069fc`):14 reachable pairs, two Scorched frontier points; mean162.37513/9739.87719, p90372.5/22426.5. Final fracture integration preserves explicit bow exclusion (`000e8d9`, lead CLI tests).
 - [x] Bounded research for owner rows2,6,7,9,10,12,13,14 recorded (`ffcf869`): first/all Harvest remains provisional; resonators/ordinary fracture/catalyst gains resolved; CoE additive fossils selected.
@@ -20,8 +20,8 @@
 - [x] Concrete fracture identity and retained-mod basic actions (`d348533`):74 lead tests; finish p=.06101200110346221/30 classes,627 of10000 seeded successes, identity loss0 and Divine Life9 value132 retained.
 - [x] Fracture-Life then Envy policy (`000e8d9`):47 lead affected tests plus17 final input tests, exact mean4227.73669,p908744[8500,9353.5], all replacement/preparation costs paid; two-candidate audit, exact target guards, distributions and explicit bow exclusion. Full default helmet0.51minute,12 routes, Envy still best.
 - [x] Catalyst quality distribution and supplied-jewellery finishing policy (`14be5e9`):48 lead core tests and19 final CLI checks; mean14.42372357 applications,p90 16; independent binomial CDF/MC agree. Ordinary jewellery only, no damage-value inference.
-- [ ] Final GOAL 2 acceptance: full pytest under one minute, ten-line STATE summary, explicit-path commits and owner report.
-- [x] Bound only the rule-mutation cache regression to a hand pool (`593d5be`, Luna medium):lead test passes,p1/2→1,mean2.5→1.5,four cache entries. Production and real helmet assertions unchanged; final full-suite measurement follows.
+- [x] Final GOAL 2 acceptance (`593d5be`, final docs commit follows):394 tests54.90s/0.915minute; full default helmet0.51minute/bow0.85minute; ten-line STATE, results report and explicit-path commits. All currently unblocked ordinary families implemented; remaining source gates explicit.
+- [x] Bound only the rule-mutation cache regression to a hand pool (`593d5be`, Luna medium):lead test passes,p1/2→1,mean2.5→1.5,four cache entries. Production and real helmet assertions unchanged; final394 tests0.915minute.
 
 ## Phase 0 -- knowledge harvest
 

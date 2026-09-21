@@ -1,6 +1,6 @@
-# Current state — GOAL 2 final acceptance (2026-09-21, 15:53 CEST)
+# Current state — GOAL 2 complete (2026-09-21, 15:58 CEST)
 
-1. Target: ordinary PoE3.29, confirmed by owner; GOAL2 implementation is merged, final runtime check remains.
+1. Target: ordinary PoE3.29, confirmed by owner; GOAL2 and all currently unblocked ordinary families are complete.
 2. Twelve offline CoE cases/25 correspondences: maximum relative difference2.08735%, none above5% (3712602).
 3. Protected Exalt mean8357.19393 ->1948.60317; Harvest2703.60938 ->1986.19822 (560f8c2).
 4. Magic helmet mean583612.10526 ->29449.03205; selected gates1/2, three slams, early stop.
@@ -9,7 +9,7 @@
 7. Fracture000e8d9: paid replacements, mean4227.73669, estimated p908744 [8500,9353.5];12 helmet routes.
 8. Catalyst14be5e9: mean14.42372 applications/p9016; supplied price2 gives28.84745/32.
 9. Solver b89f775: hand optima8/4/4.75; helmet100000-state limit in0.23022minute, no optimum claimed.
-10. Final394 tests pass in1.036minute; one tiny cache regression fixture is being bounded to meet the one-minute limit.
+10. Final394 tests pass in54.90s (0.915minute) after593d5be; clean main, no worker worktrees or active workers.
 
 ## Working commands
 
@@ -27,21 +27,20 @@ JSON: out/goal2/helmet-final.json and out/goal2/bow-thresholds.json. Accepted re
 parameters, uncertainty and before/after costs: docs/research/goal2-results.md.
 
 Lead acceptance: fossil48 affected tests plus26 changed tests; fracture47 affected tests
-plus17 final input tests. Full main after fossils373 passed in0.863minute; after fracture
-394 passed in1.036minute. Source-builder tests need the ignored local PoB/CoE snapshots.
+plus17 final input tests. Final main394 passed in54.90s (0.915minute) after593d5be.
+Source-builder tests need the ignored local PoB/CoE snapshots.
 All pytest temporary files stay in .pytest_tmp. No raw third-party files are committed.
 
-## Active work and next three actions
+## Handover and next three actions
 
-Only bound-cache-regression is active: Luna medium, five-minute spec, own worktree.
-It changes one test fixture only: same production cache path, hand probabilities1/2 ->1,
-means2.5 ->1.5; real helmet and full-plan coverage stay intact (D23). Main production code
-is accepted. All fossil/fracture implementation worktrees were removed without force.
-No long-running CPU job or background service is left behind; worker tests remain bounded.
+No work is active. The final Luna/medium task bounded one cache regression fixture only:
+same production path, hand probabilities1/2 ->1, means2.5 ->1.5. Real helmet and full-plan
+coverage remain intact (D23). All changes are accepted; all worktrees removed without
+force. No owned test process, long-running CPU job or background service remains.
 
-1. Accept the tiny fixture change by whole diff, its numbers and lead tests; merge explicitly.
-2. Run the full main suite once after that change; record measured time and final status.
-3. Finish STATE/TASKS/worker ledger/report, explicit-path commit, and report GOAL2 completion.
+1. The receiving lead can reproduce the documented commands and review the saved results.
+2. Select the next bounded source question before enabling a blocked family below.
+3. When new authoritative evidence resolves its numeric/model gate, update sheet -> spec -> tests -> policy.
 
 ## Sources and remaining limits
 
@@ -81,3 +80,4 @@ ledger:docs/WORKERS.md; detailed local reports:out/workers.
 - 13:52 CEST — kernel0f012a1/fossil0de86dd/solverb89f775 accepted; optimizer/fracture active.
 - 14:56 CEST — fracture d348533/optimizer560f8c2 accepted; family policies active.
 - 15:53 CEST — all family policies merged;394 tests green but1.036minute; one bounded cache fixture in progress.
+- 15:58 CEST — cache fixture593d5be accepted;394 tests0.915minute; GOAL2 complete, no active workers or leftover worktrees.
