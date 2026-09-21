@@ -28,6 +28,15 @@ GOAL step 4. No game constants, prices, external I/O or network.
    marginal quantiles. A later caller may explicitly estimate that case. No unbounded loops.
 4. Empty chain costs0. Any unreachable stage makes chain unreachable; validate all parameters
    first. Return clear statuses/methods and retain exact expectations. No general Markov solver.
+5. Also expose `compound_geometric_cost(p, costs, *, reset_cost=0, setup_cost=0)` where costs
+   is iterable `(cost,weight)` for an independent identically distributed per-attempt cost.
+   Normalize positive weights. Success is independent of this cost coin (caller responsibility).
+   Expected total setup+E[c]/p+reset*(1-p)/p. Exact integer-lattice PMF recurrence:
+   h[k]=p*q[k]+(1-p)*sum_c q[c]*h[k-c-reset], then apply setup shift; handle zero-cost
+   self-transition algebraically. Quantile is first CDF>=.9. Same operation bound as chain;
+   never replace random attempt cost by its mean when calculating p90. Return attempts1/p,
+   expected_cost,cost_p90,method. This is needed for an optional Augmentation charge in the
+   magic-core policy; see docs/design/night-policies.md, read-only.
 
 ## Hand-computed acceptance numbers
 - p=.5,c2 => attempts2,cost4,n90=4,c90=8.
@@ -41,6 +50,9 @@ GOAL step 4. No game constants, prices, external I/O or network.
 - Same two stages c2 => mean8,p90=14; c.25 => mean1,p90=1.75.
 - Deterministic stage cost3 plus previous c1 chain => mean7,p90=10.
 - Tiny p=1e-9 finite quantile and stable boundary. No simulation needed to check it.
+- Compound p=.5, cost1 or2 equally likely, no reset: expected3; h1=.25,h2=.3125,
+  h3=.140625,h4=.11328125,h5=.0634765625,h6=.044189453125; CDF5=.8798828125,
+  CDF6=.924072265625, so p90=6. Constant attempt-cost input reduces to geometric result.
 
 ## Report
 Commits, pytest summary, all fixtures, complexity bound and exact-vs-unreachable semantics.
