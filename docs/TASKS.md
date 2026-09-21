@@ -59,7 +59,7 @@ all game mechanics. No dependent path may silently guess.
 - [x] Price table and loadout files (`f3cf7c2`; invented prices, explicit permissions and sourced bench quantities)
 - [~] Strategy templates1-3 within ordinary night slice, with stopping/restart rules and decisions; templates4-6 remain future/blocked-family work
 - [~] The ranker and `python -m craftoracle plan ...`: Pareto frontier of evaluated policies with expected utility, expected cost, p90 cost, irreversible-failure risk and rare inputs
-- [ ] Validate two thresholds on one distribution, conditional terminal value, and dominance filtering; distinguish cost quantiles from confidence intervals
+- [x] Validate two thresholds on shared distributions, conditional terminal utility and dominance (`242091f`); bow12 candidates/3 Pareto points; p90 remains distinct from estimation uncertainty
 
 - [x] Night vertical slice: item model and ordinary PoB pool resolver (`d07a1b5`; 21 focused tests; corrected ordinary pool totals)
 - [x] Night exact grouped distribution kernel (`4ee0641`;17 focused tests)
@@ -70,5 +70,5 @@ all game mechanics. No dependent path may silently guess.
 - [x] Night concrete policies (`5eeefd3`,8 tests,9 helmet policies) and direct CLI (`d344054`,`0acb192`,9 focused tests; real helmet/bow subprocesses)
 - [x] Night core integration umbrella: GOAL1-6 merged (`d344054`,`0acb192`);187 main tests in0.71minute, mandatory helmet command succeeds
 - [x] Night stretch1:41 individually collected hand-computed cases (`8ac207c`,41 passed), indexed in docs/research/known-answers.md
-- [~] Night stretch2: Pareto membership and two bow stopping thresholds over shared raw distributions (`specs/2026-09-21-stretch-frontier.md`)
-- [ ] Night stretch3: bounded Divine integer rerolls with side locks (`specs/2026-09-21-divine-values.md`); selected unblocked family, D17
+- [x] Night stretch2: Pareto membership and two bow stopping thresholds over shared raw distributions (`242091f`,33 affected tests, full244 green)
+- [~] Night stretch3: bounded Divine integer rerolls with side locks (`specs/2026-09-21-divine-values.md`); selected unblocked family, D17
