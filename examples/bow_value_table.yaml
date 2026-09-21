@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "Crude Bow invented local-mod utility target",
+  "base": "Crude Bow",
+  "item_level": 86,
+  "quality": 20,
+  "flags": {
+    "corrupted": false,
+    "influenced": false,
+    "fractured": false,
+    "synthesised": false,
+    "mirrored": false,
+    "split": false
+  },
+  "tier_ids": {
+    "LocalFireDamageTwoHand": [
+      ["LocalAddedFireDamageTwoHand10"],
+      ["LocalAddedFireDamageTwoHand9"]
+    ],
+    "LocalIncreasedAttackSpeed": [
+      ["LocalIncreasedAttackSpeed5"],
+      ["LocalIncreasedAttackSpeed4"]
+    ]
+  },
+  "value_table": {
+    "LocalFireDamageTwoHand": {"1": 60, "2": 40},
+    "LocalIncreasedAttackSpeed": {"1": 40, "2": 25}
+  },
+  "threshold": 60,
+  "values_note": "Invented additive utility for prototype stopping rules. It is not DPS and does not model exact Path of Building local-mod multiplication. A tier missing from this value table contributes 0.",
+  "sources": [
+    "S24: data/pob_mod_families.json accepted explicit-mod IDs and their PoB groups.",
+    "S27: sources/pob/Data/Bases/bow.lua, Crude Bow base identity.",
+    "Owner BRIEF: the additive values and threshold are invented prototype inputs."
+  ]
+}

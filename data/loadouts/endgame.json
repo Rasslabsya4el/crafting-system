@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "name": "Endgame ordinary-currency prototype loadout",
+  "allowed_actions": [
+    "transmute",
+    "alteration",
+    "augmentation",
+    "regal",
+    "alchemy",
+    "chaos",
+    "exalted",
+    "annul",
+    "scour",
+    "essence",
+    "bench"
+  ],
+  "allowed_essences": [
+    "Metadata/Items/Currency/CurrencyEssenceEnvy3",
+    "Metadata/Items/Currency/CurrencyEssenceHatred7",
+    "Metadata/Items/Currency/CurrencyEssenceAnger6",
+    "Metadata/Items/Currency/CurrencyEssenceWrath5"
+  ],
+  "allowed_bench": [131, 728, 729, 730, 731, 732],
+  "prices_file": "../prices.example.json",
+  "budget": 100000,
+  "base_cost": 0
+}

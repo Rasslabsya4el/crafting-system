@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "unit": "chaos-equivalent",
+  "values": {
+    "chaos": 1,
+    "alchemy": 0.5,
+    "scour": 0.5,
+    "transmute": 0.1,
+    "alteration": 0.1,
+    "augmentation": 0.1,
+    "regal": 0.5,
+    "exalted": 10,
+    "divine": 100,
+    "Metadata/Items/Currency/CurrencyEssenceEnvy3": 5,
+    "Metadata/Items/Currency/CurrencyEssenceHatred7": 3,
+    "Metadata/Items/Currency/CurrencyEssenceAnger6": 3,
+    "Metadata/Items/Currency/CurrencyEssenceWrath5": 3
+  },
+  "bench_recipes": {
+    "131": {"chaos": 2},
+    "728": {"divine": 2},
+    "729": {"divine": 2},
+    "730": {"divine": 2},
+    "731": {"divine": 1},
+    "732": {"divine": 1}
+  },
+  "note": "Invented chaos-equivalent prototype inputs, not trade prices.",
+  "sources": [
+    "Owner BRIEF: ordinary-currency, essence, budget, and metamod prices are invented chaos-equivalent inputs.",
+    "S1: sources/pob/Data/ModMaster.lua source_index 131, line 135; Prefix LocalPhysicalDamageReductionRatingPercent, Helmet supported, (56-74)% increased Armour.",
+    "S2: poecc.benchcosts['2775b52'][2] gives {'2': 2}; poecc.benchcosts 2962/2963/2964/2965/2966 gives the recipes for 728/729/730/731/732.",
+    "S3: poec_constants.indexes.currency.bench[2] is chaos for recipe 131; currency index 10 is divine for recipes 728 through 732.",
+    "S4: tiers['2775']['52'][2] confirms the source-index 131 range and level 75; its quantity is reimplemented-from-CoE, read 2026-09-21.",
+    "docs/mechanics/bench_metamods.md: source-index identities for recipes 728 through 732."
+  ]
+}
