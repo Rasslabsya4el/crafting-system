@@ -282,16 +282,25 @@ def test_utility_threshold_override_replaces_only_the_stop_rule() -> None:
         )
 
 
-def test_invalid_path_flag_and_empty_action_loadout_exit_two(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    with pytest.raises(SystemExit) as missing:
-        cli.main(["plan", "examples/no-such-spec.yaml", "--loadout", "data/loadouts/endgame.json"])
-    assert missing.value.code == 2
-    assert "unable to read item spec" in capsys.readouterr().err
+def test_invalid_path_flag_and_empty_action_loadout_exit_two(tmp_path: Path) -> None:
+    missing = _run_cli(
+        "plan",
+        "examples/no-such-spec.yaml",
+        "--loadout",
+        "data/loadouts/endgame.json",
+    )
+    assert missing.returncode == 2
+    assert "unable to read item spec" in missing.stderr
 
-    with pytest.raises(SystemExit) as invalid_flag:
-        cli.main(["plan", "examples/helmet_life_chaos_res.yaml", "--loadout", "data/loadouts/endgame.json", "--skip-q9"])
-    assert invalid_flag.value.code == 2
-    assert "unrecognized arguments" in capsys.readouterr().err
+    invalid_flag = _run_cli(
+        "plan",
+        "examples/helmet_life_chaos_res.yaml",
+        "--loadout",
+        "data/loadouts/endgame.json",
+        "--skip-q9",
+    )
+    assert invalid_flag.returncode == 2
+    assert "unrecognized arguments" in invalid_flag.stderr
 
     loadout = {
         "schema_version": 1,
@@ -305,7 +314,11 @@ def test_invalid_path_flag_and_empty_action_loadout_exit_two(tmp_path: Path, cap
     }
     path = tmp_path / "no-actions.json"
     path.write_text(json.dumps(loadout), encoding="utf-8")
-    with pytest.raises(SystemExit) as empty:
-        cli.main(["plan", "examples/helmet_life_chaos_res.yaml", "--loadout", str(path.relative_to(ROOT))])
-    assert empty.value.code == 2
-    assert "permits no crafting actions" in capsys.readouterr().err
+    empty = _run_cli(
+        "plan",
+        "examples/helmet_life_chaos_res.yaml",
+        "--loadout",
+        str(path.relative_to(ROOT)),
+    )
+    assert empty.returncode == 2
+    assert "permits no crafting actions" in empty.stderr
