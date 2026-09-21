@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.coe_validation import CASES
+from craftoracle.actions import load_action_data
+from tools.coe_validation import CASES, validate_correspondence
 
 
 ROOT = Path(__file__).parents[1]
@@ -96,3 +97,28 @@ def test_case_manifest_is_the_twelve_assigned_inputs() -> None:
         ("C11", "Iron Greaves", "alchemy"),
         ("C12", "Iron Greaves", "regal"),
     ]
+    assert CASES[1].rarity == "rare"
+
+
+@pytest.mark.parametrize(
+    ("tampered", "message"),
+    [
+        ({"level": 65}, "level mismatch"),
+        ({"range": "[[131,144]]"}, "range mismatch"),
+    ],
+)
+def test_correspondence_rejects_tampered_coe_level_and_range(
+    tampered: dict[str, object], message: str,
+) -> None:
+    record: dict[str, object] = {
+        "aid": "1775",
+        "side": "prefix",
+        "level": 64,
+        "range": "[[130,144]]",
+    }
+    record.update(tampered)
+
+    with pytest.raises(ValueError, match=message):
+        validate_correspondence(
+            load_action_data(ROOT), "IncreasedLife9", record, case_id="C01", role="target",
+        )

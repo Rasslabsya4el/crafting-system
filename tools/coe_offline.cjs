@@ -13,6 +13,16 @@ const DEFAULT_PACKAGE = path.join(ROOT, "sources", "raw", "coe", "package.js");
 const DEFAULT_DATA = path.join(ROOT, "sources", "raw", "coe", "poec_data.json");
 const PACKAGE_PATH = process.argv[2] === "--package" ? process.argv[3] : DEFAULT_PACKAGE;
 const SOURCE_TIMEOUT_MS = 2_000;
+const FROZEN_FUNCTION_LOCATIONS = Object.freeze({
+  poec_computeFinalProbsV2: {
+    offset: { start: 406614, end: 459392 },
+    line: { start: 1021, end: 1198 },
+  },
+  poec_computePermutationsV2: {
+    offset: { start: 459393, end: 476461 },
+    line: { start: 1199, end: 1249 },
+  },
+});
 
 
 function fail(message) {
@@ -116,6 +126,16 @@ function findFunction(source, name) {
 }
 
 
+function frozenLocation(name, extracted) {
+  const expected = FROZEN_FUNCTION_LOCATIONS[name];
+  if (!expected) fail(`no frozen location registered for CoE function: ${name}`);
+  if (extracted.start !== expected.offset.start || extracted.end !== expected.offset.end) {
+    fail(`frozen CoE function offset changed for ${name}`);
+  }
+  return { source_range: expected.offset, source_line_range: expected.line };
+}
+
+
 function jqueryEach(value, callback) {
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index += 1) callback(index, value[index]);
@@ -138,14 +158,6 @@ for (const method of ["addClass", "attr", "children", "find", "hide", "html", "r
   jqueryStub[method] = () => jqueryStub;
 }
 jqueryStub.each = jqueryEach;
-
-
-function permutations(size) {
-  if (size === 1) return [[1]];
-  if (size === 2) return [[1, 2], [2, 1]];
-  if (size === 3) return [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]];
-  fail(`unsupported cached-kernel draw count: ${size}`);
-}
 
 
 function validatePool(pool) {
@@ -179,7 +191,6 @@ function makeContext(source, data) {
   const permutation = findFunction(source, "poec_computePermutationsV2");
   const context = {
     $: jqueryStub,
-    affPermutes: { 1: permutations(1), 2: permutations(2), 3: permutations(3) },
     numModifersToExact: 10,
     pavgaffs: {},
     pavgcnts: {},
@@ -191,6 +202,7 @@ function makeContext(source, data) {
     poecd: data || { modifiers: { ind: {}, seq: [] } },
   };
   vm.createContext(context);
+  vm.runInContext(readVariableStatement(source, "affPermutes"), context, { timeout: SOURCE_TIMEOUT_MS });
   vm.runInContext(permutation.declaration, context, { timeout: SOURCE_TIMEOUT_MS });
   return { context, permutation };
 }
@@ -235,8 +247,7 @@ function runKernel(source, input, data) {
     probability,
     pool_total: totalWeight,
     source_hash: sourceHash(source),
-    source_range: { start: permutation.start, end: permutation.end },
-    source_line_range: { start: 1199, end: 1249 },
+    ...frozenLocation("poec_computePermutationsV2", permutation),
   };
 }
 
@@ -332,6 +343,29 @@ function resolveForcedEssence(data, essenceName, baseId, itemLevel) {
 }
 
 
+function describeModifier(data, baseId, itemLevel, aid) {
+  const modifier = data.modifiers.seq[data.modifiers.ind[String(aid)]];
+  if (!modifier) fail(`missing CoE modifier: ${aid}`);
+  const tiers = data.tiers[String(aid)] && data.tiers[String(aid)][String(baseId)];
+  if (!Array.isArray(tiers)) fail(`missing CoE tiers for modifier ${aid} on base_id ${baseId}`);
+  return {
+    aid: String(aid),
+    side: modifier.affix,
+    modgroups: parseGroups(modifier.modgroups, String(aid)),
+    tiers: tiers
+      .map((tier) => ({ level: Number(tier.ilvl), range: tier.nvalues, weight: Number(tier.weighting) }))
+      .filter((tier) => Number.isFinite(tier.level) && tier.level <= itemLevel),
+  };
+}
+
+
+function describeExcludedModifiers(data, input) {
+  const excluded = input.exclude_aids || [];
+  if (!Array.isArray(excluded)) fail("exclude_aids must be an array when supplied");
+  return excluded.map((aid) => describeModifier(data, String(input.base_id), input.item_level, aid));
+}
+
+
 function selectedTopTier(pool, side, aid) {
   const entry = pool[side].find((candidate) => candidate.aid === String(aid));
   if (!entry) fail(`target ${aid} is absent from the eligible CoE ${side} pool`);
@@ -387,6 +421,7 @@ function runRealFinal(source, data, input) {
     item_level: input.item_level,
     targets,
     excluded_aids: (input.exclude_aids || []).map(String),
+    excluded_modifiers: describeExcludedModifiers(data, input),
     forced_essence: forced,
   };
 }
@@ -411,6 +446,14 @@ function runRealKernel(source, data, input) {
     item_level: input.item_level,
     targets,
     excluded_aids: (input.exclude_aids || []).map(String),
+    excluded_modifiers: describeExcludedModifiers(data, input),
+    side_pool_totals: Object.fromEntries(["prefix", "suffix"].map((side) => [
+      side,
+      selectedSides.includes(side)
+        ? poolBySide[side].reduce((sum, entry) => sum + entry.weight, 0)
+        : 0,
+    ])),
+    combined_pool_total: calculated.pool_total,
     kernel_scope: "direct one-draw or side-local draw invocation with source-native weights",
   };
 }
@@ -534,12 +577,12 @@ function runFinal(source, input, data) {
     pool_totals: weight,
     source_hash: sourceHash(source),
     source_ranges: {
-      final: { start: final.start, end: final.end },
-      permutations: { start: permutation.start, end: permutation.end },
+      final: frozenLocation("poec_computeFinalProbsV2", final).source_range,
+      permutations: frozenLocation("poec_computePermutationsV2", permutation).source_range,
     },
     source_line_ranges: {
-      final: { start: 1021, end: 1198 },
-      permutations: { start: 1199, end: 1249 },
+      final: frozenLocation("poec_computeFinalProbsV2", final).source_line_range,
+      permutations: frozenLocation("poec_computePermutationsV2", permutation).source_line_range,
     },
   };
 }
