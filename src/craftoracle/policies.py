@@ -628,7 +628,13 @@ def _conditional_expected_utility(spec, distribution):
     selected_mass = _selected_mass(spec, distribution)
     if getattr(spec, "value_table", None) is None:
         return 1.0
-    return math.fsum(mass * float(spec.utility(outcome)) for outcome, mass in distribution.items() if _completes(spec, outcome)) / selected_mass
+    selected = [
+        (mass, float(spec.utility(outcome)))
+        for outcome, mass in distribution.items()
+        if _completes(spec, outcome)
+    ]
+    anchor = selected[0][1]
+    return anchor + math.fsum(mass * (utility - anchor) for mass, utility in selected) / selected_mass
 
 
 def _success_probability(spec, distribution):
