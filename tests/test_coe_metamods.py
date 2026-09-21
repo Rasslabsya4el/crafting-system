@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -38,10 +40,29 @@ def test_build_preserves_literal_cells_and_source_order() -> None:
     assert table["groups"][1]["actions"][0]["cells"][2]["note"] == "note"
 
 
+def test_note_stops_at_its_closing_div() -> None:
+    source = FIXTURE.replace(
+        '<div class="note"> source note </div>',
+        '<div class="note"> source note </div> trailing text',
+    )
+
+    table = build_metamod_table(source, "fixture.html")
+
+    assert table["groups"][0]["actions"][0]["cells"][1]["note"] == "source note"
+
+
 @pytest.mark.parametrize(
     ("source", "message"),
     [
-        (FIXTURE.replace("<td>Caster</td>", ""), "expected five cells"),
+        (FIXTURE.replace("<td>Suffix</td>", "<td>Prefix</td>"), "missing/duplicate metamod columns"),
+        (
+            FIXTURE.replace(
+                '<td class="na">&nbsp;</td><td class="">&nbsp;</td>',
+                '<td class="">&nbsp;</td>',
+                1,
+            ),
+            "action row.*expected five cells",
+        ),
         (FIXTURE.replace('class="yes"', 'class="maybe"', 1), "unknown status"),
         (FIXTURE.replace('class="mmode_none coe_tbl"', 'class="coe_tbl"'), "missing metamod table"),
         (FIXTURE.replace("</table>", "</table><table class=\"mmode_none coe_tbl\"></table>"), "duplicate metamod table"),
@@ -53,9 +74,20 @@ def test_invalid_structure_fails_explicitly(source: str, message: str) -> None:
         build_metamod_table(source, "fixture.html")
 
 
-def test_serialization_is_deterministic() -> None:
-    table = build_metamod_table(FIXTURE, "fixture.html")
-    assert serialize_metamod_table(table) == serialize_metamod_table(table)
+def test_builder_cli_outputs_independent_deterministic_bytes(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[1]
+    source = root / "sources/raw/coe/metamods.html"
+    first = tmp_path / "first.json"
+    second = tmp_path / "second.json"
+    command = [sys.executable, str(root / "tools/build_coe_metamods.py"), str(source)]
+
+    subprocess.run([*command, str(first)], check=True)
+    subprocess.run([*command, str(second)], check=True)
+
+    assert first.read_bytes() == second.read_bytes()
+    assert first.read_bytes() == serialize_metamod_table(
+        build_metamod_table(source.read_bytes().decode("utf-8"), "sources/raw/coe/metamods.html")
+    )
 
 
 def test_committed_table_reproduces_s14_snapshot() -> None:
@@ -90,4 +122,4 @@ def test_committed_table_reproduces_s14_snapshot() -> None:
         assert [cell["status"] for cell in cells] == ["yes", "yes", "yesno", "yesno"]
         assert [cell["note"] for cell in cells[2:]] == ["Only for the first added modifier"] * 2
     assert [cell["status"] for cell in groups["General"]["Veiled orb"]["cells"]] == ["yes", "yes", "no", "no"]
-    assert groups["Beastcrafting"]["Suffix > Prefix"]["cells"][2]["note"] == "Will not protects attack mods from removal"
+    assert groups["Beastcrafting"]["Suffix > Prefix"]["cells"][3]["note"] == "Will not protects attack mods from removal"

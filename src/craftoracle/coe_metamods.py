@@ -89,6 +89,8 @@ class _MetamodHTMLParser(HTMLParser):
                 self.in_table_depth = None
         if tag == "table":
             self.table_depth -= 1
+        if tag == "div" and self.note_depth == self.div_depth:
+            self.note_depth = 0
         if tag == "div" and self.warning_depth == self.div_depth:
             self.warning_depth = 0
         if tag == "div":
