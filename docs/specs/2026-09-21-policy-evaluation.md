@@ -98,7 +98,9 @@ Changing allprices by2 doubles cost/p90, leaves probabilities and attempts uncha
 Removing essence permission excludes correspondingpolicies; removing bench729 excludesprotected.
 Reranking pricechanges changes order, never target probabilities. Show all distributions normalized.
 Focused tests must avoid rerunning identical expensive DP when price-only changed (fixtures can reuse
-results); no speculative globalcache. Report full helmet table and elapsedminutes.
+results); no speculative globalcache. Optional caller-owned distribution_cache dict is allowed:
+key all draw-affecting inputs, exclude prices/threshold, reuse raw distributions for the planned
+two-threshold evaluation. Include p90_over_budget bool. Report full helmet table and elapsedminutes.
 
 ## Report
 Commits, tests, every acceptance probability, per-policy expected/p90cost, stageattempts,
