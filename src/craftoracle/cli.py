@@ -13,7 +13,9 @@ from typing import Any
 
 from craftoracle.actions import load_action_data
 from craftoracle.distributions import OutcomeClass
+from craftoracle.item_model import ItemState
 from craftoracle.plan_inputs import ItemSpec, Loadout, load_loadout, load_spec
+from craftoracle.quality import plan_catalyst
 
 
 _SCHEMA_VERSION = 1
@@ -27,21 +29,32 @@ Evaluator = Callable[[ItemSpec, Loadout, object], Mapping[str, Any]]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Parse the repository-local ``plan`` command and return its exit status."""
+    """Parse a repository-local command and return its exit status."""
     parser = _parser()
     arguments = parser.parse_args(argv)
     try:
-        document = evaluate_plan(
-            arguments.spec,
-            arguments.loadout,
-            arguments.threshold,
-            compare_thresholds=arguments.compare_thresholds,
-            item_level_range=arguments.item_level_range,
-        )
+        if arguments.command == "quality":
+            document = evaluate_quality(
+                arguments.base,
+                arguments.item_level,
+                arguments.catalyst,
+                arguments.target_quality,
+                arguments.price,
+            )
+            renderer = format_quality
+        else:
+            document = evaluate_plan(
+                arguments.spec,
+                arguments.loadout,
+                arguments.threshold,
+                compare_thresholds=arguments.compare_thresholds,
+                item_level_range=arguments.item_level_range,
+            )
+            renderer = format_plan
         if arguments.json:
             print(json.dumps(document, indent=2, sort_keys=True, allow_nan=False))
         else:
-            print(format_plan(document))
+            print(renderer(document))
     except (PlanInputError, ValueError, NotImplementedError) as error:
         parser.error(str(error))
     return 0
@@ -75,6 +88,56 @@ def evaluate_plan(
     else:
         result = _load_evaluator()(spec, loadout, data, thresholds=thresholds, item_level_range=item_level_range)
     return plan_document(spec, loadout, result)
+
+
+def evaluate_quality(
+    base: str = "Vermillion Ring",
+    item_level: int = 86,
+    catalyst: str = "Fertile",
+    target_quality: int = 20,
+    price: float = 0.0,
+) -> dict[str, Any]:
+    """Plan a finite ordinary-catalyst quality finish from a zero-quality rare."""
+    root = Path(__file__).resolve().parents[2]
+    item = ItemState(base, item_level, "rare")
+    plan = plan_catalyst(item, load_action_data(root), catalyst, target_quality, price)
+    return {
+        "input": {
+            "base": base,
+            "item_level": item_level,
+            "rarity": "rare",
+            "quality": 0,
+            "catalyst": catalyst,
+            "target_quality": target_quality,
+            "unit_price": price,
+        },
+        "steps": list(plan["steps"]),
+        "count_distribution": [
+            {"applications": applications, "probability": probability}
+            for applications, probability in sorted(plan["count_distribution"].items())
+        ],
+        "cost_distribution": [
+            {"cost": cost, "probability": probability}
+            for cost, probability in sorted(plan["cost_distribution"].items())
+        ],
+        "final_quality_distribution": [
+            {
+                "quality": state.quality,
+                "catalyst": state.catalyst_type,
+                "probability": probability,
+            }
+            for state, probability in sorted(
+                plan["final_quality_distribution"].items(), key=lambda entry: entry[0].quality
+            )
+        ],
+        "expected_applications": plan["expected_applications"],
+        "applications_p90": plan["applications_p90"],
+        "expected_cost": plan["expected_cost"],
+        "cost_p90": plan["cost_p90"],
+        "source_confidence": plan["source_confidence"],
+        "sources": plan["sources"],
+        "price_disclaimer": plan["price_disclaimer"],
+    }
 
 
 def plan_document(
@@ -229,6 +292,41 @@ def format_plan(document: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def format_quality(document: Mapping[str, Any]) -> str:
+    """Render the bounded ordinary-catalyst policy and its exact laws."""
+    input_data = _required_mapping(document, "input")
+    lines = [
+        "Catalyst quality plan",
+        "Input: " + ", ".join((
+            str(input_data["base"]),
+            f"ilvl {input_data['item_level']}",
+            str(input_data["rarity"]),
+            f"{input_data['catalyst']} Catalyst",
+        )),
+        *(_list_value(document, "steps")),
+        f"Expected applications: {_number_text(_number_value(document, 'expected_applications'))}",
+        f"p90 applications: {_number_text(_number_value(document, 'applications_p90'))}",
+        f"Expected cost: {_number_text(_number_value(document, 'expected_cost'))}",
+        f"p90 cost: {_number_text(_number_value(document, 'cost_p90'))}",
+        "Exact application distribution:",
+    ]
+    for entry in _list_value(document, "count_distribution"):
+        entry = _mapping(entry, "count distribution entry")
+        lines.append(
+            f"  {_number_text(_number_value(entry, 'applications'))}: "
+            f"{_probability_text(_number_value(entry, 'probability'))}"
+        )
+    lines.append("Final quality states:")
+    for entry in _list_value(document, "final_quality_distribution"):
+        entry = _mapping(entry, "final quality entry")
+        lines.append(
+            f"  {_number_text(_number_value(entry, 'quality'))}% {entry['catalyst']}: "
+            f"{_probability_text(_number_value(entry, 'probability'))}"
+        )
+    lines.append(f"Price note: {document['price_disclaimer']}")
+    return "\n".join(lines)
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m craftoracle")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -248,6 +346,13 @@ def _parser() -> argparse.ArgumentParser:
         metavar="MIN:MAX",
         help="opt in to an inclusive item-level search over PoB modifier breakpoints",
     )
+    quality = commands.add_parser("quality", help="plan an ordinary catalyst quality finish")
+    quality.add_argument("--base", default="Vermillion Ring", help="PoB jewellery base name")
+    quality.add_argument("--item-level", type=int, default=86, help="positive item level")
+    quality.add_argument("--catalyst", required=True, help="regular catalyst name")
+    quality.add_argument("--target-quality", type=int, default=20, help="target quality from 1 through 20")
+    quality.add_argument("--price", type=float, required=True, help="non-negative caller-supplied unit price")
+    quality.add_argument("--json", action="store_true", help="emit machine-readable exact distributions")
     return parser
 
 

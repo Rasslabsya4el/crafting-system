@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -564,8 +564,7 @@ def _labels_for(mods, labels):
 
 
 def _replace_item(item, rarity, mods):
-    return ItemState(item.base_name, item.item_level, rarity, tuple(mods), item.corrupted, item.influenced,
-                     item.fractured, item.synthesised, item.mirrored, item.split, item.fractured_mod_id)
+    return replace(item, rarity=rarity, mods=tuple(mods))
 
 
 def _weighted_choice(entries, rng):
