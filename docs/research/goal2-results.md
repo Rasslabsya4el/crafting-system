@@ -77,7 +77,36 @@ bow table from the brief, not a Path of Building damage calculation. The raw sta
 distributions are shared between thresholds; terminal distributions retain only outcomes
 that satisfy each selected stopping rule.
 
-The paid fracture route and final integrated test runtime remain to be measured.
+## Paid fracture preparation
+
+The default helmet output after fracture integration is saved locally as
+`out/goal2/helmet-final.json` (worker644b032; lead47 affected tests passed). It contains12
+ranked routes and no unavailable route. The chosen fracture policy stops immediately on
+a complete Alchemy result; otherwise it prepares exactly four ordinary modifiers including
+Life9, tries the uniform CoE fracture model and uses Deafening Envy after Life9 is retained.
+Every wrong fracture is set aside at supplied salvage0 and another paid base is prepared.
+
+| Preparation stopping rule | Mean cost | Estimated p90 |
+|---|---:|---:|
+| Always proceed to the four-mod fracture gate | 4244.57117015 | 9192.5 |
+| Stop on an already complete Alchemy result | 4227.73669145 | 8744 |
+
+The selected p90 has99% DKW interval[8500,9353.5],50000 samples, seed20260921 and
+probability-space error bound.00727895416. Its mean is exact under the stated action model.
+The early-completion probability is.000024282088455126462, incomplete four-mod Life9
+preparation mass.02428733447648724, desired fracture chance1/4 and final Envy success
+chance.06101200110346221. Conditional terminal mass is1.
+
+Expected inputs are3.9880503801 bases,164.0388811448 Alchemy,160.0508307646 Scour,
+3.9840671735 Fracturing and16.3249323963 Envy. An individual Fracturing attempt has3/4
+wrong-mod probability; expected discarded bases are2.9880503801. The model's item-destruction
+risk is0: discarding an unwanted item is a paid policy decision, not orb destruction.
+The invented Fracturing price1000 makes this route more expensive than direct Envy,
+so the best helmet policy is unchanged. The utility bow is explicitly outside this exact
+Life9/Chaos6/elemental8 helmet template. Sources and derivation:
+`../mechanics/fracturing.md`, `../mechanics/essences.md`, `../design/family-policies.md`.
+
+Final merge bookkeeping and the integrated full-suite runtime remain pending.
 
 ## Quality finishing
 
