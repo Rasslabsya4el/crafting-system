@@ -63,7 +63,10 @@ def resolve_pool(item: ItemState, base_rows: dict[str, dict], mod_rows: dict[str
 def pool_totals(... ) -> dict[str, int]
 ```
 
-`load_item_data` must reject duplicate base names and duplicate explicit IDs. `resolve_pool`
+`load_item_data` must reject duplicate source occurrences and duplicate explicit IDs.
+Repeated base names are already documented in D9: use `name@source.path:source.line` keys
+for every base, and a plain-name alias only when that name occurs once. An ambiguous plain
+name must raise ValueError, never silently select one. Only true-valued base tags are active. `resolve_pool`
 must preserve source order, return only positive-weight eligible rows, and accept `side=None`
 for both sides or `Prefix`/`Suffix` for one side. A base tag weight is the value at the first
 key present in the base's `tags`; if no key matches, weight is zero. Eligibility is:
@@ -84,18 +87,23 @@ For `Royal Burgonet` (tags include armour, helmet, str_armour, default, item lev
 accepted explicit projection:
 
 - `IncreasedLife9` resolves to Prefix weight 1000; `IncreasedLife10` and `IncreasedLife11`
-  resolve to weight 0 because their first matching keys are shield/body_armour.
+  resolve to weight 0 because their first matching key is default (the helmet has neither shield nor body_armour).
 - `ChaosResist6`, `FireResist8`, `ColdResist8`, `LightningResist8`, and `Strength8` resolve
   to Suffix weights 250, 1000, 1000, 1000, and 1000 respectively.
-- An empty rare has 50 positive prefix entries totaling 51275 and 115 positive suffix entries
-  totaling 124300. These totals are checks of the provisional first-match/group/level rule,
+- An empty rare has 41 positive prefix entries totaling 39275 and 84 positive suffix entries
+  totaling 78400. These totals are checks of the provisional first-match/group/level rule,
   not game-wide probability claims.
 - With existing `IncreasedLife9`, prefix pool excludes group `IncreasedLife`; with existing
   `ChaosResist6`, suffix pool excludes group `ChaosResistance`.
-- With an existing two-prefix rare, prefix entries are empty; with an existing one-prefix
+- With an existing two-prefix rare, a third prefix may still be added; with three prefixes none may be added; with an existing one-prefix
   magic, prefix entries are empty. An existing 3-prefix rare still yields suffixes.
 - All six Q9 flags raise the exact error. Magic and rare are accepted; normal has no explicit
-  side capacity and may be represented but is not used by the night plan.
+  side capacity and is the initial state for Transmutation/Alchemy; those actions change rarity before pool resolution.
+- Further item-level 86 totals (Prefix/Suffix): Iron Ring 60250/103600; Simple Robe
+  61000/58200; Iron Gauntlets 46000/77000; Crude Bow 54658/59100.
+- FireResist7 and ColdResist7: 1000 each on Royal Burgonet. These complete ten single-mod checks.
+- Snapshot tests use committed own JSON; do not copy raw snapshots or execute older builder tests
+  in this worktree. Full regression runs happen on main after merge.
 
 ## Tests and report
 

@@ -103,3 +103,8 @@ no individual command approached ten minutes.
 
 ## Night log
 - 00:05 — read GOAL and repository rules; item-model pool spec written, worker launch next.
+
+Night goal active: first worker failed before writing files due to service 429, retrying the
+same handle once with corrected spec. If delegation remains unavailable, lead implements
+under the same spec/test discipline per AGENTS 6. Tasks may span 30–60 minutes due to
+exact-DP and acceptance work; individual commands are bounded and no background job remains.

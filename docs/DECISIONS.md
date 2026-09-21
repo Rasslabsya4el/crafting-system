@@ -111,3 +111,19 @@ PoB group exclusion, level gates and ordinary prefix/suffix caps. Generated tags
 multipliers remain retained data but are not applied (Q16/Q17). Non-ordinary flags raise the
 exact Q9 error. Rejected: silently modelling blocked action families, inferred tier parsing,
 or a resolver that treats all cached modifier tables as one pool.
+
+## D14 — lead-provisional 2026-09-20 — Night goal overrides unresolved research gates
+Authority: owner-authored docs/GOAL.md. Use unbiased exact weighted draws (Q2); rare
+reroll counts 4/5/6 with weights 8/3/1 in a sourced parameter file, printed in assumptions
+(Q4, reimplemented-from-CoE); prices are caller inputs, cached bench costs only example
+defaults (Q7). Restrict flags to ordinary uncorrupted/uninfluenced/unfractured/unsynthesised/
+unmirrored/unsplit items (Q9). PoB group and first base-tag weight are provisional exclusions
+and weights; omit generated-tag/multiplier effects (Q16/Q17), print that assumption.
+Validate exact math against hand cases and independent seeded Monte Carlo, not CoE Q14.
+Blocked special families remain explicit question-ID stubs. These decisions supersede
+the old requirement to settle every research question before the ordinary vertical slice.
+
+A lead spec arithmetic error counted extra tables; corrected BEFORE implementation to only
+ModExplicit rows: Royal Burgonet level 86 prefix/suffix 41/84, weights 39275/78400.
+Existing duplicate base display names use explicit source occurrence identities (D9), not
+a loader that rejects the accepted snapshot. No earlier accepted projection is re-audited.
