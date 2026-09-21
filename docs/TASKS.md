@@ -57,8 +57,9 @@ all game mechanics. No dependent path may silently guess.
 - [x] Item spec accepts required mods OR a group/tier value table + stopping threshold; helmet example (`f3cf7c2`)
 - [x] `examples/bow_value_table.yaml` with explicitly invented values and threshold (BRIEF 3b; `f3cf7c2`)
 - [x] Price table and loadout files (`f3cf7c2`; invented prices, explicit permissions and sourced bench quantities)
-- [~] Strategy templates1-3 within ordinary night slice, with stopping/restart rules and decisions; templates4-6 remain future/blocked-family work
-- [~] The ranker and `python -m craftoracle plan ...`: Pareto frontier of evaluated policies with expected utility, expected cost, p90 cost, irreversible-failure risk and rare inputs
+- [x] Strategy templates1-3 within ordinary night slice (`5eeefd3`): fixed spam, magic/Regal/Exalt cycle, protected-half and compatible bench finish; explicit stopping/restart rules
+- [x] Ranker and `python -m craftoracle plan ...` (`d344054`,`242091f`): full ranked table plus Pareto membership, utility, mean/p90 cost, risk and required inputs
+- [ ] Extend the policy library beyond the fixed ordinary slice: blocking, general bench finishing and templates4-6; special actions retain their research gates above
 - [x] Validate two thresholds on shared distributions, conditional terminal utility and dominance (`242091f`); bow12 candidates/3 Pareto points; p90 remains distinct from estimation uncertainty
 
 - [x] Night vertical slice: item model and ordinary PoB pool resolver (`d07a1b5`; 21 focused tests; corrected ordinary pool totals)
