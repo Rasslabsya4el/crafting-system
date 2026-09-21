@@ -1,5 +1,11 @@
 # Essences
 
+Update 2026-09-21: S21 plus PoEDB Screaming Essence of Sorrow (S63) confirm that all normal
+essence tiers upgrade normal items; tier5/Screaming and above ALSO reforge rare items.
+It is not a white-only/rare-only switch. No tier permits magic inputs (owner row8, S21).
+The existing ordinary adapter already implements this boundary correctly; tier8 remains
+separately gated by its special mapping rules. Confidence: documented; owner-confirmed magic ban.
+
 ## Rule
 
 An essence upgrades a normal item to rare and applies one guaranteed affix. Tier 5 (Screaming) and higher can reforge a rare item in the same broad manner as Chaos while retaining the guaranteed affix. Lower tiers do not have that rare-item reforge operation. The Wiki page also says lower tiers cap the random modifier level when the item level is above that tier's cap.

@@ -35,7 +35,7 @@ learn, decide or leave unfinished must be findable in the docs without asking yo
   you cannot find a source, the item goes to `docs/OPEN_QUESTIONS.md` with status `unsourced` and the code path that needs it
   raises `NotImplementedError("unsourced: <question id>")` -- it never silently guesses.
 - Confidence labels on every fact sheet: `datamined`, `documented` (wiki / GGG), `reimplemented-from-CoE` (we read how Craft
-  of Exile does it), `player-report`, `unsourced`.
+  of Exile does it), `owner-confirmed`, `owner-provisional`, `player-report`, `unsourced`.
 - Keep the CONDITIONS a source attaches ("only on influenced items", "before 3.19", "item level 68+"). A digested fact that
   lost its condition is worse than no fact.
 

@@ -1,6 +1,6 @@
 # Harvest reforges and add/remove crafts
 
-Read 2026-09-20. Confidence: `documented` S42 current recipe descriptions and S19 official
+Read 2026-09-20; updated 2026-09-21 from owner answers. Confidence: `documented` S42 current recipe descriptions and S19 official
 3.27 change; `reimplemented-from-CoE` S3 algorithms. Current recipes are distinguished from
 the frozen simulator's legacy options. This is a researched partial sheet, not an executable
 claim that every modern generation step is known.
@@ -14,7 +14,9 @@ annuls and old Harvest synthesis in S3 are not approved as current actions (S42 
 
 The current tag table includes Fire/Cold/Lightning/Physical/Life/Defence/Chaos/Attack/Caster/
 Speed/Critical and additional Minion/Elemental/Attribute/Mana/Drop reforges using Rancour.
-Availability within the target loadout is Q26; their existence does not establish equal weights.
+Minion/Elemental/Attribute/Mana availability in the endgame loadout is owner-confirmed
+(OWNER_QUESTIONS row 3). Their example price is owner-provisional, equal to the chosen
+Sacred-lifeforce add/remove placeholder. Drop is not enabled by that answer.
 S3's modern-toggle augment rejects full items and requires a legal tagged addition plus a
 removable old modifier (2707-2708,2342-2344). Remaining item flags are Q9.
 
@@ -27,8 +29,9 @@ removable old modifier (2707-2708,2342-2344). Remaining item flags are Q9.
    The `hrerollp` legacy path additionally biases later draws; it is not the ordinary current reforge.
 4. Draw the ordinary target count, subtract retained/forced counts, fill remaining slots through
    shared weighted selection (2455-2458). See affix_generation.md for count assumptions and Q2.
-5. S19 says modern reforges respect modifier-type restrictions. Frozen S3 passes ignore-type-
-   restriction to both forced and later draws. Do not silently use S3 for post-3.27 metamod cases.
+5. S19 decisively establishes respect for modifier-type restrictions in 3.27. The frozen S3
+   ignore flag is not used for the guaranteed draw. Owner row 2 authorizes S14's first-draw-only
+   interpretation pending narrower evidence; print that assumption wherever relevant.
 
 ## Observed modern-toggle add/remove steps
 1. Check non-influence, open space and tagged addition pool (2707-2708).
@@ -56,10 +59,60 @@ Q6 retains uncertainty about current carrier retention and later draws after the
 - A full 3-prefix/3-suffix ordinary item is rejected by S3 augment before the draw. A
   guaranteed tagged addition does not grant a seventh affix slot (2707).
 
+## Accepted ordinary reforge model (2026-09-21)
+
+Side protection is enabled now: S14/S17/S42 and owner row 1 establish that existing protected
+affixes survive. The official change S19 specifically addresses type restrictions; it does
+not introduce side protection or describe the order in which carrier flags disappear.
+Keep the existing ordinary Q9 item boundary until each special-state family is implemented.
+
+For a rare input, retain each existing affix on a protected side. Free slots may still receive
+new affixes. Draw one available mod with the selected tag, checking original attack/caster
+restrictions, occupied groups and side capacities. Then choose total 4/5/6 with weights 8/3/1,
+subtract all retained affixes and the guaranteed mod, and fill the remainder from the ordinary
+pool. The first-draw-only model applies no type restriction to subsequent draws. An explicitly
+named `all_draws` sensitivity mode applies original type restrictions to every new mod; it
+is an alternative hypothesis, not a second accepted game rule. Empty guaranteed pools reject
+the action. If both sides are completely protected and no slot is available, reject it.
+
+Weights/groups/ilvl come from PoB; unbiased draws follow D14. Every chosen group is excluded
+from subsequent draws. Sampling uses an explicit RNG. Exact evaluation retains group state
+until the terminal distribution, including a forced mod's group, even when that mod is junk
+under the value table. This preserves BRIEF 3b's distribution/threshold contract.
+
+### Hand examples for the reforge adapter
+All weights below are synthetic inputs. Let A(prefix, life, weight1) and B(prefix, life,
+weight3) share group L; X(prefix, attack, weight2) and Y(prefix, weight2) have distinct groups.
+Keep three concrete suffixes with suffix lock. With count4, A/B final probabilities are
+1/4 and 3/4; with count5, AX, AY, BX, BY are 1/8,1/8,3/8,3/8.
+With counts4/5/6 at 8/3/1, P(A)=1/4, and total prefix counts1/2/3 are 2/3,1/4,1/12.
+For a separate fixture, A(life,attack,weight1), B(life,weight3), X(attack,weight2),
+Y(weight2) have four distinct prefix groups, with three retained suffixes including no-attack
+and multimod and an original suffix lock prefix. Count5: forced A is excluded; forced B then
+adds A/X/Y at 1/5,2/5,2/5 in first-only mode, or Y with probability1 in all-draws mode.
+
+Real Royal Burgonet ilvl86 with three protected ordinary suffixes: eligible life prefix
+weight13000 = ten IncreasedLife tiers x1000 plus three LocalBaseArmourAndLife tiers x1000.
+The first-draw IncreasedLife9 probability is 1000/13000=1/13. Later draws may also hit Life9
+after a hybrid forced mod; the FINAL chance must not be replaced by 1/13.
+Source: PoB ModExplicit.lua keys IncreasedLife0..9 and LocalBaseArmourAndLife1..3,
+accepted projection and ordinary resolver; checked 2026-09-21.
+
+### Legal protected-half policy boundary
+The prepared helmet must have the desired chaos/elemental suffixes, exactly three suffixes,
+and space for the prefix lock. Reforge can leave three prefixes; a failed full-prefix result
+cannot be locked again. A legal baseline policy restarts the essence preparation on such a
+result. A later optimizer may compare an explicitly priced Annul recovery. Do not silently
+model all failed outcomes as renewable protected attempts. If p is reforge success, b is
+full-prefix failure, A is expected preparation cost, and c is lock+reforge cost, renewal gives
+expected total A + (c + b*A)/p. With A=10,c=2,p=1/4,b=1/4 the result is28, not18.
+These inputs are hand-chosen arithmetic examples, not game prices or probabilities.
+
 ## Comparison and implementation boundary
 Source changes are material: legacy toggle, removed recipes, new Rancour options and changed
 metamod interactions. Implement only a future bounded spec whose version, item flags,
-group rules and draw assumptions are explicit; otherwise raise unsourced Q6/Q9/Q26.
+group rules and draw assumptions are explicit. Q6 no longer blocks ordinary protected reforges;
+its unresolved type-filter detail is the declared owner-authorized first-only assumption.
 More/less-likely weighting and resistance/damage tier correspondence still need their own
 verified tables (Q12). No probability for them is inferred from their names.
 
