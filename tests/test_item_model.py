@@ -1,3 +1,9 @@
+"""Acceptance examples for PoB JSON keys under the provisional Q16/Q17 boundary.
+
+Rule sources: docs/mechanics/pool_resolution.md and affix_generation.md; data comes
+from data/pob_bases.json and data/pob_mod_families.json.
+"""
+
 from __future__ import annotations
 
 import json
@@ -114,6 +120,36 @@ def test_level_gate_invalid_inputs_and_unknown_ids(item_data) -> None:
         resolve_pool(rare(mods=(ModRef("missing", "Prefix", "x"),)), bases, mods)
 
 
+@pytest.mark.parametrize("level", [True, False, 0, -1])
+def test_invalid_item_levels_are_rejected(item_data, level) -> None:
+    bases, mods = item_data
+    with pytest.raises(ValueError, match="positive integer"):
+        resolve_pool(ItemState("Royal Burgonet", level, "rare"), bases, mods)
+
+
+def test_existing_mod_refs_must_be_possible(item_data) -> None:
+    bases, mods = item_data
+    life = ModRef("IncreasedLife9", "Prefix", "IncreasedLife")
+    other_prefix = next(entry for entry in resolve_pool(rare(), bases, mods, "Prefix") if entry.group != life.group)
+    other = ModRef(other_prefix.mod_id, other_prefix.type, other_prefix.group)
+    with pytest.raises(ValueError, match="duplicate existing mod id"):
+        resolve_pool(rare(mods=(life, life)), bases, mods)
+    with pytest.raises(ValueError, match="duplicate existing mod group"):
+        resolve_pool(rare(mods=(life, ModRef(other.id, "Prefix", life.group))), bases, mods)
+    with pytest.raises(ValueError, match="differs from source row"):
+        resolve_pool(rare(mods=(ModRef(life.id, "Suffix", life.group),)), bases, mods)
+    with pytest.raises(ValueError, match="differs from source row"):
+        resolve_pool(rare(mods=(ModRef(life.id, life.type, "forged"),)), bases, mods)
+    unique_prefixes = {entry.group: entry for entry in resolve_pool(rare(), bases, mods, "Prefix")}
+    four_prefixes = tuple(
+        ModRef(entry.mod_id, entry.type, entry.group) for entry in list(unique_prefixes.values())[:4]
+    )
+    with pytest.raises(ValueError, match="side cap"):
+        resolve_pool(rare(mods=four_prefixes), bases, mods)
+    with pytest.raises(ValueError, match="normal side cap"):
+        resolve_pool(ItemState("Royal Burgonet", 86, "normal", (life,)), bases, mods)
+
+
 def test_load_rejects_duplicate_occurrences_ids_and_ambiguous_names(tmp_path: Path) -> None:
     base_rows = {
         "bases": [
@@ -151,3 +187,7 @@ def test_malformed_required_rows_raise_value_error() -> None:
     bad_mod = {"A": {"id": "A", "type": "Prefix", "group": "A", "level": 1, "weightKey": ["default"], "weightVal": [], "source_path": "ModExplicit.lua"}}
     with pytest.raises(ValueError, match="weightKey"):
         resolve_pool(item, {"Base": {"name": "Base", "tags": {"default": True}}}, bad_mod)
+    for weight in (True, -1):
+        bad_mod["A"]["weightVal"] = [weight]
+        with pytest.raises(ValueError, match="weights"):
+            resolve_pool(item, {"Base": {"name": "Base", "tags": {"default": True}}}, bad_mod)

@@ -1,4 +1,10 @@
-"""Ordinary explicit-mod pool resolution from the accepted PoB projections."""
+"""Resolve ordinary explicit pools from PoB projection JSON.
+
+Source contract: ``data/pob_bases.json`` and ``data/pob_mod_families.json`` keys,
+``docs/mechanics/pool_resolution.md`` and ``affix_generation.md``.  The literal
+PoB ``group`` exclusion and omitted generated-tag/multiplier semantics are the
+lead-provisional 2026-09-20 Q16/Q17 boundary.
+"""
 
 from __future__ import annotations
 
@@ -111,14 +117,14 @@ def resolve_pool(
         raise ValueError(f"invalid rarity: {item.rarity}")
     if side is not None and side not in _SIDES:
         raise ValueError(f"invalid side: {side}")
-    if not isinstance(item.item_level, int):
-        raise ValueError("item level must be an integer")
+    if isinstance(item.item_level, bool) or not isinstance(item.item_level, int) or item.item_level <= 0:
+        raise ValueError("item level must be a positive integer")
     base = _resolve_base(item.base_name, base_rows)
     tags = base.get("tags")
     if not isinstance(tags, dict):
         raise ValueError(f"malformed base row for {item.base_name}: tags must be an object")
     active_tags = {tag for tag, enabled in tags.items() if isinstance(tag, str) and enabled is True}
-    _validate_existing_mods(item.mods, mod_rows)
+    _validate_existing_mods(item, mod_rows)
     cap = _RARITY_CAPS[item.rarity]
     counts = {candidate_side: sum(mod.type == candidate_side for mod in item.mods) for candidate_side in _SIDES}
     excluded_groups = {mod.group for mod in item.mods}
@@ -185,14 +191,29 @@ def _resolve_base(name: str, base_rows: dict[str, dict]) -> dict:
     raise ValueError(f"unknown base: {name}")
 
 
-def _validate_existing_mods(mods: tuple[ModRef, ...], mod_rows: dict[str, dict]) -> None:
-    for mod in mods:
+def _validate_existing_mods(item: ItemState, mod_rows: dict[str, dict]) -> None:
+    seen_ids: set[str] = set()
+    seen_groups: set[str] = set()
+    counts = {side: 0 for side in _SIDES}
+    for mod in item.mods:
         if mod.id not in mod_rows:
             raise ValueError(f"unknown mod id: {mod.id}")
-        if mod.type not in _SIDES:
-            raise ValueError(f"invalid existing mod side: {mod.type}")
-        if not isinstance(mod.group, str):
-            raise ValueError(f"invalid existing mod group: {mod.id}")
+        if mod.id in seen_ids:
+            raise ValueError(f"duplicate existing mod id: {mod.id}")
+        if mod.group in seen_groups:
+            raise ValueError(f"duplicate existing mod group: {mod.group}")
+        source_type, source_group, _, _, _, source_path = _validate_mod_row(mod.id, mod_rows[mod.id])
+        if not source_path.endswith("ModExplicit.lua"):
+            raise ValueError(f"existing mod is not ordinary explicit: {mod.id}")
+        if mod.type != source_type or mod.group != source_group:
+            raise ValueError(f"existing mod ref differs from source row: {mod.id}")
+        seen_ids.add(mod.id)
+        seen_groups.add(mod.group)
+        counts[mod.type] += 1
+    cap = _RARITY_CAPS[item.rarity]
+    for side, count in counts.items():
+        if count > cap:
+            raise ValueError(f"existing {side} mods exceed {item.rarity} side cap")
 
 
 def _validate_mod_row(mod_id: str, row: dict) -> tuple[str, str, int, list[Any], list[Any], str]:
@@ -200,13 +221,25 @@ def _validate_mod_row(mod_id: str, row: dict) -> tuple[str, str, int, list[Any],
         raise ValueError(f"malformed mod row: {mod_id}")
     mod_type, group, level = row.get("type"), row.get("group"), row.get("level")
     keys, values, source_path = row.get("weightKey"), row.get("weightVal"), row.get("source_path")
-    if mod_type not in _SIDES or not isinstance(group, str) or not isinstance(level, int):
+    if (
+        mod_type not in _SIDES
+        or not isinstance(group, str)
+        or isinstance(level, bool)
+        or not isinstance(level, int)
+        or level <= 0
+    ):
         raise ValueError(f"malformed mod row: {mod_id}")
     if not isinstance(keys, list) or not isinstance(values, list) or len(keys) != len(values):
         raise ValueError(f"malformed mod row weightKey/weightVal: {mod_id}")
     if not isinstance(source_path, str):
         raise ValueError(f"malformed mod row source_path: {mod_id}")
-    if any(not isinstance(key, str) or not isinstance(value, int) for key, value in zip(keys, values)):
+    if any(
+        not isinstance(key, str)
+        or isinstance(value, bool)
+        or not isinstance(value, int)
+        or value < 0
+        for key, value in zip(keys, values)
+    ):
         raise ValueError(f"malformed mod row weights: {mod_id}")
     return mod_type, group, level, keys, values, source_path
 
