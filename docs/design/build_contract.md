@@ -1,7 +1,8 @@
 # Build-system contract before engine design
 
-Status: design constraints and hand-computed acceptance cases; no item model, evaluator, spec
-loader, or ranker has been implemented. Authority: `docs/BRIEF.md` section 3b and owner instruction,
+Status: design constraints and hand-computed acceptance cases. Ordinary item, distribution,
+cost and input modules are accepted; policy/CLI integration and frontier stretch are tracked
+in `docs/STATE.md`. Authority: `docs/BRIEF.md` section 3b and owner instruction,
 read 2026-09-20; decision D7. All numbers below are invented mathematical fixtures, not PoE facts,
 market prices, or PoB measurements.
 
@@ -11,9 +12,9 @@ market prices, or PoB measurements.
   explicitly defined scored class. Keep failure/unsupported mass visible. Monte Carlo reports
   sample count and seed alongside estimated probabilities; it does not claim exact probabilities.
 - The item spec accepts required mods OR a value table keyed by mod group and tier plus a
-  stopping threshold. The helmet remains the required-mod demo. A future
-  `examples/bow_value_table.yaml` uses clearly marked invented values. The exact serialization
-  and treatment of missing table entries still belong in a bounded implementation spec.
+  stopping threshold. The helmet remains the required-mod demo.
+  `examples/bow_value_table.yaml` uses clearly marked invented values. The accepted input spec
+  defines JSON-compatible YAML and assigns zero utility to missing table entries.
 - Success is a predicate over the distribution: required mods satisfied, or utility >= threshold.
   A policy includes a stopping rule and action/continue/restart/failure decision points.
 - A policy result carries expected utility, expected cost, cost p90, irreversible-failure risk,
