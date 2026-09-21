@@ -9,7 +9,7 @@
 5. Royal Burgonet86 has 41 eligible prefixes / 84 suffixes, weights39275/78400.
 6. Model Chaos target chance is0.0000242820884551; Deafening Envy0.00259406068444.
 7. Ordinary actions (51b386f,15 tests) and exact loop costs (8eeee53,13 tests) are merged.
-8. MC (70fcadb,14 tests) and inputs (f3cf7c2,12 tests) are merged; policies and CLI running.
+8. MC (70fcadb,14 tests) and inputs (f3cf7c2,12 tests) are merged; policies accepted5eeefd3; CLI real integration running.
 9. Source uncertainties are provisionally bounded by GOAL/D14; blocked special families stay out.
 10. The required plan command does not exist yet; do not claim the morning demo is complete.
 
@@ -44,7 +44,8 @@ path is ignored. All subsequent fixture runs must use that setting; no external 
 
 ## Workers / current work
 
-At most two workers: policy-evaluation and plan-cli in separate ignored worktrees. Budgets
+Policy evaluator accepted5eeefd3:8 tests passed in0.32minute;9 real helmet policies.
+Only plan-cli remains active, with accepted policies integrated into its isolated worktree. Budgets
 60/25minutes cover exact multi-stage integration and direct CLI. Accepted inputs are integrated
 into the policy worktree; CLI starts against its documented JSON-ready result contract. No individual
 command may exceed10minutes. Item-model, exact-distributions, actions and cost trees were accepted

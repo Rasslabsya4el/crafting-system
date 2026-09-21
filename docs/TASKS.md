@@ -67,5 +67,5 @@ all game mechanics. No dependent path may silently guess.
 - [x] Night loop costs exact geometric/chain/compound arithmetic (`8eeee53`;13 focused tests; explicit work limits)
 - [x] Night independent Monte Carlo and p90 cost estimator (`70fcadb`;14 tests, five real pools within stated bounds)
 - [x] Night item specs, invented prices and loadouts (`f3cf7c2`;12 tests; two examples and sourced bench finish)
-- [~] Night concrete policies and direct CLI (`2026-09-21-policy-evaluation.md`, `2026-09-21-plan-cli.md`; workers running)
+- [~] Night concrete policies (`5eeefd3`,8 tests,9 helmet policies) accepted; direct CLI real subprocess acceptance in progress (`2026-09-21-plan-cli.md`)
 - [~] Night core integration umbrella: GOAL1-5 merged; real policies/CLI in progress; known-answer/frontier/Divine specs prepared but not dispatched before core acceptance
