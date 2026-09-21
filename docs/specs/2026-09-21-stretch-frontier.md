@@ -59,6 +59,10 @@ raw-distribution calls to verify the second threshold reuses the first computati
 Test single-threshold IDs remain backward compatible and malformed/lower/criteria thresholds
 return the normal CLI input error. Keep full suite below a minute; do not duplicate expensive
 same-input evaluations merely to assert formatting.
+Main core suite takes0.71minute. Keep the stretch within the one-minute total: the existing
+real bow CLI subprocess test may be upgraded to the two-threshold comparison instead of
+adding another identical bow calculation. Retain its threshold100 assertions plus threshold60
+and existing lightweight --threshold override validation. Formatting can reuse that JSON.
 
 Lead baseline from accepted engine, read2026-09-21 (model predictions, invented inputs):
 AlchemyScour threshold60:p0.0053171974267639515,mean187.568999463238,p90=431.5,
