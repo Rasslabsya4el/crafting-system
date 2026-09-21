@@ -1,9 +1,16 @@
 {
-  "confidence": "documented",
+  "confidence": {
+    "literal_tags": "datamined",
+    "side_protection": "documented",
+    "count_selection": ["reimplemented-from-CoE", "owner-confirmed"],
+    "first_only": ["reimplemented-from-CoE", "owner-provisional"],
+    "all_draws": {"confidence": "unsourced", "role": "sensitivity"},
+    "minion_elemental_attribute_mana_availability": "owner-provisional"
+  },
   "sources": [
     "docs/mechanics/harvest.md: Accepted ordinary reforge model (2026-09-21)",
     "S19 official 3.27 patch notes: modifier-type restrictions",
-    "S42 https://www.poewiki.net/index.php?title=Harvest_crafting&oldid=1699145 (read 2026-09-21)",
+    "S42 https://www.poewiki.net/index.php?title=Harvest_crafting&oldid=1699145 (read 2026-09-20)",
     "PoB data: ModExplicit.lua:115+ literal modTag defences (defence API spelling), and literal modTags/weights/groups"
   ],
   "supported_tags": [

@@ -13,7 +13,12 @@ import pytest
 
 from craftoracle.actions import ActionData, action_distribution, load_action_data
 from craftoracle.distributions import OutcomeClass, probability
-from craftoracle.harvest import apply_harvest, harvest_distribution
+from craftoracle.harvest import (
+    apply_harvest,
+    harvest_distribution,
+    prepare_harvest,
+    sample_harvest,
+)
 from craftoracle.item_model import ItemState, ModRef
 
 
@@ -66,7 +71,11 @@ def simple_data() -> ActionData:
             "S2": _mod("S2", "Suffix", "S2"),
             "S3": _mod("S3", "Suffix", "S3"),
         },
-        bench={729: _bench(729, "Prefix", "ItemGenerationCannotChangeSuffixes")},
+        bench={
+            728: _bench(728, "Suffix", "ItemGenerationCannotChangePrefixes"),
+            729: _bench(729, "Prefix", "ItemGenerationCannotChangeSuffixes"),
+            730: _bench(730, "Suffix", "ItemGenerationCanHaveMultipleCraftedMods"),
+        },
         essences={},
         rules={
             "magic_caps": [1, 1], "rare_caps": [3, 3],
@@ -144,10 +153,64 @@ def test_first_only_and_all_draws_use_original_attack_flag() -> None:
 
 def test_apply_harvest_uses_direct_seeded_draws_and_preserves_protected_side(simple_data: ActionData) -> None:
     item = ItemState("Base", 1, "rare", _locked_suffixes())
-    result = apply_harvest(item, _with_rare_counts(simple_data, {"5": 1}), "life", random.Random(20260921))
+    data = _with_rare_counts(simple_data, {"5": 1})
+    plan = prepare_harvest(item, data, "life")
+    result = sample_harvest(plan, random.Random(20260921))
+    assert result == apply_harvest(item, data, "life", random.Random(20260921))
     assert result.rarity == "rare"
     assert {mod.id for mod in _locked_suffixes()[:3]} <= {mod.id for mod in result.mods}
     assert item.mods == _locked_suffixes()
+
+
+def test_prefix_lock_mirror_empty_pool_and_no_slot_rejections(simple_data: ActionData) -> None:
+    mirror_mods = dict(simple_data.mods)
+    mirror_mods["LS"] = _mod("LS", "Suffix", "LS", tags=("life",))
+    mirror = ActionData(simple_data.bases, mirror_mods, simple_data.bench, simple_data.essences, {
+        **simple_data.rules, "rare_count_weights": {"4": 1},
+    })
+    protected_prefixes = ItemState("Base", 1, "rare", (
+        _ref("A", "Prefix", "L"), _ref("X", "Prefix", "X"), _ref("Y", "Prefix", "Y"),
+        _ref("bench:728", "Suffix", "ItemGenerationCannotChangePrefixes"),
+    ))
+    rolled = apply_harvest(protected_prefixes, mirror, "life", random.Random(7))
+    assert {"A", "X", "Y"} <= {mod.id for mod in rolled.mods}
+    with pytest.raises(ValueError, match="no eligible tagged"):
+        harvest_distribution(ItemState("Base", 1, "rare"), simple_data, "fire")
+    full = ItemState("Base", 1, "rare", (
+        _ref("A", "Prefix", "L"), _ref("X", "Prefix", "X"),
+        _ref("bench:729", "Prefix", "ItemGenerationCannotChangeSuffixes"),
+        _ref("S1", "Suffix", "S1"), _ref("bench:728", "Suffix", "ItemGenerationCannotChangePrefixes"),
+        _ref("bench:730", "Suffix", "ItemGenerationCanHaveMultipleCraftedMods"),
+    ))
+    with pytest.raises(ValueError, match="no eligible tagged"):
+        harvest_distribution(full, simple_data, "life")
+
+
+def test_unprotected_more_than_two_draws_matches_direct_monte_carlo(simple_data: ActionData) -> None:
+    data = _with_rare_counts(simple_data, {"6": 1})
+    item = ItemState("Base", 1, "rare")
+    exact = harvest_distribution(item, data, "life", {"A": "A"})
+    expected = probability(exact, lambda outcome: "A" in outcome.labels)
+    assert expected == pytest.approx(1 / 4)
+    assert {outcome.prefixes + outcome.suffixes for outcome in exact} == {6}
+    plan = prepare_harvest(item, data, "life")
+    samples = [sample_harvest(plan, random.Random(seed)) for seed in range(2_000)]
+    observed = sum(any(mod.id == "A" for mod in result.mods) for result in samples) / len(samples)
+    assert abs(observed - expected) < 0.04
+
+
+def test_mutating_action_data_changes_new_plan_and_public_sampling(simple_data: ActionData) -> None:
+    data = _with_rare_counts(simple_data, {"4": 1})
+    item = ItemState("Base", 1, "rare", _locked_suffixes())
+    labels = {"A": "A"}
+    before = probability(harvest_distribution(item, data, "life", labels), lambda outcome: "A" in outcome.labels)
+    before_samples = [apply_harvest(item, data, "life", random.Random(seed)) for seed in range(20)]
+    data.mods["B"]["weightVal"][0] = 1000
+    after = probability(harvest_distribution(item, data, "life", labels), lambda outcome: "A" in outcome.labels)
+    after_samples = [apply_harvest(item, data, "life", random.Random(seed)) for seed in range(20)]
+    assert before == pytest.approx(1 / 4)
+    assert after == pytest.approx(1 / 1001)
+    assert before_samples != after_samples
 
 
 @pytest.mark.parametrize("bad_tag", ("drop", "unknown", 1, None))
@@ -167,29 +230,26 @@ def test_harvest_validates_tag_mode_rng_and_item(simple_data: ActionData, bad_ta
 
 def test_action_adapter_and_real_protected_helmet_seeded_comparison() -> None:
     data = load_action_data(ROOT)
-    # Three ordinary suffixes; the later policy supplies its concrete target labels.
-    suffixes = [entry for entry in data.mods.values() if entry["type"] == "Suffix" and entry["level"] <= 86]
     chosen = []
-    groups = set()
-    for row in suffixes:
-        if row["group"] not in groups:
-            chosen.append(ModRef(row["id"], row["type"], row["group"]))
-            groups.add(row["group"])
-        if len(chosen) == 3:
-            break
+    for mod_id in ("ChaosResist6", "FireResist8", "ColdResist8"):
+        row = data.mods[mod_id]
+        assert row["type"] == "Suffix"
+        chosen.append(ModRef(mod_id, row["type"], row["group"]))
     lock = ModRef("bench:729", "Prefix", "ItemGenerationCannotChangeSuffixes")
     item = ItemState("Royal Burgonet", 86, "rare", tuple((*chosen, lock)))
     labels = {"IncreasedLife9": "Life9"}
     distribution = action_distribution("harvest_reforge", item, data, labels, harvest_tag="life")
     exact = probability(distribution, lambda outcome: "Life9" in outcome.labels)
     assert sum(distribution.values()) == pytest.approx(1, abs=1e-10)
-    assert exact >= 1 / 13
-    assert len(distribution) > 1
+    assert exact == pytest.approx(0.07950823245417578)
+    assert len(distribution) == 6
+    assert sum(entry.weight for entry in prepare_harvest(item, data, "life").forced) == 13_000
     defence = action_distribution("harvest_reforge", item, data, harvest_tag="defence")
     assert sum(defence.values()) == pytest.approx(1, abs=1e-10)
 
     rng = random.Random(20260921)
-    samples = [apply_harvest(item, data, "life", rng) for _ in range(10_000)]
+    plan = prepare_harvest(item, data, "life")
+    samples = [sample_harvest(plan, rng) for _ in range(10_000)]
     successes = sum(any(mod.id == "IncreasedLife9" for mod in result.mods) for result in samples)
     frequency = successes / len(samples)
     bound = math.sqrt(math.log(2 / 0.001) / (2 * len(samples)))

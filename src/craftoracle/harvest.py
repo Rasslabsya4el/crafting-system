@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Mapping
+from dataclasses import dataclass
 from functools import lru_cache
 import json
 from pathlib import Path
 import random
-import weakref
 
 from craftoracle.actions import (
     ActionData,
@@ -30,12 +30,24 @@ from craftoracle.actions import (
     _validate_item,
     _validate_labels,
 )
-from craftoracle.distributions import OutcomeClass, draw_distribution, mixture_distribution
+from craftoracle.distributions import DrawEntry, OutcomeClass, draw_distribution, mixture_distribution
 from craftoracle.item_model import ItemState, ModRef
 
 
 _RULE_PATH = Path(__file__).resolve().parents[2] / "data" / "rules" / "harvest.json"
-_SAMPLER_PLANS: dict[tuple[int, ItemState, str, str], tuple[weakref.ReferenceType, tuple]] = {}
+
+
+@dataclass(frozen=True)
+class HarvestPlan:
+    """Immutable resolved pool for repeated direct samples of one reforge."""
+
+    item: ItemState
+    retained: tuple[ModRef, ...]
+    forced: tuple[DrawEntry, ...]
+    ordinary: tuple[DrawEntry, ...]
+    counts: tuple[tuple[int, int], ...]
+    prefix_cap: int
+    suffix_cap: int
 
 
 def harvest_distribution(
@@ -99,47 +111,46 @@ def apply_harvest(
     The supplied ``random.Random`` is the sole entropy source.  This function
     deliberately does not sample the exact terminal distribution.
     """
+    return sample_harvest(prepare_harvest(item, data, tag, type_filter=type_filter), rng)
+
+
+def prepare_harvest(
+    item: ItemState,
+    data: ActionData,
+    tag: str,
+    *,
+    type_filter: str = "first_only",
+) -> HarvestPlan:
+    """Resolve immutable candidates once for a caller-managed sample series."""
+    _, retained, forced, ordinary_flags, counts = _prepare(item, data, tag, None, type_filter)
+    ordinary = _candidate_entries(item, data, retained, ordinary_flags, None)
+    prefix_cap, suffix_cap = _caps(data, "rare")
+    return HarvestPlan(item, retained, forced, ordinary, counts, prefix_cap, suffix_cap)
+
+
+def sample_harvest(plan: HarvestPlan, rng: random.Random) -> ItemState:
+    """Sample one prepared plan using only direct individual weighted draws."""
+    if not isinstance(plan, HarvestPlan):
+        raise ValueError("plan must be HarvestPlan")
     if not isinstance(rng, random.Random):
         raise ValueError("rng must be random.Random")
-    retained, forced, ordinary, counts, cap = _sampling_plan(item, data, tag, type_filter)
-    target = _weighted_choice(counts, rng)[0]
-    chosen = _weighted_choice(forced, rng)
-    current: list[ModRef] = [*retained, ModRef(chosen.mod_id, chosen.type, chosen.group)]
+    target = _weighted_choice(plan.counts, rng)[0]
+    chosen = _weighted_choice(plan.forced, rng)
+    current: list[ModRef] = [*plan.retained, ModRef(chosen.mod_id, chosen.type, chosen.group)]
     while len(current) < target:
         prefixes, suffixes = _counts(current)
         occupied_groups = {mod.group for mod in current}
         eligible = tuple(
-            entry for entry in ordinary
+            entry for entry in plan.ordinary
             if entry.group not in occupied_groups
-            and ((entry.type == "Prefix" and prefixes < cap[0])
-                 or (entry.type == "Suffix" and suffixes < cap[1]))
+            and ((entry.type == "Prefix" and prefixes < plan.prefix_cap)
+                 or (entry.type == "Suffix" and suffixes < plan.suffix_cap))
         )
         if not eligible:
             break
         selected = _weighted_choice(eligible, rng)
         current.append(ModRef(selected.mod_id, selected.type, selected.group))
-    return _replace_item(item, "rare", current)
-
-
-def _sampling_plan(item, data, tag, type_filter):
-    """Cache immutable pool resolution, never a random outcome or RNG state."""
-    _validate_action_data(data)
-    _validate_item(item, data)
-    rules = _rules()
-    if not isinstance(tag, str) or tag not in rules["supported_tags"]:
-        raise ValueError(f"unknown harvest tag: {tag}")
-    if type_filter not in rules["ordinary_reforge"]["type_filter_modes"]:
-        raise ValueError(f"unknown harvest type_filter: {type_filter}")
-    key = (id(data), item, tag, type_filter)
-    cached = _SAMPLER_PLANS.get(key)
-    if cached is not None and cached[0]() is data:
-        return cached[1]
-    _, retained, forced, ordinary_flags, counts = _prepare(item, data, tag, None, type_filter)
-    plan = (retained, forced, _candidate_entries(item, data, retained, ordinary_flags, None), counts, _caps(data, "rare"))
-    if len(_SAMPLER_PLANS) >= 64:
-        _SAMPLER_PLANS.clear()
-    _SAMPLER_PLANS[key] = (weakref.ref(data), plan)
-    return plan
+    return _replace_item(plan.item, "rare", current)
 
 
 def _prepare(item, data, tag, labels, type_filter):
