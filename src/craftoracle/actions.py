@@ -25,7 +25,7 @@ _NO_ATTACK = "ItemGenerationCannotRollAttackAffixes"
 _NO_CASTER = "ItemGenerationCannotRollCasterAffixes"
 _ESSENCE_LEVEL_CAPS = {1: 35, 2: 45, 3: 60, 4: 75}  # S21, docs/mechanics/essences.md
 _BLOCKED_ACTIONS = {
-    "harvest": "Q6", "fossil": "Q13", "fossils": "Q13", "eldritch": "Q11", "awakener": "Q20",
+    "harvest": "Q6", "fossils": "Q13", "eldritch": "Q11", "awakener": "Q20",
     "recombinator": "Q21", "fracture": "Q12", "veiled": "Q12", "corruption": "Q18",
     "beasts": "Q25", "catalysts": "Q23",
 }
@@ -132,6 +132,9 @@ def action_distribution(
     bench_index: int | None = None,
     harvest_tag: str | None = None,
     harvest_type_filter: str = "first_only",
+    fossil_ids: tuple[int, ...] | list[int] | None = None,
+    fossil_mode: str = "additive",
+    socket_count: int | None = None,
 ) -> dict[OutcomeClass, float]:
     """Return terminal-only exact outcomes; do not use the projection for a later action."""
     checked_labels = _validate_labels(labels)
@@ -140,6 +143,8 @@ def action_distribution(
             raise ValueError("harvest options are only valid for harvest_reforge")
         if bench_index is not None:
             raise ValueError("bench_index is only valid for bench")
+        if fossil_ids is not None or fossil_mode != "additive" or socket_count is not None:
+            raise ValueError("fossil options are only valid for fossil")
         scenario = prepare_roll(action, item, data, checked_labels, essence_id=essence_id)
         parts = []
         for draws, weight in scenario.draw_counts:
@@ -155,15 +160,30 @@ def action_distribution(
             raise ValueError("essence_id is only valid for essence")
         if bench_index is not None:
             raise ValueError("bench_index is only valid for bench")
+        if fossil_ids is not None or fossil_mode != "additive" or socket_count is not None:
+            raise ValueError("fossil options are only valid for fossil")
         if harvest_tag is None:
             raise ValueError("harvest_reforge requires harvest_tag")
         # Harvest imports ActionData from this module, so keep the adapter import local.
         from craftoracle.harvest import harvest_distribution
         return harvest_distribution(item, data, harvest_tag, checked_labels, type_filter=harvest_type_filter)
+    if action == "fossil":
+        if essence_id is not None:
+            raise ValueError("essence_id is only valid for essence")
+        if bench_index is not None:
+            raise ValueError("bench_index is only valid for bench")
+        if harvest_tag is not None or harvest_type_filter != "first_only":
+            raise ValueError("harvest options are only valid for harvest_reforge")
+        if fossil_ids is None:
+            raise ValueError("fossil requires fossil_ids")
+        from craftoracle.fossils import fossil_distribution
+        return fossil_distribution(item, data, fossil_ids, checked_labels, mode=fossil_mode, socket_count=socket_count)
     if essence_id is not None:
         raise ValueError("essence_id is only valid for essence")
     if harvest_tag is not None or harvest_type_filter != "first_only":
         raise ValueError("harvest options are only valid for harvest_reforge")
+    if fossil_ids is not None or fossil_mode != "additive" or socket_count is not None:
+        raise ValueError("fossil options are only valid for fossil")
     _validate_action_data(data)
     _validate_item(item, data)
     if action == "annul":

@@ -1,0 +1,30 @@
+{
+  "source": {
+    "S3": "Craft of Exile cached package.js: fossil line 5; poec_workoutFOMTypes lines 1500-1508; poec_getModdedWeight lines 1559-1570; read 2026-09-21",
+    "S4": "Craft of Exile cached fossils.seq[] IDs and mod_data; read 2026-09-21",
+    "confidence": "reimplemented-from-CoE",
+    "choice": "D21 default additive positive stacking"
+  },
+  "bound_s56_disagreement": "S56 applies Bound once to a multi-tag mod (x10); cached CoE additive trace applies minion and aura (x20). D21 selects x20.",
+  "ordinary": [
+    {"id": 1, "name": "Aberrant", "positive": {"chaos": "10"}, "negative": {"lightning": "0"}},
+    {"id": 2, "name": "Aetheric", "positive": {"caster": "10"}, "negative": {"attack": "0.15"}},
+    {"id": 3, "name": "Bound", "positive": {"minion": "10", "aura": "10", "curse": "10"}, "negative": {}},
+    {"id": 4, "name": "Corroded", "positive": {}, "negative": {"elemental": "0", "fire": "0", "cold": "0", "lightning": "0"}, "hybrids": [{"tags": ["physical", "ailment"], "factor": "10"}, {"tags": ["chaos", "ailment"], "factor": "10"}]},
+    {"id": 5, "name": "Dense", "positive": {"defences": "10"}, "negative": {"life": "0"}},
+    {"id": 6, "name": "Faceted", "positive": {"gem": "10"}, "negative": {}},
+    {"id": 7, "name": "Frigid", "positive": {"cold": "10"}, "negative": {"fire": "0"}},
+    {"id": 8, "name": "Jagged", "positive": {"physical": "10"}, "negative": {"chaos": "0"}},
+    {"id": 9, "name": "Lucent", "positive": {"mana": "10"}, "negative": {"speed": "0"}},
+    {"id": 10, "name": "Metallic", "positive": {"lightning": "10"}, "negative": {"physical": "0"}},
+    {"id": 11, "name": "Prismatic", "positive": {"elemental": "6"}, "negative": {}, "hybrids": [{"tags": ["physical", "ailment"], "factor": "0"}, {"tags": ["chaos", "ailment"], "factor": "0"}]},
+    {"id": 12, "name": "Pristine", "positive": {"life": "10"}, "negative": {"defences": "0"}},
+    {"id": 13, "name": "Scorched", "positive": {"fire": "10"}, "negative": {"cold": "0"}},
+    {"id": 14, "name": "Serrated", "positive": {"attack": "10"}, "negative": {"caster": "0.15"}},
+    {"id": 15, "name": "Shuddering", "positive": {"speed": "10"}, "negative": {"mana": "0"}},
+    {"id": 21, "name": "Fundamental", "positive": {"attribute": "10"}, "negative": {"critical": "0"}},
+    {"id": 22, "name": "Deft", "positive": {"critical": "10"}, "negative": {"attribute": "0"}},
+    {"id": 23, "name": "Opulent", "positive": {"drop": "10"}, "negative": {}, "untagged_factor": "0"}
+  ],
+  "excluded_special_ids": [16, 17, 18, 19, 20, 24, 25]
+}
