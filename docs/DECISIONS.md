@@ -189,3 +189,11 @@ and100 for another. Center the conditional weighted mean on one observed utility
 summing differences: constant values then remain exactly constant. Do not invent a risk/
 cost/utility comparison epsilon that could hide genuine small differences. This bounded
 integration correction belongs to the frontier spec, not a general numerical refactor.
+
+## D19 — 2026-09-21 — Lead selects worker model and reasoning per task
+Owner instruction in chat supersedes the earlier fixed Terra/xhigh worker setting and the
+requirement to match the lead's model. Use GPT-5.6 Terra for ordinary tasks and GPT-5.6 Luna
+for very light tasks where Terra would be excessive. The lead independently chooses any
+reasoning level supported by that model according to task scope and complexity. The earlier
+workers' recorded settings remain historical facts; no completed work is rerun. Isolation,
+written specs, direct lead acceptance and the two-worker limit remain the governing workflow.

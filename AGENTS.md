@@ -74,11 +74,15 @@ learn, decide or leave unfinished must be findable in the docs without asking yo
 ## 6. You are the LEAD; code that is not crafting logic goes to workers (no third party in between)
 
 You work the way the parent project's lead works: YOU read the sources, decide what a rule is, write fact sheets, design the
-strategy templates, write specs, review and merge. WORKERS (subagents you start in the Codex desktop app: the same model as
-you, GPT-5.6 Terra at extra-high reasoning -- the owner sets the model in the app) write code from your written spec. There is
+strategy templates, write specs, review and merge. WORKERS (subagents you start in the Codex desktop app, with model and
+reasoning chosen by you under the rule below) write code from your written spec. There is
 no reviewer between you and them: you verify their work yourself. If you ARE a worker (your prompt names a spec and a
 worktree), this section does not apply to you: `docs/WORKER_RULES.md` does.
 
+- **Worker model and reasoning:** use GPT-5.6 Terra for ordinary worker tasks. For very light tasks where Terra would be
+  excessive, use GPT-5.6 Luna instead. You choose the reasoning level yourself for each task, according to its scope and
+  complexity; any reasoning level supported by the chosen model is allowed. Workers need not match the lead's model or
+  reasoning level, and extra-high reasoning is not mandatory.
 - **Delegate:** data builders and parsers (PoB's Lua tables -> our JSON), mechanical extraction from cached files ("list every
   crafting method in package.js with its options and the function that implements it" -- a TABLE with pointers, no
   interpretation), calculators and simulators from a formula or a fact sheet you wrote, tests, refactors, command-line glue.
