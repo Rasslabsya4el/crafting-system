@@ -219,3 +219,17 @@ Example prices are invented inputs: use harvest_reforge:<tag> as atomic craft pr
 normal tagged reforge1, Sacred add/remove placeholder100, and minion/elemental/attribute/mana
 100 each. The latter equality and availability are owner-provisional (row3); no exchange rate
 or actual Sacred price is claimed. The planner must disclose these assumptions.
+
+## D22 — 2026-09-21 — Search legal cycles and price every replacement
+Parameter design lives in design/parameter-search.md. A failed third Exalt leaves no slot
+for a prefix suffix-lock: restart preparation and charge it. Retain concrete group state
+through gates; a target-label/junk-count abstraction is not generally Markov. Reject free
+relocks and independent cost/target approximations. Item-level search requires caller opt-in.
+
+Answered family designs are in design/family-policies.md. Fossil adapter supports18 ordinary
+fossils; policy enumerates a caller allowlist of at most4 (15 subsets), initially1/12/13/14.
+This availability bound keeps exhaustive search reviewable without claiming global coverage.
+Example fossil prices1 each, resonator prices1/2/3/4 and Fracturing1000 are invented inputs.
+Fracture-Life then Envy pays each failed base and preparation, salvage0 explicitly. Comparing
+early completion off/on preserves useful already-complete Alchemy results. Catalyst policy
+finishes a supplied jewellery item; no inferred damage value or whole-jewellery craft added.
