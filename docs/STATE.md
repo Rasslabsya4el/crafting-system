@@ -8,7 +8,7 @@
 4. Protected suffix/life mean8357.19,p90=18985; optional bench131 mean8359.19,p90=18987.
 5. Chaos mean41183.12,p90=94826.5; Alchemy+Scour mean41182.12,p90=94825.5.
 6. Magic/Regal/Exalt mean583612.11; estimated p90=1345699.5 with explicit99%DKW interval.
-7. Main suite187 passed in0.71minute; hand exact cases and five real-pool MC comparisons included.
+7. Main suite228 passed in0.76minute;41 indexed hand answers and five real-pool MC comparisons included.
 8. Bow value-table threshold100 produces6 reachable policies; prices/utility are invented inputs.
 9. Special families remain parked by GOAL/D14 and question-ID stubs; no new owner answer needed.
 10. 41 known answers accepted8ac207c; Pareto/two bow thresholds next, then bounded Divine.
@@ -23,8 +23,8 @@ python -m pytest -q
 ```
 
 Mandatory text command personally run by lead:exit0,9 policies,0.08minute. CLI focused9 tests
-passed0.18minute. Main187 tests passed42.82s (0.71minute) atd344054; final0acb192 adds only
-subprocess error-test coverage, personally checked1 test. Core cost/probability evidence is
+passed0.18minute. Latest combined main suite228 tests passed45.80s (0.76minute) atf32bff3,
+including final CLI subprocess error coverage and41 indexed known answers. Core cost/probability evidence is
 in policy-evaluation spec and out/workers reports. All5 acceptance probabilities passed.
 
 ## Boundaries and current work
