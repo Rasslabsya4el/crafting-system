@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Маршрут крафта: три макета</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101419;
+      --panel: #181e25;
+      --panel-2: #202831;
+      --line: #34414d;
+      --text: #edf2f5;
+      --muted: #9daab5;
+      --dim: #65727e;
+      --green: #79d99a;
+      --green-bg: #173728;
+      --violet: #cf9cff;
+      --violet-bg: #342149;
+      --gold: #f4ca72;
+      --gold-bg: #423516;
+      --red: #ff958a;
+      --red-bg: #48252a;
+      --blue: #8ac6ff;
+      --radius: 7px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.45; }
+    button { font: inherit; }
+    button:focus-visible, summary:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+    .shell { max-width: 1180px; margin: 0 auto; padding: 28px 26px 58px; }
+    .eyebrow { color: var(--violet); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 5px 0 8px; font-size: clamp(26px, 4vw, 38px); line-height: 1.12; letter-spacing: 0; }
+    h2 { margin: 0; font-size: 20px; letter-spacing: 0; }
+    h3 { margin: 0; font-size: 15px; letter-spacing: 0; }
+    p { margin: 0; }
+    .subtitle { max-width: 830px; color: var(--muted); }
+    .mode-switch { display: flex; gap: 7px; margin: 23px 0 14px; border-bottom: 1px solid var(--line); padding-bottom: 14px; overflow-x: auto; }
+    .mode-button { min-width: max-content; border: 1px solid var(--line); border-radius: 5px; padding: 8px 12px; color: var(--muted); background: #151b22; cursor: pointer; }
+    .mode-button:hover { color: var(--text); border-color: #6d7b87; }
+    .mode-button[aria-selected="true"] { background: var(--violet-bg); color: #f3e9ff; border-color: var(--violet); }
+    .mode-note { display: grid; grid-template-columns: 34px 1fr; gap: 11px; margin: 0 0 24px; padding: 12px 14px; border-left: 3px solid var(--violet); background: #151b22; color: var(--muted); }
+    .mode-letter { color: var(--violet); font-weight: 900; font-size: 20px; line-height: 1; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .step-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 20px; }
+    .jump { border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; border-radius: 5px; padding: 9px 8px; text-align: left; }
+    .jump:hover { border-color: var(--blue); }
+    .jump b { display: block; color: var(--violet); font-size: 12px; }
+    .jump span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .timeline { display: grid; gap: 17px; }
+    .step-card, .detail-panel, .evidence, .context, .manual-panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+    .step-card { scroll-margin-top: 18px; overflow: hidden; }
+    .step-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px 13px; border-bottom: 1px solid var(--line); }
+    .step-no { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--violet-bg); color: var(--violet); font-weight: 800; }
+    .step-title { flex: 1; }
+    .step-title p { color: var(--muted); font-size: 13px; margin-top: 3px; }
+    .action-chip { display: inline-flex; align-items: center; border: 1px solid #78663d; border-radius: 4px; background: #2d291e; color: var(--gold); padding: 4px 7px; font-size: 12px; font-weight: 700; }
+    .step-body { padding: 15px 18px 17px; }
+    .step-grid { display: grid; grid-template-columns: minmax(250px, .95fr) minmax(280px, 1.25fr); gap: 18px; align-items: start; }
+    .state-group { display: grid; gap: 10px; }
+    .state-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .state-card { border: 1px solid var(--line); border-radius: 5px; background: #12171d; overflow: hidden; }
+    .state-card header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; padding: 9px 10px; border-bottom: 1px solid #2b3540; font-size: 12px; }
+    .state-card header strong { font-size: 13px; }
+    .state-card header span { color: var(--muted); text-align: right; }
+    .slot { display: grid; grid-template-columns: 25px 1fr; gap: 7px; align-items: center; min-height: 29px; padding: 5px 9px; border-bottom: 1px solid #222b34; font-size: 12px; }
+    .slot:last-child { border-bottom: 0; }
+    .slot-id { font-size: 11px; color: var(--dim); font-weight: 800; }
+    .slot.empty { color: #8996a1; border-left: 3px dashed #65727e; }
+    .slot.muted { color: #b4c0c9; border-left: 3px solid #71808c; }
+    .slot.essence { color: #e0bdff; border-left: 3px solid var(--violet); background: #21192c; }
+    .slot.required { color: #a7ecba; border-left: 3px solid var(--green); background: #14251b; }
+    .slot.crafted { color: #ffe0a1; border-left: 3px solid var(--gold); background: #282210; }
+    .prefix-divider { border-top: 2px solid #46545f; }
+    .transition-area { display: grid; gap: 10px; }
+    .goal { color: var(--text); font-size: 14px; }
+    .goal strong { color: var(--green); }
+    .outcomes { display: grid; gap: 7px; }
+    .outcome { border-left: 3px solid var(--line); padding: 8px 10px; background: #141a20; font-size: 13px; }
+    .outcome.success { border-left-color: var(--green); }
+    .outcome.loop { border-left-color: var(--violet); }
+    .outcome.fail { border-left-color: var(--red); }
+    .outcome b { display: block; margin-bottom: 2px; }
+    .outcome span { color: var(--muted); }
+    .inline-note { padding: 9px 10px; background: #16212b; border-left: 3px solid var(--blue); color: #c9ddeb; font-size: 12px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 7px 13px; margin-top: 13px; color: var(--muted); font-size: 12px; }
+    .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 4px; border-left: 3px solid; vertical-align: -1px; }
+    .legend .l-empty { border-left-style: dashed; border-color: #65727e; }.legend .l-muted{border-color:#71808c}.legend .l-essence{border-color:var(--violet)}.legend .l-required{border-color:var(--green)}.legend .l-crafted{border-color:var(--gold)}
+    .connector { height: 17px; margin-left: 30px; border-left: 1px dashed #5d6b76; position: relative; }
+    .connector::after { content: "↓"; position: absolute; left: -6px; bottom: -8px; color: var(--violet); background: var(--bg); font-size: 15px; }
+    .graph-frame { border: 1px solid var(--line); border-radius: var(--radius); background: #11161c; overflow-x: auto; }
+    .route-graph { min-width: 875px; display: block; width: 100%; height: 445px; }
+    .route-graph .edge { stroke: #778793; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    .route-graph .edge.loop { stroke: var(--violet); }.route-graph .edge.fail { stroke: var(--red); }.route-graph .edge.ok { stroke: var(--green); }
+    .route-graph .edge-label { fill: #cbd5dc; font-size: 13px; }.route-graph .edge-label.small { fill: #9daab5; font-size: 11px; }
+    .route-graph .node { cursor: pointer; }.route-graph .node rect { fill: #202831; stroke: #536270; stroke-width: 1.5; rx: 6; }.route-graph .node:hover rect, .route-graph .node.selected rect { stroke: var(--blue); stroke-width: 3; }.route-graph .node.finish rect { fill: var(--green-bg); stroke: var(--green); }.route-graph .node text.title { fill: #edf2f5; font-size: 15px; font-weight: 750; }.route-graph .node text.sub { fill: #aab7c1; font-size: 12px; }
+    .graph-hint { padding: 10px 13px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
+    .detail-panel { margin-top: 16px; padding: 16px; }
+    .detail-panel > header { display: flex; gap: 10px; align-items: baseline; margin-bottom: 14px; }.detail-panel > header span { color: var(--muted); font-size: 13px; }
+    .detail-content { display: grid; grid-template-columns: minmax(250px, .9fr) 1.1fr; gap: 16px; align-items: start; }
+    .manual-panel { padding: 18px; }
+    .manual-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+    .manual-top p { color: var(--muted); font-size: 13px; margin-top: 3px; }
+    .manual-grid { display: grid; grid-template-columns: minmax(270px, .95fr) 1.05fr; gap: 20px; }
+    .manual-copy { display: grid; gap: 13px; }
+    .manual-status { border-left: 3px solid var(--violet); padding: 9px 11px; background: #141a20; }.manual-status b { display:block; }.manual-status span{color:var(--muted);font-size:13px}
+    .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+    .choice { padding: 9px 11px; background: #202831; color: var(--text); border: 1px solid #52606d; border-radius: 4px; cursor: pointer; text-align: left; }.choice:hover { border-color: var(--blue); background: #263543; }.choice.danger { border-color: #8e4e51; }.choice.success { border-color: #4d8d60; }
+    .reset { padding: 8px 10px; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }.reset:hover{color:var(--text);border-color:#71808c}
+    .history { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 13px; }.history h3{margin-bottom:7px}.history ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: 13px; }.history li{margin:3px 0}.history .current{color:var(--text)}
+    .evidence { margin-top: 25px; overflow: hidden; }.evidence > header { padding: 15px 17px; border-bottom: 1px solid var(--line); }.evidence > header p { color: var(--muted); font-size: 13px; margin-top: 4px; }.evidence-body { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; padding: 14px 17px 17px; }.evidence-block { background: #12171d; padding: 12px; border-left: 3px solid var(--blue); font-size: 13px; }.evidence-block.closed { border-left-color: var(--green); }.evidence-block b { display: block; margin-bottom: 4px; }.evidence-block span { color: var(--muted); }
+    details { border-top: 1px solid var(--line); padding: 12px 17px; color: var(--muted); font-size: 12px; } summary { cursor: pointer; color: #c6d3dc; font-weight: 700; } details p { margin-top: 8px; }
+    .context { display: grid; grid-template-columns: 1fr auto; gap: 16px; margin-top: 18px; padding: 14px 16px; }.context h2{font-size:16px}.context p{color:var(--muted);font-size:13px;margin-top:4px}.stat-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.stat{font-size:13px}.stat b{display:block;color:var(--gold);font-size:16px}.stat span{color:var(--muted);font-size:11px}
+    .smallprint { color: var(--dim); font-size: 11px; margin-top: 14px; }
+    @media (max-width: 720px) {
+      .shell { padding: 20px 14px 42px; }.step-strip { grid-template-columns: repeat(2, 1fr); }.step-grid, .detail-content, .manual-grid, .evidence-body, .context { grid-template-columns: 1fr; }.step-head { flex-wrap: wrap; }.action-chip { margin-left: 40px; }.context { gap: 10px; }.route-graph { height: 420px; }.mode-note { margin-bottom: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="eyebrow">Проект согласования интерфейса · исторический снимок</div>
+    <h1>Маршрут: защищённые суффиксы Envy</h1>
+    <p class="subtitle">Royal Burgonet, ilvl 86, quality 20%. Цель: life T1, chaos T1 и один elemental T1. Выберите формат, в котором удобнее проверить шаги, возвраты и условия переходов.</p>
+
+    <div class="mode-switch" role="tablist" aria-label="Выбор макета маршрута">
+      <button class="mode-button" id="tab-a" role="tab" aria-controls="view-a" aria-selected="true" data-mode="a">A · Карточки шагов</button>
+      <button class="mode-button" id="tab-b" role="tab" aria-controls="view-b" aria-selected="false" data-mode="b">B · Карта переходов</button>
+      <button class="mode-button" id="tab-c" role="tab" aria-controls="view-c" aria-selected="false" data-mode="c">C · Во время крафта</button>
+    </div>
+    <div class="mode-note" id="mode-note"><span class="mode-letter">A</span><p><b>Карточки шагов.</b> Лучше для последовательного чтения: перед и после каждого действия видны рядом. Минус: длиннее, чем карта.</p></div>
+
+    <section class="view active" id="view-a" role="tabpanel" aria-labelledby="tab-a">
+      <nav class="step-strip" aria-label="Переход к шагу">
+        <button class="jump" data-jump="step-1"><b>01 · Envy</b><span>поиск финиша или подготовки</span></button>
+        <button class="jump" data-jump="step-2"><b>02 · Bench</b><span>защитить суффиксы</span></button>
+        <button class="jump" data-jump="step-3"><b>03 · Scour</b><span>очистить префиксы</span></button>
+        <button class="jump" data-jump="step-4"><b>04 · Exalt ×3</b><span>остановиться на life T1</span></button>
+      </nav>
+      <div class="timeline" id="timeline"></div>
+      <div class="context" id="context-panel"></div>
+    </section>
+
+    <section class="view" id="view-b" role="tabpanel" aria-labelledby="tab-b">
+      <div class="graph-frame">
+        <svg class="route-graph" viewBox="0 0 920 445" role="img" aria-labelledby="graph-title graph-desc">
+          <title id="graph-title">Карта переходов маршрута защищённых суффиксов Envy</title>
+          <desc id="graph-desc">Четыре действия, завершение, повтор Envy и возврат после трёх неудачных Exalt.</desc>
+          <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="currentColor"></path></marker></defs>
+          <path class="edge loop" d="M182 277 C78 333 65 178 183 208"></path><text class="edge-label" x="35" y="264">99,7% · повторить</text>
+          <path class="edge ok" d="M245 180 C270 73 564 62 670 142"></path><text class="edge-label" x="398" y="81">0,3% · готово</text>
+          <path class="edge" d="M310 231 L382 231"></path><text class="edge-label" x="316" y="217">&lt;0,1% · подготовка</text>
+          <path class="edge" d="M510 231 L580 231"></path><text class="edge-label small" x="514" y="217">100,0% при условиях</text>
+          <path class="edge" d="M705 231 L760 231"></path><text class="edge-label small" x="694" y="272">100,0% при защите</text>
+          <path class="edge ok" d="M832 189 C868 139 832 102 783 131"></path><text class="edge-label" x="816" y="100">6,7% за серию</text>
+          <path class="edge fail" d="M788 285 C692 393 313 390 220 286"></path><text class="edge-label" x="434" y="393">93,3% · 3 префикса заняты → Envy</text>
+          <g class="node selected" tabindex="0" role="button" aria-label="Шаг 1: Envy" data-node="envy"><rect x="120" y="181" width="125" height="101"></rect><text class="title" x="140" y="218">1 · Envy</text><text class="sub" x="140" y="241">5,0 chaos-equiv.</text><text class="sub" x="140" y="260">поиск состояния</text></g>
+          <g class="node" tabindex="0" role="button" aria-label="Шаг 2: Bench" data-node="bench"><rect x="383" y="181" width="127" height="101"></rect><text class="title" x="403" y="218">2 · Bench</text><text class="sub" x="403" y="241">2 Divine</text><text class="sub" x="403" y="260">защита</text></g>
+          <g class="node" tabindex="0" role="button" aria-label="Шаг 3: Scour" data-node="scour"><rect x="580" y="181" width="125" height="101"></rect><text class="title" x="600" y="218">3 · Scour</text><text class="sub" x="600" y="241">0,5 chaos-equiv.</text><text class="sub" x="600" y="260">очистка</text></g>
+          <g class="node" tabindex="0" role="button" aria-label="Шаг 4: Exalt" data-node="exalt"><rect x="759" y="181" width="129" height="101"></rect><text class="title" x="779" y="218">4 · Exalt ×3</text><text class="sub" x="779" y="241">10,0 за сферу</text><text class="sub" x="779" y="260">проверка после каждой</text></g>
+          <g class="node finish" tabindex="0" role="button" aria-label="Завершённый предмет" data-node="finished"><rect x="660" y="102" width="125" height="55"></rect><text class="title" x="681" y="136">Готово</text></g>
+        </svg>
+        <div class="graph-hint">Выберите узел мышью или клавишами Tab / Enter / Пробел: ниже откроется его состояние и назначение. На узком экране карта прокручивается внутри рамки.</div>
+      </div>
+      <article class="detail-panel" aria-live="polite"><header><h2 id="detail-title">1 · Спам Deafening Essence of Envy</h2><span id="detail-chip"></span></header><div class="detail-content" id="detail-content"></div></article>
+      <div class="context" id="context-panel-b"></div>
+    </section>
+
+    <section class="view" id="view-c" role="tabpanel" aria-labelledby="tab-c">
+      <article class="manual-panel">
+        <div class="manual-top"><div><h2>Демонстрация интерфейса: выберите результат вручную</h2><p>Это навигация по готовому сценарию, без случайной генерации предмета.</p></div><button class="reset" id="reset-c" type="button">Сбросить маршрут</button></div>
+        <div class="manual-grid"><div id="manual-state"></div><div class="manual-copy"><div class="manual-status" id="manual-status"></div><div class="choices" id="manual-choices"></div><div class="inline-note" id="manual-note"></div></div></div>
+        <div class="history"><h3>История действий</h3><ol id="history-list"></ol></div>
+      </article>
+      <div class="context" id="context-panel-c"></div>
+    </section>
+
+    <section class="evidence" aria-labelledby="evidence-heading">
+      <header><h2 id="evidence-heading">Проверка этого маршрута</h2><p>Границы проверки отображены намеренно: это не новый запуск валидатора и не заявление об оптимальности.</p></header>
+      <div class="evidence-body">
+        <div class="evidence-block"><b>Полный маршрут не сравнивался с CoE</b><span>C01 / C02 / C03 на той же базе проверяют компоненты действий. Это не доказательство полного рецепта; целевой предмет C02 отличается от запрошенного здесь.</span></div>
+        <div class="evidence-block closed"><b>Общие тесты движка: 12 случаев, 5 баз</b><span>Закрытый общий набор объясняет прежние упоминания body armour, ring, amulet и boots. Он не является таблицей доказательств этого маршрута.</span></div>
+      </div>
+      <details><summary>Снимок источника и историческая ревизия</summary><p>Сохранённый вход: <code>out/reports/helmet/plan.json</code>, route id <code>suffix-protected-life</code>; исходная реализация и доказательство: revision <code>02bceff</code>. Историческая сводка 423 тестов относится к этой ревизии и здесь не запускалась. Поведение: <code>docs/mechanics/essences.md</code>, <code>bench_metamods.md</code>, <code>basic_currency.md</code>. Данные: PoB Essence.lua:104; ModMaster.lua:733; data/pob_essences.json и data/pob_bench.json.</p></details>
+    </section>
+    <p class="smallprint">Для согласования владельцем: выбрать A, B, C или A с небольшой обзорной картой B. Слабые маршруты зависят от конечной библиотеки шаблонов, ограниченной сетки параметров, не реализованных специальных семейств и закрытых источников; текущая цель и выдуманная таблица цен влияют на ранжирование.</p>
+  </main>
+
+  <script>
+    const route = {
+      prices: { envy: "5,0 chaos-equiv. · выдуманная цена", bench: "2 Divine · выдуманная цена", scour: "0,5 chaos-equiv. · выдуманная цена", exalt: "10,0 за сферу · выдуманная цена" },
+      snapshot: {
+        envyFinish: "0.0025940606844434212",
+        envyPreparation: "0.0005495684166343902",
+        envyRepeat: "0.9968563708989222",
+        exaltSeriesSuccess: "0.06674609236085169",
+        exaltSeriesFailure: "0.9332539076391483",
+        firstExaltHit: "0.02546148949713558",
+        envyCompletionShare: "0.9860565798144074",
+        mean: "1948.6031719508137",
+        p90: "4450.5"
+      },
+      states: {
+        rejected: ["empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто", "empty|пусто"],
+        preparation: ["muted|произвольный, не life T1", "empty|пусто", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
+        protected: ["muted|произвольный, не life T1", "crafted|Suffixes Cannot Be Changed", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
+        scoured: ["empty|пусто", "empty|пусто", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
+        miss1: ["muted|произвольный, не цель", "empty|пусто", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
+        miss2: ["muted|произвольный, не цель", "muted|произвольный, не цель", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
+        finished: ["required|life 130–144", "empty|пусто", "empty|пусто", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"],
+        failed: ["muted|произвольный, не цель", "muted|произвольный, не цель", "muted|произвольный, не цель", "essence|Envy chaos 31–35%", "required|fire 46–48%", "required|cold 46–48%"]
+      },
+      steps: [
+        { id: "envy", no: "1", action: "Спам Deafening Essence of Envy", chip: "Deafening Essence of Envy · 5,0 chaos-equiv.", goal: "Найти <strong>готовую цель</strong> или точную подготовку: все 3 суффикса заняты, минимум 2 нужных elemental T1, включая принудительный Envy chaos, и не более 1 префикса.", before: "Обычная пустая база или отклонённый rare-предмет", after: "Пример подготовки: fire/cold — лишь один допустимый пример двух разных нужных элементов", state: "preparation", outcomes: [
+          ["success", "Готово → финиш", "0,3% за эссенцию · сначала всегда проверяется готовая цель"],
+          ["loop", "Подготовка готова → шаг 2", "<0,1% · ~1 из 1 820 за эссенцию"],
+          ["fail", "Не подходит → повторить шаг 1", "99,7% за эссенцию"]
+        ], note: "Ветви взаимоисключающие: готовая цель исключается из подготовки. Это пример состояния, не симуляция броска." },
+        { id: "bench", no: "2", action: "Верстак: Suffixes Cannot Be Changed", chip: "Bench craft · 2 Divine", goal: "Защитить принятые 3 суффикса перед Scour. Крафт добавляется в свободный префикс.", before: "До верстака", after: "После верстака: один префикс занят крафтом", state: "protected", beforeState: "preparation", outcomes: [["success", "Защита установлена → шаг 3", "100,0% при показанных условиях · действие без случайного броска"]], note: "Цена за применение: 2 Divine, выдуманная цена 100 за Divine. Это цена действия, не ожидаемая цена всего маршрута." },
+        { id: "scour", no: "3", action: "Orb of Scouring", chip: "Orb of Scouring · 0,5 chaos-equiv.", goal: "Очистить префиксы, оставив 3 принятых суффикса. Защитный крафт исчезает вместе с префиксами.", before: "До Scour: крафт занимает P2", after: "После Scour: все префиксы очищены", state: "scoured", beforeState: "protected", outcomes: [["success", "Префиксы очищены → шаг 4", "100,0% при защите"]], note: "Защита оплачена именно для этого Scour; это не отдельный остающийся модификатор." },
+        { id: "exalt", no: "4", action: "До 3 Exalted Orb, проверка после каждой", chip: "Exalted Orb · 10,0 за сферу", goal: "Добавлять префикс и останавливаться сразу при <strong>life T1</strong>. Старт: 3 свободных префикса и 3 подготовленных суффикса.", before: "Перед первой сферой", after: "После первого попадания: финальный пример", state: "finished", beforeState: "scoured", outcomes: [
+          ["success", "Готово", "6,7% за всю серию до 3 Exalt"],
+          ["loop", "Промах + свободный префикс → следующая сфера", "Промежуточному промаху не присвоена вероятность в снимке; 6,7% относится к полной серии."],
+          ["fail", "3 префикса заняты → шаг 1", "93,3% за всю серию · у верстака нет свободного префикса, подготовка суффиксов сдана"]
+        ], note: "Первый Exalt сам по себе попадает с вероятностью 2,5% (деталь снимка). При трёх промахах нельзя делать bench/Scour: маршрут возвращается к Envy." }
+      ]
+    };
+
+    const slotNames = ["P1", "P2", "P3", "S1", "S2", "S3"];
+    function stateCard(title, subtitle, stateKey) {
+      return `<section class="state-card"><header><strong>${title}</strong><span>${subtitle}</span></header>${route.states[stateKey].map((item, i) => {
+        const [kind, text] = item.split("|");
+        return `<div class="slot ${kind}${i === 3 ? " prefix-divider" : ""}"><span class="slot-id">${slotNames[i]}</span><span>${text}</span></div>`;
+      }).join("")}</section>`;
+    }
+    function outcomeCard([kind, title, text]) { return `<div class="outcome ${kind}"><b>${title}</b><span>${text}</span></div>`; }
+    function stepMarkup(step) {
+      const before = step.beforeState ? stateCard("До", step.before, step.beforeState) : stateCard("Вход", step.before, "rejected");
+      return `<article class="step-card" id="step-${step.no}">
+        <header class="step-head"><span class="step-no">${step.no}</span><div class="step-title"><h2>${step.action}</h2><p>${step.goal}</p></div><span class="action-chip">${step.chip}</span></header>
+        <div class="step-body"><div class="step-grid"><div class="state-group">${before}${stateCard("После / образец", step.after, step.state)}</div><div class="transition-area"><div class="outcomes">${step.outcomes.map(outcomeCard).join("")}</div><div class="inline-note">${step.note}</div></div></div></div>
+      </article>`;
+    }
+    document.getElementById("timeline").innerHTML = route.steps.map((step, index) => `${index ? '<div class="connector" aria-hidden="true"></div>' : ""}${stepMarkup(step)}`).join("");
+    const legend = `<div class="legend" aria-label="Легенда слотов"><span><i class="l-empty"></i>пусто</span><span><i class="l-muted"></i>произвольный</span><span><i class="l-essence"></i>эссенция</span><span><i class="l-required"></i>требуется</span><span><i class="l-crafted"></i>верстак</span></div>`;
+    document.querySelector("#step-1 .step-body").insertAdjacentHTML("beforeend", legend);
+
+    const contextHtml = `<div><h2>Контекст маршрута</h2><p>Средняя стоимость и p90 — сохранённые исторические оценки при выдуманных ценах. 98,6% завершившихся предметов закончили во время Envy; это не доказывает оптимальность и не является шансом за одну эссенцию.</p></div><div class="stat-row"><div class="stat"><b>1948,6</b><span>среднее по снимку</span></div><div class="stat"><b>4450,5</b><span>p90 по снимку</span></div><div class="stat"><b>98,6%</b><span>доля завершений в Envy</span></div></div>`;
+    ["context-panel", "context-panel-b", "context-panel-c"].forEach(id => document.getElementById(id).innerHTML = contextHtml);
+
+    const modeNotes = {
+      a: ["A", "<b>Карточки шагов.</b> Лучше для последовательного чтения: перед и после каждого действия видны рядом. Минус: длиннее, чем карта."],
+      b: ["B", "<b>Карта переходов.</b> Лучше показывает петли, пропуски и возврат после трёх Exalt. Минус: состояние читается в выбранной детали ниже."],
+      c: ["C", "<b>Во время крафта.</b> Лучше для ручного следования сценарию и контроля возвратов. Минус: одновременно виден только активный шаг."]
+    };
+    function chooseMode(mode) {
+      document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === `view-${mode}`));
+      document.querySelectorAll(".mode-button").forEach(button => button.setAttribute("aria-selected", String(button.dataset.mode === mode)));
+      document.getElementById("mode-note").innerHTML = `<span class="mode-letter">${modeNotes[mode][0]}</span><p>${modeNotes[mode][1]}</p>`;
+    }
+    document.querySelectorAll(".mode-button").forEach(button => button.addEventListener("click", () => chooseMode(button.dataset.mode)));
+    document.querySelectorAll(".jump").forEach(button => button.addEventListener("click", () => document.getElementById(button.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" })));
+
+    const graphDetails = {
+      envy: { title: "1 · Спам Deafening Essence of Envy", chip: route.prices.envy, state: "preparation", label: "Образец точной подготовки", copy: "Сначала всегда проверить готовую цель. Только затем принимать подготовку: ровно 3 суффикса, минимум 2 нужных elemental T1, принудительный chaos Envy и максимум 1 префикс.", edge: "Петля: 99,7% — повторить Envy. Ветка к финишу: 0,3% за эссенцию. Ветка подготовки: <0,1% · ~1 из 1 820." },
+      bench: { title: "2 · Верстак: Suffixes Cannot Be Changed", chip: route.prices.bench, state: "protected", label: "После установки защиты", copy: "Крафт занимает свободный префикс и защищает принятые суффиксы перед Scour.", edge: "Переход к Scour: 100,0% при показанных условиях. Цена действия: 2 Divine, выдуманная цена." },
+      scour: { title: "3 · Orb of Scouring", chip: route.prices.scour, state: "scoured", label: "После очистки", copy: "Все префиксы очищены, три суффикса остаются. Верстачный крафт исчезает как префикс.", edge: "Переход к Exalt: 100,0% при защите." },
+      exalt: { title: "4 · До 3 Exalted Orb", chip: route.prices.exalt, state: "failed", label: "После третьего промаха", copy: "Проверяйте после каждой сферы и остановитесь на life T1. Промах с пустым префиксом продолжает к следующей сфере; отдельная вероятность в снимке отсутствует.", edge: "К финишу: 6,7% за всю серию. После трёх промахов: 93,3% за серию → Envy; у верстака уже нет места." },
+      finished: { title: "Готово", chip: "Целевое состояние", state: "finished", label: "Финальный образец", copy: "Или готово прямо после Envy, или получено после одного из Exalt. Оба исхода пропускают все последующие действия.", edge: "Финиш маршрута. Сохранённая доля завершений в Envy: 98,6% от всех завершившихся предметов." }
+    };
+    function renderDetail(key) {
+      const detail = graphDetails[key];
+      document.getElementById("detail-title").textContent = detail.title;
+      document.getElementById("detail-chip").innerHTML = `<span class="action-chip">${detail.chip}</span>`;
+      document.getElementById("detail-content").innerHTML = `${stateCard(detail.label, "6 слотов", detail.state)}<div class="transition-area"><p class="goal">${detail.copy}</p><div class="inline-note">${detail.edge}</div></div>`;
+      document.querySelectorAll(".route-graph .node").forEach(node => node.classList.toggle("selected", node.dataset.node === key));
+    }
+    document.querySelectorAll(".route-graph .node").forEach(node => {
+      node.addEventListener("click", () => renderDetail(node.dataset.node));
+      node.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); renderDetail(node.dataset.node); } });
+    });
+    renderDetail("envy");
+
+    const manual = { state: "envy", exalt: 0, history: [] };
+    const manualScreens = {
+      envy: { title: "Шаг 1 · Deafening Essence of Envy", state: "rejected", label: "До Envy: база или отклонённый rare", status: "Примените Envy и вручную укажите наблюдаемый результат.", note: "Цель пропускает оставшиеся шаги. Подготовка принимается только при 3 занятых суффиксах, 2 elemental T1, Envy chaos и не более 1 префиксе.", choices: [["ready", "Готово: цель уже есть", "success"], ["prepare", "Подготовка совпала", ""], ["reroll", "Не подходит: ещё Envy", "danger"]] },
+      bench: { title: "Шаг 2 · Suffixes Cannot Be Changed", state: "preparation", label: "Принятая подготовка", status: "Установите защиту в свободный префикс: 2 Divine (выдуманная цена).", note: "При показанных условиях переход детерминирован: 100,0%. После установки крафт будет виден в P2.", choices: [["bench-next", "Защита установлена → Scour", "success"]] },
+      scour: { title: "Шаг 3 · Orb of Scouring", state: "protected", label: "Защита в P2", status: "Используйте Scour, чтобы очистить все префиксы, сохранив 3 суффикса.", note: "При защите переход детерминирован: 100,0%. Верстачный крафт исчезает вместе с префиксами.", choices: [["scour-next", "Префиксы очищены → Exalt", "success"]] },
+      exalt: { title: "Шаг 4 · Exalted Orb", state: "scoured", label: "Перед Exalt", status: "Проверяйте результат после каждой сферы. Остановитесь при life T1.", note: "6,7% относится только ко всей серии до 3 Exalt. Для единичного промежуточного промаха в снимке нет отдельной вероятности.", choices: [["hit", "Есть life T1 → готово", "success"], ["miss", "Промах, есть свободный префикс", "danger"]] },
+      finished: { title: "Готово", state: "finished", label: "Целевой предмет", status: "Маршрут завершён. Следующих действий не требуется.", note: "Финиш после Envy или любого успешного Exalt пропускает все последующие шаги.", choices: [] },
+      miss3: { title: "Третий промах · возврат", state: "failed", label: "3 префикса заняты", status: "Нет свободного префикса для bench craft. Текущая подготовка суффиксов сдаётся.", note: "Ветка всей серии: 93,3%. Вернитесь к Envy; bench и Scour здесь не предлагаются.", choices: [["restart", "Вернуться к Envy", "danger"]] }
+    };
+    function log(text) { manual.history.push(text); }
+    function handleChoice(choice) {
+      if (choice === "ready") { log("Envy: готовая цель → финиш"); manual.state = "finished"; }
+      if (choice === "prepare") { log("Envy: подготовка совпала → Bench"); manual.state = "bench"; }
+      if (choice === "reroll") { log("Envy: не подходит → повторить Envy"); }
+      if (choice === "bench-next") { log("Bench: защита установлена → Scour"); manual.state = "scour"; }
+      if (choice === "scour-next") { log("Scour: префиксы очищены → Exalt"); manual.state = "exalt"; manual.exalt = 0; }
+      if (choice === "hit") { manual.exalt += 1; log(`Exalt ${manual.exalt}/3: life T1 → финиш`); manual.state = "finished"; }
+      if (choice === "miss") { manual.exalt += 1; if (manual.exalt < 3) { log(`Exalt ${manual.exalt}/3: промах → следующая сфера`); } else { log("Exalt 3/3: промах → возврат к Envy"); manual.state = "miss3"; } }
+      if (choice === "restart") { log("Возврат: начать снова с Envy"); manual.state = "envy"; manual.exalt = 0; }
+      renderManual();
+    }
+    function renderManual() {
+      const screen = manualScreens[manual.state];
+      const use = manual.state === "exalt" ? ` · Exalt ${manual.exalt + 1}/3` : "";
+      const stateKey = manual.state === "exalt" && manual.exalt ? `miss${manual.exalt}` : screen.state;
+      const stateLabel = manual.state === "exalt" && manual.exalt ? `После промаха ${manual.exalt}` : screen.label;
+      document.getElementById("manual-state").innerHTML = stateCard(screen.title, `${stateLabel}${use}`, stateKey);
+      document.getElementById("manual-status").innerHTML = `<b>${screen.status}</b><span>${manual.state === "exalt" ? `Текущий выбор: сфера ${manual.exalt + 1} из 3.` : ""}</span>`;
+      document.getElementById("manual-note").textContent = screen.note;
+      document.getElementById("manual-choices").innerHTML = screen.choices.map(([value, label, cls]) => `<button class="choice ${cls}" type="button" data-choice="${value}">${label}</button>`).join("");
+      document.querySelectorAll("[data-choice]").forEach(button => button.addEventListener("click", () => handleChoice(button.dataset.choice)));
+      document.getElementById("history-list").innerHTML = manual.history.length ? manual.history.map((entry, index) => `<li class="${index === manual.history.length - 1 ? "current" : ""}">${entry}</li>`).join("") : "<li class=\"current\">Ожидание первого решения.</li>";
+    }
+    document.getElementById("reset-c").addEventListener("click", () => { manual.state = "envy"; manual.exalt = 0; manual.history = ["Маршрут сброшен."]; renderManual(); });
+    renderManual();
+  </script>
+</body>
+</html>
