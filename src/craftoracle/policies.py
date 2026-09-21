@@ -14,7 +14,8 @@ import math
 from craftoracle.actions import ActionData, action_distribution, prepare_roll
 from craftoracle.costs import chain_cost, compound_geometric_cost, geometric_cost
 from craftoracle.distributions import OutcomeClass, probability, scheduled_distribution
-from craftoracle.item_model import ItemState, resolve_pool
+from craftoracle.item_model import ItemState, ModRef, resolve_pool
+from craftoracle.harvest_policies import estimate_renewal_cost_p90, renewal_metrics
 from craftoracle.monte_carlo import estimate_compound_cost_p90
 
 
@@ -73,6 +74,8 @@ def evaluate_policies(
 
     protected = _protected_policy(spec, loadout, data, normal, rare, labels, cache)
     _collect(protected, available, unavailable)
+    harvest_protected = _harvest_protected_policy(spec, loadout, data, normal, labels, cache)
+    _collect(harvest_protected, available, unavailable)
     bench_candidate = _protected_bench_policy(
         spec,
         loadout,
@@ -395,6 +398,217 @@ def _protected_policy(spec, loadout, data, normal, rare, labels, cache):
         ),
         ("Stage 1 and Stage 2 are independent only after the explicit empty-prefix and disjoint-group guards.",),
     )
+
+
+def _harvest_protected_policy(spec, loadout, data, normal, labels, cache):
+    """Evaluate the sourced restart-on-full-prefix tagged-Harvest route."""
+    policy_id = "suffix-protected-harvest-life"
+    name = "Envy suffix preparation and protected Harvest life"
+    target_reason = _protected_target_reason(spec, data)
+    if target_reason is not None:
+        return _unavailable(policy_id, name, [target_reason])
+    prices, reasons = _requirements(
+        loadout,
+        ("essence", "bench", "harvest_reforge:life"),
+        (_ENVY, "harvest_reforge:life"),
+        essence_id=_ENVY,
+        bench_index=729,
+    )
+    if reasons:
+        return _unavailable(policy_id, name, reasons)
+    lock_reason = _suffix_lock_reason(spec, data)
+    if lock_reason is not None:
+        return _unavailable(policy_id, name, [lock_reason])
+    representatives, representative_reason = _harvest_suffix_representatives(spec, data)
+    if representative_reason is not None:
+        return _unavailable(policy_id, name, [representative_reason])
+    assert representatives is not None
+
+    stage_one = _action_distribution(cache, data, "essence", normal, labels, essence_id=_ENVY)
+    prepared, preparation_p = _prepared_suffixes(stage_one, labels)
+    if preparation_p == 0:
+        return _unavailable(policy_id, name, ["Envy cannot prepare the required full suffix state"])
+    life_label = labels["IncreasedLife9"]
+    representative = ItemState(
+        getattr(spec, "base"),
+        getattr(spec, "item_level"),
+        "rare",
+        (*representatives, _bench_ref(data, 729)),
+    )
+    prefixes = _harvest_distribution(cache, data, representative, {"IncreasedLife9": life_label})
+    p = _normalized_mass(prefixes, probability(prefixes, lambda outcome: life_label in outcome.labels))
+    b = _normalized_mass(
+        prefixes,
+        probability(prefixes, lambda outcome: outcome.prefixes == 3 and life_label not in outcome.labels),
+    )
+    if p == 0:
+        return _unavailable(policy_id, name, ["Harvest life reforge cannot roll IncreasedLife9"])
+    terminal_attempt = _combine_harvest_prefixes(prepared, preparation_p, prefixes, life_label)
+    bench_price, price_reason = _bench_price(loadout, 729)
+    if price_reason is not None:
+        return _unavailable(policy_id, name, [price_reason])
+    reforge_cost = bench_price + prices["harvest_reforge:life"]
+    metrics = renewal_metrics(
+        preparation_p,
+        prices[_ENVY],
+        p,
+        b,
+        reforge_cost,
+        base_cost=_base_cost(loadout),
+    )
+    estimate = estimate_renewal_cost_p90(
+        preparation_p,
+        prices[_ENVY],
+        p,
+        b,
+        reforge_cost,
+        base_cost=_base_cost(loadout),
+        samples=50_000,
+        seed=20260921,
+        confidence=.99,
+    )
+    stages = [
+        _stage(
+            "prepare three suffixes",
+            preparation_p,
+            metrics.essence_attempts,
+            (f"essence:{_ENVY}",),
+            ("Keep Chaos plus at least one elemental target with exactly three suffixes and at most two prefixes.",),
+            stage_one,
+        ),
+        _stage(
+            "roll protected Harvest life prefix",
+            p,
+            metrics.reforge_attempts,
+            ("bench:729", "harvest_reforge:life"),
+            (
+                "On a non-full failure, retain the suffixes and reforge again.",
+                "On a failed three-prefix result, restart Envy preparation on the same base.",
+            ),
+            terminal_attempt,
+            target_probability_after_stage=p,
+        ),
+    ]
+    policy = _policy(
+        spec,
+        loadout,
+        policy_id,
+        name,
+        stages,
+        metrics.mean_cost,
+        estimate.p90,
+        "estimated p90 (seeded independent renewal MC); exact mean",
+        terminal_attempt,
+        (_ENVY, "bench:729", "harvest_reforge:life"),
+        (
+            "Repeat Deafening Envy until the stated three-suffix preparation occurs.",
+            "Craft Suffixes Cannot Be Changed, then reforge Life.",
+            "Keep non-full failures protected; a failed full-prefix result returns to Envy preparation on the same base.",
+        ),
+        (
+            "Success is tested only after the Harvest stage for this baseline.",
+            "The base cost is charged once; each Envy, bench lock, and Harvest reforge is charged.",
+        ),
+    )
+    policy.update({
+        "full_prefix_failure_probability": b,
+        "preparation_probability": preparation_p,
+        "expected_reforge_attempts": metrics.reforge_attempts,
+        "expected_preparations": metrics.preparations,
+        "expected_essence_attempts": metrics.essence_attempts,
+        "cost_p90_interval": [estimate.interval_lower, estimate.interval_upper],
+        "cost_sample_count": estimate.samples,
+        "cost_seed": estimate.seed,
+        "cost_error_bound": estimate.dkw_epsilon,
+        "_assumptions": (
+            "Harvest uses the adopted S14 first-draw-only modifier-type filtering and S19 type-restriction support.",
+            "The lock has no attack/caster blocker; only ordinary Q9-free items are evaluated.",
+            "All ordinary suffix groups are checked against prefix groups before one concrete sourced suffix representative is reused.",
+            "harvest_reforge:life is an owner-provisional invented price input.",
+        ),
+    })
+    return policy
+
+
+def _suffix_lock_reason(spec, data):
+    if 729 not in data.bench:
+        return "bench 729 is absent from ActionData"
+    lock = data.bench[729]
+    if lock["type"] != "Prefix" or lock["group"] != "ItemGenerationCannotChangeSuffixes":
+        return "bench 729 is not the required suffix-protection prefix craft"
+    base_type = _base_type(spec, data)
+    if lock["types"].get(base_type) is not True:
+        return f"bench 729 does not support base type {base_type}"
+    if lock["group"] in {"ItemGenerationCannotRollAttackAffixes", "ItemGenerationCannotRollCasterAffixes"}:
+        return "bench 729 unexpectedly applies an attack/caster blocker"
+    if tuple(data.rules["rare_caps"]) != (3, 3):
+        return "protected Harvest policy requires ordinary 3/3 caps"
+    return None
+
+
+def _harvest_suffix_representatives(spec, data):
+    selected = ("ChaosResist6", "FireResist8", "ColdResist8")
+    refs = []
+    for mod_id in selected:
+        row = data.mods.get(mod_id)
+        if row is None or row.get("type") != "Suffix" or not isinstance(row.get("group"), str):
+            return None, f"representative protected suffix {mod_id} is not an ordinary suffix with a source group"
+        refs.append((mod_id, row["group"]))
+    suffix_groups = {group for _, group in refs}
+    if len(suffix_groups) != len(refs):
+        return None, "representative protected suffixes do not have distinct source groups"
+    ordinary = _item(spec, "rare")
+    prefix_groups = {entry.group for entry in resolve_pool(ordinary, data.bases, data.mods, "Prefix")}
+    all_suffix_groups = {entry.group for entry in resolve_pool(ordinary, data.bases, data.mods, "Suffix")}
+    overlap = prefix_groups & all_suffix_groups
+    if overlap:
+        return None, "prefix/suffix group intersection prevents independent protected Harvest prefix calculation"
+    return tuple(ModRef(mod_id, "Suffix", group) for mod_id, group in refs), None
+
+
+def _bench_ref(data, index):
+    row = data.bench[index]
+    return ModRef(f"bench:{index}", row["type"], row["group"])
+
+
+def _prepared_suffixes(stage_one, labels):
+    chaos_label = labels["ChaosResist6"]
+    elemental_labels = {labels[mod_id] for mod_id in ("FireResist8", "ColdResist8", "LightningResist8")}
+    prepared = {
+        outcome: mass
+        for outcome, mass in stage_one.items()
+        if chaos_label in outcome.labels
+        and any(label in outcome.labels for label in elemental_labels)
+        and outcome.suffixes == 3
+        and outcome.prefixes <= 2
+    }
+    return prepared, _normalized_mass(stage_one, math.fsum(prepared.values()))
+
+
+def _harvest_distribution(cache, data, item, labels):
+    key = (
+        "harvest_reforge",
+        item,
+        "life",
+        "first_only",
+        tuple(sorted(labels.items())),
+        tuple(sorted(data.rules["rare_count_weights"].items())),
+    )
+    if key not in cache:
+        cache[key] = action_distribution("harvest_reforge", item, data, labels, harvest_tag="life")
+    return cache[key]
+
+
+def _combine_harvest_prefixes(prepared, preparation_p, prefixes, life_label):
+    """Attach each accepted suffix label class to its group-independent prefixes."""
+    combined: dict[OutcomeClass, float] = {}
+    for suffix_outcome, suffix_mass in prepared.items():
+        suffix_labels = tuple(label for label in suffix_outcome.labels if label != life_label)
+        for prefix_outcome, prefix_mass in prefixes.items():
+            labels = tuple(sorted((*suffix_labels, *prefix_outcome.labels)))
+            outcome = OutcomeClass(labels, prefix_outcome.prefixes, 3)
+            combined[outcome] = combined.get(outcome, 0.0) + suffix_mass / preparation_p * prefix_mass
+    return combined
 
 
 def _protected_bench_policy(spec, loadout, data, protected, requested_index):
@@ -752,7 +966,8 @@ def _result(available, unavailable, data, unit):
     unavailable.sort(key=lambda policy: policy["id"])
     assumptions = _assumptions(data, unit)
     for policy in [*available, *unavailable]:
-        policy["assumptions"] = list(assumptions)
+        extra = policy.pop("_assumptions", ())
+        policy["assumptions"] = [*assumptions, *extra]
     return {"ranked": available, "unavailable": unavailable, "assumptions": list(assumptions), "unit": unit}
 
 
