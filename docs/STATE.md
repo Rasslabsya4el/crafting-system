@@ -1,112 +1,66 @@
-# State — 2026-09-20
+# State — 2026-09-21
 
-## Current milestone and target
+## Current progress (night goal active; not DONE)
 
-Phase 0 knowledge harvest is complete against the BRIEF exit criteria (acceptance 68dd82d;
-checklist in `docs/research/phase0-coverage.md`). Target: ordinary PoE 3.29, explicitly
-confirmed by the owner (Q3/D11). No crafting engine, item model, calculator or ranker exists yet.
-Completion means reviewed source material and selected data, not resolved odds for every action.
+1. Phase 0 remains accepted; ordinary PoE 3.29 target is confirmed.
+2. GOAL.md now requires the working helmet planner plus stretch work; this goal is active.
+3. Ordinary item/pool model is merged (d07a1b5), 21 focused tests passed.
+4. Exact grouped distributions are merged (4ee0641), 17 focused tests passed.
+5. Royal Burgonet86 has 41 eligible prefixes / 84 suffixes, weights39275/78400.
+6. Model Chaos target chance is0.0000242820884551; Deafening Envy0.00259406068444.
+7. Ordinary action adapter and independent cost math workers are running.
+8. MC, input files, policy evaluator and direct CLI still need implementation/acceptance.
+9. Source uncertainties are provisionally bounded by GOAL/D14; blocked special families stay out.
+10. The required plan command does not exist yet; do not claim the morning demo is complete.
 
-## What works and how to reproduce it
+## Working commands / evidence
 
-Run in crafting/. Commands are offline; snapshot tests require the ignored local inputs in SOURCES.
+- `python -m pytest -q tests/test_item_model.py`:21 passed on accepted branch.
+- `python -m pytest -q tests/test_distributions.py`:17 passed on accepted branch.
+- Existing Phase0 suite was78 tests; full combined suite will be run after integration.
+- Exact six-draw helmet distribution:14 classes,mass0.9999999999999984,target0.0000535457934229.
+- Exact mixture count4/5/6 weights8/3/1:Chaos p0.000024282088455126466; Envy
+  p0.0025940606844434217; suffix preparation p0.05567530208498237; final life slam1000/39275.
+  These are predictions under the declared provisional model, not independent game measurements.
 
-| command / artifact | verified result | acceptance |
-|---|---|---|
-| `python -m pytest -q` | 78 passed, under one minute, no skips in this checkout | lead ran combined main after both merges |
-| `python tools/build_pob_mod_families.py` | 10555 records: Explicit 4310 / Veiled 258 / Eldritch 4086 / Corrupted 371 / Delve 186 / Synthesis 1344; zero skips/errors | 375528a |
-| `python tools/build_pob_recipes.py` | 732 bench rows, 105 essence rows, 2310 class mappings / 622 distinct referenced mod IDs, none missing | 8d49e8f |
-| `python tools/build_pob_explicit.py` | initial narrow projection, 4310 records, zero skips/errors | b0a19ae |
-| `python tools/build_pob_bases.py` | 375 source occurrences / 371 names, 5 files (95/29/48/123/80) | 3cb707d |
-| `python tools/mod_crosscheck.py` | 54 mods / 5 classes; 54 agreements each for level, weight, range and side; group labels 33 equal / 21 different; missing triples 0 | d440ffd |
-| `python tools/coe_inventory.py --source sources/raw/coe/package.js --output docs/research/coe-method-inventory.md` | 95 nodes / 84 leaves / 13 custom subsets | cd5e976 |
+The exact DP retains group-removal state internally and projects to labelled terminal classes
+only after the whole draw schedule. It does not turn junk into a reusable aggregate weight.
+Outcome classes must not be reused for arbitrary transitions requiring lost group identities.
 
-The lead independently matched every projected field of all 10555 family records, all 837
-recipe records and all 375 base occurrences to the raw sources, and checked every raw-source
-row of the 54-mod comparison. Builders preserve source hashes, order and lines. Repeated base
-names are occurrences, not collapsed identities. Source version is owner-supplied PoB 2.67.2 /
-PoE 3.29; upstream revision remains unverified (Q8).
+## Implementation and evidence boundaries
 
-Full family data retains literal stat strings, ordered weights, optional tags/multipliers and
-six fractional statOrder values. It does not infer game stat IDs, tiers or group equivalence.
-The initial explicit JSON remains for the existing cross-check consumer (D12).
+See docs/GOAL.md, D14/D15 and docs/design/night-policies.md. Prices are invented caller inputs;
+rare count assumptions and PoB group/first-match weights will be printed on every plan.
+Generated tags and multipliers are deliberately omitted per the owner's provisional decision.
+No third-party code/data copied into src/data. Existing own projections and cached source
+acceptance remain in SOURCES, WORKERS and research/phase0-coverage.md (62 sources/20 sheets).
+No new fact sheets or broad research tonight; no record-by-record re-verification.
 
-Reproducible UTF-8 LF output SHA-256 values:
+The first nightly focused acceptance inherited pytest's default temporary-directory setting.
+It has now been corrected: pytest.ini sets --basetemp=.pytest_tmp and that repository-local
+path is ignored. All subsequent fixture runs must use that setting; no external cleanup/read.
 
-- Family: a37bd981e34e1d43cbb12c1b7009ab86cc63fa357bdaba41ad20d8d2ba39aee4.
-- Bench: ed9666c32a65744efe0428ccf5876d20b2523e3efdc7ffc3db3aae8a4251c4b5.
-- Essence: 280dc5026636cd7551337ad49b8e5abda082edbf99aae9f1fd3f9004cf9503c3.
-- Bases: 4d7b1ac6c1c51bd692b622bf0b01e0e7199b66ef37e03762844c29b1a89d75ad.
+## Workers / current work
 
-The cross-check byte hash in main is 4a5dd86f014dd3dafb4e3a204d0d5e77e0343a4685a5915f339d6b8bec5adb68.
-It also carries a separate canonical self-reference hash. Git may convert checkout line endings;
-regenerate explicit JSON before regenerating that report. Byte hashes describe actual bytes.
+At most two workers: ordinary-actions and loop-costs, each in its own ignored worktree. Their
+45/25-minute budgets cover tests-first implementation and arithmetic validation; no individual
+command may exceed10minutes. Item-model and exact-distributions trees were accepted and removed
+without force. Initial item worker's service429 retry succeeded; no duplicate worker was launched.
+Independent cost implementation overlaps action work; dependent adapters/policies wait for merged APIs.
 
-## Sources and mechanics
-
-- 12 public CoE files cached once; this session read only their frozen copies. 62 source rows
-  and 20 fact sheets plus INDEX. Raw third-party material and supplied PoB inputs remain ignored;
-  no CoE code or compiled data copied into src/data.
-- Wiki works through the owner's existing authorized Codex browser. Selected paraphrases and
-  permanent revision URLs are cached locally; these are not full-page captures. No cookies exported.
-- All required BRIEF action families have source-qualified preconditions, steps, numerical
-  examples, confidence labels and open questions. Additional sheets cover beasts, Dominance,
-  influence orbs, Blessed, synthesis and quality. Optional catalogue families remain backlog.
-- Official 3.29 changes take precedence over old frozen actions: changed corruption sockets,
-  synthesis availability, beast split replacements and Fractured Fossil (Q18/Q19). Ordinary
-  resonators require rare inputs; legacy/Ruthless Alchemical inputs are separately scoped (Q30).
-- CoE calculator exact/extrapolated branches and simulator routing, reset, batch, success,
-  resource and cost aggregation are reviewed. Its displayed mean rounds quantities up, and its
-  cheapest/costliest sort is by action count, not price (Q28); neither defines our future metrics.
-- S7 contains 52 guide references (37 video / 15 written), not guide bodies. Linked contents
-  were not claimed as read. CoE inventory entries are not proof of current availability.
-
-## What remains unsupported
-
-Source conflicts remain explicit: Harvest retention Q6; Conflict odds Q11; special eligibility
-Q9/Q12; fossil stacking Q13; CoE exactness on overlapping groups Q14; canonical groups and
-multiplier/generated-tag semantics Q16/Q17; Awakener conflict survivor Q20; recombinator
-counts/algorithm Q21/Q22; current quality increments/rounding Q23; Blessed exclusion Q24;
-beast exchange details Q25. Other questions and overview discrepancies remain in OPEN_QUESTIONS.
-
-Extraction is complete for the selected Phase 0 tables, but numeric stat/range interpretation,
-complete base identity, other item classes and a general pool resolver are future work. A rule
-with an unsourced dependency must raise NotImplementedError with its question ID when reached;
-source uncertainty is not permission to guess or advertise an exact full-game calculator.
-
-## Mandatory next-stage contract
-
-BRIEF 3b, D7 and `docs/design/build_contract.md`: return stage outcome distributions, accept
-required mods OR a utility table with threshold, retain states needed by later decisions, and
-evaluate policies with stopping rules. Report expected utility/cost, p90 cost, irreversible
-risk and rare inputs. CoE success-only frequencies or rounded display costs are insufficient.
-
-## Worker and process status
-
-Both new workers completed. The lead reviewed full diffs, requested parser corrections, ran
-each final branch suite, checked all specified numbers, merged with no-ff and saved reports in
-out/workers. WORKERS has both acceptance rows. All worker worktrees were removed without force;
-only main remains. No worker jobs or background processes were left running. No external
-filesystem paths were used. Implementation stays delegated under a bounded spec, at most two
-workers. The completed 25/30-minute budgets covered literal parsing and malformed-input checks;
-no individual command approached ten minutes.
+Prepared specs: ordinary-actions, monte-carlo, loop-costs, plan-inputs, policy-evaluation, plan-cli.
+All are bounded and include acceptance numbers. Work continues through DONE and unblocked stretch;
+completion of one task is not a stopping condition. Corrections capped at two per task.
 
 ## Next three actions
 
-1. Design a bounded Phase 1 item/outcome representation and exact draw contract using BRIEF 3b
-   and the existing synthetic fixtures; specify preserved state and unsupported source branches.
-2. Resolve Q16/Q17 for the first concrete item-class pool, then write a sourced resolver spec.
-   Until then, use explicitly synthetic pools only; do not claim real-item probabilities.
-3. Delegate exact distributions and spam-policy costs with hand-computed acceptance numbers,
-   followed by a seeded Monte Carlo check. Keep optional catalogue work and unresolved special
-   actions visible in TASKS, outside the first executable slice.
+1. Accept ordinary actions and loop costs with focused tests/full diff/numeric fixtures.
+2. Delegate independent MC on five real pools and validated item/price/loadout inputs.
+3. Evaluate the designed real policies, wire direct module CLI, validate the helmet and bow,
+   then execute the stretch list; record final ten-line morning summary and full-suite timing.
 
 ## Night log
-- 00:05 — read GOAL and repository rules; item-model pool spec written, worker launch next.
 
-Night goal active: first worker failed before writing files due to service 429, retrying the
-same handle once with corrected spec. If delegation remains unavailable, lead implements
-under the same spec/test discipline per AGENTS 6. Tasks may span 30–60 minutes due to
-exact-DP and acceptance work; individual commands are bounded and no background job remains.
-
-- 08:18 CEST — item-model-pool merged d07a1b5 (21 tests); exact DP in progress; action/MC/cost specs prepared. Goal still active, demo not complete. No fabricated intermediate hourly observations.
+- 00:05 — read GOAL and rules; item-model spec prepared, worker launch next.
+- 08:18 CEST — item model merged d07a1b5; exact DP in progress; goal/demo incomplete.
+- 08:31 CEST — exact DP merged4ee0641; actions/costs running; all downstream specs prepared.

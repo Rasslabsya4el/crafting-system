@@ -45,9 +45,9 @@ all game mechanics. No dependent path may silently guess.
 
 ## Phase 1 -- engine core
 
-- [ ] Item model and mod-pool resolver; preserve state information needed by later policies, not only a scalar score (BRIEF 3b / D7; real pool blocked by Q16/Q17)
+- [~] Item model and mod-pool resolver (`d07a1b5` ordinary slice accepted; Q16/Q17 provisionally bounded by GOAL/D14; full model still out of scope)
 - [ ] Actions as pure functions, one module per rule family
-- [ ] Exact stage outcome distributions; target predicates and value thresholds reduce the same distribution to success probabilities
+- [~] Exact stage outcome distributions (`4ee0641` grouped draw kernel accepted; action adapters/CLI pending); predicates and thresholds reduce the same distribution
 - [ ] Expected cost of spam loops, attempt/cost distribution and p90; hand-computed fixtures in `docs/design/build_contract.md`; reject Q28 display shortcuts
 - [ ] Monte Carlo outcome frequencies agreeing with exact distributions; seed, sample count and estimated-method labels
 - [ ] 30+ known-answer tests with their sources (the current 78 tests validate data tooling, not 78 crafting probabilities)
