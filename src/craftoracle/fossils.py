@@ -94,11 +94,9 @@ def prepare_fossils(
 
     rules = _rules()
     rows = {row["id"]: row for row in rules["ordinary"]}
-    specials = set(rules["excluded_special_ids"])
     unknown = [fossil for fossil in selected if fossil not in rows]
     if unknown:
-        question = "Q19" if any(fossil in specials for fossil in unknown) else "Q13"
-        raise NotImplementedError(f"unsourced: {question} fossil id {unknown[0]}")
+        raise NotImplementedError(f"unsourced: Q13 fossil id {unknown[0]}")
     candidates = _candidate_entries(item, data, (), (False, False), None)
     rational = {
         entry.mod_id: transformed_weight(
