@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -69,6 +70,23 @@ def test_parse_coe_comparison_derives_maximum_absolute_difference(tmp_path: Path
     assert report["max_abs_relative_difference"] == pytest.approx(0.03)
     assert report["source_hashes"] == {"package": "abc"}
     assert report["cases"][0]["relative_difference"] == -0.02
+
+
+def test_execute_command_records_timeout_and_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def timeout(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(["python", "-m", "pytest"], 120, output=b"partial", stderr=b"late")
+
+    monkeypatch.setattr(collect_evidence.subprocess, "run", timeout)
+
+    record = collect_evidence.execute_command(
+        "pytest", ["python", "-m", "pytest"], cwd=tmp_path, timeout_seconds=120, output_dir=tmp_path,
+    )
+
+    assert record["exit_code"] is None
+    assert record["timed_out"] is True
+    assert (tmp_path / "pytest.stdout.log").read_text(encoding="utf-8") == "partial"
+    assert "late" in (tmp_path / "pytest.stderr.log").read_text(encoding="utf-8")
+    assert "timed out after 2 minutes" in (tmp_path / "pytest.stderr.log").read_text(encoding="utf-8")
 
 
 def test_collect_marks_missing_pytest_artifact_unavailable_after_failed_command(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
