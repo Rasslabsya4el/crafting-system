@@ -11,6 +11,7 @@ import math
 from numbers import Real
 import os
 from pathlib import Path
+import re
 import subprocess
 import shutil
 from typing import Any
@@ -20,7 +21,7 @@ from craftoracle.distributions import OutcomeClass
 from craftoracle.item_model import ItemState
 from craftoracle.plan_inputs import ItemSpec, Loadout, load_loadout, load_spec
 from craftoracle.quality import plan_catalyst
-from craftoracle.reporting import build_report, render_report
+from craftoracle.reporting import build_report, render_evidence, render_report
 
 
 _SCHEMA_VERSION = 1
@@ -84,11 +85,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_dir.mkdir(parents=True, exist_ok=True)
             if arguments.evidence_dir:
                 _copy_evidence_artifacts(_repository_path(arguments.evidence_dir, "evidence"), output_dir, evidence or {})
-            plan_path, index_path = output_dir / "plan.json", output_dir / "index.html"
+            plan_path, index_path, evidence_path = output_dir / "plan.json", output_dir / "index.html", output_dir / "evidence.html"
             plan_path.write_text(json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
             index_path.write_text(render_report(report), encoding="utf-8")
+            evidence_path.write_text(render_evidence(report), encoding="utf-8")
             print(index_path)
             print(plan_path)
+            print(evidence_path)
             return 0
         if arguments.json:
             print(json.dumps(document, indent=2, sort_keys=True, allow_nan=False))
@@ -458,19 +461,39 @@ def _copy_evidence_artifacts(source: Path, output: Path, evidence: Mapping[str, 
 
 
 def _report_target(spec_path: str | Path, data: Any, threshold: float | None = None) -> dict[str, Any]:
-    """Expose source-backed target wording without adding it to planner output."""
+    """Expose source-backed target wording (with the mod's Prefix/Suffix type and a
+    plain-English family derived from its own stat text) without adding it to planner output."""
     spec = load_spec(spec_path, data.mods)
     labels: dict[str, str] = {}
+    kinds: dict[str, str] = {}
     for group, tiers in spec.tier_ids.items():
         for tier, identifiers in enumerate(tiers, start=1):
             text = " / ".join(_stat_text(data.mods[identifier].get("stat_text", identifier)) for identifier in identifiers)
             labels[f"{group}:{tier}"] = text
+            kinds[f"{group}:{tier}"] = str(data.mods[identifiers[0]].get("type", "Modifier")) if identifiers else "Modifier"
+
+    def mod_entry(group: str, tier: int) -> dict[str, Any]:
+        key = f"{group}:{tier}"
+        text = labels.get(key, group)
+        return {"group": group, "tier": tier, "max_tier": tier, "text": text, "type": kinds.get(key, "Modifier"), "family": _mod_family(text)}
+
     def choices(item: Any) -> list[dict[str, Any]]:
-        return [{"tier": tier, "text": labels[f"{item.group}:{tier}"]} for tier in range(1, item.max_tier + 1)]
+        return [mod_entry(item.group, tier) for tier in range(1, item.max_tier + 1)]
+
+    value_rows: list[dict[str, Any]] = []
+    if spec.value_table:
+        for group, tiers in spec.value_table.items():
+            for tier, score in tiers.items():
+                entry = mod_entry(group, tier)
+                entry["value"] = score
+                value_rows.append(entry)
+        value_rows.sort(key=lambda row: (-row["value"], row["tier"]))
+
     return {
-        "criteria": [{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group), "tiers": choices(item)} for item in spec.required_mods],
-        "any_of": [[{"group": item.group, "max_tier": item.max_tier, "text": labels.get(f"{item.group}:{item.max_tier}", item.group), "tiers": choices(item)} for item in alternatives] for alternatives in spec.any_of],
+        "criteria": [{**mod_entry(item.group, item.max_tier), "tiers": choices(item)} for item in spec.required_mods],
+        "any_of": [[{**mod_entry(item.group, item.max_tier), "tiers": choices(item)} for item in alternatives] for alternatives in spec.any_of],
         "value_table": spec.value_table,
+        "value_rows": value_rows,
         "threshold": threshold if threshold is not None else spec.threshold,
         "values_note": spec.values_note,
         "labels": labels,
@@ -483,6 +506,16 @@ def _stat_text(value: Any) -> str:
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
         return " ".join(value)
     return str(value)
+
+
+def _mod_family(stat_text: str) -> str:
+    """Derive a short plain-English family label from the mod's own stat text
+    (e.g. "+(130-144) to maximum Life" -> "Life"), never from memory."""
+    text = re.sub(r"\([^)]*\)", "", stat_text)
+    text = re.sub(r"[+%]", "", text)
+    text = re.sub(r"\b(to|maximum|increased|reduced|decreased|Adds|of)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text or stat_text
 
 
 def _fossil_names() -> dict[str, str]:

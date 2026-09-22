@@ -1,3 +1,22 @@
+# Current state -- report v2 merged, engine work parked (2026-09-22)
+
+Owner decision 2026-09-22: this project is run by the Claude lead of poe-junkroan-v2; Astra no longer works here.
+Report v2 (brief `docs/briefs/2026-09-22-report-ui-v2.md`, branch `lead-report-ui-v2`, a428cb9 + e3e2610) is merged
+after the owner's look ("вроде норм"): English, game tooltip card, route rows as ordered actions, a crafting flow
+whose steps are ACTIONS (bench crafts titled "Crafting Bench: <recipe>", payments shown under them), one-line steps,
+costs per success, evidence split into `evidence.html`. Engine numbers byte-identical (plan.json); 434 tests pass.
+Commands: `python -m craftoracle report examples/helmet_life_chaos_res.yaml --loadout data/loadouts/endgame.json
+--output-dir out/reports-v2/helmet` (and `examples/bow_value_table.yaml ... --compare-thresholds 60,100
+--output-dir out/reports-v2/bow`).
+
+PARKED (the owner: engine work later, the main build system first). Open engine question for the next engine task:
+the protected-prefix routes search `min_elemental in (1, 2)` (`optimizer.py:552`, `605`, `887`; gate
+`_preparation_classes` `optimizer.py:823-839`; pick = lowest mean `optimizer.py:742-750`) and the helmet's route 2
+picked 2 although the target needs ONE of Fire / Cold / Lightning T1. Accepting >= 1 is a superset of >= 2 with the
+same finishing step, so it cannot cost more -- a cost picked 2 as cheaper points at a modelling error. Check before
+trusting any protected-prefix number. Also owed: rare/magic affix-count weights and fossil stacking are taken from
+Craft of Exile; spot-check them against the wiki.
+
 # Current state — simplify crafting instructions (2026-09-21)
 
 ## Owner request and current output
