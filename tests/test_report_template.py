@@ -1,58 +1,51 @@
-"""Focused contract checks for the standalone report asset."""
+"""Focused contract checks for the standalone report shell asset.
+
+The template is a plain HTML/CSS shell now: reporting.py renders the whole
+page server-side and fills `{{REPORT_TITLE}}` / `{{REPORT_BODY}}`. There is
+no embedded JSON blob and no client-side JavaScript to test here; route
+selection uses a CSS-only radio-button tab pattern instead.
+"""
 
 from __future__ import annotations
 
-import json
-import subprocess
+import re
 from pathlib import Path
 
 
 TEMPLATE = Path(__file__).parents[1] / "src" / "craftoracle" / "report_assets" / "template.html"
 
 
-def test_template_contains_safe_offline_rendering_contract() -> None:
+def test_template_contains_the_two_required_placeholders() -> None:
     content = TEMPLATE.read_text(encoding="utf-8")
-
     assert "{{REPORT_TITLE}}" in content
-    assert "{{REPORT_DATA}}" in content
-    assert 'type="application/json"' in content
-    assert "safeLocalPath" in content
-    assert "textContent" in content
-    assert "https://" not in content
-    assert "http://" not in content
+    assert "{{REPORT_BODY}}" in content
+    # REPORT_TITLE may appear more than once (<title> and <h1>); REPORT_BODY exactly once.
+    assert content.count("{{REPORT_BODY}}") == 1
 
 
-def test_pure_javascript_formats_probabilities_escapes_values_and_keeps_duplicate_keys() -> None:
+def test_template_has_no_client_side_script() -> None:
     content = TEMPLATE.read_text(encoding="utf-8")
-    script = content.split('<script>\n  "use strict";', 1)[1].split("// START_APP", 1)[0]
-    fixture = {"routes": [{"key": "same-60", "id": "same"}, {"key": "same-100", "id": "same"}]}
-    program = """
-      global.document = {getElementById: () => ({textContent: %s})};
-      global.location = {hash: '#same-100'};
-      %s
-      const t = globalThis.ReportTemplate;
-      const result = {
-        probability: t.probability(0.000024282),
-        zero: t.probability(0),
-        rounded_zero: t.numeric(-1e-12),
-        cost: t.numeric(1927.479966),
-        escaped: t.escapeText('</script><img src=x onerror=1>'),
-        valid: t.safeLocalPath('proof/pytest.xml'),
-        rejected: t.safeLocalPath('../secret'),
-        scheme: t.safeLocalPath('https://example.invalid/proof'),
-        selected: t.routeByKey('same-100').key
-      };
-      console.log(JSON.stringify(result));
-    """ % (json.dumps(json.dumps(fixture, ensure_ascii=False)), script)
+    assert "<script" not in content.lower()
 
-    completed = subprocess.run(["node", "-e", program], check=True, text=True, capture_output=True)
-    result = json.loads(completed.stdout)
-    assert result["probability"] == "&lt;0,1% (примерно 1 из 41\u00a0183)"
-    assert result["zero"] == "0,0%"
-    assert result["rounded_zero"] == "0,0"
-    assert result["cost"] == "1\u00a0927,5"
-    assert result["escaped"] == "&lt;/script&gt;&lt;img src=x onerror=1&gt;"
-    assert result["valid"] == "proof/pytest.xml"
-    assert result["rejected"] is None
-    assert result["scheme"] is None
-    assert result["selected"] == "same-100"
+
+def test_template_only_reaches_google_fonts_over_the_network() -> None:
+    content = TEMPLATE.read_text(encoding="utf-8")
+    urls = re.findall(r"https?://[^\s'\"()]+", content)
+    assert urls, "expected the Google Fonts import to be present"
+    for url in urls:
+        assert url.startswith("https://fonts.googleapis.com/") or url.startswith("https://fonts.gstatic.com/"), url
+
+
+def test_template_declares_the_dark_craft_of_exile_style_palette() -> None:
+    content = TEMPLATE.read_text(encoding="utf-8")
+    assert "color-scheme: dark" in content
+    for token in ("--bg", "--panel", "--frame", "--rare", "--mod", "--added", "--removed"):
+        assert token in content, token
+    assert "Cinzel" in content  # the serif small-caps heading face named in the brief
+
+
+def test_template_is_a_complete_html_document() -> None:
+    content = TEMPLATE.read_text(encoding="utf-8")
+    assert content.lstrip().lower().startswith("<!doctype html>")
+    assert '<html lang="en">' in content
+    assert "<title>{{REPORT_TITLE}}</title>" in content

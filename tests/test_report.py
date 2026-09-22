@@ -1,7 +1,16 @@
 from __future__ import annotations
 
+from pathlib import Path
+import re
+
 from craftoracle import cli
-from craftoracle.reporting import build_report, material_accounting, render_report
+from craftoracle.actions import load_action_data
+from craftoracle.reporting import build_report, material_accounting, render_evidence, render_report
+
+
+ROOT = Path(__file__).parents[1]
+
+_CYRILLIC = re.compile(r"[\u0400-\u04FF]")
 
 
 def _plan() -> dict:
@@ -30,6 +39,17 @@ def test_accounting_reprices_essence_and_protected_exalts() -> None:
     assert next(row for row in protected["rows"] if row["currency"] == "Exalt")["count"] == 3.5
 
 
+def test_protected_envy_row_uses_the_full_essence_display_name_when_known() -> None:
+    plan = _plan()
+    context = {"envy_id": "Metadata/Items/Currency/CurrencyEssenceEnvy3", "essence_names": {"Metadata/Items/Currency/CurrencyEssenceEnvy3": "Deafening Essence of Envy"}, "bench_recipes": {}}
+    plan["prices"]["values"]["Metadata/Items/Currency/CurrencyEssenceEnvy3"] = 5
+    protected = material_accounting(plan["ranked"][1], plan, context)
+    assert any(row["currency"] == "Deafening Essence of Envy" for row in protected["rows"])
+    # Without a name mapping, the label falls back to the generic "Envy" (unchanged behaviour).
+    fallback = material_accounting(plan["ranked"][1], plan, {"bench_recipes": {}})
+    assert any(row["currency"] == "Envy" for row in fallback["rows"])
+
+
 def test_magic_counts_and_stage_reach_label() -> None:
     plan = _plan()
     context = {"action_rules": {"magic_count_weights": {"1": 1, "2": 1}}}
@@ -38,17 +58,16 @@ def test_magic_counts_and_stage_reach_label() -> None:
     assert counts == {"Transmute": 4, "Alteration": 4, "Augmentation": 2, "Scour": 3, "Regal": 2, "Exalt": 1}
     report = build_report(plan, context)
     magic = next(route for route in report["routes"] if route["id"] == "magic-regal-exalt")
-    assert magic["stages"][0]["meaning"] == "Шанс дойти до этапа"
+    assert magic["stages"][0]["meaning"] == "Chance of reaching this step"
     assert any("Exalt" in step for step in magic["instructions"])
 
     for early, expects_goal_check in ((True, True), (False, False)):
         magic_plan = _plan()["ranked"][2]
         magic_plan["parameters"] = {"max_exalts": 3, "early_stop": early, "magic_min_desired": 1, "regal_min_desired": 2}
         instructions = build_report({**_plan(), "ranked": [magic_plan]}, {})["routes"][0]["instructions"]
-        regal_step = next(step for step in instructions if "После Regal" in step or "Сначала проверьте цель" in step)
-        assert "не менее 2 желаемых модификатор" in regal_step
-        assert "примените Regal Orb" in regal_step
-        assert ("Сначала проверьте цель" in regal_step) is expects_goal_check
+        regal_step = next(step for step in instructions if step.startswith("Use Regal Orb."))
+        assert "at least 2 desired modifiers" in regal_step
+        assert ("Check the target first" in regal_step) is expects_goal_check
 
 
 def test_report_retains_unavailable_marks_missing_evidence_and_escapes_html() -> None:
@@ -82,10 +101,13 @@ def test_real_shaped_optimizer_names_and_cli_writes_sibling_files(tmp_path, monk
     monkeypatch.setattr(cli, "_report_output_dir", lambda path: tmp_path)
     monkeypatch.setattr(cli, "_report_target", lambda path, data, threshold=None: {})
     monkeypatch.setattr(cli, "load_loadout", lambda path: type("Loadout", (), {"bench_recipes": {}})())
-    monkeypatch.setattr(cli, "render_report", lambda report: "<!doctype html><script id='report-data'>{}</script>")
+    monkeypatch.setattr(cli, "render_report", lambda report: "<!doctype html><title>stub</title>")
     assert cli.main(["report", "ignored.json", "--loadout", "ignored.json", "--output-dir", "ignored"]) == 0
     assert (tmp_path / "index.html").is_file()
     assert (tmp_path / "plan.json").is_file()
+    assert (tmp_path / "evidence.html").is_file()
+    # render_report was stubbed; render_evidence runs for real against the same report and must not crash.
+    assert "pytest summary" in (tmp_path / "evidence.html").read_text(encoding="utf-8")
 
 
 def test_report_rejects_paths_outside_repository_before_evaluation(monkeypatch) -> None:
@@ -112,12 +134,12 @@ def test_fracture_base_count_uses_production_keys_and_no_exalt_when_k_zero() -> 
     magic["stages"] = [{"name": "transmute setup/reset", "probability": 1, "expected_attempts": 4}, {"name": "Regal gate", "probability": .5, "expected_attempts": 2}]
     text = build_report({**_plan(), "ranked": [magic]}, {"action_rules": {"magic_count_weights": {"1": 1, "2": 1}}})["routes"][0]["instructions"]
     assert not any("Exalt" in step for step in text)
-    assert any("только на последнем" in step for step in text)
+    assert any("last configured step" in step for step in text)
 
 
 def test_stale_evidence_is_explicit() -> None:
     report = build_report(_plan(), {"generation": {"commit": "new"}}, {"schema_version": 1, "git_commit": "old", "pytest": {"status": "passed", "cases": []}, "coe": {"status": "passed", "cases": []}})
-    assert report["evidence"]["revision_message"] == "Проверки другой ревизии"
+    assert report["evidence"]["revision_message"] == "Checks are from a different revision"
 
 
 def test_production_shaped_metadata_and_fossil_instruction() -> None:
@@ -152,3 +174,113 @@ def test_copy_evidence_artifacts_preserves_relative_links(tmp_path) -> None:
     assert (output / "evidence/proof.json").is_file()
     assert (output / "evidence/coe/comparison.json").is_file()
     assert (output / "evidence/logs/run.out").is_file()
+
+
+# --------------------------------------------------------------------------
+# report-ui-v2: the player page reads like the game, evidence is split out.
+# --------------------------------------------------------------------------
+
+
+def _full_context() -> dict:
+    return {
+        "action_rules": {"magic_count_weights": {"1": 1, "2": 1}},
+        "essence_names": {"Envy": "Deafening Essence of Envy"},
+        "envy_id": "Envy",
+        "bench_recipes": {},
+        "fossil_names": {},
+        "bench_names": {},
+        "target": {"criteria": [], "any_of": [], "labels": {}},
+        "generation": {"commit": "abc1234567890", "generated_at": "2026-09-22T00:00:00+00:00"},
+    }
+
+
+def test_player_page_has_no_russian_prose_and_the_expected_sections() -> None:
+    report = build_report(_plan(), _full_context())
+    html = render_report(report)
+    assert not _CYRILLIC.search(html), "the player page must read in English, like the game"
+    assert 'class="tooltip-card"' in html
+    assert 'class="routes"' in html
+    assert "Crafting flow" in html
+    assert "Step by step" in html
+    assert "Costs per success" in html
+    assert 'href="evidence.html"' in html
+    assert "Prices are placeholders, not trade prices." in html
+    # dropped from the player page per the brief: invented value/price banners, stage tables, raw dumps
+    assert "invented" not in html.lower()
+    assert "<script" not in html.lower()
+
+
+def test_evidence_page_has_no_russian_prose_and_carries_what_the_player_page_dropped() -> None:
+    evidence = {"schema_version": 1, "pytest": {"status": "passed", "tests": 5, "cases": []}, "coe": {"status": "passed", "cases": []}}
+    report = build_report(_plan(), _full_context(), evidence)
+    html = render_evidence(report)
+    assert not _CYRILLIC.search(html)
+    assert "pytest summary" in html
+    assert "Craft of Exile cross-check" in html
+    assert 'href="index.html"' in html
+    assert "invented" in html  # the raw price note is still fully visible in the evidence dump
+    assert "<script" not in html.lower()
+
+
+def test_flow_has_one_step_box_per_currency_actually_spent() -> None:
+    report = build_report(_plan(), _full_context())
+    essence_route = next(route for route in report["routes"] if route["id"] == "essence-envy")
+    assert len(essence_route["flow"]["steps"]) == 1
+    magic_route = next(route for route in report["routes"] if route["id"] == "magic-regal-exalt")
+    assert [step["currency"] for step in magic_route["flow"]["steps"]] == [
+        "Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Orb of Scouring", "Regal Orb", "Exalted Orb",
+    ]
+    html = render_report(report)
+    assert html.count('class="flow-step"') == len(essence_route["flow"]["steps"]) + len(magic_route["flow"]["steps"]) + len(report["routes"][1]["flow"]["steps"])
+
+
+def test_flow_collapses_repeated_per_stage_currency_rows_into_one_step() -> None:
+    # magic-regal-exalt with three per-attempt Exalt stages (as produced by the real
+    # optimizer) still gets ONE "Exalted Orb" flow box, with the three counts summed.
+    plan = _plan()
+    magic = plan["ranked"][2]
+    magic["stages"] = [
+        {"name": "regal", "probability": .5, "expected_attempts": 2},
+        {"name": "exalt 1", "probability": .1, "expected_attempts": 1},
+        {"name": "exalt 2", "probability": .1, "expected_attempts": 1},
+        {"name": "exalt 3", "probability": .1, "expected_attempts": 1},
+    ]
+    report = build_report(plan, _full_context())
+    magic_route = next(route for route in report["routes"] if route["id"] == "magic-regal-exalt")
+    currencies = [step["currency"] for step in magic_route["flow"]["steps"]]
+    assert currencies.count("Exalted Orb") == 1
+    exalt_step = next(step for step in magic_route["flow"]["steps"] if step["currency"] == "Exalted Orb")
+    assert exalt_step["uses"] == 3
+
+
+def test_routes_beyond_six_are_collapsed_behind_show_all() -> None:
+    plan = _plan()
+    template = plan["ranked"][0]
+    plan["ranked"] = [{**template, "id": f"essence-envy-{i}", "expected_cost": 100 + i} for i in range(8)]
+    report = build_report(plan, _full_context())
+    html = render_report(report)
+    assert "Show all 8 routes" in html
+    assert html.count('class="route-row"') == 8
+
+    plan["ranked"] = plan["ranked"][:5]
+    report_few = build_report(plan, _full_context())
+    html_few = render_report(report_few)
+    assert "Show all" not in html_few
+
+
+def test_helmet_and_bow_target_cards_show_the_games_own_prefix_suffix_wording() -> None:
+    data = load_action_data(ROOT)
+    helmet = cli._report_target(ROOT / "examples" / "helmet_life_chaos_res.yaml", data)
+    life = next(item for item in helmet["criteria"] if item["group"] == "IncreasedLife")
+    assert life["type"] == "Prefix"
+    assert life["family"] == "Life"
+    assert life["text"] == "+(130-144) to maximum Life"
+    resist = next(item for item in helmet["any_of"][0] if item["group"] == "FireResistance")
+    assert resist["type"] == "Suffix"
+    assert resist["family"] == "Fire Resistance"
+
+    bow = cli._report_target(ROOT / "examples" / "bow_value_table.yaml", data)
+    assert bow["criteria"] == []
+    families = {row["group"]: row["family"] for row in bow["value_rows"]}
+    assert families["LocalFireDamageTwoHand"] == "Fire Damage"
+    assert families["LocalIncreasedAttackSpeed"] == "Attack Speed"
