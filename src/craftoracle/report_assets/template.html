@@ -69,6 +69,9 @@
     .chip-harvest { background: #1e3520; color: #a6e0a6; }
     .chip-fracturing { background: #401e28; color: #f0a0b8; }
     .chip-base { background: #262626; color: #cfcfcf; }
+    .chip-bench { background: #3a2410; color: #e8c48a; }
+    .chip-note { color: var(--muted); font-size: .78rem; margin-right: 4px; }
+    .chip-arrow { color: var(--muted); margin: 0 2px; }
 
     /* routes list (CSS-only tab selection, no script) */
     .route-tab { position: absolute; opacity: 0; pointer-events: none; }
@@ -76,10 +79,12 @@
     .route-tab:checked + .route-row { border-color: var(--frame); background: #221a10; }
     .route-tab:focus-visible + .route-row { outline: 2px solid var(--rare); }
     .route-title { font-weight: 600; margin-bottom: 4px; }
+    .route-chips { line-height: 2.1; }
     .route-chance { color: var(--muted); font-size: .85rem; margin: 4px 0; }
     .route-costs { font-size: .9rem; margin-top: 4px; }
     details.show-all > summary { cursor: pointer; color: #d9b96a; margin: 6px 0; }
     .route-panel { padding-top: 4px; }
+    .step-detail { color: var(--muted); font-size: .85rem; margin-top: 2px; }
 
     /* crafting flow */
     .flow-scroll { overflow-x: auto; padding-bottom: 6px; }
@@ -93,6 +98,8 @@
     .flow-chip-resonator { background: #3a2410; color: #f0a860; }
     .flow-chip-harvest { background: #1e3520; color: #a6e0a6; }
     .flow-chip-fracturing { background: #401e28; color: #f0a0b8; }
+    .flow-chip-bench { background: #3a2410; color: #e8c48a; }
+    .flow-chip-base { background: #262626; color: #cfcfcf; }
     .flow-meta { font-size: .78rem; color: var(--muted); }
     .flow-badge { margin-top: 6px; font-size: .76rem; padding: 3px 6px; border-radius: 4px; }
     .flow-success { background: rgba(110,224,110,.15); color: var(--added); }

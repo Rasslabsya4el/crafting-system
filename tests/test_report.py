@@ -13,6 +13,12 @@ ROOT = Path(__file__).parents[1]
 _CYRILLIC = re.compile(r"[\u0400-\u04FF]")
 
 
+def _texts(instructions: list[dict]) -> list[str]:
+    """Flatten step-by-step {"text", "detail"} entries to one searchable string
+    each, so tests can keep using substring assertions."""
+    return [f'{step["text"]} {step.get("detail") or ""}' for step in instructions]
+
+
 def _plan() -> dict:
     return {
         "input": {"name": "<target>", "base": "Royal Burgonet", "item_level": 86, "quality": 20},
@@ -59,15 +65,16 @@ def test_magic_counts_and_stage_reach_label() -> None:
     report = build_report(plan, context)
     magic = next(route for route in report["routes"] if route["id"] == "magic-regal-exalt")
     assert magic["stages"][0]["meaning"] == "Chance of reaching this step"
-    assert any("Exalt" in step for step in magic["instructions"])
+    assert any("Exalt" in text for text in _texts(magic["instructions"]))
 
     for early, expects_goal_check in ((True, True), (False, False)):
         magic_plan = _plan()["ranked"][2]
         magic_plan["parameters"] = {"max_exalts": 3, "early_stop": early, "magic_min_desired": 1, "regal_min_desired": 2}
         instructions = build_report({**_plan(), "ranked": [magic_plan]}, {})["routes"][0]["instructions"]
-        regal_step = next(step for step in instructions if step.startswith("Use Regal Orb."))
-        assert "at least 2 desired modifiers" in regal_step
-        assert ("Check the target first" in regal_step) is expects_goal_check
+        regal_step = next(step for step in instructions if step["text"].startswith("Use Regal Orb"))
+        combined = f'{regal_step["text"]} {regal_step.get("detail") or ""}'
+        assert "at least 2 desired modifiers" in combined
+        assert ("keep the item now" in regal_step["text"]) is expects_goal_check
 
 
 def test_report_retains_unavailable_marks_missing_evidence_and_escapes_html() -> None:
@@ -132,7 +139,7 @@ def test_fracture_base_count_uses_production_keys_and_no_exalt_when_k_zero() -> 
     magic = dict(_plan()["ranked"][2])
     magic["parameters"] = {"max_exalts": 0, "early_stop": False, "magic_min_desired": 1, "regal_min_desired": 1}
     magic["stages"] = [{"name": "transmute setup/reset", "probability": 1, "expected_attempts": 4}, {"name": "Regal gate", "probability": .5, "expected_attempts": 2}]
-    text = build_report({**_plan(), "ranked": [magic]}, {"action_rules": {"magic_count_weights": {"1": 1, "2": 1}}})["routes"][0]["instructions"]
+    text = _texts(build_report({**_plan(), "ranked": [magic]}, {"action_rules": {"magic_count_weights": {"1": 1, "2": 1}}})["routes"][0]["instructions"])
     assert not any("Exalt" in step for step in text)
     assert any("last configured step" in step for step in text)
 
@@ -151,7 +158,7 @@ def test_production_shaped_metadata_and_fossil_instruction() -> None:
     plan["prices"]["values"].update({"fossil:13": 1, "resonator:1": 1, "alchemy": 1})
     report = build_report(plan, {"action_rules": {"magic_count_weights": {"1": 1, "2": 1}}, "fossil_names": {"13": "Scorched"}})
     assert report["routes"][0]["metadata"]["success_probability"] == .25
-    assert any("Scorched" in step and "1" in step for step in report["routes"][1]["instructions"])
+    assert any("Scorched" in step and "1" in step for step in _texts(report["routes"][1]["instructions"]))
 
 
 def test_evidence_links_are_relative_and_keep_provenance() -> None:
@@ -186,9 +193,9 @@ def _full_context() -> dict:
         "action_rules": {"magic_count_weights": {"1": 1, "2": 1}},
         "essence_names": {"Envy": "Deafening Essence of Envy"},
         "envy_id": "Envy",
-        "bench_recipes": {},
+        "bench_recipes": {729: {"Divine": 2}},
         "fossil_names": {},
-        "bench_names": {},
+        "bench_names": {"729": "Suffixes Cannot Be Changed"},
         "target": {"criteria": [], "any_of": [], "labels": {}},
         "generation": {"commit": "abc1234567890", "generated_at": "2026-09-22T00:00:00+00:00"},
     }
@@ -222,21 +229,29 @@ def test_evidence_page_has_no_russian_prose_and_carries_what_the_player_page_dro
     assert "<script" not in html.lower()
 
 
-def test_flow_has_one_step_box_per_currency_actually_spent() -> None:
+def test_flow_has_one_step_box_per_action_actually_performed() -> None:
+    """A flow step is the ACTION (what you click), never the payment currency:
+    the suffix-protected route's bench-craft step must be titled by the recipe,
+    not by whatever currency happens to pay for it (D95 lead review)."""
     report = build_report(_plan(), _full_context())
     essence_route = next(route for route in report["routes"] if route["id"] == "essence-envy")
     assert len(essence_route["flow"]["steps"]) == 1
     magic_route = next(route for route in report["routes"] if route["id"] == "magic-regal-exalt")
-    assert [step["currency"] for step in magic_route["flow"]["steps"]] == [
-        "Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Orb of Scouring", "Regal Orb", "Exalted Orb",
+    assert [step["action"] for step in magic_route["flow"]["steps"]] == [
+        "Use Orb of Transmutation", "Use Orb of Alteration", "Use Orb of Augmentation", "Use Orb of Scouring", "Use Regal Orb", "Use Exalted Orb",
     ]
+    protected_route = next(route for route in report["routes"] if route["id"] == "suffix-protected-life")
+    actions = [step["action"] for step in protected_route["flow"]["steps"]]
+    assert "Crafting Bench: Suffixes Cannot Be Changed" in actions
+    assert not any("Divine" in action for action in actions)  # the payment currency is never a step title
     html = render_report(report)
-    assert html.count('class="flow-step"') == len(essence_route["flow"]["steps"]) + len(magic_route["flow"]["steps"]) + len(report["routes"][1]["flow"]["steps"])
+    assert html.count('class="flow-step"') == len(essence_route["flow"]["steps"]) + len(magic_route["flow"]["steps"]) + len(protected_route["flow"]["steps"])
 
 
 def test_flow_collapses_repeated_per_stage_currency_rows_into_one_step() -> None:
     # magic-regal-exalt with three per-attempt Exalt stages (as produced by the real
-    # optimizer) still gets ONE "Exalted Orb" flow box, with the three counts summed.
+    # optimizer) still gets ONE "Use Exalted Orb" flow box, with the three counts summed
+    # (not just the first stage's count -- D95 fix: uses must sum across the batch).
     plan = _plan()
     magic = plan["ranked"][2]
     magic["stages"] = [
@@ -247,10 +262,23 @@ def test_flow_collapses_repeated_per_stage_currency_rows_into_one_step() -> None
     ]
     report = build_report(plan, _full_context())
     magic_route = next(route for route in report["routes"] if route["id"] == "magic-regal-exalt")
-    currencies = [step["currency"] for step in magic_route["flow"]["steps"]]
-    assert currencies.count("Exalted Orb") == 1
-    exalt_step = next(step for step in magic_route["flow"]["steps"] if step["currency"] == "Exalted Orb")
+    actions = [step["action"] for step in magic_route["flow"]["steps"]]
+    assert actions.count("Use Exalted Orb") == 1
+    exalt_step = next(step for step in magic_route["flow"]["steps"] if step["action"] == "Use Exalted Orb")
     assert exalt_step["uses"] == 3
+    assert len(exalt_step["payments"]) == 1  # three same-currency rows merge into one payment line
+
+
+def test_bench_action_uses_the_true_repeat_count_not_the_currency_quantity() -> None:
+    """A recipe that costs more than one currency unit per use (729 costs 2
+    Divine Orbs) must report "uses" as how many times the CRAFT happens, not
+    how many currency units were spent (D95: this was the original bug)."""
+    plan = _plan()
+    context = {"bench_recipes": {729: {"Divine": 2}}, "bench_names": {"729": "Suffixes Cannot Be Changed"}}
+    protected = build_report(plan, context)["routes"][1]
+    bench_step = next(step for step in protected["flow"]["steps"] if step["action"] == "Crafting Bench: Suffixes Cannot Be Changed")
+    assert bench_step["uses"] == 2  # expected_prefix_cycles from the fixture, not 2 * 2
+    assert bench_step["payments"] == [{"currency": "Divine", "count": 4.0, "spend": 40.0}]
 
 
 def test_routes_beyond_six_are_collapsed_behind_show_all() -> None:

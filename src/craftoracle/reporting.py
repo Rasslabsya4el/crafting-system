@@ -52,18 +52,25 @@ def material_accounting(route: Mapping[str, Any], plan: Mapping[str, Any], conte
     complete = True
     reason: str | None = None
 
-    def add(currency: str, count: float, price_key: str | None = None) -> None:
+    def add(currency: str, count: float, price_key: str | None = None, action: str | None = None, uses: float | None = None) -> None:
+        """Append one payment row. `action` is the crafting ACTION this payment is
+        for (defaults to "Use <currency>", correct for every currency that is
+        applied directly to the item); `uses` is how many times that action
+        happens (defaults to `count`, correct unless one use of the action
+        costs more than one unit of this currency, e.g. a bench recipe)."""
         nonlocal complete, reason
         if count == 0:
             return
         resolved_key = price_key or _price_key(currency, values)
         price = values.get(resolved_key) if resolved_key is not None else None
+        resolved_action = action or f"Use {_currency_display_name(currency)}"
+        resolved_uses = count if uses is None else uses
         if isinstance(price, bool) or not isinstance(price, Real) or not math.isfinite(price):
             complete = False
             reason = f"missing price for {currency}"
-            rows.append({"currency": currency, "count": count, "unit_price": None, "spend": None})
+            rows.append({"currency": currency, "count": count, "unit_price": None, "spend": None, "action": resolved_action, "uses": resolved_uses})
             return
-        rows.append({"currency": currency, "count": count, "unit_price": float(price), "spend": count * float(price)})
+        rows.append({"currency": currency, "count": count, "unit_price": float(price), "spend": count * float(price), "action": resolved_action, "uses": resolved_uses})
 
     if identifier.startswith("essence"):
         stage = _find_stage(route, "essence") or _first_stage(route)
@@ -99,22 +106,26 @@ def material_accounting(route: Mapping[str, Any], plan: Mapping[str, Any], conte
             count = _number(expected, "expected_resonators")
             add("Alchemy", 1)
             fossils = _mapping(context.get("fossil_names", {}), "fossil_names")
-            for fossil_id in fossil_ids:
-                add(str(fossils.get(str(fossil_id), fossils.get(fossil_id, f"fossil {fossil_id}"))), count, f"fossil:{fossil_id}")
-            add(f"{len(fossil_ids)}-socket Chaotic Resonator", count, f"resonator:{len(fossil_ids)}")
+            resonator_action = "Use a Chaotic Resonator"
+            # One resonator use consumes one of each selected fossil plus the resonator itself: that
+            # is ONE batch of `count` uses billed in several currencies, so only the first row counts
+            # towards the action's total uses (see _aggregate_actions).
+            for position, fossil_id in enumerate(fossil_ids):
+                add(str(fossils.get(str(fossil_id), fossils.get(fossil_id, f"fossil {fossil_id}"))), count, f"fossil:{fossil_id}", action=resonator_action, uses=(count if position == 0 else 0.0))
+            add(f"{len(fossil_ids)}-socket Chaotic Resonator", count, f"resonator:{len(fossil_ids)}", action=resonator_action, uses=(count if not fossil_ids else 0.0))
     elif identifier.startswith("fracture"):
         counts = _mapping(route.get("expected_action_counts", {}), "expected_action_counts")
         if not counts:
             complete, reason = False, "missing expected_action_counts"
         else:
             envy_id = context.get("envy_id")
-            for action, currency in (("bases", "Base"), ("alchemy", "Alchemy"), ("scour", "Scour"), ("fracturing", "Fracturing Orb"), ("envy", envy_name)):
-                if action in counts:
-                    count = _number(counts[action], action)
-                    if action == "bases":
-                        rows.append({"currency": "Base", "count": count, "unit_price": base_cost, "spend": count * base_cost})
+            for count_key, currency in (("bases", "Base"), ("alchemy", "Alchemy"), ("scour", "Scour"), ("fracturing", "Fracturing Orb"), ("envy", envy_name)):
+                if count_key in counts:
+                    count = _number(counts[count_key], count_key)
+                    if count_key == "bases":
+                        rows.append({"currency": "Base", "count": count, "unit_price": base_cost, "spend": count * base_cost, "action": "Buy a Base", "uses": count})
                     else:
-                        add(currency, count, envy_id if action == "envy" and isinstance(envy_id, str) else None)
+                        add(currency, count, envy_id if count_key == "envy" and isinstance(envy_id, str) else None)
     elif identifier.startswith("suffix-protected"):
         recovery = _mapping(route.get("recovery", {}), "recovery")
         parameters = _mapping(route.get("parameters", {}), "parameters")
@@ -170,7 +181,7 @@ def material_accounting(route: Mapping[str, Any], plan: Mapping[str, Any], conte
         complete, reason = False, "missing accounting translation for this route"
 
     if base_cost and not identifier.startswith("fracture"):
-        rows.insert(0, {"currency": "Base", "count": 1.0, "unit_price": base_cost, "spend": base_cost})
+        rows.insert(0, {"currency": "Base", "count": 1.0, "unit_price": base_cost, "spend": base_cost, "action": "Buy a Base", "uses": 1.0})
     if complete and any(row["spend"] is None for row in rows):
         complete, reason = False, reason or "missing price or recipe"
     total = math.fsum(float(row["spend"]) for row in rows if row["spend"] is not None)
@@ -221,7 +232,8 @@ def _route(route: Mapping[str, Any], plan: Mapping[str, Any], context: Mapping[s
             metadata["success_probability"] = 1 / _number(attempts.get("expected_attempts"), "magic expected_attempts")
     title = _route_title(identifier, route, context)
     accounting = material_accounting(route, plan, context)
-    return {"key": f"{identifier}-{threshold if threshold is not None else 'base'}-{index}", "id": identifier, "name": str(route.get("name", identifier)), "title": title, "search_text": f"{title} {identifier} {route.get('name', '')}", "expected_cost": route.get("expected_cost"), "cost_p90": route.get("cost_p90"), "cost_label": "approximate" if route.get("cost_p90_interval") else "exact", "expected_utility": route.get("expected_utility"), "frontier": bool(route.get("frontier", False)), "stopping_threshold": threshold, "stages": stages, "parameters": dict(_mapping(route.get("parameters", {}), "parameters")), "decisions": list(route.get("decision_points", [])), "metadata": metadata, "source": {"assumptions": list(route.get("assumptions", [])), "design": ["docs/design/route-report.md", "docs/design/parameter-search.md", "docs/design/family-policies.md"], "generation": context.get("generation", {})}, "audit": {"parameter_audit": list(route.get("parameter_audit", [])), "terminal_distribution": list(route.get("terminal_distribution", []))}, "instructions": _instructions(identifier, route, context), "accounting": accounting, "flow": _flow(identifier, route, context, _aggregate_rows(accounting["rows"]))}
+    base_name = str(_mapping(plan.get("input"), "input").get("base", "") or "")
+    return {"key": f"{identifier}-{threshold if threshold is not None else 'base'}-{index}", "id": identifier, "name": str(route.get("name", identifier)), "title": title, "search_text": f"{title} {identifier} {route.get('name', '')}", "expected_cost": route.get("expected_cost"), "cost_p90": route.get("cost_p90"), "cost_label": "approximate" if route.get("cost_p90_interval") else "exact", "expected_utility": route.get("expected_utility"), "frontier": bool(route.get("frontier", False)), "stopping_threshold": threshold, "stages": stages, "parameters": dict(_mapping(route.get("parameters", {}), "parameters")), "decisions": list(route.get("decision_points", [])), "metadata": metadata, "source": {"assumptions": list(route.get("assumptions", [])), "design": ["docs/design/route-report.md", "docs/design/parameter-search.md", "docs/design/family-policies.md"], "generation": context.get("generation", {})}, "audit": {"parameter_audit": list(route.get("parameter_audit", [])), "terminal_distribution": list(route.get("terminal_distribution", []))}, "instructions": _instructions(identifier, route, context, base_name), "accounting": accounting, "flow": _flow(identifier, route, context, accounting["rows"])}
 
 
 def _route_title(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any]) -> str:
@@ -251,91 +263,117 @@ def _route_title(identifier: str, route: Mapping[str, Any], context: Mapping[str
     return str(route.get("name", identifier))
 
 
-def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any]) -> list[str]:
+def _step(text: str, detail: str | None = None) -> dict[str, str | None]:
+    """One "step by step" line: one action, imperative, in game verbs. `detail`
+    is a short second line for a retry rule too long for the main sentence."""
+    return {"text": text, "detail": detail}
+
+
+def _instructions(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any], base_name: str) -> list[dict[str, str | None]]:
     parameters = _mapping(route.get("parameters", {}), "parameters")
     life = _life_target_text(context)
     envy_name = _envy_display_name(context)
+    base = f"a normal {base_name}" if base_name else "a normal base"
     if identifier.startswith("essence"):
         essence_id = parameters.get("forced_essence_id", parameters.get("essence_id"))
         essence = _mapping(context.get("essence_names", {}), "essence_names").get(essence_id, essence_id or "Essence")
-        return ["Take a normal base.", f"Use {essence} and check the target after every use.", f"Done — stop. Otherwise use {essence} again."]
+        return [_step(f"Use {essence} on {base}; keep the item once it has the target modifiers, otherwise use {essence} again.")]
     if identifier.startswith("alchemy-scour"):
-        return ["Use Orb of Alchemy.", "If the target is met, stop.", "Otherwise use Orb of Scouring, then Orb of Alchemy again."]
+        return [_step("Use Orb of Alchemy on " + base + "; keep the item once the target is met, otherwise use Orb of Scouring and use Orb of Alchemy again.")]
     if identifier.startswith("chaos"):
         early = bool(parameters.get("alchemy_early_stop", True))
         return [
-            "Use Orb of Alchemy first." + (" Check the target now." if early else " The result is not checked here."),
-            "Then use Chaos Orb repeatedly until the target is met; do not use Orb of Scouring between Chaos Orbs.",
+            _step(f"Use Orb of Alchemy on {base}" + (", checking the target now." if early else "; the result is not checked here.")),
+            _step("Use Chaos Orb repeatedly (never Orb of Scouring in between) and keep the item once the target is met."),
         ]
     if identifier.startswith("fossil"):
         fossils = _mapping(context.get("fossil_names", {}), "fossil_names")
         selected = ", ".join(str(fossils.get(str(value), f"fossil {value}")) for value in parameters.get("fossil_ids", []))
         sockets = parameters.get("socket_count", "?")
         return [
-            "Use Orb of Alchemy and check the target immediately.",
-            f"On a miss, fill one {sockets}-socket Chaotic Resonator with {selected} and use it on the rare item.",
-            "Repeat the full recipe and check the target after every use.",
+            _step(f"Use Orb of Alchemy on {base} and check the target immediately."),
+            _step(f"Fill a {sockets}-socket Chaotic Resonator with {selected} and use it on the item; repeat until the target is met."),
         ]
     if identifier.startswith("fracture"):
         early = bool(parameters.get("alchemy_early_stop", False))
         return [
-            "Use Orb of Alchemy on every new normal base." + (" Check for an early finish after every Alchemy." if early else " The early check is off here."),
-            f"If the target is not met but the item already has exactly four explicit modifiers including {life}, use Fracturing Orb right away. Otherwise use Orb of Scouring, then Orb of Alchemy, until it does.",
-            "A wrong fracture cannot be undone: set the base aside (no refund in this cost model) and buy a new one.",
-            f"Once {life} is fractured, use {envy_name} repeatedly until the target is met.",
+            _step(
+                f"Use Orb of Alchemy on {base}, then Orb of Scouring and Orb of Alchemy again, until it has exactly four explicit modifiers including {life}.",
+                None if early else "The early-finish check on a complete Alchemy roll is off for this route; it always continues to four modifiers.",
+            ),
+            _step(f"Use Fracturing Orb once it has exactly four explicit modifiers including {life}."),
+            _step("Set a wrongly fractured base aside (no refund in this cost model) and buy a new one; start over from Orb of Alchemy."),
+            _step(f"Use {envy_name} repeatedly once {life} is fractured, and keep the item once the target is met."),
         ]
     if identifier.startswith("suffix-protected-harvest"):
-        return _protected_preparation(parameters, envy_name) + [
-            "Use Harvest Reforge: Life with Suffixes Cannot Be Changed; the attack/caster blocker is not used.",
-            f"{life} finishes the route. With a free prefix, repeat the paid Suffixes Cannot Be Changed step and reforge; at three prefixes, go back to {envy_name}. There is no Orb of Scouring here.",
+        prep = _protected_preparation_step(parameters, envy_name, base)
+        return [
+            prep,
+            _step(
+                f"Use Suffixes Cannot Be Changed, then Harvest Reforge: Life; keep the item once it has {life}.",
+                f"On a miss: repeat this step while a prefix is free, or go back to step 1 once three prefixes are used (no Orb of Scouring here).",
+            ),
         ]
     if identifier.startswith("suffix-protected"):
         max_exalts = _integer(parameters.get("max_exalts", 0), "max_exalts")
-        steps = _protected_preparation(parameters, envy_name) + ["Use Suffixes Cannot Be Changed, then Orb of Scouring."]
+        prep = _protected_preparation_step(parameters, envy_name, base)
+        steps = [prep, _step("Use Suffixes Cannot Be Changed, then Orb of Scouring.")]
         if max_exalts:
-            steps.append(
-                f"Use up to {max_exalts} Exalted Orbs; stop after the first {life}. Only once all {max_exalts} have failed: "
-                f"with a free prefix, repeat the paid Suffixes Cannot Be Changed and Orb of Scouring step; at three prefixes, go back to {envy_name}."
-            )
+            steps.append(_step(
+                f"Use up to {max_exalts} Exalted Orbs and keep the item once it has {life}.",
+                f"Only once all {max_exalts} have failed: repeat step 2 while a prefix is free, or go back to step 1 once three prefixes are used.",
+            ))
         if parameters.get("bench_finish_id") is not None:
             bench = _mapping(context.get("bench_names", {}), "bench_names").get(str(parameters["bench_finish_id"]), f"bench {parameters['bench_finish_id']}")
-            steps.append(f"Finish with {bench}; this does not replace the required {life}.")
+            steps.append(_step(f"Finish with Crafting Bench: {bench}; this does not replace the required {life}."))
         return steps
     if identifier.startswith("magic"):
         max_exalts = _integer(parameters.get("max_exalts", 0), "max_exalts")
         early = bool(parameters.get("early_stop", False))
         magic_gate, regal_gate = parameters.get("magic_min_desired"), parameters.get("regal_min_desired")
         steps = [
-            "Use Orb of Transmutation; this is a paid setup step with no check.",
-            "Use Orb of Alteration; only on a one-modifier result also use Orb of Augmentation.",
-            ("Check the target at every step from here." if early else "Only check the target at the last configured step.")
-            + f" It then needs at least {magic_gate} desired modifiers (target modifiers, or tiers with a positive value from the input table); on a miss, reset with Orb of Scouring and Orb of Transmutation.",
+            _step(f"Use Orb of Transmutation on {base}."),
+            _step("Use Orb of Alteration; on a one-modifier result also use Orb of Augmentation."),
+            _step(
+                f"Keep going only with at least {magic_gate} desired modifiers"
+                + (", checked now" if early else " (checked only at the last configured step)")
+                + "; otherwise use Orb of Scouring and Orb of Transmutation and start over.",
+            ),
         ]
-        if max_exalts:
-            if early:
-                steps.append(f"Use Regal Orb. Check the target first: done, stop. Otherwise continue only with at least {regal_gate} desired modifiers; below that, use Orb of Scouring and Orb of Transmutation and go back to Orb of Alteration.")
-            else:
-                steps.append(f"Use Regal Orb. After it, continue only with at least {regal_gate} desired modifiers; below that, use Orb of Scouring and Orb of Transmutation and go back to Orb of Alteration.")
+        if max_exalts and early:
+            steps.append(_step(
+                "Use Regal Orb; keep the item now if the target is met.",
+                f"Otherwise continue only with at least {regal_gate} desired modifiers; below that, use Orb of Scouring and Orb of Transmutation and start over.",
+            ))
+        elif max_exalts:
+            steps.append(_step(
+                f"Use Regal Orb and continue only with at least {regal_gate} desired modifiers.",
+                "Below that, use Orb of Scouring and Orb of Transmutation and start over.",
+            ))
         else:
-            steps.append(f"Use Regal Orb; after checking the target it needs at least {regal_gate} desired modifiers, otherwise reset with Orb of Scouring and Orb of Transmutation.")
+            steps.append(_step(
+                "Use Regal Orb; keep the item once the target is met.",
+                f"Otherwise (fewer than {regal_gate} desired modifiers) use Orb of Scouring and Orb of Transmutation and start over.",
+            ))
         if max_exalts:
-            steps.append(
-                f"After Regal, use up to {max_exalts} Exalted Orbs; "
-                + ("check the target after every use and stop once it is met." if early else "check the target after the last use.")
-                + " On a miss, reset with Orb of Scouring and Orb of Transmutation."
-            )
-        else:
-            steps.append("After Regal, check the target: done, stop; otherwise use Orb of Scouring and Orb of Transmutation and go back to Orb of Alteration.")
+            steps.append(_step(
+                f"Use up to {max_exalts} Exalted Orbs and keep the item once the target is met.",
+                ("On a miss after every use, use Orb of Scouring and Orb of Transmutation and start over." if early else "On a miss after the last use, use Orb of Scouring and Orb of Transmutation and start over."),
+            ))
         return steps
-    return [str(step) for step in route.get("steps", [])] or ["No instructions are available for this route."]
+    return [_step(str(step)) for step in route.get("steps", [])] or [_step("No instructions are available for this route.")]
 
 
-def _protected_preparation(parameters: Mapping[str, Any], envy_name: str) -> list[str]:
+def _protected_preparation_step(parameters: Mapping[str, Any], envy_name: str, base: str) -> dict[str, str | None]:
     early = bool(parameters.get("preparation_early_stop", False))
     suffixes = parameters.get("minimum_desired_elemental_suffixes", "?")
     prefixes = parameters.get("max_prefixes", "?")
-    first = f"Use {envy_name} repeatedly." + (" A target that is already complete during preparation finishes the route immediately." if early else " An already-complete target does not stop the route here.")
-    return [first, f"Accept only exactly 3 suffixes, at least {suffixes} elemental resistance suffixes from the target, and at most {prefixes} prefixes; use {envy_name} again on every other result."]
+    text = (
+        f"Use {envy_name} on {base}; keep the item when it has exactly 3 suffixes, at least {suffixes} elemental "
+        f"resistance suffixes, and at most {prefixes} prefixes, otherwise use {envy_name} again."
+    )
+    detail = "An item that is already complete finishes the route immediately, even during this step." if early else None
+    return _step(text, detail)
 
 
 def _life_target_text(context: Mapping[str, Any]) -> str:
@@ -412,18 +450,62 @@ def _aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [merged[currency] for currency in order]
 
 
-def _flow(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any], aggregated_rows: list[dict[str, Any]]) -> dict[str, Any]:
+def _aggregate_actions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Group payment rows by the crafting ACTION they pay for (in first-seen
+    order), so a flow step is "Crafting Bench: Suffixes Cannot Be Changed"
+    paid in Divine Orbs, never a step titled "Divine Orb". Every row already
+    carries `action`/`uses` (see `material_accounting`'s `add`); this only
+    regroups them, it adds no new engine numbers.
+
+    `uses` is summed across rows of the same action: most actions have one
+    row (sum is a no-op), but e.g. three per-attempt "exalt 1/2/3" stages are
+    three genuinely separate batches of real Exalted Orb uses and must add up
+    (`_add_bench_recipe` and the fossil+resonator bundle instead mark every
+    row but the first `uses=0`, since those rows are one batch billed in more
+    than one currency, not several batches). Payments are also merged by
+    currency, so three same-currency rows show one payment line, not three.
+    """
+    order: list[str] = []
+    merged: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        action = str(row.get("action") or f"Use {_currency_display_name(str(row['currency']))}")
+        if action not in merged:
+            merged[action] = {"action": action, "uses": 0.0, "cost": 0.0, "payment_order": [], "payments": {}}
+            order.append(action)
+        entry = merged[action]
+        entry["uses"] += float(row.get("uses", row.get("count")) or 0.0)
+        spend = row.get("spend")
+        entry["cost"] = None if spend is None or entry["cost"] is None else entry["cost"] + float(spend)
+        currency = str(row["currency"])
+        if currency not in entry["payments"]:
+            entry["payments"][currency] = {"currency": currency, "count": 0.0, "spend": 0.0}
+            entry["payment_order"].append(currency)
+        payment = entry["payments"][currency]
+        payment["count"] += float(row.get("count") or 0.0)
+        if row.get("spend") is None or payment["spend"] is None:
+            payment["spend"] = None
+        else:
+            payment["spend"] = float(payment["spend"]) + float(row["spend"])
+    return [
+        {"action": merged[action]["action"], "uses": merged[action]["uses"], "cost": merged[action]["cost"],
+         "payments": [merged[action]["payments"][currency] for currency in merged[action]["payment_order"]]}
+        for action in order
+    ]
+
+
+def _flow(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any], accounting_rows: list[dict[str, Any]]) -> dict[str, Any]:
     parameters = _mapping(route.get("parameters", {}), "parameters")
     stages = _list(route, "stages")
     life = _life_target_text(context)
     envy_name = _envy_display_name(context)
-    base_row = next((row for row in aggregated_rows if row["currency"] == "Base"), None)
-    rows = [row for row in aggregated_rows if row["currency"] != "Base"]
+    actions = _aggregate_actions(accounting_rows)
+    base_action = next((entry for entry in actions if entry["action"] == "Buy a Base"), None)
+    action_rows = [entry for entry in actions if entry["action"] != "Buy a Base"]
 
-    def mk(row: dict[str, Any]) -> dict[str, Any]:
-        return {"currency": _currency_display_name(row["currency"]), "uses": row["count"], "cost": row.get("spend"), "chance": None, "transitions": []}
+    def mk(entry: dict[str, Any]) -> dict[str, Any]:
+        return {"action": entry["action"], "uses": entry["uses"], "cost": entry["cost"], "payments": entry["payments"], "chance": None, "transitions": []}
 
-    steps = [mk(row) for row in rows]
+    steps = [mk(entry) for entry in action_rows]
 
     if identifier.startswith("essence") and len(steps) >= 1:
         steps[0]["chance"] = stages[0]["probability"] if stages else None
@@ -533,7 +615,7 @@ def _flow(identifier: str, route: Mapping[str, Any], context: Mapping[str, Any],
                 {"kind": "success", "label": "Target complete"},
                 {"kind": "forward", "to": 3, "label": f"Fewer than {regal_gate} desired modifiers"},
             ]
-    return {"steps": steps, "restart": {"currency": base_row["currency"], "uses": base_row["count"], "cost": base_row.get("spend")} if base_row else None}
+    return {"steps": steps, "restart": {"uses": base_action["uses"], "cost": base_action["cost"]} if base_action else None}
 
 
 # --------------------------------------------------------------------------
@@ -592,18 +674,21 @@ def _currency_display_name(name: str) -> str:
 
 
 def _currency_family(name: str) -> str:
+    """Classify a currency OR action label into a chip colour family."""
     lower = name.lower()
+    if "crafting bench" in lower:
+        return "bench"
     if "essence" in lower:
         return "essence"
-    if "fossil" in lower:
-        return "fossil"
     if "resonator" in lower:
         return "resonator"
+    if "fossil" in lower:
+        return "fossil"
     if "harvest" in lower:
         return "harvest"
     if "fracturing" in lower:
         return "fracturing"
-    if lower == "base":
+    if "base" in lower:
         return "base"
     return "orb"
 
@@ -693,14 +778,26 @@ def _target_card_html(report: Mapping[str, Any]) -> str:
     </section>'''
 
 
-def _currency_chip_row(route: Mapping[str, Any]) -> str:
-    rows = route.get("accounting", {}).get("rows", [])
-    seen: list[str] = []
-    for row in rows:
-        name = str(row["currency"])
-        if name not in seen:
-            seen.append(name)
-    return "".join(f'<span class="chip chip-{_currency_family(name)}">{escape(_currency_display_name(name))}</span>' for name in seen)
+def _route_action_chain_html(flow: Mapping[str, Any]) -> str:
+    """The route row's compact chain: actions in policy order, with a short
+    repeat/reset note on any step that loops (never bare payment currencies:
+    D95 -- a chip is what you click, not what you pay with)."""
+    steps = flow.get("steps", [])
+    if not steps:
+        return ""
+    parts: list[str] = []
+    for index, step in enumerate(steps):
+        family = _currency_family(step["action"])
+        parts.append(f'<span class="chip chip-{family}">{escape(step["action"])}</span>')
+        repeat_labels = [t.get("label") for t in step.get("transitions", []) if t.get("kind") == "repeat" and t.get("label")]
+        other_labels = [t.get("label") for t in step.get("transitions", []) if t.get("kind") in ("reset", "restart") and t.get("label")]
+        if repeat_labels:
+            parts.append(f'<span class="chip-note">(repeat while: {escape("; ".join(repeat_labels))})</span>')
+        if other_labels:
+            parts.append(f'<span class="chip-note">(otherwise: {escape("; ".join(other_labels))})</span>')
+        if index < len(steps) - 1:
+            parts.append('<span class="chip-arrow">&rarr;</span>')
+    return "".join(parts)
 
 
 def _route_try_chance(route: Mapping[str, Any]) -> str | None:
@@ -718,7 +815,7 @@ def _route_try_chance(route: Mapping[str, Any]) -> str | None:
 
 
 def _route_row_html(index: int, route: Mapping[str, Any]) -> str:
-    chips = _currency_chip_row(route)
+    chips = _route_action_chain_html(route.get("flow", {}))
     chance = _route_try_chance(route)
     chance_html = f'<div class="route-chance">Success chance per try: {chance}</div>' if chance else ""
     approx = "~" if route.get("cost_label") == "approximate" else ""
@@ -740,6 +837,7 @@ def _flow_html(flow: Mapping[str, Any]) -> str:
     for index, step in enumerate(steps):
         chance_html = f'<div class="flow-meta">chance per use: {_display_percent(step["chance"])}</div>' if step.get("chance") is not None else ""
         meta_html = f'<div class="flow-meta">avg uses: {_display_number(step["uses"])} &middot; cost: {_display_number(step["cost"])} {_CHAOS_LABEL}</div>'
+        meta_html += _flow_payment_html(step)
         forward_label = None
         badges: list[str] = []
         for transition in step.get("transitions", []):
@@ -761,10 +859,10 @@ def _flow_html(flow: Mapping[str, Any]) -> str:
             elif kind == "forward":
                 target_no = to + 1 if isinstance(to, int) else "?"
                 badges.append(f'<div class="flow-badge flow-forward">&rArr; Step {target_no}: {escape(label or "")}</div>' if label else f'<div class="flow-badge flow-forward">&rArr; Step {target_no}</div>')
-        family = _currency_family(step["currency"])
+        family = _currency_family(step["action"])
         parts.append(f'''<div class="flow-step">
       <div class="flow-title">Step {index + 1}</div>
-      <div class="flow-chip flow-chip-{family}">{escape(step["currency"])}</div>
+      <div class="flow-chip flow-chip-{family}">{escape(step["action"])}</div>
       {chance_html}{meta_html}
       {"".join(badges)}
     </div>''')
@@ -774,8 +872,28 @@ def _flow_html(flow: Mapping[str, Any]) -> str:
     restart = flow.get("restart")
     restart_html = ""
     if restart:
-        restart_html = f'<div class="flow-house">&#8962; A wrong fracture buys a new {escape(str(restart["currency"]))} (avg {_display_number(restart["uses"])}, {_display_number(restart["cost"])} {_CHAOS_LABEL}) and restarts from Step 1.</div>'
+        restart_html = f'<div class="flow-house">&#8962; A wrong fracture buys a new Base (avg {_display_number(restart["uses"])}, {_display_number(restart["cost"])} {_CHAOS_LABEL}) and restarts from Step 1.</div>'
     return f'<div class="flow-track">{"".join(parts)}</div>{restart_html}'
+
+
+def _flow_payment_html(step: Mapping[str, Any]) -> str:
+    """Show the payment under an action box ("N Divine Orb each") whenever
+    one use of the action costs something other than exactly one unit of a
+    single currency (a plain "Use Orb of X" action needs no extra line: its
+    payment is already the same number as "avg uses")."""
+    uses = step.get("uses")
+    payments = [p for p in step.get("payments", []) if p.get("count")]
+    if not payments or not isinstance(uses, Real) or isinstance(uses, bool) or not uses:
+        return ""
+    parts = []
+    for payment in payments:
+        per_use = payment["count"] / uses
+        if len(payments) == 1 and math.isclose(per_use, 1.0, rel_tol=1e-9, abs_tol=1e-9):
+            continue
+        parts.append(f'{_display_number(per_use)} {escape(_currency_display_name(str(payment["currency"])))}')
+    if not parts:
+        return ""
+    return f'<div class="flow-meta">{" + ".join(parts)} each</div>'
 
 
 def _example_item_html(route: Mapping[str, Any], report: Mapping[str, Any]) -> str:
@@ -813,9 +931,18 @@ def _costs_table_html(accounting: Mapping[str, Any], aggregated_rows: list[dict[
     </table></div>{warn}'''
 
 
+def _step_html(step: Mapping[str, Any]) -> str:
+    if isinstance(step, Mapping):
+        text, detail = step.get("text", ""), step.get("detail")
+    else:
+        text, detail = str(step), None
+    detail_html = f'<div class="step-detail">{escape(str(detail))}</div>' if detail else ""
+    return f"<li>{escape(str(text))}{detail_html}</li>"
+
+
 def _route_panel_html(route: Mapping[str, Any], report: Mapping[str, Any]) -> str:
     flow_html = _flow_html(route.get("flow", {}))
-    steps_html = "".join(f"<li>{escape(step)}</li>" for step in route.get("instructions", []))
+    steps_html = "".join(_step_html(step) for step in route.get("instructions", []))
     example_html = _example_item_html(route, report)
     aggregated = _aggregate_rows(route.get("accounting", {}).get("rows", []))
     costs_html = _costs_table_html(route.get("accounting", {}), aggregated)
@@ -1033,11 +1160,25 @@ def _price_key(currency: str, values: Mapping[str, Any]) -> str | None:
     return next((candidate for candidate in candidates if isinstance(candidate, str) and candidate in values), None)
 
 
+def _bench_action_name(context: Mapping[str, Any], index: int) -> str:
+    names = _mapping(context.get("bench_names", {}), "bench_names")
+    return f"Crafting Bench: {names.get(str(index), f'recipe {index}')}"
+
+
 def _add_bench_recipe(rows: list[dict[str, Any]], values: Mapping[str, Any], context: Mapping[str, Any], index: int, multiplier: float, add: Any) -> None:
+    """Add the payment row(s) for one bench-craft ACTION. The action itself
+    (a crafting-bench recipe, e.g. "Suffixes Cannot Be Changed") happens
+    `multiplier` times; the payment row(s) carry however many currency units
+    that costs per use, which is not always the same number (a recipe can
+    cost more than one unit of its currency per use)."""
+    action = _bench_action_name(context, index)
     recipes = _mapping(context.get("bench_recipes", {}), "bench_recipes")
     recipe = recipes.get(str(index), recipes.get(index))
     if not isinstance(recipe, Mapping):
-        rows.append({"currency": f"Bench {index}", "count": multiplier, "unit_price": None, "spend": None})
+        rows.append({"currency": f"Bench {index}", "count": multiplier, "unit_price": None, "spend": None, "action": action, "uses": multiplier})
         return
-    for currency, quantity in recipe.items():
-        add(str(currency), multiplier * _number(quantity, "bench recipe quantity"), str(currency))
+    # One bench craft can cost more than one currency (a multimod recipe): that is ONE batch of
+    # `multiplier` uses billed in several currencies, so only the first row counts towards the
+    # action's total uses (see _aggregate_actions).
+    for position, (currency, quantity) in enumerate(recipe.items()):
+        add(str(currency), multiplier * _number(quantity, "bench recipe quantity"), str(currency), action=action, uses=(multiplier if position == 0 else 0.0))
