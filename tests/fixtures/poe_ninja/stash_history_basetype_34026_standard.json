@@ -1,0 +1,52 @@
+[
+  {
+    "count": 42,
+    "value": 1372,
+    "daysAgo": 0
+  },
+  {
+    "count": 42,
+    "value": 1326,
+    "daysAgo": 1
+  },
+  {
+    "count": 42,
+    "value": 1276,
+    "daysAgo": 2
+  },
+  {
+    "count": 39,
+    "value": 1130,
+    "daysAgo": 3
+  },
+  {
+    "count": 38,
+    "value": 1083,
+    "daysAgo": 4
+  },
+  {
+    "count": 37,
+    "value": 1044,
+    "daysAgo": 5
+  },
+  {
+    "count": 38,
+    "value": 1042,
+    "daysAgo": 6
+  },
+  {
+    "count": 17,
+    "value": 1948,
+    "daysAgo": 7
+  },
+  {
+    "count": 16,
+    "value": 1758,
+    "daysAgo": 8
+  },
+  {
+    "count": 14,
+    "value": 1534,
+    "daysAgo": 9
+  }
+]

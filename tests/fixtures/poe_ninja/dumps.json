@@ -1,0 +1,38 @@
+[
+  {
+    "leagueName": "Phrecia",
+    "minDate": "2025-02-20T00:00:00Z",
+    "maxDate": "2025-04-23T00:00:00Z",
+    "zipName": "Phrecia.zip"
+  },
+  {
+    "leagueName": "Mercenaries",
+    "minDate": "2025-06-13T00:00:00Z",
+    "maxDate": "2025-10-27T00:00:00Z",
+    "zipName": "Mercenaries.zip"
+  },
+  {
+    "leagueName": "Keepers",
+    "minDate": "2025-10-31T00:00:00Z",
+    "maxDate": "2026-03-02T00:00:00Z",
+    "zipName": "Keepers.zip"
+  },
+  {
+    "leagueName": "Phrecia 2.0",
+    "minDate": "2026-01-29T00:00:00Z",
+    "maxDate": "2026-02-19T00:00:00Z",
+    "zipName": "Phrecia 2.0.zip"
+  },
+  {
+    "leagueName": "Mirage",
+    "minDate": "2026-03-06T00:00:00Z",
+    "maxDate": "2026-07-20T00:00:00Z",
+    "zipName": "Mirage.zip"
+  },
+  {
+    "leagueName": "Ancestors",
+    "minDate": "2026-06-25T00:00:00Z",
+    "maxDate": "2026-07-16T00:00:00Z",
+    "zipName": "Ancestors.zip"
+  }
+]
