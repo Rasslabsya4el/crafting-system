@@ -1,0 +1,60 @@
+# Mechanic family: harvest_reforge (the tagged Harvest reforges of a rare item; Lightning first).
+# Research ticket #10 (claims HRV-xx) and the decisions D3, D4, D7 of issue #28; the tag field was
+# settled by the main chat in the same issue. The reroll shares chaos_orb.* and affix_pool.* rules.
+rules:
+  - id: harvest_reforge.tagged_rare_reforge_exists
+    statement: A Harvest craft exists for each tag in `value`, usable on a rare item, that reforges the item with random modifiers including one of that tag. Only Lightning is admitted here. The key is the craft's name in lower case and the value is the mod tag it guarantees.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Reforge a Rare item with random modifiers, including a Lightning modifier"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: {lightning: lightning}
+
+  - id: harvest_reforge.rerolls_like_chaos_with_guaranteed_tag
+    statement: A tagged reforge rerolls the modifiers of a rare item as a Chaos Orb does, and guarantees one modifier with the chosen tag.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Harvest_Crafting
+    quote: "will completely reforge the modifiers of a Rare item, similar to a Chaos Orb, while guaranteeing a modifier with the specified tag"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: harvest_reforge.refused_without_tagged_mod
+    statement: A tagged reforge cannot be used when the item's pool holds no modifier with the chosen tag.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Harvest_Crafting
+    quote: "no valid tags in the mod pool to roll for the selected item, the craft cannot be used"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: harvest_reforge.fractured_mods_kept
+    statement: A fractured modifier stays on the item through a tagged reforge, in its slot, and its family is excluded from the new draws.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
+    quote: "permanently locked to the item, being unable to be rerolled or removed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: harvest_reforge.tag_is_implicit_tag
+    statement: The tag of a Harvest craft is the `implicit_tags` field of the mod in the repoe-fork data (it agrees with Craft of Exile's own mod tags on 98.4% of matched mods and reproduces the guide's total of 14,950 for Lightning on an amulet).
+    source_kind: datamined
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531099515
+    quote: "A list of the tags which apply to crafting methods like fossils and harvest crafting."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: harvest_reforge.guaranteed_draw_first_by_weight
+    statement: The guaranteed modifier is drawn first, from the modifiers with the tag that the item can roll (item level, family, side capacity and weights as for any draw), in proportion to their weights; the other modifiers are then drawn as in a Chaos Orb (decision D7 of issue #28).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "poec_simRollAffix(null,forcetag,null,null,1,!0,!1,!1,igcrca,!1,!1,null,!1)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: harvest_reforge.guaranteed_mod_counts_in_total
+    statement: The drawn total of 4, 5 or 6 mods (8:3:1, as for a Chaos Orb) includes the guaranteed modifier and the fractured mods that stay; only the rest is drawn (decisions D3 and D4 of issue #28). The guaranteed modifier is drawn even when the kept mods already reach the total.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "poec_simRollAffix(null,forcetag,null,null,1,!0,!1,!1,igcrca,!1,!1,null,!1);"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30

@@ -126,6 +126,713 @@
   "type": "LocalEnergyShield",
   "gold_value": null
  },
+ "AddedLightningDamage1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Humming",
+  "required_level": 3,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "gloves",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 1,
+    "min": 1
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 5,
+    "min": 5
+   }
+  ],
+  "text": "Adds 1 to 5 Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "AddedLightningDamage2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Buzzing",
+  "required_level": 13,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "gloves",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 1,
+    "min": 1
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 15,
+    "min": 14
+   }
+  ],
+  "text": "Adds 1 to (14-15) Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "AddedLightningDamage3": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Snapping",
+  "required_level": 22,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "gloves",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 2,
+    "min": 1
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 23,
+    "min": 22
+   }
+  ],
+  "text": "Adds (1-2) to (22-23) Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "AddedLightningDamage4": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Crackling",
+  "required_level": 28,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "gloves",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 2,
+    "min": 1
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 28,
+    "min": 27
+   }
+  ],
+  "text": "Adds (1-2) to (27-28) Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "AddedLightningDamage5": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Sparking",
+  "required_level": 35,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "gloves",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 3,
+    "min": 1
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 34,
+    "min": 33
+   }
+  ],
+  "text": "Adds (1-3) to (33-34) Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "AddedLightningDamage6": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Arcing",
+  "required_level": 44,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "gloves",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 4,
+    "min": 1
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 43,
+    "min": 40
+   }
+  ],
+  "text": "Adds (1-4) to (40-43) Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "AddedLightningDamage7": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Shocking",
+  "required_level": 52,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 100
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "gloves",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 5,
+    "min": 2
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 50,
+    "min": 47
+   }
+  ],
+  "text": "Adds (2-5) to (47-50) Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "AddedLightningDamage8": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Discharging",
+  "required_level": 64,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 100
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "gloves",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 6,
+    "min": 3
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 61,
+    "min": 57
+   }
+  ],
+  "text": "Adds (3-6) to (57-61) Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "AddedLightningDamage9": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Electrocuting",
+  "required_level": 76,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 50
+   },
+   {
+    "tag": "amulet",
+    "weight": 250
+   },
+   {
+    "tag": "gloves",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attack_minimum_added_lightning_damage",
+    "max": 7,
+    "min": 3
+   },
+   {
+    "id": "attack_maximum_added_lightning_damage",
+    "max": 72,
+    "min": 68
+   }
+  ],
+  "text": "Adds (3-7) to (68-72) Lightning Damage to Attacks",
+  "type": "LightningDamage",
+  "gold_value": null
+ },
+ "LifeLeechPermyriadSuffix1": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "LifeLeech"
+  ],
+  "implicit_tags": [
+   "resource",
+   "life",
+   "physical",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of the Remora",
+  "required_level": 50,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "gloves",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "life_leech_from_physical_attack_damage_permyriad",
+    "max": 40,
+    "min": 20
+   }
+  ],
+  "text": "(0.2-0.4)% of Physical Attack Damage Leeched as Life",
+  "type": "LifeLeechPermyriad",
+  "gold_value": null
+ },
+ "LifeLeechPermyriadSuffix2": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "LifeLeech"
+  ],
+  "implicit_tags": [
+   "resource",
+   "life",
+   "physical",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of the Lamprey",
+  "required_level": 60,
+  "spawn_weights": [
+   {
+    "tag": "ranged",
+    "weight": 0
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "life_leech_from_physical_attack_damage_permyriad",
+    "max": 80,
+    "min": 60
+   }
+  ],
+  "text": "(0.6-0.8)% of Physical Attack Damage Leeched as Life",
+  "type": "LifeLeechPermyriad",
+  "gold_value": null
+ },
+ "LifeLeechPermyriadSuffix3": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "LifeLeech"
+  ],
+  "implicit_tags": [
+   "resource",
+   "life",
+   "physical",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of the Vampire",
+  "required_level": 70,
+  "spawn_weights": [
+   {
+    "tag": "ranged",
+    "weight": 0
+   },
+   {
+    "tag": "amulet",
+    "weight": 250
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "life_leech_from_physical_attack_damage_permyriad",
+    "max": 120,
+    "min": 100
+   }
+  ],
+  "text": "(1-1.2)% of Physical Attack Damage Leeched as Life",
+  "type": "LifeLeechPermyriad",
+  "gold_value": null
+ },
  "AccuracyPercentImplicitSword1": {
   "adds_tags": [],
   "domain": "item",
@@ -630,6 +1337,346 @@
   "type": "FireDamageWeaponPrefix",
   "gold_value": null
  },
+ "ManaLeechPermyriadSuffix1": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ManaLeech"
+  ],
+  "implicit_tags": [
+   "resource",
+   "mana",
+   "physical",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of Thirst",
+  "required_level": 50,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "gloves",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "mana_leech_from_physical_attack_damage_permyriad",
+    "max": 40,
+    "min": 20
+   }
+  ],
+  "text": "(0.2-0.4)% of Physical Attack Damage Leeched as Mana",
+  "type": "ManaLeechPermyriad",
+  "gold_value": null
+ },
+ "ManaLeechPermyriadSuffix2": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ManaLeech"
+  ],
+  "implicit_tags": [
+   "resource",
+   "mana",
+   "physical",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of Parching",
+  "required_level": 70,
+  "spawn_weights": [
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "mana_leech_from_physical_attack_damage_permyriad",
+    "max": 80,
+    "min": 60
+   }
+  ],
+  "text": "(0.6-0.8)% of Physical Attack Damage Leeched as Mana",
+  "type": "ManaLeechPermyriad",
+  "gold_value": null
+ },
+ "ItemFoundRarityIncreasePrefix1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemFoundRarityIncreasePrefix"
+  ],
+  "implicit_tags": [
+   "drop"
+  ],
+  "is_essence_only": false,
+  "name": "Magpie's",
+  "required_level": 20,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "gloves",
+    "weight": 1000
+   },
+   {
+    "tag": "boots",
+    "weight": 1000
+   },
+   {
+    "tag": "helmet",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_item_found_rarity_+%",
+    "max": 12,
+    "min": 8
+   }
+  ],
+  "text": "(8-12)% increased Rarity of Items found",
+  "type": "ItemFoundRarityIncreasePrefix",
+  "gold_value": null
+ },
+ "ItemFoundRarityIncreasePrefix2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemFoundRarityIncreasePrefix"
+  ],
+  "implicit_tags": [
+   "drop"
+  ],
+  "is_essence_only": false,
+  "name": "Pirate's",
+  "required_level": 39,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "gloves",
+    "weight": 1000
+   },
+   {
+    "tag": "boots",
+    "weight": 1000
+   },
+   {
+    "tag": "helmet",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_item_found_rarity_+%",
+    "max": 18,
+    "min": 13
+   }
+  ],
+  "text": "(13-18)% increased Rarity of Items found",
+  "type": "ItemFoundRarityIncreasePrefix",
+  "gold_value": null
+ },
+ "ItemFoundRarityIncreasePrefix3": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemFoundRarityIncreasePrefix"
+  ],
+  "implicit_tags": [
+   "drop"
+  ],
+  "is_essence_only": false,
+  "name": "Dragon's",
+  "required_level": 62,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "helmet",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_item_found_rarity_+%",
+    "max": 24,
+    "min": 19
+   }
+  ],
+  "text": "(19-24)% increased Rarity of Items found",
+  "type": "ItemFoundRarityIncreasePrefix",
+  "gold_value": null
+ },
+ "ItemFoundRarityIncreasePrefix4_": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemFoundRarityIncreasePrefix"
+  ],
+  "implicit_tags": [
+   "drop"
+  ],
+  "is_essence_only": false,
+  "name": "Perandus'",
+  "required_level": 84,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_item_found_rarity_+%",
+    "max": 28,
+    "min": 25
+   }
+  ],
+  "text": "(25-28)% increased Rarity of Items found",
+  "type": "ItemFoundRarityIncreasePrefix",
+  "gold_value": null
+ },
  "LifeRegeneration1": {
   "adds_tags": [],
   "domain": "item",
@@ -866,6 +1913,648 @@
   "type": "LightningResistance",
   "gold_value": null
  },
+ "LightningResist3": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Storm",
+  "required_level": 25,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_lightning_damage_resistance_%",
+    "max": 23,
+    "min": 18
+   }
+  ],
+  "text": "+(18-23)% to Lightning Resistance",
+  "type": "LightningResistance",
+  "gold_value": null
+ },
+ "LightningResist4": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Thunderhead",
+  "required_level": 37,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_lightning_damage_resistance_%",
+    "max": 29,
+    "min": 24
+   }
+  ],
+  "text": "+(24-29)% to Lightning Resistance",
+  "type": "LightningResistance",
+  "gold_value": null
+ },
+ "LightningResist5": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Tempest",
+  "required_level": 49,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_lightning_damage_resistance_%",
+    "max": 35,
+    "min": 30
+   }
+  ],
+  "text": "+(30-35)% to Lightning Resistance",
+  "type": "LightningResistance",
+  "gold_value": null
+ },
+ "LightningResist6": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Maelstrom",
+  "required_level": 60,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_lightning_damage_resistance_%",
+    "max": 41,
+    "min": 36
+   }
+  ],
+  "text": "+(36-41)% to Lightning Resistance",
+  "type": "LightningResistance",
+  "gold_value": null
+ },
+ "LightningResist7": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Lightning",
+  "required_level": 72,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_lightning_damage_resistance_%",
+    "max": 45,
+    "min": 42
+   }
+  ],
+  "text": "+(42-45)% to Lightning Resistance",
+  "type": "LightningResistance",
+  "gold_value": null
+ },
+ "LightningResist8": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of Ephij",
+  "required_level": 84,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_lightning_damage_resistance_%",
+    "max": 48,
+    "min": 46
+   }
+  ],
+  "text": "+(46-48)% to Lightning Resistance",
+  "type": "LightningResistance",
+  "gold_value": null
+ },
+ "ChaosResist1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ChaosResistance"
+  ],
+  "implicit_tags": [
+   "chaos",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Lost",
+  "required_level": 16,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 250
+   },
+   {
+    "tag": "ring",
+    "weight": 250
+   },
+   {
+    "tag": "amulet",
+    "weight": 250
+   },
+   {
+    "tag": "belt",
+    "weight": 250
+   },
+   {
+    "tag": "quiver",
+    "weight": 250
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_chaos_damage_resistance_%",
+    "max": 10,
+    "min": 5
+   }
+  ],
+  "text": "+(5-10)% to Chaos Resistance",
+  "type": "ChaosResistance",
+  "gold_value": null
+ },
+ "ChaosResist2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ChaosResistance"
+  ],
+  "implicit_tags": [
+   "chaos",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of Banishment",
+  "required_level": 30,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 250
+   },
+   {
+    "tag": "ring",
+    "weight": 250
+   },
+   {
+    "tag": "amulet",
+    "weight": 250
+   },
+   {
+    "tag": "belt",
+    "weight": 250
+   },
+   {
+    "tag": "quiver",
+    "weight": 250
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_chaos_damage_resistance_%",
+    "max": 15,
+    "min": 11
+   }
+  ],
+  "text": "+(11-15)% to Chaos Resistance",
+  "type": "ChaosResistance",
+  "gold_value": null
+ },
+ "ChaosResist3": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ChaosResistance"
+  ],
+  "implicit_tags": [
+   "chaos",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of Eviction",
+  "required_level": 44,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 250
+   },
+   {
+    "tag": "ring",
+    "weight": 250
+   },
+   {
+    "tag": "amulet",
+    "weight": 250
+   },
+   {
+    "tag": "belt",
+    "weight": 250
+   },
+   {
+    "tag": "quiver",
+    "weight": 250
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_chaos_damage_resistance_%",
+    "max": 20,
+    "min": 16
+   }
+  ],
+  "text": "+(16-20)% to Chaos Resistance",
+  "type": "ChaosResistance",
+  "gold_value": null
+ },
+ "ChaosResist4": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ChaosResistance"
+  ],
+  "implicit_tags": [
+   "chaos",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of Expulsion",
+  "required_level": 56,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 250
+   },
+   {
+    "tag": "ring",
+    "weight": 250
+   },
+   {
+    "tag": "amulet",
+    "weight": 250
+   },
+   {
+    "tag": "belt",
+    "weight": 250
+   },
+   {
+    "tag": "quiver",
+    "weight": 250
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_chaos_damage_resistance_%",
+    "max": 25,
+    "min": 21
+   }
+  ],
+  "text": "+(21-25)% to Chaos Resistance",
+  "type": "ChaosResistance",
+  "gold_value": null
+ },
+ "ChaosResist5": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ChaosResistance"
+  ],
+  "implicit_tags": [
+   "chaos",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of Exile",
+  "required_level": 65,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 250
+   },
+   {
+    "tag": "ring",
+    "weight": 250
+   },
+   {
+    "tag": "amulet",
+    "weight": 250
+   },
+   {
+    "tag": "belt",
+    "weight": 250
+   },
+   {
+    "tag": "quiver",
+    "weight": 250
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_chaos_damage_resistance_%",
+    "max": 30,
+    "min": 26
+   }
+  ],
+  "text": "+(26-30)% to Chaos Resistance",
+  "type": "ChaosResistance",
+  "gold_value": null
+ },
+ "ChaosResist6": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ChaosResistance"
+  ],
+  "implicit_tags": [
+   "chaos",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of Bameth",
+  "required_level": 81,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 250
+   },
+   {
+    "tag": "ring",
+    "weight": 250
+   },
+   {
+    "tag": "amulet",
+    "weight": 250
+   },
+   {
+    "tag": "belt",
+    "weight": 250
+   },
+   {
+    "tag": "quiver",
+    "weight": 250
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_chaos_damage_resistance_%",
+    "max": 35,
+    "min": 31
+   }
+  ],
+  "text": "+(31-35)% to Chaos Resistance",
+  "type": "ChaosResistance",
+  "gold_value": null
+ },
  "ColdDamagePercentEssence1": {
   "adds_tags": [],
   "domain": "item",
@@ -899,6 +2588,257 @@
   ],
   "text": "(6-10)% increased Cold Damage",
   "type": "ColdDamagePercentage",
+  "gold_value": null
+ },
+ "LightningDamagePercent1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamagePercentage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning"
+  ],
+  "is_essence_only": false,
+  "name": "of Sparks",
+  "required_level": 10,
+  "spawn_weights": [
+   {
+    "tag": "wand",
+    "weight": 0
+   },
+   {
+    "tag": "sceptre",
+    "weight": 0
+   },
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "lightning_damage_+%",
+    "max": 12,
+    "min": 10
+   }
+  ],
+  "text": "(10-12)% increased Lightning Damage",
+  "type": "LightningDamagePercentage",
+  "gold_value": null
+ },
+ "LightningDamagePercent2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamagePercentage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning"
+  ],
+  "is_essence_only": false,
+  "name": "of Static",
+  "required_level": 23,
+  "spawn_weights": [
+   {
+    "tag": "wand",
+    "weight": 0
+   },
+   {
+    "tag": "sceptre",
+    "weight": 0
+   },
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "lightning_damage_+%",
+    "max": 15,
+    "min": 13
+   }
+  ],
+  "text": "(13-15)% increased Lightning Damage",
+  "type": "LightningDamagePercentage",
+  "gold_value": null
+ },
+ "LightningDamagePercent3": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamagePercentage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning"
+  ],
+  "is_essence_only": false,
+  "name": "of Electricity",
+  "required_level": 36,
+  "spawn_weights": [
+   {
+    "tag": "wand",
+    "weight": 0
+   },
+   {
+    "tag": "sceptre",
+    "weight": 0
+   },
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "lightning_damage_+%",
+    "max": 18,
+    "min": 16
+   }
+  ],
+  "text": "(16-18)% increased Lightning Damage",
+  "type": "LightningDamagePercentage",
+  "gold_value": null
+ },
+ "LightningDamagePercent4": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamagePercentage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning"
+  ],
+  "is_essence_only": false,
+  "name": "of Voltage",
+  "required_level": 50,
+  "spawn_weights": [
+   {
+    "tag": "wand",
+    "weight": 0
+   },
+   {
+    "tag": "sceptre",
+    "weight": 0
+   },
+   {
+    "tag": "ring",
+    "weight": 500
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "lightning_damage_+%",
+    "max": 22,
+    "min": 19
+   }
+  ],
+  "text": "(19-22)% increased Lightning Damage",
+  "type": "LightningDamagePercentage",
+  "gold_value": null
+ },
+ "LightningDamagePercent5": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningDamagePercentage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "lightning"
+  ],
+  "is_essence_only": false,
+  "name": "of Discharge",
+  "required_level": 64,
+  "spawn_weights": [
+   {
+    "tag": "wand",
+    "weight": 0
+   },
+   {
+    "tag": "sceptre",
+    "weight": 0
+   },
+   {
+    "tag": "amulet",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "lightning_damage_+%",
+    "max": 26,
+    "min": 23
+   }
+  ],
+  "text": "(23-26)% increased Lightning Damage",
+  "type": "LightningDamagePercentage",
   "gold_value": null
  },
  "IncreasedLifeLeechRateEssence1": {
@@ -1405,6 +3345,118 @@
   "type": "AreaOfEffect",
   "gold_value": null
  },
+ "GlobalSkillGemLevel1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "GlobalSkillGemLevel"
+  ],
+  "implicit_tags": [
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Exalter's",
+  "required_level": 75,
+  "spawn_weights": [
+   {
+    "tag": "amulet",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "all_skill_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of all Skill Gems",
+  "type": "GlobalSkillGemLevel",
+  "gold_value": null
+ },
+ "GlobalFireGemLevel1_": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "GlobalDamageTypeGemLevel"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "fire",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Vulcanist's",
+  "required_level": 75,
+  "spawn_weights": [
+   {
+    "tag": "amulet",
+    "weight": 200
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "fire_skill_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of all Fire Skill Gems",
+  "type": "GlobalFireGemLevel",
+  "gold_value": null
+ },
+ "GlobalColdGemLevel1__": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "GlobalDamageTypeGemLevel"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "cold",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Rimedweller's",
+  "required_level": 75,
+  "spawn_weights": [
+   {
+    "tag": "amulet",
+    "weight": 200
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "cold_skill_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of all Cold Skill Gems",
+  "type": "GlobalColdGemLevel",
+  "gold_value": null
+ },
  "GlobalLightningGemLevel1": {
   "adds_tags": [],
   "domain": "item",
@@ -1441,6 +3493,80 @@
   ],
   "text": "+1 to Level of all Lightning Skill Gems",
   "type": "GlobalLightningGemLevel",
+  "gold_value": null
+ },
+ "GlobalPhysicalGemLevel1_": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "GlobalDamageTypeGemLevel"
+  ],
+  "implicit_tags": [
+   "physical",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Behemoth's",
+  "required_level": 75,
+  "spawn_weights": [
+   {
+    "tag": "amulet",
+    "weight": 200
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "physical_skill_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of all Physical Skill Gems",
+  "type": "GlobalPhysicalGemLevel",
+  "gold_value": null
+ },
+ "GlobalChaosGemLevel1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "GlobalDamageTypeGemLevel"
+  ],
+  "implicit_tags": [
+   "chaos",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Provocateur's",
+  "required_level": 75,
+  "spawn_weights": [
+   {
+    "tag": "amulet",
+    "weight": 200
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "chaos_skill_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of all Chaos Skill Gems",
+  "type": "GlobalChaosGemLevel",
   "gold_value": null
  },
  "DelveStrengthGemLevel1": {

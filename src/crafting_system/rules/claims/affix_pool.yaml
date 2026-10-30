@@ -1,0 +1,91 @@
+# Mechanic family: affix_pool (which mods a random add can pick from, and with what weight).
+# The wiki's "group" is this project's "family". Claims about the single draw: research ticket #6
+# (claims AFX-xx) and the owner decisions of issue #28 (Craft of Exile admitted, ADR-0005).
+rules:
+  - id: affix_pool.domain_match
+    statement: A random add can only pick mods whose domain equals the domain of the item's base (items such as amulets, rings and weapons share the domain `item`).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Mechanics_overview
+    quote: "Mod domain governs the type of entity the modifier is going to appear and may confer some specific rules (such as the number of affixes)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.side_is_generation_type
+    statement: The mods a random add can pick have generation type prefix or suffix, and that value is the side the mod takes on the item. Other generation types (unique, corrupted, essence, crafted and so on) never enter this draw.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Mechanics_overview
+    quote: "Mod generation type determines how the modifier is generated, for example whether it's a prefix, suffix, corrupted or always applied (like on unique items)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.level_gate
+    statement: A mod can be added only if its required level is at most the item level (a mod whose required level equals the item level is allowed).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Item_level#What_item_level_affects
+    quote: "Magic and Rare items can only receive affixes which require a level less than or equal to the item's item level."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.spawn_weight_first_match
+    statement: The spawn weight of a mod on an item is the weight of the first entry of the mod's own ordered spawn-weight list whose tag the item has; later matching entries are ignored and weight 0 removes the mod. The item's tags are the tags of its base (an item without influence adds none).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Spawn_weight_tag
+    quote: "If multiple tags apply, the left-most tags are most important, where the right most tags are the least."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.generation_weight_multiplier
+    statement: The generation weights of a mod (365 attack mods carry them) are an ordered list read first-match like the spawn weights, and the value found multiplies the spawn weight by value/100 (the official note only says Sceptres, Staves, Rune Daggers and Wands roll attack mods less often). A mod without generation weights, or with no matching entry, keeps its spawn weight. The result stays an exact fraction, it is not rounded.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28
+    quote: "`generation_weights` as a ×value/100 multiplier"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.draw_proportional_to_weight
+    statement: Among the mods that can still be added, the chance of each is its weight divided by the sum of the weights of all of them.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Weight#Overview
+    quote: "if a modifier with a weight of 1000, and a total weight of 40,000, that modifier has a 2.5% chance to roll (1000/40,000)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.one_pool_for_both_sides
+    statement: While both sides have an open slot, one add draws from the prefixes and suffixes together, in one sum, with no first choice of a side (decision D2 of issue #28). Craft of Exile joins the two lists before drawing.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "var tmodpool=tmodp_pre.concat(tmodp_suf)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.full_side_closes
+    statement: When an item holds as many prefixes (or suffixes) as its capacity allows, no mod of that side can be added, and the other side is the whole pool.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Rarity#Rarities
+    quote: "A magic item with only either a prefix or suffix property can have a second property of the missing type added to it by using an Orb of Augmentation"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.implicits_do_not_block
+    statement: An implicit mod on the base does not remove explicit mods of its family from the pool, so only the explicit mods of an item block.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Version_history
+    quote: "Implicit mods on items now do not stop explicit mods of the same type being spawned."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.values_uniform_integers
+    statement: Each stat of a drawn mod rolls a uniform integer from its minimum to its maximum, both included. A stat whose minimum equals its maximum is fixed. Whether the stats of one mod roll independently is not admitted (research ticket #6, O-04); the sampler rolls them independently and no exact probability depends on it.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Mechanics_overview
+    quote: "the actual value of the stat in the cases where minimum and maximum are not the same will be randomized within with equal chances"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: affix_pool.no_memory_strands
+    statement: The planner's items carry no Memory Strands, so a draw is not tier-gated and the ordinary pool applies.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_strand#Mechanics
+    quote: "When crafting on an item with memory strands, it will consume a random amount of it to increase the tier of the modifier it adds to the item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
