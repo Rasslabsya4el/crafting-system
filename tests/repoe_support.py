@@ -70,13 +70,32 @@ def fixture_game_data() -> GameData:
     )
 
 
-def make_pin(payloads: Mapping[str, bytes], *, version: str = TEST_VERSION) -> RepoePin:
+def game_data_from_raw(raw: Mapping[str, object], *, version: str = TEST_VERSION) -> GameData:
+    """Normalize parsed raw files (file name -> parsed JSON), e.g. a changed copy of `raw_fixtures()`."""
+    return normalize_game_data(
+        raw["mods.json"],
+        raw["base_items.json"],
+        raw["fossils.json"],
+        raw["essences.json"],
+        raw["crafting_bench_options.json"],
+        version=version,
+    )
+
+
+def raw_to_bytes(raw: Mapping[str, object]) -> dict[str, bytes]:
+    """Serialize parsed raw files back to file bytes (what a download of that version would serve)."""
+    return {name: json.dumps(value, indent=1).encode("utf-8") for name, value in raw.items()}
+
+
+def make_pin(
+    payloads: Mapping[str, bytes], *, version: str = TEST_VERSION, commit: str = TEST_COMMIT
+) -> RepoePin:
     """A pin whose sizes and hashes are computed from `payloads` (file name -> bytes)."""
     files = tuple(
         PinnedFile(name=name, sha256=hashlib.sha256(data).hexdigest(), size=len(data))
         for name, data in payloads.items()
     )
-    return RepoePin(version=version, commit=TEST_COMMIT, base_url=TEST_BASE_URL, files=files)
+    return RepoePin(version=version, commit=commit, base_url=TEST_BASE_URL, files=files)
 
 
 class FakeOpener:

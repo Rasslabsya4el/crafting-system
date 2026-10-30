@@ -16,6 +16,11 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 _COMMIT = re.compile(r"[0-9a-f]{40}")
 
 
+def is_commit(text: str) -> bool:
+    """Whether `text` is a full git commit id the way a pin spells it: 40 lowercase hex digits."""
+    return bool(_COMMIT.fullmatch(text))
+
+
 _WINDOWS_DEVICE = re.compile(r"(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?", re.IGNORECASE)
 
 
