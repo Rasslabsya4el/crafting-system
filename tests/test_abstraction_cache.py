@@ -36,6 +36,7 @@ from abstraction_support import (
     PASSING,
     REFORGE,
     abstraction,
+    check_kernel,
     expected_kernel,
     with_fractured,
 )
@@ -229,3 +230,24 @@ def test_reachable_skips_an_action_that_is_out_of_scope_for_the_state():
     corrupted = ab.compress(dataclasses.replace(fractured_item(RESIST_2), corrupted=True))
     assert ab.reachable([corrupted], [CHAOS]) == {corrupted}
 
+
+
+@pytest.mark.parametrize("action", [CHAOS, REFORGE])
+def test_a_fractured_mod_outside_the_pool_still_changes_the_signature(action):
+    # At item level 12 the fire gem-level family cannot be drawn, so removing it leaves the pool as
+    # it was; only the kept mod and the free prefix slot tell this state from a plain one.
+    ab = abstraction(level=12)
+    plain = ab.compress(small_item(roll(RESIST_1, fractured=True), level=12))
+    blocked = ab.compress(small_item(roll(RESIST_1, fractured=True), roll(FIRE_GEM, fractured=True), level=12))
+
+    assert ab.signature(plain, action) != ab.signature(blocked, action)
+    check_kernel(ab, small_item(roll(RESIST_1, fractured=True), level=12), action)
+    check_kernel(ab, small_item(roll(RESIST_1, fractured=True), roll(FIRE_GEM, fractured=True), level=12), action)
+    assert ab.stats.kernels == 2
+
+
+def test_a_state_of_another_goal_is_refused():
+    state = abstraction("nested").compress(fractured_item(RESIST_1))
+
+    with pytest.raises(ValueError, match="another abstraction"):
+        abstraction("any").kernel(state, CHAOS)

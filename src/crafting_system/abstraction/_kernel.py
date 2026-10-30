@@ -95,9 +95,14 @@ class Abstraction:
         """The exact distribution of the next compressed state after `action` on `state`.
 
         Raises what the action raises for the retained item (`NotApplicableError`,
-        `OutOfScopeError`), and `OutOfScopeError` for a crafted mod and for a roll limit on a
-        drawn mod.
+        `OutOfScopeError`), `OutOfScopeError` for a crafted mod and for a roll limit on a drawn
+        mod, and `ValueError` for a state of another goal.
         """
+        if len(state.status) != len(self.goal.leaves):
+            raise ValueError(
+                f"the state has {len(state.status)} statuses but the goal has {len(self.goal.leaves)} leaves: "
+                "it comes from another abstraction"
+            )
         outcomes = self._outcomes_of(state, action)
         if state.flags.crafted:
             raise OutOfScopeError(
