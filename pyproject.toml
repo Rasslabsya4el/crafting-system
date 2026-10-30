@@ -16,5 +16,6 @@ addopts = "-ra --strict-markers"
 
 [dependency-groups]
 dev = [
+    "highspy>=1.15.1",
     "pytest>=9.2.0",
 ]
