@@ -54,8 +54,13 @@ def default_open_url(url: str) -> AbstractContextManager[BinaryIO]:
 
 def cache_folder(pin: RepoePin = PIN, cache_dir: Path | None = None) -> Path:
     """Where the files of `pin` are cached; `cache_dir` defaults to the configured cache directory."""
+    return version_folder(pin.version, cache_dir)
+
+
+def version_folder(version: str, cache_dir: Path | None = None) -> Path:
+    """The cache folder named `version` (a pin's version, or the commit of a candidate)."""
     base = Path(cache_dir) if cache_dir is not None else load_config().cache_dir
-    return base / "repoe-fork" / pin.version
+    return base / "repoe-fork" / version
 
 
 def fetch(
@@ -167,8 +172,40 @@ def _unreadable(path: Path, error: OSError) -> FetchError:
 
 
 def _download(url: str, pinned: PinnedFile, target: Path, open_url: OpenUrl) -> None:
-    """Stream `url` into a temporary file next to `target`, check it, and move it into place."""
-    descriptor, temp_name = tempfile.mkstemp(dir=target.parent, prefix=f"{pinned.name}.", suffix=".part")
+    """Stream `url` into a temporary file next to `target`, check it against the pin, and move it into place."""
+
+    def check(received: int, digest: str) -> None:
+        if received != pinned.size or digest != pinned.sha256:
+            raise _download_mismatch(pinned, url, f"{received} bytes with sha256 {digest}")
+
+    download_file(
+        url,
+        target,
+        open_url,
+        name=pinned.name,
+        limit=pinned.size,
+        too_big=lambda: _download_mismatch(pinned, url, f"more than {pinned.size} bytes"),
+        check=check,
+    )
+
+
+def download_file(
+    url: str,
+    target: Path,
+    open_url: OpenUrl,
+    *,
+    name: str,
+    limit: int,
+    too_big: Callable[[], Exception],
+    check: Callable[[int, str], None],
+) -> tuple[int, str]:
+    """Stream `url` into a temporary file next to `target`, hashing as it arrives; return (size, sha256 hex).
+
+    The stream is cut off as soon as it goes past `limit` bytes (`too_big()` is raised), and
+    `check(size, sha256)` may raise to refuse the finished download. Only an accepted download is
+    moved into place (`os.replace`); any failure removes the temporary file, so nothing is left.
+    """
+    descriptor, temp_name = tempfile.mkstemp(dir=target.parent, prefix=f"{name}.", suffix=".part")
     temp = Path(temp_name)
     try:
         digest = hashlib.sha256()
@@ -178,22 +215,22 @@ def _download(url: str, pinned: PinnedFile, target: Path, open_url: OpenUrl) -> 
                 with open_url(url) as response:
                     while chunk := response.read(CHUNK_SIZE):
                         received += len(chunk)
-                        if received > pinned.size:
-                            raise _download_mismatch(pinned, url, f"more than {pinned.size} bytes")
+                        if received > limit:
+                            raise too_big()
                         digest.update(chunk)
                         out.write(chunk)
             except (OSError, http.client.HTTPException) as error:
                 raise FetchError(f"could not download {url}: {error}") from error
-        if received != pinned.size or digest.hexdigest() != pinned.sha256:
-            raise _download_mismatch(pinned, url, f"{received} bytes with sha256 {digest.hexdigest()}")
+        check(received, digest.hexdigest())
         try:
             os.replace(temp, target)
         except OSError as error:
             raise FetchError(
-                f"could not store {pinned.name} (from {url}) as {target}: {error}. "
+                f"could not store {name} (from {url}) as {target}: {error}. "
                 "Another fetch may be running, or the file may be open in another program; "
                 "close it and retry."
             ) from error
+        return received, digest.hexdigest()
     except BaseException:
         temp.unlink(missing_ok=True)
         raise
