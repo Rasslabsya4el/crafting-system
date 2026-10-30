@@ -39,16 +39,19 @@ SYSTEM_DIRS = (
 # Web and other URLs are not paths; a URL ends at whitespace, a quote, a comma, a parenthesis or
 # an angle bracket, so a path written right after one is still seen. `file:` URLs are kept,
 # since they carry real paths.
-URL = re.compile(r"\b(?!file:)[A-Za-z][A-Za-z0-9+.-]*://[^\s\"'`,()<>]*")
+# A scheme has at least two characters: one letter before the colon-slashes is a drive.
+URL = re.compile(r"\b(?!file:)[A-Za-z][A-Za-z0-9+.-]+://[^\s\"'`,()<>]*")
 
-# What may not come right before the slash that starts an absolute POSIX-style path.
-NOT_BEFORE_SLASH = r"(?<![\w./~:)\]}-])"
+# What may not come right before the slash that starts an absolute POSIX-style path: a word or
+# name character, or the end of a shell expansion. A colon is deliberately not here: after one
+# (PATH-like lists, docker volumes) the slash does start a path.
+NOT_BEFORE_SLASH = r"(?<![\w./~)\]}-])"
 
 # Each rule: (kind, pattern). The patterns are written so that their own text does not match.
 RULES = (
-    # a letter, a colon, then a backslash or a single slash; the `(?!/)` keeps the colon-slash
-    # of `https://` and `file:///` out of it
-    ("drive letter path", re.compile(r"(?<![A-Za-z0-9_])[A-Za-z]:(?:\\|/(?!/))")),
+    # a letter, a colon, then a backslash, one slash or two; the `(?!/)` keeps the colon-slash
+    # of `file:///` out of it
+    ("drive letter path", re.compile(r"(?<![A-Za-z0-9_])[A-Za-z]:(?:\\|//?(?!/))")),
     # Git Bash / MSYS spelling of a drive: one letter between slashes, then a name
     ("MSYS drive path", re.compile(NOT_BEFORE_SLASH + r"/[A-Za-z]/(?=[\w.$-])")),
     ("UNC path", re.compile(r"\\{2,}[\w.$-]+\\+[\w$-]")),
@@ -57,8 +60,12 @@ RULES = (
     ("home directory", re.compile(NOT_BEFORE_SLASH + r"/(?:home|Users|root)/")),
     ("home directory", re.compile(r"(?<!\w)~[/\\]")),
     ("home directory", re.compile(r"\$\{?" + "HOME" + r"\b")),
-    ("home directory", re.compile("%" + "USERPROFILE" + "%")),
-    ("home directory", re.compile("%" + "(?:LOCAL)?APPDATA" + "%")),
+    # Windows variables, in any case, and PowerShell's spelling of them
+    ("home directory", re.compile("%" + "(?:USERPROFILE|(?:LOCAL)?APPDATA)" + "%", re.IGNORECASE)),
+    (
+        "home directory",
+        re.compile(r"\$\{?" + "env:" + "(?:USERPROFILE|(?:LOCAL)?APPDATA)", re.IGNORECASE),
+    ),
     (
         "system directory path",
         re.compile(NOT_BEFORE_SLASH + r"/(?:" + "|".join(SYSTEM_DIRS) + r")/"),
@@ -108,10 +115,35 @@ BAD_SAMPLES = [
     ("'/" + "/" + "fileserver/share/x'", "UNC path"),
     ("%" + "APPDATA" + "%\\x", "home directory"),
     ("%" + "LOCALAPPDATA" + "%\\x", "home directory"),
+    # a path after a colon, as in PATH-like lists and docker volume specs
+    ("export PATH=$PATH:/" + "us" + "r/local/bin", "system directory path"),
+    ("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/" + "op" + "t/lib", "system directory path"),
+    ("PYTHONPATH=src:/" + "op" + "t/x", "system directory path"),
+    ("docker run -v data:/" + "ho" + "me/app/data img", "home directory"),
+    # Windows variables in any case, and PowerShell's spelling
+    ("%" + "userprofile" + "%\\x", "home directory"),
+    ("%" + "UserProfile" + "%\\x", "home directory"),
+    ("%" + "AppData" + "%\\x", "home directory"),
+    ("%" + "localappdata" + "%\\x", "home directory"),
+    ("$" + "env:USERPROFILE\\x", "home directory"),
+    ("$" + "env:APPDATA\\x", "home directory"),
+    ("$" + "ENV:LocalAppData\\x", "home directory"),
+    ("${" + "env:appdata}\\x", "home directory"),
+    # a single letter before `//` is a drive, not a URL scheme
+    ("C" + "://" + "Users/x", "drive letter path"),
+    ("D" + "://" + "data", "drive letter path"),
+    ("d" + "://" + "data/x", "drive letter path"),
+    ('"E' + "://" + 'work"', "drive letter path"),
 ]
 
 GOOD_SAMPLES = [
     "https://github.com/Rasslabsya4el/crafting-system",
+    "s3://bucket/key",
+    "ssh://git@host/x",
+    "file://host/share",
+    # a shell expansion right before the slash makes it a relative path
+    "$(pwd)/" + "tm" + "p/x",
+    "${ROOT}/" + "et" + "c/x",
     "http://example.com/" + "tmp" + "/x",
     "https://example.com/" + "ho" + "me/page",
     "ssh://git@host/" + "var" + "/repo",
