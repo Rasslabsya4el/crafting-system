@@ -680,18 +680,32 @@ def test_a_family_or_stat_with_surrounding_whitespace_is_found():
 
 
 def test_a_merge_key_is_refused_even_when_nothing_overrides():
-    message = parse_error("requirements:\n  - &one\n    family: IncreasedLife\n  - <<: *one\n    min_tier: 1\n")
+    message = parse_error("requirements:\n  - <<: {family: IncreasedLife}\n    min_tier: 1\n")
 
-    assert message.startswith("t.yaml:6: ")
+    assert message.startswith("t.yaml:4: ")
     assert "merge keys `<<` are not supported; write the keys out" in message
 
 
 def test_a_merge_key_that_is_overridden_is_refused_the_same_way():
-    message = parse_error(
-        "requirements:\n  - &one\n    family: IncreasedLife\n    min_tier: 1\n  - <<: *one\n    min_tier: 2\n"
-    )
+    message = parse_error("requirements:\n  - <<: {family: IncreasedLife, min_tier: 1}\n    min_tier: 2\n")
 
+    assert message.startswith("t.yaml:4: ")
     assert "merge keys `<<` are not supported" in message and "written twice" not in message
+
+
+def test_an_anchor_is_refused_at_its_line_before_anything_is_read():
+    message = parse_error("requirements:\n  - &a {family: IncreasedLife}\n")
+
+    assert message.startswith("t.yaml:4: ")
+    assert "anchors `&a` are not supported; write the value out" in message
+
+
+def test_an_alias_is_refused_at_its_line_even_when_its_anchor_is_missing():
+    message = parse_error("requirements:\n  - family: IncreasedLife\nprice_file: *a\n")
+
+    assert message.startswith("t.yaml:5: ")
+    assert "aliases `*a` are not supported; write the value out" in message
+    assert "undefined alias" not in message
 
 
 def test_a_repeated_influence_is_refused_whatever_its_case():

@@ -40,8 +40,15 @@ requirements:
         not_crafted: true
 
   # "A crafted damage modifier". The route does not say which one, so this is an interpretation:
-  # either of the two damage prefixes a belt can get from the crafting bench counts. They are
-  # bench-crafted by nature, so they carry no not_crafted mark.
+  # either of the damage prefixes the crafting bench offers on a belt counts. Source: the
+  # crafting_bench_options.json of the pinned repoe-fork dump 3.29.3.3, the options whose item
+  # classes include Belt and whose mod is a damage prefix (the dump lists them under the master
+  # Niko). They are exactly these two families, two tiers each, and no other damage prefix:
+  #   AllDamage: (12-14)% increased Damage, needs item level 72; (15-17)%, needs item level 81
+  #   IncreasedWeaponElementalDamagePercent: (15-23)% increased Elemental Damage with Attack
+  #     Skills, needs item level 30; (24-32)%, needs item level 50
+  # The game data gives AllDamage a spawn weight of 0 on belts, so only the bench can add it;
+  # the bench copy is crafted by nature, so these two carry no not_crafted mark.
   - at_least: 1
     of:
       - family: AllDamage                                  # "(12-14)% increased Damage" and its tiers

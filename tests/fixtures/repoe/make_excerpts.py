@@ -101,8 +101,9 @@ ESSENCES = (
 )
 # positions in crafting_bench_options.json: a socket count, a link, a colour, remove crafted
 # mods, an enchant with two costs, the Niko belt option for JunMaster2ArmourAndEnergyShield1,
-# a rarity reroll, a rare reroll, an Einhar explicit mod
-BENCH_OPTIONS = (0, 5, 10, 20, 294, 527, 753, 754, 760)
+# a rarity reroll, a rare reroll, an Einhar explicit mod; then the four belt damage prefixes of the
+# R13 target (#43): the two tiers of EinharMasterWeaponElementalDamage and of JunMaster2AllDamage
+BENCH_OPTIONS = (0, 5, 10, 20, 294, 527, 753, 754, 760, 89, 90, 639, 640)
 
 
 def read(folder: Path, name: str):

@@ -4,11 +4,14 @@
 and `LineList` objects: a dict and a list that also know the 1-based line they start on and the line of
 each key or entry. Scalars have no line of their own; an error about one is reported at its key or
 entry. Anything wrong with the YAML itself becomes a `TargetError`. Merge keys (`<<`) are refused, since
-an override through one would look like a key written twice.
+an override through one would look like a key written twice. Anchors (`&name`) and aliases (`*name`) are
+refused before any node is built: an alias makes the parser walk the same node again at every use, so a
+short file could take minutes and gigabytes to read.
 """
 
 import yaml
 import yaml.reader
+from yaml.events import AliasEvent, NodeEvent
 
 from .errors import TargetError
 
@@ -37,6 +40,21 @@ class _LineLoader(yaml.SafeLoader):
     def __init__(self, text: str, source: str) -> None:
         super().__init__(text)
         self.source = source
+
+    def compose_node(self, parent, index):
+        # Refused while the event is read, before any alias is expanded or node built.
+        event = self.peek_event()
+        if isinstance(event, AliasEvent):
+            raise TargetError(
+                f"{self.source}:{event.start_mark.line + 1}: aliases `*{event.anchor}` are not supported;"
+                " write the value out"
+            )
+        if isinstance(event, NodeEvent) and event.anchor is not None:
+            raise TargetError(
+                f"{self.source}:{event.start_mark.line + 1}: anchors `&{event.anchor}` are not supported;"
+                " write the value out"
+            )
+        return super().compose_node(parent, index)
 
     def construct_line_map(self, node: yaml.MappingNode) -> LineMap:
         for key_node, _ in node.value:
@@ -76,7 +94,8 @@ def load_with_lines(text: str, source: str) -> object:
     """Parse one YAML document into `LineMap`, `LineList` and plain scalars (None for an empty document).
 
     Raises `TargetError` for invalid YAML, a character not allowed in text, a key written twice, a key
-    that is not text, a merge key (`<<`), and nesting too deep to read.
+    that is not text, a merge key (`<<`), an anchor (`&name`) or an alias (`*name`), and nesting too deep
+    to read.
     """
     loader = None
     try:
