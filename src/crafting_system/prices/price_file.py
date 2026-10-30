@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from ..config import Config
+from .price_names import canonical_price_name
 
 UNIT = "chaos"
 CHAOS_ORB = "Chaos Orb"
@@ -180,7 +181,12 @@ def _parse_timestamp(value: object, path: Path) -> datetime:
 
 
 def load_overrides(path: Path) -> dict[str, float]:
-    """Name -> Chaos price from the `[prices]` table; a missing file means no overrides."""
+    """Name -> Chaos price from the `[prices]` table; a missing file means no overrides.
+
+    A base name is put in canonical form (`canonical_price_name`: influences in game order), so a
+    hand price for `Stygian Vise (ilvl 85, Warlord/Hunter)` is the price of `... Hunter/Warlord)`,
+    the name the wanted lists and the fetchers use. Two names that become one are an error.
+    """
     try:
         text = path.read_bytes().decode("utf-8-sig")
     except FileNotFoundError:
@@ -205,7 +211,10 @@ def load_overrides(path: Path) -> dict[str, float]:
             raise ValueError(f"{path}: {name!r} must be a number above zero, got {value!r}")
         if name == CHAOS_ORB and value != 1:
             raise ValueError(f"{path}: {name!r} is always 1 and cannot be overridden")
-        overrides[name] = float(value)
+        canonical = canonical_price_name(name)
+        if canonical in overrides:
+            raise ValueError(f"{path}: {name!r} and another name give the same price name {canonical!r}")
+        overrides[canonical] = float(value)
     return overrides
 
 

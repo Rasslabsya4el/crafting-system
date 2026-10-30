@@ -1,0 +1,106 @@
+"""The goal as the abstraction sees it: requirement leaves with a status each, and the check over them."""
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from enum import IntEnum
+from functools import cached_property
+
+
+class Status(IntEnum):
+    """How a requirement leaf stands on an item; ordered, so the best of several mods is the maximum."""
+
+    ABSENT = 0
+    BELOW = 1
+    PASSING = 2
+
+
+@dataclass(frozen=True)
+class Wanted:
+    """One requirement leaf: a mod from `mod_ids` that passes every limit.
+
+    The limits are those of a target requirement: `min_tier` is the worst tier accepted (1 is the
+    best), `min_roll` has one entry per stat (None where any value will do), `not_crafted` refuses a
+    crafted mod.
+    """
+
+    mod_ids: frozenset[str]
+    min_tier: int | None = None
+    min_roll: tuple[int | None, ...] | None = None
+    not_crafted: bool = False
+
+    @property
+    def has_roll_limit(self) -> bool:
+        """Whether `min_roll` asks for any value at all."""
+        return self.min_roll is not None and any(wanted is not None for wanted in self.min_roll)
+
+
+@dataclass(frozen=True)
+class AtLeast:
+    """A k-of-n requirement: met when at least `k` of `members` are met."""
+
+    k: int
+    members: tuple["Wanted | AtLeast", ...]
+
+    def __post_init__(self) -> None:
+        if not 1 <= self.k <= len(self.members):
+            raise ValueError(f"k must be from 1 to {len(self.members)}, got {self.k}")
+
+
+Node = Wanted | AtLeast
+
+
+def _leaves(node: Node) -> tuple[Wanted, ...]:
+    if isinstance(node, Wanted):
+        return (node,)
+    return tuple(leaf for member in node.members for leaf in _leaves(member))
+
+
+def _met(node: Node, statuses: Sequence[Status], start: int) -> tuple[bool, int]:
+    """Whether `node` is met by `statuses[start:]`, and the index after the leaves of `node`."""
+    if isinstance(node, Wanted):
+        return statuses[start] is Status.PASSING, start + 1
+    met = 0
+    position = start
+    for member in node.members:
+        member_met, position = _met(member, statuses, position)
+        met += member_met
+    return met >= node.k, position
+
+
+@dataclass(frozen=True)
+class Goal:
+    """Every requirement must hold; the leaves, depth-first in file order, are the positions of a status tuple."""
+
+    requirements: tuple[Node, ...]
+
+    @cached_property
+    def leaves(self) -> tuple[Wanted, ...]:
+        """The requirement leaves, depth-first in file order: the order of `CompressedState.status`."""
+        return tuple(leaf for node in self.requirements for leaf in _leaves(node))
+
+    def is_met(self, statuses: Sequence[Status]) -> bool:
+        """Whether `statuses` (one per leaf) meet every requirement: a leaf needs PASSING, an `AtLeast` needs k members met."""
+        if len(statuses) != len(self.leaves):
+            raise ValueError(f"expected {len(self.leaves)} statuses, got {len(statuses)}")
+        position = 0
+        for node in self.requirements:
+            met, position = _met(node, statuses, position)
+            if not met:
+                return False
+        return True
+
+    @classmethod
+    def from_target(cls, target) -> "Goal":
+        """The goal of a target, read by duck typing from `target.requirements`.
+
+        A node with the attributes `at_least` and `of` is a k-of-n; any other node has `mod_ids`,
+        `min_tier`, `min_roll` and `not_crafted`.
+        """
+        return cls(tuple(_node(node) for node in target.requirements))
+
+
+def _node(node) -> Node:
+    if hasattr(node, "at_least") and hasattr(node, "of"):
+        return AtLeast(node.at_least, tuple(_node(member) for member in node.of))
+    min_roll = None if node.min_roll is None else tuple(node.min_roll)
+    return Wanted(frozenset(node.mod_ids), node.min_tier, min_roll, node.not_crafted)

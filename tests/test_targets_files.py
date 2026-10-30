@@ -54,6 +54,22 @@ def test_the_r13_example_parses_into_the_route():
     assert "EinharMasterWeaponElementalDamage1_" in damage.of[1].mod_ids
 
 
+def test_the_r13_damage_families_are_damage_prefixes_the_bench_offers_on_a_belt_in_two_tiers():
+    target = load_target(R13, DATA)
+    damage = target.requirements[2]
+    assert isinstance(damage, KOfN)
+
+    for member in damage.of:
+        offered = {
+            option.actions.add_explicit_mod
+            for option in DATA.bench_options
+            if "Belt" in option.item_classes
+            and option.actions.add_explicit_mod in member.mod_ids
+            and DATA.mods[option.actions.add_explicit_mod].generation_type == "prefix"
+        }
+        assert offered == member.mod_ids and len(offered) == 2, member.family
+
+
 def test_the_r13_belt_is_met_by_life_two_resists_and_a_crafted_damage_mod():
     target = load_target(R13, DATA)
     life = roll("IncreasedLife1")
@@ -76,6 +92,26 @@ def test_the_r13_resists_must_be_tier_one():
     second_tier = ExplicitMod("ColdResist1", 2, (6,))
 
     assert not target.is_met_by(belt(life, damage, roll("FireResist1"), second_tier))
+
+
+def alias_bomb(levels: int) -> str:
+    """A requirements list where each level's group lists the previous level's anchor ten times."""
+    lines = ["base: Paua Amulet", "item_level: 84", "requirements:", "  - &l0 {family: IncreasedLife}"]
+    for level in range(1, levels + 1):
+        aliases = ", ".join([f"*l{level - 1}"] * 10)
+        lines.append(f"  - &l{level} {{at_least: 1, of: [{aliases}]}}")
+    return "\n".join(lines) + "\n"
+
+
+def test_an_alias_bomb_is_refused_at_its_first_anchor_without_being_expanded(tmp_path):
+    path = tmp_path / "bomb.yaml"
+    path.write_text(alias_bomb(12), encoding="utf-8")
+
+    with pytest.raises(TargetError) as caught:
+        load_target(path, DATA)
+
+    assert str(caught.value).startswith(f"{path}:4: ")
+    assert "anchors `&l0` are not supported" in str(caught.value)
 
 
 def test_a_relative_price_file_counts_from_the_folder_of_the_target_file(tmp_path):

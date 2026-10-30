@@ -285,7 +285,7 @@ def test_no_stages_means_no_fallback(ninja):
 def test_fetch_passes_the_previous_league_to_the_chain(ninja, tmp_path, monkeypatch):
     seen = {}
 
-    def fake_fetch(get_json, now, wanted, league, previous_league):
+    def fake_fetch(get_json, now, wanted, league, previous_league, **rest):
         seen["previous_league"] = previous_league
         return fetch_price_file(get_json, now, wanted, league, previous_league, stages=())
 
