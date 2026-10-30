@@ -14,7 +14,7 @@ rules:
     statement: A magic item holds at most 1 prefix and 1 suffix, and a rare item at most 3 prefixes and 3 suffixes (the same number on each side). This is the capacity of an ordinary item; jewels are the exception in affix_count.rare_jewel_max_per_side.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
-    quote: "Magic - random modifiers based on conditions: (0 to 1) prefix and (0 to 1) suffix; Rare - random modifiers based on conditions: (1 to 3) prefixes and (1 to 3) suffixes"
+    quote: "Magic - random modifiers based on conditions: (0 to 1) prefix and (0 to 1) suffix ... Rare - random modifiers based on conditions: (1 to 3) prefixes and (1 to 3) suffixes"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
     value: {magic: 1, rare: 3}
@@ -22,8 +22,8 @@ rules:
   - id: affix_count.normal_has_no_explicit_mods
     statement: A normal item holds no explicit mods, so its prefix and suffix capacity is 0.
     source_kind: wiki
-    url: https://www.poewiki.net/wiki/Modifier#Types_of_modifiers
-    quote: "Any generated modifier of an entity that has a non-normal rarity (i.e. magic, rare or unique)."
+    url: https://www.poewiki.net/wiki/Rarity
+    quote: 'Normal items (also called base items) are the "default" state of items without any explicit modifiers/affixes.'
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
     value: {normal: 0}

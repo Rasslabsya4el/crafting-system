@@ -134,6 +134,8 @@ class Item:
     corrupted: bool = False
 
     def __post_init__(self) -> None:
+        if type(self.item_level) is not int:
+            raise self._error(f"item level {self.item_level!r} is not an integer")
         if not MIN_ITEM_LEVEL <= self.item_level <= MAX_ITEM_LEVEL:
             raise self._error(
                 f"item level {self.item_level} is outside {MIN_ITEM_LEVEL} to {MAX_ITEM_LEVEL}"
@@ -144,8 +146,14 @@ class Item:
             isinstance(entry, Influence) for entry in self.influences
         ):
             raise self._error("influences must be a frozenset of Influence")
+        if not all(isinstance(mod, ExplicitMod) for mod in self.mods):
+            raise self._error("mods must all be ExplicitMod")
         ordered = tuple(sorted(self.mods, key=lambda mod: mod.mod_id))
         for mod in ordered:
+            if type(mod.tier) is not int or not isinstance(mod.values, tuple):
+                raise self._error(f"mod {mod.mod_id} needs an integer tier and a tuple of values")
+            if any(type(value) is not int for value in mod.values):
+                raise self._error(f"mod {mod.mod_id} has a rolled value that is not an integer")
             if mod.tier < 1:
                 raise self._error(f"mod {mod.mod_id} has tier {mod.tier}, tiers start at 1")
             if mod.fractured and mod.crafted:
@@ -176,8 +184,8 @@ class Item:
         return built
 
     def validate(self, data: GameData) -> None:
-        """Raise an `ItemError` subclass for the first problem found, checking in this order:
-        unknown base, unknown mod, wrong slot or domain, wrong values."""
+        """Raise an `ItemError` subclass for the first problem found, checking in this order: unknown
+        base, unknown mod, wrong slot or domain, wrong values, capacity, family conflict."""
         base = data.base_items.get(self.base_id)
         if base is None:
             raise self._error("the base is not in the game data", UnknownBaseError)

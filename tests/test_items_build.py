@@ -111,3 +111,19 @@ def test_the_item_is_immutable():
 def test_the_rarity_must_be_a_rarity():
     with pytest.raises(ItemError, match="rarity 'rare' is not a Rarity"):
         make(rarity="rare")
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"item_level": 50.5},
+        {"item_level": True},
+        {"mods": ("IncreasedLife1",)},
+        {"mods": (ExplicitMod("IncreasedLife1", 1.5, (10,)),)},
+        {"mods": (ExplicitMod("IncreasedLife1", 1, [10]),)},
+        {"mods": (ExplicitMod("IncreasedLife1", 1, (10.5,)),)},
+    ],
+)
+def test_wrongly_typed_fields_are_an_item_error_not_a_stray_type_error(fields):
+    with pytest.raises(ItemError):
+        make(**fields)
