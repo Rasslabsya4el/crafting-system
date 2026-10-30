@@ -1,0 +1,63 @@
+{
+ "Metadata/Items/Currency/CurrencyDelveCraftingFire": {
+  "added_mods": [],
+  "allowed_tags": [],
+  "blocked_descriptions": {
+   "MoreCold": "More Cold modifiers",
+   "GreatlyMoreCold": "Greatly more Cold modifiers"
+  },
+  "changes_quality": false,
+  "corrupted_essence_chance": 0,
+  "descriptions": {
+   "MoreFire": "More Fire modifiers",
+   "NoCold": "No Cold modifiers"
+  },
+  "forbidden_tags": [],
+  "forced_mods": [],
+  "mirrors": false,
+  "name": "Scorched Fossil",
+  "negative_mod_weights": [
+   {
+    "tag": "cold",
+    "weight": 0
+   }
+  ],
+  "positive_mod_weights": [
+   {
+    "tag": "fire",
+    "weight": 1000
+   }
+  ],
+  "rolls_lucky": false,
+  "rolls_white_sockets": false,
+  "sell_price_mods": []
+ },
+ "Metadata/Items/Currency/CurrencyDelveCraftingGemLevel": {
+  "added_mods": [
+   "DelveStrengthGemLevel1",
+   "DelveDexterityGemLevel1",
+   "DelveIntelligenceGemLevel1"
+  ],
+  "allowed_tags": [],
+  "blocked_descriptions": {},
+  "changes_quality": false,
+  "corrupted_essence_chance": 0,
+  "descriptions": {
+   "MoreGemLevel": "More Gem modifiers"
+  },
+  "forbidden_tags": [],
+  "forced_mods": [],
+  "mirrors": false,
+  "name": "Faceted Fossil",
+  "negative_mod_weights": [],
+  "positive_mod_weights": [
+   {
+    "tag": "gem",
+    "weight": 1000
+   }
+  ],
+  "rolls_lucky": false,
+  "rolls_white_sockets": false,
+  "sell_price_mods": []
+ }
+}
