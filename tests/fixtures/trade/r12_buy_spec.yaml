@@ -1,0 +1,11 @@
+# R12 start item (docs/research/2026-10-30-5-reference-routes.md): a rare Amulet with fractured
+# Lightning Resistance. Item level 75 is the level the target prefix "+1 to Level of all Lightning
+# Skill Gems" (Stormbrewer's) needs, so a lower amulet could never reach the target.
+name: R12 start amulet
+category: accessory.amulet
+rarity: rare
+item_level_min: 75
+corrupted: false
+mods:
+  - stat: LightningResistance
+    fractured: true
