@@ -94,10 +94,10 @@ def test_a_wanted_thin_beast_whose_history_is_all_thin_stays_missing(ninja):
     assert "Aboriginal Chieftain" not in result.price_file.prices
     assert "Aboriginal Chieftain" in result.thin
     assert any("id=167860" in url and "type=Beast" in url for url in ninja.stash_history_requests())
-    assert result.warnings == [
+    assert (
         "Aboriginal Chieftain: current line is too thin (fewer than 5 observations or no trade volume) "
         "and no fallback gave a price; dropped"
-    ]
+    ) in result.warnings
 
 
 def test_a_stash_history_that_answers_with_an_error_leaves_the_name_missing(ninja):

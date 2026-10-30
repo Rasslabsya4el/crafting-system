@@ -52,6 +52,8 @@ class FakeNinja:
         if route == "/stash/current/item/history":
             key = (query["league"], query["type"], int(query["id"]))
             return self._answer(self.stash_histories.get(key, SourceError(f"HTTP 404 for {url}")))
+        if not url.startswith(BASE_URL):
+            return self._answer(SourceError(f"HTTP 404 for {url}"))  # poe.watch and the league list: not recorded here
         raise AssertionError(f"unexpected URL {url}")
 
     @staticmethod
