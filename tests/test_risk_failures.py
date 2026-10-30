@@ -9,7 +9,7 @@ import math
 from fractions import Fraction
 
 import pytest
-from risk_support import geometric_policy, is_goal
+from risk_support import decimal, geometric_policy, is_goal, path_pmf, pmf_quantile
 
 from crafting_system.risk import evaluate
 from crafting_system.solver import Action, TabularModel, solve
@@ -181,3 +181,25 @@ def test_costs_outside_the_supported_range_are_rejected_for_a_policy_that_can_fa
 def test_a_resolution_so_small_that_costs_overflow_the_grid_is_a_value_error(resolution):
     with pytest.raises(ValueError, match="resolution"):
         evaluate(geometric_policy(1, 1, 1.0), "S", is_goal, resolution=resolution)
+
+
+def test_a_policy_that_can_fail_with_irrational_costs_gets_a_fine_default_grid():
+    # S pays sqrt 2: goal 2, T 2, dead end 1 (of 5); T pays sqrt 5: goal 1, dead end 1. p = 3/5.
+    policy = {
+        "S": Action("s", math.sqrt(2), (("goal", 2), ("T", 2), ("dead", 1))),
+        "T": Action("t", math.sqrt(5), (("goal", 1), ("dead", 1))),
+    }
+    pmf = path_pmf(policy, "S")
+
+    report = evaluate(policy, "S", is_goal, quantile_levels=(0.2, 0.5, 0.7))
+
+    assert sum(pmf.values()) == Fraction(3, 5)
+    assert report.success_probability.low - 1e-12 <= 0.6 <= report.success_probability.high + 1e-12
+    assert report.success_probability.high - report.success_probability.low <= 1e-9
+    assert not report.grid.exact
+    for level in (0.2, 0.5):
+        truth = float(pmf_quantile(pmf, decimal(level)))
+        estimate = report.quantiles[level]
+        assert estimate.low - 1e-12 <= truth <= estimate.high + 1e-12
+        assert estimate.high - estimate.low < 0.03 * truth
+    assert tuple(report.quantiles[0.7]) == (math.inf, math.inf, math.inf)

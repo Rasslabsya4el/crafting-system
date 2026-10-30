@@ -23,8 +23,8 @@ Choosing D (`resolution=None`). If every cost is a multiple of one unit u (found
 grid is exact. The horizon is H = mean + 6 sd for a proper policy; for a policy that is not proper
 it is 64 c_min, so the unit must let the DP span 64 of the smallest costs (a unit of 1e-12 would
 leave 200k bins covering nothing). Otherwise D = min(c_min, max(c_min / 64, H / max_bins)) with
-c_min the smallest cost (H = max_bins * c_min if the policy is not proper): the smallest cost is
-64 bins unless the horizon needs coarser. That grid is usually inexact; its interval width is data
+c_min the smallest cost (H = 64 c_min if the policy is not proper, so 200k bins then cover about
+3000 c_min): the smallest cost is 64 bins unless the horizon needs coarser. That grid is usually inexact; its interval width is data
 driven and reported, and a smaller `resolution` tightens it. An explicit `resolution` is used as
 given; one so small that cost / resolution overflows is a `ValueError`.
 
@@ -173,9 +173,9 @@ def _level(value: float, name: str) -> float:
 
 def _choose_step(costs: Sequence[float], c_min: float, max_bins: int, horizon: float | None) -> float:
     unit = exact_unit(costs)
-    if unit is not None and (COVERED_STEPS * c_min if horizon is None else horizon) / unit <= max_bins:
+    horizon = COVERED_STEPS * c_min if horizon is None else horizon
+    if unit is not None and horizon / unit <= max_bins:
         return unit
-    horizon = max_bins * c_min if horizon is None else horizon
     return min(c_min, max(c_min / FINE_STEPS, horizon / max_bins))
 
 

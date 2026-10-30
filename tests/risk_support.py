@@ -185,7 +185,8 @@ def geometric_pmf(p, cost, tail):
 def path_pmf(table, start, goal_test=is_goal):
     """Exact cost distribution of an acyclic policy, by enumerating every path with Fractions.
 
-    `table` maps a state to an `Action`; each float cost enters as its exact binary value.
+    `table` maps a state to an `Action`; each float cost enters as its exact binary value. A state
+    without an entry loses its mass, so the pmf of a policy that can fail sums to its success chance.
     """
     pmf = {}
 
@@ -193,7 +194,9 @@ def path_pmf(table, start, goal_test=is_goal):
         if goal_test(state):
             pmf[paid] = pmf.get(paid, 0) + prob
             return
-        action = table[state]
+        action = table.get(state)
+        if action is None:
+            return  # a stuck state: this mass is lost, so the pmf may sum to less than 1
         total = sum(weight for _, weight in action.outcomes)
         for successor, weight in action.outcomes:
             walk(successor, paid + Fraction(action.cost), prob * Fraction(weight, total))
