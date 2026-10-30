@@ -1,6 +1,8 @@
 """`python -m crafting_system.data diff OLD NEW`: output, learning a commit, errors, exit codes."""
 
+import hashlib
 import io
+import json
 import os
 import subprocess
 import sys
@@ -86,12 +88,16 @@ def test_the_learned_pin_lines_are_printed_for_the_commit_that_is_not_pinned(cac
 
     pin_lines = out.split("\n\n" + PIN_LINES_TITLE)[1].split("\n")
     assert pin_lines[0].startswith(" ")  # the rest of the title line
-    assert pin_lines[1] == f'commit="{COMMIT}",'
-    assert pin_lines[2] == "files=("
+    assert pin_lines[1] == (
+        "(hashes recorded from the first download of this commit; "
+        "check them against another source before trusting)"
+    )
+    assert pin_lines[2] == f'commit="{COMMIT}",'
+    assert pin_lines[3] == "files=("
     learned = {file.name: file for file in make_pin(raw_to_bytes(seeded_raw())).files}
-    for line, name in zip(pin_lines[3:8], FILE_NAMES, strict=True):
+    for line, name in zip(pin_lines[4:9], FILE_NAMES, strict=True):
         assert line == f'    PinnedFile("{name}", "{learned[name].sha256}", {learned[name].size}),'
-    assert pin_lines[8] == "),"
+    assert pin_lines[9] == "),"
     assert TEST_COMMIT not in out.split(PIN_LINES_TITLE)[1]
 
 
@@ -325,17 +331,47 @@ def test_a_manifest_for_other_hashes_makes_the_repair_fail_instead_of_trusting_t
     assert "nothing was kept" in err
 
 
-def test_a_commit_whose_files_are_not_json_exits_one_with_the_normal_error(cache, capsys):
-    payloads = raw_to_bytes(seeded_raw())
-    payloads["mods.json"] = b"this is not json"
-    pin, opener = build_world({COMMIT: payloads})
+def test_a_commit_whose_first_download_is_not_json_is_not_recorded_and_works_on_the_next_run(cache, capsys):
+    pin, opener = build_world()
+    url = f"{pin.base_url}/{COMMIT}/data/mods.json"
+    good = opener.served[url]
+    opener.served[url] = b"<html>Service unavailable</html>"
+
+    code, out, err = run(capsys, ["diff", "pinned", COMMIT], pin, opener)
+
+    assert code == 1
+    assert out == ""
+    assert err.startswith("error: ")
+    assert "mods.json" in err
+    assert "not valid JSON" in err
+    assert listing(folder_of(cache, COMMIT)) == []
+
+    opener.served[url] = good
+    code, out, err = run(capsys, ["diff", "pinned", COMMIT], pin, opener)
+
+    assert code == 0
+    assert err == ""
+    assert "Mods: 1 added, 1 removed, 3 changed" in out
+    assert "pin.json" in listing(folder_of(cache, COMMIT))
+
+
+def test_a_learned_commit_whose_files_cannot_be_read_says_how_to_start_over(cache, capsys):
+    pin, opener = build_world()
+    run(capsys, ["diff", "pinned", COMMIT], pin, opener)
+    folder = folder_of(cache, COMMIT)
+    bad = b"[]"  # valid JSON, wrong shape: the manifest is rewritten to match it, as a poisoned one would be
+    (folder / "mods.json").write_bytes(bad)
+    manifest = json.loads((folder / "pin.json").read_text(encoding="utf-8"))
+    manifest["files"][0].update(sha256=hashlib.sha256(bad).hexdigest(), size=len(bad))
+    (folder / "pin.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     code, out, err = run(capsys, ["diff", "pinned", COMMIT], pin, opener)
 
     assert code == 1
     assert out == ""
     assert "mods.json" in err
-    assert "not valid JSON" in err
+    assert str(folder) in err
+    assert "delete" in err.lower()
 
 
 def test_an_error_prints_nothing_on_stdout_even_after_the_pinned_side_loaded(cache, capsys):

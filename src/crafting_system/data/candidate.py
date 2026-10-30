@@ -13,8 +13,9 @@ the first use, and the manifest after that. It does not change what the active p
 move the pin to a new patch, copy the printed lines into `PIN`.
 
 The manifest is written last and atomically, so its presence means the files were all stored.
-Files without a manifest (an interrupted first use) are learned again. A manifest that cannot be
-read or does not fit (wrong commit, other file names, bad hash, not an https URL) is a
+Each learned file must parse as JSON before anything is recorded, so an error page served with
+status 200 cannot poison the commit. Files without a manifest (an interrupted first use) are
+learned again. A manifest that cannot be read or does not fit (wrong commit, other file names, bad hash, not an https URL) is a
 `FetchError` naming the file; it is never replaced silently, so a tampered one cannot go
 unnoticed. Delete `pin.json` to learn the commit again.
 """
@@ -26,7 +27,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from .errors import FetchError
+from .errors import FetchError, RawFormatError
 from .fetch import OpenUrl, default_open_url, download_file, version_folder
 from .pin import PIN, PinnedFile, RepoePin, is_commit
 
@@ -51,6 +52,8 @@ def candidate_pin(
     """
     if not is_commit(commit):
         raise ValueError(f"commit must be 40 lowercase hex digits, got {commit!r}")
+    if commit == template.commit:
+        raise ValueError(f"commit {commit} is the active pin: ask for 'pinned', whose hashes come from code")
     folder = version_folder(commit, cache_dir)
     manifest = folder / MANIFEST_NAME
     if manifest.exists():
@@ -93,6 +96,7 @@ def _learn(commit: str, template: RepoePin, folder: Path, open_url: OpenUrl) -> 
                 check=lambda size, digest, url=url, file=file: _refuse_empty(file.name, url, size),
             )
             stored.append(target)
+            _require_json(target, file.name, commit, url)
             learned.append(PinnedFile(file.name, digest, size))
         pin = dataclasses.replace(probe, files=tuple(learned))
         _write_manifest(folder / MANIFEST_NAME, pin)
@@ -101,6 +105,19 @@ def _learn(commit: str, template: RepoePin, folder: Path, open_url: OpenUrl) -> 
             path.unlink(missing_ok=True)
         raise
     return pin
+
+
+def _require_json(path: Path, name: str, commit: str, url: str) -> None:
+    """A download that is not JSON (an HTML error page with status 200, say) must never be recorded."""
+    try:
+        json.loads(path.read_bytes())
+    except (ValueError, RecursionError) as error:  # JSONDecodeError and UnicodeDecodeError are ValueErrors
+        raise RawFormatError(
+            f"{name}: the download from {url} (commit {commit}) is not valid JSON: {error}. "
+            "Nothing was kept, so the commit can be tried again."
+        ) from error
+    except OSError as error:
+        raise FetchError(f"could not read back {path}: {error}") from error
 
 
 def _refuse_empty(name: str, url: str, size: int) -> None:
@@ -139,7 +156,7 @@ def _read_manifest(path: Path, commit: str, template: RepoePin) -> RepoePin:
 
     try:
         document: Any = json.loads(path.read_bytes())
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as error:
+    except (OSError, ValueError, RecursionError) as error:  # ValueError: bad JSON or bad UTF-8
         raise bad(f"it cannot be read as JSON ({error})") from error
     if not isinstance(document, dict) or set(document) != {"commit", "base_url", "files"}:
         raise bad("it must be an object with commit, base_url and files")

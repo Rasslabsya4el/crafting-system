@@ -21,8 +21,8 @@ from collections.abc import Sequence
 
 from .candidate import candidate_pin, pin_lines
 from .diff import diff_game_data
-from .errors import DataError
-from .fetch import OpenUrl, fetch, verify_cache
+from .errors import DataError, RawFormatError
+from .fetch import OpenUrl, fetch, verify_cache, version_folder
 from .load import load_game_data
 from .model import GameData
 from .pin import PIN, RepoePin, is_commit
@@ -52,7 +52,14 @@ def _load_version(version: str, pin: RepoePin, open_url: OpenUrl | None) -> tupl
         return load_game_data(pin), f"{pin.version} ({pin.commit[:8]})", None
     learned = candidate_pin(version, pin, open_url=open_url)
     fetch(learned, open_url=open_url)
-    return load_game_data(learned), f"commit {version[:12]}", learned
+    try:
+        data = load_game_data(learned)
+    except RawFormatError as error:
+        raise RawFormatError(
+            f"{error} (the files of commit {version} are in {version_folder(version)}; "
+            "delete that folder to download the commit again)"
+        ) from error
+    return data, f"commit {version[:12]}", learned
 
 
 def _diff(old: str, new: str, pin: RepoePin, open_url: OpenUrl | None) -> None:
@@ -66,6 +73,10 @@ def _diff(old: str, new: str, pin: RepoePin, open_url: OpenUrl | None) -> None:
     for learned in (old_learned, new_learned):
         if learned is not None:
             print(f"\nPin lines for commit {learned.commit} (paste into PIN in pin.py, with its new version):")
+            print(
+                "(hashes recorded from the first download of this commit; "
+                "check them against another source before trusting)"
+            )
             print(pin_lines(learned))
 
 

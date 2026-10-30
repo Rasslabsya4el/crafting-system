@@ -8,6 +8,7 @@ import urllib.error
 import pytest
 from repoe_support import (
     FILE_NAMES,
+    TEST_COMMIT,
     TEST_BASE_URL,
     FakeOpener,
     fixture_bytes,
@@ -16,7 +17,7 @@ from repoe_support import (
     no_network,  # noqa: F401
 )
 
-from crafting_system.data import FetchError, HashMismatchError, candidate
+from crafting_system.data import FetchError, HashMismatchError, RawFormatError, candidate
 from crafting_system.data.candidate import MANIFEST_NAME, candidate_pin
 from crafting_system.data.fetch import fetch, read_verified_files
 
@@ -276,3 +277,44 @@ def test_the_manifest_base_url_is_used_for_later_downloads(tmp_path):
 
     assert pin.base_url == TEST_BASE_URL
     assert pin.url_for("mods.json") == expected.url_for("mods.json")
+
+
+@pytest.mark.parametrize("junk", [b"<html>rate limited</html>", bytes([0xFF, 0xFE]) + b" not text", b"[" * 200_000])
+def test_a_download_that_is_not_json_is_refused_and_nothing_is_recorded(tmp_path, junk):
+    payloads = fixture_bytes()
+    pin, opener = served_pin()
+    opener.served[pin.url_for("mods.json")] = junk
+
+    with pytest.raises(RawFormatError, match="not valid JSON") as caught:
+        candidate_pin(COMMIT, TEMPLATE, tmp_path, open_url=opener)
+
+    assert "mods.json" in str(caught.value)
+    assert COMMIT in str(caught.value)
+    assert listing(folder_of(tmp_path)) == []
+    assert opener.served[pin.url_for("essences.json")] == payloads["essences.json"]
+
+
+def test_the_commit_can_be_learned_after_a_bad_first_download(tmp_path):
+    pin, bad = served_pin()
+    bad.served[pin.url_for("fossils.json")] = b"<html>"
+    with pytest.raises(RawFormatError):
+        candidate_pin(COMMIT, TEMPLATE, tmp_path, open_url=bad)
+
+    learned = candidate_pin(COMMIT, TEMPLATE, tmp_path, open_url=served_pin()[1])
+
+    assert read_verified_files(learned, tmp_path) == fixture_bytes()
+
+
+def test_a_deeply_nested_manifest_is_a_clear_error_and_not_a_crash(tmp_path):
+    path, _ = good_manifest(tmp_path)
+    path.write_bytes(b"[" * 200_000)
+
+    with pytest.raises(FetchError, match=r"pin\.json"):
+        candidate_pin(COMMIT, TEMPLATE, tmp_path, open_url=served_pin()[1])
+
+
+def test_the_commit_of_the_active_pin_is_refused_because_it_goes_through_pinned(tmp_path):
+    with pytest.raises(ValueError, match="pinned"):
+        candidate_pin(TEST_COMMIT, TEMPLATE, tmp_path, open_url=served_pin()[1])
+
+    assert not (tmp_path / "repoe-fork").exists()
