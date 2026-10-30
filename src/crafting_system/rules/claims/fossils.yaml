@@ -1,0 +1,10 @@
+# Mechanic family: fossils (Delve fossils socketed into a resonator).
+# The wiki's "group" is this project's "family".
+rules:
+  - id: fossils.factor_stacking
+    statement: When several fossils are socketed, the positive weight factors of the fossils that apply to a mod add, the negative factors multiply, and a factor of zero blocks the mod.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/2#issuecomment-6529150116
+    quote: "Fossil factors stack as Craft of Exile does (additive positive factors, negatives multiply, blocks win)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30

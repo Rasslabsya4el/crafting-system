@@ -1,0 +1,104 @@
+{
+ "Metadata/Items/Currency/CurrencyEssenceHatred1": {
+  "item_level_restriction": 35,
+  "level": 1,
+  "mods": {
+   "Amulet": "ColdDamagePercentEssence1",
+   "Belt": "ColdResist1",
+   "Body Armour": "ColdResist1",
+   "Boots": "ColdResist1",
+   "Bow": "LocalAddedColdDamageTwoHand1",
+   "Claw": "LocalAddedColdDamage1",
+   "Dagger": "LocalAddedColdDamage1",
+   "Gloves": "ColdResist1",
+   "Helmet": "ColdResist1",
+   "One Hand Axe": "LocalAddedColdDamage1",
+   "One Hand Mace": "LocalAddedColdDamage1",
+   "One Hand Sword": "LocalAddedColdDamage1",
+   "Quiver": "ColdResist1",
+   "Ring": "ColdDamagePercentEssence1",
+   "Sceptre": "LocalAddedColdDamage1",
+   "Shield": "ColdResist1",
+   "Staff": "LocalAddedColdDamageTwoHand1",
+   "Thrusting One Hand Sword": "LocalAddedColdDamage1",
+   "Two Hand Axe": "LocalAddedColdDamageTwoHand1",
+   "Two Hand Mace": "LocalAddedColdDamageTwoHand1",
+   "Two Hand Sword": "LocalAddedColdDamageTwoHand1",
+   "Wand": "LocalAddedColdDamage1"
+  },
+  "name": "Whispering Essence of Hatred",
+  "spawn_level_min": 1,
+  "type": {
+   "is_corruption_only": false,
+   "tier": 1
+  }
+ },
+ "Metadata/Items/Currency/CurrencyEssenceHysteria1": {
+  "item_level_restriction": null,
+  "level": 8,
+  "mods": {
+   "Amulet": "IncreasedLifeLeechRateEssence1",
+   "Belt": "ElementalPenetrationDuringFlaskEffectEssence1",
+   "Body Armour": "AreaOfEffectEssence1",
+   "Boots": "BurningGroundWhileMovingEssence1",
+   "Bow": "FireBurstOnHitEssence1",
+   "Claw": "FireBurstOnHitEssence1",
+   "Dagger": "FireBurstOnHitEssence1",
+   "Gloves": "SocketedGemsDealAdditionalFireDamageEssence1",
+   "Helmet": "SocketedSkillDamageOnLowLifeEssence1__",
+   "One Hand Axe": "FireBurstOnHitEssence1",
+   "One Hand Mace": "FireBurstOnHitEssence1",
+   "One Hand Sword": "FireBurstOnHitEssence1",
+   "Quiver": "FireDamageAsPortionOfPhysicalDamageEssence2",
+   "Ring": "FireDamageAsPortionOfPhysicalDamageEssence1",
+   "Sceptre": "FireBurstOnHitEssence1",
+   "Shield": "AddedFireDamageIfBlockedRecentlyEssence1",
+   "Staff": "FireBurstOnHitEssence1",
+   "Thrusting One Hand Sword": "FireBurstOnHitEssence1",
+   "Two Hand Axe": "FireBurstOnHitEssence1",
+   "Two Hand Mace": "FireBurstOnHitEssence1",
+   "Two Hand Sword": "FireBurstOnHitEssence1",
+   "Wand": "FireBurstOnHitEssence1"
+  },
+  "name": "Essence of Hysteria",
+  "spawn_level_min": 0,
+  "type": {
+   "is_corruption_only": true,
+   "tier": 6
+  }
+ },
+ "Metadata/Items/Currency/CurrencyCorruptMonolith": {
+  "item_level_restriction": null,
+  "level": 0,
+  "mods": {
+   "Amulet": null,
+   "Belt": null,
+   "Body Armour": null,
+   "Boots": null,
+   "Bow": null,
+   "Claw": null,
+   "Dagger": null,
+   "Gloves": null,
+   "Helmet": null,
+   "One Hand Axe": null,
+   "One Hand Mace": null,
+   "One Hand Sword": null,
+   "Quiver": null,
+   "Ring": null,
+   "Sceptre": null,
+   "Shield": null,
+   "Staff": null,
+   "Thrusting One Hand Sword": null,
+   "Two Hand Axe": null,
+   "Two Hand Mace": null,
+   "Two Hand Sword": null,
+   "Wand": null
+  },
+  "name": "Remnant of Corruption",
+  "spawn_level_min": 32,
+  "type": {
+   "is_corruption_only": false,
+   "tier": 0
+  }
+ }
+}
