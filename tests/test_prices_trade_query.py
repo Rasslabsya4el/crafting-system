@@ -477,3 +477,10 @@ def test_a_spec_that_fails_validation_names_the_file_too(tmp_path):
 
     assert str(path) in str(error.value)
     assert "legendary" in str(error.value)
+
+
+def test_a_buy_spec_name_with_influences_in_another_order_is_put_in_game_order():
+    spec = amulet_spec(name="Stygian Vise (ilvl 85, Warlord/Hunter)")
+
+    assert spec.name == "Stygian Vise (ilvl 85, Hunter/Warlord)"
+    assert amulet_spec(name="R12 start amulet").name == "R12 start amulet"

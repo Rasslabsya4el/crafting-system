@@ -53,6 +53,8 @@ from typing import Any
 
 import yaml
 
+from .price_names import canonical_price_name
+
 RARITIES = ("normal", "magic", "rare", "unique", "nonunique", "uniquefoil")
 STATUSES = ("online", "securable", "available", "any")
 INDEXED_OPTIONS = ("1hour", "3hours", "12hours", "1day", "3days", "1week", "2weeks", "1month", "2months")
@@ -253,6 +255,8 @@ class BuySpec:
     def __post_init__(self) -> None:
         if not isinstance(self.name, str) or not self.name.strip():
             raise TradeSpecError(f"a buy spec needs a name, got {self.name!r}")
+        # The price is stored under this name: put a base name in the form the wanted lists use.
+        object.__setattr__(self, "name", canonical_price_name(self.name))
         if self.base_type is None and self.category is None:
             raise TradeSpecError(f"buy spec {self.name!r} needs a base_type or a category")
         _check_rarity(self.rarity)

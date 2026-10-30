@@ -125,7 +125,7 @@ def main(
                 overrides=load_overrides(overrides_path),
                 old_price_file=old_file,
             )
-            new_file, trade_warnings = merge_trade_prices(result.price_file, old_file)
+            new_file, trade_warnings = merge_trade_prices(result.price_file, _old_price_file(price_path))
             write_price_file(price_path, new_file)
             print(f"League {new_file.league}: {len(new_file.prices)} prices written to {price_path}")
             if result.thin:
