@@ -7,6 +7,7 @@ signatures share one computation. These tests count the computations (`stats.ker
 """
 
 import dataclasses
+import itertools
 import math
 from collections import defaultdict
 from fractions import Fraction
@@ -42,6 +43,7 @@ from abstraction_support import (
 )
 
 from crafting_system.abstraction import CompressedState, Flags, integer_weights
+from crafting_system.actions import ActionError
 from crafting_system.items import Rarity
 
 FLAGS = Flags(Rarity.RARE, False, frozenset(), False)
@@ -251,3 +253,41 @@ def test_a_state_of_another_goal_is_refused():
 
     with pytest.raises(ValueError, match="another abstraction"):
         abstraction("any").kernel(state, CHAOS)
+
+
+def test_an_out_of_pool_fractured_prefix_and_suffix_differ_in_the_signature():
+    # At item level 12 neither the fire gem-level family (a prefix) nor the mana leech family (a
+    # suffix) can be drawn, so both states have the same pool, the same kept count and the same
+    # total of free slots; only which side has room tells them apart.
+    ab = abstraction(level=12)
+    prefix = fractured_item(FIRE_GEM, level=12)
+    suffix = fractured_item(MANA_1, level=12)
+
+    for action in (CHAOS, REFORGE):
+        assert ab.signature(ab.compress(prefix), action) != ab.signature(ab.compress(suffix), action)
+        check_kernel(ab, prefix, action)
+        check_kernel(ab, suffix, action)
+    assert ab.stats.kernels == 4
+
+
+@pytest.mark.parametrize("level", [12, 84])
+def test_one_cache_serves_every_fractured_combination_of_the_pool_exactly(level):
+    # One abstraction, so every request after the first may be answered from the cache: a signature
+    # that merged two pools or two slot counts would hand one of these states a wrong kernel.
+    ab = abstraction(level=level)
+    one_per_family = [GEM, FIRE_GEM, DAMAGE_1, LIFE_1, RESIST_1, COLD_RESIST, FIRE_RESIST, MANA_1]
+    combinations = [(mod_id,) for mod_id in one_per_family]
+    combinations += [
+        pair for pair in itertools.combinations(one_per_family, 2) if not {GEM, FIRE_GEM} <= set(pair)
+    ]
+    asked = 0
+    for mod_ids in combinations:
+        item = fractured_item(*mod_ids, level=level)
+        for action in (CHAOS, REFORGE):
+            try:
+                check_kernel(ab, item, action)
+            except ActionError:
+                continue
+            asked += 1
+    assert asked > 40
+    assert ab.stats.hits > 0
