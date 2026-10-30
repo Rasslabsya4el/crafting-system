@@ -1,6 +1,6 @@
 ---
 name: checker
-description: Read-only review on Sonnet 5.5 of one change against its ticket: does it do what the ticket asks on every case, and what does it break. Use on every change before it lands.
+description: "Read-only review on Sonnet 5.5 of one change against its ticket: does it do what the ticket asks on every case, and what does it break. Use on every change before it lands."
 model: claude-sonnet-5-5
 effort: high
 tools: Read, Grep, Glob, Bash

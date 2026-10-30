@@ -4,3 +4,12 @@
 
 # Local third-party snapshots (PoB data, CoE/PoEDB/wiki cache); never committed: PoB is only a cross-check and the raw cache is third-party data (docs/adr/0003)
 sources/
+
+# Local runtime directories (default data, cache and output), virtualenv and build artefacts
+/local/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+/dist/
+/build/

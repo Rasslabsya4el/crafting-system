@@ -1,6 +1,6 @@
 ---
 name: finder
-description: Read-only search on Haiku 5.5: find, list, grep, count, inventory. Use when an answer means reading many files or long logs and the main chat needs only the facts.
+description: "Read-only search on Haiku 5.5: find, list, grep, count, inventory. Use when an answer means reading many files or long logs and the main chat needs only the facts."
 model: claude-haiku-5-5
 effort: medium
 tools: Read, Grep, Glob, Bash
