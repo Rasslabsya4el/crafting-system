@@ -11,6 +11,7 @@ from crafting_system.prices.poe_ninja import BASE_URL, SourceError
 
 NINJA_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "poe_ninja"
 OVERVIEW_TYPES = ("Currency", "Fossil", "Resonator", "Essence")
+STASH_TYPES = ("Beast", "BaseType")
 
 
 def ninja_fixture(name: str):
@@ -20,8 +21,9 @@ def ninja_fixture(name: str):
 class FakeNinja:
     """A `get_json` that maps a URL to a recorded response; no network.
 
-    `leagues`, `overviews[type]` and `details[(type, id)]` hold the response to give: a parsed
-    JSON value, or an exception to raise. A details request nobody set up answers like a 404.
+    `leagues`, `overviews[type]`, `details[(type, id)]`, `stash_overviews[type]` and
+    `stash_histories[(league, type, id)]` hold the response to give: a parsed JSON value, or an
+    exception to raise. A details or stash history request nobody set up answers like a 404.
     Every URL asked for is kept in `requests`.
     """
 
@@ -30,6 +32,8 @@ class FakeNinja:
         self.leagues = ninja_fixture("leagues")
         self.overviews = {kind: ninja_fixture(f"overview_{kind.lower()}") for kind in OVERVIEW_TYPES}
         self.details = {("Fossil", "hollow-fossil"): ninja_fixture("details_hollow_fossil")}
+        self.stash_overviews = {kind: ninja_fixture(f"stash_{kind.lower()}") for kind in STASH_TYPES}
+        self.stash_histories: dict[tuple[str, str, int], object] = {}
 
     def __call__(self, url: str):
         self.requests.append(url)
@@ -43,6 +47,11 @@ class FakeNinja:
         if route == "/exchange/current/details":
             key = (query["type"], query["id"])
             return self._answer(self.details.get(key, SourceError(f"HTTP 404 for {url}")))
+        if route == "/stash/current/item/overview":
+            return self._answer(self.stash_overviews[query["type"]])
+        if route == "/stash/current/item/history":
+            key = (query["league"], query["type"], int(query["id"]))
+            return self._answer(self.stash_histories.get(key, SourceError(f"HTTP 404 for {url}")))
         raise AssertionError(f"unexpected URL {url}")
 
     @staticmethod
@@ -53,6 +62,21 @@ class FakeNinja:
 
     def detail_requests(self) -> list[str]:
         return [url for url in self.requests if "/exchange/current/details" in url]
+
+    def stash_history_requests(self) -> list[str]:
+        return [url for url in self.requests if "/stash/current/item/history" in url]
+
+    def set_stash_line(self, kind: str, line_id: int, **changes) -> None:
+        """Change fields of one stash overview line; a value of None removes the field."""
+        for line in self.stash_overviews[kind]["lines"]:
+            if line["id"] == line_id:
+                for field, value in changes.items():
+                    if value is None:
+                        line.pop(field, None)
+                    else:
+                        line[field] = value
+                return
+        raise AssertionError(line_id)
 
     def drop_line(self, kind: str, line_id: str) -> None:
         """Remove one item from an overview, as if poe.ninja had no line for it."""

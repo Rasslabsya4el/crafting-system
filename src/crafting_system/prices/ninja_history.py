@@ -15,13 +15,15 @@ least `MIN_COUNT` (stash). Every function returns `(day, price)` pairs inside th
 the history endpoints are not documented, so "this source failed" is an ordinary answer.
 """
 
+import statistics
 import urllib.parse
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from .fallbacks import HISTORY_DAYS, MIN_COUNT
+from .fallbacks import HISTORY_DAYS, MIN_COUNT, Context, Gap, StageResult, stamped_entry
 from .http_json import GetJson, SourceError
-from .poe_ninja import BASE_URL, OVERVIEW_TYPES
+from .poe_ninja import BASE_URL, HISTORY_SOURCE, OVERVIEW_TYPES
 from .price_file import is_price
 
 
@@ -103,3 +105,28 @@ def stash_history(
         return stash_rows(get_json(url), anchor, first, last)
     except SourceError:
         return []
+
+
+def ninja_history_stage(get_json: GetJson, context: Context, gaps: Sequence[Gap]) -> StageResult:
+    """Price each gap with the median of its poe.ninja daily rows in the 7 days ending on `context.today`.
+
+    A gap with an `exchange_id` is read from the exchange history, one with a `stash_kind` and `stash_id`
+    from the stash history; any other gap, or one without rows, stays a gap.
+    """
+    first, last = window_ending(context.today)
+    prices, warnings = {}, []
+    for gap in gaps:
+        if gap.exchange_id is not None:
+            rows = exchange_history(get_json, context.league, gap.exchange_id, first, last)
+        elif gap.stash_kind is not None and gap.stash_id is not None:
+            rows = stash_history(get_json, context.league, gap.stash_kind, gap.stash_id, context.today, first, last)
+        else:
+            continue
+        if not rows:
+            continue
+        note = f"median of {len(rows)} daily rows in the {HISTORY_DAYS} days ending {last.isoformat()}"
+        median = float(statistics.median(price for _, price in rows))
+        newest = max(day for day, _ in rows)
+        prices[gap.name] = stamped_entry(median, HISTORY_SOURCE, context.league, newest, note)
+        warnings.append(f"{gap.name}: no current price, used history ({note})")
+    return StageResult(prices, warnings)
