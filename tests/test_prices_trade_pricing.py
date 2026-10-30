@@ -31,7 +31,7 @@ from crafting_system.prices.trade_pricing import (
 )
 from crafting_system.prices.trade_query import BuyMod, query_hash
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, FakeTrade, api_row, make_client, network_guard, price_file  # noqa: F401
+from trade_support import NOW, R12_SPEC, FakeTrade, api_row, make_client, price_file
 
 
 @pytest.fixture
@@ -258,7 +258,7 @@ def test_two_usable_listings_are_not_enough_and_the_message_says_why(trade, spec
 def test_a_search_with_no_listings_is_not_enough_and_fetches_nothing(trade, spec, game_mods, tmp_path):
     trade.search.update(total=0, result=[])
 
-    with pytest.raises(NotEnoughListings):
+    with pytest.raises(NotEnoughListings, match="--indexed"):
         price(trade, spec, game_mods, tmp_path)
 
     assert trade.kinds == ["stats", "search"]
@@ -273,7 +273,7 @@ def test_the_entry_carries_source_note_and_the_query(trade, spec, game_mods, tmp
     entry = entry_for(found)
 
     assert (entry.chaos, entry.source) == (1.0, TRADE_SOURCE) and TRADE_SOURCE == "trade-api"
-    assert entry.note == "median of the 5 cheapest of 10 fetched listings, 910 on the site"
+    assert entry.note == "median of the 5 cheapest of 10 fetched listings, 910 on the site, listed within 1week"
     assert entry.detail == {
         "league": "Allflame",
         "date": "2026-10-30",

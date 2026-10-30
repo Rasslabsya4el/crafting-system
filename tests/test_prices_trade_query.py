@@ -5,7 +5,6 @@ import math
 from pathlib import Path
 
 import pytest
-from trade_support import network_guard  # noqa: F401
 
 from crafting_system.prices.trade_query import (
     INFLUENCE_STAT_IDS,
@@ -293,6 +292,7 @@ def test_build_query_for_the_r12_start_item():
         mirrored=False,
         fractured=True,
         stats=(StatFilter(FRACTURED_LIGHTNING_RES),),
+        indexed="1week",
     )
 
 

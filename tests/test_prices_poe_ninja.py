@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from ninja_support import OVERVIEW_TYPES, ninja, ninja_fixture  # noqa: F401  (ninja is a fixture)
+from ninja_support import OVERVIEW_TYPES, STASH_TYPES, ninja, ninja_fixture  # noqa: F401  (ninja is a fixture)
 from crafting_system.prices import (
     CHAOS_ORB,
     DIVINE_ORB,
@@ -18,11 +18,11 @@ from crafting_system.prices import (
     write_price_file,
 )
 from crafting_system.config import Config
+from crafting_system.prices.fetch import fetch_price_file
 from crafting_system.prices.poe_ninja import (
     BASE_URL,
     USER_AGENT,
     SourceError,
-    fetch_price_file,
     history_slug,
     http_get_json,
 )
@@ -62,10 +62,13 @@ def test_the_current_league_is_the_first_one_poe_ninja_lists(ninja):
     assert result.price_file.league == "Allflame"
     assert ninja.requests[0] == f"{BASE_URL}/leagues"
     overview_urls = [url for url in ninja.requests if "/overview" in url]
-    assert len(overview_urls) == len(OVERVIEW_TYPES)
+    assert len(overview_urls) == len(OVERVIEW_TYPES) + len(STASH_TYPES)
     assert all("league=Allflame" in url for url in overview_urls)
     for kind in OVERVIEW_TYPES:
-        assert any(f"type={kind}" in url for url in overview_urls)
+        assert any(f"/exchange/current/overview?league=Allflame&type={kind}" in url for url in overview_urls)
+    stash_urls = [url for url in overview_urls if "/stash/" in url]
+    assert [url.split("type=")[1] for url in stash_urls] == ["Beast", "BaseType"]
+    assert overview_urls[-2:] == stash_urls  # the stash overviews come after the four exchange ones
 
 
 def test_prices_are_the_recorded_values_in_chaos(ninja):
@@ -531,3 +534,26 @@ def test_fetching_and_writing_leave_the_overrides_file_alone(ninja, tmp_path):
     write_price_file(tmp_path / "prices.json", fetch_price_file(ninja, NOW).price_file)
 
     assert overrides.read_bytes() == before
+
+
+# --- pacing of the real transport ----------------------------------------------------------
+
+
+def test_the_paced_transport_leaves_the_interval_between_requests():
+    from crafting_system.prices.http_json import paced
+
+    clock, slept = [0.0], []
+
+    def sleep(seconds):
+        slept.append(seconds)
+        clock[0] += seconds
+
+    get = paced(lambda url: url, lambda: clock[0], sleep, interval=0.5)
+
+    assert get("a") == "a" and slept == []  # the first request goes at once
+    clock[0] += 0.2
+    get("b")
+    assert slept == [pytest.approx(0.3)]
+    clock[0] += 1.0
+    get("c")
+    assert len(slept) == 1  # enough time has passed already

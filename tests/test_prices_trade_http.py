@@ -10,7 +10,6 @@ import socket
 import threading
 
 import pytest
-from trade_support import network_guard  # noqa: F401
 
 from crafting_system.prices.trade_http import (
     BudgetExceeded,

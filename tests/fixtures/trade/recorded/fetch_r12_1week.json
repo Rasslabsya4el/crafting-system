@@ -1,0 +1,1537 @@
+{
+  "result": [
+    {
+      "id": "ea99c92d187277ec6a3c31c356e7221feac343eca8c19217b6983e19a482eddb",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-25T19:32:22Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 1,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Onslaught Torc",
+        "typeLine": "Onyx Amulet",
+        "baseType": "Onyx Amulet",
+        "rarity": "Rare",
+        "ilvl": 82,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "+54 to maximum Life",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3299347043",
+            "mods": [
+              {
+                "name": "Stalwart",
+                "tier": "P6",
+                "level": 18,
+                "magnitudes": [
+                  {
+                    "min": "40",
+                    "max": "54"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+19 to maximum Mana",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_1050105434",
+            "mods": [
+              {
+                "name": "Beryl",
+                "tier": "P13",
+                "magnitudes": [
+                  {
+                    "min": "15",
+                    "max": "19"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "Gain 4 Life per Enemy Hit with Attacks",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_2797971005",
+            "mods": [
+              {
+                "name": "of Regrowth",
+                "tier": "S1",
+                "level": 30,
+                "magnitudes": [
+                  {
+                    "min": "4",
+                    "max": "4"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+43% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of the Lightning",
+                "tier": "S2",
+                "level": 72,
+                "magnitudes": [
+                  {
+                    "min": "42",
+                    "max": "45"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_3299347043",
+                [
+                  2
+                ]
+              ],
+              [
+                "explicit.stat_1050105434",
+                [
+                  1
+                ]
+              ],
+              [
+                "explicit.stat_2797971005",
+                [
+                  0
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_1379411836",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpPbnNsYXVnaHQgVG9yYw0KT255eCBBbXVsZXQNCi0tLS0tLS0tDQpSZXF1aXJlbWVudHM6DQpMZXZlbDogNTcNCi0tLS0tLS0tDQpJdGVtIExldmVsOiA4Mg0KLS0tLS0tLS0NCisxNSB0byBhbGwgQXR0cmlidXRlcw0KLS0tLS0tLS0NCis0MyUgdG8gTGlnaHRuaW5nIFJlc2lzdGFuY2UNCis1NCB0byBtYXhpbXVtIExpZmUNCisxOSB0byBtYXhpbXVtIE1hbmENCkdhaW4gNCBMaWZlIHBlciBFbmVteSBIaXQgd2l0aCBBdHRhY2tzDQotLS0tLS0tLQ0KRnJhY3R1cmVkIEl0ZW0NCi0tLS0tLS0tDQpOb3RlOiB+Yi9vIDEgY2hhb3MNCg=="
+        }
+      }
+    },
+    {
+      "id": "b4f65a33b8286d7b8303ee7f188ef61fee051c99b200001214fe8c609dafeb11",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-25T21:51:09Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 4,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Doom Locket",
+        "typeLine": "Onyx Amulet",
+        "baseType": "Onyx Amulet",
+        "rarity": "Rare",
+        "ilvl": 79,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "Adds 5 to 7 Fire Damage to Attacks",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_1573130764",
+            "mods": [
+              {
+                "name": "Smouldering",
+                "tier": "P8",
+                "level": 12,
+                "magnitudes": [
+                  {
+                    "min": "3",
+                    "max": "5"
+                  },
+                  {
+                    "min": "7",
+                    "max": "8"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+19 to maximum Energy Shield",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3489782002",
+            "mods": [
+              {
+                "name": "Radiating",
+                "tier": "P8",
+                "level": 29,
+                "magnitudes": [
+                  {
+                    "min": "16",
+                    "max": "19"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+38% to Fire Resistance",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3372524247",
+            "mods": [
+              {
+                "name": "of the Volcano",
+                "tier": "S3",
+                "level": 60,
+                "magnitudes": [
+                  {
+                    "min": "36",
+                    "max": "41"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "0.28% of Physical Attack Damage Leeched as Mana",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3237948413",
+            "mods": [
+              {
+                "name": "of Thirst",
+                "tier": "S2",
+                "level": 50,
+                "magnitudes": [
+                  {
+                    "min": "0.2",
+                    "max": "0.4"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+14% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of the Squall",
+                "tier": "S7",
+                "level": 13,
+                "magnitudes": [
+                  {
+                    "min": "12",
+                    "max": "17"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_1573130764",
+                [
+                  0
+                ]
+              ],
+              [
+                "explicit.stat_3489782002",
+                [
+                  3
+                ]
+              ],
+              [
+                "explicit.stat_3372524247",
+                [
+                  1
+                ]
+              ],
+              [
+                "explicit.stat_3237948413",
+                [
+                  2
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_1379411836",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpEb29tIExvY2tldA0KT255eCBBbXVsZXQNCi0tLS0tLS0tDQpSZXF1aXJlbWVudHM6DQpMZXZlbDogNDgNCi0tLS0tLS0tDQpJdGVtIExldmVsOiA3OQ0KLS0tLS0tLS0NCisxMyB0byBhbGwgQXR0cmlidXRlcw0KLS0tLS0tLS0NCisxNCUgdG8gTGlnaHRuaW5nIFJlc2lzdGFuY2UNCkFkZHMgNSB0byA3IEZpcmUgRGFtYWdlIHRvIEF0dGFja3MNCisxOSB0byBtYXhpbXVtIEVuZXJneSBTaGllbGQNCiszOCUgdG8gRmlyZSBSZXNpc3RhbmNlDQowLjI4JSBvZiBQaHlzaWNhbCBBdHRhY2sgRGFtYWdlIExlZWNoZWQgYXMgTWFuYQ0KLS0tLS0tLS0NCkZyYWN0dXJlZCBJdGVtDQotLS0tLS0tLQ0KTm90ZTogfmIvbyA0IGNoYW9zDQo="
+        }
+      }
+    },
+    {
+      "id": "f6c454bd5fdad397aea8ca398482d9d3c01d6b86a89bf78a08c42e8b87332400",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-25T11:28:21Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 4,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Dragon Clasp",
+        "typeLine": "Coral Amulet",
+        "baseType": "Coral Amulet",
+        "rarity": "Rare",
+        "ilvl": 83,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "+12 to Strength",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_4080418644",
+            "mods": [
+              {
+                "name": "of the Brute",
+                "tier": "S9",
+                "magnitudes": [
+                  {
+                    "min": "8",
+                    "max": "12"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+84 to Accuracy Rating",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_803737631",
+            "mods": [
+              {
+                "name": "of Steadiness",
+                "tier": "S5",
+                "magnitudes": [
+                  {
+                    "min": "50",
+                    "max": "100"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+28 to maximum Energy Shield",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3489782002",
+            "mods": [
+              {
+                "name": "Blazing",
+                "tier": "P5",
+                "level": 50,
+                "magnitudes": [
+                  {
+                    "min": "27",
+                    "max": "31"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "10% increased maximum Energy Shield",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_2482852589",
+            "mods": [
+              {
+                "name": "Resolute",
+                "tier": "P5",
+                "level": 30,
+                "magnitudes": [
+                  {
+                    "min": "8",
+                    "max": "10"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+43% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of the Lightning",
+                "tier": "S2",
+                "level": 72,
+                "magnitudes": [
+                  {
+                    "min": "42",
+                    "max": "45"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_4080418644",
+                [
+                  2
+                ]
+              ],
+              [
+                "explicit.stat_803737631",
+                [
+                  0
+                ]
+              ],
+              [
+                "explicit.stat_3489782002",
+                [
+                  3
+                ]
+              ],
+              [
+                "explicit.stat_2482852589",
+                [
+                  1
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_3325883026",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpEcmFnb24gQ2xhc3ANCkNvcmFsIEFtdWxldA0KLS0tLS0tLS0NClJlcXVpcmVtZW50czoNCkxldmVsOiA1Nw0KLS0tLS0tLS0NCkl0ZW0gTGV2ZWw6IDgzDQotLS0tLS0tLQ0KUmVnZW5lcmF0ZSAyLjYgTGlmZSBwZXIgc2Vjb25kDQotLS0tLS0tLQ0KKzQzJSB0byBMaWdodG5pbmcgUmVzaXN0YW5jZQ0KKzEyIHRvIFN0cmVuZ3RoDQorODQgdG8gQWNjdXJhY3kgUmF0aW5nDQorMjggdG8gbWF4aW11bSBFbmVyZ3kgU2hpZWxkDQoxMCUgaW5jcmVhc2VkIG1heGltdW0gRW5lcmd5IFNoaWVsZA0KLS0tLS0tLS0NCkZyYWN0dXJlZCBJdGVtDQotLS0tLS0tLQ0KTm90ZTogfmIvbyA0IGNoYW9zDQo="
+        }
+      }
+    },
+    {
+      "id": "2ccbb5b54c8b65b8214e804fee734b1af75c3246a51cf63e5fa0d8ff29303142",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-24T23:30:38Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 8,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Vortex Medallion",
+        "typeLine": "Onyx Amulet",
+        "baseType": "Onyx Amulet",
+        "rarity": "Rare",
+        "ilvl": 84,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "Adds 14 to 22 Physical Damage to Attacks",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3032590688",
+            "mods": [
+              {
+                "name": "Flaring",
+                "tier": "P1",
+                "level": 76,
+                "magnitudes": [
+                  {
+                    "min": "11",
+                    "max": "15"
+                  },
+                  {
+                    "min": "22",
+                    "max": "26"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "19% increased Global Critical Strike Chance",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_587431675",
+            "mods": [
+              {
+                "name": "of Stinging",
+                "tier": "S5",
+                "level": 20,
+                "magnitudes": [
+                  {
+                    "min": "15",
+                    "max": "19"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "23% increased Mana Regeneration Rate",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_789117908",
+            "mods": [
+              {
+                "name": "of Joy",
+                "tier": "S5",
+                "level": 18,
+                "magnitudes": [
+                  {
+                    "min": "20",
+                    "max": "29"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+46% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of Ephij",
+                "tier": "S1",
+                "level": 84,
+                "magnitudes": [
+                  {
+                    "min": "46",
+                    "max": "48"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_3032590688",
+                [
+                  2
+                ]
+              ],
+              [
+                "explicit.stat_587431675",
+                [
+                  0
+                ]
+              ],
+              [
+                "explicit.stat_789117908",
+                [
+                  1
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_1379411836",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpWb3J0ZXggTWVkYWxsaW9uDQpPbnl4IEFtdWxldA0KLS0tLS0tLS0NClJlcXVpcmVtZW50czoNCkxldmVsOiA2Nw0KLS0tLS0tLS0NCkl0ZW0gTGV2ZWw6IDg0DQotLS0tLS0tLQ0KKzE1IHRvIGFsbCBBdHRyaWJ1dGVzDQotLS0tLS0tLQ0KKzQ2JSB0byBMaWdodG5pbmcgUmVzaXN0YW5jZQ0KQWRkcyAxNCB0byAyMiBQaHlzaWNhbCBEYW1hZ2UgdG8gQXR0YWNrcw0KMTklIGluY3JlYXNlZCBHbG9iYWwgQ3JpdGljYWwgU3RyaWtlIENoYW5jZQ0KMjMlIGluY3JlYXNlZCBNYW5hIFJlZ2VuZXJhdGlvbiBSYXRlDQotLS0tLS0tLQ0KRnJhY3R1cmVkIEl0ZW0NCg=="
+        }
+      }
+    },
+    {
+      "id": "854c03d0646e406e1210e3c76447690af9b185ca54bb263b0755214d22f3e001",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-26T20:05:48Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 10,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Morbid Charm",
+        "typeLine": "Onyx Amulet",
+        "baseType": "Onyx Amulet",
+        "rarity": "Rare",
+        "ilvl": 83,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "16% increased maximum Energy Shield",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_2482852589",
+            "mods": [
+              {
+                "name": "Dauntless",
+                "tier": "P3",
+                "level": 56,
+                "magnitudes": [
+                  {
+                    "min": "14",
+                    "max": "16"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "Regenerate 31.8 Life per second",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3325883026",
+            "mods": [
+              {
+                "name": "of the Hydra",
+                "tier": "S4",
+                "level": 44,
+                "magnitudes": [
+                  {
+                    "min": "24.1",
+                    "max": "32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "12% increased Rarity of Items found",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3917489142",
+            "mods": [
+              {
+                "name": "of Raiding",
+                "tier": "S3",
+                "level": 30,
+                "magnitudes": [
+                  {
+                    "min": "11",
+                    "max": "14"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+25% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of the Thunderhead",
+                "tier": "S5",
+                "level": 37,
+                "magnitudes": [
+                  {
+                    "min": "24",
+                    "max": "29"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_2482852589",
+                [
+                  1
+                ]
+              ],
+              [
+                "explicit.stat_3325883026",
+                [
+                  2
+                ]
+              ],
+              [
+                "explicit.stat_3917489142",
+                [
+                  0
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_1379411836",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpNb3JiaWQgQ2hhcm0NCk9ueXggQW11bGV0DQotLS0tLS0tLQ0KUmVxdWlyZW1lbnRzOg0KTGV2ZWw6IDQ0DQotLS0tLS0tLQ0KSXRlbSBMZXZlbDogODMNCi0tLS0tLS0tDQorMTMgdG8gYWxsIEF0dHJpYnV0ZXMNCi0tLS0tLS0tDQorMjUlIHRvIExpZ2h0bmluZyBSZXNpc3RhbmNlDQoxNiUgaW5jcmVhc2VkIG1heGltdW0gRW5lcmd5IFNoaWVsZA0KUmVnZW5lcmF0ZSAzMS44IExpZmUgcGVyIHNlY29uZA0KMTIlIGluY3JlYXNlZCBSYXJpdHkgb2YgSXRlbXMgZm91bmQNCi0tLS0tLS0tDQpGcmFjdHVyZWQgSXRlbQ0KLS0tLS0tLS0NCk5vdGU6IH5iL28gMTAgY2hhb3MNCg=="
+        }
+      }
+    },
+    {
+      "id": "59fb57ab74ee37cce62f7ca0201c5ae628b9fe8579f41223f41d635b30f187c5",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-27T23:50:01Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 15,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Dusk Heart",
+        "typeLine": "Ape Talisman",
+        "baseType": "Ape Talisman",
+        "rarity": "Rare",
+        "ilvl": 85,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "+28 to all Attributes",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_1379411836",
+            "mods": [
+              {
+                "name": "of the Universe",
+                "tier": "S3",
+                "level": 66,
+                "magnitudes": [
+                  {
+                    "min": "25",
+                    "max": "28"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "21% increased Armour",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_2866361420",
+            "mods": [
+              {
+                "name": "Buttressed",
+                "tier": "P4",
+                "level": 42,
+                "magnitudes": [
+                  {
+                    "min": "19",
+                    "max": "23"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+13% to all Elemental Resistances",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_2901986750",
+            "mods": [
+              {
+                "name": "of Variegation",
+                "tier": "S3",
+                "level": 48,
+                "magnitudes": [
+                  {
+                    "min": "12",
+                    "max": "14"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+19% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of the Storm",
+                "tier": "S6",
+                "level": 25,
+                "magnitudes": [
+                  {
+                    "min": "18",
+                    "max": "23"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_1379411836",
+                [
+                  1
+                ]
+              ],
+              [
+                "explicit.stat_2866361420",
+                [
+                  2
+                ]
+              ],
+              [
+                "explicit.stat_2901986750",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ],
+            "enchant": [
+              [
+                "enchant.stat_66303477",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpEdXNrIEhlYXJ0DQpBcGUgVGFsaXNtYW4NCi0tLS0tLS0tDQpSZXF1aXJlbWVudHM6DQpMZXZlbDogNTINCi0tLS0tLS0tDQpJdGVtIExldmVsOiA4NQ0KLS0tLS0tLS0NCisxIHRvIE1pbmltdW0gRW5kdXJhbmNlLCBGcmVuenkgYW5kIFBvd2VyIENoYXJnZXMgKGVuY2hhbnQpDQotLS0tLS0tLQ0KKzE5JSB0byBMaWdodG5pbmcgUmVzaXN0YW5jZQ0KKzI4IHRvIGFsbCBBdHRyaWJ1dGVzDQoyMSUgaW5jcmVhc2VkIEFybW91cg0KKzEzJSB0byBhbGwgRWxlbWVudGFsIFJlc2lzdGFuY2VzDQotLS0tLS0tLQ0KIlRoZSBEcnVpZHMgZW1lcmdlZCBmcm9tIHRoZSBmb3Jlc3RzIHRvIGdyZWV0DQphbmQgd2FybiB0aGUgbmV3IHNldHRsZXJzLiBUaGlzIHdhcyBhbiBhbmNpZW50DQpsYW5kIGZ1bGwgb2YgbXlzdGVyaWVzIGFuZCBkYW5nZXJzLiBMeXNhbmRhIHNlbnQNCmhlciBiZXN0IG1lbiB0byBzdHVkeSBhbmQgbGVhcm4gd2l0aCB0aGVtLiINCi0tLS0tLS0tDQpGcmFjdHVyZWQgSXRlbQ0KLS0tLS0tLS0NCk5vdGU6IH5iL28gMTUgY2hhb3MNCg=="
+        }
+      }
+    },
+    {
+      "id": "521e213bebadb62faf5272cdc40e1e196235e4a57ce99256ae50b626b1ae80ea",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-25T21:04:44Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 30,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Torment Braid",
+        "typeLine": "Turquoise Amulet",
+        "baseType": "Turquoise Amulet",
+        "rarity": "Rare",
+        "ilvl": 85,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "+31 to all Attributes",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_1379411836",
+            "mods": [
+              {
+                "name": "of the Infinite",
+                "tier": "S2",
+                "level": 77,
+                "magnitudes": [
+                  {
+                    "min": "29",
+                    "max": "32"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+71 to maximum Mana",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_1050105434",
+            "mods": [
+              {
+                "name": "Zaffre",
+                "tier": "P2",
+                "level": 81,
+                "magnitudes": [
+                  {
+                    "min": "69",
+                    "max": "73"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+27% to Cold Resistance",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_4220027924",
+            "mods": [
+              {
+                "name": "of the Yeti",
+                "tier": "S5",
+                "level": 38,
+                "magnitudes": [
+                  {
+                    "min": "24",
+                    "max": "29"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "7% increased Elemental Damage with Attack Skills",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_387439868",
+            "mods": [
+              {
+                "name": "Catalysing",
+                "tier": "P6",
+                "level": 4,
+                "magnitudes": [
+                  {
+                    "min": "5",
+                    "max": "10"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+34% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of the Tempest",
+                "tier": "S4",
+                "level": 49,
+                "magnitudes": [
+                  {
+                    "min": "30",
+                    "max": "35"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_1379411836",
+                [
+                  0
+                ]
+              ],
+              [
+                "explicit.stat_1050105434",
+                [
+                  3
+                ]
+              ],
+              [
+                "explicit.stat_4220027924",
+                [
+                  2
+                ]
+              ],
+              [
+                "explicit.stat_387439868",
+                [
+                  1
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_2300185227",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpUb3JtZW50IEJyYWlkDQpUdXJxdW9pc2UgQW11bGV0DQotLS0tLS0tLQ0KUmVxdWlyZW1lbnRzOg0KTGV2ZWw6IDY0DQotLS0tLS0tLQ0KSXRlbSBMZXZlbDogODUNCi0tLS0tLS0tDQorMTYgdG8gRGV4dGVyaXR5IGFuZCBJbnRlbGxpZ2VuY2UNCi0tLS0tLS0tDQorMzQlIHRvIExpZ2h0bmluZyBSZXNpc3RhbmNlDQorMzEgdG8gYWxsIEF0dHJpYnV0ZXMNCis3MSB0byBtYXhpbXVtIE1hbmENCisyNyUgdG8gQ29sZCBSZXNpc3RhbmNlDQo3JSBpbmNyZWFzZWQgRWxlbWVudGFsIERhbWFnZSB3aXRoIEF0dGFjayBTa2lsbHMNCi0tLS0tLS0tDQpGcmFjdHVyZWQgSXRlbQ0KLS0tLS0tLS0NCk5vdGU6IH5iL28gMzAgY2hhb3MNCg=="
+        }
+      }
+    },
+    {
+      "id": "3688af28cf5f3b983208f0fab2b7edade8c05f5538bd064f43b138c5de4b3c9f",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-28T13:03:25Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 30,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Glyph Heart",
+        "typeLine": "Amber Amulet",
+        "baseType": "Amber Amulet",
+        "rarity": "Rare",
+        "ilvl": 85,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "+28% to Global Critical Strike Multiplier",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3556824919",
+            "mods": [
+              {
+                "name": "of Fury",
+                "tier": "S3",
+                "level": 45,
+                "magnitudes": [
+                  {
+                    "min": "25",
+                    "max": "29"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+37 to maximum Mana",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_1050105434",
+            "mods": [
+              {
+                "name": "Cerulean",
+                "tier": "P9",
+                "level": 29,
+                "magnitudes": [
+                  {
+                    "min": "35",
+                    "max": "39"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+47% to Cold Resistance",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_4220027924",
+            "mods": [
+              {
+                "name": "of Haast",
+                "tier": "S1",
+                "level": 84,
+                "magnitudes": [
+                  {
+                    "min": "46",
+                    "max": "48"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+46% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of Ephij",
+                "tier": "S1",
+                "level": 84,
+                "magnitudes": [
+                  {
+                    "min": "46",
+                    "max": "48"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_3556824919",
+                [
+                  0
+                ]
+              ],
+              [
+                "explicit.stat_1050105434",
+                [
+                  1
+                ]
+              ],
+              [
+                "explicit.stat_4220027924",
+                [
+                  2
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_4080418644",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpHbHlwaCBIZWFydA0KQW1iZXIgQW11bGV0DQotLS0tLS0tLQ0KUmVxdWlyZW1lbnRzOg0KTGV2ZWw6IDY3DQotLS0tLS0tLQ0KSXRlbSBMZXZlbDogODUNCi0tLS0tLS0tDQorMjcgdG8gU3RyZW5ndGgNCi0tLS0tLS0tDQorNDYlIHRvIExpZ2h0bmluZyBSZXNpc3RhbmNlDQorMjglIHRvIEdsb2JhbCBDcml0aWNhbCBTdHJpa2UgTXVsdGlwbGllcg0KKzM3IHRvIG1heGltdW0gTWFuYQ0KKzQ3JSB0byBDb2xkIFJlc2lzdGFuY2UNCi0tLS0tLS0tDQpGcmFjdHVyZWQgSXRlbQ0KLS0tLS0tLS0NCk5vdGU6IH5iL28gMzAgY2hhb3MNCg=="
+        }
+      }
+    },
+    {
+      "id": "aede325e4ab7e8f5149a51738206783e3a35e417d8c80ab3a6bbe8ac938c8817",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-29T04:46:01Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 50,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Rift Collar",
+        "typeLine": "Coral Amulet",
+        "baseType": "Coral Amulet",
+        "rarity": "Rare",
+        "ilvl": 85,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "Adds 1 to 2 Physical Damage to Attacks",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3032590688",
+            "mods": [
+              {
+                "name": "Glinting",
+                "tier": "P9",
+                "level": 5,
+                "magnitudes": [
+                  {
+                    "min": "1",
+                    "max": "1"
+                  },
+                  {
+                    "min": "2",
+                    "max": "2"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+13 to maximum Energy Shield",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3489782002",
+            "mods": [
+              {
+                "name": "Glowing",
+                "tier": "P9",
+                "level": 23,
+                "magnitudes": [
+                  {
+                    "min": "13",
+                    "max": "15"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "49% increased Mana Regeneration Rate",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_789117908",
+            "mods": [
+              {
+                "name": "of Bliss",
+                "tier": "S3",
+                "level": 42,
+                "magnitudes": [
+                  {
+                    "min": "40",
+                    "max": "49"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+47% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of Ephij",
+                "tier": "S1",
+                "level": 84,
+                "magnitudes": [
+                  {
+                    "min": "46",
+                    "max": "48"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_3032590688",
+                [
+                  1
+                ]
+              ],
+              [
+                "explicit.stat_3489782002",
+                [
+                  2
+                ]
+              ],
+              [
+                "explicit.stat_789117908",
+                [
+                  0
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_3325883026",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpSaWZ0IENvbGxhcg0KQ29yYWwgQW11bGV0DQotLS0tLS0tLQ0KUmVxdWlyZW1lbnRzOg0KTGV2ZWw6IDY3DQotLS0tLS0tLQ0KSXRlbSBMZXZlbDogODUNCi0tLS0tLS0tDQpSZWdlbmVyYXRlIDMuOCBMaWZlIHBlciBzZWNvbmQNCi0tLS0tLS0tDQorNDclIHRvIExpZ2h0bmluZyBSZXNpc3RhbmNlDQpBZGRzIDEgdG8gMiBQaHlzaWNhbCBEYW1hZ2UgdG8gQXR0YWNrcw0KKzEzIHRvIG1heGltdW0gRW5lcmd5IFNoaWVsZA0KNDklIGluY3JlYXNlZCBNYW5hIFJlZ2VuZXJhdGlvbiBSYXRlDQotLS0tLS0tLQ0KRnJhY3R1cmVkIEl0ZW0NCi0tLS0tLS0tDQpOb3RlOiB+Yi9vIDUwIGNoYW9zDQo="
+        }
+      }
+    },
+    {
+      "id": "f0dfbbc500bd8c8e841f78753f83e2b995e9f0a78d87306acd43f3d532413dcb",
+      "listing": {
+        "method": "psapi",
+        "indexed": "2026-10-28T12:02:55Z",
+        "price": {
+          "type": "~b/o",
+          "amount": 50,
+          "currency": "chaos"
+        }
+      },
+      "item": {
+        "league": "Allflame",
+        "fractured": true,
+        "name": "Apocalypse Collar",
+        "typeLine": "Agate Amulet",
+        "baseType": "Agate Amulet",
+        "rarity": "Rare",
+        "ilvl": 85,
+        "identified": true,
+        "explicitMods": [
+          {
+            "description": "+17 to Intelligence",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_328541901",
+            "mods": [
+              {
+                "name": "of the Student",
+                "tier": "S8",
+                "level": 11,
+                "magnitudes": [
+                  {
+                    "min": "13",
+                    "max": "17"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "Adds 3 to 7 Physical Damage to Attacks",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3032590688",
+            "mods": [
+              {
+                "name": "Polished",
+                "tier": "P7",
+                "level": 19,
+                "magnitudes": [
+                  {
+                    "min": "3",
+                    "max": "4"
+                  },
+                  {
+                    "min": "6",
+                    "max": "7"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+28 to maximum Energy Shield",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_3489782002",
+            "mods": [
+              {
+                "name": "Blazing",
+                "tier": "P5",
+                "level": 50,
+                "magnitudes": [
+                  {
+                    "min": "27",
+                    "max": "31"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+49 to maximum Mana",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_1050105434",
+            "mods": [
+              {
+                "name": "Opalescent",
+                "tier": "P7",
+                "level": 42,
+                "magnitudes": [
+                  {
+                    "min": "45",
+                    "max": "49"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+12% to Chaos Resistance",
+            "domain": "explicit",
+            "hash": "stat.explicit.stat_2923486259",
+            "mods": [
+              {
+                "name": "of Banishment",
+                "tier": "S5",
+                "level": 30,
+                "magnitudes": [
+                  {
+                    "min": "11",
+                    "max": "15"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "description": "+36% to Lightning Resistance",
+            "flags": {
+              "fractured": true
+            },
+            "domain": "fractured",
+            "hash": "stat.fractured.stat_1671376347",
+            "mods": [
+              {
+                "name": "of the Maelstrom",
+                "tier": "S3",
+                "level": 60,
+                "magnitudes": [
+                  {
+                    "min": "36",
+                    "max": "41"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended": {
+          "hashes": {
+            "explicit": [
+              [
+                "explicit.stat_328541901",
+                [
+                  3
+                ]
+              ],
+              [
+                "explicit.stat_3032590688",
+                [
+                  0
+                ]
+              ],
+              [
+                "explicit.stat_3489782002",
+                [
+                  4
+                ]
+              ],
+              [
+                "explicit.stat_1050105434",
+                [
+                  2
+                ]
+              ],
+              [
+                "explicit.stat_2923486259",
+                [
+                  1
+                ]
+              ]
+            ],
+            "implicit": [
+              [
+                "implicit.stat_1535626285",
+                [
+                  0
+                ]
+              ]
+            ],
+            "fractured": [
+              [
+                "fractured.stat_1671376347",
+                [
+                  0
+                ]
+              ]
+            ]
+          },
+          "text": "SXRlbSBDbGFzczogQW11bGV0cw0KUmFyaXR5OiBSYXJlDQpBcG9jYWx5cHNlIENvbGxhcg0KQWdhdGUgQW11bGV0DQotLS0tLS0tLQ0KUmVxdWlyZW1lbnRzOg0KTGV2ZWw6IDQ4DQotLS0tLS0tLQ0KSXRlbSBMZXZlbDogODUNCi0tLS0tLS0tDQorMTcgdG8gU3RyZW5ndGggYW5kIEludGVsbGlnZW5jZQ0KLS0tLS0tLS0NCiszNiUgdG8gTGlnaHRuaW5nIFJlc2lzdGFuY2UNCisxNyB0byBJbnRlbGxpZ2VuY2UNCkFkZHMgMyB0byA3IFBoeXNpY2FsIERhbWFnZSB0byBBdHRhY2tzDQorMjggdG8gbWF4aW11bSBFbmVyZ3kgU2hpZWxkDQorNDkgdG8gbWF4aW11bSBNYW5hDQorMTIlIHRvIENoYW9zIFJlc2lzdGFuY2UNCi0tLS0tLS0tDQpGcmFjdHVyZWQgSXRlbQ0KLS0tLS0tLS0NCk5vdGU6IH5iL28gNTAgY2hhb3MNCg=="
+        }
+      }
+    }
+  ]
+}

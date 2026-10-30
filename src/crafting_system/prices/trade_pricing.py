@@ -23,7 +23,7 @@ from typing import Any
 from ..data import Mod
 from .price_file import PriceEntry, PriceFile, load_price_file, write_price_file
 from .trade_http import MAX_FETCH_IDS, TradeClient, TradeError
-from .trade_query import BuySpec, build_query, query_hash
+from .trade_query import DEFAULT_INDEXED, BuySpec, build_query, query_hash
 from .trade_stats import TradeStats, parse_trade_stats, resolve_buy_mod
 
 TRADE_SOURCE = "trade-api"
@@ -84,6 +84,12 @@ class TradePrice:
     dropped: Mapping[str, int]  # reason -> count
     query_hash: str
     query: Mapping[str, Any]  # the search body
+
+    @property
+    def indexed(self) -> str | None:
+        """The listing-age window the query was sent with (None = any time)."""
+        window = self.query["query"].get("filters", {}).get("trade_filters", {}).get("filters", {})
+        return window.get("indexed", {}).get("option")
 
 
 # --- cache files ---------------------------------------------------------------------------------
@@ -201,20 +207,26 @@ def price_buy_spec(
     now: datetime,
     k: int = DEFAULT_K,
     refresh_stats: bool = False,
+    indexed: str | None = DEFAULT_INDEXED,
 ) -> TradePrice:
     """Median Chaos price of the `k` cheapest usable listings of `spec`; see the module text.
 
     `price_file` should already carry the overrides (`load_prices`). Raises `NotEnoughListings` when
-    fewer than `MIN_LISTINGS` listings are usable, and the `TradeError`s of the client.
+    fewer than `MIN_LISTINGS` listings are usable, and the `TradeError`s of the client. `indexed` is the
+    listing-age window of the query (None = any time); it is part of the body, so of the cache key.
     """
     if k < 1:
         raise ValueError(f"k must be at least 1, got {k}")
     mods = tuple(game_mods)
     stats = _stats(client, cache_dir, now, refresh_stats)
     filters = [resolve_buy_mod(mod, mods, stats) for mod in spec.mods]
-    body = build_query(spec, filters).body()
+    body = build_query(spec, filters, indexed).body()
     digest = query_hash(price_file.league, body)
-    total, rows = _listings(client, price_file.league, body, cache_dir / "trade" / f"{digest}.json", now)
+    hint = _window_hint(indexed)
+    try:
+        total, rows = _listings(client, price_file.league, body, cache_dir / "trade" / f"{digest}.json", now)
+    except NotEnoughListings as error:
+        raise NotEnoughListings(f"{error}{hint}") from None
 
     usable: list[float] = []
     dropped: dict[str, int] = {}
@@ -228,7 +240,7 @@ def price_buy_spec(
         why = "; ".join(f"{count} {reason}" for reason, count in sorted(dropped.items())) or "none dropped"
         raise NotEnoughListings(
             f"only {len(usable)} of {len(rows)} fetched listings ({total} on the site) can be priced; "
-            f"at least {MIN_LISTINGS} are needed. Dropped: {why}"
+            f"at least {MIN_LISTINGS} are needed. Dropped: {why}{hint}"
         )
     cheapest = sorted(usable)[:k]
     return TradePrice(
@@ -249,10 +261,20 @@ def price_buy_spec(
 # --- the price file ------------------------------------------------------------------------------
 
 
+def _window_hint(indexed: str | None) -> str:
+    if indexed is None:
+        return ""
+    return f". Only listings listed {within(indexed)} count; a wider window (--indexed) may find more"
+
+
+def within(indexed: str | None) -> str:
+    return "any time" if indexed is None else f"within {indexed}"
+
+
 def entry_for(price: TradePrice) -> PriceEntry:
     note = (
         f"median of the {price.used} cheapest of {price.fetched} fetched listings, "
-        f"{price.listings} on the site"
+        f"{price.listings} on the site, listed {within(price.indexed)}"
     )
     detail = {
         "league": price.league,

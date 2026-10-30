@@ -1,16 +1,12 @@
 """Test helpers for the trade-API pricing: a fake transport that answers from the recorded responses.
 
-Not a conftest: a test module imports `network_guard` (an autouse fixture) to switch it on for every
-test of that module, the way the `data` tests import `no_network` from `repoe_support`.
+The network guard for these tests lives in `conftest.py`, where it covers every `test_prices_*.py` module.
 """
 
 import copy
 import json
-import socket
 from datetime import UTC, datetime
 from pathlib import Path
-
-import pytest
 
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.prices.trade_http import (
@@ -27,50 +23,6 @@ RECORDED = TRADE_FIXTURES / "recorded"
 R12_SPEC = TRADE_FIXTURES / "r12_buy_spec.yaml"
 SECRET = "SECRET-COOKIE-123"
 NOW = datetime(2026, 10, 30, 21, 30, 0, tzinfo=UTC)
-
-
-LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
-
-
-@pytest.fixture(autouse=True)
-def network_guard(monkeypatch):
-    """Any connection (or name lookup) to a host other than loopback fails with AssertionError.
-
-    The local `http.server` tests of the real transport still work; the pathofexile.com host never
-    gets a packet, not even a DNS question.
-    """
-
-    def check(host) -> None:
-        if isinstance(host, bytes):
-            host = host.decode("ascii", errors="replace")
-        if host not in LOOPBACK_HOSTS:
-            raise AssertionError(f"the test used the network: {host!r}")
-
-    real_connect, real_connect_ex = socket.socket.connect, socket.socket.connect_ex
-    real_getaddrinfo, real_create_connection = socket.getaddrinfo, socket.create_connection
-
-    def connect(self, address, *args, **kwargs):
-        if isinstance(address, tuple):
-            check(address[0])
-        return real_connect(self, address, *args, **kwargs)
-
-    def connect_ex(self, address, *args, **kwargs):
-        if isinstance(address, tuple):
-            check(address[0])
-        return real_connect_ex(self, address, *args, **kwargs)
-
-    def getaddrinfo(host, *args, **kwargs):
-        check(host)
-        return real_getaddrinfo(host, *args, **kwargs)
-
-    def create_connection(address, *args, **kwargs):
-        check(address[0])
-        return real_create_connection(address, *args, **kwargs)
-
-    monkeypatch.setattr(socket.socket, "connect", connect)
-    monkeypatch.setattr(socket.socket, "connect_ex", connect_ex)
-    monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
-    monkeypatch.setattr(socket, "create_connection", create_connection)
 
 
 def recorded(name: str):
