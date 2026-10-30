@@ -1,1 +1,19 @@
-"""The stochastic shortest path; branching in B3 (ADR-0010, ADR-0011). May import only: data, rules, items, actions, abstraction."""
+"""The stochastic shortest path; branching in B3 (ADR-0010, ADR-0011). May import only: data, rules, items, actions, abstraction.
+
+The solver itself is generic: states are any hashable objects, it is pure standard-library Python
+and knows nothing of Path of Exile (`tests/test_solver_independence.py` guards that).
+"""
+
+from ._certify import ConvergenceError
+from ._model import Action, Model, Outcome, TabularModel
+from ._solve import Solution, solve
+
+__all__ = [
+    "Action",
+    "ConvergenceError",
+    "Model",
+    "Outcome",
+    "Solution",
+    "TabularModel",
+    "solve",
+]
