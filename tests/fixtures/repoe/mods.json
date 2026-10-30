@@ -1,4 +1,45 @@
 {
+ "IncreasedLife1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedLife"
+  ],
+  "implicit_tags": [
+   "resource",
+   "life"
+  ],
+  "is_essence_only": false,
+  "name": "Healthy",
+  "required_level": 5,
+  "spawn_weights": [
+   {
+    "tag": "fishing_rod",
+    "weight": 0
+   },
+   {
+    "tag": "weapon",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 1000
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_maximum_life",
+    "max": 24,
+    "min": 10
+   }
+  ],
+  "text": "+(10-24) to maximum Life",
+  "type": "IncreasedLife",
+  "gold_value": null
+ },
  "IncreasedEnergyShield1": {
   "adds_tags": [],
   "domain": "item",
@@ -589,6 +630,80 @@
   "type": "FireDamageWeaponPrefix",
   "gold_value": null
  },
+ "LifeRegeneration1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LifeRegeneration"
+  ],
+  "implicit_tags": [
+   "flat_life_regen",
+   "resource",
+   "life"
+  ],
+  "is_essence_only": false,
+  "name": "of the Newt",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "fishing_rod",
+    "weight": 0
+   },
+   {
+    "tag": "weapon",
+    "weight": 0
+   },
+   {
+    "tag": "quiver",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 1000
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_life_regeneration_rate_per_minute",
+    "max": 120,
+    "min": 60
+   }
+  ],
+  "text": "Regenerate (1-2) Life per second",
+  "type": "LifeRegeneration",
+  "gold_value": null
+ },
+ "ManaRegenerationImplicitAmulet1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "unique",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ManaRegeneration"
+  ],
+  "implicit_tags": [
+   "resource",
+   "mana"
+  ],
+  "is_essence_only": false,
+  "name": "",
+  "required_level": 2,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "mana_regeneration_rate_+%",
+    "max": 30,
+    "min": 20
+   }
+  ],
+  "text": "(20-30)% increased Mana Regeneration Rate",
+  "type": "ManaRegeneration",
+  "gold_value": null
+ },
  "ColdResist1": {
   "adds_tags": [],
   "domain": "item",
@@ -641,6 +756,114 @@
   ],
   "text": "+(6-11)% to Cold Resistance",
   "type": "ColdResistance",
+  "gold_value": null
+ },
+ "LightningResist1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Cloud",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_lightning_damage_resistance_%",
+    "max": 11,
+    "min": 6
+   }
+  ],
+  "text": "+(6-11)% to Lightning Resistance",
+  "type": "LightningResistance",
+  "gold_value": null
+ },
+ "LightningResist2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "LightningResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Squall",
+  "required_level": 13,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_lightning_damage_resistance_%",
+    "max": 17,
+    "min": 12
+   }
+  ],
+  "text": "+(12-17)% to Lightning Resistance",
+  "type": "LightningResistance",
   "gold_value": null
  },
  "ColdDamagePercentEssence1": {
@@ -734,6 +957,106 @@
   ],
   "text": "Prefixes Cannot Be Changed",
   "type": "ItemGenerationCannotChangePrefixes",
+  "gold_value": null
+ },
+ "DexMasterItemGenerationCannotChangeSuffixes": {
+  "adds_tags": [],
+  "domain": "crafted",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemGenerationCannotChangeSuffixes"
+  ],
+  "implicit_tags": [],
+  "is_essence_only": false,
+  "name": "Suffixed",
+  "required_level": 1,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "item_generation_cannot_change_suffixes",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "Suffixes Cannot Be Changed",
+  "type": "ItemGenerationCannotChangeSuffixes",
+  "gold_value": null
+ },
+ "IntMasterItemGenerationCannotRollAttackAffixes": {
+  "adds_tags": [],
+  "domain": "crafted",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemGenerationCannotRollAttackAffixes"
+  ],
+  "implicit_tags": [],
+  "is_essence_only": false,
+  "name": "of Spellcraft",
+  "required_level": 1,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "item_generation_cannot_roll_attack_affixes",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "Cannot roll Attack Modifiers",
+  "type": "ItemGenerationCannotRollAttackAffixes",
+  "gold_value": null
+ },
+ "StrDexMasterItemGenerationCannotRollCasterAffixes": {
+  "adds_tags": [],
+  "domain": "crafted",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemGenerationCannotRollCasterAffixes"
+  ],
+  "implicit_tags": [],
+  "is_essence_only": false,
+  "name": "of Weaponcraft",
+  "required_level": 1,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "item_generation_cannot_roll_caster_affixes",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "Cannot roll Caster Modifiers",
+  "type": "ItemGenerationCannotRollCasterAffixes",
+  "gold_value": null
+ },
+ "StrIntMasterItemGenerationCanHaveMultipleCraftedMods": {
+  "adds_tags": [],
+  "domain": "crafted",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemGenerationCanHaveMultipleCraftedMods"
+  ],
+  "implicit_tags": [],
+  "is_essence_only": false,
+  "name": "of Crafting",
+  "required_level": 1,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "item_generation_can_have_multiple_crafted_mods",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "Can have up to 3 Crafted Modifiers",
+  "type": "ItemGenerationCanHaveMultipleCraftedMods",
   "gold_value": null
  },
  "SocketedGemsDealAdditionalFireDamageEssence1": {
@@ -1080,6 +1403,44 @@
   ],
   "text": "25% increased Area of Effect",
   "type": "AreaOfEffect",
+  "gold_value": null
+ },
+ "GlobalLightningGemLevel1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "GlobalDamageTypeGemLevel"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "lightning",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Stormbrewer's",
+  "required_level": 75,
+  "spawn_weights": [
+   {
+    "tag": "amulet",
+    "weight": 200
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "lightning_skill_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of all Lightning Skill Gems",
+  "type": "GlobalLightningGemLevel",
   "gold_value": null
  },
  "DelveStrengthGemLevel1": {

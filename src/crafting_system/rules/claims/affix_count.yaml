@@ -9,3 +9,30 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
     value: {4: 8, 5: 3, 6: 1}
+
+  - id: affix_count.max_per_side_by_rarity
+    statement: A magic item holds at most 1 prefix and 1 suffix, and a rare item at most 3 prefixes and 3 suffixes (the same number on each side). This is the capacity of an ordinary item; jewels are the exception in affix_count.rare_jewel_max_per_side.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
+    quote: "Magic - random modifiers based on conditions: (0 to 1) prefix and (0 to 1) suffix ... Rare - random modifiers based on conditions: (1 to 3) prefixes and (1 to 3) suffixes"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: {magic: 1, rare: 3}
+
+  - id: affix_count.normal_has_no_explicit_mods
+    statement: A normal item holds no explicit mods, so its prefix and suffix capacity is 0.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Rarity
+    quote: 'Normal items (also called base items) are the "default" state of items without any explicit modifiers/affixes.'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: {normal: 0}
+
+  - id: affix_count.rare_jewel_max_per_side
+    statement: A rare jewel holds at most 2 prefixes and 2 suffixes instead of 3 and 3. The wiki says "some items like jewels"; only the repoe item classes Jewel and AbyssJewel are admitted here, and the other items of that exception, if any, are an open question.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
+    quote: "with the exception of some items like jewels, which can only have (1 to 2) prefixes and (1 to 2) suffixes"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: {rare: 2, item_classes: [Jewel, AbyssJewel]}
