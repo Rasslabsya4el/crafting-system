@@ -18,6 +18,7 @@ from .price_file import PriceEntry
 from .price_names import BaseKey
 
 HISTORY_DAYS = 7  # a history fallback takes the median of the 7 days ending on its last day
+MIN_COUNT = 5  # the minimum sample of a poe.ninja stash line or history row (its own charts use it too)
 
 
 @dataclass(frozen=True)
