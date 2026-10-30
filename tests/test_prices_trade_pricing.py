@@ -31,7 +31,7 @@ from crafting_system.prices.trade_pricing import (
 )
 from crafting_system.prices.trade_query import BuyMod, query_hash
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, FakeTrade, api_row, make_client, network_guard, price_file  # noqa: F401
+from trade_support import NOW, R12_SPEC, FakeTrade, api_row, make_client, price_file
 
 
 @pytest.fixture
