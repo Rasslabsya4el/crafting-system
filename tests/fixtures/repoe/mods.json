@@ -1,0 +1,1491 @@
+{
+ "IncreasedEnergyShield1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedEnergyShield"
+  ],
+  "implicit_tags": [
+   "defences",
+   "energy_shield"
+  ],
+  "is_essence_only": false,
+  "name": "Shining",
+  "required_level": 3,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_maximum_energy_shield",
+    "max": 3,
+    "min": 1
+   }
+  ],
+  "text": "+(1-3) to maximum Energy Shield",
+  "type": "EnergyShield",
+  "gold_value": null
+ },
+ "LocalIncreasedEnergyShield1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "BaseLocalDefences"
+  ],
+  "implicit_tags": [
+   "defences",
+   "energy_shield"
+  ],
+  "is_essence_only": false,
+  "name": "Shining",
+  "required_level": 3,
+  "spawn_weights": [
+   {
+    "tag": "int_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "str_dex_int_armour",
+    "weight": 166
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_energy_shield",
+    "max": 5,
+    "min": 3
+   }
+  ],
+  "text": "+(3-5) to maximum Energy Shield",
+  "type": "LocalEnergyShield",
+  "gold_value": null
+ },
+ "AccuracyPercentImplicitSword1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "unique",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedAccuracy"
+  ],
+  "implicit_tags": [
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "",
+  "required_level": 1,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "accuracy_rating_+%",
+    "max": 40,
+    "min": 40
+   }
+  ],
+  "text": "40% increased Global Accuracy Rating",
+  "type": "LocalAccuracyRatingIncrease",
+  "gold_value": null
+ },
+ "ElementalDamagePercentImplicitSceptreNew1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "unique",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ElementalDamagePercent"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental"
+  ],
+  "is_essence_only": false,
+  "name": "",
+  "required_level": 1,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "elemental_damage_+%",
+    "max": 10,
+    "min": 10
+   }
+  ],
+  "text": "10% increased Elemental Damage",
+  "type": "ElementalDamagePercent",
+  "gold_value": null
+ },
+ "LocalAddedFireDamageTwoHand1": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "FireDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "fire",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Heated",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "one_hand_weapon",
+    "weight": 0
+   },
+   {
+    "tag": "bow",
+    "weight": 1400
+   },
+   {
+    "tag": "sword",
+    "weight": 1200
+   },
+   {
+    "tag": "axe",
+    "weight": 1200
+   },
+   {
+    "tag": "mace",
+    "weight": 500
+   },
+   {
+    "tag": "staff",
+    "weight": 600
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_minimum_added_fire_damage",
+    "max": 5,
+    "min": 3
+   },
+   {
+    "id": "local_maximum_added_fire_damage",
+    "max": 7,
+    "min": 6
+   }
+  ],
+  "text": "Adds (3-5) to (6-7) Fire Damage",
+  "type": "LocalFireDamageTwoHand",
+  "gold_value": null
+ },
+ "LocalAddedColdDamage1": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ColdDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "cold",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Frosted",
+  "required_level": 2,
+  "spawn_weights": [
+   {
+    "tag": "two_hand_weapon",
+    "weight": 0
+   },
+   {
+    "tag": "rapier",
+    "weight": 2000
+   },
+   {
+    "tag": "deepwater_sword",
+    "weight": 0
+   },
+   {
+    "tag": "sword",
+    "weight": 1200
+   },
+   {
+    "tag": "axe",
+    "weight": 1200
+   },
+   {
+    "tag": "sceptre",
+    "weight": 800
+   },
+   {
+    "tag": "mace",
+    "weight": 500
+   },
+   {
+    "tag": "wand",
+    "weight": 500
+   },
+   {
+    "tag": "claw",
+    "weight": 1200
+   },
+   {
+    "tag": "dagger",
+    "weight": 1200
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_minimum_added_cold_damage",
+    "max": 2,
+    "min": 1
+   },
+   {
+    "id": "local_maximum_added_cold_damage",
+    "max": 4,
+    "min": 3
+   }
+  ],
+  "text": "Adds (1-2) to (3-4) Cold Damage",
+  "type": "LocalColdDamage",
+  "gold_value": null
+ },
+ "LocalAddedColdDamageTwoHand1": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ColdDamage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "cold",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Frosted",
+  "required_level": 2,
+  "spawn_weights": [
+   {
+    "tag": "one_hand_weapon",
+    "weight": 0
+   },
+   {
+    "tag": "bow",
+    "weight": 1400
+   },
+   {
+    "tag": "sword",
+    "weight": 1200
+   },
+   {
+    "tag": "axe",
+    "weight": 1200
+   },
+   {
+    "tag": "mace",
+    "weight": 500
+   },
+   {
+    "tag": "staff",
+    "weight": 600
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_minimum_added_cold_damage",
+    "max": 3,
+    "min": 2
+   },
+   {
+    "id": "local_maximum_added_cold_damage",
+    "max": 7,
+    "min": 6
+   }
+  ],
+  "text": "Adds (2-3) to (6-7) Cold Damage",
+  "type": "LocalColdDamageTwoHand",
+  "gold_value": null
+ },
+ "LocalIncreasedPhysicalDamageReductionRating1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "BaseLocalDefences"
+  ],
+  "implicit_tags": [
+   "defences",
+   "armour"
+  ],
+  "is_essence_only": false,
+  "name": "Lacquered",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "str_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "str_dex_int_armour",
+    "weight": 166
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_base_physical_damage_reduction_rating",
+    "max": 12,
+    "min": 6
+   }
+  ],
+  "text": "+(6-12) to Armour",
+  "type": "LocalPhysicalDamageReductionRating",
+  "gold_value": null
+ },
+ "SpellDamageOnWeapon1": {
+  "adds_tags": [
+   "has_caster_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "WeaponCasterDamagePrefix"
+  ],
+  "implicit_tags": [
+   "caster_damage",
+   "damage",
+   "caster"
+  ],
+  "is_essence_only": false,
+  "name": "Apprentice's",
+  "required_level": 2,
+  "spawn_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 0
+   },
+   {
+    "tag": "focus",
+    "weight": 1500
+   },
+   {
+    "tag": "wand",
+    "weight": 1500
+   },
+   {
+    "tag": "sceptre",
+    "weight": 1500
+   },
+   {
+    "tag": "dagger",
+    "weight": 1500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "spell_damage_+%",
+    "max": 19,
+    "min": 10
+   }
+  ],
+  "text": "(10-19)% increased Spell Damage",
+  "type": "WeaponSpellDamage",
+  "gold_value": null
+ },
+ "FireDamagePrefixOnWeapon1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "WeaponCasterDamagePrefix"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "fire"
+  ],
+  "is_essence_only": false,
+  "name": "Searing",
+  "required_level": 2,
+  "spawn_weights": [
+   {
+    "tag": "focus",
+    "weight": 500
+   },
+   {
+    "tag": "wand",
+    "weight": 500
+   },
+   {
+    "tag": "sceptre",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "fire_damage_+%",
+    "max": 19,
+    "min": 10
+   }
+  ],
+  "text": "(10-19)% increased Fire Damage",
+  "type": "FireDamageWeaponPrefix",
+  "gold_value": null
+ },
+ "ColdResist1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ColdResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "cold",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Inuit",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_cold_damage_resistance_%",
+    "max": 11,
+    "min": 6
+   }
+  ],
+  "text": "+(6-11)% to Cold Resistance",
+  "type": "ColdResistance",
+  "gold_value": null
+ },
+ "ColdDamagePercentEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ColdDamagePercentage"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "cold"
+  ],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "cold_damage_+%",
+    "max": 10,
+    "min": 6
+   }
+  ],
+  "text": "(6-10)% increased Cold Damage",
+  "type": "ColdDamagePercentage",
+  "gold_value": null
+ },
+ "IncreasedLifeLeechRateEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedLifeLeechRate"
+  ],
+  "implicit_tags": [
+   "resource",
+   "life"
+  ],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "life_leech_speed_+%",
+    "max": 150,
+    "min": 150
+   }
+  ],
+  "text": "150% increased total Recovery per second from Life Leech",
+  "type": "IncreasedLifeLeechRate",
+  "gold_value": null
+ },
+ "StrMasterItemGenerationCannotChangePrefixes": {
+  "adds_tags": [],
+  "domain": "crafted",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemGenerationCannotChangePrefixes"
+  ],
+  "implicit_tags": [],
+  "is_essence_only": false,
+  "name": "of Prefixes",
+  "required_level": 1,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "item_generation_cannot_change_prefixes",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "Prefixes Cannot Be Changed",
+  "type": "ItemGenerationCannotChangePrefixes",
+  "gold_value": null
+ },
+ "SocketedGemsDealAdditionalFireDamageEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [
+   {
+    "granted_effect_id": "SupportAddedFireDamageEssence1",
+    "level": 1
+   }
+  ],
+  "groups": [
+   "Supported"
+  ],
+  "implicit_tags": [
+   "skill",
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "fire",
+   "gem"
+  ],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_display_socketed_gems_minimum_added_fire_damage",
+    "max": 175,
+    "min": 175
+   },
+   {
+    "id": "local_display_socketed_gems_maximum_added_fire_damage",
+    "max": 225,
+    "min": 225
+   }
+  ],
+  "text": "Socketed Gems deal 175 to 225 Added Fire Damage",
+  "type": "SocketedGemsDealAdditionalFireDamage",
+  "gold_value": null
+ },
+ "BurningGroundWhileMovingEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ItemGrantsBuff"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "fire"
+  ],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "essence_buff_ground_fire_damage_to_deal_per_second",
+    "max": 2500,
+    "min": 2500
+   },
+   {
+    "id": "essence_buff_ground_fire_duration_ms",
+    "max": 4000,
+    "min": 4000
+   },
+   {
+    "id": "dummy_stat_display_nothing",
+    "max": 0,
+    "min": 0
+   }
+  ],
+  "text": "Drops Burning Ground while moving, dealing 2500 Fire Damage per second for 4 seconds",
+  "type": "BurningGroundWhileMoving",
+  "gold_value": null
+ },
+ "FireDamageAsPortionOfPhysicalDamageEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "FireDamageAsPortionOfDamage"
+  ],
+  "implicit_tags": [
+   "physical_damage",
+   "elemental_damage",
+   "damage",
+   "physical",
+   "elemental",
+   "fire"
+  ],
+  "is_essence_only": true,
+  "name": "Essences",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "physical_damage_%_to_add_as_fire",
+    "max": 10,
+    "min": 10
+   }
+  ],
+  "text": "Gain 10% of Physical Damage as Extra Fire Damage",
+  "type": "FireDamageAsPortionOfDamage",
+  "gold_value": null
+ },
+ "FireDamageAsPortionOfPhysicalDamageEssence2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "FireDamageAsPortionOfDamage"
+  ],
+  "implicit_tags": [
+   "physical_damage",
+   "elemental_damage",
+   "damage",
+   "physical",
+   "elemental",
+   "fire"
+  ],
+  "is_essence_only": true,
+  "name": "Essences",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "physical_damage_%_to_add_as_fire",
+    "max": 15,
+    "min": 15
+   }
+  ],
+  "text": "Gain 15% of Physical Damage as Extra Fire Damage",
+  "type": "FireDamageAsPortionOfDamage",
+  "gold_value": null
+ },
+ "AddedFireDamageIfBlockedRecentlyEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "AddedFireDamageIfBlockedRecently"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "fire"
+  ],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "minimum_added_fire_damage_if_blocked_recently",
+    "max": 60,
+    "min": 60
+   },
+   {
+    "id": "maximum_added_fire_damage_if_blocked_recently",
+    "max": 100,
+    "min": 100
+   }
+  ],
+  "text": "Adds 60 to 100 Fire Damage if you've Blocked Recently",
+  "type": "AddedFireDamageIfBlockedRecently",
+  "gold_value": null
+ },
+ "SocketedSkillDamageOnLowLifeEssence1__": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [
+   {
+    "granted_effect_id": "SupportDamageOnLowLifeEssence1",
+    "level": 1
+   }
+  ],
+  "groups": [
+   "DisplaySupportedSkillsDealDamageOnLowLife"
+  ],
+  "implicit_tags": [
+   "damage"
+  ],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_display_socketed_gems_damage_+%_final_while_on_low_life",
+    "max": 30,
+    "min": 30
+   }
+  ],
+  "text": "Socketed Gems deal 30% more Damage while on Low Life",
+  "type": "DisplaySupportedSkillsDealDamageOnLowLife",
+  "gold_value": null
+ },
+ "ElementalPenetrationDuringFlaskEffectEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ElementalPenetrationDuringFlaskEffect"
+  ],
+  "implicit_tags": [
+   "flask",
+   "elemental_damage",
+   "damage",
+   "elemental"
+  ],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "elemental_penetration_%_during_flask_effect",
+    "max": 5,
+    "min": 5
+   }
+  ],
+  "text": "Damage Penetrates 5% Elemental Resistances during any Flask Effect",
+  "type": "ElementalPenetrationDuringFlaskEffect",
+  "gold_value": null
+ },
+ "FireBurstOnHitEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [
+   {
+    "granted_effect_id": "FireBurstOnHit",
+    "level": 20
+   }
+  ],
+  "groups": [
+   "GrantedSkill"
+  ],
+  "implicit_tags": [
+   "skill",
+   "attack"
+  ],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_display_fire_burst_on_hit_%",
+    "max": 100,
+    "min": 100
+   }
+  ],
+  "text": "Cast Level 20 Fire Burst on Hit",
+  "type": "FireBurstOnHit",
+  "gold_value": null
+ },
+ "AreaOfEffectEssence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "AreaOfEffect"
+  ],
+  "implicit_tags": [],
+  "is_essence_only": true,
+  "name": "of the Essence",
+  "required_level": 63,
+  "spawn_weights": [
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_skill_area_of_effect_+%",
+    "max": 25,
+    "min": 25
+   }
+  ],
+  "text": "25% increased Area of Effect",
+  "type": "AreaOfEffect",
+  "gold_value": null
+ },
+ "DelveStrengthGemLevel1": {
+  "adds_tags": [],
+  "domain": "delve",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "DelveStrengthGemLevel"
+  ],
+  "implicit_tags": [
+   "attribute",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "of the Underground",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "abyss_jewel",
+    "weight": 0
+   },
+   {
+    "tag": "jewel",
+    "weight": 0
+   },
+   {
+    "tag": "staff",
+    "weight": 1000
+   },
+   {
+    "tag": "sceptre",
+    "weight": 1000
+   },
+   {
+    "tag": "mace",
+    "weight": 1600
+   },
+   {
+    "tag": "axe",
+    "weight": 1000
+   },
+   {
+    "tag": "sword",
+    "weight": 1000
+   },
+   {
+    "tag": "bow",
+    "weight": 750
+   },
+   {
+    "tag": "dagger",
+    "weight": 750
+   },
+   {
+    "tag": "claw",
+    "weight": 750
+   },
+   {
+    "tag": "wand",
+    "weight": 750
+   },
+   {
+    "tag": "str_armour",
+    "weight": 1600
+   },
+   {
+    "tag": "int_armour",
+    "weight": 750
+   },
+   {
+    "tag": "dex_armour",
+    "weight": 750
+   },
+   {
+    "tag": "str_dex_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "str_int_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "dex_int_armour",
+    "weight": 750
+   },
+   {
+    "tag": "str_dex_int_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "unset_ring",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_socketed_strength_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of Socketed Strength Gems",
+  "type": "DelveStrengthGemLevel",
+  "gold_value": null
+ },
+ "DelveDexterityGemLevel1": {
+  "adds_tags": [],
+  "domain": "delve",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "DelveDexterityGemLevel"
+  ],
+  "implicit_tags": [
+   "attribute",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "of the Underground",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "abyss_jewel",
+    "weight": 0
+   },
+   {
+    "tag": "jewel",
+    "weight": 0
+   },
+   {
+    "tag": "staff",
+    "weight": 750
+   },
+   {
+    "tag": "sceptre",
+    "weight": 750
+   },
+   {
+    "tag": "mace",
+    "weight": 750
+   },
+   {
+    "tag": "axe",
+    "weight": 1000
+   },
+   {
+    "tag": "sword",
+    "weight": 1000
+   },
+   {
+    "tag": "bow",
+    "weight": 1600
+   },
+   {
+    "tag": "dagger",
+    "weight": 1000
+   },
+   {
+    "tag": "claw",
+    "weight": 1000
+   },
+   {
+    "tag": "wand",
+    "weight": 750
+   },
+   {
+    "tag": "str_armour",
+    "weight": 750
+   },
+   {
+    "tag": "int_armour",
+    "weight": 750
+   },
+   {
+    "tag": "dex_armour",
+    "weight": 1600
+   },
+   {
+    "tag": "str_dex_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "str_int_armour",
+    "weight": 750
+   },
+   {
+    "tag": "dex_int_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "str_dex_int_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "unset_ring",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_socketed_dexterity_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of Socketed Dexterity Gems",
+  "type": "DelveDexterityGemLevel",
+  "gold_value": null
+ },
+ "DelveIntelligenceGemLevel1": {
+  "adds_tags": [],
+  "domain": "delve",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "DelveIntelligenceGemLevel"
+  ],
+  "implicit_tags": [
+   "attribute",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "of the Underground",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "abyss_jewel",
+    "weight": 0
+   },
+   {
+    "tag": "jewel",
+    "weight": 0
+   },
+   {
+    "tag": "staff",
+    "weight": 1000
+   },
+   {
+    "tag": "sceptre",
+    "weight": 1000
+   },
+   {
+    "tag": "mace",
+    "weight": 750
+   },
+   {
+    "tag": "axe",
+    "weight": 750
+   },
+   {
+    "tag": "sword",
+    "weight": 750
+   },
+   {
+    "tag": "bow",
+    "weight": 750
+   },
+   {
+    "tag": "dagger",
+    "weight": 1000
+   },
+   {
+    "tag": "claw",
+    "weight": 1000
+   },
+   {
+    "tag": "wand",
+    "weight": 1600
+   },
+   {
+    "tag": "str_armour",
+    "weight": 750
+   },
+   {
+    "tag": "int_armour",
+    "weight": 1600
+   },
+   {
+    "tag": "dex_armour",
+    "weight": 750
+   },
+   {
+    "tag": "str_dex_armour",
+    "weight": 750
+   },
+   {
+    "tag": "str_int_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "dex_int_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "str_dex_int_armour",
+    "weight": 1000
+   },
+   {
+    "tag": "unset_ring",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_socketed_intelligence_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of Socketed Intelligence Gems",
+  "type": "DelveIntelligenceGemLevel",
+  "gold_value": null
+ },
+ "JunMaster2ArmourAndEnergyShield1": {
+  "adds_tags": [],
+  "domain": "crafted",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedPhysicalDamageReductionRating",
+   "IncreasedEnergyShield"
+  ],
+  "implicit_tags": [
+   "unveiled_mod",
+   "defences",
+   "armour",
+   "energy_shield"
+  ],
+  "is_essence_only": false,
+  "name": "Upgraded",
+  "required_level": 60,
+  "spawn_weights": [
+   {
+    "tag": "belt",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_physical_damage_reduction_rating",
+    "max": 150,
+    "min": 105
+   },
+   {
+    "id": "base_maximum_energy_shield",
+    "max": 15,
+    "min": 11
+   }
+  ],
+  "text": "+(105-150) to Armour\n+(11-15) to maximum Energy Shield",
+  "type": "ArmourAndEnergyShield",
+  "gold_value": null
+ },
+ "FlaskEnchantmentInjectorAdjacentFlasks___": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "flask_enchantment_instilling",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "FlaskEnchantment"
+  ],
+  "implicit_tags": [],
+  "is_essence_only": false,
+  "name": "",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "flask",
+    "weight": 100
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_flask_use_on_adjacent_flask_use",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "Used when an adjacent Flask is used",
+  "type": "FlaskEnchantmentInjectorAdjacentFlasks",
+  "gold_value": null
+ }
+}
