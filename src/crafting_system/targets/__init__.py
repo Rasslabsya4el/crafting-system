@@ -33,7 +33,9 @@ sides (a range such as `(10-24)` becomes `#`, `[X|Y]` markup becomes `Y`), so `+
 and `+(10-24) to maximum Life` are the same, and it selects every tier and variant of that text. `family`
 selects every mod of the family. Rolls (`min_roll`, `values`) are the raw numbers of the game data, for
 example life regeneration is per minute. How a mod got on the item does not matter unless `not_crafted`
-is set. Whether a mod can spawn on the base is not checked here; that belongs to `actions`.
+is set. The members of an `at_least` group are checked independently, so one mod can satisfy two of
+them (say a family and a stat text that select the same mod); groups may nest 20 levels deep. Merge keys
+(`<<`) are not supported. Whether a mod can spawn on the base is not checked here; that belongs to `actions`.
 """
 
 from pathlib import Path

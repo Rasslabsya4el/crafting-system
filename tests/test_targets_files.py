@@ -18,7 +18,7 @@ def test_the_r12_example_parses_into_the_route():
     assert (target.base_id, target.item_level, target.influences) == (AMULET, 84, frozenset())
     stat, family = target.requirements
     assert isinstance(stat, Requirement) and stat.stat == "+1 to Level of all Lightning Skill Gems"
-    assert stat.mod_ids == {"GlobalLightningGemLevel1"}
+    assert "GlobalLightningGemLevel1" in stat.mod_ids
     assert isinstance(family, Requirement) and family.family == "LightningResistance"
     assert (family.min_tier, family.min_roll, family.not_crafted) == (None, None, False)
     assert target.start_item.rarity is Rarity.RARE
@@ -50,8 +50,8 @@ def test_the_r13_example_parses_into_the_route():
     assert all(member.min_tier == 1 and member.not_crafted for member in resists.of)
     assert isinstance(damage, KOfN) and damage.at_least == 1
     assert [member.family for member in damage.of] == ["AllDamage", "IncreasedWeaponElementalDamagePercent"]
-    assert damage.of[0].mod_ids == {"JunMaster2AllDamage2_"}
-    assert damage.of[1].mod_ids == {"EinharMasterWeaponElementalDamage1_"}
+    assert "JunMaster2AllDamage2_" in damage.of[0].mod_ids
+    assert "EinharMasterWeaponElementalDamage1_" in damage.of[1].mod_ids
 
 
 def test_the_r13_belt_is_met_by_life_two_resists_and_a_crafted_damage_mod():

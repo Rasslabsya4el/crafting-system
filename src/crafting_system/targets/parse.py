@@ -5,6 +5,7 @@ missing keys, then each value in the order of the schema. Key paths count list e
 """
 
 import difflib
+import re
 from collections.abc import Iterable
 from pathlib import Path
 from typing import NoReturn
@@ -24,13 +25,17 @@ START_ITEM_KEYS = ("rarity", "corrupted", "mods")
 START_MOD_KEYS = ("mod", "tier", "values", "fractured", "crafted")
 MIN_ITEM_LEVEL = 1
 MAX_ITEM_LEVEL = 100
+MAX_GROUP_DEPTH = 20
 
 
 def parse_target_text(
     text: str, data: GameData, source: str, base_dir: Path | None
 ) -> Target:
     """Parse and resolve the YAML `text`; `source` names the file in error messages."""
-    return _Reader(data, source, base_dir).read(load_with_lines(text, source))
+    try:
+        return _Reader(data, source, base_dir).read(load_with_lines(text, source))
+    except RecursionError:
+        raise TargetError(f"{source}:1: the file is nested too deeply to read") from None
 
 
 def describe(value: object) -> str:
@@ -52,6 +57,16 @@ def describe(value: object) -> str:
 
 def is_whole(value: object) -> bool:
     return type(value) is int
+
+
+def blamed_mod(message: str, mods: tuple[ExplicitMod, ...]) -> int | None:
+    """The index of the written mod whose id the item error `message` names first, if any."""
+    found = []
+    for index, mod in enumerate(mods):
+        match = re.search(rf"(?<!\w){re.escape(mod.mod_id)}(?!\w)", message)
+        if match:
+            found.append((match.start(), index))
+    return min(found)[1] if found else None
 
 
 class _Reader:
@@ -109,19 +124,28 @@ class _Reader:
         names = root["influence"]
         if not isinstance(names, LineList):
             self.fail(line, "influence", f"must be a list such as [shaper, elder], got {describe(names)}")
-        found = set()
+        first_seen: dict[Influence, int] = {}
         for index, name in enumerate(names):
             path = f"influence[{index}]"
             allowed = [influence.value for influence in Influence]
             if not isinstance(name, str) or name.lower() not in allowed:
                 self.fail(names.item_lines[index], path, f"must be one of {quoted(allowed)}, got {describe(name)}")
-            found.add(Influence(name.lower()))
-        return frozenset(found)
+            influence = Influence(name.lower())
+            if influence in first_seen:
+                self.fail(
+                    names.item_lines[index],
+                    path,
+                    f"{describe(name)} is listed twice (first at influence[{first_seen[influence]}])",
+                )
+            first_seen[influence] = index
+        return frozenset(first_seen)
 
     def read_price_file(self, root: LineMap) -> Path | None:
         if "price_file" not in root:
             return None
         name = self.text(root, "price_file", "price_file")
+        if "\x00" in name:
+            self.fail(root.key_lines["price_file"], "price_file", "is not a valid path (it contains a NUL character)")
         path = Path(name)
         return self.base_dir / path if self.base_dir is not None else path
 
@@ -133,18 +157,22 @@ class _Reader:
         if not entries:
             self.fail(line, path, "must hold at least one requirement")
         return tuple(
-            self.read_node(entry, f"{path}[{index}]", entries.item_lines[index])
+            self.read_node(entry, f"{path}[{index}]", entries.item_lines[index], 0)
             for index, entry in enumerate(entries)
         )
 
-    def read_node(self, entry: object, path: str, line: int) -> Node:
+    def read_node(self, entry: object, path: str, line: int, depth: int) -> Node:
         if not isinstance(entry, LineMap):
             self.fail(line, path, f"must be a mapping (`family:` or `stat:` or `at_least:` and `of:`), got {describe(entry)}")
         if "at_least" in entry or "of" in entry:
-            return self.read_group(entry, path)
+            return self.read_group(entry, path, depth)
         return self.read_requirement(entry, path)
 
-    def read_group(self, entry: LineMap, path: str) -> KOfN:
+    def read_group(self, entry: LineMap, path: str, depth: int) -> KOfN:
+        if depth >= MAX_GROUP_DEPTH:
+            self.fail(
+                entry.line, path, f"at_least groups are nested too deeply; at most {MAX_GROUP_DEPTH} levels are allowed"
+            )
         self.check_keys(entry, path, GROUP_KEYS)
         for key in GROUP_KEYS:
             if key not in entry:
@@ -163,7 +191,7 @@ class _Reader:
                 f"must be a whole number from 1 to {len(members)} (the number of entries in `of`), got {describe(count)}",
             )
         nodes = tuple(
-            self.read_node(member, f"{of_path}[{index}]", members.item_lines[index])
+            self.read_node(member, f"{of_path}[{index}]", members.item_lines[index], depth + 1)
             for index, member in enumerate(members)
         )
         return KOfN(count, nodes)
@@ -271,6 +299,7 @@ class _Reader:
         line = root.key_lines.get("start_item", root.key_lines["base"])
         fields: dict[str, object] = {"rarity": Rarity.NORMAL}
         mods: tuple[ExplicitMod, ...] = ()
+        mod_lines: list[int] = []
         if "start_item" in root:
             start = root["start_item"]
             line = root.key_lines["start_item"]
@@ -279,6 +308,7 @@ class _Reader:
             self.check_keys(start, "start_item", START_ITEM_KEYS)
             if "mods" in start:
                 mods = self.read_start_mods(start["mods"], start.key_lines["mods"])
+                mod_lines = start["mods"].item_lines
             fields["rarity"] = self.read_rarity(start, bool(mods))
             if "corrupted" in start:
                 if not isinstance(start["corrupted"], bool):
@@ -293,6 +323,9 @@ class _Reader:
                 self.data, base_id=base_id, item_level=item_level, mods=mods, influences=influences, **fields
             )
         except ItemError as problem:
+            index = blamed_mod(str(problem), mods)
+            if index is not None:
+                self.fail(mod_lines[index], f"start_item.mods[{index}]", str(problem))
             self.fail(line, "start_item", str(problem))
 
     def read_rarity(self, start: LineMap, has_mods: bool) -> Rarity:
@@ -352,7 +385,7 @@ class _Reader:
         value = mapping[key]
         if not isinstance(value, str) or not value.strip():
             self.fail(mapping.key_lines[key], path, f"must be non-empty text, got {describe(value)}")
-        return value
+        return value.strip()
 
     def check_keys(self, mapping: LineMap, path: str, allowed: Iterable[str]) -> None:
         allowed = tuple(allowed)

@@ -5,12 +5,13 @@ file is called `t.yaml`.
 """
 
 import dataclasses
+from pathlib import Path
 from types import MappingProxyType
 
 import pytest
 from targets_support import AMULET, DATA, parse, parse_error
 
-from crafting_system.targets import TargetError, parse_target
+from crafting_system.targets import TargetError, load_target, parse_target
 
 
 def assert_error(message: str, line: int, key: str, *causes: str) -> None:
@@ -160,16 +161,37 @@ def test_a_bad_not_crafted_is_refused():
     assert_error(message, 5, "requirements[0].not_crafted", "must be true or false")
 
 
+def best_roll(selector: str) -> int:
+    """The highest roll of the one stat of the mods `selector` (a requirement line) selects, from the data."""
+    (requirement,) = parse("requirements:\n  - " + selector + "\n").requirements
+    return max(
+        max(DATA.mods[mod_id].stats[0].min, DATA.mods[mod_id].stats[0].max)
+        for mod_id in requirement.mod_ids
+    )
+
+
 def test_a_minimum_roll_above_the_best_roll_says_what_the_best_is():
-    message = parse_error("requirements:\n  - family: LightningResistance\n    min_roll: 24\n")
+    best = best_roll("family: LightningResistance")
 
-    assert_error(message, 5, "requirements[0].min_roll", "24 is above the best roll", "which is 23")
+    message = parse_error(f"requirements:\n  - family: LightningResistance\n    min_roll: {best + 1}\n")
+
+    assert_error(message, 5, "requirements[0].min_roll", f"{best + 1} is above the best roll", f"which is {best}")
 
 
-def test_the_best_roll_counts_the_lower_end_of_a_descending_range_too():
-    message = parse_error('requirements:\n  - stat: "+# to maximum Life"\n    min_roll: [55]\n')
+def test_a_minimum_roll_in_a_list_above_the_best_roll_names_the_entry():
+    best = best_roll('stat: "+# to maximum Life"')
 
-    assert_error(message, 5, "requirements[0].min_roll[0]", "55 is above the best roll", "which is 54")
+    message = parse_error(f'requirements:\n  - stat: "+# to maximum Life"\n    min_roll: [{best + 1}]\n')
+
+    assert_error(message, 5, "requirements[0].min_roll[0]", f"{best + 1} is above the best roll", f"which is {best}")
+
+
+def test_a_minimum_roll_exactly_at_the_best_roll_is_accepted():
+    best = best_roll("family: LightningResistance")
+
+    target = parse(f"requirements:\n  - family: LightningResistance\n    min_roll: {best}\n")
+
+    assert target.requirements[0].min_roll == (best,)
 
 
 def test_a_bare_minimum_roll_on_a_two_stat_mod_asks_for_a_list():
@@ -208,7 +230,7 @@ def test_a_bare_minimum_roll_must_be_a_whole_number(value):
 def test_a_selector_spanning_mods_with_different_stat_counts_cannot_take_a_minimum_roll():
     message = parse_error("requirements:\n  - family: IncreasedEnergyShield\n    min_roll: 1\n")
 
-    assert_error(message, 5, "requirements[0].min_roll", "different numbers of stats", "1, 2")
+    assert_error(message, 5, "requirements[0].min_roll", "different numbers of stats")
 
 
 def test_a_selector_spanning_mods_with_different_stat_counts_is_fine_without_a_minimum_roll():
@@ -390,7 +412,46 @@ def test_a_start_item_that_the_item_model_rejects_keeps_its_words():
         """
     )
 
-    assert_error(message, 5, "start_item", "mod LightningResist2 has value 99", "outside 12 to 17")
+    assert_error(message, 7, "start_item.mods[0]", "mod LightningResist2 has value 99", "outside 12 to 17")
+
+
+def test_an_item_error_about_the_second_mod_is_reported_at_that_mod():
+    message = parse_error(
+        """
+        requirements:
+          - family: IncreasedLife
+        start_item:
+          mods:
+            - mod: IncreasedLife1
+              tier: 1
+              values: [10]
+            - mod: LightningResist2
+              tier: 3
+              values: [99]
+        """
+    )
+
+    assert_error(message, 10, "start_item.mods[1]", "mod LightningResist2 has value 99")
+
+
+def test_an_item_error_naming_two_mods_is_reported_at_the_one_its_words_name_first():
+    message = parse_error(
+        """
+        requirements:
+          - family: IncreasedLife
+        start_item:
+          mods:
+            - mod: LightningResist2
+              tier: 3
+              values: [14]
+            - mod: LightningResist1
+              tier: 3
+              values: [7]
+        """
+    )
+
+    assert "mods LightningResist1 and LightningResist2 share" in message
+    assert_error(message, 10, "start_item.mods[1]", "share the family LightningResistance")
 
 
 def test_a_normal_start_item_with_mods_is_rejected_by_the_item_model():
@@ -507,3 +568,147 @@ def test_the_default_source_name_is_used_when_none_is_given():
 
 def test_a_valid_target_parses_under_the_same_helper():
     assert parse("requirements:\n  - family: IncreasedLife\n").base_id == AMULET
+
+
+@pytest.mark.parametrize("bad", ["\x07", "\x00", "\x1b", "\x7f"])
+def test_a_character_not_allowed_in_text_is_a_target_error_at_its_line(bad):
+    message = parse_error(f"requirements:\n  - family: IncreasedLife\nprice_file: a{bad}b\n")
+
+    assert message.startswith("t.yaml:5: ")
+    assert "not allowed in text" in message
+    assert "ReaderError" not in message and "special characters" not in message
+
+
+def test_a_character_not_allowed_at_the_very_start_is_reported_at_line_one():
+    message = parse_error("\x07base: Paua Amulet\n", header=False)
+
+    assert message.startswith("t.yaml:1: ") and "not allowed in text" in message
+
+
+def test_a_nul_in_a_quoted_price_file_is_refused():
+    message = parse_error('requirements:\n  - family: IncreasedLife\nprice_file: "a\\0b"\n')
+
+    assert_error(message, 5, "price_file", "not a valid path")
+
+
+def test_a_control_character_in_a_file_is_a_target_error_that_names_the_path(tmp_path):
+    path = tmp_path / "t.yaml"
+    path.write_bytes(b"base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n\x00\n")
+
+    with pytest.raises(TargetError) as caught:
+        load_target(path, DATA)
+
+    assert str(caught.value).startswith(f"{path}:5: ") and "not allowed in text" in str(caught.value)
+
+
+def nested_groups(levels: int) -> str:
+    """A requirements list of `levels` at_least groups inside each other, around one family entry."""
+    lines = ["requirements:"]
+    for level in range(levels):
+        indent = " " * (2 + 4 * level)
+        lines += [f"{indent}- at_least: 1", f"{indent}  of:"]
+    lines.append(" " * (2 + 4 * levels) + "- family: IncreasedLife")
+    return "\n".join(lines) + "\n"
+
+
+def test_twenty_levels_of_groups_are_allowed():
+    target = parse(nested_groups(20))
+
+    node = target.requirements[0]
+    for _ in range(19):
+        node = node.of[0]
+    assert node.of[0].family == "IncreasedLife"
+
+
+def test_twenty_one_levels_of_groups_are_refused_with_a_clear_message():
+    message = parse_error(nested_groups(21))
+
+    assert message.startswith("t.yaml:")
+    assert "nested too deeply" in message and "20" in message
+    assert "requirements[0].of[0]" in message
+
+
+def test_a_chain_of_four_hundred_groups_is_a_target_error():
+    assert "nested too deeply" in parse_error(nested_groups(400))
+
+
+def test_thousands_of_nested_brackets_are_a_target_error_not_a_recursion_error():
+    message = parse_error("requirements: " + "[" * 3000 + "]" * 3000 + "\n")
+
+    assert message.startswith("t.yaml:") and "nested too deeply" in message
+
+
+def test_thousands_of_nested_mappings_are_a_target_error():
+    message = parse_error("requirements: " + "{a: " * 3000 + "1" + "}" * 3000 + "\n")
+
+    assert message.startswith("t.yaml:") and "nested too deeply" in message
+
+
+def test_base_and_price_file_ignore_surrounding_whitespace_and_a_trailing_newline():
+    text = (
+        "base: >\n  Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n"
+        'price_file: "  p.json \\n"\n'
+    )
+
+    target = parse(text, header=False)
+
+    assert target.base_id == AMULET and target.price_file == Path("p.json")
+
+
+def test_a_folded_base_name_with_a_trailing_newline_is_found():
+    target = parse("base: |\n  Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n", header=False)
+
+    assert target.base_id == AMULET
+
+
+@pytest.mark.parametrize("blank", ['""', '"   "', '"\\n"', ">\n  "])
+def test_a_blank_base_or_price_file_is_still_refused(blank):
+    for key, line in (("base", 1), ("price_file", 5)):
+        lines = ["base: Paua Amulet", "item_level: 84", "requirements:", "  - family: IncreasedLife", "price_file: x"]
+        lines[line - 1] = f"{key}: {blank}"
+
+        message = parse_error("\n".join(lines) + "\n", header=False)
+
+        assert_error(message, line, key, "must be non-empty text")
+
+
+def test_a_family_or_stat_with_surrounding_whitespace_is_found():
+    target = parse('requirements:\n  - family: " IncreasedLife "\n  - stat: " +# to maximum Life\\n"\n')
+
+    assert target.requirements[0].family == "IncreasedLife"
+    assert target.requirements[1].stat == "+# to maximum Life"
+
+
+def test_a_merge_key_is_refused_even_when_nothing_overrides():
+    message = parse_error("requirements:\n  - &one\n    family: IncreasedLife\n  - <<: *one\n    min_tier: 1\n")
+
+    assert message.startswith("t.yaml:6: ")
+    assert "merge keys `<<` are not supported; write the keys out" in message
+
+
+def test_a_merge_key_that_is_overridden_is_refused_the_same_way():
+    message = parse_error(
+        "requirements:\n  - &one\n    family: IncreasedLife\n    min_tier: 1\n  - <<: *one\n    min_tier: 2\n"
+    )
+
+    assert "merge keys `<<` are not supported" in message and "written twice" not in message
+
+
+def test_a_repeated_influence_is_refused_whatever_its_case():
+    message = parse_error("influence: [shaper, elder, Shaper]\nrequirements:\n  - family: IncreasedLife\n")
+
+    assert message.startswith("t.yaml:")
+    assert "influence[2]" in message and "listed twice" in message and "influence[0]" in message
+
+
+@pytest.mark.parametrize("text", ["[]", "[|]", "[ | ]", " [a|]  [b|] "])
+def test_a_stat_text_that_is_empty_once_markup_is_removed_is_refused(text):
+    message = parse_error(f'requirements:\n  - stat: "{text}"\n')
+
+    assert_error(message, 4, "requirements[0].stat", "empty", "markup")
+
+
+def test_a_stat_text_with_only_a_range_is_not_empty():
+    message = parse_error('requirements:\n  - stat: "(1-2)"\n')
+
+    assert "empty" not in message and "no mod" in message

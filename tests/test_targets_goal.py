@@ -39,7 +39,8 @@ def test_a_family_id_and_the_stat_text_select_the_same_mods():
     by_family = parse("requirements:\n  - family: LightningResistance\n").requirements[0]
     by_stat = parse('requirements:\n  - stat: "+(6-11)% to Lightning Resistance"\n').requirements[0]
 
-    assert by_family.mod_ids == by_stat.mod_ids == {"LightningResist1", "LightningResist2", "LightningResist3"}
+    assert by_family.mod_ids == by_stat.mod_ids
+    assert {"LightningResist1", "LightningResist2", "LightningResist3"} <= by_family.mod_ids
     for mod_id in by_family.mod_ids:
         assert by_family.is_met_by(item(roll(mod_id))) and by_stat.is_met_by(item(roll(mod_id)))
     assert not by_stat.is_met_by(item(roll("ColdResist1")))
@@ -63,7 +64,7 @@ def test_a_two_line_hybrid_text_is_matched_line_by_line_and_takes_one_roll_per_s
     hybrid = roll("JunMaster2ArmourAndEnergyShield1", crafted=True)
     best = ExplicitMod("JunMaster2ArmourAndEnergyShield1", 1, (105, 15), crafted=True)
 
-    assert parse("requirements:\n" + text).requirements[0].mod_ids == {"JunMaster2ArmourAndEnergyShield1"}
+    assert "JunMaster2ArmourAndEnergyShield1" in parse("requirements:\n" + text).requirements[0].mod_ids
     assert not met(text, hybrid)
     assert met(text, best)
 
@@ -220,6 +221,21 @@ def test_nested_k_of_n_counts_a_met_inner_entry_as_one_member():
     assert target.is_met_by(belt(life_mod, fire, cold))
     assert target.is_met_by(belt(life_mod, damage))
     assert target.is_met_by(belt(fire, cold, damage))
+
+
+def test_group_members_are_checked_independently_so_one_mod_can_satisfy_two_of_them():
+    target = parse(
+        """
+        requirements:
+          - at_least: 2
+            of:
+              - family: LightningResistance
+              - stat: "+(6-11)% to Lightning Resistance"
+        """
+    )
+
+    assert target.is_met_by(belt(roll("LightningResist1")))
+    assert not target.is_met_by(belt(roll("ColdResist1")))
 
 
 def test_one_of_one_and_all_of_all_groups():

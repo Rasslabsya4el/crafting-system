@@ -77,6 +77,8 @@ class Resolver:
     def mods_for_stat(self, text: str) -> frozenset[str]:
         """Every mod whose normalised text equals the normalised `text`; `Unresolved` if there is none."""
         wanted = normalise_stat_text(text)
+        if not wanted:
+            raise Unresolved("the stat text is empty once markup such as [..] and blank lines are removed")
         found = self._mods_by_text.get(wanted)
         if found is not None:
             return found

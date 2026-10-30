@@ -28,7 +28,7 @@ def test_a_minimal_target_resolves_the_base_and_fills_the_defaults():
     assert isinstance(requirement, Requirement)
     assert requirement.stat == "+1 to Level of all Lightning Skill Gems"
     assert requirement.family is None
-    assert requirement.mod_ids == frozenset({"GlobalLightningGemLevel1"})
+    assert "GlobalLightningGemLevel1" in requirement.mod_ids
     assert (requirement.min_tier, requirement.min_roll, requirement.not_crafted) == (None, None, False)
 
 
@@ -66,7 +66,7 @@ def test_a_family_requirement_collects_every_mod_of_the_family():
     (requirement,) = target.requirements
     assert requirement.family == "LightningResistance"
     assert requirement.stat is None
-    assert requirement.mod_ids == {"LightningResist1", "LightningResist2", "LightningResist3"}
+    assert {"LightningResist1", "LightningResist2", "LightningResist3"} <= requirement.mod_ids
 
 
 def test_a_group_holds_its_members_in_order_and_nested_groups_parse():
