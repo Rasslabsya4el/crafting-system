@@ -15,7 +15,9 @@ from pathlib import Path
 
 from ..config import Config, load_config
 from ..data import DataError, load_game_data
-from .poe_ninja import GetJson, SourceError, fetch_price_file, http_get_json
+from .fallbacks import MIN_COUNT
+from .fetch import fetch_price_file
+from .http_json import GetJson, SourceError, http_get_json
 from .price_file import (
     OVERRIDE_SOURCE,
     PriceFile,
@@ -73,6 +75,7 @@ def main(
     commands = parser.add_subparsers(dest="command", required=True)
     fetch = commands.add_parser("fetch", help="fetch poe.ninja prices into the price file")
     fetch.add_argument("--league", help="league id (default: the current league poe.ninja lists)")
+    fetch.add_argument("--previous-league", help="league to take old prices from (default: work it out)")
     fetch.add_argument("--wanted-file", help="text file, one resource name per line")
     check = commands.add_parser("check", help="report a stale price file and unpriced names")
     check.add_argument("--wanted-file", help="text file, one resource name per line")
@@ -97,11 +100,20 @@ def main(
         if args.command == "fetch":
             instant = now if now is not None else datetime.now(UTC)
             result = fetch_price_file(
-                get_json if get_json is not None else http_get_json, instant, wanted, args.league
+                get_json if get_json is not None else http_get_json,
+                instant,
+                wanted,
+                args.league,
+                args.previous_league,
             )
             new_file, trade_warnings = merge_trade_prices(result.price_file, _old_price_file(price_path))
             write_price_file(price_path, new_file)
             print(f"League {new_file.league}: {len(new_file.prices)} prices written to {price_path}")
+            if result.thin:
+                print(
+                    f"{len(result.thin)} current lines were too thin to price "
+                    f"(fewer than {MIN_COUNT} observations or no trade volume)"
+                )
             for warning in [*result.warnings, *trade_warnings]:
                 print(f"Warning: {warning}")
         merged = load_prices(price_path, overrides_path)  # overrides count as priced
