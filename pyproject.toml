@@ -1,0 +1,20 @@
+[project]
+name = "crafting-system"
+version = "0.1.0"
+description = "Crafting planner for Path of Exile: finds and prices the best crafting policy for a target item."
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]

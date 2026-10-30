@@ -1,0 +1,7 @@
+# Project config. Environment variables CRAFTING_DATA_DIR, CRAFTING_CACHE_DIR and
+# CRAFTING_OUTPUT_DIR win over this file; CRAFTING_CONFIG names another file to use instead.
+# Relative paths here count from this file's directory.
+[paths]
+data = "local/data"
+cache = "local/cache"
+output = "local/output"
