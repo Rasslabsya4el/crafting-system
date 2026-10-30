@@ -1,0 +1,8 @@
+{
+  "request": "GET https://www.pathofexile.com/api/trade/data/stats",
+  "status": 200,
+  "headers": {
+    "date": "Fri, 30 Oct 2026 21:21:01 GMT",
+    "content-type": "application/json"
+  }
+}
