@@ -15,8 +15,22 @@ from functools import cached_property
 from crafting_system.data import GameData, Mod, conflicts
 from crafting_system.items import ExplicitMod, Item, Side, tier_table
 
-from .draw import Outcome, exact_distribution, sample_new_mods, total_distribution
+from crafting_system.rules import get_rule
+
+from .draw import (
+    Outcome,
+    exact_distribution,
+    guaranteed_candidates,
+    sample_new_mods,
+    total_distribution,
+)
+from .errors import NotApplicableError
 from .pool import PoolFamily, build_pool
+
+CHAOS_FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
+HARVEST_FRACTURED_MODS_KEPT = get_rule("harvest_reforge.fractured_mods_kept")
+REFUSED_WITHOUT_TAGGED_MOD = get_rule("harvest_reforge.refused_without_tagged_mod")
+VALUES_UNIFORM_INTEGERS = get_rule("affix_pool.values_uniform_integers")
 
 
 @dataclass(frozen=True, eq=False)
@@ -37,9 +51,19 @@ class Outcomes:
 
     @classmethod
     def reroll(cls, data: GameData, item: Item, tag: str | None) -> "Outcomes":
-        """The outcomes of rerolling `item` (already checked to be rerollable), guaranteeing `tag` if given."""
+        """The outcomes of rerolling `item` (already checked to be rerollable), guaranteeing `tag` if given.
+
+        Raises `NotApplicableError` when `tag` is given and the pool holds no mod with it that the
+        retained item has a free family and a free slot for.
+        """
         retained = item.changed(data, mods=item.fractured_mods)
-        return cls(data, retained, build_pool(data, retained), total_distribution(), tag)
+        result = cls(data, retained, build_pool(data, retained), total_distribution(), tag)
+        if tag is not None and not guaranteed_candidates(result.pool, result.free, tag):
+            raise NotApplicableError(
+                f"the {tag} reforge cannot be used: the pool holds no {tag} mod "
+                "that the item has a free slot and a free family for"
+            )
+        return result
 
     @property
     def free(self) -> Mapping[Side, int]:
@@ -74,8 +98,13 @@ class Outcomes:
         """The exact distribution of the new mods seen through `label`.
 
         An outcome is the set of `(label, how many new mods got that label)` pairs; the kept mods are
-        not in it. Probabilities are exact and sum to 1. Exact for any pure `label`; the cost grows
-        with the number of distinct (side, weight, label) classes in the pool.
+        not in it. Probabilities are exact and sum to 1. Exact for any pure `label`.
+
+        The work grows with the number of distinct (side, weight, label) classes in the pool. A
+        real amulet pool with a coarse label (a few values) takes about 0.3 to 3 s; a pool of 40
+        families that all have different weights took about 70 s. The fractions are exact and can
+        be thousands of bits long: `str()` of one can hit Python's 4300-digit limit, so convert
+        with `float()` or `Fraction.limit_denominator` to display it.
         """
         return exact_distribution(
             self.pool, self.free, self.tag, self.totals, len(self.retained.mods), label

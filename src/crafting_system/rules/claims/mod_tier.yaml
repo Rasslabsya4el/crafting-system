@@ -10,7 +10,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: mod_tier.scope_is_mod_type
-    statement: Tiers are counted among the mods of one mod type (not one family) and one side that can spawn on the base, i.e. with a positive spawn weight for the base's tags. The five "+1 to Level of all X Skill Gems" amulet prefixes share one family and are five different mod types, each its own tier 1. On every released item-domain base of 3.29.3.3 no two such mods share a required level, and no mod type spans two families.
+    statement: Tiers are counted among the mods of one mod type (not one family) and one generation type and one domain, and only among the mods that can spawn on the base (a positive spawn weight for its tags). The five "+1 to Level of all X Skill Gems" amulet prefixes share one family and are five different mod types, each its own tier 1. On every released item-domain base of 3.29.3.3 no two such mods share a required level, and no mod type spans two families.
     source_kind: datamined
     url: https://repoe-fork.github.io/mods.json
     quote: 'GlobalLightningGemLevel1 type "GlobalLightningGemLevel", groups ["GlobalDamageTypeGemLevel"]; GlobalFireGemLevel1_ type "GlobalFireGemLevel", groups ["GlobalDamageTypeGemLevel"]'

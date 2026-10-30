@@ -12,7 +12,7 @@ from actions_support import DATA, RESIST, TARGET, amulet, fractured_resist
 
 from crafting_system.actions import ChaosOrb, HarvestReforge
 
-LEVELS = (84, 86)
+LEVELS = (80, 84, 86)
 
 
 def chance(action, item):
@@ -21,14 +21,14 @@ def chance(action, item):
 
 @pytest.mark.parametrize("level", LEVELS)
 def test_chaos_orb_on_a_rare_amulet_matches_the_oracle(level):
-    assert chance(ChaosOrb(), amulet(item_level=level)) == chaos_chance()
+    assert chance(ChaosOrb(), amulet(item_level=level)) == chaos_chance(level)
 
 
 @pytest.mark.parametrize("level", LEVELS)
 def test_chaos_orb_with_a_fractured_lightning_resistance_matches_the_oracle(level):
     item = amulet(fractured_resist(), item_level=level)
 
-    assert chance(ChaosOrb(), item) == chaos_chance(("LightningResistance",))
+    assert chance(ChaosOrb(), item) == chaos_chance(level, ("LightningResistance",))
 
 
 def test_the_chance_is_an_exact_fraction_not_a_float():
@@ -37,22 +37,22 @@ def test_the_chance_is_an_exact_fraction_not_a_float():
 
 @pytest.mark.parametrize("level", LEVELS)
 def test_harvest_reforge_lightning_on_a_rare_amulet_matches_the_oracle(level):
-    assert chance(HarvestReforge("lightning"), amulet(item_level=level)) == harvest_chance()
+    assert chance(HarvestReforge("lightning"), amulet(item_level=level)) == harvest_chance(level)
 
 
 @pytest.mark.parametrize("level", LEVELS)
 def test_harvest_reforge_lightning_with_a_fractured_lightning_resistance_matches_the_oracle(level):
     item = amulet(fractured_resist(), item_level=level)
 
-    assert chance(HarvestReforge("lightning"), item) == harvest_chance(("LightningResistance",))
+    assert chance(HarvestReforge("lightning"), item) == harvest_chance(level, ("LightningResistance",))
 
 
 @pytest.mark.parametrize("number", range(1, 9))
 def test_any_tier_of_the_fractured_resistance_gives_the_same_chance(number):
     item = amulet(fractured_resist(f"LightningResist{number}"))
 
-    assert chance(ChaosOrb(), item) == chaos_chance(("LightningResistance",))
-    assert chance(HarvestReforge("lightning"), item) == harvest_chance(("LightningResistance",))
+    assert chance(ChaosOrb(), item) == chaos_chance(86, ("LightningResistance",))
+    assert chance(HarvestReforge("lightning"), item) == harvest_chance(86, ("LightningResistance",))
 
 
 def test_the_fractured_resistance_raises_the_chance_of_the_gem_mod_under_a_reforge():

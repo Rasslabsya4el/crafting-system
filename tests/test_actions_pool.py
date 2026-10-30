@@ -4,6 +4,7 @@ import dataclasses
 from fractions import Fraction
 
 import pytest
+from actions_oracle import FAMILIES, TAGGED
 from actions_support import AMULET, DATA, amulet, roll
 
 from crafting_system.actions import OutOfScopeError, PoolFamily, build_pool
@@ -128,3 +129,22 @@ def test_a_family_spread_over_both_sides_is_out_of_scope():
 
     with pytest.raises(OutOfScopeError, match="both sides"):
         build_pool(data, amulet())
+
+
+@pytest.mark.parametrize("level", [80, 84, 86])
+def test_the_hand_typed_oracle_table_is_the_pool_of_the_fixture_amulet(level):
+    pool = build_pool(DATA, amulet(item_level=level))
+
+    assert {f.family: (f.side.value, f.weight) for f in pool} == FAMILIES[level]
+    tagged = {
+        f.family: sum(e.weight for e in f.mods if LIGHTNING in e.mod.implicit_tags)
+        for f in pool
+        if any(LIGHTNING in e.mod.implicit_tags for e in f.mods)
+    }
+    assert tagged == TAGGED[level]
+
+
+def test_at_item_level_80_the_lightning_tagged_weight_is_13_950():
+    pool = build_pool(DATA, amulet(item_level=80))
+
+    assert sum(e.weight for f in pool for e in f.mods if LIGHTNING in e.mod.implicit_tags) == 13_950

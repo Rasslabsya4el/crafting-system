@@ -3,7 +3,7 @@
 # (claims AFX-xx) and the owner decisions of issue #28 (Craft of Exile admitted, ADR-0005).
 rules:
   - id: affix_pool.domain_match
-    statement: A random add can only pick mods whose domain equals the domain of the item's base (items such as amulets, rings and weapons share the domain `item`).
+    statement: A random add can only pick mods whose domain equals the domain of the item's base.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Modifier#Mechanics_overview
     quote: "Mod domain governs the type of entity the modifier is going to appear and may confer some specific rules (such as the number of affixes)"
@@ -59,11 +59,11 @@ rules:
     date_checked: 2026-10-30
 
   - id: affix_pool.full_side_closes
-    statement: When an item holds as many prefixes (or suffixes) as its capacity allows, no mod of that side can be added, and the other side is the whole pool.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Rarity#Rarities
-    quote: "A magic item with only either a prefix or suffix property can have a second property of the missing type added to it by using an Orb of Augmentation"
-    patch_verified: "3.29.3.3"
+    statement: When an item holds as many prefixes (or suffixes) as its capacity allows, no mod of that side can be added, and the other side is the whole pool. Craft of Exile closes a side once its count reaches the capacity; the wiki only spells this out for the magic item (an Orb of Augmentation adds the missing type).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(useaffbt.prefix>=usemaxaffgrp.prefix){blkdata.blktype.prefix=!0}"
+    patch_verified: "3.29.0.3"
     date_checked: 2026-10-30
 
   - id: affix_pool.implicits_do_not_block

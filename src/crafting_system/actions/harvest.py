@@ -6,15 +6,12 @@ from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
-from .draw import guaranteed_candidates, refuse_unmodelled
+from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
 
 TAGGED_RARE_REFORGE_EXISTS = get_rule("harvest_reforge.tagged_rare_reforge_exists")
 REROLLS_LIKE_CHAOS_WITH_GUARANTEED_TAG = get_rule("harvest_reforge.rerolls_like_chaos_with_guaranteed_tag")
-REFUSED_WITHOUT_TAGGED_MOD = get_rule("harvest_reforge.refused_without_tagged_mod")
-FRACTURED_MODS_KEPT = get_rule("harvest_reforge.fractured_mods_kept")
-TAG_IS_IMPLICIT_TAG = get_rule("harvest_reforge.tag_is_implicit_tag")
 REFUSED_ON_CORRUPTED = get_rule("harvest_reforge.refused_on_corrupted")
 
 
@@ -25,7 +22,7 @@ class HarvestReforge:
     tag: str = "lightning"
 
     def __post_init__(self) -> None:
-        if self.tag not in TAGGED_RARE_REFORGE_EXISTS.value:
+        if not isinstance(self.tag, str) or self.tag not in TAGGED_RARE_REFORGE_EXISTS.value:
             known = ", ".join(sorted(TAGGED_RARE_REFORGE_EXISTS.value))
             raise ValueError(f"there is no Harvest reforge for the tag {self.tag!r}; known: {known}")
 
@@ -43,11 +40,4 @@ class HarvestReforge:
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Harvest reforge")
         refuse_unmodelled(data, item)
-        tag_value = TAGGED_RARE_REFORGE_EXISTS.value[self.tag]
-        result = Outcomes.reroll(data, item, tag=tag_value)
-        if not guaranteed_candidates(result.pool, result.free, tag_value):
-            raise NotApplicableError(
-                f"the {self.tag} reforge cannot be used: the pool holds no {self.tag} mod "
-                "that the item has a free slot and a free family for"
-            )
-        return result
+        return Outcomes.reroll(data, item, tag=TAGGED_RARE_REFORGE_EXISTS.value[self.tag])

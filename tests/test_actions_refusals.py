@@ -11,6 +11,7 @@ from crafting_system.actions import (
     HarvestReforge,
     NotApplicableError,
     OutOfScopeError,
+    Outcomes,
 )
 from crafting_system.items import Influence, Rarity
 
@@ -105,6 +106,25 @@ def test_a_reforge_is_refused_when_the_side_of_every_tagged_mod_is_full():
 
     with pytest.raises(NotApplicableError, match="no lightning mod"):
         HarvestReforge("lightning").outcomes(DATA, item)
+
+
+def test_building_outcomes_with_a_tag_nothing_can_carry_is_refused_by_the_game():
+    blocked = amulet(
+        roll("AddedLightningDamage1", fractured=True),
+        roll("GlobalLightningGemLevel1", fractured=True),
+        roll("LightningResist1", fractured=True),
+        roll("LightningDamagePercent1", fractured=True),
+    )
+
+    with pytest.raises(NotApplicableError, match="no lightning mod"):
+        Outcomes.reroll(DATA, blocked, "lightning")
+    assert Outcomes.reroll(DATA, blocked, None).tag is None
+
+
+@pytest.mark.parametrize("tag", [["lightning"], None, 5, ("lightning",)])
+def test_a_reforge_with_a_tag_that_is_not_a_string_cannot_be_built(tag):
+    with pytest.raises(ValueError, match="no Harvest reforge for the tag"):
+        HarvestReforge(tag)
 
 
 def test_a_reforge_with_an_unknown_tag_cannot_be_built():

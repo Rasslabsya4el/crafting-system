@@ -19,7 +19,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: chaos_orb.fractured_mods_kept
-    statement: A fractured mod stays on the item in its slot when the item is rerolled, and its family stays excluded from the new draws.
+    statement: A fractured mod stays on the item in its slot when the item is rerolled (its family then blocks the new draws as any family on the item does, affix_draw.family_exclusion).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
     quote: "permanently locked to the item, being unable to be rerolled or removed"
@@ -35,7 +35,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: chaos_orb.kept_mods_count_in_total
-    statement: The drawn total of 4, 5 or 6 mods includes the fractured mods that stay on the item (decision D4 of issue #28); only the rest is drawn, and nothing is drawn when the kept mods already reach the total. Craft of Exile counts every kept mod and subtracts it from the total.
+    statement: The drawn total of 4, 5 or 6 mods includes the fractured mods that stay on the item (decision D4 of issue #28); only the rest is drawn, and nothing is drawn when the kept mods already reach the total. Craft of Exile draws the total minus the count of kept mods (a negative number draws nothing).
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: 'poec_simRollAffix(null,null,null,fossil,noaffix-prmods,!0,!1,enforcetag,igcrca,rfmlk,rfmlkt,rfmlkv,!1,"|",graveyard,overrideMaxAff)'

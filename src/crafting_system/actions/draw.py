@@ -13,8 +13,9 @@ fewer mods (`DRY_POOL_LEAVES_FEWER_MODS`).
 The exact engine does not track which family was drawn. Two families that the caller's label cannot
 tell apart (same side, same weight per label) are interchangeable, so they are grouped into a class
 and the state is only how many families of each class have been drawn plus the free slots; states
-are memoised. This is exact, and the number of states grows with the number of distinct classes,
-not with the number of families.
+are memoised. This is exact. The number of states grows with the number of distinct
+(side, weight per label) classes, not with the number of families, so a pool whose families all
+have different weights, or a label that tells many mods apart, gives many states.
 """
 
 import random
@@ -33,17 +34,15 @@ from .pool import PoolFamily, PoolMod
 Outcome = frozenset[tuple[Hashable, int]]
 
 RARE_REROLL_RATIO = get_rule("affix_count.rare_reroll_ratio")
-REROLLS_ALL_MODS = get_rule("chaos_orb.rerolls_all_mods")
-FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
 KEPT_MODS_COUNT_IN_TOTAL = get_rule("chaos_orb.kept_mods_count_in_total")
 DRY_POOL_LEAVES_FEWER_MODS = get_rule("chaos_orb.dry_pool_leaves_fewer_mods")
 RARE_JEWEL_MAX_PER_SIDE = get_rule("affix_count.rare_jewel_max_per_side")
+TAG_IS_IMPLICIT_TAG = get_rule("harvest_reforge.tag_is_implicit_tag")
 GUARANTEED_DRAW_FIRST_BY_WEIGHT = get_rule("harvest_reforge.guaranteed_draw_first_by_weight")
 GUARANTEED_MOD_COUNTS_IN_TOTAL = get_rule("harvest_reforge.guaranteed_mod_counts_in_total")
 DRAW_PROPORTIONAL_TO_WEIGHT = get_rule("affix_pool.draw_proportional_to_weight")
 ONE_POOL_FOR_BOTH_SIDES = get_rule("affix_pool.one_pool_for_both_sides")
 FULL_SIDE_CLOSES = get_rule("affix_pool.full_side_closes")
-VALUES_UNIFORM_INTEGERS = get_rule("affix_pool.values_uniform_integers")
 
 ONE = Fraction(1)
 

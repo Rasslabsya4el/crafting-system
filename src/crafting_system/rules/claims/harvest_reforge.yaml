@@ -28,7 +28,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: harvest_reforge.fractured_mods_kept
-    statement: A fractured modifier stays on the item through a tagged reforge, in its slot, and its family is excluded from the new draws.
+    statement: A fractured modifier stays on the item through a tagged reforge, in its slot (its family then blocks the new draws as any family on the item does, affix_draw.family_exclusion).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
     quote: "permanently locked to the item, being unable to be rerolled or removed"
@@ -36,7 +36,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: harvest_reforge.tag_is_implicit_tag
-    statement: The tag of a Harvest craft is the `implicit_tags` field of the mod in the repoe-fork data (it agrees with Craft of Exile's own mod tags on 98.4% of matched mods and reproduces the guide's total of 14,950 for Lightning on an amulet).
+    statement: The tag of a Harvest craft is the `implicit_tags` field of the mod in the repoe-fork data. The quote is the exporter's own description of the field; the linked comment of issue #28 adds the cross-checks (98.4% agreement with Craft of Exile's mod tags, and the guide's total of 14,950 for Lightning on an amulet).
     source_kind: datamined
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531099515
     quote: "A list of the tags which apply to crafting methods like fossils and harvest crafting."
@@ -55,7 +55,7 @@ rules:
     statement: The drawn total of 4, 5 or 6 mods (8:3:1, as for a Chaos Orb) includes the guaranteed modifier and the fractured mods that stay; only the rest is drawn (decisions D3 and D4 of issue #28). The guaranteed modifier is drawn even when the kept mods already reach the total.
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
-    quote: "poec_simRollAffix(null,forcetag,null,null,1,!0,!1,!1,igcrca,!1,!1,null,!1);"
+    quote: "poec_simRollAffix(null,forcetag,null,null,1,!0,!1,!1,igcrca,!1,!1,null,!1); ... prmods++}"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-30
 

@@ -28,9 +28,11 @@ only its fractured mods, which stay and count inside the total of 4, 5 or 6 mods
 
 Exactness and cost: nothing is rounded. Families the label cannot tell apart (same side, same
 weight per label) are counted, not identified, so the work grows with the number of distinct
-(side, weight, label) classes in the pool, not with the number of families. A label that gives
-every mod its own value is the worst case; a label with a few values on a real amulet pool
-(about 40 families) takes about a second.
+(side, weight, label) classes in the pool, not with the number of families. A real amulet pool
+(about 40 families) with a coarse label takes about 0.3 to 3 s; a pool of 40 families that all
+have different weights took about 70 s, and a label that gives every mod its own value is worse.
+The fractions are exact and can be thousands of bits long: `str()` of one can hit Python's
+4300-digit limit, so convert with `float()` or `Fraction.limit_denominator` to display it.
 
 The pool a draw uses is `build_pool(data, item)`: the mods that could be drawn next, grouped by
 family, with exact `Fraction` weights.
