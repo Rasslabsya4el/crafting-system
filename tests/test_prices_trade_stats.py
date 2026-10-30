@@ -214,10 +214,28 @@ def test_a_text_with_several_trade_ids_is_refused_listing_them(stats, game_mods)
     assert "explicit.stat_5555555555" in message
 
 
+GEM_LEVEL_SIBLINGS = {
+    "GlobalFireGemLevel1_",
+    "GlobalColdGemLevel1__",
+    "GlobalPhysicalGemLevel1_",
+    "GlobalChaosGemLevel1",
+}
+
+
 def test_a_gem_level_family_resolves_through_its_text(stats, game_mods):
-    found = resolve_buy_mod(BuyMod("GlobalDamageTypeGemLevel"), game_mods, stats)
+    # The real family has five texts (fire, cold, lightning, physical, chaos); this test keeps
+    # only the Lightning member, so the family has one text.
+    lightning_only = [mod for mod in game_mods if mod.id not in GEM_LEVEL_SIBLINGS]
+
+    found = resolve_buy_mod(BuyMod("GlobalDamageTypeGemLevel"), lightning_only, stats)
 
     assert found == StatFilter("explicit.stat_1111111111")
+
+
+def test_the_whole_gem_level_family_of_the_game_data_has_different_texts(stats, game_mods):
+    # A real-data fact: the five mods of GlobalDamageTypeGemLevel say five different things.
+    with pytest.raises(TradeSpecError, match="different texts"):
+        resolve_buy_mod(BuyMod("GlobalDamageTypeGemLevel"), game_mods, stats)
 
 
 # -- the "(Local)" suffix and the recorded R12 stats (#39) --------------------------------------

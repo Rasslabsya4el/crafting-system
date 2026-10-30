@@ -1,0 +1,51 @@
+# Mechanic family: chaos_orb (the Orb of Chaos on a rare item), and the reroll rules the Harvest
+# reforges share with it. Research ticket #7 (claims CUR-xx) and the decisions D3, D4 of issue #28.
+# The rare count 4/5/6 = 8:3:1 is affix_count.rare_reroll_ratio.
+rules:
+  - id: chaos_orb.accepts_rare_only
+    statement: A Chaos Orb can be used on a rare item only.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a rare item to apply it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: chaos_orb.rerolls_all_mods
+    statement: A Chaos Orb rerolls every modifier of the rare item and the number of modifiers too, except the modifiers that cannot change (fractured mods).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Chaos_Orb#Mechanics
+    quote: "they reroll all modifiers (and the number of modifiers) on a rare item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: chaos_orb.fractured_mods_kept
+    statement: A fractured mod stays on the item in its slot when the item is rerolled (its family then blocks the new draws as any family on the item does, affix_draw.family_exclusion).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
+    quote: "permanently locked to the item, being unable to be rerolled or removed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: chaos_orb.refused_on_corrupted
+    statement: A corrupted item takes no Chaos Orb (the Tainted Chaos Orb is a different item).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: chaos_orb.kept_mods_count_in_total
+    statement: The drawn total of 4, 5 or 6 mods includes the fractured mods that stay on the item (decision D4 of issue #28); only the rest is drawn, and nothing is drawn when the kept mods already reach the total. Craft of Exile draws the total minus the count of kept mods (a negative number draws nothing).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'poec_simRollAffix(null,null,null,fossil,noaffix-prmods,!0,!1,enforcetag,igcrca,rfmlk,rfmlkt,rfmlkv,!1,"|",graveyard,overrideMaxAff)'
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: chaos_orb.dry_pool_leaves_fewer_mods
+    statement: When no mod can be added any more (the pool is empty, or both sides are full) before the total is reached, the reroll stops and the item keeps the mods it has (decision D4 of issue #28, Craft of Exile row CHK-013).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/research/coe-wiki-checklist/docs/research/2026-10-30-coe-wiki-checklist.md
+    quote: "a dry pool leaves fewer mods"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30

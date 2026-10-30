@@ -10,7 +10,7 @@ Not enforced here, because they are rules of `actions` or open questions: a mod'
 against the item level, whether a mod can spawn on the base's tags, the limit of one crafted mod
 (and the metamod that lifts it), a magic item needing at least one mod and a rare at least four,
 the limit of two influences, fractured mods only on rares, and what corruption forbids. The `tier`
-of a mod is stored as given: the data layer has no tier concept, so it is not checked against data.
+of a mod is stored as given; `tiers.py` derives the tier of a mod on a base from the data.
 """
 
 from dataclasses import dataclass, replace
