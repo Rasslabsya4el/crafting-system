@@ -329,3 +329,57 @@ def test_missing_prices_are_sorted_and_listed_once():
 
 def test_nothing_is_missing_when_everything_is_priced():
     assert missing_prices(["Chaos Orb"], sample_file().prices) == []
+
+
+# --- the detail of a price (#39) ---------------------------------------------------------------
+
+DETAIL = {"league": "Allflame", "listings": 910, "query": {"query": {"type": "x"}}}
+
+
+def test_a_price_detail_is_written_and_reads_back_equal(tmp_path):
+    path = tmp_path / "prices.json"
+    original = sample_file(prices={"Chaos Orb": PriceEntry(1.0, "poe.ninja"), "Amulet": PriceEntry(2.0, "trade-api", "n", DETAIL)})
+
+    write_price_file(path, original)
+
+    assert load_price_file(path) == original
+    assert json.loads(path.read_text(encoding="utf-8"))["prices"]["Amulet"]["detail"] == DETAIL
+
+
+def test_a_price_without_a_detail_writes_no_detail_key(tmp_path):
+    path = tmp_path / "prices.json"
+
+    write_price_file(path, sample_file())
+
+    assert all("detail" not in entry for entry in json.loads(path.read_text(encoding="utf-8"))["prices"].values())
+
+
+def test_a_file_written_before_the_detail_existed_still_loads_with_no_detail(tmp_path):
+    path = tmp_path / "prices.json"
+    write_raw(path, raw_document())
+
+    assert load_price_file(path).prices["Chaos Orb"].detail is None
+
+
+@pytest.mark.parametrize("detail", [[1], "text", 5, True])
+def test_a_detail_that_is_not_an_object_is_rejected_naming_file_and_price(tmp_path, detail):
+    path = tmp_path / "prices.json"
+    write_raw(path, raw_document(prices={"X": {"chaos": 5, "source": "trade-api", "detail": detail}}))
+
+    with pytest.raises(ValueError, match="prices.json") as error:
+        load_price_file(path)
+
+    assert "'X'" in str(error.value) and "detail" in str(error.value)
+
+
+def test_an_override_wins_over_a_price_that_carries_a_detail(tmp_path):
+    write_price_file(
+        tmp_path / "prices.json",
+        sample_file(prices={"Amulet": PriceEntry(2.0, "trade-api", "n", DETAIL)}),
+    )
+    (tmp_path / "price_overrides.toml").write_text('[prices]\nAmulet = 9\n', encoding="utf-8")
+
+    entry = load_prices(tmp_path / "prices.json", tmp_path / "price_overrides.toml").prices["Amulet"]
+
+    assert entry == PriceEntry(9.0, "override")
+    assert entry.detail is None

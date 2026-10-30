@@ -39,18 +39,19 @@ def families_of(pool):
     return {f.family: (f.side, f.weight, len(f.mods)) for f in pool}
 
 
-def test_the_fixture_amulet_pool_at_item_level_86_has_these_thirteen_families():
+def test_the_fixture_amulet_pool_at_item_level_86_has_these_fourteen_families():
     pool = build_pool(DATA, amulet())
 
     assert families_of(pool) == {
         "GlobalDamageTypeGemLevel": (Side.PREFIX, 1000, 5),
         "GlobalSkillGemLevel": (Side.PREFIX, 50, 1),
         "IncreasedEnergyShield": (Side.PREFIX, 1000, 1),
-        "IncreasedLife": (Side.PREFIX, 1000, 1),
+        "IncreasedLife": (Side.PREFIX, 3000, 3),  # three mods of 1000, at levels 5, 11 and 18
         "ItemFoundRarityIncreasePrefix": (Side.PREFIX, 4000, 4),
         "LightningDamage": (Side.PREFIX, 4250, 9),
         "ChaosResistance": (Side.SUFFIX, 1500, 6),
         "ColdResistance": (Side.SUFFIX, 1000, 1),
+        "FireResistance": (Side.SUFFIX, 1000, 1),
         "LifeLeech": (Side.SUFFIX, 1750, 3),
         "LifeRegeneration": (Side.SUFFIX, 1000, 1),
         "LightningDamagePercentage": (Side.SUFFIX, 2500, 5),
@@ -79,7 +80,7 @@ def test_a_family_on_the_item_leaves_the_pool_with_all_its_mods():
 
     names = {f.family for f in pool}
     assert "LightningResistance" not in names and "LightningDamage" not in names
-    assert len(pool) == 11
+    assert len(pool) == 12  # fourteen families less the two on the item
 
 
 def test_an_implicit_of_the_base_does_not_block_its_family():
@@ -101,7 +102,8 @@ def test_a_generation_weight_scales_the_weight_exactly():
 
     family = next(f for f in build_pool(data, amulet()) if f.family == "IncreasedLife")
 
-    assert family.weight == Fraction(1000 * 33, 100)
+    # IncreasedLife1 is scaled to 33/100 of 1000; IncreasedLife2 and IncreasedLife3 keep their 1000.
+    assert family.weight == Fraction(1000 * 33, 100) + 1000 + 1000
 
 
 def test_a_candidate_with_two_families_is_out_of_scope():

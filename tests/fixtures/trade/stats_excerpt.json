@@ -1,0 +1,49 @@
+{
+  "_note": "synthetic excerpt in the shape of /api/trade/data/stats; replaced by a recorded one after the smoke test",
+  "result": [
+    {
+      "id": "pseudo",
+      "label": "Pseudo",
+      "entries": [
+        {"id": "pseudo.pseudo_has_shaper_influence", "text": "Has Shaper Influence", "type": "pseudo"},
+        {"id": "pseudo.pseudo_has_elder_influence", "text": "Has Elder Influence", "type": "pseudo"},
+        {"id": "pseudo.pseudo_has_crusader_influence", "text": "Has Crusader Influence", "type": "pseudo"},
+        {"id": "pseudo.pseudo_has_hunter_influence", "text": "Has Hunter Influence", "type": "pseudo"},
+        {"id": "pseudo.pseudo_has_redeemer_influence", "text": "Has Redeemer Influence", "type": "pseudo"},
+        {"id": "pseudo.pseudo_has_warlord_influence", "text": "Has Warlord Influence", "type": "pseudo"}
+      ]
+    },
+    {
+      "id": "explicit",
+      "label": "Explicit",
+      "entries": [
+        {"id": "explicit.stat_1671376347", "text": "+#% to Lightning Resistance", "type": "explicit"},
+        {"id": "explicit.stat_1111111111", "text": "+# to Level of all Lightning Skill Gems", "type": "explicit"},
+        {"id": "explicit.stat_2222222222", "text": "Adds # to # Fire Damage", "type": "explicit"},
+        {"id": "explicit.stat_3333333333", "text": "#% increased Global Accuracy Rating", "type": "explicit"},
+        {"id": "explicit.stat_4444444444", "text": "#% increased Elemental Damage", "type": "explicit"},
+        {"id": "explicit.stat_5555555555", "text": "#% increased Elemental Damage", "type": "explicit"},
+        {
+          "id": "explicit.stat_6666666666",
+          "text": "Allocates #",
+          "type": "explicit",
+          "option": {"options": [{"id": 1, "text": "Synthetic Notable"}]}
+        }
+      ]
+    },
+    {
+      "id": "fractured",
+      "label": "Fractured",
+      "entries": [
+        {"id": "fractured.stat_1671376347", "text": "+#% to Lightning Resistance", "type": "fractured"}
+      ]
+    },
+    {
+      "id": "implicit",
+      "label": "Implicit",
+      "entries": [
+        {"id": "implicit.stat_1671376347", "text": "+#% to Lightning Resistance", "type": "implicit"}
+      ]
+    }
+  ]
+}

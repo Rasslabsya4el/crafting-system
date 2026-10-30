@@ -75,12 +75,20 @@ MODS = (
     "LifeLeechPermyriadSuffix3",
     "ManaLeechPermyriadSuffix1",
     "ManaLeechPermyriadSuffix2",
+    # the target file (#19): more tiers of life and lightning resistance, fire resistance, and the
+    # two belt damage crafts; the belt's own implicit comes in with the base
+    "IncreasedLife2",
+    "IncreasedLife3",
+    "FireResist1",
+    "JunMaster2AllDamage2_",
+    "EinharMasterWeaponElementalDamage1_",
 )
 BASE_ITEMS = (
     "Metadata/Items/Armours/BodyArmours/BodyInt1",
     "Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword1",  # has an implicit
     "Metadata/Items/Weapons/OneHandWeapons/OneHandMaces/Sceptre1",  # repeats the tag `sceptre`
     "Metadata/Items/Amulets/Amulet1",  # an amulet: a base with mods of its own on the item model
+    "Metadata/Items/Belts/Belt3",  # Leather Belt, for the R13 target (#19)
 )
 FOSSILS = (
     "Metadata/Items/Currency/CurrencyDelveCraftingFire",  # Scorched

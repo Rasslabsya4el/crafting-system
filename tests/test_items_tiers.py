@@ -60,10 +60,12 @@ def test_mods_that_tie_on_required_level_share_a_tier_and_the_next_one_is_three(
 
 
 def test_the_table_holds_exactly_the_mods_that_spawn_on_the_base():
+    """The pinned 50 is a plain fixture count, not engine output: the mods of `mods.json` whose first
+    spawn weight on a tag of Amulet1 (amulet, default) is positive."""
     table = tier_table(DATA, AMULET)
     tags = DATA.base_items[AMULET].tags
 
-    assert len(table) == 47  # the mods of the committed fixture with a positive spawn weight here
+    assert len(table) == 50
     assert all(spawn_weight(DATA.mods[mod_id], tags) > 0 for mod_id in table)
     assert CANNOT_SPAWN not in table
 

@@ -40,6 +40,116 @@
   "type": "IncreasedLife",
   "gold_value": null
  },
+ "IncreasedLife2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedLife"
+  ],
+  "implicit_tags": [
+   "resource",
+   "life"
+  ],
+  "is_essence_only": false,
+  "name": "Sanguine",
+  "required_level": 11,
+  "spawn_weights": [
+   {
+    "tag": "fishing_rod",
+    "weight": 0
+   },
+   {
+    "tag": "weapon",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 1000
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_maximum_life",
+    "max": 39,
+    "min": 25
+   }
+  ],
+  "text": "+(25-39) to maximum Life",
+  "type": "IncreasedLife",
+  "gold_value": null
+ },
+ "IncreasedLife3": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedLife"
+  ],
+  "implicit_tags": [
+   "resource",
+   "life"
+  ],
+  "is_essence_only": false,
+  "name": "Stalwart",
+  "required_level": 18,
+  "spawn_weights": [
+   {
+    "tag": "fishing_rod",
+    "weight": 0
+   },
+   {
+    "tag": "weapon",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 1000
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_maximum_life",
+    "max": 54,
+    "min": 40
+   }
+  ],
+  "text": "+(40-54) to maximum Life",
+  "type": "IncreasedLife",
+  "gold_value": null
+ },
+ "IncreasedLifeImplicitBelt1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "unique",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedLife"
+  ],
+  "implicit_tags": [
+   "resource",
+   "life"
+  ],
+  "is_essence_only": false,
+  "name": "",
+  "required_level": 10,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "base_maximum_life",
+    "max": 40,
+    "min": 25
+   }
+  ],
+  "text": "+(25-40) to maximum Life",
+  "type": "IncreasedLife",
+  "gold_value": null
+ },
  "IncreasedEnergyShield1": {
   "adds_tags": [],
   "domain": "item",
@@ -1749,6 +1859,60 @@
   ],
   "text": "(20-30)% increased Mana Regeneration Rate",
   "type": "ManaRegeneration",
+  "gold_value": null
+ },
+ "FireResist1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "FireResistance"
+  ],
+  "implicit_tags": [
+   "elemental",
+   "fire",
+   "resistance"
+  ],
+  "is_essence_only": false,
+  "name": "of the Whelpling",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "armour",
+    "weight": 1000
+   },
+   {
+    "tag": "ring",
+    "weight": 1000
+   },
+   {
+    "tag": "amulet",
+    "weight": 1000
+   },
+   {
+    "tag": "belt",
+    "weight": 1000
+   },
+   {
+    "tag": "quiver",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "base_fire_damage_resistance_%",
+    "max": 11,
+    "min": 6
+   }
+  ],
+  "text": "+(6-11)% to Fire Resistance",
+  "type": "FireResistance",
   "gold_value": null
  },
  "ColdResist1": {
@@ -3939,6 +4103,79 @@
   ],
   "text": "+(105-150) to Armour\n+(11-15) to maximum Energy Shield",
   "type": "ArmourAndEnergyShield",
+  "gold_value": null
+ },
+ "JunMaster2AllDamage2_": {
+  "adds_tags": [],
+  "domain": "crafted",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "AllDamage"
+  ],
+  "implicit_tags": [
+   "unveiled_mod",
+   "damage"
+  ],
+  "is_essence_only": false,
+  "name": "Upgraded",
+  "required_level": 72,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 0
+   },
+   {
+    "tag": "belt",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "damage_+%",
+    "max": 14,
+    "min": 12
+   }
+  ],
+  "text": "(12-14)% increased Damage",
+  "type": "AllDamage",
+  "gold_value": null
+ },
+ "EinharMasterWeaponElementalDamage1_": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "crafted",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedWeaponElementalDamagePercent"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Upgraded",
+  "required_level": 30,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "elemental_damage_with_attack_skills_+%",
+    "max": 23,
+    "min": 15
+   }
+  ],
+  "text": "(15-23)% increased Elemental Damage with Attack Skills",
+  "type": "IncreasedWeaponElementalDamagePercent",
   "gold_value": null
  },
  "FlaskEnchantmentInjectorAdjacentFlasks___": {

@@ -17,6 +17,27 @@ from .price_file import (
     to_divine,
     write_price_file,
 )
+from .trade_http import (
+    BudgetExceeded,
+    RateLimiter,
+    RequestBudget,
+    TradeBlocked,
+    TradeClient,
+    TradeError,
+    package_version,
+    urllib_transport,
+    user_agent,
+)
+from .trade_pricing import (
+    TRADE_SOURCE,
+    NotEnoughListings,
+    TradePrice,
+    entry_for,
+    merge_trade_prices,
+    price_buy_spec,
+    store_trade_price,
+)
+from .trade_query import BuyMod, BuySpec, TradeSpecError, load_buy_spec
 
 __all__ = [
     "FetchResult",
@@ -37,4 +58,24 @@ __all__ = [
     "stale_warning",
     "to_divine",
     "write_price_file",
+    "TRADE_SOURCE",
+    "BudgetExceeded",
+    "BuyMod",
+    "BuySpec",
+    "NotEnoughListings",
+    "RateLimiter",
+    "RequestBudget",
+    "TradeBlocked",
+    "TradeClient",
+    "TradeError",
+    "TradePrice",
+    "TradeSpecError",
+    "entry_for",
+    "load_buy_spec",
+    "merge_trade_prices",
+    "package_version",
+    "price_buy_spec",
+    "store_trade_price",
+    "urllib_transport",
+    "user_agent",
 ]

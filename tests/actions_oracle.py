@@ -1,6 +1,6 @@
 """A hand oracle for the R12 chances, independent of `crafting_system.actions`.
 
-It knows the thirteen families of the fixture amulet at item level 84 to 86 as a typed table and
+It knows the fourteen families of the fixture amulet at item level 84 to 86 as a typed table and
 walks every draw order exactly: a recursion over the set of families drawn so far, with
 `Fraction`s. It does not group families and does not use the engine's lumping, the data model or
 the item model; the only shared thing is the table, typed here by hand from the fixture.
@@ -26,11 +26,12 @@ FAMILIES_FROM_84 = {
     "GlobalDamageTypeGemLevel": (PREFIX, 1000),  # five mods of 200, level 75
     "GlobalSkillGemLevel": (PREFIX, 50),  # level 75
     "IncreasedEnergyShield": (PREFIX, 1000),
-    "IncreasedLife": (PREFIX, 1000),
+    "IncreasedLife": (PREFIX, 3000),  # three mods of 1000, at levels 5, 11 and 18
     "ItemFoundRarityIncreasePrefix": (PREFIX, 4000),  # four mods of 1000, the last at level 84
     "LightningDamage": (PREFIX, 4250),  # eight mods of 500 and one of 250 (level 76)
     "ChaosResistance": (SUFFIX, 1500),  # six mods of 250, the last at level 81
     "ColdResistance": (SUFFIX, 1000),
+    "FireResistance": (SUFFIX, 1000),  # level 1
     "LifeLeech": (SUFFIX, 1750),  # 1000 + 500 + 250
     "LifeRegeneration": (SUFFIX, 1000),
     "LightningDamagePercentage": (SUFFIX, 2500),  # five mods of 500
