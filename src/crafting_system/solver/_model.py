@@ -34,7 +34,10 @@ class Action[S]:
         cost = self.cost
         if isinstance(cost, bool) or not isinstance(cost, Real):
             raise ValueError(f"action cost must be a real number, got {cost!r}")
-        cost = float(cost)
+        try:
+            cost = float(cost)
+        except OverflowError:
+            raise ValueError("action cost does not fit a float64") from None
         if not math.isfinite(cost) or cost <= 0.0:
             raise ValueError(f"action cost must be finite and above zero, got {self.cost!r}")
         outcomes = []

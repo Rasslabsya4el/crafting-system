@@ -54,7 +54,7 @@ def test_the_same_slow_cycle_is_solved_exactly_by_policy_iteration():
         "B": [act("b", 1, ("A", 999), (GOAL, 1))],
     }
 
-    solution = solve(model(table), ["A"], direct_solve_limit=64, max_sweeps=0)
+    solution = solve(model(table), ["A"], direct_solve_limit=64, max_sweeps=1)
 
     # V = 1 + 0.999 V  ->  1000, by symmetry for both states
     assert solution.values["A"] == pytest.approx(1000.0, rel=1e-9)

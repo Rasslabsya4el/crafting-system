@@ -21,9 +21,15 @@ import highspy
 from crafting_system.solver import Action, TabularModel
 
 
-def random_ssp(seed, *, min_states=3, max_states=6, max_actions=3, ensure_proper=False):
-    """A seeded random SSP. With `ensure_proper` every state has a proper policy."""
+def random_ssp(
+    seed, *, min_states=3, max_states=6, max_actions=3, ensure_proper=False, weight_choices=None
+):
+    """A seeded random SSP. With `ensure_proper` every state has a proper policy.
+
+    Weights are 1..10, or drawn from `weight_choices` when given (to stress rounding).
+    """
     rng = random.Random(seed)
+    draw = (lambda r: r.randint(1, 10)) if weight_choices is None else (lambda r: r.choice(weight_choices))
     size = rng.randint(min_states, max_states)
     table = {}
     for state in range(size):
@@ -38,10 +44,10 @@ def random_ssp(seed, *, min_states=3, max_states=6, max_actions=3, ensure_proper
         actions = []
         for index in range(rng.randint(1, max_actions)):
             outcomes = [
-                (rng.randint(0, size), rng.randint(1, 10)) for _ in range(rng.randint(1, 4))
+                (rng.randint(0, size), draw(rng)) for _ in range(rng.randint(1, 4))
             ]
             if ensure_proper and index == 0:
-                outcomes.append((state + 1, rng.randint(1, 10)))  # a path towards the goal
+                outcomes.append((state + 1, draw(rng)))  # a path towards the goal
             actions.append((f"{state}.{index}", Fraction(rng.randint(1, 20), 4), outcomes))
         table[state] = actions
     return size, table

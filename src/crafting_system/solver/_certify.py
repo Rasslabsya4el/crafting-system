@@ -6,19 +6,32 @@ term: the effective cost plus the fixed contribution of the successors outside t
 (sum of p_j * D(j)). T is the minimum over actions. Let g be the smallest constant term k over the
 component's retained actions (above zero), and for a candidate V:
 
-    e = max over states of (T V - V)^+        d = max over states of (V - T V)^+
+    e = max over states of (T V - V)^+        d = max over states of (V - T V)^+  (computed)
 
 Since T_mu(a V) = a T_mu(V) + (1 - a) k_mu, only a lower bound on k is needed, in both directions:
 
-* Upper side: if e < g, the greedy policy mu (argmin of the same computed T V) is proper and
+* Operator mismatch. The computed operator T~ differs from the exact one: the effective cost and
+  every probability w / L are rounded, and so is every sum, so |T~V - TV|(s) <= rho * TV(s) with
+  rho = (m + 2) * epsilon (m is defined below). That mismatch enters the residuals exactly like
+  e and d, and the expected number of visits amplifies it. So the certificate is taken with
+  e' = e + delta and d' = d + delta, where delta = rho * max over states of TV, and e', d' stand
+  for e, d below. Example: a loop that leaves with chance 1 in 10^9 has a rounded exit
+  probability off by 1e-16 relative, a true error near 1e-8, far above any residual the iteration
+  shows; delta covers it.
+* Upper side: if e' < g, the greedy policy mu (argmin of the same computed T V) is proper and
   V* <= J_mu <= V * g / (g - e). Proof: for U = a V with a >= 1, T_mu U = a T_mu V - (a - 1) k_mu
   <= a V + a e - (a - 1) g, so a = g / (g - e) gives T_mu U <= U, and a supersolution bounds the
   cost of mu from above. If e >= g there is no upper certificate yet.
 * Lower side (always): for a <= 1, T(a V) >= a T V + (1 - a) g, so a = g / (g + d) gives
   a V <= T(a V), a subsolution, hence a V <= V*.
 
-So the component's own multipliers are l_own = g / (g + d) and u_own = g / (g - e), and its own
+So the component's own multipliers are l_own = g / (g + d') and u_own = g / (g - e'), and its own
 relative error is max(1 - l_own, u_own - 1).
+
+Stopping uses the iteration alone: the loop stops when the relative error computed from e and d
+(without delta) is at most `tolerance`. So a model whose rounding amplification delta / g (about
+epsilon * value / g) exceeds `tolerance` still terminates, and the reported `error_bound`, which
+includes delta, may then be larger than `tolerance`; it is infinite when e' >= g.
 
 Across components. Every state keeps multipliers lo, hi with lo * V <= V* <= hi * V (goals: 1, 1).
 Scaling the downstream values by a >= 1 scales a component's solution by at most a, and by a <= 1 by

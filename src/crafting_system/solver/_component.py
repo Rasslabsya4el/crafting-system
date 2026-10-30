@@ -3,7 +3,7 @@
 import math
 from dataclasses import dataclass
 
-from ._certify import own_multipliers, relative_error
+from ._certify import own_multipliers, relative_error, rounding_allowance
 from ._graph import Graph
 
 IMPROVEMENT = 1e-12  # policy iteration switches action only on a relative gain this large
@@ -104,19 +104,21 @@ def _backup(bellman: Bellman, values: list[float], local: int) -> tuple[float, i
     return best, best_a
 
 
-def _certify(bellman: Bellman, values: list[float]) -> tuple[float, float, list[int]]:
-    """Residuals `(e, d)` of `values` and the greedy action index per local state."""
-    e = d = 0.0
+def _certify(bellman: Bellman, values: list[float]) -> tuple[float, float, float, list[int]]:
+    """Residuals `(e, d)` of `values`, the largest backup `max T V`, and the greedy action indices."""
+    e = d = top = 0.0
     greedy = []
     for local, current in enumerate(values):
         best, best_a = _backup(bellman, values, local)
         greedy.append(best_a)
+        if best > top:
+            top = best
         gap = best - current
         if gap > e:
             e = gap
         elif -gap > d:
             d = -gap
-    return e, d, greedy
+    return e, d, top, greedy
 
 
 def _attractor(bellman: Bellman) -> tuple[list[int], list[int]]:
@@ -216,9 +218,12 @@ def solve_cyclic(
 ) -> CyclicResult:
     """Policy iteration for small components, then Gauss-Seidel sweeps until certified.
 
-    Stops when the component's own certified relative error is at most `tolerance`; otherwise
-    returns the best certified candidate seen, with `converged` False.
+    Stops when the iteration's own relative error (the residuals `e`, `d` against `g`) is at most
+    `tolerance`; otherwise returns the best certified candidate seen, with `converged` False. The
+    reported multipliers also carry the operator mismatch `delta` (see `_certify`), so the reported
+    error can exceed `tolerance`; with no upper certificate the upper multiplier is infinite.
     """
+    rho = rounding_allowance(bellman.terms)
     size = len(bellman.states)
     policy, order = _attractor(bellman)
     if len(order) != size:  # cannot happen: every state of the finite set can reach an exit
@@ -229,14 +234,17 @@ def solve_cyclic(
 
     def examine(candidate: list[float]) -> bool:
         nonlocal best_error, best
-        e, d, greedy = _certify(bellman, candidate)
-        lower, upper = own_multipliers(bellman.g, e, d)
+        e, d, top, greedy = _certify(bellman, candidate)
+        delta = rho * top
+        iteration = relative_error(*own_multipliers(bellman.g, e, d))
+        lower, upper = own_multipliers(bellman.g, e + delta, d + delta)
         error = relative_error(lower, upper)
-        if best is None or error < best_error:
+        stop = iteration <= tolerance
+        if stop or best is None or error < best_error:
             best_error = error
             choice = [bellman.ids[local][a] for local, a in enumerate(greedy)]
-            best = CyclicResult(list(candidate), choice, lower, upper, error <= tolerance)
-        return error <= tolerance
+            best = CyclicResult(list(candidate), choice, lower, upper, stop)
+        return stop
 
     if size <= direct_solve_limit:
         solved = _policy_iteration(bellman, policy)
@@ -249,6 +257,4 @@ def solve_cyclic(
             values[local] = _backup(bellman, values, local)[0]
         if examine(values):
             return best  # type: ignore[return-value]
-    if best is None:  # max_sweeps == 0 and no policy iteration result
-        examine(values)
     return best  # type: ignore[return-value]

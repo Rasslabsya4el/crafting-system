@@ -1,5 +1,6 @@
 """Reachable-state generation, exact self-loop elimination and the proper-policy analysis."""
 
+import math
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
@@ -18,7 +19,7 @@ class Graph[S]:
     goal: list[bool] = field(default_factory=list)
     owner: list[int] = field(default_factory=list)
     original: list[Action[S]] = field(default_factory=list)
-    cost: list[float] = field(default_factory=list)  # effective cost: cost * W / L
+    cost: list[float] = field(default_factory=list)  # effective cost: cost * (W / L)
     succ: list[list[int]] = field(default_factory=list)  # non-self successors, merged
     prob: list[list[float]] = field(default_factory=list)  # w_j / L
     state_actions: list[list[int]] = field(default_factory=list)
@@ -28,7 +29,7 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
     """Explore from `starts` once, calling `model.actions` once per non-goal state.
 
     Integers first: W is the total weight, L the weight that leaves the state. The effective cost
-    is `cost * W / L` and the probabilities are `w_j / L`; `1 - p_self` is never computed in floats.
+    is `cost * (W / L)` and the probabilities are `w_j / L`; `1 - p_self` is never computed in floats.
     """
     graph: Graph[S] = Graph()
     index: dict[S, int] = {}
@@ -67,10 +68,19 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
             leave = total - merged.pop(i, 0)
             if leave == 0:
                 continue  # repeats forever at a positive cost: infinite, never useful
+            try:
+                factor = total / leave  # int / int is correctly rounded, however large
+            except OverflowError:
+                factor = math.inf
+            effective = action.cost * factor
+            if not math.isfinite(effective):
+                raise ValueError(
+                    f"effective cost overflows float64 for action {action.label!r} in state {state!r}"
+                )
             ids.append(len(graph.owner))
             graph.owner.append(i)
             graph.original.append(action)
-            graph.cost.append(action.cost * total / leave)
+            graph.cost.append(effective)
             graph.succ.append(list(merged))
             graph.prob.append([weight / leave for weight in merged.values()])
         i += 1
