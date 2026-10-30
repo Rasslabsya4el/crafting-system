@@ -1,0 +1,52 @@
+{
+  "request": "GET https://www.pathofexile.com/api/trade/data/filters (the indexed filter of the trade_filters group)",
+  "filter": {
+    "id": "indexed",
+    "text": "Listed",
+    "fullSpan": true,
+    "option": {
+      "options": [
+        {
+          "id": null,
+          "text": "Any Time"
+        },
+        {
+          "id": "1hour",
+          "text": "Up to an Hour Ago"
+        },
+        {
+          "id": "3hours",
+          "text": "Up to 3 Hours Ago"
+        },
+        {
+          "id": "12hours",
+          "text": "Up to 12 Hours Ago"
+        },
+        {
+          "id": "1day",
+          "text": "Up to a Day Ago"
+        },
+        {
+          "id": "3days",
+          "text": "Up to 3 Days Ago"
+        },
+        {
+          "id": "1week",
+          "text": "Up to a Week Ago"
+        },
+        {
+          "id": "2weeks",
+          "text": "Up to 2 Weeks Ago"
+        },
+        {
+          "id": "1month",
+          "text": "Up to 1 Month Ago"
+        },
+        {
+          "id": "2months",
+          "text": "Up to 2 Months Ago"
+        }
+      ]
+    }
+  }
+}

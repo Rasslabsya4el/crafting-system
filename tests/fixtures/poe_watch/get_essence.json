@@ -1,0 +1,44 @@
+[
+  {
+    "id": 17,
+    "name": "Weeping Essence of Contempt",
+    "category": "essence",
+    "group": "currency",
+    "frame": 5,
+    "influences": "",
+    "mean": 1,
+    "min": 1,
+    "max": 1,
+    "exalted": 0.36,
+    "daily": 2,
+    "change": 0,
+    "history": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "sevenDaysHistory": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "lowConfidence": true,
+    "implicits": null,
+    "explicits": null,
+    "itemLevel": 0,
+    "width": 1,
+    "height": 1,
+    "divine": 0,
+    "tier": 3,
+    "divine_pair_id": 10809,
+    "chaos_pair_id": 339
+  }
+]

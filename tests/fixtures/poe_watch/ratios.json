@@ -1,0 +1,446 @@
+{
+  "items": [
+    {
+      "id": 3534,
+      "name": "Hollow Fossil",
+      "category": "delve",
+      "price": {
+        "chaos": 187.08333333333334,
+        "divine": 0.49991859701621066,
+        "method": "volumeWeightedMean",
+        "source": "chaos",
+        "sourcePairID": 12431,
+        "lowConfidence": false,
+        "lastTradeAt": 1793386800,
+        "window": {
+          "hours": 4,
+          "start": 1793379930,
+          "end": 1793394330,
+          "volume": 12
+        },
+        "volume7D": 1233
+      },
+      "chaos": {
+        "value": 196.11111111111111,
+        "lowConfidence": false,
+        "timestamp": 1793386800,
+        "lastTradeAt": 1793386800,
+        "volume": 9,
+        "chaosValue": 196.11111111111111,
+        "divineValue": 0.5240423600496581,
+        "pairID": 12431,
+        "volume24H": 173,
+        "meanPrice24H": 189.4508670520231,
+        "history7D": [
+          {
+            "date": "2026-10-23",
+            "meanPrice": 171.58823529411765,
+            "volume": 17
+          },
+          {
+            "date": "2026-10-24",
+            "meanPrice": 139.04137931034484,
+            "volume": 145
+          },
+          {
+            "date": "2026-10-25",
+            "meanPrice": 142.8193832599119,
+            "volume": 227
+          },
+          {
+            "date": "2026-10-26",
+            "meanPrice": 156.19847328244273,
+            "volume": 131
+          },
+          {
+            "date": "2026-10-27",
+            "meanPrice": 154.30645161290323,
+            "volume": 186
+          },
+          {
+            "date": "2026-10-28",
+            "meanPrice": 159.07407407407408,
+            "volume": 108
+          },
+          {
+            "date": "2026-10-29",
+            "meanPrice": 166.47528517110266,
+            "volume": 263
+          },
+          {
+            "date": "2026-10-30",
+            "meanPrice": 193.55128205128204,
+            "volume": 156
+          }
+        ],
+        "volume7D": 1233,
+        "usedForCanonicalPrice": true,
+        "change24H": 16.26
+      }
+    },
+    {
+      "id": 850,
+      "name": "Prismatic Fossil",
+      "category": "delve",
+      "price": {
+        "chaos": 2.2666666666666666,
+        "divine": 0.006056920195474801,
+        "method": "volumeWeightedMean",
+        "source": "chaos",
+        "sourcePairID": 904,
+        "lowConfidence": false,
+        "lastTradeAt": 1793386800,
+        "window": {
+          "hours": 4,
+          "start": 1793379930,
+          "end": 1793394330,
+          "volume": 45
+        },
+        "volume7D": 2416
+      },
+      "chaos": {
+        "value": 4.8500000000000005,
+        "lowConfidence": false,
+        "timestamp": 1793386800,
+        "lastTradeAt": 1793386800,
+        "volume": 20,
+        "chaosValue": 4.8500000000000005,
+        "divineValue": 0.01296002777119976,
+        "pairID": 904,
+        "volume24H": 286,
+        "meanPrice24H": 5.223776223776224,
+        "history7D": [
+          {
+            "date": "2026-10-23",
+            "meanPrice": 7.5,
+            "volume": 40
+          },
+          {
+            "date": "2026-10-24",
+            "meanPrice": 6.835820895522388,
+            "volume": 402
+          },
+          {
+            "date": "2026-10-25",
+            "meanPrice": 10.845283018867924,
+            "volume": 265
+          },
+          {
+            "date": "2026-10-26",
+            "meanPrice": 5.694078947368421,
+            "volume": 304
+          },
+          {
+            "date": "2026-10-27",
+            "meanPrice": 8.797872340425531,
+            "volume": 470
+          },
+          {
+            "date": "2026-10-28",
+            "meanPrice": 8.031446540880504,
+            "volume": 318
+          },
+          {
+            "date": "2026-10-29",
+            "meanPrice": 7.788968824940048,
+            "volume": 417
+          },
+          {
+            "date": "2026-10-30",
+            "meanPrice": 5.32,
+            "volume": 200
+          }
+        ],
+        "volume7D": 2416,
+        "usedForCanonicalPrice": true,
+        "change24H": -31.7
+      }
+    },
+    {
+      "id": 414,
+      "name": "Deafening Essence of Hatred",
+      "category": "essence",
+      "price": {
+        "chaos": 1.865,
+        "divine": 0.00498359830789434,
+        "method": "volumeWeightedMean",
+        "source": "chaos",
+        "sourcePairID": 230,
+        "lowConfidence": false,
+        "lastTradeAt": 1793390400,
+        "window": {
+          "hours": 4,
+          "start": 1793379930,
+          "end": 1793394330,
+          "volume": 400
+        },
+        "volume7D": 12416
+      },
+      "chaos": {
+        "value": 1,
+        "lowConfidence": false,
+        "timestamp": 1793390400,
+        "lastTradeAt": 1793390400,
+        "volume": 125,
+        "chaosValue": 1,
+        "divineValue": 0.0026721706744741772,
+        "pairID": 230,
+        "volume24H": 1439,
+        "meanPrice24H": 3.8561501042390547,
+        "history7D": [
+          {
+            "date": "2026-10-23",
+            "meanPrice": 2,
+            "volume": 16
+          },
+          {
+            "date": "2026-10-24",
+            "meanPrice": 7.123529411764705,
+            "volume": 2380
+          },
+          {
+            "date": "2026-10-25",
+            "meanPrice": 5.52170100832968,
+            "volume": 2281
+          },
+          {
+            "date": "2026-10-26",
+            "meanPrice": 3.746641074856046,
+            "volume": 1563
+          },
+          {
+            "date": "2026-10-27",
+            "meanPrice": 3.9696969696969697,
+            "volume": 1221
+          },
+          {
+            "date": "2026-10-28",
+            "meanPrice": 4.011636363636364,
+            "volume": 1375
+          },
+          {
+            "date": "2026-10-29",
+            "meanPrice": 5.085597826086956,
+            "volume": 2208
+          },
+          {
+            "date": "2026-10-30",
+            "meanPrice": 3.9591836734693877,
+            "volume": 1372
+          }
+        ],
+        "volume7D": 12416,
+        "usedForCanonicalPrice": true,
+        "change24H": -22.15
+      }
+    },
+    {
+      "id": 56327,
+      "name": "Divine Orb",
+      "category": "currency",
+      "price": {
+        "chaos": 364.33144857296713,
+        "divine": 0.9735558126653795,
+        "method": "volumeWeightedMean",
+        "source": "chaos",
+        "sourcePairID": 139,
+        "lowConfidence": false,
+        "lastTradeAt": 1793390400,
+        "window": {
+          "hours": 4,
+          "start": 1793379930,
+          "end": 1793394330,
+          "volume": 3714
+        },
+        "volume7D": 245693
+      },
+      "chaos": {
+        "value": 374.22759315206446,
+        "lowConfidence": false,
+        "timestamp": 1793390400,
+        "lastTradeAt": 1793390400,
+        "volume": 372601,
+        "chaosValue": 374.22759315206446,
+        "divineValue": 1,
+        "pairID": 139,
+        "volume24H": 28221,
+        "meanPrice24H": 357.9310796924276,
+        "history7D": [
+          {
+            "date": "2026-10-23",
+            "meanPrice": 332.02148062907554,
+            "volume": 2607
+          },
+          {
+            "date": "2026-10-24",
+            "meanPrice": 330.6512911310906,
+            "volume": 43489
+          },
+          {
+            "date": "2026-10-25",
+            "meanPrice": 340.49711493476116,
+            "volume": 38474
+          },
+          {
+            "date": "2026-10-26",
+            "meanPrice": 343.864324750537,
+            "volume": 36779
+          },
+          {
+            "date": "2026-10-27",
+            "meanPrice": 340.3847615805747,
+            "volume": 35253
+          },
+          {
+            "date": "2026-10-28",
+            "meanPrice": 337.42360641632354,
+            "volume": 32542
+          },
+          {
+            "date": "2026-10-29",
+            "meanPrice": 339.73903987304107,
+            "volume": 30246
+          },
+          {
+            "date": "2026-10-30",
+            "meanPrice": 358.30445196365434,
+            "volume": 26303
+          }
+        ],
+        "volume7D": 245693,
+        "usedForCanonicalPrice": true,
+        "change24H": 5.46
+      }
+    },
+    {
+      "id": 51896,
+      "name": "A Chilling Wind",
+      "category": "card",
+      "price": {
+        "chaos": 42.5,
+        "divine": 0.11356725366515252,
+        "method": "volumeWeightedMean",
+        "source": "chaos",
+        "sourcePairID": 1565,
+        "lowConfidence": true,
+        "lastTradeAt": 1793372400,
+        "window": {
+          "hours": 168,
+          "start": 1792789530,
+          "end": 1793394330,
+          "volume": 4
+        },
+        "volume7D": 4
+      },
+      "chaos": {
+        "value": 10,
+        "lowConfidence": true,
+        "timestamp": 1793372400,
+        "lastTradeAt": 1793372400,
+        "volume": 1,
+        "chaosValue": 10,
+        "divineValue": 0.02672170674474177,
+        "pairID": 1565,
+        "volume24H": 2,
+        "meanPrice24H": 10,
+        "history7D": [
+          {
+            "date": "2026-10-24",
+            "meanPrice": 75,
+            "volume": 2
+          },
+          {
+            "date": "2026-10-30",
+            "meanPrice": 10,
+            "volume": 2
+          }
+        ],
+        "volume7D": 4,
+        "usedForCanonicalPrice": true,
+        "change24H": 0
+      }
+    },
+    {
+      "id": 8360,
+      "name": "Alchemy Shard",
+      "category": "currency",
+      "chaos": {
+        "value": 3,
+        "lowConfidence": true,
+        "timestamp": 1791752400,
+        "lastTradeAt": 1791752400,
+        "volume": 1,
+        "chaosValue": 3,
+        "divineValue": 0.008016512023422531,
+        "pairID": 29290,
+        "usedForCanonicalPrice": false,
+        "change24H": 0
+      },
+      "divine": {
+        "value": 0.5,
+        "lowConfidence": true,
+        "timestamp": 1792270800,
+        "lastTradeAt": 1792270800,
+        "volume": 2,
+        "chaosValue": 187.11379657603223,
+        "divineValue": 0.5,
+        "pairID": 29427,
+        "usedForCanonicalPrice": false,
+        "change24H": 0
+      }
+    },
+    {
+      "id": 17,
+      "name": "Weeping Essence of Contempt",
+      "category": "essence",
+      "price": {
+        "chaos": 9.4,
+        "divine": 0.025118404340057264,
+        "method": "volumeWeightedMean",
+        "source": "chaos",
+        "sourcePairID": 339,
+        "lowConfidence": true,
+        "lastTradeAt": 1793340000,
+        "window": {
+          "hours": 168,
+          "start": 1792789530,
+          "end": 1793394330,
+          "volume": 5
+        },
+        "volume7D": 5
+      },
+      "chaos": {
+        "value": 12.666666666666668,
+        "lowConfidence": true,
+        "timestamp": 1793340000,
+        "lastTradeAt": 1793340000,
+        "volume": 3,
+        "chaosValue": 12.666666666666668,
+        "divineValue": 0.03384749521000625,
+        "pairID": 339,
+        "volume24H": 3,
+        "meanPrice24H": 12.666666666666666,
+        "history7D": [
+          {
+            "date": "2026-10-24",
+            "meanPrice": 1,
+            "volume": 1
+          },
+          {
+            "date": "2026-10-29",
+            "meanPrice": 8,
+            "volume": 1
+          },
+          {
+            "date": "2026-10-30",
+            "meanPrice": 12.666666666666666,
+            "volume": 3
+          }
+        ],
+        "volume7D": 5,
+        "usedForCanonicalPrice": true,
+        "change24H": 58.33
+      }
+    }
+  ]
+}

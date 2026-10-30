@@ -8,33 +8,22 @@ The `details` endpoint is undocumented, so any failure or changed shape there me
 source failed": the resource stays unpriced and is reported, nothing crashes.
 """
 
-import http.client
-import json
 import re
 import statistics
-import urllib.error
 import urllib.parse
-import urllib.request
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from .http_json import TIMEOUT_SECONDS, USER_AGENT, GetJson, SourceError, http_get_json  # noqa: F401  (re-exported)
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile, is_price, missing_prices
 
 BASE_URL = "https://poe.ninja/poe1/api/economy"
-USER_AGENT = "crafting-system price fetcher (https://github.com/Rasslabsya4el/crafting-system)"
-TIMEOUT_SECONDS = 30
 OVERVIEW_TYPES = ("Currency", "Fossil", "Resonator", "Essence")
 SOURCE = "poe.ninja"
 HISTORY_SOURCE = "poe.ninja-history"
 HISTORY_DAYS = 7
-
-GetJson = Callable[[str], Any]
-
-
-class SourceError(Exception):
-    """A price source failed: HTTP error, network error, invalid JSON or a changed shape."""
 
 
 @dataclass(frozen=True)
@@ -42,24 +31,6 @@ class FetchResult:
     price_file: PriceFile
     warnings: list[str] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)  # wanted names still without a price
-
-
-def http_get_json(url: str, timeout: float = TIMEOUT_SECONDS) -> Any:
-    """The real transport: one GET, decoded as JSON; every failure is a `SourceError`."""
-    request = urllib.request.Request(
-        url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"}
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            body = response.read()
-    except urllib.error.HTTPError as error:
-        raise SourceError(f"HTTP {error.code} from {url}") from error
-    except (OSError, http.client.HTTPException) as error:  # URLError, timeouts, cut-off answers
-        raise SourceError(f"cannot reach {url}: {error}") from error
-    try:
-        return json.loads(body.decode("utf-8"))
-    except ValueError as error:  # bad UTF-8 or bad JSON
-        raise SourceError(f"invalid JSON from {url}: {error}") from error
 
 
 def history_slug(name: str) -> str:

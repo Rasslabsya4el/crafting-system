@@ -1,0 +1,12 @@
+{
+  "request": "GET https://www.pathofexile.com/api/trade/fetch/ea99c92d187277ec6a3c31c356e7221feac343eca8c19217b6983e19a482eddb,b4f65a33b8286d7b8303ee7f188ef61fee051c99b200001214fe8c609dafeb11,f6c454bd5fdad397aea8ca398482d9d3c01d6b86a89bf78a08c42e8b87332400,2ccbb5b54c8b65b8214e804fee734b1af75c3246a51cf63e5fa0d8ff29303142,854c03d0646e406e1210e3c76447690af9b185ca54bb263b0755214d22f3e001,59fb57ab74ee37cce62f7ca0201c5ae628b9fe8579f41223f41d635b30f187c5,521e213bebadb62faf5272cdc40e1e196235e4a57ce99256ae50b626b1ae80ea,3688af28cf5f3b983208f0fab2b7edade8c05f5538bd064f43b138c5de4b3c9f,aede325e4ab7e8f5149a51738206783e3a35e417d8c80ab3a6bbe8ac938c8817,f0dfbbc500bd8c8e841f78753f83e2b995e9f0a78d87306acd43f3d532413dcb",
+  "status": 200,
+  "headers": {
+    "date": "Fri, 30 Oct 2026 21:44:17 GMT",
+    "content-type": "application/json",
+    "x-rate-limit-policy": "trade-fetch-request-limit",
+    "x-rate-limit-rules": "Ip",
+    "x-rate-limit-ip": "12:4:10,16:12:300,50:300:300,1000:21600:1800",
+    "x-rate-limit-ip-state": "1:4:0,1:12:0,1:300:0,3:21600:0"
+  }
+}
