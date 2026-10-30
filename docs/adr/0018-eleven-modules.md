@@ -14,6 +14,4 @@ The code splits into eleven modules; each may depend only on modules listed befo
 10. `targets`: the YAML target and the goal check (ADR-0008).
 11. `report` / `cli` (ADR-0015).
 
-The one-way order keeps game data free of crafting rules and lets each layer be tested against the one below it.
-
 Origin: [Design grill round 3: modules, verification, process](https://github.com/Rasslabsya4el/crafting-system/issues/4) Q18.

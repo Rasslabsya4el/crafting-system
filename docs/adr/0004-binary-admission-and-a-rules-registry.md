@@ -7,7 +7,3 @@ Each primitive's behaviour is Python code. Every claim or number that code relie
 Which sources can admit a rule is ADR-0005.
 
 Origin: [Design grill round 1: foundations](https://github.com/Rasslabsya4el/crafting-system/issues/2) Q2, [Design grill round 3: modules, verification, process](https://github.com/Rasslabsya4el/crafting-system/issues/4) Q20.
-
-## Considered options
-
-- Rules with confidence levels and a threshold in the solver: rejected, a policy built on a half-trusted rule has no clear meaning.
