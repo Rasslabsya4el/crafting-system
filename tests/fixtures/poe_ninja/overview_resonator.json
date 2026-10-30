@@ -1,0 +1,79 @@
+{
+ "core": {
+  "items": [
+   {
+    "id": "chaos",
+    "name": "Chaos Orb",
+    "category": "Currency",
+    "detailsId": "chaos-orb"
+   },
+   {
+    "id": "divine",
+    "name": "Divine Orb",
+    "category": "Currency",
+    "detailsId": "divine-orb"
+   }
+  ],
+  "rates": {
+   "divine": 0.002776
+  },
+  "primary": "chaos",
+  "secondary": "divine"
+ },
+ "lines": [
+  {
+   "id": "potent-chaotic-resonator",
+   "primaryValue": 1.6,
+   "volumePrimaryValue": 48.17,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.6263
+  },
+  {
+   "id": "powerful-chaotic-resonator",
+   "primaryValue": 0.7889,
+   "volumePrimaryValue": 35.5,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 1.27
+  },
+  {
+   "id": "prime-chaotic-resonator",
+   "primaryValue": 147.9,
+   "volumePrimaryValue": 1307,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.006759
+  },
+  {
+   "id": "primitive-chaotic-resonator",
+   "primaryValue": 0.9634,
+   "volumePrimaryValue": 153.5,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 1.04
+  }
+ ],
+ "items": [
+  {
+   "id": "potent-chaotic-resonator",
+   "name": "Potent Chaotic Resonator",
+   "category": "Delve",
+   "detailsId": "potent-chaotic-resonator"
+  },
+  {
+   "id": "powerful-chaotic-resonator",
+   "name": "Powerful Chaotic Resonator",
+   "category": "Delve",
+   "detailsId": "powerful-chaotic-resonator"
+  },
+  {
+   "id": "prime-chaotic-resonator",
+   "name": "Prime Chaotic Resonator",
+   "category": "Delve",
+   "detailsId": "prime-chaotic-resonator"
+  },
+  {
+   "id": "primitive-chaotic-resonator",
+   "name": "Primitive Chaotic Resonator",
+   "category": "Delve",
+   "detailsId": "primitive-chaotic-resonator"
+  }
+ ]
+}

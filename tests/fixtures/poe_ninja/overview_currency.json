@@ -1,0 +1,183 @@
+{
+ "core": {
+  "items": [
+   {
+    "id": "chaos",
+    "name": "Chaos Orb",
+    "category": "Currency",
+    "detailsId": "chaos-orb"
+   },
+   {
+    "id": "divine",
+    "name": "Divine Orb",
+    "category": "Currency",
+    "detailsId": "divine-orb"
+   }
+  ],
+  "rates": {
+   "divine": 0.00278
+  },
+  "primary": "chaos",
+  "secondary": "divine"
+ },
+ "lines": [
+  {
+   "id": "accelerating-catalyst",
+   "primaryValue": 1.94,
+   "volumePrimaryValue": 62.5,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.5147
+  },
+  {
+   "id": "chaos",
+   "primaryValue": 1,
+   "volumePrimaryValue": 517148,
+   "maxVolumeCurrency": "divine",
+   "maxVolumeRate": 359.7
+  },
+  {
+   "id": "alch",
+   "primaryValue": 0.01659,
+   "volumePrimaryValue": 60.5,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 60.26
+  },
+  {
+   "id": "alt",
+   "primaryValue": 0.09988,
+   "volumePrimaryValue": 2175,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 10.01
+  },
+  {
+   "id": "annul",
+   "primaryValue": 13.12,
+   "volumePrimaryValue": 10790,
+   "maxVolumeCurrency": "divine",
+   "maxVolumeRate": 27.41
+  },
+  {
+   "id": "aug",
+   "primaryValue": 0.01472,
+   "volumePrimaryValue": 34.67,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 67.94
+  },
+  {
+   "id": "divine",
+   "primaryValue": 359.7,
+   "volumePrimaryValue": 517148,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.00278
+  },
+  {
+   "id": "exalted",
+   "primaryValue": 2.41,
+   "volumePrimaryValue": 5907,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.4155
+  },
+  {
+   "id": "fracturing-orb",
+   "primaryValue": 254.3,
+   "volumePrimaryValue": 7628,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.003933
+  },
+  {
+   "id": "regal",
+   "primaryValue": 0.3083,
+   "volumePrimaryValue": 179.8,
+   "maxVolumeCurrency": "divine",
+   "maxVolumeRate": 1167
+  },
+  {
+   "id": "scour",
+   "primaryValue": 0.4105,
+   "volumePrimaryValue": 1541,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 2.44
+  },
+  {
+   "id": "vivid-lifeforce",
+   "primaryValue": 0.1677,
+   "volumePrimaryValue": 270353,
+   "maxVolumeCurrency": "divine",
+   "maxVolumeRate": 2145
+  }
+ ],
+ "items": [
+  {
+   "id": "accelerating-catalyst",
+   "name": "Accelerating Catalyst",
+   "category": "Catalysts",
+   "detailsId": "accelerating-catalyst"
+  },
+  {
+   "id": "chaos",
+   "name": "Chaos Orb",
+   "category": "Currency",
+   "detailsId": "chaos-orb"
+  },
+  {
+   "id": "alch",
+   "name": "Orb of Alchemy",
+   "category": "Currency",
+   "detailsId": "orb-of-alchemy"
+  },
+  {
+   "id": "alt",
+   "name": "Orb of Alteration",
+   "category": "Currency",
+   "detailsId": "orb-of-alteration"
+  },
+  {
+   "id": "annul",
+   "name": "Orb of Annulment",
+   "category": "Currency",
+   "detailsId": "orb-of-annulment"
+  },
+  {
+   "id": "aug",
+   "name": "Orb of Augmentation",
+   "category": "Currency",
+   "detailsId": "orb-of-augmentation"
+  },
+  {
+   "id": "divine",
+   "name": "Divine Orb",
+   "category": "Currency",
+   "detailsId": "divine-orb"
+  },
+  {
+   "id": "exalted",
+   "name": "Exalted Orb",
+   "category": "Currency",
+   "detailsId": "exalted-orb"
+  },
+  {
+   "id": "fracturing-orb",
+   "name": "Fracturing Orb",
+   "category": "Currency",
+   "detailsId": "fracturing-orb"
+  },
+  {
+   "id": "regal",
+   "name": "Regal Orb",
+   "category": "Currency",
+   "detailsId": "regal-orb"
+  },
+  {
+   "id": "scour",
+   "name": "Orb of Scouring",
+   "category": "Currency",
+   "detailsId": "orb-of-scouring"
+  },
+  {
+   "id": "vivid-lifeforce",
+   "name": "Vivid Crystallised Lifeforce",
+   "category": "Currency",
+   "detailsId": "vivid-crystallised-lifeforce"
+  }
+ ]
+}

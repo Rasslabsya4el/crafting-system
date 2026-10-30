@@ -1,0 +1,105 @@
+{
+ "core": {
+  "items": [
+   {
+    "id": "chaos",
+    "name": "Chaos Orb",
+    "category": "Currency",
+    "detailsId": "chaos-orb"
+   },
+   {
+    "id": "divine",
+    "name": "Divine Orb",
+    "category": "Currency",
+    "detailsId": "divine-orb"
+   }
+  ],
+  "rates": {
+   "divine": 0.00278
+  },
+  "primary": "chaos",
+  "secondary": "divine"
+ },
+ "lines": [
+  {
+   "id": "deafening-essence-of-doubt",
+   "primaryValue": 1,
+   "volumePrimaryValue": 39.33,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 1
+  },
+  {
+   "id": "essence-of-delirium",
+   "primaryValue": 34.43,
+   "volumePrimaryValue": 774.7,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.02904
+  },
+  {
+   "id": "shrieking-essence-of-anger",
+   "primaryValue": 0.5,
+   "volumePrimaryValue": 1.5,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 2
+  },
+  {
+   "id": "wailing-essence-of-fear",
+   "primaryValue": 1,
+   "volumePrimaryValue": 3.17,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 1
+  },
+  {
+   "id": "screaming-essence-of-wrath",
+   "primaryValue": 4,
+   "volumePrimaryValue": 14.67,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.25
+  },
+  {
+   "id": "muttering-essence-of-fear",
+   "primaryValue": 1,
+   "volumePrimaryValue": 1.33,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 1
+  }
+ ],
+ "items": [
+  {
+   "id": "deafening-essence-of-doubt",
+   "name": "Deafening Essence of Doubt",
+   "category": "Essences",
+   "detailsId": "deafening-essence-of-doubt"
+  },
+  {
+   "id": "essence-of-delirium",
+   "name": "Essence of Delirium",
+   "category": "Essences",
+   "detailsId": "essence-of-delirium"
+  },
+  {
+   "id": "shrieking-essence-of-anger",
+   "name": "Shrieking Essence of Anger",
+   "category": "Essences",
+   "detailsId": "shrieking-essence-of-anger"
+  },
+  {
+   "id": "wailing-essence-of-fear",
+   "name": "Wailing Essence of Fear",
+   "category": "Essences",
+   "detailsId": "wailing-essence-of-fear"
+  },
+  {
+   "id": "screaming-essence-of-wrath",
+   "name": "Screaming Essence of Wrath",
+   "category": "Essences",
+   "detailsId": "screaming-essence-of-wrath"
+  },
+  {
+   "id": "muttering-essence-of-fear",
+   "name": "Muttering Essence of Fear",
+   "category": "Essences",
+   "detailsId": "muttering-essence-of-fear"
+  }
+ ]
+}

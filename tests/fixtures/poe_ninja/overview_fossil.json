@@ -1,0 +1,105 @@
+{
+ "core": {
+  "items": [
+   {
+    "id": "chaos",
+    "name": "Chaos Orb",
+    "category": "Currency",
+    "detailsId": "chaos-orb"
+   },
+   {
+    "id": "divine",
+    "name": "Divine Orb",
+    "category": "Currency",
+    "detailsId": "divine-orb"
+   }
+  ],
+  "rates": {
+   "divine": 0.002776
+  },
+  "primary": "chaos",
+  "secondary": "divine"
+ },
+ "lines": [
+  {
+   "id": "bound-fossil",
+   "primaryValue": 9.03,
+   "volumePrimaryValue": 236.2,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.1108
+  },
+  {
+   "id": "aberrant-fossil",
+   "primaryValue": 14.88,
+   "volumePrimaryValue": 600.3,
+   "maxVolumeCurrency": "divine",
+   "maxVolumeRate": 24.2
+  },
+  {
+   "id": "dense-fossil",
+   "primaryValue": 24.37,
+   "volumePrimaryValue": 1442,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.04103
+  },
+  {
+   "id": "jagged-fossil",
+   "primaryValue": 13.97,
+   "volumePrimaryValue": 368.0,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.07156
+  },
+  {
+   "id": "pristine-fossil",
+   "primaryValue": 16.2,
+   "volumePrimaryValue": 202.5,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.06173
+  },
+  {
+   "id": "hollow-fossil",
+   "primaryValue": 206.8,
+   "volumePrimaryValue": 2034,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.004834
+  }
+ ],
+ "items": [
+  {
+   "id": "bound-fossil",
+   "name": "Bound Fossil",
+   "category": "Delve",
+   "detailsId": "bound-fossil"
+  },
+  {
+   "id": "aberrant-fossil",
+   "name": "Aberrant Fossil",
+   "category": "Delve",
+   "detailsId": "aberrant-fossil"
+  },
+  {
+   "id": "dense-fossil",
+   "name": "Dense Fossil",
+   "category": "Delve",
+   "detailsId": "dense-fossil"
+  },
+  {
+   "id": "jagged-fossil",
+   "name": "Jagged Fossil",
+   "category": "Delve",
+   "detailsId": "jagged-fossil"
+  },
+  {
+   "id": "pristine-fossil",
+   "name": "Pristine Fossil",
+   "category": "Delve",
+   "detailsId": "pristine-fossil"
+  },
+  {
+   "id": "hollow-fossil",
+   "name": "Hollow Fossil",
+   "category": "Delve",
+   "detailsId": "hollow-fossil"
+  }
+ ]
+}
