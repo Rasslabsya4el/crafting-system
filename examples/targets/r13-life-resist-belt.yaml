@@ -1,0 +1,48 @@
+# Target for benchmark route R13: an alt-regal belt with tier-1 life, two tier-1 resistances and a
+# crafted damage modifier.
+#
+# This file says WHAT you want to end with. It does not say how to craft it: the planner finds
+# that. Lines starting with # are comments and are ignored.
+#
+# The route (Reddit, 2021): alteration spam for tier-1 life and a resistance, a regal for another
+# tier-1 resistance, then a multimod bench craft for the damage modifier.
+
+# The base item: a Leather Belt, written by its English name as in the game. (When the game
+# data has several bases with one name, the planner skips the Battle Royale copies; if that still
+# leaves several, it asks you to write the base id instead, e.g. Metadata/Items/Belts/Belt3.)
+base: Leather Belt
+
+# The item level of the belt, a whole number from 1 to 100.
+item_level: 86
+
+# No start_item block: the crafting starts from a fresh white (normal) Leather Belt.
+
+# Everything below must be present on the finished item.
+requirements:
+  # Tier-1 life. "family" is the game's own name for a group of mods that exclude each other.
+  # min_tier: 1 means only the best tier counts (tier 1 is the BEST; min_tier: 2 would accept T1
+  # and T2). not_crafted: true refuses a copy of the mod that came from the crafting bench.
+  - family: IncreasedLife
+    min_tier: 1
+    not_crafted: true
+
+  # "At least 2 of these 3": two tier-1 resistances out of fire, cold and lightning.
+  - at_least: 2
+    of:
+      - family: FireResistance
+        min_tier: 1
+        not_crafted: true
+      - family: ColdResistance
+        min_tier: 1
+        not_crafted: true
+      - family: LightningResistance
+        min_tier: 1
+        not_crafted: true
+
+  # "A crafted damage modifier". The route does not say which one, so this is an interpretation:
+  # either of the two damage prefixes a belt can get from the crafting bench counts. They are
+  # bench-crafted by nature, so they carry no not_crafted mark.
+  - at_least: 1
+    of:
+      - family: AllDamage                                  # "(12-14)% increased Damage" and its tiers
+      - family: IncreasedWeaponElementalDamagePercent      # "(15-23)% increased Elemental Damage with Attack Skills"

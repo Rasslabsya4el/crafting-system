@@ -1,0 +1,55 @@
+# Target for benchmark route R12: a "+1 Lightning" amulet with a fractured Lightning Resistance.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Fractured-lightning-resistance +1 Lightning amulet"):
+#   1. Start from an amulet with Lightning Resistance fractured.
+#   2. Harvest-reforge Lightning until it gains "+1 to Level of all Lightning Skill Gems".
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+# A full base id such as Metadata/Items/Amulets/Amulet1 works too.
+base: Paua Amulet
+
+# The item level of the amulet, a whole number from 1 to 100.
+item_level: 84
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
+# [] means none.
+influence: []
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # A mod named by its exact English text, as the game shows it.
+  # A range such as (10-24) can be written in full or as #: "+# to maximum Life" is the same text.
+  # Every tier of the mod counts, because no minimum tier is given.
+  - stat: "+1 to Level of all Lightning Skill Gems"
+
+  # A mod named by its family id (the game's own name for the group of mods that exclude each
+  # other, here every tier of Lightning Resistance). How the mod got onto the item does not
+  # matter: the fractured one from the start item counts.
+  # Other things you could add under a requirement:
+  #   min_tier: 2        accept this tier or better (tier 1 is the BEST, so 2 accepts T1 and T2)
+  #   min_roll: 40       accept only a roll of at least 40 (a list gives one number per stat,
+  #                      null for a stat you do not care about)
+  #   not_crafted: true  refuse a mod that came from the crafting bench
+  - family: LightningResistance
+
+# Where the crafting starts. Leave this block out to start from a fresh white (normal) item.
+# Here the route starts from an amulet that already has Lightning Resistance fractured.
+start_item:
+  rarity: rare
+  mods:
+    # The mod is named by its game-data id. The tier is taken as written until the planner can
+    # derive tiers from the game data itself (ticket #23), so check it by hand.
+    - mod: LightningResist2
+      tier: 3
+      # One whole number per stat of the mod, in the units of the game data (resistance is a plain
+      # percentage; life regeneration, for example, is per minute).
+      values: [14]
+      # Locked in place by a Fracturing Orb.
+      fractured: true
+
+# Optional: the price file, relative to the folder of this file. It is not read by the target
+# loader and the file does not have to exist yet.
+# price_file: prices.json
