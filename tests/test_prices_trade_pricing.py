@@ -273,7 +273,7 @@ def test_the_entry_carries_source_note_and_the_query(trade, spec, game_mods, tmp
     entry = entry_for(found)
 
     assert (entry.chaos, entry.source) == (1.0, TRADE_SOURCE) and TRADE_SOURCE == "trade-api"
-    assert entry.note == "median of the 5 cheapest of 10 fetched listings, 910 on the site"
+    assert entry.note == "median of the 5 cheapest of 10 fetched listings, 910 on the site, listed within 1week"
     assert entry.detail == {
         "league": "Allflame",
         "date": "2026-10-30",
