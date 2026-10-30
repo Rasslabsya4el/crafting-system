@@ -292,6 +292,7 @@ def test_build_query_for_the_r12_start_item():
         mirrored=False,
         fractured=True,
         stats=(StatFilter(FRACTURED_LIGHTNING_RES),),
+        indexed="1week",
     )
 
 

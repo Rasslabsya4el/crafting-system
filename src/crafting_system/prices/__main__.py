@@ -49,7 +49,7 @@ from .trade_pricing import (
     refuse_name_collision,
     store_trade_price,
 )
-from .trade_query import load_buy_spec
+from .trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS, load_buy_spec
 
 DATA_FETCH_COMMAND = "python -m crafting_system.data fetch"
 
@@ -83,6 +83,15 @@ def main(
     trade.add_argument("--k", type=int, default=DEFAULT_K, help="price from the k cheapest listings")
     trade.add_argument(
         "--max-requests", type=int, default=DEFAULT_MAX_REQUESTS, help="most requests this run may send"
+    )
+    trade.add_argument(
+        "--indexed",
+        choices=[*INDEXED_OPTIONS, "any"],
+        default=DEFAULT_INDEXED,
+        help=(
+            f"keep only listings made within this window (default {DEFAULT_INDEXED}: the last week); "
+            "a months-old listing can set a floor price nobody will honour; 'any' keeps all"
+        ),
     )
     trade.add_argument("--refresh-stats", action="store_true", help="download the stat list again")
     args = parser.parse_args(argv)
@@ -169,7 +178,15 @@ def _trade(
     )
     instant = now if now is not None else datetime.now(UTC)
     price = price_buy_spec(
-        spec, game_mods, price_file, client, config.cache_dir, instant, args.k, args.refresh_stats
+        spec,
+        game_mods,
+        price_file,
+        client,
+        config.cache_dir,
+        instant,
+        args.k,
+        args.refresh_stats,
+        None if args.indexed == "any" else args.indexed,
     )
     store_trade_price(price_path, price, entry_for(price))
     print(
@@ -177,6 +194,7 @@ def _trade(
         f"{price.used} of {price.fetched} fetched listings used ({price.listings} on the site), "
         f"league {price.league}"
     )
+    print(f"  listings from {'any time' if price.indexed is None else 'the last ' + price.indexed}")
     for reason, count in sorted(price.dropped.items()):
         print(f"  dropped {count} {reason}")
     print(f"{budget.used} requests used")

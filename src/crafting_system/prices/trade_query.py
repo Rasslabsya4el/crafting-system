@@ -32,12 +32,13 @@ equipment piece bought for its mods, and each one would also widen the query has
       .vestigial, .identified, .split               not covered   not relevant to rare equipment
     socket_filters (links, white sockets)         not covered   the buy actions do not ask for sockets
     armour_filters, weapon_filters, map_filters   not covered   defence / damage rolls come from mods
-    trade_filters (price, collapse, indexed)      not covered   price is read from the listings; the
+    trade_filters.indexed (listing age)           set           a window, `DEFAULT_INDEXED`; None = any time
+    trade_filters price, collapse, fee, sale_type not covered   price is read from the listings; the
                                                                 query sorts by price ascending
     influence (APT: pseudo stats)                 set           `INFLUENCE_STAT_IDS`, minimum 1
 
 PoEQuery's extra filters (`synthesised_item`, `identified`, `enchanted`, `crafted`, `quality`,
-sockets and links by colour, `sale_type`, `indexed`, `alternate_art`, `talisman_tier`, ultimatum)
+sockets and links by colour, `sale_type`, `alternate_art`, `talisman_tier`, ultimatum)
 are left out for the same reason.
 """
 
@@ -54,6 +55,8 @@ import yaml
 
 RARITIES = ("normal", "magic", "rare", "unique", "nonunique", "uniquefoil")
 STATUSES = ("online", "securable", "available", "any")
+INDEXED_OPTIONS = ("1hour", "3hours", "12hours", "1day", "3days", "1week", "2weeks", "1month", "2months")
+DEFAULT_INDEXED = "1week"  # an old listing can set a floor price nobody will honour
 
 INFLUENCE_STAT_IDS: Mapping[str, str] = {
     name: f"pseudo.pseudo_has_{name}_influence"
@@ -145,10 +148,15 @@ class TradeQuery:
     fractured: bool | None = None
     stats: tuple[StatFilter, ...] = field(default_factory=tuple)
     status: str = "available"
+    indexed: str | None = None  # listing-age window, one of INDEXED_OPTIONS; None = any time
 
     def __post_init__(self) -> None:
         if self.rarity is not None:
             _check_rarity(self.rarity)
+        if self.indexed is not None and self.indexed not in INDEXED_OPTIONS:
+            raise TradeSpecError(
+                f"indexed must be one of {', '.join(INDEXED_OPTIONS)}, got {self.indexed!r}"
+            )
         if self.status not in STATUSES:
             raise TradeSpecError(f"status must be one of {', '.join(STATUSES)}, got {self.status!r}")
         _check_level("item level minimum", self.ilvl_min)
@@ -194,6 +202,7 @@ class TradeQuery:
         for group, content in (
             ("type_filters", self._type_filters()),
             ("misc_filters", self._misc_filters()),
+            ("trade_filters", {"indexed": {"option": self.indexed}} if self.indexed is not None else {}),
         ):
             if content:
                 filters[group] = {"filters": content}
@@ -260,8 +269,13 @@ class BuySpec:
         _check_range("item level", self.item_level_min, self.item_level_max)
 
 
-def build_query(spec: BuySpec, mod_filters: Sequence[StatFilter]) -> TradeQuery:
-    """The query for a spec. `mod_filters` are the spec's mods already resolved to trade stat ids."""
+def build_query(
+    spec: BuySpec, mod_filters: Sequence[StatFilter], indexed: str | None = DEFAULT_INDEXED
+) -> TradeQuery:
+    """The query for a spec. `mod_filters` are the spec's mods already resolved to trade stat ids.
+
+    `indexed` is the listing-age window (None = any time).
+    """
     influence_filters = tuple(StatFilter(INFLUENCE_STAT_IDS[name], min=1) for name in spec.influences)
     return TradeQuery(
         type=spec.base_type,
@@ -273,6 +287,7 @@ def build_query(spec: BuySpec, mod_filters: Sequence[StatFilter]) -> TradeQuery:
         mirrored=False,
         fractured=True if any(mod.fractured for mod in spec.mods) else None,
         stats=tuple(mod_filters) + influence_filters,
+        indexed=indexed,
     )
 
 
