@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from crafting_system.prices.trade_query import BuyMod, StatFilter, TradeSpecError
+from crafting_system.prices.trade_query import INFLUENCE_STAT_IDS, BuyMod, StatFilter, TradeSpecError
 from crafting_system.prices.trade_stats import (
     normalize_text,
     parse_trade_stats,
@@ -14,11 +14,17 @@ from crafting_system.prices.trade_stats import (
 from repoe_support import fixture_game_data
 
 STATS_FILE = Path(__file__).resolve().parent / "fixtures" / "trade" / "stats_excerpt.json"
+RECORDED_STATS_FILE = Path(__file__).resolve().parent / "fixtures" / "trade" / "recorded" / "stats_excerpt.json"
 
 
 @pytest.fixture(scope="module")
 def stats():
     return parse_trade_stats(json.loads(STATS_FILE.read_text(encoding="utf-8")))
+
+
+@pytest.fixture(scope="module")
+def recorded():
+    return parse_trade_stats(json.loads(RECORDED_STATS_FILE.read_text(encoding="utf-8")))
 
 
 @pytest.fixture(scope="module")
@@ -211,3 +217,62 @@ def test_a_gem_level_family_resolves_through_its_text(stats, game_mods):
     found = resolve_buy_mod(BuyMod("GlobalDamageTypeGemLevel"), game_mods, stats)
 
     assert found == StatFilter("explicit.stat_1111111111")
+
+
+# -- the "(Local)" suffix and the recorded R12 stats (#39) --------------------------------------
+
+
+def stats_of(*entries):
+    return parse_trade_stats(
+        {"result": [{"id": "explicit", "entries": [{"id": i, "text": t} for i, t in entries]}]}
+    )
+
+
+def test_a_text_without_the_local_suffix_finds_the_local_stat_of_the_recorded_list(recorded):
+    assert recorded.ids_for("explicit", "Adds (1-3) to (5-9) Lightning Damage") == (
+        "explicit.stat_3336890334",
+    )
+    found = resolve_buy_mod(BuyMod("Adds # to # Lightning Damage", minimum=2), [], recorded)
+    assert found == StatFilter("explicit.stat_3336890334", min=2)
+
+
+def test_the_plain_text_wins_over_the_local_one_when_both_exist():
+    stats = stats_of(("explicit.stat_1", "#% increased Armour"), ("explicit.stat_2", "#% increased Armour (Local)"))
+
+    assert stats.ids_for("explicit", "#% increased Armour") == ("explicit.stat_1",)
+
+
+def test_two_local_stats_with_one_text_stay_an_error():
+    stats = stats_of(("explicit.stat_1", "Adds # Damage (Local)"), ("explicit.stat_2", "Adds # Damage (Local)"))
+
+    with pytest.raises(TradeSpecError, match="explicit.stat_1"):
+        resolve_buy_mod(BuyMod("Adds # Damage"), [], stats)
+
+
+def test_the_local_suffix_is_tried_in_the_same_group_only():
+    stats = parse_trade_stats(
+        {"result": [{"id": "implicit", "entries": [{"id": "implicit.stat_9", "text": "Adds # Damage (Local)"}]}]}
+    )
+
+    assert stats.ids_for("explicit", "Adds # Damage") == ()
+
+
+def test_the_r12_lightning_resistance_resolves_on_the_recorded_list(recorded):
+    fractured = resolve_buy_mod(BuyMod("+#% to Lightning Resistance", fractured=True), [], recorded)
+    explicit = resolve_buy_mod(BuyMod("+#% to Lightning Resistance"), [], recorded)
+
+    assert fractured == StatFilter("fractured.stat_1671376347")
+    assert explicit == StatFilter("explicit.stat_1671376347")
+
+
+def test_the_r12_target_prefix_resolves_on_the_recorded_list(recorded):
+    found = resolve_buy_mod(BuyMod("+# to Level of all Lightning Skill Gems"), [], recorded)
+
+    assert found == StatFilter("explicit.stat_1147690586")
+
+
+def test_the_six_influence_pseudo_ids_exist_on_the_recorded_list(recorded):
+    listed = {entry.id for entry in recorded.entries if entry.group == "pseudo"}
+
+    assert len(INFLUENCE_STAT_IDS) == 6
+    assert set(INFLUENCE_STAT_IDS.values()) <= listed

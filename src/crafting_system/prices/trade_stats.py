@@ -54,8 +54,15 @@ class TradeStats:
     entries: tuple[TradeStatEntry, ...]
 
     def ids_for(self, group: str, text: str) -> tuple[str, ...]:
-        """The ids in `group` whose normalized text equals the normalized `text`, in list order."""
+        """The ids in `group` whose normalized text equals the normalized `text`, in list order.
+
+        The site writes local mods with a suffix (`Adds # to # Lightning Damage (Local)`), repoe
+        text has none: when nothing in the group matches, the text followed by ` (local)` is tried.
+        """
         wanted = normalize_text(text)
+        return self._ids(group, wanted) or self._ids(group, f"{wanted} (local)")
+
+    def _ids(self, group: str, wanted: str) -> tuple[str, ...]:
         found: list[str] = []
         for entry in self.entries:
             if entry.group == group and entry.normalized == wanted and entry.id not in found:

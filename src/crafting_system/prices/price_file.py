@@ -15,6 +15,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 
 from ..config import Config
 
@@ -38,6 +39,7 @@ class PriceEntry:
     chaos: float
     source: str
     note: str | None = None
+    detail: Mapping[str, Any] | None = None  # a JSON object: how the price was found (#39)
 
 
 @dataclass(frozen=True)
@@ -86,6 +88,7 @@ def write_price_file(path: Path, price_file: PriceFile) -> None:
                 "chaos": entry.chaos,
                 "source": entry.source,
                 **({"note": entry.note} if entry.note is not None else {}),
+                **({"detail": entry.detail} if entry.detail is not None else {}),
             }
             for name, entry in price_file.prices.items()
         },
@@ -152,7 +155,10 @@ def _price_file_from_document(document: object, path: Path) -> PriceFile:
         note = raw.get("note")
         if note is not None and not isinstance(note, str):
             raise ValueError(f"{path}: price {name!r}: note must be a string")
-        prices[name] = PriceEntry(float(raw["chaos"]), source, note)
+        detail = raw.get("detail")
+        if detail is not None and not isinstance(detail, dict):
+            raise ValueError(f"{path}: price {name!r}: detail must be an object")
+        prices[name] = PriceEntry(float(raw["chaos"]), source, note, detail)
     return PriceFile(league, fetched_at, float(chaos_per_divine), prices)
 
 
