@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Crafting planner for Path of Exile: finds and prices the best crafting policy for a target item."
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
-dependencies = []
+dependencies = [
+    "pyyaml>=6.0.3",
+]
 
 [build-system]
 requires = ["uv_build>=0.13.6,<0.14"]
