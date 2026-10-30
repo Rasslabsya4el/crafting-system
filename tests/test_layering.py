@@ -53,19 +53,39 @@ def imported_layers(tree: ast.AST, own_package: list[str], package_name: str) ->
     return found
 
 
+def layers_imported_by(path: Path, package_dir: Path, layers: tuple[str, ...]) -> list[str]:
+    relative = path.relative_to(package_dir)
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    own_package = [package_dir.name, *relative.parts[:-1]]
+    return sorted(imported_layers(tree, own_package, package_dir.name) & set(layers))
+
+
 def find_layer_violations(package_dir: Path, layers: tuple[str, ...]) -> list[str]:
-    """One line per file that imports a module listed after its own."""
-    package_name = package_dir.name
+    """One line per file that imports a module listed after its own.
+
+    A top-level module outside the layers (like `config.py`) is shared infrastructure and may
+    import none of them: otherwise a layer could reach a later one through it.
+    """
     violations = []
     for own_index, own_layer in enumerate(layers):
         for path in sorted((package_dir / own_layer).rglob("*.py")):
-            relative = path.relative_to(package_dir)
-            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-            own_package = [package_name, *relative.parts[:-1]]
-            for imported in sorted(imported_layers(tree, own_package, package_name)):
-                if imported in layers and layers.index(imported) > own_index:
-                    violations.append(f"{relative.as_posix()}: {own_layer} imports later {imported}")
+            for imported in layers_imported_by(path, package_dir, layers):
+                if layers.index(imported) > own_index:
+                    relative = path.relative_to(package_dir).as_posix()
+                    violations.append(f"{relative}: {own_layer} imports later {imported}")
+    for path in sorted(package_dir.glob("*.py")):
+        for imported in layers_imported_by(path, package_dir, layers):
+            violations.append(f"{path.name}: sits outside the layers but imports {imported}")
     return violations
+
+
+def find_unexpected_subpackages(package_dir: Path, layers: tuple[str, ...]) -> list[str]:
+    """Folders holding Python files that are not one of the layers (bytecode leftovers do not count)."""
+    return sorted(
+        folder.name
+        for folder in package_dir.iterdir()
+        if folder.is_dir() and folder.name not in layers and any(folder.rglob("*.py"))
+    )
 
 
 def make_package(root: Path, files: dict[str, str], layers: tuple[str, ...]) -> Path:
@@ -151,12 +171,94 @@ def test_allowed_imports_are_not_reported(tmp_path, source):
     assert find_layer_violations(package_dir, SYNTHETIC_LAYERS) == []
 
 
-def test_files_outside_the_layers_may_import_any_layer(tmp_path):
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import pkg.first",
+        "from pkg.first import thing",
+        "from pkg import second",
+        "from .third import thing",
+        "from . import first",
+        "from .first.deep import thing",
+        "def late():\n    from pkg.second import thing\n",
+    ],
+)
+def test_a_top_level_module_outside_the_layers_may_import_none_of_them(tmp_path, source):
+    package_dir = make_package(tmp_path, {"shared.py": source}, SYNTHETIC_LAYERS)
+
+    violations = find_layer_violations(package_dir, SYNTHETIC_LAYERS)
+
+    assert len(violations) == 1
+    assert violations[0].startswith("shared.py")
+
+
+def test_the_package_init_counts_as_outside_the_layers(tmp_path):
+    package_dir = make_package(tmp_path, {"__init__.py": "from . import first"}, SYNTHETIC_LAYERS)
+
+    assert len(find_layer_violations(package_dir, SYNTHETIC_LAYERS)) == 1
+
+
+def test_a_layer_cannot_reach_a_later_layer_through_a_shared_module(tmp_path):
     package_dir = make_package(
-        tmp_path, {"shared.py": "from pkg.third import thing"}, SYNTHETIC_LAYERS
+        tmp_path,
+        {"first/mod.py": "from .. import shared", "shared.py": "from .third import thing"},
+        SYNTHETIC_LAYERS,
+    )
+
+    violations = find_layer_violations(package_dir, SYNTHETIC_LAYERS)
+
+    assert len(violations) == 1
+    assert violations[0].startswith("shared.py")
+
+
+def test_top_level_modules_may_import_each_other_and_the_standard_library(tmp_path):
+    package_dir = make_package(
+        tmp_path,
+        {
+            "shared.py": "import os\nfrom . import config\nimport pkg.config",
+            "config.py": "import tomllib",
+        },
+        SYNTHETIC_LAYERS,
     )
 
     assert find_layer_violations(package_dir, SYNTHETIC_LAYERS) == []
+
+
+def test_a_layer_may_import_a_top_level_module(tmp_path):
+    package_dir = make_package(
+        tmp_path,
+        {"first/mod.py": "from ..config import load_config\nfrom .. import config", "config.py": ""},
+        SYNTHETIC_LAYERS,
+    )
+
+    assert find_layer_violations(package_dir, SYNTHETIC_LAYERS) == []
+
+
+def test_an_extra_subpackage_is_reported(tmp_path):
+    package_dir = make_package(tmp_path, {"fourth/__init__.py": ""}, SYNTHETIC_LAYERS)
+
+    assert find_unexpected_subpackages(package_dir, SYNTHETIC_LAYERS) == ["fourth"]
+
+
+def test_an_extra_folder_with_python_files_but_no_init_is_reported(tmp_path):
+    package_dir = make_package(tmp_path, {"fourth/mod.py": ""}, SYNTHETIC_LAYERS)
+
+    assert find_unexpected_subpackages(package_dir, SYNTHETIC_LAYERS) == ["fourth"]
+
+
+def test_leftover_bytecode_folders_are_not_subpackages(tmp_path):
+    package_dir = make_package(tmp_path, {}, SYNTHETIC_LAYERS)
+    (package_dir / "__pycache__").mkdir()
+    (package_dir / "old" / "__pycache__").mkdir(parents=True)
+    (package_dir / "old" / "__pycache__" / "x.pyc").write_bytes(b"")
+
+    assert find_unexpected_subpackages(package_dir, SYNTHETIC_LAYERS) == []
+
+
+def test_exactly_the_given_subpackages_pass(tmp_path):
+    package_dir = make_package(tmp_path, {}, SYNTHETIC_LAYERS)
+
+    assert find_unexpected_subpackages(package_dir, SYNTHETIC_LAYERS) == []
 
 
 def test_every_module_folder_exists_in_the_real_package():
@@ -165,6 +267,12 @@ def test_every_module_folder_exists_in_the_real_package():
     missing = [layer for layer in LAYERS if not (package_dir / layer / "__init__.py").is_file()]
 
     assert missing == []
+
+
+def test_real_package_has_exactly_the_eleven_subpackages():
+    package_dir = Path(crafting_system.__file__).parent
+
+    assert find_unexpected_subpackages(package_dir, LAYERS) == []
 
 
 def test_real_package_imports_only_earlier_modules():

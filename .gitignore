@@ -6,10 +6,10 @@
 sources/
 
 # Local runtime directories (default data, cache and output), virtualenv and build artefacts
-local/
+/local/
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-dist/
-build/
+/dist/
+/build/

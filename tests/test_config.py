@@ -1,11 +1,12 @@
 """Config: data, cache and output directories from env vars > config file > built-in defaults."""
 
+import codecs
 import dataclasses
 from pathlib import Path
 
 import pytest
 
-from crafting_system.config import Config, load_config
+from crafting_system.config import Config, find_project_root, load_config
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -163,7 +164,7 @@ def test_unknown_top_level_table_is_an_error_naming_file_and_key(tmp_path):
         load_config(env={}, project_root=tmp_path)
 
 
-@pytest.mark.parametrize("value", ["3", "true", '["a"]', "{ x = 1 }", '""'])
+@pytest.mark.parametrize("value", ["3", "true", '["a"]', "{ x = 1 }", '""', '"   "', '"\\t"'])
 def test_non_string_or_empty_value_is_an_error_naming_file_and_key(tmp_path, value):
     write_toml(tmp_path / "crafting.toml", f"[paths]\ncache = {value}\n")
 
@@ -195,14 +196,110 @@ def test_project_root_is_found_from_the_package_location(monkeypatch, tmp_path):
     assert config.data_dir == REPO_ROOT / "local" / "data"
 
 
-def test_without_a_pyproject_above_the_package_the_current_directory_is_the_root(
+def test_without_a_pyproject_in_the_searched_folders_the_current_directory_is_the_root(
     monkeypatch, tmp_path
 ):
-    from crafting_system import config as config_module
+    # `search_up_to` keeps the walk inside tmp_path, wherever pytest put it (it may be inside
+    # a project that does have a pyproject.toml)
+    nested = tmp_path / "a" / "b"
+    nested.mkdir(parents=True)
+    elsewhere = tmp_path / "cwd"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
 
-    monkeypatch.chdir(tmp_path)
+    assert find_project_root(start=nested, search_up_to=tmp_path) == Path.cwd()
 
-    assert config_module.find_project_root(start=tmp_path) == tmp_path
+
+def test_the_nearest_pyproject_above_start_is_the_root(tmp_path):
+    nested = tmp_path / "a" / "b"
+    nested.mkdir(parents=True)
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    (tmp_path / "a" / "pyproject.toml").write_text("", encoding="utf-8")
+
+    assert find_project_root(start=nested, search_up_to=tmp_path) == tmp_path / "a"
+
+
+def test_a_pyproject_at_the_search_limit_counts(tmp_path):
+    nested = tmp_path / "a"
+    nested.mkdir()
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+
+    assert find_project_root(start=nested, search_up_to=tmp_path) == tmp_path
+
+
+def test_a_pyproject_above_the_search_limit_is_not_looked_at(monkeypatch, tmp_path):
+    limit = tmp_path / "a"
+    nested = limit / "b"
+    nested.mkdir(parents=True)
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+    monkeypatch.chdir(nested)
+
+    assert find_project_root(start=nested, search_up_to=limit) == Path.cwd()
+
+
+def test_config_file_with_a_utf8_bom_is_accepted(tmp_path):
+    (tmp_path / "crafting.toml").write_bytes(codecs.BOM_UTF8 + b'[paths]\ndata = "d"\n')
+
+    assert load_config(env={}, project_root=tmp_path).data_dir == tmp_path / "d"
+
+
+def test_config_file_that_is_not_utf8_is_an_error_naming_the_file(tmp_path):
+    # what PowerShell 5.1's `>` writes
+    (tmp_path / "crafting.toml").write_bytes('[paths]\ndata = "d"\n'.encode("utf-16"))
+
+    with pytest.raises(ValueError, match=r"crafting\.toml.*UTF-8") as caught:
+        load_config(env={}, project_root=tmp_path)
+
+    assert not isinstance(caught.value, UnicodeDecodeError)
+
+
+@pytest.mark.parametrize("blank", [" ", "   ", "\t", " \t "])
+def test_whitespace_only_env_value_counts_as_unset(tmp_path, blank):
+    write_toml(tmp_path / "crafting.toml", '[paths]\ndata = "from-file"\n')
+    env = {"CRAFTING_DATA_DIR": blank, "CRAFTING_CONFIG": blank}
+
+    assert load_config(env=env, project_root=tmp_path).data_dir == tmp_path / "from-file"
+
+
+@pytest.fixture
+def home(tmp_path, monkeypatch):
+    home_dir = tmp_path / "home"
+    home_dir.mkdir()
+    monkeypatch.setenv("HOME", str(home_dir))
+    monkeypatch.setenv("USERPROFILE", str(home_dir))
+    return home_dir
+
+
+TILDE = "~"
+
+
+def test_leading_tilde_in_an_env_value_is_the_home_folder(tmp_path, home):
+    env = {"CRAFTING_DATA_DIR": TILDE + "/data", "CRAFTING_CACHE_DIR": TILDE}
+
+    config = load_config(env=env, project_root=tmp_path / "proj")
+
+    assert config.data_dir == home / "data"
+    assert config.cache_dir == home
+
+
+def test_leading_tilde_in_a_config_value_is_the_home_folder(tmp_path, home):
+    write_toml(tmp_path / "crafting.toml", f'[paths]\ndata = "{TILDE}/data"\n')
+
+    assert load_config(env={}, project_root=tmp_path).data_dir == home / "data"
+
+
+def test_leading_tilde_in_crafting_config_is_the_home_folder(tmp_path, home):
+    write_toml(home / "mine.toml", '[paths]\ndata = "x"\n')
+
+    config = load_config(env={"CRAFTING_CONFIG": TILDE + "/mine.toml"}, project_root=tmp_path)
+
+    assert config.data_dir == home / "x"
+
+
+def test_a_tilde_that_is_not_leading_stays_a_plain_name(tmp_path, home):
+    config = load_config(env={"CRAFTING_DATA_DIR": "a/" + TILDE + "/b"}, project_root=tmp_path)
+
+    assert config.data_dir == tmp_path / "a" / TILDE / "b"
 
 
 def test_committed_crafting_toml_holds_the_built_in_defaults():

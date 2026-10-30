@@ -8,33 +8,60 @@ this file, which the scan reads like any other.
 
 import re
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-SCANNED_SUFFIXES = {".py", ".toml", ".yml", ".yaml", ".json", ".cfg", ".ini"}
-SCANNED_NAMES = {"uv.lock", ".python-version", ".gitattributes", ".gitignore"}
+SCANNED_SUFFIXES = {
+    ".py", ".toml", ".yml", ".yaml", ".json", ".cfg", ".ini",
+    ".ps1", ".psm1", ".sh", ".bash", ".bat", ".cmd", ".txt", ".env",
+}  # fmt: skip
+SCANNED_NAMES = {"uv.lock", ".python-version", ".gitattributes", ".gitignore", ".env"}
 
-SYSTEM_DIRS = ("tmp", "var", "opt", "srv", "mnt", "etc", "usr", "media")
 
-# Web and other URLs are not paths. `file:` URLs are kept, since they carry real paths.
-URL = re.compile(r"\b(?!file:)[A-Za-z][A-Za-z0-9+.-]*://\S*")
+def is_scanned(name: str) -> bool:
+    """Whether a tracked file (by name, case-insensitive) is a code or config kind."""
+    lowered = PurePosixPath(name).name.lower()
+    return (
+        PurePosixPath(lowered).suffix in SCANNED_SUFFIXES
+        or lowered in SCANNED_NAMES
+        or lowered.startswith(".env.")
+    )
+
+
+SYSTEM_DIRS = (
+    "tmp", "var", "opt", "srv", "mnt", "etc", "usr", "media",
+    "dev", "proc", "run", "bin", "sbin", "lib", "Volumes",
+)  # fmt: skip
+
+# Web and other URLs are not paths; a URL ends at whitespace, a quote, a comma, a parenthesis or
+# an angle bracket, so a path written right after one is still seen. `file:` URLs are kept,
+# since they carry real paths.
+URL = re.compile(r"\b(?!file:)[A-Za-z][A-Za-z0-9+.-]*://[^\s\"'`,()<>]*")
+
+# What may not come right before the slash that starts an absolute POSIX-style path.
+NOT_BEFORE_SLASH = r"(?<![\w./~:)\]}-])"
 
 # Each rule: (kind, pattern). The patterns are written so that their own text does not match.
 RULES = (
     # a letter, a colon, then a backslash or a single slash; the `(?!/)` keeps the colon-slash
     # of `https://` and `file:///` out of it
     ("drive letter path", re.compile(r"(?<![A-Za-z0-9_])[A-Za-z]:(?:\\|/(?!/))")),
+    # Git Bash / MSYS spelling of a drive: one letter between slashes, then a name
+    ("MSYS drive path", re.compile(NOT_BEFORE_SLASH + r"/[A-Za-z]/(?=[\w.$-])")),
     ("UNC path", re.compile(r"\\{2,}[\w.$-]+\\+[\w$-]")),
-    ("home directory", re.compile(r"(?<![\w.-])/(?:home|Users|root)/")),
+    # the same with forward slashes; the lookbehind keeps the slashes of `scheme://` out
+    ("UNC path", re.compile(r"(?<![:/\w])//[\w.$-]+/[\w$-]")),
+    ("home directory", re.compile(NOT_BEFORE_SLASH + r"/(?:home|Users|root)/")),
     ("home directory", re.compile(r"(?<!\w)~[/\\]")),
     ("home directory", re.compile(r"\$\{?" + "HOME" + r"\b")),
     ("home directory", re.compile("%" + "USERPROFILE" + "%")),
+    ("home directory", re.compile("%" + "(?:LOCAL)?APPDATA" + "%")),
     (
         "system directory path",
-        re.compile(r"(?<![\w./~-])/(?:" + "|".join(SYSTEM_DIRS) + r")/"),
+        re.compile(NOT_BEFORE_SLASH + r"/(?:" + "|".join(SYSTEM_DIRS) + r")/"),
     ),
 )
 
@@ -70,6 +97,17 @@ BAD_SAMPLES = [
     ("${" + "HOME}/data", "home directory"),
     ("%" + "USERPROFILE" + "%\\data", "home directory"),
     *[("/" + name + "/data", "system directory path") for name in SYSTEM_DIRS],
+    *[
+        ("/" + name + "/data", "system directory path")
+        for name in ("dev", "proc", "run", "bin", "sbin", "lib", "Volumes")
+    ],
+    ("/" + "c" + "/Us" + "ers/anton/data", "MSYS drive path"),
+    ("/" + "D" + "/work", "MSYS drive path"),
+    ("path='/" + "e" + "/work'", "MSYS drive path"),
+    ("/" + "/" + "fileserver/share", "UNC path"),
+    ("'/" + "/" + "fileserver/share/x'", "UNC path"),
+    ("%" + "APPDATA" + "%\\x", "home directory"),
+    ("%" + "LOCALAPPDATA" + "%\\x", "home directory"),
 ]
 
 GOOD_SAMPLES = [
@@ -89,7 +127,90 @@ GOOD_SAMPLES = [
     "ratio 1:2",
     'pattern = "x+y"',
     "",
+    # too many false positives to flag: drive-relative and root-relative-looking names
+    "C:work",
+    "Z:foo",
+    "/data",
+    "/data/x",
+    "/app",
+    "/workspace/x",
+    # near misses of the MSYS drive and forward-slash UNC rules
+    "s/a/b/",
+    "a/c/b",
+    "{a}/b/{c}",
+    "/cc/x",
+    "/c",
+    "/c/",
+    "a//b/c",
+    "https://x.com/c/y",
+    "https://host/share",
+    "src/lib/x",
+    "src/bin/run",
+    "src/dev/null",
 ]
+
+URL_FOLLOWERS = ['"', "'", ",", ")", "(", "<", ">", " ", "`", "\t"]
+
+
+@pytest.mark.parametrize("separator", URL_FOLLOWERS)
+def test_a_path_written_right_after_a_url_is_still_flagged(separator):
+    sample = "https://a.b/c" + separator + WIN_BACK
+
+    assert find_absolute_paths(sample) == ["drive letter path"]
+
+
+@pytest.mark.parametrize(
+    "sample",
+    [
+        '{"u":"https://x.com","p":"' + "C" + ":" + "\\\\" + 'work"}',
+        'get("https://a.b/c","' + "C" + ":" + "\\\\" + 'work")',
+        "[https://a.b](" + WIN_FWD + ")",
+    ],
+)
+def test_a_path_next_to_a_url_in_code_is_flagged(sample):
+    assert find_absolute_paths(sample) == ["drive letter path"]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "a.py",
+        "pyproject.toml",
+        "CONF.TOML",
+        "x.Yml",
+        "x.yaml",
+        "x.JSON",
+        "setup.cfg",
+        "tox.INI",
+        "run.ps1",
+        "mod.psm1",
+        "run.sh",
+        "run.bash",
+        "run.bat",
+        "run.cmd",
+        "notes.txt",
+        "LICENSE.TXT",
+        "x.env",
+        ".env",
+        ".ENV",
+        ".env.local",
+        ".env.production",
+        "sub/dir/a.JSON",
+        "uv.lock",
+        ".python-version",
+        ".gitattributes",
+        ".gitignore",
+    ],
+)
+def test_code_and_config_kinds_are_scanned(name):
+    assert is_scanned(name)
+
+
+@pytest.mark.parametrize(
+    "name", ["README.md", "notes.MD", "a.png", "environment", "env.md", "a.lockfile", "src/a.pyc"]
+)
+def test_docs_and_binaries_are_not_scanned(name):
+    assert not is_scanned(name)
 
 
 @pytest.mark.parametrize(("sample", "kind"), BAD_SAMPLES)
@@ -118,7 +239,11 @@ def test_detector_passes_urls_and_relative_paths(sample):
 def tracked_files(repo_root: Path) -> list[Path]:
     try:
         result = subprocess.run(
-            ["git", "ls-files", "-z"], cwd=repo_root, capture_output=True, text=True, check=False
+            ["git", "ls-files", "-z"],
+            cwd=repo_root,
+            capture_output=True,
+            encoding="utf-8",  # not the locale's: file names may be non-ASCII
+            check=False,
         )
     except FileNotFoundError:
         pytest.fail("git is not installed or not on PATH; the absolute-path guard needs `git ls-files`")
@@ -128,8 +253,7 @@ def tracked_files(repo_root: Path) -> list[Path]:
     return [
         repo_root / name
         for name in names
-        if (Path(name).suffix in SCANNED_SUFFIXES or Path(name).name in SCANNED_NAMES)
-        and (repo_root / name).is_file()
+        if is_scanned(name) and (repo_root / name).is_file()
     ]
 
 
@@ -141,6 +265,17 @@ def scan(files: list[Path], repo_root: Path) -> list[str]:
             for kind in find_absolute_paths(line):
                 problems.append(f"{path.relative_to(repo_root).as_posix()}:{number}: {kind}")
     return problems
+
+
+def test_tracked_file_with_a_non_ascii_name_is_listed(tmp_path):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    (tmp_path / "données.toml").write_text("a = 1\n", encoding="utf-8")
+    (tmp_path / "notes.md").write_text("docs\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+
+    listed = [path.name for path in tracked_files(tmp_path)]
+
+    assert listed == ["données.toml"]
 
 
 def test_scan_reports_file_and_line_of_a_bad_path(tmp_path):
