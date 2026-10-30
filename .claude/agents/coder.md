@@ -1,6 +1,6 @@
 ---
 name: coder
-description: Code and tests for one ticket or one piece of it, on Sonnet 5.5. Use for every change to code or tests once the main chat has decided what to build.
+description: "Code and tests on Sonnet 5.5 for a piece that needs its own judgement: subtle logic where a wrong detail breaks the result, a change across several modules, a defect whose cause is not yet known, or a piece coder-light handed back. Plain, exactly described pieces go to coder-light."
 model: claude-sonnet-5-5
 effort: high
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill

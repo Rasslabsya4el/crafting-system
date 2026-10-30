@@ -22,11 +22,22 @@ MODS = (
     "SpellDamageOnWeapon1",
     "LocalIncreasedPhysicalDamageReductionRating1",
     "IncreasedEnergyShield1",
+    # the item model (#18): a rare of 3 prefixes and 3 suffixes, a two-tier family, the five metamods
+    "IncreasedLife1",
+    "LifeRegeneration1",
+    "LightningResist1",
+    "LightningResist2",  # same family as LightningResist1
+    "GlobalLightningGemLevel1",
+    "DexMasterItemGenerationCannotChangeSuffixes",
+    "IntMasterItemGenerationCannotRollAttackAffixes",
+    "StrDexMasterItemGenerationCannotRollCasterAffixes",
+    "StrIntMasterItemGenerationCanHaveMultipleCraftedMods",
 )
 BASE_ITEMS = (
     "Metadata/Items/Armours/BodyArmours/BodyInt1",
     "Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword1",  # has an implicit
     "Metadata/Items/Weapons/OneHandWeapons/OneHandMaces/Sceptre1",  # repeats the tag `sceptre`
+    "Metadata/Items/Amulets/Amulet1",  # an amulet: a base with mods of its own on the item model
 )
 FOSSILS = (
     "Metadata/Items/Currency/CurrencyDelveCraftingFire",  # Scorched

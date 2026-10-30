@@ -16,11 +16,12 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 The main chat thinks and decides: the idea, the grill, the ticket, the plan, the verdict on a change. The doing goes to the helpers in `.claude/agents/`, each on its own model:
 
-- `coder` (Sonnet 5.5): every code and test change, one ticket or one piece per call.
+- `coder-light` (Haiku 5.5): a piece the main chat can spell out exactly: the files, the places in them (`file:line`), the result and the test that shows it. Plain code: a script, a config, a test, a case added by a pattern already in the code. The default once a ticket is cut into pieces.
+- `coder` (Sonnet 5.5): a piece that needs its own judgement: subtle logic where a wrong detail breaks the result, a change across several modules, a defect whose cause is not yet known, or a piece `coder-light` handed back unclear or unfinished.
 - `finder` (Haiku 5.5): wide reading and search; the main chat keeps only its facts.
 - `checker` (Sonnet 5.5): every change, against its ticket, before it lands.
 
-Each helper prompt names its ticket (`#N`), the files or worktree, and the result to reach. Pieces that touch different files run in parallel, each `coder` with `isolation: "worktree"`.
+Each helper prompt names its ticket (`#N`), the files or worktree, and the result to reach. A `coder-light` prompt also carries the places to read with their line ranges; `finder` finds them when the main chat does not know them. Pieces that touch different files run in parallel, each coder with `isolation: "worktree"`.
 
 Model of the main chat: Opus for ideas, grills and decisions; Sonnet 5.5 for a stretch of plain implementation.
 
