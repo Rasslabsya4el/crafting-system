@@ -1,0 +1,86 @@
+[
+  {
+    "mean": 6,
+    "date": "2026-10-18T22:28:01.344899Z",
+    "id": 850,
+    "volume": 3,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-19T22:28:09.193865Z",
+    "id": 850,
+    "volume": 3,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-20T22:29:18.439428Z",
+    "id": 850,
+    "volume": 1,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-21T22:28:23.644967Z",
+    "id": 850,
+    "volume": 1,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-22T22:19:56.119686Z",
+    "id": 850,
+    "volume": 4,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-23T22:20:03.913178Z",
+    "id": 850,
+    "volume": 2,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-24T22:20:10.427221Z",
+    "id": 850,
+    "volume": 6,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-25T23:20:19.743178Z",
+    "id": 850,
+    "volume": 6,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-26T23:20:54.868167Z",
+    "id": 850,
+    "volume": 4,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-27T23:23:08.92889Z",
+    "id": 850,
+    "volume": 6,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-28T23:21:14.024919Z",
+    "id": 850,
+    "volume": 4,
+    "lowConfidence": true
+  },
+  {
+    "mean": 6,
+    "date": "2026-10-29T23:32:56.315097Z",
+    "id": 850,
+    "volume": 5,
+    "lowConfidence": true
+  }
+]

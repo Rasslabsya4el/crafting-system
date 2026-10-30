@@ -8,7 +8,7 @@ import pytest
 
 from ninja_support import ninja  # noqa: F401  (a fixture)
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, SECRET, FakeTrade, api_row, network_guard, price_file  # noqa: F401
+from trade_support import NOW, R12_SPEC, SECRET, FakeTrade, api_row, price_file
 
 from crafting_system.data import DataError
 from crafting_system.prices import (

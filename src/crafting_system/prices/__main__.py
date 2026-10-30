@@ -15,7 +15,10 @@ from pathlib import Path
 
 from ..config import Config, load_config
 from ..data import DataError, load_game_data
-from .poe_ninja import GetJson, SourceError, fetch_price_file, http_get_json
+from .fallbacks import MIN_COUNT
+from .fetch import fetch_price_file
+from .http_json import GetJson, SourceError, http_get_json, paced
+from .price_names import canonical_price_name
 from .price_file import (
     OVERRIDE_SOURCE,
     PriceFile,
@@ -49,7 +52,7 @@ from .trade_pricing import (
     refuse_name_collision,
     store_trade_price,
 )
-from .trade_query import load_buy_spec
+from .trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS, load_buy_spec
 
 DATA_FETCH_COMMAND = "python -m crafting_system.data fetch"
 
@@ -73,6 +76,7 @@ def main(
     commands = parser.add_subparsers(dest="command", required=True)
     fetch = commands.add_parser("fetch", help="fetch poe.ninja prices into the price file")
     fetch.add_argument("--league", help="league id (default: the current league poe.ninja lists)")
+    fetch.add_argument("--previous-league", help="league to take old prices from (default: work it out)")
     fetch.add_argument("--wanted-file", help="text file, one resource name per line")
     check = commands.add_parser("check", help="report a stale price file and unpriced names")
     check.add_argument("--wanted-file", help="text file, one resource name per line")
@@ -83,6 +87,15 @@ def main(
     trade.add_argument("--k", type=int, default=DEFAULT_K, help="price from the k cheapest listings")
     trade.add_argument(
         "--max-requests", type=int, default=DEFAULT_MAX_REQUESTS, help="most requests this run may send"
+    )
+    trade.add_argument(
+        "--indexed",
+        choices=[*INDEXED_OPTIONS, "any"],
+        default=DEFAULT_INDEXED,
+        help=(
+            f"keep only listings made within this window (default {DEFAULT_INDEXED}: the last week); "
+            "a months-old listing can set a floor price nobody will honour; 'any' keeps all"
+        ),
     )
     trade.add_argument("--refresh-stats", action="store_true", help="download the stat list again")
     args = parser.parse_args(argv)
@@ -97,11 +110,26 @@ def main(
         if args.command == "fetch":
             instant = now if now is not None else datetime.now(UTC)
             result = fetch_price_file(
-                get_json if get_json is not None else http_get_json, instant, wanted, args.league
+                get_json
+                if get_json is not None
+                else paced(
+                    http_get_json,
+                    monotonic if monotonic is not None else time.monotonic,
+                    sleep if sleep is not None else time.sleep,
+                ),
+                instant,
+                wanted,
+                args.league,
+                args.previous_league,
             )
             new_file, trade_warnings = merge_trade_prices(result.price_file, _old_price_file(price_path))
             write_price_file(price_path, new_file)
             print(f"League {new_file.league}: {len(new_file.prices)} prices written to {price_path}")
+            if result.thin:
+                print(
+                    f"{len(result.thin)} current lines were too thin to price "
+                    f"(fewer than {MIN_COUNT} observations or no trade volume)"
+                )
             for warning in [*result.warnings, *trade_warnings]:
                 print(f"Warning: {warning}")
         merged = load_prices(price_path, overrides_path)  # overrides count as priced
@@ -169,7 +197,15 @@ def _trade(
     )
     instant = now if now is not None else datetime.now(UTC)
     price = price_buy_spec(
-        spec, game_mods, price_file, client, config.cache_dir, instant, args.k, args.refresh_stats
+        spec,
+        game_mods,
+        price_file,
+        client,
+        config.cache_dir,
+        instant,
+        args.k,
+        args.refresh_stats,
+        None if args.indexed == "any" else args.indexed,
     )
     store_trade_price(price_path, price, entry_for(price))
     print(
@@ -177,6 +213,7 @@ def _trade(
         f"{price.used} of {price.fetched} fetched listings used ({price.listings} on the site), "
         f"league {price.league}"
     )
+    print(f"  listings from {'any time' if price.indexed is None else 'the last ' + price.indexed}")
     for reason, count in sorted(price.dropped.items()):
         print(f"  dropped {count} {reason}")
     print(f"{budget.used} requests used")
@@ -188,7 +225,8 @@ def _read_wanted(path: str | None) -> list[str]:
     if path is None:
         return []
     lines = Path(path).read_text(encoding="utf-8-sig").splitlines()
-    return [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    names = [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    return [canonical_price_name(name) for name in names]
 
 
 if __name__ == "__main__":

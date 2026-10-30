@@ -1,0 +1,76 @@
+{
+  "lines": [
+    {
+      "id": 101094,
+      "name": "Wild Bristle Matron",
+      "baseType": "Gargantuans|Ursae|The Wilds",
+      "itemClass": 2,
+      "chaosValue": 139.0,
+      "exaltedValue": 59.91,
+      "divineValue": 0.39,
+      "count": 201,
+      "detailsId": "wild-bristle-matron",
+      "listingCount": 450
+    },
+    {
+      "id": 167860,
+      "name": "Aboriginal Chieftain",
+      "baseType": "Ape Chieftains|Primates|The Wilds",
+      "itemClass": 2,
+      "chaosValue": 1843,
+      "exaltedValue": 794.5,
+      "divineValue": 5.11,
+      "count": 2,
+      "detailsId": "aboriginal-chieftain",
+      "listingCount": 31
+    },
+    {
+      "id": 21154,
+      "name": "Tunnelfiend",
+      "baseType": "Plummeting Ursae|Ursae|The Wilds",
+      "itemClass": 2,
+      "chaosValue": 100.0,
+      "exaltedValue": 43.1,
+      "divineValue": 0.28,
+      "count": 6,
+      "detailsId": "tunnelfiend",
+      "listingCount": 6
+    },
+    {
+      "id": 20270,
+      "name": "Plated Parasite",
+      "baseType": "Parasites|Insects|The Caverns",
+      "itemClass": 2,
+      "chaosValue": 4.2,
+      "exaltedValue": 1.81,
+      "divineValue": 0.01,
+      "count": 5,
+      "detailsId": "plated-parasite",
+      "listingCount": 101
+    },
+    {
+      "id": 20434,
+      "name": "Stygian Silverback",
+      "baseType": "Ape Chieftains|Primates|The Wilds",
+      "itemClass": 2,
+      "chaosValue": 22.4,
+      "exaltedValue": 9.66,
+      "divineValue": 0.06,
+      "count": 4,
+      "detailsId": "stygian-silverback",
+      "listingCount": 5
+    },
+    {
+      "id": 101096,
+      "name": "Vivid Vulture",
+      "baseType": "Vultures|Avians|The Sands",
+      "itemClass": 2,
+      "chaosValue": 88.1,
+      "exaltedValue": 37.97,
+      "divineValue": 0.24,
+      "count": 32,
+      "detailsId": "vivid-vulture",
+      "listingCount": 348
+    }
+  ]
+}
