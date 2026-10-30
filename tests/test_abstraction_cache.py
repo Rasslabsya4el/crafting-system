@@ -123,14 +123,15 @@ def test_states_that_differ_only_in_the_status_of_the_whole_item_share_one_compu
 
 def test_states_with_equal_signatures_have_the_same_kernel_up_to_the_status_they_lead_to():
     # Every single fractured mod of the pool, under both actions: whenever two share a signature,
-    # their kernels give the same probability to each status.
+    # their kernels give the same probabilities; only the status a fractured mod itself gives (a
+    # fractured Lightning gem level against a fractured Cold one) tells the next states apart.
     ab = abstraction()
     mod_ids = sorted(POOL_IDS - {CRAFTED})
     groups = defaultdict(list)
     for mod_id in mod_ids:
         state = ab.compress(fractured_item(mod_id))
         for action in (CHAOS, REFORGE):
-            groups[ab.signature(state, action)].append(projection(ab.kernel(state, action)))
+            groups[ab.signature(state, action)].append(sorted(ab.kernel(state, action).values()))
 
     assert any(len(group) > 1 for group in groups.values())
     for group in groups.values():
