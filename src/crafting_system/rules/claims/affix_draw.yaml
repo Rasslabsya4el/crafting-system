@@ -1,0 +1,10 @@
+# Mechanic family: affix_draw (how a random affix is drawn onto an item).
+# The wiki's "group" is this project's "family".
+rules:
+  - id: affix_draw.family_exclusion
+    statement: An item never holds two mods of the same family, so a random add cannot pick a mod that shares a family with a mod already on the item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Group/family
+    quote: "Only one modifier from any given group may appear on an object; in other words, all modifiers belonging to a group are mutually exclusive with one another."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
