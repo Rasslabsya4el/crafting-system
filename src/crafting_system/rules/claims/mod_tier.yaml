@@ -1,0 +1,18 @@
+# Mechanic family: mod_tier (how the tier number of a mod on a base is derived from the game data).
+# The repoe-fork data has no tier field. Wiki: "Tier" is a level-gated version of a mod.
+rules:
+  - id: mod_tier.numbering
+    statement: The tiers of a mod on a base are numbered from 1, the best, in descending order of required level. Craft of Exile lists the tiers of a modifier on a base from the lowest level up and shows the tier as the list length minus the index.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "var tnum=poecd.tiers[crsim_data.iaffixes[i].id][crsim_settings.base].length-crsim_data.iaffixes[i].tindex"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: mod_tier.scope_is_mod_type
+    statement: Tiers are counted among the mods of one mod type (not one family) and one generation type and one domain, and only among the mods that can spawn on the base (a positive spawn weight for its tags). The five "+1 to Level of all X Skill Gems" amulet prefixes share one family and are five different mod types, each its own tier 1. On every released item-domain base of 3.29.3.3 no two such mods share a required level, and no mod type spans two families.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: 'GlobalLightningGemLevel1 type "GlobalLightningGemLevel", groups ["GlobalDamageTypeGemLevel"]; GlobalFireGemLevel1_ type "GlobalFireGemLevel", groups ["GlobalDamageTypeGemLevel"]'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
