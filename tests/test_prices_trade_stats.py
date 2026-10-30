@@ -1,11 +1,19 @@
 """Mapping repoe mods and stat texts to trade stat ids (#39): text normalization, lookup, resolution."""
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from crafting_system.prices.trade_query import INFLUENCE_STAT_IDS, BuyMod, StatFilter, TradeSpecError
+from crafting_system.prices.trade_query import (
+    INFLUENCE_STAT_IDS,
+    BuyMod,
+    BuySpec,
+    StatFilter,
+    TradeSpecError,
+    build_query,
+)
 from crafting_system.prices.trade_stats import (
     normalize_text,
     parse_trade_stats,
@@ -294,3 +302,69 @@ def test_the_six_influence_pseudo_ids_exist_on_the_recorded_list(recorded):
 
     assert len(INFLUENCE_STAT_IDS) == 6
     assert set(INFLUENCE_STAT_IDS.values()) <= listed
+
+
+# -- a mod named by stat text or mod id, not only by family (#47) -------------------------------
+
+LIGHTNING_GEM_LEVEL_TEXT = "+1 to Level of all Lightning Skill Gems"
+
+
+def test_one_member_of_a_multi_text_family_is_named_by_its_stat_text(stats, game_mods):
+    found = resolve_buy_mod(BuyMod(LIGHTNING_GEM_LEVEL_TEXT), game_mods, stats)
+
+    assert found == StatFilter("explicit.stat_1111111111")
+
+
+def test_one_member_of_a_multi_text_family_is_named_by_its_mod_id(stats, game_mods):
+    found = resolve_buy_mod(BuyMod("GlobalLightningGemLevel1", minimum=1), game_mods, stats)
+
+    assert found == StatFilter("explicit.stat_1111111111", min=1)
+
+
+def test_a_buy_spec_naming_the_lightning_gem_level_builds_a_query_with_that_stat_only(stats, game_mods):
+    spec = BuySpec(name="gem level amulet", category="accessory.amulet", mods=(BuyMod(LIGHTNING_GEM_LEVEL_TEXT),))
+    filters = [resolve_buy_mod(mod, game_mods, stats) for mod in spec.mods]
+
+    body = build_query(spec, filters).body()
+
+    assert [stat["id"] for stat in body["query"]["stats"][0]["filters"]] == ["explicit.stat_1111111111"]
+
+
+def test_naming_the_whole_gem_level_family_is_still_refused_and_points_to_the_text_and_the_id(stats, game_mods):
+    with pytest.raises(TradeSpecError, match="different texts") as error:
+        resolve_buy_mod(BuyMod("GlobalDamageTypeGemLevel"), game_mods, stats)
+
+    assert "stat text" in str(error.value) and "mod id" in str(error.value)
+
+
+def test_a_mod_id_whose_text_the_trade_list_lacks_is_refused_with_the_searched_text(stats, game_mods):
+    with pytest.raises(TradeSpecError, match="no trade stat") as error:
+        resolve_buy_mod(BuyMod("GlobalFireGemLevel1_"), game_mods, stats)  # the excerpt lists only Lightning
+
+    assert "+# to level of all fire skill gems" in str(error.value)
+
+
+def test_a_hybrid_mod_named_by_id_is_refused(stats, game_mods):
+    with pytest.raises(TradeSpecError, match="hybrid mods are not supported"):
+        resolve_buy_mod(BuyMod("JunMaster2ArmourAndEnergyShield1"), game_mods, stats)
+
+
+def test_a_name_that_is_neither_family_nor_mod_id_nor_listed_text_says_so(stats, game_mods):
+    with pytest.raises(TradeSpecError, match="not a family id or mod id"):
+        resolve_buy_mod(BuyMod("NoSuchFamily"), game_mods, stats)
+
+
+def test_a_stat_text_does_not_need_the_game_data(stats):
+    assert resolve_buy_mod(BuyMod(LIGHTNING_GEM_LEVEL_TEXT), [], stats) == StatFilter("explicit.stat_1111111111")
+
+
+def test_repoe_markup_in_a_mod_text_is_stripped_before_the_lookup(stats, game_mods):
+    marked = tuple(
+        replace(mod, text="+(6-11)% to [Resistances|Lightning Resistance]") if "LightningResistance" in mod.families else mod
+        for mod in game_mods
+    )
+
+    assert any(mod.text == "+(6-11)% to [Resistances|Lightning Resistance]" for mod in marked)
+    assert normalize_text("+(6-11)% to [Resistances|Lightning Resistance]") == "+#% to lightning resistance"
+    assert normalize_text("[Mana] and [Life|Health]") == "mana and health"
+    assert resolve_buy_mod(BuyMod("LightningResistance"), marked, stats) == StatFilter("explicit.stat_1671376347")

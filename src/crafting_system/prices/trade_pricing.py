@@ -304,6 +304,18 @@ def store_trade_price(path: Path, price: TradePrice, entry: PriceEntry) -> None:
     write_price_file(path, replace(current, prices={**current.prices, price.name: entry}))
 
 
+def current_trade_prices(old: PriceFile | None, league: str) -> dict[str, PriceEntry]:
+    """The trade-api prices of `old` that are prices of `league`: the ones a fetch of `league` keeps."""
+    if old is None or old.league != league:
+        return {}
+    return {
+        name: entry
+        for name, entry in old.prices.items()
+        if entry.source == TRADE_SOURCE
+        and (entry.detail is None or entry.detail.get("league") in (None, league))
+    }
+
+
 def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile, list[str]]:
     """`new` plus the trade prices of `old`, so a re-fetch of poe.ninja does not lose them.
 

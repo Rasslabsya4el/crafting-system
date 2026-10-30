@@ -109,6 +109,7 @@ def main(
         overrides_path = default_overrides_path(config)
         if args.command == "fetch":
             instant = now if now is not None else datetime.now(UTC)
+            old_file = _old_price_file(price_path)
             result = fetch_price_file(
                 get_json
                 if get_json is not None
@@ -121,6 +122,8 @@ def main(
                 wanted,
                 args.league,
                 args.previous_league,
+                overrides=load_overrides(overrides_path),
+                old_price_file=old_file,
             )
             new_file, trade_warnings = merge_trade_prices(result.price_file, _old_price_file(price_path))
             write_price_file(price_path, new_file)
@@ -171,7 +174,7 @@ def _trade(
     overrides_path = default_overrides_path(config)
     price_file = load_prices(price_path, overrides_path)  # a missing file says to run `fetch` first
     spec = load_buy_spec(Path(args.spec))
-    if spec.name in load_overrides(overrides_path):
+    if canonical_price_name(spec.name) in load_overrides(overrides_path):
         print(f"{spec.name}: a hand override wins, so no request was made and the price file is unchanged")
         return 0
     existing = price_file.prices.get(spec.name)

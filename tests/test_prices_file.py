@@ -383,3 +383,43 @@ def test_an_override_wins_over_a_price_that_carries_a_detail(tmp_path):
 
     assert entry == PriceEntry(9.0, "override")
     assert entry.detail is None
+
+
+def test_a_hand_price_with_influences_in_any_order_is_the_canonical_wanted_name(tmp_path):
+    path = tmp_path / "price_overrides.toml"
+    write_overrides(
+        path,
+        '[prices]\n"Stygian Vise (ilvl 85, Warlord/Hunter)" = 900\n"Vaal Regalia (ilvl 86, warlord/ELDER)" = 50\n'
+        '"Stygian Vise (ilvl 85)" = 7\n"Wild Bristle Matron" = 3\n',
+    )
+
+    assert load_overrides(path) == {
+        "Stygian Vise (ilvl 85, Hunter/Warlord)": 900.0,
+        "Vaal Regalia (ilvl 86, Elder/Warlord)": 50.0,
+        "Stygian Vise (ilvl 85)": 7.0,
+        "Wild Bristle Matron": 3.0,
+    }
+
+
+def test_a_hand_price_with_reordered_influences_prices_the_wanted_name(tmp_path):
+    prices_path = tmp_path / "prices.json"
+    overrides_path = tmp_path / "price_overrides.toml"
+    write_price_file(prices_path, sample_file())
+    write_overrides(overrides_path, '[prices]\n"Stygian Vise (ilvl 85, Warlord/Hunter)" = 900\n')
+
+    merged = load_prices(prices_path, overrides_path)
+
+    wanted = "Stygian Vise (ilvl 85, Hunter/Warlord)"
+    assert merged.prices[wanted] == PriceEntry(900.0, "override")
+    assert missing_prices([wanted], merged.prices) == []
+
+
+def test_two_hand_prices_that_become_one_name_are_refused(tmp_path):
+    path = tmp_path / "price_overrides.toml"
+    write_overrides(
+        path,
+        '[prices]\n"Stygian Vise (ilvl 85, Warlord/Hunter)" = 900\n"Stygian Vise (ilvl 85, Hunter/Warlord)" = 800\n',
+    )
+
+    with pytest.raises(ValueError, match="price_overrides.toml.*same price name"):
+        load_overrides(path)

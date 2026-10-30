@@ -11,7 +11,7 @@ and goes down the stages (`DEFAULT_STAGES`: poe.ninja history, poe.watch, the pr
 endpoints are undocumented, so a stage whose source fails prices nothing and the name stays in `missing`.
 """
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Collection, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -25,6 +25,7 @@ from .poe_watch import poe_watch_stage
 from .previous_league import previous_league_stage
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile, missing_prices
 from .price_names import canonical_price_name, parse_base_price_name
+from .trade_pricing import current_trade_prices
 
 DEFAULT_STAGES: tuple[Stage, ...] = (ninja_history_stage, poe_watch_stage, previous_league_stage)
 
@@ -44,6 +45,8 @@ def fetch_price_file(
     league: str | None = None,
     previous_league: str | None = None,
     stages: Sequence[Stage] = DEFAULT_STAGES,
+    overrides: Collection[str] = (),
+    old_price_file: PriceFile | None = None,
 ) -> FetchResult:
     """Build a price file for `league` (default: the first league poe.ninja lists).
 
@@ -51,14 +54,19 @@ def fetch_price_file(
     Essence, Beast, BaseType) must answer with at least one usable line, else a `SourceError` is raised.
     `wanted` names that the overviews do not price (or only on a thin line) are walked down `stages`, with
     the 7 days ending on `now`'s UTC date as the window; those still unpriced come back in `missing`.
+
+    A wanted name that `overrides` (the names of the hand prices) or the trade-api prices of
+    `old_price_file` for this league already cover is left out of all that: no request is spent on it and
+    it is neither a gap nor `missing`. The caller's merge keeps those prices.
     """
     if now.tzinfo is None:
         raise ValueError("`now` needs a time zone (pass a UTC time)")
     if league is not None and not league.strip():
         raise ValueError("league must not be blank")
     fetched_at = now.astimezone(UTC).replace(microsecond=0)
-    wanted_names = sorted({canonical_price_name(name) for name in wanted or ()})
     league = league if league is not None else _current_league(get_json)
+    covered = {canonical_price_name(name) for name in overrides} | set(current_trade_prices(old_price_file, league))
+    wanted_names = sorted({canonical_price_name(name) for name in wanted or ()} - covered)
 
     prices: dict[str, PriceEntry] = {}
     thin_exchange: dict[str, str] = {}  # zero-volume line name -> its details id
