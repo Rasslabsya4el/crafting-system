@@ -8,7 +8,7 @@ import pytest
 
 from ninja_support import ninja  # noqa: F401  (a fixture)
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, SECRET, FakeTrade, api_row, price_file
+from trade_support import NOW, R12_SPEC, SECRET, FakeTrade, api_row, network_guard, price_file  # noqa: F401
 
 from crafting_system.data import DataError
 from crafting_system.prices import (
@@ -170,12 +170,19 @@ def test_an_expired_query_cache_is_asked_again(tmp_path, trade, prices_path):
     assert trade.kinds == ["search", "fetch"]
 
 
-def test_k_and_league_are_taken_from_the_command_line(tmp_path, trade, prices_path):
-    run(tmp_path, trade, "--k", "3", "--league", "Standard")
+def test_k_is_taken_from_the_command_line(tmp_path, trade, prices_path):
+    run(tmp_path, trade, "--k", "3")
 
-    assert "/search/Standard" in trade.requests[1].url
     detail = load_price_file(prices_path).prices["R12 start amulet"].detail
-    assert (detail["k"], detail["used"], detail["league"]) == (3, 3, "Standard")
+    assert (detail["k"], detail["used"]) == (3, 3)
+
+
+def test_the_league_is_the_price_files_and_there_is_no_league_option(tmp_path, trade, prices_path, capsys):
+    with pytest.raises(SystemExit) as exit_info:
+        run(tmp_path, trade, "--league", "Standard")
+
+    assert exit_info.value.code == 2 and trade.requests == []
+    assert "--league" in capsys.readouterr().err
 
 
 # -- failures leave the price file alone -----------------------------------------------------------
@@ -245,6 +252,7 @@ def test_a_name_that_is_a_poe_ninja_price_is_refused(tmp_path, trade, prices_pat
     assert code == 1
     assert "collides with a poe.ninja price" in capsys.readouterr().err
     assert prices_path.read_bytes() == before
+    assert trade.requests == []  # refused before any request is spent
 
 
 def test_a_missing_price_file_says_to_run_fetch_first(tmp_path, trade, capsys):
@@ -377,4 +385,20 @@ def test_the_cookie_value_is_in_no_error_message_either(tmp_path, trade, prices_
 
     captured = capsys.readouterr()
     assert code == 1 and SECRET not in captured.out + captured.err
+    assert SECRET not in tree_text(tmp_path)
+
+
+@pytest.mark.parametrize("cookie", [f"{SECRET}\n", f"{SECRET} x", f"{SECRET}ж", "ж"])
+def test_a_cookie_that_cannot_be_sent_exits_1_names_the_variable_and_sends_nothing(
+    tmp_path, trade, prices_path, capsys, cookie
+):
+    before = prices_path.read_bytes()
+
+    code = run(tmp_path, trade, env={"POESESSID": cookie})
+
+    captured = capsys.readouterr()
+    assert code == 1 and trade.requests == []
+    assert captured.err.startswith("Error: POESESSID in the environment is not a valid cookie value")
+    assert "SECRET" not in captured.out + captured.err and "ж" not in captured.out + captured.err
+    assert prices_path.read_bytes() == before
     assert SECRET not in tree_text(tmp_path)

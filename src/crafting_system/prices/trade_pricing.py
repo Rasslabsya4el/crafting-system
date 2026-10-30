@@ -266,17 +266,19 @@ def entry_for(price: TradePrice) -> PriceEntry:
     return PriceEntry(price.chaos, TRADE_SOURCE, note, detail)
 
 
+def refuse_name_collision(name: str, existing: PriceEntry | None) -> None:
+    """`ValueError` when `existing` (the entry already under `name`) is another source's price."""
+    if existing is not None and existing.source != TRADE_SOURCE:
+        raise ValueError(f"name {name!r} collides with a {existing.source} price; rename the buy spec")
+
+
 def store_trade_price(path: Path, price: TradePrice, entry: PriceEntry) -> None:
     """Add `entry` under the price's name to the price file at `path`; nothing else changes.
 
     A name that is already another source's price is refused (`ValueError`) and the file is untouched.
     """
     current = load_price_file(path)
-    existing = current.prices.get(price.name)
-    if existing is not None and existing.source != TRADE_SOURCE:
-        raise ValueError(
-            f"name {price.name!r} collides with a {existing.source} price; rename the buy spec"
-        )
+    refuse_name_collision(price.name, current.prices.get(price.name))
     write_price_file(path, replace(current, prices={**current.prices, price.name: entry}))
 
 
@@ -284,7 +286,8 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
     """`new` plus the trade prices of `old`, so a re-fetch of poe.ninja does not lose them.
 
     A trade price is a price of one league: a different league drops them, with a warning line naming
-    them. A name the new file already has stays as the new file has it. Returns (file, warnings).
+    them. So is a trade price whose own `detail["league"]` names another league than the new file's.
+    A name the new file already has stays as the new file has it. Returns (file, warnings).
     """
     if old is None:
         return new, []
@@ -300,7 +303,13 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
     warnings = []
     kept = {}
     for name, entry in trade.items():
-        if name in new.prices:
+        entry_league = entry.detail.get("league") if entry.detail else None
+        if entry_league is not None and entry_league != new.league:
+            warnings.append(
+                f"trade-api price {name!r} dropped: it is a price of league {entry_league}, "
+                f"the new price file is for {new.league}"
+            )
+        elif name in new.prices:
             warnings.append(f"trade-api price {name!r} dropped: the fetch has a {new.prices[name].source} price of that name")
         else:
             kept[name] = entry

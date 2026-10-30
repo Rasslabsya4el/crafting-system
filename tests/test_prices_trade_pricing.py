@@ -31,7 +31,7 @@ from crafting_system.prices.trade_pricing import (
 )
 from crafting_system.prices.trade_query import BuyMod, query_hash
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, FakeTrade, api_row, make_client, price_file
+from trade_support import NOW, R12_SPEC, FakeTrade, api_row, make_client, network_guard, price_file  # noqa: F401
 
 
 @pytest.fixture
@@ -347,6 +347,21 @@ def test_merge_drops_trade_prices_of_another_league_with_a_warning():
 
     assert "Amulet" not in merged.prices
     assert len(warnings) == 1 and "Amulet" in warnings[0] and "Allflame" in warnings[0]
+
+
+def test_merge_drops_a_trade_price_whose_own_league_differs_even_in_a_same_league_file():
+    other = PriceEntry(3.0, TRADE_SOURCE, "n", {"league": "Standard"})
+    same = PriceEntry(2.0, TRADE_SOURCE, "n", {"league": "Allflame"})
+    bare = PriceEntry(4.0, TRADE_SOURCE, "n", None)
+    old = price_file()
+    old = replace(old, prices={**old.prices, "Mixed": other, "Same": same, "Bare": bare})
+
+    merged, warnings = merge_trade_prices(price_file(), old)
+
+    assert "Mixed" not in merged.prices
+    assert merged.prices["Same"] == same and merged.prices["Bare"] == bare
+    assert len(warnings) == 1 and "Mixed" in warnings[0] and "Standard" in warnings[0]
+    assert "Same" not in warnings[0]
 
 
 def test_merge_never_overwrites_a_name_the_fresh_file_already_has():

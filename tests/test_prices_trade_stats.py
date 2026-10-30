@@ -12,6 +12,7 @@ from crafting_system.prices.trade_stats import (
     resolve_buy_mod,
 )
 from repoe_support import fixture_game_data
+from trade_support import network_guard  # noqa: F401
 
 STATS_FILE = Path(__file__).resolve().parent / "fixtures" / "trade" / "stats_excerpt.json"
 RECORDED_STATS_FILE = Path(__file__).resolve().parent / "fixtures" / "trade" / "recorded" / "stats_excerpt.json"

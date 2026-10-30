@@ -10,6 +10,7 @@ import socket
 import threading
 
 import pytest
+from trade_support import network_guard  # noqa: F401
 
 from crafting_system.prices.trade_http import (
     BudgetExceeded,
@@ -626,3 +627,58 @@ def test_urllib_transport_failures_are_trade_errors_without_headers(local_url: s
     with pytest.raises(TradeError) as caught:
         urllib_transport(timeout=5)(cut)
     assert SECRET not in str(caught.value)
+
+
+# --- a cookie value that cannot be sent never reaches the wire or an error text -------------
+
+BAD_COOKIES = [
+    f"{SECRET}\n",
+    f"{SECRET} ",
+    f"{SECRET}\r\nX-Evil: 1",
+    f"{SECRET}\x00",
+    f"{SECRET}\u0436",
+    "\u0436",
+]
+
+
+@pytest.mark.parametrize("cookie", BAD_COOKIES)
+def test_a_cookie_with_whitespace_control_or_non_ascii_is_refused_before_anything_is_spent(cookie: str) -> None:
+    client, transport, _ = make_client(ok(), cookie=cookie)
+    with pytest.raises(TradeError, match="POESESSID in the environment is not a valid cookie value") as caught:
+        client.data_stats()
+    assert "fix the variable" in str(caught.value)
+    assert SECRET not in str(caught.value) and SECRET not in repr(caught.value)
+    assert transport.requests == []
+    assert client.budget.used == 0
+
+
+@pytest.mark.parametrize("cookie", [SECRET, "a~b!c", "0123456789abcdef"])
+def test_a_printable_ascii_cookie_is_accepted(cookie: str) -> None:
+    client, transport, _ = make_client(ok(), cookie=cookie)
+    client.data_stats()
+    assert transport.requests[0].headers["Cookie"] == f"POESESSID={cookie}"
+
+
+# what http.client itself refuses (a space or NUL passes it; only the client's own check stops those)
+HTTP_CLIENT_REFUSES = [BAD_COOKIES[0], BAD_COOKIES[2], BAD_COOKIES[4], BAD_COOKIES[5]]
+
+
+@pytest.mark.parametrize("cookie", HTTP_CLIENT_REFUSES)
+def test_the_real_transport_never_shows_a_header_value_that_http_client_rejects(
+    local_url: str, cookie: str
+) -> None:
+    request = HttpRequest("GET", f"{local_url}/x", {"Cookie": f"POESESSID={cookie}"})
+    with pytest.raises(TradeError) as caught:
+        urllib_transport(timeout=5)(request)
+    assert str(caught.value) == "the request could not be built"
+    assert caught.value.__cause__ is None and caught.value.__suppress_context__
+    assert SECRET not in str(caught.value) and SECRET not in repr(caught.value)
+
+
+# --- the network guard of the trade tests ---------------------------------------------------
+
+
+def test_the_guard_stops_a_real_call_to_the_trade_site_before_any_connection() -> None:
+    request = HttpRequest("GET", "https://www.pathofexile.com/api/trade/data/stats", {})
+    with pytest.raises(AssertionError, match="the test used the network: 'www.pathofexile.com'"):
+        urllib_transport(timeout=5)(request)

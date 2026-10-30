@@ -10,7 +10,6 @@ import os
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -18,6 +17,7 @@ from ..config import Config, load_config
 from ..data import DataError, load_game_data
 from .poe_ninja import GetJson, SourceError, fetch_price_file, http_get_json
 from .price_file import (
+    OVERRIDE_SOURCE,
     PriceFile,
     PriceFileNotFound,
     default_overrides_path,
@@ -46,6 +46,7 @@ from .trade_pricing import (
     entry_for,
     merge_trade_prices,
     price_buy_spec,
+    refuse_name_collision,
     store_trade_price,
 )
 from .trade_query import load_buy_spec
@@ -84,7 +85,6 @@ def main(
         "--max-requests", type=int, default=DEFAULT_MAX_REQUESTS, help="most requests this run may send"
     )
     trade.add_argument("--refresh-stats", action="store_true", help="download the stat list again")
-    trade.add_argument("--league", help="league to search (default: the league of the price file)")
     args = parser.parse_args(argv)
 
     try:
@@ -146,10 +146,9 @@ def _trade(
     if spec.name in load_overrides(overrides_path):
         print(f"{spec.name}: a hand override wins, so no request was made and the price file is unchanged")
         return 0
-    if args.league is not None:
-        if not args.league.strip():
-            raise ValueError("league must not be empty")
-        price_file = replace(price_file, league=args.league)
+    existing = price_file.prices.get(spec.name)
+    if existing is not None and existing.source != OVERRIDE_SOURCE:
+        refuse_name_collision(spec.name, existing)  # before any request is spent
     try:
         game_mods = list(load_game_data(cache_dir=config.cache_dir).mods.values())
     except DataError:

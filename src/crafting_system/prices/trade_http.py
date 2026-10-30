@@ -116,6 +116,9 @@ def urllib_transport(timeout: float = TIMEOUT_SECONDS) -> Transport:
                 return HttpResponse(response.status, headers, response.read())
         except (OSError, http.client.HTTPException) as error:  # URLError, timeouts, cut-off answers
             raise TradeError(f"cannot reach {request.url}: {error}") from error
+        except (ValueError, UnicodeError):
+            # http.client names the offending header value in its text, so the text is dropped
+            raise TradeError("the request could not be built") from None
 
     return send
 
@@ -275,6 +278,13 @@ class RateLimiter:
 # --- the client ----------------------------------------------------------------------------
 
 
+_COOKIE_VALUE = re.compile(r"[\x21-\x7e]*")  # printable ASCII only: no whitespace, control or non-ASCII
+COOKIE_INVALID = (
+    "POESESSID in the environment is not a valid cookie value "
+    "(it has whitespace or a non-ASCII character); fix the variable"
+)
+
+
 def _json_object(body: bytes) -> dict | None:
     """The body as a JSON object, or `None` when it is not one."""
     try:
@@ -336,6 +346,8 @@ class TradeClient:
         if body is not None:
             headers["Content-Type"] = "application/json"
         if self.session_cookie is not None:
+            if not _COOKIE_VALUE.fullmatch(self.session_cookie):
+                raise TradeError(COOKIE_INVALID)  # the value itself is never in the message
             headers["Cookie"] = f"POESESSID={self.session_cookie}"
         self.budget.spend(what)
         self.limiter.before(kind)

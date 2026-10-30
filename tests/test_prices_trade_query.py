@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 
 import pytest
+from trade_support import network_guard  # noqa: F401
 
 from crafting_system.prices.trade_query import (
     INFLUENCE_STAT_IDS,
