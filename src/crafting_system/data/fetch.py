@@ -67,12 +67,18 @@ def fetch(
     """Make the cache hold every pinned file, downloading only what is missing or wrong.
 
     Raises `HashMismatchError` when a download is not the pinned file (nothing is kept) and
-    `FetchError` when the network (or the folder) fails.
+    `FetchError` when the network fails or the disk does (the cache folder cannot be created,
+    a cached file cannot be read, a download cannot be moved into place).
     """
     if open_url is None:
         open_url = default_open_url
     folder = cache_folder(pin, cache_dir)
-    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        raise FetchError(
+            f"could not create the cache folder {folder} (is there a file with that name in the way?): {error}"
+        ) from error
 
     results = []
     for pinned in pin.files:
@@ -88,7 +94,8 @@ def fetch(
 
 
 def verify_cache(pin: RepoePin = PIN, cache_dir: Path | None = None) -> None:
-    """Re-hash the cached files; raises `MissingDataError` or `HashMismatchError`, else returns."""
+    """Re-hash the cached files; raises `MissingDataError`, `HashMismatchError` or (a file that
+    cannot be read) `FetchError`, else returns."""
     folder = cache_folder(pin, cache_dir)
     _require_present(pin, folder)
     for pinned in pin.files:
@@ -108,7 +115,10 @@ def read_verified_files(pin: RepoePin = PIN, cache_dir: Path | None = None) -> d
     contents = {}
     for pinned in pin.files:
         path = folder / pinned.name
-        data = path.read_bytes()
+        try:
+            data = path.read_bytes()
+        except OSError as error:
+            raise _unreadable(path, error) from error
         digest = hashlib.sha256(data).hexdigest()
         if (len(data), digest) != (pinned.size, pinned.sha256):
             raise _cache_mismatch(pinned, path, len(data), digest)
@@ -135,14 +145,25 @@ def _cache_mismatch(pinned: PinnedFile, path: Path, size: int, digest: str) -> H
 
 
 def _hash_file(path: Path) -> tuple[int, str]:
-    """(size, sha256 hex) of a file, read in chunks."""
+    """(size, sha256 hex) of a file, read in chunks; an unreadable file raises `FetchError`."""
     digest = hashlib.sha256()
     size = 0
-    with path.open("rb") as stream:
-        while chunk := stream.read(CHUNK_SIZE):
-            size += len(chunk)
-            digest.update(chunk)
+    try:
+        with path.open("rb") as stream:
+            while chunk := stream.read(CHUNK_SIZE):
+                size += len(chunk)
+                digest.update(chunk)
+    except OSError as error:
+        raise _unreadable(path, error) from error
     return size, digest.hexdigest()
+
+
+def _unreadable(path: Path, error: OSError) -> FetchError:
+    # One error class for every disk failure in this module, read or write: `FetchError`.
+    return FetchError(
+        f"could not read the cached file {path}: {error}. "
+        "Check that it is not open in another program, then retry."
+    )
 
 
 def _download(url: str, pinned: PinnedFile, target: Path, open_url: OpenUrl) -> None:
@@ -168,7 +189,11 @@ def _download(url: str, pinned: PinnedFile, target: Path, open_url: OpenUrl) -> 
         try:
             os.replace(temp, target)
         except OSError as error:
-            raise FetchError(f"could not store {url} as {target}: {error}") from error
+            raise FetchError(
+                f"could not store {pinned.name} (from {url}) as {target}: {error}. "
+                "Another fetch may be running, or the file may be open in another program; "
+                "close it and retry."
+            ) from error
     except BaseException:
         temp.unlink(missing_ok=True)
         raise

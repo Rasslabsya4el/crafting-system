@@ -41,7 +41,7 @@ def main(argv: Sequence[str] | None = None, *, pin: RepoePin = PIN, open_url: Op
             verify_cache(pin)
             for pinned in pin.files:
                 print(_line(pinned.name, "ok", pinned.size, pinned.sha256))
-    except DataError as error:
+    except (DataError, ValueError) as error:  # ValueError: a broken crafting.toml or CRAFTING_CONFIG
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0

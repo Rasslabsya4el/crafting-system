@@ -2,6 +2,7 @@
 
 import hashlib
 import http.client
+import pathlib
 import urllib.error
 import urllib.request
 
@@ -279,6 +280,93 @@ def test_a_connection_that_drops_mid_download_leaves_no_temp_file(tmp_path):
     assert list(cache_folder(pin, tmp_path).iterdir()) == []
 
 
+# --- the disk fails -----------------------------------------------------------------------
+
+
+def test_a_file_where_the_cache_folder_should_be_is_a_fetch_error_naming_the_path(tmp_path):
+    pin, opener = fixture_pin_and_opener()
+    folder = cache_folder(pin, tmp_path)
+    folder.parent.mkdir(parents=True)
+    folder.write_bytes(b"i am a file, not a folder")
+
+    with pytest.raises(FetchError) as caught:
+        fetch(pin, tmp_path, open_url=opener)
+
+    assert str(folder) in str(caught.value)
+    assert opener.urls == []
+
+
+def test_a_file_in_the_middle_of_the_cache_path_is_a_fetch_error(tmp_path):
+    pin, opener = fixture_pin_and_opener()
+    (tmp_path / "repoe-fork").write_bytes(b"i am a file, not a folder")
+
+    with pytest.raises(FetchError) as caught:
+        fetch(pin, tmp_path, open_url=opener)
+
+    assert str(cache_folder(pin, tmp_path)) in str(caught.value)
+
+
+def make_unreadable(monkeypatch, name):
+    """Make reading the file called `name` raise OSError (file permissions are not portable to Windows)."""
+    real_open = pathlib.Path.open
+    real_read_bytes = pathlib.Path.read_bytes
+
+    def open_(self, *args, **kwargs):
+        if self.name == name:
+            raise PermissionError(13, "Permission denied", str(self))
+        return real_open(self, *args, **kwargs)
+
+    def read_bytes(self):
+        if self.name == name:
+            raise PermissionError(13, "Permission denied", str(self))
+        return real_read_bytes(self)
+
+    monkeypatch.setattr(pathlib.Path, "open", open_)
+    monkeypatch.setattr(pathlib.Path, "read_bytes", read_bytes)
+
+
+def test_an_unreadable_cached_file_is_a_fetch_error_in_fetch(tmp_path, monkeypatch):
+    pin, opener, folder = fetched(tmp_path)
+    make_unreadable(monkeypatch, "mods.json")
+
+    with pytest.raises(FetchError) as caught:
+        fetch(pin, tmp_path, open_url=opener)
+
+    assert str(folder / "mods.json") in str(caught.value)
+    assert "Permission denied" in str(caught.value)
+
+
+def test_an_unreadable_cached_file_is_a_fetch_error_in_verify_and_load(tmp_path, monkeypatch):
+    pin, _, folder = fetched(tmp_path)
+    make_unreadable(monkeypatch, "fossils.json")
+
+    for action in (lambda: verify_cache(pin, tmp_path), lambda: load_game_data(pin, tmp_path)):
+        with pytest.raises(FetchError) as caught:
+            action()
+        assert str(folder / "fossils.json") in str(caught.value)
+        assert "Permission denied" in str(caught.value)
+
+
+def test_a_failed_move_into_place_says_another_fetch_may_run_and_to_retry(tmp_path, monkeypatch):
+    pin, opener = fixture_pin_and_opener()
+
+    def locked(source, destination):
+        raise PermissionError(13, "Access is denied")
+
+    monkeypatch.setattr(fetch_module.os, "replace", locked)
+
+    with pytest.raises(FetchError) as caught:
+        fetch(pin, tmp_path, open_url=opener)
+
+    message = str(caught.value)
+    assert "mods.json" in message
+    assert "Access is denied" in message
+    assert "another fetch may be running" in message.lower()
+    assert "open in another program" in message
+    assert "retry" in message.lower()
+    assert leftover_temp_files(cache_folder(pin, tmp_path)) == []
+
+
 def test_the_default_downloader_sends_a_user_agent_and_a_timeout(monkeypatch):
     seen = {}
 
@@ -484,6 +572,48 @@ def test_a_bad_pinned_file_is_rejected_on_construction(fields):
 
     with pytest.raises(ValueError):
         PinnedFile(**arguments)
+
+
+ODD_NAMES = [
+    "mods.json:stream",  # alternate data stream
+    "C:mods.json",
+    ":x",
+    "mods.json.",  # Windows drops a trailing dot
+    "mods.json ",  # and a trailing space
+    "mods. ",
+    "CON",
+    "con",
+    "con.json",
+    "PRN.txt",
+    "Aux",
+    "NUL",
+    "nul.json",
+    "COM1",
+    "com9.json",
+    "LPT1",
+    "lpt9.json",
+    "CON.tar.gz",
+]
+
+
+@pytest.mark.parametrize("name", ODD_NAMES)
+def test_a_pinned_file_name_that_windows_treats_specially_is_rejected(name):
+    with pytest.raises(ValueError):
+        PinnedFile(name, "0" * 64, 10)
+
+
+@pytest.mark.parametrize("name", ODD_NAMES)
+def test_a_pin_version_that_windows_treats_specially_is_rejected(name):
+    with pytest.raises(ValueError):
+        pin_with(version=name)
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["mods.json", "crafting_bench_options.json", "3.29.3.3", "console.json", "com10.json", "lpt0", "a.b"],
+)
+def test_ordinary_names_are_still_accepted(name):
+    assert PinnedFile(name, "0" * 64, 10).name == name
 
 
 def test_pin_and_files_are_frozen():

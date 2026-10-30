@@ -136,6 +136,52 @@ def test_fetch_with_a_network_failure_exits_one_and_names_the_url(cache, capsys)
     assert "Traceback" not in captured.err
 
 
+@pytest.mark.parametrize("command", ["fetch", "verify"])
+def test_a_broken_config_file_exits_one_with_an_error_line(tmp_path, monkeypatch, capsys, command):
+    broken = tmp_path / "crafting.toml"
+    broken.write_text("[paths\ncache_dir = ", encoding="utf-8")
+    monkeypatch.setenv("CRAFTING_CONFIG", str(broken))
+    pin, opener = fixture_pin_and_opener()
+
+    code = main([command], pin=pin, open_url=opener)
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.out == ""
+    assert captured.err.startswith("error: ")
+    assert "not valid TOML" in captured.err
+    assert "Traceback" not in captured.err
+    assert opener.urls == []
+
+
+@pytest.mark.parametrize("command", ["fetch", "verify"])
+def test_a_config_file_that_does_not_exist_exits_one_with_an_error_line(tmp_path, monkeypatch, capsys, command):
+    monkeypatch.setenv("CRAFTING_CONFIG", str(tmp_path / "missing.toml"))
+    pin, opener = fixture_pin_and_opener()
+
+    code = main([command], pin=pin, open_url=opener)
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.startswith("error: ")
+    assert "does not exist" in captured.err
+
+
+def test_a_file_where_the_cache_folder_should_be_exits_one(cache, capsys):
+    pin, opener = fixture_pin_and_opener()
+    folder = cache_folder(pin)
+    folder.parent.mkdir(parents=True)
+    folder.write_bytes(b"a file")
+
+    code = main(["fetch"], pin=pin, open_url=opener)
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.startswith("error: ")
+    assert str(folder) in captured.err
+    assert "Traceback" not in captured.err
+
+
 @pytest.mark.parametrize("argv", [[], ["bogus"], ["fetch", "extra"], ["--nope"]])
 def test_wrong_usage_returns_two_and_prints_usage_to_stderr(argv, capsys):
     code = main(argv)

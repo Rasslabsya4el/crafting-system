@@ -16,9 +16,23 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 _COMMIT = re.compile(r"[0-9a-f]{40}")
 
 
+_WINDOWS_DEVICE = re.compile(r"(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?", re.IGNORECASE)
+
+
 def _is_plain_name(name: str) -> bool:
-    """A single file or folder name: it cannot climb out of, or nest inside, the cache folder."""
-    return bool(name) and name not in (".", "..") and not any(c in name for c in ("/", "\\", "\0"))
+    """A single file or folder name: it cannot climb out of, or nest inside, the cache folder.
+
+    Also refused, because Windows treats them specially: a `:` (an alternate data stream, or a
+    drive), a trailing dot or space (silently dropped), and the device names CON, PRN, AUX, NUL,
+    COM1-9 and LPT1-9 with or without an extension.
+    """
+    return (
+        bool(name)
+        and name not in (".", "..")
+        and not any(c in name for c in ("/", "\\", "\0", ":"))
+        and not name.endswith((".", " "))
+        and not _WINDOWS_DEVICE.fullmatch(name)
+    )
 
 
 @dataclass(frozen=True)

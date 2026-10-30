@@ -19,7 +19,8 @@ class MissingDataError(DataError):
 
 
 class FetchError(DataError):
-    """The network failed (or the folder could not be written) while fetching a pinned file."""
+    """The network or the disk failed while fetching, storing or reading a cached pinned file
+    (also raised when a cached file cannot be read in verify and load)."""
 
 
 class RawFormatError(DataError):
