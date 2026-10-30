@@ -33,6 +33,8 @@ def find_rule_reference_problems(source: str, filename: str, known_ids: set[str]
         if isinstance(node, ast.Call) and _names_get_rule(node.func):
             called.add(id(node.func))
             _check_call(node, known_ids, report)
+        elif isinstance(node, ast.Call) and _is_getattr_of_get_rule(node):
+            report(node, f"{FUNCTION} must not be fetched with getattr; call {FUNCTION}(\"<id>\")")
         elif isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 if alias.name == FUNCTION and alias.asname not in (None, FUNCTION):
@@ -51,6 +53,17 @@ def _names_get_rule(node: ast.AST) -> bool:
     """Whether `node` is the bare name `get_rule` or an attribute access ending in it."""
     return (isinstance(node, ast.Name) and node.id == FUNCTION) or (
         isinstance(node, ast.Attribute) and node.attr == FUNCTION
+    )
+
+
+def _is_getattr_of_get_rule(call: ast.Call) -> bool:
+    """Whether `call` is `getattr(<anything>, "get_rule", ...)`."""
+    return (
+        isinstance(call.func, ast.Name)
+        and call.func.id == "getattr"
+        and len(call.args) >= 2
+        and isinstance(call.args[1], ast.Constant)
+        and call.args[1].value == FUNCTION
     )
 
 
@@ -200,6 +213,10 @@ def test_importing_get_rule_under_another_name_is_reported(source):
         "def f(fn=get_rule):\n    return fn",
         "@get_rule\ndef f():\n    pass",
         "import functools\nlookup = functools.partial(get_rule)",
+        'lookup = getattr(rules, "get_rule")',
+        'THING = getattr(rules, "get_rule")("fam.thing")',
+        'lookup = getattr(rules, "get_rule", None)',
+        'import crafting_system.rules as r\nfn = getattr(r, "get_rule")',
     ],
 )
 def test_using_get_rule_as_something_other_than_a_called_function_is_reported(source):

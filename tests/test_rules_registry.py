@@ -34,7 +34,7 @@ def test_shipped_registry_holds_the_seed_rules():
 
     for rule_id, kind in SEEDS.items():
         assert registry[rule_id].source_kind is kind
-    assert registry["affix_count.rare_reroll_ratio"].value == {4: 8, 5: 3, 6: 1}
+    assert dict(registry["affix_count.rare_reroll_ratio"].value) == {4: 8, 5: 3, 6: 1}
     assert registry["affix_draw.family_exclusion"].value is None
     assert get_rule("affix_count.rare_reroll_ratio") == registry["affix_count.rare_reroll_ratio"]
     assert isinstance(get_rule("fossils.factor_stacking"), Rule)
@@ -79,6 +79,15 @@ def load_entry(tmp_path: Path, **changes) -> Mapping[str, Rule]:
     return load_registry(claims_dir(tmp_path, {"fam.yaml": [valid_entry(**changes)]}))
 
 
+def thaw(value):
+    """The frozen form of a value (read-only mappings, tuples) as plain dicts and lists."""
+    if isinstance(value, Mapping):
+        return {key: thaw(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [thaw(item) for item in value]
+    return value
+
+
 # --- the happy path -----------------------------------------------------------------------
 
 
@@ -100,8 +109,8 @@ def test_a_minimal_valid_entry_loads_with_no_value(tmp_path):
 @pytest.mark.parametrize(
     "value", [7, 0.5, "text", [1, 2, 3], {"a": {"b": [1, None]}}, {4: 8, 5: 3}, False]
 )
-def test_a_value_of_any_shape_is_kept_as_is(tmp_path, value):
-    assert load_entry(tmp_path, value=value)["fam.thing"].value == value
+def test_a_value_of_any_shape_is_kept(tmp_path, value):
+    assert thaw(load_entry(tmp_path, value=value)["fam.thing"].value) == value
 
 
 def test_all_six_source_kinds_are_accepted(tmp_path):
@@ -196,12 +205,18 @@ BAD_VALUES = [
     ("url", "poewiki.net/wiki/Chaos_Orb"),
     ("url", "ftp://example.org/x"),
     ("url", ""),
+    ("url", "https://"),
+    ("url", "http://"),
+    ("url", "https://example.org/a b"),
+    ("url", "https://example.org/\tx"),
+    ("url", "https://example.org/x\n"),
     ("url", 5),
     ("patch_verified", 3.29),  # unquoted in YAML: a float
     ("patch_verified", "3.29"),
     ("patch_verified", "latest"),
     ("patch_verified", "3.29.3.3.1"),
     ("patch_verified", "3.29.3.3A"),
+    ("patch_verified", "\u0663.\u0662\u0669.\u0663"),  # Arabic-Indic digits
     ("date_checked", "2026-10-30"),  # quoted in YAML: a string
     ("date_checked", datetime.datetime(2026, 10, 30, 12, 0)),
     ("date_checked", 20261030),
@@ -268,6 +283,46 @@ def test_an_unknown_key_is_rejected(tmp_path):
     assert "fam.thing" in str(raised.value)
 
 
+VALID_ENTRY_TEXT = """rules:
+  - id: fam.thing
+    statement: A thing happens.
+    source_kind: wiki
+    url: https://example.org/page
+    quote: A thing happens.
+    patch_verified: "3.29.3.3"
+    date_checked: {date}
+"""
+
+
+def test_an_impossible_date_is_a_registry_error_naming_the_file(tmp_path):
+    folder = claims_dir(tmp_path, {"fam.yaml": VALID_ENTRY_TEXT.format(date="2026-02-30")})
+
+    with pytest.raises(RegistryError, match=r"fam\.yaml"):
+        load_registry(folder)
+
+
+def test_the_valid_entry_text_used_by_the_text_cases_loads(tmp_path):
+    folder = claims_dir(tmp_path, {"fam.yaml": VALID_ENTRY_TEXT.format(date="2026-02-28")})
+
+    assert load_registry(folder)["fam.thing"].date_checked == datetime.date(2026, 2, 28)
+
+
+def test_a_repeated_key_inside_one_entry_is_rejected_naming_file_and_key(tmp_path):
+    text = VALID_ENTRY_TEXT.format(date="2026-02-28") + "    quote: A second quote.\n"
+    folder = claims_dir(tmp_path, {"fam.yaml": text})
+
+    with pytest.raises(RegistryError, match=r"fam\.yaml.*duplicate key 'quote'"):
+        load_registry(folder)
+
+
+def test_a_repeated_key_in_a_value_mapping_is_rejected(tmp_path):
+    text = VALID_ENTRY_TEXT.format(date="2026-02-28") + "    value: {a: 1, a: 2}\n"
+    folder = claims_dir(tmp_path, {"fam.yaml": text})
+
+    with pytest.raises(RegistryError, match=r"fam\.yaml.*duplicate key 'a'"):
+        load_registry(folder)
+
+
 FILE_LEVEL_CASES = {
     "invalid YAML": "rules: [unclosed\n",
     "no rules key": "other: []\n",
@@ -316,6 +371,42 @@ def test_a_non_utf8_file_is_rejected_naming_the_file(tmp_path):
 
     with pytest.raises(RegistryError, match=r"fam\.yaml"):
         load_registry(folder)
+
+
+# --- a rule is immutable and hashable ------------------------------------------------------------
+
+
+def test_a_rule_value_cannot_be_mutated():
+    value = get_rule("affix_count.rare_reroll_ratio").value
+
+    with pytest.raises(TypeError):
+        value[4] = 99
+    assert dict(value) == {4: 8, 5: 3, 6: 1}
+
+
+def test_every_shipped_rule_is_hashable():
+    for rule in load_registry().values():
+        assert isinstance(hash(rule), int)
+
+
+def test_a_value_is_frozen_all_the_way_down(tmp_path):
+    value = {"a": {"b": [1, {"c": [2]}]}, "d": [3]}
+
+    frozen = load_entry(tmp_path, value=value)["fam.thing"].value
+
+    assert frozen["a"]["b"] == (1, frozen["a"]["b"][1])
+    assert frozen["a"]["b"][1]["c"] == (2,)
+    assert frozen["d"] == (3,)
+    with pytest.raises(TypeError):
+        frozen["a"]["x"] = 1
+    with pytest.raises(AttributeError):
+        frozen["d"].append(4)
+
+
+def test_a_rule_with_a_value_is_hashable(tmp_path):
+    rule = load_entry(tmp_path, value={"a": [1, 2], "b": {"c": 3}})["fam.thing"]
+
+    assert isinstance(hash(rule), int)
 
 
 # --- lookup by id -----------------------------------------------------------------------------

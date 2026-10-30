@@ -17,7 +17,7 @@ unregistered claim fails the build. The same call also fails at import time. For
 """
 
 import re
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
@@ -30,9 +30,9 @@ from typing import Any
 import yaml
 
 ID_PATTERN = re.compile(r"([a-z][a-z0-9_]*)\.([a-z][a-z0-9_]*)")
-PATCH_PATTERN = re.compile(r"\d+(\.\d+){2,3}[a-z]?")
+PATCH_PATTERN = re.compile(r"[0-9]+(\.[0-9]+){2,3}[a-z]?")
 MAX_QUOTE_LENGTH = 400
-URL_PREFIXES = ("https://", "http://")
+URL_PATTERN = re.compile(r"https?://\S+")  # a scheme, then something, and no whitespace
 CLAIMS_SUFFIX = ".yaml"
 
 
@@ -42,6 +42,59 @@ class RegistryError(ValueError):
 
 class UnknownRuleError(KeyError):
     """Code asked for a rule id that is not in the registry."""
+
+
+class FrozenMap(Mapping):
+    """A read-only, hashable mapping: the form a YAML mapping takes in `Rule.value`."""
+
+    def __init__(self, items: Mapping) -> None:
+        self._items = dict(items)
+
+    def __getitem__(self, key: Any) -> Any:
+        return self._items[key]
+
+    def __iter__(self) -> Iterator:
+        return iter(self._items)
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+    def __hash__(self) -> int:
+        return hash(frozenset(self._items.items()))
+
+    def __repr__(self) -> str:
+        return f"FrozenMap({self._items!r})"
+
+
+def _freeze(value: Any) -> Any:
+    """Mappings become `FrozenMap`, lists tuples and sets frozensets, all the way down."""
+    if isinstance(value, dict):
+        return FrozenMap({key: _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, set):
+        return frozenset(_freeze(item) for item in value)
+    return value
+
+
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """`safe_load` that refuses a mapping with a repeated key instead of keeping the last one."""
+
+    def construct_mapping(self, node, deep=False):  # noqa: ANN001
+        if isinstance(node, yaml.MappingNode):
+            seen = set()
+            for key_node, _ in node.value:
+                key = self.construct_object(key_node, deep=True)
+                try:
+                    repeated = key in seen
+                    seen.add(key)
+                except TypeError:  # an unhashable key: the parent class reports it
+                    break
+                if repeated:
+                    raise yaml.constructor.ConstructorError(
+                        None, None, f"duplicate key {key!r}", key_node.start_mark
+                    )
+        return super().construct_mapping(node, deep)
 
 
 class SourceKind(StrEnum):
@@ -57,7 +110,11 @@ class SourceKind(StrEnum):
 
 @dataclass(frozen=True)
 class Rule:
-    """One admitted claim. `value` is the number or structure that code reads, if the claim has one."""
+    """One admitted claim. `value` is the number or structure that code reads, if the claim has one.
+
+    The value is frozen on load (mappings read-only, lists tuples), so a rule is hashable and the
+    cached registry cannot be changed by the code that reads it.
+    """
 
     id: str
     statement: str
@@ -91,8 +148,8 @@ def _check_source_kind(value: object) -> str | None:
 
 
 def _check_url(value: object) -> str | None:
-    if not isinstance(value, str) or not value.startswith(URL_PREFIXES):
-        return f"url must be a string starting with https:// or http://, got {value!r}"
+    if not isinstance(value, str) or not URL_PATTERN.fullmatch(value):
+        return f"url must start with https:// or http://, continue after it, and hold no whitespace, got {value!r}"
     return None
 
 
@@ -157,13 +214,16 @@ def _parse_entry(entry: object, number: int, file_name: str, seen: set[str]) -> 
     if entry["id"] in seen:
         raise fail("duplicate id, it is already used by an earlier entry")
     seen.add(entry["id"])
-    return Rule(**{**entry, "source_kind": SourceKind(entry["source_kind"])})
+    fields = {**entry, "source_kind": SourceKind(entry["source_kind"])}
+    if "value" in fields:
+        fields["value"] = _freeze(fields["value"])
+    return Rule(**fields)
 
 
 def _parse_file(text: str, file_name: str, seen: set[str]) -> list[Rule]:
     try:
-        data = yaml.safe_load(text)
-    except yaml.YAMLError as error:
+        data = yaml.load(text, Loader=_UniqueKeyLoader)  # noqa: S506 - a SafeLoader subclass
+    except (yaml.YAMLError, ValueError) as error:  # ValueError: a date such as 2026-02-30
         raise RegistryError(f"{file_name}: invalid YAML: {error}") from error
     if not isinstance(data, dict) or "rules" not in data:
         raise RegistryError(f"{file_name}: the top level must be a mapping with a `rules` key")
