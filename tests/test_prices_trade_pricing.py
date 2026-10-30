@@ -258,7 +258,7 @@ def test_two_usable_listings_are_not_enough_and_the_message_says_why(trade, spec
 def test_a_search_with_no_listings_is_not_enough_and_fetches_nothing(trade, spec, game_mods, tmp_path):
     trade.search.update(total=0, result=[])
 
-    with pytest.raises(NotEnoughListings):
+    with pytest.raises(NotEnoughListings, match="--indexed"):
         price(trade, spec, game_mods, tmp_path)
 
     assert trade.kinds == ["stats", "search"]

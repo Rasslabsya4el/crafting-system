@@ -222,7 +222,11 @@ def price_buy_spec(
     filters = [resolve_buy_mod(mod, mods, stats) for mod in spec.mods]
     body = build_query(spec, filters, indexed).body()
     digest = query_hash(price_file.league, body)
-    total, rows = _listings(client, price_file.league, body, cache_dir / "trade" / f"{digest}.json", now)
+    hint = _window_hint(indexed)
+    try:
+        total, rows = _listings(client, price_file.league, body, cache_dir / "trade" / f"{digest}.json", now)
+    except NotEnoughListings as error:
+        raise NotEnoughListings(f"{error}{hint}") from None
 
     usable: list[float] = []
     dropped: dict[str, int] = {}
@@ -236,7 +240,7 @@ def price_buy_spec(
         why = "; ".join(f"{count} {reason}" for reason, count in sorted(dropped.items())) or "none dropped"
         raise NotEnoughListings(
             f"only {len(usable)} of {len(rows)} fetched listings ({total} on the site) can be priced; "
-            f"at least {MIN_LISTINGS} are needed. Dropped: {why}"
+            f"at least {MIN_LISTINGS} are needed. Dropped: {why}{hint}"
         )
     cheapest = sorted(usable)[:k]
     return TradePrice(
@@ -255,6 +259,12 @@ def price_buy_spec(
 
 
 # --- the price file ------------------------------------------------------------------------------
+
+
+def _window_hint(indexed: str | None) -> str:
+    if indexed is None:
+        return ""
+    return f". Only listings listed {within(indexed)} count; a wider window (--indexed) may find more"
 
 
 def within(indexed: str | None) -> str:

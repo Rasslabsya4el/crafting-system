@@ -17,7 +17,8 @@ from ..config import Config, load_config
 from ..data import DataError, load_game_data
 from .fallbacks import MIN_COUNT
 from .fetch import fetch_price_file
-from .http_json import GetJson, SourceError, http_get_json
+from .http_json import GetJson, SourceError, http_get_json, paced
+from .price_names import canonical_price_name
 from .price_file import (
     OVERRIDE_SOURCE,
     PriceFile,
@@ -109,7 +110,13 @@ def main(
         if args.command == "fetch":
             instant = now if now is not None else datetime.now(UTC)
             result = fetch_price_file(
-                get_json if get_json is not None else http_get_json,
+                get_json
+                if get_json is not None
+                else paced(
+                    http_get_json,
+                    monotonic if monotonic is not None else time.monotonic,
+                    sleep if sleep is not None else time.sleep,
+                ),
                 instant,
                 wanted,
                 args.league,
@@ -218,7 +225,8 @@ def _read_wanted(path: str | None) -> list[str]:
     if path is None:
         return []
     lines = Path(path).read_text(encoding="utf-8-sig").splitlines()
-    return [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    names = [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    return [canonical_price_name(name) for name in names]
 
 
 if __name__ == "__main__":

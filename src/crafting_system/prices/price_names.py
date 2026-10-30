@@ -53,3 +53,9 @@ def parse_base_price_name(price_name: str) -> BaseKey | None:
     except ValueError:
         return None
     return BaseKey(match["name"], int(match["level"]), influences)
+
+
+def canonical_price_name(name: str) -> str:
+    """`name` with the influences of a base price name in game order ("Hunter/Warlord"); other names unchanged."""
+    key = parse_base_price_name(name)
+    return name if key is None else base_price_name(key.name, key.item_level, key.influences)

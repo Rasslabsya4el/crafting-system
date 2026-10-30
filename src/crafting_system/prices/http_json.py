@@ -37,3 +37,30 @@ def http_get_json(url: str, timeout: float = TIMEOUT_SECONDS) -> Any:
         return json.loads(body.decode("utf-8"))
     except ValueError as error:  # bad UTF-8 or bad JSON
         raise SourceError(f"invalid JSON from {url}: {error}") from error
+
+
+PAUSE_SECONDS = 0.3
+
+
+def paced(
+    get_json: GetJson,
+    monotonic: Callable[[], float],
+    sleep: Callable[[float], None],
+    interval: float = PAUSE_SECONDS,
+) -> GetJson:
+    """`get_json` that leaves at least `interval` seconds between two requests, to go easy on the sites.
+
+    The fallbacks can send a dozen requests for one unpriced name, so the real fetch is paced; the clock
+    and the sleep are injected, as everywhere else.
+    """
+    last: list[float] = []
+
+    def get(url: str) -> Any:
+        if last and (wait := interval - (monotonic() - last[0])) > 0:
+            sleep(wait)
+        try:
+            return get_json(url)
+        finally:
+            last[:] = [monotonic()]
+
+    return get

@@ -534,3 +534,26 @@ def test_fetching_and_writing_leave_the_overrides_file_alone(ninja, tmp_path):
     write_price_file(tmp_path / "prices.json", fetch_price_file(ninja, NOW).price_file)
 
     assert overrides.read_bytes() == before
+
+
+# --- pacing of the real transport ----------------------------------------------------------
+
+
+def test_the_paced_transport_leaves_the_interval_between_requests():
+    from crafting_system.prices.http_json import paced
+
+    clock, slept = [0.0], []
+
+    def sleep(seconds):
+        slept.append(seconds)
+        clock[0] += seconds
+
+    get = paced(lambda url: url, lambda: clock[0], sleep, interval=0.5)
+
+    assert get("a") == "a" and slept == []  # the first request goes at once
+    clock[0] += 0.2
+    get("b")
+    assert slept == [pytest.approx(0.3)]
+    clock[0] += 1.0
+    get("c")
+    assert len(slept) == 1  # enough time has passed already

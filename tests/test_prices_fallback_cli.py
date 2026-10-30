@@ -66,3 +66,13 @@ def test_a_wanted_price_that_poe_ninja_has_never_reaches_a_fallback(tmp_path, ca
     assert code == 0 and saved.prices["Hollow Fossil"].source == "poe.ninja"
     assert watch.requests == []
     assert "too thin" in out  # the recorded thin base and beast lines are reported
+
+
+def test_a_wanted_base_with_influences_in_the_wrong_order_is_matched_under_the_game_order(tmp_path, capsys):
+    ninja, watch = FakeNinja(), FakeWatch()  # the recorded Warlord/Hunter Vise is a thin line (count 2)
+
+    code, saved, out = run(tmp_path, ["Stygian Vise (ilvl 85, Warlord/Hunter)"], Both(ninja, watch), capsys)
+
+    assert code == 0
+    assert "Stygian Vise (ilvl 85, Hunter/Warlord): current line is too thin" in out
+    assert "No price for 1 wanted resources:\n  Stygian Vise (ilvl 85, Hunter/Warlord)" in out

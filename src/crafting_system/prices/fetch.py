@@ -24,7 +24,7 @@ from .poe_ninja import BASE_URL, OVERVIEW_TYPES, SOURCE, api_url, history_slug, 
 from .poe_watch import poe_watch_stage
 from .previous_league import previous_league_stage
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile, missing_prices
-from .price_names import parse_base_price_name
+from .price_names import canonical_price_name, parse_base_price_name
 
 DEFAULT_STAGES: tuple[Stage, ...] = (ninja_history_stage, poe_watch_stage, previous_league_stage)
 
@@ -57,7 +57,7 @@ def fetch_price_file(
     if league is not None and not league.strip():
         raise ValueError("league must not be blank")
     fetched_at = now.astimezone(UTC).replace(microsecond=0)
-    wanted_names = sorted(set(wanted or ()))
+    wanted_names = sorted({canonical_price_name(name) for name in wanted or ()})
     league = league if league is not None else _current_league(get_json)
 
     prices: dict[str, PriceEntry] = {}
