@@ -1,0 +1,145 @@
+{
+ "item": {
+  "id": "hollow-fossil",
+  "name": "Hollow Fossil",
+  "category": "Delve",
+  "detailsId": "hollow-fossil"
+ },
+ "pairs": [
+  {
+   "id": "chaos",
+   "rate": 213.0,
+   "volumePrimaryValue": 1917,
+   "history": [
+    {
+     "timestamp": "2026-10-30T00:00:00Z",
+     "rate": 213.0,
+     "volumePrimaryValue": 1917
+    },
+    {
+     "timestamp": "2026-10-29T00:00:00Z",
+     "rate": 165.3,
+     "volumePrimaryValue": 1798
+    },
+    {
+     "timestamp": "2026-10-28T00:00:00Z",
+     "rate": 158.5,
+     "volumePrimaryValue": 781.5
+    },
+    {
+     "timestamp": "2026-10-27T00:00:00Z",
+     "rate": 153.0,
+     "volumePrimaryValue": 1254
+    },
+    {
+     "timestamp": "2026-10-26T00:00:00Z",
+     "rate": 162.4,
+     "volumePrimaryValue": 826.3
+    },
+    {
+     "timestamp": "2026-10-25T00:00:00Z",
+     "rate": 147.1,
+     "volumePrimaryValue": 1383
+    },
+    {
+     "timestamp": "2026-10-24T00:00:00Z",
+     "rate": 138.8,
+     "volumePrimaryValue": 684.5
+    },
+    {
+     "timestamp": "2026-10-23T00:00:00Z",
+     "rate": 174.7,
+     "volumePrimaryValue": 1845
+    },
+    {
+     "timestamp": "2026-10-22T00:00:00Z",
+     "rate": 171.9,
+     "volumePrimaryValue": 1120
+    },
+    {
+     "timestamp": "2026-10-21T00:00:00Z",
+     "rate": 210.7,
+     "volumePrimaryValue": 2011
+    }
+   ]
+  },
+  {
+   "id": "divine",
+   "rate": 0.625,
+   "volumePrimaryValue": 599.5,
+   "history": [
+    {
+     "timestamp": "2026-10-30T00:00:00Z",
+     "rate": 0.625,
+     "volumePrimaryValue": 449.6
+    },
+    {
+     "timestamp": "2026-10-29T00:00:00Z",
+     "rate": 0.5224,
+     "volumePrimaryValue": 616.6
+    },
+    {
+     "timestamp": "2026-10-28T00:00:00Z",
+     "rate": 0.4906,
+     "volumePrimaryValue": 999.1
+    },
+    {
+     "timestamp": "2026-10-27T00:00:00Z",
+     "rate": 0.4583,
+     "volumePrimaryValue": 539.5
+    },
+    {
+     "timestamp": "2026-10-26T00:00:00Z",
+     "rate": 0.5216,
+     "volumePrimaryValue": 1169
+    },
+    {
+     "timestamp": "2026-10-25T00:00:00Z",
+     "rate": 0.5953,
+     "volumePrimaryValue": 1183
+    },
+    {
+     "timestamp": "2026-10-24T00:00:00Z",
+     "rate": 0.4832,
+     "volumePrimaryValue": 1439
+    },
+    {
+     "timestamp": "2026-10-23T00:00:00Z",
+     "rate": 0.5343,
+     "volumePrimaryValue": 1012
+    },
+    {
+     "timestamp": "2026-10-22T00:00:00Z",
+     "rate": 0.4935,
+     "volumePrimaryValue": 479.6
+    },
+    {
+     "timestamp": "2026-10-21T00:00:00Z",
+     "rate": 0.6681,
+     "volumePrimaryValue": 2123
+    }
+   ]
+  }
+ ],
+ "core": {
+  "items": [
+   {
+    "id": "chaos",
+    "name": "Chaos Orb",
+    "category": "Currency",
+    "detailsId": "chaos-orb"
+   },
+   {
+    "id": "divine",
+    "name": "Divine Orb",
+    "category": "Currency",
+    "detailsId": "divine-orb"
+   }
+  ],
+  "rates": {
+   "divine": 0.00278
+  },
+  "primary": "chaos",
+  "secondary": "divine"
+ }
+}
