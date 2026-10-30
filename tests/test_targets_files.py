@@ -54,6 +54,22 @@ def test_the_r13_example_parses_into_the_route():
     assert "EinharMasterWeaponElementalDamage1_" in damage.of[1].mod_ids
 
 
+def test_the_r13_damage_families_are_damage_prefixes_the_bench_offers_on_a_belt_in_two_tiers():
+    target = load_target(R13, DATA)
+    damage = target.requirements[2]
+    assert isinstance(damage, KOfN)
+
+    for member in damage.of:
+        offered = {
+            option.actions.add_explicit_mod
+            for option in DATA.bench_options
+            if "Belt" in option.item_classes
+            and option.actions.add_explicit_mod in member.mod_ids
+            and DATA.mods[option.actions.add_explicit_mod].generation_type == "prefix"
+        }
+        assert offered == member.mod_ids and len(offered) == 2, member.family
+
+
 def test_the_r13_belt_is_met_by_life_two_resists_and_a_crafted_damage_mod():
     target = load_target(R13, DATA)
     life = roll("IncreasedLife1")

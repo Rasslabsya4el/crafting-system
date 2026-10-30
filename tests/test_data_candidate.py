@@ -165,10 +165,10 @@ def test_a_network_failure_is_a_fetch_error(tmp_path):
 def test_a_download_over_the_size_bound_is_cut_off_and_removes_the_files_already_stored(tmp_path, monkeypatch):
     reversed_template = dataclasses.replace(TEMPLATE, files=tuple(reversed(TEMPLATE.files)))
     # mods.json is the biggest excerpt and now comes last, after four files that fit under the bound
-    monkeypatch.setattr(candidate, "MAX_FILE_BYTES", 8000)
+    monkeypatch.setattr(candidate, "MAX_FILE_BYTES", 10000)
     _, opener = served_pin()
 
-    with pytest.raises(FetchError, match=r"mods\.json.*larger than 8000 bytes"):
+    with pytest.raises(FetchError, match=r"mods\.json.*larger than 10000 bytes"):
         candidate_pin(COMMIT, reversed_template, tmp_path, open_url=opener)
 
     assert listing(folder_of(tmp_path)) == []

@@ -4146,6 +4146,47 @@
   "type": "AllDamage",
   "gold_value": null
  },
+ "JunMaster2AllDamage3": {
+  "adds_tags": [],
+  "domain": "crafted",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "AllDamage"
+  ],
+  "implicit_tags": [
+   "unveiled_mod",
+   "damage"
+  ],
+  "is_essence_only": false,
+  "name": "Upgraded",
+  "required_level": 81,
+  "spawn_weights": [
+   {
+    "tag": "ring",
+    "weight": 0
+   },
+   {
+    "tag": "belt",
+    "weight": 0
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "damage_+%",
+    "max": 17,
+    "min": 15
+   }
+  ],
+  "text": "(15-17)% increased Damage",
+  "type": "AllDamage",
+  "gold_value": null
+ },
  "EinharMasterWeaponElementalDamage1_": {
   "adds_tags": [
    "has_attack_mod"
@@ -4175,6 +4216,38 @@
    }
   ],
   "text": "(15-23)% increased Elemental Damage with Attack Skills",
+  "type": "IncreasedWeaponElementalDamagePercent",
+  "gold_value": null
+ },
+ "EinharMasterWeaponElementalDamage2": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "crafted",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedWeaponElementalDamagePercent"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Upgraded",
+  "required_level": 50,
+  "spawn_weights": [],
+  "stats": [
+   {
+    "id": "elemental_damage_with_attack_skills_+%",
+    "max": 32,
+    "min": 24
+   }
+  ],
+  "text": "(24-32)% increased Elemental Damage with Attack Skills",
   "type": "IncreasedWeaponElementalDamagePercent",
   "gold_value": null
  },

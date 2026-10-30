@@ -373,5 +373,125 @@
    "Quiver"
   ],
   "master": "Einhar, Beastmaster"
+ },
+ {
+  "actions": {
+   "change_socket_count": null,
+   "link_sockets": null,
+   "color_sockets": null,
+   "add_explicit_mod": "EinharMasterWeaponElementalDamage1_",
+   "remove_crafted_mods": null,
+   "add_enchant_mod": null,
+   "remove_enchantments": null,
+   "reroll_rarity": null,
+   "reroll_rare_mods": null
+  },
+  "bench_tier": 1,
+  "cost": {
+   "Metadata/Items/Currency/CurrencyRerollMagic": 6
+  },
+  "item_classes": [
+   "Dagger",
+   "Rune Dagger",
+   "One Hand Axe",
+   "One Hand Mace",
+   "One Hand Sword",
+   "Claw",
+   "Sceptre",
+   "Thrusting One Hand Sword",
+   "Two Hand Axe",
+   "Two Hand Mace",
+   "Two Hand Sword",
+   "Staff",
+   "Warstaff",
+   "Wand",
+   "Bow",
+   "Ring",
+   "Amulet",
+   "Belt",
+   "Quiver"
+  ],
+  "master": "Niko, Master of the Depths"
+ },
+ {
+  "actions": {
+   "change_socket_count": null,
+   "link_sockets": null,
+   "color_sockets": null,
+   "add_explicit_mod": "EinharMasterWeaponElementalDamage2",
+   "remove_crafted_mods": null,
+   "add_enchant_mod": null,
+   "remove_enchantments": null,
+   "reroll_rarity": null,
+   "reroll_rare_mods": null
+  },
+  "bench_tier": 2,
+  "cost": {
+   "Metadata/Items/Currency/CurrencyUpgradeToRare": 4
+  },
+  "item_classes": [
+   "Dagger",
+   "Rune Dagger",
+   "One Hand Axe",
+   "One Hand Mace",
+   "One Hand Sword",
+   "Claw",
+   "Sceptre",
+   "Thrusting One Hand Sword",
+   "Two Hand Axe",
+   "Two Hand Mace",
+   "Two Hand Sword",
+   "Staff",
+   "Warstaff",
+   "Wand",
+   "Bow",
+   "Quiver",
+   "Belt"
+  ],
+  "master": "Niko, Master of the Depths"
+ },
+ {
+  "actions": {
+   "change_socket_count": null,
+   "link_sockets": null,
+   "color_sockets": null,
+   "add_explicit_mod": "JunMaster2AllDamage2_",
+   "remove_crafted_mods": null,
+   "add_enchant_mod": null,
+   "remove_enchantments": null,
+   "reroll_rarity": null,
+   "reroll_rare_mods": null
+  },
+  "bench_tier": 1,
+  "cost": {
+   "Metadata/Items/Currency/CurrencyRerollRare": 4
+  },
+  "item_classes": [
+   "Ring",
+   "Belt"
+  ],
+  "master": "Niko, Master of the Depths"
+ },
+ {
+  "actions": {
+   "change_socket_count": null,
+   "link_sockets": null,
+   "color_sockets": null,
+   "add_explicit_mod": "JunMaster2AllDamage3",
+   "remove_crafted_mods": null,
+   "add_enchant_mod": null,
+   "remove_enchantments": null,
+   "reroll_rarity": null,
+   "reroll_rare_mods": null
+  },
+  "bench_tier": 2,
+  "cost": {
+   "Metadata/Items/Currency/CurrencyAddModToRare": 4
+  },
+  "item_classes": [
+   "Ring",
+   "Belt"
+  ],
+  "master": "Niko, Master of the Depths"
  }
 ]

@@ -94,7 +94,7 @@ def seeded_raw() -> dict[str, object]:
     del bases["Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword1"]
 
     # bench options: cost changed, tier changed, one added, one removed
-    sockets, _, _, _, _, explicit, _, rare, einhar = bench
+    sockets, _, _, _, _, explicit, _, rare, einhar, *_ = bench
     sockets["cost"]["Metadata/Items/Currency/CurrencyRerollSocketNumbers"] = 2
     explicit["bench_tier"] = 2
     new_option = copy.deepcopy(rare)
