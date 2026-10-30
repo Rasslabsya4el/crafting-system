@@ -219,7 +219,8 @@ def solve_cyclic(
     """Policy iteration for small components, then Gauss-Seidel sweeps until certified.
 
     Stops when the iteration's own relative error (the residuals `e`, `d` against `g`) is at most
-    `tolerance`; otherwise returns the best certified candidate seen, with `converged` False. The
+    `tolerance`, or when both residuals are already at the rounding floor `delta` (more sweeps
+    could not improve the reported bound by more than a factor of about two); otherwise returns the best certified candidate seen, with `converged` False. The
     reported multipliers also carry the operator mismatch `delta` (see `_certify`), so the reported
     error can exceed `tolerance`; with no upper certificate the upper multiplier is infinite.
     """
@@ -239,7 +240,7 @@ def solve_cyclic(
         iteration = relative_error(*own_multipliers(bellman.g, e, d))
         lower, upper = own_multipliers(bellman.g, e + delta, d + delta)
         error = relative_error(lower, upper)
-        stop = iteration <= tolerance
+        stop = iteration <= tolerance or (e <= delta and d <= delta)  # or at the rounding floor
         if stop or best is None or error < best_error:
             best_error = error
             choice = [bellman.ids[local][a] for local, a in enumerate(greedy)]

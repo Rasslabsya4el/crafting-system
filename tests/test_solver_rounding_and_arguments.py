@@ -37,6 +37,15 @@ def test_the_bound_covers_the_rounding_of_a_nearly_certain_cycle(n, limit):
         assert error <= Fraction(solution.error_bound) + Fraction(1, 10**300)
 
 
+# Seeds of the wide-weight family whose cycles lose too little per sweep for plain value iteration
+# to reach the tolerance in 2000 sweeps (taken from a real run). They must be reported with a
+# bound, never answered wrongly; policy iteration (the default and the policy-only limit) answers
+# every seed.
+SLOW_FOR_SWEEPS = frozenset(
+    {1, 37, 43, 44, 47, 52, 75, 77, 82, 89, 90, 99, 105, 107, 111, 117, 126, 130}
+)
+
+
 @limits
 @pytest.mark.parametrize("seed", range(150))
 def test_the_bound_stays_honest_with_weights_spanning_nine_orders_of_magnitude(seed, limit):
@@ -44,10 +53,13 @@ def test_the_bound_stays_honest_with_weights_spanning_nine_orders_of_magnitude(s
     best = brute_force(spec)
     size, _ = spec
 
-    try:
-        solution = solve(to_model(spec), range(size), direct_solve_limit=limit, max_sweeps=2000)
-    except ConvergenceError:
-        pytest.skip("this cycle is too slow for sweeps and is reported, not answered")
+    if limit == 0 and seed in SLOW_FOR_SWEEPS:
+        with pytest.raises(ConvergenceError) as slow:
+            solve(to_model(spec), range(size), direct_solve_limit=0, max_sweeps=2000)
+        assert not math.isnan(slow.value.error_bound)
+        return
+
+    solution = solve(to_model(spec), range(size), direct_solve_limit=limit, max_sweeps=2000)
 
     for state, optimum in best.items():
         value = solution.values[state]

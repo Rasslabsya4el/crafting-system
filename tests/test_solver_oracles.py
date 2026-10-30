@@ -11,7 +11,16 @@ from fractions import Fraction
 
 import pytest
 from ssp_helpers import DIRECT_LIMITS
-from ssp_oracles import brute_force, evaluate_exactly, lp_values, random_ssp, sparse_ssp, to_model
+from ssp_oracles import (
+    brute_force,
+    cost_spread_ssp,
+    evaluate_exactly,
+    exact_optimal_values,
+    lp_values,
+    random_ssp,
+    sparse_ssp,
+    to_model,
+)
 
 from crafting_system.solver import solve
 
@@ -160,3 +169,22 @@ def test_the_cheap_cycle_is_certified_within_a_small_sweep_budget_because_the_do
     for state, optimum in best.items():
         optimum = float(optimum)
         assert abs(solution.values[state] - optimum) <= solution.error_bound * optimum + 1e-12 * optimum
+
+
+@limits
+@pytest.mark.parametrize("seed", [701582, 701779, 701945])
+def test_cost_spread_cycles_with_large_values_are_answered_at_the_default_tolerance(seed, limit):
+    # Costs from 0.001 to 1000 and values near 1e4: the exact solve leaves residuals at the
+    # rounding floor, far above tolerance * 0.001, yet the answer is exact to about 1e-16.
+    spec = cost_spread_ssp(seed)
+    size, _ = spec
+    exact = exact_optimal_values(spec)
+
+    # one of the three is a genuinely slow cycle for plain sweeps (about 30 000 of them)
+    sweeps = 60_000 if (seed, limit) == (701582, 0) else 3000
+    solution = solve(to_model(spec), range(size), direct_solve_limit=limit, max_sweeps=sweeps)
+
+    assert solution.error_bound <= 1e-6
+    for state, optimum in exact.items():
+        error = abs(Fraction(solution.values[state]) - optimum) / optimum
+        assert error <= Fraction(solution.error_bound)

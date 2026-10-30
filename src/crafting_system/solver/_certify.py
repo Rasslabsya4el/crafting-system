@@ -31,7 +31,9 @@ relative error is max(1 - l_own, u_own - 1).
 Stopping uses the iteration alone: the loop stops when the relative error computed from e and d
 (without delta) is at most `tolerance`. So a model whose rounding amplification delta / g (about
 epsilon * value / g) exceeds `tolerance` still terminates, and the reported `error_bound`, which
-includes delta, may then be larger than `tolerance`; it is infinite when e' >= g.
+includes delta, may then be larger than `tolerance`; it is infinite when e' >= g. The loop also stops
+when e <= delta and d <= delta: the residuals are at the rounding floor and the reported bound cannot
+improve by more than about a factor of two (soundness is untouched, only the moment to stop).
 
 Across components. Every state keeps multipliers lo, hi with lo * V <= V* <= hi * V (goals: 1, 1).
 Scaling the downstream values by a >= 1 scales a component's solution by at most a, and by a <= 1 by

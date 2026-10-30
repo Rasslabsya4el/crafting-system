@@ -194,3 +194,85 @@ def lp_values(spec):
     highs.run()
     assert highs.getModelStatus() == highspy.HighsModelStatus.kOptimal
     return list(highs.getSolution().col_value)
+
+
+FUZZ_COSTS = [0.001, 0.01, 0.1, 0.3, 1.0, 2.5, 7.0, 30.0, 100.0, 333.3, 1000.0]
+
+
+def cost_spread_ssp(seed):
+    """A seeded chain of 2-4 small cyclic components with costs from 0.001 to 1000.
+
+    Each state has a forward action that leaves its component only at the last state, plus a
+    few random back or self actions; weights come from {1, 2, 5, 1000}. Values reach about 1e4
+    while the cheapest action costs 0.001.
+    """
+    rng = random.Random(seed)
+    components, size = [], 0
+    count = rng.randint(2, 4)
+    for _ in range(count):
+        width = rng.randint(2, 8) if count <= 2 else rng.randint(2, 5)
+        components.append(list(range(size, size + width)))
+        size += width
+    goal = size
+
+    def weight():
+        return rng.choice([1, 2, 5, 10**3])
+
+    table = {}
+    for index, component in enumerate(components):
+        later = [s for other in components[index + 1 :] for s in other] + [goal]
+        for position, state in enumerate(component):
+            outs = []
+            if position + 1 < len(component):
+                outs.append((component[position + 1], weight()))
+            else:
+                outs.extend((rng.choice(later), weight()) for _ in range(rng.randint(1, 3)))
+            outs.extend((rng.choice(component), weight()) for _ in range(rng.randint(0, 3)))
+            actions = [(f"{state}.f", outs)]
+            for extra in range(rng.randint(0, 3)):
+                outs = [(rng.choice(component), weight()) for _ in range(rng.randint(1, 3))]
+                if rng.random() < 0.5:
+                    outs.extend((rng.choice(later), weight()) for _ in range(rng.randint(1, 3)))
+                if all(t == state for t, _ in outs) and rng.random() < 0.7:
+                    outs.append((rng.choice(later), weight()))
+                actions.append((f"{state}.{extra}", outs))
+            table[state] = [
+                (label, Fraction(rng.choice(FUZZ_COSTS)), outs) for label, outs in actions
+            ]
+    return size, table
+
+
+def exact_optimal_values(spec):
+    """Optimal values by policy iteration in exact fractions (every state needs a proper policy).
+
+    Starts from the first action everywhere, which `cost_spread_ssp` makes proper.
+    """
+    size, table = spec
+    policy = dict.fromkeys(range(size), 0)
+
+    def q(state, index, values):
+        _, cost, outcomes = table[state][index]
+        total = sum(w for _, w in outcomes)
+        return cost + sum(Fraction(w, total) * values.get(s, 0) for s, w in outcomes)
+
+    for _ in range(500):
+        matrix = [[Fraction(int(i == j)) for j in range(size)] for i in range(size)]
+        rhs = []
+        for state in range(size):
+            _, cost, outcomes = table[state][policy[state]]
+            total = sum(w for _, w in outcomes)
+            for s, w in outcomes:
+                if s != size:
+                    matrix[state][s] -= Fraction(w, total)
+            rhs.append(cost)
+        values = dict(enumerate(_solve_fractions(matrix, rhs)))
+        changed = False
+        for state in range(size):
+            current = q(state, policy[state], values)
+            for index in range(len(table[state])):
+                candidate = q(state, index, values)
+                if candidate < current:
+                    policy[state], current, changed = index, candidate, True
+        if not changed:
+            return values
+    raise RuntimeError("exact policy iteration did not settle")

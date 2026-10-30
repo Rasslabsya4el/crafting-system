@@ -137,3 +137,13 @@ def test_a_ring_is_the_same_whether_sweeps_or_policy_iteration_solve_it():
     by_policy = solve(Ring(40), [0], direct_solve_limit=10**9)
 
     assert by_sweeps.values[0] == pytest.approx(by_policy.values[0], rel=1e-8)
+
+
+def test_a_genuinely_slow_cycle_still_raises_when_the_sweeps_run_out():
+    table = {
+        "A": [act("a", 1, ("B", 999), (GOAL, 1))],
+        "B": [act("b", 1, ("A", 999), (GOAL, 1))],
+    }
+
+    with pytest.raises(ConvergenceError):
+        solve(model(table), ["A"], direct_solve_limit=0, tolerance=1e-10, max_sweeps=3)
