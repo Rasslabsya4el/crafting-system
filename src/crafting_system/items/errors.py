@@ -32,3 +32,7 @@ class CapacityError(ItemError):
 
 class FamilyConflictError(ItemError):
     """Two mods of the item share a family, so they exclude each other."""
+
+
+class TierError(ItemError):
+    """A mod has no tier on a base because it cannot spawn there: its spawn weight is 0 for the base's tags."""
