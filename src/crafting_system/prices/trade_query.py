@@ -223,7 +223,7 @@ def query_hash(league: str, body: Mapping[str, Any]) -> str:
 
 @dataclass(frozen=True)
 class BuyMod:
-    """A mod the bought item must have. `stat` is a repoe family id or the English stat text."""
+    """A mod the bought item must have. `stat` is a repoe family id, a mod id or the English stat text."""
 
     stat: str
     minimum: float | None = None
