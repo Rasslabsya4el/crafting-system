@@ -1,0 +1,866 @@
+{
+ "result": [
+  {
+   "id": "f78a5b4b7fa210c716ae6fa2f0f27c230021e8cb12bafd559127111d71a66e73",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-13T11:12:08Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Glyph Noose",
+    "typeLine": "Lapis Amulet",
+    "baseType": "Lapis Amulet",
+    "rarity": "Rare",
+    "ilvl": 77,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "Adds 12 to 26 Cold Damage to Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4067062424"
+     },
+     {
+      "description": "9% increased Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2106365538"
+     },
+     {
+      "description": "57% increased Mana Regeneration Rate",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_789117908"
+     },
+     {
+      "description": "+39% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_4067062424",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_2106365538",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_789117908",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_328541901",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "372e5fef0b5ed9e4758d8631cc7f8911ab1d266702509bfbfab72e5cdfe887a7",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-19T04:25:26Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Brimstone Locket",
+    "typeLine": "Agate Amulet",
+    "baseType": "Agate Amulet",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+21 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901"
+     },
+     {
+      "description": "+34 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434"
+     },
+     {
+      "description": "+3% to all Elemental Resistances",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2901986750"
+     },
+     {
+      "description": "+40% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_2901986750",
+        [
+         0
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1535626285",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "0cf91ba6fcfbdf3885a65f4322abce8ad5605a3b061bc052d01b78c03880546a",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-07T00:41:56Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Rapture Heart",
+    "typeLine": "Lapis Amulet",
+    "baseType": "Lapis Amulet",
+    "rarity": "Rare",
+    "ilvl": 84,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "Adds 9 to 19 Physical Damage to Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3032590688"
+     },
+     {
+      "description": "+33 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043"
+     },
+     {
+      "description": "Regenerate 49 Life per second",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3325883026"
+     },
+     {
+      "description": "+42% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3032590688",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_3325883026",
+        [
+         2
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_328541901",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "102f94a9a77322139e31b95176e53d965ed303b5a67dc3e36af395ad0749a88f",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-08T19:07:56Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Agony Torc",
+    "typeLine": "Onyx Amulet",
+    "baseType": "Onyx Amulet",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "6% increased Spell Damage",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2974417149"
+     },
+     {
+      "description": "+223 to Accuracy Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_803737631"
+     },
+     {
+      "description": "+14% to Fire Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3372524247"
+     },
+     {
+      "description": "+40% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_2974417149",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_803737631",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_3372524247",
+        [
+         0
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1379411836",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "23b4dcca60505541e21f706c8d008d4ebd305493c0d9a58990a02ffd6deff2da",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-02T07:32:18Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Pain Charm",
+    "typeLine": "Onyx Amulet",
+    "baseType": "Onyx Amulet",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "Adds 1 to 43 Lightning Damage to Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1754445556"
+     },
+     {
+      "description": "+30 to maximum Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3489782002"
+     },
+     {
+      "description": "10% increased maximum Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2482852589"
+     },
+     {
+      "description": "+37% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_1754445556",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3489782002",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_2482852589",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1379411836",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "e04fc4df2755abde341129cd53c34324d6f2a7a12bb42c0445f69c1b05efd197",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-07-28T17:39:36Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Grim Noose",
+    "typeLine": "Paua Amulet",
+    "baseType": "Paua Amulet",
+    "rarity": "Rare",
+    "ilvl": 81,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+27 to Dexterity",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3261801346"
+     },
+     {
+      "description": "+12% to Damage over Time Multiplier",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3988349707"
+     },
+     {
+      "description": "31% increased Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2106365538"
+     },
+     {
+      "description": "+35% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3261801346",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_3988349707",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_2106365538",
+        [
+         0
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_789117908",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "aba5a5566fd162895841809b4551f020ec74274fd5ad1991fa257e44c0af59f5",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-07-28T04:31:15Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Torment Choker",
+    "typeLine": "Agate Amulet",
+    "baseType": "Agate Amulet",
+    "rarity": "Rare",
+    "ilvl": 83,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+13 to all Attributes",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1379411836"
+     },
+     {
+      "description": "+37 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434"
+     },
+     {
+      "description": "0.61% of Physical Attack Damage Leeched as Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3593843976"
+     },
+     {
+      "description": "+20% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_1379411836",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3593843976",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1535626285",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "c37e48e759a95b01a31add02ce40e2ef7a15db942af2d5c93dbfcb0208a99d31",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-26T16:35:57Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Loath Collar",
+    "typeLine": "Citrine Amulet",
+    "baseType": "Citrine Amulet",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+17 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901"
+     },
+     {
+      "description": "16% increased maximum Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2482852589"
+     },
+     {
+      "description": "+61 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043"
+     },
+     {
+      "description": "+39% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_2482852589",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_538848803",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "0af7d406994860370818505ed5bf0093e5a7dc230dc703e7adb03cc61073ee32",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-27T21:38:09Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Dragon Rosary",
+    "typeLine": "Amber Amulet",
+    "baseType": "Amber Amulet",
+    "rarity": "Rare",
+    "ilvl": 77,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+41 to Strength",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4080418644"
+     },
+     {
+      "description": "23% increased Spell Damage",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2974417149"
+     },
+     {
+      "description": "+11 to maximum Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3489782002"
+     },
+     {
+      "description": "23% increased Rarity of Items found",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3917489142"
+     },
+     {
+      "description": "+15% to Fire Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3372524247"
+     },
+     {
+      "description": "+15% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_4080418644",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_2974417149",
+        [
+         3
+        ]
+       ],
+       [
+        "explicit.stat_3489782002",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3917489142",
+        [
+         4
+        ]
+       ],
+       [
+        "explicit.stat_3372524247",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_4080418644",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "ea99c92d187277ec6a3c31c356e7221feac343eca8c19217b6983e19a482eddb",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-10-25T19:32:22Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Onslaught Torc",
+    "typeLine": "Onyx Amulet",
+    "baseType": "Onyx Amulet",
+    "rarity": "Rare",
+    "ilvl": 82,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+54 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043"
+     },
+     {
+      "description": "+19 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434"
+     },
+     {
+      "description": "Gain 4 Life per Enemy Hit with Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2797971005"
+     },
+     {
+      "description": "+43% to Lightning Resistance",
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347"
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3299347043",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_2797971005",
+        [
+         0
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1379411836",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  }
+ ]
+}

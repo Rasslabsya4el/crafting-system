@@ -1,0 +1,474 @@
+{
+ "_note": "excerpt of GET /api/trade/data/stats recorded 2026-10-30 (Allflame, patch 3.29); full list is 2 MB and not kept",
+ "result": [
+  {
+   "id": "pseudo",
+   "label": "Pseudo",
+   "entries": [
+    {
+     "id": "pseudo.pseudo_adds_fire_damage",
+     "text": "Adds # to # Fire Damage",
+     "type": "pseudo"
+    },
+    {
+     "id": "pseudo.pseudo_increased_elemental_damage",
+     "text": "#% increased Elemental Damage",
+     "type": "pseudo"
+    },
+    {
+     "id": "pseudo.pseudo_has_shaper_influence",
+     "text": "Has Shaper Influence",
+     "type": "pseudo"
+    },
+    {
+     "id": "pseudo.pseudo_has_elder_influence",
+     "text": "Has Elder Influence",
+     "type": "pseudo"
+    },
+    {
+     "id": "pseudo.pseudo_has_crusader_influence",
+     "text": "Has Crusader Influence",
+     "type": "pseudo"
+    },
+    {
+     "id": "pseudo.pseudo_has_redeemer_influence",
+     "text": "Has Redeemer Influence",
+     "type": "pseudo"
+    },
+    {
+     "id": "pseudo.pseudo_has_hunter_influence",
+     "text": "Has Hunter Influence",
+     "type": "pseudo"
+    },
+    {
+     "id": "pseudo.pseudo_has_warlord_influence",
+     "text": "Has Warlord Influence",
+     "type": "pseudo"
+    },
+    {
+     "id": "pseudo.pseudo_has_influence_count",
+     "text": "Has # Influences",
+     "type": "pseudo"
+    }
+   ]
+  },
+  {
+   "id": "explicit",
+   "label": "Explicit",
+   "entries": [
+    {
+     "id": "explicit.stat_3299347043",
+     "text": "+# to maximum Life",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_4220027924",
+     "text": "+#% to Cold Resistance",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_3372524247",
+     "text": "+#% to Fire Resistance",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_1671376347",
+     "text": "+#% to Lightning Resistance",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_210067635",
+     "text": "#% increased Attack Speed (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_2923486259",
+     "text": "+#% to Chaos Resistance",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_4052037485",
+     "text": "+# to maximum Energy Shield (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_1940865751",
+     "text": "Adds # to # Physical Damage (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_124859000",
+     "text": "#% increased Evasion Rating (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_4015621042",
+     "text": "#% increased Energy Shield (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_53045048",
+     "text": "+# to Evasion Rating (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_1062208444",
+     "text": "#% increased Armour (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_3484657501",
+     "text": "+# to Armour (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_3321629045",
+     "text": "#% increased Armour and Energy Shield (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_2451402625",
+     "text": "#% increased Armour and Evasion (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_1999113824",
+     "text": "#% increased Evasion and Energy Shield (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_3336890334",
+     "text": "Adds # to # Lightning Damage (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_1037193709",
+     "text": "Adds # to # Cold Damage (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_691932474",
+     "text": "+# to Accuracy Rating (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_709508406",
+     "text": "Adds # to # Fire Damage (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_55876295",
+     "text": "#% of Physical Attack Damage Leeched as Life (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_3141070085",
+     "text": "#% increased Elemental Damage",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_3885634897",
+     "text": "#% chance to Poison on Hit (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_321077055",
+     "text": "Adds # to # Fire Damage",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_669069897",
+     "text": "#% of Physical Attack Damage Leeched as Mana (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_2223678961",
+     "text": "Adds # to # Chaos Damage (Local)",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_1147690586",
+     "text": "+# to Level of all Lightning Skill Gems",
+     "type": "explicit"
+    },
+    {
+     "id": "explicit.stat_3523867985",
+     "text": "#% increased Armour, Evasion and Energy Shield (Local)",
+     "type": "explicit"
+    }
+   ]
+  },
+  {
+   "id": "implicit",
+   "label": "Implicit",
+   "entries": [
+    {
+     "id": "implicit.stat_3299347043",
+     "text": "+# to maximum Life",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_3141070085",
+     "text": "#% increased Elemental Damage",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_2923486259",
+     "text": "+#% to Chaos Resistance",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_1671376347",
+     "text": "+#% to Lightning Resistance",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_4220027924",
+     "text": "+#% to Cold Resistance",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_3372524247",
+     "text": "+#% to Fire Resistance",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_691932474",
+     "text": "+# to Accuracy Rating (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_55876295",
+     "text": "#% of Physical Attack Damage Leeched as Life (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_210067635",
+     "text": "#% increased Attack Speed (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_709508406",
+     "text": "Adds # to # Fire Damage (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_3336890334",
+     "text": "Adds # to # Lightning Damage (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_1940865751",
+     "text": "Adds # to # Physical Damage (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_1037193709",
+     "text": "Adds # to # Cold Damage (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_4015621042",
+     "text": "#% increased Energy Shield (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_124859000",
+     "text": "#% increased Evasion Rating (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_1062208444",
+     "text": "#% increased Armour (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_2223678961",
+     "text": "Adds # to # Chaos Damage (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_4052037485",
+     "text": "+# to maximum Energy Shield (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_3484657501",
+     "text": "+# to Armour (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_53045048",
+     "text": "+# to Evasion Rating (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_669069897",
+     "text": "#% of Physical Attack Damage Leeched as Mana (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_321077055",
+     "text": "Adds # to # Fire Damage",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_3885634897",
+     "text": "#% chance to Poison on Hit (Local)",
+     "type": "implicit"
+    },
+    {
+     "id": "implicit.stat_3523867985",
+     "text": "#% increased Armour, Evasion and Energy Shield (Local)",
+     "type": "implicit"
+    }
+   ]
+  },
+  {
+   "id": "fractured",
+   "label": "Fractured",
+   "entries": [
+    {
+     "id": "fractured.stat_3299347043",
+     "text": "+# to maximum Life",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_1671376347",
+     "text": "+#% to Lightning Resistance",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_3372524247",
+     "text": "+#% to Fire Resistance",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_4220027924",
+     "text": "+#% to Cold Resistance",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_2923486259",
+     "text": "+#% to Chaos Resistance",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_4052037485",
+     "text": "+# to maximum Energy Shield (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_210067635",
+     "text": "#% increased Attack Speed (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_53045048",
+     "text": "+# to Evasion Rating (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_3484657501",
+     "text": "+# to Armour (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_4015621042",
+     "text": "#% increased Energy Shield (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_3336890334",
+     "text": "Adds # to # Lightning Damage (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_691932474",
+     "text": "+# to Accuracy Rating (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_709508406",
+     "text": "Adds # to # Fire Damage (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_1037193709",
+     "text": "Adds # to # Cold Damage (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_1999113824",
+     "text": "#% increased Evasion and Energy Shield (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_1940865751",
+     "text": "Adds # to # Physical Damage (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_124859000",
+     "text": "#% increased Evasion Rating (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_1062208444",
+     "text": "#% increased Armour (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_2451402625",
+     "text": "#% increased Armour and Evasion (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_3321629045",
+     "text": "#% increased Armour and Energy Shield (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_2223678961",
+     "text": "Adds # to # Chaos Damage (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_3885634897",
+     "text": "#% chance to Poison on Hit (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_55876295",
+     "text": "#% of Physical Attack Damage Leeched as Life (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_669069897",
+     "text": "#% of Physical Attack Damage Leeched as Mana (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_321077055",
+     "text": "Adds # to # Fire Damage",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_1147690586",
+     "text": "+# to Level of all Lightning Skill Gems",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_3523867985",
+     "text": "#% increased Armour, Evasion and Energy Shield (Local)",
+     "type": "fractured"
+    },
+    {
+     "id": "fractured.stat_3141070085",
+     "text": "#% increased Elemental Damage",
+     "type": "fractured"
+    }
+   ]
+  }
+ ]
+}
