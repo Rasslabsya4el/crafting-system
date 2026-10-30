@@ -94,6 +94,26 @@ def test_the_r13_resists_must_be_tier_one():
     assert not target.is_met_by(belt(life, damage, roll("FireResist1"), second_tier))
 
 
+def alias_bomb(levels: int) -> str:
+    """A requirements list where each level's group lists the previous level's anchor ten times."""
+    lines = ["base: Paua Amulet", "item_level: 84", "requirements:", "  - &l0 {family: IncreasedLife}"]
+    for level in range(1, levels + 1):
+        aliases = ", ".join([f"*l{level - 1}"] * 10)
+        lines.append(f"  - &l{level} {{at_least: 1, of: [{aliases}]}}")
+    return "\n".join(lines) + "\n"
+
+
+def test_an_alias_bomb_is_refused_at_its_first_anchor_without_being_expanded(tmp_path):
+    path = tmp_path / "bomb.yaml"
+    path.write_text(alias_bomb(12), encoding="utf-8")
+
+    with pytest.raises(TargetError) as caught:
+        load_target(path, DATA)
+
+    assert str(caught.value).startswith(f"{path}:4: ")
+    assert "anchors `&l0` are not supported" in str(caught.value)
+
+
 def test_a_relative_price_file_counts_from_the_folder_of_the_target_file(tmp_path):
     path = tmp_path / "targets" / "t.yaml"
     path.parent.mkdir()
