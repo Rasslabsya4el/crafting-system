@@ -14,13 +14,15 @@ both are asked about the same craft, and they must agree:
   binomial standard errors, the share below the low end at most 0.9 plus five).
 
 Only the test composes the two sides: the goal check on concrete items is written here by hand
-(`Target.is_met_by` on the real amulet), not read back from the kernel. Seeds are fixed and the
-tolerances are five standard errors, so a correct pair fails about once in 1.7 million runs. The
+(`Target.is_met_by` on the real amulet), not read back from the kernel. Seeds are fixed, so a run is repeatable; the
+tolerances are five standard errors (the normal approximation of a binomial tail makes a correct pair
+fail somewhat more often than once in 1.7 million runs, about 1e-5 per test, for another seed). The
 fixture cases run in CI. The real R12 amulet needs the cached 3.29.3.3 dump (`CRAFTING_CACHE_DIR`)
 and skips cleanly without it.
 """
 
 import math
+import random
 from collections import Counter
 from fractions import Fraction
 
@@ -114,8 +116,6 @@ def run_policy(data, ab, policy, start, is_goal, runs, seed):
 
 
 def assert_one_click_follows_the_kernel(data, ab, start, action, clicks, seed):
-    import random
-
     state = ab.compress(start)
     kernel = ab.kernel(state, action)
     outcomes = action.outcomes(data, start)
@@ -159,6 +159,26 @@ def test_a_simulated_policy_agrees_with_the_kernel_chain_on_the_fixture_amulet(s
 
     runs = SLOW_RUNS if name == "r12-fractured-resist" else RUNS
     report = run_policy(DATA, ab, policy, start, is_goal, runs, seed=4100 + seed)
+
+    assert_policy_agrees_with_the_chain(report, risk)
+
+
+def test_a_mixed_policy_that_switches_actions_by_state_agrees_with_the_kernel_chain():
+    # The solver's own policies here use one action throughout, so the switch is set by hand: a
+    # reforge once any leaf passes, a Chaos Orb while none does. `risk` takes any policy.
+    start, goal, is_goal, costs = CASES["two-of-three-plain-amulet"]
+    ab = Abstraction(DATA, goal, AMULET, LEVEL)
+    state = ab.compress(start)
+    policy = {}
+    for reached in ab.reachable([state], list(costs)):
+        if not ab.is_goal(reached):
+            action = REFORGE if any(status > 0 for status in reached.status) else CHAOS
+            weights = integer_weights(ab.kernel(reached, action))
+            policy[reached] = Action(action, costs[action], tuple(weights.items()))
+    assert {chosen.label for chosen in policy.values()} == {CHAOS, REFORGE}
+    risk = evaluate(policy, state, ab.is_goal)
+
+    report = run_policy(DATA, ab, policy, start, is_goal, RUNS, seed=4250)
 
     assert_policy_agrees_with_the_chain(report, risk)
 
