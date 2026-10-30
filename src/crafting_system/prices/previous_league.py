@@ -5,8 +5,9 @@ Both read poe.ninja's history (`ninja_history`) of a different economy, so every
 with its league and warned about as one to check.
 
 - The previous league is the owner's choice (`context.previous_league`) or, from poe.ninja's
-  undocumented league dump (`/poe1/api/data/dumps`), the softcore league that ended last. Its dates
-  come from the dump; the current league's start from poe.watch's `/leagues`. The price is the
+  undocumented league dump (`/poe1/api/data/dumps`), the softcore league that ended last among those
+  that lasted until the current league's age (a short event league ending later does not count). Its
+  dates come from the dump; the current league's start from poe.watch's `/leagues`. The price is the
   median of the 7 days at the current league's age (days since its start) in the previous league.
 - Standard is the last resort: the median of the 7 days ending today.
 
@@ -124,27 +125,26 @@ def previous_league_stage(get_json: GetJson, context: Context, gaps: Sequence[Ga
             )
         left = [gap for gap in left if gap.name not in prices]
 
-    old = _previous(get_json, context, warnings)
-    if old is not None:
-        age_days = _age(get_json, context, warnings)
-        if age_days is not None:
-            first, last = window_ending(old.start + timedelta(days=age_days))
-            if first > old.end:
-                warnings.append(
-                    f"previous league {old.name} ended on {old.end.isoformat()}, before league day {age_days}; skipped"
-                )
-            else:
-                take(
-                    old.name,
-                    PREVIOUS_SOURCE,
-                    old.end,
-                    first,
-                    last,
-                    f"the same league age in an older league (league day {age_days})",
-                    f" at league day {age_days}",
-                    "a different economy, check it",
-                    age_days=age_days,
-                )
+    found = _previous(get_json, context, warnings)
+    if found is not None:
+        old, age_days = found
+        first, last = window_ending(old.start + timedelta(days=age_days))
+        if first > old.end:
+            warnings.append(
+                f"previous league {old.name} ended on {old.end.isoformat()}, before league day {age_days}; skipped"
+            )
+        else:
+            take(
+                old.name,
+                PREVIOUS_SOURCE,
+                old.end,
+                first,
+                last,
+                f"the same league age in an older league (league day {age_days})",
+                f" at league day {age_days}",
+                "a different economy, check it",
+                age_days=age_days,
+            )
 
     if left:
         first, last = window_ending(context.today)
@@ -161,22 +161,35 @@ def previous_league_stage(get_json: GetJson, context: Context, gaps: Sequence[Ga
     return StageResult(prices, warnings)
 
 
-def _previous(get_json: GetJson, context: Context, warnings: list[str]) -> _Old | None:
-    """The previous league: the owner's choice or the softcore league that ended last; None means Standard."""
+def _previous(get_json: GetJson, context: Context, warnings: list[str]) -> tuple[_Old, int] | None:
+    """The previous league and the current league's age in days; None means Standard.
+
+    The owner's choice is used as given (the caller checks it reached the age). Otherwise the age is
+    learnt first, and the pick is the softcore league that ended last among those that lasted that long.
+    """
     wanted = context.previous_league
     if wanted is not None and wanted.casefold() == STANDARD.casefold():
         return None
-    data = _fetch(get_json, DUMPS_URL)
-    leagues = [old for old in _old_leagues(data) if old.name != context.league]
+    if wanted is None:
+        age_days = _age(get_json, context, warnings)
+        if age_days is None:
+            return None
+    leagues = [old for old in _old_leagues(_fetch(get_json, DUMPS_URL)) if old.name != context.league]
     if wanted is not None:
         chosen = next((old for old in leagues if old.name == wanted), None)
         if chosen is None:
             warnings.append(f"previous league {wanted} is not in poe.ninja's league list")
-        return chosen
+            return None
+        age_days = _age(get_json, context, warnings)
+        return None if age_days is None else (chosen, age_days)
     if not leagues:
         warnings.append("poe.ninja's league list gave no previous league")
         return None
-    return max(leagues, key=lambda old: (old.end, old.start))
+    reaching = [old for old in leagues if old.start + timedelta(days=age_days) <= old.end]
+    if not reaching:
+        warnings.append(f"no league in poe.ninja's league list lasted until league day {age_days}; previous league skipped")
+        return None
+    return max(reaching, key=lambda old: (old.end, old.start)), age_days
 
 
 def _age(get_json: GetJson, context: Context, warnings: list[str]) -> int | None:

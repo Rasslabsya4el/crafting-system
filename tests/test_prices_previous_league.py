@@ -155,6 +155,54 @@ def test_a_tie_on_the_last_day_goes_to_the_league_that_started_later(watch):
     assert set(leagues_asked(watch, DETAILS)) == {"Mirage"}
 
 
+def test_a_short_event_league_ending_later_does_not_hide_the_real_previous_league(watch):
+    watch.dumps.append({"leagueName": "Ancestors 2", "minDate": "2026-06-25T00:00:00Z", "maxDate": "2026-07-25T00:00:00Z"})
+
+    result = run(watch, HOLLOW)
+
+    assert result.prices["Hollow Fossil"].detail["league"] == "Mirage"
+    assert set(leagues_asked(watch, DETAILS)) == {"Mirage"}  # Ancestors 2 ends 2026-07-25 but starts on 06-25: day 98 is 10-01
+    assert len(watch.asked(NINJA_HOST, DUMPS)) == 1
+    assert len(watch.asked("api.poe.watch", "/leagues")) == 1
+
+
+def test_the_last_league_to_reach_the_age_wins(watch):
+    watch.dumps.append({"leagueName": "Long", "minDate": "2026-03-06T00:00:00Z", "maxDate": "2026-07-14T00:00:00Z"})  # reaches day 98 too, ends earlier
+
+    run(watch, HOLLOW)
+
+    assert set(leagues_asked(watch, DETAILS)) == {"Mirage"}
+
+
+def test_a_league_that_ends_exactly_on_the_age_reaches_it(watch):
+    watch.dumps = [{"leagueName": "Exact", "minDate": "2026-03-06T00:00:00Z", "maxDate": "2026-06-12T00:00:00Z"}]
+    watch.details[("Exact", "Fossil", "hollow-fossil")] = ninja_fixture("details_hollow_fossil_mirage")
+
+    result = run(watch, HOLLOW)
+
+    assert result.prices["Hollow Fossil"].detail["league"] == "Exact"
+    assert result.prices["Hollow Fossil"].chaos == mirage_exchange_median()
+
+
+def test_no_league_that_reaches_the_age_warns_once_and_goes_to_standard(watch):
+    watch.dumps = [{"leagueName": "Ancestors", "minDate": "2026-06-25T00:00:00Z", "maxDate": "2026-07-16T00:00:00Z"}]
+
+    result = run(watch, VISE)
+
+    assert result.warnings[0] == "no league in poe.ninja's league list lasted until league day 98; previous league skipped"
+    assert len(result.warnings) == 2
+    assert result.prices[VISE.name].source == "poe.ninja-standard"
+    assert leagues_asked(watch, STASH) == ["Standard"]
+
+
+def test_an_unknown_age_does_not_ask_for_the_league_dump(watch):
+    watch.leagues = SourceError("HTTP 500")
+
+    run(watch, VISE)
+
+    assert watch.asked(NINJA_HOST, DUMPS) == []
+
+
 def test_a_previous_league_that_ended_before_the_current_age_is_skipped(watch):
     result = run(watch, HOLLOW, context=Context("Allflame", TODAY, previous_league="Ancestors"))
 
@@ -200,7 +248,7 @@ def test_a_failing_league_dump_warns_and_goes_to_standard(watch):
 
         assert result.warnings[0] == "poe.ninja's league list gave no previous league"
         assert result.prices[VISE.name].source == "poe.ninja-standard"
-        assert watch.asked("api.poe.watch", "/leagues") == []
+        assert len(watch.asked("api.poe.watch", "/leagues")) == 1
 
 
 def test_a_gap_the_previous_league_cannot_price_falls_through_to_standard(watch):
