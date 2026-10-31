@@ -270,42 +270,37 @@ def test_the_written_file_with_bases_and_beasts_loads_back_equal(ninja, tmp_path
     "answer",
     [SourceError("HTTP 500 for the overview"), {"lines": []}, [], {"lines": 5}, {"lines": [{"name": "x"}]}],
 )
-def test_a_failing_empty_or_changed_stash_category_raises_and_says_the_old_file_was_kept(ninja, kind, answer):
+def test_a_failing_empty_or_changed_stash_category_warns_and_the_fetch_finishes(ninja, kind, answer):
     ninja.stash_overviews[kind] = answer
 
-    with pytest.raises(SourceError, match=f"the {kind} prices failed") as error:
-        fetch_price_file(ninja, NOW)
+    result = fetch_price_file(ninja, NOW)
 
-    assert "no price file was written, the old price file was kept" in str(error.value)
+    assert any(f"the {kind} prices failed" in line for line in result.warnings)
+    assert "Hollow Fossil" in result.price_file.prices  # the exchange categories were still written
 
 
 @pytest.mark.parametrize("kind", STASH_TYPES)
-def test_a_failing_stash_category_leaves_the_existing_file_byte_identical_and_writes_nothing_else(
-    ninja, tmp_path, capsys, kind
-):
+def test_a_failing_stash_category_still_writes_the_file_and_prints_the_warning(ninja, tmp_path, capsys, kind):
     path = tmp_path / "data" / "prices.json"
-    write_price_file(path, PriceFile("Old", NOW, 100.0, {"Chaos Orb": PriceEntry(1.0, "poe.ninja")}))
-    before = path.read_bytes()
-    folder_before = sorted(p.name for p in path.parent.iterdir())
     ninja.stash_overviews[kind] = SourceError(f"HTTP 500 for {kind}")
 
     code = main(["fetch"], get_json=ninja, now=NOW, env={"CRAFTING_DATA_DIR": str(path.parent)})
 
-    assert code == 1
-    assert path.read_bytes() == before
-    assert sorted(p.name for p in path.parent.iterdir()) == folder_before
-    assert kind in capsys.readouterr().err
+    assert code == 0
+    assert "Hollow Fossil" in load_price_file(path).prices
+    out = capsys.readouterr().out
+    assert any(line.startswith("Warning:") and kind in line and f"HTTP 500 for {kind}" in line for line in out.splitlines())
 
 
 @pytest.mark.parametrize("kind", STASH_TYPES)
-def test_an_empty_stash_category_writes_no_file(ninja, tmp_path, capsys, kind):
+def test_an_empty_stash_category_still_writes_a_file_with_a_warning(ninja, tmp_path, capsys, kind):
     ninja.stash_overviews[kind] = {"lines": []}
 
     code = main(["fetch"], get_json=ninja, now=NOW, env={"CRAFTING_DATA_DIR": str(tmp_path / "data")})
 
-    assert code == 1
-    assert not (tmp_path / "data" / "prices.json").exists()
-    assert "old price file was kept" in capsys.readouterr().err
+    assert code == 0
+    assert (tmp_path / "data" / "prices.json").exists()
+    assert f"the {kind} prices failed" in capsys.readouterr().out
 
 
 # --- the command line ----------------------------------------------------------------------

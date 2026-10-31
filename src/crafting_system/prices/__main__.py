@@ -50,6 +50,7 @@ from .trade_pricing import (
     merge_trade_prices,
     price_buy_spec,
     refuse_name_collision,
+    stale_trade_warnings,
     store_trade_price,
 )
 from .trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS, load_buy_spec
@@ -138,9 +139,12 @@ def main(
         merged = load_prices(price_path, overrides_path)  # overrides count as priced
         if args.command == "check":
             print(f"League {merged.league}, fetched {merged.fetched_at:%Y-%m-%d}: {len(merged.prices)} prices")
-            stale = stale_warning(merged, today if today is not None else datetime.now(UTC).date())
+            day = today if today is not None else datetime.now(UTC).date()
+            stale = stale_warning(merged, day)
             if stale:
                 print(f"Warning: {stale}")
+            for line in stale_trade_warnings(merged, day):
+                print(f"Warning: {line}")
         missing = missing_prices(wanted, merged.prices)
         if missing:
             print(f"No price for {len(missing)} wanted resources:")
