@@ -67,7 +67,7 @@ S1's one outside reference for the "does not preview" list is a YouTube video at
 
 | Currency | Status | Source |
 |---|---|---|
-| Chaos Orb | previewed | S1: "any given Chaos Orb will show the same preview each time" |
+| Chaos Orb | previewed | S1 names "any given Chaos Orb" as its example of a currency whose preview is the same each time it is viewed |
 | Divine Orb | previewed | S1 Strategies ("preview the outcomes of a Divine Orb, Tailoring Orb, and Sacred Orb using the same lock"); u/pepegaklaus, 2023-10-04, thread 16ywd1w: "Now hover over with a divine." |
 | Tailoring Orb, Sacred Orb | previewed | S1 Strategies, same sentence; u/pepegaklaus, 2023-10-04: "So use a sacred orb then lock again" |
 | Awakener's Orb | previewed, depends on the donor | S1 (no reference) |
