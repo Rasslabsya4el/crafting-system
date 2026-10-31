@@ -1,26 +1,92 @@
 name: CI
 
+# The whole suite with the real game data, on Ubuntu and Windows, in 8 shards each (16 jobs, ticket #165); a shard runs
+# 4 pytest processes at once. Tests are split in whole groups (a module, or a module and one route), so a route is solved
+# once. See docs/ci.md.
+# `CI summary` is the one check to wait for: green only when every shard of both systems passed.
+
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
-    name: pytest (${{ matrix.os }})
+    name: tests (${{ matrix.os }}, shard ${{ matrix.shard }}/8)
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7.0.1
+      - name: Point the cache directory at the runner's temp folder
+        run: echo "CRAFTING_CACHE_DIR=$RUNNER_TEMP/crafting-cache" >> "$GITHUB_ENV"
+      # The pinned repoe-fork export, cached by the pin: a new pin is a new key, so the data is fetched again.
+      - id: data
+        uses: actions/cache@v6.1.0
+        with:
+          path: ${{ runner.temp }}/crafting-cache
+          key: repoe-fork-${{ runner.os }}-${{ hashFiles('src/crafting_system/data/PIN.json') }}
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.13.6"
           enable-cache: true
       - run: uv sync --locked
-      - run: uv run pytest
+      - name: Fetch the pinned game data (only on a cache miss)
+        if: steps.data.outputs.cache-hit != 'true'
+        run: |
+          for attempt in 1 2 3 4 5; do
+            uv run --no-sync python -m crafting_system.data fetch && exit 0
+            echo "fetch failed (attempt $attempt)"; sleep $((attempt * 15))
+          done
+          exit 1
+      - name: Check the game data against the pin
+        run: uv run --no-sync python -m crafting_system.data verify
+      - name: Run shard ${{ matrix.shard }} of 8 on 4 processes
+        run: >
+          uv run --no-sync python .github/scripts/run_shard.py
+          --shard ${{ matrix.shard }}/8 --procs 4 --out out --timeout 25
+          -- -p no:cacheprovider -q --durations=10 --shard-durations tests/shard_durations.json
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: results-${{ matrix.os }}-${{ matrix.shard }}
+          path: out/
+          if-no-files-found: warn
+
+  summary:
+    name: CI summary
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: results-*
+          path: results
+      - name: Totals, skips, and the shard check
+        run: >
+          python3 .github/scripts/ci_summary.py results --shards 8 --systems ubuntu-latest,windows-latest
+          --job-result "${{ needs.test.result }}" --merged-durations merged/shard_durations.json
+      - name: Keep the measured seconds (commit them as tests/shard_durations.json to rebalance)
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: shard-durations
+          path: merged/shard_durations.json
+          if-no-files-found: ignore

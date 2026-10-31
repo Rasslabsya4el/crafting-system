@@ -7,7 +7,7 @@ in exact fractions: single fossils, a summed pair, blocks, the forced mod of the
 Fractured Fossil and the Tangled Fossil.
 
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`, set the cache folder with
-`CRAFTING_CACHE_DIR`). They skip cleanly when it is not there, which is the case in CI.
+`CRAFTING_CACHE_DIR`). They skip cleanly when it is not there; CI fetches it (ticket #165), so they run there.
 """
 
 import pytest
