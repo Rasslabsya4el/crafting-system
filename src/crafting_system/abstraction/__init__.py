@@ -77,9 +77,14 @@ family type (that type's mods marked), cached by the pool signature and the labe
 costs the number of family types times a plain distribution, which is why the action set of a target
 needs pruning (see ADR-0009).
 
-Widening for the rest of B1: an action that adds or removes one mod (Exalted, Annulment, Regal)
-makes the outcome depend on the weights of the junk families too, so its family types must
-add the pool weights; an action declares that with `Reads(junk=True, families=None)`.
+An action that adds mods and keeps the junk (Augmentation, Regal, later Exalted) makes the outcome
+depend on the weights of the junk families too: a family on the item leaves the pool. It declares
+`Reads.adding()` (`pool_weight`), and every family that no enabled action tells apart by name then
+gets the kind of its family type, `"~n"`: its side, and the sorted (what each mod gives the goal,
+weight) of its mods in the pool of an empty rare item. Two junk families of one type leave the same
+pool, so the states merge exactly. A magic item needs nothing else: the rarity is a flag and the
+capacity (1 + 1 for magic, 3 + 3 for rare) is in the free slots of the pool signature. A
+Transmutation, an Alteration, an Alchemy and a Scouring erase the junk and add no slot.
 
 Out of scope: a `min_roll` on a mod that an action draws, forces or crafts. Its value is rolled and no
 exact roll distribution is built yet, so such a mod raises `OutOfScopeError`. A concrete item's mod is
