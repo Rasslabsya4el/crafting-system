@@ -26,11 +26,11 @@ fail here, not pass silently.
 """
 
 from collections import Counter, defaultdict
-from collections.abc import Callable, Hashable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 
-from crafting_system.actions import build_pool
+from crafting_system.actions import PoolFamily, build_pool
 from crafting_system.data import GameData, Mod
 from crafting_system.items import ExplicitMod, Item, Rarity, tier_table
 
@@ -55,11 +55,18 @@ def guaranteed_tag(action: object) -> str | None:
 
 
 def finished_items(
-    data: GameData, start: Item, tag: str | None = None, *, forced: str | None = None, cap: int | None = None
+    data: GameData,
+    start: Item,
+    tag: str | None = None,
+    *,
+    forced: str | None = None,
+    cap: int | None = None,
+    pool: Iterable[PoolFamily] | None = None,
 ) -> list[tuple[Item, Fraction]]:
     """Every finished item of rerolling `start` (kept: its fractured mods) with its exact probability.
 
     `forced` is the id of the forced mod of an essence and `cap` the level cap of a low essence.
+    `pool` replaces the candidates (a fossil pool with its weights); it must be built for the retained item.
     Raises `ValueError` when `tag` is given and no tagged mod can be drawn first. `start` is taken to
     be an uncorrupted, uninfluenced item that the action accepts: refusals are not the oracle's business.
     """
@@ -75,7 +82,7 @@ def finished_items(
     }
     candidates = [
         Candidate(entry.mod, family.family, family.side.value, entry.weight)
-        for family in build_pool(data, retained, cap)
+        for family in (build_pool(data, retained, cap) if pool is None else pool)
         for entry in family.mods
     ]
     by_id = {candidate.mod.id: candidate for candidate in candidates}
@@ -129,7 +136,7 @@ def finished_items(
 
 def _drawn(data: GameData, tiers: Mapping[str, int], mod_id: str) -> ExplicitMod:
     stats = data.mods[mod_id].stats
-    return ExplicitMod(mod_id, tiers[mod_id], tuple(min(stat.min, stat.max) for stat in stats))
+    return ExplicitMod(mod_id, tiers.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in stats))
 
 
 def crafted_item(data: GameData, start: Item, mod_id: str) -> Item:
