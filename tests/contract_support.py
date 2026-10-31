@@ -64,9 +64,15 @@ def _fixture_data():
                 entry.item_id,
                 BaseItem(entry.item_id, entry.item_id.rsplit("/", 1)[-1], "StackableCurrency", "currency", 1, (), (), "released"),
             )
-    return dataclasses.replace(
-        DATA, mods={mod_id: mod for mod_id, mod in DATA.mods.items() if mod_id in keep}, base_items=bases
-    )
+    mods = {mod_id: mod for mod_id, mod in DATA.mods.items() if mod_id in keep}
+    # crafts that clash with a mod of the pool: every ordinary crafted mod takes the family of a mana mod,
+    # so the items that hold that life mod refuse the craft and a kernel that forgets the family is caught
+    metamods = {metamod.value for metamod in Metamod}
+    for option in DATA.bench_options:
+        crafted = mods.get(option.actions.add_explicit_mod or "")
+        if crafted is not None and crafted.generation_type in ("prefix", "suffix") and crafted.stats and not metamods & set(crafted.families):
+            mods[crafted.id] = dataclasses.replace(crafted, families=mods[MANA_1].families)
+    return dataclasses.replace(DATA, mods=mods, base_items=bases)
 
 
 CONTRACT_DATA = _fixture_data()
@@ -156,7 +162,8 @@ def check_action(action: Action, item: Item, data=CONTRACT_DATA, goal: Goal = GO
     """
     try:
         outcomes = action.outcomes(data, item)
-    except ActionError:
+    except ActionError as refusal:
+        check_kernel_refuses_too(action, item, data, goal, type(refusal))
         return False
     name = action.label(data)
     assert isinstance(name, str) and name, "the label is a name"
@@ -172,6 +179,18 @@ def check_action(action: Action, item: Item, data=CONTRACT_DATA, goal: Goal = GO
         check_kernel_equals_brute_force(action, reads, item, items, data, goal)
     check_resources_are_priced(action, item, data)
     return True
+
+
+def check_kernel_refuses_too(action, item: Item, data, goal: Goal, refusal: type[ActionError]) -> None:
+    """Where the action refuses the item, the kernel of the item's state refuses it the same way (the families the action reads are told apart)."""
+    reads = action.reads(data)
+    ab = Abstraction(data, goal, AMULET, LEVEL, [action] if reads.junk else [])
+    try:
+        kernel = ab.kernel(ab.compress(item), action)
+    except ActionError as raised:
+        assert type(raised) is refusal, "the kernel refuses for the same reason the action does"
+    else:
+        raise AssertionError(f"the action refuses the item ({refusal.__name__}) but the kernel of its state does not: {dict(kernel)!r}")
 
 
 def check_sums_to_one(outcomes, data) -> None:
@@ -205,6 +224,18 @@ def check_sampler_follows_the_chances(outcomes, items, data) -> None:
 
 
 def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, given: Item) -> None:
+    if reads.needs_crafted:
+        assert given.crafted_mods, "an action that needs a crafted mod refuses an item without one"
+    if adds.named is not None:
+        for _, result in items:
+            assert adds.named <= {entry.mod_id for entry in result.mods}, "every result holds the mods the action names"
+    if adds.tag is not None:
+        assert adds.draws, "a guaranteed tag belongs to a draw"
+        for _, result in items:
+            drawn = [CONTRACT_DATA.mods[e.mod_id] for e in result.mods if not e.fractured and not e.crafted]
+            assert any(adds.tag in mod.implicit_tags for mod in drawn), "every result holds a drawn mod with the guaranteed tag"
+    if adds.single_draw:
+        assert adds.draws and not reads.junk and not adds.named, "a single draw reads no junk and forces no mod"
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
     if not reads.junk:
         for _, part in outcomes.components:

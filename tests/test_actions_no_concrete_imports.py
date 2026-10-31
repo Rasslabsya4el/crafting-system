@@ -36,6 +36,12 @@ def violations(source: str, names: set[str]) -> list[str]:
             if node.level > 0 and module[0] == "actions" and len(module) > 1:
                 found.append(f"line {node.lineno}: imports from the submodule {node.module}")
             found.extend(f"line {node.lineno}: imports {alias.name}" for alias in node.names if alias.name in names)
+        elif isinstance(node, ast.Import):
+            found.extend(
+                f"line {node.lineno}: imports the submodule {alias.name}"
+                for alias in node.names
+                if alias.name.startswith("crafting_system.actions.")
+            )
         elif isinstance(node, ast.Name) and node.id in names:
             found.append(f"line {node.lineno}: uses {node.id}")
         elif isinstance(node, ast.Attribute) and node.attr in names:
@@ -65,4 +71,5 @@ def test_the_check_catches_what_it_is_meant_to():
     assert violations("from crafting_system.actions import ChaosOrb, catalog\n", names)
     assert violations("from crafting_system.actions.chaos import ChaosOrb\n", names)
     assert violations("import crafting_system.actions as a\nx = a.BenchCraft('m')\n", names)
+    assert violations("import crafting_system.actions.chaos\n", names)
     assert not violations("from crafting_system.actions import Action, catalog\n", names)

@@ -186,6 +186,8 @@ class Abstraction:
         outcomes = prepared.outcomes
         if all(isinstance(part, Fixed) for _, part in outcomes.components):
             return ("fixed", action)
+        if outcomes.fractures and any(isinstance(part, Fixed) for _, part in outcomes.components):
+            raise ValueError("a fixed result cannot fracture a mod: only pool draws do (a Fractured Fossil's)")
         signatures = self._signatures_of(prepared)
         if len(signatures) == 1 and not outcomes.fractures:
             return signatures[0]
@@ -374,6 +376,8 @@ class Abstraction:
         new draws seen through the label); with a fracture one finished mod also becomes fractured.
         """
         outcomes = prepared.outcomes
+        if outcomes.fractures and any(isinstance(part, Fixed) for _, part in outcomes.components):
+            raise ValueError("a fixed result cannot fracture a mod: only pool draws do (a Fractured Fossil's)")
         signatures = self._signatures_of(prepared)
         result: dict[CompressedState, Fraction] = defaultdict(Fraction)
         for (share, part), signature in zip(outcomes.components, signatures):

@@ -5,7 +5,7 @@ The owner requires flexibility across leagues ([#81](https://github.com/Rasslabs
 ## What each change touches
 
 - **New numbers** (a weight, a price, a bench cost): the data pin (`data`, the patch-update skill) or the price file. No code.
-- **A changed rule of an existing method**: its claim in `rules/claims/<family>.yaml` and, if the logic changes, the one action file and its tests. The cost of a use is a claim too (`chaos_orb.cost`, `harvest_reforge.lifeforce_cost`, ...), so a price-name change is a claim edit.
+- **A changed rule of an existing method**: its claim in `rules/claims/<family>.yaml` and, if the logic changes, the one action file and its tests. The cost of an orb or a reforge is a claim too (`chaos_orb.cost`, `harvest_reforge.lifeforce_cost`, ...), so a price-name change there is a claim edit; an essence, a fossil or a bench craft is priced under the name the game data gives it (`essence.cost`, `fossils.cost`, `bench_craft.option_cost`), so a new patch moves them with the data pin.
 - **A brand-new method**: one file in `actions/` that subclasses `Action`, registers its kind with `@kind(...)`, and cites its claims; plus its tests. Nothing in `abstraction`, `cli` or `simulator` changes. A method that does not draw from a pool lists its results with `Finite`; one that draws uses `Outcomes`.
 
 ## The contract

@@ -104,7 +104,8 @@ class ApplyFossils(Action):
         return f"{sockets[len(self.fossils)]} Chaotic Resonator"
 
     def label(self, data: GameData | None = None) -> str:
-        return f"Fossils {' + '.join(self.fossils)}"
+        names = self.fossils if data is None else tuple(_record(data, name).name for name in self.fossils)
+        return f"Fossils {' + '.join(names)}"
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         """The resonator and one of each fossil, priced under its name (the record's, when the set names ids)."""
