@@ -141,7 +141,7 @@ Treating concrete items as one compressed state when every action behaves identi
 
 **Coarse state**:
 A block of compressed states treated as one, used only to bound an answer: some slot kinds are renamed to a coarser kind, never a requirement's status, a slot count or a side. Its members are the compressed states it stands for.
-_Avoid_: abstract state, bucket
+_Avoid_: abstract state
 
 **Family group**:
 Families that no requirement asks for and that no relevant bench craft clashes with, pooled into one kind in a coarse state.
