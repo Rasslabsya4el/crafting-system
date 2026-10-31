@@ -43,6 +43,7 @@ def read_curio(folder):
 
 def read_tally(folder):
     tally = {}
+    seen = set()
     rows = list(csv.reader(open(folder + "/tailoring_tally.csv", encoding="utf8")))
     header = rows[0]
     for r in rows[1:]:
@@ -53,6 +54,9 @@ def read_tally(folder):
             n = int(float(r[2]))
         except ValueError:
             n = 0
+        if (text, n) in seen:  # the sheet repeats a row (same text, same count): count it once
+            continue
+        seen.add((text, n))
         tally[text] = tally.get(text, 0) + n
     return header, tally
 
@@ -224,6 +228,9 @@ def main(dump, data):
     print("   largest Curio armour rows absent from the tally sheet:", [(c, t) for c, t in missing_big])
     absent = sum(c for t, c in ctal.items() if t not in tally) / sum(ctal.values())
     print(f"   share of Curio armour items on rows absent from the tally: {100 * absent:.1f}%")
+    life_res = sum(c for t, c in ctal.items() if t in ("8% increased Explicit Life Modifier magnitudes", "8% increased Explicit Resistance Modifier magnitudes"))
+    exp_lr = float(header[2]) * life_res / sum(ctal.values())
+    print(f"   8% Life + 8% Resistance would be {exp_lr:.0f} of the header's {header[2]} clicks under the Curio shares; the tally rows add to {sum(tally.values())}, gap {float(header[2]) - sum(tally.values()):.0f}")
 
 
 if __name__ == "__main__":

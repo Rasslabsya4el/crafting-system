@@ -122,8 +122,8 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
-  - id: enchantment.quality_enchant_leaves_socket_odds
-    statement: A quality enchant changes only the stat quality gives (weapon Physical Damage, armour Defences); quality still raises the chance of sockets and links with Jeweller's Orbs and Orbs of Fusing by 1% per 1% (the sockets rework of 3.29.0 is ticket #99's). Currency raises quality to 20% at most; catalysts act on jewellery only.
+  - id: enchantment.quality_enchant_changes_only_its_stat
+    statement: A Harvest quality enchant changes only which stat quality gives (weapon Physical Damage, body armour Defences); the other effects of quality on the item are unchanged. Whether quality still scales the socket and link odds of Jeweller's and Fusing Orbs after the 3.29.0 sockets rework is not claimed here (ticket #99 found it unsettled).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Quality#Effect_on_items
     quote: "This does not affect other aspects of quality such as the chance to have a certain number of sockets or links."
@@ -143,7 +143,7 @@ rules:
   # the rest renormalised), which assumes GGG kept every weight. The numbers are reproduced by
   # docs/research/2026-10-31-enchantments-samples.py.
   - id: enchantment.pool_is_weighted
-    statement: The Tempering and Tailoring pools are weighted, not uniform. Players' counts of 7,742 enchanted weapons and 5,078 enchanted body armours from Grand Heist Curio Displays (13,845 wings, 3.23 to 3.27) give chi-square 19,025 against a uniform pool of 136 weapon enchants and 16,460 against 54 body-armour enchants.
+    statement: The enchant pool is weighted, not uniform - measured on Curio Displays, a proxy for the orbs. Players' counts of 7,742 enchanted weapons and 5,078 enchanted body armours found in Grand Heist Curio Displays (13,845 wings, 3.23 to 3.27) give chi-square 19,025 against a uniform pool of 136 weapon enchants and 16,460 against 54 body-armour enchants. That the Tailoring Orb uses the same weights rests on a 291-click armour tally (claim enchantment.tailoring_orb_tally_matches_curio); for the Tempering Orb it is an inference, no weapon tally exists.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt3ptsj/
     quote: "Since 3.23 I've been tracking blueprint curio case rewards with folks in the Prohibited Library Discord. Across 27,155 total items we've seen this mod 18 times on 2,032 enchanted armors and 9 times on 3,016 enchanted weapons."
@@ -151,7 +151,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: enchantment.body_armour_weight_classes
-    statement: The body-armour weights are per kind of enchant, as the Curio counts of the 3.29 pool show (mean count per enchant, 4,318 items). Single 8% tag 480 (Life 752, Defence 690, Resistance 504, Attribute 227, Mana 227); 40% reduced Attribute Requirements 456; 8% plus no colour 44 (15 enchants); six-plus-six hybrid 39; 6% plus 25% less requirements 40; All Sockets Linked 45; extra crafted modifier 36; 15% plus -3 sockets 22; 15% plus 200% requirements 21; 10-12% plus a penalty 18; 6% plus All Sockets Linked 4.4. Within each hybrid kind the counts are what one weight gives.
+    statement: Curio proxy for the Tailoring Orb weights. The Curio-display body-armour counts of the 3.29 pool (4,318 items; not orb results) show weights per kind of enchant (mean count per enchant). Single 8% tag 480 (Life 752, Defence 690, Resistance 504, Attribute 227, Mana 227); 40% reduced Attribute Requirements 456; 8% plus no colour 44 (15 enchants); six-plus-six hybrid 39; 6% plus 25% less requirements 40; All Sockets Linked 45; extra crafted modifier 36; 15% plus -3 sockets 22; 15% plus 200% requirements 21; 10-12% plus a penalty 18; 6% plus All Sockets Linked 4.4. Within each hybrid kind the counts are what one weight gives.
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1dDDMRc3GAE4G0X-lJeLXSHaGtLLNf612nrFiOyCo0Vs/
     quote: "Armor Enchant, All-Time: 8% increased Explicit Life Modifier magnitudes 752; 8% increased Explicit Defence Modifier magnitudes 690; 8% increased Explicit Resistance Modifier magnitudes 504; 40% reduced Attribute Requirements 456; ... Can have 1 additional Crafted Modifier 36 (75 rows, 5,078 items)"
@@ -160,24 +160,24 @@ rules:
     value: {single_8pct_tag: 480, attribute_requirements_40: 456, no_colour: 44, six_six: 39, six_requirements_25: 40, sockets_linked: 45, extra_crafted_modifier: 36, minus_3_sockets: 22, requirements_200: 21, penalty_hybrid: 18, six_linked: 4.4}
 
   - id: enchantment.weapon_weights_depend_on_tag
-    statement: The weapon weights depend on the tag as well as the kind. In the Curio counts the plain 8% enchants run Critical 453, Speed 451, Physical 425, Caster damage 420, Attribute 261, Lightning 171, Fire 163, Cold 146, Ailment 126, Mana 124, Chaos 39 and the 40% reduced requirements 451; the 33 "8% plus no colour" enchants scatter 6.7 times their degrees of freedom around the kind mean 28 and the 28 six-plus-six hybrids 2.8 times around 41. The extra crafted modifier has 32 of 7,742 (0.41%).
+    statement: Curio proxy for the Tempering Orb weights (no weapon orb tally exists, the equality is an inference). The weapon weights depend on the tag as well as the kind. In the Curio-display counts the plain 8% enchants run Critical 453, Speed 451, Physical 425, Caster damage 420, Attribute 261, Lightning 171, Fire 163, Cold 146, Ailment 126, Mana 124, Chaos 39 and the 40% reduced requirements 451; the 33 "8% plus no colour" enchants scatter 6.7 times their degrees of freedom around the kind mean 28 and the 28 six-plus-six hybrids 2.8 times around 41. The extra crafted modifier has 32 of 7,742 (0.41%).
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1dDDMRc3GAE4G0X-lJeLXSHaGtLLNf612nrFiOyCo0Vs/
     quote: "Weapon Enchant, All-Time: 8% increased Explicit Critical Modifier magnitudes 453; 8% increased Explicit Speed Modifier magnitudes 451; 40% reduced Attribute Requirements 451; ... Can have 1 additional Crafted Modifier 32 (181 rows, 7,742 items)"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
-  - id: enchantment.extra_crafted_modifier_rate
-    statement: In Curio Displays the extra-crafted-modifier enchant is 36 of 5,078 enchanted body armours (0.71%, 95% 0.51 to 0.98%) and 32 of 7,742 enchanted weapons (0.41%, 0.29 to 0.58%); on the 3.29 pool 0.83% and 0.48%. Whether the orbs roll it at the same rate is open point O-07.
+  - id: enchantment.extra_crafted_modifier_curio_display_rate
+    statement: How often the extra-crafted-modifier enchant appears on enchanted items found in Curio Displays - not the chance of an orb click. 36 of 5,078 enchanted body armours (0.71%, 95% 0.51 to 0.98%) and 32 of 7,742 enchanted weapons (0.41%, 0.29 to 0.58%); on the 3.29 pool 0.83% and 0.48%. The chance that a Tempering or Tailoring Orb rolls it is unknown and may be 0 (open point O-07); do not read `curio_display_rate` as an orb probability.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt3ptsj/
     quote: "we've seen this mod 18 times on 2,032 enchanted armors and 9 times on 3,016 enchanted weapons"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
-    value: {armour: 0.0083, weapon: 0.0048}
+    value: {curio_display_rate: {armour: 0.0083, weapon: 0.0048}, orb_probability: null}
 
   - id: enchantment.tailoring_orb_tally_matches_curio
-    statement: A tally of 291 Tailoring Orb results (header 330) fits the Curio shares on the 71 enchants it lists, chi-square 8.1 on 5 degrees of freedom; the 8% Life and 8% Resistance rows are missing from it, so the two largest Curio shares are not confirmed.
+    statement: A tally of 263 Tailoring Orb results (header 330; the sheet lists "40% reduced Attribute Requirements" twice with 24 each and one Defence-plus-white-socket row twice, each counted once here) fits the Curio-display shares on the 71 distinct enchants it lists, chi-square 5.0 on 5 degrees of freedom. The 8% Life and 8% Resistance rows are missing from it (about 82 clicks would be expected there under the Curio shares, the unexplained gap to 330 is 67), so the tally does not contradict the Curio shares but cannot confirm the Life and Resistance shares. It is armour only.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1gcr4is/_/ltvy0hq/
     quote: "I've seen this data from someone ... Pretty accurate according to my experience"
@@ -200,16 +200,24 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
-  - id: enchantment.crafted_slot_two_crafts
-    statement: The extra-crafted-modifier enchant allows two crafted modifiers, does not lift the six-modifier limit, and spares the affix slot that the "of Crafting" metamod takes; whether it stacks with that metamod is open point O-06.
+  - id: enchantment.crafted_slot_takes_no_affix_slot
+    statement: The extra-crafted-modifier enchant sits in the enchantment slot, so it does not use an affix slot, where the "of Crafting" metamod ("can have 3 crafted mods") does. Whether the two stack is open point O-06.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1lvfm6b/_/n25ysbt/
     quote: "normally the \"can have 3 crafted mods\" would block one affix slot and can't be annulled because of suffixes cannot be changed."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
+  - id: enchantment.crafted_slot_allows_two_crafts
+    statement: The extra-crafted-modifier enchant allows two crafted modifiers on the item. One player says so in a thread whose other replies agree ("It doesn't bypass the six mod limit"); no test is shown.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt4exla/
+    quote: "It just allows 2x crafted mods"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
   - id: enchantment.tailoring_orb_leaves_memory_strands
-    statement: A Tailoring Orb does not consume Memory Strands (it changes the base, not the modifiers).
+    statement: A Tailoring Orb does not consume Memory Strands (it changes the base, not the modifiers). It rests on this one reply plus the absence of the Tailoring and Tempering Orbs from the wiki's list of strand-spending currencies in the #98 claims (research/memory-strands, d6731e5, `memory_strands.spend_*`); no collision with #98, which does not name these orbs either way.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1pbtw60/_/nrt0pww/
     quote: "They don't"
