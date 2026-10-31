@@ -65,10 +65,6 @@ def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = Non
             "the 4, 5 or 6 mod ratio is admitted for regular items only, so rerolling a jewel is not modelled yet"
         )
         raise OutOfScopeError(f"the item is a jewel ({base.item_class}); {reason}")
-    if item.influences:
-        raise OutOfScopeError(
-            "the item has an influence, and the influence tags of the pool are not modelled yet"
-        )
     refuse_metamods(data, item)
 
 

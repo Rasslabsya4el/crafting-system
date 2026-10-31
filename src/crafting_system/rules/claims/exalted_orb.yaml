@@ -1,0 +1,37 @@
+# Mechanic family: exalted_orb (the Exalted Orb on a rare item). Research ticket #7 (claims CUR-xx) and the
+# decisions D2, D14 of issue #28. The draw is the shared add (actions/add.py): affix_pool.* and affix_draw.*
+# decide the pool, magic_orbs.add_refused_when_no_legal_mod refuses an add with no legal mod. Influence
+# Exalts (Shaper's, Elder's, ...) and the Orb of Conflict are B2.
+rules:
+  - id: exalted_orb.accepts_rare_only
+    statement: An Exalted Orb can be used on a rare item only; the result is the same item with one more mod.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a rare item to apply it. Rare items can have up to six random modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: exalted_orb.adds_one_mod
+    statement: An Exalted Orb adds exactly one random explicit mod to the rare item and keeps every mod it has (the fractured and the crafted ones too); a family already on the item cannot be added. It needs an open prefix or suffix slot, and the mod is drawn like any add (one pool of both sides, a full side closed).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Exalted_Orb#Mechanics
+    quote: "If a modifier is present on the rare item before usage, that modifier cannot be added by an Exalted Orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: exalted_orb.refused_on_corrupted
+    statement: A corrupted item takes no Exalted Orb.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: exalted_orb.cost
+    statement: One use of an Exalted Orb consumes one Exalted Orb item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddModToRare: name "Exalted Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {Exalted Orb: 1}

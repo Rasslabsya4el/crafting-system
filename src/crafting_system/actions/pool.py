@@ -5,19 +5,20 @@ the pool and its side takes a slot (ADR-0021: a "family" is the exclusion set of
 holds no capacity filter: which sides still have room changes during a reroll, so the draw applies
 it. Weights are exact fractions and never rounded.
 
-The item's tags for the spawn weights are the tags of its base: influences are refused before the
-pool is built. Items carry no Memory Strands (`NO_MEMORY_STRANDS`), so a draw is never tier-gated.
+The item's tags for the spawn weights are the tags of its base plus one tag per influence
+(`item_tags`), so the mods of an influence join the pool. Items carry no Memory Strands (`NO_MEMORY_STRANDS`), so a draw is never tier-gated.
 Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); only the explicit
 mods on the item do.
 """
 
-from collections.abc import Callable, Iterable
+from collections import defaultdict
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 from itertools import chain
 
 from crafting_system.data import GameData, Mod
-from crafting_system.items import Item, Side, UnknownBaseError, effective_weight
+from crafting_system.items import Item, Side, UnknownBaseError, effective_weight, spawn_weight, tier_table
 from crafting_system.rules import get_rule
 
 from .errors import OutOfScopeError
@@ -28,6 +29,7 @@ LEVEL_GATE = get_rule("affix_pool.level_gate")
 FAMILY_EXCLUSION = get_rule("affix_draw.family_exclusion")
 IMPLICITS_DO_NOT_BLOCK = get_rule("affix_pool.implicits_do_not_block")
 NO_MEMORY_STRANDS = get_rule("affix_pool.no_memory_strands")
+INFLUENCE_TAGS = get_rule("affix_pool.influence_tags")
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +67,46 @@ class Candidate:
 ModFactor = Callable[[Mod], Fraction]
 
 
+def item_tags(data: GameData, item: Item) -> tuple[str, ...]:
+    """The tags the spawn weights see on `item`: its base's tags, then one `<class key>_<influence key>` per influence.
+
+    Raises `UnknownBaseError` for a base not in the game data and `OutOfScopeError` when the item is
+    influenced and its item class has no admitted class key (`affix_pool.influence_tags`).
+    """
+    base = data.base_items.get(item.base_id)
+    if base is None:
+        raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
+    if not item.influences:
+        return base.tags
+    class_key = INFLUENCE_TAGS.value["classes"].get(base.item_class)
+    if class_key is None:
+        raise OutOfScopeError(
+            f"the item is influenced and its class ({base.item_class}) has no admitted influence class key, "
+            "so the influence mods of its pool are not modelled"
+        )
+    keys = INFLUENCE_TAGS.value["influences"]
+    return (*base.tags, *(f"{class_key}_{keys[influence.value]}" for influence in sorted(item.influences)))
+
+
+def tiers_of(data: GameData, item: Item) -> Mapping[str, int]:
+    """The tier of every mod that can spawn on `item`, counted as `items.tier_table` does but with the influence tags too.
+
+    An item without influence gets `tier_table`. Mods that cannot spawn on it are absent.
+    """
+    if not item.influences:
+        return tier_table(data, item.base_id)
+    tags = item_tags(data, item)
+    groups: dict[tuple[str, str, str], list[Mod]] = defaultdict(list)
+    for mod in data.mods.values():
+        if spawn_weight(mod, tags) > 0:
+            groups[(mod.type, mod.generation_type, mod.domain)].append(mod)
+    table: dict[str, int] = {}
+    for group in groups.values():
+        for mod in group:
+            table[mod.id] = 1 + sum(other.required_level > mod.required_level for other in group)
+    return table
+
+
 def pool_candidates(
     data: GameData, item: Item, max_level: int | None = None, extra: Iterable[Mod] = ()
 ) -> tuple[Candidate, ...]:
@@ -81,6 +123,7 @@ def pool_candidates(
     base = data.base_items.get(item.base_id)
     if base is None:
         raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
+    tags = item_tags(data, item)
     level_limit = item.item_level if max_level is None else min(item.item_level, max_level)
     sides: dict[str, Side] = {}
     candidates: list[Candidate] = []
@@ -89,7 +132,7 @@ def pool_candidates(
     for mod, in_domain in chain(own, joined):
         if not in_domain or mod.generation_type not in Side or mod.required_level > level_limit:
             continue
-        weight = effective_weight(mod, base.tags)
+        weight = effective_weight(mod, tags)
         if weight <= 0 or item.blocks(data, mod):
             continue
         if len(mod.families) != 1:
