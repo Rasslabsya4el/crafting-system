@@ -136,12 +136,12 @@
       "source": "poe.ninja"
     },
     "R05 start ring": {
-      "chaos": 20.0,
+      "chaos": 2.6,
       "detail": {
         "date": "2026-10-31",
         "k": 5,
         "league": "Allflame",
-        "listings": 42,
+        "listings": 602,
         "query": {
           "query": {
             "filters": {
@@ -158,13 +158,6 @@
                   },
                   "mirrored": {
                     "option": "false"
-                  }
-                }
-              },
-              "trade_filters": {
-                "filters": {
-                  "indexed": {
-                    "option": "1week"
                   }
                 }
               },
@@ -194,26 +187,26 @@
               }
             ],
             "status": {
-              "option": "available"
+              "option": "securable"
             }
           },
           "sort": {
             "price": "asc"
           }
         },
-        "query_hash": "83073b16c01c2195574d468bc9790d274ad1ba4f835380fad338cc8d2201e47c",
+        "query_hash": "bdb5af8472203c4fce6f8b9e43ceb12e956dcbe13e28a9a5d64cb7ef21081bca",
         "used": 5
       },
-      "note": "median of the 5 cheapest of 10 fetched listings, 42 on the site, listed within 1week",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 602 on the site, listed any time",
       "source": "trade-api"
     },
     "R10 start boots": {
-      "chaos": 300.0,
+      "chaos": 17.0,
       "detail": {
         "date": "2026-10-31",
         "k": 5,
         "league": "Allflame",
-        "listings": 6,
+        "listings": 156,
         "query": {
           "query": {
             "filters": {
@@ -230,13 +223,6 @@
                   },
                   "mirrored": {
                     "option": "false"
-                  }
-                }
-              },
-              "trade_filters": {
-                "filters": {
-                  "indexed": {
-                    "option": "1week"
                   }
                 }
               },
@@ -266,7 +252,7 @@
               }
             ],
             "status": {
-              "option": "available"
+              "option": "securable"
             },
             "type": "Sorcerer Boots"
           },
@@ -274,19 +260,19 @@
             "price": "asc"
           }
         },
-        "query_hash": "c6e1dc9a3cd3582bf78c38a787d46391701a5794a2a78feaa43771445f2d56e2",
+        "query_hash": "87d77da5263e8e3d965f3a7024311a646d396b09779a66684bc0cc05b29afb1d",
         "used": 5
       },
-      "note": "median of the 5 cheapest of 6 fetched listings, 6 on the site, listed within 1week",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 156 on the site, listed any time",
       "source": "trade-api"
     },
     "R11 start helmet": {
-      "chaos": 372.2,
+      "chaos": 20.0,
       "detail": {
         "date": "2026-10-31",
         "k": 5,
         "league": "Allflame",
-        "listings": 6,
+        "listings": 42,
         "query": {
           "query": {
             "filters": {
@@ -306,13 +292,6 @@
                   }
                 }
               },
-              "trade_filters": {
-                "filters": {
-                  "indexed": {
-                    "option": "1month"
-                  }
-                }
-              },
               "type_filters": {
                 "filters": {
                   "category": {
@@ -329,14 +308,17 @@
                 "filters": [
                   {
                     "disabled": false,
-                    "id": "fractured.stat_2923486259"
+                    "id": "fractured.stat_2923486259",
+                    "value": {
+                      "min": 31
+                    }
                   }
                 ],
                 "type": "and"
               }
             ],
             "status": {
-              "option": "available"
+              "option": "securable"
             },
             "type": "Lion Pelt"
           },
@@ -344,19 +326,19 @@
             "price": "asc"
           }
         },
-        "query_hash": "3b430e44df6b4edf71bf5d21439c4a1700ff3bb7fbfb0642b506296dc2b185ba",
+        "query_hash": "619adea02934d4015fa357f00c4f0aa3c28c5a9032587c3a4cff95ee852c81f2",
         "used": 5
       },
-      "note": "median of the 5 cheapest of 6 fetched listings, 6 on the site, listed within 1month",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 42 on the site, listed any time",
       "source": "trade-api"
     },
     "R12 start amulet": {
-      "chaos": 4.0,
+      "chaos": 1.0,
       "detail": {
         "date": "2026-10-31",
         "k": 5,
         "league": "Allflame",
-        "listings": 18,
+        "listings": 909,
         "query": {
           "query": {
             "filters": {
@@ -373,13 +355,6 @@
                   },
                   "mirrored": {
                     "option": "false"
-                  }
-                }
-              },
-              "trade_filters": {
-                "filters": {
-                  "indexed": {
-                    "option": "1week"
                   }
                 }
               },
@@ -406,17 +381,17 @@
               }
             ],
             "status": {
-              "option": "available"
+              "option": "securable"
             }
           },
           "sort": {
             "price": "asc"
           }
         },
-        "query_hash": "b33b1dbe859f495002a0fddd9221d219cafbdc43b9a213c487744ab278953e28",
+        "query_hash": "71430f3c6f6a1b616e4150414f1519e16fc760a7971b72e67bba77f6447653b2",
         "used": 5
       },
-      "note": "median of the 5 cheapest of 10 fetched listings, 18 on the site, listed within 1week",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 909 on the site, listed any time",
       "source": "trade-api"
     },
     "Regal Orb": {

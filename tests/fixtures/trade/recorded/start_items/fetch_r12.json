@@ -1,0 +1,1642 @@
+{
+ "result": [
+  {
+   "id": "1c0b95cb12df07dac02150457699b5e394e47820bd88c6712547c98b5957f325",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-14T18:12:10Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Victory Torc",
+    "typeLine": "Turquoise Amulet",
+    "baseType": "Turquoise Amulet",
+    "rarity": "Rare",
+    "ilvl": 83,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "+20 to Dexterity and Intelligence",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_2300185227",
+      "mods": [
+       {
+        "level": 20,
+        "magnitudes": [
+         {
+          "min": "16",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "3% increased Spell Damage",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2974417149",
+      "mods": [
+       {
+        "name": "Chanter's",
+        "tier": "P5",
+        "level": 5,
+        "magnitudes": [
+         {
+          "min": "3",
+          "max": "7"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+59 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434",
+      "mods": [
+       {
+        "name": "Chalybeous",
+        "tier": "P5",
+        "level": 60,
+        "magnitudes": [
+         {
+          "min": "55",
+          "max": "59"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "12% increased Rarity of Items found",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3917489142",
+      "mods": [
+       {
+        "name": "of Raiding",
+        "tier": "S3",
+        "level": 30,
+        "magnitudes": [
+         {
+          "min": "11",
+          "max": "14"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+38% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Maelstrom",
+        "tier": "S3",
+        "level": 60,
+        "magnitudes": [
+         {
+          "min": "36",
+          "max": "41"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_2974417149",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3917489142",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_2300185227",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "aba5a5566fd162895841809b4551f020ec74274fd5ad1991fa257e44c0af59f5",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-07-28T04:31:15Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Torment Choker",
+    "typeLine": "Agate Amulet",
+    "baseType": "Agate Amulet",
+    "rarity": "Rare",
+    "ilvl": 83,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "+20 to Strength and Intelligence",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_1535626285",
+      "mods": [
+       {
+        "level": 20,
+        "magnitudes": [
+         {
+          "min": "16",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "+13 to all Attributes",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1379411836",
+      "mods": [
+       {
+        "name": "of the Comet",
+        "tier": "S6",
+        "level": 33,
+        "magnitudes": [
+         {
+          "min": "13",
+          "max": "16"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+37 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434",
+      "mods": [
+       {
+        "name": "Cerulean",
+        "tier": "P9",
+        "level": 29,
+        "magnitudes": [
+         {
+          "min": "35",
+          "max": "39"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "0.61% of Physical Attack Damage Leeched as Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3593843976",
+      "mods": [
+       {
+        "name": "of the Lamprey",
+        "tier": "S2",
+        "level": 60,
+        "magnitudes": [
+         {
+          "min": "0.6",
+          "max": "0.8"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+20% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Storm",
+        "tier": "S6",
+        "level": 25,
+        "magnitudes": [
+         {
+          "min": "18",
+          "max": "23"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_1379411836",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3593843976",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1535626285",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "0cf91ba6fcfbdf3885a65f4322abce8ad5605a3b061bc052d01b78c03880546a",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-07T00:41:56Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Rapture Heart",
+    "typeLine": "Lapis Amulet",
+    "baseType": "Lapis Amulet",
+    "rarity": "Rare",
+    "ilvl": 84,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "+20 to Intelligence",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_328541901",
+      "mods": [
+       {
+        "level": 7,
+        "magnitudes": [
+         {
+          "min": "20",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "Adds 9 to 19 Physical Damage to Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3032590688",
+      "mods": [
+       {
+        "name": "Tempered",
+        "tier": "P2",
+        "level": 64,
+        "magnitudes": [
+         {
+          "min": "9",
+          "max": "12"
+         },
+         {
+          "min": "19",
+          "max": "22"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+33 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Sanguine",
+        "tier": "P7",
+        "level": 11,
+        "magnitudes": [
+         {
+          "min": "25",
+          "max": "39"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Regenerate 49 Life per second",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3325883026",
+      "mods": [
+       {
+        "name": "of Ryslatha",
+        "tier": "S2",
+        "level": 68,
+        "magnitudes": [
+         {
+          "min": "48.1",
+          "max": "64"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+42% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Lightning",
+        "tier": "S2",
+        "level": 72,
+        "magnitudes": [
+         {
+          "min": "42",
+          "max": "45"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3032590688",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_3325883026",
+        [
+         2
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_328541901",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "8e9e8d5b655c2809c7433f25053a67590fb6f5ab47863188365ee17e8b5fbf3e",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-16T09:53:42Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Pandemonium Gorget",
+    "typeLine": "Turquoise Amulet",
+    "baseType": "Turquoise Amulet",
+    "rarity": "Rare",
+    "ilvl": 83,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "+24 to Dexterity and Intelligence",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_2300185227",
+      "mods": [
+       {
+        "level": 20,
+        "magnitudes": [
+         {
+          "min": "16",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "+25 to Dexterity",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3261801346",
+      "mods": [
+       {
+        "name": "of the Falcon",
+        "tier": "S6",
+        "level": 33,
+        "magnitudes": [
+         {
+          "min": "23",
+          "max": "27"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+18 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Prodigy",
+        "tier": "S7",
+        "level": 22,
+        "magnitudes": [
+         {
+          "min": "18",
+          "max": "22"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Adds 1 to 2 Cold Damage to Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4067062424",
+      "mods": [
+       {
+        "name": "Frosted",
+        "tier": "P9",
+        "level": 2,
+        "magnitudes": [
+         {
+          "min": "1",
+          "max": "1"
+         },
+         {
+          "min": "2",
+          "max": "2"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "27% increased Armour",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2866361420",
+      "mods": [
+       {
+        "name": "Thickened",
+        "tier": "P3",
+        "level": 56,
+        "magnitudes": [
+         {
+          "min": "24",
+          "max": "28"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+47 to maximum Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3489782002",
+      "mods": [
+       {
+        "name": "Resplendent",
+        "tier": "P2",
+        "level": 74,
+        "magnitudes": [
+         {
+          "min": "44",
+          "max": "47"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+20% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Storm",
+        "tier": "S6",
+        "level": 25,
+        "magnitudes": [
+         {
+          "min": "18",
+          "max": "23"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3261801346",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_328541901",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_4067062424",
+        [
+         4
+        ]
+       ],
+       [
+        "explicit.stat_2866361420",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3489782002",
+        [
+         3
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_2300185227",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "3ccc42b74730499edbe51d17a1c1a7cf2abb4c532d5b392fc95974579cb83c0f",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-07-26T17:14:45Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Brood Beads",
+    "typeLine": "Seaglass Amulet",
+    "baseType": "Seaglass Amulet",
+    "rarity": "Rare",
+    "ilvl": 78,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "12% faster start of Energy Shield Recharge",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_1782086450",
+      "mods": [
+       {
+        "level": 93,
+        "magnitudes": [
+         {
+          "min": "10",
+          "max": "15"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "+34 to Dexterity",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3261801346",
+      "mods": [
+       {
+        "name": "of the Leopard",
+        "tier": "S4",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "33",
+          "max": "37"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+12 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Healthy",
+        "tier": "P8",
+        "level": 5,
+        "magnitudes": [
+         {
+          "min": "10",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "0.66% of Physical Attack Damage Leeched as Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3237948413",
+      "mods": [
+       {
+        "name": "of Parching",
+        "tier": "S1",
+        "level": 70,
+        "magnitudes": [
+         {
+          "min": "0.6",
+          "max": "0.8"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+45% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Lightning",
+        "tier": "S2",
+        "level": 72,
+        "magnitudes": [
+         {
+          "min": "42",
+          "max": "45"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3261801346",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3237948413",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1782086450",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "2629d530a4b57868c310d219c1868514820ad9429ad91486fa74fe5918ccd028",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-09-29T14:50:09Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Tempest Pendant",
+    "typeLine": "Coral Amulet",
+    "baseType": "Coral Amulet",
+    "rarity": "Rare",
+    "ilvl": 81,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "Regenerate 3.1 Life per second",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_3325883026",
+      "mods": [
+       {
+        "level": 2,
+        "magnitudes": [
+         {
+          "min": "2",
+          "max": "4"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "+23 to all Attributes",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1379411836",
+      "mods": [
+       {
+        "name": "of the Galaxy",
+        "tier": "S4",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "21",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+42 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Savant",
+        "tier": "S3",
+        "level": 66,
+        "magnitudes": [
+         {
+          "min": "38",
+          "max": "42"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Adds 2 to 5 Physical Damage to Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3032590688",
+      "mods": [
+       {
+        "name": "Burnished",
+        "tier": "P8",
+        "level": 13,
+        "magnitudes": [
+         {
+          "min": "2",
+          "max": "3"
+         },
+         {
+          "min": "4",
+          "max": "5"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+37% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Maelstrom",
+        "tier": "S3",
+        "level": 60,
+        "magnitudes": [
+         {
+          "min": "36",
+          "max": "41"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_1379411836",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_328541901",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3032590688",
+        [
+         2
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_3325883026",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "6dd3b310f4ea19571613d8f9f9342019e0ca314838bba5c55f8d656ef10bc988",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-29T02:23:41Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Loath Noose",
+    "typeLine": "Paua Amulet",
+    "baseType": "Paua Amulet",
+    "rarity": "Rare",
+    "ilvl": 78,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "20% increased Mana Regeneration Rate",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_789117908",
+      "mods": [
+       {
+        "level": 2,
+        "magnitudes": [
+         {
+          "min": "20",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "+26 to Strength",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4080418644",
+      "mods": [
+       {
+        "name": "of the Lion",
+        "tier": "S6",
+        "level": 33,
+        "magnitudes": [
+         {
+          "min": "23",
+          "max": "27"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Adds 8 to 14 Cold Damage to Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4067062424",
+      "mods": [
+       {
+        "name": "Frigid",
+        "tier": "P6",
+        "level": 29,
+        "magnitudes": [
+         {
+          "min": "6",
+          "max": "9"
+         },
+         {
+          "min": "13",
+          "max": "16"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+38 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434",
+      "mods": [
+       {
+        "name": "Cerulean",
+        "tier": "P9",
+        "level": 29,
+        "magnitudes": [
+         {
+          "min": "35",
+          "max": "39"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+44% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Lightning",
+        "tier": "S2",
+        "level": 72,
+        "magnitudes": [
+         {
+          "min": "42",
+          "max": "45"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_4080418644",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_4067062424",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         2
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_789117908",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "6fd7146f33e6ba07ad7028112567441b0e5968b52b06930ed9b424ef01af252f",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-09-06T18:40:20Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Fate Idol",
+    "typeLine": "Agate Amulet",
+    "baseType": "Agate Amulet",
+    "rarity": "Rare",
+    "ilvl": 83,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "+18 to Strength and Intelligence",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_1535626285",
+      "mods": [
+       {
+        "level": 20,
+        "magnitudes": [
+         {
+          "min": "16",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "Adds 7 to 10 Cold Damage to Attacks",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4067062424",
+      "mods": [
+       {
+        "name": "Icy",
+        "tier": "P7",
+        "level": 21,
+        "magnitudes": [
+         {
+          "min": "5",
+          "max": "7"
+         },
+         {
+          "min": "10",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+35% to Global Critical Strike Multiplier",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3556824919",
+      "mods": [
+       {
+        "name": "of Destruction",
+        "tier": "S1",
+        "level": 74,
+        "magnitudes": [
+         {
+          "min": "35",
+          "max": "38"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Regenerate 4.6 Life per second",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3325883026",
+      "mods": [
+       {
+        "name": "of the Lizard",
+        "tier": "S7",
+        "level": 7,
+        "magnitudes": [
+         {
+          "min": "2.1",
+          "max": "8"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+45% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Lightning",
+        "tier": "S2",
+        "level": 72,
+        "magnitudes": [
+         {
+          "min": "42",
+          "max": "45"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_4067062424",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3556824919",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3325883026",
+        [
+         1
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1535626285",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "aa8da5f4edd87aaac1671629163a3f495ea80dc964676bb8712d50ff714d76ec",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-01T11:46:26Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Entropy Rosary",
+    "typeLine": "Agate Amulet",
+    "baseType": "Agate Amulet",
+    "rarity": "Rare",
+    "ilvl": 79,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "+16 to Strength and Intelligence",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_1535626285",
+      "mods": [
+       {
+        "level": 20,
+        "magnitudes": [
+         {
+          "min": "16",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "+46 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Virtuoso",
+        "tier": "S2",
+        "level": 74,
+        "magnitudes": [
+         {
+          "min": "43",
+          "max": "50"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "9% increased Cast Speed",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2891184298",
+      "mods": [
+       {
+        "name": "of Nimbleness",
+        "tier": "S3",
+        "level": 15,
+        "magnitudes": [
+         {
+          "min": "9",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+23 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434",
+      "mods": [
+       {
+        "name": "Cobalt",
+        "tier": "P12",
+        "level": 11,
+        "magnitudes": [
+         {
+          "min": "20",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+31% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Tempest",
+        "tier": "S4",
+        "level": 49,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_2891184298",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         2
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1535626285",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "4738b66d605e6cbed01683bd41294f9596b2e7d8bfb6c5bc34bb742261477f6f",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-09-06T19:57:27Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 1,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Carrion Scarab",
+    "typeLine": "Agate Amulet",
+    "baseType": "Agate Amulet",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "implicitMods": [
+     {
+      "description": "+16 to Strength and Intelligence",
+      "domain": "implicit",
+      "hash": "stat.implicit.stat_1535626285",
+      "mods": [
+       {
+        "level": 20,
+        "magnitudes": [
+         {
+          "min": "16",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "explicitMods": [
+     {
+      "description": "11% increased Spell Damage",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2974417149",
+      "mods": [
+       {
+        "name": "Mage's",
+        "tier": "P4",
+        "level": 20,
+        "magnitudes": [
+         {
+          "min": "8",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "21% increased maximum Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2482852589",
+      "mods": [
+       {
+        "name": "Unassailable",
+        "tier": "P1",
+        "level": 77,
+        "magnitudes": [
+         {
+          "min": "20",
+          "max": "22"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "0.39% of Physical Attack Damage Leeched as Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3593843976",
+      "mods": [
+       {
+        "name": "of the Remora",
+        "tier": "S3",
+        "level": 50,
+        "magnitudes": [
+         {
+          "min": "0.2",
+          "max": "0.4"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+17% to Lightning Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Squall",
+        "tier": "S7",
+        "level": 13,
+        "magnitudes": [
+         {
+          "min": "12",
+          "max": "17"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_2974417149",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_2482852589",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3593843976",
+        [
+         0
+        ]
+       ]
+      ],
+      "implicit": [
+       [
+        "implicit.stat_1535626285",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  }
+ ]
+}

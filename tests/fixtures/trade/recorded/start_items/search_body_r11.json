@@ -1,0 +1,53 @@
+{
+ "query": {
+  "status": {
+   "option": "securable"
+  },
+  "stats": [
+   {
+    "type": "and",
+    "filters": [
+     {
+      "id": "fractured.stat_2923486259",
+      "disabled": false,
+      "value": {
+       "min": 31
+      }
+     }
+    ]
+   }
+  ],
+  "filters": {
+   "type_filters": {
+    "filters": {
+     "rarity": {
+      "option": "rare"
+     },
+     "category": {
+      "option": "armour.helmet"
+     }
+    }
+   },
+   "misc_filters": {
+    "filters": {
+     "ilvl": {
+      "min": 84
+     },
+     "corrupted": {
+      "option": "false"
+     },
+     "mirrored": {
+      "option": "false"
+     },
+     "fractured_item": {
+      "option": "true"
+     }
+    }
+   }
+  },
+  "type": "Lion Pelt"
+ },
+ "sort": {
+  "price": "asc"
+ }
+}

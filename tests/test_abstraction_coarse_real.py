@@ -1,4 +1,4 @@
-"""The coarse state on the real R05 ring: the block counts of ADR-0023 (ticket #125). Needs the cached dump; skips without it, as CI does.
+"""The coarse state on the real R05 ring: the block counts of ADR-0023 (ticket #125). Needs the cached dump; skips without it (CI fetches it, ticket #165).
 
 R05 is a ring (item level 86) with a fractured All Attributes, the goal Life and the forced Strength of the
 Deafening Essence of Rage, and every ring craft of the bench (141 in 3.29.3.3) with Remove Crafted Mods enabled.
