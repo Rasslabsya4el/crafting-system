@@ -83,7 +83,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: veiled.mod_placeholder_records
-    statement: The veiled placeholders are 22 mods of the veiled domain with no spawn weight; VeiledPrefix and VeiledSuffix are the generic ones, the others are named after a Syndicate member (signature, with their own offer pools). Each carries a veiled_mod_type and a veiled_mod_seed (1 to 30000).
+    statement: The veiled placeholders are 22 mods of the veiled domain with no spawn weight; VeiledPrefix and VeiledSuffix are the generic ones, the other 20 are named after a Syndicate member (18, signature, with their own offer pools) or belong to unique Abyss items (2). Each carries a veiled_mod_type and a veiled_mod_seed (1 to 30000).
     source_kind: datamined
     url: https://repoe-fork.github.io/mods.json
     quote: 'VeiledPrefix: domain "veiled", generation_type "prefix", groups ["VeiledPrefix"], spawn_weights [], stats veiled_mod_type 1, veiled_mod_seed 1..30000'
