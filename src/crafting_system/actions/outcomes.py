@@ -50,8 +50,8 @@ def retained_item(data: GameData, item: Item, forced: Mod | None = None) -> Item
 class Outcomes:
     """What a reroll of `retained` can leave behind.
 
-    `retained` is the item before any mod is drawn: a rare item with only the fractured mods of the
-    original and, for an essence, the forced mod (rolled at its lowest values: `sample` rolls it).
+    `retained` is the item before any mod is drawn: for a reroll a rare item (magic for an Alteration)
+    with only the fractured mods of the original and, for an essence, the forced mod (rolled at its lowest values: `sample` rolls it).
     `pool` is the candidate pool for the draws on it, `totals` the probability of each total number
     of mods of the finished item (kept mods included), `tag` the tag of the guaranteed mod of a
     Harvest reforge, None for a Chaos Orb or an essence, and `forced` the id of the forced mod of an
@@ -104,6 +104,17 @@ class Outcomes:
     ) -> "Outcomes":
         """The outcomes of drawing from a `pool` already built onto `retained` (see `retained_item`)."""
         return cls(data, retained, pool, total_distribution(), tag, None if forced is None else forced.id)
+
+    @classmethod
+    def fill(cls, data: GameData, retained: Item, totals: Mapping[int, Fraction]) -> "Outcomes":
+        """The outcomes of drawing onto `retained`, which keeps every mod it holds, up to a total.
+
+        `totals` is the probability of each total number of mods of the finished item (the mods of
+        `retained` included), so one add is `{len(retained.mods) + 1: 1}` and a draw never takes a
+        mod away. The pool is built on `retained`, whose rarity decides the capacity. Use `add_one_mod`
+        and `draw_onto` of `add.py`; `add_one_mod` refuses an add that has no legal mod.
+        """
+        return cls(data, retained, build_pool(data, retained), totals, None, None)
 
     @property
     def free(self) -> Mapping[Side, int]:
