@@ -206,12 +206,12 @@ def test_r14_the_finishing_crafts_on_a_bow(data):
     ]
 
 
-def test_r14_a_bow_of_item_level_78_cannot_take_the_plus_two_support_gems_craft(data):
+def test_r14_a_bow_of_item_level_78_takes_the_finishing_crafts_of_the_route(data):
     bow = next(base for base in data.base_items.values() if base.item_class == "Bow" and "Thicket" in base.name)
     item = Item.build(data, base_id=bow.id, item_level=78, rarity=Rarity.RARE, mods=(rolled(data, "IncreasedLife1"),))
 
-    with pytest.raises(NotApplicableError, match="needs item level 80, and the item has 78"):
-        BenchCraft("JunMaster2LocalIncreaseSocketedSupportGemLevel2").outcomes(data, item)
-    assert BenchCraft("JunMaster2ChaosDamageOverTimeMultiplier2").outcomes(data, item).chance_all(
-        ["JunMaster2ChaosDamageOverTimeMultiplier2"]
-    ) == 1
+    for mod_id in (
+        "JunMaster2LocalIncreaseSocketedSupportGemLevel2",
+        "JunMaster2ChaosDamageOverTimeMultiplier3",
+    ):
+        assert BenchCraft(mod_id).outcomes(data, item).chance_all([mod_id]) == 1

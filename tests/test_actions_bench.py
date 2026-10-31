@@ -103,11 +103,8 @@ def test_a_craft_works_on_a_magic_item_with_a_free_side():
     assert BenchCraft(PREFIXES_LOCK).outcomes(DATA, magic).chance_all([LIFE, PREFIXES_LOCK]) == 1
 
 
-def test_a_craft_works_at_exactly_the_required_item_level_and_not_below():
-    assert BenchCraft(DAMAGE_1).outcomes(DATA, belt(roll(LIFE), item_level=72)).chance_all([DAMAGE_1]) == 1
-
-    with pytest.raises(NotApplicableError, match=rf"{DAMAGE_1} needs item level 72, and the item has 71"):
-        BenchCraft(DAMAGE_1).outcomes(DATA, belt(roll(LIFE), item_level=71))
+def test_a_craft_does_not_look_at_the_item_level():
+    assert BenchCraft(DAMAGE_1).outcomes(DATA, belt(roll(LIFE), item_level=1)).chance_all([DAMAGE_1]) == 1
 
 
 def test_a_craft_ignores_influence():
@@ -179,6 +176,33 @@ def test_an_item_holding_the_multimod_is_out_of_scope_until_ticket_68():
 
     with pytest.raises(OutOfScopeError, match="multimod"):
         BenchCraft(DAMAGE_1).outcomes(DATA, start)
+
+
+def test_an_item_with_no_mod_is_out_of_scope_for_a_craft():
+    with pytest.raises(OutOfScopeError, match="holds no mod"):
+        BenchCraft(DAMAGE_1).outcomes(DATA, belt(rarity=Rarity.MAGIC))
+    with pytest.raises(OutOfScopeError, match="holds no mod"):
+        BenchCraft(DAMAGE_1).outcomes(DATA, belt(rarity=Rarity.RARE))
+
+
+def test_an_item_that_fails_validation_raises_its_item_error():
+    from crafting_system.items import ExplicitMod, UnknownBaseError, UnknownModError
+
+    unknown_mod = Item(base_id=BELT, item_level=86, rarity=Rarity.RARE, mods=(ExplicitMod("Nope", 1, (1,)),))
+    with pytest.raises(UnknownModError):
+        BenchCraft(DAMAGE_1).outcomes(DATA, unknown_mod)
+    with pytest.raises(UnknownModError):
+        RemoveCraftedMods().outcomes(DATA, unknown_mod)
+    unknown_base = Item(base_id="Nope", item_level=86, rarity=Rarity.RARE)
+    with pytest.raises(UnknownBaseError):
+        BenchCraft(DAMAGE_1).outcomes(DATA, unknown_base)
+
+
+def test_a_bench_option_that_names_a_mod_missing_from_the_data_is_a_value_error():
+    mods = {key: mod for key, mod in DATA.mods.items() if key != DAMAGE_1}
+
+    with pytest.raises(ValueError, match="names a mod that is not in the game data"):
+        BenchCraft(DAMAGE_1).outcomes(dataclasses.replace(DATA, mods=mods), belt(roll(LIFE)))
 
 
 def test_a_game_refusal_comes_before_an_out_of_scope_one():
@@ -267,9 +291,10 @@ def test_remove_crafted_mods_refuses_an_item_class_the_bench_does_not_offer_it_f
         RemoveCraftedMods().outcomes(data, belt(roll(LIFE), crafted(DAMAGE_1)))
 
 
-def test_remove_crafted_mods_on_a_magic_item_left_without_a_mod_is_out_of_scope():
-    with pytest.raises(OutOfScopeError, match="magic"):
-        RemoveCraftedMods().outcomes(DATA, belt(crafted(PREFIXES_LOCK), rarity=Rarity.MAGIC))
+@pytest.mark.parametrize("rarity", [Rarity.MAGIC, Rarity.RARE])
+def test_remove_crafted_mods_on_an_item_left_without_a_mod_is_out_of_scope(rarity):
+    with pytest.raises(OutOfScopeError, match=f"{rarity}.*only crafted mods"):
+        RemoveCraftedMods().outcomes(DATA, belt(crafted(PREFIXES_LOCK), rarity=rarity))
 
 
 # --- costs and the list of crafts -----------------------------------------------------------------

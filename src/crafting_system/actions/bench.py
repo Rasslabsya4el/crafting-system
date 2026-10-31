@@ -25,9 +25,9 @@ FOLLOW_AFFIX_RULES = get_rule("bench_craft.crafts_follow_affix_rules")
 ONE_CRAFTED_MOD = get_rule("bench_craft.one_crafted_mod_by_default")
 METAMODS_ARE_CRAFTED_MODS = get_rule("bench_craft.metamods_are_crafted_mods")
 REFUSED_ON_CORRUPTED = get_rule("bench_craft.refused_on_corrupted")
-NEEDS_ITEM_LEVEL = get_rule("bench_craft.needs_item_level")
 EVERY_CRAFT_UNLOCKED = get_rule("bench_craft.every_craft_unlocked")
-ONLY_MOD_OPTIONS = get_rule("bench_craft.rerolls_not_b1_actions")
+REROLLS_NOT_B1 = get_rule("bench_craft.rerolls_not_b1_actions")
+OTHER_OPTIONS_NOT_MOD_CRAFTS = get_rule("bench_craft.other_options_not_mod_crafts")
 REMOVES_ALL_CRAFTED_MODS = get_rule("bench_craft.remove_crafted_mods_removes_all")
 VALUES_UNIFORM_INTEGERS = get_rule("affix_pool.values_uniform_integers")
 
@@ -131,24 +131,27 @@ class BenchCraft:
     def outcomes(self, data: GameData, item: Item) -> BenchOutcomes:
         """The outcome of crafting the mod onto `item`.
 
-        Raises `NotApplicableError` for a corrupted item, an item class the option is not offered
-        for, an item level below the mod's required level, a family already on the item, a full
-        side, or an item that already holds a crafted mod (in this order), and `OutOfScopeError`
-        for a normal item (no admitted rule says what a craft does there) and for an item that
-        holds the multimod `Can have up to 3 Crafted Modifiers`, whose limit is not modelled yet.
+        A corrupted item and an item class the option is not offered for are checked first, then a
+        normal item or an item with no mod, then the rest. Raises `NotApplicableError` for a
+        corrupted item, a class not offered, a family already on the item, a full side, and an item
+        that already holds a crafted mod; `OutOfScopeError` for a normal item or an item with no mod
+        (no admitted rule says what a craft does there) and for an item that holds the multimod
+        `Can have up to 3 Crafted Modifiers`, whose limit is not modelled yet. An item that fails
+        `Item.validate` raises its `ItemError`.
         """
         option = self.option(data)
-        mod = data.mods[self.mod_id]
+        mod = data.mods.get(self.mod_id)
+        if mod is None:
+            raise ValueError(f"the bench option for {self.mod_id} names a mod that is not in the game data")
+        item.validate(data)
         _refuse_if_corrupted(item, "bench craft")
         _refuse_if_class_not_offered(data, item, option, f"the craft {self.mod_id}")
-        if item.item_level < mod.required_level:
-            raise NotApplicableError(
-                f"the craft {self.mod_id} needs item level {mod.required_level}, and the item has {item.item_level}"
-            )
         if item.rarity is Rarity.NORMAL:
             raise OutOfScopeError(
                 "the item is normal; no admitted rule says what a bench craft does to a normal item"
             )
+        if not item.mods:
+            raise OutOfScopeError(f"the item is {item.rarity} and holds no mod, which no admitted rule covers")
         for entry in item.mods:
             if conflicts(data.mods[entry.mod_id], mod) or entry.mod_id == mod.id:
                 raise NotApplicableError(
@@ -189,17 +192,20 @@ class RemoveCraftedMods:
         """The outcome of removing every crafted mod of `item`.
 
         Raises `NotApplicableError` for a corrupted item, an item class the option is not offered
-        for, or an item with no crafted mod, and `OutOfScopeError` for a magic item that would be
-        left with no mod (no admitted rule says what it becomes).
+        for, or an item with no crafted mod, and `OutOfScopeError` for a magic or rare item that would be
+        left with no mod (no admitted rule says what it becomes). An item that fails `Item.validate`
+        raises its `ItemError`.
         """
+        item.validate(data)
         _refuse_if_corrupted(item, "Remove Crafted Mods")
         _refuse_if_class_not_offered(data, item, self.option(data), "Remove Crafted Mods")
         if not item.crafted_mods:
             raise NotApplicableError("the item holds no crafted mod, so there is nothing to remove")
         kept = tuple(entry for entry in item.mods if not entry.crafted)
-        if item.rarity is Rarity.MAGIC and not kept:
+        if not kept:
             raise OutOfScopeError(
-                "the item is magic and holds only crafted mods; no admitted rule says what it becomes without a mod"
+                f"the item is {item.rarity} and holds only crafted mods; "
+                "no admitted rule says what it becomes without a mod"
             )
         return BenchOutcomes(data, item.changed(data, mods=kept), None)
 
