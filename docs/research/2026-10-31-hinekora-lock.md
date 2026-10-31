@@ -88,6 +88,8 @@ Harvest crafts are the Horticrafting Station (R7) and are not previewed. So only
 
 Searches run for this section: archive title search `Hinekora`, r/pathofexile, 2023-08-15 to 2023-10-15 (43 posts; the first 8,000 characters of the list read; later windows from 2023-10-07 and all windows to 2026-10-31 timed out or were rate-limited); direct reads of the four threads above (the wiki's own Reddit reference is 18ewhsi). No full-text comment search was possible.
 
+A second live researcher job (terra, `20261031-160158-178d`, 16:02 to about 16:20, the brief of section 9) had a run slot but no shell tool: its web search answered 429, and its raw Arctic Shift requests (posts by title `Hinekora`, r/pathofexile, 2023-08-01..2023-12-31, 2023-08-15..2023-10-15, 2023-10-15..2023-12-31) all answered 429 over ten minutes with nothing opened, so I stopped it. The shared reader waits out 429s but only a session with a shell can use it; the rerun of the not-found points should run the reader from a shell session, not through the researcher.
+
 ### What the sources do not say (checked and absent)
 
 - Whether the previews of two different currencies on one lock are **independent**. The wiki says only that each is fixed; none of the four Reddit threads read compares two previews (not found).
