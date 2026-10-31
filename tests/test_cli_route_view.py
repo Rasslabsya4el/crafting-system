@@ -33,19 +33,24 @@ from route_view_support import (
 from targets_support import EXAMPLES
 
 from crafting_system.actions import HarvestReforge
-from crafting_system.cli import evaluate_route, main, make_plan, parse_route
+from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, parse_route
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._report import build_report
 from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
 from crafting_system.cli._route_view import (
+    Field,
+    Line,
     Page,
     RouteInput,
+    RouteSection,
+    StepRow,
     build_section,
     chance_text,
     count,
     given_route_input,
+    merge_sections,
     money,
     route_input,
     write_route_page,
@@ -112,6 +117,10 @@ def junk_decides(state, ab):
 
 def dead_end_on_junk(state, ab):
     return None if len(state.slots) >= 2 else "Chaos Orb"
+
+
+def chaos_at_the_start_only(state, ab):
+    return "Chaos Orb" if not state.slots else None
 
 
 START = belt(FRACTURED_COLD, roll("LifeRegeneration1"))
@@ -186,8 +195,8 @@ def test_r12_is_a_buy_and_one_step_that_loops_until_the_gem(r12_plan):
     assert [row.title for row in section.rows] == ["Buy R12 start amulet", "Harvest Reforge Lightning"]
     assert labels_of(buy) == ["Accepts", "Cost per use"]
     assert lines_of(buy, "Cost per use") == ["4 c"]
-    assert labels_of(reforge) == ["Goal", "Chance per use", "Cost per use", "Uses on average", "Step cost", "On failure"]
-    assert lines_of(reforge, "Goal") == [GEM_TEXT]
+    assert labels_of(reforge) == ["Goal", "Accepts", "Chance per use", "Cost per use", "Uses on average", "Step cost", "On failure"]
+    assert lines_of(reforge, "Goal") == [f"{GEM_TEXT} · T1"]
     (chance,) = lines_of(reforge, "Chance per use")
     assert float(chance.strip("≈%")) / 100 == pytest.approx(q, rel=0.06)
     assert lines_of(reforge, "Cost per use") == ["50 × Primal Crystallised Lifeforce 0.5 c"]
@@ -215,7 +224,7 @@ def test_the_target_card_of_the_goal_row_is_the_target_item(r12_plan):
 
     assert card.name == "Paua Amulet"
     assert card.prefixes[0].text == GEM_TEXT
-    assert card.suffixes[0].text == "+#% to Lightning Resistance" and card.suffixes[0].note.startswith("any of ")
+    assert card.suffixes[0].text == "+#% to Lightning Resistance" and card.suffixes[0].note == "any tier"
 
 
 def run_command(tmp_path: Path, *arguments: str, cache: Path | None = None):
@@ -249,15 +258,28 @@ def test_golden_r12_through_the_command_with_a_buy_spec(tmp_path, stats_cache, c
     assert_golden("r12_fixture", page.read_text(encoding="utf-8"))
 
 
-def test_golden_r12_with_the_given_route_stacks_a_second_section(tmp_path, capsys):
+def test_golden_r12_with_a_given_route_that_is_the_same_draws_one_section(tmp_path, capsys):
     code, out = run_command(tmp_path, "--route", str(ROUTE))
 
     assert code == 0
     html = (out.parent / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
     assert_golden("r12_fixture_given_route", html)
+    assert "<h2>" not in html and "<nav>" not in html
+    ids = re.findall(r' id="([^"]+)"', html)
+    assert len(ids) == len(set(ids))
+    assert set(re.findall(r'href="#([^"]+)"', html)) <= set(ids)
+
+
+def test_golden_a_given_route_that_differs_is_a_second_section_with_its_differing_steps(two_leaf_plan):
+    policy = build_section(route_input(two_leaf_plan), DATA, anchor="policy")
+    drawn = build_section(given(two_leaf_plan, RESTART_ROUTE), DATA, prefix="g-", anchor="given", route_field=False)
+
+    html = render_page(Page("Test page", merge_sections(policy, drawn, "Restart on a lone gem")))
+
+    assert_golden("given_route_differs", html)
     assert html.count("<h2>") == 2 and "<nav>" in html
     ids = re.findall(r' id="([^"]+)"', html)
-    assert len(ids) == len(set(ids))  # the two sections' anchors do not clash
+    assert len(ids) == len(set(ids))
     assert set(re.findall(r'href="#([^"]+)"', html)) <= set(ids)
 
 
@@ -327,7 +349,7 @@ def test_the_titles_are_the_exact_actions():
     assert [row.title for row in removal] == [f"Buy {START_NAME}", "Benchcraft: Remove Crafted Mods", "Chaos Orb"]
     assert lines_of(removal[1], "Goal") == ["crafted mods removed"]
     assert lines_of(removal[1], "Chance per use") == []  # one outcome of chance 1 says nothing
-    assert lines_of(bench, "Goal") == [f"{DATA.mods[DAMAGE].text} (crafted)"]  # the crafted mod, named once
+    assert lines_of(bench, "Goal") == [f"{DATA.mods[DAMAGE].text} · crafted"]  # the crafted mod, named once
 
 
 def test_a_bench_row_shows_the_price_of_each_resource_and_the_sum():
@@ -344,9 +366,143 @@ def test_a_policy_taking_one_action_in_look_alike_states_is_one_row_and_two_acti
 
     assert [row.title for row in one.rows] == [f"Buy {START_NAME}", "Chaos Orb"]
     assert [row.title for row in two.rows] == [f"Buy {START_NAME}", "Essence of Hysteria", "Chaos Orb"]
-    chances = [field for field in two.rows[1].fields if field.label == "Chance per use"][0]
-    assert [line.text.split(":")[0] for line in chances.lines] == ["the target", "the item of step 3"]
-    assert [line.href for line in chances.lines] == [None, "#s3"]  # the outcome that leads to the other row links to it
+
+
+def test_a_miss_into_a_later_numbered_row_reads_under_on_failure_with_its_chance_not_as_a_chance_per_use():
+    section = build_section(INPUTS["branch"](), DATA)  # the essence gives life 84% of the time, else the item goes on to the Chaos Orb step
+
+    essence = section.rows[1]
+    assert lines_of(essence, "Chance per use") == ["≈84%"]
+    failure = [field for field in essence.fields if field.label == "On failure"][0]
+    assert failure.tone == "warn"
+    assert [(line.text, line.href, line.anchor) for line in failure.lines] == [("the item of step 3 (≈16%)", "#s3", "")]
+
+
+def test_a_craft_step_with_several_outcomes_says_what_it_accepts_and_a_sure_one_does_not():
+    branch = build_section(INPUTS["branch"](), DATA)
+    bench = build_section(INPUTS["bench"](), DATA)
+
+    essence, chaos = branch.rows[1], branch.rows[2]
+    assert labels_of(essence)[:3] == ["Goal", "Accepts", "Chance per use"]  # between the goal and the chances
+    assert lines_of(essence, "Accepts") == ["4 or 5 mods", "other mods: any"]
+    assert lines_of(chaos, "Accepts") == ["4 or 5 mods", "other mods: any"]
+    assert all("Accepts" not in labels_of(row) for row in bench.rows[1:])  # a bench craft has one outcome
+
+
+def test_the_route_field_of_the_goal_card_is_left_out_when_the_page_has_a_heading_with_it():
+    one = build_section(INPUTS["branch"](), DATA)
+    stacked = build_section(INPUTS["branch"](), DATA, route_field=False)
+
+    assert [field.label for field in one.goal.fields][0] == "Route"
+    assert "Route" not in [field.label for field in stacked.goal.fields]
+
+
+def test_the_command_with_a_route_the_same_as_the_policy_draws_it_once_and_says_so(tmp_path):
+    code, out = run_command(tmp_path, "--route", str(ROUTE))
+
+    html = (out.parent / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
+    assert code == 0 and html.count("<section") == 1
+    assert "Same as the given route (R12, PoE Vault guide)" in html and html.count(">Route<") == 1
+
+
+def test_a_given_route_the_same_as_the_policy_is_not_drawn_again(r12_plan):
+    policy = build_section(route_input(r12_plan), DATA, anchor="policy", route_field=False)
+    given_section = build_section(
+        given(r12_plan, ROUTE.read_text(encoding="utf-8")), DATA, prefix="g-", anchor="given", route_field=False
+    )
+
+    (merged,) = merge_sections(policy, given_section, "the guide")
+
+    assert merged.rows == policy.rows
+    assert [field.label for field in merged.goal.fields][:2] == ["Route", "Given route"]
+    assert lines_of_card(merged.goal, "Given route") == ["Same as the given route (the guide)"]
+
+
+def lines_of_card(goal, label: str) -> list[str]:
+    return [line.text for field in goal.fields if field.label == label for line in field.lines]
+
+
+def test_a_given_route_that_differs_is_drawn_with_its_differing_steps_only_and_links_to_the_shared_ones(two_leaf_plan):
+    policy = build_section(route_input(two_leaf_plan), DATA, anchor="policy")
+    given_section = build_section(
+        given(two_leaf_plan, RESTART_ROUTE), DATA, prefix="g-", anchor="given", route_field=False
+    )
+
+    drawn, guide = merge_sections(policy, given_section, "restart route")
+
+    assert drawn is policy
+    assert [row.number for row in guide.rows] == [row.number for row in given_section.rows if row.number != 1]  # the buy is shared
+    assert lines_of_card(guide.goal, "Same as the planner") == ["step 1: the planner's step 1"]
+    (shared,) = [field for field in guide.goal.fields if field.label == "Same as the planner"]
+    assert shared.lines[0].href == "#s1"
+    hrefs = [line.href for row in guide.rows for field in row.fields for line in field.lines if line.href]
+    assert all(href.startswith(("#s", "#g-s")) for href in hrefs)
+    html = render_page(Page("x", (drawn, guide)))
+    assert all(f'id="{anchor}"' in html for anchor in {href[1:] for href in hrefs})
+
+
+def hand_section(rows, prefix: str = "") -> RouteSection:
+    """A section of made-up rows `(title, [(text, target number or None)])`, the item card after each from the branch policy."""
+    base = build_section(INPUTS["branch"](), DATA)
+    made = tuple(
+        StepRow(
+            number,
+            title,
+            (Field("On failure", tuple(Line(text, None if to is None else f"#{prefix}s{to}", "→ step 9" if to else "") for text, to in lines), "warn"),)
+            if lines
+            else (),
+            base.rows[0].after,
+            f"{prefix}s{number}",
+        )
+        for number, (title, lines) in enumerate(rows, 1)
+    )
+    return RouteSection("Hand", base.goal, made, "given" if prefix else "policy")
+
+
+def test_a_step_with_the_same_words_but_another_follow_up_is_not_the_planners_step():
+    policy = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Alchemy", [])])
+    given_route = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Scour", []), ("Alchemy", [])], "g-")
+    # the given route's Chaos says the same words, but its follow-up is a Scour, not the planner's Alchemy
+
+    drawn, guide = merge_sections(policy, given_route, "the guide")
+
+    assert [row.title for row in guide.rows] == ["Chaos", "Scour"]  # Chaos is not shared; Buy and Alchemy are
+    assert lines_of_card(guide.goal, "Same as the planner") == ["step 1: the planner's step 1", "step 4: the planner's step 3"]
+
+
+def test_a_shared_step_is_named_and_linked_by_the_planners_number_even_when_the_numbers_differ():
+    policy = hand_section([("Buy", []), ("A", []), ("B", [("life lost (1%)", 2)])])
+    given_route = hand_section([("Buy", []), ("B", [("life lost (1%)", 3)]), ("A", []), ("C", [("a miss (9%)", 2)])], "g-")
+
+    drawn, guide = merge_sections(policy, given_route, "the guide")
+
+    assert [row.title for row in guide.rows] == ["C"]
+    (line,) = [line for field in guide.rows[0].fields for line in field.lines]
+    assert (line.href, line.anchor) == ("#s3", "→ step 3")  # the given B is the planner's step 3
+    shared = [field for field in guide.goal.fields if field.label == "Same as the planner"][0]
+    assert [(l.text, l.href) for l in shared.lines] == [
+        ("step 1: the planner's step 1", "#s1"),
+        ("step 2: the planner's step 3", "#s3"),
+        ("step 3: the planner's step 2", "#s2"),
+    ]
+
+
+def test_two_given_rows_that_repeat_one_planner_row_are_not_the_same_route():
+    policy = hand_section([("Buy", []), ("A", []), ("B", [])])
+    given_route = hand_section([("Buy", []), ("A", []), ("A", [])], "g-")
+
+    assert len(merge_sections(policy, given_route, "the guide")) == 2
+
+
+def test_above_the_cap_the_rows_have_no_uses_or_step_costs_and_the_goal_card_says_so(monkeypatch):
+    monkeypatch.setattr(_route_flow, "MAX_STEPS", 1)
+
+    section = build_section(INPUTS["branch"](), DATA)
+
+    assert all("Uses on average" not in labels_of(row) and "Step cost" not in labels_of(row) for row in section.rows)
+    assert lines_of(section.rows[1], "Cost per use") == ["1 × Essence of Hysteria 3 c"]
+    note = [field for field in section.goal.fields if field.label == "Note"][0]
+    assert note.lines[0].text.startswith("how often a step is used and what it costs are left out")
 
 
 @pytest.mark.parametrize("name", INPUTS)
@@ -401,7 +557,8 @@ def test_a_restart_row_buys_again_and_goes_back_to_the_first_step(two_leaf_plan)
     assert lines_of(restart, "Cost per use") == ["4 c"]
     failure = restart.fields[-1].lines[0]
     assert failure.text.startswith("the start item bought again (100%)") and failure.href == "#s2"
-    assert restart.after.suffixes[0].text == "empty" and restart.after.properties == ("Rare", "item level 84")
+    # a bought rare: the other mods are not known
+    assert restart.after.suffixes[0].text == "any mod or empty" and restart.after.properties == ("Rare", "item level 84")
     assert section.goal.fields[0].lines[0].text == "Given route: Restart on a lone gem"
 
 
@@ -430,6 +587,18 @@ def test_a_step_from_which_no_run_finishes_says_so_without_cost_numbers(two_leaf
     assert row.title.startswith("Restart")
     assert lines_of(row, "Uses on average") == ["never finishes from here"]
     assert "Step cost" not in labels_of(row) and row.cost is None
+    assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"] == "never finishes"
+
+
+def test_a_step_whose_every_exit_is_a_gap_says_it_never_finishes_without_cost_numbers():
+    inp = hand_input(belt(FRACTURED_COLD), (COLD_REQ, HYSTERIA_REQ, LIFE), chaos_at_the_start_only)  # a Chaos Orb cannot give the essence mod
+
+    section = build_section(inp, DATA)
+
+    chaos, gap = section.rows[1], section.rows[-1]
+    assert chaos.title == "Chaos Orb" and gap.title == "No action"
+    assert lines_of(chaos, "Uses on average") == ["never finishes from here"]
+    assert "Step cost" not in labels_of(chaos) and chaos.cost is None
     assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"] == "never finishes"
 
 

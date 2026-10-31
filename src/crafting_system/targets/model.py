@@ -18,7 +18,7 @@ class Requirement:
     """One mod wanted on the item.
 
     Exactly one of `family` (a family id) and `stat` (English stat text) is the selector as the owner
-    wrote it; `mod_ids` is every mod that selector counts. `min_tier` is the worst tier accepted, so
+    wrote it; `mod_ids` is every mod that selector counts, or the one mod a `mod:` key names. `min_tier` is the worst tier accepted, so
     2 accepts tiers 1 and 2. `min_roll` has one entry per stat of the mod, None where any value will
     do. Rolls are the raw numbers of the game data.
     """
