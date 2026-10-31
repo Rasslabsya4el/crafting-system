@@ -65,6 +65,11 @@ class Candidate:
 ModFactor = Callable[[Mod], Fraction]
 
 
+_POOL_LIMIT = 256
+# (id(data), base, item level, max level, mod ids of the item, mod ids of extra) -> (data, candidates).
+_POOLS: dict[tuple, tuple[GameData, tuple[Candidate, ...]]] = {}
+
+
 def pool_candidates(
     data: GameData, item: Item, max_level: int | None = None, extra: Iterable[Mod] = ()
 ) -> tuple[Candidate, ...]:
@@ -77,7 +82,31 @@ def pool_candidates(
 
     Raises `OutOfScopeError` for a candidate that does not have exactly one family (none is
     drawable in domain `item` in 3.29.3.3) and for a family whose candidates sit on both sides.
+    A result is cached per game data object and key; a call that raises is not cached.
     """
+    extra = tuple(extra)
+    key = (
+        id(data),
+        item.base_id,
+        item.item_level,
+        max_level,
+        tuple(sorted(entry.mod_id for entry in item.mods)),
+        tuple(mod.id for mod in extra),
+    )
+    hit = _POOLS.get(key)
+    if hit is not None and hit[0] is data:
+        return hit[1]
+    candidates = _compute_pool_candidates(data, item, max_level, extra)
+    if key not in _POOLS and len(_POOLS) >= _POOL_LIMIT:
+        del _POOLS[next(iter(_POOLS))]
+    _POOLS[key] = (data, candidates)
+    return candidates
+
+
+def _compute_pool_candidates(
+    data: GameData, item: Item, max_level: int | None, extra: tuple[Mod, ...]
+) -> tuple[Candidate, ...]:
+    """`pool_candidates` without the cache; `extra` is already a tuple."""
     base = data.base_items.get(item.base_id)
     if base is None:
         raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
