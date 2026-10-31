@@ -53,15 +53,31 @@ Done when `pin` and `verify` print the five files and `PIN.json` names the new v
 
 ## 6. Update the claims
 
-For each claim of the impact report and of the table: open its `url`, read the new source, and decide. The claim still holds: `patch_verified` becomes the new version and `date_checked` today. The claim's value changed: new `statement`, `value` and `quote`, the new `patch_verified`, and the old value in the commit message (`was X on <old version>`), because a claim has no history field. A rule you cannot source stays on the research ticket of step 4.
+For each claim of the impact report and of the table: open its `url`, read the new source, and decide. The claim still holds: `patch_verified` becomes the new version and `date_checked` today. The claim's value changed: new `statement`, `value` and `quote`, the new `patch_verified`, and the old version of the claim as an entry of its `history` list, oldest first (the old `statement` and/or `value`, `held_until` = the `patch_verified` the claim had before, and the `source_kind`, `url` and `quote` of the source that showed the change). A rule you cannot source stays on the research ticket of step 4.
 
-List the claims that were not verified on the new version:
-
-```bash
-uv run python -c "from crafting_system.rules.registry import load_registry as r; [print(x.id, x.source_kind.value, x.patch_verified) for x in r().values() if x.patch_verified != '<new version>']"
+```yaml
+    patch_verified: "3.29.4.1"
+    value: 3
+    history:
+      - statement: A Chaos Orb costs 2 Chaos.
+        value: 2
+        held_until: "3.29.3.3"
+        source_kind: official
+        url: https://www.poewiki.net/wiki/Version_3.29.4
+        quote: "Chaos Orb now costs 3 Chaos."
 ```
 
-Done when each claim of the table is changed or has a ticket, and the registry loads (`uv run pytest -q tests/test_rules_registry.py`).
+The registry refuses a malformed entry with the file, the claim and the line. Code never reads `history`; the claim's `value` stays what it was.
+
+List the claims that were not verified on the pinned version (the one `PIN.json` names, so run it after step 5):
+
+```bash
+uv run python -m crafting_system.rules stale
+```
+
+One line per claim: id, `patch_verified`, source kind, the `url` to re-read. A claim you re-read and found unchanged gets the new `patch_verified` and drops off the list.
+
+Done when each claim of the table is changed or has a ticket, `rules stale` lists only claims that have a ticket (or nothing), and the registry loads (`uv run pytest -q tests/test_rules_registry.py tests/test_rules_history.py`).
 
 ## 7. Prices
 
@@ -95,6 +111,6 @@ Done when the PR body holds that table.
 
 ## 10. Open the PR
 
-Body: the diff summary, the table of step 3, the claims changed (with the old value of each, since the registry keeps no history), the tickets opened, the benchmark table, the minutes each step took. Turn Auto-fix on; the main chat merges.
+Body: the diff summary, the table of step 3, the claims changed (the old value of each is in its `history`), the claims `rules stale` still lists and why, the tickets opened, the benchmark table, the minutes each step took. Turn Auto-fix on; the main chat merges.
 
 Done when the PR is open with that body and `Closes #<ticket>` of the update.
