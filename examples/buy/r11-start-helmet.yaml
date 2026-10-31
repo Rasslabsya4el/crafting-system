@@ -1,0 +1,17 @@
+# R11 start item (docs/research/2026-10-30-5-reference-routes.md): a rare Evasion helmet with a
+# fractured Chaos Resistance. The target file is examples/targets/r11-reservation-helmet.yaml; its
+# `start_price` is the `name` below.
+#
+# The base is the one of the target (a Dexterity helmet, whose armour is Evasion Rating), and the
+# item level is the one of the target, so the item bought is the item the planner starts from.
+name: R11 start helmet
+base_type: Lion Pelt
+category: armour.helmet
+rarity: rare
+item_level_min: 84
+corrupted: false
+mods:
+  # Any tier of Chaos Resistance passes the target, so there is no minimum. The English text of the
+  # trade site is used because the family has mods with other texts.
+  - stat: "+#% to Chaos Resistance"
+    fractured: true

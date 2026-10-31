@@ -7,7 +7,10 @@ runs the policy on concrete items with the simulator and compares the mean with 
 
 The report and the command line are one module here (ADR-0018 lists them as `report` / `cli`):
 
-* `make_plan(data, target, prices)`: targets -> prices -> abstraction -> solver -> risk, as a `Plan`.
+* `make_plan(data, target, prices)`: targets -> prices -> abstraction -> solver -> risk, as a `Plan`. Its
+  model offers, for the target (`offers_for`): a Chaos Orb, the Harvest reforge of Lightning, every essence
+  the item class takes, Remove Crafted Mods, the bench crafts whose mod counts toward a requirement (the
+  others are left out and listed, see `offers_for`), and `restart`, buying the start item again.
 * `build_report(plan, data)`, `render_text(report)`, `policy_document(report)`: the outputs.
 * `verify(data, plan)`: the simulator against the computed mean (a normal-approximate interval).
 * `weight_share`, `start_shares`: the guide's single-draw weight shares from the pool builder.
@@ -23,7 +26,18 @@ file says under the target's `start_price` name (a trade-API price, a hand overr
 """
 
 from ._main import main
-from ._offers import DroppedOffer, Offer, PricedOffer, default_offers, price_offers
+from ._offers import (
+    RESTART,
+    BuyStartItem,
+    DroppedOffer,
+    LeftOut,
+    Offer,
+    OfferSet,
+    PricedOffer,
+    default_offers,
+    offers_for,
+    price_offers,
+)
 from ._plan import Plan, PlanError, StartPrice, make_plan
 from ._report import Report, build_report, policy_document, render_text
 from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
@@ -31,10 +45,14 @@ from ._shares import WeightShare, start_shares, weight_share
 from ._verify import Verification, verify
 
 __all__ = [
+    "RESTART",
+    "BuyStartItem",
     "Divergence",
     "DroppedOffer",
     "Gap",
+    "LeftOut",
     "Offer",
+    "OfferSet",
     "Plan",
     "PlanError",
     "PricedOffer",
@@ -53,6 +71,7 @@ __all__ = [
     "load_route",
     "main",
     "make_plan",
+    "offers_for",
     "parse_route",
     "policy_document",
     "price_offers",

@@ -1,0 +1,79 @@
+# Target for benchmark route R11: an Evasion helmet with a fractured Chaos Resistance, the
+# Mana Reservation Efficiency suffix of an Essence of Loathing, and Evasion and Life prefixes.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Fractured chaos-reservation helmet", docs/research/
+# 2026-10-30-5-reference-routes.md, id R11):
+#   1. Buy a helmet with Chaos Resistance fractured. Use Essences of Loathing, at least Shrieking,
+#      until it has an open suffix and Evasion and Life prefixes you are happy with.
+#   2. Finish with a crafted Resistance or Attribute.
+#
+# How the vague words of the guide are read (each reading is a choice and can be changed here):
+#   * "Evasion Helmet": a helmet whose armour is Evasion Rating (the Dexterity helmets, the game's
+#     dex_armour tag). The base below is Lion Pelt.
+#   * "Fractured Chaos Resistance": any tier of Chaos Resistance, fractured in the start item.
+#   * "High Evasion": the percentage prefix "#% increased Evasion Rating", tier 3 or better (68% or
+#     more, of seven tiers). The flat "+# to Evasion Rating" prefix and the hybrids (evasion with life,
+#     evasion with stun recovery) are not counted. Rolled, not from the bench.
+#   * "+# to Maximum Life": any tier of Life, rolled, not from the bench.
+#   * "Mana Reservation Efficiency from Loathing, at least Shrieking": see the entry below.
+#   * The two implicits of the guide (reduced mana cost of attacks, physical taken as lightning) are
+#     Eldritch implicits, a different part of the work, and are left out. So is "finish with a
+#     crafted Resistance or Attribute": the guide gives no number for it ("as needed"), so it asks
+#     nothing of the item here.
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+base: Lion Pelt
+
+# The item level of the helmet, a whole number from 1 to 100. The guide gives none; 84 lets every
+# tier of every mod appear, as in the R12 example.
+item_level: 84
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
+# [] means none.
+influence: []
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The fractured Chaos Resistance, every tier. The fractured mod of the start item counts.
+  - family: ChaosResistance
+
+  # "#% increased Mana Reservation Efficiency of Skills", the suffix of Essence of Loathing. The
+  # guide wants Shrieking or better, whose mod rolls (7-8)% (Wailing gives (3-4)%, Screaming (5-6)%).
+  # The target cannot say that yet: an essence mod has no tier of its own, so min_tier cannot tell
+  # Shrieking from Wailing, and a roll limit on a mod the planner draws (min_roll: 7) waits for
+  # ticket #71. Until then this accepts any tier of the mod, so the planner may also use the
+  # Screaming essence (5-6%), which the guide excludes: R11's solver-versus-guide comparison is
+  # therefore not like for like (the solver can win just by using the cheaper, weaker essence). As an ordinary
+  # modifier of a helmet this mod exists only as an essence mod (the Eldritch implicits of the same
+  # family are another part of the work), so no other source can satisfy it by accident.
+  - family: ReducedManaReservationsCost
+
+  # High Evasion: the percentage prefix, tier 3 or better (68% or more). Rolled, not from the bench.
+  - family: DefencesPercent
+    min_tier: 3
+    not_crafted: true
+
+  # Life, any tier, rolled by the essence reforge, not crafted.
+  - family: IncreasedLife
+    not_crafted: true
+
+# Where the crafting starts: a helmet that already has Chaos Resistance fractured.
+start_item:
+  rarity: rare
+  mods:
+    # The mod is named by its game-data id: ChaosResist3 is "+(16-20)% to Chaos Resistance", tier 4
+    # of Chaos Resistance on this base. Any tier would do for the target; this one is a middle
+    # tier. The tier is taken as written, so it was checked by hand against the game data (3.29.3.3).
+    - mod: ChaosResist3
+      tier: 4
+      # One whole number per stat of the mod, in the units of the game data.
+      values: [18]
+      # Locked in place by a Fracturing Orb.
+      fractured: true
+
+# The name the start item has in the price file, which is what it costs to get: the `name` of
+# examples/buy/r11-start-helmet.yaml.
+start_price: R11 start helmet

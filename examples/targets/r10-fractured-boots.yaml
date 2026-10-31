@@ -1,0 +1,83 @@
+# Target for benchmark route R10: Intelligence-base boots with a fractured Movement Speed, an
+# Intelligence suffix from a Shrieking Essence of Spite, a Life prefix and a crafted
+# "#% chance to Avoid Elemental Ailments".
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Fractured Movement Speed intelligence boots", docs/research/
+# 2026-10-30-5-reference-routes.md, id R10):
+#   1. Buy boots with Movement Speed fractured. Use Shrieking Essence of Spite until the boots have
+#      48 Intelligence, Life and an open suffix.
+#   2. Craft "#% chance to Avoid Elemental Ailments" at the crafting bench in the open suffix.
+#
+# How the vague words of the guide are read (each reading is a choice and can be changed here):
+#   * "Intelligence base": boots whose armour is Energy Shield (they carry the game's int_armour tag).
+#     The base below is Sorcerer Boots; every Intelligence boot base has the same pool of mods.
+#   * "30%+ increased Movement Speed (fractured)": the fractured mod is a Movement Speed prefix
+#     of tier 2 (30%) or tier 1 (35%).
+#   * "48 Intelligence from Shrieking Essence of Spite": the essence adds "+(43-50) to Intelligence"
+#     (mod Intelligence8). On boots that is also the game's own tier 2 of Intelligence, so "tier 2 or
+#     better" is exactly "at least what the Shrieking essence gives". Tier 1 (51-55) is a bonus.
+#   * "Life": any tier of Life, rolled (not from the bench).
+#   * "an open suffix for the craft": the item has three suffixes; the fractured prefix, the Life
+#     prefix and the essence suffix leave room, so the planner may craft there.
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+base: Sorcerer Boots
+
+# The item level of the boots, a whole number from 1 to 100. The guide gives none; 84 lets every
+# tier of every mod appear, as in the R12 example.
+item_level: 84
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
+# [] means none.
+influence: []
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The fractured Movement Speed. A family is the game's own name for the group of mods that exclude
+  # each other. min_tier: 2 accepts tier 2 (30%) and tier 1 (35%), so "30%+". The fractured mod of
+  # the start item counts, and no other mod of this family can be added next to it.
+  # not_crafted: true refuses a Movement Speed copy that came from the crafting bench.
+  - family: MovementVelocity
+    min_tier: 2
+    not_crafted: true
+
+  # The Intelligence of the Shrieking Essence of Spite (see the readings above): tier 2 or better.
+  # not_crafted: true keeps the weak bench Intelligence (up to 30) out.
+  - family: Intelligence
+    min_tier: 2
+    not_crafted: true
+
+  # Life, any tier, rolled by the essence reforge, not crafted.
+  # The guide says "preferably at least 70" Life, i.e. a roll of 70 or more (tier 4 and up). That is
+  # a roll limit on a mod the planner draws, which the planner cannot model yet: it waits for
+  # ticket #71 (Divine Orb and roll requirements on drawn mods). When #71 lands, add
+  #   min_roll: 70
+  # to this entry.
+  - family: IncreasedLife
+    not_crafted: true
+
+  # "#% chance to Avoid Elemental Ailments", the bench craft. The bench copy counts, so there is
+  # no not_crafted mark here. This mod is also the one a Loathing essence forces on boots, so it
+  # can come from the essence or from the bench; the guide crafts it.
+  - family: AvoidElementalStatusAilments
+
+# Where the crafting starts: boots that already have Movement Speed fractured.
+start_item:
+  rarity: rare
+  mods:
+    # The mod is named by its game-data id: MovementVelocity5 is "30% increased Movement Speed",
+    # tier 2 of Movement Speed on this base. The tier is taken as written, so it was checked by hand
+    # against the game data (3.29.3.3).
+    - mod: MovementVelocity5
+      tier: 2
+      # One whole number per stat of the mod, in the units of the game data.
+      values: [30]
+      # Locked in place by a Fracturing Orb.
+      fractured: true
+
+# The name the start item has in the price file, which is what it costs to get: the `name` of
+# examples/buy/r10-start-boots.yaml.
+start_price: R10 start boots
