@@ -4,11 +4,14 @@ import random
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
+from functools import cached_property
 
 from crafting_system.data import GameData, Mod, conflicts
 from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
+from .catalog import kind
+from .contract import Action, Adds, Fixed, Reads
 from .draw import Outcome, refuse_metamods
 from .errors import NotApplicableError
 
@@ -18,6 +21,7 @@ FRACTURED_MODS_STAY = get_rule("scouring.fractured_mods_stay")
 RARITY_FOLLOWS_MODS_LEFT = get_rule("scouring.rarity_follows_mods_left")
 KEEPS_INFLUENCE = get_rule("scouring.keeps_influence")
 REFUSED_ON_CORRUPTED = get_rule("magic_orbs.refused_on_corrupted")
+COST = get_rule("scouring.cost")
 
 ONE = Fraction(1)
 
@@ -32,6 +36,15 @@ class ScourOutcomes:
 
     data: GameData
     retained: Item
+
+    @cached_property
+    def components(self) -> tuple[tuple[Fraction, Fixed], ...]:
+        """One part with probability 1: the scoured item (see `ActionOutcomes`)."""
+        return ((ONE, Fixed(self.data, self.retained)),)
+
+    @property
+    def fractures(self) -> bool:
+        return False
 
     def chance_all(self, mod_ids: Iterable[str]) -> Fraction:
         """1 when the scoured item holds all of `mod_ids`, 0 when it does not (two of one family included).
@@ -58,8 +71,20 @@ class ScourOutcomes:
 
 
 @dataclass(frozen=True)
-class ScouringOrb:
+class ScouringOrb(Action):
     """One Orb of Scouring."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return "Orb of Scouring"
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        return dict(COST.value)
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads.nothing()
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds.removal(keeps_crafted=False)
 
     def outcomes(self, data: GameData, item: Item) -> ScourOutcomes:
         """The outcome of using the orb on `item`.
@@ -82,3 +107,8 @@ class ScouringOrb:
         else:
             rarity = Rarity.RARE
         return ScourOutcomes(data, item.changed(data, rarity=rarity, mods=kept))
+
+
+@kind("scouring-orb", order=80, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+def _scouring_orb(data: GameData, item: Item):
+    yield ScouringOrb()

@@ -7,14 +7,18 @@ currency names and counts, for the price layer. Every craft counts as unlocked.
 """
 
 import random
+import re
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
+from functools import cached_property
 
 from crafting_system.data import BenchOption, GameData, Mod, conflicts
 from crafting_system.items import ExplicitMod, Item, Metamod, Rarity, Side
 from crafting_system.rules import get_rule
 
+from .catalog import kind
+from .contract import Action, Adds, Fixed, Reads
 from .draw import Outcome
 from .errors import NotApplicableError, OutOfScopeError
 
@@ -41,6 +45,16 @@ class CurrencyCost:
 
     currency: str
     count: int
+
+
+def without_ranges(text: str) -> str:
+    """A mod text with its roll ranges as `#`: "+(6-11) to Strength" -> "+# to Strength"."""
+    return re.sub(r"\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)", "#", text)
+
+
+def _one_line(text: str) -> str:
+    """A mod text on one line: some mods read over two lines, such as a Life craft that also regenerates Mana."""
+    return " / ".join(part.strip() for part in text.splitlines() if part.strip())
 
 
 def _cost(data: GameData, option: BenchOption) -> tuple[CurrencyCost, ...]:
@@ -78,6 +92,19 @@ class BenchOutcomes:
     retained: Item
     added: Mod | None
 
+    @cached_property
+    def components(self) -> tuple[tuple[Fraction, Fixed], ...]:
+        """One part with probability 1: the finished item, the added mod at its lowest values (see `ActionOutcomes`)."""
+        if self.added is None:
+            return ((ONE, Fixed(self.data, self.retained)),)
+        low = tuple(min(stat.min, stat.max) for stat in self.added.stats)
+        crafted = ExplicitMod(self.added.id, CRAFTED_TIER, low, crafted=True)
+        return ((ONE, Fixed(self.data, self.retained.changed(self.data, mods=(*self.retained.mods, crafted)))),)
+
+    @property
+    def fractures(self) -> bool:
+        return False
+
     def chance_all(self, mod_ids: Iterable[str]) -> Fraction:
         """1 when the finished item holds all of `mod_ids`, 0 when it does not (two of one family included).
 
@@ -112,10 +139,37 @@ class BenchOutcomes:
 
 
 @dataclass(frozen=True)
-class BenchCraft:
+class BenchCraft(Action):
     """One bench craft, named by the crafted mod it adds ("JunMaster2AllDamage2_", a metamod's id, ...)."""
 
     mod_id: str
+
+    @property
+    def variant(self) -> str:
+        return self.mod_id
+
+    def label(self, data: GameData | None = None) -> str:
+        if data is None:
+            raise ValueError("a bench craft is named by the text of its mod, so it needs the data")
+        mod = data.mods.get(self.mod_id)
+        if mod is None:
+            raise ValueError(f"the craft {self.mod_id} names a mod that is not in the game data")
+        return f"Bench craft {_one_line(without_ranges(mod.text or mod.name))}"
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        if data is None:
+            raise ValueError("a bench craft is priced from the bench data, so it needs the data")
+        return {entry.currency: entry.count for entry in self.cost(data)}
+
+    def reads(self, data: GameData) -> Reads:
+        """A craft is refused when its mod shares a family with a mod on the item, so it tells those families apart."""
+        mod = data.mods.get(self.mod_id)
+        if mod is None:
+            raise ValueError(f"the craft {self.mod_id} names a mod that is not in the game data")
+        return Reads(junk=True, families=frozenset(mod.families), block_invariant=True)
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds(named=frozenset({self.mod_id}), crafted=True, draws=False)
 
     def option(self, data: GameData) -> BenchOption:
         """The bench option that adds this mod; `ValueError` when the data has none."""
@@ -174,8 +228,23 @@ class BenchCraft:
 
 
 @dataclass(frozen=True)
-class RemoveCraftedMods:
+class RemoveCraftedMods(Action):
     """The bench's Remove Crafted Mods: removes every crafted mod, metamods included."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return "Remove Crafted Mods"
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        if data is None:
+            raise ValueError("Remove Crafted Mods is priced from the bench data, so it needs the data")
+        return {entry.currency: entry.count for entry in self.cost(data)}
+
+    def reads(self, data: GameData) -> Reads:
+        """It reads how many mods are left, not which: the count of the junk, no family."""
+        return Reads(junk=True, families=frozenset(), needs_crafted=True, block_invariant=True)
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds.removal(keeps_crafted=False)
 
     def option(self, data: GameData) -> BenchOption:
         """The bench option that removes crafted mods; `ValueError` when the data has none."""
@@ -217,3 +286,19 @@ def bench_crafts(data: GameData) -> tuple[BenchCraft, ...]:
         for option in data.bench_options
         if option.actions.add_explicit_mod is not None
     )
+
+
+@kind("bench-craft", order=40)
+def _bench_crafts(data: GameData, item: Item):
+    """Every craft the bench offers for the item class."""
+    base = data.base_items.get(item.base_id)
+    item_class = base.item_class if base is not None else None
+    for craft in bench_crafts(data):
+        if item_class in craft.option(data).item_classes:
+            yield craft
+
+
+@kind("remove-crafted-mods", order=50)
+def _remove_crafted_mods(data: GameData, item: Item):
+    if any(option.actions.remove_crafted_mods for option in data.bench_options):
+        yield RemoveCraftedMods()

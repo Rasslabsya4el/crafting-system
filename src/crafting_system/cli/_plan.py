@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
-from crafting_system.actions import ActionError, BenchCraft, RemoveCraftedMods
+from crafting_system.actions import ActionError
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
@@ -20,7 +20,7 @@ from crafting_system.risk import RiskReport, evaluate
 from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
-from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers
+from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
 
 
 class PlanError(ValueError):
@@ -190,15 +190,15 @@ def make_plan(
     if not priced:
         names = sorted({name for drop in dropped for name in drop.missing})
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
-    if not target.start_item.crafted_mods and not any(isinstance(p.offer.action, BenchCraft) for p in priced):
-        priced = tuple(p for p in priced if not isinstance(p.offer.action, RemoveCraftedMods))
+    kept = usable_actions(data, target.start_item, [p.offer.action for p in priced])
+    priced = tuple(p for p in priced if p.offer.action in kept)
     if price_of_start.chaos > 0:
         bought = price_of_start.name or "start item"
         restart = Offer(RESTART, BuyStartItem(target.start_item), {bought: 1}, shares=False)
         part = (bought, 1, price_of_start.chaos, price_of_start.source)
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,)))
 
-    enabled = [p.offer.action for p in priced if isinstance(p.offer.action, (BenchCraft, RemoveCraftedMods))]
+    enabled = [p.offer.action for p in priced if p.offer.action.reads(data).junk]
     abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled)
     start = abstraction.compress(target.start_item)
     model = _Model(abstraction, start, priced)

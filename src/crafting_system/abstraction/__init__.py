@@ -1,10 +1,12 @@
 """Design D, compression, family types, pool signatures, the cached kernel (ADR-0009). May import only: data, rules, items, actions.
 
 An `Abstraction(data, goal, base_id, item_level, actions)` turns a concrete `Item` into a
-`CompressedState` and gives the exact kernel of an action on it: the rerolls `ChaosOrb()`,
-`HarvestReforge("lightning")`, `ApplyEssence(name)` and the fossil sets `ApplyFossils(names)`, the
-bench's `BenchCraft(mod_id)` and `RemoveCraftedMods()`. `actions` are the enabled actions that read the mods besides the fractured
-ones (the bench; none by default): they decide what a state keeps.
+`CompressedState` and gives the exact kernel of an action on it. An action is anything that meets the
+contract of `actions` (`Action`: a Chaos Orb, a Harvest reforge, an essence, a resonator, a bench craft,
+a toy defined in a test): the kernel is built from its `outcomes` alone, and what a state keeps is read
+from the action's own declaration `reads(data)`. `actions` are the enabled actions that read the mods
+besides the fractured ones (none by default): they decide what a state keeps. No concrete action class
+is imported or tested for here.
 
 * `Goal`: the requirements as `Wanted` leaves (`mod_ids`, `min_tier`, `min_roll`, `not_crafted`)
   and `AtLeast(k, members)` groups; `Goal.from_target(target)` reads a target by duck typing and
@@ -42,15 +44,16 @@ enabled action treats alike; a family that an enabled craft would clash with is 
 is the family key), as is a family the pool does not list. Crafted mods are always slots, told apart
 by their canonical mod id; a reroll drops them (an ordinary crafted mod is erased like any other),
 and a state with a crafted metamod is refused by the rerolls as `OutOfScopeError`. A new action that
-reads the mods must say how it tells families apart, in `Kinds`; an unknown one tells every family
-apart (exact, but the state count can blow up).
+reads the mods says how it tells families apart in its `reads` (`Reads.families`); one that says nothing
+tells every family apart (exact, but the state count can blow up).
 
 An action runs on a concrete item that the state stands for: its fractured mods, its crafted mods and
-one mod of a distinct family of the right side and kind for every other slot. `Outcomes` and
-`BenchOutcomes` come from the action itself, so no rule is decided here. A reroll's outcome is the
-fractured mods, the forced mod of an essence and the new draws, each a slot of its side and kind
-(seen through the label of the draw: what it gives each leaf, its side and its kind); a bench action
-adds a crafted slot or drops the crafted ones.
+one mod of a distinct family of the right side and kind for every other slot. The outcomes come from
+the action itself, so no rule is decided here. They are a mixture of parts (`components`): a fixed
+result (`Fixed`: the mods that stay and the new ones, as in a bench craft) or a pool draw (`Outcomes`:
+the retained mods, the forced mod and the new draws, each a slot of its side and kind, seen through the
+label of the draw: what it gives each leaf, its side and its kind). A mod of a part that the item given
+to the action held is the state's own fractured mod or slot; any other is new.
 
 The cache. What decides the distribution of the new mods, seen through the label, is the guaranteed
 tag, how many mods are kept (the forced mod of an essence included), the free slots per side, the
@@ -76,7 +79,7 @@ needs pruning (see ADR-0009).
 
 Widening for the rest of B1: an action that adds or removes one mod (Exalted, Annulment, Regal)
 makes the outcome depend on the weights of the junk families too, so its family types must
-add the pool weights; that is done in `Kinds` when the action is added.
+add the pool weights; an action declares that with `Reads(junk=True, families=None)`.
 
 Out of scope: a `min_roll` on a mod that an action draws, forces or crafts. Its value is rolled and no
 exact roll distribution is built yet, so such a mod raises `OutOfScopeError`. A concrete item's mod is

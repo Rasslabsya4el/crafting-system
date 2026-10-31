@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import NoReturn
 
 from crafting_system.abstraction import CompressedState, Status
-from crafting_system.actions import ActionError, BenchCraft, RemoveCraftedMods
+from crafting_system.actions import ActionError
 from crafting_system.data import GameData
 from crafting_system.items import Rarity, Side, capacity
 from crafting_system.risk import RiskReport, evaluate
@@ -294,7 +294,7 @@ class _Reader:
             value, line = when[key], when.key_lines[key]
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 self.fail(line, f"{path}.{key}", f"must be a whole number of free slots, 0 or more, got {describe(value)}")
-            if not any(isinstance(p.offer.action, (BenchCraft, RemoveCraftedMods)) for p in self.plan.offers):
+            if not self.plan.abstraction.keeps_junk:
                 self.fail(
                     line,
                     f"{path}.{key}",
