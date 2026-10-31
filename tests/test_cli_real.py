@@ -112,7 +112,7 @@ def test_without_a_lifeforce_price_the_reforge_is_dropped_and_the_chaos_orb_poli
     assert code == 0
     dropped = {drop["action"]: drop["missing_prices"] for drop in document["dropped_actions"]}
     assert dropped.pop("Harvest Reforge Lightning") == ["Primal Crystallised Lifeforce"]
-    assert dropped and all(name.startswith(("Bench craft", "Remove")) or "Essence of" in name for name in dropped)
+    assert dropped and all(name.startswith(("Bench craft", "Remove", "Harvest Reforge")) or "Essence of" in name for name in dropped)
     # the price file of this test holds no essence and no bench currency
     (state,) = document["states"]
     assert state["action"] == "Chaos Orb"

@@ -1,0 +1,12 @@
+{
+ "request": "GET https://www.pathofexile.com/api/trade/fetch/4a0bb6f98aea354c2673711b7ed4c0e1e6d7f525684d544723cd914609a7cce8,a745a70e2598c70bcbf4d1ece1a43c9192c46b79ebc45b07489f919902fbc18f,b8eaaa2682f512e8b187a11a3f8e857071fbbe5fc550448fa35115ef952dba28,8a3ebc77fde6bf30cba184d0814018c2ebeb38a0ba0cf314412cfefd9b4127d7,eca020becbd33fc618222a8c6d95d7d382b6d1194072b0e0373d369c37bda8c6,5bdf9a7858bba99d7115ea8ec9841f026aa259e6d1bc7f4bbc8dc58d46f68cee,f384da051573e3dd0403b0ea5c179ade753ce00fb1810ce781928b05a2e7422e,08eeae5977a949cfc0aefa9494148d550bdccde6968fa1c68213d0eb2cfcfefb,14cee23fed1f1b350d1b7e52ef71ebcc36ea31d3a1a4383f110d01541bd8e32b,372b40bc471c687d5b8cea105eed957a0874e097d03f6365fbe3e338dda17ea1?query=H4sIAAAAAAAAA3VQwarCMBD8FdlzEbEWxeP7hXcUKTHdSiB1y2YjSMm_u0lF2oO37M5kZnYmCGIkBjhPQKM4esAZAtrI5uYRUlVwhS8TyGtERc2jgwp65wV5Blyn656NlcjYbfOPdr9vdk1dH5ujkjsXspzSeuMDVvA0PmL2HJwa1ruUrum6EJ3N2sW8eLJhJ69VYl2VsNYI3onXoOGBIm9vRHpISkobXLA_xJ1_-m-w0yFrEnMcJadfiJZDoGgxE_9Cv620TnBYcYS1glTyfJr9J7bIyJu_OeobLK3SP50BAAA",
+ "status": 200,
+ "headers": {
+  "date": "Sat, 31 Oct 2026 21:14:37 GMT",
+  "content-type": "application/json",
+  "x-rate-limit-policy": "trade-fetch-request-limit",
+  "x-rate-limit-rules": "Ip",
+  "x-rate-limit-ip": "12:4:10,16:12:300,50:300:300,1000:21600:1800",
+  "x-rate-limit-ip-state": "1:4:0,1:12:0,2:300:0,2:21600:0"
+ }
+}

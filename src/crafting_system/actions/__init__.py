@@ -9,8 +9,11 @@ kind for an item; a module registers its kinds with the `kind` decorator, so a n
 and nothing outside `actions` imports a concrete action: `abstraction`, `cli` and `simulator` use the
 contract and the catalog only. See ADR-0024 (extending to new methods and patches).
 
-Three random actions so far, `ChaosOrb()`, `HarvestReforge("lightning")` and `ApplyEssence("Shrieking
-Essence of Spite")` (an essence is named as in the game data or by its record id). Each has one method,
+Random rerolls: `ChaosOrb()`, `HarvestReforge("lightning")` (sixteen tagged crafts, one per tag of the claim
+`harvest_reforge.tagged_rare_reforge_exists`), `HarvestReforgeInfluence()` (an influenced item, one influence mod
+guaranteed), `HarvestReforgeLikelihood(more=True)` (the mods the item holds are 90 times more, or with `more=False`
+90 times less, likely to return; the item keeps at least as many mods) and `ApplyEssence("Shrieking Essence of
+Spite")` (an essence is named as in the game data or by its record id). Each has one method,
 `outcomes(data, item) -> Outcomes`, and `Outcomes` is the whole result.
 
 The crafting bench has two deterministic ones, `BenchCraft(mod_id)` (one per bench option that adds a
@@ -60,7 +63,7 @@ Refusals, raised by `outcomes` in this order (a message names the reason):
   admitted for regular items only), a pool mod with other than one family; for an essence also
   Essence of Desolation (not a B1 action) and fractured mods that fill the side of the forced mod.
   A planner treats the action as unavailable.
-* `HarvestReforge("fire")` raises `ValueError` at construction: only admitted tags exist; an
+* `HarvestReforge("nothing")` raises `ValueError` at construction: only the admitted crafts exist; an
   `ApplyEssence` name that is no essence of the data raises it from `outcomes`.
 
 What an `Outcomes` gives, on the item before any mod is drawn (`retained`: a rare item with only the
@@ -105,6 +108,8 @@ from .finite import Finite
 from .fossil import ApplyFossils, fossil_actions, usable_fossils
 from .fracture import FractureOutcomes, FracturingOrb
 from .harvest import HarvestReforge
+from .harvest_influence import HarvestReforgeInfluence
+from .harvest_likelihood import HarvestReforgeLikelihood
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
 from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
@@ -139,6 +144,8 @@ __all__ = [
     "Fractured",
     "FracturingOrb",
     "HarvestReforge",
+    "HarvestReforgeInfluence",
+    "HarvestReforgeLikelihood",
     "Kind",
     "Mixture",
     "NotApplicableError",
