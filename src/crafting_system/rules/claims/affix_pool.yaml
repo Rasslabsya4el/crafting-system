@@ -39,8 +39,8 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28
     quote: "`generation_weights` as a ×value/100 multiplier"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: affix_pool.draw_proportional_to_weight
     statement: Among the mods that can still be added, the chance of each is its weight divided by the sum of the weights of all of them.
@@ -55,16 +55,16 @@ rules:
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "var tmodpool=tmodp_pre.concat(tmodp_suf)"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: affix_pool.full_side_closes
     statement: When an item holds as many prefixes (or suffixes) as its capacity allows, no mod of that side can be added, and the other side is the whole pool. Craft of Exile closes a side once its count reaches the capacity; the wiki only spells this out for the magic item (an Orb of Augmentation adds the missing type).
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "if(useaffbt.prefix>=usemaxaffgrp.prefix){blkdata.blktype.prefix=!0}"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: affix_pool.implicits_do_not_block
     statement: An implicit mod on the base does not remove explicit mods of its family from the pool, so only the explicit mods of an item block.
