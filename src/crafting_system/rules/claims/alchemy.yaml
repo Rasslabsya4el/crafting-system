@@ -1,0 +1,19 @@
+# Mechanic family: alchemy (the Orb of Alchemy on a normal item). Research ticket #7 (claims CUR-xx) and
+# the decisions D3, D4 of issue #28. The count 4/5/6 = 8:3:1 is affix_count.rare_reroll_ratio; the draws
+# share affix_pool.* and affix_draw.* with the Chaos Orb.
+rules:
+  - id: alchemy.accepts_normal_only
+    statement: An Orb of Alchemy can be used on a normal item only, and the result is a rare item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a normal item to apply it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: alchemy.count_like_chaos
+    statement: An Orb of Alchemy gives a rare item with 4, 5 or 6 mods in the ratio 8:3:1, the same as a Chaos Orb (decision D3 of issue #28; the wiki says only "from four to six"). A normal item holds no mod, so nothing is kept and the total is drawn whole.
+    source_kind: coe
+    url: https://www.craftofexile.com/basics#Chaos_spamming
+    quote: "The same as chaos spamming can also be achieved by using an orb of scouring, followed by an orb of alchemy repeatedly (this is known as scour-alching)."
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31

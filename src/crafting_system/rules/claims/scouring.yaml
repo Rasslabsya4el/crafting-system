@@ -1,0 +1,44 @@
+# Mechanic family: scouring (the Orb of Scouring on a magic or rare item). Research ticket #7 (claims
+# CUR-xx) and the Craft of Exile rows CHK-025, CHK-026 of the claim checklist. Metamods are not modelled
+# yet (issue #68).
+rules:
+  - id: scouring.accepts_magic_or_rare
+    statement: An Orb of Scouring can be used on a magic or rare item; a normal item takes none.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click on a magic or rare item to apply it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: scouring.removes_all_unprotected_mods
+    statement: An Orb of Scouring removes every explicit mod of the item that is not protected, an ordinary crafted mod included (the crafted metamod is removed with the other side, so it is no exception); the implicit mods, quality, sockets and links stay. Only a fractured mod is protected in the modelled states, since a metamod is out of scope.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Scouring
+    quote: "Implicit modifiers, quality, sockets, and links are not removed, as well as affixes protected by meta-crafting mods."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: scouring.fractured_mods_stay
+    statement: A fractured mod is not removed by an Orb of Scouring.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Fractured_item#Mechanics
+    quote: "These mods cannot be removed (by Orb of Annulment or Orb of Scouring, etc.) or have its values changed by Divine Orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: scouring.rarity_follows_mods_left
+    statement: After an Orb of Scouring the item is normal with no mod left, magic with one mod left and rare with two or more (a fractured prefix and suffix make a rare item). The value is the number of mods left from which the item stays rare.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Scouring
+    quote: "When an Orb of Scouring removes all but one modifier, the item will be downgraded to magic instead of normal. (With two modifiers, the item will remain rare.)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: 2
+
+  - id: scouring.keeps_influence
+    statement: An item keeps its influences when it is scoured, so the Orb of Scouring accepts an influenced item (it draws nothing, so the influence pools are not needed).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Influenced_item#Mechanics
+    quote: "Items retain their influences when modified, even if an Orb of Scouring is used."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
