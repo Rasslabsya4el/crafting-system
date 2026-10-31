@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from targets_support import AMULET, BELT, DATA, parse
+from targets_support import AMULET, BELT, DATA, parse, parse_error
 
 from crafting_system.items import ExplicitMod, Influence, Item, Rarity
 from crafting_system.targets import KOfN, Requirement, Target
@@ -174,3 +174,19 @@ def test_a_base_name_that_only_one_base_carries_finds_it():
     text = "base: Leather Belt\nitem_level: 86\nrequirements:\n  - family: IncreasedLife\n"
 
     assert parse(text, header=False).base_id == BELT
+
+
+def test_the_start_price_is_the_name_the_start_item_has_in_the_price_file():
+    target = parse("requirements:\n  - family: IncreasedLife\nstart_price: '  R12 start amulet '\n")
+
+    assert target.start_price == "R12 start amulet"
+
+
+def test_a_target_without_a_start_price_has_none():
+    assert parse("requirements:\n  - family: IncreasedLife\n").start_price is None
+
+
+def test_a_start_price_must_be_non_empty_text():
+    message = parse_error("requirements:\n  - family: IncreasedLife\nstart_price: 5\n")
+
+    assert message.startswith("t.yaml:5: ") and ": start_price: must be non-empty text" in message

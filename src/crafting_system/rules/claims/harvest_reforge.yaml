@@ -66,3 +66,12 @@ rules:
     quote: "Corrupted items cannot be modified, with the following exceptions:"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
+
+  - id: harvest_reforge.lifeforce_cost
+    statement: One use of a tagged reforge costs this much lifeforce, by craft (the key of tagged_rare_reforge_exists). The value maps the price-file name of the lifeforce item to the number of items. Lightning costs 50 Primal Crystallised Lifeforce. The wiki table columns are Wild, Vivid, Primal, Sacred and Rancour; the Lightning row is 0 0 50 0 0.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Reforge a Rare item with random modifiers, including a Lightning modifier 0 0 50 0 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: {lightning: {Primal Crystallised Lifeforce: 50}}

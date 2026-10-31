@@ -26,6 +26,7 @@ Keys (unknown keys are errors, with a close-match hint):
           tier: 3           # whole number >= 1, stored as written (tier derivation is not built yet)
           values: [14]      # one whole number per stat; a bare number is allowed for one stat
           fractured: true   # optional; `crafted` is optional too
+    start_price: R12 start amulet   # optional: the name of the start item in the price file (what it costs to get)
     price_file: prices.json # optional path; a relative path counts from the target file's folder
 
 Exactly one of `family` and `stat` names a requirement's mod. `stat` is compared after normalising both

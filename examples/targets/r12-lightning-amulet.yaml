@@ -50,6 +50,12 @@ start_item:
       # Locked in place by a Fracturing Orb.
       fractured: true
 
+# Optional: the name the start item has in the price file, which is what it costs to get. A price
+# found by `python -m crafting_system.prices trade --spec <buy spec>` is stored under the name of
+# the buy spec, and a hand price in price_overrides.toml wins over it. Without this key the start
+# item is counted as free.
+start_price: R12 start amulet
+
 # Optional: the price file, relative to the folder of this file. It is not read by the target
 # loader and the file does not have to exist yet.
 # price_file: prices.json
