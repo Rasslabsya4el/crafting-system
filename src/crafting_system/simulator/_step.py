@@ -20,9 +20,9 @@ class Sampler(Protocol):
 class Action(Protocol):
     """Anything the simulator can apply to a concrete item.
 
-    The actions of the `actions` module fit (`ChaosOrb()`, `HarvestReforge("lightning")`): their
-    `outcomes(data, item)` returns an object with `sample(rng)`. The simulator uses nothing else,
-    which also lets a test pass a fake. A refusal is raised by `outcomes`, never swallowed here.
+    The actions of the `actions` module fit (every `actions.Action`): their `outcomes(data, item)`
+    returns an object with `sample(rng)`. That is all the simulator takes of the contract, which also
+    lets a test pass a fake. A refusal is raised by `outcomes`, never swallowed here.
     """
 
     def outcomes(self, data: GameData, item: Item) -> Sampler: ...

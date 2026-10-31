@@ -99,3 +99,12 @@ rules:
     quote: "Corrupted items cannot be modified, with the following exceptions:"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+
+  - id: magic_orbs.cost
+    statement: One use of an orb of the magic-item steps consumes one item of that orb; the value maps the orb (transmutation, alteration, augmentation, regal) to its price-file name, the item's name in the game data, and the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeToMagic: name "Orb of Transmutation"; CurrencyRerollMagic: "Orb of Alteration"; CurrencyAddModToMagic: "Orb of Augmentation"; CurrencyUpgradeMagicToRare: "Regal Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {transmutation: {Orb of Transmutation: 1}, alteration: {Orb of Alteration: 1}, augmentation: {Orb of Augmentation: 1}, regal: {Regal Orb: 1}}

@@ -1,5 +1,14 @@
 """Primitives, each with its exact outcome distribution and sampling on a concrete item. May import only: data, rules, items.
 
+**One contract (ticket #108).** Every action subclasses `Action` (`contract.py`) and answers five
+questions: `label(data)` (the stable name routes and the CLI use), `outcomes(data, item)` (the exact
+result), `resources(data)` (what one use consumes, by price-file name, read from claims), `reads(data)`
+(what of the item besides its fractured mods the result depends on: `Reads`) and `adds(data, item)`
+(what it puts on the item: `Adds`). The catalog (`catalog.py`) lists the actions of every registered
+kind for an item; a module registers its kinds with the `kind` decorator, so a new method is one file
+and nothing outside `actions` imports a concrete action: `abstraction`, `cli` and `simulator` use the
+contract and the catalog only. See ADR-0024 (extending to new methods and patches).
+
 Three random actions so far, `ChaosOrb()`, `HarvestReforge("lightning")` and `ApplyEssence("Shrieking
 Essence of Spite")` (an essence is named as in the game data or by its record id). Each has one method,
 `outcomes(data, item) -> Outcomes`, and `Outcomes` is the whole result.
@@ -75,20 +84,32 @@ family, with exact `Fraction` weights.
 
 from .add import add_one_mod, draw_onto
 from .alchemy import AlchemyOrb
-from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts
+from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts, without_ranges
+from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
+from .contract import Action, ActionOutcomes, Adds, Fixed, Reads
 from .draw import Outcome
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
-from .fossil import ApplyFossils, FossilOutcomes, Fractured, fossil_actions, usable_fossils
+from .finite import Finite
+from .fossil import ApplyFossils, fossil_actions, usable_fossils
 from .harvest import HarvestReforge
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
+from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool
 from .scour import ScouringOrb, ScourOutcomes
 
+def default_actions() -> tuple[Action, ...]:
+    """The two rerolls that need no game data: a Chaos Orb and the Harvest reforge of Lightning."""
+    return (ChaosOrb(), HarvestReforge("lightning"))
+
+
 __all__ = [
+    "Action",
     "ActionError",
+    "ActionOutcomes",
+    "Adds",
     "AlchemyOrb",
     "AlterationOrb",
     "ApplyEssence",
@@ -98,15 +119,20 @@ __all__ = [
     "BenchOutcomes",
     "ChaosOrb",
     "CurrencyCost",
+    "Finite",
+    "Fixed",
     "FossilOutcomes",
     "Fractured",
     "HarvestReforge",
+    "Kind",
+    "Mixture",
     "NotApplicableError",
     "Outcome",
     "Outcomes",
     "OutOfScopeError",
     "PoolFamily",
     "PoolMod",
+    "Reads",
     "RegalOrb",
     "RemoveCraftedMods",
     "ScouringOrb",
@@ -115,7 +141,14 @@ __all__ = [
     "add_one_mod",
     "bench_crafts",
     "build_pool",
+    "catalog",
+    "default_actions",
     "draw_onto",
     "fossil_actions",
+    "kind",
+    "kinds",
+    "register",
+    "registered",
     "usable_fossils",
+    "without_ranges",
 ]
