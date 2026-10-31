@@ -31,7 +31,7 @@ class ExaltedOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        return Reads()
+        return Reads.adding()
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset())
@@ -55,7 +55,7 @@ class ExaltedOrb(Action):
     "exalted-orb",
     order=75,
     planner=False,
-    why_not="no compressed-state kernel for an add on a rare item that keeps its mods yet (#65)",
+    why_not="not in the B1 offer set; which actions a target needs is pruning (#118)",
 )
 def _exalted_orb(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:
