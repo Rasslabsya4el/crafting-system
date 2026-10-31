@@ -41,9 +41,10 @@ cost within 1e-12 relative of a multiple of D counts as that multiple. Levels wi
 of 1 cannot be certified at the high end and are reported unresolved (high = inf, even on an exact
 grid); a level within `rounding` of 0 gets low = 0 and a high end, with no point claim.
 
-Complexity. Time O(bins * edges of the chain), memory O(window * states) for the rolling window
-plus O(bins) floats for the cumulative distribution; one or two solver runs for the moments, and
-two more for CVaR on an inexact grid.
+Complexity. Time O(entries * edges), one entry per (bins paid, state) pair that holds mass, and
+memory O(entries in flight) plus O(bins) floats for the cumulative distribution (see `_budget`,
+numpy-vectorised); one or two solver runs for the moments, and two more for CVaR on an inexact
+grid.
 """
 
 import math
