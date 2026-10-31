@@ -256,8 +256,8 @@ def _parse_history(
     for number, item in enumerate(history, start=1):
         if not isinstance(item, dict):
             raise RegistryError(
-                f"{where}: history entry #{number}: a history entry must be a mapping,"
-                f" got {type(item).__name__}"
+                f"{where}: history entry #{number}{lines.of(entry, 'history')}: a history entry"
+                f" must be a mapping, got {type(item).__name__}"
             )
 
         def fail(problem: str, key: str | None = None) -> RegistryError:
@@ -269,7 +269,7 @@ def _parse_history(
         for field in HISTORY_REQUIRED_FIELDS:
             if field not in item:
                 raise fail(f"missing required field {field}")
-        if "statement" not in item and "value" not in item:
+        if "statement" not in item and item.get("value") is None:
             raise fail("give the old statement or the old value (or both)")
         checks = {
             "held_until": lambda value: _check_patch(value, "held_until"),

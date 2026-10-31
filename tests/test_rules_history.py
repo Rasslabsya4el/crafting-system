@@ -98,11 +98,6 @@ def test_a_history_does_not_change_the_value_code_reads(tmp_path):
     assert dict(rule.value) == {"times": 1}
 
 
-def malformed(**changes):
-    entry = {**HISTORY_ENTRY, **changes}
-    return {key: val for key, val in entry.items() if val is not None}
-
-
 MALFORMED = {
     "no old text or value": (
         {k: v for k, v in HISTORY_ENTRY.items() if k not in ("statement", "value")},
@@ -115,6 +110,7 @@ MALFORMED = {
         {k: v for k, v in HISTORY_ENTRY.items() if k != "source_kind"},
         "missing required field source_kind",
     ),
+    "only a null value": ({k: v for k, v in HISTORY_ENTRY.items() if k != "statement"} | {"value": None}, "give the old statement or the old value"),
     "unknown key": ({**HISTORY_ENTRY, "note": "x"}, "unknown key note"),
     "bad patch": ({**HISTORY_ENTRY, "held_until": "latest"}, "held_until must be a quoted patch"),
     "unquoted patch": ({**HISTORY_ENTRY, "held_until": 3.29}, "held_until 3.29 was read as a number"),
@@ -164,6 +160,7 @@ def test_history_that_is_not_a_list_of_mappings_is_refused(tmp_path):
         with pytest.raises(RegistryError, match=problem) as raised:
             load_registry(folder)
         assert "fam.yaml: rule fam.thing: history" in str(raised.value)
+        assert re.search(r"\(line \d+\)", str(raised.value))
 
 
 def test_a_history_that_is_not_a_list_names_the_line_of_the_history_key(tmp_path):
