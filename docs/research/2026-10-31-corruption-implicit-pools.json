@@ -4184,5 +4184,326 @@
     }
    ]
   }
+ ],
+ "Jewel": [
+  {
+   "example_bases": [
+    "Cobalt Jewel",
+    "Crimson Jewel",
+    "Viridian Jewel",
+    "Prismatic Jewel"
+   ],
+   "n_bases": 8,
+   "mods": [
+    {
+     "id": "V2CorruptedBloodImmunityCorrupted",
+     "group": "CorruptedBloodImmunity",
+     "required_level": 33,
+     "weight": 1000,
+     "text": "Corrupted Blood cannot be inflicted on you"
+    },
+    {
+     "id": "V2HinderImmunityCorrupted",
+     "group": "YouCannotBeHindered",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "You cannot be Hindered"
+    },
+    {
+     "id": "V2IncreasedAilmentEffectOnEnemiesCorrupted",
+     "group": "IncreasedAilmentEffectOnEnemies",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Effect of Non-Damaging Ailments"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffectCorrupted",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-5)% increased Area of Effect"
+    },
+    {
+     "id": "V2IncreasedCriticalStrikeChanceCorrupted_",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-10)% increased Global Critical Strike Chance"
+    },
+    {
+     "id": "V2IncreasedDamageJewelCorrupted___",
+     "group": "IncreasedDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-5)% increased Damage"
+    },
+    {
+     "id": "V2MaimImmunityCorrupted",
+     "group": "AvoidMaimChance",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "You cannot be Maimed"
+    },
+    {
+     "id": "V2MinionDamageCorrupted",
+     "group": "MinionDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Minions deal (4-5)% increased Damage"
+    },
+    {
+     "id": "V2ReducedManaReservationCorruptedEfficiency__",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "2% increased Reservation Efficiency of Skills"
+    },
+    {
+     "id": "V2SilenceImmunityJewelCorrupted",
+     "group": "PlayerCurseImmunity",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "You cannot be Cursed with Silence"
+    },
+    {
+     "id": "V2FirePenetrationJewelCorrupted",
+     "group": "FireResistancePenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates 1% Fire Resistance"
+    },
+    {
+     "id": "V2ColdPenetrationJewelCorrupted",
+     "group": "ColdResistancePenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates 1% Cold Resistance"
+    },
+    {
+     "id": "V2LightningPenetrationJewelCorrupted__",
+     "group": "LightningResistancePenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates 1% Lightning Resistance"
+    },
+    {
+     "id": "V2ElementalPenetrationJewelCorrupted_",
+     "group": "ElementalPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates 1% Elemental Resistances"
+    },
+    {
+     "id": "V2ArmourPenetrationJewelCorrupted",
+     "group": "ArmourPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Hits have (10-15)% chance to ignore Enemy Physical Damage Reduction"
+    },
+    {
+     "id": "V2IgniteDurationOnYouJewelCorrupted",
+     "group": "ReducedSelfIgniteDuration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-25)% reduced Ignite Duration on you"
+    },
+    {
+     "id": "V2ChillEffectOnYouJewelCorrupted",
+     "group": "ChillEffectivenessOnSelf",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-20)% reduced Effect of Chill on you"
+    },
+    {
+     "id": "V2ShockEffectOnYouJewelCorrupted",
+     "group": "ShockEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-20)% reduced Effect of Shock on you"
+    },
+    {
+     "id": "V2PoisonDurationOnYouJewelCorrupted",
+     "group": "ReducedPoisonDuration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-20)% reduced Poison Duration on you"
+    },
+    {
+     "id": "V2BleedDurationOnYouJewelCorrupted",
+     "group": "ReducedBleedDuration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-20)% reduced Bleed Duration on you"
+    },
+    {
+     "id": "V2CurseEffectOnYouJewelCorrupted",
+     "group": "ReducedCurseEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-20)% reduced Effect of Curses on you"
+    }
+   ],
+   "caveat": "Pool of mods with domain misc and tag jewel. Timeless and cluster jewels (domain misc / affliction_jewel) are not checked against it."
+  }
+ ],
+ "AbyssJewel": [
+  {
+   "example_bases": [
+    "Assembled Eye Jewel",
+    "Ghastly Eye Jewel",
+    "Hypnotic Eye Jewel"
+   ],
+   "n_bases": 5,
+   "mods": [
+    {
+     "id": "V2AvoidIgniteAbyssalJewelCorrupted",
+     "group": "AvoidIgnite",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-25)% chance to Avoid being Ignited"
+    },
+    {
+     "id": "V2AvoidChillAndFreezeAbyssalJewelCorrupted_",
+     "group": "ChanceToAvoidFreezeAndChill",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-25)% chance to Avoid being Frozen"
+    },
+    {
+     "id": "V2AvoidShockAbyssalJewelCorrupted",
+     "group": "AvoidShock",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-25)% chance to Avoid being Shocked"
+    },
+    {
+     "id": "V2AvoidPoisonAbyssalJewelCorrupted",
+     "group": "ChanceToAvoidPoison",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-25)% chance to Avoid being Poisoned"
+    },
+    {
+     "id": "V2AvoidBleedAbyssalJewelCorrupted_",
+     "group": "ChanceToAvoidBleeding",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-25)% chance to Avoid Bleeding"
+    },
+    {
+     "id": "V2AvoidStunAbyssalJewelCorrupted",
+     "group": "AvoidStun",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-25)% chance to Avoid being Stunned"
+    },
+    {
+     "id": "V2CorruptedBloodImmunityAbyssalJewelCorrupted",
+     "group": "CorruptedBloodImmunity",
+     "required_level": 33,
+     "weight": 1000,
+     "text": "Corrupted Blood cannot be inflicted on you"
+    },
+    {
+     "id": "V2HinderImmunityAbyssalJewelCorrupted",
+     "group": "YouCannotBeHindered",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "You cannot be Hindered"
+    },
+    {
+     "id": "V2IncreasedAilmentEffectOnEnemiesAbyssalJewelCorrupted",
+     "group": "IncreasedAilmentEffectOnEnemies",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Effect of Non-Damaging Ailments"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffectAbyssalJewelCorrupted",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-5)% increased Area of Effect"
+    },
+    {
+     "id": "V2IncreasedCriticalStrikeChanceAbyssalJewelCorrupted",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-10)% increased Global Critical Strike Chance"
+    },
+    {
+     "id": "V2IncreasedDamageAbyssJewelCorrupted_",
+     "group": "IncreasedDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-5)% increased Damage"
+    },
+    {
+     "id": "V2MaimImmunityCorrupted_",
+     "group": "AvoidMaimChance",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "You cannot be Maimed"
+    },
+    {
+     "id": "V2MinionDamageCorrupted__",
+     "group": "MinionDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Minions deal (4-5)% increased Damage"
+    },
+    {
+     "id": "V2ReducedManaReservationCorruptedEfficiency_____",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "2% increased Reservation Efficiency of Skills"
+    },
+    {
+     "id": "V2SilenceImmunityJewelCorrupted__",
+     "group": "PlayerCurseImmunity",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "You cannot be Cursed with Silence"
+    },
+    {
+     "id": "V2FirePenetrationAbyssalJewelCorrupted",
+     "group": "FireResistancePenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates 1% Fire Resistance"
+    },
+    {
+     "id": "V2ColdPenetrationAbyssalJewelCorrupted",
+     "group": "ColdResistancePenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates 1% Cold Resistance"
+    },
+    {
+     "id": "V2LightningPenetrationAbyssalJewelCorrupted",
+     "group": "LightningResistancePenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates 1% Lightning Resistance"
+    },
+    {
+     "id": "V2ElementalPenetrationAbyssalJewelCorrupted_",
+     "group": "ElementalPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates 1% Elemental Resistances"
+    },
+    {
+     "id": "V2ArmourPenetrationAbyssalJewelCorrupted",
+     "group": "ArmourPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Hits have (10-15)% chance to ignore Enemy Physical Damage Reduction"
+    }
+   ],
+   "caveat": "Pool of mods with domain abyss_jewel (tag default)."
+  }
  ]
 }

@@ -10,13 +10,13 @@ unique items are never a target; catalyst quality is a target. Data file for the
 | Row | Rule | Chances | Status |
 |---|---|---|---|
 | M-47 Vaal Orb, equipment | Corrupts, plus exactly one of four outcomes: a corrupted implicit; one white socket turns non-white (3.29.0); the item becomes a rare of the same base with six random affixes and random sockets and links ("brick"); nothing. | 1/4 each, no source shows otherwise. | Rule: wiki + CoE code. Equal weights: wiki citing old GGG/Reddit statements (2014, 2015) and CoE's code. Not re-measured in 3.29. |
-| Corrupted implicit pool | One implicit drawn by weight from the mods whose spawn tag (first matching tag of the mod) fits the item class and whose `required_level` is at most the item level; it replaces the item's implicit (one at random if there are several). | Weights 1000, 500, 250 or 200 per mod (tier counted as a mod). 19 to 39 mods per class (section 4). | Datamined (repoe 3.29.3.3), equal to CoE's data for ring, amulet, belt. |
-| M-48 Locus of Corruption | Corrupts, plus one of four: two corrupted implicits; every white socket turns non-white (3.29.0); the item becomes an influenced rare with random affixes; the item is destroyed. | 1/4 each by the wiki. **Two player samples disagree**: 427 two-implicit outcomes in 1,612 items (26.5%, 3.23, mostly uniques) against 2 in about 58 (3.25, uniques). | Wiki. CoE code agrees on the four branches. No Hinekora preview (3.23.0). Section 2a. |
+| Corrupted implicit pool | One implicit drawn by weight from the mods whose spawn tag (first matching tag of the mod) fits the item class and whose `required_level` is at most the item level; it replaces the item's implicit (one at random if there are several). | Weights 1000, 500, 250 or 200 per mod (tier counted as a mod). 5 to 39 mods per class (section 4). | Datamined (repoe 3.29.3.3), equal to CoE's data for ring, amulet, belt. |
+| M-48 Locus of Corruption | Corrupts, plus one of four: two corrupted implicits; every white socket turns non-white (3.29.0); the item becomes an influenced rare with random affixes; the item is destroyed. | 1/4 each by the wiki. **Player counts disagree**: one self-recorded sheet (3.23, 52 runs of named uniques) has 427 two-implicit outcomes in 1,612 items (26.5%); every other count found is far lower (14 in about 160 tries, 3.23 to 3.25; section 2a). | Wiki. CoE code agrees on the four branches. No Hinekora preview (3.23.0). Unresolved. |
 | M-49 Tainted Chaos Orb | On a corrupted rare: reforges it, or removes all mods (fractured mods stay; the item drops to the lowest rarity they allow; a plain item becomes Normal). | **Unpublished.** Players say "about 50/50" (2021, 2026), no count. | Wiki + item text + Reddit (Scourge summary thread 2021-10-28). |
 | M-50 Tainted Exalted Orb | On a corrupted rare: adds or removes one mod; never changes rarity. Used on a 6-mod item it always removes (player report 2021); removal at 1 mod leaves a mod-less rare (player report 2026). | **Unpublished.** Players say "50/50 to add or remove where both are possible" (2021), no count. | Wiki + item text + Reddit. |
 | M-51 Tainted Divine Teardrop | On a corrupted rare: each mod goes up one tier, down one tier or stays; not below the lowest tier, not above the highest tier the base can have; crafted mods are not touched; ignores metamods. | **Unpublished.** One 2021 tester with 100+ uses reads it as +1 or -1 at about 50% each (stays only at a tier limit); one counted run: 8 of 12 up on a two-tier mod. No 3.29 count. | Wiki (3.16.1 fix) + Reddit. |
 | M-53 Tainted Jeweller's, M-54 Tainted Fusing | Add or remove one socket / one link (of the largest group). New sockets are white (3.29.0). Jeweller's cannot reach six sockets under item level 50. | 50% / 50% each. | Wiki citing a community direct test (Prohibited Library, 2024-02, Discord, **not opened**); odds were changed in 3.19.0 and 3.19.1. Sample size unknown. |
-| M-55 Tainted Chromatic | Rerolls socket colours ignoring attribute requirements; forces at least one non-white (3.29.0); quality raises the chance of more non-white. | Colour chances unpublished. | Patch notes 3.29.0. B6. |
+| M-55 Tainted Chromatic | Rerolls socket colours ignoring attribute requirements; forces at least one non-white (3.29.0); quality raises the chance of more non-white. | Colour chances **unmeasured**: no sample size exists; a 2021 post says "equal odds" per colour (before the 3.29 change). | Patch notes 3.29.0. B6. |
 | M-56 Tainted Armourer's Scrap, Whetstone, Catalyst | Corrupted armour / weapon: random quality, maximum 20% (it was 29% in 2021). Corrupted ring, amulet, belt: random catalyst type and amount, maximum 20%, replaces other quality types. Tainted Catalyst drops only from the Ultimatum Trialmaster. | Distribution of amount and type **unpublished**; players say "every outcome equiprobable" (2021) and "random 1 to 20 of a random type" (2026), no count. | Item text (datamined) + wiki + Reddit. |
 | M-57 Bench on corrupted items | Only socket number, socket colour and link crafts, each costing the usual currency **plus the same number of Vaal Orbs**. No mod crafts. | Deterministic. | Wiki (Corrupted, Vaal Orb). |
 | Bloodstained Fossil | Item is rerolled by the other fossils as usual, becomes corrupted and gets one corrupted implicit like the Vaal Orb's implicit outcome (not affected by other fossils). | Same pool as the Vaal Orb. | Wiki, since 3.16.0. |
@@ -85,12 +85,13 @@ Method: `python C:\Coding\gpt-research\reddit_archive.py thread <id>` on threads
 
 | Sample | What it shows | Author, date, URL | n | Reading |
 |---|---|---|---|---|
-| Affliction temple sheet (3.23, 2023-12 to 2024-01) | 52 runs, 1,612 items corrupted at the Locus (mostly unique items, a few rares), 427 counted in the column `DC's` (double corruptions, my reading of the header; the sheet's Legend does not define it): 26.5%, 95% interval 24.3% to 28.6% | u/doomermedia, 2024-03-22, https://www.reddit.com/r/pathofexile/comments/1bl8mdz/ (sheet: docs.google.com/spreadsheets/d/1CmXZrJJX7ltJjEaUdaXfnH2ZdrYXwbJuy8UoQKECWc0, tab Runs) | 1,612 | Fits 1/4. The other three outcomes are not split in the sheet. |
+| Affliction temple sheet (3.23, 2023-12 to 2024-01) | 52 runs, 1,612 items corrupted at the Locus (**all 52 runs are named unique items**), 427 counted in the column `DC's` (double corruptions, my reading of the header; the sheet's Legend does not define it): 26.5%, 95% interval 24.3% to 28.6%. Recorded by one player himself. | u/doomermedia, 2024-03-22, https://www.reddit.com/r/pathofexile/comments/1bl8mdz/ (sheet: docs.google.com/spreadsheets/d/1CmXZrJJX7ltJjEaUdaXfnH2ZdrYXwbJuy8UoQKECWc0, tab Runs) | 1,612 | Fits 1/4. The other three outcomes are not split in the sheet. |
 | Same sheet, last run (a unique, Stranglegasp) | "Out of 50 items, 21 poofed. ... EV is 12.5. In the first 40 items, only 3 bricked." | same sheet, run 53, 2024-01-22 | 50 | Destroyed 21/50 (chance of 21 or more at 25%: 0.6%); this unique does not follow the 1/4 split. |
-| "Has Locus of Corruption been nerfed?" (3.25) | 28 tries: 1 corrupted implicits, 8 sockets white, 9 bricked, 10 destroyed | u/Cahecher, 2024-12-28, https://www.reddit.com/r/pathofexile/comments/1ho6ibv/ | 28 | Two implicits 1/28 (chance of 1 or fewer at 25%: 0.3%). Item type not stated ("EEs"). |
-| same thread | "Over 30 svallins ... one double corrupt, 7 corrupt no change, 14 influenced corrupted rares and the rest poofed" | u/Wise-Constant-2582, 2025-04-05, https://www.reddit.com/r/pathofexile/comments/1ho6ibv/_/mljfe7s/ | about 30 | Svallin is a unique shield. Two implicits 1/30; influenced rare 14/30. |
+| "Has Locus of Corruption been nerfed?" (3.25) | 28 tries: 1 corrupted implicits, 8 sockets white, 9 bricked, 10 destroyed | u/Cahecher, 2024-12-28, https://www.reddit.com/r/pathofexile/comments/1ho6ibv/ | 28 | Two implicits 1/28 (chance of 1 or fewer at 25%: 0.3%). The item type is **not stated** ("EEs"), so unique or rare is unknown. |
+| same thread | "Over 30 svallins ... one double corrupt, 7 corrupt no change, 14 influenced corrupted rares and the rest poofed"; same user: "in 3.24 I took over 24 to hit one double corrupt on cloak of flame" | u/Wise-Constant-2582, 2025-04-05, https://www.reddit.com/r/pathofexile/comments/1ho6ibv/_/mljfe7s/ | over 30; over 24 | Svallin is a unique shield, the cloak is a unique; 1 double corrupt in each. |
+| Comments in the sheet's own thread (3.23, 3.25) | "i hit my first implicits in temple #14 and and only 2 in 22 temples" (u/BERND_HENNING, 2024-03-23, https://www.reddit.com/r/pathofexile/comments/1bl8mdz/_/kw6akt9/; items per temple not stated); "56 tries: (16%) 9x double corrupt with two mods, (35%) 20x corrupt with no changes, (21%) 12x break to rare, (26%) 15x disappears to void" (body armour, u/pathoftolik, 2024-08-05, https://www.reddit.com/r/pathofexile/comments/1bl8mdz/_/lgmna0j/; unique or rare not stated) | as shown | 22 temples; 56 | 56 tries: two implicits 9/56 (chance of 9 or fewer at 25%: 7.8%), destroyed 26%, rare 21%, no change 35%: close to 1/4 except the two-implicit share. |
 
-Pooled 3.25 posts: 2 two-implicit outcomes in about 58 (chance of 2 or fewer at 25%: 0.001%). The two data sets cannot both be a fair 1/4 draw on the same items: either GGG changed the odds between 3.23 and 3.25 (the wiki's version history shows no change), or the unique items in the later samples have another outcome table. Replies in the 3.25 thread: "temple was working fine all league" (u/iv_is) and "When will people get over just being unlucky?" (u/Kosgladx); no counts. No counted sample of rare (non-unique) items exists. No post-3.29 sample was found (u/BelowMikeHawk, 2026-08-05: "finally hit a double corrupt on my cloak after 15 cloaks", one try count, https://www.reddit.com/r/pathofexile/comments/1vfpw78/_/p1rbl2e/).
+Counts outside the sheet add up to 14 two-implicit outcomes in about 160 tries (8.8%; 9/56, 1/28, 1/30, 2/22 temples, 1/over 24; 3.23 to 3.25); at 25% the chance of that few is about 10^-7. So the sheet is the outlier, not a clean 3.23 against 3.25 split, and it is one player's own record. Either the share of two implicits is well below 1/4 in general (the wiki and the sheet say 1/4; the wiki's version history shows no change), or the items counted here follow another outcome table (the sheet's own last run, a unique, had 21 of 50 destroyed). Replies in the 3.25 thread: "temple was working fine all league" (u/iv_is) and "When will people get over just being unlucky?" (u/Kosgladx); no counts. No counted sample of rare (non-unique) items is identified. No post-3.29 sample was found (u/BelowMikeHawk, 2026-08-05: "finally hit a double corrupt on my cloak after 15 cloaks", one try count, https://www.reddit.com/r/pathofexile/comments/1vfpw78/_/p1rbl2e/).
 
 ### Statements and anecdotes
 
@@ -128,7 +129,7 @@ Result: Reddit gives **no measured chance for any Tainted currency or for the 3.
 | Tainted Fusing odds | Reddit 2022: about 30% up | wiki: 50% / 50% since 3.19.0 and 3.19.1 | Wiki wins (newer); sample size unknown. |
 | Locus brick | inventory M-48 said "random rare" | wiki, Maxroll, CoE: influenced rare | Influenced rare. |
 | Catalyst source | inventory (M-56) said Beyond | wiki: Trialmaster only | Trialmaster, Ultimatum. |
-| Locus share of two implicits | wiki: 1/4; Affliction (3.23) sheet: 427 of 1,612 items (26.5%, 95% interval 24.3% to 28.6%) | Reddit 3.25 reports: 1 of 28, and 1 of "over 30" (binomial chance of 2 or fewer in 58 at 25%: 0.001%) | Unresolved. All samples are unique items (Svallin, Stranglegasp, Aegis Aurora ...); no sample of rare items exists. See open point 10. |
+| Locus share of two implicits | wiki: 1/4; Affliction (3.23) sheet: 427 of 1,612 items (26.5%, 95% interval 24.3% to 28.6%), self-recorded, 52 runs of named uniques | Other Reddit counts: 9/56, 1/28, 1/30, 2/22 temples, 1/over 24 (14 in about 160, 8.8%) | Unresolved; the sheet is the outlier. Item type is unique or not stated everywhere; no sample of rare items. See open point 10. |
 | Quality maximum of the Tainted scrap / whetstone | Scourge summary thread 2021-10-28: "maximum possible Quality outcome is 29%" (Maxroll copied it) | repoe 3.29.3.3 item text: 20% | Item text; the change date is unknown. |
 
 ## 4. Corrupted implicit pools per item class (3.29.3.3)
@@ -151,7 +152,7 @@ W = total weight, at item level 86 or more. Every mod's weight is 1000, 500, 250
 | Two Hand Mace | 15 | 12 | 14,250 | Two Hand Sword | 15 | 12 | 13,750 |
 | Fishing Rod | 5 | 5 | 5,000 | | | | |
 
-Jewels: 21 mods (W = 21,000, all weight 1000) for ordinary jewels and 21 (W = 21,000) for abyss jewels; four of each need item level 33, 40, 40 or 60. Their lists are in `mods.json`, domains `misc` and `abyss_jewel`; the JSON file holds equipment, jewellery and quivers only.
+Jewels: 21 mods (W = 21,000, all weight 1000) for ordinary jewels and 21 (W = 21,000) for abyss jewels; four of each need item level 33, 40, 40 or 60. Their lists are in the JSON file under `Jewel` and `AbyssJewel` (Timeless and cluster jewels are not checked against the `Jewel` pool).
 
 Worked numbers, ring of level 83 or more: the pool is 31,850 wide. "+14-16% to all Elemental Resistances" has weight 1000: 3.14% of an implicit draw, so 0.78% per Vaal Orb (a quarter of the orbs draw an implicit): about 127 Vaal Orbs per hit on average, and the other outcomes (brick, 1/4) destroy the explicit mods on the way. "+1 to Maximum Frenzy Charges" has weight 200: 0.63% per draw, 0.16% per orb, about 637 orbs. A ring of level 80 loses the three level 81 to 83 Added-damage tiers (3 x 250), so W is 31,100.
 
@@ -168,7 +169,7 @@ Sample sizes are two-sided 95% (z = 1.96). For a split p: n = z² p(1-p) / h² f
 | 5 | Teardrop up / down / same per mod | Corrupted rare with six mods in the middle tiers (so no boundary), count each mod separately. | About 350 mod-draws for ±5 points on one third (z² (1/3)(2/3) / 0.05² = 342). Mods drift to the ends, so about 100 orbs on 6-mod items rather than 58. |
 | 6 | Tainted Catalyst type and amount; scrap and whetstone amount | Use on corrupted jewellery / armour / weapons, record type and quality. | Amount (shape unknown; if uniform from 1 to 20, a 5-point band is 1/4): 450 uses for ±4 points per band. Type (about 10 types, so 1/10 each if equal): 385 uses for ±3 points. Prices unknown. |
 | 7 | Tainted Jeweller's / Fusing 50% | Re-test with the same rule as in #4 (a corrupted socketed item). | ±5 points: 385 orbs each. The wiki's own sample size is unknown. B6 may defer this. |
-| 8 | Locus (the share of two implicits: 26.5% in one sample, about 3% in another) | Needs an Incursion temple and one item per try; non-unique items only matter for us. | ±5 points: 289 tries; 100 tries are enough to see 25% against 10% (80% power). Not practical for the owner; weigh question 3. |
+| 8 | Locus (the share of two implicits: 26.5% in the sheet, 8.8% elsewhere) | Needs an Incursion temple and one item per try; rare (non-unique) items are what matter for us. | ±5 points: 289 tries; 100 tries are enough to see 25% against 10% (80% power). Not practical for the owner; weigh question 3. |
 
 Free of any test: the corrupted implicit pools (datamined and equal in two sources), the 3.29.0 socket rule, the bench rule, the Bloodstained rule.
 
@@ -184,17 +185,19 @@ Free of any test: the corrupted implicit pools (datamined and equal in two sourc
 
 1. **Can a corrupted implicit be part of a target** (for example a ring with "+1 to maximum Frenzy Charges" or "all elemental resistances" as the implicit)? It decides whether B4 plans around the pool tables above or only around the Tainted tools. *Recommendation: yes.* It is the main reason players corrupt; the data is complete and free of unknowns.
 2. **How should the planner treat the three Tainted currencies whose odds nobody published (Chaos, Exalted, Teardrop)?** (a) leave them out until someone measures them (section 5, rows 3 to 5, 385 / 385 / about 100 orbs each); (b) offer Chaos and Exalted with a "50/50 assumed from player talk, not measured" warning on the result (Reddit has no counts for them either; the Teardrop would stay out). *Recommendation: (a) for B4's first release, (b) possible later;* a route that rests on an invented split would look exact and not be. Tainted Jeweller's and Fusing (50/50, community-tested) can go in with their source shown, in B6.
-3. **Do you want the Locus of Corruption in the plans?** It needs an Incursion temple with a tier 3 Corruption room and has no currency price. *Recommendation: include it as an optional action with a price per use that you enter yourself (default: not available).* The 1/4 destruction chance is then shown as a risk, with the warning that player samples disagree on the share of double corruptions (26.5% of 1,612 in 3.23; about 3% of 58 in 3.25, both on unique items).
+3. **Do you want the Locus of Corruption in the plans?** It needs an Incursion temple with a tier 3 Corruption room and has no currency price. *Recommendation: include it as an optional action with a price per use that you enter yourself (default: not available).* The 1/4 destruction chance is then shown as a risk, with the warning that player counts disagree on the share of double corruptions (26.5% of 1,612 in one self-recorded sheet of uniques; about 9% of 160 in the other counts, unique or not stated).
 4. **A fact only you may know, or a test of 11 Vaal Orbs:** when a Vaal Orb "bricks" an item that has a fractured mod, does the fractured mod stay? And does a "Prefixes cannot be changed" metamod keep the prefixes? *Recommendation: say what you remember; if unsure, I treat both as "unknown" and the planner refuses to corrupt fractured or metamod items with a warning (nothing guessed).* The test is in section 5, row 1.
 5. **Quality from catalysts:** is it enough that the plan puts the ordinary catalyst on before the Vaal Orb, with the Tainted Catalyst, Armourer's Scrap and Whetstone left out? Their amount and type are random and unpublished. *Recommendation: yes, leave them out.*
 
 ## 8. Draft claims for `src/crafting_system/rules/claims/` (files `corruption.yaml`, `tainted.yaml`)
 
+Both blocks load with `load_registry` (checked 2026-10-31: 17 + 10 = 27 rules). Single player reports are **not** admitted: no source kind fits them (`experiment` means a large sample), so they stay open points with their quote and permalink (section 2a, section 9). A rule whose statement covers a conflict says so in the statement.
+
 ```yaml
 # corruption.yaml
 rules:
   - id: corruption.vaal_equipment_four_outcomes
-    statement: "A Vaal Orb on equipment corrupts it and applies exactly one of four outcomes with equal chance: a corrupted implicit, one white socket turns non-white, a reroll into a rare of the same base with six random affixes and random sockets and links, nothing. The 1/4 split rests on old GGG statements and on Craft of Exile's code; no 3.29 count exists."
+    statement: "A Vaal Orb on equipment corrupts it and applies exactly one of four outcomes with equal chance: a corrupted implicit, one white socket turns non-white, a reroll into a rare of the same base with six random affixes and random sockets and links, nothing. The 1/4 split rests on old GGG statements the wiki cites and on Craft of Exile's code; no 3.29 count exists."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Vaal_Orb#Equipment
     quote: "Using a Vaal Orb on a piece of equipment will corrupt it and apply one of four possible outcomes. Each outcome has an equal chance of occurring."
@@ -202,25 +205,24 @@ rules:
     date_checked: 2026-10-31
     value: {implicit: 0.25, socket_colour: 0.25, brick: 0.25, nothing: 0.25}
 
-  - id: corruption.vaal_equal_in_coe_code
-    statement: "Craft of Exile draws the Vaal Orb's outcome uniformly from four entries; its socket entry is a label only."
+  - id: corruption.vaal_uniform_in_coe_code
+    statement: "Craft of Exile picks the Vaal Orb's outcome uniformly from a four-entry table (its table reads white sockets, implicit, brick, nothing; the socket entry is a label only and still says white). Locus uses a table of white sockets, implicits, brick, destroy."
     source_kind: coe
     url: https://www.craftofexile.com/
-    quote: "crsim_vaaltbl=[\"white sockets\",\"implicit\",\"brick\",\"nothing\"]; var rolled=poec_rand(0,tbl.length,!0)"
+    quote: "var rolled=poec_rand(0,tbl.length,!0);var retterm=tbl[rolled];"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: corruption.vaal_socket_outcome_3_29
-    statement: "Since 3.29.0 the socket outcome of the Vaal Orb turns one random white socket non-white (ignoring attribute colour weights); with no white socket, or no socket, it changes nothing. It no longer makes a socket white."
-    source_kind: official
-    url: https://www.pathofexile.com/forum/view-thread/3985332
+    statement: "Since 3.29.0 the socket outcome of the Vaal Orb turns one random white socket non-white (ignoring attribute colour weights); with no white socket, or no socket, it changes nothing. It no longer makes a socket white. Read in the wiki's copy of the official notes (Stacey_GGG, 2026-07-16, GGG forum thread 3985332; the forum page itself was behind a Cloudflare check)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.29.0
     quote: "This outcome instead now turns a random White Socket on the item to be a Non-White Socket."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
-    note: "read through the wiki's copy https://www.poewiki.net/wiki/Version_3.29.0 (Cloudflare blocked the forum page)"
 
   - id: corruption.vaal_brick_rare_six_mods
-    statement: "The brick outcome makes the item a rare of the same base with six random affixes, randomises sockets and links, respects metamods when rolling, and keeps quality, enchantments, memory strands and base values. Whether fractured mods and metamod-locked sides survive is unresolved (the wiki says metamods respected, Craft of Exile removes fractured mods and protection)."
+    statement: "The brick outcome makes the item a rare of the same base with six random affixes, randomises sockets and links, respects metamods when rolling, and keeps quality, enchantments, memory strands and base values. Whether fractured mods and metamod-locked sides survive is unresolved: the wiki says metamods are respected, Craft of Exile's code removes fractured mods and protection."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Vaal_Orb#Equipment
     quote: "This outcome does respect metamods when rolling affixes. The item will retain all of its other properties, including enchantments, quality, memory strands"
@@ -229,26 +231,26 @@ rules:
     value: {affixes: 6}
 
   - id: corruption.implicit_replaces_existing
-    statement: "A corrupted implicit replaces the item's existing implicit; if the item has several, one is replaced at random (double corruption: two). Explicit mods are not touched."
+    statement: "A corrupted implicit from a Vaal Orb replaces the item's existing implicit; if the item has several, one is replaced at random. Explicit mods are not touched by this outcome."
     source_kind: wiki
-    url: https://www.poewiki.net/wiki/Corrupted#Mechanics
-    quote: "Synthesised items or items with Eldritch implicit modifiers can also have more than one implicit modifier, and will only lose one random implicit modifier if corrupted via a Vaal Orb."
+    url: https://www.poewiki.net/wiki/Vaal_Orb#Equipment
+    quote: "If the item already has an implicit modifier, it will be replaced by the new corruption implicit modifier. If it has more than one, one of them will be replaced at random."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: corruption.implicit_pool_by_item_class
     statement: "The corrupted implicit is drawn by weight from the mods with generation_type corrupted whose first matching spawn tag gives a weight above 0 and whose required_level is at most the item level. The pool depends only on the item class; per-class pools are in docs/research/2026-10-31-corruption-implicit-pools.json."
     source_kind: datamined
-    url: https://github.com/lvlvllvlvllvlvl/RePoE
-    quote: "372 mods with generation_type corrupted and domain item; spawn_weights e.g. {ring: 250, default: 0} for V2AddedColdDamageCorrupted3 (required_level 81)"
+    url: https://repoe-fork.github.io/mods.json
+    quote: "mods[\"V2AddedColdDamageCorrupted3\"]: generation_type=\"corrupted\", domain=\"item\", required_level=81, spawn_weights=[{tag: ring, weight: 250}, {tag: default, weight: 0}]"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: corruption.implicit_pool_matches_coe
-    statement: "Craft of Exile's corrupted pools equal the repoe pools for ring (39 mods, weight 31850), amulet (30, 28500) and belt (19, 18500); CoE keeps a corrupted tier only if its ilvl is at most the item level."
+    statement: "Craft of Exile's corrupted pools have the same mod counts and total weights as the repoe pools for ring (39 mods, weight 31850), amulet (30, 28500) and belt (19, 18500) (my comparison of its data with repoe). Its pool builder keeps a tier only if the tier's ilvl is at most the item level; the exempt groups are 10, 11 and 13, and the corrupted modifiers belong to group 1 (Base), so they are cut by item level."
     source_kind: coe
     url: https://www.craftofexile.com/
-    quote: "htilvl<=iLvl||mod.id_mgroup==11||mod.id_mgroup==13||mod.id_mgroup==10; corrupted modifiers have id_mgroup 1"
+    quote: "if(htilvl<=iLvl||mod.id_mgroup==11||mod.id_mgroup==13||mod.id_mgroup==10)"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -262,20 +264,19 @@ rules:
     value: {two_implicits: 0.25, sockets_non_white: 0.25, influenced_rare: 0.25, destroyed: 0.25}
 
   - id: corruption.locus_two_implicit_share_observed
-    statement: "One player sheet of the Locus on Affliction (3.23) counts 427 two-implicit outcomes in 1,612 items (26.5%, 95% interval 24.3% to 28.6%), consistent with 1/4; two 3.25 posts report 1 in 28 and 1 in about 30 on unique items, which is not consistent with 1/4. Unresolved; all samples are unique items."
+    statement: "One player sheet of the Locus on Affliction (3.23, all 52 runs are named unique items, self-recorded by one player) counts 427 two-implicit outcomes in 1,612 items (26.5%, 95% interval 24.3% to 28.6%), consistent with 1/4. Other counts in the same Reddit threads are far lower: 2 in 22 temples (u/BERND_HENNING, 3.23), 1 in 28 (u/Cahecher, 3.25, item type not stated), 1 in over 30 Svallins (u/Wise-Constant-2582, 3.25), 1 in over 24 cloaks (same user, 3.24). The sheet may be the outlier; the share is unresolved."
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1bl8mdz/
     quote: "I recorded all my stats here in great detail"
-    patch_verified: "3.23"
+    patch_verified: "3.23.0"
     date_checked: 2026-10-31
     value: {n: 1612, two_implicits: 427}
-    note: "column `DC's` of the sheet tab Runs read as double corruptions (my reading); 3.25 counts in https://www.reddit.com/r/pathofexile/comments/1ho6ibv/"
 
   - id: corruption.locus_second_implicit_other_group
     statement: "In Craft of Exile's code the second implicit of a double corruption is drawn from the pool without the mods that share a mod group with the first. The wiki does not say."
     source_kind: coe
     url: https://www.craftofexile.com/
-    quote: "if(m>0){var nmodpool=[]; ... for(var zy=0;zy<vmp[i].modgroups.length;zy++){...if(vmp[i].modgroups[zy]==affix.modgroups[zw]){mconflict=!0}"
+    quote: "for(var zy=0;zy<vmp[i].modgroups.length;zy++){for(var zw=0;zw<affix.modgroups.length;zw++){if(vmp[i].modgroups[zy]==affix.modgroups[zw]){mconflict=!0}}}"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -287,8 +288,16 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
-  - id: corruption.corrupted_blocks_currency_except
-    statement: "A corrupted item takes no ordinary currency or mod craft. The exceptions are Tainted currency, Tainted Oil and Tainted Catalyst, and bench crafts of socket number, socket colour and links, each costing the usual currency plus the same number of Vaal Orbs."
+  - id: corruption.corrupted_modifiable_exceptions
+    statement: "A corrupted item cannot be modified except by: the Crafting Bench (socket colour, number and links only), Tainted currency, a Tainted Catalyst, a Tainted Oil, and a few unique items that can be modified while corrupted. No other currency and no mod craft applies."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Mechanics
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.bench_corrupted_extra_vaal
+    statement: "A bench craft of socket number, socket colour or links on a corrupted item costs, besides its usual currency, the same number of Vaal Orbs. That the three 3.29.0 options for at least two, three or four non-white sockets (5 / 20 / 75 Chromatic Orbs) follow the same rule is my reading, not stated."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Corrupted#Mechanics
     quote: "It will cost additional Vaal Orbs equal to the number of currency items the recipe normally requires."
@@ -302,13 +311,37 @@ rules:
     quote: "it will also attempt to add a corrupted implicit modifier similar to the outcome of using a Vaal Orb and receiving a corrupted implicit"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+
+  - id: corruption.vaal_incompatible_with_allflame
+    statement: "The Vaal Orb cannot be used in Allflame crafting; Allflame crafting also refuses corrupted items, Tainted currency, socket and quality currency."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Allflame_crafting
+    quote: "The Vaal Orb is intentionally incompatible with Allflame crafting"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.jewel_vaal_outcomes
+    statement: "A Vaal Orb on a jewel applies one of four equal outcomes: a jewel corrupted implicit, a rare jewel of the same base, a corruption-exclusive unique jewel (only Cobalt, Crimson and Viridian bases have one; other bases give no effect instead), nothing. A unique result is a failed try for this project (#81). The affix count of the rare jewel is not stated."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vaal_Orb#Jewels
+    quote: "Using a Vaal Orb on a jewel will corrupt it and apply one of four possible outcomes. Each outcome has an equal chance of occurring."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.jewel_implicit_pool
+    statement: "The corrupted implicit of an ordinary jewel is drawn from 21 mods with weight 1000 each (domain misc, tag jewel), that of an abyss jewel from 21 mods with weight 1000 each (domain abyss_jewel, tag default); four of each need item level 33, 40, 40 or 60. The lists are in docs/research/2026-10-31-corruption-implicit-pools.json."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "mods[\"V2HinderImmunityCorrupted\"]: generation_type=\"corrupted\", domain=\"misc\", required_level=40, spawn_weights=[{tag: jewel, weight: 1000}, {tag: default, weight: 0}]"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 ```
 
 ```yaml
 # tainted.yaml
 rules:
   - id: tainted.chaos_reforge_or_clear
-    statement: "A Tainted Chaos Orb on a corrupted rare either reforges it or removes all its mods (fractured mods stay; the item takes the lowest rarity they allow). The branch chances are not published."
+    statement: "A Tainted Chaos Orb on a corrupted rare either reforges it or removes all its mods (fractured mods stay; the item takes the lowest rarity they allow, Normal if none). The branch chances are not published."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Tainted_Chaos_Orb
     quote: "fractured mods will not be removed, leaving the item at the lowest eligible rarity"
@@ -331,27 +364,18 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
-  - id: tainted.divine_teardrop_fifty_fifty_player_reading
-    statement: "A 2021 tester who used 100+ Tainted Divine Teardrops reads each mod as going one tier up or one tier down at about 50% each, unchanged only at a tier limit; essence, veiled and crafted mods do not change; the top tier is limited by item level (12 teardrops on an ilvl 72 bow never gave the +2 tier an ilvl 86 bow reached 8 times in 12). Not a measured table; before later Teardrop changes."
-    source_kind: experiment
-    url: https://www.reddit.com/r/pathofexile/comments/qufcjo/
-    quote: "everytime you use one, it will force each mod to go +1 tier or -1 tier (from my results, it appears 50% for each outcome"
-    patch_verified: "3.16.1"
-    date_checked: 2026-10-31
-    note: "u/pedrolopa 2021-11-15; the 3.29.3.3 behaviour is unverified"
-
-  - id: tainted.exalted_edge_cases
-    statement: "A Tainted Exalted Orb used on a 6-mod rare always removes a mod (2021 player report); used on a 1-mod rare it can remove that mod and the item stays rare with no mods (2026 player report). The add / remove split is not published (players say about 50/50)."
-    source_kind: experiment
-    url: https://www.reddit.com/r/pathofexile/comments/1w1nmpp/_/p6uzm0b/
-    quote: "Using Tainted Exalt on a 1 mod item and it removing the mod keeps the item as rare."
+  - id: tainted.jeweller_even_split
+    statement: "A Tainted Jeweller's Orb adds or removes one socket with 50% each (the wiki cites a direct community test, sample size unknown; the odds were changed in 3.19.0 and 3.19.1). Sockets it adds are white since 3.29.0; it cannot reach six sockets under item level 50."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Jeweller%27s_Orb
+    quote: "The chance to add or remove a socket are both 50%."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
-    note: "6-mod rule from u/poorFishwife 2021-10-28 https://www.reddit.com/r/pathofexile/comments/qhtxh9/_/hif09eo/ (\"This guarantees that one of the explicit affixes will be removed.\"); one report each"
+    value: {add: 0.5, remove: 0.5}
 
-  - id: tainted.jeweller_fusing_even
-    statement: "Tainted Jeweller's and Tainted Fusing add or remove one socket or link with 50% each (community test; the odds were changed in 3.19.0 and 3.19.1). Sockets added are white since 3.29.0."
-    source_kind: experiment
+  - id: tainted.fusing_even_split
+    statement: "A Tainted Orb of Fusing adds or removes one link of the largest linked group with 50% each (the wiki cites a direct community test, sample size unknown; the odds were changed in 3.19.0 and 3.19.1)."
+    source_kind: wiki
     url: https://www.poewiki.net/wiki/Tainted_Orb_of_Fusing
     quote: "The chance to add or remove a link are both 50%."
     patch_verified: "3.29.3.3"
@@ -359,19 +383,34 @@ rules:
     value: {add: 0.5, remove: 0.5}
 
   - id: tainted.chromatic_forces_non_white
-    statement: "Tainted Chromatic Orbs ignore attribute requirements and force at least one non-white socket; quality raises the chance of more."
-    source_kind: official
-    url: https://www.pathofexile.com/forum/view-thread/3985332
+    statement: "Tainted Chromatic Orbs ignore attribute requirements and, since 3.29.0, force at least one non-white socket; quality raises the chance of more. The colour chances are not published (no sample size exists)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.29.0
     quote: "Chromatic Orbs and Tainted Chromatic Orbs now force one of the Sockets on the item to be Non-White"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
-    note: "read through https://www.poewiki.net/wiki/Version_3.29.0"
 
-  - id: tainted.quality_orbs_random_max_20
-    statement: "Tainted Armourer's Scrap and Blacksmith's Whetstone set a random quality up to 20% on a corrupted armour or weapon; Tainted Catalyst sets a random catalyst type and amount up to 20% on a corrupted ring, amulet or belt and replaces other quality types. The distributions are not published. Tainted Catalyst drops only from the Ultimatum Trialmaster."
+  - id: tainted.scrap_whetstone_random_max_20
+    statement: "Tainted Armourer's Scrap and Tainted Blacksmith's Whetstone set a random quality, at most 20%, on a corrupted armour or weapon. The distribution is not published."
     source_kind: datamined
-    url: https://github.com/lvlvllvlvllvlvl/RePoE
-    quote: "Randomises the quality of a corrupted armour ... The maximum random quality is 20%."
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a corrupted armour to apply it. The maximum random quality is 20%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.catalyst_random_type_and_amount
+    statement: "A Tainted Catalyst sets a random catalyst quality type and amount, at most 20%, on a corrupted ring, amulet or belt and replaces other quality types. The distributions are not published."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Applies a random quality type and amount of quality to a Corrupted ring, amulet or belt"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.catalyst_source_trialmaster
+    statement: "Tainted Catalyst drops only from the Trialmaster in an Ultimatum encounter, not from Beyond demons."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Catalyst
+    quote: "Can be obtained as a boss drop from the Trialmaster in an Ultimatum encounter."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -389,14 +428,14 @@ rules:
 1. Fractured mods and metamod-locked sides through a Vaal brick (wiki vs CoE): one observed brick settles it (section 5 row 1).
 2. Branch chances of Tainted Chaos, Exalted, Teardrop (only player talk of 50/50 and no counts); edge rules of Tainted Exalted are reported by players (6 mods: always removes, 2021; 1 mod: leaves a mod-less rare, 2026) but not confirmed; Teardrop (does "obtainable" use the item level; fractured and influence mods; 2021 report of tier-weight dependence).
 3. Distribution of Tainted Catalyst type and amount, and of the two quality scraps.
-4. Number of affixes of a Vaal-bricked rare jewel (a jewel holds at most 4).
+4. Number of affixes of a Vaal-bricked rare jewel (a jewel holds at most 4). Settles with: in-game Vaal Orbs on magic jewels until about 5 come out as a rare jewel (about 20 jewels), counting the mods of each.
 5. 3.29 socket maths of the brick (number and links; the "1 in 144" is from 2014) and of Tainted Chromatic: B6.
-6. Whether Bloodstained's implicit can fail, and whether it uses the Vaal pool uniformly (assumed).
-7. Whether the three new 3.29.0 bench options cost extra Vaal Orbs on a corrupted item (assumed by the general rule).
+6. Whether Bloodstained's implicit can fail, and whether it uses the Vaal pool uniformly (assumed). Settles with: about 30 Bloodstained uses on one item class (30 are enough to see a failure rate above 10% at 95%; the implicit's weight class shows the pool), or a developer statement on the wiki's word "attempt".
+7. Whether the three new 3.29.0 bench options cost extra Vaal Orbs on a corrupted item (assumed by the general rule). Settles with **one in-game look**: open the bench with any corrupted socketed item selected, at the "At Least Two Non-White Sockets" option; the cost line shows the Vaal Orbs or not.
 8. Allflame crafting (3.29.0): Merrick's Ducat is said by the wiki to craft a rare Abyss jewel to an extra explicit mod and corrupt it; this is a separate mechanic outside #92 and probably belongs in a row of its own (jewels are in scope).
 9. Hinekora's Lock on a Vaal Orb use of an uncorrupted item: belongs to the Lock's own ticket.
-10. The Locus share of two implicits: 3.23 sheet 26.5% (n = 1,612) against 3.25 posts about 3% (n about 58); did GGG change it in 3.24 or 3.25, or do unique items behave differently from rare ones? Nobody has counted rare items.
-11. A Syndicate bench option for the Tainted Exalted Orb is mentioned by one player (u/FourOranges, 2026-08-29); it is in no inventory row and no source I read.
+10. The Locus share of two implicits: one self-recorded sheet of uniques says 26.5% (n = 1,612), every other count says about 9% (14 in about 160); did GGG change it, or is the sheet misread? Nobody has counted rare items. Settles with: 100 tries on rare items to see 25% against 10% (80% power), or a GGG statement.
+11. A Syndicate bench option for the Tainted Exalted Orb is mentioned by one player (u/FourOranges, 2026-08-29); it is in no inventory row and no source I read. Settles with **one in-game look** at the Immortal Syndicate bench (does it offer a Tainted Exalted craft, at what cost, and is it in the 3.29 league).
 
 ## 10. How this was gathered, and what failed
 
