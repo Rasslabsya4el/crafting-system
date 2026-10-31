@@ -1,0 +1,99 @@
+# Draft claims for src/crafting_system/rules/claims/veiled.yaml (research ticket #87, note 2026-10-31-veiled-unveiling.md). Patch 3.29.3.3, checked 2026-10-31.
+rules:
+  - id: veiled.chaos_reforge_with_one_veiled_mod
+    statement: A Veiled Chaos Orb (its own currency since 3.26.0) rerolls a rare item like a Chaos Orb and guarantees one veiled mod.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Veiled_Chaos_Orb
+    quote: "It reforges a rare item with new random modifiers similarly to the standard Chaos Orb, but also guarantees one veiled modifier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.exalted_removes_then_adds_veiled
+    statement: A Veiled Exalted Orb removes one random mod from a rare item and then adds one veiled mod.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Veiled_Exalted_Orb
+    quote: "It removes a random modifier from a rare item, and then adds a random veiled modifier to it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.orbs_generic_pool_only
+    statement: Both veiled orbs add a generic veiled mod; the signature veiled mods of the Syndicate members are not in their pool. The generic placeholders are VeiledPrefix and VeiledSuffix.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Veiled_Exalted_Orb
+    quote: "The pool of possible outcomes does not include signature veiled modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.mod_is_a_plain_affix_not_crafted
+    statement: A veiled mod takes one prefix or suffix slot, is not a crafted mod (it uses no crafted-mod slot), and the orbs never put a second veiled mod on an item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Veiled_modifier
+    quote: "Veiled Chaos Orbs can no longer be used to obtain multiple Veiled modifiers on an item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.chaos_veiled_counts_in_total
+    statement: In a Veiled Chaos reroll the veiled mod counts inside the drawn total of 4, 5 or 6 mods, like the kept mods (Craft of Exile only; the draw is the total minus the kept mods minus the veiled one).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: |-
+      poec_simAddVeiledAffix(veiltype);if(crsim_bypass){useaffixes=crsim_bypass.iaffixes;useaffbt=crsim_bypass.iaffbt}else{useaffixes=crsim_data.iaffixes;useaffbt=crsim_data.iaffbt}
+      prmods++}}
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.chaos_placement_side
+    statement: In a Veiled Chaos reroll the veiled mod goes to the only side with room (kept mods counted); with room on both sides it goes to the prefix or the suffix with probability 1/2 each, whether or not a side is locked (Craft of Exile only; open point V-01).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'if(veiltype===!1){var rolled=poec_rand(0,2,!0);if(rolled==1){veiltype="prefix"}else{veiltype="suffix"}}'
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.chaos_refused_when_a_veiled_mod_would_be_kept
+    statement: A Veiled Chaos Orb is refused when a veiled mod (the placeholder, a mod unveiled from the veiled pool, or a bench craft equal to one) sits on a locked side, or when a veiled mod is fractured (Craft of Exile only; open points V-02, V-05).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'if((hasveiled.prefix&&haslock.prefix)||(hasveiled.suffix&&haslock.suffix)||hasfrac){var errtxt="Could not generate mod (Can''t use while veiled affix is present)"'
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.exalted_refused_with_a_veiled_mod
+    statement: A Veiled Exalted Orb is refused on an item that has a veiled mod or a bench craft that is the craftable version of one; in Craft of Exile a mod already unveiled from the veiled pool counts too (open point V-02). It is also refused when no mod can be removed.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Veiled_Exalted_Orb
+    quote: "Veiled Exalted Orbs cannot be used on an item with a veiled modifier or its craftable versions."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.exalted_removal_respects_side_locks_not_attack_caster
+    statement: The removal of a Veiled Exalted Orb picks uniformly among the mods that are not on a side locked by Prefixes/Suffixes Cannot Be Changed and are not fractured (crafted mods and the metamods themselves included); Cannot roll Attack/Caster Modifiers do not protect any mod.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Veiled_Exalted_Orb
+    quote: "The mod removal does not respect cannot roll attack/caster modifiers, but does respect prefixes/suffixes cannot be changed."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.exalted_placement_side
+    statement: After the removal the veiled mod goes to the only side with room; with room on both sides it goes to the prefix or the suffix with probability 1/2 each. The old 15% second veiled mod is not reachable (Craft of Exile only; open point V-01).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "var losuf=usecmaxaffgrp.suffix-useiaffbt.suffix;var lopre=usecmaxaffgrp.prefix-useiaffbt.prefix;var loaff=losuf+lopre;if(loaff>1){var rolled=99;var veiltype=null;"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.mod_placeholder_records
+    statement: The veiled placeholders are 22 mods of the veiled domain with no spawn weight; VeiledPrefix and VeiledSuffix are the generic ones, the others are named after a Syndicate member (signature, with their own offer pools). Each carries a veiled_mod_type and a veiled_mod_seed (1 to 30000).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: 'VeiledPrefix: domain "veiled", generation_type "prefix", groups ["VeiledPrefix"], spawn_weights [], stats veiled_mod_type 1, veiled_mod_seed 1..30000'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: veiled.reflecting_mist_refused_on_veiled
+    statement: A Reflecting Mist cannot be used on an item with a veiled mod (nor on an influenced item).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "Cannot be used on Veiled or Influenced items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31

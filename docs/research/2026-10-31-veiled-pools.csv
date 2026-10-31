@@ -1,0 +1,594 @@
+item_class_rep,generation_type,group,mod_id,weight,required_level,name,text
+Boots (dex),prefix,BaseLocalDefencesAndLife,JunMasterVeiledLocalIncreasedEvasionAndLife__,1000,60,Chosen,(24-28)% increased Evasion Rating | +(17-19) to maximum Life
+Boots (dex),suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Boots (dex),suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Boots (dex),suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Boots (dex),prefix,MovementVelocity,JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently,1500,60,Chosen,(25-30)% increased Movement Speed | (10-12)% increased Movement Speed if you haven't been Hit Recently
+Boots (dex),prefix,MovementVelocity,JunMasterVeiledMovementVelocityAndOnslaughtOnKill,1500,60,Chosen,(25-30)% increased Movement Speed | (13-16)% chance to gain Onslaught for 4 seconds on Kill
+Boots (dex),prefix,MovementVelocity,JunMasterVeiledMovementVelocityAndCannotBeChilled__,1500,60,Chosen,(25-30)% increased Movement Speed | 100% chance to Avoid being Chilled
+Boots (dex),suffix,IncreasedAilmentEffectOnEnemies,JunMasterVeiledEffectOfAilments__,1500,60,of the Order,(33-40)% increased Effect of Non-Damaging Ailments
+Boots (dex),suffix,GainOnslaughtDuringSoulGainPrevention,JunMasterVeiledGainOnslaughtDuringSoulGainPrevention,1500,60,of the Order,You have Onslaught during Soul Gain Prevention
+Boots (dex),suffix,DamageWithNonVaalSkillsDuringSoulGainPrevention,JunMasterVeiledDamageWithNonVaalSkillsDuringSoulGainPrevention_,1500,60,of the Order,(71-80)% increased Damage with Non-Vaal Skills during Soul Gain Prevention
+Boots (dex),prefix,IncreasedLife,JunMasterVeiledBaseLifeAndManaRegen_,1000,60,Chosen,+(55-60) to maximum Life | Regenerate 5.3 Mana per second
+Boots (dex),prefix,IncreasedMana,JunMasterVeiledBaseManaAndLifeRegen__,1000,60,Chosen,+(55-60) to maximum Mana | Regenerate 33.3 Life per second
+Boots (dex),suffix,SummonTotemCastSpeed,JunMasterVeiledSummonTotemCastSpeed_,1000,60,of the Order,(36-40)% increased Totem Placement speed
+Boots (dex),prefix,DodgeChanceDuringFocus,JunMasterVeiledDodgeChanceDuringFocus_,1000,60,Chosen,(30-32)% increased Evasion Rating while Focused
+Boots (dex),suffix,ImmuneToStatusAilmentsWhileFocused,JunMasterVeiledImmuneToStatusAilmentsWhileFocused,2000,60,of the Order,You are Immune to Ailments while Focused | Focus has (5-8)% increased Cooldown Recovery Rate
+Boots (dex),suffix,CooldownRecovery,JunMasterVeiledFocusCooldownRecovery_,2000,60,of the Order,Focus has (31-35)% increased Cooldown Recovery Rate
+Boots (dex),suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Boots (dex),suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Boots (dex),suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Boots (str),prefix,BaseLocalDefencesAndLife,JunMasterVeiledLocalIncreasedArmourAndLife_,1000,60,Chosen,(24-28)% increased Armour | +(17-19) to maximum Life
+Boots (str),suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Boots (str),suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Boots (str),suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Boots (str),prefix,MovementVelocity,JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently,1500,60,Chosen,(25-30)% increased Movement Speed | (10-12)% increased Movement Speed if you haven't been Hit Recently
+Boots (str),prefix,MovementVelocity,JunMasterVeiledMovementVelocityAndOnslaughtOnKill,1500,60,Chosen,(25-30)% increased Movement Speed | (13-16)% chance to gain Onslaught for 4 seconds on Kill
+Boots (str),prefix,MovementVelocity,JunMasterVeiledMovementVelocityAndCannotBeChilled__,1500,60,Chosen,(25-30)% increased Movement Speed | 100% chance to Avoid being Chilled
+Boots (str),suffix,IncreasedAilmentEffectOnEnemies,JunMasterVeiledEffectOfAilments__,1500,60,of the Order,(33-40)% increased Effect of Non-Damaging Ailments
+Boots (str),suffix,GainOnslaughtDuringSoulGainPrevention,JunMasterVeiledGainOnslaughtDuringSoulGainPrevention,1500,60,of the Order,You have Onslaught during Soul Gain Prevention
+Boots (str),suffix,DamageWithNonVaalSkillsDuringSoulGainPrevention,JunMasterVeiledDamageWithNonVaalSkillsDuringSoulGainPrevention_,1500,60,of the Order,(71-80)% increased Damage with Non-Vaal Skills during Soul Gain Prevention
+Boots (str),prefix,IncreasedLife,JunMasterVeiledBaseLifeAndManaRegen_,1000,60,Chosen,+(55-60) to maximum Life | Regenerate 5.3 Mana per second
+Boots (str),prefix,IncreasedMana,JunMasterVeiledBaseManaAndLifeRegen__,1000,60,Chosen,+(55-60) to maximum Mana | Regenerate 33.3 Life per second
+Boots (str),suffix,SummonTotemCastSpeed,JunMasterVeiledSummonTotemCastSpeed_,1000,60,of the Order,(36-40)% increased Totem Placement speed
+Boots (str),prefix,DodgeChanceDuringFocus,JunMasterVeiledDodgeChanceDuringFocus_,1000,60,Chosen,(30-32)% increased Evasion Rating while Focused
+Boots (str),suffix,ImmuneToStatusAilmentsWhileFocused,JunMasterVeiledImmuneToStatusAilmentsWhileFocused,2000,60,of the Order,You are Immune to Ailments while Focused | Focus has (5-8)% increased Cooldown Recovery Rate
+Boots (str),suffix,CooldownRecovery,JunMasterVeiledFocusCooldownRecovery_,2000,60,of the Order,Focus has (31-35)% increased Cooldown Recovery Rate
+Boots (str),suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Boots (str),suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Boots (str),suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Gloves (dex),prefix,AreaDamageAndAreaOfEffect,JunMasterVeiledAreaDamageAndAreaOfEffect,750,60,Chosen,(17-20)% increased Area Damage | (14-16)% increased Area of Effect
+Gloves (dex),prefix,ProjectileDamageAndProjectileSpeed,JunMasterVeiledProjectileDamageAndProjectileSpeed,750,60,Chosen,(17-20)% increased Projectile Damage | (23-25)% increased Projectile Speed
+Gloves (dex),prefix,MeleeRangeAndMeleeDamage,JunMasterVeiledMeleeDamageAndMeleeRange,750,60,Chosen,(17-20)% increased Melee Damage | +0.2 metres to Melee Strike Range
+Gloves (dex),prefix,BaseLocalDefencesAndLife,JunMasterVeiledLocalIncreasedEvasionAndLife__,1000,60,Chosen,(24-28)% increased Evasion Rating | +(17-19) to maximum Life
+Gloves (dex),suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Gloves (dex),suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Gloves (dex),suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Gloves (dex),prefix,ConvertPhysicalToFire,JunMasterVeiledPhysicalDamageConvertedToFire_,2000,60,Chosen,(30-35)% of Physical Damage Converted to Fire Damage
+Gloves (dex),prefix,ConvertPhysicalToCold,JunMasterVeiledPhysicalDamageConvertedToCold,2000,60,Chosen,(30-35)% of Physical Damage Converted to Cold Damage
+Gloves (dex),prefix,ConvertPhysicalToLightning,JunMasterVeiledPhysicalDamageConvertedToLightning,2000,60,Chosen,(30-35)% of Physical Damage Converted to Lightning Damage
+Gloves (dex),suffix,GainOnslaughtDuringSoulGainPrevention,JunMasterVeiledGainOnslaughtDuringSoulGainPrevention,1500,60,of the Order,You have Onslaught during Soul Gain Prevention
+Gloves (dex),suffix,DamageWithNonVaalSkillsDuringSoulGainPrevention,JunMasterVeiledDamageWithNonVaalSkillsDuringSoulGainPrevention_,1500,60,of the Order,(71-80)% increased Damage with Non-Vaal Skills during Soul Gain Prevention
+Gloves (dex),suffix,CriticalStrikeChanceIncrease,JunMasterVeiledCriticalChanceAndElementalDamagePercentIfHaveCritRecently,1500,60,of the Order,(27-30)% increased Elemental Damage if you've dealt a Critical Strike Recently | (20-22)% increased Global Critical Strike Chance
+Gloves (dex),suffix,CriticalStrikeChanceIncrease,JunMasterVeiledCriticalChanceAndAddedChaosDamageIfHaveCritRecently_,1500,60,of the Order,Adds (22-25) to (28-32) Chaos Damage if you've dealt a Critical Strike Recently | (20-22)% increased Global Critical Strike Chance
+Gloves (dex),prefix,IncreasedLife,JunMasterVeiledBaseLifeAndManaRegen_,1000,60,Chosen,+(55-60) to maximum Life | Regenerate 5.3 Mana per second
+Gloves (dex),prefix,IncreasedMana,JunMasterVeiledBaseManaAndLifeRegen__,1000,60,Chosen,+(55-60) to maximum Mana | Regenerate 33.3 Life per second
+Gloves (dex),suffix,BrandAttachmentRange,JunMasterVeiledBrandAttachmentRange,1000,60,of the Order,(25-28)% increased Brand Attachment range
+Gloves (dex),prefix,PhysicalDamageReductionDuringFocus,JunMasterVeiledPhysicalDamageReductionDuringFocus_,1500,60,Chosen,(13-15)% additional Physical Damage Reduction while Focused
+Gloves (dex),suffix,AttackAndCastSpeedWhileFocused,JunMasterVeiledAttackAndCastSpeedWhileFocused_,2000,60,of the Order,(45-50)% increased Attack and Cast Speed while Focused
+Gloves (dex),suffix,MinionsRecoverMaximumLifeWhenYouFocus,JunMasterVeiledMinionsRecoverMaximumLifeWhenYouFocus_,2000,60,of the Order,Minions Recover 100% of their Life when you Focus | Focus has (5-8)% increased Cooldown Recovery Rate
+Gloves (dex),suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Gloves (dex),suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Gloves (dex),suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Helmet (dex),prefix,BaseLocalDefencesAndLife,JunMasterVeiledLocalIncreasedEvasionAndLifeMed___,1000,60,Chosen,(24-28)% increased Evasion Rating | +(19-22) to maximum Life
+Helmet (dex),suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Helmet (dex),suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Helmet (dex),suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Helmet (dex),prefix,MaximumMinionCount,JunMasterVeiledMaximumZombieAndSkeleton,2000,60,Chosen,+1 to maximum number of Raised Zombies | +1 to maximum number of Skeletons | Minions have (8-10)% increased maximum Life
+Helmet (dex),suffix,AvoidElementalDamageChanceDuringSoulGainPrevention,JunMasterVeiledAvoidElementalDamageChanceDuringSoulGainPrevention,1000,60,of the Order,(10-12)% chance to Avoid Damage of each Element from Hits during Soul Gain Prevention
+Helmet (dex),prefix,SkillAreaOfEffectPercentAndAreaOfEffectGemLevel,JunMasterVeiledSkillAreaOfEffectPercentAndAreaOfEffectGemLevel,1500,60,Chosen,(8-10)% increased Area of Effect | +2 to Level of Socketed AoE Gems
+Helmet (dex),prefix,ProjectilePierceAndProjectileGemLevel,JunMasterVeiledProjectilePierceAndProjectileGemLevel,1500,60,Chosen,Projectiles Pierce an additional Target | +2 to Level of Socketed Projectile Gems
+Helmet (dex),prefix,MeleeRangeAndMeleeGemLevel,JunMasterVeiledMeleeRangeAndMeleeGemLevel,1500,60,Chosen,+0.2 metres to Melee Strike Range | +2 to Level of Socketed Melee Gems
+Helmet (dex),prefix,IncreasedLife,JunMasterVeiledBaseLifeAndManaRegen_,1000,60,Chosen,+(55-60) to maximum Life | Regenerate 5.3 Mana per second
+Helmet (dex),prefix,IncreasedMana,JunMasterVeiledBaseManaAndLifeRegen__,1000,60,Chosen,+(55-60) to maximum Mana | Regenerate 33.3 Life per second
+Helmet (dex),suffix,MineLayingSpeed,JunMasterVeiledMineLayingSpeed,1000,60,of the Order,(14-16)% increased Mine Throwing Speed
+Helmet (dex),prefix,DodgeChanceDuringFocus,JunMasterVeiledDodgeChanceDuringFocus_,1000,60,Chosen,(30-32)% increased Evasion Rating while Focused
+Helmet (dex),prefix,PhysicalDamageReductionDuringFocus,JunMasterVeiledPhysicalDamageReductionDuringFocus_,1500,60,Chosen,(13-15)% additional Physical Damage Reduction while Focused
+Helmet (dex),suffix,StatusAilmentsYouInflictDurationWhileFocused,JunMasterVeiledStatusAilmentsYouInflictDurationWhileFocused_,1000,60,of the Order,(36-40)% increased Duration of Ailments you inflict while Focused
+Helmet (dex),suffix,TriggerSocketedSpellWhenYouFocus,JunMasterVeiledTriggerSocketedSpellWhenYouFocus,1000,60,of the Order,"Trigger Socketed Spells when you Focus, with a 0.25 second Cooldown | Focus has (5-8)% increased Cooldown Recovery Rate"
+Helmet (dex),suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Helmet (dex),suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Helmet (dex),suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Body Armour (dex),prefix,BaseLocalDefencesAndLife,JunMasterVeiledLocalIncreasedEvasionAndLifeHigh_,1000,60,Chosen,(24-28)% increased Evasion Rating | +(23-26) to maximum Life
+Body Armour (dex),suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Body Armour (dex),suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Body Armour (dex),suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Body Armour (dex),suffix,AvoidElementalDamageChanceDuringSoulGainPrevention,JunMasterVeiledAvoidElementalDamageChanceDuringSoulGainPrevention,1000,60,of the Order,(10-12)% chance to Avoid Damage of each Element from Hits during Soul Gain Prevention
+Body Armour (dex),prefix,PhysicalDamageReductionRatingDuringSoulGainPrevention,JunMasterVeiledPhysicalDamageReductionRatingDuringSoulGainPrevention,1000,60,Chosen,+(3201-4000) to Armour during Soul Gain Prevention
+Body Armour (dex),suffix,EnergyShieldRegenerationRatePerMinuteIfRareOrUniqueEnemyNearby,JunMasterVeiledEnergyShieldRegenerationRatePerMinuteIfRareOrUniqueEnemyNearby,1500,60,of the Order,Regenerate 200 Energy Shield per second while a Rare or Unique Enemy is Nearby
+Body Armour (dex),suffix,LifeRegenerationPerEvasionDuringFocus,JunMasterVeiledLifeRegenerationPerEvasionDuringFocus,1000,60,of the Order,1.5% of Evasion Rating is Regenerated as Life per second while Focused
+Body Armour (dex),suffix,RestoreManaAndEnergyShieldOnFocus,JunMasterVeiledRestoreManaAndEnergyShieldOnFocus,1000,60,of the Order,Recover (37-40)% of Mana and Energy Shield when you Focus
+Body Armour (dex),suffix,FortifyEffectWhileFocused,JunMasterVeiledFortifyEffectWhileFocused_,1000,60,of the Order,+10 to maximum Fortification while Focused
+Body Armour (dex),suffix,DamageRemovedFromManaBeforeLifeWhileFocused,JunMasterVeiledDamageRemovedFromManaBeforeLifeWhileFocused,1000,60,of the Order,(18-22)% of Damage is taken from Mana before Life while Focused
+Body Armour (dex),suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Body Armour (dex),suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Body Armour (dex),suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Body Armour (dex),suffix,Strength,JunMasterVeiledStrengthAndAvoidIgnite,1000,60,of the Order,+(31-35) to Strength | (21-25)% chance to Avoid being Ignited
+Body Armour (dex),suffix,Dexterity,JunMasterVeiledDexterityAndAvoidFreeze,1000,60,of the Order,+(31-35) to Dexterity | (21-25)% chance to Avoid being Frozen
+Body Armour (dex),suffix,Intelligence,JunMasterVeiledIntelligenceAndAvoidShock,1000,60,of the Order,+(31-35) to Intelligence | (21-25)% chance to Avoid being Shocked
+Body Armour (dex),prefix,MaximumLifeIncreasePercent,JunMasterVeiledPercentageLifeAndMana,2000,60,Chosen,(9-10)% increased maximum Life | (9-10)% increased maximum Mana
+Body Armour (dex),prefix,BlockPercent,JunMasterVeiledBlockPercent,2000,60,Chosen,(8-9)% Chance to Block Attack Damage
+Body Armour (dex),prefix,SpellBlockPercentage,JunMasterVeiledSpellBlockPercent____,2000,60,Chosen,(9-10)% Chance to Block Spell Damage
+Body Armour (dex),prefix,AvoidStunAndElementalStatusAilments,JunMasterVeiledAvoidStunAndElementalStatusAilments,2000,60,Chosen,(30-35)% chance to Avoid Elemental Ailments | (30-35)% chance to Avoid being Stunned
+Shield (str),suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+Shield (str),prefix,BaseLocalDefencesAndLife,JunMasterVeiledLocalIncreasedArmourAndLifeMed___,1000,60,Chosen,(24-28)% increased Armour | +(19-22) to maximum Life
+Shield (str),suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Shield (str),suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Shield (str),suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Shield (str),suffix,CurseEffectiveness,JunMasterVeiledCurseEffect,3000,60,of the Order,(8-10)% increased Effect of your Curses
+Shield (str),prefix,PhysicalDamageReductionRatingDuringSoulGainPrevention,JunMasterVeiledPhysicalDamageReductionRatingDuringSoulGainPrevention,1000,60,Chosen,+(3201-4000) to Armour during Soul Gain Prevention
+Shield (str),prefix,AddedFireAndColdDamage,JunMasterVeiledAddedFireAndColdDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Cold Damage
+Shield (str),prefix,AddedFireAndLightningDamage,JunMasterVeiledAddedFireAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Lightning Damage
+Shield (str),prefix,AddedColdAndLightningDamage,JunMasterVeiledAddedColdAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Cold Damage | Adds (14-16) to (20-22) Lightning Damage
+Shield (str),suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+Shield (str),suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Shield (str),suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Shield (str),suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Shield (str),suffix,Strength,JunMasterVeiledStrengthAndAvoidIgnite,1000,60,of the Order,+(31-35) to Strength | (21-25)% chance to Avoid being Ignited
+Shield (str),suffix,Dexterity,JunMasterVeiledDexterityAndAvoidFreeze,1000,60,of the Order,+(31-35) to Dexterity | (21-25)% chance to Avoid being Frozen
+Shield (str),suffix,Intelligence,JunMasterVeiledIntelligenceAndAvoidShock,1000,60,of the Order,+(31-35) to Intelligence | (21-25)% chance to Avoid being Shocked
+Shield (int/focus),suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+Shield (int/focus),prefix,BaseLocalDefencesAndLife,JunMasterVeiledLocalIncreasedEnergyShieldAndLifeMed,1000,60,Chosen,(24-28)% increased Energy Shield | +(19-22) to maximum Life
+Shield (int/focus),suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Shield (int/focus),suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Shield (int/focus),suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Shield (int/focus),suffix,CurseEffectiveness,JunMasterVeiledCurseEffect,3000,60,of the Order,(8-10)% increased Effect of your Curses
+Shield (int/focus),prefix,PhysicalDamageReductionRatingDuringSoulGainPrevention,JunMasterVeiledPhysicalDamageReductionRatingDuringSoulGainPrevention,1000,60,Chosen,+(3201-4000) to Armour during Soul Gain Prevention
+Shield (int/focus),prefix,AddedFireAndColdDamage,JunMasterVeiledAddedFireAndColdDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Cold Damage
+Shield (int/focus),prefix,AddedFireAndLightningDamage,JunMasterVeiledAddedFireAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Lightning Damage
+Shield (int/focus),prefix,AddedColdAndLightningDamage,JunMasterVeiledAddedColdAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Cold Damage | Adds (14-16) to (20-22) Lightning Damage
+Shield (int/focus),suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+Shield (int/focus),suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Shield (int/focus),suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Shield (int/focus),suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Shield (int/focus),suffix,Strength,JunMasterVeiledStrengthAndAvoidIgnite,1000,60,of the Order,+(31-35) to Strength | (21-25)% chance to Avoid being Ignited
+Shield (int/focus),suffix,Dexterity,JunMasterVeiledDexterityAndAvoidFreeze,1000,60,of the Order,+(31-35) to Dexterity | (21-25)% chance to Avoid being Frozen
+Shield (int/focus),suffix,Intelligence,JunMasterVeiledIntelligenceAndAvoidShock,1000,60,of the Order,+(31-35) to Intelligence | (21-25)% chance to Avoid being Shocked
+Ring,suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Ring,suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Ring,suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Ring,suffix,MinimumEnduranceCharges,JunMasterVeiledMinimumEnduranceCharges_,1500,60,of the Order,+1 to Minimum Endurance Charges | (3-4)% chance to gain an Endurance Charge on Kill
+Ring,suffix,MinimumPowerCharges,JunMasterVeiledMinimumPowerCharges,1500,60,of the Order,+1 to Minimum Power Charges | (3-4)% chance to gain a Power Charge on Kill
+Ring,suffix,MinimumFrenzyCharges,JunMasterVeiledMinimumFrenzyCharges___,1500,60,of the Order,+1 to Minimum Frenzy Charges | (3-4)% chance to gain a Frenzy Charge on Kill
+Ring,prefix,IncreasedMana,JunMasterVeiledIncreasedManaAndRegen,600,60,Chosen,+(51-55) to maximum Mana | Regenerate 5.3 Mana per second
+Ring,prefix,IncreasedMana,JunMasterVeiledManaAndManaCostEfficiency,600,60,Chosen,+(51-55) to maximum Mana | (13-15)% increased Mana Cost Efficiency
+Ring,prefix,IncreasedMana,JunMasterVeiledManaAndDamageTakenGoesToManaPercent,600,60,Chosen,+(51-55) to maximum Mana | (7-8)% of Damage taken Recouped as Mana
+Ring,prefix,IncreasedLife,JunMasterVeiledBaseLifeAndManaRegen_,1000,60,Chosen,+(55-60) to maximum Life | Regenerate 5.3 Mana per second
+Ring,prefix,IncreasedMana,JunMasterVeiledBaseManaAndLifeRegen__,1000,60,Chosen,+(55-60) to maximum Mana | Regenerate 33.3 Life per second
+Ring,prefix,AddedFireAndColdDamage,JunMasterVeiledAddedFireAndColdDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Cold Damage
+Ring,prefix,AddedFireAndLightningDamage,JunMasterVeiledAddedFireAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Lightning Damage
+Ring,prefix,AddedColdAndLightningDamage,JunMasterVeiledAddedColdAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Cold Damage | Adds (14-16) to (20-22) Lightning Damage
+Ring,suffix,ShockNearbyEnemiesOnFocus,JunMasterVeiledShockNearbyEnemiesOnFocus,1000,60,of the Order,Shock nearby Enemies for 4 Seconds when you Focus | Focus has (5-8)% increased Cooldown Recovery Rate
+Ring,suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Ring,suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Ring,suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Amulet,suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Amulet,suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Amulet,suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Amulet,suffix,MinimumEnduranceCharges,JunMasterVeiledMinimumEnduranceCharges_,1500,60,of the Order,+1 to Minimum Endurance Charges | (3-4)% chance to gain an Endurance Charge on Kill
+Amulet,suffix,MinimumPowerCharges,JunMasterVeiledMinimumPowerCharges,1500,60,of the Order,+1 to Minimum Power Charges | (3-4)% chance to gain a Power Charge on Kill
+Amulet,suffix,MinimumFrenzyCharges,JunMasterVeiledMinimumFrenzyCharges___,1500,60,of the Order,+1 to Minimum Frenzy Charges | (3-4)% chance to gain a Frenzy Charge on Kill
+Amulet,prefix,IncreasedMana,JunMasterVeiledIncreasedManaAndRegen,600,60,Chosen,+(51-55) to maximum Mana | Regenerate 5.3 Mana per second
+Amulet,prefix,IncreasedMana,JunMasterVeiledManaAndManaCostEfficiency,600,60,Chosen,+(51-55) to maximum Mana | (13-15)% increased Mana Cost Efficiency
+Amulet,prefix,IncreasedMana,JunMasterVeiledManaAndDamageTakenGoesToManaPercent,600,60,Chosen,+(51-55) to maximum Mana | (7-8)% of Damage taken Recouped as Mana
+Amulet,suffix,AttackCastSpeed,JunMasterVeiledAttackAndCastSpeed_,1500,60,of the Order,(7-8)% increased Attack and Cast Speed
+Amulet,suffix,IncreasedAilmentEffectOnEnemies,JunMasterVeiledEffectOfAilments__,1500,60,of the Order,(33-40)% increased Effect of Non-Damaging Ailments
+Amulet,prefix,IncreasedLife,JunMasterVeiledBaseLifeAndManaRegen_,1000,60,Chosen,+(55-60) to maximum Life | Regenerate 5.3 Mana per second
+Amulet,prefix,IncreasedMana,JunMasterVeiledBaseManaAndLifeRegen__,1000,60,Chosen,+(55-60) to maximum Mana | Regenerate 33.3 Life per second
+Amulet,suffix,SummonTotemCastSpeed,JunMasterVeiledSummonTotemCastSpeed_,1000,60,of the Order,(36-40)% increased Totem Placement speed
+Amulet,suffix,TrapAndMineThrowSpeed,JunMasterVeiledTrapThrowSpeed_,1000,60,of the Order,(14-16)% increased Trap Throwing Speed
+Amulet,suffix,MineLayingSpeed,JunMasterVeiledMineLayingSpeed,1000,60,of the Order,(14-16)% increased Mine Throwing Speed
+Amulet,suffix,BrandAttachmentRange,JunMasterVeiledBrandAttachmentRange,1000,60,of the Order,(25-28)% increased Brand Attachment range
+Amulet,prefix,AddedFireAndColdDamage,JunMasterVeiledAddedFireAndColdDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Cold Damage
+Amulet,prefix,AddedFireAndLightningDamage,JunMasterVeiledAddedFireAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Lightning Damage
+Amulet,prefix,AddedColdAndLightningDamage,JunMasterVeiledAddedColdAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Cold Damage | Adds (14-16) to (20-22) Lightning Damage
+Amulet,suffix,LifeLeechFromAnyDamagePermyriadWhileFocused,JunMasterVeiledLifeLeechFromAnyDamageAndVaalPactWhileFocused,3000,60,of the Order,15% of Damage Leeched as Life while Focused | You have Vaal Pact while Focused
+Amulet,suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Amulet,suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Amulet,suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Belt,suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Belt,suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Belt,suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Belt,prefix,IncreasedPhysicalDamageReductionRating,JunMasterVeiledArmourAndEvasionRating,1500,60,Chosen,+(365-400) to Armour and Evasion Rating
+Belt,prefix,IncreasedPhysicalDamageReductionRating,JunMasterVeiledArmourAndEnergyShield,1500,60,Chosen,+(365-400) to Armour | +(31-35) to maximum Energy Shield
+Belt,prefix,IncreasedEvasionRating,JunMasterVeiledEvasionRatingAndEnergyShield,1500,60,Chosen,+(365-400) to Evasion Rating | +(31-35) to maximum Energy Shield
+Belt,prefix,FlaskEffect,JunMasterVeiledFlaskEffectAndFlaskChargesGained,1500,60,Chosen,Flasks applied to you have (15-18)% increased Effect | 33% reduced Flask Charges gained
+Belt,suffix,CooldownRecovery,JunMasterVeiledGlobalCooldownRecovery,1500,60,of the Order,(13-16)% increased Cooldown Recovery Rate
+Belt,suffix,EnergyShieldRegenerationRatePerMinuteIfRareOrUniqueEnemyNearby,JunMasterVeiledEnergyShieldRegenerationRatePerMinuteIfRareOrUniqueEnemyNearby,1500,60,of the Order,Regenerate 200 Energy Shield per second while a Rare or Unique Enemy is Nearby
+Belt,prefix,IncreasedLife,JunMasterVeiledBaseLifeAndManaRegen_,1000,60,Chosen,+(55-60) to maximum Life | Regenerate 5.3 Mana per second
+Belt,prefix,IncreasedMana,JunMasterVeiledBaseManaAndLifeRegen__,1000,60,Chosen,+(55-60) to maximum Mana | Regenerate 33.3 Life per second
+Belt,suffix,TrapAndMineThrowSpeed,JunMasterVeiledTrapThrowSpeed_,1000,60,of the Order,(14-16)% increased Trap Throwing Speed
+Belt,suffix,LuckyCriticalsDuringFocus,JunMasterVeiledLuckyCriticalsDuringFocus,1000,60,of the Order,Your Critical Strike Chance is Lucky while Focused | Focus has (5-8)% increased Cooldown Recovery Rate
+Belt,suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Belt,suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Belt,suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Quiver,suffix,Strength,JunMasterVeiledStrengthAndDexterity,600,60,of the Order,+(31-35) to Strength and Dexterity
+Quiver,suffix,Dexterity,JunMasterVeiledDexterityAndIntelligence,600,60,of the Order,+(31-35) to Dexterity and Intelligence
+Quiver,suffix,Strength,JunMasterVeiledStrengthAndIntelligence,600,60,of the Order,+(31-35) to Strength and Intelligence
+Quiver,suffix,AttackCastSpeed,JunMasterVeiledAttackAndCastSpeed_,1500,60,of the Order,(7-8)% increased Attack and Cast Speed
+Quiver,prefix,IncreasedPhysicalDamageReductionRating,JunMasterVeiledArmourAndEvasionRating,1500,60,Chosen,+(365-400) to Armour and Evasion Rating
+Quiver,prefix,IncreasedEvasionRating,JunMasterVeiledEvasionRatingAndEnergyShield,1500,60,Chosen,+(365-400) to Evasion Rating | +(31-35) to maximum Energy Shield
+Quiver,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledCriticalChanceAndGainFrenzyChargeOnCriticalStrikePercent,1500,60,of the Order,(6-7)% chance to gain a Frenzy Charge on Critical Strike | (18-20)% increased Global Critical Strike Chance
+Quiver,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledCriticalChanceAndElementalDamagePercentIfHaveCritRecently,1500,60,of the Order,(27-30)% increased Elemental Damage if you've dealt a Critical Strike Recently | (20-22)% increased Global Critical Strike Chance
+Quiver,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledCriticalChanceAndAddedChaosDamageIfHaveCritRecently_,1500,60,of the Order,Adds (22-25) to (28-32) Chaos Damage if you've dealt a Critical Strike Recently | (20-22)% increased Global Critical Strike Chance
+Quiver,prefix,IncreasedLife,JunMasterVeiledBaseLifeAndManaRegen_,1000,60,Chosen,+(55-60) to maximum Life | Regenerate 5.3 Mana per second
+Quiver,prefix,IncreasedMana,JunMasterVeiledBaseManaAndLifeRegen__,1000,60,Chosen,+(55-60) to maximum Mana | Regenerate 33.3 Life per second
+Quiver,prefix,AddedFireAndColdDamage,JunMasterVeiledAddedFireAndColdDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Cold Damage
+Quiver,prefix,AddedFireAndLightningDamage,JunMasterVeiledAddedFireAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Fire Damage | Adds (14-16) to (20-22) Lightning Damage
+Quiver,prefix,AddedColdAndLightningDamage,JunMasterVeiledAddedColdAndLightningDamage,1000,60,Chosen,Adds (14-16) to (20-22) Cold Damage | Adds (14-16) to (20-22) Lightning Damage
+Quiver,suffix,FireAndChaosDamageResistance,JunMasterVeiledFireAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Fire and Chaos Resistances
+Quiver,suffix,LightningAndChaosDamageResistance,JunMasterVeiledLightningAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Lightning and Chaos Resistances
+Quiver,suffix,ColdAndChaosDamageResistance,JunMasterVeiledColdAndChaosDamageResistance,600,60,of the Order,+(16-20)% to Cold and Chaos Resistances
+Wand,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+Wand,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+Wand,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+Wand,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+Wand,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,500,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+Wand,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,500,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+Wand,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+Wand,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite1h,1000,60,Chosen,(70-79)% increased Fire Damage | (21-23)% chance to Ignite
+Wand,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze1h,1000,60,Chosen,(70-79)% increased Cold Damage | (21-23)% chance to Freeze
+Wand,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock1h_,1000,60,Chosen,(70-79)% increased Lightning Damage | (21-23)% chance to Shock
+Wand,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration1h,1000,60,Chosen,(60-69)% increased Chaos Damage | Chaos Skills have (13-15)% increased Skill Effect Duration
+Wand,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate1h,1000,60,Chosen,(70-79)% increased Spell Damage | (18-20)% increased Mana Regeneration Rate
+Wand,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage1h,1000,60,Chosen,(60-69)% increased Spell Damage | Gain 5% of Non-Chaos Damage as extra Chaos Damage
+Wand,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife1h,1000,60,Chosen,Minions deal (34-38)% increased Damage | Minions have (34-38)% increased maximum Life
+Wand,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h,1000,60,of the Order,Minions have (18-20)% increased Attack Speed | Minions have (18-20)% increased Cast Speed
+Wand,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplier__,1000,60,of the Order,+(24-28)% to Chaos Damage over Time Multiplier
+Wand,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplier,1000,60,of the Order,+(24-28)% to Physical Damage over Time Multiplier
+Wand,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplier___,1000,60,of the Order,+(24-28)% to Cold Damage over Time Multiplier
+Wand,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplier,1000,60,of the Order,+(24-28)% to Fire Damage over Time Multiplier
+Wand,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge1h,1000,60,of the Order,(5-6)% increased Damage per Endurance Charge
+Wand,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge1h,1000,60,of the Order,(5-6)% increased Damage per Frenzy Charge
+Wand,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge1h_,1000,60,of the Order,(5-6)% increased Damage per Power Charge
+Wand,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,+(36-40)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+Wand,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,(12-15)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+Wand,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+Wand,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligenceRanged,1000,60,of the Order,(12-15)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+Wand,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+Wand,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+Wand,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChanceRangedWeapon,1000,60,of the Order,(12-15)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+Wand,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance1h__,1000,60,of the Order,(18-22)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+Sceptre,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+Sceptre,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+Sceptre,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+Sceptre,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+Sceptre,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+Sceptre,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+Sceptre,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+Sceptre,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite1h,1000,60,Chosen,(70-79)% increased Fire Damage | (21-23)% chance to Ignite
+Sceptre,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze1h,1000,60,Chosen,(70-79)% increased Cold Damage | (21-23)% chance to Freeze
+Sceptre,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock1h_,1000,60,Chosen,(70-79)% increased Lightning Damage | (21-23)% chance to Shock
+Sceptre,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration1h,1000,60,Chosen,(60-69)% increased Chaos Damage | Chaos Skills have (13-15)% increased Skill Effect Duration
+Sceptre,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate1h,1000,60,Chosen,(70-79)% increased Spell Damage | (18-20)% increased Mana Regeneration Rate
+Sceptre,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage1h,1000,60,Chosen,(60-69)% increased Spell Damage | Gain 5% of Non-Chaos Damage as extra Chaos Damage
+Sceptre,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife1h,1000,60,Chosen,Minions deal (34-38)% increased Damage | Minions have (34-38)% increased maximum Life
+Sceptre,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h,1000,60,of the Order,Minions have (18-20)% increased Attack Speed | Minions have (18-20)% increased Cast Speed
+Sceptre,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplier__,600,60,of the Order,+(24-28)% to Chaos Damage over Time Multiplier
+Sceptre,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Physical Damage over Time Multiplier
+Sceptre,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplier___,600,60,of the Order,+(24-28)% to Cold Damage over Time Multiplier
+Sceptre,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplier,600,60,of the Order,+(24-28)% to Fire Damage over Time Multiplier
+Sceptre,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge1h,1000,60,of the Order,(5-6)% increased Damage per Endurance Charge
+Sceptre,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge1h,1000,60,of the Order,(5-6)% increased Damage per Frenzy Charge
+Sceptre,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge1h_,1000,60,of the Order,(5-6)% increased Damage per Power Charge
+Sceptre,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,+(36-40)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+Sceptre,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,(12-15)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+Sceptre,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+Sceptre,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+Sceptre,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+Sceptre,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+Sceptre,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+Sceptre,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance1h__,1000,60,of the Order,(18-22)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+Dagger,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+Dagger,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+Dagger,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+Dagger,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,500,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+Dagger,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,500,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+Dagger,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,500,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+Dagger,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+Dagger,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite1h,1000,60,Chosen,(70-79)% increased Fire Damage | (21-23)% chance to Ignite
+Dagger,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze1h,1000,60,Chosen,(70-79)% increased Cold Damage | (21-23)% chance to Freeze
+Dagger,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock1h_,1000,60,Chosen,(70-79)% increased Lightning Damage | (21-23)% chance to Shock
+Dagger,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration1h,1000,60,Chosen,(60-69)% increased Chaos Damage | Chaos Skills have (13-15)% increased Skill Effect Duration
+Dagger,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate1h,1000,60,Chosen,(70-79)% increased Spell Damage | (18-20)% increased Mana Regeneration Rate
+Dagger,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage1h,1000,60,Chosen,(60-69)% increased Spell Damage | Gain 5% of Non-Chaos Damage as extra Chaos Damage
+Dagger,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife1h,1000,60,Chosen,Minions deal (34-38)% increased Damage | Minions have (34-38)% increased maximum Life
+Dagger,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h,1000,60,of the Order,Minions have (18-20)% increased Attack Speed | Minions have (18-20)% increased Cast Speed
+Dagger,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplier__,1000,60,of the Order,+(24-28)% to Chaos Damage over Time Multiplier
+Dagger,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Physical Damage over Time Multiplier
+Dagger,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplier___,1000,60,of the Order,+(24-28)% to Cold Damage over Time Multiplier
+Dagger,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplier,1000,60,of the Order,+(24-28)% to Fire Damage over Time Multiplier
+Dagger,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge1h,1000,60,of the Order,(5-6)% increased Damage per Endurance Charge
+Dagger,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge1h,1000,60,of the Order,(5-6)% increased Damage per Frenzy Charge
+Dagger,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge1h_,1000,60,of the Order,(5-6)% increased Damage per Power Charge
+Dagger,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,+(36-40)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+Dagger,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,(12-15)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+Dagger,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+Dagger,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+Dagger,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+Dagger,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+Dagger,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+Dagger,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance1h__,1000,60,of the Order,(18-22)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+Claw,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+Claw,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+Claw,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+Claw,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+Claw,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+Claw,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+Claw,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+Claw,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite1h,100,60,Chosen,(70-79)% increased Fire Damage | (21-23)% chance to Ignite
+Claw,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze1h,100,60,Chosen,(70-79)% increased Cold Damage | (21-23)% chance to Freeze
+Claw,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock1h_,100,60,Chosen,(70-79)% increased Lightning Damage | (21-23)% chance to Shock
+Claw,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration1h,100,60,Chosen,(60-69)% increased Chaos Damage | Chaos Skills have (13-15)% increased Skill Effect Duration
+Claw,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate1h,100,60,Chosen,(70-79)% increased Spell Damage | (18-20)% increased Mana Regeneration Rate
+Claw,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage1h,100,60,Chosen,(60-69)% increased Spell Damage | Gain 5% of Non-Chaos Damage as extra Chaos Damage
+Claw,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife1h,400,60,Chosen,Minions deal (34-38)% increased Damage | Minions have (34-38)% increased maximum Life
+Claw,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h,400,60,of the Order,Minions have (18-20)% increased Attack Speed | Minions have (18-20)% increased Cast Speed
+Claw,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplier__,100,60,of the Order,+(24-28)% to Chaos Damage over Time Multiplier
+Claw,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Physical Damage over Time Multiplier
+Claw,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplier___,400,60,of the Order,+(24-28)% to Cold Damage over Time Multiplier
+Claw,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Fire Damage over Time Multiplier
+Claw,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge1h,1000,60,of the Order,(5-6)% increased Damage per Endurance Charge
+Claw,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge1h,1000,60,of the Order,(5-6)% increased Damage per Frenzy Charge
+Claw,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge1h_,1000,60,of the Order,(5-6)% increased Damage per Power Charge
+Claw,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,+(36-40)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+Claw,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,(12-15)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+Claw,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+Claw,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+Claw,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+Claw,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+Claw,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+Claw,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance1h__,100,60,of the Order,(18-22)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+1H Sword,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+1H Sword,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+1H Sword,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+1H Sword,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+1H Sword,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+1H Sword,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+1H Sword,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+1H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite1h,100,60,Chosen,(70-79)% increased Fire Damage | (21-23)% chance to Ignite
+1H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze1h,100,60,Chosen,(70-79)% increased Cold Damage | (21-23)% chance to Freeze
+1H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock1h_,100,60,Chosen,(70-79)% increased Lightning Damage | (21-23)% chance to Shock
+1H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration1h,100,60,Chosen,(60-69)% increased Chaos Damage | Chaos Skills have (13-15)% increased Skill Effect Duration
+1H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate1h,100,60,Chosen,(70-79)% increased Spell Damage | (18-20)% increased Mana Regeneration Rate
+1H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage1h,100,60,Chosen,(60-69)% increased Spell Damage | Gain 5% of Non-Chaos Damage as extra Chaos Damage
+1H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife1h,400,60,Chosen,Minions deal (34-38)% increased Damage | Minions have (34-38)% increased maximum Life
+1H Sword,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h,400,60,of the Order,Minions have (18-20)% increased Attack Speed | Minions have (18-20)% increased Cast Speed
+1H Sword,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplier__,100,60,of the Order,+(24-28)% to Chaos Damage over Time Multiplier
+1H Sword,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Physical Damage over Time Multiplier
+1H Sword,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplier___,400,60,of the Order,+(24-28)% to Cold Damage over Time Multiplier
+1H Sword,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Fire Damage over Time Multiplier
+1H Sword,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge1h,1000,60,of the Order,(5-6)% increased Damage per Endurance Charge
+1H Sword,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge1h,1000,60,of the Order,(5-6)% increased Damage per Frenzy Charge
+1H Sword,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge1h_,1000,60,of the Order,(5-6)% increased Damage per Power Charge
+1H Sword,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,+(36-40)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+1H Sword,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,(12-15)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+1H Sword,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+1H Sword,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+1H Sword,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+1H Sword,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+1H Sword,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+1H Sword,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance1h__,100,60,of the Order,(18-22)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+1H Axe,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+1H Axe,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+1H Axe,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+1H Axe,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+1H Axe,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+1H Axe,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+1H Axe,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+1H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite1h,100,60,Chosen,(70-79)% increased Fire Damage | (21-23)% chance to Ignite
+1H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze1h,100,60,Chosen,(70-79)% increased Cold Damage | (21-23)% chance to Freeze
+1H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock1h_,100,60,Chosen,(70-79)% increased Lightning Damage | (21-23)% chance to Shock
+1H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration1h,100,60,Chosen,(60-69)% increased Chaos Damage | Chaos Skills have (13-15)% increased Skill Effect Duration
+1H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate1h,100,60,Chosen,(70-79)% increased Spell Damage | (18-20)% increased Mana Regeneration Rate
+1H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage1h,100,60,Chosen,(60-69)% increased Spell Damage | Gain 5% of Non-Chaos Damage as extra Chaos Damage
+1H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife1h,400,60,Chosen,Minions deal (34-38)% increased Damage | Minions have (34-38)% increased maximum Life
+1H Axe,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h,400,60,of the Order,Minions have (18-20)% increased Attack Speed | Minions have (18-20)% increased Cast Speed
+1H Axe,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplier__,100,60,of the Order,+(24-28)% to Chaos Damage over Time Multiplier
+1H Axe,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Physical Damage over Time Multiplier
+1H Axe,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplier___,400,60,of the Order,+(24-28)% to Cold Damage over Time Multiplier
+1H Axe,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Fire Damage over Time Multiplier
+1H Axe,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge1h,1000,60,of the Order,(5-6)% increased Damage per Endurance Charge
+1H Axe,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge1h,1000,60,of the Order,(5-6)% increased Damage per Frenzy Charge
+1H Axe,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge1h_,1000,60,of the Order,(5-6)% increased Damage per Power Charge
+1H Axe,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,+(36-40)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+1H Axe,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,(12-15)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+1H Axe,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+1H Axe,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+1H Axe,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+1H Axe,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+1H Axe,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+1H Axe,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance1h__,100,60,of the Order,(18-22)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+1H Mace,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+1H Mace,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+1H Mace,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+1H Mace,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+1H Mace,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+1H Mace,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+1H Mace,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance1h,1000,60,of the Order,(6-7)% chance to deal Double Damage
+1H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite1h,100,60,Chosen,(70-79)% increased Fire Damage | (21-23)% chance to Ignite
+1H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze1h,100,60,Chosen,(70-79)% increased Cold Damage | (21-23)% chance to Freeze
+1H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock1h_,100,60,Chosen,(70-79)% increased Lightning Damage | (21-23)% chance to Shock
+1H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration1h,100,60,Chosen,(60-69)% increased Chaos Damage | Chaos Skills have (13-15)% increased Skill Effect Duration
+1H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate1h,100,60,Chosen,(70-79)% increased Spell Damage | (18-20)% increased Mana Regeneration Rate
+1H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage1h,100,60,Chosen,(60-69)% increased Spell Damage | Gain 5% of Non-Chaos Damage as extra Chaos Damage
+1H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife1h,400,60,Chosen,Minions deal (34-38)% increased Damage | Minions have (34-38)% increased maximum Life
+1H Mace,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon1h,400,60,of the Order,Minions have (18-20)% increased Attack Speed | Minions have (18-20)% increased Cast Speed
+1H Mace,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplier__,100,60,of the Order,+(24-28)% to Chaos Damage over Time Multiplier
+1H Mace,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Physical Damage over Time Multiplier
+1H Mace,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplier___,400,60,of the Order,+(24-28)% to Cold Damage over Time Multiplier
+1H Mace,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Fire Damage over Time Multiplier
+1H Mace,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge1h,1000,60,of the Order,(5-6)% increased Damage per Endurance Charge
+1H Mace,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge1h,1000,60,of the Order,(5-6)% increased Damage per Frenzy Charge
+1H Mace,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge1h_,1000,60,of the Order,(5-6)% increased Damage per Power Charge
+1H Mace,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,+(36-40)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+1H Mace,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby1h,1000,60,of the Order,(12-15)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+1H Mace,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused1h,1000,60,of the Order,(18-20)% chance to deal Double Damage while Focused
+1H Mace,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+1H Mace,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+1H Mace,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+1H Mace,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+1H Mace,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance1h__,100,60,of the Order,(18-22)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+2H Sword,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+2H Sword,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+2H Sword,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+2H Sword,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+2H Sword,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+2H Sword,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+2H Sword,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance2h_,1000,60,of the Order,(12-14)% chance to deal Double Damage
+2H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite2h,100,60,Chosen,(123-138)% increased Fire Damage | (35-40)% chance to Ignite
+2H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze2h__,100,60,Chosen,(123-138)% increased Cold Damage | (35-40)% chance to Freeze
+2H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock2h,100,60,Chosen,(123-138)% increased Lightning Damage | (35-40)% chance to Shock
+2H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration2h_,100,60,Chosen,(105-120)% increased Chaos Damage | Chaos Skills have (26-30)% increased Skill Effect Duration
+2H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate2h,100,60,Chosen,(123-138)% increased Spell Damage | (36-40)% increased Mana Regeneration Rate
+2H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage2h,100,60,Chosen,(105-120)% increased Spell Damage | Gain (9-10)% of Non-Chaos Damage as extra Chaos Damage
+2H Sword,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife2h__,400,60,Chosen,Minions deal (50-59)% increased Damage | Minions have (50-59)% increased maximum Life
+2H Sword,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon2h,400,60,of the Order,Minions have (34-38)% increased Attack Speed | Minions have (34-38)% increased Cast Speed
+2H Sword,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplierTwoHand,100,60,of the Order,+(44-48)% to Chaos Damage over Time Multiplier
+2H Sword,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplierTwoHand_,400,60,of the Order,+(44-48)% to Physical Damage over Time Multiplier
+2H Sword,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplierTwoHand,400,60,of the Order,+(44-48)% to Cold Damage over Time Multiplier
+2H Sword,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplierTwoHand,400,60,of the Order,+(44-48)% to Fire Damage over Time Multiplier
+2H Sword,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge2h,1000,60,of the Order,(7-8)% increased Damage per Endurance Charge
+2H Sword,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge2h__,1000,60,of the Order,(7-8)% increased Damage per Frenzy Charge
+2H Sword,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge2h,1000,60,of the Order,(7-8)% increased Damage per Power Charge
+2H Sword,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,+(54-60)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+2H Sword,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,(27-30)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+2H Sword,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused2h_,1000,60,of the Order,(36-40)% chance to deal Double Damage while Focused
+2H Sword,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+2H Sword,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+2H Sword,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+2H Sword,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+2H Sword,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance2h_,100,60,of the Order,(26-31)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+2H Axe,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+2H Axe,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+2H Axe,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+2H Axe,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+2H Axe,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+2H Axe,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+2H Axe,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance2h_,1000,60,of the Order,(12-14)% chance to deal Double Damage
+2H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite2h,100,60,Chosen,(123-138)% increased Fire Damage | (35-40)% chance to Ignite
+2H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze2h__,100,60,Chosen,(123-138)% increased Cold Damage | (35-40)% chance to Freeze
+2H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock2h,100,60,Chosen,(123-138)% increased Lightning Damage | (35-40)% chance to Shock
+2H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration2h_,100,60,Chosen,(105-120)% increased Chaos Damage | Chaos Skills have (26-30)% increased Skill Effect Duration
+2H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate2h,100,60,Chosen,(123-138)% increased Spell Damage | (36-40)% increased Mana Regeneration Rate
+2H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage2h,100,60,Chosen,(105-120)% increased Spell Damage | Gain (9-10)% of Non-Chaos Damage as extra Chaos Damage
+2H Axe,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife2h__,400,60,Chosen,Minions deal (50-59)% increased Damage | Minions have (50-59)% increased maximum Life
+2H Axe,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon2h,400,60,of the Order,Minions have (34-38)% increased Attack Speed | Minions have (34-38)% increased Cast Speed
+2H Axe,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplierTwoHand,100,60,of the Order,+(44-48)% to Chaos Damage over Time Multiplier
+2H Axe,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplierTwoHand_,400,60,of the Order,+(44-48)% to Physical Damage over Time Multiplier
+2H Axe,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplierTwoHand,400,60,of the Order,+(44-48)% to Cold Damage over Time Multiplier
+2H Axe,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplierTwoHand,400,60,of the Order,+(44-48)% to Fire Damage over Time Multiplier
+2H Axe,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge2h,1000,60,of the Order,(7-8)% increased Damage per Endurance Charge
+2H Axe,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge2h__,1000,60,of the Order,(7-8)% increased Damage per Frenzy Charge
+2H Axe,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge2h,1000,60,of the Order,(7-8)% increased Damage per Power Charge
+2H Axe,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,+(54-60)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+2H Axe,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,(27-30)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+2H Axe,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused2h_,1000,60,of the Order,(36-40)% chance to deal Double Damage while Focused
+2H Axe,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+2H Axe,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+2H Axe,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+2H Axe,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+2H Axe,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance2h_,100,60,of the Order,(26-31)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+2H Mace,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+2H Mace,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+2H Mace,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+2H Mace,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+2H Mace,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+2H Mace,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+2H Mace,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance2h_,1000,60,of the Order,(12-14)% chance to deal Double Damage
+2H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite2h,100,60,Chosen,(123-138)% increased Fire Damage | (35-40)% chance to Ignite
+2H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze2h__,100,60,Chosen,(123-138)% increased Cold Damage | (35-40)% chance to Freeze
+2H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock2h,100,60,Chosen,(123-138)% increased Lightning Damage | (35-40)% chance to Shock
+2H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration2h_,100,60,Chosen,(105-120)% increased Chaos Damage | Chaos Skills have (26-30)% increased Skill Effect Duration
+2H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate2h,100,60,Chosen,(123-138)% increased Spell Damage | (36-40)% increased Mana Regeneration Rate
+2H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage2h,100,60,Chosen,(105-120)% increased Spell Damage | Gain (9-10)% of Non-Chaos Damage as extra Chaos Damage
+2H Mace,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife2h__,400,60,Chosen,Minions deal (50-59)% increased Damage | Minions have (50-59)% increased maximum Life
+2H Mace,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon2h,400,60,of the Order,Minions have (34-38)% increased Attack Speed | Minions have (34-38)% increased Cast Speed
+2H Mace,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplierTwoHand,100,60,of the Order,+(44-48)% to Chaos Damage over Time Multiplier
+2H Mace,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplierTwoHand_,400,60,of the Order,+(44-48)% to Physical Damage over Time Multiplier
+2H Mace,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplierTwoHand,400,60,of the Order,+(44-48)% to Cold Damage over Time Multiplier
+2H Mace,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplierTwoHand,400,60,of the Order,+(44-48)% to Fire Damage over Time Multiplier
+2H Mace,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge2h,1000,60,of the Order,(7-8)% increased Damage per Endurance Charge
+2H Mace,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge2h__,1000,60,of the Order,(7-8)% increased Damage per Frenzy Charge
+2H Mace,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge2h,1000,60,of the Order,(7-8)% increased Damage per Power Charge
+2H Mace,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,+(54-60)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+2H Mace,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,(27-30)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+2H Mace,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused2h_,1000,60,of the Order,(36-40)% chance to deal Double Damage while Focused
+2H Mace,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+2H Mace,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+2H Mace,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+2H Mace,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+2H Mace,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance2h_,100,60,of the Order,(26-31)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+Bow,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+Bow,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+Bow,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+Bow,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+Bow,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+Bow,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+Bow,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance2h_,1000,60,of the Order,(12-14)% chance to deal Double Damage
+Bow,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife2h__,400,60,Chosen,Minions deal (50-59)% increased Damage | Minions have (50-59)% increased maximum Life
+Bow,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon2h,400,60,of the Order,Minions have (34-38)% increased Attack Speed | Minions have (34-38)% increased Cast Speed
+Bow,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplier__,1000,60,of the Order,+(24-28)% to Chaos Damage over Time Multiplier
+Bow,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplier,400,60,of the Order,+(24-28)% to Physical Damage over Time Multiplier
+Bow,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplier,100,60,of the Order,+(24-28)% to Fire Damage over Time Multiplier
+Bow,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge2h,1000,60,of the Order,(7-8)% increased Damage per Endurance Charge
+Bow,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge2h__,1000,60,of the Order,(7-8)% increased Damage per Frenzy Charge
+Bow,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge2h,1000,60,of the Order,(7-8)% increased Damage per Power Charge
+Bow,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,+(54-60)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+Bow,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,(27-30)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+Bow,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused2h_,1000,60,of the Order,(36-40)% chance to deal Double Damage while Focused
+Bow,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligenceRanged,1000,60,of the Order,(12-15)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+Bow,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+Bow,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+Bow,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChanceRangedWeapon,1000,60,of the Order,(12-15)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+Bow,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance2h_,100,60,of the Order,(26-31)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+Staff,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+Staff,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+Staff,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+Staff,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+Staff,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+Staff,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+Staff,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance2h_,1000,60,of the Order,(12-14)% chance to deal Double Damage
+Staff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite2h,1000,60,Chosen,(123-138)% increased Fire Damage | (35-40)% chance to Ignite
+Staff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze2h__,1000,60,Chosen,(123-138)% increased Cold Damage | (35-40)% chance to Freeze
+Staff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock2h,1000,60,Chosen,(123-138)% increased Lightning Damage | (35-40)% chance to Shock
+Staff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration2h_,1000,60,Chosen,(105-120)% increased Chaos Damage | Chaos Skills have (26-30)% increased Skill Effect Duration
+Staff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate2h,1000,60,Chosen,(123-138)% increased Spell Damage | (36-40)% increased Mana Regeneration Rate
+Staff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage2h,1000,60,Chosen,(105-120)% increased Spell Damage | Gain (9-10)% of Non-Chaos Damage as extra Chaos Damage
+Staff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife2h__,1000,60,Chosen,Minions deal (50-59)% increased Damage | Minions have (50-59)% increased maximum Life
+Staff,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon2h,1000,60,of the Order,Minions have (34-38)% increased Attack Speed | Minions have (34-38)% increased Cast Speed
+Staff,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplierTwoHand,1000,60,of the Order,+(44-48)% to Chaos Damage over Time Multiplier
+Staff,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplierTwoHand_,1000,60,of the Order,+(44-48)% to Physical Damage over Time Multiplier
+Staff,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplierTwoHand,1000,60,of the Order,+(44-48)% to Cold Damage over Time Multiplier
+Staff,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplierTwoHand,1000,60,of the Order,+(44-48)% to Fire Damage over Time Multiplier
+Staff,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge2h,1000,60,of the Order,(7-8)% increased Damage per Endurance Charge
+Staff,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge2h__,1000,60,of the Order,(7-8)% increased Damage per Frenzy Charge
+Staff,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge2h,1000,60,of the Order,(7-8)% increased Damage per Power Charge
+Staff,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,+(54-60)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+Staff,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,(27-30)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+Staff,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused2h_,1000,60,of the Order,(36-40)% chance to deal Double Damage while Focused
+Staff,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+Staff,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+Staff,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+Staff,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+Staff,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance2h_,1000,60,of the Order,(26-31)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
+Warstaff,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndImpaleCrafted,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Impale Enemies on Hit with Attacks
+Warstaff,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBleedChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to cause Bleeding on Hit
+Warstaff,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndBlindChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Blind Enemies on hit
+Warstaff,prefix,LocalPhysicalDamagePercent,JunMasterVeiledLocalIncreasedPhysicalDamageAndPoisonChanceCrafted_,1000,60,Chosen,(120-139)% increased Physical Damage | (21-25)% chance to Poison on Hit
+Warstaff,prefix,LocalAttackReduceEnemyElementalResistance,JunMasterVeiledElementalPenetrationWithAttacks_,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Elemental Resistances
+Warstaff,prefix,ChaosPenetrationWithAttacks,JunMasterVeiledChaosPenetrationWithAttacks__,1000,60,Chosen,Attacks with this Weapon Penetrate (14-16)% Chaos Resistance
+Warstaff,suffix,DoubleDamage,JunMasterVeiledDoubleDamageChance2h_,1000,60,of the Order,(12-14)% chance to deal Double Damage
+Warstaff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledFireDamageAndChanceToIgnite2h,1000,60,Chosen,(123-138)% increased Fire Damage | (35-40)% chance to Ignite
+Warstaff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledColdDamageAndBaseChanceToFreeze2h__,1000,60,Chosen,(123-138)% increased Cold Damage | (35-40)% chance to Freeze
+Warstaff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledLightningDamageAndChanceToShock2h,1000,60,Chosen,(123-138)% increased Lightning Damage | (35-40)% chance to Shock
+Warstaff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledChaosDamageAndChaosSkillDuration2h_,1000,60,Chosen,(105-120)% increased Chaos Damage | Chaos Skills have (26-30)% increased Skill Effect Duration
+Warstaff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndManaRegenerationRate2h,1000,60,Chosen,(123-138)% increased Spell Damage | (36-40)% increased Mana Regeneration Rate
+Warstaff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledSpellDamageAndNonChaosDamageToAddAsChaosDamage2h,1000,60,Chosen,(105-120)% increased Spell Damage | Gain (9-10)% of Non-Chaos Damage as extra Chaos Damage
+Warstaff,prefix,WeaponCasterDamagePrefix,JunMasterVeiledMinionDamageAndMinionMaximumLife2h__,1000,60,Chosen,Minions deal (50-59)% increased Damage | Minions have (50-59)% increased maximum Life
+Warstaff,suffix,MinionAttackSpeedAndCastSpeed,JunMasterVeiledMinionAttackAndCastSpeedOnWeapon2h,1000,60,of the Order,Minions have (34-38)% increased Attack Speed | Minions have (34-38)% increased Cast Speed
+Warstaff,suffix,DamageOverTimeMultiplier,JunMasterVeiledChaosDamageOverTimeMultiplierTwoHand,1000,60,of the Order,+(44-48)% to Chaos Damage over Time Multiplier
+Warstaff,suffix,DamageOverTimeMultiplier,JunMasterVeiledPhysicalDamageOverTimeMultiplierTwoHand_,1000,60,of the Order,+(44-48)% to Physical Damage over Time Multiplier
+Warstaff,suffix,DamageOverTimeMultiplier,JunMasterVeiledColdDamageOverTimeMultiplierTwoHand,1000,60,of the Order,+(44-48)% to Cold Damage over Time Multiplier
+Warstaff,suffix,DamageOverTimeMultiplier,JunMasterVeiledFireDamageOverTimeMultiplierTwoHand,1000,60,of the Order,+(44-48)% to Fire Damage over Time Multiplier
+Warstaff,suffix,AllDamage,JunMasterVeiledDamagePerEnduranceCharge2h,1000,60,of the Order,(7-8)% increased Damage per Endurance Charge
+Warstaff,suffix,AllDamage,JunMasterVeiledDamagePerFrenzyCharge2h__,1000,60,of the Order,(7-8)% increased Damage per Frenzy Charge
+Warstaff,suffix,AllDamage,JunMasterVeiledDamagePerPowerCharge2h,1000,60,of the Order,(7-8)% increased Damage per Power Charge
+Warstaff,suffix,CriticalStrikeMultiplierIfRareOrUniqueEnemyNearby,JunMasterVeiledCriticalStrikeMultiplierIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,+(54-60)% Critical Strike Multiplier while a Rare or Unique Enemy is Nearby
+Warstaff,suffix,AttackSpeedPercentIfRareOrUniqueEnemyNearby,JunMasterVeiledAttackSpeedPercentIfRareOrUniqueEnemyNearby2h,1000,60,of the Order,(27-30)% increased Attack Speed while a Rare or Unique Enemy is Nearby
+Warstaff,suffix,ChanceToDealDoubleDamageWhileFocused,JunMasterVeiledChanceToDealDoubleDamageWhileFocused2h_,1000,60,of the Order,(36-40)% chance to deal Double Damage while Focused
+Warstaff,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedDexterityIntelligence,1000,60,of the Order,(18-22)% increased Attack Speed | +(25-28) to Dexterity and Intelligence
+Warstaff,suffix,CriticalStrikeChanceIncrease,JunMasterVeiledLocalCriticalStrikeChanceStrengthIntelligence__,1000,60,of the Order,(28-32)% increased Critical Strike Chance | +(25-28) to Strength and Intelligence
+Warstaff,suffix,IncreasedAccuracy,JunMasterVeiledLocalAccuracyRatingStrengthDexterity_,1000,60,of the Order,+(311-350) to Accuracy Rating | +(25-28) to Strength and Dexterity
+Warstaff,suffix,IncreasedAttackSpeed,JunMasterVeiledLocalAttackSpeedAndLocalDisplayTriggerLevel1BloodRageOnKillChance_,1000,60,of the Order,(18-22)% increased Attack Speed | 15% chance to Trigger Level 1 Blood Rage when you Kill an Enemy
+Warstaff,suffix,IncreasedCastSpeed,JunMasterVeiledCastSpeedAndGainArcaneSurgeOnKillChance2h_,1000,60,of the Order,(26-31)% increased Cast Speed | 15% chance to gain Arcane Surge when you Kill an Enemy
