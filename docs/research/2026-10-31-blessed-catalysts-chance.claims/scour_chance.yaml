@@ -1,0 +1,9 @@
+# Mechanic family: scour_chance (Orb of Scouring then Orb of Chance). Research ticket #89, CHA-08.
+rules:
+  - id: scour_chance.scouring_returns_to_normal
+    statement: Scour-chancing is an Orb of Scouring (magic or rare back to normal, scouring rules as CUR-16/CUR-17) followed by an Orb of Chance on the same base; holding Alt while using an Orb of Chance switches to a Scouring.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics
+    quote: "The process of using a Orb of Scouring to make a magic or rare item white again to repeat the process with the same base is referred to as \"scour-chancing\"."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31

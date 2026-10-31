@@ -1,0 +1,33 @@
+# Mechanic family: blessed_orb (rerolls implicit values). Research ticket #89, claims BLE-xx. Old-value exclusion is an open point (O-01), not a claim.
+rules:
+  - id: blessed_orb.needs_ranged_implicit
+    statement: A Blessed Orb needs an item with at least one implicit that has a range of values; items without implicits or with fixed-value implicits are not valid inputs. A corrupted item takes none (as for the ten basic orbs, CUR-21).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
+    quote: "It cannot be used on items without implicit modifiers or whose implicit modifiers do not have a range of values."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: blessed_orb.rerolls_implicit_values_only
+    statement: A Blessed Orb rerolls the values of the item's implicit modifiers inside each implicit's own range; the implicit's identity and every explicit modifier stay as they are.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Randomises the values of the implicit modifiers of an item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: blessed_orb.special_implicits_allowed
+    statement: Synthesised implicits and Eldritch implicits can be rerolled by a Blessed Orb (whether both Eldritch implicits are rerolled is not stated).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
+    quote: "They can be used on items with special implicits, such as synthesised items items with Eldritch implicit modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: blessed_orb.new_value_uniform_in_range
+    statement: Each rolled integer implicit value is drawn uniformly over the implicit's range, both ends included (decimal ranges in hundredths).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "poec_simRerollImplicits ... poec_rand(useimplicits[i].nvalues[j][0],useimplicits[i].nvalues[j][1]+1,!0)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31

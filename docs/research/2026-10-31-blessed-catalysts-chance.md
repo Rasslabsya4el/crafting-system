@@ -6,7 +6,7 @@ Date checked: 2026-10-31. Patch: PoE 1 3.29.3.3, ordinary (non-Ruthless). Datami
 **Answer.**
 
 - **Blessed Orb**: rerolls the *values* of the implicits of an item, never their identity; usable only where an implicit has a range (71 of the 115 ring/amulet/belt bases, 24 of 46 rings, 36 of 53 amulets, 11 of 16 belts). New values are drawn inside the implicit's range. The one open fork is whether the old value can come up again: the wiki says no, Craft of Exile's code does not exclude it (`BLE-04`, O-01). Nothing in the 3.25–3.29 notes changes it.
-- **Catalysts**: 13 exist in the data (10 regular + Tainted + Sinistral + Dextral), all for rings, amulets and belts, stack 20, Ultimatum is the only source since 3.29.0. One quality type at a time; a different catalyst wipes the old quality. One catalyst adds `floor(f)` or `floor(f)+1` points, `f = max(1, min(30·e^(−ilvl/30) − 0.3, 20))` with random rounding (ilvl 75: 2 or 3 points; ilvl 84: 1 or 2; ilvl 95+: always 1), capped at 20%. The wiki's probability table matches this formula to the last digit. At 20% a matching modifier is multiplied by 1.20 on its stored integer and **rounded down**; the match is by the modifier's tag (a modifier with two matching tags is boosted once). Catalyst quality neither changes mod weights nor is removed by crafting (since 3.15.0), so it behaves as a separate, finish-line cost: expected catalysts to 20% = 9.5 at ilvl 75, 13.3 at ilvl 84, 20 at ilvl 95+.
+- **Catalysts**: 13 exist in the data (10 regular + Tainted + Sinistral + Dextral), all for rings, amulets and belts, stack 20, Ultimatum is the only source since 3.29.0. One quality type at a time; a different catalyst wipes the old quality. One catalyst adds `floor(f)` or `floor(f)+1` points, `f = max(1, min(30·e^(−ilvl/30) − 0.3, 20))` with random rounding (ilvl 75: 2 or 3 points; ilvl 84: 1 or 2; ilvl 95+: always 1), capped at 20%. The wiki's probability table matches this formula to the last digit. At 20% a matching modifier is multiplied by 1.20 on its stored integer and **rounded down**; the match is by the modifier's tag (a modifier with two matching tags is boosted once). Catalyst quality does not change mod weights and Augmentation, Regal and Exalted no longer use it up (since 3.15.0; nothing says another currency touches it), so it behaves as a separate, finish-line cost: expected catalysts to 20% = 9.5 at ilvl 75, 13.3 at ilvl 84, 20 at ilvl 95+.
 - **Orb of Chance**: normal item → magic, rare or unique. **The magic/rare split is not published anywhere I could reach**; the unique chance is not a flat number: it depends on which drop-anywhere uniques exist on the base and their tiers (GGG staff 2013 + wiki), rough odds 1 in a few hundred (T4/T5) to 1 in hundreds of thousands (T0). A base with no eligible unique cannot give a unique (the unique roll falls back to another rarity). Omen of Fortune forces a unique, so it has no role when a unique is a failed try. The bench craft "Reroll the Rarity of a non-Unique item" costs 1 Orb of Chance (no Scouring), works on magic/rare directly, and *can* create uniques (it did on synthesised items until 3.26.0c).
 
 Conventions. Source kinds: `official` (GGG notes or staff posts), `wiki` (poewiki.net), `datamined` (repoe-fork 3.29.3.3), `coe` (Craft of Exile code or data), `third-party code` (Path of Building, PoEDB), `owner`. "Patch" is the patch the source speaks for; for wiki pages it is the page's last behaviour-relevant "Version history" row. Wiki permalinks: Orb_of_Chance oldid=1681150 (edited 2026-07-26), Blessed_Orb oldid=1681166 (2026-07-26), Catalyst oldid=1675910 (2026-07-21), Quality oldid=1673652 (2026-07-16), Omen_of_Fortune oldid=1702543 (2026-09-20), Crafting_Bench oldid=1700860 (2026-08-16), Unique_item oldid=1699287 (2026-08-07), Guide:Analysis_of_unique_item_tiers oldid=1702744 (2026-09-26). Every line carries `[chk 2026-10-31]`. Wiki table cells are quoted as rendered text.
@@ -78,9 +78,9 @@ Conventions. Source kinds: `official` (GGG notes or staff posts), `wiki` (poewik
 - Check by script (this note): the formula reproduces the table's rows exactly: ilvl 75 → 83.75% for +2 and 16.25% for +3; ilvl 80 → 21.55% / 78.45% (+1 / +2); ilvl 84 → 47.57% / 52.43%; ilvl 86 → 59.34% / 40.66%; ilvl 90 → 80.64% / 19.36%; ilvl 95+ → 100% for +1; ilvl 12 → 19.04% (+19) / 80.96% (+20). The table is the wiki's reading of the formula, not a game dump: no experiment confirms the *random rounding* (O-05).
 - Derived (script, formula): application count to reach 20% from 0: ilvl 60 → 5.75 mean (p90 6); 65 → 6.81 (7); 70 → 7.99 (9); 75 → 9.53 (10); 80 → 11.45 (12); 82 → 12.36 (14); 84 → 13.35 (15); 85 → 13.87 (15); 86 → 14.42 (16); 90 → 16.89 (19); 95 and up → 20 (20). The prototype got 14.4237 / p90 16 at ilvl 86, the same.
 
-**CAT-07 Catalyst quality is persistent state.** Since 3.15.0 it no longer changes the chances of rolling matching modifiers when crafting and is no longer removed by crafting currency.
+**CAT-07 Catalyst quality is no longer a crafting input or consumable for Augmentation, Regal, Exalted.** Since 3.15.0 quality does not raise the chance of rolling a modifier with a matching tag, and Augmentation, Regal Orb, Exalted Orb and Elderslayer's Exalted Orb no longer use it up. The 3.15.0 note says only "specific Currency"; nothing says Chaos, Scouring, Annulment, essences or bench crafts change catalyst quality, and none did before. That they leave it alone is an inference from silence (O-09), consistent with PoB and CoE keeping quality as plain item state.
 - official (reproduced on the wiki): https://www.poewiki.net/wiki/Version_3.15.0: "Catalysts no longer affect the chances of rolling related modifiers on jewellery through crafting, and Quality on jewellery is no longer removed when crafting with specific Currency." [chk 2026-10-31]
-- wiki: https://www.poewiki.net/wiki/Catalyst#Version_history repeats it ("Prior to version 3.15.0 ... Each time one of these currency items was used on the item, its quality percentage would be reduced."). [chk 2026-10-31]
+- wiki: https://www.poewiki.net/wiki/Catalyst#Version_history: "Prior to version 3.15.0, catalyst quality on jewellery also increased the chances of hitting a modifier with matching tags when using an Orb of Augmentation, a Regal Orb, an Exalted Orb, or an Elderslayer's Exalted Orb on the item." [chk 2026-10-31]
 
 ### 2.3 What quality does to a modifier
 
@@ -152,7 +152,7 @@ Conventions. Source kinds: `official` (GGG notes or staff posts), `wiki` (poewik
 - wiki: https://www.poewiki.net/wiki/Guide:Analysis_of_unique_item_tiers#Currency_outcomes: "When using a Tainted Mythic Orb or Orb of Chance, if a tier is rolled for which there are no eligible outcomes a unique item will not be produced, instead the item will be destroyed (mythic orb) or a different rarity will be rolled. The exception is Tier 4 and Tier 5, which are believed to be bundled together into a super-tier". Marked on the page "believed". [chk 2026-10-31]
 
 **CHA-04 The unique chance depends on the uniques that exist on the base, not on a flat number.**
-- official (staff): Mark_GGG, 2013-08-01, https://web.archive.org/web/2021/https://www.pathofexile.com/forum/view-thread/485201/filter-account-type/staff : "They do not have a flat chance to obtain a unique, regardless of how "rare" that unique is supposed to be. If the only unique of a base type is a rarely occurring one, then chances have a low chance to get uniques on that base type. Adding a more common unique to the same type means that chances on that item will have an significantly increased chance to roll uniques". [chk 2026-10-31]
+- official (staff, patch of the source: 2013-08-01, in the 0.10.7 to 1.0.0g era per the wiki's version history; the wiki still repeats it for the current game, nobody re-tested it on 3.29.3.3): Mark_GGG, 2013-08-01, https://web.archive.org/web/2021/https://www.pathofexile.com/forum/view-thread/485201/filter-account-type/staff : "They do not have a flat chance to obtain a unique, regardless of how "rare" that unique is supposed to be. If the only unique of a base type is a rarely occurring one, then chances have a low chance to get uniques on that base type. Adding a more common unique to the same type means that chances on that item will have an significantly increased chance to roll uniques". [chk 2026-10-31]
 - wiki: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics: "The chance for an Orb of Chance to hit a unique item depends on its unique item tier; these odds get exponentially worse with higher tier items"; "T5/T4: 1 in a few hundred; T3: 1 in a few thousands; T2: 1 in a couple tens of thousands; T1: 1 in multiple tens of thousands; T0: 1 in multiple hundreds of thousands" (footnote: "Preliminary testing from Prohibited Library prior to version 3.21.0; better estimates in progress"). Patch: pre-3.21 testing; page text unchanged since 2026-07-26. [chk 2026-10-31]
 - wiki: https://www.poewiki.net/wiki/Guide:Analysis_of_unique_item_tiers: "Any data regarding unique tiers beyond version 3.14.0 is based on black box testing and estimates"; Orb of Chance "believed to use the MoreValuable distribution" (pre-3.19 weights T5 40.8%, T4 39.8%, T3 17.3%, T2 1.9%, T1 0.13%, T0 0.026%; the page says the tier-first model is "likely outdated"); "Orb of Chance ignores item level of the base item". [chk 2026-10-31]
 - Rule for the planner: the unique result is a failure; its probability enters only as a loss from the magic/rare success (about 1/several hundred at worst for a base that has a common unique). See O-03.
@@ -224,218 +224,7 @@ Conventions. Source kinds: `official` (GGG notes or staff posts), `wiki` (poewik
 
 ## Appendix A. Draft claims for `src/crafting_system/rules/claims/`
 
-Families: `blessed_orb`, `catalyst`, `orb_of_chance`, `omen_of_fortune`, `scour_chance`, `bench_craft` (one added rule). Seven provenance fields each.
-
-```yaml
-rules:
-  - id: blessed_orb.needs_ranged_implicit
-    statement: A Blessed Orb needs an item with at least one implicit that has a range of values; items without implicits or with fixed-value implicits are not valid inputs. A corrupted item takes none (as for the ten basic orbs, CUR-21).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
-    quote: "It cannot be used on items without implicit modifiers or whose implicit modifiers do not have a range of values."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: blessed_orb.rerolls_implicit_values_only
-    statement: A Blessed Orb rerolls the values of the item's implicit modifiers inside each implicit's own range; the implicit's identity and every explicit modifier stay as they are.
-    source_kind: datamined
-    url: https://repoe-fork.github.io/base_items.json
-    quote: "Randomises the values of the implicit modifiers of an item"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: blessed_orb.special_implicits_allowed
-    statement: Synthesised implicits and Eldritch implicits can be rerolled by a Blessed Orb (whether both Eldritch implicits are rerolled is not stated).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
-    quote: "They can be used on items with special implicits, such as synthesised items items with Eldritch implicit modifiers."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: blessed_orb.new_value_uniform_in_range
-    statement: Each rolled integer implicit value is drawn uniformly over the implicit's range, both ends included (decimal ranges in hundredths).
-    source_kind: coe
-    url: https://www.craftofexile.com/packages/package.js
-    quote: "poec_simRerollImplicits ... poec_rand(useimplicits[i].nvalues[j][0],useimplicits[i].nvalues[j][1]+1,!0)"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: blessed_orb.old_value_excluded
-    statement: PROVISIONAL (open O-01). A Blessed Orb cannot roll the same implicit value the item had before, so the new value is uniform over the range without the old value; Craft of Exile does not exclude it, and the planner follows the wiki until an in-game test (15 Blessed Orbs on a Prismatic Ring) says otherwise. For an item with several ranged implicit values the scope of the exclusion (each value or the whole set) is not known.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
-    quote: "Blessed Orbs can not roll the same implicit value that the original item had."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.thirteen_items_for_jewellery
-    statement: There are thirteen catalysts (Abrasive, Accelerating, Fertile, Imbued, Intrinsic, Noxious, Prismatic, Tempering, Turbulent, Unstable, Sinistral, Dextral, Tainted); each applies to a ring, amulet or belt only, stacks to 20, and replaces other quality types. Tainted works on corrupted jewellery only.
-    source_kind: datamined
-    url: https://repoe-fork.github.io/base_items.json
-    quote: "Right click this item then left click a ring, amulet or belt to apply it. Has greater effect on lower item level, non-unique jewellery. The maximum quality is 20%."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.single_quality_type
-    statement: An item carries one catalyst quality type; a catalyst of a different type replaces it and quality starts again from 0%; a catalyst of the same type adds to it. Quality is capped at 20%.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Catalyst
-    quote: "Using a different type of catalyst on an item that already has quality will replace the quality type, starting again from 0%."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.source_ultimatum_only
-    statement: Since 3.29.0 Ultimatum is the only source of catalysts and a stack holds 20; they are bought, not made, in a plan.
-    source_kind: official
-    url: https://www.poewiki.net/wiki/Version_3.29.0
-    quote: "Ultimatum is now the exclusive source of Catalysts."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.gain_depends_on_item_level
-    statement: The quality a non-unique catalyst adds depends on the item's level and not on its rarity.
-    source_kind: official
-    url: https://www.pathofexile.com/forum/view-thread/3531661
-    quote: "the amount of Quality they provide is now based on the item level"
-    patch_verified: "3.25.0"
-    date_checked: 2026-10-31
-
-  - id: catalyst.gain_formula_and_rounding
-    statement: With f = max(1, min(30*exp(-ilvl/30) - 0.3, 20)), one catalyst adds floor(f) points with probability 1 - frac(f) and floor(f)+1 points with probability frac(f); an integer f adds exactly f. Examples (ilvl 75: +2 83.75% / +3 16.25%; ilvl 84: +1 47.57% / +2 52.43%; ilvl 86: +1 59.34% / +2 40.66%; ilvl 95 and up: +1 always). The wiki's table equals this formula; no player sample confirms the random rounding.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Quality#Amount
-    quote: "max(1, min(30*e^(-1/30*ilvl) - 3/10, 20))"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.quality_capped_at_20
-    statement: Catalyst quality never exceeds 20%; a catalyst whose gain passes 20 leaves the item at 20 (the overflow case is not described by any source, open O-06).
-    source_kind: datamined
-    url: https://repoe-fork.github.io/base_items.json
-    quote: "The maximum quality is 20%."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.quality_survives_crafting
-    statement: Catalyst quality does not change which modifiers an Augmentation, Regal, Exalted or Annulment draws and is not removed by crafting currency; it is a state that persists with the item.
-    source_kind: official
-    url: https://www.poewiki.net/wiki/Version_3.15.0
-    quote: "Catalysts no longer affect the chances of rolling related modifiers on jewellery through crafting, and Quality on jewellery is no longer removed when crafting with specific Currency."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.magnitude_multiplier
-    statement: A modifier that matches the catalyst type, implicit or explicit, has its value multiplied by (100 + quality) / 100 (20% quality = x1.20).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Quality
-    quote: "Increased modifier magnitude based on catalyst tag; affects implicit and explicit affixes"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.magnitude_multiplier_in_code
-    statement: Craft of Exile adds quality/100 to a factor 1 for the first matching catalyst tag (so x1.20 at 20%, once per modifier); Path of Building returns (100 + quality) / 100 on the first matching tag. The three sources agree.
-    source_kind: coe
-    url: https://www.craftofexile.com/packages/package.js
-    quote: "val+=(crsim_catalyst.val/100);break"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.rounding_floor
-    statement: A catalyst-scaled value is the stored integer stat value times (100 + quality) / 100, rounded down; in integer arithmetic scaled = (v * (100 + q)) // 100 on the repoe stat integer. A displayed target N at quality q needs a stored roll v >= ceil(100 * N / (100 + q)). (Floor versus nearest is not separated by the one GGG example, open O-08.)
-    source_kind: coe
-    url: https://www.craftofexile.com/packages/package.js
-    quote: "function poec_simApplyCatMod(val,mod){if(mod!=1){if(val-Math.floor(val)!=0){return Math.floor(((val*100)*mod))/100}else{return Math.floor(val*mod)}}else{return val}}"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.rounding_example_ggg
-    statement: GGG's example of a catalyst-scaled life regeneration roll - the stored value is an integer, the scaled value is stored rounded down (20997 x 1.2 = 25196.4 stored as 25196).
-    source_kind: official
-    url: https://devtrackers.gg/pathofexile/p/c038cd2a-ggg-help-please-catalyst-no-worky-on-immortal-flesh
-    quote: "With the quality modifier, the base roll of 20997 becomes 25196.4, which rounds down to 25196 as the stored value."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.match_by_implicit_tags
-    statement: Which modifiers a regular catalyst boosts is decided by the modifier's implicit_tags - Abrasive attack; Accelerating speed; Fertile resource; Imbued caster; Intrinsic attribute; Noxious physical_damage or chaos_damage; Prismatic resistance; Tempering defences; Turbulent elemental_damage; Unstable critical. A modifier counts once however many tags match, and may match two catalyst types. On the 312 ordinary ring/amulet/belt modifier records of 3.29.3.3, PoEDB's tag list and Path of Building's tag list pick exactly the same records for all ten catalysts.
-    source_kind: datamined
-    url: https://poedb.tw/us/Catalyst
-    quote: "Fertile Catalyst resource"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: catalyst.sinistral_dextral_by_side
-    statement: A Sinistral Catalyst boosts the prefix modifiers and a Dextral Catalyst the suffix modifiers of the item (Mirage-only items); implicits are not prefixes or suffixes and are taken as not boosted (open O-07).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Catalyst
-    quote: "Adds quality that enhances Prefix modifiers on a ring, amulet or belt"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: orb_of_chance.normal_to_random_rarity
-    statement: An Orb of Chance is used on a normal item only and turns it into a magic, a rare or a unique item.
-    source_kind: datamined
-    url: https://repoe-fork.github.io/base_items.json
-    quote: "Upgrades a normal item to a random rarity"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: orb_of_chance.unique_is_failure
-    statement: A unique result of an Orb of Chance (or of the bench rarity reroll) counts as a failed try; unique items are never a target.
-    source_kind: owner
-    url: https://github.com/Rasslabsya4el/crafting-system/issues/81
-    quote: "Unique items are never a target. An Orb of Chance that makes a unique counts as a failed try"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: orb_of_chance.unique_chance_depends_on_base
-    statement: The chance of a unique is not a flat number; it depends on which drop-anywhere uniques exist on the base and their tiers (rough odds T5/T4 1 in a few hundred down to T0 1 in hundreds of thousands); a base with no eligible unique cannot give one, and the unique roll then falls back to another rarity. The item level of the base is ignored.
-    source_kind: official
-    url: https://web.archive.org/web/2021/https://www.pathofexile.com/forum/view-thread/485201/filter-account-type/staff
-    quote: "They do not have a flat chance to obtain a unique, regardless of how \"rare\" that unique is supposed to be."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: orb_of_chance.no_unique_from_special_items
-    statement: Fractured items, synthesised items, items with an Eldritch implicit and items with a Runesmithing enchantment cannot become unique, so an Orb of Chance on them gives magic or rare only.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics
-    quote: "Synthesised items and fractured items cannot be turned into a unique item."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: orb_of_chance.magic_rare_split_unknown
-    statement: OPEN O-02. The split between magic and rare results is not published; the planner carries it as an input (p_magic, p_rare) that must be set before the Orb of Chance is planned with.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics
-    quote: "the resulting item is more likely to become a magic or rare item"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: omen_of_fortune.forces_unique
-    statement: The Omen of Fortune makes the next Orb of Chance on an item that can become unique produce a unique, and is not consumed when the base has none; under the owner's rule (a unique is a failure) it has no use and is not an action.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Omen_of_Fortune#Mechanics
-    quote: "If no uniques exist for the basetype, it will not consume the Omen."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: scour_chance.scouring_returns_to_normal
-    statement: Scour-chancing is an Orb of Scouring (magic or rare back to normal, scouring rules as CUR-16/CUR-17) followed by an Orb of Chance on the same base; holding Alt while using an Orb of Chance switches to a Scouring.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics
-    quote: "The process of using a Orb of Scouring to make a magic or rare item white again to repeat the process with the same base is referred to as \"scour-chancing\"."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: bench_craft.reroll_rarity
-    statement: The bench option "Reroll the Rarity of a non-Unique item" costs 1 Orb of Chance (no Scouring), is unlocked from the start, is offered on 40 item classes including ring, amulet, belt and jewel, rerolls the rarity of the magic or rare item in place like Scouring plus Orb of Chance, and can produce a unique (it did on synthesised items until 3.26.0c).
-    source_kind: datamined
-    url: https://repoe-fork.github.io/crafting_bench_options.json
-    quote: "reroll_rarity: true ... cost: Metadata/Items/Currency/CurrencyUpgradeRandomly: 1 ... Niko, Master of the Depths"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-```
+In the folder [`2026-10-31-blessed-catalysts-chance.claims/`](2026-10-31-blessed-catalysts-chance.claims/) beside this note, one file per family so each can be copied into `src/crafting_system/rules/claims/` as it is: `blessed_orb.yaml` (4 rules), `catalyst.yaml` (13), `orb_of_chance.yaml` (5), `omen_of_fortune.yaml` (1), `scour_chance.yaml` (1), and `bench_craft.yaml` (a full copy of the shipped file, taken from `main` on 2026-10-31, with `bench_craft.other_options_not_mod_crafts` amended and two rules added: `bench_craft.reroll_rarity`, `bench_craft.reroll_rarity_spends_memory_strands`, 0 to 50 strands from #98). Checked: all files copied beside the shipped claims load with `load_registry` (138 rules). Not claims, kept as open points: the Blessed old-value exclusion (O-01) and the magic/rare split of the Orb of Chance (O-02).
 
 ## Appendix B. How the numbers were produced
 

@@ -1,0 +1,50 @@
+# Mechanic family: orb_of_chance. Research ticket #89, claims CHA-xx. The magic/rare split is unpublished (open O-02) and is not a claim.
+rules:
+  - id: orb_of_chance.normal_to_random_rarity
+    statement: An Orb of Chance is used on a normal item only and turns it into a magic, a rare or a unique item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Upgrades a normal item to a random rarity"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: orb_of_chance.unique_is_failure
+    statement: A unique result of an Orb of Chance (or of the bench rarity reroll) counts as a failed try; unique items are never a target.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/81
+    quote: "Unique items are never a target. An Orb of Chance that makes a unique counts as a failed try"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: orb_of_chance.no_unique_from_special_items
+    statement: Fractured items, synthesised items, items with an Eldritch implicit and items with a Runesmithing enchantment cannot become unique, so an Orb of Chance on them gives magic or rare only.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics
+    quote: "Synthesised items and fractured items cannot be turned into a unique item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: orb_of_chance.unique_chance_depends_on_tier
+    statement: >-
+      The chance of a unique from an Orb of Chance depends on the unique item tiers that exist on the
+      base (rough odds: T5/T4 1 in a few hundred, T3 1 in a few thousand, T2 1 in a couple of tens
+      of thousands, T1 1 in multiple tens of thousands, T0 1 in multiple hundreds of thousands,
+      from Prohibited Library testing before 3.21.0); the item level of the base is ignored. It is
+      not a flat number.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics
+    quote: "The chance for an Orb of Chance to hit a unique item depends on its unique item tier"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: orb_of_chance.unique_needs_eligible_unique_on_base
+    statement: >-
+      A staff statement from 2013-08-01 (written in the 0.10.7 to 1.0.0g era, the wiki repeats it
+      for the current game; not re-tested on 3.29.3.3): an Orb of Chance has no flat chance of a
+      unique; the chance depends on which uniques exist on that base type and how common they are,
+      and where the unique roll finds none the result is a rare or magic item instead.
+    source_kind: official
+    url: https://web.archive.org/web/2021/https://www.pathofexile.com/forum/view-thread/485201/filter-account-type/staff
+    quote: "They do not have a flat chance to obtain a unique, regardless of how \"rare\" that unique is supposed to be."
+    patch_verified: "0.10.7"
+    date_checked: 2026-10-31

@@ -1,0 +1,9 @@
+# Mechanic family: omen_of_fortune. Research ticket #89, CHA-07.
+rules:
+  - id: omen_of_fortune.forces_unique
+    statement: The Omen of Fortune makes the next Orb of Chance on an item that can become unique produce a unique, and is not consumed when the base has none; under the owner's rule (a unique is a failure) it has no use and is not an action.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Omen_of_Fortune#Mechanics
+    quote: "If no uniques exist for the basetype, it will not consume the Omen."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
