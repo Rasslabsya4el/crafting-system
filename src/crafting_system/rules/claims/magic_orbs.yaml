@@ -24,7 +24,7 @@ rules:
     source_kind: coe
     url: https://www.craftofexile.com/basics#Crafting_Currency
     quote: "It will reroll a magic rarity item into a new magic item, removing all old explicits on it"
-    patch_verified: "3.29.0.3"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: magic_orbs.fractured_mods_kept
@@ -40,7 +40,7 @@ rules:
     source_kind: coe
     url: https://www.craftofexile.com/basics#Crafting_Currency
     quote: "Will turn a normal item into a magic item (with one or two random explicit mods)."
-    patch_verified: "3.29.0.3"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value: {1: 1, 2: 1}
 
@@ -49,7 +49,7 @@ rules:
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: 'poec_simRollAffix(null,null,null,fossil,noaffix-prmods,!0,!1,enforcetag,igcrca,rfmlk,rfmlkt,rfmlkv,!1,"|",graveyard,overrideMaxAff)'
-    patch_verified: "3.29.0.3"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: magic_orbs.dry_pool_leaves_fewer_mods
@@ -57,7 +57,7 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/blob/research/coe-wiki-checklist/docs/research/2026-10-30-coe-wiki-checklist.md
     quote: "a dry pool leaves fewer mods"
-    patch_verified: "3.29.0.3"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: magic_orbs.augmentation_accepts_magic_with_free_slot
@@ -65,7 +65,7 @@ rules:
     source_kind: coe
     url: https://www.craftofexile.com/basics#Crafting_Currency
     quote: "Will add a new random explicit mod to a magic item that is missing a prefix or suffix."
-    patch_verified: "3.29.0.3"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: magic_orbs.regal_accepts_magic_only
@@ -89,7 +89,7 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/blob/research/coe-wiki-checklist/docs/research/2026-10-30-coe-wiki-checklist.md
     quote: "Augmentation, Regal, Exalted and the Harvest add are refused (no change, orb not consumed) when no legal mod fits the open slot."
-    patch_verified: "3.29.0.3"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: magic_orbs.refused_on_corrupted
