@@ -1,4 +1,9 @@
-"""The tagged Harvest reforge: rerolls a rare item like a Chaos Orb and guarantees one mod with a tag."""
+"""The tagged Harvest reforges: reroll a rare item like a Chaos Orb and guarantee one mod with a tag.
+
+Sixteen crafts exist in 3.29, one per tag of `harvest_reforge.tagged_rare_reforge_exists`; each costs the
+lifeforce (and, for five of them, the Crystallised Rancour) of `harvest_reforge.lifeforce_cost`. The influence
+reforge (`harvest_influence.py`) and the two likelihood reforges (`harvest_likelihood.py`) are other methods.
+"""
 
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -19,9 +24,17 @@ REFUSED_ON_CORRUPTED = get_rule("harvest_reforge.refused_on_corrupted")
 LIFEFORCE_COST = get_rule("harvest_reforge.lifeforce_cost")
 
 
+def check_reforgeable(item: Item) -> None:
+    """Raise `NotApplicableError` for an item no Harvest reforge takes: one that is not rare or is corrupted (every reforge shares this)."""
+    if item.rarity is not Rarity.RARE:
+        raise NotApplicableError(f"a Harvest reforge works on a rare item only, and this item is {item.rarity}")
+    if item.corrupted:
+        raise NotApplicableError("the item is corrupted, and a corrupted item takes no Harvest reforge")
+
+
 @dataclass(frozen=True)
 class HarvestReforge(Action):
-    """One tagged Harvest reforge of a rare item; `tag` is the craft's name in lower case ("lightning")."""
+    """One tagged Harvest reforge of a rare item; `tag` is the craft's name in lower case ("lightning", "defence")."""
 
     tag: str = "lightning"
 
@@ -52,12 +65,7 @@ class HarvestReforge(Action):
         no mod with the tag that it can still take, and `OutOfScopeError` for a jewel, an influenced item whose
         class has no influence class key, or one with a crafted metamod. Ordinary crafted mods are removed by the reroll.
         """
-        if item.rarity is not Rarity.RARE:
-            raise NotApplicableError(
-                f"a Harvest reforge works on a rare item only, and this item is {item.rarity}"
-            )
-        if item.corrupted:
-            raise NotApplicableError("the item is corrupted, and a corrupted item takes no Harvest reforge")
+        check_reforgeable(item)
         refuse_unmodelled(data, item)
         return Outcomes.reroll(data, item, tag=TAGGED_RARE_REFORGE_EXISTS.value[self.tag])
 

@@ -13,7 +13,7 @@ mods on the item do.
 
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from itertools import chain
 
@@ -164,6 +164,26 @@ def group_pool(candidates: Iterable[Candidate], factor: ModFactor | None = None)
         sides[candidate.family] = candidate.side
         grouped.setdefault(candidate.family, []).append(PoolMod(candidate.mod, weight))
     return tuple(PoolFamily(name, sides[name], tuple(mods)) for name, mods in grouped.items())
+
+
+def mark_pool(pool: Iterable[PoolFamily], tag: str, chosen: Callable[[Mod], bool]) -> tuple[PoolFamily, ...]:
+    """`pool` where exactly the mods for which `chosen` is true carry `tag` in `implicit_tags`.
+
+    For a guaranteed draw whose set of mods is not a tag of the data (the influence reforge: the Hunter
+    mods do not carry `influence_mod`). A mod is copied only when its tag changes, so the ids and weights stay.
+    """
+
+    def marked(mod: Mod) -> Mod:
+        has, wants = tag in mod.implicit_tags, chosen(mod)
+        if has == wants:
+            return mod
+        tags = (*mod.implicit_tags, tag) if wants else tuple(name for name in mod.implicit_tags if name != tag)
+        return replace(mod, implicit_tags=tags)
+
+    return tuple(
+        PoolFamily(family.family, family.side, tuple(PoolMod(marked(entry.mod), entry.weight) for entry in family.mods))
+        for family in pool
+    )
 
 
 def build_pool(
