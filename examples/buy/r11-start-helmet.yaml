@@ -11,7 +11,8 @@ rarity: rare
 item_level_min: 84
 corrupted: false
 mods:
-  # Any tier of Chaos Resistance passes the target, so there is no minimum. The English text of the
-  # trade site is used because the family has mods with other texts.
+  # 31 is the lowest roll of tier 1, the tier the target asks for (the next tier down rolls up to 30).
+  # The English text of the trade site is used because the family has mods with other texts.
   - stat: "+#% to Chaos Resistance"
+    minimum: 31
     fractured: true

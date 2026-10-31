@@ -25,6 +25,11 @@ is imported or tested for here.
   closure; an action that raises an `ActionError` in a state is skipped there),
   `family_types(tag, fossils)` (the families of the empty pool grouped by family type: the "family types
   of the amulet's junk"; with a resonator, of the pool its fossils make), `stats` (`CacheStats(kernels, hits)`).
+* `Coarsening(abstraction, groups)` (`_coarse.py`, ADR-0023): the coarse state. Families that no requirement
+  cares about are pooled into groups; `coarsen(state)` maps an exact state to its `Block` (a `CompressedState`
+  whose pooled slots have the kind of their pool) and `kernel(block, action, bound)` is the kernel of a
+  block-invariant action in the optimistic (`"lower"`) or pessimistic (`"upper"`) model, per member. Any other
+  action raises `OutOfScopeError`. `Coarsening.pooling_irrelevant(abstraction, size)` builds the groups.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 
@@ -97,6 +102,7 @@ No mechanic is decided here: this module only recombines the results of `actions
 claim of the rules registry.
 """
 
+from ._coarse import Block, Coarsening
 from ._goal import AtLeast, Goal, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
 from ._state import CompressedState, Flags, FracturedMod, Slot
@@ -104,7 +110,9 @@ from ._state import CompressedState, Flags, FracturedMod, Slot
 __all__ = [
     "Abstraction",
     "AtLeast",
+    "Block",
     "CacheStats",
+    "Coarsening",
     "CompressedState",
     "FamilyType",
     "Flags",

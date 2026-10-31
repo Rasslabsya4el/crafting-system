@@ -114,6 +114,19 @@ class Abstraction:
         """How many label distributions were computed and how many requests reused one."""
         return CacheStats(self._kernels, self._hits)
 
+    @property
+    def enabled(self) -> tuple[Action, ...]:
+        """The enabled actions that read the ordinary mods (the ones `actions` of the constructor named)."""
+        return self._kinds.actions
+
+    def kind_of(self, mod: Mod) -> str:
+        """The kind a slot of the ordinary mod `mod` gets: `ALIKE` ("") or its family key."""
+        return self._kinds.of(mod)
+
+    def crafted_slot(self, mod_id: str) -> Slot:
+        """The slot a crafted mod of this id makes (its canonical id, its contribution, low rolls)."""
+        return self._slot_of(ExplicitMod(mod_id, self._tiers.get(mod_id, 1), _low_values(self.data.mods[mod_id]), crafted=True))
+
     def compress(self, item: Item) -> CompressedState:
         """The compressed state of a concrete item.
 
