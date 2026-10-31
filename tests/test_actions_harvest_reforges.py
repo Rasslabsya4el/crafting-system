@@ -96,7 +96,8 @@ def test_a_craft_that_does_not_exist_is_refused_at_construction(name):
 
 def test_the_catalog_lists_the_sixteen_crafts_for_a_rare_item():
     members = [action for entry in kinds() if entry.name == "harvest-reforge" for action in entry.members(SMALL, start_of("plain"))]
-    assert members == [HarvestReforge(craft) for craft in TABLE]
+    assert sorted(members, key=lambda a: a.tag) == sorted((HarvestReforge(craft) for craft in TABLE), key=lambda a: a.tag)
+    assert members[0] == HarvestReforge("lightning")  # the first offer stays what it was before the other crafts came
     assert HarvestReforge("lightning") in catalog(SMALL, start_of("plain"))
 
 

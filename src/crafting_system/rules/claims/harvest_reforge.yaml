@@ -3,16 +3,16 @@
 # settled by the main chat in the same issue. The reroll shares chaos_orb.* and affix_pool.* rules.
 rules:
   - id: harvest_reforge.tagged_rare_reforge_exists
-    statement: A Harvest craft exists for each tag in `value`, usable on a rare item, that reforges the item with random modifiers including one of that tag. The key is the craft's name in lower case and the value is the mod tag it guarantees (the craft "Defence" guarantees the tag `defences` of the data). Sixteen crafts exist in 3.29; the five that cost Crystallised Rancour (Minion, Elemental, Attribute, Mana, Drop) are in the list too.
+    statement: A Harvest craft exists for each tag in `value`, usable on a rare item, that reforges the item with random modifiers including one of that tag. The key is the craft's name in lower case (Lightning first, then the wiki table's order) and the value is the mod tag it guarantees (the craft "Defence" guarantees the tag `defences` of the data). Sixteen crafts exist in 3.29; the five that cost Crystallised Rancour (Minion, Elemental, Attribute, Mana, Drop) are in the list too.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
     quote: "Reforge a Rare item with random modifiers, including a Lightning modifier"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value:
+      lightning: lightning
       fire: fire
       cold: cold
-      lightning: lightning
       physical: physical
       life: life
       defence: defences
@@ -91,9 +91,9 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value:
+      lightning: {Primal Crystallised Lifeforce: 50}
       fire: {Wild Crystallised Lifeforce: 50}
       cold: {Vivid Crystallised Lifeforce: 50}
-      lightning: {Primal Crystallised Lifeforce: 50}
       physical: {Vivid Crystallised Lifeforce: 50}
       life: {Wild Crystallised Lifeforce: 75}
       defence: {Primal Crystallised Lifeforce: 75}
