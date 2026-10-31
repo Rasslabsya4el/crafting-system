@@ -1,0 +1,258 @@
+side	item_class	mod_family	mod_group	weight_base	weight_unique_presence	weight_pinnacle_presence	text_lesser_tier1	text_perfect_tier6
+eater	gloves	AdditionalPierce	Pierce	500	250	100	Projectiles Pierce an additional Target	Projectiles Pierce 2 additional Targets
+eater	body_armour	AllResistances	AllResistances	1000	500	200	+(5-6)% to all Elemental Resistances	+(15-16)% to all Elemental Resistances
+eater	boots	AncestralCryExertedDamage	WarcryBonus	300	150	60	Attacks Exerted by Ancestral Cry deal (20-22)% increased Damage	Attacks Exerted by Ancestral Cry deal (34-35)% increased Damage
+eater	body_armour	AngerAuraEffect	AuraEffect	300	150	60	Anger has (19-21)% increased Aura Effect	Anger has (34-36)% increased Aura Effect
+eater	helmet	ArcaneSurgeEffect	ArcaneSurgeEffect	300	150	60	(6-7)% increased Effect of Arcane Surge on you	(16-17)% increased Effect of Arcane Surge on you
+eater	boots	ArmourFromHelmetGloves	IncreasedPhysicalDamageReductionRating	1000	500	200	(33-35)% increased Armour from Equipped Helmet and Gloves	(48-50)% increased Armour from Equipped Helmet and Gloves
+eater	gloves	ArmourPenetration	ArmourPenetration	700	350	140	Hits have (30-34)% chance to ignore Enemy Physical Damage Reduction	Hits have (49-50)% chance to ignore Enemy Physical Damage Reduction
+eater	helmet	AttackDamage	AttackDamage	1000	500	200	(14-16)% increased Attack Damage	(28-29)% increased Attack Damage
+eater	amulet	AttackDamage	AttackDamage	1000	500	200	(14-16)% increased Attack Damage	(28-29)% increased Attack Damage
+eater	gloves	AttackImpaleChance	ImpaleOnHit	700	350	140	5% chance to Impale Enemies on Hit with Attacks	30% chance to Impale Enemies on Hit with Attacks
+eater	boots	AvoidElementalStatusAilments	AvoidElementalStatusAilments	500	250	100	(15-17)% chance to Avoid Elemental Ailments	(30-32)% chance to Avoid Elemental Ailments
+eater	boots	BattlemagesCryWarcryEffect	WarcryBonus	300	150	60	(6-7)% increased Battlemage's Cry Buff Effect	(16-17)% increased Battlemage's Cry Buff Effect
+eater	gloves	BlindEffect	BlindEffect	300	150	60	(6-7)% increased Blind Effect	(16-17)% increased Blind Effect
+eater	body_armour	BlockPercent	BlockPercent	700	350	140	5% Chance to Block Attack Damage	10% Chance to Block Attack Damage
+eater	amulet	BlockPercent	BlockPercent	700	350	140	5% Chance to Block Attack Damage	10% Chance to Block Attack Damage
+eater	gloves	ChanceToAggravateBleed	ChanceToAggravateBleed	400	200	100	5% chance to Aggravate Bleeding on targets you Hit with Attacks	30% chance to Aggravate Bleeding on targets you Hit with Attacks
+eater	boots	ChanceToAvoidBleeding	ChanceToAvoidBleeding	700	350	140	(33-35)% chance to Avoid Bleeding	(48-50)% chance to Avoid Bleeding
+eater	boots	ChanceToAvoidPoison	ChanceToAvoidPoison	700	350	140	(33-35)% chance to Avoid being Poisoned	(48-50)% chance to Avoid being Poisoned
+eater	gloves	ChanceToBleed	ChanceToBleed	700	350	140	Attacks have 5% chance to cause Bleeding	Attacks have 30% chance to cause Bleeding
+eater	helmet	ChanceToFreeze	ChanceToFreeze	700	350	140	5% chance to Freeze	30% chance to Freeze
+eater	helmet	ChanceToIgnite	ChanceToIgnite	700	350	140	5% chance to Ignite	30% chance to Ignite
+eater	helmet	ChanceToShock	ChanceToShock	700	350	140	5% chance to Shock	30% chance to Shock
+eater	gloves	ChanceToSuppressSpells	ChanceToSuppressSpells	1000	500	200	+5% chance to Suppress Spell Damage	+10% chance to Suppress Spell Damage
+eater	amulet	ChanceToSuppressSpells	ChanceToSuppressSpells	1000	500	200	+5% chance to Suppress Spell Damage	+10% chance to Suppress Spell Damage
+eater	gloves	ChaosDamageLifeLeech	ChaosDamageLifeLeech	400	200	80	0.2% of Chaos Damage Leeched as Life	0.7% of Chaos Damage Leeched as Life
+eater	gloves	ColdDamageLifeLeech	ColdDamageLifeLeech	400	200	80	0.2% of Cold Damage Leeched as Life	0.7% of Cold Damage Leeched as Life
+eater	gloves	ColdExposureEffectOnHit	ExposureOnHit	700	350	140	Inflict Cold Exposure on Hit, applying -11% to Cold Resistance	Inflict Cold Exposure on Hit, applying -16% to Cold Resistance
+eater	helmet	ColdResistancePenetration	ColdResistancePenetration	700	350	140	Damage Penetrates 4% Cold Resistance	Damage Penetrates 6% Cold Resistance
+eater	amulet	ColdResistancePenetration	ColdResistancePenetration	700	350	140	Damage Penetrates 4% Cold Resistance	Damage Penetrates 6% Cold Resistance
+eater	gloves	ConvertPhysicalToChaos	PhysicalDamageConvertToChaos	600	300	120	10% of Physical Damage Converted to Chaos Damage	35% of Physical Damage Converted to Chaos Damage
+eater	gloves	ConvertPhysicalToCold	ConvertPhysicalToCold	600	300	120	10% of Physical Damage Converted to Cold Damage	35% of Physical Damage Converted to Cold Damage
+eater	gloves	ConvertPhysicalToFire	ConvertPhysicalToFire	600	300	120	10% of Physical Damage Converted to Fire Damage	35% of Physical Damage Converted to Fire Damage
+eater	gloves	ConvertPhysicalToLightning	ConvertPhysicalToLightning	600	300	120	10% of Physical Damage Converted to Lightning Damage	35% of Physical Damage Converted to Lightning Damage
+eater	gloves	DamagePer100DEX	AllDamage	400	200	80	3% increased Damage per 100 Dexterity	4% increased Damage per 100 Dexterity
+eater	gloves	DamagePer100INT	AllDamage	400	200	80	3% increased Damage per 100 Intelligence	4% increased Damage per 100 Intelligence
+eater	gloves	DamagePer100STR	AllDamage	400	200	80	3% increased Damage per 100 Strength	4% increased Damage per 100 Strength
+eater	body_armour	DamageTakenPerDexterity	DamageTaken	500	250	100	1% less Damage Taken per 230 Dexterity	1% less Damage Taken per 180 Dexterity
+eater	body_armour	DamageTakenPerIntelligence	DamageTaken	500	250	100	1% less Damage Taken per 230 Intelligence	1% less Damage Taken per 180 Intelligence
+eater	body_armour	DamageTakenPerStrength	DamageTaken	500	250	100	1% less Damage Taken per 230 Strength	1% less Damage Taken per 180 Strength
+eater	body_armour	DeterminationAuraEffect	AuraEffect	300	150	60	Determination has (19-21)% increased Aura Effect	Determination has (34-36)% increased Aura Effect
+eater	body_armour	DisciplineAuraEffect	AuraEffect	300	150	60	Discipline has (19-21)% increased Aura Effect	Discipline has (34-36)% increased Aura Effect
+eater	boots	ElusiveEffect	ElusiveEffect	300	150	60	(6-7)% increased Elusive Effect	(16-17)% increased Elusive Effect
+eater	boots	EnduringCryCooldownRecovery	WarcryBonus	300	150	60	Enduring Cry has (15-17)% increased Cooldown Recovery Rate	Enduring Cry has (30-32)% increased Cooldown Recovery Rate
+eater	helmet	EnemyLifeRegenerationRate	EnemyLifeRegenerationRate	700	350	140	Enemies you've Hit Recently have (67-65)% reduced Life Regeneration rate	Enemies you've Hit Recently have (82-80)% reduced Life Regeneration rate
+eater	helmet	EnergyShieldFromGlovesBoots	IncreasedEnergyShield	1000	500	200	(33-35)% increased Maximum Energy Shield from Equipped Gloves and Boots	(48-50)% increased Maximum Energy Shield from Equipped Gloves and Boots
+eater	body_armour	EnergyShieldRecoveryRate	EnergyShieldRecovery	700	350	140	7% increased Energy Shield Recovery rate	12% increased Energy Shield Recovery rate
+eater	helmet	EnergyShieldRegeneration	EnergyShieldRegeneration	1000	500	200	21% increased Energy Shield Recharge Rate	26% increased Energy Shield Recharge Rate
+eater	amulet	EnergyShieldRegeneration	EnergyShieldRegeneration	1000	500	200	21% increased Energy Shield Recharge Rate	26% increased Energy Shield Recharge Rate
+eater	gloves	EvasionRatingHelmetBoots	EvasionRatingPercent	1000	500	200	(33-35)% increased Evasion Rating from Equipped Helmet and Boots	(48-50)% increased Evasion Rating from Equipped Helmet and Boots
+eater	gloves	ExertedAttackDamage	ExertedAttackDamage	700	350	140	Exerted Attacks deal (20-22)% increased Damage	Exerted Attacks deal (34-35)% increased Damage
+eater	boots	FasterBleedDamage	FasterDamageAilments	600	300	120	Bleeding you inflict deals Damage 5% faster	Bleeding you inflict deals Damage 10% faster
+eater	boots	FasterIgniteDamage	FasterDamageAilments	600	300	120	Ignites you inflict deal Damage 5% faster	Ignites you inflict deal Damage 10% faster
+eater	boots	FasterPoisonDamage	FasterDamageAilments	600	300	120	Poisons you inflict deal Damage 5% faster	Poisons you inflict deal Damage 10% faster
+eater	gloves	FireDamageLifeLeech	FireDamageLifeLeech	400	200	80	0.2% of Fire Damage Leeched as Life	0.7% of Fire Damage Leeched as Life
+eater	gloves	FireExposureEffectOnHit	ExposureOnHit	700	350	140	Inflict Fire Exposure on Hit, applying -11% to Fire Resistance	Inflict Fire Exposure on Hit, applying -16% to Fire Resistance
+eater	helmet	FireResistancePenetration	FireResistancePenetration	700	350	140	Damage Penetrates 4% Fire Resistance	Damage Penetrates 6% Fire Resistance
+eater	amulet	FireResistancePenetration	FireResistancePenetration	700	350	140	Damage Penetrates 4% Fire Resistance	Damage Penetrates 6% Fire Resistance
+eater	gloves	FlatAccuracyPerFrenzyCharge	IncreasedAccuracy	1000	500	200	+(43-45) to Accuracy Rating per Frenzy Charge	+(58-60) to Accuracy Rating per Frenzy Charge
+eater	body_armour	FortifyOnMeleeHit	FortifyOnMeleeHit	500	250	100	Melee Hits have (6-7)% chance to Fortify	Melee Hits have (16-17)% chance to Fortify
+eater	boots	GeneralsCryCooldownRecovery	WarcryBonus	300	150	60	General's Cry has (15-17)% increased Cooldown Recovery Rate	General's Cry has (30-32)% increased Cooldown Recovery Rate
+eater	boots	GlobalCooldownRecovery	CooldownRecovery	400	200	80	5% increased Cooldown Recovery Rate	10% increased Cooldown Recovery Rate
+eater	body_armour	GlobalEnergyShieldPercent	EnergyShieldPercent	1000	500	200	(6-7)% increased maximum Energy Shield	(16-17)% increased maximum Energy Shield
+eater	amulet	GlobalEnergyShieldPercent	EnergyShieldPercent	1000	500	200	(6-7)% increased maximum Energy Shield	(16-17)% increased maximum Energy Shield
+eater	body_armour	GlobalEvasionRatingPercent	EvasionRatingPercent	1000	500	200	(17-18)% increased Evasion Rating	(27-28)% increased Evasion Rating
+eater	amulet	GlobalEvasionRatingPercent	EvasionRatingPercent	1000	500	200	(17-18)% increased Evasion Rating	(27-28)% increased Evasion Rating
+eater	gloves	GlobalMaimOnHit	GlobalMaimOnHit	600	300	120	Attacks have 15% chance to Maim on Hit	Attacks have 40% chance to Maim on Hit
+eater	body_armour	GlobalPhysicalDamageReductionRatingPercent	IncreasedPhysicalDamageReductionRatingPercent	1000	500	200	(17-18)% increased Armour	(27-28)% increased Armour
+eater	amulet	GlobalPhysicalDamageReductionRatingPercent	IncreasedPhysicalDamageReductionRatingPercent	1000	500	200	(17-18)% increased Armour	(27-28)% increased Armour
+eater	body_armour	GraceAuraEffect	AuraEffect	300	150	60	Grace has (19-21)% increased Aura Effect	Grace has (34-36)% increased Aura Effect
+eater	body_armour	HasteAuraEffect	AuraEffect	300	150	60	Haste has (19-21)% increased Aura Effect	Haste has (34-36)% increased Aura Effect
+eater	body_armour	HatredAuraEffect	AuraEffect	300	150	60	Hatred has (19-21)% increased Aura Effect	Hatred has (34-36)% increased Aura Effect
+eater	gloves	IncreasedAccuracyPercent	IncreasedAccuracyPercent	1000	500	200	(9-10)% increased Global Accuracy Rating	(19-20)% increased Global Accuracy Rating
+eater	helmet	IncreasedAilmentDuration	IncreasedAilmentDuration	700	350	140	(13-14)% increased Duration of Ailments on Enemies	(23-24)% increased Duration of Ailments on Enemies
+eater	amulet	IncreasedAilmentDuration	IncreasedAilmentDuration	700	350	140	(13-14)% increased Duration of Ailments on Enemies	(23-24)% increased Duration of Ailments on Enemies
+eater	helmet	IncreasedAilmentEffectOnEnemies	IncreasedAilmentEffectOnEnemies	700	350	140	(14-16)% increased Effect of Non-Damaging Ailments	(28-29)% increased Effect of Non-Damaging Ailments
+eater	amulet	IncreasedAilmentEffectOnEnemies	IncreasedAilmentEffectOnEnemies	700	350	140	(14-16)% increased Effect of Non-Damaging Ailments	(28-29)% increased Effect of Non-Damaging Ailments
+eater	helmet	IncreasedManaRegenerationPerPowerCharge	IncreasedManaRegenerationPerPowerCharge	1000	500	200	5% increased Mana Regeneration Rate per Power Charge	6% increased Mana Regeneration Rate per Power Charge
+eater	boots	IncreasedStunThreshold	IncreasedStunThreshold	1000	500	200	(15-17)% increased Stun Threshold	(30-32)% increased Stun Threshold
+eater	boots	InfernalCryWarcryAreaOfEffect	WarcryBonus	300	150	60	Infernal Cry has (15-17)% increased Area of Effect	Infernal Cry has (30-32)% increased Area of Effect
+eater	boots	IntimidatingCryCooldownRecovery	WarcryBonus	300	150	60	Intimidating Cry has (15-17)% increased Cooldown Recovery Rate	Intimidating Cry has (30-32)% increased Cooldown Recovery Rate
+eater	body_armour	LifeRecoveryRate	LifeRecoveryRate	700	350	140	7% increased Life Recovery rate	12% increased Life Recovery rate
+eater	boots	LifeRegenerationPercentPerEnduranceCharge	LifeRegenerationPercentPerEnduranceCharge	1000	500	200	Regenerate 0.2% of Life per second per Endurance Charge	Regenerate 0.3% of Life per second per Endurance Charge
+eater	boots	LifeRegenerationRate	LifeRegenerationRate	1000	500	200	7% increased Life Regeneration rate	12% increased Life Regeneration rate
+eater	amulet	LifeRegenerationRate	LifeRegenerationRate	1000	500	200	7% increased Life Regeneration rate	12% increased Life Regeneration rate
+eater	gloves	LightningDamageLifeLeech	LightningDamageLifeLeech	400	200	80	0.2% of Lightning Damage Leeched as Life	0.7% of Lightning Damage Leeched as Life
+eater	gloves	LightningExposureEffectOnHit	ExposureOnHit	700	350	140	Inflict Lightning Exposure on Hit, applying -11% to Lightning Resistance	Inflict Lightning Exposure on Hit, applying -16% to Lightning Resistance
+eater	helmet	LightningResistancePenetration	LightningResistancePenetration	700	350	140	Damage Penetrates 4% Lightning Resistance	Damage Penetrates 6% Lightning Resistance
+eater	amulet	LightningResistancePenetration	LightningResistancePenetration	700	350	140	Damage Penetrates 4% Lightning Resistance	Damage Penetrates 6% Lightning Resistance
+eater	body_armour	MalevolenceAuraEffect	AuraEffect	300	150	60	Malevolence has (19-21)% increased Aura Effect	Malevolence has (34-36)% increased Aura Effect
+eater	body_armour	ManaRecoveryRate	ManaRecoveryRate	700	350	140	7% increased Mana Recovery rate	12% increased Mana Recovery rate
+eater	helmet	ManaRegeneration	ManaRegeneration	1000	500	200	(19-21)% increased Mana Regeneration Rate	(34-36)% increased Mana Regeneration Rate
+eater	helmet	ManaReservationEfficiency	ReducedManaReservationsCost	400	200	80	7% increased Mana Reservation Efficiency of Skills	12% increased Mana Reservation Efficiency of Skills
+eater	amulet	ManaReservationEfficiency	ReducedManaReservationsCost	400	200	80	7% increased Mana Reservation Efficiency of Skills	12% increased Mana Reservation Efficiency of Skills
+eater	gloves	MarkEffect	CurseEffectiveness	400	200	80	(6-7)% increased Effect of your Marks	(16-17)% increased Effect of your Marks
+eater	body_armour	MinionReflectedDamage	ReflectedDamage	700	350	140	Minions prevent +45% of Reflected Damage they would take	Minions prevent +70% of Reflected Damage they would take
+eater	boots	PhysicalAddedAsCold	PhysicalAddedAsCold	600	300	120	Gain 4% of Physical Damage as Extra Cold Damage	Gain 6% of Physical Damage as Extra Cold Damage
+eater	boots	PhysicalAddedAsFire	PhysicalAddedAsFire	600	300	120	Gain 4% of Physical Damage as Extra Fire Damage	Gain 6% of Physical Damage as Extra Fire Damage
+eater	boots	PhysicalAddedAsLightning	PhysicalAddedAsLightning	600	300	120	Gain 4% of Physical Damage as Extra Lightning Damage	Gain 6% of Physical Damage as Extra Lightning Damage
+eater	boots	PhysicalDamageAddedAsChaos	PhysicalDamageAddedAsChaos	600	300	120	Gain 4% of Physical Damage as Extra Chaos Damage	Gain 6% of Physical Damage as Extra Chaos Damage
+eater	gloves	PhysicalDamageLifeLeech	PhysicalDamageLifeLeech	400	200	80	0.2% of Physical Damage Leeched as Life	0.7% of Physical Damage Leeched as Life
+eater	body_armour	PhysicalDamageTakenAsChaosBodyUber	PhysicalDamageTakenAsElement	500	250	100	10% of Physical Damage from Hits taken as Chaos Damage	12% of Physical Damage from Hits taken as Chaos Damage
+eater	helmet	PhysicalDamageTakenAsChaosUber	PhysicalDamageTakenAsElement	500	250	100	6% of Physical Damage from Hits taken as Chaos Damage	8% of Physical Damage from Hits taken as Chaos Damage
+eater	body_armour	PhysicalDamageTakenAsColdBodyUber	PhysicalDamageTakenAsElement	500	250	100	10% of Physical Damage from Hits taken as Cold Damage	12% of Physical Damage from Hits taken as Cold Damage
+eater	helmet	PhysicalDamageTakenAsColdUber	PhysicalDamageTakenAsElement	500	250	100	6% of Physical Damage from Hits taken as Cold Damage	8% of Physical Damage from Hits taken as Cold Damage
+eater	body_armour	PhysicalDamageTakenAsFireBodyUber	PhysicalDamageTakenAsElement	500	250	100	10% of Physical Damage from Hits taken as Fire Damage	12% of Physical Damage from Hits taken as Fire Damage
+eater	helmet	PhysicalDamageTakenAsFireUber	PhysicalDamageTakenAsElement	500	250	100	6% of Physical Damage from Hits taken as Fire Damage	8% of Physical Damage from Hits taken as Fire Damage
+eater	body_armour	PhysicalDamageTakenAsLightningBodyUber	PhysicalDamageTakenAsElement	500	250	100	10% of Physical Damage from Hits taken as Lightning Damage	12% of Physical Damage from Hits taken as Lightning Damage
+eater	helmet	PhysicalDamageTakenAsLightningUber	PhysicalDamageTakenAsElement	500	250	100	6% of Physical Damage from Hits taken as Lightning Damage	8% of Physical Damage from Hits taken as Lightning Damage
+eater	body_armour	PlayerReflectedDamage	ReflectedDamage	700	350	140	Prevent +45% of Reflected Damage	Prevent +70% of Reflected Damage
+eater	gloves	PoisonOnHit	PoisonOnHit	700	350	140	5% chance to Poison on Hit	30% chance to Poison on Hit
+eater	body_armour	PrideAuraEffect	AuraEffect	300	150	60	Pride has (19-21)% increased Aura Effect	Pride has (34-36)% increased Aura Effect
+eater	body_armour	PurityOfElementsEffect	AuraEffect	300	150	60	Purity of Elements has (19-21)% increased Aura Effect	Purity of Elements has (34-36)% increased Aura Effect
+eater	body_armour	PurityOfFireEffect	AuraEffect	300	150	60	Purity of Fire has (19-21)% increased Aura Effect	Purity of Fire has (34-36)% increased Aura Effect
+eater	body_armour	PurityOfIceEffect	AuraEffect	300	150	60	Purity of Ice has (19-21)% increased Aura Effect	Purity of Ice has (34-36)% increased Aura Effect
+eater	body_armour	PurityOfLightningEffect	AuraEffect	300	150	60	Purity of Lightning has (19-21)% increased Aura Effect	Purity of Lightning has (34-36)% increased Aura Effect
+eater	boots	RallyingCryWarcryEffect	WarcryBonus	300	150	60	(6-7)% increased Rallying Cry Buff Effect	(16-17)% increased Rallying Cry Buff Effect
+eater	helmet	ReducedFreezeDuration	ReducedFreezeDuration	700	350	140	(33-35)% reduced Freeze Duration on you	(48-50)% reduced Freeze Duration on you
+eater	helmet	ReducedIgniteDurationOnSelf	ReducedSelfIgniteDuration	700	350	140	(33-35)% reduced Ignite Duration on you	(48-50)% reduced Ignite Duration on you
+eater	helmet	ReducedShockEffectOnSelf	ShockEffect	700	350	140	(35-33)% reduced Effect of Shock on you	(50-48)% reduced Effect of Shock on you
+eater	boots	SeismicCryExertedDamage	WarcryBonus	300	150	60	Attacks Exerted by Seismic Cry deal (20-22)% increased Damage	Attacks Exerted by Seismic Cry deal (34-35)% increased Damage
+eater	amulet	SkillEffectDuration	SkillEffectDuration	500	250	100	(7-8)% increased Skill Effect Duration	(17-18)% increased Skill Effect Duration
+eater	body_armour	SpellBlockPercentage	SpellBlockPercentage	700	350	140	5% Chance to Block Spell Damage	10% Chance to Block Spell Damage
+eater	amulet	SpellBlockPercentage	SpellBlockPercentage	700	350	140	5% Chance to Block Spell Damage	10% Chance to Block Spell Damage
+eater	helmet	SpellDamage	SpellDamage	1000	500	200	(14-16)% increased Spell Damage	(28-29)% increased Spell Damage
+eater	amulet	SpellDamage	SpellDamage	1000	500	200	(14-16)% increased Spell Damage	(28-29)% increased Spell Damage
+eater	gloves	SpellsHinderOnHitChance	HinderOnHit	600	300	120	15% chance to Hinder Enemies on Hit with Spells	40% chance to Hinder Enemies on Hit with Spells
+eater	boots	TravelSkillCooldownRecovery	CooldownRecovery	700	350	140	(15-17)% increased Cooldown Recovery Rate of Travel Skills	(30-32)% increased Cooldown Recovery Rate of Travel Skills
+eater	boots	WarcrySpeed	WarcrySpeed	700	350	140	(15-16)% increased Warcry Speed	(25-26)% increased Warcry Speed
+eater	gloves	WitherExpireSpeed	WitherOnHitChance	700	350	140	Withered you Inflict expires (12-10)% slower	Withered you Inflict expires (24-23)% slower
+eater	body_armour	WrathAuraEffect	AuraEffect	300	150	60	Wrath has (19-21)% increased Aura Effect	Wrath has (34-36)% increased Aura Effect
+eater	body_armour	ZealotryAuraEffect	AuraEffect	300	150	60	Zealotry has (19-21)% increased Aura Effect	Zealotry has (34-36)% increased Aura Effect
+exarch	boots	ActionSpeedImplicit	ActionSpeedReduction	300	150	60	4% increased Action Speed	6% increased Action Speed
+exarch	gloves	AddedChaosDamage	ChaosDamage	1000	500	200	Adds (5-6) to (10-11) Chaos Damage to Attacks	Adds (8-10) to (16-18) Chaos Damage to Attacks
+exarch	gloves	AddedColdDamage	ColdDamage	1000	500	200	Adds (6-7) to (11-13) Cold Damage to Attacks	Adds (9-12) to (18-22) Cold Damage to Attacks
+exarch	gloves	AddedFireDamage	FireDamage	1000	500	200	Adds (6-8) to (13-15) Fire Damage to Attacks	Adds (10-13) to (21-24) Fire Damage to Attacks
+exarch	gloves	AddedLightningDamage	LightningDamage	1000	500	200	Adds (1-2) to (22-24) Lightning Damage to Attacks	Adds (2-4) to (36-38) Lightning Damage to Attacks
+exarch	gloves	AddedPhysicalDamage	PhysicalDamage	1000	500	200	Adds (3-5) to (7-9) Physical Damage to Attacks	Adds (6-7) to (12-14) Physical Damage to Attacks
+exarch	body_armour	ArcticArmourBuffEffect	ArcticArmourBuffEffect	300	150	60	(15-17)% increased Arctic Armour Buff Effect	(30-32)% increased Arctic Armour Buff Effect
+exarch	helmet	AreaOfEffect	AreaOfEffect	500	250	100	(7-8)% increased Area of Effect	(17-18)% increased Area of Effect
+exarch	amulet	AreaOfEffect	AreaOfEffect	500	250	100	(7-8)% increased Area of Effect	(17-18)% increased Area of Effect
+exarch	gloves	AttackCriticalStrikeChance	CriticalStrikeChanceIncrease	1000	500	200	(19-21)% increased Critical Strike Chance for Attacks	(34-36)% increased Critical Strike Chance for Attacks
+exarch	amulet	AttackCriticalStrikeChance	CriticalStrikeChanceIncrease	1000	500	200	(19-21)% increased Critical Strike Chance for Attacks	(34-36)% increased Critical Strike Chance for Attacks
+exarch	body_armour	AttackCriticalStrikeMultiplier	CriticalStrikeMultiplier	700	350	140	+(20-21)% to Critical Strike Multiplier for Attack Damage	+(30-31)% to Critical Strike Multiplier for Attack Damage
+exarch	body_armour	AuraEffect	AuraEffect	500	250	100	(9-10)% increased effect of Non-Curse Auras from your Skills	(19-20)% increased effect of Non-Curse Auras from your Skills
+exarch	amulet	AuraEffect	AuraEffect	500	250	100	(9-10)% increased effect of Non-Curse Auras from your Skills	(19-20)% increased effect of Non-Curse Auras from your Skills
+exarch	boots	AvoidFreeze	AvoidFreeze	700	350	140	(33-35)% chance to Avoid being Frozen	(48-50)% chance to Avoid being Frozen
+exarch	boots	AvoidIgnite	AvoidIgnite	700	350	140	(33-35)% chance to Avoid being Ignited	(48-50)% chance to Avoid being Ignited
+exarch	boots	AvoidShock	AvoidShock	700	350	140	(33-35)% chance to Avoid being Shocked	(48-50)% chance to Avoid being Shocked
+exarch	boots	AvoidStun	AvoidStun	500	250	100	(15-17)% chance to Avoid being Stunned	(30-32)% chance to Avoid being Stunned
+exarch	boots	BoneOfferingEffect	OfferingBuffEffect	300	150	60	Bone Offering has (6-7)% increased Effect	Bone Offering has (16-17)% increased Effect
+exarch	boots	BrandAttachmentRange	BrandAttachmentRange	700	350	140	10% increased Brand Attachment range	15% increased Brand Attachment range
+exarch	boots	BrittleGroundWhileMoving	ItemGrantsBuff	600	300	120	Drops Brittle Ground while moving, lasting 2 seconds	Drops Brittle Ground while moving, lasting 7 seconds
+exarch	boots	CarrionGolemBuffEffect	GolemBuffEffect	300	150	60	(31-33)% increased Effect of the Buff granted by your Carrion Golems	(46-48)% increased Effect of the Buff granted by your Carrion Golems
+exarch	gloves	ChanceToIntimidateOnHit	ChanceToIntimidateOnHit	400	200	80	15% chance to Intimidate Enemies for 4 seconds on Hit	40% chance to Intimidate Enemies for 4 seconds on Hit
+exarch	gloves	ChanceToUnnerveOnHit	ChanceToUnnerveOnHit	400	200	80	15% chance to Unnerve Enemies for 4 seconds on Hit	40% chance to Unnerve Enemies for 4 seconds on Hit
+exarch	gloves	ChaosDamageOverTimeMultiplier	DamageOverTimeMultiplier	600	300	120	+(5-7)% to Chaos Damage over Time Multiplier	+(19-20)% to Chaos Damage over Time Multiplier
+exarch	amulet	ChaosDamageOverTimeMultiplier	DamageOverTimeMultiplier	600	300	120	+(5-7)% to Chaos Damage over Time Multiplier	+(19-20)% to Chaos Damage over Time Multiplier
+exarch	boots	ChaosGolemBuffEffect	GolemBuffEffect	300	150	60	(31-33)% increased Effect of the Buff granted by your Chaos Golems	(46-48)% increased Effect of the Buff granted by your Chaos Golems
+exarch	boots	ChaosResistance	ChaosResistance	700	350	140	+(6-7)% to Chaos Resistance	+(16-17)% to Chaos Resistance
+exarch	gloves	ColdDamageOverTimeMultiplier	DamageOverTimeMultiplier	600	300	120	+(5-7)% to Cold Damage over Time Multiplier	+(19-20)% to Cold Damage over Time Multiplier
+exarch	amulet	ColdDamageOverTimeMultiplier	DamageOverTimeMultiplier	600	300	120	+(5-7)% to Cold Damage over Time Multiplier	+(19-20)% to Cold Damage over Time Multiplier
+exarch	body_armour	ColdDamagePercentage	ColdDamagePercentage	1000	500	200	(15-17)% increased Cold Damage	(29-30)% increased Cold Damage
+exarch	amulet	ColdDamagePercentage	ColdDamagePercentage	1000	500	200	(15-17)% increased Cold Damage	(29-30)% increased Cold Damage
+exarch	helmet	ColdDamageTakenGainedAsLife	DamageTakenGainedAsLife	600	300	120	(7-8)% of Cold Damage taken Recouped as Life	(17-18)% of Cold Damage taken Recouped as Life
+exarch	boots	ColdResistance	ColdResistance	1000	500	200	+(13-14)% to Cold Resistance	+(23-24)% to Cold Resistance
+exarch	helmet	CurseEffectConductivity	CurseEffectiveness	300	150	60	10% increased Conductivity Curse Effect	15% increased Conductivity Curse Effect
+exarch	helmet	CurseEffectDespair	CurseEffectiveness	300	150	60	10% increased Despair Curse Effect	15% increased Despair Curse Effect
+exarch	helmet	CurseEffectElementalWeakness	CurseEffectiveness	300	150	60	10% increased Elemental Weakness Curse Effect	15% increased Elemental Weakness Curse Effect
+exarch	helmet	CurseEffectEnfeeble	CurseEffectiveness	300	150	60	10% increased Enfeeble Curse Effect	15% increased Enfeeble Curse Effect
+exarch	helmet	CurseEffectFlammability	CurseEffectiveness	300	150	60	10% increased Flammability Curse Effect	15% increased Flammability Curse Effect
+exarch	helmet	CurseEffectFrostbite	CurseEffectiveness	300	150	60	10% increased Frostbite Curse Effect	15% increased Frostbite Curse Effect
+exarch	helmet	CurseEffectPunishment	CurseEffectiveness	300	150	60	10% increased Punishment Curse Effect	15% increased Punishment Curse Effect
+exarch	helmet	CurseEffectTemporalChains	CurseEffectiveness	300	150	60	10% increased Temporal Chains Curse Effect	15% increased Temporal Chains Curse Effect
+exarch	helmet	CurseEffectVulnerability	CurseEffectiveness	300	150	60	10% increased Vulnerability Curse Effect	15% increased Vulnerability Curse Effect
+exarch	body_armour	CurseEffectiveness	CurseEffectiveness	500	250	100	7% increased Effect of your Curses	12% increased Effect of your Curses
+exarch	amulet	CurseEffectiveness	CurseEffectiveness	500	250	100	7% increased Effect of your Curses	12% increased Effect of your Curses
+exarch	boots	DamagePerEnduranceCharge	AllDamage	1000	500	200	4% increased Damage per Endurance Charge	6% increased Damage per Endurance Charge
+exarch	gloves	DamagePerFrenzyCharge	AllDamage	1000	500	200	4% increased Damage per Frenzy Charge	6% increased Damage per Frenzy Charge
+exarch	body_armour	DamageTakenGainedAsLife	DamageTakenGainedAsLife	700	350	140	(8-9)% of Damage taken Recouped as Life	(18-19)% of Damage taken Recouped as Life
+exarch	body_armour	EnduranceChargePerSecond	EnduranceChargePerSecond	500	250	100	Gain an Endurance Charge every 15 seconds	Gain an Endurance Charge every 10 seconds
+exarch	gloves	ExtinguishOnHit	ExtinguishOnHitChance	700	350	140	15% chance to Extinguish Enemies on Hit	40% chance to Extinguish Enemies on Hit
+exarch	gloves	FireDamageOverTimeMultiplier	DamageOverTimeMultiplier	600	300	120	+(5-7)% to Fire Damage over Time Multiplier	+(19-20)% to Fire Damage over Time Multiplier
+exarch	amulet	FireDamageOverTimeMultiplier	DamageOverTimeMultiplier	600	300	120	+(5-7)% to Fire Damage over Time Multiplier	+(19-20)% to Fire Damage over Time Multiplier
+exarch	body_armour	FireDamagePercentage	FireDamagePercentage	1000	500	200	(15-17)% increased Fire Damage	(29-30)% increased Fire Damage
+exarch	amulet	FireDamagePercentage	FireDamagePercentage	1000	500	200	(15-17)% increased Fire Damage	(29-30)% increased Fire Damage
+exarch	helmet	FireDamageTakenGainedAsLife	DamageTakenGainedAsLife	600	300	120	(7-8)% of Fire Damage taken Recouped as Life	(17-18)% of Fire Damage taken Recouped as Life
+exarch	boots	FireGolemBuffEffect	GolemBuffEffect	300	150	60	(31-33)% increased Effect of the Buff granted by your Flame Golems	(46-48)% increased Effect of the Buff granted by your Flame Golems
+exarch	boots	FireResistance	FireResistance	1000	500	200	+(13-14)% to Fire Resistance	+(23-24)% to Fire Resistance
+exarch	body_armour	FlaskEffect	FlaskEffect	500	250	100	Flasks applied to you have (6-7)% increased Effect	Flasks applied to you have (16-17)% increased Effect
+exarch	body_armour	FlaskGainPerSecond	FlaskChargesGained	500	250	100	Flasks gain a Charge every 3 seconds	Flasks gain 2 Charges every 3 seconds
+exarch	body_armour	FleshAndStoneAreaOfEffect	FleshAndStoneAreaOfEffect	300	150	60	Flesh and Stone has (15-17)% increased Area of Effect	Flesh and Stone has (30-32)% increased Area of Effect
+exarch	boots	FleshOfferingEffect	OfferingBuffEffect	300	150	60	Flesh Offering has (6-7)% increased Effect	Flesh Offering has (16-17)% increased Effect
+exarch	gloves	FreezeProliferation	FreezeProliferation	400	200	80	Freezes you inflict spread to other Enemies within 1.2 metres	Freezes you inflict spread to other Enemies within 1.7 metres
+exarch	body_armour	FrenzyChargePerSecond	FrenzyChargePerSecond	500	250	100	Gain a Frenzy Charge every 15 seconds	Gain a Frenzy Charge every 10 seconds
+exarch	body_armour	GolemBuffEffectUnique	GolemBuffEffectUnique	500	250	100	(19-21)% increased Effect of Buffs granted by your Golems	(34-36)% increased Effect of Buffs granted by your Golems
+exarch	gloves	HeraldBonusAgonyEffect	HeraldBonus	300	150	60	Herald of Agony has (15-17)% increased Buff Effect	Herald of Agony has (29-30)% increased Buff Effect
+exarch	gloves	HeraldBonusAshEffect	HeraldBonus	300	150	60	Herald of Ash has (15-17)% increased Buff Effect	Herald of Ash has (29-30)% increased Buff Effect
+exarch	gloves	HeraldBonusIceEffect	HeraldBonus	300	150	60	Herald of Ice has (15-17)% increased Buff Effect	Herald of Ice has (29-30)% increased Buff Effect
+exarch	gloves	HeraldBonusPurityEffect	HeraldBonus	300	150	60	Herald of Purity has (15-17)% increased Buff Effect	Herald of Purity has (29-30)% increased Buff Effect
+exarch	gloves	HeraldBonusThunderEffect	HeraldBonus	300	150	60	Herald of Thunder has (15-17)% increased Buff Effect	Herald of Thunder has (29-30)% increased Buff Effect
+exarch	boots	IceGolemBuffEffect	GolemBuffEffect	300	150	60	(31-33)% increased Effect of the Buff granted by your Ice Golems	(46-48)% increased Effect of the Buff granted by your Ice Golems
+exarch	gloves	IgniteProliferation	GlobalIgniteProlif	400	200	80	Ignites you inflict spread to other Enemies within 1.2 metres	Ignites you inflict spread to other Enemies within 1.7 metres
+exarch	gloves	IncreasedAttackSpeed	IncreasedAttackSpeed	1000	500	200	8% increased Attack Speed	13% increased Attack Speed
+exarch	helmet	IncreasedCastSpeed	IncreasedCastSpeed	1000	500	200	8% increased Cast Speed	13% increased Cast Speed
+exarch	body_armour	IncreasedChaosDamage	IncreasedChaosDamage	1000	500	200	(15-17)% increased Chaos Damage	(29-30)% increased Chaos Damage
+exarch	amulet	IncreasedChaosDamage	IncreasedChaosDamage	1000	500	200	(15-17)% increased Chaos Damage	(29-30)% increased Chaos Damage
+exarch	helmet	IncreasedDamagePerPowerCharge	AllDamage	1000	500	200	4% increased Damage per Power Charge	6% increased Damage per Power Charge
+exarch	body_armour	LightningDamagePercentage	LightningDamagePercentage	1000	500	200	(15-17)% increased Lightning Damage	(29-30)% increased Lightning Damage
+exarch	amulet	LightningDamagePercentage	LightningDamagePercentage	1000	500	200	(15-17)% increased Lightning Damage	(29-30)% increased Lightning Damage
+exarch	helmet	LightningDamageTakenGainedAsLife	DamageTakenGainedAsLife	600	300	120	(7-8)% of Lightning Damage taken Recouped as Life	(17-18)% of Lightning Damage taken Recouped as Life
+exarch	boots	LightningGolemBuffEffect	GolemBuffEffect	300	150	60	(31-33)% increased Effect of the Buff granted by your Lightning Golems	(46-48)% increased Effect of the Buff granted by your Lightning Golems
+exarch	boots	LightningResistance	LightningResistance	1000	500	200	+(13-14)% to Lightning Resistance	+(23-24)% to Lightning Resistance
+exarch	helmet	ManaCostEfficiency	CostEfficiency	700	350	140	(25-26)% increased Mana Cost Efficiency	(35-36)% increased Mana Cost Efficiency
+exarch	body_armour	MaximumChaosResistanceImplicit	MaximumResistances	500	250	100	+1% to maximum Chaos Resistance	+3% to maximum Chaos Resistance
+exarch	gloves	MaximumColdResistance	MaximumResistances	600	300	120	+1% to maximum Cold Resistance	+2% to maximum Cold Resistance
+exarch	body_armour	MaximumColdResistanceEldritch	MaximumResistances	600	300	120	+1% to maximum Cold Resistance	+3% to maximum Cold Resistance
+exarch	body_armour	MaximumFireResistanceEldritch	MaximumResistances	600	300	120	+1% to maximum Fire Resistance	+3% to maximum Fire Resistance
+exarch	boots	MaximumFireResistanceImplicit	MaximumResistances	600	300	120	+1% to maximum Fire Resistance	+2% to maximum Fire Resistance
+exarch	body_armour	MaximumLightningResistanceEldritch	MaximumResistances	600	300	120	+1% to maximum Lightning Resistance	+3% to maximum Lightning Resistance
+exarch	helmet	MaximumLightningResistanceImplicit	MaximumResistances	600	300	120	+1% to maximum Lightning Resistance	+2% to maximum Lightning Resistance
+exarch	body_armour	MaximumResistances	MaximumResistances	400	200	80	+1% to all maximum Resistances	+2% to all maximum Resistances
+exarch	amulet	MaximumResistances	MaximumResistances	400	200	80	+1% to all maximum Resistances	+2% to all maximum Resistances
+exarch	gloves	MineLayingSpeed	MineLayingSpeed	700	350	140	8% increased Mine Throwing Speed	13% increased Mine Throwing Speed
+exarch	gloves	MinionDamage	MinionDamage	1000	500	200	Minions deal (14-16)% increased Damage	Minions deal (28-29)% increased Damage
+exarch	amulet	MinionDamage	MinionDamage	1000	500	200	Minions deal (14-16)% increased Damage	Minions deal (28-29)% increased Damage
+exarch	helmet	MinionLife	MinionLife	1000	500	200	Minions have (14-16)% increased maximum Life	Minions have (28-29)% increased maximum Life
+exarch	helmet	MinionRunSpeed	MinionMovementSpeed	1000	500	200	Minions have (11-12)% increased Movement Speed	Minions have (21-22)% increased Movement Speed
+exarch	boots	MovementVelocity	MovementVelocity	1000	500	200	5% increased Movement Speed	10% increased Movement Speed
+exarch	amulet	MovementVelocity	MovementVelocity	1000	500	200	5% increased Movement Speed	10% increased Movement Speed
+exarch	body_armour	OfferingEffect	OfferingEffect	500	250	100	(13-14)% increased effect of Offerings	(23-24)% increased effect of Offerings
+exarch	boots	OnslaughtEffect	OnslaughtEffect	300	150	60	(6-7)% increased Effect of Onslaught on you	(16-17)% increased Effect of Onslaught on you
+exarch	gloves	PhysicalDamageOverTimeMultiplier	DamageOverTimeMultiplier	600	300	120	+(5-7)% to Physical Damage over Time Multiplier	+(19-20)% to Physical Damage over Time Multiplier
+exarch	amulet	PhysicalDamageOverTimeMultiplier	DamageOverTimeMultiplier	600	300	120	+(5-7)% to Physical Damage over Time Multiplier	+(19-20)% to Physical Damage over Time Multiplier
+exarch	body_armour	PhysicalDamagePercent	PhysicalDamagePercent	1000	500	200	(15-17)% increased Global Physical Damage	(29-30)% increased Global Physical Damage
+exarch	amulet	PhysicalDamagePercent	PhysicalDamagePercent	1000	500	200	(15-17)% increased Global Physical Damage	(29-30)% increased Global Physical Damage
+exarch	helmet	PhysicalDamageTakenGainedAsLife	DamageTakenGainedAsLife	600	300	120	(7-8)% of Physical Damage taken Recouped as Life	(17-18)% of Physical Damage taken Recouped as Life
+exarch	body_armour	PowerChargePerSecond	PowerChargePerSecond	500	250	100	Gain a Power Charge every 15 seconds	Gain a Power Charge every 10 seconds
+exarch	gloves	RageOnAttackHit	RageOnHitImplicit	300	150	60	Gain 1 Rage on Attack Hit	Gain 2 Rage on Attack Hit
+exarch	boots	RockGolemBuffEffect	GolemBuffEffect	300	150	60	(31-33)% increased Effect of the Buff granted by your Stone Golems	(46-48)% increased Effect of the Buff granted by your Stone Golems
+exarch	boots	SappedGroundWhileMoving	ItemGrantsBuff	600	300	120	Drops Sapped Ground while moving, lasting 2 seconds	Drops Sapped Ground while moving, lasting 7 seconds
+exarch	boots	ScorchedGroundWhileMoving	ItemGrantsBuff	600	300	120	Drops Scorched Ground while moving, lasting 2 seconds	Drops Scorched Ground while moving, lasting 7 seconds
+exarch	gloves	ShockProliferation	ShockProliferation	400	200	80	Shocks you inflict spread to other Enemies within 1.2 metres	Shocks you inflict spread to other Enemies within 1.7 metres
+exarch	helmet	SpellAddedChaosDamage	SpellAddedChaosDamage	1000	500	200	Adds (7-10) to (15-17) Chaos Damage to Spells	Adds (11-15) to (24-27) Chaos Damage to Spells
+exarch	helmet	SpellAddedColdDamage	SpellAddedElementalDamage	1000	500	200	Adds (9-11) to (17-20) Cold Damage to Spells	Adds (14-18) to (28-32) Cold Damage to Spells
+exarch	helmet	SpellAddedFireDamage	SpellAddedElementalDamage	1000	500	200	Adds (10-13) to (20-23) Fire Damage to Spells	Adds (15-20) to (32-36) Fire Damage to Spells
+exarch	helmet	SpellAddedLightningDamage	SpellAddedElementalDamage	1000	500	200	Adds (2-4) to (34-36) Lightning Damage to Spells	Adds (2-6) to (54-59) Lightning Damage to Spells
+exarch	helmet	SpellAddedPhysicalDamage	SpellAddedPhysicalDamage	1000	500	200	Adds (8-10) to (15-18) Physical Damage to Spells	Adds (13-16) to (25-29) Physical Damage to Spells
+exarch	helmet	SpellCriticalStrikeChance	SpellCriticalStrikeChanceIncrease	1000	500	200	(28-30)% increased Spell Critical Strike Chance	(43-45)% increased Spell Critical Strike Chance
+exarch	amulet	SpellCriticalStrikeChance	SpellCriticalStrikeChanceIncrease	1000	500	200	(28-30)% increased Spell Critical Strike Chance	(43-45)% increased Spell Critical Strike Chance
+exarch	body_armour	SpellCriticalStrikeMultiplier	CriticalStrikeMultiplier	700	350	140	+(20-21)% to Critical Strike Multiplier for Spell Damage	+(30-31)% to Critical Strike Multiplier for Spell Damage
+exarch	boots	SpiritOfferingEffect	OfferingBuffEffect	300	150	60	Spirit Offering has (6-7)% increased Effect	Spirit Offering has (16-17)% increased Effect
+exarch	gloves	StrikeSkillsAdditionalTarget	StrikeSkillsAdditionalTarget	400	200	80	Non-Vaal Strike Skills target 1 additional nearby Enemy	Non-Vaal Strike Skills target 2 additional nearby Enemies
+exarch	gloves	StunThresholdReduction	StunThresholdReduction	400	200	80	(6-7)% reduced Enemy Stun Threshold	(16-17)% reduced Enemy Stun Threshold
+exarch	boots	SummonTotemCastSpeed	SummonTotemCastSpeed	700	350	140	10% increased Totem Placement speed	15% increased Totem Placement speed
+exarch	body_armour	TempestShieldBuffEffect	TempestShieldBuffEffect	300	150	60	Tempest Shield has (15-17)% increased Buff Effect	Tempest Shield has (30-32)% increased Buff Effect
+exarch	gloves	TrapThrowSpeed	TrapAndMineThrowSpeed	700	350	140	8% increased Trap Throwing Speed	13% increased Trap Throwing Speed
+exarch	body_armour	WarcryEffect	WarcryEffect	500	250	100	(19-20)% increased Warcry Buff Effect	(29-30)% increased Warcry Buff Effect
