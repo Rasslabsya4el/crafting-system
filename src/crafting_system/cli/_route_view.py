@@ -35,7 +35,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from crafting_system.abstraction import CompressedState, Status
-from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, RemoveCraftedMods
 from crafting_system.data import GameData
 from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
@@ -348,17 +347,13 @@ class _View:
             name = self.plan.start_price.name
             return f"Restart: buy {name} again" if name else "Restart: buy the start item again"
         offer = self.plan.offer_of(action).offer
-        match offer.action:
-            case ChaosOrb():
-                return "Chaos Orb"
-            case ApplyEssence(name=name):
-                return name
-            case BenchCraft(mod_id=mod_id):
-                return f"Benchcraft: {self._mod(mod_id)}"
-            case RemoveCraftedMods():
-                return "Benchcraft: Remove Crafted Mods"
-            case _:
-                return offer.label
+        action = offer.action
+        adds = action.adds(self.data, self.plan.target.start_item)
+        if adds.crafted and adds.named and len(adds.named) == 1:  # a bench craft: named by the mod it adds
+            return f"Benchcraft: {self._mod(next(iter(adds.named)))}"
+        if action.reads(self.data).needs_crafted:  # Remove Crafted Mods
+            return f"Benchcraft: {offer.label}"
+        return offer.label
 
     def trade_field(self) -> Field | None:
         if self.buy is None:
