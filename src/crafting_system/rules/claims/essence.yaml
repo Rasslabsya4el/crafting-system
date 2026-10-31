@@ -117,3 +117,11 @@ rules:
     patch_verified: "3.29.3"
     date_checked: 2026-10-30
     value: Essence of Desolation
+
+  - id: essence.cost
+    statement: One use of an essence consumes one item of that essence, priced under the name the game data gives it (the name of the essence record).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyEssenceSpite3: name "Shrieking Essence of Spite"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31

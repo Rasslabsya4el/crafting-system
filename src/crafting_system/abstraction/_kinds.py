@@ -1,20 +1,20 @@
 """Which families the enabled actions can tell apart, and a concrete mod to stand for a slot.
 
-A slot of a compressed state keeps no family unless an enabled action needs it. The actions that
-erase the junk (`ChaosOrb`, `HarvestReforge`, `ApplyEssence`) read nothing of it; `RemoveCraftedMods`
-reads only the count; a `BenchCraft` also reads the families, because it is refused when its mod
-shares a family with a mod on the item, so the families of its crafted mod are told apart. Any other
-action is not known to treat families alike, so with one of those every family is told apart.
+A slot of a compressed state keeps no family unless an enabled action needs it. What an action needs
+is its own declaration, `Action.reads(data)` (see `actions.Reads`): an action that reads nothing of
+the junk erases it (a Chaos Orb, a Harvest reforge, an essence, a resonator) and needs no slot; one
+that reads the junk needs its count, and the families it names (a bench craft: the families of its
+mod, because it is refused when one is on the item), or every family when it names none. An action that
+declares nothing reads everything, so with one of those every family is told apart.
 """
 
 from collections.abc import Iterable
 
-from crafting_system.actions import ApplyEssence, ApplyFossils, BenchCraft, ChaosOrb, HarvestReforge, RemoveCraftedMods, build_pool
+from crafting_system.actions import Action, build_pool
 from crafting_system.data import GameData, Mod
 from crafting_system.items import Item, Rarity, Side
 from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS
 
-ERASING = (ChaosOrb, HarvestReforge, ApplyEssence, ApplyFossils)
 ALIKE = ""  # the kind of a family that every enabled action treats like any other of its side
 
 
@@ -28,35 +28,35 @@ def held_families(mod: Mod) -> set[str]:
     return set(mod.families) or {f"#{mod.id}"}
 
 
-def reads_junk(action: object) -> bool:
-    """Whether `action` can see the mods that a Chaos Orb would erase (their number or their families)."""
-    return not isinstance(action, ERASING)
-
-
 class Kinds:
     """The kind of every ordinary mod, and the representative mods that stand for slots.
 
     `actions` are the enabled actions. With none that reads the junk, nothing is kept for it.
     """
 
-    def __init__(self, data: GameData, base_id: str, item_level: int, actions: Iterable[object]):
+    def __init__(self, data: GameData, base_id: str, item_level: int, actions: Iterable[Action]):
         self.data = data
         self.base_id = base_id
         self.item_level = item_level
         self.actions = tuple(actions)
-        self.tracked = any(reads_junk(action) for action in self.actions)
+        self.tracked = any(self.reads_junk(action) for action in self.actions)
         self._distinct: set[str] = set()
         self._everything = False
         for action in self.actions:
-            if isinstance(action, BenchCraft):
-                if action.mod_id not in data.mods:
-                    raise ValueError(f"the craft {action.mod_id} names a mod that is not in the game data")
-                self._distinct.update(data.mods[action.mod_id].families)
-            elif reads_junk(action) and not isinstance(action, RemoveCraftedMods):
+            reads = action.reads(data)
+            if not reads.junk:
+                continue
+            if reads.families is None:
                 self._everything = True
+            else:
+                self._distinct.update(reads.families)
         self._listed: set[str] | None = None
         self._alike: dict[Side, list[tuple[str, Mod]]] = {}
         self._by_family: dict[str, list[Mod]] | None = None
+
+    def reads_junk(self, action: Action) -> bool:
+        """Whether `action` can see the mods that a Chaos Orb would erase (their number or their families)."""
+        return action.reads(self.data).junk
 
     def of(self, mod: Mod) -> str:
         """The kind of an ordinary (not crafted) mod: `ALIKE` or its family key."""

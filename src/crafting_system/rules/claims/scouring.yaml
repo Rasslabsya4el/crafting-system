@@ -42,3 +42,12 @@ rules:
     quote: "Items retain their influences when modified, even if an Orb of Scouring is used."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+
+  - id: scouring.cost
+    statement: One use of an Orb of Scouring consumes one Orb of Scouring item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyConvertToNormal: name "Orb of Scouring"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {Orb of Scouring: 1}

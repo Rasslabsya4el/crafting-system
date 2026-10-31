@@ -1,0 +1,40 @@
+# Extending to new methods and patches
+
+The owner requires flexibility across leagues ([#81](https://github.com/Rasslabsya4el/crafting-system/issues/81) Q11, 2026-10-31): new numbers in a league the same day, a changed rule of an existing method in a few hours, a brand-new method in one or two tickets, **without changes elsewhere in the system**. Until ticket [#108](https://github.com/Rasslabsya4el/crafting-system/issues/108) a new action touched `abstraction` (class lists and `isinstance` checks), `cli/_offers.py` (hand-wired offers and costs) and the cost rules of its own family. Now every action meets one contract, `actions` keeps a catalog, and everything else reads the contract.
+
+## What each change touches
+
+- **New numbers** (a weight, a price, a bench cost): the data pin (`data`, the patch-update skill) or the price file. No code.
+- **A changed rule of an existing method**: its claim in `rules/claims/<family>.yaml` and, if the logic changes, the one action file and its tests. The cost of an orb or a reforge is a claim too (`chaos_orb.cost`, `harvest_reforge.lifeforce_cost`, ...), so a price-name change there is a claim edit; an essence, a fossil or a bench craft is priced under the name the game data gives it (`essence.cost`, `fossils.cost`, `bench_craft.option_cost`), so a new patch moves them with the data pin.
+- **A brand-new method**: one file in `actions/` that subclasses `Action`, registers its kind with `@kind(...)`, and cites its claims; plus its tests. Nothing in `abstraction`, `cli` or `simulator` changes. A method that does not draw from a pool lists its results with `Finite`; one that draws uses `Outcomes`.
+
+## The contract
+
+An action answers five questions (`actions/contract.py`): `label(data)`, `outcomes(data, item)` (exact `distribution`, `chance_all` and `sample`, plus `components`, the mixture the kernel is built from), `resources(data)`, `reads(data)` and `adds(data, item)`. `abstraction` builds the state from the `reads` of the enabled actions and the kernel from `outcomes` alone; `cli` builds its offers from the catalog, `resources` and `adds`; `simulator` samples `outcomes`. `tests/test_actions_no_concrete_imports.py` fails when a module outside `actions` names a concrete action class.
+
+`reads` is the one declaration that must be right: an action that reads nothing of the other mods **erases** them, which is why a state need not store them. An action that declares nothing reads every mod and tells every family apart: exact, but the state count can blow up. A new method is therefore correct by default and fast by declaration.
+
+## The catalog and the planner
+
+Each module registers its kinds, with an order number and a `planner` flag. `catalog(data, item)` lists the actions that can apply to the item or to what a policy makes of it; `planner_only` leaves out the kinds the planner cannot use yet (fossil sets, the orbs of magic items, Orb of Scouring, Orb of Alchemy), each with its reason. A new kind is offered by default. The planner's filters are over declarations, not classes: an action that only adds named crafted mods is offered when a mod it adds counts toward the target (the #60 rule), and an action that needs a crafted mod (`Reads.needs_crafted`) is offered when the start item holds one or another offered action adds one. Pruning for speed (#118) is a further filter over `adds` and `reads`; the claim history (#120) reads the claims.
+
+Two more declarations carry decisions that used to hide in the CLI and in ADR-0023. `Adds.keeps_crafted` (default True, the safe value) says whether a crafted mod survives the action: a bench craft that gives the target nothing is left out only while every other offered action declares False, so Exalted, Annulment or a metamod action needs no edit in `cli`. `Reads.block_invariant` (default False, refuse) says that the action's kernel, pushed through the pooling of junk families, is the same for every member of a block (ADR-0023, #125): it is set on the erasing rerolls (fossils included), the bench crafts and Remove Crafted Mods, and the contract suite compares the members of blocks on the fixture items. A `Finite` action is not invariant until someone proves it.
+
+## Limits a later ticket must lift with a contract change
+
+- **Two-input actions** (ADR-0022): `outcomes(data, item)` takes one item; `extra_inputs`, a `Need` and a donor have no place in the contract yet.
+- **In-place value changes** (a Divine-like orb, #71): the kernel accepts only `Fixed` or `Outcomes` parts and `_split` matches mods by `(mod_id, fractured, crafted)`, so a changed roll would count as kept.
+- **`Adds` names only what is added by name** from the start item. For a drawn action it says that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
+- **The catalog looks at the start item's rarity** (essences of level 1 to 4, the orbs of magic items): those kinds are not listed for states a policy reaches later. Today no planner kind needs them.
+- **Prices of essences, fossils and bench crafts** come from the game data's names, not from a claim's value; the claim says so.
+- The contract suite does not compare a fracturing action (Fractured Fossil) with the brute force; `test_abstraction_fossil.py` does.
+
+## Verification
+
+`tests/contract_support.py` runs on every kind of the catalog without being edited: outcomes sum to one; the finished items listed from `components` give each mod the chance `chance_all` says; the sampler follows it within five standard errors; the kernel equals the brute force on the compressed finished items (layer 1, ADR-0019); what an action declares agrees with what it does; its resources price an offer from a fixture price file; its label round-trips through a given route. A toy action defined only in `tests/test_actions_toy.py` is offered by the CLI, gets exact kernels, runs in the simulator and passes the same checks, which is the test that the contract is enough.
+
+## Rejected
+
+- A `typing.Protocol` alone: a new method could forget `reads` and silently be wrong. The base class gives the safe defaults.
+- Kernel dispatch on the kind of outcome (a bench result, a resonator result): every new shape would need a kernel edit. The kernel reads the mixture of parts (`Fixed` or a pool draw) that every outcome exposes.
+- The planner choosing actions by class or by a list in `cli`: the toy action would need an edit there.

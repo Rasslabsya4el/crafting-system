@@ -28,10 +28,8 @@ The lucky rolls of a Sanctified Fossil change the rolled values only, which belo
 requirements of the Divine Orb ticket; `sample` rolls every value once.
 """
 
-import random
-from collections import defaultdict
-from collections.abc import Callable, Hashable, Mapping
-from dataclasses import dataclass, replace
+from collections.abc import Mapping
+from dataclasses import dataclass
 from fractions import Fraction
 from itertools import combinations
 
@@ -39,9 +37,12 @@ from crafting_system.data import Fossil, GameData, Mod, conflicts
 from crafting_system.items import Item, Metamod, Rarity, Side, UnknownBaseError, capacity
 from crafting_system.rules import get_rule
 
-from .draw import Outcome, refuse_unmodelled
+from .catalog import kind
+from .contract import Action, Adds, Reads
+from .draw import refuse_unmodelled
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .fossil_weights import FossilWeights, fossil_weights
+from .mixture import FossilOutcomes
 from .outcomes import Outcomes, retained_item
 from .pool import Candidate, group_pool, pool_candidates
 
@@ -69,80 +70,15 @@ FRACTURED_FOSSIL_REFUSED = get_rule("fossils.fractured_fossil_refused_on_fractur
 FRACTURED_MOD_UNIFORM = get_rule("fossils.fractured_mod_uniform")
 FRACTURED_MODS_KEPT = get_rule("fossils.fractured_mods_kept")
 DAGGER_STAFF_TAKE_CLASS_MODS = get_rule("essence.dagger_staff_take_class_mods")
+COST = get_rule("fossils.cost")
 
 MIN_FOSSILS = 1
 MAX_FOSSILS = max(CHAOTIC_RESONATOR_SOCKETS.value.values())
 TANGLED_RECORD_MARKER = "RandomFossilOutcome"
 
 
-@dataclass(frozen=True, slots=True)
-class Fractured:
-    """The label of a mod that a Fractured Fossil fractured: `Fractured(label(mod))` in an outcome with count 1.
-
-    The fractured mod is also counted under its own label like every new mod, so a caller that
-    does not care about fracturing reads the same counts as for any reroll.
-    """
-
-    label: Hashable
-
-
-@dataclass(frozen=True, eq=False)
-class FossilOutcomes:
-    """What a resonator with `fossils` can leave behind: a mixture of `Outcomes` (`components`).
-
-    `components` holds `(probability, Outcomes)` pairs that sum to 1. `fractures` is True when a
-    Fractured Fossil is socketed: one finished mod is then fractured, uniformly among all of them.
-    """
-
-    data: GameData
-    components: tuple[tuple[Fraction, Outcomes], ...]
-    fractures: bool
-
-    def chance_all(self, mod_ids) -> Fraction:
-        """The exact chance that the finished item holds all of `mod_ids`, kept, forced or newly drawn."""
-        wanted = list(mod_ids)
-        return sum((p * part.chance_all(wanted) for p, part in self.components), Fraction(0))
-
-    def distribution(self, label: Callable[[Mod], Hashable]) -> Mapping[Outcome, Fraction]:
-        """The exact distribution of the new mods seen through `label`, as for `Outcomes.distribution`.
-
-        With a Fractured Fossil every outcome also holds one `(Fractured(l), 1)` pair, `l` being the
-        label of the mod that was fractured; the mods that are kept or forced take part in the choice.
-        """
-        mixed: dict[Outcome, Fraction] = defaultdict(Fraction)
-        for p, part in self.components:
-            forced = None if part.forced is None else label(self.data.mods[part.forced])
-            for outcome, chance in part.distribution(label).items():
-                if not self.fractures:
-                    mixed[outcome] += p * chance
-                    continue
-                counts = dict(outcome)
-                if forced is not None:
-                    counts[forced] = counts.get(forced, 0) + 1
-                whole = sum(counts.values())
-                if whole == 0:
-                    mixed[outcome] += p * chance
-                    continue
-                for lab, count in counts.items():
-                    mixed[outcome | {(Fractured(lab), 1)}] += p * chance * Fraction(count, whole)
-        return dict(mixed)
-
-    def sample(self, rng: random.Random) -> Item:
-        """One finished item drawn with `rng`; a Fractured Fossil fractures one of its mods at random."""
-        part = rng.choices([c for _, c in self.components], weights=[float(p) for p, _ in self.components])[0]
-        finished = part.sample(rng)
-        if not self.fractures or not finished.mods:
-            return finished
-        chosen = rng.randrange(len(finished.mods))
-        mods = tuple(
-            replace(entry, fractured=True) if index == chosen else entry
-            for index, entry in enumerate(finished.mods)
-        )
-        return finished.changed(self.data, mods=mods)
-
-
 @dataclass(frozen=True)
-class ApplyFossils:
+class ApplyFossils(Action):
     """One Chaotic resonator with 1 to 4 different fossils, each named as in the game data or by record id."""
 
     fossils: tuple[str, ...]
@@ -166,6 +102,30 @@ class ApplyFossils:
         """The Chaotic resonator with as many sockets as there are fossils ("Potent Chaotic Resonator")."""
         sockets = {count: name for name, count in CHAOTIC_RESONATOR_SOCKETS.value.items()}
         return f"{sockets[len(self.fossils)]} Chaotic Resonator"
+
+    def label(self, data: GameData | None = None) -> str:
+        names = self.fossils if data is None else tuple(_record(data, name).name for name in self.fossils)
+        return f"Fossils {' + '.join(names)}"
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        """The resonator and one of each fossil, priced under its name (the record's, when the set names ids)."""
+        names = self.fossils if data is None else tuple(_record(data, name).name for name in self.fossils)
+        return {self.resonator: 1, **{name: 1 for name in names}}
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads.nothing(block_invariant=True)
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        """The mods a Hollow Fossil forces; None when a Glyphic Fossil chooses among several."""
+        if data is None:
+            return Adds.erasing()
+        named: set[str] = set()
+        for name in self.fossils:
+            record = _record(data, name)
+            named.update(record.forced_mods)
+            if record.corrupted_essence_chance >= 100 and not _special(record, "tangled") and not record.forced_mods:
+                return Adds.erasing()
+        return Adds.erasing(named=frozenset(named))
 
     def outcomes(self, data: GameData, item: Item) -> FossilOutcomes:
         """The outcomes of using the resonator on `item`; see the module text for the refusals."""
@@ -387,3 +347,8 @@ def _check_forced(data: GameData, item: Item, forced: Mod, name: str) -> None:
             f"the fractured mods fill every {side.value} slot, so the forced mod {forced.id} "
             "has no slot; no admitted rule says what the game does then"
         )
+
+
+@kind("fossil-set", order=60, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+def _fossil_sets(data: GameData, item: Item):
+    yield from fossil_actions(data, item)

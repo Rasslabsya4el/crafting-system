@@ -1,5 +1,6 @@
 """The orbs of magic items: Transmutation and Alteration (1 or 2 mods), Augmentation and Regal (one more mod)."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 
@@ -8,6 +9,8 @@ from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
 from .add import add_one_mod, draw_onto
+from .catalog import kind
+from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
@@ -23,6 +26,7 @@ AUGMENTATION_ACCEPTS_MAGIC_WITH_FREE_SLOT = get_rule("magic_orbs.augmentation_ac
 REGAL_ACCEPTS_MAGIC_ONLY = get_rule("magic_orbs.regal_accepts_magic_only")
 REGAL_KEEPS_MODS_AND_ADDS_ONE = get_rule("magic_orbs.regal_keeps_mods_and_adds_one")
 REFUSED_ON_CORRUPTED = get_rule("magic_orbs.refused_on_corrupted")
+COST = get_rule("magic_orbs.cost")
 
 JEWEL_REASON = (
     "the magic and rare capacities and mod counts are admitted for regular items only, "
@@ -47,8 +51,20 @@ def _refuse(data: GameData, item: Item, wanted: Rarity, name: str) -> None:
 
 
 @dataclass(frozen=True)
-class TransmutationOrb:
+class TransmutationOrb(Action):
     """One Orb of Transmutation: a normal item becomes magic with 1 or 2 mods, 1/2 each."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return "Orb of Transmutation"
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        return dict(COST.value["transmutation"])
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads.nothing()
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds.erasing(named=frozenset())
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.
@@ -61,8 +77,20 @@ class TransmutationOrb:
 
 
 @dataclass(frozen=True)
-class AlterationOrb:
+class AlterationOrb(Action):
     """One Orb of Alteration: rerolls a magic item to 1 or 2 mods, 1/2 each; the fractured mods stay and count inside."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return "Orb of Alteration"
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        return dict(COST.value["alteration"])
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads.nothing()
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds.erasing(named=frozenset())
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.
@@ -77,8 +105,20 @@ class AlterationOrb:
 
 
 @dataclass(frozen=True)
-class AugmentationOrb:
+class AugmentationOrb(Action):
     """One Orb of Augmentation: adds one mod to a magic item that has a free slot."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return "Orb of Augmentation"
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        return dict(COST.value["augmentation"])
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads()
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds(named=frozenset())
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.
@@ -91,8 +131,20 @@ class AugmentationOrb:
 
 
 @dataclass(frozen=True)
-class RegalOrb:
+class RegalOrb(Action):
     """One Regal Orb: a magic item becomes rare and gains one mod; the mods it has stay."""
+
+    def label(self, data: GameData | None = None) -> str:
+        return "Regal Orb"
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        return dict(COST.value["regal"])
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads()
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds(named=frozenset())
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.
@@ -103,3 +155,27 @@ class RegalOrb:
         """
         _refuse(data, item, Rarity.MAGIC, "a Regal Orb")
         return add_one_mod(data, item, "a Regal Orb", rarity=Rarity.RARE)
+
+
+@kind("transmutation-orb", order=71, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+def _transmutation_orb(data: GameData, item: Item):
+    if item.rarity is Rarity.NORMAL:
+        yield TransmutationOrb()
+
+
+@kind("alteration-orb", order=72, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+def _alteration_orb(data: GameData, item: Item):
+    if item.rarity in (Rarity.NORMAL, Rarity.MAGIC):
+        yield AlterationOrb()
+
+
+@kind("augmentation-orb", order=73, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+def _augmentation_orb(data: GameData, item: Item):
+    if item.rarity in (Rarity.NORMAL, Rarity.MAGIC):
+        yield AugmentationOrb()
+
+
+@kind("regal-orb", order=74, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+def _regal_orb(data: GameData, item: Item):
+    if item.rarity in (Rarity.NORMAL, Rarity.MAGIC):
+        yield RegalOrb()

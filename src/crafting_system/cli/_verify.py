@@ -10,7 +10,7 @@ every time in the goal. Every interval is a normal approximation, good for thous
 import math
 from dataclasses import dataclass
 
-from crafting_system.actions import ApplyEssence, ChaosOrb, HarvestReforge
+from crafting_system.actions import Action
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.simulator import SimulationReport, Step, simulate
@@ -29,7 +29,8 @@ class Memoized:
 
     What a reroll can leave behind depends only on the base, the item level, the rarity, the
     influences, the corruption and the fractured and crafted mods of the item (the `retained` item
-    of `Outcomes`), so building it once per such item changes no result. The sampler runs every time.
+    of `Outcomes`) for an action that reads nothing of the other mods (`Action.reads`), so building it
+    once per such item changes no result. The sampler runs every time.
     """
 
     def __init__(self, action: object) -> None:
@@ -37,6 +38,8 @@ class Memoized:
         self._cache: dict[tuple, object] = {}
 
     def outcomes(self, data: GameData, item: Item) -> object:
+        if isinstance(self.action, Action) and self.action.reads(data).junk:
+            return self.action.outcomes(data, item)  # it reads the other mods of the item, so the key above is not enough
         key = (
             item.base_id, item.item_level, item.rarity, item.influences, item.corrupted,
             item.fractured_mods, item.crafted_mods,
@@ -47,8 +50,8 @@ class Memoized:
 
 
 def _memoized(action: object) -> object:
-    """The rerolls are memoized; a bench action reads every mod of the item (a family clash, a full side) and is not."""
-    return Memoized(action) if isinstance(action, (ChaosOrb, HarvestReforge, ApplyEssence)) else action
+    """Every action is wrapped; `Memoized` remembers only those that read nothing of the junk (a bench action reads every mod of the item and is not)."""
+    return Memoized(action)
 
 
 @dataclass(frozen=True)
