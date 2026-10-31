@@ -31,7 +31,7 @@ rules:
     statement: A fossil boosts a mod once for every one of its tags that the mod carries, so a fossil with two matching tags (Bound on a mod tagged minion and aura) gives two terms. This replaces the wiki's "once per fossil" (FOS-06).
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531135766
-    quote: "CHK-048 (does one fossil boost a mod once (wiki) or once per matching tag (Craft of Exile)). Decision: Craft of Exile's poec_getModdedWeight"
+    quote: "(does one fossil boost a mod once, wiki, or once per matching tag, Craft of Exile). Decision: Craft of Exile's `poec_getModdedWeight`"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-30
 
@@ -63,8 +63,8 @@ rules:
   - id: fossils.opulent_no_tagless
     statement: An Opulent Fossil removes every mod that has no tag at all (empty `implicit_tags`) from the pool, on top of its boost of the tag `drop`.
     source_kind: wiki
-    url: https://www.poewiki.net/wiki/Opulent_Fossil#Mechanics
-    quote: "Tagless modifiers are those without any tags."
+    url: https://www.poewiki.net/wiki/Fossil#Mechanics
+    quote: "No tagless modifiers"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
 
@@ -81,7 +81,7 @@ rules:
     statement: The Sanctified level factor multiplies the whole weight of the mod (base weight times the fossil tag factor), it is not one of the summed boosts; a blocked mod stays blocked.
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
-    quote: "Sanctified multiplies the whole weight: weight = base weight x fossil tag factor x (1 + (tier level - 40)/100) x catalyst"
+    quote: "Sanctified multiplies the whole weight"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-30
 
@@ -172,7 +172,7 @@ rules:
     statement: A Tangled Fossil applies one of the 420 outcome records of `fossils.json` (a boost of x30 on one tag and a block of another), each with the same probability. It may pick a tag that another fossil boosts (the terms add) or blocks (the block wins).
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
-    quote: "Tangled's pair uniform over the 420 RandomFossilOutcome records of fossils.json"
+    quote: "Tangled's pair uniform over the 420 `RandomFossilOutcome` records of `fossils.json`"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-30
 
@@ -244,9 +244,9 @@ rules:
 
   - id: fossils.no_duplicate_fossil
     statement: A resonator holds at most one fossil of each type.
-    source_kind: official
-    url: https://www.pathofexile.com/forum/view-thread/2197540
-    quote: "Can we stack copies of the same fossils in a Resonator?"
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Resonator
+    quote: "Resonators cannot be socketed with multiple of the same fossil."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
 
