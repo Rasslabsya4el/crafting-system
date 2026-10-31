@@ -1,0 +1,6 @@
+# Fixture route: it reads a family that the seeded second version touches.
+name: Fixture route
+rules:
+  - when:
+      fractured: [{family: ColdResistance}]
+    do: Chaos Orb
