@@ -6,9 +6,11 @@ Research ticket [#76](https://github.com/Rasslabsya4el/crafting-system/issues/76
 
 **No source shows a gate, and every source that speaks to it says the bench does not refuse a craft because the item's level is below the crafted mod's level.** `BenchCraft` stays as landed in [PR #74](https://github.com/Rasslabsya4el/crafting-system/pull/74): no item-level check. An item level 78 bow takes `+2 to Level of Socketed Support Gems` (mod level 80), and a belt of any level takes the damage prefixes (72, 81).
 
+**The owner agrees** (2026-10-31, in chat, his own knowledge, he says he may be wrong): a bench craft of a higher level can be crafted on a low item level item, but the item's level requirement (the character level needed to equip it) goes up; he thinks essences behave the same; he does not remember whether the item level itself changes. The written sources below agree with him on every point except the last, which no source speaks to (nothing suggests the item level changes: the wiki treats the item level as the level the item dropped or was made at, and the requirement as a separate property).
+
 What the mod's `required_level` does instead: it raises the finished item's **wearing level requirement** to 80 % of the mod level (80 → 64, 81 → 65, rounded as the wiki says). That is a property of the item, not a refusal of the craft. The model does not track wearing levels, so nothing is added.
 
-Confidence: moderate-to-good. The evidence is one working implementation (Craft of Exile's code), the wiki's explicit list of bench rules, and three player reports from 2020–2021 (one of them a direct test: an item level 80 item took a craft that Craft of Exile lists at 81). Nobody tested the exact case (item level 78 bow, `+2` support gems) in 3.25–3.29. The ticket's quick in-game check is at the end; it is a confirmation, not a blocker.
+Confidence: moderate-to-good. The owner's own knowledge and the evidence below agree. The evidence is one working implementation (Craft of Exile's code), the wiki's explicit list of bench rules, and three player reports from 2020–2021 (one of them a direct test: an item level 80 item took a craft that Craft of Exile lists at 81). Nobody tested the exact case (item level 78 bow, `+2` support gems) in 3.25–3.29. The ticket's quick in-game check is at the end; it is a confirmation, not a blocker.
 
 ## Evidence
 
@@ -30,6 +32,7 @@ Read 2026-10-31 in the built-in browser (Anubis check passed).
 
 - [Crafting Bench](https://www.poewiki.net/wiki/Crafting_Bench), "Using the crafting bench": "Crafting a mod follows the normal affix rules. Specifically: The item cannot already have a mod of that type. The item must have a prefix or suffix slot open as appropriate." The page has no mention of item level, `ilvl` or required level anywhere (searched the whole page text, 100,880 characters). The craft tables have no level column.
 - [Modifier](https://www.poewiki.net/wiki/Modifier), "Mod level": "The required level of the relevant entity. For example, this can be the required item level or a monster level. However, there are cases where this is not respected: in particular this is the case for any mods that are directly given to other entities, such as implicit mods including enchantments or monsters with innate mods." and "The mod level is also a factor in calculating the level requirement of items; raising the level requirement up to 80% requirement of the mod". Domain 9 "Crafted" is described as "Options offered by the crafting bench to add modifiers to items". The page does not list the bench among the places where the mod level is the item-level gate, and it is not in the exception list either; it neither supports nor contradicts a gate by itself. Read with the bench page's two-rule list it points to no gate.
+- [Essence](https://www.poewiki.net/wiki/Essence), tier table: the column "Minimum required level of crafted item" is 1 / 8 / 20 / 33 / 46 / 59 / 65 for Whispering … Deafening. Essences set the *wearing* requirement of the item they craft, and the page names no item-level condition for using one; this matches the owner's belief that essences behave like bench crafts. (Essence pools are cut by item level for random mods only: "restrict the pool of random modifiers … up to a certain maximum level".)
 - [Item level](https://www.poewiki.net/wiki/Item_level): "the Crafting Bench can be used to roll a specific number of sockets to an item regardless of ilvl." That is about sockets only; it shows the bench is not ruled by item level in general, no more.
 
 ### repoe-fork 3.29.3.3 (kind `datamined`): nothing besides `required_level`
@@ -71,15 +74,15 @@ Third-party data pages ([poeref.com](https://poeref.com/crafting-bench/record-70
 
 ```yaml
   - id: bench_craft.no_item_level_gate
-    statement: A bench craft is not refused because the item's level is below the crafted mod's `required_level`; `required_level` raises the finished item's wearing level requirement instead. The crafted mod's level is not an item-level condition of the craft.
-    source_kind: coe
-    url: https://www.craftofexile.com/
-    quote: "htilvl<=iLvl||mod.id_mgroup==11||mod.id_mgroup==13||mod.id_mgroup==10 (bench group 11 skips the item-level cut); poec_simApplyBenchCraft refuses only on prefix/suffix, modgroup, id"
+    statement: A bench craft is not refused because the item's level is below the crafted mod's `required_level`; the mod's level raises the item's own level requirement (the character level needed to equip it) to 80% of the mod level instead. Whether the item level itself changes is not known and not modelled (nothing suggests it does).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/76
+    quote: "a bench craft of a higher level can be crafted on a low item level item, but the item's level requirement goes up; he does not remember whether the item level itself changes (owner, 2026-10-31, in chat, his own knowledge, he may be wrong)"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 ```
 
-(Backed by the wiki's rule list and the 2020 test; `source_kind` takes one source, so the code is the one cited. If the owner's in-game check below is done, it becomes kind `owner` and replaces this one.)
+(The rule rests on the owner's statement, kind `owner`, with his stated uncertainty. It is corroborated by Craft of Exile's code (kind `coe`: bench mods skip the item-level cut; `poec_simApplyBenchCraft` checks only slot, family, duplicate), the wiki's Crafting Bench rule list and Modifier page (kind `wiki`), and the 2020–2021 player reports. `source_kind` takes one source; if the in-game check below is done it replaces the owner's memory as the source.)
 
 ## Quick in-game check (optional confirmation)
 
