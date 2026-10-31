@@ -103,3 +103,19 @@ def test_verify_agrees_with_the_computed_mean_on_the_real_amulet(data):
     assert check.report.successes == RUNS
     assert check.computed_mean == pytest.approx(4.0 + plan.mean_remaining)
 
+
+
+def test_without_a_lifeforce_price_the_reforge_is_dropped_and_the_chaos_orb_policy_is_returned(tmp_path, data, capsys):
+    code, out = run_command(tmp_path, data=data, prices=price_file(lifeforce=None))
+
+    document = read_json(out)
+    assert code == 0
+    assert document["dropped_actions"] == [
+        {"action": "Harvest Reforge Lightning", "missing_prices": ["Primal Crystallised Lifeforce"]}
+    ]
+    (state,) = document["states"]
+    assert state["action"] == "Chaos Orb"
+    assert 0.0 < state["goal_chance_per_use"] < 0.01  # about 0.42% a Chaos Orb, the weights are huge integers
+    assert state["reach_probability"] == pytest.approx(1.0)
+    assert document["totals"]["mean_cost"]["value"] == pytest.approx(4.0 + 1.0 / state["goal_chance_per_use"], rel=1e-9)
+    assert "Dropped for lack of a price: Harvest Reforge Lightning" in capsys.readouterr().out

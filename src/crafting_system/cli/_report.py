@@ -19,7 +19,7 @@ from crafting_system.targets import KOfN
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
 from ._shares import WeightShare, start_shares
-from ._verify import Verification
+from ._verify import SIGMAS, Verification
 
 FORMAT = "crafting-system-policy/1"
 GOAL = "goal"
@@ -271,6 +271,8 @@ def _verification_lines(check: Verification, plan: Plan) -> list[str]:
         f"  computed mean cost  {money(check.computed_mean)} Chaos ({check.computed_mean / divine:.3g} Divine)",
         f"  simulated p90       {money(p90.value)} Chaos, interval {money(p90.low)} to {money(p90.high)}; "
         f"computed {money(check.computed_p90)}",
+        f"  detectable error    a mean off by more than {check.detectable_error:.1%} is rejected "
+        f"({SIGMAS:g} standard errors); a smaller error passes; more --runs see smaller ones",
         f"  successes {report.successes:,} of {report.runs:,}, mean uses per run {report.mean_steps:.1f}",
         "  " + ("AGREES with the computed mean" if check.agrees else f"DOES NOT AGREE: {check.reason}"),
     ]
@@ -387,6 +389,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "successes": sim.successes,
             "unfinished": sim.unfinished,
             "stopped": sim.stopped,
+            "detectable_relative_error": verification.detectable_error,
             "agrees": verification.agrees,
             "reason": verification.reason,
         }

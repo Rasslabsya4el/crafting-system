@@ -72,7 +72,7 @@ def reach_probabilities[S: Hashable](
             total = sum(weight for _, weight in policy[source].outcomes)
             into = sum(weight for successor, weight in policy[source].outcomes if successor == state)
             if into:
-                stepped += start_row[position[source]] * into / total
+                stepped += start_row[position[source]] * (into / total)  # int / int first: the weights can be huge
         reach[state] = min(1.0, max(0.0, stepped))
     return reach
 

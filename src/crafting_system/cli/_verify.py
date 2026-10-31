@@ -59,6 +59,15 @@ class Verification:
     reason: str  # why it does not agree, empty when it does
 
     @property
+    def detectable_error(self) -> float:
+        """The smallest relative error of the computed mean this run can reject: SIGMAS standard errors over the mean.
+
+        A cost is about as spread as its mean (a geometric number of clicks), so the standard error is
+        about the mean over sqrt(runs): 10,000 runs see an error of 5% or more, not a smaller one.
+        """
+        return SIGMAS * self.report.cost.standard_error / self.computed_mean if self.computed_mean else math.inf
+
+    @property
     def p90(self):
         return self.report.quantile(0.9)
 

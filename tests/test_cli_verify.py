@@ -116,3 +116,29 @@ def test_the_memoized_action_builds_its_outcomes_once_per_kind_of_item(plan):
     again = memo.outcomes(DATA, start)
 
     assert first is again and action.calls == 1
+
+
+BIG_RUNS = 20_000
+
+
+def test_a_mean_six_percent_off_is_rejected_when_the_run_can_see_it():
+    # No start price, so the whole mean is the cost of the clicks and a 6% error in it is a 6% error per click.
+    # A craft's cost is as spread as its mean, so the standard error is about mean / sqrt(runs) and five of
+    # them are 3.5% at 20,000 runs. The default 10,000 runs see errors above about 5%, not smaller ones:
+    # the output says so (`detectable_error`).
+    exact = make_plan(DATA, load_target(R12, DATA), price_file(), start_price=0.0)
+    off = Solution({s: v * 1.06 for s, v in exact.solution.values.items()}, exact.solution.policy, 0.0)
+
+    wrong = verify(DATA, dataclasses.replace(exact, solution=off), runs=BIG_RUNS, seed=3)
+
+    assert wrong.report.cost.agrees_with(exact.mean_remaining)  # the simulation itself is right
+    assert not wrong.agrees and "standard errors" in wrong.reason
+    assert 0.03 < wrong.detectable_error < 0.05  # it saw 6% and says it could not see much less
+
+
+def test_the_verify_output_names_the_smallest_error_the_run_can_detect(plan, tmp_path, capsys):
+    code, out = run_command(tmp_path, "--verify", "--runs", str(RUNS), prices=price_file())
+
+    assert code == 0
+    assert "a mean off by more than" in capsys.readouterr().out
+    assert 0.0 < read_json(out)["verification"]["detectable_relative_error"] < 1.0

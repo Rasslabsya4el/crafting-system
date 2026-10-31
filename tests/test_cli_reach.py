@@ -49,3 +49,21 @@ def test_too_many_states_give_no_chances():
     policy[MAX_TRANSIENT + 1] = action(("goal", 1))
 
     assert reach_probabilities(0, policy, is_goal) is None
+
+
+def test_weights_too_large_for_a_float_still_give_chances():
+    huge = 10**400
+    policy = {"S": action(("S", huge), ("goal", huge // 100))}
+
+    reach = reach_probabilities("S", policy, is_goal)
+
+    assert reach["S"] == pytest.approx(1.0) and reach["goal"] == pytest.approx(1.0)
+
+
+def test_a_dead_end_behind_huge_weights_has_its_chance():
+    huge = 10**400
+    policy = {"S": action(("goal", huge), ("dead", huge))}
+
+    reach = reach_probabilities("S", policy, is_goal)
+
+    assert reach["goal"] == pytest.approx(0.5) and reach["dead"] == pytest.approx(0.5)
