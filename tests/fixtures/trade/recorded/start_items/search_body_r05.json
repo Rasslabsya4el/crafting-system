@@ -1,0 +1,52 @@
+{
+ "query": {
+  "status": {
+   "option": "securable"
+  },
+  "stats": [
+   {
+    "type": "and",
+    "filters": [
+     {
+      "id": "fractured.stat_1379411836",
+      "disabled": false,
+      "value": {
+       "min": 13
+      }
+     }
+    ]
+   }
+  ],
+  "filters": {
+   "type_filters": {
+    "filters": {
+     "rarity": {
+      "option": "rare"
+     },
+     "category": {
+      "option": "accessory.ring"
+     }
+    }
+   },
+   "misc_filters": {
+    "filters": {
+     "ilvl": {
+      "min": 75
+     },
+     "corrupted": {
+      "option": "false"
+     },
+     "mirrored": {
+      "option": "false"
+     },
+     "fractured_item": {
+      "option": "true"
+     }
+    }
+   }
+  }
+ },
+ "sort": {
+  "price": "asc"
+ }
+}

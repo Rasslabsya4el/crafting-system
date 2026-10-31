@@ -144,8 +144,8 @@ def test_a_reforge_with_a_tag_that_is_not_a_string_cannot_be_built(tag):
 
 
 def test_a_reforge_with_an_unknown_tag_cannot_be_built():
-    with pytest.raises(ValueError, match="no Harvest reforge for the tag 'fire'"):
-        HarvestReforge("fire")
+    with pytest.raises(ValueError, match="no Harvest reforge for the tag 'randomise'"):
+        HarvestReforge("randomise")
 
 
 def test_the_default_reforge_is_lightning():

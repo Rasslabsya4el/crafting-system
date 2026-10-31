@@ -1,0 +1,49 @@
+{
+ "query": {
+  "status": {
+   "option": "securable"
+  },
+  "stats": [
+   {
+    "type": "and",
+    "filters": [
+     {
+      "id": "fractured.stat_1671376347",
+      "disabled": false
+     }
+    ]
+   }
+  ],
+  "filters": {
+   "type_filters": {
+    "filters": {
+     "rarity": {
+      "option": "rare"
+     },
+     "category": {
+      "option": "accessory.amulet"
+     }
+    }
+   },
+   "misc_filters": {
+    "filters": {
+     "ilvl": {
+      "min": 75
+     },
+     "corrupted": {
+      "option": "false"
+     },
+     "mirrored": {
+      "option": "false"
+     },
+     "fractured_item": {
+      "option": "true"
+     }
+    }
+   }
+  }
+ },
+ "sort": {
+  "price": "asc"
+ }
+}
