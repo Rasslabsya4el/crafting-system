@@ -1,6 +1,7 @@
 """The registry of admitted mechanics with provenance (ADR-0004). May import only: data."""
 
 from .registry import (
+    HistoryEntry,
     RegistryError,
     Rule,
     SourceKind,
@@ -10,6 +11,7 @@ from .registry import (
 )
 
 __all__ = [
+    "HistoryEntry",
     "RegistryError",
     "Rule",
     "SourceKind",

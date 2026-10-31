@@ -80,6 +80,10 @@ def _freeze(value: Any) -> Any:
 class _UniqueKeyLoader(yaml.SafeLoader):
     """`safe_load` that refuses a mapping with a repeated key instead of keeping the last one."""
 
+    def __init__(self, stream) -> None:  # noqa: ANN001
+        super().__init__(stream)
+        self.nodes: dict[int, yaml.MappingNode] = {}
+
     def construct_mapping(self, node, deep=False):  # noqa: ANN001
         if isinstance(node, yaml.MappingNode):
             seen = set()
@@ -96,6 +100,32 @@ class _UniqueKeyLoader(yaml.SafeLoader):
                     )
         return super().construct_mapping(node, deep)
 
+    def construct_yaml_map(self, node):  # noqa: ANN001, ANN201
+        for data in super().construct_yaml_map(node):
+            self.nodes[id(data)] = node  # the parsed dict is alive as long as the document is
+            yield data
+
+
+_UniqueKeyLoader.add_constructor("tag:yaml.org,2002:map", _UniqueKeyLoader.construct_yaml_map)
+
+
+class _Lines:
+    """Where in the file a parsed mapping, and each of its keys, stands (1-based line numbers)."""
+
+    def __init__(self, nodes: dict[int, yaml.MappingNode]) -> None:
+        self._nodes = nodes
+
+    def of(self, mapping: object, key: str | None = None) -> str:
+        """` (line N)` for the mapping, or for its key `key`; empty when the place is unknown."""
+        node = self._nodes.get(id(mapping))
+        if node is None:
+            return ""
+        if key is not None:
+            for key_node, _ in node.value:
+                if getattr(key_node, "value", None) == key:
+                    return f" (line {key_node.start_mark.line + 1})"
+        return f" (line {node.start_mark.line + 1})"
+
 
 class SourceKind(StrEnum):
     """What kind of source admits a rule (GLOSSARY: Source kind)."""
@@ -109,11 +139,29 @@ class SourceKind(StrEnum):
 
 
 @dataclass(frozen=True)
+class HistoryEntry:
+    """What a claim said before a patch changed it, and the source that showed the change.
+
+    `held_until` is the last patch the old `statement` or `value` was verified on (the claim's own
+    `patch_verified` before the change). At least one of `statement` and `value` is given. Code
+    reads `Rule.value`, never a history entry: history is for the people who trace a changed rule.
+    """
+
+    held_until: str
+    source_kind: SourceKind
+    url: str
+    quote: str
+    statement: str | None = None
+    value: Any = None
+
+
+@dataclass(frozen=True)
 class Rule:
     """One admitted claim. `value` is the number or structure that code reads, if the claim has one.
 
     The value is frozen on load (mappings read-only, lists tuples), so a rule is hashable and the
-    cached registry cannot be changed by the code that reads it.
+    cached registry cannot be changed by the code that reads it. `history` lists the earlier
+    versions of the claim, oldest first (empty for a claim that never changed).
     """
 
     id: str
@@ -124,12 +172,22 @@ class Rule:
     patch_verified: str
     date_checked: date
     value: Any = None
+    history: tuple[HistoryEntry, ...] = ()
 
 
 REQUIRED_FIELDS = (
     "id", "statement", "source_kind", "url", "quote", "patch_verified", "date_checked",
 )  # fmt: skip
-ALLOWED_FIELDS = (*REQUIRED_FIELDS, "value")
+ALLOWED_FIELDS = (*REQUIRED_FIELDS, "value", "history")
+HISTORY_REQUIRED_FIELDS = ("held_until", "source_kind", "url", "quote")
+HISTORY_FIELDS = (*HISTORY_REQUIRED_FIELDS, "statement", "value")
+
+
+def patch_order_key(patch: str) -> tuple[tuple[int, ...], str]:
+    """Sort key of a patch name: `3.29.3` and `3.29.3.0` are the same patch, `3.29.3.3a` follows `3.29.3.3`."""
+    number = patch[:-1] if patch[-1].isalpha() else patch
+    numbers = [int(part) for part in number.split(".")]
+    return tuple(numbers + [0] * (4 - len(numbers))), patch[len(number):]
 
 
 def _check_text(field: str, value: object) -> str | None:
@@ -153,11 +211,11 @@ def _check_url(value: object) -> str | None:
     return None
 
 
-def _check_patch(value: object) -> str | None:
+def _check_patch(value: object, field: str = "patch_verified") -> str | None:
     if isinstance(value, float):
-        return f"patch_verified {value!r} was read as a number; quote it, like \"{value}\""
+        return f"{field} {value!r} was read as a number; quote it, like \"{value}\""
     if not isinstance(value, str) or not PATCH_PATTERN.fullmatch(value):
-        return f"patch_verified must be a quoted patch like \"3.29.3.3\", got {value!r}"
+        return f"{field} must be a quoted patch like \"3.29.3.3\", got {value!r}"
     return None
 
 
@@ -186,7 +244,73 @@ def _check_id(value: object, family: str) -> str | None:
     return None
 
 
-def _parse_entry(entry: object, number: int, file_name: str, seen: set[str]) -> Rule:
+def _parse_history(
+    history: object, patch_verified: str, where: str, entry: dict, lines: _Lines
+) -> tuple[HistoryEntry, ...]:
+    """The `history` list of one claim; every problem names the file, the claim and the line."""
+    if not isinstance(history, list) or not history:
+        raise RegistryError(
+            f"{where}: history{lines.of(entry, 'history')}: history must be a non-empty list of entries"
+        )
+    parsed: list[HistoryEntry] = []
+    for number, item in enumerate(history, start=1):
+        if not isinstance(item, dict):
+            raise RegistryError(
+                f"{where}: history entry #{number}: a history entry must be a mapping,"
+                f" got {type(item).__name__}"
+            )
+
+        def fail(problem: str, key: str | None = None) -> RegistryError:
+            return RegistryError(f"{where}: history entry #{number}{lines.of(item, key)}: {problem}")
+
+        unknown = sorted(str(key) for key in item if key not in HISTORY_FIELDS)
+        if unknown:
+            raise fail(f"unknown key {', '.join(unknown)} (allowed: {', '.join(HISTORY_FIELDS)})")
+        for field in HISTORY_REQUIRED_FIELDS:
+            if field not in item:
+                raise fail(f"missing required field {field}")
+        if "statement" not in item and "value" not in item:
+            raise fail("give the old statement or the old value (or both)")
+        checks = {
+            "held_until": lambda value: _check_patch(value, "held_until"),
+            "source_kind": _check_source_kind,
+            "url": _check_url,
+            "quote": lambda value: _check_text("quote", value),
+        }
+        if "statement" in item:
+            checks["statement"] = lambda value: _check_text("statement", value)
+        for field, check in checks.items():
+            problem = check(item[field])
+            if problem is not None:
+                raise fail(problem, field)
+        if parsed and patch_order_key(item["held_until"]) <= patch_order_key(parsed[-1].held_until):
+            raise fail(
+                f"held_until {item['held_until']} must be later than the entry before it"
+                f" ({parsed[-1].held_until}): list the history oldest first",
+                "held_until",
+            )
+        if patch_order_key(item["held_until"]) >= patch_order_key(patch_verified):
+            raise fail(
+                f"held_until {item['held_until']} must be earlier than the claim's patch_verified"
+                f" {patch_verified}: the claim was rewritten after it",
+                "held_until",
+            )
+        parsed.append(
+            HistoryEntry(
+                held_until=item["held_until"],
+                source_kind=SourceKind(item["source_kind"]),
+                url=item["url"],
+                quote=item["quote"],
+                statement=item.get("statement"),
+                value=_freeze(item.get("value")),
+            )
+        )
+    return tuple(parsed)
+
+
+def _parse_entry(
+    entry: object, number: int, file_name: str, seen: set[str], lines: _Lines
+) -> Rule:
     family = file_name.removesuffix(CLAIMS_SUFFIX)
     where = f"{file_name}: entry #{number}"
     if not isinstance(entry, dict):
@@ -217,14 +341,21 @@ def _parse_entry(entry: object, number: int, file_name: str, seen: set[str]) -> 
     fields = {**entry, "source_kind": SourceKind(entry["source_kind"])}
     if "value" in fields:
         fields["value"] = _freeze(fields["value"])
+    if "history" in fields:
+        fields["history"] = _parse_history(
+            fields["history"], entry["patch_verified"], where, entry, lines
+        )
     return Rule(**fields)
 
 
 def _parse_file(text: str, file_name: str, seen: set[str]) -> list[Rule]:
+    loader = _UniqueKeyLoader(text)
     try:
-        data = yaml.load(text, Loader=_UniqueKeyLoader)  # noqa: S506 - a SafeLoader subclass
+        data = loader.get_single_data()
     except (yaml.YAMLError, ValueError) as error:  # ValueError: a date such as 2026-02-30
         raise RegistryError(f"{file_name}: invalid YAML: {error}") from error
+    finally:
+        loader.dispose()
     if not isinstance(data, dict) or "rules" not in data:
         raise RegistryError(f"{file_name}: the top level must be a mapping with a `rules` key")
     if set(data) != {"rules"}:
@@ -233,7 +364,7 @@ def _parse_file(text: str, file_name: str, seen: set[str]) -> list[Rule]:
     if not isinstance(data["rules"], list) or not data["rules"]:
         raise RegistryError(f"{file_name}: `rules` must be a non-empty list")
     return [
-        _parse_entry(entry, number, file_name, seen)
+        _parse_entry(entry, number, file_name, seen, _Lines(loader.nodes))
         for number, entry in enumerate(data["rules"], start=1)
     ]
 
