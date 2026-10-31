@@ -8,17 +8,21 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
 
 * `mod_text(mod, values)`: the text of a mod; with the rolled `values` of an item, the ranges that roll
   are filled in (a stat the text shows scaled, `(0.2-0.4)%` for 20 to 40, is scaled back).
-* `card_of_item(data, item)`: a concrete item, the start item.
+* `card_of_item(data, item)`: a concrete item, the start item. With `tiers` its mods carry their tier, with
+  `rolled=False` they show the range of the tier, not the roll, and `filler` draws the slots it has no mod for.
 * `card_of_target(data, target)`: the goal. Each requirement leaf is a "wanted" slot on its mod's side,
   the rest `any mod or empty`; a k-of-n group's members carry the note `at least k of n`.
 * `card_of_states(abstraction, states)`: the item after a step, the join of the compressed states the
   step leads to. What a state keeps decides what it can say (see below).
 * `tracks_junk(abstraction)`: whether the abstraction keeps the mods that are not fractured.
 
-A wanted mod drawn at random writes its ranges as `#` and says `any of N tiers`, N being the mods of the
-leaf that can spawn on the base (`items.tier_table`) and pass `min_tier`; with one such mod the note is
-left out and the text keeps its ranges. A fractured mod of a state is stored by a canonical id that
-stands for every tier of the same contribution, so it is drawn the same way.
+One format for every mod line: the game's text with its ranges, then the tier as the note, `+(100-114) to
+maximum Life · T1`. The tier is the mod's place among the mods that can spawn on the base
+(`items.tier_table`, 1 is the best); a crafted or essence-only mod has none and says `crafted` or `essence only` when a leaf can only be met by it. A leaf that several mods can
+meet (the candidates are those that spawn on the base at the item level and pass `min_tier`) writes the texts
+of all of them with `#` for the ranges, joined by ` or `, and the note `T2 or better` (`min_tier`) or
+`any tier`. A fractured mod of a state is stored by a canonical id that stands for every tier of the same
+contribution, so it is drawn the same way.
 
 The slots of a state. Fractured mods and crafted slots are shown as they are. A goal leaf that a state
 meets (PASSING) is a wanted slot on the leaf's side; one that it only half meets (BELOW) is the same
@@ -181,14 +185,20 @@ def _note(*parts: str) -> str:
     return ", ".join(part for part in parts if part)
 
 
-def _tiers_note(count: int) -> str:
-    return f"any of {count} tiers" if count > 1 else ""
+def _tier_note(tiers, mod_ids, min_tier: int | None = None) -> str:
+    """The tier note of a line that stands for `mod_ids`: `T2`, `T2 or better`, `any tier`; "" for a mod with no tier."""
+    ids = list(mod_ids)
+    if len(ids) == 1:
+        return f"T{tiers[ids[0]]}" if ids[0] in tiers else ""
+    return f"T{min_tier} or better" if min_tier is not None else "any tier"
 
 
 # --- a wanted mod drawn at random -----------------------------------------------------------------------
 
 
-def _leaf_slot(data: GameData, base_id: str, tiers, mod_ids, min_tier: int | None) -> tuple[Side, str, str]:
+def _leaf_slot(
+    data: GameData, base_id: str, tiers, mod_ids, min_tier: int | None, item_level: int | None = None
+) -> tuple[Side, str, str]:
     """The side, the text and the tier note of a requirement leaf (see the module docstring)."""
     base_domain = data.base_items[base_id].domain
     sides = {side.value for side in SIDES}
@@ -201,18 +211,21 @@ def _leaf_slot(data: GameData, base_id: str, tiers, mod_ids, min_tier: int | Non
         key=lambda mod_id: (tiers[mod_id], mod_id),
     )
     candidates = [mod_id for mod_id in spawning if min_tier is None or tiers[mod_id] <= min_tier]
+    at_level = [mod_id for mod_id in candidates if item_level is None or data.mods[mod_id].required_level <= item_level]
+    candidates = at_level or candidates
     if not candidates:
         known = [mod_id for mod_id in mod_ids if mod_id in data.mods and data.mods[mod_id].generation_type in sides]
         if not known:
             raise ValueError(f"no mod of the requirement {sorted(mod_ids)[:3]} is a prefix or a suffix")
         known.sort(key=lambda mod_id: (data.mods[mod_id].domain not in {base_domain, CRAFTED_DOMAIN}, mod_id))
         mod = data.mods[known[0]]
-        return Side(mod.generation_type), _own_text(mod), ""
+        note = "crafted" if mod.domain == CRAFTED_DOMAIN else "essence only" if mod.is_essence_only else _tier_note(tiers, [known[0]])
+        return Side(mod.generation_type), _own_text(mod), note
     side = Side(data.mods[candidates[0]].generation_type)
     if len(candidates) == 1:
-        return side, _own_text(data.mods[candidates[0]]), ""
+        return side, _own_text(data.mods[candidates[0]]), _tier_note(tiers, candidates)
     texts = list(dict.fromkeys(_hashes(_own_text(data.mods[mod_id])) for mod_id in candidates))
-    return side, " or ".join(texts), _tiers_note(len(candidates))
+    return side, " or ".join(texts), _tier_note(tiers, candidates, min_tier)
 
 
 # --- the card of a concrete item ------------------------------------------------------------------------
@@ -222,12 +235,16 @@ def _fill(rows: list[Slot], limit: int, filler: Slot = EMPTY) -> tuple[Slot, ...
     return (*rows, *(filler,) * max(0, limit - len(rows)))
 
 
-def card_of_item(data: GameData, item: Item) -> ItemCard:
+def card_of_item(
+    data: GameData, item: Item, *, tiers: bool = False, rolled: bool = True, filler: Slot = EMPTY
+) -> ItemCard:
     """The card of a concrete item: its mods with their rolled values, the empty slots of a rare's capacity.
 
     Within a side the fractured mods come first, then the other mods, then the crafted ones. A magic or
-    normal item shows the capacity of a rare, the slots it cannot fill as `empty`.
+    normal item shows the capacity of a rare, the slots it cannot fill as `filler`. With `tiers` a mod carries
+    its tier as the note; with `rolled` False it shows the range of its tier, not the roll.
     """
+    table = tier_table(data, item.base_id) if tiers else {}
     sides: dict[Side, tuple[Slot, ...]] = {}
     for side in SIDES:
         entries = sorted(
@@ -238,8 +255,8 @@ def card_of_item(data: GameData, item: Item) -> ItemCard:
             mod = data.mods[entry.mod_id]
             marks = (*(("fractured",) * entry.fractured), *(("crafted",) * entry.crafted), *_marks(mod))
             tone: Tone = "crafted" if entry.crafted else "mod"
-            rows.append(Slot(mod_text(mod, entry.values), tone, marks))
-        sides[side] = _fill(rows, _capacity(data, item.base_id, side))
+            rows.append(Slot(mod_text(mod, entry.values if rolled else None), tone, marks, _tier_note(table, [mod.id])))
+        sides[side] = _fill(rows, _capacity(data, item.base_id, side), filler)
     influences = tuple(influence.value.title() for influence in sorted(item.influences))
     properties = _properties(_title(item.rarity), item.item_level, influences, "corrupted" if item.corrupted else "")
     return ItemCard(
@@ -269,7 +286,7 @@ def card_of_target(data: GameData, target: Target) -> ItemCard:
             if isinstance(node, KOfN):
                 add(node.of, f"at least {node.at_least} of {len(node.of)}")
                 continue
-            side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier)
+            side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level)
             wanted[side].append(Slot(text, "wanted", (), _note(tier_note, group)))
 
     add(target.requirements, "")
@@ -318,7 +335,9 @@ class _StateReader:
         """The side, text and tier note of the goal leaf number `index`."""
         if index not in self._leaves:
             leaf: Wanted = self.ab.goal.leaves[index]
-            self._leaves[index] = _leaf_slot(self.data, self.ab.base_id, self.tiers, leaf.mod_ids, leaf.min_tier)
+            self._leaves[index] = _leaf_slot(
+                self.data, self.ab.base_id, self.tiers, leaf.mod_ids, leaf.min_tier, self.ab.item_level
+            )
         return self._leaves[index]
 
     def wanted(self, indexes: Sequence[int], status: Status) -> Slot:
@@ -350,12 +369,14 @@ class _StateReader:
             if stands_for and mod_id not in stands_for:  # the state names another mod of the class (an essence-only one, say)
                 mod = self.data.mods[stands_for[0]]
             text = mod_text(mod)
+            note = _tier_note(self.tiers, [mod.id])
         else:  # the texts of the tiers, as the target card writes a leaf drawn from several mods
             stands_for.sort(key=lambda other: (self.tiers[other], other))
             mod = self.data.mods[stands_for[0]]
             text = " or ".join(dict.fromkeys(_hashes(_own_text(self.data.mods[other])) for other in stands_for))
+            note = _tier_note(self.tiers, stands_for)
         tone: Tone = "wanted" if Status.PASSING in contribution else "mod"
-        return Side(mod.generation_type), Slot(text, tone, ("fractured", *_marks(mod)), _tiers_note(len(stands_for)))
+        return Side(mod.generation_type), Slot(text, tone, ("fractured", *_marks(mod)), note)
 
     def crafted(self, slot: StateSlot) -> Slot:
         mod = self.data.mods[slot.kind]
@@ -380,9 +401,9 @@ class _StateReader:
             return ANY_MOD
         ordered = sorted(family, key=lambda mod: (self.tiers[mod.id], mod.id))
         if len(ordered) == 1:
-            return Slot(mod_text(ordered[0]), "mod", _marks(ordered[0]))
+            return Slot(mod_text(ordered[0]), "mod", _marks(ordered[0]), _tier_note(self.tiers, [ordered[0].id]))
         text = " or ".join(dict.fromkeys(_hashes(_own_text(mod)) for mod in ordered))
-        return Slot(text, "mod", _marks(ordered[0]), _tiers_note(len(ordered)))
+        return Slot(text, "mod", _marks(ordered[0]), _tier_note(self.tiers, [mod.id for mod in ordered]))
 
     def read(self, state: CompressedState) -> _Rows:
         if len(state.status) != len(self.ab.goal.leaves):

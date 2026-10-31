@@ -46,6 +46,7 @@ from crafting_system.cli._route_view import (
     chance_text,
     count,
     given_route_input,
+    merge_sections,
     money,
     route_input,
     write_route_page,
@@ -191,7 +192,7 @@ def test_r12_is_a_buy_and_one_step_that_loops_until_the_gem(r12_plan):
     assert labels_of(buy) == ["Accepts", "Cost per use"]
     assert lines_of(buy, "Cost per use") == ["4 c"]
     assert labels_of(reforge) == ["Goal", "Accepts", "Chance per use", "Cost per use", "Uses on average", "Step cost", "On failure"]
-    assert lines_of(reforge, "Goal") == [GEM_TEXT]
+    assert lines_of(reforge, "Goal") == [f"{GEM_TEXT} · T1"]
     (chance,) = lines_of(reforge, "Chance per use")
     assert float(chance.strip("≈%")) / 100 == pytest.approx(q, rel=0.06)
     assert lines_of(reforge, "Cost per use") == ["50 × Primal Crystallised Lifeforce 0.5 c"]
@@ -219,7 +220,7 @@ def test_the_target_card_of_the_goal_row_is_the_target_item(r12_plan):
 
     assert card.name == "Paua Amulet"
     assert card.prefixes[0].text == GEM_TEXT
-    assert card.suffixes[0].text == "+#% to Lightning Resistance" and card.suffixes[0].note.startswith("any of ")
+    assert card.suffixes[0].text == "+#% to Lightning Resistance" and card.suffixes[0].note == "any tier"
 
 
 def run_command(tmp_path: Path, *arguments: str, cache: Path | None = None):
@@ -253,15 +254,28 @@ def test_golden_r12_through_the_command_with_a_buy_spec(tmp_path, stats_cache, c
     assert_golden("r12_fixture", page.read_text(encoding="utf-8"))
 
 
-def test_golden_r12_with_the_given_route_stacks_a_second_section(tmp_path, capsys):
+def test_golden_r12_with_a_given_route_that_is_the_same_draws_one_section(tmp_path, capsys):
     code, out = run_command(tmp_path, "--route", str(ROUTE))
 
     assert code == 0
     html = (out.parent / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
     assert_golden("r12_fixture_given_route", html)
+    assert "<h2>" not in html and "<nav>" not in html
+    ids = re.findall(r' id="([^"]+)"', html)
+    assert len(ids) == len(set(ids))
+    assert set(re.findall(r'href="#([^"]+)"', html)) <= set(ids)
+
+
+def test_golden_a_given_route_that_differs_is_a_second_section_with_its_differing_steps(two_leaf_plan):
+    policy = build_section(route_input(two_leaf_plan), DATA, anchor="policy")
+    drawn = build_section(given(two_leaf_plan, RESTART_ROUTE), DATA, prefix="g-", anchor="given", route_field=False)
+
+    html = render_page(Page("Test page", merge_sections(policy, drawn, "Restart on a lone gem")))
+
+    assert_golden("given_route_differs", html)
     assert html.count("<h2>") == 2 and "<nav>" in html
     ids = re.findall(r' id="([^"]+)"', html)
-    assert len(ids) == len(set(ids))  # the two sections' anchors do not clash
+    assert len(ids) == len(set(ids))
     assert set(re.findall(r'href="#([^"]+)"', html)) <= set(ids)
 
 
@@ -331,7 +345,7 @@ def test_the_titles_are_the_exact_actions():
     assert [row.title for row in removal] == [f"Buy {START_NAME}", "Benchcraft: Remove Crafted Mods", "Chaos Orb"]
     assert lines_of(removal[1], "Goal") == ["crafted mods removed"]
     assert lines_of(removal[1], "Chance per use") == []  # one outcome of chance 1 says nothing
-    assert lines_of(bench, "Goal") == [f"{DATA.mods[DAMAGE].text} (crafted)"]  # the crafted mod, named once
+    assert lines_of(bench, "Goal") == [f"{DATA.mods[DAMAGE].text} · crafted"]  # the crafted mod, named once
 
 
 def test_a_bench_row_shows_the_price_of_each_resource_and_the_sum():
@@ -379,11 +393,48 @@ def test_the_route_field_of_the_goal_card_is_left_out_when_the_page_has_a_headin
     assert "Route" not in [field.label for field in stacked.goal.fields]
 
 
-def test_the_command_with_a_route_does_not_repeat_the_route_name_in_the_goal_card(tmp_path):
+def test_the_command_with_a_route_the_same_as_the_policy_draws_it_once_and_says_so(tmp_path):
     code, out = run_command(tmp_path, "--route", str(ROUTE))
 
     html = (out.parent / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
-    assert code == 0 and ">Route<" not in html
+    assert code == 0 and html.count("<section") == 1
+    assert "Same as the given route (R12, PoE Vault guide)" in html and html.count(">Route<") == 1
+
+
+def test_a_given_route_the_same_as_the_policy_is_not_drawn_again(r12_plan):
+    policy = build_section(route_input(r12_plan), DATA, anchor="policy", route_field=False)
+    given_section = build_section(
+        given(r12_plan, ROUTE.read_text(encoding="utf-8")), DATA, prefix="g-", anchor="given", route_field=False
+    )
+
+    (merged,) = merge_sections(policy, given_section, "the guide")
+
+    assert merged.rows == policy.rows
+    assert [field.label for field in merged.goal.fields][:2] == ["Route", "Given route"]
+    assert lines_of_card(merged.goal, "Given route") == ["Same as the given route (the guide)"]
+
+
+def lines_of_card(goal, label: str) -> list[str]:
+    return [line.text for field in goal.fields if field.label == label for line in field.lines]
+
+
+def test_a_given_route_that_differs_is_drawn_with_its_differing_steps_only_and_links_to_the_shared_ones(two_leaf_plan):
+    policy = build_section(route_input(two_leaf_plan), DATA, anchor="policy")
+    given_section = build_section(
+        given(two_leaf_plan, RESTART_ROUTE), DATA, prefix="g-", anchor="given", route_field=False
+    )
+
+    drawn, guide = merge_sections(policy, given_section, "restart route")
+
+    assert drawn is policy
+    assert [row.number for row in guide.rows] == [row.number for row in given_section.rows if row.number != 1]  # the buy is shared
+    assert lines_of_card(guide.goal, "Same as the planner") == ["step 1"]
+    (shared,) = [field for field in guide.goal.fields if field.label == "Same as the planner"]
+    assert shared.lines[0].href == "#s1"
+    hrefs = [line.href for row in guide.rows for field in row.fields for line in field.lines if line.href]
+    assert "#g-s1" not in hrefs and all(href.startswith(("#s", "#g-s")) for href in hrefs)
+    html = render_page(Page("x", (drawn, guide)))
+    assert all(f'id="{anchor}"' in html for anchor in {href[1:] for href in hrefs})
 
 
 def test_above_the_cap_the_rows_have_no_uses_or_step_costs_and_the_goal_card_says_so(monkeypatch):
@@ -449,7 +500,8 @@ def test_a_restart_row_buys_again_and_goes_back_to_the_first_step(two_leaf_plan)
     assert lines_of(restart, "Cost per use") == ["4 c"]
     failure = restart.fields[-1].lines[0]
     assert failure.text.startswith("the start item bought again (100%)") and failure.href == "#s2"
-    assert restart.after.suffixes[0].text == "empty" and restart.after.properties == ("Rare", "item level 84")
+    # a bought rare: the other mods are not known
+    assert restart.after.suffixes[0].text == "any mod or empty" and restart.after.properties == ("Rare", "item level 84")
     assert section.goal.fields[0].lines[0].text == "Given route: Restart on a lone gem"
 
 

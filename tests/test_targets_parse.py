@@ -32,6 +32,13 @@ def test_a_minimal_target_resolves_the_base_and_fills_the_defaults():
     assert (requirement.min_tier, requirement.min_roll, requirement.not_crafted) == (None, None, False)
 
 
+def test_a_mod_narrows_a_family_to_exactly_one_mod_and_keeps_the_family_as_the_selector():
+    target = parse("requirements:\n  - family: IncreasedLife\n    mod: IncreasedLife2\n")
+
+    (requirement,) = target.requirements
+    assert requirement.family == "IncreasedLife" and requirement.mod_ids == frozenset({"IncreasedLife2"})
+
+
 def test_the_base_may_be_named_by_id():
     text = f"base: {AMULET}\nitem_level: 70\nrequirements:\n  - family: LightningResistance\n"
 

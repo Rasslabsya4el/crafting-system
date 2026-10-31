@@ -17,6 +17,7 @@ from targets_support import EXAMPLES
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli._route_card import (
+    _leaf_slot,
     ItemCard,
     Slot,
     _StateReader,
@@ -26,7 +27,7 @@ from crafting_system.cli._route_card import (
     mod_text,
     tracks_junk,
 )
-from crafting_system.items import ExplicitMod, Influence, Rarity, Side
+from crafting_system.items import ExplicitMod, Influence, Rarity, Side, tier_table
 from crafting_system.targets import KOfN, Requirement, Target, load_target
 
 IMPLICIT = "(20-30)% increased Mana Regeneration Rate"
@@ -192,23 +193,23 @@ def test_the_r12_goal_has_a_wanted_slot_per_requirement_on_its_side_and_the_rest
         properties=("Rare", "item level 84"),
         implicits=(IMPLICIT,),
         enchantments=(),
-        prefixes=(Slot(GEM_TEXT, "wanted"), ANY_OR_EMPTY, ANY_OR_EMPTY),
-        suffixes=(Slot(RESIST_TEXT, "wanted", note="any of 3 tiers"), ANY_OR_EMPTY, ANY_OR_EMPTY),
+        prefixes=(Slot(GEM_TEXT, "wanted", note="T1"), ANY_OR_EMPTY, ANY_OR_EMPTY),
+        suffixes=(Slot(RESIST_TEXT, "wanted", note="any tier"), ANY_OR_EMPTY, ANY_OR_EMPTY),
     )
 
 
-def test_a_minimum_tier_narrows_the_tiers_the_note_counts():
+def test_a_minimum_tier_is_the_note_as_that_tier_or_better():
     card = card_of_target(POOL, target_of(resist_leaf(min_tier=2)))
 
-    assert card.suffixes[0] == Slot(RESIST_TEXT, "wanted", note="any of 2 tiers")
+    assert card.suffixes[0] == Slot(RESIST_TEXT, "wanted", note="T2 or better")
 
 
-def test_a_leaf_with_one_possible_mod_keeps_the_exact_text_with_its_ranges_and_no_note():
+def test_a_leaf_with_one_possible_mod_keeps_the_exact_text_with_its_ranges_and_the_tier_of_the_mod():
     life = Requirement(None, "+(25-39) to maximum Life", frozenset({"IncreasedLife2"}))
 
     card = card_of_target(POOL, target_of(life))
 
-    assert card.prefixes[0] == Slot("+(25-39) to maximum Life", "wanted")
+    assert card.prefixes[0] == Slot("+(25-39) to maximum Life", "wanted", note="T1")
 
 
 def test_the_members_of_a_k_of_n_group_say_so():
@@ -216,8 +217,8 @@ def test_the_members_of_a_k_of_n_group_say_so():
 
     card = card_of_target(POOL, target_of(group))
 
-    assert card.prefixes[0] == Slot(GEM_TEXT, "wanted", note="at least 1 of 2")
-    assert card.suffixes[0] == Slot(RESIST_TEXT, "wanted", note="any of 3 tiers, at least 1 of 2")
+    assert card.prefixes[0] == Slot(GEM_TEXT, "wanted", note="T1, at least 1 of 2")
+    assert card.suffixes[0] == Slot(RESIST_TEXT, "wanted", note="any tier, at least 1 of 2")
 
 
 def test_the_influences_of_the_target_are_properties():
@@ -231,7 +232,7 @@ def test_a_leaf_that_only_a_crafted_mod_can_give_is_still_shown_by_its_text():
 
     card = card_of_target(DATA, target_of(meta))
 
-    assert card.suffixes[0] == Slot("Prefixes Cannot Be Changed", "wanted")
+    assert card.suffixes[0] == Slot("Prefixes Cannot Be Changed", "wanted", note="crafted")
 
 
 # --- the card of the state after a step: a reroll-only abstraction (the junk is not kept) ----------------
@@ -248,9 +249,9 @@ def test_a_state_after_a_reroll_shows_the_fractured_row_the_wanted_row_and_any_m
     card = reroll_card("r12", fractured, small_roll(GEM))
 
     assert card.name == "Paua Amulet" and card.properties == ("Rare", "item level 84")
-    assert card.prefixes == (Slot(GEM_TEXT, "wanted"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    assert card.prefixes == (Slot(GEM_TEXT, "wanted", note="T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
     assert card.suffixes == (
-        Slot(RESIST_TEXT, "wanted", ("fractured",), "any of 3 tiers"),
+        Slot(RESIST_TEXT, "wanted", ("fractured",), "any tier"),
         ANY_OR_EMPTY,
         ANY_OR_EMPTY,
     )
@@ -265,20 +266,20 @@ def test_a_leaf_the_state_does_not_meet_has_no_wanted_row():
 def test_a_fractured_mod_that_no_leaf_wants_is_a_plain_row_with_its_exact_text():
     card = reroll_card("r12", small_roll("FireResist1", fractured=True))
 
-    assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",)), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",), "T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
 
 
 def test_a_fractured_mod_that_stands_for_several_tiers_says_so_even_when_no_leaf_wants_it():
     card = reroll_card("roll_not_asked", small_roll("LightningResist1", fractured=True))
 
-    assert card.suffixes[0] == Slot(RESIST_TEXT, "wanted", ("fractured",), "any of 3 tiers")
+    assert card.suffixes[0] == Slot(RESIST_TEXT, "wanted", ("fractured",), "any tier")
 
 
 def test_a_leaf_met_below_its_tier_is_the_wanted_text_with_a_note():
     card = reroll_card("tier", small_roll("ColdResist1", fractured=True), small_roll(RESIST_1), small_roll(GEM))
 
     assert card.suffixes == (
-        Slot("+(6-11)% to Cold Resistance", "mod", ("fractured",)),
+        Slot("+(6-11)% to Cold Resistance", "mod", ("fractured",), "T1"),
         Slot(RESIST_TEXT, "wanted", note="tier too low"),
         ANY_OR_EMPTY,
     )
@@ -309,7 +310,7 @@ def test_a_fractured_mod_that_stands_for_tiers_with_other_fixed_values_reads_all
     side, slot = stub_reader(*FAST).fractured("Fast2", ())
 
     assert side is Side.PREFIX
-    assert slot == Slot("35% increased Speed or 30% increased Speed", "mod", ("fractured",), "any of 2 tiers")
+    assert slot == Slot("35% increased Speed or 30% increased Speed", "mod", ("fractured",), "any tier")
 
 
 def test_a_fractured_mod_the_state_names_by_an_essence_only_tier_reads_as_the_tiers_of_its_class():
@@ -317,13 +318,13 @@ def test_a_fractured_mod_the_state_names_by_an_essence_only_tier_reads_as_the_ti
 
     _, slot = reader.fractured("FastEssence", ())
 
-    assert slot == Slot("35% increased Speed or 30% increased Speed", "mod", ("fractured",), "any of 2 tiers")  # no "essence only"
+    assert slot == Slot("35% increased Speed or 30% increased Speed", "mod", ("fractured",), "any tier")  # no "essence only"
 
 
 def test_a_slot_of_a_family_told_apart_reads_the_texts_of_its_tiers():
     row = stub_reader(*FAST).family(SimpleNamespace(side=Side.PREFIX, kind="Speed"))
 
-    assert row == Slot("35% increased Speed or 30% increased Speed", "mod", (), "any of 2 tiers")
+    assert row == Slot("35% increased Speed or 30% increased Speed", "mod", (), "any tier")
 
 
 def test_a_fractured_mod_of_a_class_of_one_tier_keeps_its_text_and_the_state_named_mod_when_it_is_not_in_the_class():
@@ -331,7 +332,42 @@ def test_a_fractured_mod_of_a_class_of_one_tier_keeps_its_text_and_the_state_nam
 
     _, slot = reader.fractured("FastEssence", ())
 
-    assert slot == Slot("35% increased Speed", "mod", ("fractured",))
+    assert slot == Slot("35% increased Speed", "mod", ("fractured",), "T1")
+
+
+def test_a_leaf_meets_only_mods_that_can_appear_at_the_item_level():
+    tiers = tier_table(DATA, BELT)
+    life = {"IncreasedLife1", "IncreasedLife2", "IncreasedLife3"}  # tiers 3, 2, 1 (item levels 5, 11, 18)
+
+    assert _leaf_slot(DATA, BELT, tiers, life, 2, 12) == (Side.PREFIX, "+(25-39) to maximum Life", "T2")  # tier 1 needs 18
+    assert _leaf_slot(DATA, BELT, tiers, life, 2, 18)[2] == "T2 or better"
+    assert _leaf_slot(DATA, BELT, tiers, life, None, 12)[2] == "any tier"
+
+
+def test_a_leaf_only_a_crafted_mod_meets_says_crafted():
+    tiers = tier_table(DATA, BELT)
+
+    side, text, note = _leaf_slot(DATA, BELT, tiers, {PREFIXES_LOCK}, None, BELT_LEVEL)
+
+    assert (side, note) == (Side.SUFFIX, "crafted") and text == mod_text(DATA.mods[PREFIXES_LOCK])
+
+
+def test_a_leaf_only_an_essence_mod_meets_says_essence_only():
+    tiers = tier_table(DATA, BELT)
+
+    _, text, note = _leaf_slot(DATA, BELT, tiers, {"ElementalPenetrationDuringFlaskEffectEssence1"}, None, BELT_LEVEL)
+
+    assert note == "essence only" and text == mod_text(DATA.mods["ElementalPenetrationDuringFlaskEffectEssence1"])
+
+
+def test_the_card_of_a_bought_item_can_show_the_range_of_the_tier_and_any_mod_for_what_it_does_not_know():
+    bought = belt(roll(FIRE, fractured=True), roll(LIFE_3))
+
+    card = card_of_item(DATA, bought, tiers=True, rolled=False, filler=ANY_OR_EMPTY)
+
+    assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",), "T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    assert card.prefixes[0] == Slot("+(40-54) to maximum Life", "mod", (), "T1")
+    assert card.prefixes[1:] == (ANY_OR_EMPTY, ANY_OR_EMPTY)
 
 
 def test_a_crafted_slot_is_a_crafted_row_after_the_fractured_and_wanted_ones():
@@ -386,15 +422,15 @@ def test_the_junk_of_a_tracked_state_is_any_mod_per_slot_and_empty_for_the_rest(
 def test_a_wanted_slot_of_a_tracked_state_is_drawn_by_its_leaf_and_is_not_junk():
     card = belt_card(roll(FIRE, fractured=True), roll(LIFE_3))
 
-    assert card.prefixes == (Slot("+# to maximum Life", "wanted", note="any of 3 tiers"), EMPTY, EMPTY)
-    assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",)), EMPTY, EMPTY)
+    assert card.prefixes == (Slot("+# to maximum Life", "wanted", note="any tier"), EMPTY, EMPTY)
+    assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",), "T1"), EMPTY, EMPTY)
 
 
 def test_a_metamod_of_a_tracked_state_is_a_crafted_row():
     card = belt_card(roll(FIRE, fractured=True), roll(PREFIXES_LOCK, crafted=True))
 
     assert card.suffixes == (
-        Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",)),
+        Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",), "T1"),
         Slot("Prefixes Cannot Be Changed", "crafted", ("crafted",)),
         EMPTY,
     )
@@ -403,7 +439,7 @@ def test_a_metamod_of_a_tracked_state_is_a_crafted_row():
 def test_a_family_told_apart_is_a_mod_of_that_family_not_junk():
     card = belt_card(roll(FIRE, fractured=True), roll(SHIELD))
 
-    assert card.prefixes == (Slot("+(1-3) to maximum Energy Shield", "mod"), EMPTY, EMPTY)
+    assert card.prefixes == (Slot("+(1-3) to maximum Energy Shield", "mod", note="T1"), EMPTY, EMPTY)
 
 
 def test_a_slot_below_its_tier_in_a_tracked_state_is_the_wanted_text_with_a_note():
@@ -444,8 +480,8 @@ def test_a_row_only_some_states_have_carries_the_note_in_some_and_a_shared_row_s
 
     card = belt_join(belt(fractured), belt(fractured, roll(LIFE_3)))
 
-    assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",)), EMPTY, EMPTY)
-    assert card.prefixes == (Slot("+# to maximum Life", "wanted", note="any of 3 tiers, in some"), EMPTY, EMPTY)
+    assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",), "T1"), EMPTY, EMPTY)
+    assert card.prefixes == (Slot("+# to maximum Life", "wanted", note="any tier, in some"), EMPTY, EMPTY)
 
 
 def test_properties_that_differ_between_the_joined_states_say_so():
@@ -503,8 +539,8 @@ def test_the_real_r12_goal_card_wants_the_gem_level_and_a_lightning_resistance_o
 
     card = card_of_target(data, target)
 
-    assert card.prefixes == (Slot(GEM_TEXT, "wanted"), ANY_OR_EMPTY, ANY_OR_EMPTY)
-    assert card.suffixes == (Slot(RESIST_TEXT, "wanted", note="any of 8 tiers"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    assert card.prefixes == (Slot(GEM_TEXT, "wanted", note="T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    assert card.suffixes == (Slot(RESIST_TEXT, "wanted", note="any tier"), ANY_OR_EMPTY, ANY_OR_EMPTY)
 
 
 def test_the_real_r12_states_are_the_start_and_the_goal_and_neither_shows_markup(r12):
@@ -515,7 +551,7 @@ def test_the_real_r12_states_are_the_start_and_the_goal_and_neither_shows_markup
     cards = [card_of_states(ab, [state]) for state in (start, goal)]
 
     assert cards[0].prefixes == (ANY_OR_EMPTY,) * 3
-    assert cards[1].prefixes == (Slot(GEM_TEXT, "wanted"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    assert cards[1].prefixes == (Slot(GEM_TEXT, "wanted", note="T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
     for card in cards:
         assert card.suffixes[0].marks == ("fractured",) and card.suffixes[0].text.endswith("to Lightning Resistance")
         assert not any("[" in slot.text or "|" in slot.text for slot in (*card.prefixes, *card.suffixes))

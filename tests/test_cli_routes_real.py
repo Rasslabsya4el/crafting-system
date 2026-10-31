@@ -13,6 +13,7 @@ The route view pages of the three routes (ticket #96) are golden files, `tests/g
 planner's policy, the guide's route stacked under it, the buy step with its trade link. `UPDATE_GOLDEN=1` rewrites them.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -125,8 +126,6 @@ def test_the_solver_is_no_dearer_than_the_guides_given_route(solved, data):
 
     assert result.gaps == ()
     assert result.risk.success_probability.value == pytest.approx(1.0)
-    # R11: the target cannot ask for "at least Shrieking" until #71, so the solver may use the weaker
-    # Screaming essence and this comparison proves less there (see the target file)
     assert plan.risk.mean.value <= result.risk.mean.value * (1 + 1e-9), route_id
 
 
@@ -199,3 +198,19 @@ def test_a_fractured_mod_reads_as_the_mod_of_the_item_not_as_a_mod_only_an_essen
         fractured = [slot for slot in (*row.after.prefixes, *row.after.suffixes) if "fractured" in slot.marks]
         assert fractured and all("essence only" not in slot.marks for slot in fractured)
         assert all("for each nearby Enemy" not in slot.text for slot in fractured)
+
+
+NOTE_PARTS = re.compile(r"T\d+( or better)?|any tier|crafted|essence only|tier too low|in some|at least \d+ of \d+")
+
+
+def test_every_mod_line_of_the_pages_has_the_one_format_and_the_bought_item_has_no_empty_slot(solved, data):
+    _, _, _, plan = solved
+    section = build_section(route_input(plan), data)
+
+    cards = [section.goal.target, *(row.after for row in section.rows)]
+    for card in cards:
+        for slot in (*card.prefixes, *card.suffixes):
+            assert all(NOTE_PARTS.fullmatch(part) for part in slot.note.split(", ") if part), slot
+    bought = section.rows[0].after
+    assert all(slot.text != "empty" for slot in (*bought.prefixes, *bought.suffixes))
+    assert any("fractured" in slot.marks and slot.note.startswith("T") for slot in (*bought.prefixes, *bought.suffixes))
