@@ -1,0 +1,92 @@
+# Mechanic family: bench_craft (the crafting bench: crafted mods, metamods as crafted mods, Remove
+# Crafted Mods). Research ticket #11 (claims BEN-xx) and the decisions D6, O-08, O-11 of issue #28.
+# What the metamods do to other actions and the limit of three crafted mods are ticket #68.
+rules:
+  - id: bench_craft.option_adds_one_fixed_mod
+    statement: A bench option with `add_explicit_mod` adds that one named crafted mod, never one drawn at random. The 732 options name 732 different mods, all of domain `crafted`, so a bench craft is identified by its mod id. The mod's side is its generation type.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "bench[760].actions.add_explicit_mod=\"StrMasterItemGenerationCannotChangePrefixes\"; 732 records with add_explicit_mod, 732 distinct ids, generation_weights [] for all 732"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: bench_craft.option_item_classes
+    statement: A bench option is offered for the item classes in its `item_classes` list and for no other; the five metamods and Remove Crafted Mods use the same 24 equipment classes.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "item_classes lists the equipment classes an option is offered for; the five metamods and remove_crafted_mods use the same 24 classes (bench[20], bench[760]..bench[764])"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: bench_craft.option_cost
+    statement: The price of a bench option is its `cost` map, currency base item ids with whole counts (one currency for 750 options, two for the 15 flask enchants); a craft is paid once per use.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "bench[20].actions.remove_crafted_mods=true, cost={\"Metadata/Items/Currency/CurrencyConvertToNormal\":1}, bench_tier=0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: bench_craft.crafts_follow_affix_rules
+    statement: A bench craft follows the ordinary affix rules, so the item cannot already hold a mod of the crafted mod's family, and a prefix or suffix slot must be open on the crafted mod's side (a magic item holds one per side, a rare item three).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Crafting_Bench#Using_the_crafting_bench
+    quote: "Crafting a mod follows the normal affix rules. Specifically: * The item cannot already have a mod of that type. * The item must have a prefix or suffix slot open as appropriate."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: bench_craft.one_crafted_mod_by_default
+    statement: An item holds one crafted mod by default (`value`), metamods included. A craft on an item that already holds a crafted mod is refused here, although the game offers to replace it for an extra Orb of Scouring (not modelled). The multimod `Can have up to 3 Crafted Modifiers` lifts the limit to three; that is ticket #68.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Crafting_Bench#Using_the_crafting_bench
+    quote: "Typically, only one crafted modifier may be added to an item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: 1
+
+  - id: bench_craft.metamods_are_crafted_mods
+    statement: A metamod is a crafted mod like any other bench craft. It takes a slot on its own side and counts toward the limit of crafted mods, so no further craft fits on an item that holds one, unless the item holds the multimod.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Wild_Bristle_Matron
+    quote: "The beastcraft cannot be used on an item that already has a crafted mod (unless the existing mod is Can have up to 3 Crafted Modifiers)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: bench_craft.refused_on_corrupted
+    statement: A corrupted item takes no bench craft and no Remove Crafted Mods (the socket recipes are the one exception, and are not modelled here).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: bench_craft.needs_item_level
+    statement: A bench craft needs an item level of at least the `required_level` of its crafted mod in the data (for example the belt damage prefix `JunMaster2AllDamage2_` needs 72). No wiki or official sentence states it; the data field is the crafted mod's own level, and Path of Building's master mod list gives each of these mods the same level.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "mods[JunMaster2AllDamage2_].required_level=72, mods[JunMaster2AllDamage3].required_level=81; Path of Building ModMaster.lua level = 15 for the tier-1 life and resistance crafts"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: bench_craft.every_craft_unlocked
+    statement: In v1 every bench craft counts as unlocked; whether the player has found the recipe is not in the data and not asked (decision O-08 of issue #11, taken by the main chat in issue #28, recorded in ADR-0013). An "unlocked set" input can come later.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0013-four-batches-with-benchmark-routes.md
+    quote: "Every bench craft counts as unlocked (main chat, 2026-10-30"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: bench_craft.rerolls_not_b1_actions
+    statement: The 3.29 bench rerolls ("Reroll 3 random Modifiers on a Rare Item", "Reroll a random Modifier on a Rare Item") and the other options that add no crafted mod (flask enchants, sockets, links, colours, Remove Enchantments, Reroll the Rarity) are not B1 bench actions here. The rerolls consume Memory Strands, which v1 start items do not carry.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531984706
+    quote: "v1 start items carry no Memory Strands until Memory Strands get their batch"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: bench_craft.remove_crafted_mods_removes_all
+    statement: Remove Crafted Mods removes every crafted mod of the item, metamods included, and their effects end. It costs the option's price (one Orb of Scouring) and is offered for the same 24 equipment classes as the metamods.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
+    quote: "Remove Crafted Mods removes every crafted mod, metamods included, and their effects end"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
