@@ -1,3 +1,5 @@
+# UPDATE (2026-11-01): this file is the paused draft. The measurements were finished on GitHub (run 41251657124); the final text is ADR-0023 (PR #171). Raw logs of all rows are in `logs/` (job1..9.log are the runner outputs: 1-4 tail cut abs:1000/2000/1500/one, 5 exact cheap prices, 6 tail cut cheap, 7 tail cut goal B, 8 oracle, 9 lifted). Where this draft says the tail cut or the cheap-price exact solve "never finished" or lists the "ratio <= 2" row, the ADR and logs/ win (tail cut: floor 0.31% at spread 1000; cheap exact V*=3502.62; the ratio row has no log and is dropped).
+
 # #130: certified level for adding actions and Annulment — partial result (paused, measurements stopped by the main chat)
 
 Prototype and logs: `t130-prototype/` in this folder (copy of `.claude/scratch/130/` of worktree trusting-sutherland-44e2e2). Run from a worktree root with
