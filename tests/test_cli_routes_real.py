@@ -211,6 +211,28 @@ def test_every_mod_line_of_the_pages_has_the_one_format_and_the_bought_item_has_
     for card in cards:
         for slot in (*card.prefixes, *card.suffixes):
             assert all(NOTE_PARTS.fullmatch(part) for part in slot.note.split(", ") if part), slot
+    for card in cards:
+        for slot in (*card.prefixes, *card.suffixes):
+            assert slot.tone in ("any", "empty") or slot.note or "crafted" in slot.marks, slot  # a mod line has its tier
     bought = section.rows[0].after
     assert all(slot.text != "empty" for slot in (*bought.prefixes, *bought.suffixes))
     assert any("fractured" in slot.marks and slot.note.startswith("T") for slot in (*bought.prefixes, *bought.suffixes))
+
+
+def test_the_tiers_the_target_asks_for_can_appear_at_its_item_level(solved, data):
+    """The owner's rule is the top tier the item level allows: some mod of every leaf spawns at the item level."""
+    from crafting_system.items import tier_table
+
+    _, _, target, _ = solved
+    tiers = tier_table(data, target.base_id)
+
+    def leaves(node):
+        if isinstance(node, KOfN):
+            for member in node.of:
+                yield from leaves(member)
+        else:
+            yield node
+
+    for leaf in (found for node in target.requirements for found in leaves(node)):
+        mods = [data.mods[m] for m in leaf.mod_ids if leaf.min_tier is None or tiers.get(m, 1) <= leaf.min_tier]
+        assert any(mod.required_level <= target.item_level for mod in mods), (leaf.family, leaf.min_tier)

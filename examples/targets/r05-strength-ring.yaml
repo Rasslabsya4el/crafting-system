@@ -22,7 +22,8 @@
 #   * "Life or Resistances": at least one of Life and the three elemental resistances, each at the
 #     top tier the item level (75) allows: Life tier 1, +(100-114); the resistances tier 2, +(42-45)%
 #     (their tier 1 needs item level 84). The guide ends with "use the crafting bench on any open
-#     modifier", so a crafted Life or Resistance counts too (the group has no not_crafted). (The
+#     modifier", so a crafted Life or Resistance counts too (the group has no not_crafted), and a
+#     bench craft counts as tier 1 of what it crafts whatever its range. (The
 #     guide calls them prefixes; in the game Life is a prefix and the resistances are suffixes.) To
 #     insist on a rolled one, add `not_crafted: true` to the four lines of the last group.
 #   * "20 Intrinsic Catalysts" (quality): left out, it is B2. The bench craft of the guide is the

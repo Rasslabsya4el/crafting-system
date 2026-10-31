@@ -39,6 +39,20 @@ def test_a_mod_narrows_a_family_to_exactly_one_mod_and_keeps_the_family_as_the_s
     assert requirement.family == "IncreasedLife" and requirement.mod_ids == frozenset({"IncreasedLife2"})
 
 
+def test_a_mod_may_narrow_a_stat_text_and_keeps_the_stat_as_the_selector():
+    target = parse('requirements:\n  - stat: "+# to maximum Life"\n    mod: IncreasedLife2\n')
+
+    (requirement,) = target.requirements
+    assert requirement.stat == "+# to maximum Life" and requirement.mod_ids == frozenset({"IncreasedLife2"})
+
+
+def test_a_minimum_roll_of_a_narrowed_requirement_is_read_against_that_one_mod():
+    target = parse("requirements:\n  - family: IncreasedLife\n    mod: IncreasedLife2\n    min_roll: 30\n")
+
+    (requirement,) = target.requirements
+    assert requirement.min_roll == (30,) and requirement.mod_ids == frozenset({"IncreasedLife2"})
+
+
 def test_the_base_may_be_named_by_id():
     text = f"base: {AMULET}\nitem_level: 70\nrequirements:\n  - family: LightningResistance\n"
 

@@ -140,6 +140,12 @@ def test_a_base_name_is_case_sensitive():
     assert_error(message, 1, "base", "no base is named `paua amulet`", "`Paua Amulet`")
 
 
+def test_a_mod_that_is_not_text_is_refused():
+    message = parse_error("requirements:\n  - family: IncreasedLife\n    mod: 5\n")
+
+    assert_error(message, 5, "requirements[0].mod", "must be non-empty text")
+
+
 def test_a_mod_that_is_not_of_the_family_is_refused():
     message = parse_error("requirements:\n  - family: IncreasedLife\n    mod: LightningResist2\n")
 

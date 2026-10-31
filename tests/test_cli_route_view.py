@@ -40,8 +40,12 @@ from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
 from crafting_system.cli._route_view import (
+    Field,
+    Line,
     Page,
     RouteInput,
+    RouteSection,
+    StepRow,
     build_section,
     chance_text,
     count,
@@ -428,13 +432,66 @@ def test_a_given_route_that_differs_is_drawn_with_its_differing_steps_only_and_l
 
     assert drawn is policy
     assert [row.number for row in guide.rows] == [row.number for row in given_section.rows if row.number != 1]  # the buy is shared
-    assert lines_of_card(guide.goal, "Same as the planner") == ["step 1"]
+    assert lines_of_card(guide.goal, "Same as the planner") == ["step 1: the planner's step 1"]
     (shared,) = [field for field in guide.goal.fields if field.label == "Same as the planner"]
     assert shared.lines[0].href == "#s1"
     hrefs = [line.href for row in guide.rows for field in row.fields for line in field.lines if line.href]
-    assert "#g-s1" not in hrefs and all(href.startswith(("#s", "#g-s")) for href in hrefs)
+    assert all(href.startswith(("#s", "#g-s")) for href in hrefs)
     html = render_page(Page("x", (drawn, guide)))
     assert all(f'id="{anchor}"' in html for anchor in {href[1:] for href in hrefs})
+
+
+def hand_section(rows, prefix: str = "") -> RouteSection:
+    """A section of made-up rows `(title, [(text, target number or None)])`, the item card after each from the branch policy."""
+    base = build_section(INPUTS["branch"](), DATA)
+    made = tuple(
+        StepRow(
+            number,
+            title,
+            (Field("On failure", tuple(Line(text, None if to is None else f"#{prefix}s{to}", "→ step 9" if to else "") for text, to in lines), "warn"),)
+            if lines
+            else (),
+            base.rows[0].after,
+            f"{prefix}s{number}",
+        )
+        for number, (title, lines) in enumerate(rows, 1)
+    )
+    return RouteSection("Hand", base.goal, made, "given" if prefix else "policy")
+
+
+def test_a_step_with_the_same_words_but_another_follow_up_is_not_the_planners_step():
+    policy = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Alchemy", [])])
+    given_route = hand_section([("Buy", []), ("Chaos", [("life lost (50%)", 3)]), ("Scour", []), ("Alchemy", [])], "g-")
+    # the given route's Chaos says the same words, but its follow-up is a Scour, not the planner's Alchemy
+
+    drawn, guide = merge_sections(policy, given_route, "the guide")
+
+    assert [row.title for row in guide.rows] == ["Chaos", "Scour"]  # Chaos is not shared; Buy and Alchemy are
+    assert lines_of_card(guide.goal, "Same as the planner") == ["step 1: the planner's step 1", "step 4: the planner's step 3"]
+
+
+def test_a_shared_step_is_named_and_linked_by_the_planners_number_even_when_the_numbers_differ():
+    policy = hand_section([("Buy", []), ("A", []), ("B", [("life lost (1%)", 2)])])
+    given_route = hand_section([("Buy", []), ("B", [("life lost (1%)", 3)]), ("A", []), ("C", [("a miss (9%)", 2)])], "g-")
+
+    drawn, guide = merge_sections(policy, given_route, "the guide")
+
+    assert [row.title for row in guide.rows] == ["C"]
+    (line,) = [line for field in guide.rows[0].fields for line in field.lines]
+    assert (line.href, line.anchor) == ("#s3", "→ step 3")  # the given B is the planner's step 3
+    shared = [field for field in guide.goal.fields if field.label == "Same as the planner"][0]
+    assert [(l.text, l.href) for l in shared.lines] == [
+        ("step 1: the planner's step 1", "#s1"),
+        ("step 2: the planner's step 3", "#s3"),
+        ("step 3: the planner's step 2", "#s2"),
+    ]
+
+
+def test_two_given_rows_that_repeat_one_planner_row_are_not_the_same_route():
+    policy = hand_section([("Buy", []), ("A", []), ("B", [])])
+    given_route = hand_section([("Buy", []), ("A", []), ("A", [])], "g-")
+
+    assert len(merge_sections(policy, given_route, "the guide")) == 2
 
 
 def test_above_the_cap_the_rows_have_no_uses_or_step_costs_and_the_goal_card_says_so(monkeypatch):

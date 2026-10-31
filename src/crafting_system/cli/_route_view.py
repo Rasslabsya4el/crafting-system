@@ -421,12 +421,14 @@ class _View:
         filler = ANY_OR_EMPTY if item.rarity is Rarity.RARE else EMPTY
         return card_of_item(self.data, item, tiers=True, rolled=False, filler=filler)
 
-    def essence_note(self, action: Action) -> str | None:
-        """For an essence of level 5 or more: it reforges a rare and keeps only the fractured mod."""
+    def essence_note(self, action: Action, step: Step) -> str | None:
+        """For an essence of level 5 or more used on a rare: it reforges it and keeps only the fractured mod."""
+        if not any(state.flags.rarity is Rarity.RARE for state in step.states):
+            return None
         label = self.plan.offer_of(action).label
         for essence in self.data.essences.values():
             if essence.name == label and essence.level >= 5:
-                return "reforges a rare item, keeping only the fractured mod: no Scouring first"
+                return "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"
         return None
 
     def buy_row(self, final: bool) -> StepRow:
@@ -472,7 +474,7 @@ class _View:
             _plain("Uses on average", *uses),
             _plain("Step cost", money(step_cost)) if step_cost is not None else None,
             Field("On failure", tuple(self.failure_lines(step, failing, number + 1)), "warn") if failing else None,
-            _plain("Note", note) if (note := self.essence_note(action) if not restart else None) else None,
+            _plain("Note", note) if (note := self.essence_note(action, step) if not restart else None) else None,
         )
         final = any(edge.kind == "goal" for edge in step.edges)
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost)
@@ -533,38 +535,84 @@ def _trade_stats(cache_dir: Path | None) -> TradeStats | None:
 
 
 def _row_key(row: StepRow) -> tuple:
-    """What a row says, without where it links: two rows with the same key are the same step."""
+    """What a row says, without where it links: two rows with the same key can be the same step."""
     return (row.title, tuple((f.label, tuple(line.text for line in f.lines)) for f in row.fields), row.after)
+
+
+def _targets(row: StepRow, prefix: str) -> list[int | None]:
+    """The row number each line of the row links to (None for a line with no link to a row of its section)."""
+    found: list[int | None] = []
+    for f in row.fields:
+        for line in f.lines:
+            local = line.href is not None and line.href.startswith(f"#{prefix}s")
+            found.append(int(line.href[len(prefix) + 2 :]) if local else None)
+    return found
+
+
+def _same_steps(policy: RouteSection, given: RouteSection, prefix: str) -> dict[int, StepRow]:
+    """Given row number -> the planner's row it repeats: same words and the same continuation.
+
+    Two rows are the same step when they say the same and every link of the given row goes to a row that is itself
+    the planner's row the planner's link goes to (found by dropping, until nothing changes, the pairs whose links
+    part ways), so a step with another follow-up is never taken for the planner's.
+    """
+    by_number = {row.number: row for row in policy.rows}
+    candidates: dict[int, StepRow] = {}
+    for row in given.rows:
+        for other in policy.rows:
+            if _row_key(row) == _row_key(other):
+                candidates[row.number] = other
+                break
+    changed = True
+    while changed:
+        changed = False
+        for number, other in list(candidates.items()):
+            mine = _targets(next(r for r in given.rows if r.number == number), prefix)
+            theirs = _targets(other, "")
+            for here, there in zip(mine, theirs, strict=True):
+                if here is None and there is None:
+                    continue
+                if here is None or there is None or candidates.get(here) is not by_number.get(there):
+                    del candidates[number]
+                    changed = True
+                    break
+    return candidates
 
 
 def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tuple[RouteSection, ...]:
     """The planner's section and the given route's: one when they are the same, else the given route's differing steps.
 
-    Rows that say the same (title, fields, item after) are drawn once, in the planner's section. When all of the
-    given route's rows are the planner's, the planner's section says so in one line and the given route has no
-    section. Otherwise the given route's section keeps its differing rows only, lists the steps it shares with
-    the planner (as links) and sends the links that pointed at a shared row to the planner's row.
+    Rows that are the same step (`_same_steps`) are drawn once, in the planner's section. When every row of the given
+    route is one of the planner's, one for one, the planner's section says so in a line and the given route has no
+    section. Otherwise the given route's section keeps its differing rows only, lists the steps it shares with the
+    planner (as links, with the planner's number) and sends the links that pointed at a shared row to the planner's row.
     """
-    taken = {_row_key(row): row for row in reversed(policy.rows)}  # the first row of the planner that says it
-    shared = {row.number: taken[_row_key(row)] for row in given.rows if _row_key(row) in taken}
-    if len(shared) == len(given.rows) and len(policy.rows) == len(given.rows):
+    prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
+    shared = _same_steps(policy, given, prefix)
+    if len(shared) == len(given.rows) == len(policy.rows) == len({row.number for row in shared.values()}):
         head = (Field("Route", (Line(policy.title),)), Field("Given route", (Line(f"Same as the given route ({name})"),)))
         goal = replace(policy.goal, fields=(*head, *policy.goal.fields))
         return (replace(policy, goal=goal),)
-    prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
 
     def redirect(line: Line) -> Line:
         if line.href is None or not line.href.startswith(f"#{prefix}s"):
             return line
         number = int(line.href[len(prefix) + 2 :])
-        return replace(line, href=f"#{shared[number].anchor}") if number in shared else line
+        if number not in shared:
+            return line
+        there = shared[number]
+        arrow = f"→ step {there.number}" if line.anchor else ""
+        return replace(line, href=f"#{there.anchor}", anchor=arrow)
 
     rows = tuple(
         replace(row, fields=tuple(replace(f, lines=tuple(redirect(line) for line in f.lines)) for f in row.fields))
         for row in given.rows
         if row.number not in shared
     )
-    same = Field("Same as the planner", tuple(Line(f"step {n}", f"#{shared[n].anchor}") for n in shared))
+    same = Field(
+        "Same as the planner",
+        tuple(Line(f"step {n}: the planner's step {there.number}", f"#{there.anchor}") for n, there in shared.items()),
+    )
     goal = replace(given.goal, fields=(*given.goal.fields, same)) if shared else given.goal
     return policy, replace(given, goal=goal, rows=rows)
 
