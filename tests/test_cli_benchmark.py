@@ -15,8 +15,11 @@ from targets_support import DATA
 
 import crafting_system.cli._benchmark as benchmark_module
 from crafting_system.cli import main
+from crafting_system.config import load_config
+from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 
 COMMAND = "bench" + "mark"  # the name of the command; a bare string with it would trip tests/test_no_timing.py
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_benchmark(out_dir: Path, *arguments: str, prices="default", data=DATA):
@@ -109,6 +112,52 @@ def test_a_route_that_cannot_be_planned_is_recorded_and_the_exit_code_stays_0(tm
     assert "no price for the start item" in entry["error"]
     assert entry["id"] == "R12" and entry["solver"] is None and entry["given_route"] is None
     assert "no price for the start item" in capsys.readouterr().out
+
+
+def expected_overrides_file() -> str:
+    """The overrides file the benchmark names: the default data dir's, with the project root cut off as the benchmark does."""
+    path = load_config({}).data_dir / OVERRIDES_FILE_NAME
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def test_a_missing_start_price_names_the_override_line_and_the_other_routes_still_run(tmp_path, capsys):
+    code, path = run_benchmark(tmp_path, prices=price_file(start=None))
+
+    assert code == 0
+    document = read_json(path)
+    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05"]
+    entry = entry_of(document)
+    assert entry["missing_price"]["name"] == "R12 start amulet"
+    assert entry["missing_price"]["override_line"] == '"R12 start amulet" = 0'
+    assert entry["missing_price"]["overrides_file"] == expected_overrides_file()
+    out = capsys.readouterr().out
+    assert '"R12 start amulet" = 0' in [line.strip() for line in out.splitlines()]
+    assert f"add to {expected_overrides_file()} under [prices]:" in out
+    for route_id in ("R10", "R11", "R05"):  # their own files fail first in the test data, so none names a price
+        assert entry_of(document, route_id)["error"] is not None
+        assert "no price for the start item" not in entry_of(document, route_id)["error"]
+
+
+def test_the_missing_start_price_of_r12_names_its_buy_spec_for_the_trade_api(tmp_path, capsys):
+    code, path = run_benchmark(tmp_path, prices=price_file(start=None))
+
+    assert code == 0
+    entry = entry_of(read_json(path))
+    assert entry["missing_price"]["buy_spec"] == "examples/buy/r12-start-amulet.yaml"
+    assert (
+        "or price it on the trade API with: python -m crafting_system.prices trade --spec examples/buy/r12-start-amulet.yaml"
+        in entry["error"]
+    )
+    assert "python -m crafting_system.prices trade --spec examples/buy/r12-start-amulet.yaml" in capsys.readouterr().out
+
+
+def test_a_start_price_that_is_in_the_price_file_has_no_missing_price(tmp_path):
+    _, path = run_benchmark(tmp_path)
+
+    assert entry_of(read_json(path))["missing_price"] is None
 
 
 def test_a_route_with_a_bad_file_is_recorded_and_the_others_still_run(tmp_path, monkeypatch):

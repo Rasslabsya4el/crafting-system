@@ -1,9 +1,7 @@
-"""The R12 craft on the pinned 3.29.3.3 dump: the simulator against the exact chance of the real pool.
+"""The R12 craft on the pinned real dump: the simulator against the exact chance of the real pool.
 
-Skipped when the dump is not on this machine (it is never committed, ADR-0003). It is looked for in
-`.claude/scratch/repoe-3.29.3.3` of this checkout, and of the main checkout when this one is a
-worktree. The five pinned files are COPIED into a pytest temporary folder laid out as the data cache
-and read with `load_game_data`, which checks them against the pin; nothing is written next to the dump.
+Skipped when the dump is not in the cache (it is never committed, ADR-0003); like the other real-data tests it
+is read through `real_game_data()`, which loads whatever `PIN` names, so a moved pin needs no edit here.
 
 The start item is a rare Paua Amulet at item level 86 with a fractured Lightning Resistance (tier 1,
 lowest roll), the policy is "Harvest reforge Lightning until the item holds +1 to Level of all Lightning
@@ -20,22 +18,16 @@ gross mistakes (a wrong pool, cost or goal), not against small ones: the exact s
 """
 
 import math
-import shutil
-import sys
-from pathlib import Path
 
 import pytest
+from abstraction_support import real_game_data
 from repoe_support import no_network  # noqa: F401
 from simulator_support import FIVE_SIGMA, Memoized
 
 from crafting_system.actions import HarvestReforge
-from crafting_system.data.load import load_game_data
-from crafting_system.data.pin import PIN
 from crafting_system.items import ExplicitMod, Item, Rarity, tier_table
 from crafting_system.simulator import Step, simulate
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DUMP_NAME = f"repoe-{PIN.version}"
 AMULET = "Metadata/Items/Amulets/Amulet1"
 RESIST = "LightningResist1"
 TARGET = "GlobalLightningGemLevel1"
@@ -44,44 +36,9 @@ RUNS = 3_000
 CLICKS = 5_000
 
 
-def dump_folder() -> Path | None:
-    """The folder with the five pinned files, in this checkout's scratch folder or the main checkout's."""
-    candidates = [REPO_ROOT / ".claude" / "scratch" / DUMP_NAME]
-    if REPO_ROOT.parent.name == "worktrees":  # <main checkout>/.claude/worktrees/<this worktree>
-        candidates.append(REPO_ROOT.parents[1] / "scratch" / DUMP_NAME)
-    return next(
-        (folder for folder in candidates if all((folder / pinned.name).is_file() for pinned in PIN.files)),
-        None,
-    )
-
-
-def test_the_dump_is_looked_for_in_this_checkout_and_the_main_one(tmp_path, monkeypatch):
-    worktree = tmp_path / "main" / ".claude" / "worktrees" / "feature"
-    worktree.mkdir(parents=True)
-    monkeypatch.setattr(sys.modules[__name__], "REPO_ROOT", worktree)
-    assert dump_folder() is None
-
-    main_dump = tmp_path / "main" / ".claude" / "scratch" / DUMP_NAME
-    main_dump.mkdir(parents=True)
-    for pinned in PIN.files[:-1]:
-        (main_dump / pinned.name).write_bytes(b"")
-    assert dump_folder() is None  # one pinned file missing: the dump is not there
-
-    (main_dump / PIN.files[-1].name).write_bytes(b"")
-    assert dump_folder() == main_dump
-
-
 @pytest.fixture(scope="module")
-def data(tmp_path_factory):
-    source = dump_folder()
-    if source is None:
-        pytest.skip(f"the pinned dump {DUMP_NAME} is not on this machine")
-    cache = tmp_path_factory.mktemp("cache")
-    copy = cache / "repoe-fork" / PIN.version
-    copy.mkdir(parents=True)
-    for pinned in PIN.files:
-        shutil.copy2(source / pinned.name, copy / pinned.name)
-    return load_game_data(PIN, cache)
+def data():
+    return real_game_data()
 
 
 @pytest.fixture(scope="module")

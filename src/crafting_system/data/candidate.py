@@ -10,7 +10,8 @@ the manifest, and nothing is downloaded while the files are intact.
 
 What this trusts: the commit id (a git commit names its content, and the download is HTTPS) on
 the first use, and the manifest after that. It does not change what the active pin means; to
-move the pin to a new patch, copy the printed lines into `PIN`.
+move the pin to a commit, run `python -m crafting_system.data pin`, which starts from what is
+learned here.
 
 The manifest is written last and atomically, so its presence means the files were all stored.
 Each learned file must parse as JSON before anything is recorded, so an error page served with
@@ -59,14 +60,6 @@ def candidate_pin(
     if manifest.exists():
         return _read_manifest(manifest, commit, template)
     return _learn(commit, template, folder, open_url or default_open_url)
-
-
-def pin_lines(pin: RepoePin) -> str:
-    """The lines to paste into `PIN` (pin.py) to move to this commit, apart from the `version`."""
-    lines = [f'commit="{pin.commit}",', "files=("]
-    lines += [f'    PinnedFile("{file.name}", "{file.sha256}", {file.size}),' for file in pin.files]
-    lines.append("),")
-    return "\n".join(lines)
 
 
 def _learn(commit: str, template: RepoePin, folder: Path, open_url: OpenUrl) -> RepoePin:

@@ -7,26 +7,22 @@ description: Patch update: move the planner to a new Path of Exile patch or leag
 
 The owner's targets (#81, round 3): new numbers the same day, a changed rule of an existing method in a few hours. One branch, one PR titled `Patch update <version>`; the PR never merges itself. What each command prints, and the timings of the rehearsal, are in `docs/patch-update.md`.
 
-Run every command from the repo root. The old pin stays in `PIN` until step 5, so steps 1-4 work on the old data.
+Run every command from the repo root. The old pin stays in `PIN.json` until step 5, so steps 1-4 work on the old data. GitHub's API is read without a login at 60 calls an hour per address; with many sessions on one machine set `GITHUB_TOKEN` (or `GH_TOKEN`) in the environment, and the data commands send it to api.github.com only.
 
 ## 1. Find the export
 
-```bash
-gh api "repos/repoe-fork/repoe-fork.github.io/commits?per_page=60" --jq '.[] | [.sha, .commit.committer.date, .commit.message] | @tsv'
-```
+Take the game version of the patch you move to (`3.29.4.1`). The data commands take it as a name and find the repoe-fork commit themselves: the newest `Export <version>` commit of repoe-fork.github.io (`Version <version>` commits and exports of other versions never match), printed on the first line of the output. Step 2 prints it before the diff; there is no separate lookup.
 
-repoe-fork writes several `Export <version>` commits per patch, and `Version <version>` commits between them. Skip the `Version` ones; take the newest `Export` whose version is the patch you move to.
-
-Done when you hold a 40-character commit and the version it exports.
+Done when you know the version; the `Export of <version>: commit ...` line step 2 prints must name the export you expect. A version with no export is refused with the newest export it did see; a patch hours old may not be exported yet.
 
 ## 2. Diff and impact
 
 ```bash
 mkdir -p .claude/scratch
-uv run python -m crafting_system.data diff pinned <commit> > .claude/scratch/patch-diff.txt
+uv run python -m crafting_system.data diff pinned <version> > .claude/scratch/patch-diff.txt
 ```
 
-The file holds three parts: the diff (mods, weights, families, tags, bench options, essences, fossils), the **impact report** (which targets, routes, claims and tests name something that changed, and the tests that read the real cache), and the lines to paste into `PIN`. The first run downloads the commit (about 45 MB, seconds).
+The file holds three parts: the diff (mods, weights, families, tags, bench options, essences, fossils), the **impact report** (which targets, routes, claims and tests name something that changed, and the tests that read the real cache), and the command that moves the pin to the export. The first run downloads the commit (about 45 MB, seconds); step 5 reuses that download.
 
 Done when you have read all three parts and written down: the essences, fossils and bench options that changed, every claim in the impact report, every target or route in it.
 
@@ -46,16 +42,14 @@ Done when each unclear row carries an issue number.
 
 ## 5. Move the pin
 
-Edit `PIN` in `src/crafting_system/data/pin.py`: `version`, the commit comment (name and date of the export), and `commit` / `files` from the pasted lines. Then:
-
 ```bash
-uv run python -m crafting_system.data fetch
+uv run python -m crafting_system.data pin <version>
 uv run python -m crafting_system.data verify
 ```
 
-`fetch` downloads the commit again, because the diff stored it under the commit's folder and the pin looks in the version's folder.
+`pin` takes the commit `diff` already downloaded (nothing is downloaded twice), files it under the version's cache folder, checks the five files, and only then rewrites `src/crafting_system/data/PIN.json`. With a commit instead of a version: `pin <commit> <version>`; a commit alone reads its version from the commit message. Nobody edits `PIN.json` or any Python.
 
-Done when `verify` prints `ok` for all five files. The printed hashes come from the first download of the commit, and the commit id names its content, so a later download that disagrees with them is the alarm; nothing else needs checking. If `verify` fails before `fetch` with "not in the cache folder", that is the folder naming above, not a bad pin.
+Done when `pin` and `verify` print the five files and `PIN.json` names the new version. The printed hashes come from the first download of the commit, and the commit id names its content, so a later download that disagrees with them is the alarm; nothing else needs checking.
 
 ## 6. Update the claims
 
@@ -76,7 +70,7 @@ uv run python -m crafting_system.prices fetch
 uv run python -m crafting_system.prices check
 ```
 
-`fetch` takes the league poe.ninja lists as current; pass `--league <id>` otherwise. The benchmark needs the start-item price of each benchmark target (R12: `R12 start amulet`) in `price_overrides.toml` beside `prices.json` (`[prices]` table, Chaos), or from `prices trade --spec`.
+`fetch` takes the league poe.ninja lists as current; pass `--league <id>` otherwise. The benchmark needs the start-item price of each benchmark target (R12: `R12 start amulet`) in `price_overrides.toml` beside `prices.json` (`[prices]` table, Chaos), or from `prices trade --spec`. A route whose start item has no price is not run; `benchmark` prints the exact line (`"R12 start amulet" = 0`, put the price in place of the 0), the file it goes in, and the `prices trade --spec examples/buy/...` command when a buy spec names the item.
 
 Done when `check` reports no stale file and the start items are priced.
 
@@ -87,7 +81,7 @@ CRAFTING_CACHE_DIR=<the cache with the new export> uv run pytest -q -p no:cachep
 uv run python -m crafting_system.cli benchmark --out .claude/scratch/bench
 ```
 
-Two tests hold the old pin by hand: `test_the_real_pin_is_the_pinned_..._export` in `tests/test_data_fetch.py` names the version, commit, and the size and hash of `mods.json`; copy the new values from `PIN`. `tests/test_simulator_real_data.py` looks for the dump in `.claude/scratch/repoe-<version>/`, not in the cache, and **skips** three tests (a `SKIPPED ... pinned dump repoe-<version> is not on this machine` line) until you copy the five files there from the cache's version folder. Read every `SKIPPED` line of the run.
+No test holds the pin by hand: the pin test reads `PIN.json`, and `tests/test_simulator_real_data.py` reads the dump through the cache like the other real-data tests, so a moved pin needs no test edit. Read every `SKIPPED` line of the run: a skip that says the real game data is not in the cache means the new export is not in the cache you pointed at.
 
 Other tests that pin numbers of the real dump fail when the dump moved. Fix each by the new number from the new data and say in the commit which diff entry caused it. A failure the diff does not explain is a regression: find its cause before the pin moves.
 

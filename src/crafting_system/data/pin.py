@@ -3,14 +3,25 @@
 repoe-fork.github.io serves "latest" and overwrites it each patch, so the pin names a git
 commit of the site's repository instead; a raw.githubusercontent.com URL on that commit never
 changes. This is ruleset, not a user setting, which is why it lives here and not in
-`crafting.toml`. To move to a new patch, edit `PIN` below and nothing else.
+`crafting.toml`. The pin is the file `PIN.json` next to this module; `PIN` below is that file,
+loaded once. To move to a new patch, run `python -m crafting_system.data pin` (it writes the file
+after the cache holds the new files); nobody edits Python or pastes lines.
 
 Only the five files the normalizer reads are pinned; the derived `mods_by_base`, `mod_types`
 and `tags` dumps are not needed.
 """
 
+import json
+import os
 import re
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from .errors import PinFileError
+
+PIN_FILE = Path(__file__).with_name("PIN.json")
 
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _COMMIT = re.compile(r"[0-9a-f]{40}")
@@ -84,20 +95,57 @@ class RepoePin:
         return f"{self.base_url}/{self.commit}/data/{name}"
 
 
-PIN = RepoePin(
-    version="3.29.3.3",
-    # "Export 3.29.3.3", 2026-10-19, of repoe-fork/repoe-fork.github.io
-    commit="ee2084dec1f17180a132b5d133082af5b3136ace",
-    base_url="https://raw.githubusercontent.com/repoe-fork/repoe-fork.github.io",
-    files=(
-        PinnedFile("mods.json", "defbba31b60f9191080c78197278057f834f7f927c1a2a080a7ca6ed3ea686b5", 34279067),
-        PinnedFile("base_items.json", "48afb07a5f40eb51552f90c17d53186469db282a2e759dab7b46e7f9d2a0f58b", 8025343),
-        PinnedFile("essences.json", "01c6ad55866df673dd25a9b08577ee22802ad3b8f0671b019cb4cf523b9bd700", 141722),
-        PinnedFile("fossils.json", "e171c119f874b4f2be2a98366af61c5a2091ca26f508b2f5b9d6b551bb9df181", 364524),
-        PinnedFile(
-            "crafting_bench_options.json",
-            "0fe51ab1657cea69c533bb0610e393f10401156140de88edf686120483cd2845",
-            489342,
-        ),
-    ),
-)
+def load_pin(path: Path = PIN_FILE) -> RepoePin:
+    """The pin written in `path` (`PIN.json`); a file that cannot be read or does not fit is a `PinFileError` naming it."""
+
+    def bad(reason: str) -> PinFileError:
+        return PinFileError(f"the pin file {path} cannot be used: {reason}")
+
+    try:
+        document: Any = json.loads(Path(path).read_bytes())
+    except (OSError, ValueError, RecursionError) as error:  # ValueError: bad JSON or bad UTF-8
+        raise bad(f"it cannot be read as JSON ({error})") from error
+    if not isinstance(document, dict) or set(document) != {"version", "commit", "base_url", "files"}:
+        raise bad("it must be an object with version, commit, base_url and files")
+    entries = document["files"]
+    if not isinstance(entries, list) or not all(
+        isinstance(entry, dict) and set(entry) == {"name", "sha256", "size"} for entry in entries
+    ):
+        raise bad("files must be a list of objects with name, sha256 and size")
+    try:
+        return RepoePin(
+            version=document["version"],
+            commit=document["commit"],
+            base_url=document["base_url"],
+            files=tuple(PinnedFile(entry["name"], entry["sha256"], entry["size"]) for entry in entries),
+        )
+    except (ValueError, TypeError, AttributeError) as error:
+        raise bad(str(error)) from error
+
+
+def write_pin(pin: RepoePin, path: Path = PIN_FILE) -> None:
+    """Write `pin` as the pin file: all of it or none of it (a temp file next to `path`, then `os.replace`)."""
+    document = {
+        "version": pin.version,
+        "commit": pin.commit,
+        "base_url": pin.base_url,
+        "files": [{"name": file.name, "sha256": file.sha256, "size": file.size} for file in pin.files],
+    }
+    text = json.dumps(document, indent=2) + "\n"
+    path = Path(path)
+    try:
+        descriptor, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f"{path.name}.", suffix=".part")
+    except OSError as error:
+        raise PinFileError(f"could not write the pin file {path}: {error}") from error
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as out:
+            out.write(text)
+        os.replace(temp, path)
+    except OSError as error:
+        raise PinFileError(f"could not write the pin file {path}: {error}") from error
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+PIN = load_pin()

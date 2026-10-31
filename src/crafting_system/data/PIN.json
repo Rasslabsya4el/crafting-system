@@ -1,0 +1,32 @@
+{
+  "version": "3.29.3.3",
+  "commit": "ee2084dec1f17180a132b5d133082af5b3136ace",
+  "base_url": "https://raw.githubusercontent.com/repoe-fork/repoe-fork.github.io",
+  "files": [
+    {
+      "name": "mods.json",
+      "sha256": "defbba31b60f9191080c78197278057f834f7f927c1a2a080a7ca6ed3ea686b5",
+      "size": 34279067
+    },
+    {
+      "name": "base_items.json",
+      "sha256": "48afb07a5f40eb51552f90c17d53186469db282a2e759dab7b46e7f9d2a0f58b",
+      "size": 8025343
+    },
+    {
+      "name": "essences.json",
+      "sha256": "01c6ad55866df673dd25a9b08577ee22802ad3b8f0671b019cb4cf523b9bd700",
+      "size": 141722
+    },
+    {
+      "name": "fossils.json",
+      "sha256": "e171c119f874b4f2be2a98366af61c5a2091ca26f508b2f5b9d6b551bb9df181",
+      "size": 364524
+    },
+    {
+      "name": "crafting_bench_options.json",
+      "sha256": "0fe51ab1657cea69c533bb0610e393f10401156140de88edf686120483cd2845",
+      "size": 489342
+    }
+  ]
+}

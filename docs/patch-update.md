@@ -8,8 +8,9 @@ Targets (owner, [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81
 
 | Piece | What it does | Where |
 |---|---|---|
-| Pin | The repoe-fork commit, with the sha256 and size of the five files the normalizer reads. Moving it is editing `PIN` and nothing else. | `src/crafting_system/data/pin.py` |
-| `data diff OLD NEW` | Downloads a commit it has not seen (hashes learned once), prints what changed in mods, weights, families, tags, bench options, essences and fossils, then the impact report, then the lines to paste into `PIN`. `--no-impact` leaves the report out. | `python -m crafting_system.data diff pinned <commit>` |
+| Pin | The repoe-fork commit, with the sha256 and size of the five files the normalizer reads. Moving it is `data pin <version>`; nobody edits the file. | `src/crafting_system/data/PIN.json` (read by `pin.py`) |
+| `data diff OLD NEW` | OLD and NEW are `pinned`, a game version (`3.29.4.1`, resolved to the newest `Export <version>` commit of repoe-fork through the GitHub API, printed) or a commit. Downloads a commit it has not seen (hashes learned once), prints what changed in mods, weights, families, tags, bench options, essences and fossils, then the impact report, then the command that moves the pin. `--no-impact` leaves the report out. | `python -m crafting_system.data diff pinned <version>` |
+| `data pin TARGET [VERSION]` | Moves the pin to a version or commit: reuses the files `diff` downloaded (no second download), files them under the version's cache folder, checks them, then writes `PIN.json`. Refuses the version or commit that is already the pin. | `python -m crafting_system.data pin <version>` |
 | Impact report | Which files of this checkout name something that changed (below). | `src/crafting_system/data/impact.py` |
 | Claims | Every rule with its source and the `patch_verified` it was last checked on. | `src/crafting_system/rules/claims/*.yaml` |
 | Prices | poe.ninja prices of the current league, hand prices beside them. | `python -m crafting_system.prices fetch` |
@@ -46,10 +47,14 @@ On 2026-10-31 the runbook was followed on a scratch worktree with the pin moved 
 | 8 Suite and benchmark | 5377 passed, 1 failed, 3 skipped. The failure: the test that holds the old version, commit, size and hash by hand. The skips: `test_simulator_real_data.py` looks for the dump in `.claude/scratch/repoe-<version>`; after copying it, 4 passed | 6 min; 17 s; 4 s |
 | 9 Compare with the guides | R12: solver and given route both 154.95 Chaos on either pin, published odds 2.88% and 1.338% match, solver not dearer | 4 s |
 
-Findings that need code, as proposed tickets:
+Findings that needed code (items 1, 2, 4 and 5 are done; item 3, the claim history, is not):
 
-1. **Move the pin by command.** `data pin <commit> <version>` that writes `PIN` and leaves the cache usable (reuse the commit's folder), replacing the paste of five lines and the second download.
-2. **Name a patch, not a commit.** `data diff pinned 3.29.4.1` resolving the version to the repoe-fork commit through the GitHub API.
+1. **Move the pin by command.** Done in [#119](https://github.com/Rasslabsya4el/crafting-system/issues/119): `data pin`.
+2. **Name a patch, not a commit.** Done in #119: `data diff pinned 3.29.4.1` and `data pin 3.29.4.1`.
 3. **A claim keeps its history.** An optional `history` field in the registry (`rules`) for the old value and its patch, and a command that lists the claims not verified on the pinned patch.
-4. **Real-data tests do not hold the pin.** The pin test should read its expectations from nothing but the structure of `PIN`, and `test_simulator_real_data.py` should use the cache like the other real tests instead of skipping.
-5. **The benchmark names its prerequisites.** A missing start-item price should print the line to add to `price_overrides.toml`, or `prices` should price the start items of the benchmark targets.
+4. **Real-data tests do not hold the pin.** Done in #119: the pin test reads `PIN.json`, `test_simulator_real_data.py` reads the cache.
+5. **The benchmark names its prerequisites.** Done in #119: a missing start-item price prints the line for `price_overrides.toml` and the buy-spec command (the benchmark does not call the trade API itself, so a run stays offline and repeatable).
+
+## After the rehearsal: the update by command
+
+Steps 1, 2 and 5 are now commands that take the version (`diff pinned <version>`, `pin <version>`), the pin is a data file, and no test holds the pin, so a patch update touches no Python. GitHub's API allows 60 unauthenticated calls an hour per address; set `GITHUB_TOKEN` or `GH_TOKEN` on a machine that runs many sessions.
