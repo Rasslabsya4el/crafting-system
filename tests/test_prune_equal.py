@@ -8,7 +8,6 @@ the real dump (it skips without the cache) is planned twice, with and without th
 """
 
 import dataclasses
-import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -299,15 +298,11 @@ def r10():
     real = real_game_data()
     target = load_target(R10, real)
     prices = load_price_file(PRICES)
-    began = time.perf_counter()
     merged = make_plan(real, target, prices)
-    merged_seconds = time.perf_counter() - began
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(_plan, "MERGE_EQUAL", False)
-        began = time.perf_counter()
         reference = make_plan(real, target, prices)
-        reference_seconds = time.perf_counter() - began
-    print(f"\nR10 wall time: with the merge {merged_seconds:.1f} s, without {reference_seconds:.1f} s")
+    print(f"\nR10 solve seconds: with the merge {merged.solve_seconds:.1f} s, without {reference.solve_seconds:.1f} s")
     return merged, reference
 
 

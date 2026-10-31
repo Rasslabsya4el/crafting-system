@@ -7,7 +7,6 @@ checked three ways: the default of the other actions, the whole fossil listing o
 """
 
 import random
-import time
 from collections import defaultdict
 
 import pytest
@@ -147,13 +146,11 @@ def test_the_twin_classes_of_the_real_boots(real):
     base = next(base.id for base in real.base_items.values() if base.name == BOOTS)
     item = Item.build(real, base_id=base, item_level=86, rarity=Rarity.RARE, mods=())
     actions = fossil_actions(real, item)
-    started = time.perf_counter()
     keys = [action.twin_key(real, item) for action in actions]
-    elapsed = time.perf_counter() - started
     classes = defaultdict(list)
     for action, key in zip(actions, keys):
         classes[key].append(action)
-    print(f"\ntwin_key of {len(actions)} sets: {elapsed:.3f} s ({elapsed / len(actions) * 1e6:.0f} us each), {len(classes)} distinct keys")
+    print(f"\ntwin_key of {len(actions)} sets: {len(classes)} distinct keys")
     assert None not in classes
     ways = {key: ("Tangled Fossil" in members[0].fossils) for key, members in classes.items()}
     plain_classes = sum(1 for tangled in ways.values() if not tangled)

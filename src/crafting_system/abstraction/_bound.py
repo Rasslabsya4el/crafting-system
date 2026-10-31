@@ -56,8 +56,7 @@ exact engine on random pools.
 from collections.abc import Hashable, Mapping, Sequence
 from fractions import Fraction
 
-from crafting_system.actions import Action, Fixed, OutOfScopeError, PoolFamily
-from crafting_system.actions.draw import guaranteed_candidates
+from crafting_system.actions import Action, Fixed, OutOfScopeError, PoolFamily, guaranteed_candidates
 from crafting_system.data import Mod
 from crafting_system.items import Side
 
@@ -349,3 +348,20 @@ def _exact_part(abstraction: Abstraction, part, leaves: Sequence[int], retained:
         ):
             total += chance
     return total
+
+
+def keeps_shape(abstraction: Abstraction, state: CompressedState, action: Action) -> bool:
+    """Whether every outcome of `action` on `state` has the flags and the fractured mods that `state` has.
+
+    A pruning that holds the start's flags and fractured mods fixed for an action it bounds needs this
+    (#118): `reach_bound` is read at one state, and it holds at another only when the result of the
+    action does not move the item to another shape. False when the action fractures a mod or changes
+    the rarity, the corruption or the influences. Raises what the action raises (`ActionError`) when
+    it is refused on the item `state` stands for.
+    """
+    prepared = abstraction._prepared(state, action)
+    if prepared.outcomes.fractures:
+        return False
+    return all(
+        split.flags == state.flags and split.fractured == state.fractured for split in abstraction._splits_of(prepared)
+    )

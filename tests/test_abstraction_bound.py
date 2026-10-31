@@ -11,7 +11,6 @@ it needs the cached dump and skips without it.
 
 import itertools
 import random
-import time
 from fractions import Fraction
 from types import SimpleNamespace
 
@@ -388,9 +387,8 @@ BOOTS_LEVEL = 86
 
 
 def timed(function):
-    started = time.perf_counter()
-    value = function()
-    return value, (time.perf_counter() - started) * 1000
+    """The value of `function()`; the milliseconds are not measured here (no test reads a clock, ADR-0014)."""
+    return function(), 0.0
 
 
 def test_tightness_on_the_real_sorcerer_boots():
