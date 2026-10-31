@@ -7,7 +7,7 @@ result), `resources(data)` (what one use consumes, by price-file name, read from
 (what it puts on the item: `Adds`). The catalog (`catalog.py`) lists the actions of every registered
 kind for an item; a module registers its kinds with the `kind` decorator, so a new method is one file
 and nothing outside `actions` imports a concrete action: `abstraction`, `cli` and `simulator` use the
-contract and the catalog only. See ADR-0023 (extending to new methods and patches).
+contract and the catalog only. See ADR-0024 (extending to new methods and patches).
 
 Three random actions so far, `ChaosOrb()`, `HarvestReforge("lightning")` and `ApplyEssence("Shrieking
 Essence of Spite")` (an essence is named as in the game data or by its record id). Each has one method,
