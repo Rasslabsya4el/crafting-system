@@ -1,29 +1,119 @@
-"""Reachable-state generation, exact self-loop elimination and the proper-policy analysis."""
+"""Reachable-state generation, exact self-loop elimination and the proper-policy analysis.
+
+The graph is stored in flat typed arrays (about 28 bytes per transition, against about 250 for
+lists of lists and the caller's `Action` objects), so that 2 * 10^7 transitions fit in memory.
+"""
 
 import math
+from array import array
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
-from ._model import Action, Model
+from ._model import Action, Model, Outcome
 from ._scc import strongly_connected_components
+
+_WEIGHT_LIMIT = 1 << 64  # weights at or above this do not fit the `Q` array and are kept apart
+
+
+class _Rows:
+    """Read-only view: row `r` of a flat array cut by `offsets` (`data[offsets[r]:offsets[r + 1]]`)."""
+
+    __slots__ = ("offsets", "data")
+
+    def __init__(self, offsets: array, data: array) -> None:
+        self.offsets = offsets
+        self.data = data
+
+    def __len__(self) -> int:
+        return len(self.offsets) - 1
+
+    def __getitem__(self, row: int) -> array:
+        offsets = self.offsets
+        return self.data[offsets[row] : offsets[row + 1]]
+
+    def __iter__(self):
+        offsets, data = self.offsets, self.data
+        for row in range(len(offsets) - 1):
+            yield data[offsets[row] : offsets[row + 1]]
+
+
+class _Ranges:
+    """Read-only view: the actions of state `s` are `range(first[s], first[s + 1])`."""
+
+    __slots__ = ("first",)
+
+    def __init__(self, first: array) -> None:
+        self.first = first
+
+    def __len__(self) -> int:
+        return len(self.first) - 1
+
+    def __getitem__(self, state: int) -> range:
+        first = self.first
+        return range(first[state], first[state + 1])
 
 
 @dataclass(slots=True)
 class Graph[S]:
     """The reachable states and every action with its self-loop compiled out.
 
-    States are numbered in discovery order. Actions are numbered globally; `owner[k]` is the state
-    the action belongs to. An action that can never leave its state is dropped (infinite cost).
+    States are numbered in discovery order. Actions are numbered globally, grouped by state:
+    `state_actions[s]` is the range of the ids of state `s`'s actions and `owner[k]` the state of
+    action `k`. An action that can never leave its state is dropped (infinite cost). The
+    transitions of all actions lie in one flat array in action order: action `k` owns
+    `tstart[k]:tstart[k + 1]`, so the transitions of a state are one contiguous run as well.
+
+    * `targets`, `probs`: the non-self successors of each action (merged) and `w_j / L`;
+    * `succ[k]`: the successors of action `k`, a copy-slice of `targets`;
+    * `cost`: effective cost `cost * (W / L)`; `cost0`: the action's own cost;
+    * `weights`: the true integer weight of each transition; an action with a weight of 2^64 or
+      more keeps its weights in `big_weights[k]` instead; `self_loop[k] = (position, weight)`
+      is the self-loop that was compiled out and where it stood among the merged outcomes.
+
+    The caller's `Action` objects are not kept: `original_action` rebuilds the one asked for.
     """
 
     states: list[S] = field(default_factory=list)
     goal: list[bool] = field(default_factory=list)
-    owner: list[int] = field(default_factory=list)
-    original: list[Action[S]] = field(default_factory=list)
-    cost: list[float] = field(default_factory=list)  # effective cost: cost * (W / L)
-    succ: list[list[int]] = field(default_factory=list)  # non-self successors, merged
-    prob: list[list[float]] = field(default_factory=list)  # w_j / L
-    state_actions: list[list[int]] = field(default_factory=list)
+    first: array = field(default_factory=lambda: array("q"))
+    owner: array = field(default_factory=lambda: array("i"))
+    label: list = field(default_factory=list)
+    cost: array = field(default_factory=lambda: array("d"))
+    cost0: array = field(default_factory=lambda: array("d"))
+    tstart: array = field(default_factory=lambda: array("q", [0]))
+    targets: array = field(default_factory=lambda: array("i"))
+    probs: array = field(default_factory=lambda: array("d"))
+    weights: array = field(default_factory=lambda: array("Q"))
+    big_weights: dict = field(default_factory=dict)
+    self_loop: dict = field(default_factory=dict)
+    succ: _Rows = field(init=False)
+    state_actions: _Ranges = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.succ = _Rows(self.tstart, self.targets)
+        self.state_actions = _Ranges(self.first)
+
+    def original_action(self, k: int) -> Action[S]:
+        """The action `k` as it was offered: true weights, self-loop included.
+
+        Equal to the caller's action up to what `Action` itself normalises: repeated successors
+        are merged (first position, summed weight) and zero weights are dropped.
+        """
+        low, high = self.tstart[k], self.tstart[k + 1]
+        weights = self.big_weights.get(k)
+        if weights is None:
+            weights = self.weights[low:high]
+        states = self.states
+        outcomes = [Outcome(states[j], int(w)) for j, w in zip(self.targets[low:high], weights)]
+        loop = self.self_loop.get(k)
+        if loop is not None:
+            outcomes.insert(loop[0], Outcome(states[self.owner[k]], loop[1]))
+        return Action(self.label[k], self.cost0[k], tuple(outcomes))
+
+    def state_offsets(self) -> array:
+        """`offsets` for the state-level successor lists: a state's transitions are one run."""
+        tstart = self.tstart
+        return array("q", (tstart[k] for k in self.first))
 
 
 def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
@@ -34,7 +124,9 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
     """
     graph: Graph[S] = Graph()
     index: dict[S, int] = {}
-    states = graph.states
+    states, first, owner, label = graph.states, graph.first, graph.owner, graph.label
+    cost, cost0, tstart, targets = graph.cost, graph.cost0, graph.tstart, graph.targets
+    probs, weights = graph.probs, graph.weights
 
     def intern(state: S) -> int:
         found = index.get(state)
@@ -48,8 +140,7 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
     i = 0
     while i < len(states):  # the list grows while it is walked: a breadth-first queue
         state = states[i]
-        ids: list[int] = []
-        graph.state_actions.append(ids)
+        first.append(len(owner))
         if model.is_goal(state):
             graph.goal.append(True)
             i += 1
@@ -61,12 +152,16 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
                     "multi-input actions need the branching solver, B3 (ADR-0011)"
                 )
             merged: dict[int, int] = {}
+            loop_at = -1
             for successor, weight in action.outcomes:
                 if weight:
                     j = intern(successor)
+                    if j == i and loop_at < 0:
+                        loop_at = len(merged)
                     merged[j] = merged.get(j, 0) + weight
             total = sum(merged.values())
-            leave = total - merged.pop(i, 0)
+            loop_weight = merged.pop(i, 0)
+            leave = total - loop_weight
             if leave == 0:
                 continue  # repeats forever at a positive cost: infinite, never useful
             try:
@@ -78,14 +173,51 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
                 raise ValueError(
                     f"effective cost overflows float64 for action {action.label!r} in state {state!r}"
                 )
-            ids.append(len(graph.owner))
-            graph.owner.append(i)
-            graph.original.append(action)
-            graph.cost.append(effective)
-            graph.succ.append(list(merged))
-            graph.prob.append([weight / leave for weight in merged.values()])
+            k = len(owner)
+            owner.append(i)
+            label.append(action.label)
+            cost.append(effective)
+            cost0.append(action.cost)
+            targets.extend(merged)
+            probs.extend([weight / leave for weight in merged.values()])
+            if max(merged.values()) < _WEIGHT_LIMIT:
+                weights.extend(merged.values())
+            else:
+                weights.extend([0] * len(merged))
+                graph.big_weights[k] = tuple(merged.values())
+            if loop_weight:
+                graph.self_loop[k] = (loop_at, loop_weight)
+            tstart.append(len(targets))
         i += 1
+    first.append(len(owner))
     return graph
+
+
+class _Reverse:
+    """For each state, the actions that lead to it: `actions[offsets[s]:offsets[s + 1]]`."""
+
+    __slots__ = ("offsets", "actions")
+
+    def __init__(self, graph: Graph) -> None:
+        count = len(graph.states)
+        targets, tstart = graph.targets, graph.tstart
+        offsets = [0] * (count + 1)
+        for j in targets:
+            offsets[j + 1] += 1
+        for s in range(count):
+            offsets[s + 1] += offsets[s]
+        cursor = offsets[:count]
+        actions = array("i", bytes(4 * len(targets)))
+        for k in range(len(graph.owner)):
+            for j in targets[tstart[k] : tstart[k + 1]]:
+                actions[cursor[j]] = k
+                cursor[j] += 1
+        self.offsets = array("q", offsets)
+        self.actions = actions
+
+    def __getitem__(self, state: int) -> array:
+        offsets = self.offsets
+        return self.actions[offsets[state] : offsets[state + 1]]
 
 
 def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
@@ -102,16 +234,13 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
     downstream. A state alone is decided on the spot; a cycle is settled by `_settle_cycle`.
     """
     n_states = len(graph.states)
-    adjacency: list[list[int]] = [[] for _ in range(n_states)]
-    pred: list[list[int]] = [[] for _ in range(n_states)]
-    for k, successors in enumerate(graph.succ):
-        adjacency[graph.owner[k]].extend(successors)
-        for j in successors:
-            pred[j].append(k)
+    targets, tstart = graph.targets, graph.tstart
     alive = [False] * len(graph.owner)
     in_y = [False] * n_states
+    pred = _Reverse(graph)
     cycle = _Cycle(graph, pred, alive, in_y)
-    for cid, component in enumerate(strongly_connected_components(adjacency, range(n_states))):
+    components = strongly_connected_components(graph.state_offsets(), targets, range(n_states))
+    for cid, component in enumerate(components):
         if len(component) > 1:  # self-loops are compiled out, so one state alone has no cycle
             cycle.settle(component, cid)
             continue
@@ -120,7 +249,7 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
             in_y[state] = True
             continue
         for k in graph.state_actions[state]:
-            if all(in_y[j] for j in graph.succ[k]):
+            if all(in_y[j] for j in targets[tstart[k] : tstart[k + 1]]):
                 alive[k] = True
                 in_y[state] = True
     return alive, in_y
@@ -148,7 +277,7 @@ class _Cycle[S]:
     """
 
     def __init__(
-        self, graph: Graph[S], pred: list[list[int]], alive: list[bool], in_y: list[bool]
+        self, graph: Graph[S], pred: _Reverse, alive: list[bool], in_y: list[bool]
     ) -> None:
         count = len(graph.states)
         self.graph = graph

@@ -4,19 +4,20 @@ from collections.abc import Iterable, Sequence
 
 
 def strongly_connected_components(
-    adjacency: Sequence[Sequence[int]], nodes: Iterable[int]
+    offsets: Sequence[int], targets: Sequence[int], nodes: Iterable[int]
 ) -> list[list[int]]:
-    """Tarjan's algorithm without recursion.
+    """Tarjan's algorithm without recursion, on a graph stored as flat arrays.
 
-    Components come out sink-first, which is reverse topological order of the condensation: a
-    component only has edges to components emitted before it. `nodes` fixes the roots and their
-    order; every successor reachable from them must be a valid index into `adjacency`.
+    The successors of node `v` are `targets[offsets[v]:offsets[v + 1]]` (`offsets` has one entry
+    more than there are nodes). Components come out sink-first, which is reverse topological order
+    of the condensation: a component only has edges to components emitted before it. `nodes` fixes
+    the roots and their order; every successor reachable from them must be a valid node.
     """
-    size = len(adjacency)
+    size = len(offsets) - 1
     order = [-1] * size
     low = [0] * size
     on_stack = [False] * size
-    cursor = [0] * size
+    cursor = list(offsets[:size])
     components: list[list[int]] = []
     stack: list[int] = []
     counter = 0
@@ -30,9 +31,8 @@ def strongly_connected_components(
         calls = [root]
         while calls:
             v = calls[-1]
-            edges = adjacency[v]
-            if cursor[v] < len(edges):
-                w = edges[cursor[v]]
+            if cursor[v] < offsets[v + 1]:
+                w = targets[cursor[v]]
                 cursor[v] += 1
                 if order[w] == -1:
                     order[w] = low[w] = counter
