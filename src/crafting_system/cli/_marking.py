@@ -9,6 +9,7 @@ of an exact answer; the gap is the solver's own, of the cost still to pay, which
 """
 
 import math
+from fractions import Fraction
 
 from ._approx import Approximation
 
@@ -22,7 +23,7 @@ def percent(value: float) -> str:
     if math.isinf(value):
         return "unbounded"
     places = 2 if value >= 1e-4 else 4
-    return f"{math.ceil(round(value * 100 * 10**places, 6)) / 10**places:.{places}f}%"
+    return f"{math.ceil(Fraction(value) * 100 * 10**places) / 10**places:.{places}f}%"
 
 
 def headline(approximation: Approximation) -> str:

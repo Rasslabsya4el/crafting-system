@@ -216,8 +216,8 @@ def test_a_ladder_with_no_policy_at_any_level_is_an_error(approximate, target):
 # --- the marking in words and in JSON ---------------------------------------------------------------------------
 
 
-def hand(lower, upper, level, blocks, message="") -> Approximation:
-    return Approximation(lower, upper, upper / lower - 1, level, blocks, 0.01, None, message)
+def hand(lower, upper, level, blocks, message="", gap=None) -> Approximation:
+    return Approximation(lower, upper, upper / lower - 1 if gap is None else gap, level, blocks, 0.01, None, message)
 
 
 def test_golden_text_of_a_marking_within_the_tolerance():
@@ -232,7 +232,7 @@ def test_golden_text_of_a_marking_within_the_tolerance():
 
 
 def test_golden_text_of_a_marking_above_the_tolerance():
-    found = hand(100.0, 103.0, "family groups of 4", 4295, "No level reaches 1%: the narrowest certified interval has a gap of 3.00% (level: family groups of 4).")
+    found = hand(100.0, 103.0, "family groups of 4", 4295, gap=0.03, message="No level reaches 1%: the narrowest certified interval has a gap of 3.00% (level: family groups of 4).")
 
     assert marking_lines(found, 0.0, 200.0) == [
         "Answer: approximate (the certified gap is 3.00%, above the 1% tolerance)",
@@ -327,3 +327,27 @@ def test_a_query_that_cannot_be_pooled_runs_exactly_and_says_why(tmp_path, capsy
     text = capsys.readouterr().out
     assert code == 0 and "no approximate level available" in text and "is run as it is" in text
     assert read_json(out)["answer"] == {"approximate": False} and "no approximate level" in read_json(out)["note"]
+
+
+def test_a_gap_just_above_the_tolerance_never_prints_as_the_tolerance():
+    found = hand(100.0, 101.0000000004, "x", 3)
+
+    assert marking_lines(found, 0.0, 300.0)[0] == "Answer: approximate (the certified gap is 1.01%, above the 1% tolerance)"
+    assert marking_lines(hand(100.0, 103.0, "x", 3, gap=0.03), 0.0, 300.0)[0].startswith("Answer: approximate (the certified gap is 3.00%")
+
+
+def test_the_block_count_is_one_number_in_the_text_and_the_json(approximate):
+    text = render_text(build_report(approximate, DATA))
+    document = policy_document(build_report(approximate, DATA))
+
+    blocks = approximate.approximation.blocks
+    assert f"Blocks solved: {blocks:,}" in text and f"{blocks:,} blocks solved." in text
+    assert document["answer"]["blocks"] == blocks
+
+
+@pytest.mark.parametrize("value", ["-1", "nan", "inf", "soon"])
+def test_a_budget_that_is_not_a_number_of_seconds_is_refused(command, value, capsys):
+    with pytest.raises(SystemExit):
+        command("--budget", value)
+
+    assert "argument --budget: " in capsys.readouterr().err

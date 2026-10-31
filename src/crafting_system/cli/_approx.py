@@ -129,6 +129,6 @@ def climb(decision: Decision, start: CompressedState, offers: Iterable[PricedOff
             approximation.lower, approximation.upper, approximation.gap, approximation.level, approximation.blocks,
             approximation.tolerance, approximation.coarsening,
             f"No level reaches {TOLERANCE:.0%}: the narrowest certified interval has a gap of {approximation.gap:.2%} "
-            f"(level: {approximation.level}). " + exact_offer(decision.transitions, decision.predicted),
+            f"(level: {approximation.level}). " + exact_offer(decision.transitions, decision.predicted, decision.estimate is None or decision.estimate.complete),
         )  # fmt: skip
     return Solved(approximation, best.solution, best.start, spent)

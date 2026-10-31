@@ -258,3 +258,16 @@ def test_make_plan_without_a_budget_never_decides(target, exact):
     plan = make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, rates=Rates(1e9, 1e9))
 
     assert plan.approximation is None and plan.note == "" and plan.mean_remaining == exact.mean_remaining
+
+
+# --- a count that was cut short is only a lower bound ---------------------------------------------------------
+
+
+def test_a_count_cut_short_is_never_taken_for_a_small_graph():
+    cut = Estimate(states=400_001, transitions=300, outcomes=300, kernel_rate=3.9e-5, complete=False)
+
+    fits = choose(cut, 1e-9, 1e-9, 60.0, levels=LEVELS)
+    refused = choose(cut, R_KERNEL, R_SOLVE, 60.0, levels=(), refusal="Annulment is not declared block-invariant")
+
+    assert fits.action != "exact"  # the forecast of the part that was counted fits, the rest is unknown
+    assert refused.action == "refused" and "the count stopped at 300 transitions and the graph is larger" in refused.message

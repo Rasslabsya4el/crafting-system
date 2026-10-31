@@ -40,6 +40,14 @@ from ._verify import DEFAULT_RUNS, DEFAULT_SEED, verify
 COMMAND = "python -m crafting_system.cli"
 
 
+def _seconds(text: str) -> float:
+    """A `--budget` value: a number of seconds, zero or more."""
+    value = float(text)
+    if not value >= 0 or value == float("inf"):
+        raise argparse.ArgumentTypeError(f"the budget must be a number of seconds, zero or more, got {text!r}")
+    return value
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -67,7 +75,7 @@ def main(
     parser.add_argument("--route", metavar="ROUTE.yaml", help="also evaluate this given route (rules in YAML, see examples/routes/) as a fixed policy and compare it with the policy")
     parser.add_argument("--buy-spec", metavar="PATH", help="a buy spec YAML: the route view's buy step gets a trade-site search link built from it")
     parser.add_argument("--exact", action="store_true", help="solve exactly however long it takes, never approximately")
-    parser.add_argument("--budget", type=float, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
+    parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
     parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help=f"simulated crafts for --verify (default {DEFAULT_RUNS})")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help=f"random seed for --verify (default {DEFAULT_SEED})")

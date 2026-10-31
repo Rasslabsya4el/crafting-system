@@ -225,7 +225,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")
     for left in plan.left_out:
         lines.append(f"Not offered, {len(left.labels)} actions: {left.reason}")
-    lines.append(f"{'Blocks' if plan.approximation else 'States'} solved: {len(plan.solution.values)}")
+    lines.append(f"Blocks solved: {plan.approximation.blocks:,}" if plan.approximation else f"States solved: {len(plan.solution.values)}")
     lines.append("")
     lines.append("Policy (S = a state of the item; the start is S1)")
     printed: set[str] = set()

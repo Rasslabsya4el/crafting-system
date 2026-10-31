@@ -99,10 +99,15 @@ def minutes(seconds: float) -> str:
     return f"{seconds / 3600:.1f} h"
 
 
-def exact_offer(transitions: int | None, predicted: float | None) -> str:
-    """The sentence that offers the exact run, or says why it is not offered (ADR-0023)."""
+def exact_offer(transitions: int | None, predicted: float | None, complete: bool = True) -> str:
+    """The sentence that offers the exact run, or says why it is not offered (ADR-0023); `complete` false: the count is a lower bound."""
     if transitions is None:
         return "The exact run has no forecast, so its size is unknown."
+    if not complete:
+        return (
+            f"The exact run is not offered: the count stopped at {transitions:,} transitions and the graph is larger "
+            f"(the solver has been run on at most {EXACT_TRANSITIONS:,}). Offer a smaller list of crafts and run again."
+        )
     if transitions <= EXACT_TRANSITIONS:
         when = "" if predicted is None else f", predicted at about {minutes(predicted)}"
         return f"The exact answer is available: run again with --exact ({transitions:,} transitions{when})."
@@ -130,7 +135,7 @@ def choose(
         return Decision("exact", message="the size of the exact graph could not be forecast, so it is built as it is")
     predicted = estimate.seconds(r_kernel, r_solve)
     size = estimate.transitions
-    if predicted <= budget:
+    if predicted <= budget and estimate.complete:
         return Decision("exact", predicted=predicted, transitions=size, estimate=estimate)
     fits = tuple(
         found
@@ -142,10 +147,10 @@ def choose(
     why = refusal or (
         "no coarse level fits the time" if levels else "the irrelevant families are too few to pool, so no coarse level differs from the exact one"
     )
-    if size <= EXACT_TRANSITIONS:
+    if size <= EXACT_TRANSITIONS and estimate.complete:  # a cut-short count is only a lower bound: it never shows the exact run to be small
         message = f"no approximate level available ({why}); the exact run is predicted at about {minutes(predicted)} and is run as it is"
         return Decision("exact", message=message, predicted=predicted, transitions=size, estimate=estimate)
-    message = f"no approximate level available ({why}). " + exact_offer(size, predicted)
+    message = f"no approximate level available ({why}). " + exact_offer(size, predicted, estimate.complete)
     return Decision("refused", message=message, predicted=predicted, transitions=size, estimate=estimate)
 
 
