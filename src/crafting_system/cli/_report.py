@@ -87,13 +87,19 @@ def _without_ranges(text: str) -> str:
     return re.sub(r"\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)", "#", text)
 
 
+def number_states(plan: Plan) -> dict[CompressedState, str]:
+    """`S1`, `S2`, ... for the non-goal states the policy can reach, in breadth-first order from the start."""
+    ids: dict[CompressedState, str] = {}
+    for state in policy_states(plan.start, plan.policy, plan.is_goal):
+        if not plan.is_goal(state):
+            ids[state] = f"S{len(ids) + 1}"
+    return ids
+
+
 def build_report(plan: Plan, data: GameData) -> Report:
     """Number the reachable states and collect what each one does."""
     order = policy_states(plan.start, plan.policy, plan.is_goal)
-    ids: dict[CompressedState, str] = {}
-    for state in order:
-        if not plan.is_goal(state):
-            ids[state] = f"S{len(ids) + 1}"
+    ids = number_states(plan)
     reach = reach_probabilities(plan.start, plan.policy, plan.is_goal)
 
     states = []

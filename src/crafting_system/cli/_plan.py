@@ -84,14 +84,19 @@ class _RerollModel:
         found = []
         for priced in self.offers:
             try:
-                kernel = self.abstraction.kernel(state, priced.offer.action)
+                found.append(offer_action(self.abstraction, priced, state))
             except ActionError:  # the game refuses it here, or no admitted rule covers it
                 continue
-            weights = integer_weights(kernel)
-            found.append(
-                Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in weights.items()))
-            )
         return found
+
+
+def offer_action(abstraction: Abstraction, priced: PricedOffer, state: CompressedState) -> Action[CompressedState]:
+    """The solver's action for one priced offer used in `state`: its cost and the integer weights of the kernel.
+
+    Raises `ActionError` when the game refuses the action there or no admitted rule covers it.
+    """
+    weights = integer_weights(abstraction.kernel(state, priced.offer.action))
+    return Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in weights.items()))
 
 
 def leaf_labels(target: Target) -> tuple[str, ...]:
