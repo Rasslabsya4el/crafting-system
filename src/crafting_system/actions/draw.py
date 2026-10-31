@@ -50,24 +50,30 @@ FULL_SIDE_CLOSES = get_rule("affix_pool.full_side_closes")
 ONE = Fraction(1)
 
 
-def refuse_unmodelled(data: GameData, item: Item) -> None:
+def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = None) -> None:
     """Raise `OutOfScopeError` for an item in a state no admitted rule covers yet.
 
     Called after each action's own checks of rarity and corruption, each of which cites its own claim.
-    A rare jewel is out of scope: the 8:3:1 ratio is the claim for regular items, not for jewels.
+    A rare jewel is out of scope: the 8:3:1 ratio is the claim for regular items, not for jewels
+    (`jewel_reason` says what else is admitted for regular items only, for an action that is not a reroll).
     Ordinary crafted mods are not: a reforge removes them (`chaos_orb.removes_crafted_mods`,
     `harvest_reforge.removes_crafted_mods`, `essence.reforge_removes_crafted_mods`); a metamod is.
     """
     base = data.base_items.get(item.base_id)
     if base is not None and base.item_class in RARE_JEWEL_MAX_PER_SIDE.value["item_classes"]:
-        raise OutOfScopeError(
-            f"the item is a jewel ({base.item_class}); the 4, 5 or 6 mod ratio is admitted for "
-            "regular items only, so rerolling a jewel is not modelled yet"
+        reason = jewel_reason or (
+            "the 4, 5 or 6 mod ratio is admitted for regular items only, so rerolling a jewel is not modelled yet"
         )
+        raise OutOfScopeError(f"the item is a jewel ({base.item_class}); {reason}")
     if item.influences:
         raise OutOfScopeError(
             "the item has an influence, and the influence tags of the pool are not modelled yet"
         )
+    refuse_metamods(data, item)
+
+
+def refuse_metamods(data: GameData, item: Item) -> None:
+    """Raise `OutOfScopeError` for an item holding a crafted metamod: what it changes is not modelled yet."""
     if item.metamods(data):
         raise OutOfScopeError(
             "the item has a crafted metamod; what a metamod changes about a reroll is not modelled yet"

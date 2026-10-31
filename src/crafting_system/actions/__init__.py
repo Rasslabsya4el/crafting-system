@@ -20,6 +20,17 @@ of 420 tag pairs and a Glyphic Fossil one forced mod) with the same `chance_all`
 `sample`; `fossil_actions(data, item)` lists every set the item could take. See `fossil.py` for its
 refusals.
 
+The orbs of the early crafting steps are `TransmutationOrb()` (normal to magic with 1 or 2 mods, 1/2
+each), `AlterationOrb()` (rerolls a magic item the same way), `AugmentationOrb()` (adds one mod to a
+magic item with a free slot), `RegalOrb()` (magic to rare, adds one mod) and `AlchemyOrb()` (normal to
+rare with 4, 5 or 6 mods, 8:3:1). Each returns an `Outcomes` like the Chaos Orb. They draw through
+`add.py`, the shared add: `add_one_mod(data, item, what)` (one more mod on an item that keeps all
+it has, the Exalted Orb's too) and `draw_onto(data, retained, totals)`; a present family is out of the
+pool, a full side closes, and an add of one mod with no legal mod is refused (`NotApplicableError`)
+and consumes nothing. `ScouringOrb()` has one result of probability 1, a `ScourOutcomes` with the
+same `chance_all`, `distribution` and `sample`: it removes every mod but the fractured ones, and the
+item is normal with none left, magic with one and rare with two or more; it keeps its influences.
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -62,6 +73,8 @@ The pool a draw uses is `build_pool(data, item)`: the mods that could be drawn n
 family, with exact `Fraction` weights.
 """
 
+from .add import add_one_mod, draw_onto
+from .alchemy import AlchemyOrb
 from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts
 from .chaos import ChaosOrb
 from .draw import Outcome
@@ -69,13 +82,18 @@ from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
 from .fossil import ApplyFossils, FossilOutcomes, Fractured, fossil_actions, usable_fossils
 from .harvest import HarvestReforge
+from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
 from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool
+from .scour import ScouringOrb, ScourOutcomes
 
 __all__ = [
     "ActionError",
+    "AlchemyOrb",
+    "AlterationOrb",
     "ApplyEssence",
     "ApplyFossils",
+    "AugmentationOrb",
     "BenchCraft",
     "BenchOutcomes",
     "ChaosOrb",
@@ -89,9 +107,15 @@ __all__ = [
     "OutOfScopeError",
     "PoolFamily",
     "PoolMod",
+    "RegalOrb",
     "RemoveCraftedMods",
+    "ScouringOrb",
+    "ScourOutcomes",
+    "TransmutationOrb",
+    "add_one_mod",
     "bench_crafts",
     "build_pool",
+    "draw_onto",
     "fossil_actions",
     "usable_fossils",
 ]
