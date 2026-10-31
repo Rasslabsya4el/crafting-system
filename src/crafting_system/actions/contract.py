@@ -48,6 +48,14 @@ class Reads:
       true; None means any family (every family of the junk is told apart: exact, but the number of
       states grows). A bench craft names the families of its mod, because it is refused when one is
       on the item; Remove Crafted Mods reads the count only, so the empty set.
+    * `pool_weight`: with `junk` true, the result depends on the families of the junk only through
+      the weight they take out of the pool, because the action adds mods (an Augmentation, a Regal
+      Orb, an Exalted Orb): a family on the item leaves the pool, so what counts is its side, the
+      weights of its mods and what they give the goal. Families that match on those are alike, so a
+      state keeps one kind per such family type instead of one per family; the number of states
+      follows the number of family types, not of families. `families` still names the families told
+      apart on top of that (a bench craft's). False means the families are told apart only as
+      `families` says.
     * `needs_crafted`: the action can only be used on an item that holds a crafted mod (Remove
       Crafted Mods). A planner offers it only when the start item holds one or some other offered
       action adds one.
@@ -61,8 +69,14 @@ class Reads:
 
     junk: bool = True
     families: frozenset[str] | None = None
+    pool_weight: bool = False
     needs_crafted: bool = False
     block_invariant: bool = False
+
+    @classmethod
+    def adding(cls, *, block_invariant: bool = False) -> "Reads":
+        """The action keeps the junk and adds mods to it: the families count by the pool weight they take out."""
+        return cls(junk=True, families=frozenset(), pool_weight=True, block_invariant=block_invariant)
 
     @classmethod
     def nothing(cls, *, block_invariant: bool = False) -> "Reads":
