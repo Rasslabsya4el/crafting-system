@@ -8,21 +8,20 @@ from fractions import Fraction
 from functools import reduce
 
 from crafting_system.actions import (
+    Action,
     ActionError,
-    ApplyFossils,
-    BenchOutcomes,
-    FossilOutcomes,
+    ActionOutcomes,
+    Fixed,
     Fractured,
     Outcomes,
     OutOfScopeError,
-    RemoveCraftedMods,
     build_pool,
 )
 from crafting_system.data import GameData, Mod
 from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, Side, tier_table
 
 from ._goal import Goal, Status
-from ._kinds import Kinds, held_families, reads_junk
+from ._kinds import Kinds, held_families
 from ._state import CompressedState, Flags, FracturedMod, Slot, best_of, status_of
 
 Label = Hashable  # the contribution to every leaf as ints; with junk slots kept, also the side and the kind
@@ -52,14 +51,38 @@ def _low_values(mod: Mod) -> tuple[int, ...]:
     return tuple(min(stat.min, stat.max) for stat in mod.stats)
 
 
+Origins = dict[tuple[str, bool, bool], "FracturedMod | Slot"]  # (mod id, fractured, crafted) of the item given to an action
+
+
+@dataclass
+class _Prepared:
+    """What one action says about one state: its outcomes, where each mod of the item given to it came from, its pool signatures."""
+
+    outcomes: ActionOutcomes
+    origins: Origins
+    signatures: tuple[Hashable, ...] | None = None
+
+
+@dataclass(frozen=True)
+class _Split:
+    """A part's retained item read back into state terms: the fractured mods and slots it keeps, the new ones, the flags."""
+
+    flags: Flags
+    fractured: tuple[FracturedMod, ...]
+    kept: tuple[Slot, ...]  # slots of mods the item already had
+    new: tuple[Slot, ...]  # slots of mods the action put on it (stored: crafted ones, and every one when junk is kept)
+    status: tuple[Status, ...]  # what the mods that stay give each leaf
+    new_ids: tuple[str, ...]  # ids of the new mods, in the order of the retained item
+
+
 class Abstraction:
     """Design D for one base and item level: compress items, and get the exact kernel of an action.
 
-    `actions` are the enabled actions besides the erasing rerolls (`ChaosOrb`, `HarvestReforge`,
-    `ApplyEssence`), which are always known. They decide what a state keeps of the mods that are not
-    fractured: with none that reads them (the default) only the crafted mods are kept; with one, every
-    such mod is a slot of its side and kind (see `Kinds`). `kernel` refuses an action that reads them
-    and is not enabled.
+    `actions` are the enabled actions that read the mods besides the fractured ones (`Action.reads`);
+    an action that reads none of them is always known. They decide what a state keeps of the mods that
+    are not fractured: with none that reads them (the default) only the crafted mods are kept; with
+    one, every such mod is a slot of its side and kind (see `Kinds`). `kernel` refuses an action that
+    reads them and is not enabled.
 
     The kernel of a random action is cached by pool signature: two states whose pools have the same
     multiset of family types share one label distribution.
@@ -75,12 +98,16 @@ class Abstraction:
         self._labels: dict[str, Label] = {}
         self._canonical_group: dict[tuple, list[Mod]] | None = None
         self._canonical: dict[tuple[str, tuple[Status, ...], bool], str] = {}
-        self._outcomes: dict[Hashable, Outcomes | FossilOutcomes | BenchOutcomes] = {}
-        self._signatures: dict[Hashable, tuple[Hashable, ...]] = {}
+        self._prepared_by: dict[Hashable, _Prepared] = {}
         self._cache: dict[Hashable, dict[Hashable, Fraction]] = {}
         self._fractures: dict[Hashable, tuple[tuple[Hashable, Fraction], ...]] = {}
         self._kernels = 0
         self._hits = 0
+
+    @property
+    def keeps_junk(self) -> bool:
+        """Whether a state stores the ordinary mods that are not fractured (an enabled action reads them)."""
+        return self._kinds.tracked
 
     @property
     def stats(self) -> CacheStats:
@@ -119,7 +146,7 @@ class Abstraction:
         """Whether the status of `state` meets the goal."""
         return self.goal.is_met(state.status)
 
-    def kernel(self, state: CompressedState, action) -> Mapping[CompressedState, Fraction]:
+    def kernel(self, state: CompressedState, action: Action) -> Mapping[CompressedState, Fraction]:
         """The exact distribution of the next compressed state after `action` on `state`.
 
         Raises what the action raises for the item the state stands for (`NotApplicableError`,
@@ -132,14 +159,14 @@ class Abstraction:
                 f"the state has {len(state.status)} statuses but the goal has {len(self.goal.leaves)} leaves: "
                 "it comes from another abstraction"
             )
-        if reads_junk(action) and action not in self._kinds.actions:
-            raise ValueError(f"{action!r} reads the mods of the item and is not among the enabled actions")
-        outcomes = self._outcomes_of(state, action)
-        if isinstance(outcomes, BenchOutcomes):
-            return self._bench_kernel(state, action, outcomes)
-        return self._reroll_kernel(state, outcomes, action)
+        self._check_enabled(action)
+        return self._mixture_kernel(state, self._prepared(state, action))
 
-    def signature(self, state: CompressedState, action) -> Hashable:
+    def _check_enabled(self, action: Action) -> None:
+        if self._kinds.reads_junk(action) and action not in self._kinds.actions:
+            raise ValueError(f"{action!r} reads the mods of the item and is not among the enabled actions")
+
+    def signature(self, state: CompressedState, action: Action) -> Hashable:
         """What decides the label distribution: equal signatures share one cached distribution.
 
         It is `(tag, kept mods, free prefixes, free suffixes, totals, sorted family types of the pool)`
@@ -147,21 +174,19 @@ class Abstraction:
         pool, so it shares its distribution with any other action of an equal pool (a Chaos Orb, a set
         whose fossils change no weight of this item); a mixture (Tangled, Glyphic) or a Fractured Fossil
         has `("fossils", fractures, the parts)`, each part its probability and the signature of its
-        pool, with the label of its forced mod when a mod is fractured. A bench action draws nothing and
-        has no cache: its signature is `("bench", action)`, which names the action and does not decide
-        its kernel.
+        pool, with the label of its forced mod when a mod is fractured. An action with a fixed result
+        (a bench craft) draws nothing and has no cache: its signature is `("fixed", action)`, which
+        names the action and does not decide its kernel.
 
         The forced mod of an essence is not in it: it is a kept mod, so the pool already leaves out its
         family, the kept count and the free slots already count it, and it cannot change the draw.
         """
-        if reads_junk(action) and action not in self._kinds.actions:
-            raise ValueError(f"{action!r} reads the mods of the item and is not among the enabled actions")
-        outcomes = self._outcomes_of(state, action)
-        if isinstance(outcomes, BenchOutcomes):
-            return ("bench", action)
-        signatures = self._signatures_of(state, action, outcomes)
-        if isinstance(outcomes, Outcomes):
-            return signatures[0]
+        self._check_enabled(action)
+        prepared = self._prepared(state, action)
+        outcomes = prepared.outcomes
+        if all(isinstance(part, Fixed) for _, part in outcomes.components):
+            return ("fixed", action)
+        signatures = self._signatures_of(prepared)
         if len(signatures) == 1 and not outcomes.fractures:
             return signatures[0]
         parts = Counter(
@@ -170,7 +195,7 @@ class Abstraction:
         )
         return ("fossils", outcomes.fractures, frozenset(parts.items()))
 
-    def reachable(self, starts: Iterable[CompressedState], actions) -> frozenset[CompressedState]:
+    def reachable(self, starts: Iterable[CompressedState], actions: Iterable[Action]) -> frozenset[CompressedState]:
         """Every state reachable from `starts` by any of `actions`, the starts included.
 
         An action that refuses a state (`ActionError`) is skipped there.
@@ -192,14 +217,14 @@ class Abstraction:
         return frozenset(seen)
 
     def family_types(
-        self, tag: str | None = None, fossils: ApplyFossils | None = None
+        self, tag: str | None = None, fossils: Action | None = None
     ) -> Mapping[FamilyType, tuple[str, ...]]:
         """The families of the full pool of an empty rare item of this base and level, by family type.
 
-        `tag` is the guaranteed tag of a Harvest reforge or None. With `fossils`, the pool is the one
-        that resonator makes: the weights carry the factors and blocks of its fossils, so families that
-        no fossil of the set tells apart share a type (a mixture, Tangled or Glyphic, has no one pool:
-        `ValueError`). The value is the sorted family ids.
+        `tag` is the guaranteed tag of a Harvest reforge or None. With `fossils`, an action that
+        reweighs the pool (a resonator), the pool is the one it makes: the weights carry the factors and
+        blocks of its fossils, so families that no fossil of the set tells apart share a type (a mixture,
+        Tangled or Glyphic, has no one pool: `ValueError`). The value is the sorted family ids.
         """
         empty = Item.build(self.data, base_id=self.base_id, item_level=self.item_level, rarity=Rarity.RARE)
         pool = build_pool(self.data, empty)
@@ -273,35 +298,41 @@ class Abstraction:
             self._canonical[key] = found
         return found
 
-    def _item_of(self, state: CompressedState, erasing: bool) -> Item:
+    def _item_of(self, state: CompressedState, erasing: bool) -> tuple[Item, Origins]:
         """A concrete item the state stands for: its fractured mods, its crafted mods, and (unless
         the action erases them) one representative mod for every other slot, of distinct families.
+        With it, where each of its mods came from (a fractured mod or a slot of the state).
 
         Raises `ItemError` when the state is not an item (a normal item with mods) and `ValueError`
         when it holds more mods of a kind than the base has families.
         """
         flags = state.flags
-        mods = [
-            ExplicitMod(
-                entry.mod_id,
-                self._tiers.get(entry.mod_id, 1),
-                _low_values(self.data.mods[entry.mod_id]),
-                fractured=True,
+        origins: Origins = {}
+        mods = []
+        for entry in state.fractured:
+            mods.append(
+                ExplicitMod(
+                    entry.mod_id,
+                    self._tiers.get(entry.mod_id, 1),
+                    _low_values(self.data.mods[entry.mod_id]),
+                    fractured=True,
+                )
             )
-            for entry in state.fractured
-        ]
+            origins[(entry.mod_id, True, False)] = entry
         taken = {family for entry in state.fractured for family in held_families(self.data.mods[entry.mod_id])}
         for slot in state.slots:
             if slot.crafted:
                 mod = self.data.mods[slot.kind]
                 taken |= held_families(mod)
                 mods.append(ExplicitMod(mod.id, self._tiers.get(mod.id, 1), _low_values(mod), crafted=True))
+                origins[(mod.id, False, True)] = slot
         if not erasing:
             for slot in state.slots:
                 if not slot.crafted:
                     mod = self._kinds.representative(slot.side, slot.kind, taken)
                     mods.append(ExplicitMod(mod.id, self._tiers.get(mod.id, 1), _low_values(mod)))
-        return Item.build(
+                    origins[(mod.id, False, False)] = slot
+        item = Item.build(
             self.data,
             base_id=self.base_id,
             item_level=self.item_level,
@@ -310,15 +341,17 @@ class Abstraction:
             corrupted=flags.corrupted,
             mods=tuple(mods),
         )
+        return item, origins
 
-    def _outcomes_of(self, state: CompressedState, action) -> Outcomes | BenchOutcomes:
-        erasing = not reads_junk(action)
+    def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
+        """The outcomes of `action` on the item `state` stands for (cached), and where that item's mods came from."""
+        erasing = not self._kinds.reads_junk(action)
         slots = tuple(slot for slot in state.slots if slot.crafted) if erasing else state.slots
         key = (action, state.flags, state.fractured, slots)
-        outcomes = self._outcomes.get(key)
-        if outcomes is None:
+        prepared = self._prepared_by.get(key)
+        if prepared is None:
             try:
-                item = self._item_of(state, erasing)
+                item, origins = self._item_of(state, erasing)
             except ItemError:
                 bare = Item.build(
                     self.data,
@@ -330,75 +363,108 @@ class Abstraction:
                 )
                 action.outcomes(self.data, bare)
                 raise
-            outcomes = action.outcomes(self.data, item)
-            self._outcomes[key] = outcomes
-        return outcomes
+            prepared = _Prepared(action.outcomes(self.data, item), origins)
+            self._prepared_by[key] = prepared
+        return prepared
 
-    def _reroll_kernel(
-        self, state: CompressedState, outcomes: Outcomes | FossilOutcomes, action
-    ) -> dict[CompressedState, Fraction]:
-        """A reroll: the fractured mods stay, every other mod is erased, and the draws (and the forced mod) are new.
+    def _mixture_kernel(self, state: CompressedState, prepared: _Prepared) -> dict[CompressedState, Fraction]:
+        """The kernel of a result that is a mixture of parts: each part gives its states, weighted by its probability.
 
-        A resonator is a mixture of pools: each part gives its states, weighted by its probability.
+        A part is a fixed result (the mods that stay, the new ones) or a pool draw (the same, then the
+        new draws seen through the label); with a fracture one finished mod also becomes fractured.
         """
-        fractures = isinstance(outcomes, FossilOutcomes) and outcomes.fractures
-        parts = outcomes.components if isinstance(outcomes, FossilOutcomes) else ((ONE, outcomes),)
-        signatures = self._signatures_of(state, action, outcomes)
+        outcomes = prepared.outcomes
+        signatures = self._signatures_of(prepared)
         result: dict[CompressedState, Fraction] = defaultdict(Fraction)
-        for (share, part), signature in zip(parts, signatures):
-            if fractures:
-                self._add_fractured(result, share, state, part, signature)
+        for (share, part), signature in zip(outcomes.components, signatures):
+            split = self._split(part.retained, prepared.origins)
+            if isinstance(part, Fixed):
+                self._add_fixed(result, share, split)
+            elif outcomes.fractures:
+                self._add_fractured(result, share, state, part, signature, split)
             else:
-                self._add_drawn(result, share, state, part, signature)
+                self._add_drawn(result, share, part, signature, split)
         return dict(result)
 
+    def _split(self, retained: Item, origins: Origins) -> _Split:
+        """Read a part's retained item back into state terms.
+
+        A mod the item given to the action held is the fractured mod or slot it came from; any other mod
+        is new: its contribution is that of its table tier at low rolls, and it is a slot when it is
+        crafted or when junk is kept. Raises `OutOfScopeError` for a new mod a leaf limits the roll of.
+        """
+        flags = Flags(retained.rarity, retained.corrupted, retained.influences)
+        fractured: list[FracturedMod] = []
+        kept: list[Slot] = []
+        new: list[Slot] = []
+        new_ids: list[str] = []
+        contributions: list[tuple[Status, ...]] = []
+        for entry in retained.mods:
+            origin = origins.get((entry.mod_id, entry.fractured, entry.crafted))
+            if isinstance(origin, FracturedMod):
+                fractured.append(origin)
+                contributions.append(origin.contribution)
+            elif isinstance(origin, Slot):
+                kept.append(origin)
+                contributions.append(origin.contribution)
+            else:
+                mod = self.data.mods[entry.mod_id]
+                self._guard_roll(mod)
+                contribution = self._drawn_contribution(mod, entry.crafted)
+                contributions.append(contribution)
+                new_ids.append(mod.id)
+                if entry.fractured:
+                    fractured.append(FracturedMod(self._canonical_of_mod(mod), contribution))
+                elif entry.crafted:
+                    new.append(Slot(Side(mod.generation_type), self._canonical_id(entry), contribution, True))
+                elif self._kinds.tracked:
+                    new.append(Slot(Side(mod.generation_type), self._kinds.of(mod), contribution))
+        fractured.sort(key=lambda entry: (entry.mod_id, entry.contribution))
+        status = best_of(len(self.goal.leaves), contributions)
+        return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids))
+
+    def _add_fixed(self, result: dict[CompressedState, Fraction], share: Fraction, split: _Split) -> None:
+        """Add the one state of a fixed result."""
+        slots = sorted((*split.kept, *split.new), key=lambda slot: slot.key)
+        result[CompressedState(split.flags, split.fractured, split.status, tuple(slots))] += share
+
     def _add_drawn(
-        self, result: dict[CompressedState, Fraction], share: Fraction, state: CompressedState, part: Outcomes, signature
+        self, result: dict[CompressedState, Fraction], share: Fraction, part: Outcomes, signature, split: _Split
     ) -> None:
-        """Add the states of one pool: the fractured mods stay, the forced mod and the new draws are slots."""
+        """Add the states of one pool: what stays, the forced mod and the new draws (slots when junk is kept)."""
         width = len(self.goal.leaves)
         tracked = self._kinds.tracked
-        flags = Flags(part.retained.rarity, state.flags.corrupted, state.flags.influences)
-        fixed, forced = self._fixed(state, part)
+        stays = [*split.kept, *split.new]
         for drawn, chance in self._distribution(signature, part).items():
             if tracked:
                 best = best_of(width, (ints for (ints, _, _), _ in drawn))
-                slots = forced + [
+                slots = stays + [
                     Slot(Side(side), kind, tuple(Status(value) for value in ints))
                     for (ints, side, kind), count in drawn
                     for _ in range(count)
                 ]
                 slots.sort(key=lambda slot: slot.key)
             else:
-                best, slots = tuple(Status(value) for value in drawn), []
-            status = tuple(max(a, b) for a, b in zip(fixed, best))
-            result[CompressedState(flags, state.fractured, status, tuple(slots))] += share * chance
-
-    def _fixed(self, state: CompressedState, part: Outcomes) -> tuple[tuple[Status, ...], list[Slot]]:
-        """What stays on the item before the draws: its status, and the slot of the forced mod when junk is kept."""
-        fixed = best_of(len(self.goal.leaves), (entry.contribution for entry in state.fractured))
-        forced: list[Slot] = []
-        if part.forced is not None:
-            mod = self.data.mods[part.forced]
-            self._guard_roll(mod)
-            contribution = self._drawn_contribution(mod)
-            fixed = tuple(max(a, b) for a, b in zip(fixed, contribution))
-            if self._kinds.tracked:
-                forced.append(Slot(Side(mod.generation_type), self._kinds.of(mod), contribution))
-        return fixed, forced
+                best, slots = tuple(Status(value) for value in drawn), sorted(stays, key=lambda slot: slot.key)
+            status = tuple(max(a, b) for a, b in zip(split.status, best))
+            result[CompressedState(split.flags, split.fractured, status, tuple(slots))] += share * chance
 
     def _add_fractured(
-        self, result: dict[CompressedState, Fraction], share: Fraction, state: CompressedState, part: Outcomes, signature
+        self,
+        result: dict[CompressedState, Fraction],
+        share: Fraction,
+        state: CompressedState,
+        part: Outcomes,
+        signature,
+        split: _Split,
     ) -> None:
-        """Add the states of one pool of a resonator with a Fractured Fossil.
+        """Add the states of one pool of a result that fractures one finished mod (a Fractured Fossil's).
 
         One finished mod is fractured, uniformly. The distribution of the pair (the fractured mod, the
         rest) is cached by pool signature at the level of family types (see `_fracture_entries`); here
         each type is spread over the families of this pool that have it, the fractured mod being any of
         them with the same chance.
         """
-        flags = Flags(part.retained.rarity, state.flags.corrupted, state.flags.influences)
-        fixed, forced = self._fixed(state, part)
         families: dict[FamilyType, list] = defaultdict(list)
         for family in part.pool:
             families[self._family_type(family, None)].append(family)
@@ -410,21 +476,21 @@ class Abstraction:
             else:
                 members = families[family_type]
                 options = [(self._mod_with_label(family, label), chance / len(members)) for family in members]
-            status = tuple(max(a, b) for a, b in zip(fixed, best))
-            slots = [] if kind == "forced" else list(forced)
+            status = tuple(max(a, b) for a, b in zip(split.status, best))
+            slots = [*split.kept] if kind == "forced" else [*split.kept, *split.new]
             if rest is not None:
                 slots += [
                     Slot(Side(side), slot_kind, tuple(Status(value) for value in ints))
                     for (ints, side, slot_kind), count in rest
                     for _ in range(count)
                 ]
-                slots.sort(key=lambda slot: slot.key)
+            slots.sort(key=lambda slot: slot.key)
             for mod, each in options:
-                fractured = state.fractured
+                fractured = split.fractured
                 if mod is not None:
                     entry = FracturedMod(self._canonical_of_mod(mod), self._drawn_contribution(mod))
                     fractured = tuple(sorted((*fractured, entry), key=lambda e: (e.mod_id, e.contribution)))
-                result[CompressedState(flags, fractured, status, tuple(slots))] += share * each
+                result[CompressedState(split.flags, fractured, status, tuple(slots))] += share * each
 
     def _mod_with_label(self, family, label: Label) -> Mod:
         """A mod of `family` with the label `label`: the mods of one family that share a label share a canonical id."""
@@ -465,7 +531,7 @@ class Abstraction:
             for entry in family.mods:
                 owner[entry.mod.id] = family_type
         types = list(dict.fromkeys(owner.values())) or [None]
-        single = FossilOutcomes(self.data, ((ONE, part),), True)
+        single = part.fracturing()
         merged: dict[Hashable, Fraction] = defaultdict(Fraction)
         for number, marked in enumerate(types):
 
@@ -516,28 +582,6 @@ class Abstraction:
             rest = frozenset((label, count) for label, count in counts.items() if count > 0)
         return kind, fractured_label, best, rest
 
-    def _bench_kernel(
-        self, state: CompressedState, action, outcomes: BenchOutcomes
-    ) -> dict[CompressedState, Fraction]:
-        """A bench action: one result with probability 1, found by adding the crafted slot or dropping the crafted ones."""
-        if isinstance(action, RemoveCraftedMods):
-            slots = [slot for slot in state.slots if not slot.crafted]
-        else:
-            self._guard_roll(outcomes.added)
-            added = ExplicitMod(
-                outcomes.added.id,
-                self._tiers.get(outcomes.added.id, 1),
-                _low_values(outcomes.added),
-                crafted=True,
-            )
-            slots = [*state.slots, self._slot_of(added)]
-        slots.sort(key=lambda slot: slot.key)
-        status = best_of(
-            len(self.goal.leaves),
-            [entry.contribution for entry in state.fractured] + [slot.contribution for slot in slots],
-        )
-        return {CompressedState(state.flags, state.fractured, status, tuple(slots)): ONE}
-
     def _family_type(self, family, tag: str | None) -> FamilyType:
         return (
             family.side,
@@ -549,17 +593,14 @@ class Abstraction:
             ),
         )
 
-    def _signatures_of(
-        self, state: CompressedState, action, outcomes: Outcomes | FossilOutcomes
-    ) -> tuple[Hashable, ...]:
-        """The signature of every pool of `outcomes` (one, unless the action is a mixture)."""
-        key = (action, state.flags, state.fractured, tuple(slot for slot in state.slots if slot.crafted))
-        signatures = self._signatures.get(key)
-        if signatures is None:
-            parts = outcomes.components if isinstance(outcomes, FossilOutcomes) else ((ONE, outcomes),)
-            signatures = tuple(self._pool_signature(part) for _, part in parts)
-            self._signatures[key] = signatures
-        return signatures
+    def _signatures_of(self, prepared: _Prepared) -> tuple[Hashable, ...]:
+        """The signature of every part of the outcomes (one, unless the action is a mixture)."""
+        if prepared.signatures is None:
+            prepared.signatures = tuple(
+                ("fixed",) if isinstance(part, Fixed) else self._pool_signature(part)
+                for _, part in prepared.outcomes.components
+            )
+        return prepared.signatures
 
     def _pool_signature(self, part: Outcomes) -> Hashable:
         free = part.free

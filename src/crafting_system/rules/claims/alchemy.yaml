@@ -17,3 +17,12 @@ rules:
     quote: "The same as chaos spamming can also be achieved by using an orb of scouring, followed by an orb of alchemy repeatedly (this is known as scour-alching)."
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
+
+  - id: alchemy.cost
+    statement: One use of an Orb of Alchemy consumes one Orb of Alchemy item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeToRare: name "Orb of Alchemy"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {Orb of Alchemy: 1}

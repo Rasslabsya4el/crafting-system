@@ -17,6 +17,7 @@ from crafting_system.items import ExplicitMod, Item, Rarity, Side, tier_table
 
 from crafting_system.rules import get_rule
 
+from .contract import ActionOutcomes
 from .draw import (
     Outcome,
     exact_distribution,
@@ -31,6 +32,7 @@ CHAOS_FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
 HARVEST_FRACTURED_MODS_KEPT = get_rule("harvest_reforge.fractured_mods_kept")
 REFUSED_WITHOUT_TAGGED_MOD = get_rule("harvest_reforge.refused_without_tagged_mod")
 VALUES_UNIFORM_INTEGERS = get_rule("affix_pool.values_uniform_integers")
+ONE = Fraction(1)
 
 
 def retained_item(data: GameData, item: Item, forced: Mod | None = None) -> Item:
@@ -115,6 +117,22 @@ class Outcomes:
         and `draw_onto` of `add.py`; `add_one_mod` refuses an add that has no legal mod.
         """
         return cls(data, retained, build_pool(data, retained), totals, None, None)
+
+    @property
+    def components(self) -> tuple[tuple[Fraction, "Outcomes"], ...]:
+        """A pool draw is a mixture of one part, itself (see `ActionOutcomes`)."""
+        return ((ONE, self),)
+
+    @property
+    def fractures(self) -> bool:
+        """Whether one finished mod is fractured: never for a plain draw (see `fracturing`)."""
+        return False
+
+    def fracturing(self) -> "ActionOutcomes":
+        """The same draw followed by a fracture of one finished mod, uniformly (a Fractured Fossil's)."""
+        from .mixture import Mixture
+
+        return Mixture(self.data, ((ONE, self),), True)
 
     @property
     def free(self) -> Mapping[Side, int]:

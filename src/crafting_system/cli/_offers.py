@@ -8,32 +8,18 @@ missing price is dropped and reported (ADR-0007), never guessed.
 """
 
 import random
-import re
+from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import (
-    ApplyEssence,
-    BenchCraft,
-    ChaosOrb,
-    HarvestReforge,
-    RemoveCraftedMods,
-    bench_crafts,
-)
+from crafting_system.actions import Action, Reads, catalog, default_actions
+from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
-from crafting_system.items import Item, Rarity
+from crafting_system.items import Item
 from crafting_system.prices import CHAOS_ORB, PriceFile
-from crafting_system.rules import get_rule
-
-TAGGED_RARE_REFORGE_EXISTS = get_rule("harvest_reforge.tagged_rare_reforge_exists")
-LIFEFORCE_COST = get_rule("harvest_reforge.lifeforce_cost")
-NORMAL_ONLY_UP_TO_LEVEL = get_rule("essence.normal_only_up_to_level")
-DAGGER_STAFF_TAKE_CLASS_MODS = get_rule("essence.dagger_staff_take_class_mods")
-DESOLATION_IS_NOT_A_B1_ACTION = get_rule("essence.desolation_is_not_a_b1_action")
 
 RESTART = "restart"
-REMOVE_CRAFTED_MODS = "Remove Crafted Mods"
 
 
 @dataclass(frozen=True)
@@ -72,17 +58,18 @@ class DroppedOffer:
     missing: tuple[str, ...]
 
 
+def offer_of(action: Action, label: str, data: GameData | None = None, item: Item | None = None) -> Offer:
+    """The offer of `action` under `label`: its resources, and whether the report quotes a single-draw share (with its tag).
+
+    `data` and `item` only matter to an action whose resources or additions depend on them (an essence, a bench craft).
+    """
+    adds = action.adds(data, item)
+    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw)
+
+
 def default_offers() -> tuple[Offer, ...]:
     """The two rerolls that need no game data: a Chaos Orb and the Harvest reforge of Lightning."""
-    return (
-        Offer("Chaos Orb", ChaosOrb(), {CHAOS_ORB: 1}),
-        Offer(
-            "Harvest Reforge Lightning",
-            HarvestReforge("lightning"),
-            dict(LIFEFORCE_COST.value["lightning"]),
-            tag=TAGGED_RARE_REFORGE_EXISTS.value["lightning"],
-        ),
-    )
+    return tuple(offer_of(action, action.label()) for action in default_actions())
 
 
 def price_offers(
@@ -132,90 +119,74 @@ class OfferSet:
 
 
 @dataclass(frozen=True)
-class BuyStartItem:
+class BuyStartItem(Action):
     """Buy the start item again: the item comes back as the target's start item, whatever it was.
 
-    It is the restart of ADR-0011's buy action. It is an `actions`-shaped object (`outcomes(data,
-    item).sample(rng)`) so that `--verify` can simulate it; the planner gives it the start state.
+    It is the restart of ADR-0011's buy action. It meets the contract only as far as the simulator and
+    the planner need (`outcomes(data, item).sample(rng)`, the label, and that it reads nothing of the
+    item, which it replaces); the planner gives it the start state and prices it with the start item.
     """
 
     item: Item
 
-    def outcomes(self, data: GameData, item: Item) -> "BuyStartItem":
+    def label(self, data: GameData | None = None) -> str:
+        return RESTART
+
+    def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        return {}
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads.nothing()
+
+    def outcomes(self, data: GameData, item: Item) -> "BuyStartItem":  # type: ignore[override]
         return self
 
     def sample(self, rng: random.Random) -> Item:
         return self.item
 
 
-def without_ranges(text: str) -> str:
-    """A mod text with its roll ranges as `#`: "+(6-11) to Strength" -> "+# to Strength"."""
-    return re.sub(r"\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)", "#", text)
-
-
-def _one_line(text: str) -> str:
-    """A mod text on one line: some mods read over two lines, such as a Life craft that also regenerates Mana."""
-    return " / ".join(part.strip() for part in text.splitlines() if part.strip())
-
-
 def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> OfferSet:
-    """The actions the model offers for a target on `base_id`, and the bench crafts it leaves out.
+    """The actions the model offers for a target on `base_id`: the planner kinds of the catalog, then the filters below.
 
-    * A Chaos Orb, the Harvest reforge of Lightning, every essence the item class takes (the ones of
-      level 1 to 4 work on a normal item only, so they are listed only when the start item is normal;
-      Essence of Desolation and the corruption-only essences are not B1 actions).
-    * The bench: Remove Crafted Mods, and a `BenchCraft` ONLY WHEN ITS MOD COUNTS TOWARD ONE OF THE
-      GOAL'S REQUIREMENTS. Reason: in this slice every other action (Chaos Orb, Harvest reforge, an
-      essence, Remove Crafted Mods) removes the crafted mods, and without the multimod an item holds
-      one crafted mod, so a craft that gives the goal nothing only takes a slot and costs currency; it
-      can never lower the mean. Leaving it out is exact, and it keeps the state space small: each craft
-      that clashes with a family makes that family its own kind, so all 141 ring crafts would grow
-      R05 from 76 to 13,172 states (ticket #60, PR #79). REVISIT when an action that adds or removes
-      one mod without erasing the crafted mod lands (Exalted Orb and Annulment Orb, #67; metamods and
-      the multimod, #68): then a crafted mod can block a family before an Exalted Orb, a craft with no
-      goal contribution can pay off, and this rule no longer holds.
+    Every action of the `planner` kinds of `actions.catalog` that can apply to the start item is offered
+    (a Chaos Orb, the Harvest reforge of Lightning, every essence the item class takes, the bench), under
+    its `label`; two with one label are told apart by their `variant`. A new method registered in the
+    catalog is offered with no edit here. The filters, each over what an action declares (`Action.adds`,
+    `Action.reads`):
 
-    A craft counts when some requirement leaf names its mod and does not refuse a crafted mod
-    (`not_crafted`). A craft the bench does not offer for the item class is not listed at all.
+    * An action that only adds named crafted mods (a bench craft) is offered ONLY WHEN A MOD IT ADDS
+      COUNTS TOWARD ONE OF THE GOAL'S REQUIREMENTS (a leaf names it and does not refuse a crafted mod,
+      `not_crafted`). Reason: in this slice every other action (Chaos Orb, Harvest reforge, an essence,
+      Remove Crafted Mods) removes the crafted mods, and without the multimod an item holds one crafted
+      mod, so a craft that gives the goal nothing only takes a slot and costs currency; it can never
+      lower the mean. Leaving it out is exact, and it keeps the state space small: each craft that
+      clashes with a family makes that family its own kind, so all 141 ring crafts would grow R05 from
+      76 to 13,172 states (ticket #60, PR #79). REVISIT when an action that adds or removes one mod
+      without erasing the crafted mod lands (Exalted Orb and Annulment Orb, #67; metamods and the
+      multimod, #68): then a crafted mod can block a family before an Exalted Orb, a craft with no goal
+      contribution can pay off, and this rule no longer holds. The crafts left out are reported.
+    * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
+      offered only when the start item holds one or another offered action adds one.
     """
-    base = data.base_items[base_id]
-    offers = [*default_offers()]
-
-    def forced_mod(essence) -> str | None:
-        mod_id = essence.mod_for(base.item_class)
-        if mod_id is None:
-            mod_id = essence.mod_for(DAGGER_STAFF_TAKE_CLASS_MODS.value.get(base.item_class, base.item_class))
-        return mod_id
-
-    for essence in data.essences.values():
-        if essence.is_corruption_only or essence.name == DESOLATION_IS_NOT_A_B1_ACTION.value:
-            continue
-        if essence.level <= NORMAL_ONLY_UP_TO_LEVEL.value and start_item.rarity is not Rarity.NORMAL:
-            continue
-        if forced_mod(essence) is None:
-            continue
-        offers.append(Offer(essence.name, ApplyEssence(essence.name), {essence.name: 1}, shares=False))
-
-    wanted: dict[str, list[BenchCraft]] = {}
-    left_out_crafts: list[str] = []
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
-    for craft in bench_crafts(data):
-        option = craft.option(data)
-        if base.item_class not in option.item_classes:
+    chosen: list[Action] = []
+    left_out_crafts: list[str] = []
+    for action in catalog(data, start_item, planner_only=True):
+        adds = action.adds(data, start_item)
+        if adds.crafted and not adds.draws and adds.named is not None and not adds.named & counting:
+            left_out_crafts.append(action.label(data))
             continue
-        mod = data.mods[craft.mod_id]
-        label = f"Bench craft {_one_line(without_ranges(mod.text or mod.name))}"
-        if craft.mod_id in counting:
-            wanted.setdefault(label, []).append(craft)
-        else:
-            left_out_crafts.append(label)
-    for label, crafts in wanted.items():
-        for craft in crafts:
-            name = label if len(crafts) == 1 else f"{label} [{craft.mod_id}]"
-            offers.append(Offer(name, craft, {c.currency: c.count for c in craft.cost(data)}, shares=False))
-    if wanted or start_item.crafted_mods:
-        removal = RemoveCraftedMods()
-        offers.append(Offer(REMOVE_CRAFTED_MODS, removal, {c.currency: c.count for c in removal.cost(data)}, shares=False))
+        chosen.append(action)
+    chosen = usable_actions(data, start_item, chosen)
+
+    groups: dict[str, list[Action]] = defaultdict(list)
+    for action in chosen:
+        groups[action.label(data)].append(action)
+    offers = []
+    for label, actions in groups.items():
+        for action in actions:
+            name = label if len(actions) == 1 else f"{label} [{action.variant}]"
+            offers.append(offer_of(action, name, data, start_item))
 
     left_out = ()
     if left_out_crafts:
@@ -227,3 +198,11 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
             ),
         )
     return OfferSet(tuple(offers), left_out)
+
+
+def usable_actions(data: GameData, start_item: Item, actions: Iterable[Action]) -> list[Action]:
+    """`actions` without those that need a crafted mod when neither the start item nor another of them gives one."""
+    actions = list(actions)
+    if start_item.crafted_mods or any(action.adds(data, start_item).crafted for action in actions):
+        return actions
+    return [action for action in actions if not action.reads(data).needs_crafted]

@@ -62,6 +62,30 @@ _Avoid_: method, recipe
 **Action**:
 One choice the solver can take in a state: a primitive with its parameters (which essence, which fossils, which bench craft).
 
+**Action contract**:
+The five answers every action gives, so that a new one is one file: its label, its outcomes on a concrete item, its resources, what it reads and what it adds. Nothing outside the actions names a concrete action.
+
+**Action kind**:
+A family of actions defined together and registered by the module that defines them: every essence, every bench craft, every fossil set. A kind may be left out of the planner's offers while staying in the catalog.
+_Avoid_: action type, action class
+
+**Catalog**:
+The list of the actions of every registered kind that can apply to an item. The planner builds its offers from it.
+_Avoid_: registry (that is the rules registry)
+
+**Label**:
+The stable name of an action that routes and reports use ("Chaos Orb", an essence's own name); two actions share one only when their variants differ.
+
+**Resources**:
+What one use of an action consumes, by price-file name, with counts, read from admitted rules.
+_Avoid_: cost (the price of the resources in Chaos)
+
+**Reads**:
+What of the item, besides its fractured mods, the result of an action depends on: nothing (the action erases the other mods and redraws), their number, or their number and some families. It decides what a compressed state must keep.
+
+**Adds**:
+What an action puts on the item as far as can be told without running it: the mods it names, whether they are crafted, whether it draws from the pool and with which tag. A planner can ask it whether an action can matter for a target.
+
 **Crafting method**:
 A technique players name, such as essence spam or fracture-then-reforge. Here it is a pattern that appears in a policy, never something coded.
 
