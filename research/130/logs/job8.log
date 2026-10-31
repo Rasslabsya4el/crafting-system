@@ -1,0 +1,5 @@
+Downloading scipy (33.7MiB)
+ Downloaded scipy
+Installed 2 packages in 18ms
+A/B {'models': 400, 'worst_pessimistic_rel': 6.530956691842028e-14, 'worst_optimistic_rel': 3.4429382231436545e-14, 'worst_certified_over_value': 2.573496971081113e-13, 'identity_violations': 0}
+C {'trials': 300, 'checks': 1776, 'worst_difference': 3.552713678800501e-15}

@@ -1,0 +1,5 @@
+Downloading scipy (33.7MiB)
+ Downloaded scipy
+Installed 2 packages in 30ms
+{"cfg": "abs:1000", "pools": 6, "pooled_kinds": 17, "blocks": 7808, "rows": 25341, "edges": 128666, "lower": 6814.338029570654, "upper": 6869.719488893718, "gap": 0.008127195786698183, "V_lower": 6814.338030004486, "V_upper": 6869.7194884563605, "eps_lower": 6.366462912410498e-12, "eps_upper": 6.366462912410498e-12, "build_s": 2.9, "solve_s": 1.5, "lifted_cost": 6837.518523769496, "lifted_states": 29344}
+{"cfg": "abs:500", "pools": 5, "pooled_kinds": 12, "blocks": 26801, "rows": 75755, "edges": 391562, "lower": 6832.487815131732, "upper": 6845.384474366024, "gap": 0.0018875495402612685, "V_lower": 6832.487815939566, "V_upper": 6845.384473681182, "eps_lower": 1.1823431123048067e-11, "eps_upper": 1.000444171950221e-11, "build_s": 6.8, "solve_s": 23.4, "lifted_cost": 6837.518523769496, "lifted_states": 29344}

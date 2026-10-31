@@ -1,0 +1,14 @@
+Downloading scipy (33.7MiB)
+ Downloaded scipy
+Installed 2 packages in 20ms
+{"cfg": "one", "pools": 2, "pooled_kinds": 21, "blocks": 137, "rows": 505, "edges": 1575, "lower": 6445.75368815167, "upper": 7785.344258362041, "gap": 0.20782528080040552, "V_lower": 6445.753688327542, "V_upper": 7785.3442580080045, "eps_lower": 2.7284841053187847e-12, "eps_upper": 4.547473508864641e-12, "build_s": 0.0, "solve_s": 0.4, "policy_states": 28504}
+{"cfg": "one", "theta": 100.0, "expanded": 35, "leaves": 766, "edges": 1290, "lower": 6445.753688122385, "upper": 7785.344258397412, "gap": 0.20782528081138052, "seconds": 0.0}
+{"cfg": "one", "theta": 10.0, "expanded": 132, "leaves": 2014, "edges": 15790, "lower": 6445.81866227179, "upper": 7785.2041051931965, "gap": 0.2077913626023955, "seconds": 0.1}
+{"cfg": "one", "theta": 1.0, "expanded": 332, "leaves": 4336, "edges": 31699, "lower": 6446.306369071785, "upper": 7783.718903277963, "gap": 0.20746958919340885, "seconds": 0.1}
+{"cfg": "one", "theta": 0.1, "expanded": 797, "leaves": 7597, "edges": 35659, "lower": 6447.663755126097, "upper": 7762.483129423463, "gap": 0.2039218272280472, "seconds": 0.2}
+{"cfg": "one", "theta": 0.01, "expanded": 2602, "leaves": 14149, "edges": 49368, "lower": 6447.681874669182, "upper": 7690.533301007098, "gap": 0.19275942121472678, "seconds": 0.3}
+{"cfg": "one", "theta": 0.001, "expanded": 8065, "leaves": 25938, "edges": 92452, "lower": 6447.695243699614, "upper": 7362.110924931842, "gap": 0.14182054930802623, "seconds": 1.2}
+{"cfg": "one", "theta": 0.0001, "expanded": 17006, "leaves": 39576, "edges": 160926, "lower": 6447.698382173059, "upper": 6929.867851458966, "gap": 0.07478164155740208, "seconds": 3.8}
+{"cfg": "one", "theta": 1e-05, "expanded": 24680, "leaves": 45783, "edges": 217537, "lower": 6447.698638766846, "upper": 6843.201167718804, "gap": 0.0613401077050959, "seconds": 5.3}
+{"cfg": "one", "theta": 1e-06, "expanded": 27891, "leaves": 46319, "edges": 240798, "lower": 6447.698648680775, "upper": 6837.659434700042, "gap": 0.060480615994523035, "seconds": 5.7}
+{"cfg": "one", "theta": 1e-07, "expanded": 28477, "leaves": 46259, "edges": 244990, "lower": 6447.698649003092, "upper": 6837.519394604782, "gap": 0.0604588965493853, "seconds": 6.5}

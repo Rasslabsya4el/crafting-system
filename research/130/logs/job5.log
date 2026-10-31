@@ -1,0 +1,5 @@
+Downloading scipy (33.7MiB)
+ Downloaded scipy
+Installed 2 packages in 18ms
+exact graph: blocks 134821 rows 325036 edges 1567030 10.9 s
+exact V* 3502.62421682674 bracket 3502.624215616205 3502.6242180372747 solve s 491.6

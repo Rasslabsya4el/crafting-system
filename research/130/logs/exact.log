@@ -1,0 +1,6 @@
+exact graph: blocks 134821 rows 325036 edges 1567030 84.6 s
+  PI lower iter 0: V0 16055.8603, 3480 states switch
+  PI lower iter 1: V0 8498.61535, 2491 states switch
+  PI lower iter 2: V0 6874.38189, 714 states switch
+  PI lower iter 3: V0 6837.51852, 0 states switch
+exact V* 6837.518523773548 eps 2.3646862246096134e-11 bracket 6837.518522156689 6837.5185253904065 244.3 s

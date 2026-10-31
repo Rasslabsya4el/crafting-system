@@ -1,0 +1,7 @@
+{"cfg": "one", "pools": 2, "pooled_kinds": 21, "blocks": 137, "rows": 505, "edges": 1575, "lower": 6445.753688151738, "upper": 7785.344258220317, "gap": 0.20782528077840579, "V_lower": 6445.75368832761, "V_upper": 7785.344258007895, "eps_lower": 2.7284841053187847e-12, "eps_upper": 2.7284841053187847e-12, "build_s": 0.3, "solve_s": 5.9, "policy_states": 28504}
+{"cfg": "one", "theta": 100.0, "expanded": 35, "leaves": 766, "edges": 1290, "lower": 6445.753688128318, "upper": 7785.344258248613, "gap": 0.2078252807871841, "seconds": 0.2}
+{"cfg": "one", "theta": 10.0, "expanded": 132, "leaves": 2014, "edges": 15790, "lower": 6445.818662242547, "upper": 7785.204104980774, "gap": 0.20779136257491992, "seconds": 0.9}
+{"cfg": "one", "theta": 1.0, "expanded": 332, "leaves": 4336, "edges": 31699, "lower": 6446.306369159796, "upper": 7783.718903172485, "gap": 0.20746958916056069, "seconds": 1.0}
+{"cfg": "one", "theta": 0.1, "expanded": 797, "leaves": 7597, "edges": 35659, "lower": 6447.66375500888, "upper": 7762.483129428842, "gap": 0.20392182725076857, "seconds": 1.0}
+{"cfg": "one", "theta": 0.01, "expanded": 2602, "leaves": 14149, "edges": 49368, "lower": 6447.681874786536, "upper": 7690.533301092301, "gap": 0.19275942120623202, "seconds": 3.2}
+{"cfg": "one", "theta": 0.001, "expanded": 8065, "leaves": 25938, "edges": 92452, "lower": 6447.69524364104, "upper": 7362.110925006549, "gap": 0.14182054932998578, "seconds": 10.5}
