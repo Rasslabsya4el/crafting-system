@@ -85,7 +85,7 @@ def main(
         "trade", help="price a buy spec from the trade site (by hand only; a few requests)"
     )
     trade.add_argument("--spec", required=True, help="YAML file with the buy spec")
-    trade.add_argument("--k", type=int, default=DEFAULT_K, help="price from the k cheapest listings")
+    trade.add_argument("--k", type=int, default=DEFAULT_K, help="price as the mean of the k cheapest listings")
     trade.add_argument(
         "--max-requests", type=int, default=DEFAULT_MAX_REQUESTS, help="most requests this run may send"
     )
@@ -94,8 +94,8 @@ def main(
         choices=[*INDEXED_OPTIONS, "any"],
         default=DEFAULT_INDEXED,
         help=(
-            f"keep only listings made within this window (default {DEFAULT_INDEXED}: the last week); "
-            "a months-old listing can set a floor price nobody will honour; 'any' keeps all"
+            "keep only listings made within this window (default: listings of any age, since an "
+            "instant-buyout price stands however old the listing is); 'any' keeps all"
         ),
     )
     trade.add_argument("--refresh-stats", action="store_true", help="download the stat list again")
@@ -224,8 +224,8 @@ def _trade(
     store_trade_price(price_path, price, entry_for(price))
     print(
         f"{price.name}: {price.chaos:g} Chaos ({to_divine(price.chaos, price_file):.4g} Divine), "
-        f"{price.used} of {price.fetched} fetched listings used ({price.listings} on the site), "
-        f"league {price.league}"
+        f"mean of the {price.used} cheapest instant-buyout listings ({price.fetched} fetched, "
+        f"{price.listings} on the site), league {price.league}"
     )
     print(f"  listings from {'any time' if price.indexed is None else 'the last ' + price.indexed}")
     for reason, count in sorted(price.dropped.items()):
