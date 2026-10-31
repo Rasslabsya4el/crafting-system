@@ -31,3 +31,10 @@ ago, and the cheapest of those was a 1-Chaos listing from August.
 Both recordings were made with `status: available`. From #133 the query sends `securable` (instant
 buyout) and no listing-age window by default; the tests that compare a body with `search_body_r12_1week.json`
 swap in the new status. The recorded listings stay the price data of those tests.
+
+## The full stat list (#165), 2026-10-31 12:39 UTC
+
+- `stats_full.json.gz`: the whole `GET /api/trade/data/stats` answer in the shape of the trade cache file
+  `<cache dir>/trade/stats.json` (`fetched_at`, `stats`), gzipped. The route page tests of
+  `test_cli_routes_real.py` unpack it into a temporary cache folder, so the buy step's trade link is
+  compared against the same stat list on every machine and CI needs no network for it.
