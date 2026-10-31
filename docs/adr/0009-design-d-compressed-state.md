@@ -4,7 +4,7 @@ The solver's compressed state keeps, for each target mod, an exact status: absen
 
 The reason is the trade-off measured in [state compression research](../research/2026-10-30-2-state-compression.md): tracking every blocked family by identity is exact but explodes (about 1 million core states at 10 families per side, 370 million at 40); counting junk by tag class is small but not exact, because two junk mods with the same tags can block different families and so change the pool differently. Design D is close to the class-count size and stays exact.
 
-v1 allows only exact merges. An approximate merge is flagged, and its policy is checked on the concrete simulator with an error interval; approximate merges are built only if exact family types blow up the state (map [Crafting system v1](https://github.com/Rasslabsya4el/crafting-system/issues/1), "Not yet specified").
+v1 allows only exact merges in the exact state. An approximate merge is allowed only as a coarse state with an optimistic and a pessimistic model, which certify the answer's error, and the answer is marked approximate when the exact state would not solve in about a minute ([ADR-0023](0023-approximate-answers-as-two-bounds-around-one-policy.md), map [Crafting system v1](https://github.com/Rasslabsya4el/crafting-system/issues/1), "Not yet specified").
 
 ## Widening for B1 ([Compressed state for essence reforges and bench crafts](https://github.com/Rasslabsya4el/crafting-system/issues/59))
 
