@@ -1,8 +1,12 @@
 """The solver entry point: reachable states, finite set, components in reverse topological order.
 
 Known limits:
-* The finite-state analysis (`proper_states`) rescans the live graph once per round, so an
-  adversarial chain of dead ends that peels one state per round costs quadratic time.
+* The finite-state analysis (`proper_states`) settles the strongly connected components sink-first.
+  It is linear for chains, DAGs and any graph of small components, and for a large cycle whose
+  dead ends fall by the safety peel. Inside a large cycle, cutting a member's proof of reaching
+  the goal is mended locally, but in the worst case a cut near the root of a big proof tree is
+  mended again and again from inside the cycle and costs quadratic time (no linear algorithm is
+  known for this almost-sure reachability on a general graph).
 * `ConvergenceError` carries only the best certified bound, no partial result.
 """
 
