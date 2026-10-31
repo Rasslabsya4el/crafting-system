@@ -1,0 +1,230 @@
+# Draft claims of research ticket #86 (influence crafts in 3.29), ids INF-xx of docs/research/2026-10-31-influence.md.
+# One block per proposed file of src/crafting_system/rules/claims/; each block is a complete `rules:` list.
+
+# ===== influence.yaml =====
+rules:
+  - id: influence.tag_key_of_orb
+    statement: "The influence tag key of each influence, as used in the export's spawn-weight tags `<class key>_<influence key>` (the key is the value). Craft of Exile's group ids are Shaper 2, Elder 3, Crusader 4, Hunter 5, Warlord 6, Redeemer 7."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Terminology
+    quote: "Refers to Hunter influenced items, which have the \"basilisk\" tag corresponding to the item class."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {shaper: "shaper", elder: "elder", crusader: "crusader", hunter: "basilisk", redeemer: "eyrie", warlord: "adjudicator"}
+
+  - id: influence.exalt_adds_influence_and_one_mod
+    statement: "Each of the six influenced Exalted Orbs adds its influence and one new explicit mod of that influence to a rare item."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_influence_adding_items
+    quote: "Adds Shaper influence and a new Shaper modifier to a rare item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: influence.exalt_refused_on_influenced_item
+    statement: "An influenced Exalted Orb is refused on every item that already has an influence, the orb's own influence included (the wiki's Influenced item page has a broader sentence that reads the other way; three orb pages, the item help text and Craft of Exile agree on refusal)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hunter%27s_Exalted_Orb
+    quote: "Cannot be used on influenced items, synthesised items, fractured items, or items with eldritch implicit modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: influence.exalt_refused_on_fractured_synthesised_eldritch
+    statement: "An influenced Exalted Orb is refused on a fractured item, a synthesised item and an item with an Eldritch implicit."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Shaper%27s_Exalted_Orb
+    quote: "Cannot be used on items with Elder/Shaper/Conquerors influence, synthesised items, fractured items, or items with eldritch implicit modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: influence.exalt_rare_with_open_slot
+    statement: "An influenced Exalted Orb needs a rare item with an open prefix or suffix slot."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "\"required\":{\"rarity\":\"rare\",\"ilvl\":68,\"flags\":[\"is_influenced\",\"is_rare\"],\"open\":\"any\"}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: influence.exalt_min_item_level
+    statement: "An influenced Exalted Orb needs an item level of at least 68; below it no influence mod can be rolled (the lowest required level of any influence mod with a spawn weight is 68), so the gate and an empty pool coincide."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "\"required\":{\"rarity\":\"rare\",\"ilvl\":68,\"flags\":[\"is_influenced\",\"is_rare\"],\"open\":\"any\"}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+    value: 68
+
+  - id: influence.exalt_draws_from_that_influence_only
+    statement: "The mod an influenced Exalted Orb adds is drawn only from the mods of the orb's influence; ordinary mods of the base are not in this pool. The draw is the shared single add (item level, family exclusion, side capacity, spawn weight)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "case 'shaper':poec_simAddInfluence(2);craftDetail.add=poec_simRollAffix(2,null,null,null,1,!0,!0,!1,!1,!1,!1,null,!1)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: influence.exalt_catalyst_quality_ignored
+    statement: "Catalyst quality does not change the spawn weights of the influenced Exalted Orb (Craft of Exile's code still applies a catalyst weight there: stale)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hunter%27s_Exalted_Orb#Version_history
+    quote: "Quality from catalyst no longer affect the spawn weight thus the help text of this currency has also changed."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: influence.exalt_respects_metamods
+    statement: "An influenced Exalted Orb respects Prefixes/Suffixes Cannot Be Changed (open slots on the locked side may still be filled) and Cannot roll Attack/Caster Modifiers. The wiki's table names the Conqueror variants; Craft of Exile treats the Shaper and Elder orbs alike."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Respected, but open prefixes may be filled"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: influence.exalt_conqueror_respects_type_blocks_since_3_9_2c
+    statement: "The Conqueror Exalted Orbs respect Cannot roll Attack/Caster Modifiers since 3.9.2c."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hunter%27s_Exalted_Orb#Version_history
+    quote: "Fixed a bug where Conqueror's Exalted Orbs didn't respect the \"Cannot roll Caster Modifiers\" and \"Cannot roll Attack Modifiers\" modifiers."
+    patch_verified: "3.9.2c"
+    date_checked: 2026-10-31
+
+  - id: influence.state_is_on_the_item
+    statement: "The influence belongs to the item: removing or rerolling its influenced mods, Orb of Scouring included, keeps the influence and the pool's influence tags."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Influenced_item#Mechanics
+    quote: "Items retain their influences when modified, even if an Orb of Scouring is used."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: influence.one_normally_two_by_awakener
+    statement: "An item has one influence; two only through an Awakener's Orb (15 pairs). No orb of this family makes a second influence, because each refuses influenced items."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Influenced_item#Mechanics
+    quote: "An item can normally have one influence type at a time"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: influence.excludes_fractured_synthesised_eldritch
+    statement: "Fractured, synthesised and Eldritch-implicit items are not influenced and cannot be given an influence; an influenced item cannot be fractured or synthesised or take Eldritch currency."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Influenced_item#Mechanics
+    quote: "Fractured items, synthesised items and items with eldritch implicit modifiers are not considered influenced and cannot be given influences under any circumstances."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+# ===== dominance.yaml =====
+rules:
+  - id: dominance.gate
+    statement: "The Orb of Dominance works on a magic or rare body armour, boots, gloves or helmet that has at least two influenced mods (Craft of Exile gates on a rare flag and ilvl 68 only, without a class list)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Dominance
+    quote: "It can be used on Magic and Rare Body Armours, Boots, Gloves and Helmets with at least two influence modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: dominance.removes_one_upgrades_another
+    statement: "It removes one influenced mod and upgrades another one, whatever their influence types."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Dominance
+    quote: "It randomly upgrades one of these influenced modifiers and removes one other influenced modifier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: dominance.picks_uniform_remove_first
+    statement: "Among the eligible influenced mods (those not on a side locked by Cannot Be Changed) the removed mod is drawn uniformly, then the upgraded mod uniformly among the rest, so a given ordered pair has chance 1/(n(n-1)) and a given mod is upgraded with chance 1/n."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(nelig.length>=2){var rndpick=poec_rand(0,nelig.length,!0);var rchc=1/nelig.length;var rem=nelig.splice(rndpick,1);"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: dominance.upgrade_next_tier_top_becomes_elevated
+    statement: "An upgraded mod becomes the next better tier of the same mod; a top-tier mod becomes its Elevated version; an Elevated mod keeps its Elevated version and its values are rerolled."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Dominance
+    quote: "A tier 3 mod will be replaced with its tier 2 version, for example."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: dominance.elevated_step_has_no_item_level
+    statement: "Becoming an Elevated mod needs no item level."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Dominance
+    quote: "There is no item level requirement for a mod to become an elevated tier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: dominance.respects_side_locks_ignores_type_blocks
+    statement: "Prefixes/Suffixes Cannot Be Changed protect the locked side from being removed or upgraded; Cannot roll Attack/Caster Modifiers are ignored."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "modifiers that can't be changed (e.g. suffixes on an item with the \"Suffixes can't be changed\" mod) will not be affected."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: dominance.elevated_mods_only_by_dominance
+    statement: "Elevated mods are not in any random draw: the export holds 247 of them, every spawn weight 0, each in the same family as its ordinary tiers; only the Orb of Dominance (and an Awakener's Orb moving one) puts one on an item."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Elevated_modifier
+    quote: "These modifiers can only be crafted onto Rare Influenced items using a Orb of Dominance"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: dominance.elevated_mapping_is_coe_table
+    statement: "Which Elevated mod a top-tier mod becomes is read from Craft of Exile's table `poecd.maeven.bmods`, key `<base id>-<mod id>` (1,661 entries, helmet, gloves, boots and body armour bases only); the export has no link field (by name stem 216 of 247 map cleanly)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "useaffixes[aug].maven=poecd.maeven.bmods[usebase+\"-\"+useaffixes[aug].id]"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+# ===== influence_harvest.yaml =====
+rules:
+  - id: influence_harvest.two_crafts_and_costs
+    statement: "Two Harvest crafts concern influence; the value maps each to its Lifeforce cost (Primal, Sacred): Randomise the influence types of an influenced normal, magic or rare item and reforge it; Reforge an influenced rare with random mods including an influenced mod."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options
+    quote: "Reforge an Influenced Rare item with random modifiers, including a Influence modifier"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {randomise_influence: {primal: 1000, sacred: 0}, reforge_with_influence: {primal: 5000, sacred: 1}}
+
+  - id: influence_harvest.randomise_locks
+    statement: "Randomise Influence respects Prefixes/Suffixes Cannot Be Changed (open slots may be filled) but cannot be used if any mod on the locked side is influenced."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Respected, but usage is prevented if any prefix is influenced, and open prefixes may be filled"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: influence_harvest.reforge_guaranteed_draw_is_influenced_mod
+    statement: "The guaranteed mod of the influence reforge is the tagged-reforge draw with the tag Influence: a mod of an influence group of the item, drawn first by spawn weight among those that can roll, then the other mods as for a Chaos Orb (as harvest_reforge.guaranteed_draw_first_by_weight). Nothing can be drawn on an item without influence."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(tagName==\"inf\"){if(crsim_infgrps.indexOf(\"|\"+mods[j].id_mgroup+\"|\")>-1){hasATag=!0}}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: influence_harvest.tagged_reforges_respect_type_blocks
+    statement: "Tagged Harvest reforges respect Cannot Roll Attack/Caster Mods since 3.27.0; whether the influence reforge is one of them is not stated."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.27.0
+    quote: "Harvest reforge crafts which guarantee a certain modifier type, such as \"Reforge a Rare item with random modifiers, including a Lightning Modifier\" will now respect modifiers on items which restrict modifier types, such as \"Cannot Roll Attack Mods\"."
+    patch_verified: "3.27.0"
+    date_checked: 2026-10-31
+
+# ===== influence_beast.yaml =====
+rules:
+  - id: influence_beast.six_recipes
+    statement: "Six beast recipes add a mod to an item of one influence; the value maps the influence to the named beast, each also needing a Craicic Maw."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting
+    quote: "Add a Mod to a Shaper Item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {shaper: "Fenumal Devourer", elder: "Saqawine Blood Viper", crusader: "Farric Goliath", hunter: "Craicic Watcher", redeemer: "Fenumal Queen", warlord: "Fenumal Scrabbler"}
+
+  - id: influence_beast.uses_item_level
+    statement: "A beast recipe that adds a mod uses the item's item level, as other recipes that add mods do."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting
+    quote: "Other recipes that add modifiers use the item's item level as usual."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
