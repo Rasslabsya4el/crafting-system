@@ -5,6 +5,7 @@ description = "Crafting planner for Path of Exile: finds and prices the best cra
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
+    "numpy>=2.3",
     "pyyaml>=6.0.3",
 ]
 

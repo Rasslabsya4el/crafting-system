@@ -93,7 +93,8 @@ def test_risk_uses_only_the_standard_library_and_the_package():
             elif isinstance(node, ast.ImportFrom) and node.level == 0:
                 names = [(node.module or "").split(".")[0]]
             for name in names:
-                if name not in sys.stdlib_module_names and name != "crafting_system":
+                # numpy: the budget DP is vectorised (ADR-0010, ticket #82)
+                if name not in sys.stdlib_module_names and name not in ("crafting_system", "numpy"):
                     outside.setdefault(path.name, set()).add(name)
 
     assert outside == {}
