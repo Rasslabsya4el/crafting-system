@@ -32,8 +32,8 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531135766
     quote: "(does one fossil boost a mod once, wiki, or once per matching tag, Craft of Exile). Decision: Craft of Exile's `poec_getModdedWeight`"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: fossils.block_wins
     statement: If any socketed fossil has a tag of weight 0 that the mod carries, the weight of the mod is 0 whatever boost another fossil gives it. Opposing fossils (Scorched with Frigid) can be socketed together.
@@ -48,8 +48,8 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
     quote: "D11 Corroded/Prismatic bypass a second fossil's single-tag factor (fossils OPEN-02)"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
     value: {bleed: [physical, ailment], poison: [chaos, ailment]}
 
   - id: fossils.weights_exact
@@ -57,8 +57,8 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
     quote: "D13 fossil weights kept as exact fractions (fossils OPEN-09)"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: fossils.opulent_no_tagless
     statement: An Opulent Fossil removes every mod that has no tag at all (empty `implicit_tags`) from the pool, on top of its boost of the tag `drop`.
@@ -82,8 +82,8 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
     quote: "Sanctified multiplies the whole weight"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   # The fossils with their own rule.
   - id: fossils.special_fossils
@@ -148,8 +148,8 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
     quote: "D12 Glyphic base weight 1000 (fossils OPEN-07)"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
     value: 1000
 
   - id: fossils.forced_mod_counts_in_total
@@ -157,24 +157,24 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
     quote: "D4 retained, locked, fractured and forced mods count inside the total"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: fossils.forced_mod_ignores_item_level
     statement: The forced mod of a fossil is put on the item whatever its required level, as the forced mod of an essence is (Craft of Exile hands the Glyphic mod to the same reroll function the essences use).
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
     quote: "An essence's forced mod applies even above the item level"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: fossils.tangled_pair_uniform
     statement: A Tangled Fossil applies one of the 420 outcome records of `fossils.json` (a boost of x30 on one tag and a block of another), each with the same probability. It may pick a tag that another fossil boosts (the terms add) or blocks (the block wins).
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
     quote: "Tangled's pair uniform over the 420 `RandomFossilOutcome` records of `fossils.json`"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: fossils.tangled_adds_no_mods
     statement: Since 3.16.0 a Tangled Fossil adds no mods to the pool, so the legacy `added_mods` and `corrupted_essence_chance` of its record are ignored.
@@ -189,24 +189,24 @@ rules:
     source_kind: official
     url: https://www.pathofexile.com/forum/view-thread/3985332
     quote: "Fractured Fossils now Fracture a random Modifier, and cannot be used on Fractured and Influenced items."
-    patch_verified: "3.29.0"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: fossils.fractured_fossil_refused_on_fractured_or_influenced
     statement: A Fractured Fossil cannot be used on an item that has a fractured mod or an influence.
     source_kind: official
     url: https://www.pathofexile.com/forum/view-thread/3985332
     quote: "Fractured Fossils now Fracture a random Modifier, and cannot be used on Fractured and Influenced items."
-    patch_verified: "3.29.0"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: fossils.fractured_mod_uniform
     statement: The mod a Fractured Fossil fractures is uniform among all the explicit mods of the finished item, a forced mod included; the fossil weights do not influence the choice. Taken from the Fracturing Orb rule (uniform over every explicit mod).
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
     quote: "D6 Fracturing Orb uniform over every explicit affix, crafted mods and metamods included"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   # Resonators.
   - id: fossils.chaotic_resonator_sockets

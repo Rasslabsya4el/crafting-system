@@ -1,26 +1,72 @@
 name: CI
 
+# The whole suite with the real game data, on Ubuntu and Windows, in 8 shards each (16 jobs, ticket #165); a shard runs
+# 4 pytest processes at once. Tests are split in whole groups (a module, or a module and one route), so a route is solved
+# once. See docs/ci.md.
+# `CI summary` is the one check to wait for: green only when every shard of both systems passed.
+
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
-    name: pytest (${{ matrix.os }})
+    name: tests (${{ matrix.os }}, shard ${{ matrix.shard }}/8)
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: ./.github/actions/real-data
+      - name: Run shard ${{ matrix.shard }} of 8 on 4 processes
+        run: >
+          uv run --no-sync python .github/scripts/run_shard.py
+          --shard ${{ matrix.shard }}/8 --procs 4 --out out --timeout 25
+          -- -p no:cacheprovider -q --durations=10 --shard-durations tests/shard_durations.json
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
         with:
-          version: "0.13.6"
-          enable-cache: true
-      - run: uv sync --locked
-      - run: uv run pytest
+          name: results-${{ matrix.os }}-${{ matrix.shard }}
+          overwrite: true  # a re-run of one failed shard replaces its earlier result
+          path: out/
+          if-no-files-found: warn
+
+  summary:
+    name: CI summary
+    needs: test
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: results-*
+          path: results
+      - name: Totals, skips, and the shard check
+        run: >
+          python3 .github/scripts/ci_summary.py results --shards 8 --systems ubuntu-latest,windows-latest
+          --min-tests 1000 --job-result "${{ needs.test.result }}" --merged-durations merged/shard_durations.json
+      - name: Keep the measured seconds (commit them as tests/shard_durations.json to rebalance)
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: shard-durations
+          overwrite: true
+          path: merged/shard_durations.json
+          if-no-files-found: ignore

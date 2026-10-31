@@ -54,3 +54,10 @@ no listing-age window, the mean of the 5 cheapest of the first 10 listings. `sta
 Each price sits in `../../prices/routes-allflame-2026-10-31.json` with its date, listing count, query and query hash;
 `tests/test_prices_start_items.py` replays the recording against it. The instant-buyout cheapest listings of any age
 are often months old (July and August); that is the #133 rule, not a mistake of the recording.
+
+## The full stat list (#165), 2026-10-31 12:39 UTC
+
+- `stats_full.json.gz`: the whole `GET /api/trade/data/stats` answer in the shape of the trade cache file
+  `<cache dir>/trade/stats.json` (`fetched_at`, `stats`), gzipped. The route page tests of
+  `test_cli_routes_real.py` unpack it into a temporary cache folder, so the buy step's trade link is
+  compared against the same stat list on every machine and CI needs no network for it.

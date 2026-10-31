@@ -38,7 +38,7 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
     quote: "D6 Fracturing Orb uniform over every explicit affix, crafted mods and metamods included (Fracturing OPEN-01…04)"
-    patch_verified: "3.29.0.3"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: fracturing_orb.cost

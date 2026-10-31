@@ -1,0 +1,35 @@
+name: Real game data
+description: >
+  Install the locked dependencies and put the pinned repoe-fork export in CRAFTING_CACHE_DIR (cached by the
+  pin, fetched with `data fetch` on a miss, checked against the pin). Run after actions/checkout.
+
+runs:
+  using: composite
+  steps:
+    - name: Point the cache directory at the runner's temp folder
+      shell: bash
+      run: echo "CRAFTING_CACHE_DIR=$RUNNER_TEMP/crafting-cache" >> "$GITHUB_ENV"
+    # The key holds a hash of the pin: a new pin is a new key, so the data is fetched again.
+    - id: data
+      uses: actions/cache@v6.1.0
+      with:
+        path: ${{ runner.temp }}/crafting-cache
+        key: repoe-fork-${{ runner.os }}-${{ hashFiles('src/crafting_system/data/PIN.json') }}
+    - uses: astral-sh/setup-uv@v10.3.3
+      with:
+        version: "0.13.6"
+        enable-cache: true
+    - shell: bash
+      run: uv sync --locked
+    - name: Fetch the pinned game data (only on a cache miss)
+      if: steps.data.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        for attempt in 1 2 3 4 5; do
+          uv run --no-sync python -m crafting_system.data fetch && exit 0
+          echo "fetch failed (attempt $attempt)"; sleep $((attempt * 15))
+        done
+        exit 1
+    - name: Check the game data against the pin
+      shell: bash
+      run: uv run --no-sync python -m crafting_system.data verify

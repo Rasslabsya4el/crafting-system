@@ -32,6 +32,36 @@ A bench-crafted mod that changes what other actions may do to the item, such as 
 **Fractured mod**:
 A mod made permanent in its slot by the Fracturing Orb.
 
+**Eldritch implicit**:
+An implicit of The Searing Exarch (the prefix side) or The Eater of Worlds (the suffix side), added to a body armour, boots, gloves or helmet by an Ember or an Ichor or moved by an Orb of Conflict (ADR-0025).
+_Avoid_: Eldritch mod (an implicit is not an explicit mod)
+
+**Eldritch grade**:
+The strength of an Eldritch implicit, 1 Lesser to 6 Perfect, 0 for none; the reverse of `Tier`, where tier 1 is the best. Grades 5 and 6 come only from the Orb of Conflict.
+_Avoid_: Eldritch tier
+
+**Dominance**:
+The Eldritch side with the higher grade, or the only side that has an implicit; equal grades give none. Derived from the grades, never stored. The Eldritch Chaos, Exalted and Annulment Orbs act on the dominant side only.
+_Avoid_: dominance flag; Orb of Dominance (that is an influence craft)
+
+**Veiled mod**:
+A placeholder that takes a prefix or suffix slot, has no family and does nothing until it is unveiled (ADR-0026). Only one comes from the Veiled Chaos and Veiled Exalted Orbs.
+_Avoid_: hidden mod
+
+**Unveil offer**:
+The up to three mods, one per family, that unveiling shows for a veiled mod. It is drawn when the unveil action is taken and stays fixed.
+_Avoid_: unveil roll, options
+
+**Offer state**:
+A state in which an unveil offer is drawn and not yet picked. Its only actions are Pick(k), one per shown mod.
+
+**Unveil block**:
+A bench craft chosen because its family is in the unveil pool: the family leaves the offer.
+_Avoid_: veil block
+
+**Elevated mod**:
+The stronger version of a top-tier influenced mod, reachable only through the Orb of Dominance; it has spawn weight 0 and the family of its ordinary tiers.
+
 **Pool**:
 The mods an action can add to a given item at a given moment, each with its weight.
 _Avoid_: modpool
@@ -68,6 +98,25 @@ The five answers every action gives, so that a new one is one file: its label, i
 **Action kind**:
 A family of actions defined together and registered by the module that defines them: every essence, every bench craft, every fossil set. A kind may be left out of the planner's offers while staying in the catalog.
 _Avoid_: action type, action class
+
+**Influenced Exalted Orb**:
+One of the six orbs (Shaper's, Elder's, Crusader's, Hunter's, Redeemer's, Warlord's) that add their influence and one mod of it to a rare item with no influence. The mod comes from that influence's mods only (ADR-0030).
+_Avoid_: Conqueror's Exalted Orb (that names four of the six)
+
+**Catalyst quality**:
+The type and percent (to 20%) that a catalyst puts on a ring, amulet or belt. It scales matching modifier values and changes no odds, so it is a finish cost and not part of the compressed state (ADR-0029).
+_Avoid_: quality (an item has other kinds, such as the flat quality of gems)
+
+**Beast level**:
+The monster level of the beast that gates the mod a side-swap beast adds, instead of the item level. A setting, default 83, when a target names none.
+
+**Harvest add/remove**:
+A Harvest craft that adds a mod of a tag and then removes another random mod (ADR-0030).
+_Avoid_: Harvest augment
+
+**Swap**:
+A Harvest craft that changes a resistance or damage mod to another element. A resistance swap keeps the tier and rerolls the value inside it (ADR-0030).
+_Avoid_: Harvest reroll
 
 **Catalog**:
 The list of the actions of every registered kind that can apply to an item. The planner builds its offers from it.
@@ -199,6 +248,10 @@ The kind of source behind an admitted rule: official, wiki, datamined, large-sam
 **Open question**:
 A mechanics question no admitted rule answers; the actions and branches that depend on it are invisible to the solver until it is settled.
 _Avoid_: unknown, TODO
+
+**Approximate input**:
+An admitted rule whose only support is Craft of Exile or a fit to a sample, marked `approximate`. Every answer lists those that the actions of its policy read (ADR-0028); this is separate from the certified gap, which measures the solver's merge.
+_Avoid_: guess, assumption
 
 **Ruleset**:
 The one game patch and mode that all data and rules are pinned to; now PoE 1 3.29.3.3, ordinary.
