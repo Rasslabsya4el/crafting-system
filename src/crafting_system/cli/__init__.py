@@ -11,7 +11,10 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
 * `build_report(plan, data)`, `render_text(report)`, `policy_document(report)`: the outputs.
 * `verify(data, plan)`: the simulator against the computed mean (a normal-approximate interval).
 * `weight_share`, `start_shares`: the guide's single-draw weight shares from the pool builder.
-* `main(argv)`: the command.
+* `parse_route`, `load_route`, `evaluate_route`: a given route (rules in YAML) read and evaluated as a fixed
+  policy with `risk.evaluate`; `--route ROUTE.yaml` prints it next to the policy, first divergence and gaps included.
+* `main(argv)`: the command, and `main(["benchmark", "--out", DIR])`: the solver and the given route of every
+  benchmark route, the published odds, machine info and run times, written to `benchmark.json`.
 
 Costs are in Chaos Orbs. The click cost of a Harvest reforge is its lifeforce price times the
 count in the rules registry (`harvest_reforge.lifeforce_cost`); the start item costs what the price
@@ -23,23 +26,34 @@ from ._main import main
 from ._offers import DroppedOffer, Offer, PricedOffer, default_offers, price_offers
 from ._plan import Plan, PlanError, StartPrice, make_plan
 from ._report import Report, build_report, policy_document, render_text
+from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
 from ._shares import WeightShare, start_shares, weight_share
 from ._verify import Verification, verify
 
 __all__ = [
+    "Divergence",
     "DroppedOffer",
+    "Gap",
     "Offer",
     "Plan",
     "PlanError",
     "PricedOffer",
     "Report",
+    "Route",
+    "RouteError",
+    "RouteResult",
+    "Rule",
     "StartPrice",
     "Verification",
     "WeightShare",
+    "When",
     "build_report",
     "default_offers",
+    "evaluate_route",
+    "load_route",
     "main",
     "make_plan",
+    "parse_route",
     "policy_document",
     "price_offers",
     "render_text",

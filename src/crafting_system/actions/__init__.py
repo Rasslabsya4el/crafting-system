@@ -1,8 +1,17 @@
 """Primitives, each with its exact outcome distribution and sampling on a concrete item. May import only: data, rules, items.
 
-Three actions so far, `ChaosOrb()`, `HarvestReforge("lightning")` and `ApplyEssence("Shrieking Essence
-of Spite")` (an essence is named as in the game data or by its record id). Each has one method,
+Three random actions so far, `ChaosOrb()`, `HarvestReforge("lightning")` and `ApplyEssence("Shrieking
+Essence of Spite")` (an essence is named as in the game data or by its record id). Each has one method,
 `outcomes(data, item) -> Outcomes`, and `Outcomes` is the whole result.
+
+The crafting bench has two deterministic ones, `BenchCraft(mod_id)` (one per bench option that adds a
+crafted mod, listed by `bench_crafts(data)`) and `RemoveCraftedMods()`. Each has `outcomes(data,
+item) -> BenchOutcomes`, with the same `chance_all`, `distribution` and `sample` and one outcome of
+probability 1, and `cost(data)`, the price as `CurrencyCost(currency name, count)`. A bench craft
+is refused (`NotApplicableError`) on a corrupted item, for an item class the option is not offered for,
+below the mod's required item level, with a family already on the item, on a full side, and on an
+item that already holds a crafted mod; a normal item and an item holding the multimod are
+`OutOfScopeError`. Remove Crafted Mods removes every crafted mod, metamods included.
 
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
@@ -46,6 +55,7 @@ The pool a draw uses is `build_pool(data, item)`: the mods that could be drawn n
 family, with exact `Fraction` weights.
 """
 
+from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts
 from .chaos import ChaosOrb
 from .draw import Outcome
 from .errors import ActionError, NotApplicableError, OutOfScopeError
@@ -57,7 +67,10 @@ from .pool import PoolFamily, PoolMod, build_pool
 __all__ = [
     "ActionError",
     "ApplyEssence",
+    "BenchCraft",
+    "BenchOutcomes",
     "ChaosOrb",
+    "CurrencyCost",
     "HarvestReforge",
     "NotApplicableError",
     "Outcome",
@@ -65,5 +78,7 @@ __all__ = [
     "OutOfScopeError",
     "PoolFamily",
     "PoolMod",
+    "RemoveCraftedMods",
+    "bench_crafts",
     "build_pool",
 ]
