@@ -61,6 +61,7 @@ class _Prepared:
     outcomes: ActionOutcomes
     origins: Origins
     signatures: tuple[Hashable, ...] | None = None
+    splits: "tuple[_Split, ...] | None" = None  # the split of every part, read once for `kernel` and `kernel_key`
 
 
 @dataclass(frozen=True)
@@ -161,6 +162,49 @@ class Abstraction:
             )
         self._check_enabled(action)
         return self._mixture_kernel(state, self._prepared(state, action))
+
+    def kernel_key(self, state: CompressedState, action: Action) -> Hashable:
+        """A key of the kernel of `action` on `state`, cheaper than the kernel: equal keys, equal kernels.
+
+        `kernel_key(state, a) == kernel_key(state, b)` implies `kernel(state, a) == kernel(state, b)`
+        exactly (the converse does not hold: two kernels can be equal under different keys), so of the
+        actions that share a key at a state only one needs offering. It builds no state and no integer
+        weights, which is where the time of `kernel` goes; it makes the same checks (state width,
+        enabled, a fixed result that fractures) and raises what `kernel` raises before the distribution.
+
+        What the kernel reads is, per part of the outcomes, its probability `share`, its pool signature
+        (the cached label distribution; `("fixed",)` for a fixed result) and its split (flags, fractured
+        mods, kept and new slots, the status of the mods that stay); parts add up in a dict, so their
+        order does not matter and equal parts count (a multiset). Not in it: the `state` itself (the
+        kernel reads it only through the item given to the action, which the splits already carry),
+        and `_Split.new_ids`, which only names the new mods (the forced mods of two essences can differ
+        in id and give one kernel). A result that FRACTURES also reads the pool of each part (the
+        fractured mod is spread over its families; `_add_fractured`) and the forced mod, so for such a
+        part the key adds `part.forced` and the families of the pool with their mod ids and weights.
+        """
+        if len(state.status) != len(self.goal.leaves):
+            raise ValueError(
+                f"the state has {len(state.status)} statuses but the goal has {len(self.goal.leaves)} leaves: "
+                "it comes from another abstraction"
+            )
+        self._check_enabled(action)
+        prepared = self._prepared(state, action)
+        outcomes = prepared.outcomes
+        if outcomes.fractures and any(isinstance(part, Fixed) for _, part in outcomes.components):
+            raise ValueError("a fixed result cannot fracture a mod: only pool draws do (a Fractured Fossil's)")
+        parts: Counter = Counter()
+        for (share, part), signature, split in zip(
+            outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
+        ):
+            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status)
+            if outcomes.fractures:
+                pool = tuple(
+                    (family.family, tuple((entry.mod.id, entry.weight) for entry in family.mods))
+                    for family in part.pool
+                )
+                key = (*key, part.forced, pool)
+            parts[key] += 1
+        return (outcomes.fractures, frozenset(parts.items()))
 
     def _check_enabled(self, action: Action) -> None:
         if self._kinds.reads_junk(action) and action not in self._kinds.actions:
@@ -380,8 +424,7 @@ class Abstraction:
             raise ValueError("a fixed result cannot fracture a mod: only pool draws do (a Fractured Fossil's)")
         signatures = self._signatures_of(prepared)
         result: dict[CompressedState, Fraction] = defaultdict(Fraction)
-        for (share, part), signature in zip(outcomes.components, signatures):
-            split = self._split(part.retained, prepared.origins)
+        for (share, part), signature, split in zip(outcomes.components, signatures, self._splits_of(prepared)):
             if isinstance(part, Fixed):
                 self._add_fixed(result, share, split)
             elif outcomes.fractures:
@@ -389,6 +432,14 @@ class Abstraction:
             else:
                 self._add_drawn(result, share, part, signature, split)
         return dict(result)
+
+    def _splits_of(self, prepared: _Prepared) -> tuple[_Split, ...]:
+        """The split of every part of the outcomes (cached on `prepared`)."""
+        if prepared.splits is None:
+            prepared.splits = tuple(
+                self._split(part.retained, prepared.origins) for _, part in prepared.outcomes.components
+            )
+        return prepared.splits
 
     def _split(self, retained: Item, origins: Origins) -> _Split:
         """Read a part's retained item back into state terms.
