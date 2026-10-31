@@ -46,7 +46,8 @@ Research ticket [#90](https://github.com/Rasslabsya4el/crafting-system/issues/90
 | A4 | The receiver is reforged as a rare with both influences. Receiver keeps base type, item level, sockets, links, quality and enchantments. | DM description; W-awk |
 | A5 | One influenced mod from each input is kept (tier kept, value rerolled); if an input has several, one is picked at random. Craft of Exile picks uniformly among the valid (receiver mod, donor mod) pairs. | W-awk; COE `poec_simAwaken` (`poec_rand(0,nvcombs.length)`) |
 | A6 | If the two kept mods share a mod group, only one survives. **Which one is disputed**: the wiki says "one will be discarded at random"; Craft of Exile always keeps the receiver's (`poec_simRerollItem`, the `mconflict` branch); a March 2020 player report lost the receiver's mod. In Craft of Exile the donor's influence is still added when its mod is dropped. | W-awk; COE; the prototype's Q20 |
-| A7 | All other mods are rerolled "as if using a chaos orb". Craft of Exile draws the Chaos total (4/5/6 = 8:3:1) minus the kept influenced mods, the same convention as `chaos_orb.kept_mods_count_in_total`. | `basics.html` line 89; COE `prmods++` |
+| A6b | Sources for A6 beyond the wiki and Craft of Exile (researcher sub-answer, 2020 Reddit/Fandom, none re-read by me): u/Naftah, 2020-01-08, a donor with Assassin's Mark and a ring with Frostbite on hit gave a ring with only Frostbite ("I only received the frostbite on hit"; this predates the 3.10 rule that made the curse mods mutually exclusive and does not say which item was the receiver); the Fandom wiki of 2020-01-03 already says "one will be discarded at random". Nobody reports a sample with donor and receiver swapped; no source says the receiver always survives or the donor always survives. | R-2020 |
+| A7 | All other mods are rerolled "as if using a chaos orb". Craft of Exile draws the Chaos total (4/5/6 = 8:3:1) minus the kept influenced mods, the same convention as `chaos_orb.kept_mods_count_in_total`. The researcher's reasoning that the kept mods are "retained prefixes/suffixes, not bonus slots" is an inference from the item text, not a source. | `basics.html` line 89; COE `prmods++` |
 | A8 | Mastercrafting metamods (Prefixes/Suffixes Cannot Be Changed) are ignored by the reforge (since 3.9.1b). | W-awk |
 | A9 | Mod groups made mutually exclusive since 3.10 (curse on hit on rings, "physical taken as" elements) and with multiple groups per mod in 3.19. Two such mods cannot be merged. | W-awk version history |
 | A10 | An imprint made before the orb restores the receiver, never the donor. | W-awk, W-imp |
@@ -128,6 +129,13 @@ Found in the second pass; the first version of this note missed it. In 3.29 (All
 
 Consequence for the model: NNN padding is an ordinary, cheap-to-model action in 3.29 (add a mod that counts in the pool and never transfers), distinct from the dead exclusive padding. It lifts the pooled count without lifting the kept mods, so a planner that only pools "real" mods under-values doubling-with-padding routes (R27 uses a Pantheon suffix). Whether the pooled count of a padded side obeys the same table is only supported by the counts quoted above (no controlled sample). Ducat prices and sources (a "Changeling Ducat", sulphur) are market inputs for the price layer.
 
+### 3.27 and 3.28 reports (second pass)
+
+- 3.27, `1pf2xmz` ("3.27 recombinator guide?", u/Thuking, 2025-12-05): u/whatisagoodnamefort, "exclusive modifiers only count as 1 mod now so stacking them as done in 3.25 doesn't work anymore"; 2p+2s by two 1p/1s items is "either a 1/4 or 1/9" (an estimate from the table, no sample). u/zygscarry in `1qx8y2z` (2026-02-06) says the same. Agrees with the 3.26 notes: no change.
+- 3.27, `1p2knma` (u/yogghy, 2025-11-21, removed by the moderators under their misinformation rule): a T1 spell damage prefix (weight 40) against T1 spell block (1000) and block chance (500) returned the bad base ten times in a row and gave no three-mod result in about 20 combinations; replies: "Just bad rng lad". Logged as an anecdote that points toward low weights being disfavoured; it also contradicts a 50/50 base choice, so luck is the likelier reading.
+- 3.28, `1tbujal` (u/anraiki, r/PathOfExileBuilds, 2026-05-13, 6 comments): "3.26 keeps coming up as a great Recombinator foot note but changes were done after that league. All craft bench mods (except Meta crafting mods such as Cannot Roll Attack) are now coming up as 'Upgraded' or 'of Crafted'", with the advice not to bench-craft a mod; "Elevated mods were exclusive mods but not the non-elevated version"; and "you want to clean the item of any unwanted mods because of the 'weighting'", e.g. "x% increased Lighnting Damage" is "highly likely" to be chosen over a rare influenced mod. His flow chart (2p/0s + 0p/2s gives 2p/2s 10.8%, 2p/1s 22.1%, 1p/2s 22.1%, 1p/1s 44.5%; 2p/2s + 2p/2s gives 3p/3s 9.6%, 3p/2s 18.3%, 34.8% back to 2p/2s; 3p/2s + 2p/3s 32.5%) is, in his words, "mostly just regurgitating statistically-typed into a flow chart": calculated from the count table, not measured, no raw log. Cost data in the comments: "I paid 15 divine for a 5 million gold rota", about "3m gold" for the project, and "I dusted 3 Lioneyes Bow (1m+ dust each for about 200c)".
+- 3.29: section above. No post reports a new count table in 3.27, 3.28 or 3.29.
+
 ### Selection of which mods: the unresolved rule
 
 What the sources say, in date order:
@@ -139,14 +147,14 @@ What the sources say, in date order:
 | 2024-08-21, first posted version of R325 (archive snapshot; 8 days after 3.25.1) | "In the case where there are more eligible mods than the number of available mod 'slots', mod weighting is factored in. The specifics of this formula are not currently known, as much of my 'weighted' data was collected in standard." Also: "Mod weighting also does not seem to factor into the final number of modifiers"; tiers "do not seem to be a factor (thanks to testing from Forgotten Arbiter)". The author's tier test: "t9 life versus t1 life … only did 20 samples" (u/Butsicles, 2024-08-22). | R325 |
 | 2024-08-21, same thread, comment | u/Butsicles: "Affix weights matter, but you want to avoid situations where they do, since those are definitely not in your favor for most valid use cases (e.g. +1 all spell skill gems, t1 flat ele, t1 % phys, etc.)". | R325 |
 | 2024-08-22/23, same thread | u/Xyzzyzzyzzy asked about the league's "rarer modifiers are more likely to be retained" upgrade; u/Butsicles 2024-08-22: the "rare mods are much more likely to be retained" effect "is extremely difficult to calculate … we kind of ignore mod weighting with the way we set up recombinations"; "you would have to create very similar items and do tens to hundreds of recombs to even get a sense". u/Monetokuzuma 2024-08-23: the old line (equal chance) "was with regards to old recomb mechanics, now they still (seemingly) factor in weight for normal 1+1 recombinations". | R325 |
-| 2024-08, sheet tab "Standard recombs on gloves" | In-league data by "PYCKS (reddit)": "when testing recombing chaos res (250 weight) vs other res's (1000) weight. chaos res was retained at a rate of 29% and the others at a rate of 75%." Context and N are not given in the tab. | sheet gid 49869311 |
+| 2024-08-26, same thread, comment `lk007kc` | u/Butsicles, asked about the league upgrade: "We assume the rarer retained line only works when there's multiple mods. It affects their weights relative to each other (we have evidence for this). So no, it doesn't change your odds to keep 1 mod when there's just one since that probability is fixed (table 1)." So the upgrade (an effect on the relative weights of rival mods) was real in the league; the wiki says the upgrade was "likely removed" with the 3.26 bench ("Kingsmarch starts fully-upgraded, but … were likely removed"). Whether any such tilt applies to the 3.26+ bench is **not established**: the 3.25.1 note may have made a similar tilt the default, and the author's 3.26 statements below still describe low-weight mods as disadvantaged. | R325 |
+| 2024-08, sheet tab "Standard recombs on gloves" (gid 49869311) | (a) The author's own Standard test (the tab: "Why gloves? Every mod is t1 except chaos res. Easily testable if mod weight affects selection odds"), summary cells at rows 9-12: chaos resistance (weight 250) was kept in **7 of 15 two-mod results, 47%** (cell "Pct Chaos … 0.4667"; one-mod results: 1 of 1). That figure lies between the two boundary rules for this setup (about 29% under α = 1 and about 67% under α = 0, per the checker's calculation, which I did not redo), and **N = 15 cannot tell them apart**. (b) A separate excerpt in the same tab, "Additional data from PYCKS (reddit) (in-league data)": "when testing recombing chaos res (250 weight) vs other res's (1000) weight. chaos res was retained at a rate of 29% and the others at a rate of 75%"; its N and pool sizes are not given, and I could not reproduce the 29%/75% from the visible cells. So the sheet holds one small own test (47%, N 15) and one unsourced excerpt (29% against 75%). | sheet gid 49869311 |
 | later edit of R325 (cached copy, edits dated 08/21 and 08/23/2024; not in the archive snapshot) | "In current league, the weights of these modifiers is also a factor, where modifiers with higher weights are more likely. This is probably to prevent players from making extremely overpowered items too easily." | R325 cached |
 | 2025-06-17, 3.26 PSA | u/Butsicles: "I would approach recombs with some moderate caution for low weight mods until more testing is done"; PSA text: "we previously didn't have to figure out the relative 'save' chance for low weight modifiers". 2025-06-18: "I have a shaking feeling that low tier recombinations were changed but it might just be bad luck. For reference my friend failed 17 33% combines in a row with merciless + flaring … Higher weight combines seem to follow the trend I described." | R326 |
 | 2025-06-20/2025-07-04, 3.26 analysis thread | u/Butsicles: for the exclusive trick "odds greater than 50%, but this is variable depending on mod weighting … For low weights it will be below this number"; worked example uses weights as proportional: "fire spell has 250, dot multi has 300. We assume all crafted mods have 1000 … If we assume the weights are not modified in any way … 33% + 66% * ~1/4.5". u/Itchy_Egg5520 (2025-07-04): 21 combines of +1 fire (250) with t2 fire dot multi (70): "lost fire dot multi 12 times, but lost +1 fire only 2 times" (small N, uncontrolled). u/statistically-typed (2025-06-20): "I wouldn't recommend doing recombs with low weight affixes". | R326 |
 | now | "Higher weight modifiers are more likely to be selected, although the exact formula is unknown." | W-rec |
-| 2024-08-13, 3.25.1 (official) | "rarer Modifiers now have a much higher chance to be selected for the resulting item than before." | N-ver 3.25.1 |
 
-Reading, after the first-hand check: the author's working model, in every thread from 2024-08 to 2025-07, is that a mod's chance to be kept rises with its spawn weight (he computes with weights as proportional shares, and warns that rare/T1 targets "are definitely not in your favor"). The only measured contrast (chaos resistance 250 vs 1000: 29% against 75%) and the small 3.26 samples point the same way. Nobody states a formula, nobody has a controlled sample (the author: "hundreds more data points" needed), and the 3.25.1 note says only "than before". What the author never says is that rare mods are kept more often than common ones; nobody reports it. Weighted data in the first post came "mostly from standard", i.e. a different rule set than the league one, so the weight statements are weaker than the count table (N 217-424 per row).
+Reading, after the first-hand check. Direction: the author's working model in every thread from 2024-08 to 2025-07 is that a mod's chance to be kept rises with its spawn weight (he computes with weights as proportional shares and warns that rare/T1 targets "are definitely not in your favor"), the wiki says the same, and the small 3.26 samples point the same way; nobody reports rare mods kept more often than common ones. Size: unknown. His own gloves test (47%, N 15) sits between equal chance and weight-proportional, the 29%/75% excerpt has no N, and nobody has a controlled sample ("hundreds more data points" needed, the author, 2024-08-21). History: **no source gives the rule before 3.25.1** (the only older statement is the Sentinel one, "Mod weights were not a factor here", for a different system). Two documented effects tilt toward rare mods: the Kingsmarch upgrade of 3.25.0 ("affects their weights relative to each other (we have evidence for this)", u/Butsicles, 2024-08-26) and the 3.25.1 note ("a much higher chance … than before"). The guide's data were collected across 3.25.0 and 3.25.1 (rows are not dated), so its weight statements may describe a mixture. What the sources do not do is say how far either tilt went. The honest summary is therefore: rare mods are disfavoured relative to equal chance, by an unknown amount that may be smaller than weight-proportional because of those two tilts. The weighted data in the first post came "mostly from standard", so the weight statements are weaker than the count table (N 217-424 per row).
 
 ## 4. Predictable mode
 
@@ -157,13 +165,15 @@ Introduced in 3.26.0: "decide which modifiers on the two items … (with a chanc
 - PoE 2 formula (patch 0.2.0, Butsicles, part 1): each selected mod adds a success contribution proportional to the summed spawn weight of its own tier and every better tier on the other base, divided by the total weight on that side, each contribution capped at 50%; the PoE 2 sheet generalises it to more mods. Constants are base-specific, and sheet and post both carry version warnings (0.2 and 0.4). **Nobody has published PoE 1 constants.** The prototype's `recombinators_selected.md` already holds the sheet's multi-mod formula.
 - Isolating a low-tier mod with a bad base: roughly 50.5-51% success (Butsicles, one setup).
 
+**Differences by class (armour, weapon, jewellery).** Not found for predictable mode in PoE 1: no source says the mode differs by class, and the PoE 2 sheet holds base-specific constants (boots 10, a sample ring 21) that nobody has measured for PoE 1. For unpredictable mode the classes differ only through the output caps and special bases (rule C9) and the NNN attribute rules (a mod bound to strength bases cannot sit on a dexterity base). A staff guide of 2026-08-06 (u/Risxas, thread `1vgzcy1`, cited by the researcher, not read by me) says "Always use unpredictable recombination here, predictable recombination is terrible and a bait" for a three-prefix staff, an opinion with no trial count.
+
 For the planner: this is a different action (success or total loss, base choice weighted), not a variant of the unpredictable one. No benchmark route needs it. Recommendation in question 3.
 
 ## 5. The selection rule and ADR-0012's interval
 
-**Finding.** ADR-0012 defines the admissible rules as those "under which the chance to keep a mod does not fall as its spawn weight falls (rarer mods are kept at least as often as common ones; … equal chance is the boundary)". The evidence in section 3 says the opposite direction: retention does not fall as weight rises, flattened since 3.25.1. Equal chance is still a boundary, but it is the *optimistic* boundary for a rare target mod, not the pessimistic one.
+**Finding.** ADR-0012 defines the admissible rules as those "under which the chance to keep a mod does not fall as its spawn weight falls (rarer mods are kept at least as often as common ones; … equal chance is the boundary)". The evidence in section 3 says the opposite direction: retention does not fall as weight rises, by an unknown amount (two documented tilts toward rare mods, the 2024 league upgrade and the 3.25.1 note, may have made it weaker than weight-proportional). Equal chance is still a boundary, but it is the *optimistic* boundary for a rare target mod, not the pessimistic one. The official 3.25.1 line ("rarer Modifiers now have a much higher chance … than before") is compatible with a rule that favours rare mods outright (α < 0), but every later statement by the author contradicts that for 3.25.1 and 3.26; I do not admit α < 0, and say so as a risk in question 5.
 
-**Proposed family** (to settle in the grill): successive draws without replacement from the eligible pool of one side, `P(next = m) ∝ weight(m)^α`, with mod-group removal after each pick, α in [0, 1]. α = 0 is equal chance (the old prototype assumption, Craft of Exile's code); α = 1 is weight-proportional (the pre-3.25.1 rule and the literal reading of the wiki). A route's interval is the minimum and maximum of its success probability over a grid of α (the extreme need not sit at an end: for a set mixing rare and common targets it can be interior). The weights are the spawn weights of the mod on the chosen base (`mods.json`); for the exact weight used with duplicate tiers, see open point 3.
+**Proposed family** (to settle in the grill): successive draws without replacement from the eligible pool of one side, `P(next = m) ∝ weight(m)^α`, with mod-group removal after each pick, α in [0, 1]. α = 0 is equal chance (the old prototype assumption, Craft of Exile's code); α = 1 is weight-proportional (the literal reading of "higher weight, more likely", and how the author computes; no source says it was the rule before 3.25.1). A route's interval is the minimum and maximum of its success probability over a grid of α (the extreme need not sit at an end: for a set mixing rare and common targets it can be interior). The weights are the spawn weights of the mod on the chosen base (`mods.json`); for the exact weight used with duplicate tiers, see open point 3.
 
 **Size of the interval** (my computation by exact enumeration of the successive draws; pool of 4 prefixes with weights 25 (rare), 1000, 1000, 400, count row 4 of the 3.25 table: 10/60/30):
 
@@ -174,7 +184,9 @@ For the planner: this is a different action (success or total loss, base choice 
 | two common | 25% | 50% | 64% |
 | rare + two common | 7.5% | 4.4% | 1.5% |
 
-(α = -1, the rare-favoured reading of ADR-0012, would give 98.6%, 30%, 3.9% and 3.8%.) So for routes whose targets include a rare mod the interval spans an order of magnitude, and the "best route" under the worst case may differ from the one under the best case. This is the main risk for R25-R29.
+(α = -1, the rare-favoured reading of ADR-0012, would give 98.6%, 30%, 3.9% and 3.8%.) The extreme is not always at an end: for the set "rare + two common" the minimum is at α = 1 here, but the checker found interior extremes in 132 of 1,200 random cases (300 random 4-mod pools × 4 target sets), so the interval must be taken over a grid of α, never over the two endpoint rules alone. So for routes whose targets include a rare mod the interval spans an order of magnitude, and the "best route" under the worst case may differ from the one under the best case. This is the main risk for R25-R29.
+
+**What this means for ADR-0022 and the B3 grill ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)).** ADR-0022 says "two rules suffice when the rules are ordered by how much they favour rare mods". Under the α family that holds only if every route's success probability is monotone in α, and it is not: the checker found the extreme at an interior α in 132 of 1,200 random cases (300 random 4-mod pools × 4 target sets), and my own table above has a non-monotone row once α is allowed below 0. Consequences to decide in #94: (1) the rule family `R` must be a grid of α in [0, 1] (the checker's cases suggest at least five points; the density is a grid-versus-accuracy choice for #94), not the two endpoints; (2) ADR-0022's bracket `max_r V_r <= W* <= min_candidates max_r' J` stays valid over the rules in the grid, but the robust optimum over continuous α can lie outside the bracket by whatever happens between grid points, so the reported interval is an inner bound until a smoothness argument or a finer grid says otherwise; (3) the cost is `k` solves and `k²` policy evaluations for `k` grid points, against 2 and 4 for two rules; (4) the sentence in ADR-0022 should be reworded when #94 closes.
 
 **What the first-hand check changed (2026-10-31).** The conflict with ADR-0012 stands, but the evidence is weaker than I first wrote: it is a consistent qualitative direction (author's own model, one 29%/75% contrast, small 3.26 samples), not a fitted formula, and the sentence I quoted as "written after 3.25.1" came from a later edit of the guide, not its first version. The one contrast gives a crude exponent: retention ratio 29/75 = 0.39 for a weight ratio 0.25 suggests α near 0.7 if retention scaled like weight^α in comparable pools, but the pool sizes behind it are unknown, so I do not recommend using it as a point estimate. The family α in [0, 1] is therefore still the honest bound.
 
@@ -186,7 +198,8 @@ For the planner: this is a different action (success or total loss, base choice 
 - PoEDB (datamined): `RecombinatorModDustCostMultiplier = 3`, `RecombinatorModDustCostExponentTimes100 = 75`. They suggest a per-mod cost of the form `3 × x^0.75` summed over mods, but the quantity `x` and the Gold formula are not in any source I found. Treat as a hint only.
 - Dated player data points (Reddit, 3.26; N = single reports): u/pda898 2025-06-17, "the dust cost for high tier mods is insanely high this patch"; u/gandalfintraining 2025-06-17, from a Monte Carlo of about 300 recombinations to build a perfect item, "that'd be 30 million dust per item" (about 100 000 per combine); u/Godofdeathryuk 2025-06-17, 250 000 Dust for one armour because of an extra T1 suffix, "1-2 million dust on avg plus like 300 k gold"; u/g00fy_goober 2025-06-20, "wanted like 260k dust. crafted worst int roll on both and dropped to like 30k"; u/infectorAlex 2025-06-20, "step 1 used to cost 1500 dust, it now costs 40k dust even with 2 low tier mods crafted on"; u/ExiledYak 2025-07-15, "240k per try" for two 1p/1s rares; u/No-Razzmatazz7854 2025-06-18, a trash low-tier craft "can save you 50% on dust cost". The author's sheet, tab "Interesting Examples": "Influence increases recomb costs by 50%" (3.25 data). The cost therefore rises steeply with mod tier and falls when cheap low-tier mods sit on the item; the recorded cases fit a sum over mods of a steeply rising function of tier, as the datamined exponent suggests, but nobody published numbers per mod.
 - Players (3.26): two T1 mods on magic items "easily give costs over 100,000" Dust; crafting two low-tier non-exclusive mods on the side you do not care about "will lower the dust cost by at least a factor of 2" and "as low as 50k"; one necrotic armour with an extra T1 suffix cost 250 000; "1-2 million dust … plus like 300 k gold" for a long craft.
-- Supply: Dust comes from disenchanting at Kingsmarch (Rog in towns since 3.27) and "5% chance" Possessed-monster gear converting to Dust (3.26 Atlas keystone). The wiki's Kingsmarch page describes Dust yield by item level, quality (+2% per 1%), influence and corruption implicits (+50% each). A third-party calculator reports cheap uniques at about 150 000 Dust per Chaos plus a Gold fee of about 2 800-3 600 per item; **I found no trade or exchange listing for Dust or Gold**, so a "market price" does not exist as such.
+- A market-like price of Gold appears once (u/anraiki, 2026-05-13, thread `1tbujal`, 3.28): "I paid 15 divine for a 5 million gold rota", about 3 divine per million Gold, within a factor of about two of the third-party calculator's default (5 Chaos per 10 000 Gold = 500 Chaos per million, about 1.4 divine at the calculator's snapshot of 353 Chaos per divine). The same commenter puts the whole 9-link double-influence project at "3m gold" and says he disenchanted three Lioneye's Bows at "1m+ dust each for about 200c" (price of the uniques; not clear whether 200c is per bow or in total). Single reports.
+- **Disenchanting and the price of Dust (M-46).** What is known: Dust comes from disenchanting items with Disenchanter workers in Kingsmarch (the Disenchanting window also opens from Rog in towns and hideouts since 3.27.0), and from the 3.26 keystone "Refiner's Bargain" (the 3.26 note says 25%, its footnote corrects it to "5% chance to be converted to Thaumaturgic Dust" for gear dropped by Possessed monsters). The wiki's Kingsmarch page says the yield of a non-unique item depends on item level, modifier tiers "and other factors", "Each 1% item quality increases dust by 2%. Each Corruption Implicit or Influence type increases dust by 50%." A third-party calculator ([poedustcalculator.app](https://poedustcalculator.app/), unverified) reports `dust = round(base × 125 × (20 − (84 − clamp(ilvl, 65, 84))) × (1 + quality×2% + 50% per influence or corruption implicit))` for uniques, about 150 000 Dust per Chaos for the cheapest uniques at item level 84 and a Gold fee of 2 800-3 600 per item; I did not verify it against the game. **Not found:** a trade or currency-exchange listing for Dust or for Gold, a Dust yield formula for rare items (the case a planner would feed), and the Gold formula of the Recombinator. The owner has dropped disenchanting from the system (#81), so the only open item is the unit price of Dust and Gold (question 1); no claim is drafted for the yield formulas except the wiki sentence quoted above.
 - Consequence: with cheap uniques a combine costs about 1-2 Chaos of Dust, but Gold at the third-party's guess (5 Chaos per 10 000) would be 20-150 Chaos for the same combine. The unit price of Gold therefore matters more than Dust. Question 1.
 
 Cost rule for the planner: cost per combine = f(items), table-driven and recorded per observed pair until a formula appears; the price file holds Dust and Gold unit prices.
@@ -202,7 +215,7 @@ Cost rule for the planner: cost per combine = f(items), table-driven and recorde
 | Refused: fractured items (an imprint made before a Fracturing Orb cannot undo it), corrupted and mirrored items. | W-imp |
 | Not restorable: an item created from the original (recombinator output, Allflame, split items). Hinekora's Lock foresight is removed on imprinting and not restored. | W-imp |
 
-For the planner: the imprint is a one-item restore point whose creation costs a beast (price from the beast listing) and whose use costs the `Imprint` it consumed. R17's loop (imprint, annul to the 1-mod core, restore on failure) is valid in 3.29. **Not stated anywhere:** whether an imprint is consumed on use, and whether an item can hold several imprints (question 4). Sockets and links are not in the restored list.
+For the planner: the imprint is a one-item restore point whose creation costs a beast (price from the beast listing) and whose use costs the `Imprint` it consumed. R17's loop (imprint, annul to the 1-mod core, restore on failure) is valid in 3.29. **Consumption and number of imprints (second pass; not in the wiki).** The GPT researcher's imprint sub-answer, recovered from its session database after the final report failed, cites two official-forum player answers and one 3.29 bug report; I could not open any of them (the forum answers every automated fetch with a Cloudflare challenge), so these are the researcher's quotes, unverified by me: consumed on restore, `lithiumjack#2477`, 2014-03-30, "restore the imprint onto the item by using the imprint 'orb' on it, losing the imprint" (thread 868261); several imprints of one item can coexist, `Perz#2458` / `INEXFadeXFHONOR#7423`, 2014-01-30, "You can have as many imprints as your wealth allows you to" (thread 777720), with the warning that they all carry the same name; and in 3.29, `LaserVonRekyu#4613`, 2026-07-30, thread 3991369, a rare Talisman imprinted, then Allflame-crafted, could not be restored ("it is not the same item"), with the in-game text "Items created as a result of Allflame Crafting cannot be returned to a previous state via Imprinting" (the wiki already lists Allflame crafting). These are 2014 and 2026 player statements, N = single answers; the planner should treat "one use, several snapshots allowed" as probable and the Allflame rule as consistent with the wiki. PoEDB (current, third-party) repeats the recipe names and "This item is drop disabled" for the Eternal Orb. The researcher's jewel sub-answer found nothing independent (it quoted this note back) and is discarded; the Awakener sub-answer is used in section 1. Sockets and links are not in the restored list.
 
 ## 8. Benchmarks R15-R19, R25-R29
 
@@ -229,7 +242,8 @@ For the planner: the imprint is a one-item restore point whose creation costs a 
 6. The Dust and Gold formula (section 6); the unit prices.
 7. Jewels: whether the bench accepts them (my reading: no).
 8. Whether a recombinator output's catalyst quality is the chosen base's (W-rec says quality is copied, 50/50) matters for the catalyst-quality target of B2.
-9. Any Reddit material from 3.27-3.29 (tool failed).
+9. 3.27-3.29 Reddit material: three threads read (section 3), none gives a new count table; the Gold and Dust formula, a 3.26+ weight measurement and PoE 1 predictable constants are still missing.
+9b. Imprints: consumed once and several allowed are 2014 forum answers, unverified by me (section 7); the researcher's jewel sub-answer was circular and is discarded.
 10. The prototype's `recombinators.md` and `awakener_orb.md` still hold Q9, Q12, Q16, Q20, Q21, Q22 as open; this note answers Q21 (use the guide table, wiki as second case) and narrows Q20 and Q22 to an interval; it does not close Q9.
 
 ### Reddit second pass: search log (2026-10-31)
@@ -246,19 +260,19 @@ Tools: `reddit_archive.py thread <id>` (read first-hand), `reddit_archive.py pos
 | NNN padding in 3.29 | **Found** | `1vm0rxj` (2026-08-12). |
 | Dust cost | **Found, anecdotes only** | `1ldc3lz`, `1lfyxxd`; no formula posted. Nothing for 3.27-3.29 read. |
 | Predictable mode in PoE 1 | **Partly found** | `1vd294s` (2026-08-01): keeps the base item level; "1s+1s doesn't work" for a T1 mod on a lower-level result. No formula, no maximum number of selected mods, no displayed-percentage sample. Not found: searches `comments "predictable"` and the researcher's item 3 did not return. |
-| Awakener group-conflict survivor | **Not found** | Only the 2020-2023 threads in `sources/raw/research/conflict-recomb-awakener-search.txt` (player reports, the 2020-03-27 case where the donor's mod survived). Searches `comments "awakener"` (2026-07..10) and the researcher's item 5 did not return (rate limit, then a 503 from the model service). |
-| Kept mods inside the 4/5/6 total | **Not found** | Same searches. |
-| Imprint consumed on restore / several per item | **Not found** | Same; the researcher's imprint sub-task answered (17 145 chars) but its final report failed with two 503s, so I could not read it. |
-| Jewels in the recombinator | **Not found** | Same; the researcher's jewel sub-task answered (10 107 chars), unread for the same reason. Thread `1qyqv74` ("Best method for 3 mod idol recomb?") shows idols, not jewels, are the other accepted class. |
-| 3.27-3.29 changes to counts/weights | **Not found** | Wiki version pages show none; 2026 threads above show no new table; `posts "recomb" --title --after 2025-07-20 --limit 40` returned 40 titles (read the ones listed). `posts "recombinator" --title --after 2024-08-01` and the `comments` sweeps never completed. |
+| Awakener group-conflict survivor | **Not found** (only 2020 anecdotes) | `sources/raw/research/conflict-recomb-awakener-search.txt` (2020-2023 player reports); the researcher's sub-answer (recovered from its session database): wiki "discarded at random", u/Naftah 2020-01-08 Frostbite survived (pre-3.10, receiver unknown), no donor/receiver swap anywhere. My own `comments "awakener"` sweep did not return (rate limit). |
+| Kept mods inside the 4/5/6 total | **Not found** (inference only) | Craft of Exile code is the only source; the researcher's reasoning from the item text is an inference. |
+| Imprint consumed on restore / several per item | **Found, old player answers, unverified by me** | Researcher sub-answer: forum threads 868261 (2014-03-30) and 777720 (2014-01-30); not opened by me (Cloudflare). |
+| Jewels in the recombinator | **Not found** | Researcher sub-answer found no source and quoted this note back (discarded). Thread `1qyqv74` shows idols, not jewels, as the other accepted class. |
+| 3.27-3.29 changes to counts/weights | **Not found** | Wiki version pages show none; threads read (`1pf2xmz`, `1p2knma`, `1tbujal`, `1vm0rxj`, `1vs26e1`, `1vd294s`, `1qx8y2z`) report no new table. Searches: `posts "recomb" --title --after 2025-07-20 --limit 40` (returned 40 titles); `posts "recombinator" --title --after 2024-08-01` and the `comments` sweeps never completed (rate limit). The researcher's sub-answers add the 3.27-3.28 threads above and the Esm calculator (`recomb.rngissue.org`, post `1wdbd9x`, 2026-09-11, not read). |
 
 ## 10. Questions for the owner, each with my recommendation
 
 1. **How should the system price Thaumaturgic Dust and Gold?** Neither is on the trade site or the currency exchange as far as I found; Dust comes only from disenchanting (which you dropped) or Possessed-monster gear. Options: (a) two numbers you set in the price file, with defaults taken from the cheapest-unique rate (about 150 000 Dust per Chaos) and a Gold value you pick; (b) ignore both; (c) treat Dust as the Chaos value of the cheapest item you would disenchant. **Recommended: (a)**, flagged as approximate in every report, because Gold may dominate the cost of a combine and only you know what an hour of Kingsmarch gold is worth to you.
 2. **Do jewels go into the recombinator?** My reading of the wiki and the game data is no. **Recommended: treat jewels as ineligible** and drop jewel recombinator routes; if you ever saw a jewel accepted, tell us.
 3. **Do you want predictable recombination in B3?** Its PoE 1 formula is unpublished, and no benchmark route uses it. **Recommended: ship B3 with the unpredictable mode only**, add the predictable one later as a flagged, unvalidated action if a route you care about needs it.
-4. **Imprint behaviour that only the game shows:** is an imprint used up when it restores, and can one item carry more than one imprint (for example one from before and one after a regal)? **Recommended: assume one imprint is used up by one restore and an item carries one**, unless you can check in the game in two minutes.
-5. **The rarity direction of the interval.** ADR-0012 was written on the belief that rare mods are kept as often as or more often than common ones; the evidence read first-hand (direction well supported, size not) says the reverse. **Recommended: amend ADR-0012 to the family of section 5** (weights to the power α, α from 0 to 1) and accept that intervals for routes with rare target mods will be very wide (a factor of ten or more). You decide whether such an interval is still useful or whether recombinators wait until someone measures α.
+4. **Imprint behaviour that only the game shows:** is an imprint used up when it restores, and can one item carry more than one imprint (for example one from before and one after a regal)? Two 2014 forum answers (relayed, unverified by me) say yes to both: used up, several allowed. **Recommended: assume one imprint is used up by one restore and an item may carry several**, and ask the owner only if a route depends on it (R15 and R17 use a single imprint).
+5. **The rarity direction of the interval.** ADR-0012 was written on the belief that rare mods are kept as often as or more often than common ones; the evidence read first-hand (direction well supported, size not) says the reverse. **Recommended: amend ADR-0012 to the family of section 5** (weights to the power α, α from 0 to 1) and accept that intervals for routes with rare target mods will be very wide (a factor of ten or more). You decide whether such an interval is still useful or whether recombinators wait until someone measures α. Two risks to know: the official 3.25.1 line is also compatible with rare mods being favoured outright (α below 0), which I do not admit because the author contradicts it for 3.25 and 3.26; and ADR-0022's "two rules suffice" fails under this family (interior extremes), so #94 must decide a grid of α (section 5).
 6. **Awakener group conflict.** **Recommended: report the interval between "receiver's mod survives" and "donor's mod survives"** rather than refusing the pair, since the outcome is binary and ADR-0012 already covers it.
 
 ## 11. Draft claims for `src/crafting_system/rules/claims/`
@@ -322,7 +336,7 @@ rules:
     statement: Craft of Exile chooses uniformly among the valid (receiver influenced mod, donor influenced mod) pairs, where valid means different influence group and different mod id.
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
-    quote: "nvcombs.push({"m1":j,"m2":k})"
+    quote: 'nvcombs.push({"m1":j,"m2":k})'
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -380,6 +394,14 @@ rules:
     url: https://www.poewiki.net/wiki/Imprint#Mechanics
     quote: "The donor base cannot be restored"
     patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.survivor_player_report_2020
+    statement: "UNVERIFIED by me (relayed by the GPT researcher; before the 3.10 rule): one 2020 report of a ring where Assassin's Mark (donor) and Frostbite on hit (the other ring) met and only Frostbite remained. It does not say which item was the receiver; no report with donor and receiver swapped exists."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/elofd5/i_learned_a_very_expensive_mistake_with_awakeners/
+    quote: "I only received the frostbite on hit."
+    patch_verified: "3.9.2 (2020-01-08)"
     date_checked: 2026-10-31
 ```
 
@@ -530,11 +552,11 @@ rules:
     date_checked: 2026-10-31
 
   - id: recombinator.ducat_nnn_padding
-    statement: In 3.29 Ducat crafts add mods that cannot roll naturally (a belt prefix, Pantheon suffixes, an attribute reroll that makes a mod non-native) to a rare item; they count in the pooled count of their side but never reach the output, so they pad the pool without taking a kept slot. Player report, no controlled sample.
+    statement: "UNVERIFIED player assertion (one 2026-08-12 thread, score 142, supported by a hand calculation of 3/8 for a belt; no trial log; a counter-thread, 1vs26e1, was explained by the exclusive rule and is not a refutation). In 3.29 Ducat crafts add mods that cannot roll naturally (a belt prefix, Pantheon suffixes, an attribute reroll that makes a mod non-native) to a rare item; they count in the pooled count of their side but never reach the output, so they pad the pool without taking a kept slot."
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1vm0rxj/_/p35v203/
     quote: "The NNMs aren't kept on the resulting item"
-    patch_verified: "3.29"
+    patch_verified: "3.29 (reported 2026-08-12)"
     date_checked: 2026-10-31
 
   - id: recombinator.predictable_keeps_item_level
@@ -593,14 +615,39 @@ rules:
     patch_verified: "3.25.1"
     date_checked: 2026-10-31
 
-  - id: recombinator.weight_retention_contrast
-    statement: One measured contrast from the author's data sheet (in-league data credited to PYCKS, sample size not stated): chaos resistance (weight 250) kept 29% of the time, other resistances (weight 1000) 75%. Crude exponent about 0.7 if retention scaled like weight^alpha, unverified.
+  - id: recombinator.weight_own_gloves_test
+    statement: "The author's own Standard test (all mods T1 except chaos resistance, weight 250 against 1000 for the other resistances): chaos resistance was kept in 7 of 15 two-mod results (47%). N = 15 cannot separate weight-proportional (about 29% for this setup, checker's figure) from equal chance (about 67%). Date: 2024-08 (3.25.0 or 3.25.1, rows undated)."
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit#gid=49869311
+    quote: "Easily testable if mod weight affects selection odds"
+    patch_verified: "3.25 (2024-08; 3.25.0 or 3.25.1 unknown)"
+    date_checked: 2026-10-31
+    value: {low_weight: 250, high_weight: 1000, low_kept: 7, trials: 15}
+
+  - id: recombinator.weight_retention_excerpt
+    statement: "UNSOURCED excerpt in the same tab (Additional data from PYCKS, in-league data): chaos resistance (weight 250) kept 29%, other resistances (weight 1000) 75%. No N, no pool sizes, not reproducible from the visible cells. A hint, not a measurement."
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit#gid=49869311
     quote: "chaos res was retained at a rate of 29% and the others at a rate of 75%"
-    patch_verified: "3.25.1"
+    patch_verified: "3.25 (2024-08; 3.25.0 or 3.25.1 unknown)"
     date_checked: 2026-10-31
     value: {low_weight: 250, high_weight: 1000, low_kept: 0.29, high_kept: 0.75}
+
+  - id: recombinator.kingsmarch_rarer_retained_upgrade
+    statement: "The 3.25.0 league upgrade Rarer Modifiers are more likely to be retained changed the weights of rival mods relative to each other and does nothing when only one mod is in play (the one-mod count stays fixed). The wiki says the upgrades were likely removed with the 3.26 bench; whether any such tilt exists in the 3.26+ bench is not established."
+    source_kind: owner
+    url: https://www.reddit.com/r/pathofexile/comments/1exyavx/_/lk007kc/
+    quote: "It affects their weights relative to each other"
+    patch_verified: "3.25.0"
+    date_checked: 2026-10-31
+
+  - id: recombinator.weighted_report_3_27
+    statement: "UNVERIFIED anecdote, thread removed by the moderators as misinformation: with a T1 spell damage prefix (weight 40) against 1000 and 500, ten recombinations in a row returned the bad base and about 20 attempts gave no three-mod result. It is the only 3.27 weight-related report found; it also contradicts the 50/50 base rule, so it is more likely bad luck than a rule change."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1p2knma/recombinator_odds_seem_to_be_weighted/
+    quote: "results in (bad base with spell block) 10 times in a row"
+    patch_verified: "3.27 (2025-11-21)"
+    date_checked: 2026-10-31
 
   - id: recombinator.weights_as_proportional_shares
     statement: In 3.26 the guide's author computes recombination odds with spawn weights as proportional shares ("if we assume the weights are not modified in any way") and says the odds for low-weight mods fall below the equal-chance figure.
@@ -629,7 +676,7 @@ rules:
     value: 1.5
 
   - id: recombinator.reported_dust_costs
-    statement: Reported Dust costs per combine in 3.26 (single reports, Reddit): 40 000 for a first step that cost 1 500 before (two low-tier mods crafted on), 240 000 for two 1p/1s rares, 250 000 for an armour with an extra T1 suffix, about 30 000 after crafting a worst-roll mod on both inputs of a pair that had cost 260 000, about 100 000 per combine in a 300-combine plan.
+    statement: "Reported Dust costs per combine in 3.26 (single reports, Reddit): 40 000 for a first step that cost 1 500 before (two low-tier mods crafted on), 240 000 for two 1p/1s rares, 250 000 for an armour with an extra T1 suffix, about 30 000 after crafting a worst-roll mod on both inputs of a pair that had cost 260 000, about 100 000 per combine in a 300-combine plan."
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/326_recomb_psas_a_few_useful_tipsconfirmations/
     quote: "it now costs 40k dust even with 2 low tier mods crafted on"
@@ -645,7 +692,7 @@ rules:
     date_checked: 2026-09-21
 
   - id: recombinator.predictable_mode
-    statement: Predictable mode: the player selects the mods to merge and sees a success chance; on failure both inputs are destroyed and nothing is made. The PoE 1 formula is unpublished.
+    statement: "Predictable mode: the player selects the mods to merge and sees a success chance; on failure both inputs are destroyed and nothing is made. The PoE 1 formula is unpublished."
     source_kind: official
     url: https://www.poewiki.net/wiki/Version_3.26.0
     quote: "can result in the items being destroyed"
@@ -684,6 +731,14 @@ rules:
     quote: "lower the dust cost by at least a factor of 2"
     patch_verified: "3.26"
     date_checked: 2026-09-21
+
+  - id: recombinator.dust_yield_quality_influence
+    statement: "Disenchanting a non-unique item gives Thaumaturgic Dust that depends on item level and modifier tiers; each 1% quality adds 2% and each corruption implicit or influence adds 50%. No yield formula for rares and no market price of Dust is published."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Kingsmarch
+    quote: "Each 1% item quality increases dust by 2%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 ```
 
 ### `imprint.yaml`
@@ -708,7 +763,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: imprint.beast_recipes
-    statement: Two beast recipes make an imprint: of a magic item (Craicic Croaker) and of a rare Talisman (Fenumal Plagued Arachnid, since 3.29.0).
+    statement: "Two beast recipes make an imprint: of a magic item (Craicic Croaker) and of a rare Talisman (Fenumal Plagued Arachnid, since 3.29.0)."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Beastcrafting
     quote: "Create an Imprint Of a Rare Talisman"
@@ -753,5 +808,29 @@ rules:
     url: https://www.poewiki.net/wiki/Version_3.29.0
     quote: "replaced with a craft that creates an Imprint of a Rare Talisman"
     patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+
+  - id: imprint.consumed_on_restore
+    statement: "UNVERIFIED by me (the forum is behind a Cloudflare challenge; quote relayed by the GPT researcher): a restored imprint is used up. 2014 player answer, one source."
+    source_kind: experiment
+    url: https://www.pathofexile.com/forum/view-thread/868261
+    quote: "losing the imprint"
+    patch_verified: "2014 (not rechecked for 3.29)"
+    date_checked: 2026-10-31
+
+  - id: imprint.several_per_item
+    statement: "UNVERIFIED by me (relayed by the GPT researcher): an item may carry several imprints of different states, each used once; they share one name. 2014 player answers, two sources."
+    source_kind: experiment
+    url: https://www.pathofexile.com/forum/view-thread/777720
+    quote: "You can have as many imprints as your wealth allows you to."
+    patch_verified: "2014 (not rechecked for 3.29)"
+    date_checked: 2026-10-31
+
+  - id: imprint.allflame_copy_not_restorable
+    statement: "UNVERIFIED by me (relayed by the GPT researcher): an item made by Allflame crafting in 3.29 cannot be returned to a previous state by an imprint; consistent with the wiki rule that items made from the original cannot use its imprint."
+    source_kind: experiment
+    url: https://www.pathofexile.com/forum/view-thread/3991369
+    quote: "cannot be returned to a previous state via Imprinting"
+    patch_verified: "3.29 (reported 2026-07-30)"
     date_checked: 2026-10-31
 ```
