@@ -22,6 +22,7 @@ def solver_actions(
     start: CompressedState,
     *,
     merge_equal: bool = True,
+    cache: dict | None = None,
 ) -> list[Action[CompressedState]]:
     """The solver's actions at `state`: one per priced offer the game allows there, in the order of `offers`.
 
@@ -30,6 +31,10 @@ def solver_actions(
     `merge_equal`, of the offers whose `Abstraction.kernel_key` is equal at `state` only the cheapest
     stays (on a tie the earliest in `offers`, the one the solver took before); the key is cheaper than
     the kernel, so the dearer ones are never built. Without it every allowed offer stays.
+
+    `cache`, when given, holds the built solver action of each `(state, label, cost)`, so that solving
+    again with more offers does not build a kernel twice (the choice among equal kernels is still made
+    on every call; only the action is reused).
     """
     from ._plan import offer_action  # _plan imports this module
 
@@ -54,8 +59,13 @@ def solver_actions(
     for priced, key in allowed:
         if key is not None and cheapest[key] is not priced:
             continue
-        try:
-            found.append(offer_action(abstraction, priced, state, start))
-        except ActionError:
-            continue
+        built = None if cache is None else cache.get((state, priced.label, priced.cost))
+        if built is None:
+            try:
+                built = offer_action(abstraction, priced, state, start)
+            except ActionError:
+                continue
+            if cache is not None:
+                cache[(state, priced.label, priced.cost)] = built
+        found.append(built)
     return found
