@@ -51,7 +51,7 @@ def test_a_jewel_base_is_out_of_scope(action, item_class):
 
 @pytest.mark.parametrize("action", ACTIONS)
 def test_an_influenced_item_of_a_class_with_no_influence_class_key_is_out_of_scope(action):
-    sword = dataclasses.replace(DATA.base_items[AMULET], item_class="Thrusting One Hand Sword")
+    sword = dataclasses.replace(DATA.base_items[AMULET], item_class="Fishing Rod")
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: sword})
     item = dataclasses.replace(amulet(), influences=frozenset({Influence.SHAPER}))
 
@@ -67,11 +67,10 @@ def test_an_influenced_amulet_is_in_scope(action):
 
 
 @pytest.mark.parametrize("action", ACTIONS)
-def test_a_crafted_metamod_makes_the_item_out_of_scope(action):
-    item = amulet(roll(CRAFTED, crafted=True))
+def test_a_crafted_metamod_leaves_the_item_in_scope(action):
+    item = amulet(roll(CRAFTED, crafted=True))  # it locks the suffixes; the metamod itself is a prefix and goes
 
-    with pytest.raises(OutOfScopeError, match="crafted metamod"):
-        action.outcomes(DATA, item)
+    assert action.outcomes(DATA, item).retained.mods == ()
 
 
 @pytest.mark.parametrize("action", ACTIONS)

@@ -19,8 +19,8 @@ item) -> BenchOutcomes`, with the same `chance_all`, `distribution` and `sample`
 probability 1, and `cost(data)`, the price as `CurrencyCost(currency name, count)`. A bench craft
 is refused (`NotApplicableError`) on a corrupted item, for an item class the option is not offered for,
 below the mod's required item level, with a family already on the item, on a full side, and on an
-item that already holds a crafted mod; a normal item and an item holding the multimod are
-`OutOfScopeError`. Remove Crafted Mods removes every crafted mod, metamods included.
+item that already holds as many crafted mods as it may (one, or three with the multimod); a normal item
+is `OutOfScopeError`. Remove Crafted Mods removes every crafted mod that is not fractured, metamods included.
 
 A Chaotic resonator with fossils is `ApplyFossils(("Dense Fossil", "Shuddering Fossil"))`: one
 action per set of one to four different fossils, the resonator size following from their number.
@@ -37,16 +37,23 @@ rare with 4, 5 or 6 mods, 8:3:1). Each returns an `Outcomes` like the Chaos Orb.
 it has, the Exalted Orb's too) and `draw_onto(data, retained, totals)`; a present family is out of the
 pool, a full side closes, and an add of one mod with no legal mod is refused (`NotApplicableError`)
 and consumes nothing. `ScouringOrb()` has one result of probability 1, a `ScourOutcomes` with the
-same `chance_all`, `distribution` and `sample`: it removes every mod but the fractured ones, and the
-item is normal with none left, magic with one and rare with two or more; it keeps its influences.
+same `chance_all`, `distribution` and `sample`: it removes every mod but the fractured ones and those on a
+side that a lock metamod protects, and the item is normal with none left, magic with one and rare with two or
+more; it keeps its influences.
 
 The orbs of the rare item are `ExaltedOrb()` (one more mod through the same shared add, on a rare item with an
 open slot), `AnnulmentOrb()` (removes one mod that is not fractured, uniformly, D5; the rarity stays) and
 `FracturingOrb()` (a rare item of 4 or more mods that is not influenced, fractured or corrupted: fractures one
-mod, uniformly, D6; an item with a crafted mod is out of scope because the item model holds no fractured crafted
-mod). The Exalted and Annulment orbs return an `Outcomes` and a `Finite`; the Fracturing Orb a `FractureOutcomes`,
+mod, uniformly, D6; a crafted mod or a metamod is a candidate, and a fractured one stays). The Exalted and Annulment orbs return an `Outcomes` and a `Finite`; the Fracturing Orb a `FractureOutcomes`,
 a `Finite` whose `fractures` is True. None is a planner kind yet. An influenced item draws from the pool of its
 base tags plus the influence tags (`item_tags` in `pool.py`), so the mods of an influence join every pool.
+
+The five metamods (`metamods.py`, ticket #68): `Prefixes` / `Suffixes Cannot Be Changed` keep the mods of
+the locked side through a reroll (Chaos, Alteration, Harvest), a Scouring and an Annulment, and the open slots
+still fill; `Cannot roll Attack` / `Caster Modifiers` keep the mods with that tag out of every draw on an item that
+still holds the metamod (a reroll that removes it is not filtered), out of an Annulment's candidates, and, on a
+Harvest reforge, out of the first (guaranteed) mod only; essences and resonators refuse the four; the multimod
+lifts the crafted-mod limit to three. No action raises `OutOfScopeError` for a metamod.
 
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
@@ -54,9 +61,9 @@ Refusals, raised by `outcomes` in this order (a message names the reason):
   essence: it is magic, or rare and the essence is one of the normal-only levels 1 to 4); it is
   corrupted; for the Harvest reforge, the pool holds no mod with the tag that the item has a free
   family and a free slot for; for an essence, its item class takes no essence, or its forced mod
-  shares a family with a fractured mod.
-* `OutOfScopeError`: the item is in a state no admitted rule covers yet: an influenced item of a class with no admitted influence class key, a crafted
-  metamod (an ordinary crafted mod is not: a reroll removes it), a jewel base (the 8:3:1 ratio is
+  shares a family with a fractured mod, or the item holds a lock or an Attack/Caster metamod (essence and resonator).
+* `OutOfScopeError`: the item is in a state no admitted rule covers yet: an influenced item of a class with no admitted influence class key, a magic
+  item whose Orb of Alteration keeps an Attack or Caster metamod, a jewel base (the 8:3:1 ratio is
   admitted for regular items only), a pool mod with other than one family; for an essence also
   Essence of Desolation (not a B1 action) and fractured mods that fill the side of the forced mod.
   A planner treats the action as unavailable.

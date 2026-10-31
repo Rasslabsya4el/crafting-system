@@ -18,7 +18,7 @@ from crafting_system.actions import (
     build_pool,
 )
 from crafting_system.data import GameData, Mod
-from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, Side, tier_table
+from crafting_system.items import ExplicitMod, Item, ItemError, Metamod, Rarity, Side, tier_table
 
 from ._goal import Goal, Status
 from ._kinds import Kinds, held_families
@@ -316,15 +316,17 @@ class Abstraction:
         origins: Origins = {}
         mods = []
         for entry in state.fractured:
+            crafted = self.data.mods[entry.mod_id].domain == "crafted"  # a Fracturing Orb may fracture a crafted mod
             mods.append(
                 ExplicitMod(
                     entry.mod_id,
                     self._tiers.get(entry.mod_id, 1),
                     _low_values(self.data.mods[entry.mod_id]),
                     fractured=True,
+                    crafted=crafted,
                 )
             )
-            origins[(entry.mod_id, True, False)] = entry
+            origins[(entry.mod_id, True, crafted)] = entry
         taken = {family for entry in state.fractured for family in held_families(self.data.mods[entry.mod_id])}
         for slot in state.slots:
             if slot.crafted:
@@ -369,7 +371,15 @@ class Abstraction:
                 )
                 action.outcomes(self.data, bare)
                 raise
-            prepared = _Prepared(action.outcomes(self.data, item), origins)
+            outcomes = action.outcomes(self.data, item)  # a refusal of the action comes first
+            held = item.metamods(self.data) - {Metamod.MULTIPLE_CRAFTED_MODS}
+            if held and action.reads(self.data).metamods:
+                names = ", ".join(sorted(metamod.value for metamod in held))
+                raise OutOfScopeError(
+                    f"the state holds a metamod ({names}); the compressed state does not model what a metamod "
+                    f"changes about {action.label(self.data)} yet"
+                )
+            prepared = _Prepared(outcomes, origins)
             self._prepared_by[key] = prepared
         return prepared
 

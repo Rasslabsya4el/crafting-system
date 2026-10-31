@@ -16,6 +16,7 @@ from .outcomes import Outcomes
 TAGGED_RARE_REFORGE_EXISTS = get_rule("harvest_reforge.tagged_rare_reforge_exists")
 REROLLS_LIKE_CHAOS_WITH_GUARANTEED_TAG = get_rule("harvest_reforge.rerolls_like_chaos_with_guaranteed_tag")
 REFUSED_ON_CORRUPTED = get_rule("harvest_reforge.refused_on_corrupted")
+HARVEST_FILTERS_FIRST_ADDED_MOD = get_rule("metamods.harvest_filters_first_added_mod")
 LIFEFORCE_COST = get_rule("harvest_reforge.lifeforce_cost")
 
 
@@ -49,8 +50,10 @@ class HarvestReforge(Action):
         """The outcomes of using the reforge on `item`.
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, or whose pool holds
-        no mod with the tag that it can still take, and `OutOfScopeError` for a jewel, an influenced item whose
-        class has no influence class key, or one with a crafted metamod. Ordinary crafted mods are removed by the reroll.
+        no mod with the tag that it can still take, and `OutOfScopeError` for a jewel or an influenced item whose
+        class has no influence class key. Ordinary crafted mods are removed by the reroll. A locked side stays
+        and counts inside the total; an Attack or Caster metamod that stays filters the guaranteed mod only (D8
+        of issue #28), not the draws that follow.
         """
         if item.rarity is not Rarity.RARE:
             raise NotApplicableError(

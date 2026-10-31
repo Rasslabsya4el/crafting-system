@@ -94,7 +94,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: essence.reforge_removes_crafted_mods
-    statement: The reforge of a rare item by an essence removes its ordinary crafted (bench) mods like any other mod that is not fractured; the metamods, which block an essence in the game, are not modelled yet.
+    statement: The reforge of a rare item by an essence removes its ordinary crafted (bench) mods like any other mod that is not fractured; the metamods that block an essence in the game are refused (metamods.essence_refused).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Chaos_Orb#Mechanics
     quote: "they reroll all modifiers (and the number of modifiers) on a rare item"

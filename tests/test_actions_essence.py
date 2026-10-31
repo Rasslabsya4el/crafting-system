@@ -338,14 +338,20 @@ def test_the_remnant_of_corruption_and_an_unknown_name_are_no_essence():
         ApplyEssence("  ")
 
 
+def test_a_metamod_refuses_the_essence():
+    meta = amulet(roll("DexMasterItemGenerationCannotChangeSuffixes", crafted=True))  # a normal item holds no mod
+    with pytest.raises(NotApplicableError, match="metamod"):
+        ApplyEssence(HYSTERIA).outcomes(DATA, meta)
+
+
 @pytest.mark.parametrize("name", [HATRED, HYSTERIA])
-def test_a_metamod_or_an_influence_makes_the_item_out_of_scope(name):
-    if name == HYSTERIA:  # a normal item holds no mod, so only the rare reforge meets a metamod
-        meta = amulet(roll("DexMasterItemGenerationCannotChangeSuffixes", crafted=True))
-        with pytest.raises(OutOfScopeError, match="metamod"):
-            ApplyEssence(name).outcomes(DATA, meta)
-    sword = dataclasses.replace(DATA.base_items[AMULET], item_class="Thrusting One Hand Sword")
-    data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: sword})
+def test_an_influence_of_a_class_with_no_key_makes_the_item_out_of_scope(name):
+    sword = dataclasses.replace(DATA.base_items[AMULET], item_class="Fishing Rod")
+    rod_essences = {
+        key: dataclasses.replace(e, mods=(*e.mods, EssenceMod("Fishing Rod", e.mod_for("Amulet"))))
+        for key, e in DATA.essences.items()
+    }  # the odd class takes the essence like an amulet, so only the influence key is missing
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: sword}, essences=rod_essences)
     influenced = dataclasses.replace(amulet(rarity=Rarity.NORMAL), influences=frozenset({Influence.SHAPER}))
     with pytest.raises(OutOfScopeError, match="influence class key"):
         ApplyEssence(name).outcomes(data, influenced)

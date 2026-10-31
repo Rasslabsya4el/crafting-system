@@ -72,7 +72,8 @@ class ExplicitMod:
     """One explicit mod on an item.
 
     `tier` is 1 for the best and is stored as given. `values` holds one rolled integer per stat of
-    the mod, in the order of `Mod.stats`.
+    the mod, in the order of `Mod.stats`. A mod can be both fractured and crafted: a Fracturing Orb
+    may pick a crafted mod, a metamod included (D6 of issue #28), and it then stays like any fractured mod.
     """
 
     mod_id: str
@@ -156,8 +157,6 @@ class Item:
                 raise self._error(f"mod {mod.mod_id} has a rolled value that is not an integer")
             if mod.tier < 1:
                 raise self._error(f"mod {mod.mod_id} has tier {mod.tier}, tiers start at 1")
-            if mod.fractured and mod.crafted:
-                raise self._error(f"mod {mod.mod_id} is flagged both fractured and crafted")
         for first, second in zip(ordered, ordered[1:]):
             if first.mod_id == second.mod_id:
                 raise self._error(f"mod {first.mod_id} is on the item twice")

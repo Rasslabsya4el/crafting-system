@@ -26,6 +26,7 @@ from .draw import (
     total_distribution,
 )
 from .errors import NotApplicableError
+from .metamods import blocked_tags, kept_by_reroll
 from .pool import ModFactor, PoolFamily, build_pool, tiers_of
 
 CHAOS_FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
@@ -36,11 +37,13 @@ ONE = Fraction(1)
 
 
 def retained_item(data: GameData, item: Item, forced: Mod | None = None) -> Item:
-    """`item` as a reroll leaves it before any draw: rare, with the fractured mods and the `forced` mod only.
+    """`item` as a reroll leaves it before any draw: rare, with the mods a reroll keeps and the `forced` mod only.
 
-    The forced mod is rolled at its lowest values, whatever its level (`sample` rolls it).
+    A reroll keeps the fractured mods and every mod on a side that `Prefixes` or `Suffixes Cannot Be
+    Changed` locks (`metamods.kept_by_reroll`). The forced mod is rolled at its lowest values, whatever
+    its level (`sample` rolls it).
     """
-    kept = item.fractured_mods
+    kept = kept_by_reroll(data, item)
     if forced is not None:
         tier = tier_table(data, item.base_id).get(forced.id, 1)  # an essence-only mod has no tier: 1
         low = tuple(min(stat.min, stat.max) for stat in forced.stats)
@@ -58,7 +61,9 @@ class Outcomes:
     of mods of the finished item (kept mods included), `tag` the tag of the guaranteed mod of a
     Harvest reforge, None for a Chaos Orb or an essence, and `forced` the id of the forced mod of an
     essence, None otherwise. The forced mod is a kept mod: it is in `retained`, not in the
-    distribution. Build one with `Outcomes.reroll`.
+    distribution. `guaranteed_blocked` are the tags that an Attack or Caster metamod kept on the
+    item keeps out of the guaranteed draw of a reforge: the pool of a reforge is not filtered, since
+    the metamod filters its first added mod only (D8 of issue #28). Build one with `Outcomes.reroll`.
     """
 
     data: GameData
@@ -67,6 +72,7 @@ class Outcomes:
     totals: Mapping[int, Fraction]
     tag: str | None
     forced: str | None = None
+    guaranteed_blocked: frozenset[str] = frozenset()
 
     @classmethod
     def reroll(
@@ -91,9 +97,10 @@ class Outcomes:
         for.
         """
         retained = retained_item(data, item, forced)
-        pool = build_pool(data, retained, max_level, factor, extra)
-        result = cls.over(data, retained, pool, tag, forced)
-        if tag is not None and not guaranteed_candidates(result.pool, result.free, tag):
+        blocked = blocked_tags(data, retained) if tag is not None else frozenset()
+        pool = build_pool(data, retained, max_level, factor, extra, tag_filter=tag is None)
+        result = cls.over(data, retained, pool, tag, forced, blocked)
+        if tag is not None and not guaranteed_candidates(result.pool, result.free, tag, blocked):
             raise NotApplicableError(
                 f"the {tag} reforge cannot be used: the pool holds no {tag} mod "
                 "that the item has a free slot and a free family for"
@@ -102,10 +109,18 @@ class Outcomes:
 
     @classmethod
     def over(
-        cls, data: GameData, retained: Item, pool: tuple[PoolFamily, ...], tag: str | None, forced: Mod | None
+        cls,
+        data: GameData,
+        retained: Item,
+        pool: tuple[PoolFamily, ...],
+        tag: str | None,
+        forced: Mod | None,
+        guaranteed_blocked: frozenset[str] = frozenset(),
     ) -> "Outcomes":
         """The outcomes of drawing from a `pool` already built onto `retained` (see `retained_item`)."""
-        return cls(data, retained, pool, total_distribution(), tag, None if forced is None else forced.id)
+        return cls(
+            data, retained, pool, total_distribution(), tag, None if forced is None else forced.id, guaranteed_blocked
+        )
 
     @classmethod
     def fill(cls, data: GameData, retained: Item, totals: Mapping[int, Fraction]) -> "Outcomes":
@@ -176,7 +191,7 @@ class Outcomes:
         with `float()` or `Fraction.limit_denominator` to display it.
         """
         return exact_distribution(
-            self.pool, self.free, self.tag, self.totals, len(self.retained.mods), label
+            self.pool, self.free, self.tag, self.totals, len(self.retained.mods), label, self.guaranteed_blocked
         )
 
     @cached_property
@@ -192,7 +207,8 @@ class Outcomes:
         totals = list(self.totals)
         total = rng.choices(totals, weights=[float(self.totals[t]) for t in totals])[0]
         drawn = sample_new_mods(
-            self.pool, self.free, self.tag, total, len(self.retained.mods), rng, self._float_weights
+            self.pool, self.free, self.tag, total, len(self.retained.mods), rng, self._float_weights,
+            self.guaranteed_blocked,
         )
         rolled = [entry.mod for entry in drawn]
         kept = tuple(entry for entry in self.retained.mods if entry.mod_id != self.forced)

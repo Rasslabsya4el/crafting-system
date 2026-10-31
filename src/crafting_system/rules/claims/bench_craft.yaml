@@ -1,6 +1,6 @@
 # Mechanic family: bench_craft (the crafting bench: crafted mods, metamods as crafted mods, Remove
 # Crafted Mods). Research ticket #11 (claims BEN-xx) and the decisions D6, O-08, O-11 of issue #28.
-# What the metamods do to other actions and the limit of three crafted mods are ticket #68.
+# What the metamods do to other actions and the limit of three crafted mods are in metamods.yaml (ticket #68).
 rules:
   - id: bench_craft.option_adds_one_fixed_mod
     statement: A bench option with `add_explicit_mod` adds that one named crafted mod, never one drawn at random. The 732 options name 732 different mods, all of domain `crafted`, so a bench craft is identified by its mod id. The mod's side is its generation type.
@@ -35,7 +35,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: bench_craft.one_crafted_mod_by_default
-    statement: An item holds one crafted mod by default (`value`), metamods included. A craft on an item that already holds a crafted mod is refused here, although the game offers to replace it for an extra Orb of Scouring (not modelled). The multimod `Can have up to 3 Crafted Modifiers` lifts the limit to three; that is ticket #68.
+    statement: An item holds one crafted mod by default (`value`), metamods included. A craft on an item that already holds a crafted mod is refused here, although the game offers to replace it for an extra Orb of Scouring (not modelled). The multimod `Can have up to 3 Crafted Modifiers` lifts the limit to three (metamods.multimod_raises_crafted_limit).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Crafting_Bench#Using_the_crafting_bench
     quote: "Typically, only one crafted modifier may be added to an item"
