@@ -18,7 +18,6 @@ from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Reads
-from .draw import refuse_unmodelled
 from .harvest import check_reforgeable
 from .outcomes import Outcomes, retained_item
 from .pool import build_pool
@@ -59,8 +58,7 @@ class HarvestReforgeLikelihood(Action):
         an influenced item whose class has no influence class key, or one with a crafted metamod. Ordinary
         crafted mods are removed by the reroll (their families still weigh the pool).
         """
-        check_reforgeable(item)
-        refuse_unmodelled(data, item)
+        check_reforgeable(data, item)
         held = {family for entry in item.mods for family in data.mods[entry.mod_id].families}
         weight = Fraction(LIKELIHOOD_WEIGHT_FACTOR.value[self._key])
         factor = weight if self.more else 1 / weight

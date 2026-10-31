@@ -40,7 +40,7 @@ def cost_of(resources: dict[str, int]) -> float:
 @pytest.fixture(scope="module")
 def amulet_offers():
     target = load_target(R12, DATA)
-    return offers_for(DATA, target.goal if hasattr(target, "goal") else GOAL, AMULET, target.start_item).offers
+    return offers_for(DATA, Goal.from_target(target), AMULET, target.start_item).offers
 
 
 def test_the_sixteen_tagged_reforges_and_both_likelihood_reforges_are_offered_for_a_rare_amulet(amulet_offers):

@@ -250,7 +250,7 @@ def test_with_two_influences_the_mods_of_both_are_influence_mods():
     def marked(out):
         return {e.mod.id for f in out.pool for e in f.mods if "influence" in e.mod.implicit_tags}
 
-    assert marked(one) <= marked(both)
+    assert marked(one) <= marked(both)  # the fixture has no Shaper bow mod; the exact weight of both is in the real-dump test
     assert marked(one)  # the Hunter mods are marked, whatever the data says of them
 
 

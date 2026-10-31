@@ -172,11 +172,3 @@ LIKELIHOOD_STARTS = {
     "fractured": lambda: small_item(roll(RESIST_2, fractured=True), roll(LIFE_1), roll(MANA_1)),
     "six": lambda: small_item(*(roll(m) for m in (GEM, LIFE_1, DAMAGE_1, RESIST_1, COLD_RESIST, FIRE_RESIST))),
 }
-
-
-
-LIKELIHOOD_STARTS = {
-    "plain": lambda: small_item(roll(RESIST_2), roll(LIFE_1)),
-    "fractured": lambda: small_item(roll(RESIST_2, fractured=True), roll(LIFE_1), roll(MANA_1)),
-    "six": lambda: small_item(*(roll(m) for m in (GEM, LIFE_1, DAMAGE_1, RESIST_1, COLD_RESIST, FIRE_RESIST))),
-}

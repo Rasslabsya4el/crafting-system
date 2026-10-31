@@ -17,7 +17,6 @@ from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Reads
-from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .harvest import check_reforgeable
 from .outcomes import Outcomes
@@ -66,10 +65,9 @@ class HarvestReforgeInfluence(Action):
         holds no influence mod that it can still take, and `OutOfScopeError` for a jewel, an influenced item whose
         class has no influence class key, or one with a crafted metamod. Ordinary crafted mods are removed by the reroll.
         """
-        check_reforgeable(item)
+        check_reforgeable(data, item)
         if not item.influences:
             raise NotApplicableError("the item has no influence, and the influence reforge works on an influenced item only")
-        refuse_unmodelled(data, item)
         return Outcomes.reroll(data, item, tag=GUARANTEE, guaranteed=influence_spawn_test(data, item))
 
 

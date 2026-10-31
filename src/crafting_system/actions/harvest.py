@@ -24,12 +24,15 @@ REFUSED_ON_CORRUPTED = get_rule("harvest_reforge.refused_on_corrupted")
 LIFEFORCE_COST = get_rule("harvest_reforge.lifeforce_cost")
 
 
-def check_reforgeable(item: Item) -> None:
-    """Raise `NotApplicableError` for an item no Harvest reforge takes: one that is not rare or is corrupted (every reforge shares this)."""
+def check_reforgeable(data: GameData, item: Item) -> None:
+    """Raise what every Harvest reforge raises before it draws: `NotApplicableError` for an item that is not rare or is
+    corrupted, `OutOfScopeError` for a jewel or a crafted metamod (`refuse_unmodelled`). The one place for a rule that
+    holds for all reforges."""
     if item.rarity is not Rarity.RARE:
         raise NotApplicableError(f"a Harvest reforge works on a rare item only, and this item is {item.rarity}")
     if item.corrupted:
         raise NotApplicableError("the item is corrupted, and a corrupted item takes no Harvest reforge")
+    refuse_unmodelled(data, item)
 
 
 @dataclass(frozen=True)
@@ -65,8 +68,7 @@ class HarvestReforge(Action):
         no mod with the tag that it can still take, and `OutOfScopeError` for a jewel, an influenced item whose
         class has no influence class key, or one with a crafted metamod. Ordinary crafted mods are removed by the reroll.
         """
-        check_reforgeable(item)
-        refuse_unmodelled(data, item)
+        check_reforgeable(data, item)
         return Outcomes.reroll(data, item, tag=TAGGED_RARE_REFORGE_EXISTS.value[self.tag])
 
 
