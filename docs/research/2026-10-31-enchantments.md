@@ -131,6 +131,19 @@ For: the wiki says the enchants come "either through the use of a Tailoring Orb 
 
 Archive title searches (Arctic Shift, r/pathofexile, from 2023 or 2024-07): "tailoring" (8 posts), "tempering" (5), "tempering orb", "additional crafted" (4), "heist enchant" and "enchant body armour" (0). Full-text comment searches timed out. Not found: any tally of Tempering (weapon) orb results, any post-3.29 weights, any socket-reforge test with before/after sockets, a first-hand report that the orb rolled the extra crafted slot, and any source for the orb-versus-Curio equality. The Reddit-side `gpt-research` runs (two live jobs on 2026-10-31) did not help: one hit a model 503, the other had no shell tool and could not run the archive.
 
+Search log per Reddit-dependent open point, for the serial rerun (all 2026-10-31; archive = `reddit_archive.py`; a "429" means the Arctic Shift limit answered, "timed out" that the command returned nothing within 150 to 170 s):
+
+| Open point | Result | Searches run | Why nothing more |
+|---|---|---|---|
+| O-01 weights (Curio sample, Tailoring tally) | **found** (3.1, 3.2) | `posts "tailoring" --title --after 2024-07-01`; `posts "tempering" --title --after 2024-07-01`; `posts "tempering orb" --title`; thread reads 1g93nen, 1gcr4is | - |
+| O-01 Tempering (weapon) orb tally, post-3.29 weights | **not found** | `posts "tempering"` (5 posts), `posts "tempering orb"` (0), `posts "heist enchant"` (0), `posts "enchant body armour"` (0), `posts "additional crafted"` (4, all read or empty) | no thread of this kind among the titles; the full-text `comments "tempering orb"` with windows 2025-06-01..2025-08-01 and 2024-10-01..2024-12-01 returned nothing (timed out / skipped days) |
+| O-03 socket reforge detail | **partly found** (3.5: only socket-stat enchants reforge, links break) | thread reads 1ltbc8g, 1li4qai | exact rerolled parts not stated; title searches for "socket" were not run through the CLI (the live researcher's attempts returned 429) |
+| O-05 quality enchant shares the slot | **found as player quotes** (3.5) | thread reads 1g93nen, 1lvfm6b | no thread whose title names it |
+| O-06 what the extra crafted slot allows | **found** (3.5); stacking with the metamod **not found** | `posts "additional crafted"`, thread read 1lvfm6b | the thread's poster combined them but nobody states a fourth craft |
+| O-07 orb rolls the extra crafted slot | **disputed, no first-hand proof** (3.4) | thread read 1g93nen; forum thread 3813036 only as a search snippet | Twitch clip and video links in 1g93nen not opened; pathofexile.com forum behind Cloudflare / 429 |
+| O-08 item-level rule | **not found** beyond the sheet's area-level data | sheet "Rewards by alvl" | no post states it; sirgog's line "Ilvl req is datamined at 80" in 1g93nen is the only statement |
+
+
 ## 4. What stays unknown, and the measurement for it
 
 **Known well enough to use:** the relative weights of the 3.29 body-armour pool by kind (above) and, by the Curio sample, of the weapon pool. **Unknown:**
