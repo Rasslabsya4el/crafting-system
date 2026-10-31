@@ -1,0 +1,101 @@
+# Mechanic family: magic_orbs (Orb of Transmutation, Alteration, Augmentation and Regal Orb on normal
+# and magic items). Research ticket #7 (claims CUR-xx), the decisions D1, D4, D14 of issue #28 and its
+# Craft of Exile check of 2026-10-30 (rows CHK-xxx of the claim checklist). The magic capacity 1 + 1
+# is affix_count.max_per_side_by_rarity; the draws share affix_pool.* and affix_draw.* with the Chaos Orb.
+rules:
+  - id: magic_orbs.transmutation_accepts_normal_only
+    statement: An Orb of Transmutation can be used on a normal item only, and the result is a magic item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a normal item to apply it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.alteration_accepts_magic_only
+    statement: An Orb of Alteration can be used on a magic item only.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a magic item to apply it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.alteration_rerolls_all_mods
+    statement: An Orb of Alteration removes every explicit mod of the magic item that is not fractured (an ordinary crafted mod included, as for a Chaos Orb) and draws new ones like a Transmutation Orb.
+    source_kind: coe
+    url: https://www.craftofexile.com/basics#Crafting_Currency
+    quote: "It will reroll a magic rarity item into a new magic item, removing all old explicits on it"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.fractured_mods_kept
+    statement: A fractured mod stays on the item in its slot when a magic item is rerolled by an Orb of Alteration (its family then blocks the new draws as any family on the item does, affix_draw.family_exclusion). A magic item can hold one after an Orb of Scouring.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Fractured_item#Mechanics
+    quote: "These mods cannot be removed (by Orb of Annulment or Orb of Scouring, etc.) or have its values changed by Divine Orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.magic_mod_count
+    statement: A magic item made by an Orb of Transmutation or rerolled by an Orb of Alteration ends with 1 mod or 2 mods, each with chance 1/2 (decision D1 of issue #28). The value gives the weights. Which side a single mod takes follows the one pool of affix_pool.one_pool_for_both_sides.
+    source_kind: coe
+    url: https://www.craftofexile.com/basics#Crafting_Currency
+    quote: "Will turn a normal item into a magic item (with one or two random explicit mods)."
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+    value: {1: 1, 2: 1}
+
+  - id: magic_orbs.kept_mods_count_in_total
+    statement: The drawn total of 1 or 2 mods of a magic item includes the fractured mods that stay; only the rest is drawn, and nothing is drawn when the kept mods already reach the total (decision D4 of issue #28, as for chaos_orb.kept_mods_count_in_total).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'poec_simRollAffix(null,null,null,fossil,noaffix-prmods,!0,!1,enforcetag,igcrca,rfmlk,rfmlkt,rfmlkv,!1,"|",graveyard,overrideMaxAff)'
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.dry_pool_leaves_fewer_mods
+    statement: When no mod can be added any more (the pool is empty, or the open side has no candidate) before the total of a magic item is reached, the draw stops and the item keeps the mods it has (decision D4 of issue #28, as for chaos_orb.dry_pool_leaves_fewer_mods).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/research/coe-wiki-checklist/docs/research/2026-10-30-coe-wiki-checklist.md
+    quote: "a dry pool leaves fewer mods"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.augmentation_accepts_magic_with_free_slot
+    statement: An Orb of Augmentation can be used on a magic item that has an open prefix or suffix slot, and adds exactly one random mod, drawn from the pool of that open side (the other side is full, affix_pool.full_side_closes). The wiki says "with one affix" because a magic item holds at most one prefix and one suffix; an item with no mod has two open slots and is accepted.
+    source_kind: coe
+    url: https://www.craftofexile.com/basics#Crafting_Currency
+    quote: "Will add a new random explicit mod to a magic item that is missing a prefix or suffix."
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.regal_accepts_magic_only
+    statement: A Regal Orb can be used on a magic item only, and the result is a rare item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Regal_Orb
+    quote: "Regal Orbs can only be used on magic items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.regal_keeps_mods_and_adds_one
+    statement: A Regal Orb keeps every mod of the magic item (the fractured ones and the crafted ones too) and adds one random mod, drawn from the pool with the capacity of a rare item (3 prefixes and 3 suffixes), so both sides are open.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Current modifiers are retained and a new one is added."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.add_refused_when_no_legal_mod
+    statement: An add that has no legal mod (the item has no open slot, or every candidate of an open side is blocked by a family on the item or is above the item level) is refused and consumes nothing (decision D14 of issue #28, Craft of Exile row CHK-247). Only the one-mod adds are covered; a Transmutation, Alteration or Alchemy that finds nothing to draw leaves the item as a Chaos Orb does.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/research/coe-wiki-checklist/docs/research/2026-10-30-coe-wiki-checklist.md
+    quote: "Augmentation, Regal, Exalted and the Harvest add are refused (no change, orb not consumed) when no legal mod fits the open slot."
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: magic_orbs.refused_on_corrupted
+    statement: A corrupted item takes no Orb of Transmutation, Alteration, Augmentation, Regal, Alchemy or Scouring.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31

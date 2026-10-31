@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from ..data import Mod
-from .price_file import PriceEntry, PriceFile, load_price_file, write_price_file
+from .price_file import MAX_AGE_DAYS, PriceEntry, PriceFile, load_price_file, write_price_file
 from .trade_http import MAX_FETCH_IDS, TradeClient, TradeError
 from .trade_query import DEFAULT_INDEXED, BuySpec, build_query, query_hash
 from .trade_stats import TradeStats, parse_trade_stats, resolve_buy_mod
@@ -304,8 +304,47 @@ def store_trade_price(path: Path, price: TradePrice, entry: PriceEntry) -> None:
     write_price_file(path, replace(current, prices={**current.prices, price.name: entry}))
 
 
-def current_trade_prices(old: PriceFile | None, league: str) -> dict[str, PriceEntry]:
-    """The trade-api prices of `old` that are prices of `league`: the ones a fetch of `league` keeps."""
+def trade_price_age_days(entry: PriceEntry, today: date) -> int | None:
+    """Whole days from the run that made a trade-api `entry` to `today`; None when it carries no usable date."""
+    stamp = entry.detail.get("date") if entry.detail else None
+    try:
+        ran_on = date.fromisoformat(stamp) if isinstance(stamp, str) else None
+    except ValueError:
+        return None
+    return None if ran_on is None else (today - ran_on).days
+
+
+def _aged(entry: PriceEntry, today: date, max_age_days: int) -> int | None:
+    """The age in days of a trade-api `entry` older than `max_age_days`, else None."""
+    if entry.source != TRADE_SOURCE:
+        return None
+    age = trade_price_age_days(entry, today)
+    return age if age is not None and age > max_age_days else None
+
+
+def _stale_line(name: str, age: int) -> str:
+    return (
+        f"trade-api price {name!r} is {age} days old (limit {MAX_AGE_DAYS}); "
+        f"run `trade` for it again to refresh it"
+    )
+
+
+def stale_trade_warnings(price_file: PriceFile, today: date, max_age_days: int = MAX_AGE_DAYS) -> list[str]:
+    """One warning line per trade-api price older than `max_age_days`, sorted by name.
+
+    The age counts from the UTC date of the run that made the price (`detail["date"]`); a trade price
+    without a usable date has no age and gets no warning.
+    """
+    ages = {name: _aged(entry, today, max_age_days) for name, entry in price_file.prices.items()}
+    return [_stale_line(name, age) for name, age in sorted(ages.items()) if age is not None]
+
+
+def current_trade_prices(old: PriceFile | None, league: str, today: date | None = None) -> dict[str, PriceEntry]:
+    """The trade-api prices of `old` that are prices of `league`: the ones a fetch of `league` keeps.
+
+    With `today`, a price older than the stale limit is left out: it no longer covers its name, so a
+    fetch treats the name like any other wanted name (the aged price itself is kept and flagged).
+    """
     if old is None or old.league != league:
         return {}
     return {
@@ -313,6 +352,7 @@ def current_trade_prices(old: PriceFile | None, league: str) -> dict[str, PriceE
         for name, entry in old.prices.items()
         if entry.source == TRADE_SOURCE
         and (entry.detail is None or entry.detail.get("league") in (None, league))
+        and (today is None or _aged(entry, today, MAX_AGE_DAYS) is None)
     }
 
 
@@ -321,7 +361,8 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
 
     A trade price is a price of one league: a different league drops them, with a warning line naming
     them. So is a trade price whose own `detail["league"]` names another league than the new file's.
-    A name the new file already has stays as the new file has it. Returns (file, warnings).
+    A name the new file already has stays as the new file has it. A kept price older than the stale limit
+    (counted to the new file's date) is flagged in the warnings, like a stale price file. Returns (file, warnings).
     """
     if old is None:
         return new, []
@@ -347,4 +388,5 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
             warnings.append(f"trade-api price {name!r} dropped: the fetch has a {new.prices[name].source} price of that name")
         else:
             kept[name] = entry
-    return replace(new, prices={**new.prices, **kept}), warnings
+    aged = stale_trade_warnings(replace(new, prices=kept), new.fetched_at.astimezone(UTC).date())
+    return replace(new, prices={**new.prices, **kept}), [*warnings, *aged]

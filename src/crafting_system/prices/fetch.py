@@ -12,7 +12,7 @@ endpoints are undocumented, so a stage whose source fails prices nothing and the
 """
 
 from collections.abc import Callable, Collection, Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -50,14 +50,17 @@ def fetch_price_file(
 ) -> FetchResult:
     """Build a price file for `league` (default: the first league poe.ninja lists).
 
-    A partial fetch never makes a file: the leagues call and every category (Currency, Fossil, Resonator,
-    Essence, Beast, BaseType) must answer with at least one usable line, else a `SourceError` is raised.
+    The leagues call and every exchange category (Currency, Fossil, Resonator, Essence) must answer with at
+    least one usable line, else a `SourceError` is raised and no file is made. A failed stash category
+    (Beast, BaseType) does not abort: it warns, its old poe.ninja prices of the same league in
+    `old_price_file` stay (tagged with its category by the fetch that wrote it), and the rest finishes.
     `wanted` names that the overviews do not price (or only on a thin line) are walked down `stages`, with
     the 7 days ending on `now`'s UTC date as the window; those still unpriced come back in `missing`.
 
     A wanted name that `overrides` (the names of the hand prices) or the trade-api prices of
     `old_price_file` for this league already cover is left out of all that: no request is spent on it and
-    it is neither a gap nor `missing`. The caller's merge keeps those prices.
+    it is neither a gap nor `missing`. The caller's merge keeps those prices. A trade-api price older than
+    the stale limit (7 days) covers nothing: its name is fetched like any other, and the merge flags it.
     """
     if now.tzinfo is None:
         raise ValueError("`now` needs a time zone (pass a UTC time)")
@@ -65,7 +68,8 @@ def fetch_price_file(
         raise ValueError("league must not be blank")
     fetched_at = now.astimezone(UTC).replace(microsecond=0)
     league = league if league is not None else _current_league(get_json)
-    covered = {canonical_price_name(name) for name in overrides} | set(current_trade_prices(old_price_file, league))
+    trade_covered = current_trade_prices(old_price_file, league, fetched_at.date())
+    covered = {canonical_price_name(name) for name in overrides} | set(trade_covered)
     wanted_names = sorted({canonical_price_name(name) for name in wanted or ()} - covered)
 
     prices: dict[str, PriceEntry] = {}
@@ -81,15 +85,35 @@ def fetch_price_file(
                 thin_exchange.setdefault(line.name, line.details_id)
             else:
                 prices.setdefault(line.name, PriceEntry(line.chaos, SOURCE))
+    warnings: list[str] = []
+    failed_stash: list[str] = []
     for kind in STASH_TYPES:
-        lines = _category(
-            get_json, kind, "stash/current/item/overview", league, lambda data: parse_stash_overview(data, kind)
-        )
+        try:
+            lines = _category(
+                get_json,
+                kind,
+                "stash/current/item/overview",
+                league,
+                lambda data: parse_stash_overview(data, kind),
+                "",
+            )
+        except SourceError as error:
+            failed_stash.append(kind)
+            warnings.append(f"{error}; the other categories were still fetched")
+            continue
         for stash_line in lines:
             if stash_line.count < MIN_COUNT:
                 thin_stash.setdefault(stash_line.key, stash_line)
             else:
-                prices.setdefault(stash_line.key, PriceEntry(stash_line.chaos, SOURCE))
+                prices.setdefault(stash_line.key, PriceEntry(stash_line.chaos, SOURCE, None, {"category": kind}))
+    for kind in failed_stash:
+        kept = _kept_stash_prices(old_price_file, league, kind, prices)
+        prices.update(kept)
+        warnings.append(
+            f"kept {len(kept)} old {kind} price(s) of {old_price_file.fetched_at:%Y-%m-%d}"
+            if kept and old_price_file is not None
+            else f"no old {kind} prices to keep: {kind} names are priced by the fallbacks only"
+        )
 
     prices[CHAOS_ORB] = PriceEntry(1.0, SOURCE)
     chaos_per_divine = _chaos_per_divine(prices, divine_rate)
@@ -97,7 +121,8 @@ def fetch_price_file(
     thin = sorted(name for name in (*thin_exchange, *thin_stash) if name not in prices)
 
     gaps = [_gap(name, thin_exchange, thin_stash) for name in wanted_names if name not in prices]
-    found, warnings = run_stages(stages, get_json, Context(league, fetched_at.date(), previous_league), gaps)
+    found, stage_warnings = run_stages(stages, get_json, Context(league, fetched_at.date(), previous_league), gaps)
+    warnings.extend(stage_warnings)
     gap_names = {gap.name for gap in gaps}
     prices.update({name: entry for name, entry in found.items() if name in gap_names})
     for name in wanted_names:
@@ -109,6 +134,28 @@ def fetch_price_file(
 
     price_file = PriceFile(league, fetched_at, chaos_per_divine, prices)
     return FetchResult(price_file, warnings, missing_prices(wanted_names, prices), thin)
+
+
+def _kept_stash_prices(
+    old: PriceFile | None, league: str, kind: str, prices: dict[str, PriceEntry]
+) -> dict[str, PriceEntry]:
+    """The poe.ninja prices of `old` (same league) that stand in for the failed stash overview of `kind`.
+
+    Only a price the earlier fetch tagged with its category (`detail["category"]`) is kept, so a currency
+    that has left the exchange overviews is never taken for a beast; a price from before the tag is
+    dropped. A kept price gets a note with the date of the fetch it comes from (the first one, if kept
+    twice). A price a fresh overview gave is never replaced.
+    """
+    if old is None or old.league != league:
+        return {}
+    since = f"{old.fetched_at:%Y-%m-%d}"
+    kept = {}
+    for name, entry in sorted(old.prices.items()):
+        if entry.source != SOURCE or name in prices or not entry.detail or entry.detail.get("category") != kind:
+            continue
+        note = entry.note or f"kept from the fetch of {since}: the {kind} overview failed"
+        kept[name] = replace(entry, note=note)
+    return kept
 
 
 def _gap(name: str, thin_exchange: dict[str, str], thin_stash: dict[str, StashLine]) -> Gap:
@@ -125,14 +172,18 @@ def _gap(name: str, thin_exchange: dict[str, str], thin_stash: dict[str, StashLi
     return Gap(name, exchange_id=history_slug(name))
 
 
-def _category(get_json: GetJson, kind: str, route: str, league: str, parse: Callable[[Any], Any]) -> Any:
-    """One overview of `kind`, parsed; a failure names the category and says the old file was kept."""
+_ABORTED = "no price file was written, the old price file was kept"
+
+
+def _category(
+    get_json: GetJson, kind: str, route: str, league: str, parse: Callable[[Any], Any], consequence: str = _ABORTED
+) -> Any:
+    """One overview of `kind`, parsed; a failure names the category (and, if given, says what follows from it)."""
     try:
         return parse(get_json(api_url(route, league=league, type=kind)))
     except SourceError as error:
-        raise SourceError(
-            f"the {kind} prices failed: {error}; no price file was written, the old price file was kept"
-        ) from error
+        suffix = f"; {consequence}" if consequence else ""
+        raise SourceError(f"the {kind} prices failed: {error}{suffix}") from error
 
 
 def _current_league(get_json: GetJson) -> str:
