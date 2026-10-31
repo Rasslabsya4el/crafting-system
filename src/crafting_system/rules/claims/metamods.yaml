@@ -36,7 +36,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: metamods.harvest_filters_first_added_mod
-    statement: "On a Harvest reforge the Attack and Caster metamods filter the first added mod only, the guaranteed one of the tag; the draws that follow are not filtered (Craft of Exile's implementation). A tagged reforge whose tag has no allowed mod is refused."
+    statement: "On a Harvest reforge the Attack and Caster metamods filter the first added mod only; the draws that follow are not filtered (Craft of Exile's implementation). The first added mod is the guaranteed one of a tagged reforge or of the influence reforge, and the first drawn mod of the two likelihood reforges; a reforge whose first mod has no allowed candidate is refused."
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
     quote: "D8 Attack/Caster locks on a Harvest reforge apply to the first added mod only (Harvest O-02, bench O-03)"

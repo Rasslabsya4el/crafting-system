@@ -27,7 +27,7 @@ LIFEFORCE_COST = get_rule("harvest_reforge.lifeforce_cost")
 
 def check_reforgeable(data: GameData, item: Item) -> None:
     """Raise what every Harvest reforge raises before it draws: `NotApplicableError` for an item that is not rare or is
-    corrupted, `OutOfScopeError` for a jewel or a crafted metamod (`refuse_unmodelled`). The one place for a rule that
+    corrupted, `OutOfScopeError` for a jewel (`refuse_unmodelled`). The one place for a rule that
     holds for all reforges."""
     if item.rarity is not Rarity.RARE:
         raise NotApplicableError(f"a Harvest reforge works on a rare item only, and this item is {item.rarity}")
