@@ -25,3 +25,9 @@ ago, and the cheapest of those was a 1-Chaos listing from August.
 - `search_r12_1week.json`, `headers_search_1week.json`: the search answer and its headers.
 - `fetch_r12_1week.json`: the first 10 listings, trimmed as above. Every `listing.indexed` is within 7 days of the run.
 - `filters_indexed.json`: the `indexed` filter as `GET /api/trade/data/filters` lists it (the allowed `option` ids).
+
+## Status since #133
+
+Both recordings were made with `status: available`. From #133 the query sends `securable` (instant
+buyout) and no listing-age window by default; the tests that compare a body with `search_body_r12_1week.json`
+swap in the new status. The recorded listings stay the price data of those tests.
