@@ -28,13 +28,13 @@ The lucky rolls of a Sanctified Fossil change the rolled values only, which belo
 requirements of the Divine Orb ticket; `sample` rolls every value once.
 """
 
-from collections.abc import Mapping
+from collections.abc import Hashable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 from itertools import combinations
 
 from crafting_system.data import Fossil, GameData, Mod, conflicts
-from crafting_system.items import Item, Metamod, Rarity, Side, UnknownBaseError, capacity
+from crafting_system.items import Item, Metamod, Rarity, Side, UnknownBaseError, capacity, effective_weight
 from crafting_system.rules import get_rule
 
 from .catalog import kind
@@ -142,6 +142,63 @@ class ApplyFossils(Action):
         refuse_unmodelled(data, item)
         return _build(data, item, records)
 
+    def twin_key(self, data: GameData, item: Item) -> Hashable:
+        """The key of the sets that give the same pools on the base of `item`, found without building one (#118).
+
+        It holds all that `_build`, `_forced_choices` and `_glyphic_choices` read from the fossil records:
+        the Opulent, Sanctified, Glyphic, Tangled and Fractured flags, the forced mods, the mods the set
+        adds (in the order the pool takes them) and what the fossils do to the weights. `FossilWeights.factor`
+        reads the tag set of the mod it weighs and (Sanctified) its required level, nothing else (the Corroded
+        markers are tags of the mod, too), so for a set without a Tangled Fossil that is the factor of each
+        distinct tag set of the mods the set can weigh (about forty on a boots item), in a fixed order: sets
+        whose tags are masked by a block, or that touch no tag of the base, share a key. A Tangled set adds
+        one of 420 outcome records to its weights, so there the key holds the three tag effects of
+        `fossil_weights` cut to those tags (exact, but it tells apart sets that differ in a masked tag). The
+        outcome records are the same list for every Tangled set, so they are not in the key.
+
+        The key is for sets of one catalog listing, which all apply to the base: it does not hold the
+        refusals of `_check_fossil` (the tags a fossil allows or forbids). It does not hold the item level
+        either: the tags are read from the mods of the base's domain that have a spawn weight on it, at any level.
+        """
+        records = [_record(data, name) for name in self.fossils]
+        opulent = any(_special(record, "opulent") for record in records)
+        sanctified = any(record.rolls_lucky for record in records)
+        tangled = any(_special(record, "tangled") for record in records)
+        glyphic = any(record.corrupted_essence_chance >= 100 and not _special(record, "tangled") for record in records)
+        added = _added_mods(data, records)
+        weights = fossil_weights(records, None, opulent=opulent, sanctified=sanctified)
+        tag_sets, glyphic_sets = _relevant_tags(data, item.base_id)
+        key = (
+            "fossils",
+            opulent,
+            sanctified,
+            glyphic,
+            tangled,
+            any(_special(record, "fractured") for record in records),
+            tuple(sorted(mod_id for record in records for mod_id in record.forced_mods)),
+        )
+        if tangled:
+            added_sets = {frozenset(mod.implicit_tags) for mod in added}
+            tags = set().union(*tag_sets, *added_sets)
+            if glyphic:
+                tags.update(*glyphic_sets)
+            return key + (
+                tuple(mod.id for mod in added),
+                tuple(sorted((tag, boost) for tag, boost in weights.boosts.items() if tag in tags)),
+                tuple(sorted((tag, cut) for tag, cut in weights.cuts.items() if tag in tags)),
+                tuple(sorted(weights.blocks & tags)),
+            )
+        base = data.base_items[item.base_id]
+        # an added mod with no spawn weight on the base or a factor of 0 never reaches a pool
+        live = tuple(
+            (mod.id, weights.tag_factor(frozenset(mod.implicit_tags)))
+            for mod in added
+            if effective_weight(mod, base.tags) > 0 and weights.tag_factor(frozenset(mod.implicit_tags)) > 0
+        )
+        factors = tuple(weights.tag_factor(tags) for tags in tag_sets)
+        if glyphic:
+            factors += tuple(weights.tag_factor(tags, tags_only=True) for tags in glyphic_sets)
+        return key + (live, factors)
 
 def _record(data: GameData, name: str) -> Fossil:
     """The fossil named `name` (or with that record id); the Tangled outcome records are no fossils to socket."""
@@ -149,6 +206,44 @@ def _record(data: GameData, name: str) -> Fossil:
         if name in (record.name, record.id) and record.name:
             return record
     raise ValueError(f"there is no fossil {name!r} in the game data")
+
+
+TWIN_TAGS_CACHE_SIZE = 32
+_twin_tags: dict[tuple[int, str], tuple[GameData, tuple[frozenset[str], ...], tuple[frozenset[str], ...]]] = {}
+
+
+def _relevant_tags(data: GameData, base_id: str) -> tuple[tuple[frozenset[str], ...], tuple[frozenset[str], ...]]:
+    """The distinct tag sets of the mods that can spawn on a base, and those only a Glyphic Fossil can weigh.
+
+    Both are in a fixed order. Computed once per `(data, base)`; the data object is kept beside the entry so
+    a reused `id` is told apart.
+    """
+    key = (id(data), base_id)
+    hit = _twin_tags.get(key)
+    if hit is not None and hit[0] is data:
+        return hit[1], hit[2]
+    base = data.base_items.get(base_id)
+    if base is None:
+        raise UnknownBaseError(f"item on {base_id}: the base is not in the game data")
+    domain = {
+        frozenset(mod.implicit_tags)
+        for mod in data.mods.values()
+        if mod.domain == base.domain and mod.generation_type in Side and effective_weight(mod, base.tags) > 0
+    }
+    glyphic: set[frozenset[str]] = set()
+    for essence in data.essences.values():
+        if not essence.is_corruption_only:
+            continue
+        mod_id = essence.mod_for(base.item_class)
+        if mod_id is None:
+            mod_id = essence.mod_for(DAGGER_STAFF_TAKE_CLASS_MODS.value.get(base.item_class, base.item_class))
+        if mod_id is not None:
+            glyphic.add(frozenset(data.mods[mod_id].implicit_tags))
+    order = lambda sets: tuple(sorted(sets, key=lambda tags: sorted(tags)))  # noqa: E731
+    if len(_twin_tags) >= TWIN_TAGS_CACHE_SIZE:
+        del _twin_tags[next(iter(_twin_tags))]
+    _twin_tags[key] = (data, order(domain), order(glyphic))
+    return _twin_tags[key][1], _twin_tags[key][2]
 
 
 def _special(record: Fossil, key: str) -> bool:

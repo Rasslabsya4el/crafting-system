@@ -13,6 +13,8 @@ An action is a frozen dataclass that subclasses `Action` and answers five questi
 * `adds(data, item)`: what the action puts on the item (`Adds`), so a planner can ask whether it can
   matter for a target without running it.
 
+An optional sixth, `twin_key(data, item)`, lets a set of fossils name its twins without a pool (#118).
+
 `abstraction` builds its states from `reads` and its kernels from `outcomes` alone; `cli` builds its
 offers from the catalog (`catalog.py`), `resources` and `adds`; `simulator` calls `outcomes(...).sample`.
 None of them imports a concrete action. The defaults of the base class are the safe ones: an action
@@ -182,3 +184,11 @@ class Action(ABC):
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
         return Adds()
+
+    def twin_key(self, data: GameData, item: Item) -> Hashable | None:
+        """A cheap key such that two actions of the catalog with equal, non-None keys give equal `outcomes`
+        on every item of the same base, item level and rarity they apply to (their kernels are equal in every
+        state), computed without building a pool. None (the default) says the action offers none; a planner
+        then keeps it apart. Used by pruning (#118) to keep only the cheapest of a class of twins.
+        """
+        return None
