@@ -97,3 +97,11 @@ rules:
     quote: "Cannot be used on Veiled or Influenced items."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+
+  - id: veiled.chaos_veil_may_take_locked_side_open_slot
+    statement: A Veiled Chaos Orb can place the veiled mod on a side that is locked by Prefixes Cannot Be Changed when that side has an open slot (one report; the lock is not consulted for the veil). Whether a Veiled Exalted Orb behaves the same is not reported.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1nzugfk/_/ni4qpx1/
+    quote: "Veiled chaos and pray that it chooses to unveil a prefix (should be weighted be the number of available affixes? so something like 1 in 4)"
+    patch_verified: "3.26"
+    date_checked: 2026-10-31
