@@ -130,7 +130,7 @@ One mod of a compressed state that is not fractured, kept as a side, a kind and 
 _Avoid_: junk entry
 
 **Pool signature**:
-Everything about a compressed state and an action that decides the action's outcome distribution; states with equal signatures share one kernel.
+Everything about a compressed state and an action that decides the action's outcome distribution; states with equal signatures share one kernel. Different actions can share one signature: a fossil set whose factors change no weight of the base has the signature of a Chaos Orb.
 
 **Kernel**:
 The probability distribution over next compressed states for one action from one compressed state.
