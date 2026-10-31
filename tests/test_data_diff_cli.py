@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import urllib.error
+from pathlib import Path
 
 import pytest
 from repoe_support import (
@@ -21,6 +22,7 @@ from repoe_support import (
 )
 from seeded_versions import SEEDED_DIFF_TEXT, seeded_raw
 
+from crafting_system.data import __main__ as data_main
 from crafting_system.data import candidate
 from crafting_system.data.__main__ import main
 
@@ -36,6 +38,7 @@ def cache(tmp_path, monkeypatch):
     """The configured cache directory, redirected into `tmp_path`."""
     monkeypatch.delenv("CRAFTING_CONFIG", raising=False)
     monkeypatch.setenv("CRAFTING_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(data_main, "find_repo_root", lambda: None)  # no impact report; see the tests at the end
     return tmp_path / "cache"
 
 
@@ -428,3 +431,42 @@ def test_running_the_module_as_a_command_rejects_a_bad_version(tmp_path):
     assert result.stdout == ""
     assert "usage:" in result.stderr
     assert not (tmp_path / "empty").exists()
+
+
+# --- the impact report after the diff ------------------------------------------------------------
+
+FIXTURE_REPO = Path(__file__).resolve().parent / "fixtures" / "impact_repo"
+
+
+def test_the_diff_is_followed_by_the_impact_report_of_the_repo_it_runs_in(cache, capsys, monkeypatch):
+    monkeypatch.setattr(data_main, "find_repo_root", lambda: FIXTURE_REPO)
+    pin, opener = build_world()
+
+    code, out, _ = run(capsys, ["diff", "pinned", COMMIT], pin, opener)
+
+    assert code == 0
+    diff, rest = out.split("\n\nImpact of the patch on this repo: ")
+    assert diff.split("\n")[1:] == SEEDED_DIFF_TEXT.split("\n")[1:]
+    impact, pin_lines = rest.split("\n\n" + PIN_LINES_TITLE)
+    assert impact.split("\n")[0] == f"{PIN_LABEL} -> {COMMIT_LABEL}"
+    assert "examples/targets/touches-changes.yaml:6  ColdResistance (family of a changed mod)" in impact
+    assert "examples/targets/untouched.yaml" not in impact
+    assert pin_lines.startswith(" ")
+
+
+def test_no_impact_leaves_the_report_out(cache, capsys, monkeypatch):
+    monkeypatch.setattr(data_main, "find_repo_root", lambda: FIXTURE_REPO)
+    pin, opener = build_world()
+
+    _, out, _ = run(capsys, ["diff", "pinned", COMMIT, "--no-impact"], pin, opener)
+
+    assert "Impact of the patch" not in out
+    assert diff_body(out).split("\n")[1:] == SEEDED_DIFF_TEXT.split("\n")[1:]
+
+
+def test_a_package_without_a_checkout_prints_no_report(cache, capsys):
+    pin, opener = build_world()  # `cache` made find_repo_root return None, as in an installed copy
+
+    _, out, _ = run(capsys, ["diff", "pinned", COMMIT], pin, opener)
+
+    assert "Impact of the patch" not in out

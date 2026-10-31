@@ -107,7 +107,12 @@ def write_price_file(path: Path, price_file: PriceFile) -> None:
 
 
 def load_price_file(path: Path) -> PriceFile:
-    """Read and validate a price file; a bad shape is a `ValueError` naming the file."""
+    """Read and validate a price file; a bad shape is a `ValueError` naming the file.
+
+    A base name is put in canonical form (`canonical_price_name`), as `load_overrides` does, so a price
+    stored under `... Warlord/Hunter)` is found under `... Hunter/Warlord)`. Two names that become one
+    are an error.
+    """
     try:
         text = path.read_text(encoding="utf-8-sig")
     except FileNotFoundError:
@@ -159,7 +164,10 @@ def _price_file_from_document(document: object, path: Path) -> PriceFile:
         detail = raw.get("detail")
         if detail is not None and not isinstance(detail, dict):
             raise ValueError(f"{path}: price {name!r}: detail must be an object")
-        prices[name] = PriceEntry(float(raw["chaos"]), source, note, detail)
+        canonical = canonical_price_name(name)
+        if canonical in prices:
+            raise ValueError(f"{path}: {name!r} and another name give the same price name {canonical!r}")
+        prices[canonical] = PriceEntry(float(raw["chaos"]), source, note, detail)
     return PriceFile(league, fetched_at, float(chaos_per_divine), prices)
 
 

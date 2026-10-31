@@ -1,0 +1,76 @@
+# Target for benchmark route R05: a budget ring with a fractured "+12-16 to All Attributes", the
+# Strength of a Deafening Essence of Rage, and a Life or Resistance modifier.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Budget fractured all-attributes Strength ring", docs/research/
+# 2026-10-30-5-reference-routes.md, id R05):
+#   1. Buy a rare ring of item level 75 or more with "+12-16 to All Attributes" fractured.
+#   2. Use Deafening Essence of Rage until the other modifiers are useful ones, such as Maximum
+#      Life or Resistances.
+#   3. Apply 20 Intrinsic Catalysts and use the crafting bench on any open modifier.
+#
+# How the vague words of the guide are read (each reading is a choice and can be changed here):
+#   * "+12-16 to All Attributes": the game data has this mod as tier 1, "+(13-16) to all Attributes"
+#     (mod AllAttributes4); the next tier down is (9-12). The guide's 12 is read as that 13.
+#   * "Tier 1 Strength": the Strength the Deafening Essence of Rage adds, "+(51-58) to Strength"
+#     (mod StrengthEssence7_). It is tier 1, and so is the ordinary top Strength roll (51-55).
+#   * "Life or Resistances": at least one of Life and the three elemental resistances. The guide
+#     ends with "use the crafting bench on any open modifier", so a crafted Life or Resistance
+#     counts too (the group has no not_crafted). (The guide calls them prefixes; in the game Life
+#     is a prefix and the resistances are suffixes.) To insist on a rolled one, add
+#     `not_crafted: true` to the four lines of the last group.
+#   * "20 Intrinsic Catalysts" (quality): left out, it is B2. The bench craft of the guide is the
+#     crafted Life or Resistance above; a bench craft of no use to the requirements below is not
+#     offered by the planner anyway.
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+# The guide says only "rare ring"; every plain ring has the same pool of mods, so one is picked.
+base: Amethyst Ring
+
+# The item level of the ring, a whole number from 1 to 100. The guide says "75+".
+item_level: 75
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
+# [] means none.
+influence: []
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The fractured All Attributes, tier 1 (13-16). The fractured mod of the start item counts.
+  - family: AllAttributes
+    min_tier: 1
+    not_crafted: true
+
+  # Tier 1 Strength, the one of the essence (see the readings above). not_crafted: true keeps the
+  # bench Strength (up to 30) and the bench "Strength and X" mods out.
+  - family: Strength
+    min_tier: 1
+    not_crafted: true
+
+  # "At least 1 of these 4": Life, or one of the three elemental resistances.
+  - at_least: 1
+    of:
+      - family: IncreasedLife
+      - family: FireResistance
+      - family: ColdResistance
+      - family: LightningResistance
+
+# Where the crafting starts: a ring that already has All Attributes fractured.
+start_item:
+  rarity: rare
+  mods:
+    # The mod is named by its game-data id: AllAttributes4 is "+(13-16) to all Attributes", tier 1
+    # of All Attributes on this base. The tier is taken as written, so it was checked by hand
+    # against the game data (3.29.3.3).
+    - mod: AllAttributes4
+      tier: 1
+      # One whole number per stat of the mod, in the units of the game data.
+      values: [14]
+      # Locked in place by a Fracturing Orb.
+      fractured: true
+
+# The name the start item has in the price file, which is what it costs to get: the `name` of
+# examples/buy/r05-start-ring.yaml.
+start_price: R05 start ring

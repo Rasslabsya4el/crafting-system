@@ -1,0 +1,35 @@
+# Given route for benchmark route R10: Intelligence boots with a fractured Movement Speed.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# It does not search for anything: in every state the FIRST rule whose conditions match is the one
+# that is followed. A goal state is never acted on. A state no rule matches is reported as a gap.
+# Lines starting with # are comments and are ignored. The conditions and actions are explained in
+# examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (PoE Vault, "Ice Shot Deadeye gear, jewels and flasks", docs/research/
+# 2026-10-30-5-reference-routes.md, id R10):
+#   1. Buy boots with a fractured Movement Speed and use Shrieking Essence of Spite until the boots
+#      hold 48 Intelligence, Life and an open suffix.
+#   2. Craft "#% chance to Avoid Elemental Ailments" in the open suffix.
+
+name: R10, PoE Vault guide
+
+rules:
+  # Step 2: the essence has given Intelligence, there is Life and a free suffix: craft in it. The
+  # bench offers two tiers of this craft; the first is the one this route uses.
+  - when:
+      rarity: rare
+      requirements:
+        - family: Intelligence
+          status: passing
+        - family: IncreasedLife
+          status: passing
+        - family: AvoidElementalStatusAilments
+          status: absent
+      open_suffixes: 1
+    do: "Bench craft #% chance to Avoid Elemental Ailments [EinharMasterAvoidElementalAilments1]"
+  # Step 1: use the essence again (this is also the first use, on the bought boots).
+  - when:
+      rarity: rare
+    do: Shrieking Essence of Spite

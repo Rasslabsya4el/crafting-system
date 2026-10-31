@@ -68,6 +68,26 @@ A technique players name, such as essence spam or fracture-then-reforge. Here it
 **Acquisition cost**:
 The expected cost of obtaining an item in a given state, by crafting it or buying it, whichever is cheaper.
 
+**Input**:
+Another item an action consumes besides the one in hand (the donor of a recombinator, the imprint, the second item of an Awakener's Orb). An action with inputs is a two-input action. Its cost on every attempt is the action's own cost plus the acquisition cost of each input, because a retry consumes fresh inputs.
+_Avoid_: ingredient, second item (when the solver's `extra_inputs` is meant)
+
+**Need**:
+What an action asks for as an input: a start item and the compressed state wanted from it. The solver sees it as the start state of an acquisition process.
+
+**Acquisition process**:
+The sub-problem whose value is an acquisition cost: the same actions as the main problem, aimed at one wanted state instead of the target, so that an input costs the value of reaching it. The main target is one more acquisition process.
+_Avoid_: sub-craft, donor craft
+
+**Branching component**:
+A strongly connected component of the solver's graph that contains an input edge, such as donors that need each other. Its equations are not a contraction; the solver finds their least fixed point from below.
+
+**Value ceiling**:
+The cost above which the solver declares a state infinite, since a supercritical branching component never converges.
+
+**Selection rule**:
+One admissible way a recombinator chooses which mods to keep (ADR-0012). The admitted rules form a family; each is solved separately and the interval is read across them.
+
 **Policy**:
 The action to take in every state reachable from the start item, with the expected remaining cost of each state. It is what the planner returns.
 _Avoid_: plan, strategy

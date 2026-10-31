@@ -1,0 +1,16 @@
+# R05 start item (docs/research/2026-10-30-5-reference-routes.md): a rare ring of item level 75 or
+# more with "+12-16 to All Attributes" fractured. The target file is
+# examples/targets/r05-strength-ring.yaml; its `start_price` is the `name` below.
+#
+# No base is named: the guide says only "rare ring", and every plain ring has the same pool of mods.
+name: R05 start ring
+category: accessory.ring
+rarity: rare
+item_level_min: 75
+corrupted: false
+mods:
+  # 13 is the lowest roll of tier 1 (the next tier down rolls up to 12). The English text of the
+  # trade site is used.
+  - stat: "+# to all Attributes"
+    minimum: 13
+    fractured: true

@@ -1,0 +1,5 @@
+# Fixture target: its base item has its tags changed in the seeded second version.
+base: Driftwood Sceptre
+item_level: 80
+requirements:
+  - family: ChaosResistance

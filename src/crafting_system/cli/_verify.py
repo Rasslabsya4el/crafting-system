@@ -10,6 +10,7 @@ every time in the goal. Every interval is a normal approximation, good for thous
 import math
 from dataclasses import dataclass
 
+from crafting_system.actions import ApplyEssence, ChaosOrb, HarvestReforge
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.simulator import SimulationReport, Step, simulate
@@ -43,6 +44,11 @@ class Memoized:
         if key not in self._cache:
             self._cache[key] = self.action.outcomes(data, item)
         return self._cache[key]
+
+
+def _memoized(action: object) -> object:
+    """The rerolls are memoized; a bench action reads every mod of the item (a family clash, a full side) and is not."""
+    return Memoized(action) if isinstance(action, (ChaosOrb, HarvestReforge, ApplyEssence)) else action
 
 
 @dataclass(frozen=True)
@@ -87,7 +93,7 @@ def max_steps_for(plan: Plan) -> int:
 def verify(data: GameData, plan: Plan, *, runs: int = DEFAULT_RUNS, seed: int = DEFAULT_SEED) -> Verification:
     """Simulate `runs` crafts of the plan's policy from the target's start item."""
     steps = {
-        state: Step(Memoized(plan.offer_of(action).offer.action), plan.offer_of(action).cost)
+        state: Step(_memoized(plan.offer_of(action).offer.action), plan.offer_of(action).cost)
         for state, action in plan.policy.items()
     }
     abstraction, target = plan.abstraction, plan.target
