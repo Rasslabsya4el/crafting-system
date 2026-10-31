@@ -1,7 +1,10 @@
-"""The listing-age window (`indexed`) of the trade query: model, recorded end to end, command line (#40).
+"""The listing-age window (`indexed`) and the listing status of the trade query: model, recorded end to end,
+command line (#40, #133).
 
-Why it exists: a months-old listing can set a floor price. The recordings show it: the R12 query without
-the window found 910 listings, the cheapest from August; with `1week` the site found 17.
+The window is for a narrower search: the R12 query without it found 910 listings, with `1week` the site
+found 17. By default there is no window (#133): the owner buys with instant buyout, whose price stands
+however old the listing is. The recordings were made with status `available` and the `1week` window; the
+query now sends `securable`, so the expected body is the recorded one with that status.
 """
 
 import json
@@ -14,6 +17,7 @@ from crafting_system.prices.__main__ import main
 from crafting_system.prices.trade_pricing import entry_for
 from crafting_system.prices.trade_query import (
     DEFAULT_INDEXED,
+    DEFAULT_STATUS,
     INDEXED_OPTIONS,
     TradeQuery,
     TradeSpecError,
@@ -24,6 +28,13 @@ from repoe_support import fixture_game_data
 from trade_support import NOW, R12_SPEC, FakeTrade, make_client, price_file, recorded
 
 BODY = {"filters": {"indexed": {"option": "1week"}}}
+
+
+def sent_body():
+    """The recorded `1week` body as the query writes it now: instant buyout (`securable`)."""
+    body = recorded("search_body_r12_1week.json")
+    body["query"]["status"] = {"option": "securable"}
+    return body
 
 
 @pytest.fixture(scope="module")
@@ -58,9 +69,10 @@ def search_body(trade):
 # -- the query model -------------------------------------------------------------------------------
 
 
-def test_the_default_window_is_one_week():
-    assert DEFAULT_INDEXED == "1week"
-    assert DEFAULT_INDEXED in INDEXED_OPTIONS
+def test_the_default_is_any_listing_age_and_instant_buyout():
+    assert DEFAULT_INDEXED is None
+    assert DEFAULT_STATUS == "securable"
+    assert TradeQuery().status == "securable"
 
 
 def test_a_window_is_written_as_the_trade_filters_indexed_option():
@@ -91,10 +103,15 @@ def test_an_unknown_window_is_refused_and_the_options_are_listed():
     assert "2days" in str(error.value)
 
 
-def test_build_query_gives_the_default_window_unless_told_otherwise(spec):
-    assert build_query(spec, []).indexed == DEFAULT_INDEXED
+def test_build_query_has_no_window_and_instant_buyout_unless_told_otherwise(spec):
+    default = build_query(spec, [])
+    assert (default.indexed, default.status) == (None, "securable")
+    body = default.body()["query"]
+    assert body["status"] == {"option": "securable"}
+    assert "trade_filters" not in body["filters"]
+    assert build_query(spec, [], indexed="1week").body()["query"]["filters"]["trade_filters"] == BODY
     assert build_query(spec, [], indexed="3days").indexed == "3days"
-    assert build_query(spec, [], indexed=None).indexed is None
+    assert build_query(spec, [], status="available").status == "available"
 
 
 def test_the_hash_tells_two_windows_apart_and_equal_windows_together():
@@ -123,27 +140,39 @@ def run(trade, spec, game_mods, tmp_path, **options):
     )
 
 
-def test_the_search_body_is_the_one_recorded_with_the_window(trade, spec, game_mods, tmp_path):
+def test_by_default_the_search_body_is_instant_buyout_with_no_window(trade, spec, game_mods, tmp_path):
     found = run(trade, spec, game_mods, tmp_path)
 
-    assert search_body(trade) == recorded("search_body_r12_1week.json")
-    assert found.query == recorded("search_body_r12_1week.json")
+    for body in (search_body(trade), found.query):
+        assert body["query"]["status"] == {"option": "securable"}
+        assert "trade_filters" not in body["query"]["filters"]
+    assert found.indexed is None
 
 
-def test_the_price_is_the_median_of_the_five_cheapest_recent_listings(trade, spec, game_mods, tmp_path):
-    found = run(trade, spec, game_mods, tmp_path)
+def test_a_window_adds_the_indexed_filter_to_the_recorded_body(trade, spec, game_mods, tmp_path):
+    found = run(trade, spec, game_mods, tmp_path, indexed="1week")
 
-    assert (found.chaos, found.listings, found.used, found.fetched) == (4.0, 17, 5, 10)
+    assert search_body(trade) == sent_body()
+    assert found.query == sent_body()
+
+
+def test_the_price_is_the_mean_of_the_five_cheapest_listings(trade, spec, game_mods, tmp_path):
+    found = run(trade, spec, game_mods, tmp_path, indexed="1week")
+
+    # the recorded rows cost 1, 4, 4, 8, 10, 15, ...: the median of the first five would be 4.0
+    assert (found.chaos, found.listings, found.used, found.fetched) == (pytest.approx(5.4), 17, 5, 10)
 
 
 def test_the_stored_query_carries_the_window(trade, spec, game_mods, tmp_path):
-    found = run(trade, spec, game_mods, tmp_path)
+    found = run(trade, spec, game_mods, tmp_path, indexed="1week")
 
     entry = entry_for(found)
     assert entry.detail["query"]["query"]["filters"]["trade_filters"] == BODY
-    assert entry.detail["query_hash"] == query_hash("Allflame", recorded("search_body_r12_1week.json"))
+    assert entry.detail["query_hash"] == query_hash("Allflame", sent_body())
     assert "listed within 1week" in entry.note
-    assert entry.note.startswith("median of the 5 cheapest of 10 fetched listings, 17 on the site")
+    assert entry.note.startswith(
+        "mean of the 5 cheapest instant-buyout listings of 10 fetched, 17 on the site"
+    )
 
 
 def test_every_recorded_listing_is_within_a_week_of_the_run(trade):
@@ -155,10 +184,8 @@ def test_every_recorded_listing_is_within_a_week_of_the_run(trade):
     assert all(timedelta(0) <= age <= timedelta(days=7) for age in ages)
 
 
-def test_without_a_window_the_body_has_no_trade_filters_and_the_note_says_any_time(
-    trade, spec, game_mods, tmp_path
-):
-    found = run(trade, spec, game_mods, tmp_path, indexed=None)
+def test_without_a_window_the_note_says_any_time(trade, spec, game_mods, tmp_path):
+    found = run(trade, spec, game_mods, tmp_path)
 
     assert "trade_filters" not in search_body(trade)["query"]["filters"]
     assert "trade_filters" not in found.query["query"]["filters"]
@@ -166,7 +193,7 @@ def test_without_a_window_the_body_has_no_trade_filters_and_the_note_says_any_ti
 
 
 def test_a_different_window_is_a_different_cache_entry(trade, spec, game_mods, tmp_path):
-    week = run(trade, spec, game_mods, tmp_path)
+    week = run(trade, spec, game_mods, tmp_path, indexed="1week")
     trade.requests.clear()
 
     two_weeks = run(trade, spec, game_mods, tmp_path, indexed="2weeks")
@@ -202,10 +229,21 @@ def cli(tmp_path, trade, *argv):
     )
 
 
-def test_the_command_line_default_is_one_week(tmp_path, trade, prices_path, capsys):
+def test_the_command_line_default_is_instant_buyout_of_any_age(tmp_path, trade, prices_path, capsys):
     assert cli(tmp_path, trade) == 0
 
-    assert search_body(trade)["query"]["filters"]["trade_filters"] == BODY
+    body = search_body(trade)["query"]
+    assert body["status"] == {"option": "securable"}
+    assert "trade_filters" not in body["filters"]
+    out = capsys.readouterr().out
+    assert "mean of the 5 cheapest instant-buyout listings" in out
+    assert "listings from any time" in out
+
+
+def test_indexed_one_week_adds_the_window_to_the_search_body(tmp_path, trade, prices_path, capsys):
+    assert cli(tmp_path, trade, "--indexed", "1week") == 0
+
+    assert search_body(trade) == sent_body()
     assert "listings from the last 1week" in capsys.readouterr().out
 
 

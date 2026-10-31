@@ -115,7 +115,7 @@ class AugmentationOrb(Action):
         return dict(COST.value["augmentation"])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads()
+        return Reads.adding()
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset())
@@ -141,7 +141,7 @@ class RegalOrb(Action):
         return dict(COST.value["regal"])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads()
+        return Reads.adding()
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset())
