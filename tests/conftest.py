@@ -62,6 +62,7 @@ def network_guard(request, monkeypatch):
 # Without `--shard` nothing here changes: a plain `pytest` runs every test, in order.
 
 RECORDED: dict[str, float] = defaultdict(float)
+GROUPS: dict[str, str] = {}  # node id -> group, kept for the recording
 
 
 def pytest_addoption(parser):
@@ -86,6 +87,8 @@ def _wide_params(item) -> dict[str, int]:
 
 def pytest_collection_modifyitems(config, items):
     option = config.getoption("shard")
+    if config.getoption("record_durations"):
+        GROUPS.update({item.nodeid: shard_support.group_name(item.nodeid, _wide_params(item)) for item in items})
     if option is None:
         return
     try:
@@ -130,4 +133,4 @@ def pytest_runtest_logreport(report):
 def pytest_sessionfinish(session):
     target = session.config.getoption("record_durations")
     if target:
-        shard_support.write_json(Path(target), {nodeid: round(sec, 3) for nodeid, sec in RECORDED.items()})
+        shard_support.write_json(Path(target), shard_support.recording(RECORDED, GROUPS))

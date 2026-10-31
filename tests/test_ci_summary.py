@@ -31,9 +31,11 @@ def write_shard(results, system, number, *, tests=3, selected=None, collected=6,
     (folder / "junit.xml").write_text(xml, encoding="utf-8")
     report = {"shard": number, "shards": 2, "collected": collected, "selected": tests if selected is None else selected}
     (folder / "shard.json").write_text(json.dumps(report), encoding="utf-8")
-    (folder / "durations.json").write_text(
-        json.dumps({f"t::test_{system}_{number}_{index}": 1.0 + index for index in range(tests)}), encoding="utf-8"
-    )
+    recorded = {
+        "tests": {f"t::test_{system}_{number}_{index}": 1.0 + index for index in range(tests)},
+        "groups": {f"t_{number}": {"seconds": 2.0 * number if system.startswith("u") else 4.0 * number, "tests": tests}},
+    }
+    (folder / "durations.json").write_text(json.dumps(recorded), encoding="utf-8")
 
 
 def full_run(results, **options):
@@ -60,7 +62,11 @@ def test_every_shard_of_every_system_present_and_green_passes_and_reports_the_to
     assert code == 0
     assert "all shards passed" in out
     assert "| ubuntu-latest | 2/2 | 6 | 6 | 0 | 0 |" in out
-    assert json.loads(merged.read_text(encoding="utf-8"))["t::test_ubuntu-latest_1_0"] == 1.0
+    assert json.loads(merged.read_text(encoding="utf-8")) == {
+        "t_1": {"seconds": 3.0, "tests": 3},  # the mean of 2 s on one system and 4 s on the other
+        "t_2": {"seconds": 6.0, "tests": 3},
+    }
+    assert "`t::test_windows-latest_1_2`" in out  # the slowest tests are listed
 
 
 def test_a_shard_that_left_no_files_fails_the_run(tmp_path, capsys):

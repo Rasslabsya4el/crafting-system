@@ -44,24 +44,30 @@ def group_name(nodeid: str, wide_params: Mapping[str, int]) -> str:
     return module + "[" + ",".join(f"{name}#{wide_params[name]}" for name in sorted(wide_params)) + "]"
 
 
-def read_durations(path: Path | None) -> dict[str, float]:
-    """The seconds of each test by its node id; empty when no file is given."""
+def read_durations(path: Path | None) -> dict[str, tuple[float, int]]:
+    """Stored (seconds, number of tests) of each group; empty when no file is given.
+
+    By group and not by test: a test id can carry anything its parameters print, paths included, and the
+    plan needs only the group's time.
+    """
     if path is None:
         return {}
     document = json.loads(path.read_text(encoding="utf-8"))
-    return {str(nodeid): float(seconds) for nodeid, seconds in document.items()}
+    return {str(group): (float(entry["seconds"]), int(entry["tests"])) for group, entry in document.items()}
 
 
-def group_seconds(members: Mapping[str, Sequence[str]], durations: Mapping[str, float]) -> dict[str, float]:
-    """Seconds per group: the sum of its tests; a test without a stored time costs the median of the stored ones."""
-    known = [durations[nodeid] for nodeids in members.values() for nodeid in nodeids if nodeid in durations]
-    if known:
-        unknown = statistics.median(known)
-    else:
-        unknown = UNKNOWN_SECONDS
-    return {
-        group: sum(durations.get(nodeid, unknown) for nodeid in nodeids) for group, nodeids in members.items()
-    }
+def group_seconds(members: Mapping[str, Sequence[str]], durations: Mapping[str, tuple[float, int]]) -> dict[str, float]:
+    """Seconds per group: the stored time, plus the median seconds of one test for each test the group gained.
+
+    A group without a stored time costs its tests at that median; with no file at all a test costs one second.
+    """
+    per_test = [seconds / tests for seconds, tests in durations.values() if tests]
+    unit = statistics.median(per_test) if per_test else UNKNOWN_SECONDS
+    result = {}
+    for group, nodeids in members.items():
+        seconds, tests = durations.get(group, (0.0, 0))
+        result[group] = seconds + max(0, len(nodeids) - tests) * unit
+    return result
 
 
 def assign(seconds: Mapping[str, float], count: int) -> dict[str, int]:
@@ -86,3 +92,14 @@ def order_longest_first(groups: Iterable[str], seconds: Mapping[str, float]) -> 
 def write_json(path: Path, document: Mapping[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+
+
+def recording(seconds: Mapping[str, float], groups: Mapping[str, str]) -> dict[str, object]:
+    """What `--record-durations` writes: the seconds of each test that ran, and of each group of them."""
+    by_group: dict[str, dict[str, float]] = {}
+    for nodeid, spent in seconds.items():
+        entry = by_group.setdefault(groups.get(nodeid, nodeid.split("::", 1)[0]), {"seconds": 0.0, "tests": 0})
+        entry["seconds"] += spent
+        entry["tests"] += 1
+    rounded = {group: {"seconds": round(entry["seconds"], 3), "tests": int(entry["tests"])} for group, entry in by_group.items()}
+    return {"tests": {nodeid: round(spent, 3) for nodeid, spent in seconds.items()}, "groups": rounded}

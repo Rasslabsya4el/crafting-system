@@ -10,8 +10,8 @@ Markdown report; the same text goes to `$GITHUB_STEP_SUMMARY` when that is set. 
   the tests collected (a test dropped or run twice), or two shards disagree on what the suite is;
 - a test skipped for lack of the game data (a skip reason that says it is not in the cache).
 
-Other skips are counted and listed by reason. `--merged-durations FILE` writes the seconds of every test, the
-mean over the systems, for `tests/shard_durations.json` (see `docs/ci.md`).
+Other skips are counted and listed by reason. `--merged-durations FILE` writes the seconds and the number of tests
+of every group, the mean over the systems, for `tests/shard_durations.json` (see `docs/ci.md`).
 
 Standard library only: it runs on the bare runner.
 """
@@ -53,20 +53,21 @@ def read_shard(folder: Path) -> dict | None:
     }
 
 
-def read_durations(folder: Path) -> dict[str, float]:
+def read_durations(folder: Path) -> dict:
     try:
-        return json.loads((folder / "durations.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+        recorded = json.loads((folder / "durations.json").read_text(encoding="utf-8"))
+        return {"tests": recorded["tests"], "groups": recorded["groups"]}
+    except (OSError, ValueError, KeyError):
+        return {"tests": {}, "groups": {}}
 
 
-def check(results: Path, systems: list[str], shards: int) -> tuple[list[str], list[str], dict]:
-    """(problems, report lines, mean seconds per test) of the whole run."""
+def check(results: Path, systems: list[str], shards: int) -> tuple[list[str], list[str], dict, dict]:
+    """(problems, report lines, mean seconds per test, mean seconds and tests per group) of the whole run."""
     problems: list[str] = []
     lines = ["| system | shards | tests | passed | skipped | failed | slowest shard |", "|---|---|---|---|---|---|---|"]
     collected_by_system: dict[str, int] = {}
     skips = collections.Counter()
-    seconds_by_system: dict[str, dict[str, float]] = {}
+    recorded_by_system: dict[str, dict] = {}
 
     for system in systems:
         found = {}
@@ -77,7 +78,9 @@ def check(results: Path, systems: list[str], shards: int) -> tuple[list[str], li
                 problems.append(f"{system} shard {number}/{shards}: no result files (the job did not finish)")
                 continue
             found[number] = shard
-            seconds_by_system.setdefault(system, {}).update(read_durations(folder))
+            seen = recorded_by_system.setdefault(system, {"tests": {}, "groups": {}})
+            for kind, values in read_durations(folder).items():
+                seen[kind].update(values)
         if not found:
             continue
         shard_report = {number: shard["report"] for number, shard in found.items()}
@@ -118,12 +121,21 @@ def check(results: Path, systems: list[str], shards: int) -> tuple[list[str], li
         lines += ["", "Skips by reason (all systems):", ""]
         lines += [f"- {count} x {reason or '(no reason)'}" for reason, count in skips.most_common()]
 
-    systems_seen = list(seconds_by_system.values())
+    recorded = list(recorded_by_system.values())
+    tests = [seen["tests"] for seen in recorded]
     mean = {
-        nodeid: statistics.fmean(seen[nodeid] for seen in systems_seen if nodeid in seen)
-        for nodeid in sorted({nodeid for seen in systems_seen for nodeid in seen})
+        nodeid: statistics.fmean(seen[nodeid] for seen in tests if nodeid in seen)
+        for nodeid in sorted({nodeid for seen in tests for nodeid in seen})
     }
-    return problems, lines, mean
+    groups = [seen["groups"] for seen in recorded]
+    mean_groups = {
+        group: {
+            "seconds": round(statistics.fmean(seen[group]["seconds"] for seen in groups if group in seen), 3),
+            "tests": max(seen[group]["tests"] for seen in groups if group in seen),
+        }
+        for group in sorted({group for seen in groups for group in seen})
+    }
+    return problems, lines, mean, mean_groups
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -131,17 +143,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("results", type=Path, help="folder holding the results-<system>-<shard> folders")
     parser.add_argument("--shards", type=int, required=True, help="shards per system")
     parser.add_argument("--systems", required=True, help="comma-separated system names as in the folder names")
-    parser.add_argument("--merged-durations", type=Path, help="write the mean seconds per test here")
+    parser.add_argument("--merged-durations", type=Path, help="write the mean seconds and tests per group here")
     parser.add_argument("--job-result", default="success", help="result of the shard jobs as the workflow knows it")
     args = parser.parse_args(argv)
 
-    problems, lines, mean = check(args.results, args.systems.split(","), args.shards)
+    problems, lines, mean, mean_groups = check(args.results, args.systems.split(","), args.shards)
     if args.job_result != "success":
         problems.append(f"the shard jobs ended as '{args.job_result}'")
     if args.merged_durations is not None:
         args.merged_durations.parent.mkdir(parents=True, exist_ok=True)
         args.merged_durations.write_text(
-            json.dumps({nodeid: round(sec, 3) for nodeid, sec in mean.items()}, indent=1, sort_keys=True) + "\n",
+            json.dumps(mean_groups, indent=1, sort_keys=True) + "\n",
             encoding="utf-8", newline="\n",
         )  # fmt: skip
         top = sorted(mean.items(), key=lambda pair: -pair[1])[:TOP_TESTS]

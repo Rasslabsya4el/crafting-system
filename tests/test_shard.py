@@ -32,18 +32,37 @@ def test_a_group_is_the_module_and_the_index_of_each_wide_fixture_value():
     )
 
 
-def test_a_test_without_a_stored_time_costs_the_median_of_the_stored_ones():
-    members = {"g": ["a", "b", "c"], "h": ["d"]}
+def test_a_group_costs_its_stored_time_plus_the_median_test_for_each_test_it_gained():
+    members = {"g": ["a", "b", "c", "d"], "h": ["e"], "new": ["f", "g"]}
+    stored = {"g": (10.0, 3), "h": (100.0, 1), "old": (5.0, 1)}  # per test: 3.33, 100, 5; the median is 5
 
-    seconds = shard_support.group_seconds(members, {"a": 1.0, "b": 3.0, "d": 100.0})
+    seconds = shard_support.group_seconds(members, stored)
 
-    assert seconds == {"g": 1.0 + 3.0 + 3.0, "h": 100.0}  # the median of 1, 3, 100 is 3
+    assert seconds == {"g": 10.0 + 1 * 5.0, "h": 100.0, "new": 2 * 5.0}
 
 
 def test_without_any_stored_time_every_test_costs_the_same():
     seconds = shard_support.group_seconds({"g": ["a", "b"], "h": ["c"]}, {})
 
     assert seconds == {"g": 2 * shard_support.UNKNOWN_SECONDS, "h": shard_support.UNKNOWN_SECONDS}
+
+
+def test_the_stored_file_is_read_by_group_and_a_missing_name_is_no_file(tmp_path):
+    path = tmp_path / "d.json"
+    path.write_text(json.dumps({"tests/a.py": {"seconds": 1.5, "tests": 4}}), encoding="utf-8")
+
+    assert shard_support.read_durations(path) == {"tests/a.py": (1.5, 4)}
+    assert shard_support.read_durations(None) == {}
+
+
+def test_the_recording_sums_the_seconds_of_each_group_and_names_every_test():
+    spent = {"a.py::t1": 1.0, "a.py::t2[x]": 2.0, "b.py::t3[R05]": 4.0}
+    groups = {"a.py::t1": "a.py", "a.py::t2[x]": "a.py", "b.py::t3[R05]": "b.py[solved#2]"}
+
+    recorded = shard_support.recording(spent, groups)
+
+    assert recorded["groups"] == {"a.py": {"seconds": 3.0, "tests": 2}, "b.py[solved#2]": {"seconds": 4.0, "tests": 1}}
+    assert recorded["tests"] == spent
 
 
 def test_the_longest_groups_go_first_each_to_the_shard_with_the_least_time():
@@ -147,8 +166,8 @@ def test_the_tests_of_one_value_of_a_module_scoped_fixture_stay_on_one_shard(pro
 
 def test_the_stored_seconds_put_the_slow_group_alone_on_a_shard(project):
     durations = project / "durations.json"
-    seconds = {f"test_route.py::{name}[{value}]": 1.0 for name in ("test_one", "test_two") for value in ("R10", "R11", "R05")}
-    seconds |= {"test_route.py::test_three": 1.0, "test_route.py::test_at[a@b]": 1.0, "test_plain.py::test_a": 500.0, "test_plain.py::test_b": 500.0}
+    seconds = {"test_plain.py": {"seconds": 1000.0, "tests": 2}, "test_route.py": {"seconds": 1.0, "tests": 2}}
+    seconds |= {f"test_route.py[solved#{index}]": {"seconds": 1.0, "tests": 2} for index in range(3)}
     durations.write_text(json.dumps(seconds), encoding="utf-8")
 
     first = selected(project, 1, 2, "--shard-durations", str(durations))
@@ -167,8 +186,9 @@ def test_a_run_with_the_shard_and_the_record_writes_the_report_and_the_seconds_o
     report = json.loads((project / "report.json").read_text(encoding="utf-8"))
     seen = json.loads((project / "seen.json").read_text(encoding="utf-8"))
     assert (report["slot"], report["slots"], report["collected"]) == (1, 2, 10)
-    assert report["selected"] == len(seen) > 0
-    assert all(seconds >= 0 for seconds in seen.values())
+    assert report["selected"] == len(seen["tests"]) > 0
+    assert all(seconds >= 0 for seconds in seen["tests"].values())
+    assert sum(entry["tests"] for entry in seen["groups"].values()) == report["selected"]
 
 
 def test_a_bad_shard_is_a_usage_error_and_without_the_option_nothing_is_dropped(project):

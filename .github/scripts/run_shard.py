@@ -32,14 +32,16 @@ def slot_numbers(shard: int, shards: int, procs: int) -> list[int]:
 
 def merge(out: Path, slot_dirs: list[Path]) -> bool:
     """junit.xml, shard.json and durations.json of the shard from its slots; False when a slot left no files."""
-    suites, reports, durations = [], [], {}
+    suites, reports, durations = [], [], {"tests": {}, "groups": {}}
     for folder in slot_dirs:
         try:
             suite = ET.parse(folder / "junit.xml").getroot()
             suites.append(suite[0] if suite.tag == "testsuites" else suite)
             reports.append(json.loads((folder / "shard.json").read_text(encoding="utf-8")))
-            durations.update(json.loads((folder / "durations.json").read_text(encoding="utf-8")))
-        except (OSError, ValueError, ET.ParseError, IndexError):
+            recorded = json.loads((folder / "durations.json").read_text(encoding="utf-8"))
+            durations["tests"].update(recorded["tests"])
+            durations["groups"].update(recorded["groups"])
+        except (OSError, ValueError, KeyError, ET.ParseError, IndexError):
             return False
     collected = {report["collected"] for report in reports}
     if len(collected) != 1:
