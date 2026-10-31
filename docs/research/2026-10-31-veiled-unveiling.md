@@ -128,6 +128,8 @@ Archive reads (same posts and comments as reddit.com, with authors and dates). A
 
 **Not found in the three threads:** a locked side with an open slot (V-01); an unveiled or bench-crafted mod blocking Veiled Exalted / Chaos (V-02); any Cannot roll Attack/Caster interaction with the offer (V-06); any count of how often a given option is offered (V-12).
 
+**Research record of ticket #112 for V-01, V-02, V-03, V-06:** GPT researcher (Terra) run `20261031-151355-db15` (running from 16:01 to 16:30 under 429 limits of the shared search, subagent never reported; stopped) found nothing; the official forum thread 3352847 ("Question on suffixes cannot be changed + veiled chaos orb", 2022-2023 era, a search hit) answered 429 to a fetch and a human check in the browser pane, so it was not read. **Not found by anyone:** V-01, V-02, V-06 and a direct statement for V-03. They stay open with the recommended answers; the R24 circumstantial reading for V-03 is the only new evidence.
+
 ## Open points and questions for the owner
 
 Each is a gap a quick in-game check or his own knowledge settles; recommended answers are the rules above.
