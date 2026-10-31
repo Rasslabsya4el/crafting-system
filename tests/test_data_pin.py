@@ -187,50 +187,63 @@ def test_a_version_name_with_the_same_version_repeated_is_accepted(cache, tmp_pa
     assert load_pin(pin_file).commit == export
 
 
-def test_a_version_folder_that_exists_is_kept_and_only_what_is_wrong_in_it_is_downloaded(cache, tmp_path, capsys):
+def test_an_existing_version_folder_is_overwritten_by_the_moved_files_without_a_download(cache, tmp_path, capsys):
     pin, files = files_world({COMMIT: new_files()})
     folder = folder_of(cache, NEW_VERSION)
     folder.mkdir(parents=True)
-    for name, data in new_files().items():
-        (folder / name).write_bytes(data)
-    (folder / "fossils.json").write_bytes(b"corrupt")
+    (folder / "fossils.json").write_bytes(b"an older export of this version")
+    assert main(["diff", "pinned", COMMIT, "--no-impact"], pin=pin, open_url=files) == 0
+    capsys.readouterr()
     pin_file = tmp_path / "PIN.json"
 
-    code, out, _ = run(capsys, ["pin", COMMIT, NEW_VERSION], pin, files, pin_file)
+    code, out, _ = run(capsys, ["pin", COMMIT, NEW_VERSION], pin, refuse_download, pin_file)
 
     assert code == 0
-    assert [line.split(":")[1].split(",")[0] for line in out.splitlines()[:5]] == [
-        " repaired" if name == "fossils.json" else " cached" for name in FILE_NAMES
-    ]
+    assert {line.split(":")[1].split(",")[0] for line in out.splitlines()[:5]} == {" cached"}
     assert (folder / "fossils.json").read_bytes() == new_files()["fossils.json"]
+    assert not folder_of(cache, COMMIT).exists()
     assert main(["verify"], pin=load_pin(pin_file)) == 0
 
 
-def test_the_pin_file_is_written_only_after_the_files_are_checked(cache, tmp_path, capsys):
+@pytest.mark.parametrize("failing", ["fetch", "write_pin"])
+def test_a_failure_before_the_pin_is_written_leaves_the_pin_and_the_learned_commit_as_they_were(
+    cache, tmp_path, capsys, monkeypatch, failing
+):
     pin, files = files_world({COMMIT: new_files()})
     pin_file = tmp_path / "PIN.json"
     pin_file.write_bytes(b"the old pin")
     assert main(["diff", "pinned", COMMIT, "--no-impact"], pin=pin, open_url=files) == 0
     capsys.readouterr()
-    folder = folder_of(cache, NEW_VERSION)
-    folder.mkdir(parents=True)
-    (folder / "mods.json").write_bytes(b"corrupt")  # the repair is asked of a server that no longer has the file
-    files.served.pop(expected_pin().url_for("mods.json"))
+    calls = []
 
-    code, out, err = run(capsys, ["pin", COMMIT, NEW_VERSION], pin, files, pin_file)
+    def broken(*args, **kwargs):
+        calls.append(failing)
+        raise PinFileError(f"{failing} failed")
 
-    assert code == 1
-    assert err.startswith("error: ")
-    assert "mods.json" in err
+    monkeypatch.setattr(data_main, failing, broken)
+
+    code, out, err = run(capsys, ["pin", COMMIT, NEW_VERSION], pin, refuse_download, pin_file)
+
+    assert code == 1 and calls == [failing]
+    assert err.startswith("error: ") and f"{failing} failed" in err
     assert pin_file.read_bytes() == b"the old pin"
     assert "was written" not in out
-    assert listing(tmp_path) == ["PIN.json", "cache"]  # no temp file left
+    assert listing(folder_of(cache, COMMIT)) == sorted([*FILE_NAMES, "pin.json"])  # the commit is still learned
+    assert not folder_of(cache, NEW_VERSION).exists() or listing(folder_of(cache, NEW_VERSION)) == []
+
+    monkeypatch.undo()
+    monkeypatch.setenv("CRAFTING_CACHE_DIR", str(cache))
+    monkeypatch.delenv("CRAFTING_CONFIG", raising=False)
+    monkeypatch.setattr(data_main, "find_repo_root", lambda: None)
+    code, _, _ = run(capsys, ["pin", COMMIT, NEW_VERSION], pin, refuse_download, pin_file)  # a rerun downloads nothing
+    assert code == 0
+    assert main(["verify"], pin=load_pin(pin_file)) == 0
 
 
 # --- refusals ----------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("target", [TEST_COMMIT, TEST_COMMIT.upper(), PIN_VERSION])
+@pytest.mark.parametrize("target", [TEST_COMMIT, TEST_COMMIT.upper()])
 def test_the_active_pin_is_refused(cache, tmp_path, capsys, target):
     pin, files = files_world({})
     github = FakeGitHub()
@@ -247,16 +260,15 @@ def test_the_active_pin_is_refused(cache, tmp_path, capsys, target):
     assert not (cache / "repoe-fork").exists()
 
 
-def test_a_version_equal_to_the_active_pins_is_refused_for_a_new_commit(cache, tmp_path, capsys):
+def test_a_new_export_of_the_active_pins_version_can_be_pinned(cache, tmp_path, capsys):
     pin, files = files_world({COMMIT: new_files()})
     pin_file = tmp_path / "PIN.json"
 
-    code, out, err = run(capsys, ["pin", COMMIT, PIN_VERSION], pin, files, pin_file)
+    code, _, _ = run(capsys, ["pin", COMMIT, PIN_VERSION], pin, files, pin_file)
 
-    assert code == 1
-    assert "already the pin" in err
-    assert files.urls == []
-    assert not pin_file.exists()
+    assert code == 0
+    assert load_pin(pin_file) == expected_pin(version=PIN_VERSION)
+    assert main(["verify"], pin=load_pin(pin_file)) == 0
 
 
 def test_a_name_whose_export_is_the_pin_commit_is_refused(cache, tmp_path, capsys):

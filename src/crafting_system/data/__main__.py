@@ -94,8 +94,8 @@ def _export_line(export: Export) -> str:
 
 
 def _side(text: str, pin: RepoePin, open_url: OpenUrl | None) -> _Side:
-    """What an argument of `diff` stands for; a version name goes through the GitHub API (the pin's own does not)."""
-    if text in (PINNED, pin.version, pin.commit):
+    """What an argument of `diff` stands for; a version name goes through the GitHub API (several exports can share one)."""
+    if text in (PINNED, pin.commit):
         return _Side(PINNED)
     if is_commit(text):
         return _Side(text)
@@ -143,8 +143,6 @@ def _diff(old: _Side, new: _Side, pin: RepoePin, open_url: OpenUrl | None, *, im
 
 def _pin(target: str, version: str | None, pin: RepoePin, pin_file: Path, open_url: OpenUrl | None) -> None:
     """Move the pin to `target` (a commit or a version name): the files in place and checked, then `pin_file`."""
-    if target == pin.version:
-        raise DataError(f"{target} is already the pin: PIN.json names it (commit {pin.commit})")
     if is_commit(target):
         commit = target
     else:
@@ -161,34 +159,59 @@ def _pin(target: str, version: str | None, pin: RepoePin, pin_file: Path, open_u
                 f"{PIN_COMMAND} {commit} <version>"
             )
         version = named.version
-    if version == pin.version:
-        raise DataError(
-            f"version {version} is already the pin (commit {pin.commit}) and its cache folder holds that commit: "
-            "a different commit needs a different version name"
-        )
 
     new_pin = dataclasses.replace(candidate_pin(commit, pin, open_url=open_url), version=version)
-    _file_under_version(commit, version)
-    for result in fetch(new_pin, open_url=open_url):
-        print(_line(result.name, result.status, result.size, result.sha256))
-    write_pin(new_pin, pin_file)
+    moved = _file_under_version(commit, version)
+    try:
+        for result in fetch(new_pin, open_url=open_url):
+            print(_line(result.name, result.status, result.size, result.sha256))
+        write_pin(new_pin, pin_file)
+    except BaseException:
+        _put_back(moved, commit, version)  # the commit stays learned, so a rerun downloads nothing
+        raise
+    _drop_learned(commit)
     print(f"{pin_file} was written: the pin is now version {version}, commit {commit}")
 
 
-def _file_under_version(commit: str, version: str) -> None:
-    """Make the cache folder of `version` hold what `diff` stored under the commit, without a second download.
+def _file_under_version(commit: str, version: str) -> list[str]:
+    """Move the files `diff` stored under the commit into the cache folder of `version`; the names moved.
 
-    The commit's folder is moved to the version's name and its learned manifest is dropped (the pin
-    file takes over). A version folder that already exists is kept: `fetch` repairs what is wrong in it.
+    Without a second download: a file of an older export of the same version name in that folder is
+    replaced, and `fetch` repairs whatever is still wrong. The learned manifest stays in the commit's
+    folder until the pin is written (`_drop_learned`), so a failure can put everything back.
     """
     source, target = version_folder(commit), version_folder(version)
-    if target.exists():
-        return
+    moved: list[str] = []
     try:
-        os.replace(source, target)
-        (target / MANIFEST_NAME).unlink(missing_ok=True)
+        target.mkdir(parents=True, exist_ok=True)
+        for path in sorted(source.iterdir()):
+            if path.name != MANIFEST_NAME:
+                os.replace(path, target / path.name)
+                moved.append(path.name)
     except OSError as error:
-        raise FetchError(f"could not move the cache folder {source} to {target}: {error}") from error
+        _put_back(moved, commit, version)
+        raise FetchError(f"could not move the cache files {source} to {target}: {error}") from error
+    return moved
+
+
+def _put_back(moved: list[str], commit: str, version: str) -> None:
+    """Undo `_file_under_version` as far as the disk lets us; a failure here is ignored, the first error matters."""
+    source, target = version_folder(commit), version_folder(version)
+    for name in moved:
+        try:
+            os.replace(target / name, source / name)
+        except OSError:
+            pass
+
+
+def _drop_learned(commit: str) -> None:
+    """The pin is written: the commit's own folder, with its learned manifest, is no longer needed."""
+    folder = version_folder(commit)
+    try:
+        (folder / MANIFEST_NAME).unlink(missing_ok=True)
+        folder.rmdir()
+    except OSError:
+        pass  # something else is in it: leave it
 
 
 def main(
@@ -244,8 +267,8 @@ def main(
     try:
         args = parser.parse_args(argv)
         if args.command == "diff":
-            # the active pin's own commit or version is the pin: its hashes come from code, never from a manifest
-            old, new = (PINNED if text in (pin.commit, pin.version) else text for text in (args.old, args.new))
+            # the active pin's own commit is the pin: its hashes come from code, never from a manifest
+            old, new = (PINNED if text == pin.commit else text for text in (args.old, args.new))
             if old == new:
                 parser.error(f"OLD and NEW are the same version ({old}): there is nothing to compare")
         elif args.command == "pin" and is_version_name(args.target) and args.version not in (None, args.target):

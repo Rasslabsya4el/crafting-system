@@ -3,6 +3,7 @@
 import io
 import json
 import urllib.error
+import urllib.request
 
 import pytest
 from github_support import (
@@ -309,15 +310,15 @@ def test_diff_with_a_version_name_prints_which_export_was_taken_before_the_diff(
     assert out.endswith(f"\n\nTo move the pin to this export: python -m crafting_system.data pin {EXPORT_COMMIT} 3.29.3.3\n")
 
 
-def test_the_name_of_the_active_pins_version_is_the_pin_and_asks_nobody(cache, capsys):
-    pin, files = files_world({EXPORT_COMMIT: raw_to_bytes(seeded_raw())})
+def test_a_name_equal_to_the_active_pins_version_but_a_newer_export_is_compared(cache, capsys):
+    pin, files = files_world({EXPORT_COMMIT: raw_to_bytes(seeded_raw())}, pin_version="3.29.3.3")
     github = FakeGitHub()
 
-    code, out, _ = cli(capsys, ["diff", "9.9.9", "3.29.3.3"], pin, files, github)
+    code, out, _ = cli(capsys, ["diff", "pinned", "3.29.3.3"], pin, files, github)
 
     assert code == 0
-    assert github.urls == [PAGE_1]  # only the other name went to the API
-    assert out.split("\n")[1] == f"Patch diff: 9.9.9 ({pin.commit[:8]}) -> 3.29.3.3 ({EXPORT_COMMIT[:8]})"
+    assert github.urls == [PAGE_1]
+    assert out.splitlines()[1] == f"Patch diff: 3.29.3.3 ({pin.commit[:8]}) -> 3.29.3.3 ({EXPORT_COMMIT[:8]})"
 
 
 def test_a_name_whose_export_is_the_pin_commit_counts_as_pinned(cache, capsys):
@@ -406,11 +407,12 @@ class _Seen:
 def _capture(monkeypatch):
     seen = _Seen()
 
-    def urlopen(request, timeout):
-        seen.request = request
-        return io.BytesIO(b"[]")
+    class Opener:
+        def open(self, request, timeout):
+            seen.request = request
+            return io.BytesIO(b"[]")
 
-    monkeypatch.setattr(resolve_module.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(resolve_module, "_OPENER", Opener())
     return seen
 
 
@@ -433,3 +435,24 @@ def test_the_github_opener_sends_no_authorization_without_a_token(monkeypatch):
     resolve_module.github_open_url("https://api.github.com/x")
 
     assert seen.request.get_header("Authorization") is None
+
+
+def test_the_token_is_not_sent_to_another_host(monkeypatch):
+    monkeypatch.setenv("GITHUB_TOKEN", "t-1")
+    seen = _capture(monkeypatch)
+
+    resolve_module.github_open_url("https://example.test/x")
+
+    assert seen.request.get_header("Authorization") is None
+
+
+@pytest.mark.parametrize(
+    ("newurl", "kept"),
+    [("https://api.github.com/repositories/1/commits", True), ("https://evil.example/commits", False)],
+)
+def test_a_redirect_keeps_the_token_only_on_the_github_api(newurl, kept):
+    request = urllib.request.Request("https://api.github.com/x", headers={"Authorization": "Bearer t-1"})
+
+    redirected = resolve_module._KeepTokenOnGitHub().redirect_request(request, None, 301, "Moved", {}, newurl)
+
+    assert (redirected.get_header("Authorization") == "Bearer t-1") is kept

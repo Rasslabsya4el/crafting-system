@@ -43,11 +43,11 @@ Done when each unclear row carries an issue number.
 ## 5. Move the pin
 
 ```bash
-uv run python -m crafting_system.data pin <version>
+uv run python -m crafting_system.data pin <commit> <version>
 uv run python -m crafting_system.data verify
 ```
 
-`pin` takes the commit `diff` already downloaded (nothing is downloaded twice), files it under the version's cache folder, checks the five files, and only then rewrites `src/crafting_system/data/PIN.json`. With a commit instead of a version: `pin <commit> <version>`; a commit alone reads its version from the commit message. Nobody edits `PIN.json` or any Python.
+Run the line that step 2's output ended with (`To move the pin to this export: ...`): it names the commit you analysed, so a newer export that appears in between is not pinned by mistake (`pin <version>` alone asks GitHub again and takes the newest). `pin` takes the files `diff` already downloaded (nothing is downloaded twice), files them under the version's cache folder, checks the five files, and only then rewrites `src/crafting_system/data/PIN.json`; if a step fails the files go back to the commit's folder and a rerun downloads nothing. A commit alone reads its version from the commit message. Nobody edits `PIN.json` or any Python.
 
 Done when `pin` and `verify` print the five files and `PIN.json` names the new version. The printed hashes come from the first download of the commit, and the commit id names its content, so a later download that disagrees with them is the alarm; nothing else needs checking.
 

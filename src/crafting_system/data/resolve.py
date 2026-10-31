@@ -20,6 +20,7 @@ import json
 import os
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
@@ -34,6 +35,7 @@ MAX_PAGES = 10
 # One page of the commit list is a few hundred kilobytes; this keeps a wrong answer from filling memory.
 MAX_ANSWER_BYTES = 32 * 1024 * 1024
 
+GITHUB_API_HOST = "api.github.com"
 TOKEN_VARIABLES = ("GITHUB_TOKEN", "GH_TOKEN")
 
 _VERSION = re.compile(r"\d+(\.\d+)+")
@@ -51,13 +53,26 @@ class Export:
     message: str
 
 
+class _KeepTokenOnGitHub(urllib.request.HTTPRedirectHandler):
+    """Follow a redirect, but never carry the token to a host other than api.github.com."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None and urllib.parse.urlparse(newurl).hostname != GITHUB_API_HOST:
+            redirected.remove_header("Authorization")
+        return redirected
+
+
+_OPENER = urllib.request.build_opener(_KeepTokenOnGitHub)
+
+
 def github_open_url(url: str) -> AbstractContextManager[BinaryIO]:
     """Open a GitHub API `url`; a token from the environment, when there is one, raises the rate limit."""
     headers = {"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"}
     token = next((os.environ[name] for name in TOKEN_VARIABLES if os.environ.get(name)), None)
-    if token:
+    if token and urllib.parse.urlparse(url).hostname == GITHUB_API_HOST:
         headers["Authorization"] = f"Bearer {token}"
-    return urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=TIMEOUT_SECONDS)
+    return _OPENER.open(urllib.request.Request(url, headers=headers), timeout=TIMEOUT_SECONDS)
 
 
 def is_version_name(text: str) -> bool:
