@@ -77,5 +77,6 @@ jobs:
         if: always()
         with:
           name: run-${{ inputs.os }}-${{ matrix.index }}
+          overwrite: true
           path: out/
           if-no-files-found: warn

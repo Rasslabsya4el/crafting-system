@@ -8,6 +8,7 @@ Markdown report; the same text goes to `$GITHUB_STEP_SUMMARY` when that is set. 
 - a test failed or errored;
 - a shard ran another number of tests than it was given, or the shards of a system together do not add up to
   the tests collected (a test dropped or run twice), or two shards disagree on what the suite is;
+- fewer tests collected than `--min-tests` (an empty run is not a pass);
 - a test skipped for lack of the game data (a skip reason that says it is not in the cache).
 
 Other skips are counted and listed by reason. `--merged-durations FILE` writes the seconds and the number of tests
@@ -61,7 +62,7 @@ def read_durations(folder: Path) -> dict:
         return {"tests": {}, "groups": {}}
 
 
-def check(results: Path, systems: list[str], shards: int) -> tuple[list[str], list[str], dict, dict]:
+def check(results: Path, systems: list[str], shards: int, min_tests: int = 1) -> tuple[list[str], list[str], dict, dict]:
     """(problems, report lines, mean seconds per test, mean seconds and tests per group) of the whole run."""
     problems: list[str] = []
     lines = ["| system | shards | tests | passed | skipped | failed | slowest shard |", "|---|---|---|---|---|---|---|"]
@@ -88,6 +89,8 @@ def check(results: Path, systems: list[str], shards: int) -> tuple[list[str], li
         if len(collected) != 1:
             problems.append(f"{system}: the shards collected different numbers of tests: {sorted(collected)}")
         collected_by_system[system] = max(collected)
+        if max(collected) < min_tests:
+            problems.append(f"{system}: only {max(collected)} tests were collected, at least {min_tests} are expected")
         for number, shard in found.items():
             if shard["tests"] != shard["report"]["selected"]:
                 problems.append(
@@ -144,10 +147,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shards", type=int, required=True, help="shards per system")
     parser.add_argument("--systems", required=True, help="comma-separated system names as in the folder names")
     parser.add_argument("--merged-durations", type=Path, help="write the mean seconds and tests per group here")
+    parser.add_argument("--min-tests", type=int, default=1, help="fail when fewer tests were collected")
     parser.add_argument("--job-result", default="success", help="result of the shard jobs as the workflow knows it")
     args = parser.parse_args(argv)
 
-    problems, lines, mean, mean_groups = check(args.results, args.systems.split(","), args.shards)
+    problems, lines, mean, mean_groups = check(args.results, args.systems.split(","), args.shards, args.min_tests)
     if args.job_result != "success":
         problems.append(f"the shard jobs ended as '{args.job_result}'")
     if args.merged_durations is not None:

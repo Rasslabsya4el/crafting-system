@@ -43,13 +43,14 @@ jobs:
         if: always()
         with:
           name: results-${{ matrix.os }}-${{ matrix.shard }}
+          overwrite: true  # a re-run of one failed shard replaces its earlier result
           path: out/
           if-no-files-found: warn
 
   summary:
     name: CI summary
     needs: test
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -60,11 +61,12 @@ jobs:
       - name: Totals, skips, and the shard check
         run: >
           python3 .github/scripts/ci_summary.py results --shards 8 --systems ubuntu-latest,windows-latest
-          --job-result "${{ needs.test.result }}" --merged-durations merged/shard_durations.json
+          --min-tests 1000 --job-result "${{ needs.test.result }}" --merged-durations merged/shard_durations.json
       - name: Keep the measured seconds (commit them as tests/shard_durations.json to rebalance)
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
           name: shard-durations
+          overwrite: true
           path: merged/shard_durations.json
           if-no-files-found: ignore

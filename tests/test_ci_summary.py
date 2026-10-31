@@ -144,3 +144,13 @@ def test_a_workflow_that_did_not_end_in_success_fails_the_run(tmp_path, capsys, 
 
     assert code == 1
     assert f"ended as '{result}'" in capsys.readouterr().out
+
+
+def test_a_run_that_collected_fewer_tests_than_the_floor_fails(tmp_path, capsys):
+    results = tmp_path / "results"
+    full_run(results)
+
+    code, _ = run(results, tmp_path, "--min-tests", "7")
+
+    assert code == 1
+    assert "only 6 tests were collected, at least 7 are expected" in capsys.readouterr().out
