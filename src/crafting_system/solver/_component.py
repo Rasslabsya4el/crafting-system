@@ -1,6 +1,7 @@
 """Solving one strongly connected component with its downstream values fixed."""
 
 import math
+from array import array
 from dataclasses import dataclass
 
 from ._certify import own_multipliers, relative_error, rounding_allowance
@@ -12,19 +13,23 @@ MAX_POLICY_ITERATIONS = 100
 
 @dataclass(slots=True)
 class Bellman:
-    """The component's Bellman operator.
+    """The component's Bellman operator, in flat arrays (12 bytes per transition).
 
-    For local state `l` and its `a`-th retained action, the backup is
-    `base[l][a] + sum(prob * V[j] for j, prob in zip(inside[l][a], prob[l][a]))` where `base`
-    holds the effective cost plus the fixed contribution of the successors outside the component.
+    Local state `l` owns the retained actions `astart[l]:astart[l + 1]`; an action `a` is
+    identified by that index. Its backup is `base[a] + sum(prob[t] * V[inside[t]])` over the
+    transitions `tptr[a]:tptr[a + 1]`, where `base` holds the effective cost plus the fixed
+    contribution of the successors outside the component and `inside` the local positions of
+    the successors inside. `ids[a]` is the global action id.
     """
 
     states: list[int]
-    ids: list[list[int]]
-    base: list[list[float]]
-    inside: list[list[list[int]]]
-    prob: list[list[list[float]]]
-    has_exit: list[list[bool]]
+    astart: list[int]
+    ids: array
+    base: array
+    has_exit: bytearray
+    tptr: array
+    inside: array
+    prob: array
     g: float  # smallest constant term (effective cost + fixed downstream part) of a retained action
     terms: int  # largest number of terms in one Bellman sum
     low_d: float  # min(1, lo of the exit successors)
@@ -40,45 +45,45 @@ def build_bellman[S](
     hi: list[float],
 ) -> Bellman:
     local = {state: position for position, state in enumerate(component)}
-    bellman = Bellman(component, [], [], [], [], [], math.inf, 1, 1.0, 1.0)
+    targets, probs, tstart, cost = graph.targets, graph.probs, graph.tstart, graph.cost
+    ids, base, has_exit = array("i"), array("d"), bytearray()
+    tptr, inside, prob = array("q", [0]), array("i"), array("d")
+    astart = [0]
+    g, terms, low_d, high_d = math.inf, 1, 1.0, 1.0
     for state in component:
-        ids, base, inside, prob, has_exit = [], [], [], [], []
         for k in graph.state_actions[state]:
             if not alive[k]:
                 continue
-            constant = graph.cost[k]
-            here: list[int] = []
-            weights: list[float] = []
+            constant = cost[k]
             exits = False
-            for j, p in zip(graph.succ[k], graph.prob[k]):
+            low, high = tstart[k], tstart[k + 1]
+            for j, p in zip(targets[low:high], probs[low:high]):
                 position = local.get(j)
                 if position is None:
                     constant += p * value[j]
                     exits = True
-                    bellman.low_d = min(bellman.low_d, lo[j])
-                    bellman.high_d = max(bellman.high_d, hi[j])
+                    if lo[j] < low_d:
+                        low_d = lo[j]
+                    if hi[j] > high_d:
+                        high_d = hi[j]
                 else:
-                    here.append(position)
-                    weights.append(p)
-            bellman.g = min(bellman.g, constant)
-            bellman.terms = max(bellman.terms, 1 + len(graph.succ[k]))
+                    inside.append(position)
+                    prob.append(p)
+            if constant < g:
+                g = constant
+            terms = max(terms, 1 + high - low)
             ids.append(k)
             base.append(constant)
-            inside.append(here)
-            prob.append(weights)
             has_exit.append(exits)
-        bellman.ids.append(ids)
-        bellman.base.append(base)
-        bellman.inside.append(inside)
-        bellman.prob.append(prob)
-        bellman.has_exit.append(has_exit)
-    return bellman
+            tptr.append(len(inside))
+        astart.append(len(ids))
+    return Bellman(component, astart, ids, base, has_exit, tptr, inside, prob, g, terms, low_d, high_d)
 
 
 def backup_single(bellman: Bellman) -> tuple[float, int]:
     """One Bellman backup of an acyclic single state: its value and the cheapest action id."""
     best, best_id = math.inf, -1
-    for q, k in zip(bellman.base[0], bellman.ids[0]):
+    for q, k in zip(bellman.base, bellman.ids):
         if q < best:
             best, best_id = q, k
     return best, best_id
@@ -94,11 +99,20 @@ class CyclicResult:
 
 
 def _backup(bellman: Bellman, values: list[float], local: int) -> tuple[float, int]:
+    """The best backup of local state `local` and the index of its action."""
     best, best_a = math.inf, -1
-    inside, prob = bellman.inside[local], bellman.prob[local]
-    for a, q in enumerate(bellman.base[local]):
-        for j, p in zip(inside[a], prob[a]):
-            q += p * values[j]
+    tptr, base, inside, prob = bellman.tptr, bellman.base, bellman.inside, bellman.prob
+    first, last = bellman.astart[local], bellman.astart[local + 1]
+    start = tptr[first]
+    for a in range(first, last):
+        end = tptr[a + 1]
+        q = base[a]
+        if end - start == 1:
+            q += prob[start] * values[inside[start]]
+        elif end > start:
+            for j, p in zip(inside[start:end], prob[start:end]):
+                q += p * values[j]
+        start = end
         if q < best:
             best, best_a = q, a
     return best, best_a
@@ -122,22 +136,32 @@ def _certify(bellman: Bellman, values: list[float]) -> tuple[float, float, float
 
 
 def _attractor(bellman: Bellman) -> tuple[list[int], list[int]]:
-    """A proper initial policy and the order of states, closest to an exit first.
+    """A proper initial policy (an action index per local state) and the order of states, closest to an exit first.
 
     States with an action that leaves the component rank 0. A state gets the first action that
     has a successor of lower rank, so following it always has a chance to get nearer an exit.
     """
     size = len(bellman.states)
-    preds: list[list[tuple[int, int]]] = [[] for _ in range(size)]
+    astart, tptr, inside = bellman.astart, bellman.tptr, bellman.inside
+    ends = [0] * (size + 1)  # the actions that lead to local state j: leads[ends[j]:ends[j + 1]]
+    for j in inside:
+        ends[j + 1] += 1
+    for j in range(size):
+        ends[j + 1] += ends[j]
+    cursor = ends[:size]
+    leads = array("i", bytes(4 * len(inside)))
+    owner = array("i", bytes(4 * len(bellman.ids)))
     for local in range(size):
-        for a, here in enumerate(bellman.inside[local]):
-            for j in here:
-                preds[j].append((local, a))
+        for a in range(astart[local], astart[local + 1]):
+            owner[a] = local
+            for j in inside[tptr[a] : tptr[a + 1]]:
+                leads[cursor[j]] = a
+                cursor[j] += 1
     policy = [-1] * size
     order = []
     for local in range(size):
-        for a, exits in enumerate(bellman.has_exit[local]):
-            if exits:
+        for a in range(astart[local], astart[local + 1]):
+            if bellman.has_exit[a]:
                 policy[local] = a
                 order.append(local)
                 break
@@ -145,7 +169,8 @@ def _attractor(bellman: Bellman) -> tuple[list[int], list[int]]:
     while head < len(order):
         j = order[head]
         head += 1
-        for local, a in preds[j]:
+        for a in leads[ends[j] : ends[j + 1]]:
+            local = owner[a]
             if policy[local] == -1:
                 policy[local] = a
                 order.append(local)
@@ -160,9 +185,10 @@ def _evaluate(bellman: Bellman, policy: list[int]) -> list[float] | None:
         row = [0.0] * (size + 1)
         row[local] = 1.0
         a = policy[local]
-        for j, p in zip(bellman.inside[local][a], bellman.prob[local][a]):
+        low, high = bellman.tptr[a], bellman.tptr[a + 1]
+        for j, p in zip(bellman.inside[low:high], bellman.prob[low:high]):
             row[j] -= p
-        row[size] = bellman.base[local][a]
+        row[size] = bellman.base[a]
         rows.append(row)
     for column in range(size):
         pivot = max(range(column, size), key=lambda r: abs(rows[r][column]))
@@ -207,8 +233,9 @@ def _policy_iteration(bellman: Bellman, policy: list[int]) -> list[float] | None
 
 
 def _q(bellman: Bellman, values: list[float], local: int, a: int) -> float:
-    q = bellman.base[local][a]
-    for j, p in zip(bellman.inside[local][a], bellman.prob[local][a]):
+    q = bellman.base[a]
+    low, high = bellman.tptr[a], bellman.tptr[a + 1]
+    for j, p in zip(bellman.inside[low:high], bellman.prob[low:high]):
         q += p * values[j]
     return q
 
@@ -243,7 +270,7 @@ def solve_cyclic(
         stop = iteration <= tolerance or (e <= delta and d <= delta)  # or at the rounding floor
         if stop or best is None or error < best_error:
             best_error = error
-            choice = [bellman.ids[local][a] for local, a in enumerate(greedy)]
+            choice = [bellman.ids[a] for a in greedy]
             best = CyclicResult(list(candidate), choice, lower, upper, stop)
         return stop
 
