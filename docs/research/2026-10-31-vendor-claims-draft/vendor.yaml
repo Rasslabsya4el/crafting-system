@@ -54,20 +54,43 @@ rules:
     date_checked: 2026-10-31
 
   - id: vendor.spell_gem_level_weapon_recipe
-    statement: A Normal Rune Dagger, Sceptre, Staff or Wand + two or more quality gems whose combined quality is 40% and that all carry the tag (Physical, Fire, Cold, Lightning or Chaos) give a Magic weapon with the +1 to Level of all Spell Skill Gems of that tag mod (prefix, required level 2), +2 on a staff since 3.29.0. A generic dagger and a warstaff cannot be used; Sceptres have no Chaos version.
+    statement: A Normal Rune Dagger, Sceptre, Staff or Wand + two or more quality gems whose combined quality is 40% and that all carry the tag (Physical, Fire, Cold, Lightning or Chaos) give a Magic weapon with +1 to Level of all Spell Skill Gems of that tag (+2 on a staff). The wiki's notes exclude the warstaff and the generic dagger; the dagger and sceptre rows differ by tag (no Chaos version for the Sceptre in the data, see vendor.spell_gem_level_mods_in_the_data).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Vendor_recipe_system
-    quote: "The lowest tier for + physical/fire/cold/lightning/chaos skills on staff is now +2 instead of +(1-2), so the vendor recipe for a + skill level staff now always gives a +2 staff."
+    quote: "Magic Weapon with +1 to Level of all Fire Spell Skill Gems Magic Staff with +2 to Level of all Fire Spell Skill Gems Normal Rune Dagger/Sceptre/Staff/Wand 2 or more quality gems with a combined total of 40% quality & the Fire tag"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value:
       input_rarity: normal
       gem_quality_total: 40
       bases: [rune_dagger, sceptre, staff, wand]
-      sceptre_has_no_chaos_version: true
+
+  - id: vendor.staff_spell_gem_recipe_gives_plus_two
+    statement: Since 3.29.0 the staff version of the spell-gem recipe always gives +2 (the lowest tier of the staff mod became +2, so the recipe does too). The 3.29.0 patch notes do not mention it; the claim is the wiki's version history only.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "The lowest tier for + physical/fire/cold/lightning/chaos skills on staff is now +2 instead of +(1-2), so the vendor recipe for a + skill level staff now always gives a +2 staff."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.spell_gem_level_mods_in_the_data
+    statement: The mods the spell-gem recipe produces are prefixes of one tier each with required level 2 - Flame Shaper's, Frost Singer's, Thunderhand's (wand, sceptre, dagger, focus weight 250; staff two-hand version weight 1000), Lithomancer's (200 and 750), Mad Lord's (wand, dagger, focus 200, no sceptre; staff 750). The helmet mod Taskmaster's (+1 Minion Skill Gems) is a prefix of required level 14, helmet weight 250.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "GlobalFireSpellGemsLevel1_ prefix 'Flame Shaper's' required_level 2 fire_spell_skill_gem_level_+ 1..1 spawn_weights wand 250, sceptre 250, dagger 250, focus 250; GlobalFireSpellGemsLevelTwoHand1__ fire_spell_skill_gem_level_+ 2..2 staff 1000; GlobalIncreaseMinionSpellSkillGemLevel1 'Taskmaster's' required_level 14 helmet 250"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: vendor.helmet_minion_gem_recipe
-    statement: A Normal Helmet + two or more quality gems with a combined 40% quality and the Minion tag give a Magic helmet with +1 to Level of all Minion Skill Gems (Taskmaster's, prefix, required level 14). It replaced the recipe for socketed Minion Gems in 3.19.0.
+    statement: A Normal Helmet + two or more quality gems with a combined 40% quality and the Minion tag give a Magic helmet with +1 to Level of all Minion Skill Gems.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Magic Helmet with +1 to Level of all Minion Skill Gems Normal Helmet 2 or more quality gems with a combined total of 40% quality & the Minion tag"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.helmet_socketed_minion_recipe_replaced_in_3_19
+    statement: The 3.19.0 patch replaced the recipe for a helmet with +1 to Level of socketed Minion Gems; Craft of Exile still lists the old one.
     source_kind: official
     url: https://www.poewiki.net/wiki/Version_3.19.0
     quote: "The Vendor Recipe for a Helmet with a +1 to Level of socketed Minion Gems modifier has been replaced with a new recipe."
@@ -90,8 +113,8 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
-  - id: vendor.item_level_kept_by_modifying_recipes
-    statement: A recipe that modifies an item's mods keeps the input item's item level; only the 5-to-1 recipe takes the lowest item level of its inputs. The item level then limits which mods a later Chaos, Alchemy or Regal can add as usual.
+  - id: vendor.item_level_of_the_result_is_not_settled
+    statement: Two wiki pages disagree in wording. The recipe page says the result takes the lowest item level among all the ingredients unless noted otherwise and, in the sections of the tier-up and gem recipes, lists item level as retained from the base item; the Item level page says modifying recipes "typically" keep the original item's level. Whether the flask or the gems (low-level goods) can lower the result's item level is therefore open. The solver must carry the input's item level as the working assumption and mark it unverified.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Item_level
     quote: "Recipes that modify an item's modifiers typically keep the original item's ilvl. The 5-to-1 vendor recipe causes the lowest ilvl item inputted to be used on the output item."
