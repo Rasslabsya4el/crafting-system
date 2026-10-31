@@ -25,3 +25,11 @@ class FetchError(DataError):
 
 class RawFormatError(DataError):
     """A raw repoe-fork record does not have the shape the normalizer relies on."""
+
+
+class PinFileError(DataError):
+    """The pin file `PIN.json` cannot be read, does not fit, or cannot be written."""
+
+
+class VersionNotFoundError(DataError):
+    """No repoe-fork export of the asked game version was found in the commits that were searched."""

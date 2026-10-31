@@ -22,10 +22,14 @@ from datetime import UTC, date, datetime
 from fractions import Fraction
 from pathlib import Path
 
+import yaml
+
 from crafting_system.actions import ActionError
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import DataError, GameData, load_game_data
-from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
+from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_file_path, stale_warning
+from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
+from crafting_system.prices.price_names import canonical_price_name
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, Target, load_target
@@ -195,6 +199,7 @@ def run_route(
         "target": bench.target,
         "route": bench.route,
         "error": None,
+        "missing_price": None,
         "solver": None,
         "given_route": None,
         "published_odds": [],
@@ -210,6 +215,10 @@ def run_route(
         stale = stale_warning(loaded, today if today is not None else datetime.now(UTC).date())
         if stale:
             print(f"Warning: {stale}", file=sys.stderr)
+        missing = _missing_start_price(target, loaded, root, config)
+        entry["missing_price"] = missing
+        if missing is not None:
+            raise ValueError(_missing_message(missing))
         plan = make_plan(data, target, loaded)
         shift = plan.start_price.chaos
         risk = plan.risk
@@ -228,6 +237,50 @@ def run_route(
     timings["total"] = time.perf_counter() - began
     entry["timings_seconds"] = timings
     return entry, loaded
+
+
+def _missing_start_price(target: Target, prices: PriceFile, root: Path, config: Config) -> dict | None:
+    """What a route misses when its start item has no price in `prices`, else None.
+
+    The overrides file is the one `load_target_prices` reads beside the price file. The buy spec is only
+    named, never run: the benchmark does not call the trade API, so a run stays reproducible and offline.
+    """
+    if target.start_price is None:
+        return None
+    name = canonical_price_name(target.start_price)
+    if name in prices.prices:
+        return None
+    price_file = target.price_file if target.price_file is not None else default_price_file_path(config)
+    return {
+        "name": name,
+        "override_line": f'"{name}" = 0',
+        "overrides_file": _without_root(str(price_file.parent / OVERRIDES_FILE_NAME), root),
+        "buy_spec": _buy_spec_named(name, root),
+    }
+
+
+def _buy_spec_named(name: str, root: Path) -> str | None:
+    """The path, from the project root, of the buy spec in examples/buy/ whose top-level `name:` is `name`, else None."""
+    for spec in sorted((root / "examples" / "buy").glob("*.yaml")):
+        try:
+            record = yaml.safe_load(spec.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, yaml.YAMLError):
+            continue
+        if isinstance(record, dict) and record.get("name") == name:
+            return spec.relative_to(root).as_posix()
+    return None
+
+
+def _missing_message(missing: dict) -> str:
+    """The error of a route whose start item has no price: the line to write, and the trade command if a buy spec exists."""
+    text = (
+        f"no price for the start item {missing['name']!r}. Add this line under [prices] in "
+        f"{missing['overrides_file']}: {missing['override_line']}, then replace the 0 with the item's price in Chaos Orbs "
+        "(a 0 left in place is refused by the overrides loader, which names the item)"
+    )
+    if missing["buy_spec"] is not None:
+        text += f", or price it on the trade API with: python -m crafting_system.prices trade --spec {missing['buy_spec']}"
+    return text + "."
 
 
 def _without_root(text: str, root: Path) -> str:
@@ -359,6 +412,9 @@ def render_summary(document: dict) -> str:
             lines.append("  solver not dearer than the guide: " + ("yes" if entry["solver_not_dearer"] else "NO"))
         if entry["error"] is not None:
             lines.append(f"  error: {entry['error']}")
+        if entry["missing_price"] is not None:
+            lines.append(f"  add to {entry['missing_price']['overrides_file']} under [prices]:")
+            lines.append(f"    {entry['missing_price']['override_line']}")
     return "\n".join(lines)
 
 

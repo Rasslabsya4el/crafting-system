@@ -29,7 +29,7 @@ from crafting_system.data.errors import (
 )
 from crafting_system.data.fetch import FetchResult, cache_folder, fetch, verify_cache
 from crafting_system.data.load import load_game_data
-from crafting_system.data.pin import PIN, PinnedFile, RepoePin
+from crafting_system.data.pin import PIN, PIN_FILE, PinnedFile, RepoePin, load_pin
 
 FETCH_COMMAND = "python -m crafting_system.data fetch"
 
@@ -501,24 +501,13 @@ def test_default_cache_dir_comes_from_the_configured_cache_directory(tmp_path, m
 # --- the pin ------------------------------------------------------------------------------
 
 
-def test_the_real_pin_is_the_pinned_3_29_3_3_export():
-    assert PIN.version == "3.29.3.3"
-    assert PIN.commit == "ee2084dec1f17180a132b5d133082af5b3136ace"
-    assert [f.name for f in PIN.files] == [
-        "mods.json",
-        "base_items.json",
-        "essences.json",
-        "fossils.json",
-        "crafting_bench_options.json",
-    ]
-    assert PIN.url_for("mods.json") == (
-        "https://raw.githubusercontent.com/repoe-fork/repoe-fork.github.io/"
-        "ee2084dec1f17180a132b5d133082af5b3136ace/data/mods.json"
-    )
-    assert {f.name: (f.size, f.sha256) for f in PIN.files}["mods.json"] == (
-        34279067,
-        "defbba31b60f9191080c78197278057f834f7f927c1a2a080a7ca6ed3ea686b5",
-    )
+def test_the_real_pin_is_the_pin_file_and_has_the_shape_the_normalizer_reads():
+    """Nothing of the live pin is repeated here: a moved pin (`data pin`) needs no edit of this test."""
+    assert PIN == load_pin(PIN_FILE)
+    assert [f.name for f in PIN.files] == list(FILE_NAMES)
+    for pinned in PIN.files:
+        assert PIN.url_for(pinned.name) == f"{PIN.base_url}/{PIN.commit}/data/{pinned.name}"
+    assert PIN.url_for("mods.json").startswith("https://raw.githubusercontent.com/")
 
 
 GOOD_FILE = PinnedFile("a.json", "0" * 64, 10)
@@ -610,7 +599,7 @@ def test_a_pin_version_that_windows_treats_specially_is_rejected(name):
 
 @pytest.mark.parametrize(
     "name",
-    ["mods.json", "crafting_bench_options.json", "3.29.3.3", "console.json", "com10.json", "lpt0", "a.b"],
+    ["mods.json", "crafting_bench_options.json", "1.2.3.4", "console.json", "com10.json", "lpt0", "a.b"],
 )
 def test_ordinary_names_are_still_accepted(name):
     assert PinnedFile(name, "0" * 64, 10).name == name
