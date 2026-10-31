@@ -1787,6 +1787,422 @@
   "type": "ItemFoundRarityIncreasePrefix",
   "gold_value": null
  },
+ "LocalIncreasedAttackSpeed1": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedAttackSpeed"
+  ],
+  "implicit_tags": [
+   "attack",
+   "speed"
+  ],
+  "is_essence_only": false,
+  "name": "of Skill",
+  "required_level": 1,
+  "spawn_weights": [
+   {
+    "tag": "weapon",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_attack_speed_+%",
+    "max": 7,
+    "min": 5
+   }
+  ],
+  "text": "(5-7)% increased Attack Speed",
+  "type": "LocalIncreasedAttackSpeed",
+  "gold_value": null
+ },
+ "LocalIncreasedAttackSpeed2": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedAttackSpeed"
+  ],
+  "implicit_tags": [
+   "attack",
+   "speed"
+  ],
+  "is_essence_only": false,
+  "name": "of Ease",
+  "required_level": 11,
+  "spawn_weights": [
+   {
+    "tag": "weapon",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_attack_speed_+%",
+    "max": 10,
+    "min": 8
+   }
+  ],
+  "text": "(8-10)% increased Attack Speed",
+  "type": "LocalIncreasedAttackSpeed",
+  "gold_value": null
+ },
+ "LocalIncreasedAttackSpeed2Royale____": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedAttackSpeed"
+  ],
+  "implicit_tags": [
+   "attack",
+   "speed"
+  ],
+  "is_essence_only": false,
+  "name": "of Ease",
+  "required_level": 4,
+  "spawn_weights": [
+   {
+    "tag": "weapon",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_attack_speed_+%",
+    "max": 25,
+    "min": 15
+   }
+  ],
+  "text": "(15-25)% increased Attack Speed",
+  "type": "LocalIncreasedAttackSpeed",
+  "gold_value": null
+ },
+ "LocalIncreasedAttackSpeed3": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedAttackSpeed"
+  ],
+  "implicit_tags": [
+   "attack",
+   "speed"
+  ],
+  "is_essence_only": false,
+  "name": "of Mastery",
+  "required_level": 22,
+  "spawn_weights": [
+   {
+    "tag": "weapon",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_attack_speed_+%",
+    "max": 13,
+    "min": 11
+   }
+  ],
+  "text": "(11-13)% increased Attack Speed",
+  "type": "LocalIncreasedAttackSpeed",
+  "gold_value": null
+ },
+ "LocalIncreasedAttackSpeed4": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedAttackSpeed"
+  ],
+  "implicit_tags": [
+   "attack",
+   "speed"
+  ],
+  "is_essence_only": false,
+  "name": "of Renown",
+  "required_level": 30,
+  "spawn_weights": [
+   {
+    "tag": "ranged",
+    "weight": 500
+   },
+   {
+    "tag": "weapon",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_attack_speed_+%",
+    "max": 16,
+    "min": 14
+   }
+  ],
+  "text": "(14-16)% increased Attack Speed",
+  "type": "LocalIncreasedAttackSpeed",
+  "gold_value": null
+ },
+ "LocalIncreasedAttackSpeed5": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "IncreasedAttackSpeed"
+  ],
+  "implicit_tags": [
+   "attack",
+   "speed"
+  ],
+  "is_essence_only": false,
+  "name": "of Acclaim",
+  "required_level": 37,
+  "spawn_weights": [
+   {
+    "tag": "ranged",
+    "weight": 500
+   },
+   {
+    "tag": "weapon",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_attack_speed_+%",
+    "max": 19,
+    "min": 17
+   }
+  ],
+  "text": "(17-19)% increased Attack Speed",
+  "type": "LocalIncreasedAttackSpeed",
+  "gold_value": null
+ },
  "LifeRegeneration1": {
   "adds_tags": [],
   "domain": "item",
@@ -3003,6 +3419,212 @@
   ],
   "text": "(23-26)% increased Lightning Damage",
   "type": "LightningDamagePercentage",
+  "gold_value": null
+ },
+ "LocalIncreaseSocketedGemLevel1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreaseSocketedGemLevel"
+  ],
+  "implicit_tags": [
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Paragon's",
+  "required_level": 50,
+  "spawn_weights": [
+   {
+    "tag": "attack_staff",
+    "weight": 1000
+   },
+   {
+    "tag": "attack_dagger",
+    "weight": 1000
+   },
+   {
+    "tag": "staff",
+    "weight": 0
+   },
+   {
+    "tag": "wand",
+    "weight": 0
+   },
+   {
+    "tag": "dagger",
+    "weight": 0
+   },
+   {
+    "tag": "sceptre",
+    "weight": 0
+   },
+   {
+    "tag": "weapon",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_socketed_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of Socketed Gems",
+  "type": "LocalIncreaseSocketedGemLevel",
+  "gold_value": null
+ },
+ "LocalIncreaseSocketedBowGemLevel1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreaseSpecificSocketedGemLevel"
+  ],
+  "implicit_tags": [
+   "attack",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Fletcher's",
+  "required_level": 9,
+  "spawn_weights": [
+   {
+    "tag": "bow",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_socketed_bow_gem_level_+",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "+1 to Level of Socketed Bow Gems",
+  "type": "LocalIncreaseSocketedBowGemLevel",
+  "gold_value": null
+ },
+ "LocalIncreaseSocketedBowGemLevel2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "IncreaseSpecificSocketedGemLevel"
+  ],
+  "implicit_tags": [
+   "attack",
+   "gem"
+  ],
+  "is_essence_only": false,
+  "name": "Sharpshooter's",
+  "required_level": 64,
+  "spawn_weights": [
+   {
+    "tag": "bow",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_socketed_bow_gem_level_+",
+    "max": 2,
+    "min": 2
+   }
+  ],
+  "text": "+2 to Level of Socketed Bow Gems",
+  "type": "LocalIncreaseSocketedBowGemLevel",
+  "gold_value": null
+ },
+ "AdditionalArrowBow1_": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "AdditionalArrows"
+  ],
+  "implicit_tags": [
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of Splintering",
+  "required_level": 70,
+  "spawn_weights": [
+   {
+    "tag": "bow",
+    "weight": 1000
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "number_of_additional_arrows",
+    "max": 1,
+    "min": 1
+   }
+  ],
+  "text": "Bow Attacks fire an additional Arrow",
+  "type": "AdditionalArrows",
+  "gold_value": null
+ },
+ "AdditionalArrowBow2_": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "AdditionalArrows"
+  ],
+  "implicit_tags": [
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of Many",
+  "required_level": 86,
+  "spawn_weights": [
+   {
+    "tag": "bow",
+    "weight": 100
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "number_of_additional_arrows",
+    "max": 2,
+    "min": 2
+   }
+  ],
+  "text": "Bow Attacks fire 2 additional Arrows",
+  "type": "AdditionalArrows",
   "gold_value": null
  },
  "IncreasedLifeLeechRateEssence1": {
@@ -4249,6 +4871,956 @@
   ],
   "text": "(24-32)% increased Elemental Damage with Attack Skills",
   "type": "IncreasedWeaponElementalDamagePercent",
+  "gold_value": null
+ },
+ "LocalAddedChaosDamageAndPenetrationInfluence1": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ChaosDamageHybrid"
+  ],
+  "implicit_tags": [
+   "chaos_damage",
+   "damage",
+   "chaos",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Hunter's",
+  "required_level": 68,
+  "spawn_weights": [
+   {
+    "tag": "sword_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "axe_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "claw_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "dagger_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "rune_dagger_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "mace_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "sceptre_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "wand_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_minimum_added_chaos_damage",
+    "max": 7,
+    "min": 5
+   },
+   {
+    "id": "local_maximum_added_chaos_damage",
+    "max": 13,
+    "min": 11
+   },
+   {
+    "id": "local_chaos_penetration_%",
+    "max": 6,
+    "min": 4
+   }
+  ],
+  "text": "Adds (5-7) to (11-13) Chaos Damage\nAttacks with this Weapon Penetrate (4-6)% Chaos Resistance",
+  "type": "LocalChaosDamagePenetrationHybrid",
+  "gold_value": null
+ },
+ "LocalAddedChaosDamageAndPenetrationInfluence2": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ChaosDamageHybrid"
+  ],
+  "implicit_tags": [
+   "chaos_damage",
+   "damage",
+   "chaos",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Hunter's",
+  "required_level": 71,
+  "spawn_weights": [
+   {
+    "tag": "sword_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "axe_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "claw_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "dagger_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "rune_dagger_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "mace_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "sceptre_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "wand_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_minimum_added_chaos_damage",
+    "max": 11,
+    "min": 9
+   },
+   {
+    "id": "local_maximum_added_chaos_damage",
+    "max": 20,
+    "min": 17
+   },
+   {
+    "id": "local_chaos_penetration_%",
+    "max": 6,
+    "min": 4
+   }
+  ],
+  "text": "Adds (9-11) to (17-20) Chaos Damage\nAttacks with this Weapon Penetrate (4-6)% Chaos Resistance",
+  "type": "LocalChaosDamagePenetrationHybrid",
+  "gold_value": null
+ },
+ "LocalAddedChaosDamageAndPenetrationInfluence3": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ChaosDamageHybrid"
+  ],
+  "implicit_tags": [
+   "chaos_damage",
+   "damage",
+   "chaos",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Hunter's",
+  "required_level": 74,
+  "spawn_weights": [
+   {
+    "tag": "sword_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "axe_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "claw_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "dagger_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "rune_dagger_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "mace_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "sceptre_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "wand_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 400
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_minimum_added_chaos_damage",
+    "max": 16,
+    "min": 12
+   },
+   {
+    "id": "local_maximum_added_chaos_damage",
+    "max": 28,
+    "min": 24
+   },
+   {
+    "id": "local_chaos_penetration_%",
+    "max": 6,
+    "min": 4
+   }
+  ],
+  "text": "Adds (12-16) to (24-28) Chaos Damage\nAttacks with this Weapon Penetrate (4-6)% Chaos Resistance",
+  "type": "LocalChaosDamagePenetrationHybrid",
+  "gold_value": null
+ },
+ "LocalAddedChaosDamageAndPenetrationInfluence4": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ChaosDamageHybrid"
+  ],
+  "implicit_tags": [
+   "chaos_damage",
+   "damage",
+   "chaos",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Hunter's",
+  "required_level": 77,
+  "spawn_weights": [
+   {
+    "tag": "sword_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "axe_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "claw_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "dagger_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "rune_dagger_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "mace_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "sceptre_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "wand_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 300
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_minimum_added_chaos_damage",
+    "max": 20,
+    "min": 15
+   },
+   {
+    "id": "local_maximum_added_chaos_damage",
+    "max": 35,
+    "min": 30
+   },
+   {
+    "id": "local_chaos_penetration_%",
+    "max": 6,
+    "min": 4
+   }
+  ],
+  "text": "Adds (15-20) to (30-35) Chaos Damage\nAttacks with this Weapon Penetrate (4-6)% Chaos Resistance",
+  "type": "LocalChaosDamagePenetrationHybrid",
+  "gold_value": null
+ },
+ "LocalAddedChaosDamageAndPenetrationInfluence5": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "ChaosDamageHybrid"
+  ],
+  "implicit_tags": [
+   "chaos_damage",
+   "damage",
+   "chaos",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Hunter's",
+  "required_level": 80,
+  "spawn_weights": [
+   {
+    "tag": "sword_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "axe_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "claw_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "dagger_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "rune_dagger_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "mace_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "sceptre_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "wand_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_minimum_added_chaos_damage",
+    "max": 25,
+    "min": 18
+   },
+   {
+    "id": "local_maximum_added_chaos_damage",
+    "max": 44,
+    "min": 38
+   },
+   {
+    "id": "local_chaos_penetration_%",
+    "max": 6,
+    "min": 4
+   }
+  ],
+  "text": "Adds (18-25) to (38-44) Chaos Damage\nAttacks with this Weapon Penetrate (4-6)% Chaos Resistance",
+  "type": "LocalChaosDamagePenetrationHybrid",
+  "gold_value": null
+ },
+ "AddedColdDamagePerDexterityInfluence1": {
+  "adds_tags": [
+   "has_attack_mod"
+  ],
+  "domain": "item",
+  "generation_type": "prefix",
+  "generation_weights": [
+   {
+    "tag": "attack_dagger",
+    "weight": 100
+   },
+   {
+    "tag": "dagger",
+    "weight": 50
+   },
+   {
+    "tag": "warstaff",
+    "weight": 100
+   },
+   {
+    "tag": "staff",
+    "weight": 50
+   },
+   {
+    "tag": "sceptre",
+    "weight": 50
+   },
+   {
+    "tag": "wand_can_roll_caster_modifiers",
+    "weight": 50
+   },
+   {
+    "tag": "default",
+    "weight": 100
+   }
+  ],
+  "grants_effects": [],
+  "groups": [
+   "AddedColdDamagePerDexterity"
+  ],
+  "implicit_tags": [
+   "elemental_damage",
+   "damage",
+   "elemental",
+   "cold",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "Hunter's",
+  "required_level": 68,
+  "spawn_weights": [
+   {
+    "tag": "sword_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "axe_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "claw_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "dagger_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "rune_dagger_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 200
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "attacks_with_this_weapon_minimum_added_cold_damage_per_10_dexterity",
+    "max": 2,
+    "min": 1
+   },
+   {
+    "id": "attacks_with_this_weapon_maximum_added_cold_damage_per_10_dexterity",
+    "max": 4,
+    "min": 3
+   }
+  ],
+  "text": "Adds (1-2) to (3-4) Cold Damage to Attacks with this Weapon per 10 Dexterity",
+  "type": "AddedColdDamagePerDexterity",
+  "gold_value": null
+ },
+ "ArmourPenetrationTwoHandWeaponInfluence1_": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ArmourPenetration"
+  ],
+  "implicit_tags": [
+   "physical_damage",
+   "damage",
+   "physical",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of the Hunt",
+  "required_level": 68,
+  "spawn_weights": [
+   {
+    "tag": "2h_sword_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_axe_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_mace_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "staff_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "warstaff_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_hits_ignore_enemy_monster_physical_damage_reduction_%_chance",
+    "max": 65,
+    "min": 50
+   }
+  ],
+  "text": "Hits with this Weapon have (50-65)% chance to ignore Enemy Physical Damage Reduction",
+  "type": "LocalArmourPenetration",
+  "gold_value": null
+ },
+ "ArmourPenetrationTwoHandWeaponInfluence2_": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ArmourPenetration"
+  ],
+  "implicit_tags": [
+   "physical_damage",
+   "damage",
+   "physical",
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of the Hunt",
+  "required_level": 71,
+  "spawn_weights": [
+   {
+    "tag": "2h_sword_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_axe_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_mace_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "staff_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "warstaff_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_hits_ignore_enemy_monster_physical_damage_reduction_%_chance",
+    "max": 80,
+    "min": 66
+   }
+  ],
+  "text": "Hits with this Weapon have (66-80)% chance to ignore Enemy Physical Damage Reduction",
+  "type": "LocalArmourPenetration",
+  "gold_value": null
+ },
+ "ChanceToIntimidateOnHitWeaponInfluence1": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ChanceToIntimidateOnHit"
+  ],
+  "implicit_tags": [
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of the Hunt",
+  "required_level": 78,
+  "spawn_weights": [
+   {
+    "tag": "sword_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "axe_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "claw_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "dagger_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "rune_dagger_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "mace_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "sceptre_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "wand_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_sword_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_axe_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_mace_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "staff_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "warstaff_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_chance_to_intimidate_on_hit_%",
+    "max": 11,
+    "min": 7
+   }
+  ],
+  "text": "(7-11)% chance to Intimidate Enemies for 4 seconds on Hit",
+  "type": "LocalChanceToIntimidateOnHit",
+  "gold_value": null
+ },
+ "ChanceToIntimidateOnHitWeaponInfluence2": {
+  "adds_tags": [],
+  "domain": "item",
+  "generation_type": "suffix",
+  "generation_weights": [],
+  "grants_effects": [],
+  "groups": [
+   "ChanceToIntimidateOnHit"
+  ],
+  "implicit_tags": [
+   "attack"
+  ],
+  "is_essence_only": false,
+  "name": "of the Hunt",
+  "required_level": 81,
+  "spawn_weights": [
+   {
+    "tag": "sword_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "axe_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "claw_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "dagger_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "rune_dagger_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "mace_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "sceptre_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "wand_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_sword_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_axe_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "2h_mace_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "staff_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "warstaff_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "bow_basilisk",
+    "weight": 500
+   },
+   {
+    "tag": "default",
+    "weight": 0
+   }
+  ],
+  "stats": [
+   {
+    "id": "local_chance_to_intimidate_on_hit_%",
+    "max": 15,
+    "min": 12
+   }
+  ],
+  "text": "(12-15)% chance to Intimidate Enemies for 4 seconds on Hit",
+  "type": "LocalChanceToIntimidateOnHit",
   "gold_value": null
  },
  "FlaskEnchantmentInjectorAdjacentFlasks___": {

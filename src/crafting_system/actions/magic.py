@@ -70,7 +70,7 @@ class TransmutationOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not normal or is corrupted, and
-        `OutOfScopeError` for a jewel or an influenced item.
+        `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key.
         """
         _refuse(data, item, Rarity.NORMAL, "an Orb of Transmutation")
         return draw_onto(data, item.changed(data, rarity=Rarity.MAGIC), magic_totals())
@@ -96,7 +96,7 @@ class AlterationOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic or is corrupted, and
-        `OutOfScopeError` for a jewel, an influenced item or one with a crafted metamod.
+        `OutOfScopeError` for a jewel, an influenced item of a class with no influence class key, or one with a crafted metamod.
         Ordinary crafted mods are removed by the reroll like every mod that is not fractured.
         """
         _refuse(data, item, Rarity.MAGIC, "an Orb of Alteration")
@@ -124,7 +124,7 @@ class AugmentationOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic, is corrupted, is full, or for which
-        no mod is legal, and `OutOfScopeError` for a jewel, an influenced item or one with a crafted metamod.
+        no mod is legal, and `OutOfScopeError` for a jewel, an influenced item of a class with no influence class key, or one with a crafted metamod.
         """
         _refuse(data, item, Rarity.MAGIC, "an Orb of Augmentation")
         return add_one_mod(data, item, "an Orb of Augmentation")
@@ -150,7 +150,7 @@ class RegalOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic, is corrupted, or for which no mod is
-        legal on the rare item, and `OutOfScopeError` for a jewel, an influenced item or one with a
+        legal on the rare item, and `OutOfScopeError` for a jewel, an influenced item of a class with no influence class key, or one with a
         crafted metamod.
         """
         _refuse(data, item, Rarity.MAGIC, "a Regal Orb")
