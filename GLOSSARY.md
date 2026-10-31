@@ -137,7 +137,28 @@ The probability distribution over next compressed states for one action from one
 _Avoid_: transition table
 
 **Exact merge**:
-Treating concrete items as one compressed state when every action behaves identically on them. An approximate merge is one that is not exact.
+Treating concrete items as one compressed state when every action behaves identically on them. An approximate merge is one that is not exact; it is allowed only as a coarse state with an optimistic and a pessimistic model (ADR-0023).
+
+**Coarse state**:
+A block of compressed states treated as one, used only to bound an answer: some slot kinds are renamed to a coarser kind, never a requirement's status, a slot count or a side. Its members are the compressed states it stands for.
+_Avoid_: abstract state, bucket
+
+**Family group**:
+Families that no requirement asks for and that no relevant bench craft clashes with, pooled into one kind in a coarse state.
+_Avoid_: family pool (a pool is the mods an action can add)
+
+**Optimistic model**:
+The coarse state in which a block offers every action that is legal in at least one member and pays what the cheapest member pays; its value is a lower bound on the exact mean cost of every member.
+
+**Pessimistic model**:
+The coarse state in which a block offers only the actions legal in every member and pays what the worst member pays; its policy is an ordinary policy of the exact problem and its value is an upper bound on that policy's cost.
+
+**Approximate answer**:
+A policy with the interval between the optimistic and the pessimistic value, marked as approximate; given when the exact state would not fit in about a minute.
+_Avoid_: estimate, heuristic answer
+
+**Certified gap**:
+The upper bound over the lower bound, minus one: at least the true relative error of an approximate answer's mean cost. The owner's tolerance is a certified gap of at most 1%.
 
 ## Evidence
 
