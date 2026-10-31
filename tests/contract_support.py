@@ -127,6 +127,7 @@ def fixture_items() -> dict[str, Item]:
         "magic": _item(Rarity.MAGIC, _roll(LIFE_1)),
         "rare_junk": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1)),
         "rare_fractured": _item(Rarity.RARE, _roll(RESIST_1, fractured=True), _roll(MANA_1)),
+        "rare_four": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), _roll(DAMAGE_1), _roll(FIRE_GEM)),
     }
     crafted = _ordinary_crafted_mod()
     if crafted is not None:

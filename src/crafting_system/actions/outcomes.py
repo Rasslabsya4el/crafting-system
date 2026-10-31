@@ -26,7 +26,7 @@ from .draw import (
     total_distribution,
 )
 from .errors import NotApplicableError
-from .pool import ModFactor, PoolFamily, build_pool
+from .pool import ModFactor, PoolFamily, build_pool, tiers_of
 
 CHAOS_FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
 HARVEST_FRACTURED_MODS_KEPT = get_rule("harvest_reforge.fractured_mods_kept")
@@ -181,7 +181,7 @@ class Outcomes:
 
     @cached_property
     def _tiers(self) -> Mapping[str, int]:
-        return tier_table(self.data, self.retained.base_id)
+        return tiers_of(self.data, self.retained)
 
     @cached_property
     def _float_weights(self) -> Mapping[str, float]:

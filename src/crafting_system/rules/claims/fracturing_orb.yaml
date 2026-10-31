@@ -1,0 +1,51 @@
+# Mechanic family: fracturing_orb (the Fracturing Orb on a rare item). Research ticket #12 (claims FRA-xx) and
+# the decisions D4, D6 of issue #28. The crafted metamods are not modelled yet (issue #68).
+rules:
+  - id: fracturing_orb.accepts_rare_only
+    statement: A Fracturing Orb can be used on a rare item only.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a rare item to apply it. Cannot be used on Influenced or Fractured items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: fracturing_orb.needs_four_mods
+    statement: A Fracturing Orb needs a rare item with at least 4 mods (4 is enough). The crafted mods and the metamods count among them, as every explicit mod does (decision D6 of issue #28).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3323944
+    quote: "fracture a random modifier on a rare item with at least 4 modifiers, locking it in place"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: fracturing_orb.refused_on_influenced_or_fractured
+    statement: A Fracturing Orb cannot be used on an influenced item or on one that already has a fractured mod, so an orb never makes a second fractured mod. Synthesised and mirrored items are refused too; the item model holds neither.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Cannot be used on Influenced or Fractured items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: fracturing_orb.refused_on_corrupted
+    statement: A corrupted item takes no Fracturing Orb (it is no exception to the rule for corrupted items).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: fracturing_orb.fractures_one_mod_uniformly
+    statement: A Fracturing Orb fractures exactly one explicit mod and changes nothing else, and the mod is chosen uniformly over every explicit mod of the item, crafted mods and metamods included (decision D6 of issue #28; the wiki and the patch notes only say "random"). With n mods each has chance 1/n, so a 4-mod item fractures a given mod with chance 1/4.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D6 Fracturing Orb uniform over every explicit affix, crafted mods and metamods included (Fracturing OPEN-01…04)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: fracturing_orb.cost
+    statement: One use of a Fracturing Orb consumes one Fracturing Orb item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyFractureRare: name "Fracturing Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {Fracturing Orb: 1}

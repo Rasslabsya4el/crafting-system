@@ -27,7 +27,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: affix_pool.spawn_weight_first_match
-    statement: The spawn weight of a mod on an item is the weight of the first entry of the mod's own ordered spawn-weight list whose tag the item has; later matching entries are ignored and weight 0 removes the mod. The item's tags are the tags of its base (an item without influence adds none).
+    statement: The spawn weight of a mod on an item is the weight of the first entry of the mod's own ordered spawn-weight list whose tag the item has; later matching entries are ignored and weight 0 removes the mod. The item's tags are the tags of its base plus the influence tags of its influences (affix_pool.influence_tags; an item without influence adds none).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Modifier#Spawn_weight_tag
     quote: "If multiple tags apply, the left-most tags are most important, where the right most tags are the least."
@@ -89,3 +89,37 @@ rules:
     quote: "When crafting on an item with memory strands, it will consume a random amount of it to increase the tier of the modifier it adds to the item."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
+
+  - id: affix_pool.influence_tags
+    statement: An influenced item has, besides the tags of its base, one tag per influence named "<class key>_<influence key>", and the spawn weights of an influence mod list such tags, so an influence mod joins the pool of an item with its tag and of no other (the weights of the ordinary mods do not change). The value maps each influence to its key (Hunter "basilisk", Redeemer "eyrie", Warlord "adjudicator") and each item class of the game data to its class key; an item class not listed has no admitted class key (Thrusting One Hand Swords, whether they use "sword", is open; jewels and flasks take no influence), so an influenced item of such a class is out of scope. The tier of an influence mod counts among the mods of its type that can spawn with these tags (mod_tier.scope_is_mod_type); no source states it, it is the same rule on the influenced item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Terminology
+    quote: 'Refers to Shaper influenced items, which have the "shaper" tag corresponding to the item class.'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      influences: {shaper: shaper, elder: elder, crusader: crusader, hunter: basilisk, redeemer: eyrie, warlord: adjudicator}
+      classes:
+        Amulet: amulet
+        Belt: belt
+        Body Armour: body_armour
+        Boots: boots
+        Bow: bow
+        Claw: claw
+        Dagger: dagger
+        Gloves: gloves
+        Helmet: helmet
+        One Hand Axe: axe
+        One Hand Mace: mace
+        One Hand Sword: sword
+        Quiver: quiver
+        Ring: ring
+        Rune Dagger: rune_dagger
+        Sceptre: sceptre
+        Shield: shield
+        Staff: staff
+        Two Hand Axe: 2h_axe
+        Two Hand Mace: 2h_mace
+        Two Hand Sword: 2h_sword
+        Wand: wand
+        Warstaff: warstaff

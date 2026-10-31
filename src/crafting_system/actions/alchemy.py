@@ -38,7 +38,7 @@ class AlchemyOrb(Action):
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.
 
-        Raises `NotApplicableError` for an item that is not normal or is corrupted, and `OutOfScopeError` for a jewel or an influenced item. The draw is the one of a Chaos
+        Raises `NotApplicableError` for an item that is not normal or is corrupted, and `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key. The draw is the one of a Chaos
         Orb on a rare item with no mod.
         """
         if item.rarity is not Rarity.NORMAL:

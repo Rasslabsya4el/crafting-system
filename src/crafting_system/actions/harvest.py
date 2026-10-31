@@ -49,8 +49,8 @@ class HarvestReforge(Action):
         """The outcomes of using the reforge on `item`.
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, or whose pool holds
-        no mod with the tag that it can still take, and `OutOfScopeError` for a jewel, an influenced
-        item or one with a crafted metamod. Ordinary crafted mods are removed by the reroll.
+        no mod with the tag that it can still take, and `OutOfScopeError` for a jewel, an influenced item whose
+        class has no influence class key, or one with a crafted metamod. Ordinary crafted mods are removed by the reroll.
         """
         if item.rarity is not Rarity.RARE:
             raise NotApplicableError(
