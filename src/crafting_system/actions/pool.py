@@ -50,8 +50,12 @@ class PoolFamily:
         return sum((entry.weight for entry in self.mods), Fraction(0))
 
 
-def build_pool(data: GameData, item: Item) -> tuple[PoolFamily, ...]:
+def build_pool(data: GameData, item: Item, max_level: int | None = None) -> tuple[PoolFamily, ...]:
     """The candidates for one more draw on `item`, grouped by family, in data order.
+
+    `max_level` is a further cap on the required level of a candidate (the cap of a low essence on
+    its random mods); the item level gate applies as well, so the effective limit is the lower of
+    the two.
 
     Raises `OutOfScopeError` for a candidate that does not have exactly one family (none is
     drawable in domain `item` in 3.29.3.3) and for a family whose candidates sit on both sides.
@@ -59,13 +63,14 @@ def build_pool(data: GameData, item: Item) -> tuple[PoolFamily, ...]:
     base = data.base_items.get(item.base_id)
     if base is None:
         raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
+    level_limit = item.item_level if max_level is None else min(item.item_level, max_level)
     grouped: dict[str, list[PoolMod]] = {}
     sides: dict[str, Side] = {}
     for mod in data.mods.values():
         if (
             mod.domain != base.domain
             or mod.generation_type not in Side
-            or mod.required_level > item.item_level
+            or mod.required_level > level_limit
         ):
             continue
         weight = effective_weight(mod, base.tags)

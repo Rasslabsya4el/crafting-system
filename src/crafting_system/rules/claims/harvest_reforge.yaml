@@ -75,3 +75,11 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
     value: {lightning: {Primal Crystallised Lifeforce: 50}}
+
+  - id: harvest_reforge.removes_crafted_mods
+    statement: A tagged reforge removes the ordinary crafted (bench) mods of the rare item like any other mod that is not fractured, so none is retained; the metamods, which change what a reforge does, are not modelled yet (issue #68).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Harvest_Crafting
+    quote: "will completely reforge the modifiers of a Rare item, similar to a Chaos Orb, while guaranteeing a modifier with the specified tag"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
