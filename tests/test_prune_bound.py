@@ -14,7 +14,8 @@ cannot improve any value (its module text has the argument). This file checks:
 3. a deliberately wrong bound is caught by that comparison (the certificate trusts `reach_bound`: it
    proves the offers left out against the bounds, it does not check the bounds);
 4. the routes R10, R11 and R05 on the real dump give the mean and the policy that the unmodified code gave
-   (`tests/golden/plans_118.json`);
+   (`tests/golden/plans_118.json`, made by planning the three targets with `make_plan` on main at 147fdad;
+   when a target file or a price changes on main, plan again on main and replace the file);
 5. the plan still prices and evaluates an offer the pruning left out.
 
 The real-data tests need the cached dump (`CRAFTING_CACHE_DIR`) and skip cleanly without it, as in CI. No
