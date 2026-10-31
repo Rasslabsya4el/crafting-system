@@ -30,7 +30,7 @@ Research ticket [#90](https://github.com/Rasslabsya4el/crafting-system/issues/90
 | PoE2 | Reddit, Butsicles, [PoE 2 0.2.0 recombinator guide, part 1](https://www.reddit.com/r/PathOfExile2/comments/1jzu2py/poe_2_patch_020_guide_to_recombinators_part_1/) | cached text |
 | 3P | [poedustcalculator.app](https://poedustcalculator.app/) (third-party, poe.ninja prices, disenchant yields only) | 2026-10-31 |
 
-**What I could not do.** The `gpt-research` tool failed on every run (five timeouts or a dead worker, one more still running when this was written), so the Reddit post was read in the cached copy only: its comments after the crawl and any later edit are not seen, and no search for 3.27-3.29 recombinator posts on Reddit was possible. The wiki version pages show no recombinator, Awakener's Orb or Dust change in 3.27, 3.28 or 3.29.x; the wiki's own history table for the Recombinator agrees (last entry 3.27.0: a Dust counter). Absence of a note is not proof the behaviour is unchanged, so the Reddit-based rules carry the patch they were measured in (3.25 or 3.26).
+**What I could not do.** The `gpt-research` tool failed on all six runs (timeouts or a dead worker), so the Reddit post was read in the cached copy only: its comments after the crawl and any later edit are not seen, and no search for 3.27-3.29 recombinator posts on Reddit was possible. The wiki version pages show no recombinator, Awakener's Orb or Dust change in 3.27, 3.28 or 3.29.x; the wiki's own history table for the Recombinator agrees (last entry 3.27.0: a Dust counter). Absence of a note is not proof the behaviour is unchanged, so the Reddit-based rules carry the patch they were measured in (3.25 or 3.26).
 
 ## 1. Awakener's Orb (M-43)
 
