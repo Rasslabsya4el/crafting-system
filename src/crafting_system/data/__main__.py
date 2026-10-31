@@ -103,7 +103,9 @@ def main(argv: Sequence[str] | None = None, *, pin: RepoePin = PIN, open_url: Op
             "Print what changed from OLD to NEW in mods, weights, families, tags, bench options, essences "
             f"and fossils. Each of OLD and NEW is the word '{PINNED}' (the active pin) or a full "
             "40-character repoe-fork commit. A commit that is not the pin is downloaded once and its "
-            "hashes are learned; the lines to paste into PIN are printed after the diff."
+            "hashes are learned. The diff is followed by an impact report (the targets, routes, claims and "
+            "tests of this checkout that name something that changed; --no-impact leaves it out) and the "
+            "lines to paste into PIN."
         ),
     )
     compare.add_argument("old", type=_version, metavar="OLD", help=f"'{PINNED}' or a repoe-fork commit")

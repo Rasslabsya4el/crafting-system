@@ -187,6 +187,49 @@ def test_a_family_that_is_a_single_word_is_not_searched_for_because_prose_would_
     assert [r.token for r in found] == ["IncreasedLife1"]
 
 
+def test_a_lone_word_family_is_found_where_a_target_names_a_family_or_a_mod(old_data, tmp_path):
+    raw = copy.deepcopy(raw_fixtures())
+    raw["mods.json"]["IncreasedLife1"]["groups"] = ["Strength"]
+    (tmp_path / "examples").mkdir()
+    (tmp_path / "examples" / "t.yaml").write_text("# Strength is a word.\n- family: Strength\n", "utf-8")
+
+    found = compute_impact(old_data, game_data_from_raw(raw), tmp_path).examples
+
+    assert [(r.line, r.token) for r in found] == [(2, "Strength")]
+
+
+def test_a_mod_text_with_a_negative_range_matches_with_the_range_written_as_a_hash(old_data, tmp_path):
+    raw = copy.deepcopy(raw_fixtures())
+    raw["mods.json"]["IncreasedLife1"]["text"] = "(-16-16)% increased Attack Speed"
+    (tmp_path / "examples").mkdir()
+    (tmp_path / "examples" / "t.yaml").write_text('- stat: "#% increased Attack Speed"\n', "utf-8")
+
+    found = compute_impact(old_data, game_data_from_raw(raw), tmp_path).examples
+
+    assert [r.token for r in found] == ["#% increased Attack Speed"]
+
+
+def test_a_file_in_utf16_or_with_a_bom_is_read(old_data, new_data, tmp_path):
+    (tmp_path / "examples").mkdir()
+    (tmp_path / "examples" / "sixteen.yaml").write_bytes("- family: ColdResistance\n".encode("utf-16"))
+    (tmp_path / "examples" / "bom.yaml").write_bytes(b"\xef\xbb\xbf- family: ColdResistance\n")
+
+    found = compute_impact(old_data, new_data, tmp_path).examples
+
+    assert sorted(r.path for r in found) == ["examples/bom.yaml", "examples/sixteen.yaml"]
+
+
+def test_a_test_reading_the_real_cache_is_told_by_the_word_real_or_the_loader_not_by_letters(old_data, tmp_path):
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_a_real_thing.py").write_text("x = 1\n", "utf-8")
+    (tmp_path / "tests" / "test_kernel.py").write_text("from abstraction_support import real_game_data\n", "utf-8")
+    (tmp_path / "tests" / "test_unreal_thing.py").write_text("x = 1\n", "utf-8")
+
+    found = compute_impact(old_data, old_data, tmp_path).real_tests
+
+    assert found == ("tests/test_a_real_thing.py", "tests/test_kernel.py")
+
+
 def test_a_mod_a_changed_essence_or_fossil_forces_counts_as_touched(old_data, new_data, tmp_path):
     (tmp_path / "examples").mkdir()
     (tmp_path / "examples" / "t.yaml").write_text("- mod: DelveDexterityGemLevel1\n", "utf-8")

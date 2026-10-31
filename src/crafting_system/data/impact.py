@@ -10,10 +10,11 @@ exactly it (the ranges `(6-11)` of a mod text count as `#`, the way a target may
 
 Listed, from `root`: `examples/**/*.yaml` (targets and routes), the claims in
 `src/crafting_system/rules/claims/*.yaml` and `tests/*.py`. A folder that does not exist is empty.
-A file that reads a real dump is told by `real` in its name; those are always listed, because the
-numbers they pin move with any patch. The text is deterministic.
+A test file that reads a real dump (`real` as a word of its name, or an import of `real_game_data`) is always
+listed, because the numbers it pins move with any patch. The text is deterministic.
 """
 
+import codecs
 import re
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator, Mapping
@@ -25,13 +26,15 @@ from .model import BenchOption, GameData
 EXAMPLES_DIR = "examples"
 CLAIMS_DIR = "src/crafting_system/rules/claims"
 TESTS_DIR = "tests"
-REAL_MARK = "real"
+REAL_NAME_WORD = "real"
 MIN_PHRASE_LENGTH = 8  # a shorter name or text would match too many unrelated lines
 SHOWN_TOKENS = 5
 
 _IDENT = re.compile(r"[A-Za-z0-9_]+")
 _DISTINCT = re.compile(r"[A-Za-z][A-Za-z]*[A-Z0-9_]")  # a lone word (family `Nothing`) would match prose
-_RANGE = re.compile(r"\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)")
+_KEYED = re.compile(r"\b(?:family|mod)\s*:\s*['\"]?([A-Za-z0-9_]+)")  # where a lone word is searched for
+_REAL_LOADER = re.compile(r"^\s*from\s+\S+\s+import\s+.*\breal_game_data\b")  # the helper of the tests that read the real cache
+_RANGE = re.compile(r"\(-?\d+(?:\.\d+)?-{1,2}\d+(?:\.\d+)?\)")  # (6-11), (-16-16), (-25--10)
 _QUOTED = re.compile(r"\"([^\"]*)\"|'([^']*)'")
 _VALUE = re.compile(r"^\s*(?:-\s+)*(?:[A-Za-z_][\w-]*:\s+)?(.+?)\s*$")
 _CLAIM_ID = re.compile(r"^\s*-?\s*id:\s*['\"]?([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)")
@@ -175,10 +178,13 @@ class _Tokens:
     def __init__(self) -> None:
         self.ids: dict[str, set[str]] = defaultdict(set)
         self.phrases: dict[str, set[str]] = defaultdict(set)
+        self.keyed: dict[str, set[str]] = defaultdict(set)  # lone words, found only after `family:` or `mod:`
 
     def add_id(self, token: str, kind: str) -> None:
         if _DISTINCT.search(token):
             self.ids[token].add(kind)
+        elif token:
+            self.keyed[token].add(kind)
 
     def add_phrase(self, text: str | None, kind: str) -> None:
         for part in (text or "").split("\n"):
@@ -187,7 +193,7 @@ class _Tokens:
                 self.phrases[part].add(kind)
 
     def __bool__(self) -> bool:
-        return bool(self.ids or self.phrases)
+        return bool(self.ids or self.phrases or self.keyed)
 
 
 def _collect(old: GameData, new: GameData) -> tuple[DataChanges, _Tokens]:
@@ -280,6 +286,10 @@ def _hits(line: str, tokens: _Tokens) -> dict[str, tuple[str, ...]]:
     for word in dict.fromkeys(_IDENT.findall(line)):
         if word in tokens.ids:
             found[word] = tuple(sorted(tokens.ids[word]))
+    if tokens.keyed:
+        for word in _KEYED.findall(line):
+            if word in tokens.keyed:
+                found[word] = tuple(sorted(tokens.keyed[word]))
     if tokens.phrases:
         for candidate in _phrase_candidates(line):
             candidate = _RANGE.sub("#", candidate).strip()
@@ -295,7 +305,14 @@ def _files(folder: Path, patterns: Iterable[str]) -> list[Path]:
 
 
 def _lines(path: Path) -> list[str]:
-    return path.read_text(encoding="utf-8", errors="replace").splitlines()
+    """The lines of a text file (UTF-8 with or without a BOM, or UTF-16 with one); none if it cannot be read."""
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return []
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return data.decode("utf-16", errors="replace").splitlines()
+    return data.decode("utf-8-sig", errors="replace").splitlines()
 
 
 def _relative(path: Path, root: Path) -> str:
@@ -336,11 +353,12 @@ def _scan_tests(root: Path, tokens: _Tokens) -> tuple[tuple[ReferencingTestFile,
     found, real = [], []
     for path in _files(root / TESTS_DIR, ("*.py",)):
         relative = _relative(path, root)
-        if REAL_MARK in path.stem:
+        lines = _lines(path)
+        if REAL_NAME_WORD in path.stem.split("_") or any(_REAL_LOADER.match(line) for line in lines):
             real.append(relative)
         words: set[str] = set()
         count = 0
-        for line in _lines(path):
+        for line in lines:
             hits = _hits(line, tokens)
             if hits:
                 count += 1
