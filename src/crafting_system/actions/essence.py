@@ -42,8 +42,9 @@ class ApplyEssence:
         Raises `ValueError` for a name that is no essence in `data`, `NotApplicableError` for a
         magic item, a rare item and an essence that works on normal items only, a corrupted item,
         an item class that takes no essence, and a forced mod that shares a family with a fractured
-        mod, and `OutOfScopeError` for Essence of Desolation, a jewel, an influenced item, one with a
-        metamod, or one whose fractured mods fill the side of the forced mod.
+        mod, and `OutOfScopeError` (no admitted rule covers it) for Essence of Desolation, an
+        influenced item, one with a metamod, one whose fractured mods fill the side of the forced
+        mod, and a level 1 to 4 essence that has no cap in the data.
         """
         essence = self._record(data)
         if item.rarity is Rarity.MAGIC:

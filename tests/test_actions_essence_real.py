@@ -25,7 +25,7 @@ from fractions import Fraction
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.actions import ApplyEssence
+from crafting_system.actions import ApplyEssence, NotApplicableError
 from crafting_system.items import ExplicitMod, Item, Rarity
 
 BOOTS = "Metadata/Items/Armours/Boots/BootsInt1"
@@ -139,3 +139,23 @@ def test_the_caps_of_the_data_are_the_ones_the_rule_names(data):
     }
 
     assert caps == {(1, 35), (2, 45), (3, 60), (4, 75), (5, None), (6, None), (7, None), (8, None)}
+
+
+@pytest.mark.parametrize("name", ["Whispering Essence of Hatred", "Shrieking Essence of Spite", "Essence of Horror"])
+def test_every_item_class_takes_the_essence_and_the_new_mods_fit_around_the_forced_one(data, name):
+    classes = {}
+    for base in data.base_items.values():
+        if base.domain == "item" and base.release_state == "released":
+            classes.setdefault(base.item_class, base.id)
+    taken = 0
+    for item_class, base_id in sorted(classes.items()):
+        item = Item.build(data, base_id=base_id, item_level=86, rarity=Rarity.NORMAL)
+        try:
+            outcomes = ApplyEssence(name).outcomes(data, item)
+        except NotApplicableError as refusal:
+            assert "gives no mod on" in str(refusal), (item_class, refusal)
+            continue
+        taken += 1
+        sampled = outcomes.sample(random.Random(1))
+        assert outcomes.forced in {entry.mod_id for entry in sampled.mods} and 4 <= len(sampled.mods) <= 6
+    assert taken >= 20  # the 22 classes of essences.json, less the ones without a released base

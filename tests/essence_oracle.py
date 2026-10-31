@@ -65,17 +65,23 @@ def essence_chance(
     cap: int | None = None,
     kept: tuple[str, ...] = (),
     forced_side: str = SUFFIX,
+    forced_family: str | None = None,
 ) -> Fraction:
     """The chance that the finished item holds `target` after an essence whose forced mod is on `forced_side`.
 
-    `kept` are the families of the fractured mods that stay; the forced mod's own family is not in
-    the table, so nothing else of the table is blocked by it.
+    `kept` are the families of the fractured mods that stay. By default the forced mod's own family
+    is not in the table, so it only takes a slot on `forced_side`; with `forced_family` the forced
+    mod is a mod of that table family: the family leaves the pool and its side gives the slot.
     """
     limit = item_level if cap is None else min(item_level, cap)
     family, level, weight = _family_of(target)
     if family in kept or level > limit:
         return Fraction(0)
-    pool = _pool(limit, frozenset(kept))
+    if forced_family is not None:
+        if family == forced_family:
+            return Fraction(0)  # another mod of the forced family: blocked (the forced mod itself is no target)
+        forced_side = AMULET[forced_family][0]
+    pool = _pool(limit, frozenset(kept) | ({forced_family} if forced_family else frozenset()))
     share = Fraction(weight, pool[family][1])
     used = {PREFIX: 0, SUFFIX: 0}
     for name in kept:

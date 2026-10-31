@@ -37,7 +37,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: essence.normal_only_up_to_level
-    statement: The essences up to this level (1 Whispering, 2 Muttering, 3 Weeping, 4 Wailing) work on normal items only; the `level` field of the essence record is the tier (5 Screaming, 6 Shrieking, 7 Deafening). Nothing takes a magic item.
+    statement: The essences up to this level (1 Whispering, 2 Muttering, 3 Weeping, 4 Wailing) work on normal items only; the `level` field of the essence record is the tier (5 Screaming, 6 Shrieking, 7 Deafening). The directions name normal items, or normal and rare items, so nothing takes a magic item.
     source_kind: datamined
     url: https://repoe-fork.github.io/base_items.json
     quote: 'CurrencyEssenceHatred1 (and the other records of levels 1-4): "Right click this item then left click a normal item to apply it."'

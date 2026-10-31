@@ -119,6 +119,47 @@ def test_a_corrupted_essence_on_a_normal_amulet_matches_the_oracle(item_level, t
     assert chance(ApplyEssence(HYSTERIA), item, target) == essence_chance(target, item_level)
 
 
+def forcing(mod_id):
+    """The fixture data with a corrupted essence whose forced mod on an amulet is `mod_id` (a mod of the pool)."""
+    record = Essence("Metadata/Items/Currency/Test", "Essence of Test", 6, True, 8, None, 1, (EssenceMod("Amulet", mod_id),))
+    return with_essences(DATA, record)
+
+
+FORCED_IN_THE_POOL = [("IncreasedLife3", "IncreasedLife"), ("LightningResist8", "LightningResistance"),
+                      ("AddedLightningDamage9", "LightningDamage")]  # fmt: skip
+
+
+@pytest.mark.parametrize(("forced", "family"), FORCED_IN_THE_POOL)
+@pytest.mark.parametrize("item_level", [50, 86])
+@pytest.mark.parametrize("target", [t for t in TARGETS if t not in {"IncreasedLife3", "IncreasedLife1", "LightningResist1"}])
+@pytest.mark.parametrize("kept", [(), ("ChaosResistance",)])
+def test_a_forced_mod_of_a_pool_family_takes_the_family_and_a_slot_off_the_pool(
+    forced, family, item_level, target, kept
+):
+    """The forced mod is a prefix (IncreasedLife3, AddedLightningDamage9) or a suffix (LightningResist8)."""
+    item = amulet(*(fractured("ChaosResist1") for _ in kept), item_level=item_level)
+
+    got = ApplyEssence("Essence of Test").outcomes(forcing(forced), item).chance_all([target])
+
+    assert got == essence_chance(target, item_level, kept=kept, forced_family=family)
+
+
+def test_a_forced_mod_of_a_pool_family_is_held_and_blocks_its_family():
+    outcomes = ApplyEssence("Essence of Test").outcomes(forcing("IncreasedLife3"), amulet(item_level=50))
+
+    assert outcomes.chance_all(["IncreasedLife3"]) == 1
+    assert outcomes.chance_all(["IncreasedLife1"]) == 0
+    assert all(f.family != "IncreasedLife" for f in outcomes.pool)
+
+
+def test_a_low_essence_without_a_cap_in_the_data_is_out_of_scope():
+    record = dataclasses.replace(DATA.essences["Metadata/Items/Currency/CurrencyEssenceHatred1"], item_level_restriction=None)
+    data = with_essences(DATA, record)
+
+    with pytest.raises(OutOfScopeError, match="no level cap"):
+        ApplyEssence(HATRED).outcomes(data, amulet(rarity=Rarity.NORMAL))
+
+
 def test_the_forced_mod_and_the_fractured_mods_count_inside_the_total():
     # three kept mods (two fractured and the forced one): a total of 4 draws one, 5 two, 6 three
     outcomes = ApplyEssence(HYSTERIA).outcomes(

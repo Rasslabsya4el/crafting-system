@@ -73,7 +73,7 @@ class Outcomes:
         """
         kept = item.fractured_mods
         if forced is not None:
-            tier = tier_table(data, item.base_id).get(forced.id, 1)
+            tier = tier_table(data, item.base_id).get(forced.id, 1)  # an essence-only mod has no tier: 1
             low = tuple(min(stat.min, stat.max) for stat in forced.stats)
             kept = (*kept, ExplicitMod(forced.id, tier, low))
         retained = item.changed(data, rarity=Rarity.RARE, mods=kept)
@@ -155,7 +155,7 @@ class Outcomes:
         new = tuple(
             ExplicitMod(
                 mod.id,
-                self._tiers.get(mod.id, 1),
+                self._tiers[mod.id] if mod.id != self.forced else self._tiers.get(mod.id, 1),
                 tuple(
                     rng.randint(min(stat.min, stat.max), max(stat.min, stat.max))
                     for stat in mod.stats
