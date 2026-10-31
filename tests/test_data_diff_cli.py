@@ -30,7 +30,7 @@ COMMIT = "b" * 40
 OTHER_COMMIT = "c" * 40
 PIN_LABEL = f"{TEST_VERSION} ({TEST_COMMIT[:8]})"
 COMMIT_LABEL = f"commit {COMMIT[:12]}"
-PIN_LINES_TITLE = f"Pin lines for commit {COMMIT}"
+MOVE_LINE = "To move the pin to this export: python -m crafting_system.data pin "
 
 
 @pytest.fixture
@@ -68,8 +68,8 @@ def listing(folder):
 
 
 def diff_body(out):
-    """The diff part of the output (without the pin lines that follow it)."""
-    return out.split("\n\n" + "Pin lines for commit")[0]
+    """The diff part of the output (without the line that follows it, naming the command that moves the pin)."""
+    return out.split("\n\n" + MOVE_LINE)[0]
 
 
 def test_diff_of_the_pin_and_a_new_commit_lists_the_seeded_changes(cache, capsys):
@@ -84,24 +84,14 @@ def test_diff_of_the_pin_and_a_new_commit_lists_the_seeded_changes(cache, capsys
     assert lines[1:] == SEEDED_DIFF_TEXT.split("\n")[1:]
 
 
-def test_the_learned_pin_lines_are_printed_for_the_commit_that_is_not_pinned(cache, capsys):
+def test_the_command_that_moves_the_pin_is_printed_for_the_commit_that_is_not_pinned(cache, capsys):
     pin, opener = build_world()
 
     _, out, _ = run(capsys, ["diff", "pinned", COMMIT], pin, opener)
 
-    pin_lines = out.split("\n\n" + PIN_LINES_TITLE)[1].split("\n")
-    assert pin_lines[0].startswith(" ")  # the rest of the title line
-    assert pin_lines[1] == (
-        "(hashes recorded from the first download of this commit; "
-        "check them against another source before trusting)"
-    )
-    assert pin_lines[2] == f'commit="{COMMIT}",'
-    assert pin_lines[3] == "files=("
-    learned = {file.name: file for file in make_pin(raw_to_bytes(seeded_raw())).files}
-    for line, name in zip(pin_lines[4:9], FILE_NAMES, strict=True):
-        assert line == f'    PinnedFile("{name}", "{learned[name].sha256}", {learned[name].size}),'
-    assert pin_lines[9] == "),"
-    assert TEST_COMMIT not in out.split(PIN_LINES_TITLE)[1]
+    assert out.endswith(f"\n\n{MOVE_LINE}{COMMIT} <version>\n")
+    assert "paste" not in out.lower()
+    assert TEST_COMMIT not in out.split(MOVE_LINE)[1]
 
 
 def test_the_first_run_learns_the_commit_and_writes_its_manifest(cache, capsys):
@@ -160,7 +150,7 @@ def test_only_the_files_that_are_needed_are_downloaded(cache, capsys):
     assert opener.urls == [pin.url_for("essences.json")]
 
 
-def test_two_commits_are_compared_and_both_get_their_pin_lines(cache, capsys):
+def test_two_commits_are_compared_and_both_get_their_move_command(cache, capsys):
     other = raw_to_bytes(seeded_raw())
     other["fossils.json"] = fixture_bytes()["fossils.json"]
     pin, opener = build_world({COMMIT: raw_to_bytes(seeded_raw()), OTHER_COMMIT: other})
@@ -170,8 +160,8 @@ def test_two_commits_are_compared_and_both_get_their_pin_lines(cache, capsys):
     assert code == 0
     assert diff_body(out).split("\n")[0] == f"Patch diff: {COMMIT_LABEL} -> commit {OTHER_COMMIT[:12]}"
     assert "Fossils: 1 removed, 2 changed" in out  # the other commit has the original fossils
-    assert f"Pin lines for commit {COMMIT}" in out
-    assert f"Pin lines for commit {OTHER_COMMIT}" in out
+    assert f"{MOVE_LINE}{COMMIT} <version>" in out
+    assert f"{MOVE_LINE}{OTHER_COMMIT} <version>" in out
 
 
 def test_the_reverse_diff_swaps_added_and_removed(cache, capsys):
@@ -194,8 +184,8 @@ def test_the_commit_of_the_active_pin_counts_as_pinned(cache, capsys):
 
     assert code == 0
     assert diff_body(out).split("\n")[0] == f"Patch diff: {PIN_LABEL} -> {COMMIT_LABEL}"
-    assert PIN_LINES_TITLE in out
-    assert f"Pin lines for commit {TEST_COMMIT}" not in out
+    assert f"{MOVE_LINE}{COMMIT} " in out
+    assert f"{MOVE_LINE}{TEST_COMMIT}" not in out
     assert not folder_of(cache, TEST_COMMIT).exists()
 
 
@@ -447,11 +437,11 @@ def test_the_diff_is_followed_by_the_impact_report_of_the_repo_it_runs_in(cache,
     assert code == 0
     diff, rest = out.split("\n\nImpact of the patch on this repo: ")
     assert diff.split("\n")[1:] == SEEDED_DIFF_TEXT.split("\n")[1:]
-    impact, pin_lines = rest.split("\n\n" + PIN_LINES_TITLE)
+    impact, move_line = rest.split("\n\n" + MOVE_LINE)
     assert impact.split("\n")[0] == f"{PIN_LABEL} -> {COMMIT_LABEL}"
     assert "examples/targets/touches-changes.yaml:6  ColdResistance (family of a changed mod)" in impact
     assert "examples/targets/untouched.yaml" not in impact
-    assert pin_lines.startswith(" ")
+    assert move_line == f"{COMMIT} <version>\n"
 
 
 def test_no_impact_leaves_the_report_out(cache, capsys, monkeypatch):
