@@ -15,6 +15,18 @@ Accepts, Trade, Chance per use, Cost per use, Uses on average, Step cost, On fai
 never how a mechanic works. A step with no action (the dead end of a policy, the gap of a given route)
 is a row titled "No action" that says why.
 
+Chance per use lists the outcomes that move toward the goal; an outcome that does not (a worse item, in a later
+step or an earlier one, a step with no action, a restart) is under On failure with its chance (`_route_flow`
+tells the two apart by what the item still costs to finish, never by the step number). Accepts, on a craft with
+several outcomes, says how many mods the accepted results may have (when every mod is tracked) and that the rest
+is any. A step that cannot reach the target says "never finishes from here" in place of its uses. An essence
+of level 5 or more has a last field, Note: it reforges a rare and keeps only the fractured mod, so no Scouring.
+
+Every mod line has one format, the game's text with its ranges and the tier (`+(100-114) to maximum Life · T1`,
+see `_route_card`). The bought start item shows its known mods that way and the rest of a rare as `any mod or
+empty`. A given route that does what the planner's policy does is not drawn again (`merge_sections`): the goal
+card says so in a line; one that differs is drawn with its differing steps only, linking the shared ones.
+
 Words about the item come from the compressed states of the step's outcomes: a requirement leaf that
 becomes met, a mod fractured, crafted mods added or removed. When no such difference tells two outcomes
 apart the line names the row the outcome leads to instead ("the item of step 4").
@@ -31,20 +43,22 @@ what `_route_card` already reads.
 import json
 import math
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
+from crafting_system.items import Rarity
 from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 
+from . import _route_flow
 from ._plan import Plan
 from ._report import Report
 from ._route import RESTART, Route, RouteResult
-from ._route_card import ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
+from ._route_card import ANY_OR_EMPTY, EMPTY, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
 from ._route_flow import Edge, Step, build_flow
 from ._route_html import render_page
 from ._route_trade import BuyStep, buy_step
@@ -195,11 +209,14 @@ def _fields(*candidates: Field | None) -> tuple[Field, ...]:
 class _View:
     """What the rows of one section share: the plan, the data, the flow and the anchors."""
 
-    def __init__(self, inp: RouteInput, data: GameData, buy: BuyStep | None, prefix: str) -> None:
+    def __init__(self, inp: RouteInput, data: GameData, buy: BuyStep | None, prefix: str, route_field: bool) -> None:
         self.inp, self.plan, self.data, self.buy, self.prefix = inp, inp.plan, data, buy, prefix
+        self.route_field = route_field
         self.ab = self.plan.abstraction
         self.reader = _StateReader(self.ab)
-        self.flow = build_flow(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
+        self.flow = build_flow(
+            self.plan.start, inp.policy, self.ab.is_goal, inp.reasons, is_restart=lambda action: action.label == RESTART
+        )
 
     # -- anchors and links ---------------------------------------------------------------------------------
 
@@ -220,10 +237,13 @@ class _View:
             _, text, note = self.reader.leaf(index)
         except ValueError:
             return self.plan.leaf_labels[index]
-        return f"{text} ({note})" if note else text
+        return f"{text} · {note}" if note else text
 
     def _passing(self, states) -> set[int]:
         return {i for state in states for i, status in enumerate(state.status) if status is Status.PASSING}
+
+    def _passing_in_all(self, states) -> set[int]:
+        return {i for i in range(len(self.plan.leaf_labels)) if all(state.status[i] is Status.PASSING for state in states)}
 
     def _fractured(self, state: CompressedState) -> set[str]:
         return {entry.mod_id for entry in state.fractured}
@@ -235,22 +255,25 @@ class _View:
         return mod_text(self.data.mods[mod_id])
 
     def gains(self, step: Step, edges: list[Edge]) -> list[str]:
-        """What a step makes true in the states its forward edges lead to (a leaf met, a mod fractured or crafted)."""
+        """What a step makes true in the states its forward edges lead to (a leaf met, a mod fractured or crafted).
+
+        A leaf that only some of the step's states already meet still counts: the step aims at it for the others.
+        """
         landing = [state for edge in edges for state in edge.states]
         if not landing:
             return []
-        before_passing = self._passing(step.states)
+        before_passing = self._passing_in_all(step.states)
         before_fractured = set().union(*(self._fractured(state) for state in step.states))
         before_crafted = set().union(*(self._crafted(state) for state in step.states))
         mods, explained = [], set()  # a new fractured or crafted mod, and the leaves it meets (named once, as the mod)
         for state in landing:
             for entry in state.fractured:
                 if entry.mod_id not in before_fractured:
-                    mods.append(f"{self._mod(entry.mod_id)} (fractured)")
+                    mods.append(f"{self._mod(entry.mod_id)} · fractured")
                     explained |= {i for i, status in enumerate(entry.contribution) if status is Status.PASSING}
             for slot in state.slots:
                 if slot.crafted and slot.kind not in before_crafted:
-                    mods.append(f"{self._mod(slot.kind)} (crafted)")
+                    mods.append(f"{self._mod(slot.kind)} · crafted")
                     explained |= {i for i, status in enumerate(slot.contribution) if status is Status.PASSING}
         found = [
             self.leaf_text(i)
@@ -292,8 +315,8 @@ class _View:
         shared_crafted = set.intersection(*(self._crafted(state) for state in edge.states))
         before_fractured = set().union(*(self._fractured(state) for state in step.states))
         before_crafted = set().union(*(self._crafted(state) for state in step.states))
-        found += [f"{self._mod(mod_id)} fractured" for mod_id in sorted(shared_fractured - before_fractured)]
-        found += [f"{self._mod(mod_id)} crafted" for mod_id in sorted(shared_crafted - before_crafted)]
+        found += [f"{self._mod(mod_id)} · fractured" for mod_id in sorted(shared_fractured - before_fractured)]
+        found += [f"{self._mod(mod_id)} · crafted" for mod_id in sorted(shared_crafted - before_crafted)]
         return found
 
     # -- the fields of a step ----------------------------------------------------------------------------------
@@ -331,6 +354,23 @@ class _View:
                 lines.append(self.link(f"{' and '.join(what)} ({chance_text(edge.chance)})", number, None))
             else:
                 lines.append(self.link(f"the item of step {number} ({chance_text(edge.chance)})", number, None, always=True))
+        return lines
+
+    def accepts(self, action: Action, forward: list[Edge], after: ItemCard) -> list[str]:
+        """What a random craft accepts as a good result: how many mods the item may end up with, and that the rest is any.
+
+        Only for a step with several outcomes; the count only when the abstraction tracks every mod.
+        """
+        if not forward or action.label == RESTART or sum(1 for outcome in action.outcomes if outcome.weight > 0) < 2:
+            return []
+        landing = list(dict.fromkeys(state for edge in forward for state in edge.states))
+        lines = []
+        if self.reader.tracked:
+            mods = sorted({len(state.fractured) + len(state.slots) for state in landing})
+            if len(mods) > 1:
+                lines.append(f"{', '.join(map(str, mods[:-1]))} or {mods[-1]} mods")
+        if any(slot.tone == "any" for slot in (*after.prefixes, *after.suffixes)):
+            lines.append("other mods: any")
         return lines
 
     def cost_lines(self, action: Action) -> list[str]:
@@ -375,6 +415,22 @@ class _View:
                 lines.append(f"fractured: {slot.text}" if "fractured" in slot.marks else slot.text)
         return lines
 
+    def start_card(self) -> ItemCard:
+        """The bought start item: its known mods by tier, the rest of a rare unknown ("any mod or empty")."""
+        item = self.plan.target.start_item
+        filler = ANY_OR_EMPTY if item.rarity is Rarity.RARE else EMPTY
+        return card_of_item(self.data, item, tiers=True, rolled=False, filler=filler)
+
+    def essence_note(self, action: Action, step: Step) -> str | None:
+        """For an essence of level 5 or more used on a rare: it reforges it and keeps only the fractured mod."""
+        if not any(state.flags.rarity is Rarity.RARE for state in step.states):
+            return None
+        label = self.plan.offer_of(action).label
+        for essence in self.data.essences.values():
+            if essence.name == label and essence.level >= 5:
+                return "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"
+        return None
+
     def buy_row(self, final: bool) -> StepRow:
         price = self.plan.start_price
         cost = [money(price.chaos)] if price.chaos > 0 else ["free"]
@@ -384,17 +440,16 @@ class _View:
             _plain("Cost per use", *cost),
         )
         title = f"Buy {price.name}" if price.name else "Start item"
-        after = card_of_item(self.data, self.plan.target.start_item)
-        return StepRow(1, title, fields, after, self.anchor(1), final, price.chaos)
+        return StepRow(1, title, fields, self.start_card(), self.anchor(1), final, price.chaos)
 
     def step_row(self, step: Step) -> StepRow:
         number = step.number + 1
         action = step.action
         if action is None:
             fields = _fields(_plain("Why", step.reason or "no action is available here"))
-            return StepRow(number, "No action", fields, card_of_states(self.ab, step.states), self.anchor(number))
-        forward = [edge for edge in step.edges if edge.kind in ("next", "goal")]
-        failing = [edge for edge in step.edges if edge.kind in ("again", "back")]
+            return StepRow(number, "No action", fields, card_of_states(self.ab, step.states, self.reader), self.anchor(number))
+        forward = [edge for edge in step.edges if edge.kind in ("forward", "goal")]
+        failing = [edge for edge in step.edges if edge.kind in ("again", "miss")]
         restart = action.label == RESTART
         goal = self.gains(step, forward)
         if not goal and any(edge.kind == "goal" for edge in forward):
@@ -405,20 +460,22 @@ class _View:
         if uses and not never and step.reached is not None and step.reached < 0.9995:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"
         chances = self.chance_lines(step, action, forward, number + 1)
+        if restart:
+            after = self.start_card()
+        else:
+            landing = [state for edge in (forward or step.edges) for state in edge.states]
+            after = card_of_states(self.ab, list(dict.fromkeys(landing)), self.reader)
         fields = _fields(
             _plain("Goal", *goal),
+            _plain("Accepts", *self.accepts(action, forward, after)),
             self.trade_field() if restart else None,
             Field("Chance per use", tuple(chances)) if chances else None,
             _plain("Cost per use", *self.cost_lines(action)),
             _plain("Uses on average", *uses),
             _plain("Step cost", money(step_cost)) if step_cost is not None else None,
             Field("On failure", tuple(self.failure_lines(step, failing, number + 1)), "warn") if failing else None,
+            _plain("Note", note) if (note := self.essence_note(action, step) if not restart else None) else None,
         )
-        if restart:
-            after = card_of_item(self.data, self.plan.target.start_item)
-        else:
-            landing = [state for edge in (forward or step.edges) for state in edge.states]
-            after = card_of_states(self.ab, list(dict.fromkeys(landing)))
         final = any(edge.kind == "goal" for edge in step.edges)
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost)
 
@@ -432,21 +489,32 @@ class _View:
         mean = total(risk.mean.value) if math.isfinite(risk.mean.value) else (GAPS if self.inp.reasons else NEVER)
         p90 = f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else "no finish in 9 runs of 10"
         success = risk.success_probability.value
+        note = "how often a step is used and what it costs are left out: the policy is too large to solve here"
         fields = _fields(
-            _plain("Route", self.inp.label),
+            _plain("Route", self.inp.label) if self.route_field else None,
             _plain("Mean", mean),
             _plain("9 runs in 10", p90),
             _plain("Success chance", chance_text(success)) if success < 1 - 1e-9 else None,
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
+            None if self.flow.measured else _plain("Note", note),
         )
         return GoalCard(fields, card_of_target(self.data, plan.target))
 
 
 def build_section(
-    inp: RouteInput, data: GameData, buy: BuyStep | None = None, *, prefix: str = "", anchor: str = "route"
+    inp: RouteInput,
+    data: GameData,
+    buy: BuyStep | None = None,
+    *,
+    prefix: str = "",
+    anchor: str = "route",
+    route_field: bool = True,
 ) -> RouteSection:
-    """The goal card and the rows of one route; `prefix` goes before the row anchors (`s2` becomes `<prefix>s2`)."""
-    view = _View(inp, data, buy, prefix)
+    """The goal card and the rows of one route; `prefix` goes before the row anchors (`s2` becomes `<prefix>s2`).
+
+    The goal card names the route in a "Route" field unless `route_field` is False (the page has a heading with it).
+    """
+    view = _View(inp, data, buy, prefix, route_field)
     rows = [view.buy_row(final=not view.flow.steps)]
     rows += [view.step_row(step) for step in view.flow.steps]
     return RouteSection(inp.label, view.goal_card(), tuple(rows), anchor)
@@ -464,6 +532,89 @@ def _trade_stats(cache_dir: Path | None) -> TradeStats | None:
         return parse_trade_stats(document.get("stats"))
     except (OSError, ValueError, AttributeError):
         return None
+
+
+def _row_key(row: StepRow) -> tuple:
+    """What a row says, without where it links: two rows with the same key can be the same step."""
+    return (row.title, tuple((f.label, tuple(line.text for line in f.lines)) for f in row.fields), row.after)
+
+
+def _targets(row: StepRow, prefix: str) -> list[int | None]:
+    """The row number each line of the row links to (None for a line with no link to a row of its section)."""
+    found: list[int | None] = []
+    for f in row.fields:
+        for line in f.lines:
+            local = line.href is not None and line.href.startswith(f"#{prefix}s")
+            found.append(int(line.href[len(prefix) + 2 :]) if local else None)
+    return found
+
+
+def _same_steps(policy: RouteSection, given: RouteSection, prefix: str) -> dict[int, StepRow]:
+    """Given row number -> the planner's row it repeats: same words and the same continuation.
+
+    Two rows are the same step when they say the same and every link of the given row goes to a row that is itself
+    the planner's row the planner's link goes to (found by dropping, until nothing changes, the pairs whose links
+    part ways), so a step with another follow-up is never taken for the planner's.
+    """
+    by_number = {row.number: row for row in policy.rows}
+    candidates: dict[int, StepRow] = {}
+    for row in given.rows:
+        for other in policy.rows:
+            if _row_key(row) == _row_key(other):
+                candidates[row.number] = other
+                break
+    changed = True
+    while changed:
+        changed = False
+        for number, other in list(candidates.items()):
+            mine = _targets(next(r for r in given.rows if r.number == number), prefix)
+            theirs = _targets(other, "")
+            for here, there in zip(mine, theirs, strict=True):
+                if here is None and there is None:
+                    continue
+                if here is None or there is None or candidates.get(here) is not by_number.get(there):
+                    del candidates[number]
+                    changed = True
+                    break
+    return candidates
+
+
+def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tuple[RouteSection, ...]:
+    """The planner's section and the given route's: one when they are the same, else the given route's differing steps.
+
+    Rows that are the same step (`_same_steps`) are drawn once, in the planner's section. When every row of the given
+    route is one of the planner's, one for one, the planner's section says so in a line and the given route has no
+    section. Otherwise the given route's section keeps its differing rows only, lists the steps it shares with the
+    planner (as links, with the planner's number) and sends the links that pointed at a shared row to the planner's row.
+    """
+    prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
+    shared = _same_steps(policy, given, prefix)
+    if len(shared) == len(given.rows) == len(policy.rows) == len({row.number for row in shared.values()}):
+        head = (Field("Route", (Line(policy.title),)), Field("Given route", (Line(f"Same as the given route ({name})"),)))
+        goal = replace(policy.goal, fields=(*head, *policy.goal.fields))
+        return (replace(policy, goal=goal),)
+
+    def redirect(line: Line) -> Line:
+        if line.href is None or not line.href.startswith(f"#{prefix}s"):
+            return line
+        number = int(line.href[len(prefix) + 2 :])
+        if number not in shared:
+            return line
+        there = shared[number]
+        arrow = f"→ step {there.number}" if line.anchor else ""
+        return replace(line, href=f"#{there.anchor}", anchor=arrow)
+
+    rows = tuple(
+        replace(row, fields=tuple(replace(f, lines=tuple(redirect(line) for line in f.lines)) for f in row.fields))
+        for row in given.rows
+        if row.number not in shared
+    )
+    same = Field(
+        "Same as the planner",
+        tuple(Line(f"step {n}: the planner's step {there.number}", f"#{there.anchor}") for n, there in shared.items()),
+    )
+    goal = replace(given.goal, fields=(*given.goal.fields, same)) if shared else given.goal
+    return policy, replace(given, goal=goal, rows=rows)
 
 
 def write_route_page(
@@ -487,9 +638,14 @@ def write_route_page(
     if buy_spec is not None:
         searchable = [mod for mod in data.mods.values() if mod.text]  # a mod with no text (a veiled one) cannot be searched by
         buy = buy_step(buy_spec, plan.prices.league, searchable, _trade_stats(cache_dir))
-    sections = [build_section(route_input(plan), data, buy, anchor="policy")]
+    stacked = route is not None and given is not None  # then each section has a heading with its route's name
+    policy = build_section(route_input(plan), data, buy, anchor="policy", route_field=not stacked)
+    sections = (policy,)
     if route is not None and given is not None:
-        sections.append(build_section(given_route_input(plan, route, given), data, buy, prefix="g-", anchor="given"))
+        drawn = build_section(
+            given_route_input(plan, route, given), data, buy, prefix="g-", anchor="given", route_field=False
+        )
+        sections = merge_sections(policy, drawn, route.name or Path(route.source).name)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_page(Page(target_name or "Route view", tuple(sections))), encoding="utf-8", newline="\n")
+    path.write_text(render_page(Page(target_name or "Route view", sections)), encoding="utf-8", newline="\n")
     return path

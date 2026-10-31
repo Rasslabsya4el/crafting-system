@@ -11,6 +11,7 @@ Known limits:
 """
 
 import math
+from array import array
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from numbers import Integral, Real
@@ -28,7 +29,9 @@ class Solution[S]:
 
     `values` holds the expected remaining cost of every reachable state: 0.0 for goals and
     `math.inf` for states with no proper policy. `policy` maps each reachable non-goal state with
-    a finite value to its original action (true weights, self-loop included). `error_bound` is a
+    a finite value to its original action (true weights, self-loop included; rebuilt from the
+    solver's compact storage, so repeated successors of the offered action are merged into one
+    outcome and zero-weight outcomes are dropped). `error_bound` is a
     certified relative bound: for every finite value, V(s) * (1 - error_bound) <= V*(s) <=
     V(s) * (1 + error_bound). It includes the float64 rounding of the probabilities, an
     amplification of about epsilon * value / g, so it may exceed the `tolerance` asked for, and it
@@ -71,12 +74,14 @@ def solve[S](
     alive, in_y = proper_states(graph)
     count = len(graph.states)
 
-    adjacency: list[list[int]] = [[] for _ in range(count)]
+    offsets, edges = array("q", [0]), array("i")  # state graph over the retained actions only
+    targets, tstart, first = graph.targets, graph.tstart, graph.first
     for state in range(count):
         if in_y[state]:
-            adjacency[state] = [
-                j for k in graph.state_actions[state] if alive[k] for j in graph.succ[k]
-            ]
+            for k in range(first[state], first[state + 1]):
+                if alive[k]:
+                    edges.extend(targets[tstart[k] : tstart[k + 1]])
+        offsets.append(len(edges))
 
     value = [math.inf] * count
     lo = [1.0] * count
@@ -84,7 +89,7 @@ def solve[S](
     choice = [-1] * count
     total_error = 0.0
     roots = (state for state in range(count) if in_y[state])
-    for component in strongly_connected_components(adjacency, roots):
+    for component in strongly_connected_components(offsets, edges, roots):
         if len(component) == 1 and graph.goal[component[0]]:
             value[component[0]] = 0.0
             continue
@@ -115,7 +120,7 @@ def solve[S](
     return Solution(
         values={states[i]: value[i] for i in range(count)},
         policy={
-            states[i]: graph.original[choice[i]]
+            states[i]: graph.original_action(choice[i])
             for i in range(count)
             if in_y[i] and not graph.goal[i]
         },

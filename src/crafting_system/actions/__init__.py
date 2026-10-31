@@ -40,6 +40,14 @@ and consumes nothing. `ScouringOrb()` has one result of probability 1, a `ScourO
 same `chance_all`, `distribution` and `sample`: it removes every mod but the fractured ones, and the
 item is normal with none left, magic with one and rare with two or more; it keeps its influences.
 
+The orbs of the rare item are `ExaltedOrb()` (one more mod through the same shared add, on a rare item with an
+open slot), `AnnulmentOrb()` (removes one mod that is not fractured, uniformly, D5; the rarity stays) and
+`FracturingOrb()` (a rare item of 4 or more mods that is not influenced, fractured or corrupted: fractures one
+mod, uniformly, D6; an item with a crafted mod is out of scope because the item model holds no fractured crafted
+mod). The Exalted and Annulment orbs return an `Outcomes` and a `Finite`; the Fracturing Orb a `FractureOutcomes`,
+a `Finite` whose `fractures` is True. None is a planner kind yet. An influenced item draws from the pool of its
+base tags plus the influence tags (`item_tags` in `pool.py`), so the mods of an influence join every pool.
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -47,7 +55,7 @@ Refusals, raised by `outcomes` in this order (a message names the reason):
   corrupted; for the Harvest reforge, the pool holds no mod with the tag that the item has a free
   family and a free slot for; for an essence, its item class takes no essence, or its forced mod
   shares a family with a fractured mod.
-* `OutOfScopeError`: the item is in a state no admitted rule covers yet: an influence, a crafted
+* `OutOfScopeError`: the item is in a state no admitted rule covers yet: an influenced item of a class with no admitted influence class key, a crafted
   metamod (an ordinary crafted mod is not: a reroll removes it), a jewel base (the 8:3:1 ratio is
   admitted for regular items only), a pool mod with other than one family; for an essence also
   Essence of Desolation (not a B1 action) and fractured mods that fill the side of the forced mod.
@@ -84,6 +92,7 @@ family, with exact `Fraction` weights.
 
 from .add import add_one_mod, draw_onto
 from .alchemy import AlchemyOrb
+from .annul import AnnulmentOrb
 from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts, without_ranges
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
@@ -91,8 +100,10 @@ from .contract import Action, ActionOutcomes, Adds, Fixed, Reads
 from .draw import Outcome, guaranteed_candidates
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
+from .exalted import ExaltedOrb
 from .finite import Finite
 from .fossil import ApplyFossils, fossil_actions, usable_fossils
+from .fracture import FractureOutcomes, FracturingOrb
 from .harvest import HarvestReforge
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
 from .mixture import FossilOutcomes, Fractured, Mixture
@@ -112,6 +123,7 @@ __all__ = [
     "Adds",
     "AlchemyOrb",
     "AlterationOrb",
+    "AnnulmentOrb",
     "ApplyEssence",
     "ApplyFossils",
     "AugmentationOrb",
@@ -119,10 +131,13 @@ __all__ = [
     "BenchOutcomes",
     "ChaosOrb",
     "CurrencyCost",
+    "ExaltedOrb",
     "Finite",
     "Fixed",
+    "FractureOutcomes",
     "FossilOutcomes",
     "Fractured",
+    "FracturingOrb",
     "HarvestReforge",
     "Kind",
     "Mixture",

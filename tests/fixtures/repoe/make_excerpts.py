@@ -82,6 +82,29 @@ MODS = (
     "FireResist1",
     "JunMaster2AllDamage2_",
     "EinharMasterWeaponElementalDamage1_",
+    # the influenced pool (#67): the mods of eight families that a Thicket Bow can roll, plain or with the
+    # Hunter tag (bow_basilisk): every record of the family with a weight on the bow, whatever its level
+    "LocalIncreasedAttackSpeed1",
+    "LocalIncreasedAttackSpeed2",
+    "LocalIncreasedAttackSpeed2Royale____",
+    "LocalIncreasedAttackSpeed3",
+    "LocalIncreasedAttackSpeed4",
+    "LocalIncreasedAttackSpeed5",
+    "LocalIncreaseSocketedGemLevel1",
+    "LocalIncreaseSocketedBowGemLevel1",
+    "LocalIncreaseSocketedBowGemLevel2",
+    "AdditionalArrowBow1_",
+    "AdditionalArrowBow2_",
+    "LocalAddedChaosDamageAndPenetrationInfluence1",
+    "LocalAddedChaosDamageAndPenetrationInfluence2",
+    "LocalAddedChaosDamageAndPenetrationInfluence3",
+    "LocalAddedChaosDamageAndPenetrationInfluence4",
+    "LocalAddedChaosDamageAndPenetrationInfluence5",
+    "AddedColdDamagePerDexterityInfluence1",
+    "ArmourPenetrationTwoHandWeaponInfluence1_",
+    "ArmourPenetrationTwoHandWeaponInfluence2_",
+    "ChanceToIntimidateOnHitWeaponInfluence1",
+    "ChanceToIntimidateOnHitWeaponInfluence2",
 )
 BASE_ITEMS = (
     "Metadata/Items/Armours/BodyArmours/BodyInt1",
@@ -89,6 +112,7 @@ BASE_ITEMS = (
     "Metadata/Items/Weapons/OneHandWeapons/OneHandMaces/Sceptre1",  # repeats the tag `sceptre`
     "Metadata/Items/Amulets/Amulet1",  # an amulet: a base with mods of its own on the item model
     "Metadata/Items/Belts/Belt3",  # Leather Belt, for the R13 target (#19)
+    "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16",  # Thicket Bow, the R14 base (#67)
 )
 FOSSILS = (
     "Metadata/Items/Currency/CurrencyDelveCraftingFire",  # Scorched

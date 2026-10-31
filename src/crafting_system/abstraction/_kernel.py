@@ -109,8 +109,8 @@ class Abstraction:
         self.goal = goal
         self.base_id = base_id
         self.item_level = item_level
-        self._kinds = Kinds(data, base_id, item_level, actions)
         self._tiers = tier_table(data, base_id)
+        self._kinds = Kinds(data, base_id, item_level, actions, self._profile)
         self._labels: dict[str, Label] = {}
         self._canonical_group: dict[tuple, list[Mod]] | None = None
         self._canonical: dict[tuple[str, tuple[Status, ...], bool], str] = {}
@@ -133,6 +133,19 @@ class Abstraction:
     def stats(self) -> CacheStats:
         """How many label distributions were computed and how many requests reused one."""
         return CacheStats(self._kernels, self._hits)
+
+    @property
+    def enabled(self) -> tuple[Action, ...]:
+        """The enabled actions that read the ordinary mods (the ones `actions` of the constructor named)."""
+        return self._kinds.actions
+
+    def kind_of(self, mod: Mod) -> str:
+        """The kind a slot of the ordinary mod `mod` gets: `ALIKE` ("") or its family key."""
+        return self._kinds.of(mod)
+
+    def crafted_slot(self, mod_id: str) -> Slot:
+        """The slot a crafted mod of this id makes (its canonical id, its contribution, low rolls)."""
+        return self._slot_of(ExplicitMod(mod_id, self._tiers.get(mod_id, 1), _low_values(self.data.mods[mod_id]), crafted=True))
 
     def compress(self, item: Item) -> CompressedState:
         """The compressed state of a concrete item.
@@ -319,6 +332,10 @@ class Abstraction:
     def passes(self, mod: Mod, leaf: int) -> bool:
         """Whether `mod`, drawn by an action (its table tier, low rolls), gives leaf number `leaf` the status PASSING."""
         return self._drawn_contribution(mod)[leaf] is Status.PASSING
+
+    def _profile(self, mod: Mod) -> tuple[int, ...]:
+        """What `mod` gives each leaf as ints: the part of a family type that the goal decides."""
+        return tuple(int(status) for status in self._drawn_contribution(mod))
 
     def _guard_roll(self, mod: Mod) -> None:
         """Raise `OutOfScopeError` when a leaf names `mod` and limits its roll: a rolled value is not modelled yet."""

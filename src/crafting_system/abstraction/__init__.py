@@ -30,6 +30,11 @@ is imported or tested for here.
   `exact=True`; None for an action it cannot bound); the argument is in `_bound.py` (#118).
 * `keeps_shape(abstraction, state, action)`: whether every outcome of the action keeps the flags and the
   fractured mods of the state (what a bound read at one state needs to hold at the next; #118).
+* `Coarsening(abstraction, groups)` (`_coarse.py`, ADR-0023): the coarse state. Families that no requirement
+  cares about are pooled into groups; `coarsen(state)` maps an exact state to its `Block` (a `CompressedState`
+  whose pooled slots have the kind of their pool) and `kernel(block, action, bound)` is the kernel of a
+  block-invariant action in the optimistic (`"lower"`) or pessimistic (`"upper"`) model, per member. Any other
+  action raises `OutOfScopeError`. `Coarsening.pooling_irrelevant(abstraction, size)` builds the groups.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 
@@ -82,9 +87,14 @@ family type (that type's mods marked), cached by the pool signature and the labe
 costs the number of family types times a plain distribution, which is why the action set of a target
 needs pruning (see ADR-0009).
 
-Widening for the rest of B1: an action that adds or removes one mod (Exalted, Annulment, Regal)
-makes the outcome depend on the weights of the junk families too, so its family types must
-add the pool weights; an action declares that with `Reads(junk=True, families=None)`.
+An action that adds mods and keeps the junk (Augmentation, Regal, later Exalted) makes the outcome
+depend on the weights of the junk families too: a family on the item leaves the pool. It declares
+`Reads.adding()` (`pool_weight`), and every family that no enabled action tells apart by name then
+gets the kind of its family type, `"~n"`: its side, and the sorted (what each mod gives the goal,
+weight) of its mods in the pool of an empty rare item. Two junk families of one type leave the same
+pool, so the states merge exactly. A magic item needs nothing else: the rarity is a flag and the
+capacity (1 + 1 for magic, 3 + 3 for rare) is in the free slots of the pool signature. A
+Transmutation, an Alteration, an Alchemy and a Scouring erase the junk and add no slot.
 
 Out of scope: a `min_roll` on a mod that an action draws, forces or crafts. Its value is rolled and no
 exact roll distribution is built yet, so such a mod raises `OutOfScopeError`. A concrete item's mod is
@@ -97,6 +107,7 @@ claim of the rules registry.
 """
 
 from ._bound import keeps_shape, reach_bound
+from ._coarse import Block, Coarsening
 from ._goal import AtLeast, Goal, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
 from ._state import CompressedState, Flags, FracturedMod, Slot
@@ -104,7 +115,9 @@ from ._state import CompressedState, Flags, FracturedMod, Slot
 __all__ = [
     "Abstraction",
     "AtLeast",
+    "Block",
     "CacheStats",
+    "Coarsening",
     "CompressedState",
     "FamilyType",
     "Flags",

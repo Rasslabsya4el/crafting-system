@@ -110,10 +110,21 @@ class WronglyInvariantRegal(RegalOrb):
     """A Regal Orb that claims the block invariance it does not have: the pool total depends on the family held."""
 
     def reads(self, data) -> Reads:
+        return Reads(junk=True, families=frozenset({"ManaLeech"}), block_invariant=True)
+
+
+@dataclasses.dataclass(frozen=True)
+class InvariantAndReadsEveryFamily(RegalOrb):
+    def reads(self, data) -> Reads:
         return Reads(junk=True, families=None, block_invariant=True)
 
 
 def test_a_wrong_block_invariance_claim_is_caught():
-    assert len(fixture_blocks()) > 3
+    assert all(len(blocks) > 3 for blocks in fixture_blocks())
     with pytest.raises(AssertionError, match="members of a block"):
         check_block_invariance(WronglyInvariantRegal())
+
+
+def test_a_claim_of_block_invariance_by_an_action_that_reads_every_family_is_refused():
+    with pytest.raises(AssertionError, match="reads every family"):
+        check_block_invariance(InvariantAndReadsEveryFamily())

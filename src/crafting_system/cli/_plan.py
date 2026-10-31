@@ -125,6 +125,8 @@ def leaf_labels(target: Target) -> tuple[str, ...]:
                 walk(member)
             return
         name = node.stat if node.stat is not None else f"family {node.family}"
+        if len(node.mod_ids) == 1:
+            name += f", mod {next(iter(node.mod_ids))}"
         limits = []
         if node.min_tier is not None:
             limits.append(f"tier {node.min_tier} or better")

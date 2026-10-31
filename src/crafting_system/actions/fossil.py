@@ -17,8 +17,8 @@ Refusals, in this order:
   base tag it does not allow, or one it forbids); the item holds a metamod other than the multimod;
   a Fractured Fossil on an item with a fractured mod or an influence; the forced mod of a Hollow or
   Glyphic Fossil shares a family with a fractured mod.
-* `OutOfScopeError`: a Bloodstained Fossil (its corrupted implicit is corruption, B4); a jewel, an
-  influenced item or an item with the multimod; Hollow and Glyphic in one resonator (no admitted
+* `OutOfScopeError`: a Bloodstained Fossil (its corrupted implicit is corruption, B4); a jewel or an
+  item with the multimod; Hollow and Glyphic in one resonator (no admitted
   rule); a Tangled Fossil when the data holds no outcome records; fractured mods that fill the side
   of the forced mod; a Glyphic Fossil whose candidates are all blocked or missing.
 * `ValueError`: raised at construction for no fossil, more than four or the same one twice, and by

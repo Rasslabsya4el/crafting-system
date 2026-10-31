@@ -105,7 +105,8 @@ def test_the_report_names_price_counts_league_and_requests(tmp_path, trade, pric
 
     out = capsys.readouterr().out
     assert "R12 start amulet" in out and "1 Chaos" in out and "0.0025 Divine" in out
-    assert "5 of 10" in out and "910" in out and "Allflame" in out
+    assert "mean of the 5 cheapest instant-buyout listings (10 fetched, 910 on the site)" in out
+    assert "Allflame" in out
     assert "3 requests" in out
 
 

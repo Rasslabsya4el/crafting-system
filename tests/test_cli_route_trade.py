@@ -92,3 +92,10 @@ def test_influence_corruption_item_level_range_and_a_minimum_are_spelled_out():
         "corrupted",
         "+#% to Lightning Resistance (at least 30)",
     )
+
+
+def test_the_link_asks_for_instant_buyout_listings_of_any_age():
+    query = query_of(buy_step(R12_SPEC, "Allflame", MODS, STATS).url)["query"]
+
+    assert query["status"] == {"option": "securable"}
+    assert "trade_filters" not in query["filters"]

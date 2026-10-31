@@ -186,7 +186,6 @@ REFUSED = {
     "normal": lambda: small_item(rarity=Rarity.NORMAL),
     "magic": lambda: small_item(roll(LIFE_1), rarity=Rarity.MAGIC),
     "corrupted": lambda: dataclasses.replace(fractured_item(RESIST_2), corrupted=True),
-    "influenced": lambda: dataclasses.replace(fractured_item(RESIST_2), influences=frozenset({Influence.SHAPER})),
     "crafted_mod": lambda: small_item(roll(CRAFTED, crafted=True)),
     "crafted_mod_and_fractured": lambda: small_item(roll(RESIST_2, fractured=True), roll(CRAFTED, crafted=True)),
     "corrupted_and_influenced": lambda: dataclasses.replace(

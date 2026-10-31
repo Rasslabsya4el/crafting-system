@@ -56,7 +56,9 @@ class Slot:
 
     `kind` says what the enabled actions can tell it apart by. An ordinary mod of a family that every
     enabled action treats alike has the kind "" (a family type: only its side and what it gives the
-    goal count); any other ordinary mod has its family key, so it stays identified. A crafted mod
+    goal count), or, when an enabled action adds mods and keeps the junk (`Reads.pool_weight`), a
+    numbered family type "~n" (side, and the weights and goal contribution of the family's mods); any
+    other ordinary mod has its family key, so it stays identified. A crafted mod
     (a bench mod or a metamod) has its canonical mod id. `contribution` is what the mod gives each leaf.
     """
 

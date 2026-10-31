@@ -19,7 +19,7 @@ from .model import KOfN, Node, Requirement, Target
 from .resolve import Resolver, Unresolved, close_matches, quoted
 
 TOP_KEYS = ("base", "item_level", "influence", "requirements", "start_item", "start_price", "price_file")
-REQUIREMENT_KEYS = ("family", "stat", "min_tier", "min_roll", "not_crafted")
+REQUIREMENT_KEYS = ("family", "stat", "mod", "min_tier", "min_roll", "not_crafted")
 GROUP_KEYS = ("at_least", "of")
 START_ITEM_KEYS = ("rarity", "corrupted", "mods")
 START_MOD_KEYS = ("mod", "tier", "values", "fractured", "crafted")
@@ -216,6 +216,11 @@ class _Reader:
         except Unresolved as problem:
             self.fail(line, f"{path}.{selector}", str(problem))
 
+        if "mod" in entry:  # one mod of the selector: exactly that tier of it
+            mod_id = self.text(entry, "mod", f"{path}.mod")
+            if mod_id not in mod_ids:
+                self.fail(entry.key_lines["mod"], f"{path}.mod", f"`{mod_id}` is not a mod of the {selector} `{text}`")
+            mod_ids = frozenset({mod_id})
         min_tier = None
         if "min_tier" in entry:
             min_tier = entry["min_tier"]

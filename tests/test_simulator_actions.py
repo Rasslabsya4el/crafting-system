@@ -24,7 +24,7 @@ from items_support import item
 from simulator_support import DATA, Draw, Memoized, holds_target, paid, solve_chain, steps_mean_and_sd
 
 from crafting_system.actions import ChaosOrb, HarvestReforge, NotApplicableError, OutOfScopeError
-from crafting_system.items import Influence, Rarity
+from crafting_system.items import Rarity
 from crafting_system.simulator import Step, simulate
 
 N = 3_000
@@ -130,10 +130,10 @@ def test_a_chaos_orb_on_a_magic_item_is_refused_and_the_refusal_propagates():
 
 
 def test_an_item_no_rule_covers_raises_out_of_scope_and_it_propagates():
-    influenced = item(roll(RESIST), base_id=AMULET, item_level=86, influences=frozenset({Influence.SHAPER}))
+    metamod = item(roll(RESIST), roll("DexMasterItemGenerationCannotChangeSuffixes", crafted=True), base_id=AMULET, item_level=86)
 
     with pytest.raises(OutOfScopeError):
-        simulate(DATA, lambda item: Step(ChaosOrb(), 1.0), influenced, holds_target, runs=2, seed=1)
+        simulate(DATA, lambda item: Step(ChaosOrb(), 1.0), metamod, holds_target, runs=2, seed=1)
 
 
 class CorruptingAction:

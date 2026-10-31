@@ -1,0 +1,60 @@
+# Mechanic family: annulment_orb (the Orb of Annulment on a magic or rare item). Research ticket #7 (claims
+# CUR-xx) and the decision D5 of issue #28. The crafted metamods are not modelled yet (issue #68): D5 makes
+# the other side's metamod a candidate there.
+rules:
+  - id: annulment_orb.accepts_magic_or_rare
+    statement: An Orb of Annulment can be used on a magic or rare item; a normal item takes none.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click on a magic or rare item to apply it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: annulment_orb.removes_one_mod_uniformly
+    statement: An Orb of Annulment removes exactly one explicit mod, chosen uniformly among the mods it can remove, which are all the explicit mods that are not fractured (an ordinary crafted mod is one of them; a fractured mod is not, annulment_orb.fractured_mods_stay). With n removable mods each has chance 1/n (decision D5 of issue #28).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D5 Annulment uniform, the other side's metamod a candidate (basic currency O-04/O-06, bench O-09)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: annulment_orb.never_downgrades_rarity
+    statement: An Orb of Annulment never changes the rarity of the item, so a magic item left with no mod stays magic and a rare item left with two or three mods stays rare.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Annulment#Mechanics
+    quote: "Unlike Orb of Scouring, Orbs of Annulment never downgrade rarity."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: annulment_orb.fractured_mods_stay
+    statement: A fractured mod is not removed by an Orb of Annulment, so it is never a candidate.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Fractured_item#Mechanics
+    quote: "These mods cannot be removed (by Orb of Annulment or Orb of Scouring, etc.) or have its values changed by Divine Orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: annulment_orb.refused_without_removable_mod
+    statement: An Orb of Annulment cannot be used on an item that has no mod it can remove (no explicit mod, or every one fractured) and nothing is consumed. Derived from annulment_orb.removes_one_mod_uniformly and annulment_orb.fractured_mods_stay; no source states the refusal, it is the reading of "removes a random modifier" with none to remove.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Removes a random modifier from an item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: annulment_orb.refused_on_corrupted
+    statement: A corrupted item takes no Orb of Annulment.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: annulment_orb.cost
+    statement: One use of an Orb of Annulment consumes one Orb of Annulment item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRemoveMod: name "Orb of Annulment"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {Orb of Annulment: 1}

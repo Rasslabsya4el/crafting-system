@@ -17,7 +17,7 @@ equipment piece bought for its mods, and each one would also widen the query has
 
     Trade filter                                  This query    Note
     --------------------------------------------  ------------  -----------------------------------
-    status                                        set           online / securable / available / any
+    status                                        set           `DEFAULT_STATUS`, "securable" = Instant Buyout
     type (base type)                              set           `query.type`
     name (uniques)                                not covered   rare items have no name to buy by
     stats, group type "and"                       set           one group; filters sorted
@@ -32,7 +32,7 @@ equipment piece bought for its mods, and each one would also widen the query has
       .vestigial, .identified, .split               not covered   not relevant to rare equipment
     socket_filters (links, white sockets)         not covered   the buy actions do not ask for sockets
     armour_filters, weapon_filters, map_filters   not covered   defence / damage rolls come from mods
-    trade_filters.indexed (listing age)           set           a window, `DEFAULT_INDEXED`; None = any time
+    trade_filters.indexed (listing age)           set           a window; `DEFAULT_INDEXED` None = any time
     trade_filters price, collapse, fee, sale_type not covered   price is read from the listings; the
                                                                 query sorts by price ascending
     influence (APT: pseudo stats)                 set           `INFLUENCE_STAT_IDS`, minimum 1
@@ -58,7 +58,9 @@ from .price_names import canonical_price_name
 RARITIES = ("normal", "magic", "rare", "unique", "nonunique", "uniquefoil")
 STATUSES = ("online", "securable", "available", "any")
 INDEXED_OPTIONS = ("1hour", "3hours", "12hours", "1day", "3days", "1week", "2weeks", "1month", "2months")
-DEFAULT_INDEXED = "1week"  # an old listing can set a floor price nobody will honour
+# The owner buys with instant buyout: a seller cannot refuse the sale, so the listed prices are real (#133).
+DEFAULT_STATUS = "securable"
+DEFAULT_INDEXED = None  # any listing age; an instant-buyout listing's price stands however old it is (#133)
 
 INFLUENCE_STAT_IDS: Mapping[str, str] = {
     name: f"pseudo.pseudo_has_{name}_influence"
@@ -149,7 +151,7 @@ class TradeQuery:
     mirrored: bool | None = None
     fractured: bool | None = None
     stats: tuple[StatFilter, ...] = field(default_factory=tuple)
-    status: str = "available"
+    status: str = DEFAULT_STATUS
     indexed: str | None = None  # listing-age window, one of INDEXED_OPTIONS; None = any time
 
     def __post_init__(self) -> None:
@@ -274,11 +276,15 @@ class BuySpec:
 
 
 def build_query(
-    spec: BuySpec, mod_filters: Sequence[StatFilter], indexed: str | None = DEFAULT_INDEXED
+    spec: BuySpec,
+    mod_filters: Sequence[StatFilter],
+    indexed: str | None = DEFAULT_INDEXED,
+    status: str = DEFAULT_STATUS,
 ) -> TradeQuery:
     """The query for a spec. `mod_filters` are the spec's mods already resolved to trade stat ids.
 
-    `indexed` is the listing-age window (None = any time).
+    `indexed` is the listing-age window (None = any time); `status` is the site's listing status
+    (instant buyout by default).
     """
     influence_filters = tuple(StatFilter(INFLUENCE_STAT_IDS[name], min=1) for name in spec.influences)
     return TradeQuery(
@@ -291,6 +297,7 @@ def build_query(
         mirrored=False,
         fractured=True if any(mod.fractured for mod in spec.mods) else None,
         stats=tuple(mod_filters) + influence_filters,
+        status=status,
         indexed=indexed,
     )
 

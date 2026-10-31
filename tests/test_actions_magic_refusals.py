@@ -67,11 +67,20 @@ def test_a_jewel_base_is_out_of_scope(orb, accepts, item_class):
 
 
 @pytest.mark.parametrize(("orb", "accepts"), ORBS, ids=IDS)
-def test_an_influenced_item_is_out_of_scope(orb, accepts):
+def test_an_influenced_item_of_a_class_with_no_influence_class_key_is_out_of_scope(orb, accepts):
+    sword = dataclasses.replace(DATA.base_items[AMULET], item_class="Thrusting One Hand Sword")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: sword})
     item = dataclasses.replace(RARITIES[accepts](), influences=frozenset({Influence.SHAPER}))
 
-    with pytest.raises(OutOfScopeError, match="influence"):
-        orb.outcomes(DATA, item)
+    with pytest.raises(OutOfScopeError, match="influence class key"):
+        orb.outcomes(data, item)
+
+
+@pytest.mark.parametrize(("orb", "accepts"), ORBS, ids=IDS)
+def test_an_influenced_amulet_is_in_scope(orb, accepts):
+    item = dataclasses.replace(RARITIES[accepts](), influences=frozenset({Influence.SHAPER}))
+
+    assert orb.outcomes(DATA, item).retained.influences == item.influences
 
 
 @pytest.mark.parametrize("orb", [AlterationOrb(), AugmentationOrb(), RegalOrb()], ids=lambda orb: type(orb).__name__)

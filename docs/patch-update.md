@@ -12,7 +12,8 @@ Targets (owner, [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81
 | `data diff OLD NEW` | OLD and NEW are `pinned`, a game version (`3.29.4.1`, resolved to the newest `Export <version>` commit of repoe-fork through the GitHub API, printed) or a commit. Downloads a commit it has not seen (hashes learned once), prints what changed in mods, weights, families, tags, bench options, essences and fossils, then the impact report, then the command that moves the pin. `--no-impact` leaves the report out. | `python -m crafting_system.data diff pinned <version>` |
 | `data pin TARGET [VERSION]` | Moves the pin to a version or commit: reuses the files `diff` downloaded (no second download), files them under the version's cache folder, checks them, then writes `PIN.json`. Refuses the version or commit that is already the pin. | `python -m crafting_system.data pin <version>` |
 | Impact report | Which files of this checkout name something that changed (below). | `src/crafting_system/data/impact.py` |
-| Claims | Every rule with its source and the `patch_verified` it was last checked on. | `src/crafting_system/rules/claims/*.yaml` |
+| Claims | Every rule with its source and the `patch_verified` it was last checked on, and, when a patch changed it, its `history` (old statement or value, `held_until`, and the source that showed the change). | `src/crafting_system/rules/claims/*.yaml` |
+| `rules stale` | Lists the claims whose `patch_verified` is older than the version in `PIN.json`: the claims step 6 has not re-read yet. Read-only. | `python -m crafting_system.rules stale` |
 | Prices | poe.ninja prices of the current league, hand prices beside them. | `python -m crafting_system.prices fetch` |
 | Benchmark | The solver against each guide's route, with the guide's published odds recomputed. | `python -m crafting_system.cli benchmark` |
 
@@ -47,14 +48,28 @@ On 2026-10-31 the runbook was followed on a scratch worktree with the pin moved 
 | 8 Suite and benchmark | 5377 passed, 1 failed, 3 skipped. The failure: the test that holds the old version, commit, size and hash by hand. The skips: `test_simulator_real_data.py` looks for the dump in `.claude/scratch/repoe-<version>`; after copying it, 4 passed | 6 min; 17 s; 4 s |
 | 9 Compare with the guides | R12: solver and given route both 154.95 Chaos on either pin, published odds 2.88% and 1.338% match, solver not dearer | 4 s |
 
-Findings that needed code (items 1, 2, 4 and 5 are done; item 3, the claim history, is not):
+Findings that needed code (all five are done):
 
 1. **Move the pin by command.** Done in [#119](https://github.com/Rasslabsya4el/crafting-system/issues/119): `data pin`.
 2. **Name a patch, not a commit.** Done in #119: `data diff pinned 3.29.4.1` and `data pin 3.29.4.1`.
-3. **A claim keeps its history.** An optional `history` field in the registry (`rules`) for the old value and its patch, and a command that lists the claims not verified on the pinned patch.
+3. **A claim keeps its history.** Done in [#120](https://github.com/Rasslabsya4el/crafting-system/issues/120): an optional `history` list on a claim, and `rules stale`.
 4. **Real-data tests do not hold the pin.** Done in #119: the pin test reads `PIN.json`, `test_simulator_real_data.py` reads the cache.
 5. **The benchmark names its prerequisites.** Done in #119: a missing start-item price prints the line for `price_overrides.toml` and the buy-spec command (the benchmark does not call the trade API itself, so a run stays offline and repeatable).
 
 ## After the rehearsal: the update by command
 
-Steps 1, 2 and 5 are now commands that take the version (`diff pinned <version>`, `pin <version>`), the pin is a data file, and no test holds the pin, so a patch update touches no Python. GitHub's API allows 60 unauthenticated calls an hour per address; set `GITHUB_TOKEN` or `GH_TOKEN` on a machine that runs many sessions.
+Steps 1, 2 and 5 are now commands that take the version (`diff pinned <version>`, `pin <version>`), the pin is a data file, and no test holds the pin, so a patch update touches no Python. Step 6 is a command too: `rules stale` lists the claims not verified on the pinned patch, and a changed claim keeps its old text or value in `history` instead of the commit message.
+
+## A claim's history
+
+A claim whose rule changed in a patch keeps the old version in an optional `history` list, oldest first. Each entry:
+
+| Key | Meaning |
+|---|---|
+| `statement`, `value` | the old text and/or the old value; at least one |
+| `held_until` | the last patch the old version held on: the `patch_verified` the claim had before the change, quoted like `"3.29.3.3"` |
+| `source_kind`, `url`, `quote` | the source that showed the change, with the same rules as the claim's own provenance fields |
+
+The registry refuses a malformed entry with the file, the claim id and the line (a missing key, an unknown key, a patch that is not quoted, `held_until` not earlier than the claim's `patch_verified`, entries out of order). `history` is for people tracing a changed rule: `Rule.value`, which code and the action contract read, is the current value and nothing else.
+
+`rules stale` compares each `patch_verified` with the version in `PIN.json` as patches (`3.29.3` and `3.29.3.0` are the same patch; `3.9.0` is older than `3.29.0`) and prints the older ones, each with the `url` to re-read; `--pin-file` and `--claims` point it at another pin or claims folder. The ticket that cut this work ([#120](https://github.com/Rasslabsya4el/crafting-system/issues/120)) named the check against the `verified_on` field, which the registry calls `patch_verified`. GitHub's API allows 60 unauthenticated calls an hour per address; set `GITHUB_TOKEN` or `GH_TOKEN` on a machine that runs many sessions.
