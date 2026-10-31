@@ -1,0 +1,12 @@
+{
+ "request": "POST https://www.pathofexile.com/api/trade/search/Allflame",
+ "status": 200,
+ "headers": {
+  "date": "Sat, 31 Oct 2026 21:14:37 GMT",
+  "content-type": "application/json",
+  "x-rate-limit-policy": "trade-search-request-limit",
+  "x-rate-limit-rules": "Ip",
+  "x-rate-limit-ip": "5:10:60,15:60:300,30:300:1800,600:21600:3600",
+  "x-rate-limit-ip-state": "1:10:0,1:60:0,2:300:0,2:21600:0"
+ }
+}
