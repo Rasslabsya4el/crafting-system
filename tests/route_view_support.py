@@ -102,7 +102,9 @@ def hand_input(start: Item, requirements: tuple[Requirement, ...], choose: Choos
         policy[state] = offer_action(ab, by_label[picked], state)
         order += [s for s, w in policy[state].outcomes if w > 0 and s not in order]
     plan = Plan(
-        target, ab, leaf_labels(target), PRICES, first, StartPrice(START_NAME, 6.0, "trade-api"), priced, (),
-        Solution({}, policy, 0.0), evaluate(policy, first, ab.is_goal), 0.0, 0.0,
+        target=target, abstraction=ab, leaf_labels=leaf_labels(target), prices=PRICES, start=first,
+        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced, dropped=(), left_out=(),
+        solution=Solution({}, policy, 0.0), risk=evaluate(policy, first, ab.is_goal),
+        solve_seconds=0.0, risk_seconds=0.0,
     )  # fmt: skip
     return route_input(plan)
