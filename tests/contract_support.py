@@ -57,9 +57,9 @@ from crafting_system.actions import (
     Reads,
     kinds,
 )
-from crafting_system.data import BaseItem
+from crafting_system.data import BaseItem, Weight
 from crafting_system.cli._offers import offer_of, price_offers
-from crafting_system.items import ExplicitMod, Item, Metamod, Rarity, tier_table
+from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, tier_table
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
 
 
@@ -88,6 +88,15 @@ def _fixture_data():
                 BaseItem(entry.item_id, entry.item_id.rsplit("/", 1)[-1], "StackableCurrency", "currency", 1, (), (), "released"),
             )
     mods = {mod_id: mod for mod_id, mod in DATA.mods.items() if mod_id in keep}
+    # a Shaper prefix on amulets, which the fixture excerpt lacks: the lightning damage prefix with the spawn weight of an influence mod
+    shaper = mods[DAMAGE_1]
+    mods[SHAPER_PREFIX] = dataclasses.replace(
+        shaper,
+        id=SHAPER_PREFIX,
+        type=SHAPER_PREFIX,
+        families=(SHAPER_PREFIX,),
+        spawn_weights=(Weight("amulet_shaper", 700), Weight("default", 0)),
+    )
     # crafts that clash with a mod of the pool: every ordinary crafted mod takes the family of a mana mod,
     # so the items that hold that life mod refuse the craft and a kernel that forgets the family is caught
     metamods = {metamod.value for metamod in Metamod}
@@ -117,6 +126,7 @@ def _fixture_data():
     return dataclasses.replace(DATA, mods=mods, base_items=bases, bench_options=tuple(options))
 
 
+SHAPER_PREFIX = "ContractShaperPrefix1"
 CONTRACT_DATA = _fixture_data()
 TIERS = tier_table(CONTRACT_DATA, AMULET)
 GOAL = Goal((Wanted(frozenset({GEM})), Wanted(RESISTS), Wanted(frozenset({LIFE_1, LIFE_2}))))
@@ -130,8 +140,8 @@ def _roll(mod_id: str, *, fractured: bool = False, crafted: bool = False) -> Exp
     return ExplicitMod(mod_id, TIERS.get(mod_id, 1), values, fractured=fractured, crafted=crafted)
 
 
-def _item(rarity: Rarity, *mods: ExplicitMod) -> Item:
-    return Item.build(CONTRACT_DATA, base_id=AMULET, item_level=LEVEL, rarity=rarity, mods=mods)
+def _item(rarity: Rarity, *mods: ExplicitMod, **fields) -> Item:
+    return Item.build(CONTRACT_DATA, base_id=AMULET, item_level=LEVEL, rarity=rarity, mods=mods, **fields)
 
 
 def _ordinary_crafted_mod() -> str | None:
@@ -153,6 +163,7 @@ def fixture_items() -> dict[str, Item]:
         "rare_junk": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1)),
         "rare_fractured": _item(Rarity.RARE, _roll(RESIST_1, fractured=True), _roll(MANA_1)),
         "rare_four": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), _roll(DAMAGE_1), _roll(FIRE_GEM)),
+        "rare_shaper": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), influences=frozenset({Influence.SHAPER})),
     }
     crafted = _ordinary_crafted_mod()
     if crafted is not None:
