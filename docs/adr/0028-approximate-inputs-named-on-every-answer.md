@@ -4,7 +4,7 @@ B2 admits mechanics that no source settles beyond Craft of Exile's code or a fit
 
 ## The mark
 
-A claim carries `approximate` (with a one-line reason) when **the only support for it is Craft of Exile's code or data, or a fit to a sample**. A claim that Craft of Exile repeats but the wiki, the data, an official note or the owner also support is not marked. A claim may mark part of its range: the Conflict odds are `approximate` everywhere and `extrapolated` for `d` outside -2 to +3 (ADR-0025).
+A claim carries `approximate` (with a one-line reason) when **no other source settles it**: its only support is Craft of Exile's code or data, a fit to a sample, a wiki formula the owner has not checked, or a default the main chat chose for a point the sources leave open. A claim that Craft of Exile repeats but the wiki, the data, an official note or the owner also support is not marked. A claim may mark part of its range: the Conflict odds are `approximate` everywhere and `extrapolated` for `d` outside -2 to +3 (ADR-0025).
 
 Every answer lists **the approximate claims that the actions of the policy read**: actions the policy can take, not every action in the catalog. The list is in the text report (a line "Approximate inputs", each with its claim id and reason), in the JSON (`approximate_inputs`, a list) and on the route page. An answer with no marked claim says nothing.
 

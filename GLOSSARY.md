@@ -115,7 +115,7 @@ A Harvest craft that adds a mod of a tag and then removes another random mod (AD
 _Avoid_: Harvest augment
 
 **Swap**:
-A Harvest craft that changes a resistance or damage mod to the same tier of another element, keeping the tier and rerolling the value inside it.
+A Harvest craft that changes a resistance or damage mod to another element. A resistance swap keeps the tier and rerolls the value inside it (ADR-0030).
 _Avoid_: Harvest reroll
 
 **Catalog**:

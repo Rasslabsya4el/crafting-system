@@ -1,12 +1,12 @@
 # Catalysts are the finishing step and cost expected catalysts
 
-Catalyst quality changes no odds since 3.15.0: it no longer raises the chance of a matching mod, and the Augmentation, Regal and Exalted Orb no longer use it up. So no crafting action depends on it, and nothing a policy does earlier changes what a catalyst does later. [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) therefore plans catalysts **last, as a finish cost**, and keeps quality out of the compressed state. The mechanics are in [the catalyst research](https://github.com/Rasslabsya4el/crafting-system/issues/89).
+Catalyst quality changes no odds since 3.15.0: it no longer raises the chance of a matching mod, and the Augmentation, Regal and Exalted Orb no longer use it up. So no crafting action depends on it, and nothing a policy does earlier changes what a catalyst does later. [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) therefore plans catalysts **last, as a finish cost**, and keeps quality out of the compressed state unless an enabled action reads it (ADR-0027). The mechanics are in [the catalyst research](https://github.com/Rasslabsya4el/crafting-system/issues/89).
 
 ## What is modelled
 
 - **The catalysts**: the ten regular ones (Abrasive, Accelerating, Fertile, Imbued, Intrinsic, Noxious, Prismatic, Tempering, Turbulent, Unstable) and Sinistral and Dextral, on rings, amulets and belts. **Tainted Catalysts are out** (corrupted items only, random type and amount, odds unpublished).
 - **One quality type**: a different catalyst replaces the quality and restarts from 0%. The cap is 20%; a catalyst that would pass it is capped (`min(20, q + gain)`).
-- **Gain per catalyst** depends on the item level: `f = max(1, min(30·e^(-ilvl/30) - 0.3, 20))`, and one catalyst adds `floor(f)` points, or one more with probability `frac(f)`. The cost to 20% is the expected number of catalysts times their price: about 9.5 at item level 75, 13.3 at 84, 20 from 95 up.
+- **Gain per catalyst** depends on the item level: `f = max(1, min(30*e^(-ilvl/30) - 0.3, 20))`, and one catalyst adds `floor(f)` points, or one more with probability `frac(f)`. The cost to 20% is the expected number of catalysts times their price: about 9.5 at item level 75, 13.3 at 84, 20 from 95 up.
 - **Scaling**: a modifier with a matching tag (implicit or explicit) is multiplied by `(100 + quality) / 100` on its stored integer, **rounded down**, once per modifier (wiki formula, marked approximate: the owner checks in game only if a route sits on a rounding edge).
 - **The target form** is `quality: {type, min_percent}`. A requirement on a value is a base roll (ADR-0027); under a quality the planner finds the base roll that shows the displayed minimum.
 

@@ -6,7 +6,7 @@ B2's single-item additions that are not Eldritch, veiled or catalysts: the influ
 
 - Six orbs (Shaper's, Elder's, Crusader's, Hunter's, Redeemer's, Warlord's) add their influence and one mod of it to a rare item with an open slot and item level 68 or more. The mod is drawn only from that influence's mods, through the shared draw (item level, family exclusion, weights, side locks, Attack/Caster blocks). They are refused on **every item that already has an influence, the orb's own included, and on an item with an Eldritch implicit** (the owner has not checked; an optional in-game check may change it, #86 O-01 and O-02), and on fractured and synthesised items. An empty pool refuses the orb.
 - The **Orb of Dominance** (body armour, boots, gloves, helmet, with two influenced mods) removes one influenced mod and upgrades another by one tier; a top-tier mod becomes its Elevated version. Both picks are uniform (Craft of Exile, marked approximate). It respects the side locks and ignores the Attack/Caster blocks.
-- **Beast influence recipes** add a mod as that influence's Exalted Orb would, on an item that has the influence; no source says which mod, so the claim is marked unverified and approximate.
+- **Beast influence recipes** add a mod drawn from that influence's pool, as its Exalted Orb would draw it (only the pool is borrowed: the item already has the influence); no source says which mod, so the claim is marked unverified and approximate.
 - Randomise Influence and the Awakener's Orb are not here (the first is out of v1; the second is B3).
 
 ## Harvest add/remove

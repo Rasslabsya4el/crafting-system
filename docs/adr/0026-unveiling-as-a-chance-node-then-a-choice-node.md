@@ -17,7 +17,7 @@ An **unveil block** is a bench craft of a family in the unveil pool: the family 
 
 ## Open
 
-Whether a block crafted **after** seeing the offer redraws it is unknown: the export carries a per-placeholder `veiled_mod_seed` that may fix the offer for good. Until someone checks, the offer is drawn once and never redrawn; this is the cheaper reading, so a route that blocks after the peek is not offered. The claim says so and carries `approximate` (ADR-0028).
+Whether a block crafted **after** seeing the offer redraws it is unknown: the export carries a per-placeholder `veiled_mod_seed` that may fix the offer for good. Until someone checks, the offer is drawn once and never redrawn; this is the more cautious reading, so a route that blocks after the peek is not offered. The claim says so and carries `approximate` (ADR-0028).
 
 ## What this changes in the solver
 

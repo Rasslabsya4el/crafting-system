@@ -21,7 +21,7 @@ An action that declares nothing still reads everything, so a new action stays co
 
 ## Blessed Orb
 
-A Blessed Orb rerolls the value of each implicit that has a range, uniformly inside the range. **The previous value can roll again** (the owner's answer, round 1; it agrees with Craft of Exile and goes against the wiki's exclusion). It refuses corrupted items and items without a ranged implicit. What it does to an Eldritch implicit is not stated by any source; until a claim admits it, a Blessed Orb on an item with Eldritch implicits is not offered (ADR-0004: what no admitted rule answers is invisible to the solver). The catalyst scaling of ADR-0029 applies on top of the rolled base value.
+A Blessed Orb rerolls the value of each implicit that has a range, uniformly inside the range. **The previous value can roll again** (the owner's answer, round 1; it agrees with Craft of Exile and goes against the wiki's exclusion). It refuses corrupted items and items without a ranged implicit. The wiki lets it be used on an item with Eldritch implicits but does not say what it does to them; until a claim admits that effect (main chat, not recorded in the grill), a Blessed Orb on such an item is not offered (ADR-0004: what no admitted rule answers is invisible to the solver). The catalyst scaling of ADR-0029 applies on top of the rolled base value.
 
 ## Requirements on values
 
