@@ -27,7 +27,7 @@ from abstraction_support import ABSENT, BELOW, PASSING, abstraction
 from crafting_system.abstraction import Flags, FracturedMod, Goal, Wanted
 from crafting_system.items import Influence, Item, Rarity
 
-PLAIN_FLAGS = Flags(rarity=Rarity.RARE, corrupted=False, influences=frozenset(), crafted=False)
+PLAIN_FLAGS = Flags(rarity=Rarity.RARE, corrupted=False, influences=frozenset())
 
 
 def test_a_state_keeps_the_flags_the_fractured_mod_and_the_status_of_the_whole_item():
@@ -140,9 +140,9 @@ def test_a_crafted_mod_sets_the_flag_and_fails_a_not_crafted_leaf():
     asked = abstraction(Goal((Wanted(frozenset({CRAFTED}), not_crafted=True),)))
     not_asked = abstraction(Goal((Wanted(frozenset({CRAFTED})),)))
 
-    assert asked.compress(item).flags.crafted and asked.compress(item).status == (BELOW,)
+    assert asked.compress(item).crafted and asked.compress(item).status == (BELOW,)
     assert not_asked.compress(item).status == (PASSING,)
-    assert not abstraction().compress(fractured_item()).flags.crafted
+    assert not abstraction().compress(fractured_item()).crafted
 
 
 def test_the_flags_of_the_item_are_carried_into_the_state():
@@ -152,7 +152,7 @@ def test_the_flags_of_the_item_are_carried_into_the_state():
 
     flags = abstraction().compress(item).flags
 
-    assert flags == Flags(Rarity.RARE, True, frozenset({Influence.SHAPER, Influence.HUNTER}), False)
+    assert flags == Flags(Rarity.RARE, True, frozenset({Influence.SHAPER, Influence.HUNTER}))
     assert abstraction().compress(small_item(roll(LIFE_1), rarity=Rarity.MAGIC)).flags.rarity is Rarity.MAGIC
 
 

@@ -78,7 +78,7 @@ class When:
             return False
         if self.corrupted is not None and state.flags.corrupted != self.corrupted:
             return False
-        if self.crafted is not None and state.flags.crafted != self.crafted:
+        if self.crafted is not None and state.crafted != self.crafted:
             return False
         if self.no_fractured and state.fractured:
             return False

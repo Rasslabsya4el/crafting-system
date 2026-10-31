@@ -46,7 +46,7 @@ from crafting_system.abstraction import CompressedState, Flags, integer_weights
 from crafting_system.actions import ActionError
 from crafting_system.items import Rarity
 
-FLAGS = Flags(Rarity.RARE, False, frozenset(), False)
+FLAGS = Flags(Rarity.RARE, False, frozenset())
 
 
 def projection(kernel):

@@ -105,6 +105,10 @@ _Avoid_: junk class, tag class
 **Exceptional family**:
 A family that fits no family type and is tracked by identity.
 
+**Slot**:
+One mod of a compressed state that is not fractured, kept as a side, a kind and what it gives each requirement (a crafted mod also by its mod). The slots are a multiset: junk of one side and kind is counted, not identified. The kind is empty for a family type and the family itself for an exceptional family.
+_Avoid_: junk entry
+
 **Pool signature**:
 Everything about a compressed state and an action that decides the action's outcome distribution; states with equal signatures share one kernel.
 
