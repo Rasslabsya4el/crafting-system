@@ -30,6 +30,7 @@ MIN_PHRASE_LENGTH = 8  # a shorter name or text would match too many unrelated l
 SHOWN_TOKENS = 5
 
 _IDENT = re.compile(r"[A-Za-z0-9_]+")
+_DISTINCT = re.compile(r"[A-Za-z][A-Za-z]*[A-Z0-9_]")  # a lone word (family `Nothing`) would match prose
 _RANGE = re.compile(r"\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)")
 _QUOTED = re.compile(r"\"([^\"]*)\"|'([^']*)'")
 _VALUE = re.compile(r"^\s*(?:-\s+)*(?:[A-Za-z_][\w-]*:\s+)?(.+?)\s*$")
@@ -127,7 +128,7 @@ def _short(item_id: str) -> str:
 
 
 def _bench_identity(option: BenchOption) -> tuple:
-    return option.master, option.actions, frozenset(option.item_classes)
+    return option.master, option.actions
 
 
 def _bench_text(option: BenchOption) -> str:
@@ -139,18 +140,32 @@ def _bench_text(option: BenchOption) -> str:
     return f"{option.master}: {'; '.join(parts) or 'no action'}"
 
 
-def _bench_changes(old: GameData, new: GameData) -> list[tuple[BenchOption, str]]:
-    """The options that differ, as (option, kind); one with only a new cost or tier is `changed`, not two."""
+def _class_changes(before: BenchOption, after: BenchOption) -> str:
+    gained = sorted(set(after.item_classes) - set(before.item_classes))
+    lost = sorted(set(before.item_classes) - set(after.item_classes))
+    changes = [f"+{name}" for name in gained] + [f"-{name}" for name in lost]
+    return f"; item classes {', '.join(changes)}" if changes else ""
+
+
+def _bench_changes(old: GameData, new: GameData) -> list[tuple[str, str, BenchOption]]:
+    """(text, kind, option) of the options that differ.
+
+    Options have no id, so one is told by its master and actions. Where both versions have options
+    with the same master and actions but different item classes, cost or tier, they are paired and
+    reported as `changed`; the rest are `added` or `removed`.
+    """
     before, after = Counter(old.bench_options), Counter(new.bench_options)
     gone, came = before - after, after - before
-    gone_identities = {_bench_identity(option) for option in gone}
-    came_identities = {_bench_identity(option) for option in came}
-    found = []
-    for option in sorted(came, key=_bench_text):
-        found.append((option, CHANGED if _bench_identity(option) in gone_identities else ADDED))
-    for option in sorted(gone, key=_bench_text):
-        if _bench_identity(option) not in came_identities:
-            found.append((option, REMOVED))
+    found: list[tuple[str, str, BenchOption]] = []
+    for identity in sorted({_bench_identity(o) for o in (*gone, *came)}, key=lambda i: (i[0], repr(i[1]))):
+        left = sorted((o for o in gone.elements() if _bench_identity(o) == identity), key=repr)
+        right = sorted((o for o in came.elements() if _bench_identity(o) == identity), key=repr)
+        for one, other in zip(left, right):
+            found.append((_bench_text(other) + _class_changes(one, other), CHANGED, other))
+        for extra in right[len(left):]:
+            found.append((_bench_text(extra), ADDED, extra))
+        for extra in left[len(right):]:
+            found.append((_bench_text(extra), REMOVED, extra))
     return found
 
 
@@ -162,7 +177,7 @@ class _Tokens:
         self.phrases: dict[str, set[str]] = defaultdict(set)
 
     def add_id(self, token: str, kind: str) -> None:
-        if token:
+        if _DISTINCT.search(token):
             self.ids[token].add(kind)
 
     def add_phrase(self, text: str | None, kind: str) -> None:
@@ -227,8 +242,8 @@ def _collect(old: GameData, new: GameData) -> tuple[DataChanges, _Tokens]:
                 tokens.add_phrase(fossil.name, f"fossil {kind}")
 
     bench = _bench_changes(old, new)
-    for option, kind in bench:
-        actions.append(f"bench {_bench_text(option)} ({kind})")
+    for text, kind, option in bench:
+        actions.append(f"bench {text} ({kind})")
         for mod_id in (option.actions.add_explicit_mod, option.actions.add_enchant_mod):
             tokens.add_id(mod_id or "", "mod of a changed bench option")
 

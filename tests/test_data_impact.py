@@ -164,6 +164,29 @@ def test_a_bench_option_with_only_a_new_cost_is_changed_not_added_and_removed(re
     assert jun[0].endswith("(changed)")
 
 
+def test_a_bench_option_that_gains_and_loses_item_classes_is_one_changed_line(old_data):
+    raw = copy.deepcopy(raw_fixtures())
+    jun = raw["crafting_bench_options.json"][0]
+    jun["item_classes"] = [*jun["item_classes"][1:], "Ring"]
+    lost = raw_fixtures()["crafting_bench_options.json"][0]["item_classes"][0]
+
+    text = render_impact(compute_impact(old_data, game_data_from_raw(raw), FIXTURE_REPO))
+
+    jun_lines = [line for line in text.splitlines() if line.strip().startswith("bench Jun")]
+    assert jun_lines == [f"  bench Jun, Veiled Master: change_socket_count 2; item classes +Ring, -{lost} (changed)"]
+
+
+def test_a_family_that_is_a_single_word_is_not_searched_for_because_prose_would_match(old_data, tmp_path):
+    raw = copy.deepcopy(raw_fixtures())
+    raw["mods.json"]["IncreasedLife1"]["groups"] = ["Nothing"]
+    (tmp_path / "examples").mkdir()
+    (tmp_path / "examples" / "t.yaml").write_text("# Nothing here changes.\n- mod: IncreasedLife1\n", "utf-8")
+
+    found = compute_impact(old_data, game_data_from_raw(raw), tmp_path).examples
+
+    assert [r.token for r in found] == ["IncreasedLife1"]
+
+
 def test_a_mod_a_changed_essence_or_fossil_forces_counts_as_touched(old_data, new_data, tmp_path):
     (tmp_path / "examples").mkdir()
     (tmp_path / "examples" / "t.yaml").write_text("- mod: DelveDexterityGemLevel1\n", "utf-8")
