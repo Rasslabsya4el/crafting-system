@@ -50,6 +50,9 @@ def test_a_loopback_connection_still_works():
 
 def test_a_new_price_module_gets_the_guard_and_another_module_does_not(tmp_path):
     (tmp_path / "conftest.py").write_text(CONFTEST.read_text(encoding="utf-8"), encoding="utf-8")
+    (tmp_path / "shard_support.py").write_text(  # the conftest imports it (ticket #165)
+        (CONFTEST.parent / "shard_support.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
     (tmp_path / "test_prices_brand_new.py").write_text(PRICE_MODULE, encoding="utf-8")
     (tmp_path / "test_other_area.py").write_text(OTHER_MODULE, encoding="utf-8")
     ini = tmp_path / "empty.ini"
