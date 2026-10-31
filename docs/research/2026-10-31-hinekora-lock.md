@@ -7,9 +7,9 @@ Research ticket [#101](https://github.com/Rasslabsya4el/crafting-system/issues/1
 - **What it does.** The Lock is put on one item. From then on, hovering any currency over the item shows the exact result of using that currency next. Looking costs nothing and changes nothing. Using a currency applies the shown result and ends the preview.
 - **The preview is a fixed result, not an estimate.** Every Chaos Orb you hover shows the same preview; applying it makes the item exactly what was shown. Different currencies each show their own result, all at once, from the same lock.
 - **What ends it.** Any change to the item: any currency used, a bench craft, an Imprint, an anoint, a recombinator, a beast craft. Looking at previews does not end it. Incubators are said to keep it (a disputed line, section 3).
-- **Kind of plan.** A plan with information: after the Lock is on, the best next move depends on what the previews show, not only on the item. That is a different shape from every other action in v1, where the action is chosen before the dice are thrown. The solver can model it **without adding any stored state**: the Lock is one action whose value is the expected best reaction to the previews, minus the lock's price (section 6).
+- **Kind of plan.** A plan with information: after the Lock is on, the best next move depends on what the previews show, not only on the item. That is a different shape from every other action in v1, where the action is chosen before the dice are thrown. The solver can model it **without adding any stored state, provided the previews of different currencies are independent draws** (not yet known, section 7): the Lock is one action whose value is the expected best reaction to the previews, minus the lock's price (section 6). Without independence the one-look bound in 6.4 still adds no state, but the exact best-of value cannot be computed.
 - **Cost.** In the Allflame league the Lock sells for about 272 Divine Orbs (section 5). A plan will pick it only where the previews save more than that, so in most ordinary routes it will not appear.
-- **What is not known.** No Reddit evidence could be fetched (section 2). Whether the previews of different currencies on one lock are independent, whether essences, fossils, catalysts and Eldritch currency preview, and whether active Omens change a preview are all unsettled (section 7). Three questions for the owner come out of this (section 8).
+- **What is not known.** Only four Reddit threads from the Ancestor league could be read (sections 2 and 3.2); nothing from them, or from the wiki, settles the points below. Whether the previews of different currencies on one lock are independent, whether essences, fossils, catalysts and Eldritch currency preview, and whether active Omens change a preview are all unsettled (section 7). Three questions for the owner come out of this (section 8).
 
 ## 2. Sources and what was and was not reachable
 
@@ -27,8 +27,9 @@ Every source was read on 2026-10-31 unless stated.
 | S8 | [Out of Games, Hinekora's Lock price](https://outof.games/realms/pathofexile/economy/currency/hinekoras-lock/) (poe.ninja data, hourly) | market snapshot | Price, section 5. |
 | S9 | Prototype notes: `archive/prototype:docs/mechanics/beast_crafting.md` line 29, `docs/research/phase0-coverage.md` line 65 | owner's earlier notes | "Imprinting removes Hinekora's Lock foresight"; the Lock was only "catalogue-only". No model existed. |
 | S10 | Craft of Exile (`sources/raw/coe/`) | coe | Has no Lock; nothing to read. |
+| S11 | Reddit threads read first-hand through the Arctic Shift archive (`reddit_archive.py thread`), 2026-10-31: [16ywd1w](https://www.reddit.com/r/pathofexile/comments/16ywd1w/) "math to use hinekora's lock efficiently" (u/Bendooo, 2023-10-03, 10 comments); [170y99u](https://www.reddit.com/r/pathofexile/comments/170y99u/) "Any way to reset Hinekora's Lock on unique jewels without divining?" (u/Electrical-Cap-9925, 2023-10-06, 11 comments); [18ewhsi](https://www.reddit.com/r/pathofexile/comments/18ewhsi/) "Just dropped an Hinekora's lock!" (u/teraohmique, 2023-12-10, 13 comments); [177gbxj](https://www.reddit.com/r/pathofexile/comments/177gbxj/) "Double Corrupting Mageblood with 4x Hinekora's Lock" (u/Gustsouto, 2023-10-14, video post, body deleted) | player reports | All from the Ancestor league (3.22) and the weeks after 3.23.0; none from 3.24 to 3.29. |
 
-**Reddit and forums: nothing was obtained.** Seven `gpt-research` runs (terra and luna, 13:53 to 14:09, briefs of different length) all ended `failed: timed out` within about a minute; earlier runs of other sessions that day were accepted (`~/.gpt-research/runs.jsonl`, 13:36 to 13:47), so the service, not the brief, is at fault; the server log shows each run's server starting and then nothing, while about thirty sessions share the machine. Reddit cannot be opened in the built-in browser (`old.reddit.com` is refused), and web search returned only item text, PoE 2 pages (a different item with different rules) and shop pages. So no player report on any of these is quoted here: independence of previews, essences, fossils, Omens, mismatches. The main chat can rerun the brief in section 9 when the service is free.
+**Reddit, second pass (2026-10-31, with the repaired tools).** The first pass failed (seven `gpt-research` runs timed out; reddit.com is refused in the built-in browser). In the second pass the Arctic Shift archive worked for a short time and four threads were read first-hand (S11). Then the archive answered `Too many requests` to every call for more than half an hour (about a dozen sessions share the limit), and the live GPT researcher job (`20261031-150819-9620`, terra, one brief with all eight points) stayed queued for 45 minutes behind three other sessions' jobs that held all three slots from 15:13. So the Reddit evidence below is four threads, all from the first weeks of the Lock (Oct to Dec 2023), and the other Reddit-dependent points are "not found", with the searches listed in section 3.2. The brief for the researcher is kept in section 9; the main chat can rerun it when a slot is free.
 
 S1's one outside reference for the "does not preview" list is a YouTube video at 33:00 (`youtu.be/Z8g1068Q3QI`, at about 33 minutes; cited by S1, not opened). The "Awakener's Orb is an exception" sentence has no reference at all; S2 shows it was added by 2026-03-29 and kept through two later edits.
 
@@ -60,13 +61,40 @@ S1's one outside reference for the "does not preview" list is a YouTube video at
 
 **R13. Corruption by Vaal Orb was previewable in 3.22.** Maxroll, 2023-09-12 (Tenkiei): "Always lock your Headhunter/Mageblood Before Corruption!" The Altar part was removed in 3.23.0; whether a Vaal Orb is still previewed in 3.29 is not stated anywhere read. Vaal Orbs belong to the corruption batch (B4), not to B8.
 
+### 3.1 Per currency: what a source says
+
+"Previewed" means a source names the currency as shown by a Lock; "usable" means a source says the currency can be applied to a foreseeing item and ends the foresight (so its preview is unstated); "no statement" means nothing read mentions it.
+
+| Currency | Status | Source |
+|---|---|---|
+| Chaos Orb | previewed | S1: "any given Chaos Orb will show the same preview each time" |
+| Divine Orb | previewed | S1 Strategies ("preview the outcomes of a Divine Orb, Tailoring Orb, and Sacred Orb using the same lock"); u/pepegaklaus, 2023-10-04, thread 16ywd1w: "Now hover over with a divine." |
+| Tailoring Orb, Sacred Orb | previewed | S1 Strategies, same sentence; u/pepegaklaus, 2023-10-04: "So use a sacred orb then lock again" |
+| Awakener's Orb | previewed, depends on the donor | S1 (no reference) |
+| Vaal Orb | previewed in 3.22; 3.29 not confirmed | S6, 2023-09-12 "Always lock your Headhunter/Mageblood Before Corruption!"; u/Bendooo, 2023-10-03, thread 16ywd1w: "what does the potential of also checking for the outcome of a vaal orb change in the equation?" (a question, not a report) |
+| Whetstone, Armourer's Scrap (quality); Chromatic, Jeweller's (sockets); Orb of Fusing (links); Blessed Orb (implicits); anoint oils | usable, ends the foresight; their own preview unstated | S1 Strategies |
+| Exalted, Annulment, Regal, Alchemy, Scouring, Transmutation, Alteration, Augmentation | no statement (S6 lists the Annulment, Exalted and Veiled orbs next to the Lock but says nothing about previews of them) | |
+| Essences, fossils (resonators), catalysts, Eldritch ichors and embers, Orb of Conflict, Veiled orbs, Tempering Orb | no statement | |
+
+Harvest crafts are the Horticrafting Station (R7) and are not previewed. So only Chaos, Divine, Tailoring, Sacred, Awakener's and (3.22) Vaal are named. The wiki's general rule, "the next Currency item", is the only basis for every other orb.
+
+### 3.2 What the four Reddit threads say (S11)
+
+- **Throwing a Lock away and locking again is what players do.** u/tuptain, 2023-10-03: "You can use another orb on it and apply a different lock for different results." u/pepegaklaus, 2023-10-04: "So use a sacred orb then lock again". This is the burn-and-relock of R6, from players.
+- **The value of a Lock is the avoided loss.** u/OhHiHowIzYou, 2023-10-03: "What you really want to do is compare teh expected outcome if you don't use the lock versus if you do" (his example: a 1,000 Divine item, double-corrupt outcomes 25% each, Lock price 68 Divine); u/atlasgcx, 2023-10-03: "A lock will help you avoid a definitive loss (25% of the time)". The same idea as the toy in section 4, from players, with the Altar as the use case in 2023.
+- **Price reason.** u/Veteran_But_Bad, 2023-12-10, thread 18ewhsi: the prices were absurd "because they could be used to double corrupt items safely and that is no longer the case". Locks "were added to the loot pool" (u/CondorSweep's question, 2023-12-10; u/B1ackadderr: "Yes. Check trade. Theyre trading for 2d currently."); u/orc_arn, 2023-12-10: "they are 120divs in standard". Prices have moved since (section 5).
+- **A second Lock on an item: asked, not answered.** u/Munsie, 2023-10-06, thread 170y99u: "Can you use another Hinekora's Lock on it?" No reply answers it. The thread's own question is how to clear the lock on a unique jewel that no currency can be used on; the answers are "gotta divine it" (u/Sh0wTim3123) and a double-corruption altar check (u/beachteen; u/dart19: "That still won't reset the lock.").
+- **Not in any thread read:** independence of previews, essences, fossils, Omens, mismatches, when the Lock is consumed. u/Bendooo posted an in-game screenshot (imgur) in thread 16ywd1w on 2023-10-03; it was not opened.
+
+Searches run for this section: archive title search `Hinekora`, r/pathofexile, 2023-08-15 to 2023-10-15 (43 posts; the first 8,000 characters of the list read; later windows from 2023-10-07 and all windows to 2026-10-31 timed out or were rate-limited); direct reads of the four threads above (the wiki's own Reddit reference is 18ewhsi). No full-text comment search was possible.
+
 ### What the sources do not say (checked and absent)
 
-- Whether the previews of two different currencies on one lock are **independent**. The wiki says only that each is fixed.
+- Whether the previews of two different currencies on one lock are **independent**. The wiki says only that each is fixed; none of the four Reddit threads read compares two previews (not found).
 - Whether **essences, fossils (through a resonator), catalysts, Eldritch ichors and embers, Veiled orbs, Harvest-item currencies, Scouring or Vaal** are previewed. The wiki's rule is "the next Currency item"; the class on PoEDB is Stackable Currency. Fossils are used through a resonator and essences are Stackable Currency too, so by the class rule they should preview; no source confirms it.
 - Whether an **Omen** that is active changes the preview, or is spent by hovering. Omens are not named anywhere on the page.
-- Whether a second Lock can be applied to an item that is already foreseeing, and what that does.
-- Whether the Lock is **consumed** on use. The item is a stack of 10 that you apply ("Right click this item then left click an item to apply it"), the same shape as any currency; the wiki does not say it is consumed, the model assumes it is.
+- Whether a second Lock can be applied to an item that is already foreseeing, and what that does (asked on Reddit by u/Munsie, 2023-10-06; no answer in the thread).
+- Whether the Lock is **consumed** on use (not found in the Reddit threads either). The item is a stack of 10 that you apply ("Right click this item then left click an item to apply it"), the same shape as any currency; the wiki does not say it is consumed, the model assumes it is.
 - Whether the shown result can ever differ from the applied one (no mismatch report was found; none could be searched for on Reddit).
 
 ## 4. What kind of plan this makes
@@ -117,7 +145,7 @@ Given the converged values, the reaction to a set of previews is "take the optio
 
 ### 6.4 State size
 
-- **No new stored state.** The foreseeing flag is never stored: the Lock is applied and consumed inside one action (lock, look, react). The compressed state of ADR-0009 gets no new component. The previews are not state either: they are thrown inside the backup and their winner is the next state. The reachable states after a Lock are the states the previewable actions already reach, so the graph has no new nodes. **Growth of the state: none.**
+- **No new stored state.** The foreseeing flag is never stored: the Lock is applied and consumed inside one action (lock, look, react). The compressed state of ADR-0009 gets no new component. The previews are not state either: they are thrown inside the backup and their winner is the next state. The reachable states after a Lock are the states the previewable actions already reach, so the graph has no new nodes. **Growth of the state: none, if the previews are independent** (the best-of backup) **or if the plan looks at one currency only** (the one-look bound, true for any correlation). If the previews are tied by a shared draw and the tie is known, the exact value needs the joint draw and the sorted-tail sweep no longer applies; that case is not modelled.
 - **More edges, from the Lock actions.** One Lock edge list per state where the Lock is enabled, with one edge per distinct next state of any previewable action: roughly the union of the previewable actions' successors, about K edges (the 2026-10-30 solver research uses 20 outcomes per action and up to 50 actions per state as its nominal case, so K is in the hundreds) against about K/m for one plain action. Backup work rises by the sort factor and the number of states that can lock.
 - **What not to do, and its price.** Expanding the previews into explicit stored states (s, previews) is a product of the options' outcome counts: with three previewable currencies of 20 outcomes each that is 8,000 stored states per s, and a Chaos preview alone has thousands of outcomes. Expanding one currency at a time, (s, a, o_a), is K stored states per s, tens to hundreds of times the base state count. The base count is already 13,172 states for the R05 query with all 141 ring crafts told apart (#59 hand-over), and ADR-0009 measures about 1 million core states for the designs it rejected. Neither expansion is usable.
 - **If previews are not independent** (assumption I fails), the best-of formula overstates the Lock. A certified bound that needs no assumption is the one-look backup, L + E over o_a of min( c_a + V(o_a), F(s) ), for the one currency a that the player picks before looking. It also needs no product, only an expectation over the single kernel of a, and is true for any correlation. It is an upper bound on the true cost (toy: 32.4 against 23.97). The independent best-of gives the lower bound if previews are independent or negatively correlated. A report can carry both numbers.
@@ -152,7 +180,7 @@ Each stands alone. The main chat asks them; none is asked from here.
 
 **Q1. May the planner treat the previews of different currencies on one Lock as independent?** Context: a Lock shows the result of every currency at once, and the planner picks the best. If the game draws them with one shared random number, the results are tied together and the real gain is smaller than the planner says. No source says either way; checking in game needs a Lock, about 270 Divine Orbs. Options: (A) yes, admit it as the owner's rule; every route that uses several previews prints the safe "one look" number next to it; (B) no, build only the one-currency look, which needs no assumption; (C) pay for an in-game test first. Recommendation: **A**. The report shows both numbers, so the error is bounded and visible, and B alone would hide the main reason to own a Lock (choosing between currencies).
 
-**Q2. Which currencies are shown as previewable in v1?** Context: the wiki says every currency item except the listed crafts; only the orbs are named. Options: (A) all currency-item actions except the listed ones; (B) only the plain orbs (Transmutation, Alteration, Augmentation, Regal, Alchemy, Chaos, Exalted, Annulment, Scouring, Divine, Awakener's); essences, fossils, catalysts, Eldritch currency and Omen-modified uses stay blind until a source or a player check shows them. Recommendation: **B**. It can only undervalue the Lock, never promise a preview the game may not give; a `previewable` flag per action lets the list grow with each confirmation.
+**Q2. Which currencies are shown as previewable in v1?** Context: the wiki says every currency item except the listed crafts; only the orbs are named. Options: (A) all currency-item actions except the listed ones; (B) only the currencies a source names as previewed (Chaos, Divine, Tailoring, Sacred, Awakener's; section 3.1) plus the plain orbs the wiki's "next Currency item" rule covers (Transmutation, Alteration, Augmentation, Regal, Alchemy, Exalted, Annulment, Scouring); essences, fossils, catalysts, Eldritch currency and Omen-modified uses stay blind until a source or a player check shows them. Recommendation: **B**. It can only undervalue the Lock, never promise a preview the game may not give; a `previewable` flag per action lets the list grow with each confirmation.
 
 **Q3. May a plan throw a Lock away and lock again?** Context: the wiki lists spending a cheap quality, socket, link, implicit or anoint currency as the way to get fresh previews. It costs a second Lock each time, about 270 Divine Orbs, so in practice a plan would do it only for a cheap item. Options: (A) yes, as a plan step with the cheapest neutral currency priced from the price file; (B) no, one Lock per item, the previews are taken or the Lock is wasted. Recommendation: **A**. It is what the wiki says players do, it is a plain self-loop for the solver, and B understates the search the Lock allows.
 
@@ -250,11 +278,27 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
-  - id: hinekora_lock.stack_of_ten_exchange_priced
-    statement: The Lock is a stackable currency (stack size 10) traded on the Currency Exchange; its price comes from the dated price file, not from this registry.
+  - id: hinekora_lock.stack_of_ten
+    statement: The Lock is a stackable currency with a stack size of 10; its price comes from the dated price file, not from this registry.
     source_kind: datamined
     url: https://poedb.tw/us/Hinekoras_Lock
     quote: "Stack Size: 1 / 10"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.tradeable_on_currency_exchange
+    statement: The Lock can be bought on the Currency Exchange (gold fee 6,250 per item), so a market price exists for it.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Currency_exchange_market#Gold_costs
+    quote: "Hinekora's lock	6,250"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.previewed_named_currencies
+    statement: A Lock previews at least Chaos Orb, Divine Orb, Tailoring Orb, Sacred Orb and Awakener's Orb (the currencies a source names); every other currency item is previewed only if the owner admits the general rule (Q2).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Strategies
+    quote: "preview the outcomes of a Divine Orb, Tailoring Orb, and Sacred Orb using the same lock"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 ```
