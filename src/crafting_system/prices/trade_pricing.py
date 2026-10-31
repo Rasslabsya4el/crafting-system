@@ -4,7 +4,8 @@ The flow of `price_buy_spec`: the stats list (cached for a week) maps the spec's
 query goes to the site (the answer is cached for a day by the hash of league and body), ten listings
 are fetched, and each is turned into Chaos with the rates of the price file. A listing that cannot be
 turned into Chaos or does not match the spec is dropped and counted, never guessed. The price is the
-median of the `k` cheapest of what is left.
+mean of the `k` cheapest of what is left (#133: the query asks for instant-buyout listings of any age,
+so the cheapest listings are real prices).
 
 Nothing here reads a clock: the caller passes `now`. The client's request budget is the only limit on
 requests; a cache hit costs none.
@@ -78,7 +79,7 @@ class TradePrice:
     league: str
     date: date  # UTC date of the run
     listings: int  # the search `total`: how many listings the site has
-    used: int  # listings in the median, at most `k`
+    used: int  # listings in the mean, at most `k`
     k: int
     fetched: int  # rows fetched
     dropped: Mapping[str, int]  # reason -> count
@@ -209,7 +210,7 @@ def price_buy_spec(
     refresh_stats: bool = False,
     indexed: str | None = DEFAULT_INDEXED,
 ) -> TradePrice:
-    """Median Chaos price of the `k` cheapest usable listings of `spec`; see the module text.
+    """Mean Chaos price of the `k` cheapest usable listings of `spec`; see the module text.
 
     `price_file` should already carry the overrides (`load_prices`). Raises `NotEnoughListings` when
     fewer than `MIN_LISTINGS` listings are usable, and the `TradeError`s of the client. `indexed` is the
@@ -245,7 +246,7 @@ def price_buy_spec(
     cheapest = sorted(usable)[:k]
     return TradePrice(
         name=spec.name,
-        chaos=float(statistics.median(cheapest)),
+        chaos=float(statistics.fmean(cheapest)),
         league=price_file.league,
         date=now.astimezone(UTC).date(),
         listings=total,
@@ -273,7 +274,7 @@ def within(indexed: str | None) -> str:
 
 def entry_for(price: TradePrice) -> PriceEntry:
     note = (
-        f"median of the {price.used} cheapest of {price.fetched} fetched listings, "
+        f"mean of the {price.used} cheapest instant-buyout listings of {price.fetched} fetched, "
         f"{price.listings} on the site, listed {within(price.indexed)}"
     )
     detail = {

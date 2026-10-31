@@ -37,7 +37,7 @@ def stats_of(body: dict) -> list[dict]:
 
 def test_an_empty_query_has_only_status_empty_stats_and_the_sort():
     assert TradeQuery().body() == {
-        "query": {"status": {"option": "available"}, "stats": [{"type": "and", "filters": []}]},
+        "query": {"status": {"option": "securable"}, "stats": [{"type": "and", "filters": []}]},
         "sort": {"price": "asc"},
     }
 
@@ -292,7 +292,6 @@ def test_build_query_for_the_r12_start_item():
         mirrored=False,
         fractured=True,
         stats=(StatFilter(FRACTURED_LIGHTNING_RES),),
-        indexed="1week",
     )
 
 
