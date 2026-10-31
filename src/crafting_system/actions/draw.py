@@ -1,8 +1,9 @@
-"""The reroll process that a Chaos Orb and a tagged Harvest reforge share, exactly and by sampling.
+"""The reroll process that a Chaos Orb, a tagged Harvest reforge and an essence share, exactly and by sampling.
 
-A reroll keeps the fractured mods, then draws the rest of a total of 4, 5 or 6 mods (8:3:1) from
-the pool one mod at a time. The kept mods count inside the total, so only `total - kept` mods are
-drawn, and none when the kept mods reach it (`KEPT_MODS_COUNT_IN_TOTAL`). A tagged reforge first
+A reroll keeps the fractured mods (an essence also puts its forced mod on the item, which is kept
+too) and removes every other mod, an ordinary crafted one included. It then draws the rest of a
+total of 4, 5 or 6 mods (8:3:1) from the pool one mod at a time. The kept mods count inside the
+total, so only `total - kept` mods are drawn, and none when the kept mods reach it (`KEPT_MODS_COUNT_IN_TOTAL`). A tagged reforge first
 draws one guaranteed mod with its tag, which counts inside the total as well and is drawn whatever
 the total is (`GUARANTEED_MOD_COUNTS_IN_TOTAL`). Every ordinary draw picks one mod from the prefixes
 and suffixes together in proportion to weight; its whole family leaves the pool and its side uses a
@@ -37,6 +38,8 @@ RARE_REROLL_RATIO = get_rule("affix_count.rare_reroll_ratio")
 KEPT_MODS_COUNT_IN_TOTAL = get_rule("chaos_orb.kept_mods_count_in_total")
 DRY_POOL_LEAVES_FEWER_MODS = get_rule("chaos_orb.dry_pool_leaves_fewer_mods")
 RARE_JEWEL_MAX_PER_SIDE = get_rule("affix_count.rare_jewel_max_per_side")
+CHAOS_REMOVES_CRAFTED_MODS = get_rule("chaos_orb.removes_crafted_mods")
+HARVEST_REMOVES_CRAFTED_MODS = get_rule("harvest_reforge.removes_crafted_mods")
 TAG_IS_IMPLICIT_TAG = get_rule("harvest_reforge.tag_is_implicit_tag")
 GUARANTEED_DRAW_FIRST_BY_WEIGHT = get_rule("harvest_reforge.guaranteed_draw_first_by_weight")
 GUARANTEED_MOD_COUNTS_IN_TOTAL = get_rule("harvest_reforge.guaranteed_mod_counts_in_total")
@@ -52,6 +55,8 @@ def refuse_unmodelled(data: GameData, item: Item) -> None:
 
     Called after each action's own checks of rarity and corruption, each of which cites its own claim.
     A rare jewel is out of scope: the 8:3:1 ratio is the claim for regular items, not for jewels.
+    Ordinary crafted mods are not: a reforge removes them (`chaos_orb.removes_crafted_mods`,
+    `harvest_reforge.removes_crafted_mods`, `essence.reforge_removes_crafted_mods`); a metamod is.
     """
     base = data.base_items.get(item.base_id)
     if base is not None and base.item_class in RARE_JEWEL_MAX_PER_SIDE.value["item_classes"]:
@@ -63,9 +68,9 @@ def refuse_unmodelled(data: GameData, item: Item) -> None:
         raise OutOfScopeError(
             "the item has an influence, and the influence tags of the pool are not modelled yet"
         )
-    if item.crafted_mods:
+    if item.metamods(data):
         raise OutOfScopeError(
-            "the item has a crafted mod or metamod; bench mods and metamods are not modelled yet"
+            "the item has a crafted metamod; what a metamod changes about a reroll is not modelled yet"
         )
 
 

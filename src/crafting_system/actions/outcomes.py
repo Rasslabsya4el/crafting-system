@@ -1,6 +1,6 @@
 """The result of an action on a concrete item: the whole distribution of what it can leave behind.
 
-`Outcomes` is what `ChaosOrb.outcomes` and `HarvestReforge.outcomes` return. It is one object with
+`Outcomes` is what `ChaosOrb.outcomes`, `HarvestReforge.outcomes` and `ApplyEssence.outcomes` return. It is one object with
 three ways in: `chance_all` (the chance that the finished item holds given mods), `distribution`
 (the exact distribution of the new mods seen through a caller's label, which is what the compressed
 state of the solver uses) and `sample` (one finished item, drawn at random, with rolled values).
@@ -13,7 +13,7 @@ from fractions import Fraction
 from functools import cached_property
 
 from crafting_system.data import GameData, Mod, conflicts
-from crafting_system.items import ExplicitMod, Item, Side, tier_table
+from crafting_system.items import ExplicitMod, Item, Rarity, Side, tier_table
 
 from crafting_system.rules import get_rule
 
@@ -37,10 +37,13 @@ VALUES_UNIFORM_INTEGERS = get_rule("affix_pool.values_uniform_integers")
 class Outcomes:
     """What a reroll of `retained` can leave behind.
 
-    `retained` is the item before any mod is drawn: the original item with only its fractured mods.
+    `retained` is the item before any mod is drawn: a rare item with only the fractured mods of the
+    original and, for an essence, the forced mod (rolled at its lowest values: `sample` rolls it).
     `pool` is the candidate pool for the draws on it, `totals` the probability of each total number
-    of mods of the finished item (kept mods included) and `tag` the tag of the guaranteed mod of a
-    Harvest reforge, None for a Chaos Orb. Build one with `Outcomes.reroll`.
+    of mods of the finished item (kept mods included), `tag` the tag of the guaranteed mod of a
+    Harvest reforge, None for a Chaos Orb or an essence, and `forced` the id of the forced mod of an
+    essence, None otherwise. The forced mod is a kept mod: it is in `retained`, not in the
+    distribution. Build one with `Outcomes.reroll`.
     """
 
     data: GameData
@@ -48,16 +51,36 @@ class Outcomes:
     pool: tuple[PoolFamily, ...]
     totals: Mapping[int, Fraction]
     tag: str | None
+    forced: str | None = None
 
     @classmethod
-    def reroll(cls, data: GameData, item: Item, tag: str | None) -> "Outcomes":
+    def reroll(
+        cls,
+        data: GameData,
+        item: Item,
+        tag: str | None,
+        *,
+        forced: Mod | None = None,
+        max_level: int | None = None,
+    ) -> "Outcomes":
         """The outcomes of rerolling `item` (already checked to be rerollable), guaranteeing `tag` if given.
 
-        Raises `NotApplicableError` when `tag` is given and the pool holds no mod with it that the
-        retained item has a free family and a free slot for.
+        With `forced`, the mod is put on the retained rare item whatever its level, as a kept mod
+        (the caller has checked that its family is free and its side has a slot), and `max_level`
+        caps the required level of the drawn mods. Raises `NotApplicableError` when `tag` is given
+        and the pool holds no mod with it that the retained item has a free family and a free slot
+        for.
         """
-        retained = item.changed(data, mods=item.fractured_mods)
-        result = cls(data, retained, build_pool(data, retained), total_distribution(), tag)
+        kept = item.fractured_mods
+        if forced is not None:
+            tier = tier_table(data, item.base_id).get(forced.id, 1)
+            low = tuple(min(stat.min, stat.max) for stat in forced.stats)
+            kept = (*kept, ExplicitMod(forced.id, tier, low))
+        retained = item.changed(data, rarity=Rarity.RARE, mods=kept)
+        pool = build_pool(data, retained, max_level)
+        result = cls(
+            data, retained, pool, total_distribution(), tag, None if forced is None else forced.id
+        )
         if tag is not None and not guaranteed_candidates(result.pool, result.free, tag):
             raise NotApplicableError(
                 f"the {tag} reforge cannot be used: the pool holds no {tag} mod "
@@ -125,15 +148,19 @@ class Outcomes:
         drawn = sample_new_mods(
             self.pool, self.free, self.tag, total, len(self.retained.mods), rng, self._float_weights
         )
+        rolled = [entry.mod for entry in drawn]
+        kept = tuple(entry for entry in self.retained.mods if entry.mod_id != self.forced)
+        if self.forced is not None:
+            rolled.insert(0, self.data.mods[self.forced])
         new = tuple(
             ExplicitMod(
-                entry.mod.id,
-                self._tiers[entry.mod.id],
+                mod.id,
+                self._tiers.get(mod.id, 1),
                 tuple(
                     rng.randint(min(stat.min, stat.max), max(stat.min, stat.max))
-                    for stat in entry.mod.stats
+                    for stat in mod.stats
                 ),
             )
-            for entry in drawn
+            for mod in rolled
         )
-        return self.retained.changed(self.data, mods=(*self.retained.mods, *new))
+        return self.retained.changed(self.data, mods=(*kept, *new))

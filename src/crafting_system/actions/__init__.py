@@ -1,26 +1,34 @@
 """Primitives, each with its exact outcome distribution and sampling on a concrete item. May import only: data, rules, items.
 
-Two actions so far, `ChaosOrb()` and `HarvestReforge("lightning")`. Each has one method,
+Three actions so far, `ChaosOrb()`, `HarvestReforge("lightning")` and `ApplyEssence("Shrieking Essence
+of Spite")` (an essence is named as in the game data or by its record id). Each has one method,
 `outcomes(data, item) -> Outcomes`, and `Outcomes` is the whole result.
 
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
-* `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare; it is
+* `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
+  essence: it is magic, or rare and the essence is one of the normal-only levels 1 to 4); it is
   corrupted; for the Harvest reforge, the pool holds no mod with the tag that the item has a free
-  family and a free slot for.
-* `OutOfScopeError`: the item is in a state no admitted rule covers yet: an influence, a crafted mod
-  or metamod, a jewel base (the 8:3:1 ratio is admitted for regular items only), or a pool mod
-  with other than one family. A planner treats the action as unavailable.
-* `HarvestReforge("fire")` raises `ValueError` at construction: only admitted tags exist.
+  family and a free slot for; for an essence, its item class takes no essence, or its forced mod
+  shares a family with a fractured mod.
+* `OutOfScopeError`: the item is in a state no admitted rule covers yet: an influence, a crafted
+  metamod (an ordinary crafted mod is not: a reroll removes it), a jewel base (the 8:3:1 ratio is
+  admitted for regular items only), a pool mod with other than one family; for an essence also
+  Essence of Desolation (not a B1 action) and fractured mods that fill the side of the forced mod.
+  A planner treats the action as unavailable.
+* `HarvestReforge("fire")` raises `ValueError` at construction: only admitted tags exist; an
+  `ApplyEssence` name that is no essence of the data raises it from `outcomes`.
 
-What an `Outcomes` gives, on the item before any mod is drawn (`retained`: the original item with
-only its fractured mods, which stay and count inside the total of 4, 5 or 6 mods):
+What an `Outcomes` gives, on the item before any mod is drawn (`retained`: a rare item with only the
+fractured mods of the original, which stay and count inside the total of 4, 5 or 6 mods, and, for an
+essence, its forced mod, which is on the item above the item level and counts inside the total too;
+a low essence (levels 1 to 4) also caps the required level of the drawn mods):
 
 * `chance_all(mod_ids)`: the exact `Fraction` chance that the finished item holds all of these mods,
   kept or newly drawn, jointly; 0 when two of them share a family; `ValueError` for an unknown id.
 * `distribution(label)`: the exact distribution of the new mods seen through `label`, a pure
   function from a `Mod` to a hashable. An `Outcome` is a frozenset of `(label, how many new mods got
-  it)` pairs; labels with a count of zero are left out and the kept mods are not in it. The
+  it)` pairs; labels with a count of zero are left out and the kept mods (fractured, forced) are not in it. The
   probabilities are `Fraction`s that sum to exactly 1. This is the input of the compressed state.
 * `sample(rng)`: one finished item from a seeded `random.Random`: the same process, with a value
   rolled for every stat and the tier of every drawn mod. Values exist only here; no exact result
@@ -41,12 +49,14 @@ family, with exact `Fraction` weights.
 from .chaos import ChaosOrb
 from .draw import Outcome
 from .errors import ActionError, NotApplicableError, OutOfScopeError
+from .essence import ApplyEssence
 from .harvest import HarvestReforge
 from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool
 
 __all__ = [
     "ActionError",
+    "ApplyEssence",
     "ChaosOrb",
     "HarvestReforge",
     "NotApplicableError",

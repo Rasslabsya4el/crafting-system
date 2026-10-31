@@ -58,11 +58,18 @@ def test_an_influenced_item_is_out_of_scope(action):
 
 
 @pytest.mark.parametrize("action", ACTIONS)
-def test_a_crafted_mod_makes_the_item_out_of_scope(action):
+def test_a_crafted_metamod_makes_the_item_out_of_scope(action):
     item = amulet(roll(CRAFTED, crafted=True))
 
-    with pytest.raises(OutOfScopeError, match="crafted"):
+    with pytest.raises(OutOfScopeError, match="crafted metamod"):
         action.outcomes(DATA, item)
+
+
+@pytest.mark.parametrize("action", ACTIONS)
+def test_an_ordinary_crafted_mod_does_not_make_the_item_out_of_scope(action):
+    item = amulet(roll("JunMaster2AllDamage2_", crafted=True))
+
+    assert action.outcomes(DATA, item).retained.mods == ()
 
 
 @pytest.mark.parametrize("action", ACTIONS)

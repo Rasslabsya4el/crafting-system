@@ -1,0 +1,119 @@
+# Mechanic family: essence (an essence used on a normal or rare item: one guaranteed "forced" mod
+# plus a random fill). Research ticket #8 (claims ESS-xx), the decisions D3, D4 of issue #28 and its
+# Craft of Exile check of 2026-10-30. The rare count 4/5/6 = 8:3:1 is affix_count.rare_reroll_ratio;
+# the draws share affix_pool.* and affix_draw.* with the Chaos Orb.
+rules:
+  - id: essence.forced_mod_by_item_class
+    statement: The forced mod of an essence on an item is the one mod id that `essences.json` gives for the essence record and the item class (no randomness in the choice). A class with no entry takes no essence.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/essences.json
+    quote: 'CurrencyEssenceHatred1: "mods": {"Amulet": "ColdDamagePercentEssence1", "Belt": "ColdResist1", "Body Armour": "ColdResist1"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: essence.dagger_staff_take_class_mods
+    statement: Essences have no entry for the item classes Rune Dagger and Warstaff, and use the entry of the class in `value` instead (Rune Dagger takes the Dagger mods, Warstaff the Staff ones). The key is the item class of the base and the value the item class whose forced mod applies.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
+    quote: "Rune Dagger takes the Dagger essence mods, Warstaff the Staff ones (Essences O-05)."
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+    value: {Rune Dagger: Dagger, Warstaff: Staff}
+
+  - id: essence.normal_item_becomes_rare_like_alchemy
+    statement: An essence used on a normal item makes a rare item with the forced mod and random mods drawn as an Orb of Alchemy does.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Essence#Crafting
+    quote: "All essences can be used to upgrade a piece of normal rarity equipment to rare, similar to an Orb of Alchemy, and apply one guaranteed affix."
+    patch_verified: "3.29.3"
+    date_checked: 2026-10-30
+
+  - id: essence.rare_item_reforged_like_chaos
+    statement: An essence that works on rare items reforges the rare item like a Chaos Orb and guarantees the forced mod.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Essence#Crafting
+    quote: "Essences of tier 5 (Screaming) and above can also be used to reforge the affixes of rare equipment, like a Chaos Orb, with a guaranteed affix."
+    patch_verified: "3.29.3"
+    date_checked: 2026-10-30
+
+  - id: essence.normal_only_up_to_level
+    statement: The essences up to this level (1 Whispering, 2 Muttering, 3 Weeping, 4 Wailing) work on normal items only; the `level` field of the essence record is the tier (5 Screaming, 6 Shrieking, 7 Deafening). Nothing takes a magic item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'CurrencyEssenceHatred1 (and the other records of levels 1-4): "Right click this item then left click a normal item to apply it."'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: 4
+
+  - id: essence.higher_levels_also_reforge_rares
+    statement: The essences of levels 5 to 7 and the four corrupted essences (Hysteria, Insanity, Horror, Delirium; `is_corruption_only` in the record) work on normal and rare items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'CurrencyEssenceRage4 and the records of levels 5-8: "Right click this item then left click a normal or rare item to apply it."'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: essence.low_levels_cap_random_mods
+    statement: An essence of level 1 to 4 limits the random mods to a required level of at most its cap, or at most the item level when that is lower. The cap is the `item_level_restriction` field of the record (35, 45, 60, 75). The forced mod is not subject to it, and the higher essences have no cap.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Essence#Crafting
+    quote: "Low tier essences restrict the pool of random modifiers that can roll when using the essence up to a certain maximum level, if the maximum modifier level is lower than the item's actual item level."
+    patch_verified: "3.29.3"
+    date_checked: 2026-10-30
+
+  - id: essence.forced_mod_counts_in_total
+    statement: The drawn total of 4, 5 or 6 mods (8:3:1, as for a Chaos Orb) includes the forced mod and the fractured mods that stay; only the rest is drawn (decisions D3 and D4 of issue #28). The forced mod is on the item whatever the total is. The same total applies to a normal item.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'case ''essence'': ... poec_simRerollItem("rare",null,[{"mod":usecuressmod,"tier":etier}],null,!1,!1,!1,!1,null,!1,!1,!1,!1)'
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: essence.forced_mod_ignores_item_level
+    statement: The forced mod applies even when its required level is above the item level.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(htilvl<=crsim_settings.ilvl||mod.id_mgroup==11||mod.id_mgroup==13||mod.id_mgroup==10)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: essence.fractured_mods_kept
+    statement: A fractured mod stays on the item through an essence reforge, in its slot (its family then blocks the new draws as any family on the item does, affix_draw.family_exclusion).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Fractured_item#Mechanics
+    quote: "These mods cannot be removed (by Orb of Annulment or Orb of Scouring, etc.) or have its values changed by Divine Orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: essence.refused_on_family_clash_with_fractured
+    statement: An essence is refused, and nothing is consumed, when its forced mod shares a family with a fractured mod on the item.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'if(efail){var errtxt=applyLang("The item already has a mod of this type")'
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: essence.reforge_removes_crafted_mods
+    statement: The reforge of a rare item by an essence removes its ordinary crafted (bench) mods like any other mod that is not fractured; the metamods, which block an essence in the game, are not modelled yet.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Chaos_Orb#Mechanics
+    quote: "they reroll all modifiers (and the number of modifiers) on a rare item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: essence.refused_on_corrupted
+    statement: A corrupted item takes no essence.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: essence.desolation_is_not_a_b1_action
+    statement: Essence of Desolation (record level 0) is not a B1 action, because it has no ordinary source in 3.29 (decision of the main chat, issue #28). `value` is its name in the data.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Essence_of_Desolation
+    quote: "Essence of Desolation is drop disabled."
+    patch_verified: "3.29.3"
+    date_checked: 2026-10-30
+    value: Essence of Desolation
