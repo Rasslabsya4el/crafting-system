@@ -479,3 +479,28 @@ def test_a_chance_per_use_too_small_for_floats_leaves_the_flow_unmeasured_instea
     (step,) = flow.steps
     assert step.uses is None and step.reached == 1.0
     assert [(edge.kind, edge.to) for edge in step.edges] == [("goal", None), ("again", 1)]
+
+
+def line(length: int) -> dict[int, Action]:
+    """A line of states sharing one action and cost: each goes on with 1/2, else to the goal (only the last differs)."""
+    policy = {i: act("same", (i + 1, 1), ("goal", 1)) for i in range(length - 1)}
+    policy[length - 1] = act("same", ("goal", 1))
+    return policy
+
+
+def test_a_line_of_look_alike_states_is_grouped_to_the_end_when_the_work_allows():
+    flow = build_flow(0, line(40), is_goal)
+
+    assert len(flow.steps) == 40  # each state reaches the goal with another chance of going on: all different, none merged
+    assert flow.measured
+
+
+def test_a_grouping_that_needs_too_many_passes_leaves_every_state_its_own_step(monkeypatch):
+    monkeypatch.setattr(_route_flow, "REFINE_WORK", 1_000)
+    policy = line(200)
+
+    flow = build_flow(0, policy, is_goal)
+
+    assert len(flow.steps) == 200 and [step.states for step in flow.steps[:2]] == [(0,), (1,)]
+    assert all(len(step.states) == 1 for step in flow.steps)
+    assert flow.steps[0].uses == pytest.approx(1.0)

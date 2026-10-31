@@ -21,6 +21,9 @@ discovery) says nothing about that. An edge to a step with no action is a miss (
 and so is every edge of a restart (`is_restart`), which goes back to the start.
 
 The inverse is `numpy.linalg.inv`, O(n^3) in the number of steps (not of states) and fast in C.
+The grouping needs about one pass per step along a chain of look-alike states, each pass over all states with
+exact fractions; past `REFINE_WORK` (passes times states) it stops and every state is a step of its own, which
+is a valid grouping too, so a long line of states sharing one action never slows the command.
 Above `MAX_STEPS` steps the chain is not solved: `Flow.measured` is False, `uses` and `reached` are
 None (the first step is reached for sure), and an edge is `forward` when the target is nearer to a
 goal, counted in edges, than the step is. The same happens when the matrix cannot be inverted (a chance
@@ -45,6 +48,7 @@ from crafting_system.solver import Action
 from ._reach import policy_states
 
 MAX_STEPS = 1500  # above this many steps the chain of steps is not solved (see the module docstring)
+REFINE_WORK = 250_000  # passes times states the grouping may take before every state is its own step
 _GOAL = -1  # the target "a goal state" while blocks are numbered from 0
 
 
@@ -207,7 +211,11 @@ def _refine[S: Hashable](
         ]
     )
     count = len(set(block.values()))
+    work = 0
     while True:
+        work += len(states)
+        if work > REFINE_WORK:  # too many passes: the finest grouping (each state alone) is stable as it stands
+            return {state: index for index, state in enumerate(states)}
         keys: list[Hashable] = []
         for state in states:
             into: dict[int, Fraction] = {}

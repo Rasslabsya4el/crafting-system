@@ -114,6 +114,10 @@ def dead_end_on_junk(state, ab):
     return None if len(state.slots) >= 2 else "Chaos Orb"
 
 
+def chaos_at_the_start_only(state, ab):
+    return "Chaos Orb" if not state.slots else None
+
+
 START = belt(FRACTURED_COLD, roll("LifeRegeneration1"))
 LIFE_GOAL = (COLD_REQ, LIFE)
 
@@ -474,6 +478,18 @@ def test_a_step_from_which_no_run_finishes_says_so_without_cost_numbers(two_leaf
     assert row.title.startswith("Restart")
     assert lines_of(row, "Uses on average") == ["never finishes from here"]
     assert "Step cost" not in labels_of(row) and row.cost is None
+    assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"] == "never finishes"
+
+
+def test_a_step_whose_every_exit_is_a_gap_says_it_never_finishes_without_cost_numbers():
+    inp = hand_input(belt(FRACTURED_COLD), (COLD_REQ, HYSTERIA_REQ, LIFE), chaos_at_the_start_only)  # a Chaos Orb cannot give the essence mod
+
+    section = build_section(inp, DATA)
+
+    chaos, gap = section.rows[1], section.rows[-1]
+    assert chaos.title == "Chaos Orb" and gap.title == "No action"
+    assert lines_of(chaos, "Uses on average") == ["never finishes from here"]
+    assert "Step cost" not in labels_of(chaos) and chaos.cost is None
     assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"] == "never finishes"
 
 
