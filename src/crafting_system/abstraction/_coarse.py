@@ -51,7 +51,7 @@ from ._state import CompressedState, Slot
 
 Block = CompressedState
 Bound = Literal["lower", "upper"]
-POOLED = "~"  # a slot kind that starts with this names a pool of families (no family key or mod id does)
+POOLED = "="  # a slot kind that starts with this names a pool of families (no family key, mod id or family type "~n" does)
 
 
 def _slot_key(slot: Slot):
@@ -93,8 +93,8 @@ class Coarsening:
             self._data, Item.build(self._data, base_id=abstraction.base_id, item_level=abstraction.item_level, rarity=Rarity.RARE)
         )
         self._side_of = {family.family: family.side for family in pool}
-        self.told_apart = frozenset(
-            family.family for family in pool if abstraction.kind_of(family.mods[0].mod) != ALIKE
+        self.told_apart = frozenset(  # a family whose kind is its own name (not "" and not a family type "~n")
+            family.family for family in pool if abstraction.kind_of(family.mods[0].mod) == family.family
         )
         self.relevant_families = self._relevant_families()
         self.groups: tuple[frozenset[str], ...] = tuple(frozenset(group) for group in groups)
@@ -166,6 +166,11 @@ class Coarsening:
             )
         if reads.junk and reads.families is None:
             raise OutOfScopeError(f"{self._name(action)} reads every family of the item, so no family can be pooled for it")
+        if reads.pool_weight:
+            raise OutOfScopeError(
+                f"{self._name(action)} adds mods, so its kernel depends on the pool weight of the families held; "
+                "pooling families of different weights changes it, and there is no family-group level for it (ADR-0023)"
+            )
 
     def _name(self, action: Action) -> str:
         try:

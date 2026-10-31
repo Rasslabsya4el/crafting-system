@@ -132,7 +132,7 @@ def test_the_slots_of_pooled_families_get_the_kind_of_their_group_and_the_rest_s
     block = pooling.coarsen(start)
 
     kinds = sorted((slot.side, slot.kind) for slot in block.slots)
-    assert kinds == [(Side.PREFIX, ""), (Side.SUFFIX, COLD), (Side.SUFFIX, "~g0")]  # life merges already, cold is a blocker
+    assert kinds == sorted([(Side.PREFIX, ""), (Side.SUFFIX, COLD), (Side.SUFFIX, "=g0")])  # life merges already, cold is a blocker
     assert pooling.coarsen(block) == block
 
 
@@ -153,7 +153,7 @@ def test_hybrid_junk_fractured_and_hybrid_crafted_mods_are_never_pooled_a_plain_
 
     assert [slot.kind for slot in hybrid.slots if slot.side is Side.SUFFIX] == [f"{COLD}|{MANA}"]
     assert [entry.mod_id for entry in fractured.fractured] != [] and all(not slot.kind.startswith("~") for slot in fractured.slots)
-    assert any(slot.crafted and slot.kind == "~g0" for slot in crafted.slots)  # the mana craft's slot is pooled with mana
+    assert any(slot.crafted and slot.kind == "=g0" for slot in crafted.slots)  # the mana craft's slot is pooled with mana
     assert any(slot.crafted and slot.kind == HYBRID_CRAFT for slot in hybrid_crafted.slots)
 
 
@@ -372,3 +372,23 @@ def test_a_crafted_goal_mod_is_held_exactly_and_its_family_can_still_host_a_plai
         assert set(pooling.members(block)) == states
     for action in OFFERS:
         compare_members(action, ab, pooling, blocks)
+
+
+@dataclasses.dataclass(frozen=True)
+class InvariantAddition(RegalOrb):
+    """An addition that claims block invariance: its kernel follows the pool weight of the families held."""
+
+    def reads(self, data) -> Reads:
+        return Reads.adding(block_invariant=True)
+
+
+def test_an_action_that_adds_mods_and_keeps_the_junk_is_refused_even_if_it_says_it_is_invariant():
+    with pytest.raises(OutOfScopeError, match="pool weight"):
+        Coarsening(abstraction(actions=(*ENABLED, InvariantAddition())), [{MANA, COLD}])
+    pooling = coarsening(None)
+    block = pooling.coarsen(AB.compress(item(roll(MANA_1), roll(LIFE_1))))
+    with pytest.raises(OutOfScopeError, match="pool weight"):
+        pooling.kernel(block, InvariantAddition(), "lower")
+    assert RegalOrb().reads(DATA) == Reads.adding()  # the shipped additions declare it and are refused as undeclared
+    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+        pooling.kernel(block, RegalOrb(), "upper")
