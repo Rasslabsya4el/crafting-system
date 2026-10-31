@@ -143,11 +143,20 @@ def _attractor(bellman: Bellman) -> tuple[list[int], list[int]]:
     """
     size = len(bellman.states)
     astart, tptr, inside = bellman.astart, bellman.tptr, bellman.inside
-    preds: list[list[tuple[int, int]]] = [[] for _ in range(size)]
+    ends = [0] * (size + 1)  # the actions that lead to local state j: leads[ends[j]:ends[j + 1]]
+    for j in inside:
+        ends[j + 1] += 1
+    for j in range(size):
+        ends[j + 1] += ends[j]
+    cursor = ends[:size]
+    leads = array("i", bytes(4 * len(inside)))
+    owner = array("i", bytes(4 * len(bellman.ids)))
     for local in range(size):
         for a in range(astart[local], astart[local + 1]):
+            owner[a] = local
             for j in inside[tptr[a] : tptr[a + 1]]:
-                preds[j].append((local, a))
+                leads[cursor[j]] = a
+                cursor[j] += 1
     policy = [-1] * size
     order = []
     for local in range(size):
@@ -160,7 +169,8 @@ def _attractor(bellman: Bellman) -> tuple[list[int], list[int]]:
     while head < len(order):
         j = order[head]
         head += 1
-        for local, a in preds[j]:
+        for a in leads[ends[j] : ends[j + 1]]:
+            local = owner[a]
             if policy[local] == -1:
                 policy[local] = a
                 order.append(local)
