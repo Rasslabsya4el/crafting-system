@@ -213,8 +213,10 @@ def test_a_failed_stash_overview_warns_and_the_other_categories_finish(ninja, ki
 def old_file_with_stash_prices():
     return PriceFile("Allflame", datetime(2026, 10, 25, tzinfo=UTC), 400.0, {
         "Chaos Orb": PriceEntry(1.0, "poe.ninja"),
-        "Wild Bristle Matron": PriceEntry(7.0, "poe.ninja"),
-        CANONICAL: PriceEntry(9.0, "poe.ninja"),
+        "Wild Bristle Matron": PriceEntry(7.0, "poe.ninja", None, {"category": "Beast"}),
+        CANONICAL: PriceEntry(9.0, "poe.ninja", None, {"category": "BaseType"}),
+        "Vanished Currency": PriceEntry(50.0, "poe.ninja"),
+        "Untagged Beast": PriceEntry(4.0, "poe.ninja"),
         "Old Trade Thing": PriceEntry(3.0, TRADE_SOURCE),
     })
 
@@ -224,7 +226,10 @@ def test_a_failed_beast_overview_keeps_the_old_beast_prices(ninja):
 
     result = fetch_price_file(ninja, NOW, old_price_file=old_file_with_stash_prices())
 
-    assert result.price_file.prices["Wild Bristle Matron"] == PriceEntry(7.0, "poe.ninja")
+    kept = result.price_file.prices["Wild Bristle Matron"]
+    assert kept.chaos == 7.0 and kept.detail == {"category": "Beast"}
+    assert "2026-10-25" in kept.note and "Beast overview failed" in kept.note  # the date of the fetch it comes from
+    assert "Vanished Currency" not in result.price_file.prices and "Untagged Beast" not in result.price_file.prices
     assert CANONICAL not in result.price_file.prices or result.price_file.prices[CANONICAL].chaos != 9.0
     assert "Old Trade Thing" not in result.price_file.prices  # the merge, not the fetch, keeps trade prices
     assert any("Beast" in line and "kept" in line for line in result.warnings)
@@ -235,7 +240,7 @@ def test_a_failed_base_overview_keeps_the_old_base_prices(ninja):
 
     result = fetch_price_file(ninja, NOW, old_price_file=old_file_with_stash_prices())
 
-    assert result.price_file.prices[CANONICAL] == PriceEntry(9.0, "poe.ninja")
+    assert result.price_file.prices[CANONICAL].chaos == 9.0
     assert result.price_file.prices["Wild Bristle Matron"].chaos != 7.0  # the fresh beast overview
     assert any("BaseType" in line and "kept" in line for line in result.warnings)
 
@@ -279,3 +284,25 @@ def test_a_failed_exchange_overview_still_aborts_the_fetch(ninja):
 
     with pytest.raises(SourceError, match="Fossil"):
         fetch_price_file(ninja, NOW)
+
+
+def test_a_second_failure_keeps_the_note_of_the_first_fetch(ninja):
+    ninja.stash_overviews["Beast"] = SourceError("HTTP 500 for Beast")
+    first = fetch_price_file(ninja, NOW, old_price_file=old_file_with_stash_prices()).price_file
+
+    second = fetch_price_file(ninja, NOW + timedelta(days=3), old_price_file=first)
+
+    assert "2026-10-25" in second.price_file.prices["Wild Bristle Matron"].note
+
+
+def test_fetch_names_the_collision_that_stopped_the_old_file_from_loading(tmp_path, ninja, capsys):
+    path = tmp_path / "data" / "prices.json"
+    write_raw(path, {
+        UNORDERED: {"chaos": 5, "source": TRADE_SOURCE},
+        CANONICAL: {"chaos": 6, "source": TRADE_SOURCE},
+    })
+
+    code = main(["fetch"], get_json=ninja, now=NOW, env=cli_env(tmp_path))
+
+    assert code == 0
+    assert any(line.startswith("Warning:") and "same price name" in line for line in capsys.readouterr().out.splitlines())

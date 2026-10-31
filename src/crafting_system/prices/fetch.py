@@ -12,14 +12,14 @@ endpoints are undocumented, so a stage whose source fails prices nothing and the
 """
 
 from collections.abc import Callable, Collection, Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any
 
 from .fallbacks import MIN_COUNT, Context, Gap, Stage, run_stages
 from .http_json import GetJson, SourceError
 from .ninja_history import ninja_history_stage
-from .ninja_items import BASE_TYPE, BEAST, STASH_TYPES, StashLine, parse_stash_overview
+from .ninja_items import BASE_TYPE, STASH_TYPES, StashLine, parse_stash_overview
 from .poe_ninja import BASE_URL, OVERVIEW_TYPES, SOURCE, api_url, history_slug, parse_overview
 from .poe_watch import poe_watch_stage
 from .previous_league import previous_league_stage
@@ -53,7 +53,7 @@ def fetch_price_file(
     The leagues call and every exchange category (Currency, Fossil, Resonator, Essence) must answer with at
     least one usable line, else a `SourceError` is raised and no file is made. A failed stash category
     (Beast, BaseType) does not abort: it warns, its old poe.ninja prices of the same league in
-    `old_price_file` stay (a beast is any old poe.ninja price that is not a base name), and the rest finishes.
+    `old_price_file` stay (tagged with its category by the fetch that wrote it), and the rest finishes.
     `wanted` names that the overviews do not price (or only on a thin line) are walked down `stages`, with
     the 7 days ending on `now`'s UTC date as the window; those still unpriced come back in `missing`.
 
@@ -105,7 +105,7 @@ def fetch_price_file(
             if stash_line.count < MIN_COUNT:
                 thin_stash.setdefault(stash_line.key, stash_line)
             else:
-                prices.setdefault(stash_line.key, PriceEntry(stash_line.chaos, SOURCE))
+                prices.setdefault(stash_line.key, PriceEntry(stash_line.chaos, SOURCE, None, {"category": kind}))
     for kind in failed_stash:
         kept = _kept_stash_prices(old_price_file, league, kind, prices)
         prices.update(kept)
@@ -141,20 +141,21 @@ def _kept_stash_prices(
 ) -> dict[str, PriceEntry]:
     """The poe.ninja prices of `old` (same league) that stand in for the failed stash overview of `kind`.
 
-    The file does not record a price's category: a base is told by its name (`parse_base_price_name`), and
-    a beast is any other poe.ninja price the fresh overviews did not give. A price a fresh overview gave
-    is never replaced.
+    Only a price the earlier fetch tagged with its category (`detail["category"]`) is kept, so a currency
+    that has left the exchange overviews is never taken for a beast; a price from before the tag is
+    dropped. A kept price gets a note with the date of the fetch it comes from (the first one, if kept
+    twice). A price a fresh overview gave is never replaced.
     """
     if old is None or old.league != league:
         return {}
-    return {
-        name: entry
-        for name, entry in sorted(old.prices.items())
-        if entry.source == SOURCE
-        and name not in prices
-        and name not in (CHAOS_ORB, DIVINE_ORB)
-        and (BASE_TYPE if parse_base_price_name(name) is not None else BEAST) == kind
-    }
+    since = f"{old.fetched_at:%Y-%m-%d}"
+    kept = {}
+    for name, entry in sorted(old.prices.items()):
+        if entry.source != SOURCE or name in prices or not entry.detail or entry.detail.get("category") != kind:
+            continue
+        note = entry.note or f"kept from the fetch of {since}: the {kind} overview failed"
+        kept[name] = replace(entry, note=note)
+    return kept
 
 
 def _gap(name: str, thin_exchange: dict[str, str], thin_stash: dict[str, StashLine]) -> Gap:

@@ -235,7 +235,7 @@ def test_a_stage_never_overwrites_a_price_the_overviews_gave(ninja):
 
     prices = result.price_file.prices
     assert prices["Hollow Fossil"] == PriceEntry(206.8, "poe.ninja")
-    assert prices[HUNTER_VISE] == PriceEntry(1262.0, "poe.ninja")
+    assert prices[HUNTER_VISE] == PriceEntry(1262.0, "poe.ninja", None, {"category": "BaseType"})
     assert prices["Chaos Orb"] == PriceEntry(1.0, "poe.ninja")
     assert prices["Zzz"].chaos == 7.0
 
