@@ -348,3 +348,14 @@ def test_an_add_with_the_goal_mod_drawn_gives_it_to_the_status(action):
     if action == RegalOrb():
         open_pool += 1000  # the rare item opens the prefix side too: Energy Shield (Life is on the item)
     assert hit == Fraction(1000) / open_pool
+
+
+def test_a_chaos_orb_still_equals_the_brute_force_while_the_add_orbs_are_enabled():
+    from abstraction_support import check_kernel
+
+    ab = abstraction(actions=(*ORBS, ChaosOrb()))
+    start = belt(roll(FIRE, fractured=True), roll(LIFE), roll(COLD), roll(SHIELD), rarity=Rarity.RARE)
+
+    kernel = check_kernel(ab, start, ChaosOrb(), data=DATA)
+
+    assert all(state.flags.rarity is Rarity.RARE and len(state.fractured) == 1 for state in kernel)
