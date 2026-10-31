@@ -45,7 +45,8 @@ def marking_lines(approximation: Approximation | None, shift: float, divine: flo
         f"Answer: {headline(approximation)}",
         f"  The exact mean cost, the start item included, is between {chaos(approximation.lower)} and {chaos(approximation.upper)} Chaos",
         f"  ({(approximation.lower + shift) / divine:.3g} to {(approximation.upper + shift) / divine:.3g} Divine); the policy below costs no more than the upper figure.",
-        f"  Level: {approximation.level}; {approximation.blocks:,} blocks solved.",
+        f"  Level: {approximation.level}; {approximation.blocks:,} blocks solved"
+        + (f", {approximation.expanded:,} of them exact states expanded by the tail cut." if approximation.expanded else "."),
     ]
     if approximation.message:
         lines.append(f"  {approximation.message}")
@@ -72,6 +73,7 @@ def marking_document(approximation: Approximation | None, shift: float) -> dict:
         "gap": None if math.isinf(approximation.gap) else approximation.gap,
         "level": approximation.level,
         "blocks": approximation.blocks,
+        "expanded": approximation.expanded,
         "tolerance": approximation.tolerance,
         "within_tolerance": approximation.within_tolerance,
         "message": approximation.message,
