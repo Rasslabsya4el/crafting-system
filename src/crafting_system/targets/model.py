@@ -90,7 +90,8 @@ class Target:
 
     `requirements` are all required at once. `start_item` is a fresh normal item of the base, item
     level and influences unless the file gave one. `price_file` is the path as resolved against the
-    target file's folder; it is not read or checked here.
+    target file's folder; it is not read or checked here. `start_price` is the name the start item
+    has in the price file (for example the buy spec's name), or None; it is not looked up here.
     """
 
     base_id: str
@@ -99,6 +100,7 @@ class Target:
     requirements: tuple[Node, ...]
     start_item: Item
     price_file: Path | None = None
+    start_price: str | None = None
 
     def is_met_by(self, item: Item) -> bool:
         """Whether `item` meets every top-level requirement."""

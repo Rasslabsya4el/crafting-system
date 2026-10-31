@@ -18,7 +18,7 @@ from .lines import LineList, LineMap, load_with_lines
 from .model import KOfN, Node, Requirement, Target
 from .resolve import Resolver, Unresolved, close_matches, quoted
 
-TOP_KEYS = ("base", "item_level", "influence", "requirements", "start_item", "price_file")
+TOP_KEYS = ("base", "item_level", "influence", "requirements", "start_item", "start_price", "price_file")
 REQUIREMENT_KEYS = ("family", "stat", "min_tier", "min_roll", "not_crafted")
 GROUP_KEYS = ("at_least", "of")
 START_ITEM_KEYS = ("rarity", "corrupted", "mods")
@@ -98,7 +98,8 @@ class _Reader:
         requirements = self.read_requirements(root["requirements"], "requirements", root.key_lines["requirements"])
         start_item = self.read_start_item(root, base_id, item_level, influences)
         price_file = self.read_price_file(root)
-        return Target(base_id, item_level, influences, requirements, start_item, price_file)
+        start_price = self.text(root, "start_price", "start_price") if "start_price" in root else None
+        return Target(base_id, item_level, influences, requirements, start_item, price_file, start_price)
 
     def read_base(self, root: LineMap) -> str:
         name = self.text(root, "base", "base")
