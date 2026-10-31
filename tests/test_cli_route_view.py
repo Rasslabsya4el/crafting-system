@@ -36,6 +36,7 @@ from crafting_system.actions import HarvestReforge
 from crafting_system.cli import evaluate_route, main, make_plan, parse_route
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._report import build_report
+from crafting_system.cli import _route_flow
 from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
@@ -186,7 +187,7 @@ def test_r12_is_a_buy_and_one_step_that_loops_until_the_gem(r12_plan):
     assert [row.title for row in section.rows] == ["Buy R12 start amulet", "Harvest Reforge Lightning"]
     assert labels_of(buy) == ["Accepts", "Cost per use"]
     assert lines_of(buy, "Cost per use") == ["4 c"]
-    assert labels_of(reforge) == ["Goal", "Chance per use", "Cost per use", "Uses on average", "Step cost", "On failure"]
+    assert labels_of(reforge) == ["Goal", "Accepts", "Chance per use", "Cost per use", "Uses on average", "Step cost", "On failure"]
     assert lines_of(reforge, "Goal") == [GEM_TEXT]
     (chance,) = lines_of(reforge, "Chance per use")
     assert float(chance.strip("≈%")) / 100 == pytest.approx(q, rel=0.06)
@@ -344,9 +345,53 @@ def test_a_policy_taking_one_action_in_look_alike_states_is_one_row_and_two_acti
 
     assert [row.title for row in one.rows] == [f"Buy {START_NAME}", "Chaos Orb"]
     assert [row.title for row in two.rows] == [f"Buy {START_NAME}", "Essence of Hysteria", "Chaos Orb"]
-    chances = [field for field in two.rows[1].fields if field.label == "Chance per use"][0]
-    assert [line.text.split(":")[0] for line in chances.lines] == ["the target", "the item of step 3"]
-    assert [line.href for line in chances.lines] == [None, "#s3"]  # the outcome that leads to the other row links to it
+
+
+def test_a_miss_into_a_later_numbered_row_reads_under_on_failure_with_its_chance_not_as_a_chance_per_use():
+    section = build_section(INPUTS["branch"](), DATA)  # the essence gives life 84% of the time, else the item goes on to the Chaos Orb step
+
+    essence = section.rows[1]
+    assert lines_of(essence, "Chance per use") == ["≈84%"]
+    failure = [field for field in essence.fields if field.label == "On failure"][0]
+    assert failure.tone == "warn"
+    assert [(line.text, line.href, line.anchor) for line in failure.lines] == [("the item of step 3 (≈16%)", "#s3", "")]
+
+
+def test_a_craft_step_with_several_outcomes_says_what_it_accepts_and_a_sure_one_does_not():
+    branch = build_section(INPUTS["branch"](), DATA)
+    bench = build_section(INPUTS["bench"](), DATA)
+
+    essence, chaos = branch.rows[1], branch.rows[2]
+    assert labels_of(essence)[:3] == ["Goal", "Accepts", "Chance per use"]  # between the goal and the chances
+    assert lines_of(essence, "Accepts") == ["4 or 5 mods", "other mods: any"]
+    assert lines_of(chaos, "Accepts") == ["4 or 5 mods", "other mods: any"]
+    assert all("Accepts" not in labels_of(row) for row in bench.rows[1:])  # a bench craft has one outcome
+
+
+def test_the_route_field_of_the_goal_card_is_left_out_when_the_page_has_a_heading_with_it():
+    one = build_section(INPUTS["branch"](), DATA)
+    stacked = build_section(INPUTS["branch"](), DATA, route_field=False)
+
+    assert [field.label for field in one.goal.fields][0] == "Route"
+    assert "Route" not in [field.label for field in stacked.goal.fields]
+
+
+def test_the_command_with_a_route_does_not_repeat_the_route_name_in_the_goal_card(tmp_path):
+    code, out = run_command(tmp_path, "--route", str(ROUTE))
+
+    html = (out.parent / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
+    assert code == 0 and ">Route<" not in html
+
+
+def test_above_the_cap_the_rows_have_no_uses_or_step_costs_and_the_goal_card_says_so(monkeypatch):
+    monkeypatch.setattr(_route_flow, "MAX_STEPS", 1)
+
+    section = build_section(INPUTS["branch"](), DATA)
+
+    assert all("Uses on average" not in labels_of(row) and "Step cost" not in labels_of(row) for row in section.rows)
+    assert lines_of(section.rows[1], "Cost per use") == ["1 × Essence of Hysteria 3 c"]
+    note = [field for field in section.goal.fields if field.label == "Note"][0]
+    assert note.lines[0].text == "more than 1 steps: how often a step is used and what it costs are left out"
 
 
 @pytest.mark.parametrize("name", INPUTS)

@@ -8,6 +8,7 @@ from fractions import Fraction
 import pytest
 
 from crafting_system.cli._reach import policy_states, reach_probabilities
+from crafting_system.cli import _route_flow
 from crafting_system.cli._route_flow import Edge, Flow, Step, build_flow
 from crafting_system.risk import evaluate
 from crafting_system.solver import Action, Outcome
@@ -64,7 +65,7 @@ def test_a_chain_of_two_states_with_the_same_action_but_different_successors_is_
     flow = build_flow("A", policy, is_goal)
 
     assert [step.states for step in flow.steps] == [("A",), ("B",)]
-    assert [(edge.kind, edge.to) for edge in flow.steps[0].edges] == [("next", 2)]
+    assert [(edge.kind, edge.to) for edge in flow.steps[0].edges] == [("forward", 2)]
     assert [(edge.kind, edge.to) for edge in flow.steps[1].edges] == [("goal", None)]
     assert [step.uses for step in flow.steps] == [pytest.approx(1.0), pytest.approx(1.0)]
 
@@ -95,7 +96,7 @@ def test_states_with_the_same_label_and_the_same_chances_into_the_same_successor
     assert flow.step_of["A"] == flow.step_of["B"]
     shared = step_with(flow, "A")
     assert shared.states == ("A", "B")  # breadth-first order
-    assert [edge.kind for edge in shared.edges] == ["goal", "next"]
+    assert [edge.kind for edge in shared.edges] == ["goal", "miss"]  # the dead end is a miss, not progress
     assert shared.edges[1].states == ("dead",)
     assert shared.uses == pytest.approx(1.0)  # one use, shared by the two states
     assert shared.reached == pytest.approx(1.0)
@@ -146,7 +147,7 @@ def test_a_dead_end_state_is_a_step_with_no_action_and_its_reason():
     assert stuck.uses is None
     assert stuck.states == ("stuck", "gap")  # the same reason: one step
     assert stuck.reached == pytest.approx(0.75)
-    assert [(edge.kind, edge.to) for edge in flow.steps[0].edges] == [("goal", None), ("next", 2)]
+    assert [(edge.kind, edge.to) for edge in flow.steps[0].edges] == [("goal", None), ("miss", 2)]
 
 
 def test_dead_ends_with_different_reasons_are_different_steps():
@@ -174,7 +175,7 @@ def test_a_start_with_no_action_is_one_step_reached_for_sure():
     assert (step.action, step.uses, step.reached, step.edges) == (None, None, 1.0, ())
 
 
-def test_edges_are_back_again_and_next_by_step_number_with_the_goal_first():
+def test_edges_are_miss_again_and_forward_with_the_goal_first():
     policy = {
         "A": act("a", ("B", 1)),
         "B": act("b", ("A", 1), ("B", 1), ("C", 1), ("goal", 1)),
@@ -184,7 +185,7 @@ def test_edges_are_back_again_and_next_by_step_number_with_the_goal_first():
     flow = build_flow("A", policy, is_goal)
 
     b = step_with(flow, "B")
-    assert [(edge.kind, edge.to) for edge in b.edges] == [("goal", None), ("back", 1), ("again", 2), ("next", 3)]
+    assert [(edge.kind, edge.to) for edge in b.edges] == [("goal", None), ("miss", 1), ("again", 2), ("forward", 3)]
     assert math.fsum(edge.chance for edge in b.edges) == pytest.approx(1.0)
 
 
@@ -366,3 +367,104 @@ def test_uses_times_cost_is_the_mean_cost_on_random_policies_that_always_finish(
         assert total == pytest.approx(risk.mean.value, rel=1e-6)
         checked += 1
     assert checked >= 20
+
+
+def test_a_miss_into_a_later_numbered_step_is_a_miss_not_a_forward_edge():
+    # S is step 1, W (worse) is met before G (good) breadth-first, so W is step 2 and G step 3. W is dear to finish.
+    policy = {
+        "S": act("s", ("W", 3), ("G", 1)),
+        "W": act("w", ("goal", 1), cost=20.0),
+        "G": act("g", ("goal", 1)),
+    }
+
+    flow = build_flow("S", policy, is_goal)
+
+    start = flow.steps[0]
+    assert flow.step_of["W"] < flow.step_of["G"]
+    assert [(edge.kind, edge.to) for edge in start.edges] == [("miss", 2), ("forward", 3)]
+    assert edge_to(start, flow.step_of["W"]).chance == pytest.approx(0.75)
+
+
+def test_an_edge_into_an_earlier_numbered_step_is_forward_when_that_step_is_nearer_the_goal():
+    policy = {
+        "S": act("s", ("A", 1), ("B", 1)),
+        "A": act("a", ("goal", 1)),
+        "B": act("b", ("A", 1)),  # A is numbered before B
+    }
+
+    flow = build_flow("S", policy, is_goal)
+
+    assert flow.step_of["A"] < flow.step_of["B"]
+    assert [(edge.kind, edge.to) for edge in step_with(flow, "B").edges] == [("forward", flow.step_of["A"])]
+    # S: the item is expected to be 1.5 c from the goal after the use; A is 1 c away, B 2 c
+    assert edge_to(flow.steps[0], flow.step_of["A"]).kind == "forward"
+    assert edge_to(flow.steps[0], flow.step_of["B"]).kind == "miss"
+
+
+def test_every_edge_of_a_restart_is_a_miss():
+    policy = {
+        "S": act("go", ("X", 1), ("goal", 1), cost=1.0),
+        "X": act("restart", ("S", 1), cost=1.0),
+    }
+
+    flow = build_flow("S", policy, is_goal, is_restart=lambda action: action.label == "restart")
+    plain = build_flow("S", policy, is_goal)
+
+    assert [edge.kind for edge in step_with(flow, "X").edges] == ["miss"]
+    assert [edge.kind for edge in step_with(plain, "X").edges] == ["forward"]  # cheaper to finish from the start
+
+
+def test_a_step_whose_every_way_out_ends_in_a_step_with_no_action_never_finishes():
+    policy = {"S": act("s", ("A", 1)), "A": act("a", ("gap", 1)), "T": act("t", ("goal", 1))}
+
+    flow = build_flow("S", policy, is_goal, {"gap": "no rule matches this state"})
+
+    assert [step.uses for step in flow.steps[:2]] == [math.inf, math.inf]
+    assert flow.steps[0].reached == 1.0 and flow.steps[1].reached is None
+
+
+def test_a_step_that_can_reach_the_goal_and_a_gap_keeps_its_finite_uses():
+    policy = {"S": act("s", ("goal", 1), ("gap", 1))}
+
+    (start, _gap) = build_flow("S", policy, is_goal).steps
+
+    assert start.uses == pytest.approx(1.0)
+
+
+def chain(length: int) -> dict[int, Action]:
+    """A line of `length` states, each its own step (its own action), the last one reaching the goal; a miss goes back to 0."""
+    policy = {i: act(f"a{i}", (i + 1, 99), (0, 1), cost=1.0 + i / 7) for i in range(length - 1)}
+    policy[length - 1] = act(f"a{length - 1}", ("goal", 1), (0, 1))
+    return policy
+
+
+def test_a_chain_of_many_steps_is_solved_and_its_misses_go_back_to_the_start():
+    policy = chain(300)
+
+    flow = build_flow(0, policy, is_goal)
+
+    assert len(flow.steps) == 300 and flow.measured
+    first = flow.steps[0]
+    assert [(edge.kind, edge.to) for edge in first.edges] == [("again", 1), ("forward", 2)]
+
+
+def test_the_uses_of_a_chain_of_steps_add_up_to_the_mean_cost():
+    policy = chain(40)
+
+    flow = build_flow(0, policy, is_goal)
+
+    assert sum(step.uses * step.action.cost for step in flow.steps) == pytest.approx(evaluate(policy, 0, is_goal).mean.value)
+
+
+def test_above_the_cap_the_chain_is_not_solved_and_the_edges_are_told_by_the_distance_to_the_goal(monkeypatch):
+    monkeypatch.setattr(_route_flow, "MAX_STEPS", 50)
+    policy = chain(80)
+
+    flow = build_flow(0, policy, is_goal)
+
+    assert not flow.measured and len(flow.steps) == 80
+    assert flow.steps[0].reached == 1.0
+    assert all(step.uses is None and step.reached is None for step in flow.steps[1:])
+    assert [edge.kind for edge in step_with(flow, 3).edges] == ["miss", "forward"]
+    assert [edge.kind for edge in step_with(flow, 79).edges] == ["goal", "miss"]
+    assert flow.steps[0].edges[0].kind == "again" and flow.steps[0].edges[1].kind == "forward"

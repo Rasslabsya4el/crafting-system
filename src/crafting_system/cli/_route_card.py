@@ -311,6 +311,8 @@ class _StateReader:
         self.tiers = tier_table(self.data, abstraction.base_id)
         self.tracked = tracks_junk(abstraction)
         self._leaves: dict[int, tuple[Side, str, str]] = {}
+        self._fractured: dict[tuple[str, tuple[Status, ...]], tuple[Side, Slot]] = {}
+        self._families: dict[tuple[Side, str], Slot] = {}
 
     def leaf(self, index: int) -> tuple[Side, str, str]:
         """The side, text and tier note of the goal leaf number `index`."""
@@ -330,6 +332,12 @@ class _StateReader:
 
     def fractured(self, mod_id: str, contribution: tuple[Status, ...]) -> tuple[Side, Slot]:
         """A fractured mod stands for every tier of its families, side and domain that gives the same contribution."""
+        key = (mod_id, contribution)
+        if key not in self._fractured:
+            self._fractured[key] = self._fractured_row(mod_id, contribution)
+        return self._fractured[key]
+
+    def _fractured_row(self, mod_id: str, contribution: tuple[Status, ...]) -> tuple[Side, Slot]:
         mod = self.data.mods[mod_id]
         stands_for = [
             other.id
@@ -338,7 +346,14 @@ class _StateReader:
             and other.id in self.tiers
             and self.ab._drawn_contribution(other) == contribution
         ]
-        text = mod_text(mod) if len(stands_for) < 2 else _hashes(mod_text(mod))
+        if len(stands_for) < 2:
+            if stands_for and mod_id not in stands_for:  # the state names another mod of the class (an essence-only one, say)
+                mod = self.data.mods[stands_for[0]]
+            text = mod_text(mod)
+        else:  # the texts of the tiers, as the target card writes a leaf drawn from several mods
+            stands_for.sort(key=lambda other: (self.tiers[other], other))
+            mod = self.data.mods[stands_for[0]]
+            text = " or ".join(dict.fromkeys(_hashes(_own_text(self.data.mods[other])) for other in stands_for))
         tone: Tone = "wanted" if Status.PASSING in contribution else "mod"
         return Side(mod.generation_type), Slot(text, tone, ("fractured", *_marks(mod)), _tiers_note(len(stands_for)))
 
@@ -348,6 +363,12 @@ class _StateReader:
 
     def family(self, slot: StateSlot) -> Slot:
         """A slot of a family told apart: a mod of that family on its side, with the tiers it can have."""
+        key = (slot.side, slot.kind)
+        if key not in self._families:
+            self._families[key] = self._family_row(slot)
+        return self._families[key]
+
+    def _family_row(self, slot: StateSlot) -> Slot:
         family = [
             mod
             for mod_id, mod in self.data.mods.items()
@@ -360,7 +381,8 @@ class _StateReader:
         ordered = sorted(family, key=lambda mod: (self.tiers[mod.id], mod.id))
         if len(ordered) == 1:
             return Slot(mod_text(ordered[0]), "mod", _marks(ordered[0]))
-        return Slot(_hashes(mod_text(ordered[0])), "mod", _marks(ordered[0]), _tiers_note(len(ordered)))
+        text = " or ".join(dict.fromkeys(_hashes(_own_text(mod)) for mod in ordered))
+        return Slot(text, "mod", _marks(ordered[0]), _tiers_note(len(ordered)))
 
     def read(self, state: CompressedState) -> _Rows:
         if len(state.status) != len(self.ab.goal.leaves):
@@ -435,14 +457,15 @@ def _join_properties(states: Sequence[CompressedState], item_level: int) -> tupl
     return _properties(rarity, item_level, influences, shown)
 
 
-def card_of_states(abstraction, states: Sequence[CompressedState]) -> ItemCard:
+def card_of_states(abstraction, states: Sequence[CompressedState], reader: _StateReader | None = None) -> ItemCard:
     """The item after a step: the join of the compressed `states` it can be in (see the module docstring).
 
+    `reader` is the `_StateReader` of `abstraction` when the caller draws many cards (it keeps what it looked up).
     Raises `ValueError` for no state, and for a state that belongs to another goal.
     """
     if not states:
         raise ValueError("a card needs at least one state")
-    reader = _StateReader(abstraction)
+    reader = reader or _StateReader(abstraction)
     data, base_id = reader.data, abstraction.base_id
     read = [reader.read(state) for state in states]
     only_normal = all(state.flags.rarity is Rarity.NORMAL for state in states)
