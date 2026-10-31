@@ -17,7 +17,12 @@ rules:
     date_checked: 2026-10-31
 
   - id: catalyst.source_ultimatum_only
-    statement: Since 3.29.0 Ultimatum is the only source of catalysts and a stack holds 20; they are bought, not made, in a plan.
+    statement: >-
+      Since 3.29.0 Ultimatum is the only source of catalysts as drops and rewards (a stack holds 20).
+      Catalysts can also be obtained from the divination card The Finishing Touch (1x Fertile
+      Catalyst) and from three vendor recipes (3 catalysts of one type for 1 random catalyst; 1
+      normal jewellery with 20% quality for a matching catalyst; jewellery with a total of at least
+      40% of one quality type for a catalyst); none is modelled in B2.
     source_kind: official
     url: https://www.poewiki.net/wiki/Version_3.29.0
     quote: "Ultimatum is now the exclusive source of Catalysts."
@@ -57,7 +62,15 @@ rules:
     date_checked: 2026-10-31
 
   - id: catalyst.rounding_floor
-    statement: A catalyst-scaled value is the stored integer stat value times (100 + quality) / 100, rounded down; in integer arithmetic scaled = (v * (100 + q)) // 100 on the repoe stat integer. A displayed target N at quality q needs a stored roll v >= ceil(100 * N / (100 + q)). (Floor versus nearest is not separated by the one GGG example, open O-08.)
+    statement: >-
+      A catalyst-scaled value is the stat's stored integer times (100 + quality) / 100, rounded down
+      in the stored unit; in integer arithmetic scaled = (v * (100 + q)) // 100. For stats whose
+      displayed value is the stored integer (the large majority of ring, amulet and belt modifiers)
+      a displayed target N at quality q needs a stored roll v >= ceil(100 * N / (100 + q)). That
+      threshold does NOT carry over to stats displayed in another unit: flat life regeneration
+      (stored per minute, shown per second, the GGG example), percent life regeneration and the
+      leech modifiers (stored in ten-thousandths) round in the stored unit and are then displayed
+      converted. Floor versus nearest is not separated by the one GGG example (open O-08).
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "function poec_simApplyCatMod(val,mod){if(mod!=1){if(val-Math.floor(val)!=0){return Math.floor(((val*100)*mod))/100}else{return Math.floor(val*mod)}}else{return val}}"
@@ -65,7 +78,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: catalyst.rounding_example_ggg
-    statement: GGG's example of a catalyst-scaled life regeneration roll - the stored value is an integer, the scaled value is stored rounded down (20997 x 1.2 = 25196.4 stored as 25196).
+    statement: GGG's example of a catalyst-scaled life regeneration roll - the stat is stored per minute as an integer, the scaled value is stored rounded down (20997 x 1.2 = 25196.4 stored as 25196) and only then divided by 60 for display (419.9). Shows that the rounding happens in the stored unit; its fraction (.4) does not separate floor from nearest.
     source_kind: official
     url: https://devtrackers.gg/pathofexile/p/c038cd2a-ggg-help-please-catalyst-no-worky-on-immortal-flesh
     quote: "With the quality modifier, the base roll of 20997 becomes 25196.4, which rounds down to 25196 as the stored value."
@@ -73,7 +86,17 @@ rules:
     date_checked: 2026-10-31
 
   - id: catalyst.match_by_implicit_tags
-    statement: Which modifiers a regular catalyst boosts is decided by the modifier's implicit_tags - Abrasive attack; Accelerating speed; Fertile resource; Imbued caster; Intrinsic attribute; Noxious physical_damage or chaos_damage; Prismatic resistance; Tempering defences; Turbulent elemental_damage; Unstable critical. A modifier counts once however many tags match, and may match two catalyst types. On the 312 ordinary ring/amulet/belt modifier records of 3.29.3.3, PoEDB's tag list and Path of Building's tag list pick exactly the same records for all ten catalysts.
+    statement: >-
+      Which modifiers a regular catalyst boosts is decided by the modifier's implicit_tags -
+      Abrasive attack; Accelerating speed; Fertile resource; Imbued caster; Intrinsic attribute;
+      Noxious physical_damage or chaos_damage; Prismatic resistance; Tempering defences; Turbulent
+      elemental_damage; Unstable critical. The quote is one row of PoEDB's Catalyst tags table, a
+      third-party reading of the game data (not GGG text and not the repoe export); Path of
+      Building's catalystTags and Craft of Exile's catalyst data agree. A modifier counts once
+      however many tags match and may match two catalyst types. On the 316 ordinary ring, amulet
+      and belt modifier records of 3.29.3.3 (spawn weight above zero on any of the three), PoEDB's
+      tag list and Path of Building's tag list pick exactly the same records for all ten catalysts
+      (census script in the branch).
     source_kind: datamined
     url: https://poedb.tw/us/Catalyst
     quote: "Fertile Catalyst resource"

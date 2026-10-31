@@ -1,7 +1,15 @@
-# Mechanic family: omen_of_fortune. Research ticket #89, CHA-07.
+# Mechanic family: omen_of_fortune. Research ticket #89, CHA-07. Under the owner's rule (a unique is a failure) the Omen has no use and is not an action; that is a design choice, not a claim.
 rules:
   - id: omen_of_fortune.forces_unique
-    statement: The Omen of Fortune makes the next Orb of Chance on an item that can become unique produce a unique, and is not consumed when the base has none; under the owner's rule (a unique is a failure) it has no use and is not an action.
+    statement: The Omen of Fortune is consumed when an Orb of Chance is used on an item that can become unique, to make it unique.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Will be Consumed when you use an Orb of Chance\non an item which can become Unique to ensure it does so"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: omen_of_fortune.kept_when_no_unique_exists
+    statement: The Omen of Fortune is not consumed when the base has no unique that the Orb of Chance could make.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Omen_of_Fortune#Mechanics
     quote: "If no uniques exist for the basetype, it will not consume the Omen."

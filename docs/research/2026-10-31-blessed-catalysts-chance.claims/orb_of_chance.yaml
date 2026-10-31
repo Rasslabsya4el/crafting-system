@@ -17,10 +17,10 @@ rules:
     date_checked: 2026-10-31
 
   - id: orb_of_chance.no_unique_from_special_items
-    statement: Fractured items, synthesised items, items with an Eldritch implicit and items with a Runesmithing enchantment cannot become unique, so an Orb of Chance on them gives magic or rare only.
+    statement: Synthesised items, fractured items, items with an Eldritch implicit and items with a Runesmithing enchantment cannot be turned into a unique item, so an Orb of Chance on them gives magic or rare only.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics
-    quote: "Synthesised items and fractured items cannot be turned into a unique item."
+    quote: "Synthesised items and fractured items cannot be turned into a unique item. Items with Eldritch implicit modifiers or a Runesmithing enchantment also cannot be turned into a unique item."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -35,16 +35,4 @@ rules:
     url: https://www.poewiki.net/wiki/Orb_of_Chance#Mechanics
     quote: "The chance for an Orb of Chance to hit a unique item depends on its unique item tier"
     patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: orb_of_chance.unique_needs_eligible_unique_on_base
-    statement: >-
-      A staff statement from 2013-08-01 (written in the 0.10.7 to 1.0.0g era, the wiki repeats it
-      for the current game; not re-tested on 3.29.3.3): an Orb of Chance has no flat chance of a
-      unique; the chance depends on which uniques exist on that base type and how common they are,
-      and where the unique roll finds none the result is a rare or magic item instead.
-    source_kind: official
-    url: https://web.archive.org/web/2021/https://www.pathofexile.com/forum/view-thread/485201/filter-account-type/staff
-    quote: "They do not have a flat chance to obtain a unique, regardless of how \"rare\" that unique is supposed to be."
-    patch_verified: "0.10.7"
     date_checked: 2026-10-31
