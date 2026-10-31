@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
-from crafting_system.actions import ActionError
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
@@ -21,6 +20,9 @@ from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
+from ._prune import solver_actions
+
+MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
 
 
 class PlanError(ValueError):
@@ -87,15 +89,7 @@ class _Model:
         return self.abstraction.is_goal(state)
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
-        found = []
-        for priced in self.offers:
-            if priced.label == RESTART and state == self.start:
-                continue
-            try:
-                found.append(offer_action(self.abstraction, priced, state, self.start))
-            except ActionError:  # the game refuses it here, or no admitted rule covers it
-                continue
-        return found
+        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL)
 
 
 def offer_action(
