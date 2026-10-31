@@ -30,10 +30,8 @@ from collections import defaultdict
 from fractions import Fraction
 
 from abstraction_pool import (
-    COLD_GEM,
     COLD_RESIST,
     DAMAGE_1,
-    FIRE_GEM,
     FIRE_RESIST,
     GEM,
     LEVEL,
@@ -45,14 +43,16 @@ from abstraction_pool import (
     RESIST_2,
     RESISTS,
 )
+from coarse_support import blocks_of, compare_members, concrete_items
 from items_support import AMULET, DATA
 
-from crafting_system.abstraction import Abstraction, Goal, Wanted
+from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
 from crafting_system.actions import (
     Action,
     ActionError,
     Adds,
     Fixed,
+    OutOfScopeError,
     Reads,
     kinds,
 )
@@ -60,6 +60,11 @@ from crafting_system.data import BaseItem
 from crafting_system.cli._offers import offer_of, price_offers
 from crafting_system.items import ExplicitMod, Item, Metamod, Rarity, tier_table
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
+
+
+ORDINARY_CRAFT = "EinharMasterWeaponElementalDamage1_"  # an ordinary crafted mod of the fixture, copied for the extra crafts
+COLD_CRAFT, FIRE_CRAFT, DAMAGE_CRAFT = "ContractCraftCold", "ContractCraftFire", "ContractCraftLightningDamage"
+HYBRID_JUNK = "ContractJunkColdAndMana"  # a suffix mod of two families that no pool draws
 
 
 def _fixture_data():
@@ -89,7 +94,26 @@ def _fixture_data():
         crafted = mods.get(option.actions.add_explicit_mod or "")
         if crafted is not None and crafted.generation_type in ("prefix", "suffix") and crafted.stats and not metamods & set(crafted.families):
             mods[crafted.id] = dataclasses.replace(crafted, families=mods[MANA_1].families)
-    return dataclasses.replace(DATA, mods=mods, base_items=bases)
+    # crafts that clash with more of the pool, so that several families are told apart and can be pooled
+    # (ticket #125): a cold and a fire resistance craft (suffixes), a lightning damage craft (a prefix); and a
+    # hybrid junk mod of two families that nothing draws, which the pooling must keep apart
+    options = list(DATA.bench_options)
+    template = next(option for option in options if option.actions.add_explicit_mod == ORDINARY_CRAFT)
+    for mod_id, side, source in ((COLD_CRAFT, "suffix", COLD_RESIST), (FIRE_CRAFT, "suffix", FIRE_RESIST), (DAMAGE_CRAFT, "prefix", DAMAGE_1)):
+        mods[mod_id] = dataclasses.replace(
+            mods[ORDINARY_CRAFT], id=mod_id, type=mod_id, text=f"Test {mod_id}", families=mods[source].families, generation_type=side
+        )
+        options.append(dataclasses.replace(template, actions=dataclasses.replace(template.actions, add_explicit_mod=mod_id)))
+    mods[HYBRID_JUNK] = dataclasses.replace(
+        mods[COLD_RESIST], id=HYBRID_JUNK, families=(*mods[COLD_RESIST].families, *mods[MANA_1].families), spawn_weights=(), generation_weights=()
+    )
+    for option in options:
+        for entry in option.cost:
+            bases.setdefault(
+                entry.item_id,
+                BaseItem(entry.item_id, entry.item_id.rsplit("/", 1)[-1], "StackableCurrency", "currency", 1, (), (), "released"),
+            )
+    return dataclasses.replace(DATA, mods=mods, base_items=bases, bench_options=tuple(options))
 
 
 CONTRACT_DATA = _fixture_data()
@@ -301,60 +325,64 @@ def check_resources_are_priced(action, item: Item, data) -> None:
 # --- block invariance ----------------------------------------------------------------------------
 
 
-def fixture_blocks() -> list[list[Item]]:
-    """Groups of items that differ only in a junk mod of a family no requirement of `GOAL` cares about.
+_WORLDS: dict = {}
+_COMPARED: dict = {}  # a kind is compared once however many fixture items list it
 
-    A coarse state pools these families, so the members of a group are the members of one block.
+
+def _coarse_world(data, goal: Goal, extra: Action | None):
+    """The exact abstraction (the catalog's crafts and Remove Crafted Mods enabled, and `extra` when it reads the junk),
+    the coarsenings under test, and the blocks of the fixture items with their exact states (the brute force)."""
+    crafts = [action for entry in kinds() if entry.name in ("bench-craft", "remove-crafted-mods") for action in entry.members(data, _item(Rarity.RARE, _roll(LIFE_1)))]
+    enabled = tuple(dict.fromkeys([*crafts, *([extra] if extra is not None else [])]))
+    key = (id(data), goal, enabled)
+    if key not in _WORLDS:
+        ab = Abstraction(data, goal, AMULET, LEVEL, enabled)
+        coarsenings = [Coarsening.pooling_irrelevant(ab), Coarsening.pooling_irrelevant(ab, 2)]
+        ordinary = [MANA_1, COLD_RESIST, FIRE_RESIST, HYBRID_JUNK, DAMAGE_1, RESIST_2, LIFE_1]
+        items = list(concrete_items(data, ordinary, crafted=[COLD_CRAFT, _ordinary_crafted_mod()], largest=4, rarities=(Rarity.RARE, Rarity.MAGIC)))
+        _WORLDS[key] = (ab, [(c, blocks_of(ab, c, items)) for c in coarsenings])
+    return _WORLDS[key]
+
+
+def fixture_blocks(data=CONTRACT_DATA, goal: Goal = GOAL) -> list[dict]:
+    """The blocks of the fixture items under each coarsening of the contract suite: `{block: exact states}`, found by brute force.
+
+    The items hold up to four mods drawn from the pooled families, a goal-relevant family and a hybrid junk
+    mod, with at most one fractured and one crafted mod, so a full prefix side and a full suffix side are
+    among them.
     """
-    blocks: list[list[Item]] = []
-    for suffixes in ((MANA_1, COLD_RESIST, FIRE_RESIST), (COLD_RESIST, FIRE_RESIST)):
-        blocks.append([_item(Rarity.RARE, _roll(RESIST_2), _roll(junk)) for junk in suffixes])
-        blocks.append([_item(Rarity.RARE, _roll(RESIST_1, fractured=True), _roll(junk)) for junk in suffixes])
-        blocks.append([_item(Rarity.MAGIC, _roll(junk)) for junk in suffixes])
-    blocks.append([_item(Rarity.RARE, _roll(RESIST_2), _roll(junk)) for junk in (DAMAGE_1, FIRE_GEM, COLD_GEM)])
-    crafted = _ordinary_crafted_mod()
-    if crafted is not None:
-        blocks.append(
-            [_item(Rarity.RARE, _roll(crafted, crafted=True), _roll(junk)) for junk in (COLD_RESIST, FIRE_RESIST)]
-        )
-    return blocks
-
-
-class _Pooled:
-    """Stands for the pooling of junk families in an `Abstraction`: it reads the count of the junk and no family."""
-
-    def __init__(self, junk: bool):
-        self.junk = junk
-
-    def reads(self, data) -> Reads:
-        return Reads(junk=self.junk, families=frozenset())
+    return [blocks for _, blocks in _coarse_world(data, goal, None)[1]]
 
 
 def check_block_invariance(action: Action, data=CONTRACT_DATA, goal: Goal = GOAL) -> int:
-    """For an action that declares `block_invariant`: the members of a block on which it is legal give the same finished items.
+    """Where the action declares `block_invariant`, the members of a block where it is legal give the same kernel pushed through the blocks.
 
-    The compressed finished items are listed by brute force per member, under an abstraction that pools
-    the junk families. Returns how many members were compared with another member of their block.
+    The blocks and their members come from the brute force over concrete items (`fixture_blocks`), the
+    kernels are the exact kernels of the members, and the legality of each is the action's own. The two
+    models of the coarse state must offer the action exactly where some member (the lower) or every member
+    (the upper) can take it, and give that kernel. An action that does not declare it must be refused by the
+    coarse state (`OutOfScopeError`). Returns how many members were compared with another member of their block.
     """
+    key = (action, id(data), goal)
+    if key not in _COMPARED:
+        _COMPARED[key] = _compare_members(action, data, goal)
+    return _COMPARED[key]
+
+
+def _compare_members(action: Action, data, goal: Goal) -> int:
     reads = action.reads(data)
     if not reads.block_invariant:
-        return 0
-    ab = Abstraction(data, goal, AMULET, LEVEL, [_Pooled(reads.junk)])
-    compared = 0
-    for block in fixture_blocks():
-        seen: dict = {}
-        for member in block:
+        ab, [(coarsening, blocks), *_] = _coarse_world(data, goal, None)
+        block = next(iter(blocks))
+        for bound in ("lower", "upper"):
             try:
-                outcomes = action.outcomes(data, member)
-            except ActionError:
+                coarsening.kernel(block, action, bound)
+            except OutOfScopeError:
                 continue
-            listed: dict = defaultdict(Fraction)
-            for chance, result in finished(outcomes, data):
-                listed[ab.compress(result)] += chance
-            key = ab.compress(member)
-            if key in seen:
-                assert dict(listed) == seen[key], "the members of a block give the same compressed finished items"
-                compared += 1
-            else:
-                seen[key] = dict(listed)
-    return compared
+            raise AssertionError("an action that does not declare block_invariant is refused by the coarse state")
+        return 0
+    try:
+        ab, worlds = _coarse_world(data, goal, action if reads.junk else None)
+    except OutOfScopeError as refusal:
+        raise AssertionError(f"the action declares block_invariant but the coarse state refuses it: {refusal}") from refusal
+    return sum(compare_members(action, ab, coarsening, blocks) for coarsening, blocks in worlds)
