@@ -86,8 +86,9 @@ def test_the_policy_reaches_the_goal_with_odds_mean_and_p90(solved):
     assert 0.0 < risk.mean.value < float("inf")
     assert risk.p90.value >= risk.p50.value > 0.0
     assert plan.mean_remaining == pytest.approx(risk.mean.value, rel=1e-9)
-    # only some essences that no source prices (poe.ninja, poe.watch, an earlier league) are dropped
-    assert {drop.label for drop in plan.dropped} <= UNPRICED_ESSENCES
+    # only some essences that no source prices (poe.ninja, poe.watch, an earlier league) are dropped, and the
+    # Harvest reforges whose lifeforce the fixture price file lacks (it holds the Primal lifeforce only)
+    assert {drop.label for drop in plan.dropped if not drop.label.startswith("Harvest Reforge")} <= UNPRICED_ESSENCES
 
 
 def test_verify_agrees_with_the_computed_mean(solved, data):
