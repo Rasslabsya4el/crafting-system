@@ -72,6 +72,7 @@ FRACTURED_MODS_KEPT = get_rule("fossils.fractured_mods_kept")
 DAGGER_STAFF_TAKE_CLASS_MODS = get_rule("essence.dagger_staff_take_class_mods")
 COST = get_rule("fossils.cost")
 
+FRACTURED_FOSSIL_NAMES = frozenset({SPECIAL_FOSSILS.value["fractured"]})  # `adds` without game data can only see names
 MIN_FOSSILS = 1
 MAX_FOSSILS = max(CHAOTIC_RESONATOR_SOCKETS.value.values())
 TANGLED_RECORD_MARKER = "RandomFossilOutcome"
@@ -118,14 +119,15 @@ class ApplyFossils(Action):
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         """The mods a Hollow Fossil forces; None when a Glyphic Fossil chooses among several."""
         if data is None:
-            return Adds.erasing()
+            return Adds.erasing(fractures=any(name in FRACTURED_FOSSIL_NAMES for name in self.fossils))
         named: set[str] = set()
-        for name in self.fossils:
-            record = _record(data, name)
+        records = [_record(data, name) for name in self.fossils]
+        fractures = any(_special(record, "fractured") for record in records)
+        for record in records:
             named.update(record.forced_mods)
             if record.corrupted_essence_chance >= 100 and not _special(record, "tangled") and not record.forced_mods:
-                return Adds.erasing()
-        return Adds.erasing(named=frozenset(named))
+                return Adds.erasing(fractures=fractures)
+        return Adds.erasing(named=frozenset(named), fractures=fractures)
 
     def outcomes(self, data: GameData, item: Item) -> FossilOutcomes:
         """The outcomes of using the resonator on `item`; see the module text for the refusals."""

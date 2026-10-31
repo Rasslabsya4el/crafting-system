@@ -258,6 +258,11 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
             assert not crafted & {entry.mod_id for entry in result.mods if entry.crafted}, "an action that erases the crafted mods leaves none"
     if adds.single_draw:
         assert adds.draws and not reads.junk and not adds.named, "a single draw reads no junk and forces no mod"
+    assert adds.fractures or not outcomes.fractures, "an action that fractures a mod says so in `adds`"
+    if not adds.fractures:
+        fractured = {entry.mod_id for entry in given.mods if entry.fractured}
+        for _, result in items:
+            assert fractured == {entry.mod_id for entry in result.mods if entry.fractured}, "an action that does not fracture leaves the fractured mods as they were"
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
     if not reads.junk:
         for _, part in outcomes.components:

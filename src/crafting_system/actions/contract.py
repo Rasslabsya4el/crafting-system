@@ -87,6 +87,9 @@ class Adds:
     * `keeps_crafted`: a crafted mod on the item survives the action. The default is True, the safe
       value: a planner leaves out a bench craft that gives the goal nothing only when every other action
       it offers declares False (they erase the crafted mod, so the craft would only take a slot).
+    * `fractures`: one finished mod becomes fractured (a Fractured Fossil), so the fractured mods of the
+      item change. The default is False; an action that fractures must say so, because pruning by bound
+      (#118) holds the fractured mods of the start item fixed for every action it bounds.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -98,6 +101,7 @@ class Adds:
     tag: str | None = None
     single_draw: bool = False
     keeps_crafted: bool = True
+    fractures: bool = False
 
     @classmethod
     def removal(cls, *, keeps_crafted: bool = True) -> "Adds":
