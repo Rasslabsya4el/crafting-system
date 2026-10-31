@@ -1,15 +1,31 @@
-# Mechanic family: harvest_reforge (the tagged Harvest reforges of a rare item; Lightning first).
+# Mechanic family: harvest_reforge (the Harvest reforges of a rare item: the 16 tagged ones, the influence reforge and the two more / less likely ones).
 # Research ticket #10 (claims HRV-xx) and the decisions D3, D4, D7 of issue #28; the tag field was
 # settled by the main chat in the same issue. The reroll shares chaos_orb.* and affix_pool.* rules.
 rules:
   - id: harvest_reforge.tagged_rare_reforge_exists
-    statement: A Harvest craft exists for each tag in `value`, usable on a rare item, that reforges the item with random modifiers including one of that tag. Only Lightning is admitted here. The key is the craft's name in lower case and the value is the mod tag it guarantees.
+    statement: A Harvest craft exists for each tag in `value`, usable on a rare item, that reforges the item with random modifiers including one of that tag. The key is the craft's name in lower case (Lightning first, then the wiki table's order) and the value is the mod tag it guarantees (the craft "Defence" guarantees the tag `defences` of the data). Sixteen crafts exist in 3.29; the five that cost Crystallised Rancour (Minion, Elemental, Attribute, Mana, Drop) are in the list too.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
     quote: "Reforge a Rare item with random modifiers, including a Lightning modifier"
     patch_verified: "3.29.3.3"
-    date_checked: 2026-10-30
-    value: {lightning: lightning}
+    date_checked: 2026-10-31
+    value:
+      lightning: lightning
+      fire: fire
+      cold: cold
+      physical: physical
+      life: life
+      defence: defences
+      chaos: chaos
+      attack: attack
+      caster: caster
+      speed: speed
+      critical: critical
+      minion: minion
+      elemental: elemental
+      attribute: attribute
+      mana: mana
+      drop: drop
 
   - id: harvest_reforge.rerolls_like_chaos_with_guaranteed_tag
     statement: A tagged reforge rerolls the modifiers of a rare item as a Chaos Orb does, and guarantees one modifier with the chosen tag.
@@ -68,13 +84,29 @@ rules:
     date_checked: 2026-10-30
 
   - id: harvest_reforge.lifeforce_cost
-    statement: One use of a tagged reforge costs this much lifeforce, by craft (the key of tagged_rare_reforge_exists). The value maps the price-file name of the lifeforce item to the number of items. Lightning costs 50 Primal Crystallised Lifeforce. The wiki table columns are Wild, Vivid, Primal, Sacred and Rancour; the Lightning row is 0 0 50 0 0.
+    statement: One use of a tagged reforge costs this much lifeforce, by craft (the key of tagged_rare_reforge_exists). The value maps the price-file name of the lifeforce item to the number of items. The wiki table columns are Wild, Vivid, Primal, Sacred and Rancour, in the price file Wild, Vivid, Primal and Sacred Crystallised Lifeforce and Crystallised Rancour; the Lightning row is 0 0 50 0 0. Five crafts also take Crystallised Rancour (Minion 3, Elemental 1, Attribute 2, Mana 2, Drop 1).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
     quote: "Reforge a Rare item with random modifiers, including a Lightning modifier 0 0 50 0 0"
     patch_verified: "3.29.3.3"
-    date_checked: 2026-10-30
-    value: {lightning: {Primal Crystallised Lifeforce: 50}}
+    date_checked: 2026-10-31
+    value:
+      lightning: {Primal Crystallised Lifeforce: 50}
+      fire: {Wild Crystallised Lifeforce: 50}
+      cold: {Vivid Crystallised Lifeforce: 50}
+      physical: {Vivid Crystallised Lifeforce: 50}
+      life: {Wild Crystallised Lifeforce: 75}
+      defence: {Primal Crystallised Lifeforce: 75}
+      chaos: {Vivid Crystallised Lifeforce: 100}
+      attack: {Wild Crystallised Lifeforce: 75}
+      caster: {Primal Crystallised Lifeforce: 75}
+      speed: {Vivid Crystallised Lifeforce: 150}
+      critical: {Primal Crystallised Lifeforce: 150}
+      minion: {Primal Crystallised Lifeforce: 200, Crystallised Rancour: 3}
+      elemental: {Wild Crystallised Lifeforce: 200, Crystallised Rancour: 1}
+      attribute: {Vivid Crystallised Lifeforce: 200, Crystallised Rancour: 2}
+      mana: {Primal Crystallised Lifeforce: 200, Crystallised Rancour: 2}
+      drop: {Vivid Crystallised Lifeforce: 200, Crystallised Rancour: 1}
 
   - id: harvest_reforge.removes_crafted_mods
     statement: A tagged reforge removes the ordinary crafted (bench) mods of the rare item like any other mod that is not fractured, so none is retained; the metamods, which change what a reforge does, are in metamods.yaml (locks keep a side, Attack/Caster filter the guaranteed mod).
@@ -83,3 +115,72 @@ rules:
     quote: "will completely reforge the modifiers of a Rare item, similar to a Chaos Orb, while guaranteeing a modifier with the specified tag"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+
+  - id: harvest_reforge.influence_reforge_exists
+    statement: A Harvest craft exists that reforges an Influenced rare item with random modifiers including an influence modifier. It rerolls as a tagged reforge does (harvest_reforge.rerolls_like_chaos_with_guaranteed_tag) and the guarantee is the one of harvest_reforge.influence_mod_is_influence_spawn. Randomise Influence is a different craft and is not modelled (out of v1, owner, grill B2, issue 93).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Reforge an Influenced Rare item with random modifiers, including a Influence modifier"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_reforge.influence_mod_is_influence_spawn
+    statement: The influence modifiers of an item are the mods of its pool whose spawn weight comes from one of its influence tags (affix_pool.influence_tags), that is, the first entry of the mod's spawn weights that the item has is its "<class key>_<influence key>" tag. Craft of Exile calls a modifier an influence modifier when it belongs to one of the six influence mod groups (its `crsim_infgrps`). The `influence_mod` tag of the data is not the criterion, because the Hunter mods do not carry it (203 mods checked on 3.29.3.3, 1,243 of the other five influences do) and 427 mods with no influence weight do.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'var crsim_infgrps="|2|3|4|5|6|7|"'
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_reforge.influence_reforge_lifeforce_cost
+    statement: One use of the influence reforge costs 5,000 Primal Crystallised Lifeforce and 1 Sacred Crystallised Lifeforce. The value maps the price-file name of the item to the number of items.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Reforge an Influenced Rare item with random modifiers, including a Influence modifier 0 0 5000 1 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {Primal Crystallised Lifeforce: 5000, Sacred Crystallised Lifeforce: 1}
+
+  - id: harvest_reforge.influence_reforge_refused_when_not_influenced
+    statement: The influence reforge works on an influenced item only; on an item with no influence the pool holds no influence mod and the craft is refused (harvest_reforge.refused_without_tagged_mod).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Reforge an Influenced Rare item with random modifiers, including a Influence modifier"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_reforge.likelihood_reforges_exist
+    statement: Two Harvest crafts reforge a rare item, one being more likely and one less likely to receive the same modifier types as the item holds before it is used. Their keys in `value` are `more` and `less`.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Reforge a Rare item, being more likely to receive the same modifier types"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {more: more, less: less}
+
+  - id: harvest_reforge.likelihood_lifeforce_cost
+    statement: One use of either likelihood reforge costs 200 Wild Crystallised Lifeforce. The value maps the price-file name of the item to the number of items.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Reforge a Rare item, being more likely to receive the same modifier types 200 0 0 0 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {Wild Crystallised Lifeforce: 200}
+
+  - id: harvest_reforge.likelihood_weight_factor
+    statement: Before a likelihood reforge draws, the weight of every mod of a family that the item holds a mod of (a fractured one, a crafted one and the ones the reroll removes included) is multiplied by `more` for the more likely craft and divided by `less` for the less likely one. The wiki gives no multiplier; the factor 90 is decision D9 of issue 28, from the Craft of Exile FAQ, and the less likely craft takes its reciprocal (the code of Craft of Exile pairs 10 with 0.1). The unit is the family, the exclusion set of affix_draw.family_exclusion. Craft of Exile boosts the same modifier id and the same modifier name, so a hybrid that shares a family with a plain mod is the one place the readings differ; the compressed state keeps families, not types. Craft of Exile's craft list also says both crafts ignore the Cannot roll Attack and Caster metamods and that the more likely one is bugged for attribute modifiers and prevents them; neither is modelled (the metamods are issue 68's, and the attribute note is one unconfirmed line of a third-party tool).
+    source_kind: coe
+    url: https://www.craftofexile.com/faq#How_is_the_harvest_reforge_more_likely_applied
+    quote: "mods that are present on the item before usage have their weight multiplied by 90"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+    value: {more: 90, less: 90}
+
+  - id: harvest_reforge.likelihood_never_fewer_mods
+    statement: A likelihood reforge draws as many mods as the item held before, and at least `floor`, so it never leaves fewer; the fractured mods that stay count inside that number. This is the code of Craft of Exile, which passes the count of the item, with a floor, as the number to roll. Its FAQ adds that the item can roll more "if possible but it happens very rarely", which the code does not do, so the number is exact here.
+    source_kind: coe
+    url: https://www.craftofexile.com/faq#How_is_the_harvest_reforge_more_likely_applied
+    quote: "the item can never roll fewer mods than it had when using this method"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+    value: {floor: 4}

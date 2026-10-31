@@ -27,7 +27,7 @@ from .draw import (
 )
 from .errors import NotApplicableError
 from .metamods import blocked_tags, kept_by_reroll
-from .pool import ModFactor, PoolFamily, build_pool, tiers_of
+from .pool import ModFactor, PoolFamily, build_pool, mark_pool, tiers_of
 
 CHAOS_FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
 HARVEST_FRACTURED_MODS_KEPT = get_rule("harvest_reforge.fractured_mods_kept")
@@ -85,6 +85,7 @@ class Outcomes:
         max_level: int | None = None,
         factor: ModFactor | None = None,
         extra: Iterable[Mod] = (),
+        guaranteed: Callable[[Mod], bool] | None = None,
     ) -> "Outcomes":
         """The outcomes of rerolling `item` (already checked to be rerollable), guaranteeing `tag` if given.
 
@@ -92,13 +93,16 @@ class Outcomes:
         (the caller has checked that its family is free and its side has a slot), and `max_level`
         caps the required level of the drawn mods. `factor` multiplies the weight of every mod of the
         pool (the fossils of a resonator; 0 drops the mod) and `extra` are mods that join the pool.
-        Raises `NotApplicableError` when `tag` is given
-        and the pool holds no mod with it that the retained item has a free family and a free slot
-        for.
+        With `guaranteed`, exactly the mods it accepts are the ones the guaranteed draw picks from,
+        whatever their tags in the data (the pool then carries `tag` on those: the influence reforge).
+        Raises `NotApplicableError` when `tag` is given and the pool holds no mod with it that the
+        retained item has a free family and a free slot for.
         """
         retained = retained_item(data, item, forced)
         blocked = blocked_tags(data, retained) if tag is not None else frozenset()
         pool = build_pool(data, retained, max_level, factor, extra, tag_filter=tag is None)
+        if guaranteed is not None and tag is not None:
+            pool = mark_pool(pool, tag, guaranteed)
         result = cls.over(data, retained, pool, tag, forced, blocked)
         if tag is not None and not guaranteed_candidates(result.pool, result.free, tag, blocked):
             raise NotApplicableError(

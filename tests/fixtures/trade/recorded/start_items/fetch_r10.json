@@ -1,0 +1,1491 @@
+{
+ "result": [
+  {
+   "id": "4a0bb6f98aea354c2673711b7ed4c0e1e6d7f525684d544723cd914609a7cce8",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-10-25T23:59:31Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 15,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Honour Span",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+26 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Augur",
+        "tier": "S6",
+        "level": 33,
+        "magnitudes": [
+         {
+          "min": "23",
+          "max": "27"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+8 to maximum Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4052037485",
+      "mods": [
+       {
+        "name": "Glimmering",
+        "tier": "P6",
+        "level": 11,
+        "magnitudes": [
+         {
+          "min": "6",
+          "max": "11"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+48 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434",
+      "mods": [
+       {
+        "name": "Opalescent",
+        "tier": "P6",
+        "level": 42,
+        "magnitudes": [
+         {
+          "min": "45",
+          "max": "49"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "7% increased Rarity of Items found",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3917489142",
+      "mods": [
+       {
+        "name": "of Plunder",
+        "tier": "S2",
+        "level": 3,
+        "magnitudes": [
+         {
+          "min": "6",
+          "max": "10"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+39% to Lightning Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Maelstrom",
+        "tier": "S3",
+        "level": 60,
+        "magnitudes": [
+         {
+          "min": "36",
+          "max": "41"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_4052037485",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         4
+        ]
+       ],
+       [
+        "explicit.stat_3917489142",
+        [
+         3
+        ]
+       ],
+       [
+        "explicit.stat_1671376347",
+        [
+         2
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "a745a70e2598c70bcbf4d1ece1a43c9192c46b79ebc45b07489f919902fbc18f",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-09-05T14:44:10Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 15,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Onslaught Spur",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "45% increased Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4015621042",
+      "mods": [
+       {
+        "name": "Resolute",
+        "tier": "P5",
+        "level": 30,
+        "magnitudes": [
+         {
+          "min": "43",
+          "max": "55"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+68 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434",
+      "mods": [
+       {
+        "name": "Blue",
+        "tier": "P2",
+        "level": 75,
+        "magnitudes": [
+         {
+          "min": "65",
+          "max": "68"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+16% to Cold Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4220027924",
+      "mods": [
+       {
+        "name": "of the Seal",
+        "tier": "S7",
+        "level": 14,
+        "magnitudes": [
+         {
+          "min": "12",
+          "max": "17"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_4015621042",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_4220027924",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "b8eaaa2682f512e8b187a11a3f8e857071fbbe5fc550448fa35115ef952dba28",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-10-16T21:56:58Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 15,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Rune Sole",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "22% increased Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4015621042",
+      "mods": [
+       {
+        "name": "Boggart's",
+        "tier": "P4",
+        "level": 30,
+        "magnitudes": [
+         {
+          "min": "21",
+          "max": "26"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Regenerate 22.6 Life per second",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3325883026",
+      "mods": [
+       {
+        "name": "of the Starfish",
+        "tier": "S5",
+        "level": 31,
+        "magnitudes": [
+         {
+          "min": "16.1",
+          "max": "24"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+24% to Lightning Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Thunderhead",
+        "tier": "S5",
+        "level": 37,
+        "magnitudes": [
+         {
+          "min": "24",
+          "max": "29"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "10% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "Boggart's",
+        "tier": "P4",
+        "level": 30,
+        "magnitudes": [
+         {
+          "min": "10",
+          "max": "11"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_4015621042",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_3325883026",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_1671376347",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         1
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "8a3ebc77fde6bf30cba184d0814018c2ebeb38a0ba0cf314412cfefd9b4127d7",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-30T05:03:56Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 20,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Rune Urge",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+73 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434",
+      "mods": [
+       {
+        "name": "Zaffre",
+        "tier": "P1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "69",
+          "max": "73"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+46% to Fire Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3372524247",
+      "mods": [
+       {
+        "name": "of Tzteosh",
+        "tier": "S1",
+        "level": 84,
+        "magnitudes": [
+         {
+          "min": "46",
+          "max": "48"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "16% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "of Stone Skin",
+        "tier": "S5",
+        "level": 17,
+        "magnitudes": [
+         {
+          "min": "14",
+          "max": "16"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_1050105434",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3372524247",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         1
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "eca020becbd33fc618222a8c6d95d7d382b6d1194072b0e0373d369c37bda8c6",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-20T15:36:11Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 20,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Rage Slippers",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "39% increased Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4015621042",
+      "mods": [
+       {
+        "name": "Seraphim's",
+        "tier": "P1",
+        "level": 78,
+        "magnitudes": [
+         {
+          "min": "39",
+          "max": "42"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+46 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Stalwart",
+        "tier": "P6",
+        "level": 18,
+        "magnitudes": [
+         {
+          "min": "40",
+          "max": "54"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+45% to Cold Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4220027924",
+      "mods": [
+       {
+        "name": "of the Ice",
+        "tier": "S2",
+        "level": 72,
+        "magnitudes": [
+         {
+          "min": "42",
+          "max": "45"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+32% to Lightning Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Tempest",
+        "tier": "S4",
+        "level": 49,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "34% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "of Iron Skin",
+        "tier": "S4",
+        "level": 28,
+        "magnitudes": [
+         {
+          "min": "17",
+          "max": "19"
+         }
+        ]
+       },
+       {
+        "name": "Seraphim's",
+        "tier": "P1",
+        "level": 78,
+        "magnitudes": [
+         {
+          "min": "16",
+          "max": "17"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_4015621042",
+        [
+         4
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_4220027924",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_1671376347",
+        [
+         3
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         0,
+         4
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "5bdf9a7858bba99d7115ea8ec9841f026aa259e6d1bc7f4bbc8dc58d46f68cee",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-28T19:11:57Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 20,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Kraken March",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+11 to maximum Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4052037485",
+      "mods": [
+       {
+        "name": "Glimmering",
+        "tier": "P6",
+        "level": 11,
+        "magnitudes": [
+         {
+          "min": "6",
+          "max": "11"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "29% increased Energy Shield Recharge Rate",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2339757871",
+      "mods": [
+       {
+        "name": "of Diffusion",
+        "tier": "S4",
+        "level": 57,
+        "magnitudes": [
+         {
+          "min": "27",
+          "max": "29"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+129 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Athlete's",
+        "tier": "P1",
+        "level": 54,
+        "magnitudes": [
+         {
+          "min": "115",
+          "max": "129"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_4052037485",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_2339757871",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "f384da051573e3dd0403b0ea5c179ade753ce00fb1810ce781928b05a2e7422e",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-30T21:02:56Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 25,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Pain Goad",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+16 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Student",
+        "tier": "S8",
+        "level": 11,
+        "magnitudes": [
+         {
+          "min": "13",
+          "max": "17"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+4 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Hale",
+        "tier": "P9",
+        "magnitudes": [
+         {
+          "min": "3",
+          "max": "9"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Regenerate 1.9 Life per second",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3325883026",
+      "mods": [
+       {
+        "name": "of the Newt",
+        "tier": "S8",
+        "magnitudes": [
+         {
+          "min": "1",
+          "max": "2"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+28% to Chaos Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Exile",
+        "tier": "S2",
+        "level": 65,
+        "magnitudes": [
+         {
+          "min": "26",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         3
+        ]
+       ],
+       [
+        "explicit.stat_3325883026",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_2923486259",
+        [
+         1
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "08eeae5977a949cfc0aefa9494148d550bdccde6968fa1c68213d0eb2cfcfefb",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-03T17:56:36Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 25,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Dragon Hoof",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+46 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Stalwart",
+        "tier": "P6",
+        "level": 18,
+        "magnitudes": [
+         {
+          "min": "40",
+          "max": "54"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+13% to Cold Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4220027924",
+      "mods": [
+       {
+        "name": "of the Seal",
+        "tier": "S7",
+        "level": 14,
+        "magnitudes": [
+         {
+          "min": "12",
+          "max": "17"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+16% to Lightning Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Squall",
+        "tier": "S7",
+        "level": 13,
+        "magnitudes": [
+         {
+          "min": "12",
+          "max": "17"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3299347043",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_4220027924",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_1671376347",
+        [
+         1
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "14cee23fed1f1b350d1b7e52ef71ebcc36ea31d3a1a4383f110d01541bd8e32b",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-19T18:53:04Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 25,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Rune Goad",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+28 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Philosopher",
+        "tier": "S5",
+        "level": 44,
+        "magnitudes": [
+         {
+          "min": "28",
+          "max": "32"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "27% increased Energy Shield Recharge Rate",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2339757871",
+      "mods": [
+       {
+        "name": "of Diffusion",
+        "tier": "S4",
+        "level": 57,
+        "magnitudes": [
+         {
+          "min": "27",
+          "max": "29"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "16% increased Rarity of Items found",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3917489142",
+      "mods": [
+       {
+        "name": "Pirate's",
+        "tier": "P1",
+        "level": 39,
+        "magnitudes": [
+         {
+          "min": "13",
+          "max": "18"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_2339757871",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3917489142",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "372b40bc471c687d5b8cea105eed957a0874e097d03f6365fbe3e338dda17ea1",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-15T16:26:39Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 25,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Brimstone Pace",
+    "typeLine": "Sorcerer Boots",
+    "baseType": "Sorcerer Boots",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+8 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Pupil",
+        "tier": "S9",
+        "magnitudes": [
+         {
+          "min": "8",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "28% increased Energy Shield",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4015621042",
+      "mods": [
+       {
+        "name": "Naga's",
+        "tier": "P3",
+        "level": 44,
+        "magnitudes": [
+         {
+          "min": "27",
+          "max": "32"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+63 to maximum Mana",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1050105434",
+      "mods": [
+       {
+        "name": "Mazarine",
+        "tier": "P3",
+        "level": 69,
+        "magnitudes": [
+         {
+          "min": "60",
+          "max": "64"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "12% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "Naga's",
+        "tier": "P3",
+        "level": 44,
+        "magnitudes": [
+         {
+          "min": "12",
+          "max": "13"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "30% increased Movement Speed",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2250533757",
+      "mods": [
+       {
+        "name": "Cheetah's",
+        "tier": "P2",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "30"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_4015621042",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_1050105434",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2250533757",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  }
+ ]
+}

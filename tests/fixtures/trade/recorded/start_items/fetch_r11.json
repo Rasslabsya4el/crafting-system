@@ -1,0 +1,1492 @@
+{
+ "result": [
+  {
+   "id": "f20293cec44b0349b43413548fd8945af3d09089dd6c17dd7efae021f9565f6a",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-21T06:33:55Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 10,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Morbid Star",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 84,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "30% increased Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_124859000",
+      "mods": [
+       {
+        "name": "Wasp's",
+        "tier": "P3",
+        "level": 44,
+        "magnitudes": [
+         {
+          "min": "27",
+          "max": "32"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Regenerate 4.5 Life per second",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3325883026",
+      "mods": [
+       {
+        "name": "of the Lizard",
+        "tier": "S8",
+        "level": 7,
+        "magnitudes": [
+         {
+          "min": "2.1",
+          "max": "8"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "33% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "of Steel Skin",
+        "tier": "S3",
+        "level": 42,
+        "magnitudes": [
+         {
+          "min": "20",
+          "max": "22"
+         }
+        ]
+       },
+       {
+        "name": "Wasp's",
+        "tier": "P3",
+        "level": 44,
+        "magnitudes": [
+         {
+          "min": "12",
+          "max": "13"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+31% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_124859000",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3325883026",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         0,
+         2
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "51e32de7351a026d47924bc26641392dba14715de093716b4662b9bc3392e9b4",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-10-28T16:58:33Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 15,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Woe Visor",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+9 to Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_53045048",
+      "mods": [
+       {
+        "name": "Agile",
+        "tier": "P8",
+        "magnitudes": [
+         {
+          "min": "6",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "20% increased Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_124859000",
+      "mods": [
+       {
+        "name": "Moth's",
+        "tier": "P5",
+        "level": 19,
+        "magnitudes": [
+         {
+          "min": "14",
+          "max": "20"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Regenerate 6.7 Life per second",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3325883026",
+      "mods": [
+       {
+        "name": "of the Lizard",
+        "tier": "S8",
+        "level": 7,
+        "magnitudes": [
+         {
+          "min": "2.1",
+          "max": "8"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+42% to Lightning Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Lightning",
+        "tier": "S2",
+        "level": 72,
+        "magnitudes": [
+         {
+          "min": "42",
+          "max": "45"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "9% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "Moth's",
+        "tier": "P5",
+        "level": 19,
+        "magnitudes": [
+         {
+          "min": "8",
+          "max": "9"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+33% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_53045048",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_124859000",
+        [
+         3
+        ]
+       ],
+       [
+        "explicit.stat_3325883026",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_1671376347",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         3
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "8b8f245ba26ea7b6e6dffbd1ae8a24900a323236823fbb359bda6e1e41f9ac28",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-17T20:38:10Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 20,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Havoc Dome",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+12% chance to Suppress Spell Damage",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3680664274",
+      "mods": [
+       {
+        "name": "of Abjuration",
+        "tier": "S2",
+        "level": 76,
+        "magnitudes": [
+         {
+          "min": "11",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+68 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Stout",
+        "tier": "P6",
+        "level": 24,
+        "magnitudes": [
+         {
+          "min": "55",
+          "max": "69"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+16% to Lightning Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_1671376347",
+      "mods": [
+       {
+        "name": "of the Squall",
+        "tier": "S7",
+        "level": 13,
+        "magnitudes": [
+         {
+          "min": "12",
+          "max": "17"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+31% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3680664274",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_1671376347",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "6bf9cbd86eb7f7327cb4d08e72f79eec00398b094a25bd7e0c61803624fc0373",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-17T08:37:08Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 20,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Tempest Brow",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+11% chance to Suppress Spell Damage",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3680664274",
+      "mods": [
+       {
+        "name": "of Abjuration",
+        "tier": "S2",
+        "level": 76,
+        "magnitudes": [
+         {
+          "min": "11",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+50 to Dexterity",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3261801346",
+      "mods": [
+       {
+        "name": "of the Phantom",
+        "tier": "S2",
+        "level": 74,
+        "magnitudes": [
+         {
+          "min": "43",
+          "max": "50"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "33% increased Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_124859000",
+      "mods": [
+       {
+        "name": "Dragonfly's",
+        "tier": "P2",
+        "level": 60,
+        "magnitudes": [
+         {
+          "min": "33",
+          "max": "38"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "14% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "Dragonfly's",
+        "tier": "P2",
+        "level": 60,
+        "magnitudes": [
+         {
+          "min": "14",
+          "max": "15"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+31% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3680664274",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3261801346",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_124859000",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "a7f4cb84efabb8c9236d03bde80904e77b1f79be2e27920e343f1f429787a778",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-02T12:37:16Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 35,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Dragon Star",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+28 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Philosopher",
+        "tier": "S6",
+        "level": 44,
+        "magnitudes": [
+         {
+          "min": "28",
+          "max": "32"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+129 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Athlete's",
+        "tier": "P2",
+        "level": 54,
+        "magnitudes": [
+         {
+          "min": "115",
+          "max": "129"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "23% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "of Adamantite Skin",
+        "tier": "S2",
+        "level": 56,
+        "magnitudes": [
+         {
+          "min": "23",
+          "max": "25"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+31% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         0
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "3a78c1f30409d0c17cbf20f8c7c71ef8bf5094235e238c91056505deaa445504",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-06T23:45:10Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 35,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Corpse Visage",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+11 to Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_53045048",
+      "mods": [
+       {
+        "name": "Agile",
+        "tier": "P8",
+        "magnitudes": [
+         {
+          "min": "6",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "15% increased Rarity of Items found",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3917489142",
+      "mods": [
+       {
+        "name": "Pirate's",
+        "tier": "P2",
+        "level": 39,
+        "magnitudes": [
+         {
+          "min": "13",
+          "max": "18"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+32% to Fire Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3372524247",
+      "mods": [
+       {
+        "name": "of the Furnace",
+        "tier": "S4",
+        "level": 48,
+        "magnitudes": [
+         {
+          "min": "30",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+15% to Cold Resistance",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_4220027924",
+      "mods": [
+       {
+        "name": "of the Seal",
+        "tier": "S7",
+        "level": 14,
+        "magnitudes": [
+         {
+          "min": "12",
+          "max": "17"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+32% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_53045048",
+        [
+         3
+        ]
+       ],
+       [
+        "explicit.stat_3917489142",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3372524247",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_4220027924",
+        [
+         1
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "81835d4162c083e7c820bc827c683092f934b5815acf6c27c33702de4dd22527",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-02T13:38:13Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 50,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Behemoth Corona",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "18% increased Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_124859000",
+      "mods": [
+       {
+        "name": "Moth's",
+        "tier": "P5",
+        "level": 19,
+        "magnitudes": [
+         {
+          "min": "14",
+          "max": "20"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Regenerate 38.9 Life per second",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3325883026",
+      "mods": [
+       {
+        "name": "of the Troll",
+        "tier": "S4",
+        "level": 55,
+        "magnitudes": [
+         {
+          "min": "32.1",
+          "max": "48"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "10% increased Rarity of Items found",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3917489142",
+      "mods": [
+       {
+        "name": "Magpie's",
+        "tier": "P3",
+        "level": 20,
+        "magnitudes": [
+         {
+          "min": "8",
+          "max": "12"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "36% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "of Corundum Skin",
+        "tier": "S1",
+        "level": 79,
+        "magnitudes": [
+         {
+          "min": "26",
+          "max": "28"
+         }
+        ]
+       },
+       {
+        "name": "Moth's",
+        "tier": "P5",
+        "level": 19,
+        "magnitudes": [
+         {
+          "min": "8",
+          "max": "9"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+33% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_124859000",
+        [
+         3
+        ]
+       ],
+       [
+        "explicit.stat_3325883026",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_3917489142",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         0,
+         3
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "db5e6894a24576bb6a64abf646abd68cffe3b6128de4a9b61bf0dcb57ec40d4e",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-08-07T16:51:46Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 70,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Demon Glance",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+23 to Intelligence",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_328541901",
+      "mods": [
+       {
+        "name": "of the Augur",
+        "tier": "S7",
+        "level": 33,
+        "magnitudes": [
+         {
+          "min": "23",
+          "max": "27"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+16 to Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_53045048",
+      "mods": [
+       {
+        "name": "Flea's",
+        "tier": "P3",
+        "level": 30,
+        "magnitudes": [
+         {
+          "min": "14",
+          "max": "20"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+57 to maximum Life",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3299347043",
+      "mods": [
+       {
+        "name": "Flea's",
+        "tier": "P3",
+        "level": 30,
+        "magnitudes": [
+         {
+          "min": "18",
+          "max": "23"
+         }
+        ]
+       },
+       {
+        "name": "Sanguine",
+        "tier": "P8",
+        "level": 11,
+        "magnitudes": [
+         {
+          "min": "25",
+          "max": "39"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+33% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_328541901",
+        [
+         1
+        ]
+       ],
+       [
+        "explicit.stat_53045048",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3299347043",
+        [
+         0,
+         2
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "5f234e62592cfb8f9069e8d55dd434915c03c9b571af623f99829e25d66753a6",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-07-31T11:04:40Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 99,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Kraken Visage",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "26% increased Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_124859000",
+      "mods": [
+       {
+        "name": "Shade's",
+        "tier": "P7",
+        "level": 3,
+        "magnitudes": [
+         {
+          "min": "15",
+          "max": "26"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "10% increased Rarity of Items found",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3917489142",
+      "mods": [
+       {
+        "name": "of Plunder",
+        "tier": "S4",
+        "level": 3,
+        "magnitudes": [
+         {
+          "min": "6",
+          "max": "10"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "Reflects 6 Physical Damage to Melee Attackers",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3767873853",
+      "mods": [
+       {
+        "name": "Spiny",
+        "tier": "P1",
+        "level": 10,
+        "magnitudes": [
+         {
+          "min": "5",
+          "max": "10"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+31% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_124859000",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_3917489142",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_3767873853",
+        [
+         1
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "3cc74506799345cbb1baf6e939dae05540614e0b8dcfaae07da8d8bd4952e29e",
+   "listing": {
+    "method": "psapi",
+    "indexed": "2026-07-31T03:50:38Z",
+    "price": {
+     "type": "~b/o",
+     "amount": 100,
+     "currency": "chaos"
+    }
+   },
+   "item": {
+    "league": "Allflame",
+    "fractured": true,
+    "name": "Honour Keep",
+    "typeLine": "Lion Pelt",
+    "baseType": "Lion Pelt",
+    "rarity": "Rare",
+    "ilvl": 85,
+    "identified": true,
+    "explicitMods": [
+     {
+      "description": "+7% chance to Suppress Spell Damage",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_3680664274",
+      "mods": [
+       {
+        "name": "of Snuffing",
+        "tier": "S4",
+        "level": 57,
+        "magnitudes": [
+         {
+          "min": "7",
+          "max": "8"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "61% increased Evasion Rating",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_124859000",
+      "mods": [
+       {
+        "name": "Wraith's",
+        "tier": "P4",
+        "level": 44,
+        "magnitudes": [
+         {
+          "min": "56",
+          "max": "67"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+1 to Level of all Minion Skill Gems",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2162097452",
+      "mods": [
+       {
+        "name": "Taskmaster's",
+        "tier": "P2",
+        "level": 14,
+        "magnitudes": [
+         {
+          "min": "1",
+          "max": "1"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "28% increased Stun and Block Recovery",
+      "domain": "explicit",
+      "hash": "stat.explicit.stat_2511217560",
+      "mods": [
+       {
+        "name": "of Corundum Skin",
+        "tier": "S1",
+        "level": 79,
+        "magnitudes": [
+         {
+          "min": "26",
+          "max": "28"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "description": "+32% to Chaos Resistance",
+      "flags": {
+       "fractured": true
+      },
+      "domain": "fractured",
+      "hash": "stat.fractured.stat_2923486259",
+      "mods": [
+       {
+        "name": "of Bameth",
+        "tier": "S1",
+        "level": 81,
+        "magnitudes": [
+         {
+          "min": "31",
+          "max": "35"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "extended": {
+     "hashes": {
+      "explicit": [
+       [
+        "explicit.stat_3680664274",
+        [
+         3
+        ]
+       ],
+       [
+        "explicit.stat_124859000",
+        [
+         2
+        ]
+       ],
+       [
+        "explicit.stat_2162097452",
+        [
+         0
+        ]
+       ],
+       [
+        "explicit.stat_2511217560",
+        [
+         1
+        ]
+       ]
+      ],
+      "fractured": [
+       [
+        "fractured.stat_2923486259",
+        [
+         0
+        ]
+       ]
+      ]
+     }
+    }
+   }
+  }
+ ]
+}
