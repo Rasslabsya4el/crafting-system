@@ -23,6 +23,11 @@ def family_key(mod: Mod) -> str:
     return "|".join(mod.families) or f"#{mod.id}"
 
 
+def held_families(mod: Mod) -> set[str]:
+    """The families a mod on an item occupies, one by one (a mod can have several)."""
+    return set(mod.families) or {f"#{mod.id}"}
+
+
 def reads_junk(action: object) -> bool:
     """Whether `action` can see the mods that a Chaos Orb would erase (their number or their families)."""
     return not isinstance(action, ERASING)
@@ -44,6 +49,8 @@ class Kinds:
         self._everything = False
         for action in self.actions:
             if isinstance(action, BenchCraft):
+                if action.mod_id not in data.mods:
+                    raise ValueError(f"the craft {action.mod_id} names a mod that is not in the game data")
                 self._distinct.update(data.mods[action.mod_id].families)
             elif reads_junk(action) and not isinstance(action, RemoveCraftedMods):
                 self._everything = True
@@ -61,14 +68,15 @@ class Kinds:
     def representative(self, side: Side, kind: str, taken: set[str]) -> Mod:
         """A mod to put on a concrete item for a slot of `side` and `kind`, of a family not in `taken`.
 
-        The family key of the chosen mod is added to `taken`. Raises `ValueError` when the item has no
-        room for one more of that kind.
+        The families of the chosen mod are added to `taken` (single families, as `held_families`).
+        Raises `ValueError` when the item has no room for one more of that kind.
         """
         if kind != ALIKE:
-            if kind in taken:
+            mod = self._mod_of(kind, side)
+            if held_families(mod) & taken:
                 raise ValueError(f"two slots of the family {kind}: one item cannot hold both")
-            taken.add(kind)
-            return self._mod_of(kind, side)
+            taken |= held_families(mod)
+            return mod
         for key, mod in self._alike_of(side):
             if key not in taken:
                 taken.add(key)

@@ -166,3 +166,15 @@ def test_the_craft_that_clashes_with_a_family_tells_that_family_apart_on_the_rea
 
     assert {slot.kind for slot in life.slots} == {"IncreasedLife"} and {slot.kind for slot in mana.slots} == {""}
     assert life.slots[0].side is Side.PREFIX
+
+
+def test_a_crafted_mod_of_two_families_keeps_both_out_of_the_representative_item(real):
+    craft = "JunMaster2DexterityAndIntelligence1_"  # a suffix of the families Dexterity and Intelligence
+    case = CASES["boots"]
+    data = subset(real, case["base"], case["families"] | {"Dexterity"}, {craft, case["crafts"][0]})
+    ab = Abstraction(data, Goal((life_of(data),)), case["base"], LEVEL, [RemoveCraftedMods(), BenchCraft(case["crafts"][0])])
+    item = item_on(data, case, rolled(data, first_of(data, "ColdResistance")), rolled(data, craft, crafted=True))
+
+    (after,) = ab.kernel(ab.compress(item), RemoveCraftedMods())
+
+    assert not after.crafted and len(after.slots) == 1

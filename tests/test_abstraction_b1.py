@@ -109,6 +109,17 @@ def test_a_low_essence_caps_the_drawn_mods_and_a_rare_item_refuses_it():
         ab.kernel(ab.compress(belt(roll(FIRE, fractured=True))), HATRED)
 
 
+def test_two_fractured_families_of_one_type_share_one_essence_distribution():
+    ab = abstraction(HYSTERIA_LEAF)
+    fire, cold = ab.compress(belt(roll(FIRE, fractured=True))), ab.compress(belt(roll(COLD, fractured=True)))
+
+    first, second = ab.kernel(fire, HYSTERIA), ab.kernel(cold, HYSTERIA)
+
+    assert fire != cold and ab.signature(fire, HYSTERIA) == ab.signature(cold, HYSTERIA)
+    assert ab.stats.kernels == 1 and ab.stats.hits == 1
+    assert {state.slots for state in first} == {state.slots for state in second}
+
+
 def test_the_two_essences_have_different_pools_so_different_signatures():
     ab = abstraction(COLD_LEAF)
     normal, rare = ab.compress(belt(rarity=Rarity.NORMAL)), ab.compress(belt(roll(FIRE, fractured=True)))

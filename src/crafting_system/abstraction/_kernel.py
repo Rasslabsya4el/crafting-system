@@ -19,7 +19,7 @@ from crafting_system.data import GameData, Mod
 from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, Side, tier_table
 
 from ._goal import Goal, Status
-from ._kinds import Kinds, family_key, reads_junk
+from ._kinds import Kinds, held_families, reads_junk
 from ._state import CompressedState, Flags, FracturedMod, Slot, best_of, status_of
 
 Label = Hashable  # the contribution to every leaf as ints; with junk slots kept, also the side and the kind
@@ -139,11 +139,14 @@ class Abstraction:
         """What decides the label distribution: equal signatures share one cached distribution.
 
         It is `(tag, kept mods, free prefixes, free suffixes, totals, sorted family types of the pool)`
-        for a random action. A bench action draws nothing: its signature is `("bench", action)`.
+        for a random action. A bench action draws nothing and has no cache: its signature is
+        `("bench", action)`, which names the action and does not decide its kernel.
 
         The forced mod of an essence is not in it: it is a kept mod, so the pool already leaves out its
         family, the kept count and the free slots already count it, and it cannot change the draw.
         """
+        if reads_junk(action) and action not in self._kinds.actions:
+            raise ValueError(f"{action!r} reads the mods of the item and is not among the enabled actions")
         outcomes = self._outcomes_of(state, action)
         if isinstance(outcomes, BenchOutcomes):
             return ("bench", action)
@@ -258,11 +261,11 @@ class Abstraction:
             )
             for entry in state.fractured
         ]
-        taken = {family_key(self.data.mods[entry.mod_id]) for entry in state.fractured}
+        taken = {family for entry in state.fractured for family in held_families(self.data.mods[entry.mod_id])}
         for slot in state.slots:
             if slot.crafted:
                 mod = self.data.mods[slot.kind]
-                taken.add(family_key(mod))
+                taken |= held_families(mod)
                 mods.append(ExplicitMod(mod.id, self._tiers.get(mod.id, 1), _low_values(mod), crafted=True))
         if not erasing:
             for slot in state.slots:
