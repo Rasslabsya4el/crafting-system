@@ -93,8 +93,8 @@ class Abstraction:
         self.goal = goal
         self.base_id = base_id
         self.item_level = item_level
-        self._kinds = Kinds(data, base_id, item_level, actions)
         self._tiers = tier_table(data, base_id)
+        self._kinds = Kinds(data, base_id, item_level, actions, self._profile)
         self._labels: dict[str, Label] = {}
         self._canonical_group: dict[tuple, list[Mod]] | None = None
         self._canonical: dict[tuple[str, tuple[Status, ...], bool], str] = {}
@@ -265,6 +265,10 @@ class Abstraction:
         return tuple(
             status_of(leaf, mod.id, tier, _low_values(mod), crafted) for leaf in self.goal.leaves
         )
+
+    def _profile(self, mod: Mod) -> tuple[int, ...]:
+        """What `mod` gives each leaf as ints: the part of a family type that the goal decides."""
+        return tuple(int(status) for status in self._drawn_contribution(mod))
 
     def _guard_roll(self, mod: Mod) -> None:
         """Raise `OutOfScopeError` when a leaf names `mod` and limits its roll: a rolled value is not modelled yet."""
