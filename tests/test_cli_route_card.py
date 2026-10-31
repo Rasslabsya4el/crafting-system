@@ -5,6 +5,7 @@ the real 3.29.3.3 dump, and skip cleanly when the cache is not there (CI has non
 """
 
 import dataclasses
+from types import SimpleNamespace
 
 import pytest
 from abstraction_pool import AMULET, CRAFTED, GEM, RESIST_1, RESISTS, SMALL, small_item
@@ -18,13 +19,14 @@ from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli._route_card import (
     ItemCard,
     Slot,
+    _StateReader,
     card_of_item,
     card_of_states,
     card_of_target,
     mod_text,
     tracks_junk,
 )
-from crafting_system.items import ExplicitMod, Influence, Rarity
+from crafting_system.items import ExplicitMod, Influence, Rarity, Side
 from crafting_system.targets import KOfN, Requirement, Target, load_target
 
 IMPLICIT = "(20-30)% increased Mana Regeneration Rate"
@@ -280,6 +282,56 @@ def test_a_leaf_met_below_its_tier_is_the_wanted_text_with_a_note():
         Slot(RESIST_TEXT, "wanted", note="tier too low"),
         ANY_OR_EMPTY,
     )
+
+
+def stub_reader(*mods) -> _StateReader:
+    """A reader over made-up mods (fixed values, no ranges): `(id, text, tier or None, essence_only)` each, one family."""
+    made = {
+        mod_id: SimpleNamespace(
+            id=mod_id, text=text, name=mod_id, families=("Speed",), generation_type="prefix", domain="item",
+            is_essence_only=essence, spawn_weights=(),
+        )
+        for mod_id, text, _, essence in mods
+    }  # fmt: skip
+    reader = object.__new__(_StateReader)
+    reader.data = SimpleNamespace(mods=made)
+    reader.tiers = {mod_id: tier for mod_id, _, tier, _ in mods if tier is not None}
+    reader.ab = SimpleNamespace(_drawn_contribution=lambda other: ())
+    reader._fractured, reader._families = {}, {}
+    return reader
+
+
+FAST = ("Fast1", "35% increased Speed", 1, False), ("Fast2", "30% increased Speed", 2, False)
+ESSENCE_FAST = ("FastEssence", "5% increased Speed for each nearby Enemy", None, True)
+
+
+def test_a_fractured_mod_that_stands_for_tiers_with_other_fixed_values_reads_all_of_them():
+    side, slot = stub_reader(*FAST).fractured("Fast2", ())
+
+    assert side is Side.PREFIX
+    assert slot == Slot("35% increased Speed or 30% increased Speed", "mod", ("fractured",), "any of 2 tiers")
+
+
+def test_a_fractured_mod_the_state_names_by_an_essence_only_tier_reads_as_the_tiers_of_its_class():
+    reader = stub_reader(*FAST, ESSENCE_FAST)
+
+    _, slot = reader.fractured("FastEssence", ())
+
+    assert slot == Slot("35% increased Speed or 30% increased Speed", "mod", ("fractured",), "any of 2 tiers")  # no "essence only"
+
+
+def test_a_slot_of_a_family_told_apart_reads_the_texts_of_its_tiers():
+    row = stub_reader(*FAST).family(SimpleNamespace(side=Side.PREFIX, kind="Speed"))
+
+    assert row == Slot("35% increased Speed or 30% increased Speed", "mod", (), "any of 2 tiers")
+
+
+def test_a_fractured_mod_of_a_class_of_one_tier_keeps_its_text_and_the_state_named_mod_when_it_is_not_in_the_class():
+    reader = stub_reader(FAST[0], ESSENCE_FAST)
+
+    _, slot = reader.fractured("FastEssence", ())
+
+    assert slot == Slot("35% increased Speed", "mod", ("fractured",))
 
 
 def test_a_crafted_slot_is_a_crafted_row_after_the_fractured_and_wanted_ones():

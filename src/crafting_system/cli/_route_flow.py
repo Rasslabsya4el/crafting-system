@@ -23,7 +23,8 @@ and so is every edge of a restart (`is_restart`), which goes back to the start.
 The inverse is `numpy.linalg.inv`, O(n^3) in the number of steps (not of states) and fast in C.
 Above `MAX_STEPS` steps the chain is not solved: `Flow.measured` is False, `uses` and `reached` are
 None (the first step is reached for sure), and an edge is `forward` when the target is nearer to a
-goal, counted in edges, than the step is.
+goal, counted in edges, than the step is. The same happens when the matrix cannot be inverted (a chance
+per use so small that it is lost in the float).
 
 A step from which no run can ever reach a goal (it loops forever, or every way out ends in a step with
 no action) has `uses = inf`; its `reached` is 1.0 for the first step and None for the others (the
@@ -88,7 +89,8 @@ class Step[S]:
 class Flow[S]:
     """The steps (numbered from 1, the start's step first) and the step of every reachable non-goal state.
 
-    `measured`: whether `uses` and `reached` were computed (False above `MAX_STEPS` steps).
+    `measured`: whether `uses` and `reached` were computed (False above `MAX_STEPS` steps, or when the chain
+    cannot be solved in floats).
     """
 
     steps: tuple[Step[S], ...]
@@ -153,7 +155,7 @@ def build_flow[S: Hashable](
 
     has_action = [members[i][0] in policy for i in range(count)]
     costs = [policy[members[i][0]].cost if has_action[i] else 0.0 for i in range(count)]
-    uses, reached, rank, limit = _visits(count, has_action, costs, edge_chance)
+    uses, reached, rank, limit, measured = _visits(count, has_action, costs, edge_chance)
     restarting = [has_action[i] and is_restart is not None and is_restart(policy[members[i][0]]) for i in range(count)]
 
     steps = []
@@ -182,7 +184,7 @@ def build_flow[S: Hashable](
                 reached=reached[index],
             )
         )
-    return Flow(tuple(steps), {state: block[state] + 1 for state in states}, count <= MAX_STEPS)
+    return Flow(tuple(steps), {state: block[state] + 1 for state in states}, measured)
 
 
 def _refine[S: Hashable](
@@ -222,8 +224,8 @@ def _refine[S: Hashable](
 
 def _visits(
     count: int, has_action: list[bool], costs: list[float], edge_chance: list[dict[int, Fraction]]
-) -> tuple[list[float | None], list[float | None], list[float], list[float]]:
-    """Expected uses and the chance of ever entering, per step, and what tells `forward` from `miss`.
+) -> tuple[list[float | None], list[float | None], list[float], list[float], bool]:
+    """Expected uses and the chance of ever entering, per step, what tells `forward` from `miss`, and whether they were solved.
 
     The third list ranks the steps: the expected cost still to pay, or, above `MAX_STEPS` steps, the fewest
     edges to a goal; infinite for a step that cannot reach a goal. The fourth is, per step, the highest rank
@@ -260,10 +262,11 @@ def _visits(
         if has_action[i] and not can_finish[i]:
             uses[i] = math.inf
     reached[0] = 1.0
-    if count > MAX_STEPS:  # the steps that finish are not told apart by uses: only by their distance
-        return uses, reached, distance, [d - 1.0 if math.isfinite(d) else -math.inf for d in distance]
+    nearer = [d - 1.0 if math.isfinite(d) else -math.inf for d in distance]  # the limit when the steps are told apart by distance
+    if count > MAX_STEPS:
+        return uses, reached, distance, nearer, False
     if 0 not in position:  # the first step is a dead end, or a trap: nothing else of the flow is a run's business
-        return uses, reached, distance, [d - 1.0 if math.isfinite(d) else -math.inf for d in distance]
+        return uses, reached, distance, nearer, True
 
     matrix = np.eye(size)
     for i in transient:
@@ -272,7 +275,10 @@ def _visits(
             c = position.get(t)
             if t != _GOAL and c is not None:
                 matrix[r, c] -= float(chance)
-    inverse = np.linalg.inv(matrix)
+    try:
+        inverse = np.linalg.inv(matrix)
+    except np.linalg.LinAlgError:  # a chance per use so small that 1 - q is 1 in floats: nothing to say about uses
+        return uses, reached, distance, nearer, False
     row = inverse[position[0]]
     to_pay = inverse @ np.array([costs[i] for i in transient])
     rank = [math.inf] * count
@@ -289,4 +295,4 @@ def _visits(
             continue
         stepped = sum(float(row[position[i]]) * float(edge_chance[i][a]) for i in transient if a in edge_chance[i])
         reached[a] = min(1.0, max(0.0, stepped))
-    return uses, reached, rank, limit
+    return uses, reached, rank, limit, True

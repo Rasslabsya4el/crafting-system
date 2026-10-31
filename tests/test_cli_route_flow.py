@@ -7,8 +7,8 @@ from fractions import Fraction
 
 import pytest
 
-from crafting_system.cli._reach import policy_states, reach_probabilities
 from crafting_system.cli import _route_flow
+from crafting_system.cli._reach import policy_states, reach_probabilities
 from crafting_system.cli._route_flow import Edge, Flow, Step, build_flow
 from crafting_system.risk import evaluate
 from crafting_system.solver import Action, Outcome
@@ -468,3 +468,14 @@ def test_above_the_cap_the_chain_is_not_solved_and_the_edges_are_told_by_the_dis
     assert [edge.kind for edge in step_with(flow, 3).edges] == ["miss", "forward"]
     assert [edge.kind for edge in step_with(flow, 79).edges] == ["goal", "miss"]
     assert flow.steps[0].edges[0].kind == "again" and flow.steps[0].edges[1].kind == "forward"
+
+
+def test_a_chance_per_use_too_small_for_floats_leaves_the_flow_unmeasured_instead_of_failing():
+    policy = {"A": act("a", ("A", 10**17 - 1), ("goal", 1))}
+
+    flow = build_flow("A", policy, is_goal)
+
+    assert not flow.measured
+    (step,) = flow.steps
+    assert step.uses is None and step.reached == 1.0
+    assert [(edge.kind, edge.to) for edge in step.edges] == [("goal", None), ("again", 1)]

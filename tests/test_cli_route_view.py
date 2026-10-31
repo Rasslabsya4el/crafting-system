@@ -33,10 +33,9 @@ from route_view_support import (
 from targets_support import EXAMPLES
 
 from crafting_system.actions import HarvestReforge
-from crafting_system.cli import evaluate_route, main, make_plan, parse_route
+from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, parse_route
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._report import build_report
-from crafting_system.cli import _route_flow
 from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
@@ -391,7 +390,7 @@ def test_above_the_cap_the_rows_have_no_uses_or_step_costs_and_the_goal_card_say
     assert all("Uses on average" not in labels_of(row) and "Step cost" not in labels_of(row) for row in section.rows)
     assert lines_of(section.rows[1], "Cost per use") == ["1 × Essence of Hysteria 3 c"]
     note = [field for field in section.goal.fields if field.label == "Note"][0]
-    assert note.lines[0].text == "more than 1 steps: how often a step is used and what it costs are left out"
+    assert note.lines[0].text.startswith("how often a step is used and what it costs are left out")
 
 
 @pytest.mark.parametrize("name", INPUTS)

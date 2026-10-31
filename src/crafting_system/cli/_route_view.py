@@ -355,7 +355,7 @@ class _View:
 
         Only for a step with several outcomes; the count only when the abstraction tracks every mod.
         """
-        if action.label == RESTART or sum(1 for outcome in action.outcomes if outcome.weight > 0) < 2:
+        if not forward or action.label == RESTART or sum(1 for outcome in action.outcomes if outcome.weight > 0) < 2:
             return []
         landing = list(dict.fromkeys(state for edge in forward for state in edge.states))
         lines = []
@@ -471,7 +471,7 @@ class _View:
         mean = total(risk.mean.value) if math.isfinite(risk.mean.value) else (GAPS if self.inp.reasons else NEVER)
         p90 = f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else "no finish in 9 runs of 10"
         success = risk.success_probability.value
-        note = f"more than {_route_flow.MAX_STEPS} steps: how often a step is used and what it costs are left out"
+        note = "how often a step is used and what it costs are left out: the policy is too large to solve here"
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,
             _plain("Mean", mean),
