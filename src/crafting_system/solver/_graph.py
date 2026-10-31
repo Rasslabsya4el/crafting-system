@@ -194,30 +194,42 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
 
 
 class _Reverse:
-    """For each state, the actions that lead to it: `actions[offsets[s]:offsets[s + 1]]`."""
+    """For each member of one cyclic component, the actions of members that lead to it.
 
-    __slots__ = ("offsets", "actions")
+    Only these matter while the component is settled: an action owned by a state outside it is
+    not retained yet (components are settled sink-first), so it is never alive. `[s]` is a
+    copy-slice of action ids.
+    """
 
-    def __init__(self, graph: Graph) -> None:
-        count = len(graph.states)
-        targets, tstart = graph.targets, graph.tstart
-        offsets = [0] * (count + 1)
-        for j in targets:
-            offsets[j + 1] += 1
-        for s in range(count):
-            offsets[s + 1] += offsets[s]
-        cursor = offsets[:count]
-        actions = array("i", bytes(4 * len(targets)))
-        for k in range(len(graph.owner)):
-            for j in targets[tstart[k] : tstart[k + 1]]:
-                actions[cursor[j]] = k
-                cursor[j] += 1
+    __slots__ = ("local", "offsets", "actions")
+
+    def __init__(self, graph: Graph, members: list[int]) -> None:
+        local = {state: position for position, state in enumerate(members)}
+        targets, tstart, first = graph.targets, graph.tstart, graph.first
+        offsets = [0] * (len(members) + 1)
+        for s in members:
+            for j in targets[tstart[first[s]] : tstart[first[s + 1]]]:
+                position = local.get(j)
+                if position is not None:
+                    offsets[position + 1] += 1
+        for position in range(len(members)):
+            offsets[position + 1] += offsets[position]
+        cursor = offsets[:-1]
+        actions = array("i", bytes(4 * offsets[-1]))
+        for s in members:
+            for k in range(first[s], first[s + 1]):
+                for j in targets[tstart[k] : tstart[k + 1]]:
+                    position = local.get(j)
+                    if position is not None:
+                        actions[cursor[position]] = k
+                        cursor[position] += 1
+        self.local = local
         self.offsets = array("q", offsets)
         self.actions = actions
 
     def __getitem__(self, state: int) -> array:
-        offsets = self.offsets
-        return self.actions[offsets[state] : offsets[state + 1]]
+        position = self.local[state]
+        return self.actions[self.offsets[position] : self.offsets[position + 1]]
 
 
 def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
@@ -237,8 +249,7 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
     targets, tstart = graph.targets, graph.tstart
     alive = [False] * len(graph.owner)
     in_y = [False] * n_states
-    pred = _Reverse(graph)
-    cycle = _Cycle(graph, pred, alive, in_y)
+    cycle = _Cycle(graph, alive, in_y)
     components = strongly_connected_components(graph.state_offsets(), targets, range(n_states))
     for cid, component in enumerate(components):
         if len(component) > 1:  # self-loops are compiled out, so one state alone has no cycle
@@ -276,12 +287,10 @@ class _Cycle[S]:
     (decremental reachability has no known linear algorithm).
     """
 
-    def __init__(
-        self, graph: Graph[S], pred: _Reverse, alive: list[bool], in_y: list[bool]
-    ) -> None:
+    def __init__(self, graph: Graph[S], alive: list[bool], in_y: list[bool]) -> None:
         count = len(graph.states)
         self.graph = graph
-        self.pred = pred
+        self.pred: _Reverse | None = None  # set for the component being settled
         self.alive = alive
         self.in_y = in_y
         self.live = [0] * count  # alive actions of each member
@@ -297,6 +306,7 @@ class _Cycle[S]:
         for s in members:
             comp[s] = cid
             in_y[s] = True
+        self.pred = _Reverse(graph, members)
         for s in members:
             for k in graph.state_actions[s]:
                 if all(in_y[j] for j in graph.succ[k]):  # members count as in Y, outside is final
