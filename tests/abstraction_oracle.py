@@ -62,11 +62,13 @@ def finished_items(
     forced: str | None = None,
     cap: int | None = None,
     pool: Iterable[PoolFamily] | None = None,
+    totals: Mapping[int, Fraction] | None = None,
 ) -> list[tuple[Item, Fraction]]:
     """Every finished item of rerolling `start` (kept: its fractured mods) with its exact probability.
 
     `forced` is the id of the forced mod of an essence and `cap` the level cap of a low essence.
     `pool` replaces the candidates (a fossil pool with its weights); it must be built for the retained item.
+    `totals` replaces the 8:3:1 chance of each total number of mods (a likelihood reforge draws a fixed number).
     Raises `ValueError` when `tag` is given and no tagged mod can be drawn first. `start` is taken to
     be an uncorrupted, uninfluenced item that the action accepts: refusals are not the oracle's business.
     """
@@ -117,13 +119,14 @@ def finished_items(
             raise ValueError(f"no {tag} mod can be drawn first")
         whole = sum((c.weight for c in tagged), Fraction(0))
         layer = {frozenset({c.mod.id}): c.weight / whole for c in tagged}
-    picks_of = {total: max(0, total - kept - (tag is not None)) for total in TOTALS}
+    totals = TOTALS if totals is None else totals
+    picks_of = {total: max(0, total - kept - (tag is not None)) for total in totals}
     layers = [layer]
     for _ in range(max(picks_of.values())):
         layers.append(advance(layers[-1]))
 
     outcome: dict[frozenset[str], Fraction] = defaultdict(Fraction)
-    for total, chance in TOTALS.items():
+    for total, chance in totals.items():
         for drawn, inner in layers[picks_of[total]].items():
             outcome[drawn] += chance * inner
     assert sum(outcome.values()) == 1
