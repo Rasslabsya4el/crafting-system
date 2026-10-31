@@ -43,7 +43,29 @@ The serial command is unchanged:
 
     uv run python .github/scripts/run_shard.py --shard 3/8 --procs 4 --out out -- -p no:cacheprovider --shard-durations tests/shard_durations.json
 
+## Heavy runs on GitHub: the `Run a command` workflow
+
+Benchmarks, profiling and research sweeps go to GitHub too, not to a developer's PC. `.github/workflows/run.yml`
+checks out a branch, puts the pinned game data in place with the same step CI uses (`.github/actions/real-data`),
+runs a bash command from the repository root on 1 to 16 runners and uploads what the command wrote into `$OUT_DIR`
+(plus `output.log`, its console output). The command sees `RUNNER_INDEX` (1..N) and `RUNNER_COUNT`, so N runners can
+split a sweep; `CRAFTING_CACHE_DIR` already holds the data. Inputs: `command`, `runners` (default 1), `os`
+(default `ubuntu-latest`), `timeout_minutes` (default 60). GitHub only lets a workflow be started by hand when its
+file is on the default branch, so this works once the file is on `main`; the code that runs is the code of `--ref`.
+
+    gh workflow run run.yml --ref my-branch -f runners=4 -f command='uv run --no-sync python bench.py --part $RUNNER_INDEX/$RUNNER_COUNT --out $OUT_DIR'
+    gh run list --workflow run.yml --branch my-branch --limit 1 --json databaseId,status,conclusion
+    gh run watch <run id> --exit-status
+    gh run download <run id> --dir results        # one folder per runner: run-ubuntu-latest-1, -2, ...
+
+(`gh` can be slow or time out; the same calls work with `curl` against `api.github.com/repos/<owner>/<repo>/actions/...`.)
+Fetch the data into your own folder first with `python -m crafting_system.data fetch` only for a local run; on
+GitHub it is already there.
+
 ## Keeping the shards balanced
 
-After a run, download the artifact `shard-durations` and commit it as `tests/shard_durations.json`. Do it when
-tests were added or got slower; a stale file only makes the shards less even, never wrong.
+After a run, download the artifact `shard-durations` and commit it as `tests/shard_durations.json`. It holds the
+seconds and the number of tests of each group (a module, or a module and one route), not of single tests, because
+a test id can carry a path and `test_no_absolute_paths` forbids those in the repo. Do it when tests were added or
+got slower; a stale file only makes the shards less even, never wrong: a group that grew costs the median test for
+each new test, and a new group costs its tests at the median.
