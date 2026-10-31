@@ -1,4 +1,4 @@
-"""Pricing a buy spec from trade listings: stats cache, query cache, extraction to Chaos, the median (#39).
+"""Pricing a buy spec from trade listings: stats cache, query cache, extraction to Chaos, the mean (#39, #133).
 
 Every test runs on the recorded responses (or copies of the recorded rows) through a fake transport.
 """
@@ -160,7 +160,7 @@ def test_a_broken_cache_file_is_ignored_and_the_site_asked(trade, spec, game_mod
     assert trade.kinds == ["search", "fetch"]
 
 
-# -- extraction to Chaos and the median ----------------------------------------------------------
+# -- extraction to Chaos and the mean ----------------------------------------------------------
 
 
 def test_divine_and_exalted_prices_convert_with_the_price_file_rates(trade, spec, game_mods, tmp_path):
@@ -168,7 +168,7 @@ def test_divine_and_exalted_prices_convert_with_the_price_file_rates(trade, spec
 
     found = price(trade, spec, game_mods, tmp_path, k=4)
 
-    assert found.used == 4 and found.chaos == statistics.median([10, 400, 100, 200])
+    assert found.used == 4 and found.chaos == statistics.fmean([10, 400, 100, 200]) == 177.5
 
 
 @pytest.mark.parametrize(
@@ -190,7 +190,7 @@ def test_a_listing_that_cannot_be_used_is_dropped_and_counted(trade, spec, game_
     assert (found.used, found.fetched, found.chaos) == (4, 5, 2.5)
 
 
-def test_the_median_of_the_k_cheapest_ignores_the_dearer_listings(trade, spec, game_mods, tmp_path):
+def test_the_mean_of_the_k_cheapest_ignores_the_dearer_listings(trade, spec, game_mods, tmp_path):
     with_rows(trade, *(api_row(n) for n in (90, 1, 80, 2, 70, 3)))
 
     found = price(trade, spec, game_mods, tmp_path, k=3)
@@ -198,18 +198,20 @@ def test_the_median_of_the_k_cheapest_ignores_the_dearer_listings(trade, spec, g
     assert (found.used, found.k, found.chaos) == (3, 3, 2.0)
 
 
-def test_with_fewer_listings_than_k_the_median_takes_all_of_them(trade, spec, game_mods, tmp_path):
+def test_with_fewer_listings_than_k_the_mean_takes_all_of_them(trade, spec, game_mods, tmp_path):
     with_rows(trade, api_row(7), api_row(1), api_row(2))
 
     found = price(trade, spec, game_mods, tmp_path)
 
-    assert (found.used, found.k, found.chaos) == (3, DEFAULT_K, 2.0)
+    assert (found.used, found.k, found.chaos) == (3, DEFAULT_K, pytest.approx(10 / 3))
 
 
-def test_an_even_count_takes_the_mean_of_the_two_middle_ones(trade, spec, game_mods, tmp_path):
-    with_rows(trade, api_row(1), api_row(2), api_row(3), api_row(10))
+def test_the_price_is_the_mean_not_the_median_of_the_five_cheapest(trade, spec, game_mods, tmp_path):
+    with_rows(trade, *(api_row(n) for n in (1, 2, 3, 4, 100, 7, 8)))
 
-    assert price(trade, spec, game_mods, tmp_path).chaos == 2.5
+    found = price(trade, spec, game_mods, tmp_path)
+
+    assert (found.used, found.chaos) == (5, pytest.approx(3.4))  # the median would be 3.0
 
 
 def test_k_below_one_is_refused(trade, spec, game_mods, tmp_path):
@@ -258,10 +260,18 @@ def test_two_usable_listings_are_not_enough_and_the_message_says_why(trade, spec
 def test_a_search_with_no_listings_is_not_enough_and_fetches_nothing(trade, spec, game_mods, tmp_path):
     trade.search.update(total=0, result=[])
 
-    with pytest.raises(NotEnoughListings, match="--indexed"):
+    with pytest.raises(NotEnoughListings, match="total 0") as error:
         price(trade, spec, game_mods, tmp_path)
 
+    assert "--indexed" not in str(error.value)  # no age window by default, so nothing to widen
     assert trade.kinds == ["stats", "search"]
+
+
+def test_a_search_with_no_listings_in_a_narrow_window_suggests_a_wider_one(trade, spec, game_mods, tmp_path):
+    trade.search.update(total=0, result=[])
+
+    with pytest.raises(NotEnoughListings, match="--indexed"):
+        price(trade, spec, game_mods, tmp_path, indexed="1week")
 
 
 # -- the entry and the price file ----------------------------------------------------------------
@@ -273,7 +283,9 @@ def test_the_entry_carries_source_note_and_the_query(trade, spec, game_mods, tmp
     entry = entry_for(found)
 
     assert (entry.chaos, entry.source) == (1.0, TRADE_SOURCE) and TRADE_SOURCE == "trade-api"
-    assert entry.note == "median of the 5 cheapest of 10 fetched listings, 910 on the site, listed within 1week"
+    assert entry.note == (
+        "mean of the 5 cheapest instant-buyout listings of 10 fetched, 910 on the site, listed any time"
+    )
     assert entry.detail == {
         "league": "Allflame",
         "date": "2026-10-30",
