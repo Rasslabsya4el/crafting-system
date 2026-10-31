@@ -4,6 +4,11 @@
 caller loads the game data, the target and the prices and decides what to do with the `Plan`.
 Nothing here reads the clock except `time.perf_counter` around the solve and the risk run, which
 are reported (the budget DP of `risk.evaluate` is pure Python and can be slow on large policies).
+
+With a `budget` the plan first forecasts its size (`_decide.decide`): a query that fits runs exactly, a
+larger one is answered by the ladder of coarse levels (`_approx`) and the `Plan` then has an `approximation`,
+its `solution` is the pessimistic one on blocks and it has no `risk` (ADR-0023). Without a `budget` the plan
+is always exact, as before.
 """
 
 import time
@@ -20,6 +25,8 @@ from crafting_system.risk import RiskReport, evaluate
 from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
+from ._approx import Approximation, climb
+from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
 
 
@@ -50,9 +57,11 @@ class Plan:
     dropped: tuple[DroppedOffer, ...]
     left_out: tuple[LeftOut, ...]
     solution: Solution[CompressedState]
-    risk: RiskReport
+    risk: RiskReport | None
     solve_seconds: float
     risk_seconds: float
+    approximation: Approximation | None = None  # set when the answer is approximate: `start`, `solution` and `policy` are then of blocks
+    note: str = ""  # a plain-English remark on how the query was decided (empty when it simply fit)
 
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
@@ -171,6 +180,8 @@ def make_plan(
     *,
     start_price: float | None = None,
     offers: Iterable[Offer] | None = None,
+    budget: float | None = None,
+    rates: Rates | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -181,6 +192,11 @@ def make_plan(
     Remove Crafted Mods is kept only when a priced bench craft is, or the start item holds a crafted
     mod: otherwise no crafted mod can ever exist and tracking the junk slots for it would only grow
     the state space. A start item with a price is offered again as `restart` from every state.
+
+    `budget` (seconds) turns on the decision of ADR-0023: when the forecast of the exact run is longer, the
+    answer is approximate within the tolerance if some coarse level reaches it, and `PlanError` says so
+    when none exists and the exact run is not offered. `rates` injects the seconds per kernel outcome and per
+    solved edge instead of measuring them. None (the default) always solves exactly.
     """
     price_of_start = resolve_start_price(target, prices, start_price)
     goal = Goal.from_target(target)
@@ -205,6 +221,22 @@ def make_plan(
     start = abstraction.compress(target.start_item)
     model = _Model(abstraction, start, priced)
 
+    note = ""
+    if budget is not None:
+        decision = decide(abstraction, start, priced, budget, rates)
+        note = decision.message
+        if decision.action == "refused":
+            raise PlanError(decision.message)
+        if decision.action == "approximate":
+            try:
+                solved = climb(decision, start, priced)
+            except ValueError as error:
+                raise PlanError(str(error)) from error
+            return Plan(
+                target, abstraction, leaf_labels(target), prices, solved.start, price_of_start, priced, dropped, left_out,
+                solved.solution, None, solved.seconds, 0.0, solved.approximation, note,
+            )  # fmt: skip
+
     began = time.perf_counter()
     solution = solve(model, [start])
     solve_seconds = time.perf_counter() - began
@@ -217,7 +249,7 @@ def make_plan(
 
     return Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out,
-        solution, risk, solve_seconds, risk_seconds,
+        solution, risk, solve_seconds, risk_seconds, None, note,
     )
 
 
