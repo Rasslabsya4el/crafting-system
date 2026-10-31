@@ -1,0 +1,4188 @@
+{
+ "Wand": [
+  {
+   "example_bases": [
+    "Driftwood Wand",
+    "Goat's Horn",
+    "Carved Wand"
+   ],
+   "n_bases": 29,
+   "mods": [
+    {
+     "id": "V2ChanceToGainPowerChargeOnCritCorrupted",
+     "group": "PowerChargeOnCriticalStrikeChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain a Power Charge on Critical Strike"
+    },
+    {
+     "id": "V2ElementalDamagePenetrationCorrupted",
+     "group": "ElementalPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates (8-10)% Elemental Resistances"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlobalCriticalStrikeMultiplierCorrupted",
+     "group": "CriticalStrikeMultiplier",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(25-30)% to Global Critical Strike Multiplier"
+    },
+    {
+     "id": "V2GlobalIncreaseChaosSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Chaos Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreaseColdSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Cold Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreaseFireSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Fire Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreaseLightningSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Lightning Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreasePhysicalSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Physical Spell Skill Gems"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect1hCorrupted",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(15-20)% increased Area of Effect"
+    },
+    {
+     "id": "V2IncreasedCastSpeedCorrupted__",
+     "group": "IncreasedCastSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Cast Speed"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (6-8) to (13-15) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (14-18) to (27-32) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (17-23) to (24-40) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (8-10) to (15-18) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (17-22) to (33-39) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (21-28) to (40-48) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (1-2) to (27-28) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (2-5) to (58-61) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (2-6) to (72-76) Lightning Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeedWandCorrupted_",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(3-5)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance1hCorrupted1",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2PhysicalExplodeCorrupted",
+     "group": "EnemiesExplodeOnDeath",
+     "required_level": 80,
+     "weight": 250,
+     "text": "Enemies you Kill have a (10-15)% chance to Explode, dealing a tenth of their maximum Life as Physical Damage"
+    },
+    {
+     "id": "V2UnholyMightOnKillPercentChanceCorrupted",
+     "group": "UnholyMightOnKillPercentChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% chance to gain Unholy Might for 3 seconds on Kill"
+    }
+   ]
+  }
+ ],
+ "Dagger": [
+  {
+   "example_bases": [
+    "Glass Shank",
+    "Skinning Knife",
+    "Stiletto"
+   ],
+   "n_bases": 13,
+   "mods": [
+    {
+     "id": "V2ChanceToGainFrenzyChargeOnKillCorrupted",
+     "group": "FrenzyChargeOnKillChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(9-11)% chance to gain a Frenzy Charge on Kill"
+    },
+    {
+     "id": "V2ChanceToGainPowerChargeOnCritCorrupted",
+     "group": "PowerChargeOnCriticalStrikeChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain a Power Charge on Critical Strike"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlobalCriticalStrikeMultiplierCorrupted",
+     "group": "CriticalStrikeMultiplier",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(25-30)% to Global Critical Strike Multiplier"
+    },
+    {
+     "id": "V2IncreasedDamageOverTimeCorrupted_",
+     "group": "DamageOverTime",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(50-60)% increased Damage over Time"
+    },
+    {
+     "id": "V2LocalAddedChaosDamage1hCorrupted1",
+     "group": "LocalChaosDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (1-2) to (3-5) Chaos Damage"
+    },
+    {
+     "id": "V2LocalAddedChaosDamage1hCorrupted2",
+     "group": "LocalChaosDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (6-8) to (11-13) Chaos Damage"
+    },
+    {
+     "id": "V2LocalAddedChaosDamage1hCorrupted3",
+     "group": "LocalChaosDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (8-11) to (19-23) Chaos Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (6-8) to (13-15) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (14-18) to (27-32) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (17-23) to (24-40) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (8-10) to (15-18) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (17-22) to (33-39) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (21-28) to (40-48) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (1-2) to (27-28) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (2-5) to (58-61) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (2-6) to (72-76) Lightning Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed1hCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance1hCorrupted2__",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2UnholyMightOnKillPercentChanceCorrupted",
+     "group": "UnholyMightOnKillPercentChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% chance to gain Unholy Might for 3 seconds on Kill"
+    }
+   ]
+  }
+ ],
+ "Rune Dagger": [
+  {
+   "example_bases": [
+    "Carving Knife",
+    "Boot Knife",
+    "Copper Kris"
+   ],
+   "n_bases": 18,
+   "mods": [
+    {
+     "id": "V2ChanceToGainFrenzyChargeOnKillCorrupted",
+     "group": "FrenzyChargeOnKillChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(9-11)% chance to gain a Frenzy Charge on Kill"
+    },
+    {
+     "id": "V2ChanceToGainPowerChargeOnCritCorrupted",
+     "group": "PowerChargeOnCriticalStrikeChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain a Power Charge on Critical Strike"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlobalCriticalStrikeMultiplierCorrupted",
+     "group": "CriticalStrikeMultiplier",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(25-30)% to Global Critical Strike Multiplier"
+    },
+    {
+     "id": "V2GlobalIncreaseChaosSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Chaos Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreaseColdSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Cold Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreaseLightningSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Lightning Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreasePhysicalSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Physical Spell Skill Gems"
+    },
+    {
+     "id": "V2IncreasedCastSpeedCorrupted__",
+     "group": "IncreasedCastSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Cast Speed"
+    },
+    {
+     "id": "V2IncreasedDamageOverTimeCorrupted_",
+     "group": "DamageOverTime",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(50-60)% increased Damage over Time"
+    },
+    {
+     "id": "V2IncreasedSpellDamage1hCorrupted",
+     "group": "SpellDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(50-60)% increased Spell Damage"
+    },
+    {
+     "id": "V2LocalAddedChaosDamage1hCorrupted1",
+     "group": "LocalChaosDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (1-2) to (3-5) Chaos Damage"
+    },
+    {
+     "id": "V2LocalAddedChaosDamage1hCorrupted2",
+     "group": "LocalChaosDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (6-8) to (11-13) Chaos Damage"
+    },
+    {
+     "id": "V2LocalAddedChaosDamage1hCorrupted3",
+     "group": "LocalChaosDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (8-11) to (19-23) Chaos Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (6-8) to (13-15) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (14-18) to (27-32) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (17-23) to (24-40) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (8-10) to (15-18) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (17-22) to (33-39) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (21-28) to (40-48) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (1-2) to (27-28) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (2-5) to (58-61) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (2-6) to (72-76) Lightning Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed1hCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance1hCorrupted2__",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2PhysicalExplodeCorrupted",
+     "group": "EnemiesExplodeOnDeath",
+     "required_level": 80,
+     "weight": 250,
+     "text": "Enemies you Kill have a (10-15)% chance to Explode, dealing a tenth of their maximum Life as Physical Damage"
+    },
+    {
+     "id": "V2UnholyMightOnKillPercentChanceCorrupted",
+     "group": "UnholyMightOnKillPercentChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% chance to gain Unholy Might for 3 seconds on Kill"
+    }
+   ]
+  }
+ ],
+ "Claw": [
+  {
+   "example_bases": [
+    "Nailed Fist",
+    "Sharktooth Claw",
+    "Awl"
+   ],
+   "n_bases": 28,
+   "mods": [
+    {
+     "id": "V2ChanceToGainFrenzyChargeOnKillCorrupted",
+     "group": "FrenzyChargeOnKillChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(9-11)% chance to gain a Frenzy Charge on Kill"
+    },
+    {
+     "id": "V2ChanceToGainPowerChargeOnCritCorrupted",
+     "group": "PowerChargeOnCriticalStrikeChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain a Power Charge on Critical Strike"
+    },
+    {
+     "id": "V2DualWieldBlockCorrupted",
+     "group": "BlockWhileDualWielding",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(8-10)% Chance to Block Attack Damage while Dual Wielding"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlobalCriticalStrikeMultiplierCorrupted",
+     "group": "CriticalStrikeMultiplier",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(25-30)% to Global Critical Strike Multiplier"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (6-8) to (13-15) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (14-18) to (27-32) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (17-23) to (24-40) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (8-10) to (15-18) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (17-22) to (33-39) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (21-28) to (40-48) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (1-2) to (27-28) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (2-5) to (58-61) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (2-6) to (72-76) Lightning Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed1hCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance1hCorrupted1",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    }
+   ]
+  }
+ ],
+ "One Hand Axe": [
+  {
+   "example_bases": [
+    "Rusted Hatchet",
+    "Jade Hatchet",
+    "Boarding Axe"
+   ],
+   "n_bases": 28,
+   "mods": [
+    {
+     "id": "V2ChanceToBleedOnHitAndIncreasedDamageToBleedingTargetsCorrupted_",
+     "group": "ChanceToBleedOnHitAndIncreasedDamageToBleedingTargets",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "20% chance to cause Bleeding on Hit / (30-40)% increased Attack Damage against Bleeding Enemies"
+    },
+    {
+     "id": "V2ChanceToGainFortifyOnMeleeHitCorrupted",
+     "group": "FortifyOnMeleeHit",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Melee Hits have (10-15)% chance to Fortify"
+    },
+    {
+     "id": "V2ChanceToGainOnslaughtOnKillCorrupted_",
+     "group": "ChanceToGainOnslaughtOnKill",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% chance to gain Onslaught for 4 seconds on Kill"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect1hCorrupted",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(15-20)% increased Area of Effect"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted1",
+     "group": "PhysicalDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to 2 Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted2",
+     "group": "PhysicalDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (3-4) to (5-7) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted3",
+     "group": "PhysicalDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (5-7) to (10-12) Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed1hCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted1",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted2",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 85,
+     "weight": 1000,
+     "text": "(16-20)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalMeleeWeaponRangeCorrupted",
+     "group": "MeleeWeaponAndUnarmedRange",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(0.2-0.4) metres to Weapon Range"
+    }
+   ]
+  }
+ ],
+ "One Hand Sword": [
+  {
+   "example_bases": [
+    "Charan's Sword",
+    "Golden Blade",
+    "Rusted Sword"
+   ],
+   "n_bases": 32,
+   "mods": [
+    {
+     "id": "V2ChanceToGainFortifyOnMeleeHitCorrupted",
+     "group": "FortifyOnMeleeHit",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Melee Hits have (10-15)% chance to Fortify"
+    },
+    {
+     "id": "V2ChanceToGainOnslaughtOnKillCorrupted_",
+     "group": "ChanceToGainOnslaughtOnKill",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% chance to gain Onslaught for 4 seconds on Kill"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect1hCorrupted",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(15-20)% increased Area of Effect"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted1",
+     "group": "PhysicalDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to 2 Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted2",
+     "group": "PhysicalDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (3-4) to (5-7) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted3",
+     "group": "PhysicalDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (5-7) to (10-12) Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed1hCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted1",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted2",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 85,
+     "weight": 1000,
+     "text": "(16-20)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalMeleeWeaponRangeCorrupted",
+     "group": "MeleeWeaponAndUnarmedRange",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(0.2-0.4) metres to Weapon Range"
+    },
+    {
+     "id": "V2ResoluteTechniqueCorrupted",
+     "group": "Keystone",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Resolute Technique"
+    }
+   ]
+  }
+ ],
+ "Thrusting One Hand Sword": [
+  {
+   "example_bases": [
+    "Rusted Spike",
+    "Whalebone Rapier",
+    "Battered Foil"
+   ],
+   "n_bases": 25,
+   "mods": [
+    {
+     "id": "V2AdditionalProjectilesCorrupted",
+     "group": "AdditionalProjectilesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Skills fire an additional Projectile"
+    },
+    {
+     "id": "V2ChanceToGainOnslaughtOnKillCorrupted_",
+     "group": "ChanceToGainOnslaughtOnKill",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% chance to gain Onslaught for 4 seconds on Kill"
+    },
+    {
+     "id": "V2ElementalDamagePenetrationCorrupted",
+     "group": "ElementalPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Damage Penetrates (8-10)% Elemental Resistances"
+    },
+    {
+     "id": "V2GainFrenzyChargeAfterSpending200ManaCorrupted",
+     "group": "GainFrenzyChargeAfterSpending200Mana",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Gain a Frenzy Charge after Spending a total of 200 Mana"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed1hCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance1hCorrupted1",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2LocalMeleeWeaponRangeCorrupted",
+     "group": "MeleeWeaponAndUnarmedRange",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(0.2-0.4) metres to Weapon Range"
+    },
+    {
+     "id": "V2ResoluteTechniqueCorrupted",
+     "group": "Keystone",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Resolute Technique"
+    }
+   ]
+  }
+ ],
+ "One Hand Mace": [
+  {
+   "example_bases": [
+    "Driftwood Club",
+    "Tribal Club",
+    "Spiked Club"
+   ],
+   "n_bases": 28,
+   "mods": [
+    {
+     "id": "V2ChanceToGainEnduranceChargeOnStunCorrupted_",
+     "group": "GainEnduranceChargeOnStunChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain an Endurance Charge when you Stun an Enemy"
+    },
+    {
+     "id": "V2ChanceToGainFortifyOnMeleeHitCorrupted",
+     "group": "FortifyOnMeleeHit",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Melee Hits have (10-15)% chance to Fortify"
+    },
+    {
+     "id": "V2ChanceToGainOnslaughtOnKillCorrupted_",
+     "group": "ChanceToGainOnslaughtOnKill",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% chance to gain Onslaught for 4 seconds on Kill"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect1hCorrupted",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(15-20)% increased Area of Effect"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted1",
+     "group": "PhysicalDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to 2 Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted2",
+     "group": "PhysicalDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (3-4) to (5-7) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage1hCorrupted3",
+     "group": "PhysicalDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (5-7) to (10-12) Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed1hCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted1",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted2",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 85,
+     "weight": 1000,
+     "text": "(16-20)% increased Physical Damage"
+    }
+   ]
+  }
+ ],
+ "Sceptre": [
+  {
+   "example_bases": [
+    "Driftwood Sceptre",
+    "Darkwood Sceptre",
+    "Bronze Sceptre"
+   ],
+   "n_bases": 28,
+   "mods": [
+    {
+     "id": "V2ChanceToGainEnduranceChargeOnStunCorrupted_",
+     "group": "GainEnduranceChargeOnStunChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain an Endurance Charge when you Stun an Enemy"
+    },
+    {
+     "id": "V2ChanceToGainPowerChargeOnCritCorrupted",
+     "group": "PowerChargeOnCriticalStrikeChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain a Power Charge on Critical Strike"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlobalIncreaseColdSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Cold Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreaseFireSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Fire Spell Skill Gems"
+    },
+    {
+     "id": "V2GlobalIncreaseLightningSpellSkillGemLevelCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 1,
+     "weight": 250,
+     "text": "+1 to Level of all Lightning Spell Skill Gems"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect1hCorrupted",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(15-20)% increased Area of Effect"
+    },
+    {
+     "id": "V2IncreasedCastSpeedCorrupted__",
+     "group": "IncreasedCastSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Cast Speed"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (6-8) to (13-15) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (14-18) to (27-32) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage1hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (17-23) to (24-40) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (8-10) to (15-18) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (17-22) to (33-39) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage1hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (21-28) to (40-48) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (1-2) to (27-28) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (2-5) to (58-61) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage1hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (2-6) to (72-76) Lightning Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed1hCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance1hCorrupted2__",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2PhysicalExplodeCorrupted",
+     "group": "EnemiesExplodeOnDeath",
+     "required_level": 80,
+     "weight": 250,
+     "text": "Enemies you Kill have a (10-15)% chance to Explode, dealing a tenth of their maximum Life as Physical Damage"
+    }
+   ]
+  }
+ ],
+ "Bow": [
+  {
+   "example_bases": [
+    "Crude Bow",
+    "Short Bow",
+    "Long Bow"
+   ],
+   "n_bases": 29,
+   "mods": [
+    {
+     "id": "V2AdditionalArrowsCorrupted",
+     "group": "AdditionalArrows",
+     "required_level": 75,
+     "weight": 200,
+     "text": "Bow Attacks fire an additional Arrow"
+    },
+    {
+     "id": "V2AdditionalChainCorrupted",
+     "group": "Chain",
+     "required_level": 80,
+     "weight": 200,
+     "text": "Arrows Chain +1 times"
+    },
+    {
+     "id": "V2ChanceToGainFrenzyChargeOnKillCorrupted",
+     "group": "FrenzyChargeOnKillChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(9-11)% chance to gain a Frenzy Charge on Kill"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (9-13) to (20-23) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (22-27) to (36-44) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (26-32) to (45-55) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (12-17) to (23-27) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (27-31) to (39-50) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (31-39) to (52-61) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (2-3) to (35-39) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (3-7) to (73-84) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (5-9) to (103-107) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted1",
+     "group": "PhysicalDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to (2-3) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted2__",
+     "group": "PhysicalDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (4-5) to (6-8) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted3",
+     "group": "PhysicalDamage",
+     "required_level": 82,
+     "weight": 250,
+     "text": "Adds (8-9) to (11-13) Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeedBowCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(3-5)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance2hCorrupted_",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageBowCorrupted1",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageBowCorrupted2",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 85,
+     "weight": 1000,
+     "text": "(16-20)% increased Physical Damage"
+    },
+    {
+     "id": "V2SupportedByAddedChaosDamageCorrupted",
+     "group": "DisplaySocketedGemsGetAddedChaosDamage",
+     "required_level": 1,
+     "weight": 500,
+     "text": "Socketed Gems are Supported by Level 17 Added Chaos Damage"
+    },
+    {
+     "id": "V2SupportedByBlindCorrupted",
+     "group": "SupportedByBlind",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are supported by Level 10 Blind"
+    },
+    {
+     "id": "V2SupportedByChainCorrupted",
+     "group": "SupportedByChain",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Chain"
+    },
+    {
+     "id": "V2SupportedByFasterProjectilesCorrupted",
+     "group": "SupportedByProjectileSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are supported by Level 10 Faster Projectiles"
+    },
+    {
+     "id": "V2SupportedByForkCorrupted",
+     "group": "SupportedByFork",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are supported by Level 10 Fork"
+    },
+    {
+     "id": "V2SupportedByMultipleProjectilesCorrupted",
+     "group": "SupportedByMultipleProjectiles",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Multiple Projectiles"
+    },
+    {
+     "id": "V2SupportedByOnslaughtCorrupted",
+     "group": "SupportedByOnslaught",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Momentum"
+    }
+   ]
+  }
+ ],
+ "Staff": [
+  {
+   "example_bases": [
+    "Gnarled Branch",
+    "Primitive Staff",
+    "Long Staff"
+   ],
+   "n_bases": 16,
+   "mods": [
+    {
+     "id": "V2ChanceToGainEnduranceChargeOnStunCorrupted_",
+     "group": "GainEnduranceChargeOnStunChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain an Endurance Charge when you Stun an Enemy"
+    },
+    {
+     "id": "V2ChanceToGainPowerChargeOnCritCorrupted",
+     "group": "PowerChargeOnCriticalStrikeChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain a Power Charge on Critical Strike"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlobalCriticalStrikeMultiplier2HCorrupted",
+     "group": "CriticalStrikeMultiplier",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(35-50)% to Global Critical Strike Multiplier"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect2hCorrupted_",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-30)% increased Area of Effect"
+    },
+    {
+     "id": "V2IncreasedCastSpeed2HCorrupted__",
+     "group": "IncreasedCastSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(22-28)% increased Cast Speed"
+    },
+    {
+     "id": "V2IncreasedSpellDamage2hCorrupted",
+     "group": "SpellDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(70-90)% increased Spell Damage"
+    },
+    {
+     "id": "V2LevelOfSocketedChaosGemsCorrupted",
+     "group": "IncreaseSocketedChaosGemLevel",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+2 to Level of Socketed Chaos Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedColdGemsCorrupted",
+     "group": "IncreaseSocketedColdGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Cold Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedFireGemsCorrupted",
+     "group": "IncreaseSocketedFireGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Fire Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedLightningGemsCorrupted",
+     "group": "IncreaseSocketedLightningGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Lightning Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedPhysicalGemsCorrupted",
+     "group": "IncreaseSocketedPhysicalGemLevel",
+     "required_level": 1,
+     "weight": 750,
+     "text": "+2 to Level of Socketed Physical Gems"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (9-13) to (20-23) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (22-27) to (36-44) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (26-32) to (45-55) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (12-17) to (23-27) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (27-31) to (39-50) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (31-39) to (52-61) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (2-3) to (35-39) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (3-7) to (73-84) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (5-9) to (103-107) Lightning Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed2hCorrupted_",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 70,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance2hCorrupted_",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2PhysicalExplodeCorrupted2H",
+     "group": "EnemiesExplodeOnDeath",
+     "required_level": 80,
+     "weight": 250,
+     "text": "Enemies you Kill have a (20-25)% chance to Explode, dealing a tenth of their maximum Life as Physical Damage"
+    },
+    {
+     "id": "V2SupportedByAreaOfEffectCorrupted",
+     "group": "SupportedByAreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Increased Area of Effect"
+    },
+    {
+     "id": "V2SupportedByCrueltyCorrupted",
+     "group": "SupportedByCruelty",
+     "required_level": 57,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Cruelty"
+    },
+    {
+     "id": "V2SupportedByElementalPenetrationCorrupted",
+     "group": "SupportedByElementalPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Elemental Penetration"
+    },
+    {
+     "id": "V2SupportedByMultipleProjectilesCorrupted",
+     "group": "SupportedByMultipleProjectiles",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Multiple Projectiles"
+    }
+   ]
+  }
+ ],
+ "Warstaff": [
+  {
+   "example_bases": [
+    "Iron Staff",
+    "Coiled Staff",
+    "Vile Staff"
+   ],
+   "n_bases": 9,
+   "mods": [
+    {
+     "id": "V2ChanceToGainEnduranceChargeOnStunCorrupted_",
+     "group": "GainEnduranceChargeOnStunChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain an Endurance Charge when you Stun an Enemy"
+    },
+    {
+     "id": "V2ChanceToGainPowerChargeOnCritCorrupted",
+     "group": "PowerChargeOnCriticalStrikeChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain a Power Charge on Critical Strike"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlobalCriticalStrikeMultiplier2HCorrupted",
+     "group": "CriticalStrikeMultiplier",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(35-50)% to Global Critical Strike Multiplier"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect2hCorrupted_",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-30)% increased Area of Effect"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (9-13) to (20-23) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (22-27) to (36-44) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (26-32) to (45-55) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (12-17) to (23-27) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (27-31) to (39-50) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (31-39) to (52-61) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (2-3) to (35-39) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (3-7) to (73-84) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (5-9) to (103-107) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted1",
+     "group": "PhysicalDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to (2-3) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted2__",
+     "group": "PhysicalDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (4-5) to (6-8) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted3",
+     "group": "PhysicalDamage",
+     "required_level": 82,
+     "weight": 250,
+     "text": "Adds (8-9) to (11-13) Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed2hCorrupted_",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 70,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance2hCorrupted_",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted1",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted2",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 85,
+     "weight": 1000,
+     "text": "(16-20)% increased Physical Damage"
+    },
+    {
+     "id": "V2SupportedByAreaOfEffectCorrupted",
+     "group": "SupportedByAreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Increased Area of Effect"
+    },
+    {
+     "id": "V2SupportedByCrueltyCorrupted",
+     "group": "SupportedByCruelty",
+     "required_level": 57,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Cruelty"
+    },
+    {
+     "id": "V2SupportedByElementalPenetrationCorrupted",
+     "group": "SupportedByElementalPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Elemental Penetration"
+    }
+   ]
+  },
+  {
+   "example_bases": [
+    "Capacity Rod",
+    "Potentiality Rod",
+    "Eventuality Rod"
+   ],
+   "n_bases": 3,
+   "mods": [
+    {
+     "id": "V2ChanceToGainEnduranceChargeOnStunCorrupted_",
+     "group": "GainEnduranceChargeOnStunChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain an Endurance Charge when you Stun an Enemy"
+    },
+    {
+     "id": "V2ChanceToGainPowerChargeOnCritCorrupted",
+     "group": "PowerChargeOnCriticalStrikeChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain a Power Charge on Critical Strike"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlobalCriticalStrikeMultiplier2HCorrupted",
+     "group": "CriticalStrikeMultiplier",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(35-50)% to Global Critical Strike Multiplier"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect2hCorrupted_",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-30)% increased Area of Effect"
+    },
+    {
+     "id": "V2IncreasedCastSpeed2HCorrupted__",
+     "group": "IncreasedCastSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(22-28)% increased Cast Speed"
+    },
+    {
+     "id": "V2IncreasedSpellDamage2hCorrupted",
+     "group": "SpellDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(70-90)% increased Spell Damage"
+    },
+    {
+     "id": "V2LevelOfSocketedChaosGemsCorrupted",
+     "group": "IncreaseSocketedChaosGemLevel",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+2 to Level of Socketed Chaos Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedColdGemsCorrupted",
+     "group": "IncreaseSocketedColdGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Cold Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedFireGemsCorrupted",
+     "group": "IncreaseSocketedFireGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Fire Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedLightningGemsCorrupted",
+     "group": "IncreaseSocketedLightningGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Lightning Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedPhysicalGemsCorrupted",
+     "group": "IncreaseSocketedPhysicalGemLevel",
+     "required_level": 1,
+     "weight": 750,
+     "text": "+2 to Level of Socketed Physical Gems"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted1",
+     "group": "ColdDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (9-13) to (20-23) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted2",
+     "group": "ColdDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (22-27) to (36-44) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedColdDamage2hCorrupted3_",
+     "group": "ColdDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (26-32) to (45-55) Cold Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted1",
+     "group": "FireDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (12-17) to (23-27) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted2",
+     "group": "FireDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (27-31) to (39-50) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedFireDamage2hCorrupted3",
+     "group": "FireDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (31-39) to (52-61) Fire Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted1",
+     "group": "LightningDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (2-3) to (35-39) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted2",
+     "group": "LightningDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (3-7) to (73-84) Lightning Damage"
+    },
+    {
+     "id": "V2LocalAddedLightningDamage2hCorrupted3",
+     "group": "LightningDamage",
+     "required_level": 84,
+     "weight": 250,
+     "text": "Adds (5-9) to (103-107) Lightning Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed2hCorrupted_",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 70,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedCriticalStrikeChance2hCorrupted_",
+     "group": "CriticalStrikeChanceIncrease",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(14-18)% increased Critical Strike Chance"
+    },
+    {
+     "id": "V2PhysicalExplodeCorrupted2H",
+     "group": "EnemiesExplodeOnDeath",
+     "required_level": 80,
+     "weight": 250,
+     "text": "Enemies you Kill have a (20-25)% chance to Explode, dealing a tenth of their maximum Life as Physical Damage"
+    },
+    {
+     "id": "V2SupportedByAreaOfEffectCorrupted",
+     "group": "SupportedByAreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Increased Area of Effect"
+    },
+    {
+     "id": "V2SupportedByCrueltyCorrupted",
+     "group": "SupportedByCruelty",
+     "required_level": 57,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Cruelty"
+    },
+    {
+     "id": "V2SupportedByElementalPenetrationCorrupted",
+     "group": "SupportedByElementalPenetration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Elemental Penetration"
+    },
+    {
+     "id": "V2SupportedByMultipleProjectilesCorrupted",
+     "group": "SupportedByMultipleProjectiles",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Multiple Projectiles"
+    }
+   ]
+  }
+ ],
+ "Two Hand Axe": [
+  {
+   "example_bases": [
+    "Stone Axe",
+    "Jade Chopper",
+    "Woodsplitter"
+   ],
+   "n_bases": 25,
+   "mods": [
+    {
+     "id": "V2ChanceToBleedOnHitAndIncreasedDamageToBleedingTargetsCorrupted_",
+     "group": "ChanceToBleedOnHitAndIncreasedDamageToBleedingTargets",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "20% chance to cause Bleeding on Hit / (30-40)% increased Attack Damage against Bleeding Enemies"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect2hCorrupted_",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-30)% increased Area of Effect"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted1",
+     "group": "PhysicalDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to (2-3) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted2__",
+     "group": "PhysicalDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (4-5) to (6-8) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted3",
+     "group": "PhysicalDamage",
+     "required_level": 82,
+     "weight": 250,
+     "text": "Adds (8-9) to (11-13) Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed2hCorrupted_",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 70,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted1",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted2",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 85,
+     "weight": 1000,
+     "text": "(16-20)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalMeleeWeaponRangeCorrupted",
+     "group": "MeleeWeaponAndUnarmedRange",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(0.2-0.4) metres to Weapon Range"
+    },
+    {
+     "id": "V2SupportedByBloodmagicCorrupted",
+     "group": "SupportedByBloodMagic",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 1 Lifetap"
+    },
+    {
+     "id": "V2SupportedByCrueltyCorrupted",
+     "group": "SupportedByCruelty",
+     "required_level": 57,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Cruelty"
+    },
+    {
+     "id": "V2SupportedByFortifyCorrupted_",
+     "group": "SupportedByFortify",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Fortify"
+    },
+    {
+     "id": "V2SupportedByImpaleCorrupted",
+     "group": "SupportedByImpale",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Impale"
+    },
+    {
+     "id": "V2SupportedByLifeGainOnHitCorrupted",
+     "group": "SupportedByLifeGainOnHit",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Life Gain On Hit"
+    },
+    {
+     "id": "V2SupportedByOnslaughtCorrupted",
+     "group": "SupportedByOnslaught",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Momentum"
+    },
+    {
+     "id": "V2SupportedByRageCorrupted",
+     "group": "SupportedByMelee",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Rage"
+    },
+    {
+     "id": "V2SupportedByReducedManaCorrupted",
+     "group": "SupportedByReducedMana",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Inspiration"
+    }
+   ]
+  }
+ ],
+ "Two Hand Sword": [
+  {
+   "example_bases": [
+    "Corroded Blade",
+    "Longsword",
+    "Bastard Sword"
+   ],
+   "n_bases": 26,
+   "mods": [
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect2hCorrupted_",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-30)% increased Area of Effect"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted1",
+     "group": "PhysicalDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to (2-3) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted2__",
+     "group": "PhysicalDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (4-5) to (6-8) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted3",
+     "group": "PhysicalDamage",
+     "required_level": 82,
+     "weight": 250,
+     "text": "Adds (8-9) to (11-13) Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed2hCorrupted_",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 70,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted1",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted2",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 85,
+     "weight": 1000,
+     "text": "(16-20)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalMeleeWeaponRangeCorrupted",
+     "group": "MeleeWeaponAndUnarmedRange",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(0.2-0.4) metres to Weapon Range"
+    },
+    {
+     "id": "V2ResoluteTechniqueCorrupted",
+     "group": "Keystone",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Resolute Technique"
+    },
+    {
+     "id": "V2SupportedByAccuracyCorrupted__",
+     "group": "SupportedByAccuracy",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are supported by Level 10 Additional Accuracy"
+    },
+    {
+     "id": "V2SupportedByAddedChaosDamageCorrupted",
+     "group": "DisplaySocketedGemsGetAddedChaosDamage",
+     "required_level": 1,
+     "weight": 500,
+     "text": "Socketed Gems are Supported by Level 17 Added Chaos Damage"
+    },
+    {
+     "id": "V2SupportedByFortifyCorrupted_",
+     "group": "SupportedByFortify",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Fortify"
+    },
+    {
+     "id": "V2SupportedByImpaleCorrupted",
+     "group": "SupportedByImpale",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Impale"
+    },
+    {
+     "id": "V2SupportedByOnslaughtCorrupted",
+     "group": "SupportedByOnslaught",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Momentum"
+    }
+   ]
+  }
+ ],
+ "Two Hand Mace": [
+  {
+   "example_bases": [
+    "Driftwood Maul",
+    "Tribal Maul",
+    "Mallet"
+   ],
+   "n_bases": 25,
+   "mods": [
+    {
+     "id": "V2ChanceToGainEnduranceChargeOnStunCorrupted_",
+     "group": "GainEnduranceChargeOnStunChance",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-7)% chance to gain an Endurance Charge when you Stun an Enemy"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedAreaOfEffect2hCorrupted_",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-30)% increased Area of Effect"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted1",
+     "group": "PhysicalDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to (2-3) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted2__",
+     "group": "PhysicalDamage",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (4-5) to (6-8) Physical Damage"
+    },
+    {
+     "id": "V2LocalAddedPhysicalDamage2hCorrupted3",
+     "group": "PhysicalDamage",
+     "required_level": 82,
+     "weight": 250,
+     "text": "Adds (8-9) to (11-13) Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedAttackSpeed2hCorrupted_",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 70,
+     "weight": 1000,
+     "text": "(5-7)% increased Attack Speed"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted1",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% increased Physical Damage"
+    },
+    {
+     "id": "V2LocalIncreasedPhysicalDamageCorrupted2",
+     "group": "LocalPhysicalDamagePercent",
+     "required_level": 85,
+     "weight": 1000,
+     "text": "(16-20)% increased Physical Damage"
+    },
+    {
+     "id": "V2SupportedByAreaOfEffectCorrupted",
+     "group": "SupportedByAreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Increased Area of Effect"
+    },
+    {
+     "id": "V2SupportedByCrueltyCorrupted",
+     "group": "SupportedByCruelty",
+     "required_level": 57,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Cruelty"
+    },
+    {
+     "id": "V2SupportedByFortifyCorrupted_",
+     "group": "SupportedByFortify",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Fortify"
+    },
+    {
+     "id": "V2SupportedByOnslaughtCorrupted",
+     "group": "SupportedByOnslaught",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Momentum"
+    },
+    {
+     "id": "V2SupportedByRageCorrupted",
+     "group": "SupportedByMelee",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Rage"
+    },
+    {
+     "id": "V2SupportedByReducedManaCorrupted",
+     "group": "SupportedByReducedMana",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Gems are Supported by Level 10 Inspiration"
+    }
+   ]
+  }
+ ],
+ "FishingRod": [
+  {
+   "example_bases": [
+    "Fishing Rod"
+   ],
+   "n_bases": 1,
+   "mods": [
+    {
+     "id": "V2CanCatchCorruptFishCorrupted",
+     "group": "Other",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "You can catch Corrupted Fish"
+    },
+    {
+     "id": "V2CastSpeedCorrupted",
+     "group": "IncreasedCastSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-20)% increased Cast Speed"
+    },
+    {
+     "id": "V2FishingQuantityCorrupted",
+     "group": "FishingQuantity",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-10)% increased Quantity of Fish Caught"
+    },
+    {
+     "id": "V2FishingRarityCorrupted_",
+     "group": "FishingRarity",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(5-10)% increased Rarity of Fish Caught"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    }
+   ]
+  }
+ ],
+ "Ring": [
+  {
+   "example_bases": [
+    "Golden Hoop",
+    "Iron Ring",
+    "Coral Ring"
+   ],
+   "n_bases": 49,
+   "mods": [
+    {
+     "id": "V2AddedColdDamageCorrupted1",
+     "group": "AddedColdDamageToSpellsAndAttacks",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (3-4) to (7-8) Cold Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AddedColdDamageCorrupted2",
+     "group": "AddedColdDamageToSpellsAndAttacks",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (6-9) to (13-16) Cold Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AddedColdDamageCorrupted3",
+     "group": "AddedColdDamageToSpellsAndAttacks",
+     "required_level": 81,
+     "weight": 250,
+     "text": "Adds (12-16) to (24-28) Cold Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AddedFireDamageCorrupted1",
+     "group": "AddedFireDamageSpellsAndAttacks",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds (3-5) to (7-8) Fire Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AddedFireDamageCorrupted2",
+     "group": "AddedFireDamageSpellsAndAttacks",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (7-10) to (15-18) Fire Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AddedFireDamageCorrupted3",
+     "group": "AddedFireDamageSpellsAndAttacks",
+     "required_level": 82,
+     "weight": 250,
+     "text": "Adds (13-18) to (28-33) Fire Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AddedLightningDamageCorrupted1",
+     "group": "AddedLightningDamageSpellsAndAttacks",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Adds 1 to (14-15) Lightning Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AddedLightningDamageCorrupted2",
+     "group": "AddedLightningDamageSpellsAndAttacks",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "Adds (1-2) to (27-28) Lightning Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AddedLightningDamageCorrupted3",
+     "group": "AddedLightningDamageSpellsAndAttacks",
+     "required_level": 83,
+     "weight": 250,
+     "text": "Adds (1-5) to (50-52) Lightning Damage to Spells and Attacks"
+    },
+    {
+     "id": "V2AllResistancesCorrupted",
+     "group": "AllResistancesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(14-16)% to all Elemental Resistances"
+    },
+    {
+     "id": "V2AvoidIgniteCorrupted",
+     "group": "CannotBeIgnited",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Cannot be Ignited"
+    },
+    {
+     "id": "V2CannotBePoisonedCorrupted",
+     "group": "CannotBePoisoned",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Cannot be Poisoned"
+    },
+    {
+     "id": "V2CannotGainBleedingCorrupted_",
+     "group": "BleedingImmunity",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "Bleeding cannot be inflicted on you"
+    },
+    {
+     "id": "V2ChaosResistanceCorrupted",
+     "group": "ChaosResistance",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+(19-29)% to Chaos Resistance"
+    },
+    {
+     "id": "V2DamageOverTimeMultiplierCorrupted",
+     "group": "GlobalDamageOverTimeMultiplier",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "+(10-15)% to Damage over Time Multiplier"
+    },
+    {
+     "id": "V2GlobalCriticalStrikeMultiplierRingCorrupted",
+     "group": "CriticalStrikeMultiplier",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(15-20)% to Global Critical Strike Multiplier"
+    },
+    {
+     "id": "V2IncreasedAllAttributesCorrupted",
+     "group": "PercentageAllAttributes",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(3-5)% increased Attributes"
+    },
+    {
+     "id": "V2IncreasedAttackSpeedCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 500,
+     "text": "(8-10)% increased Attack Speed"
+    },
+    {
+     "id": "V2IncreasedCastSpeedCorrupted_",
+     "group": "IncreasedCastSpeed",
+     "required_level": 1,
+     "weight": 500,
+     "text": "(8-10)% increased Cast Speed"
+    },
+    {
+     "id": "V2IncreasedDexterityStrengthCorrupted",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Dexterity / (4-6)% increased Strength"
+    },
+    {
+     "id": "V2IncreasedGlobalPhysicalDamageCorrupted",
+     "group": "IncreasedDamage",
+     "required_level": 1,
+     "weight": 500,
+     "text": "(15-25)% increased Damage"
+    },
+    {
+     "id": "V2IncreasedIntelligenceDexterityCorrupted",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Intelligence / (4-6)% increased Dexterity"
+    },
+    {
+     "id": "V2IncreasedManaCostEfficiencyCorrupted",
+     "group": "CostEfficiency",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-25)% increased Mana Cost Efficiency"
+    },
+    {
+     "id": "V2IncreasedStrengthIntelligenceCorrupted_",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Strength / (4-6)% increased Intelligence"
+    },
+    {
+     "id": "V2ItemRarityCorrupted_",
+     "group": "IncreasedItemRarity",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "(20-30)% increased Rarity of Items found"
+    },
+    {
+     "id": "V2ManaOnHitCorrupted",
+     "group": "ManaGainPerTarget",
+     "required_level": 40,
+     "weight": 500,
+     "text": "Gain (4-6) Mana per Enemy Hit with Attacks"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyAngerCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Anger has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyDeterminationCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Determination has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyDisciplineCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Discipline has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyGraceCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Grace has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyHatredCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Hatred has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyMalevolenceCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Malevolence has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyPrideCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Pride has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyPurityOfElementsCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Purity of Elements has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyWrathCorrupted",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Wrath has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2ManaReservationEfficiencyZealotryCorrupted_",
+     "group": "ReducedManaReservationsCost",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Zealotry has (20-30)% increased Mana Reservation Efficiency"
+    },
+    {
+     "id": "V2MaxFrenzyChargesCorrupted",
+     "group": "MaximumFrenzyCharges",
+     "required_level": 75,
+     "weight": 200,
+     "text": "+1 to Maximum Frenzy Charges"
+    },
+    {
+     "id": "V2MaxPowerChargesCorrupted",
+     "group": "IncreasedMaximumPowerCharges",
+     "required_level": 75,
+     "weight": 200,
+     "text": "+1 to Maximum Power Charges"
+    },
+    {
+     "id": "V2MaximumEnduranceChargesCorruption",
+     "group": "MaximumEnduranceCharges",
+     "required_level": 75,
+     "weight": 200,
+     "text": "+1 to Maximum Endurance Charges"
+    }
+   ]
+  }
+ ],
+ "Amulet": [
+  {
+   "example_bases": [
+    "Paua Amulet",
+    "Coral Amulet",
+    "Amber Amulet"
+   ],
+   "n_bases": 99,
+   "mods": [
+    {
+     "id": "V2AdditionalCurseCorrupted",
+     "group": "AdditionalCurseOnEnemies",
+     "required_level": 60,
+     "weight": 500,
+     "text": "You can apply an additional Curse"
+    },
+    {
+     "id": "V2AllResistancesCorrupted",
+     "group": "AllResistancesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(14-16)% to all Elemental Resistances"
+    },
+    {
+     "id": "V2AttackSpeedCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-10)% increased Attack Speed"
+    },
+    {
+     "id": "V2BlockChanceCorrupted",
+     "group": "MonsterBlock",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-5)% Chance to Block Attack Damage"
+    },
+    {
+     "id": "V2ChaosResistanceCorrupted",
+     "group": "ChaosResistance",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+(19-29)% to Chaos Resistance"
+    },
+    {
+     "id": "V2ColdDamageLifeLeechPermyriadCorrupted_",
+     "group": "ColdDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Cold Damage Leeched as Life"
+    },
+    {
+     "id": "V2FireDamageLifeLeechPermyriadCorrupted_",
+     "group": "FireDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Fire Damage Leeched as Life"
+    },
+    {
+     "id": "V2IncreasedAllAttributesCorrupted",
+     "group": "PercentageAllAttributes",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(3-5)% increased Attributes"
+    },
+    {
+     "id": "V2IncreasedAuraEffectAngerCorrupted",
+     "group": "IncreasedAuraEffectAngerCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Anger has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectDeterminationCorrupted",
+     "group": "IncreasedAuraEffectDeterminationCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Determination has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectDisciplineCorrupted",
+     "group": "IncreasedAuraEffectDisciplineCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Discipline has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectGraceCorrupted",
+     "group": "IncreasedAuraEffectGraceCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Grace has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectHatredCorrupted",
+     "group": "IncreasedAuraEffectHatredCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Hatred has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectMalevolenceCorrupted",
+     "group": "IncreasedAuraEffectMalevolenceCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Malevolence has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectPrideCorrupted",
+     "group": "IncreasedAuraEffectPrideCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Pride has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectPurityOfElementsCorrupted",
+     "group": "IncreasedAuraEffectPurityOfElementsCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Purity of Elements has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectWrathCorrupted",
+     "group": "IncreasedAuraEffectWrathCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Wrath has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedAuraEffectZealotryCorrupted_",
+     "group": "IncreasedAuraEffectZealotryCorrupted",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "Zealotry has (20-30)% increased Aura Effect"
+    },
+    {
+     "id": "V2IncreasedDexterityStrengthCorrupted",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Dexterity / (4-6)% increased Strength"
+    },
+    {
+     "id": "V2IncreasedIntelligenceDexterityCorrupted",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Intelligence / (4-6)% increased Dexterity"
+    },
+    {
+     "id": "V2IncreasedStrengthIntelligenceCorrupted_",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Strength / (4-6)% increased Intelligence"
+    },
+    {
+     "id": "V2ItemRarityCorrupted_",
+     "group": "IncreasedItemRarity",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "(20-30)% increased Rarity of Items found"
+    },
+    {
+     "id": "V2LightningDamageLifeLeechPermyriadCorrupted",
+     "group": "LightningDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Lightning Damage Leeched as Life"
+    },
+    {
+     "id": "V2MaximumResistanceCorrupted",
+     "group": "MaximumResistances",
+     "required_level": 80,
+     "weight": 1000,
+     "text": "+1% to all maximum Resistances"
+    },
+    {
+     "id": "V2MinEnduranceChargesCorrupted",
+     "group": "MinimumEnduranceCharges",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "+1 to Minimum Endurance Charges"
+    },
+    {
+     "id": "V2MinFrenzyChargesCorrupted",
+     "group": "MinimumFrenzyCharges",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "+1 to Minimum Frenzy Charges"
+    },
+    {
+     "id": "V2MinPowerChargesCorruptedNew",
+     "group": "MinimumPowerCharges",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "+1 to Minimum Power Charges"
+    },
+    {
+     "id": "V2MovementVelocityCorrupted",
+     "group": "MovementVelocity",
+     "required_level": 1,
+     "weight": 500,
+     "text": "(8-10)% increased Movement Speed"
+    },
+    {
+     "id": "V2SpellBlockPercentageCorrupted",
+     "group": "SpellBlockPercentage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-5)% Chance to Block Spell Damage"
+    },
+    {
+     "id": "V2WeaponElementalDamageCorrupted",
+     "group": "IncreasedWeaponElementalDamagePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-24)% increased Elemental Damage with Attack Skills"
+    }
+   ]
+  }
+ ],
+ "Belt": [
+  {
+   "example_bases": [
+    "Rustic Sash",
+    "Chain Belt",
+    "Leather Belt"
+   ],
+   "n_bases": 17,
+   "mods": [
+    {
+     "id": "V2AdditionalAOERangeCorrupted",
+     "group": "AreaOfEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-10)% increased Area of Effect"
+    },
+    {
+     "id": "V2AdditionalCriticalStrikeMultiplierUnderFlaskEffectCorrupted",
+     "group": "AdditionalCriticalStrikeMultiplierUnderFlaskEffect",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "+(20-25)% to Critical Strike Multiplier during any Flask Effect"
+    },
+    {
+     "id": "V2AllResistancesCorrupted",
+     "group": "AllResistancesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(14-16)% to all Elemental Resistances"
+    },
+    {
+     "id": "V2AvoidIgniteCorrupted",
+     "group": "CannotBeIgnited",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Cannot be Ignited"
+    },
+    {
+     "id": "V2CannotBePoisonedCorrupted",
+     "group": "CannotBePoisoned",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Cannot be Poisoned"
+    },
+    {
+     "id": "V2CannotGainBleedingCorrupted_",
+     "group": "BleedingImmunity",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "Bleeding cannot be inflicted on you"
+    },
+    {
+     "id": "V2ChaosResistanceCorrupted",
+     "group": "ChaosResistance",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+(19-29)% to Chaos Resistance"
+    },
+    {
+     "id": "V2IncreasedAllAttributesCorrupted",
+     "group": "PercentageAllAttributes",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(3-5)% increased Attributes"
+    },
+    {
+     "id": "V2IncreasedAttackSpeedUnderFlaskEffectCorrupted",
+     "group": "SpeedDuringFlaskEffect",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "(8-12)% increased Attack Speed during any Flask Effect"
+    },
+    {
+     "id": "V2IncreasedCastSpeedUnderFlaskEffectCorrupted",
+     "group": "SpeedDuringFlaskEffect",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "(8-12)% increased Cast Speed during any Flask Effect"
+    },
+    {
+     "id": "V2IncreasedCriticalStrikeUnderFlaskEffectCorrupted",
+     "group": "IncreasedCriticalStrikeUnderFlaskEffect",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(35-40)% increased Critical Strike Chance during any Flask Effect"
+    },
+    {
+     "id": "V2IncreasedDexterityStrengthCorrupted",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Dexterity / (4-6)% increased Strength"
+    },
+    {
+     "id": "V2IncreasedDurationCorrupted",
+     "group": "SkillEffectDuration",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(12-15)% increased Skill Effect Duration"
+    },
+    {
+     "id": "V2IncreasedEnergyShieldCorrupted",
+     "group": "EnergyShieldPercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-10)% increased maximum Energy Shield"
+    },
+    {
+     "id": "V2IncreasedIntelligenceDexterityCorrupted",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Intelligence / (4-6)% increased Dexterity"
+    },
+    {
+     "id": "V2IncreasedLifeCorrupted",
+     "group": "MaximumLifeIncreasePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(6-10)% increased maximum Life"
+    },
+    {
+     "id": "V2IncreasedMovementVelocityUnderFlaskEffectCorrupted",
+     "group": "MovementSpeedDuringFlaskEffect",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "(8-12)% increased Movement Speed during any Flask Effect"
+    },
+    {
+     "id": "V2IncreasedStrengthIntelligenceCorrupted_",
+     "group": "IncreasedAttributesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased Strength / (4-6)% increased Intelligence"
+    },
+    {
+     "id": "V2ItemRarityCorrupted_",
+     "group": "IncreasedItemRarity",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "(20-30)% increased Rarity of Items found"
+    }
+   ]
+  }
+ ],
+ "Shield": [
+  {
+   "example_bases": [
+    "Splintered Tower Shield",
+    "Corroded Tower Shield",
+    "Rawhide Tower Shield"
+   ],
+   "n_bases": 98,
+   "mods": [
+    {
+     "id": "V2AllResistancesCorrupted",
+     "group": "AllResistancesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(14-16)% to all Elemental Resistances"
+    },
+    {
+     "id": "V2ChaosResistanceCorrupted",
+     "group": "ChaosResistance",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+(19-29)% to Chaos Resistance"
+    },
+    {
+     "id": "V2GemLevelCorrupted",
+     "group": "IncreaseSocketedGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+1 to Level of Socketed Gems"
+    },
+    {
+     "id": "V2GemQualityCorrupted",
+     "group": "SocketedGemQuality",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(5-10)% to Quality of Socketed Gems"
+    },
+    {
+     "id": "V2GlancingBlowsCorrupted",
+     "group": "Keystone",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Glancing Blows"
+    },
+    {
+     "id": "V2IncreasedMaximumEnergyShieldCorrupted",
+     "group": "MaximumEnergyShieldPercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Energy Shield"
+    },
+    {
+     "id": "V2IncreasedMaximumLifeCorrupted",
+     "group": "MaximumLifeIncreasePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Life"
+    },
+    {
+     "id": "V2LocalInreasedBlockChanceCorrupted",
+     "group": "IncreasedShieldBlockPercentage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(20-30)% increased Chance to Block"
+    },
+    {
+     "id": "V2MaximumBlockCorruption",
+     "group": "MaximumBlockChance",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "+1% to maximum Chance to Block Attack Damage"
+    },
+    {
+     "id": "V2MaximumColdResistanceCorrupted",
+     "group": "MaximumColdResist",
+     "required_level": 55,
+     "weight": 1000,
+     "text": "+2% to maximum Cold Resistance"
+    },
+    {
+     "id": "V2MaximumFireResistanceCorrupted",
+     "group": "MaximumFireResist",
+     "required_level": 55,
+     "weight": 1000,
+     "text": "+2% to maximum Fire Resistance"
+    },
+    {
+     "id": "V2MaximumLightningResistanceCorrupted",
+     "group": "MaximumLightningResistance",
+     "required_level": 55,
+     "weight": 1000,
+     "text": "+2% to maximum Lightning Resistance"
+    },
+    {
+     "id": "V2MaximumResistanceCorrupted",
+     "group": "MaximumResistances",
+     "required_level": 80,
+     "weight": 1000,
+     "text": "+1% to all maximum Resistances"
+    },
+    {
+     "id": "V2MinEnduranceChargesCorrupted",
+     "group": "MinimumEnduranceCharges",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "+1 to Minimum Endurance Charges"
+    },
+    {
+     "id": "V2MinFrenzyChargesCorrupted",
+     "group": "MinimumFrenzyCharges",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "+1 to Minimum Frenzy Charges"
+    },
+    {
+     "id": "V2MinPowerChargesCorruptedNew",
+     "group": "MinimumPowerCharges",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "+1 to Minimum Power Charges"
+    },
+    {
+     "id": "V2ReducedExtraDamageFromCriticalStrikesShieldCorrupted",
+     "group": "ReducedExtraDamageFromCrits",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "You take (20-30)% reduced Extra Damage from Critical Strikes"
+    },
+    {
+     "id": "V2SocketedAoEGemCorrupted",
+     "group": "IncreasedSocketedAoEGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed AoE Gems"
+    },
+    {
+     "id": "V2SocketedAuraGemCorrupted",
+     "group": "IncreaseSocketedAuraGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Aura Gems"
+    },
+    {
+     "id": "V2SocketedCurseGemCorrupted",
+     "group": "IncreaseSocketedCurseGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Curse Gems"
+    },
+    {
+     "id": "V2SocketedDurationGemCorrupted",
+     "group": "IncreaseSocketedDurationGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Duration Gems"
+    },
+    {
+     "id": "V2SocketedMinionGemCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Minion Gems"
+    },
+    {
+     "id": "V2SocketedProjectileGemCorrupted_",
+     "group": "IncreaseSocketedProjectileGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Projectile Gems"
+    },
+    {
+     "id": "V2SocketedTrapOrMineGemCorrupted",
+     "group": "IncreasedSocketedTrapOrMineGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Trap or Mine Gems"
+    },
+    {
+     "id": "V2SocketedWarcryGemCorrupted",
+     "group": "LocalSocketedWarcryGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Warcry Gems"
+    },
+    {
+     "id": "V2SpellBlockPercentageCorrupted",
+     "group": "SpellBlockPercentage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-5)% Chance to Block Spell Damage"
+    },
+    {
+     "id": "V2VersatileCombatantCorrupted",
+     "group": "Keystone",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Versatile Combatant"
+    }
+   ]
+  }
+ ],
+ "Helmet": [
+  {
+   "example_bases": [
+    "Iron Hat",
+    "Cone Helmet",
+    "Barbute Helmet"
+   ],
+   "n_bases": 96,
+   "mods": [
+    {
+     "id": "V2AllResistancesCorrupted",
+     "group": "AllResistancesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(14-16)% to all Elemental Resistances"
+    },
+    {
+     "id": "V2BlindImmunityCorrupted",
+     "group": "ImmunityToBlind",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Cannot be Blinded"
+    },
+    {
+     "id": "V2ChaosResistanceCorrupted",
+     "group": "ChaosResistance",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+(19-29)% to Chaos Resistance"
+    },
+    {
+     "id": "V2ColdDamageLifeLeechPermyriadCorrupted_",
+     "group": "ColdDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Cold Damage Leeched as Life"
+    },
+    {
+     "id": "V2DamageOverTimeMultiplierCorrupted",
+     "group": "GlobalDamageOverTimeMultiplier",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "+(10-15)% to Damage over Time Multiplier"
+    },
+    {
+     "id": "V2FireDamageLifeLeechPermyriadCorrupted_",
+     "group": "FireDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Fire Damage Leeched as Life"
+    },
+    {
+     "id": "V2IncreasedChillEffectCorrupted",
+     "group": "ChillEffect",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "(25-30)% increased Effect of Cold Ailments"
+    },
+    {
+     "id": "V2IncreasedLifeRegenerationPerSecondCorrupted",
+     "group": "LifeRegenerationRatePercentage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Regenerate (1.6-2)% of Life per second"
+    },
+    {
+     "id": "V2IncreasedLightRadiusCorrupted",
+     "group": "LightRadius",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(25-30)% increased Light Radius"
+    },
+    {
+     "id": "V2IncreasedMaximumEnergyShieldCorrupted",
+     "group": "MaximumEnergyShieldPercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Energy Shield"
+    },
+    {
+     "id": "V2IncreasedMaximumLifeCorrupted",
+     "group": "MaximumLifeIncreasePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Life"
+    },
+    {
+     "id": "V2IncreasedShockEffectCorrupted_",
+     "group": "ShockEffect",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "(25-30)% increased Effect of Shock"
+    },
+    {
+     "id": "V2LevelOfSocketedChaosGemsCorrupted",
+     "group": "IncreaseSocketedChaosGemLevel",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+2 to Level of Socketed Chaos Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedColdGemsCorrupted",
+     "group": "IncreaseSocketedColdGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Cold Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedFireGemsCorrupted",
+     "group": "IncreaseSocketedFireGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Fire Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedLightningGemsCorrupted",
+     "group": "IncreaseSocketedLightningGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Lightning Gems"
+    },
+    {
+     "id": "V2LevelOfSocketedPhysicalGemsCorrupted",
+     "group": "IncreaseSocketedPhysicalGemLevel",
+     "required_level": 1,
+     "weight": 750,
+     "text": "+2 to Level of Socketed Physical Gems"
+    },
+    {
+     "id": "V2LightningDamageLifeLeechPermyriadCorrupted",
+     "group": "LightningDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Lightning Damage Leeched as Life"
+    },
+    {
+     "id": "V2MaxPowerChargesCorrupted",
+     "group": "IncreasedMaximumPowerCharges",
+     "required_level": 75,
+     "weight": 1000,
+     "text": "+1 to Maximum Power Charges"
+    },
+    {
+     "id": "V2MaximumLightningResistanceCorrupted",
+     "group": "MaximumLightningResistance",
+     "required_level": 55,
+     "weight": 1000,
+     "text": "+2% to maximum Lightning Resistance"
+    },
+    {
+     "id": "V2SocketedAoEGemCorrupted",
+     "group": "IncreasedSocketedAoEGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed AoE Gems"
+    },
+    {
+     "id": "V2SocketedAuraGemCorrupted",
+     "group": "IncreaseSocketedAuraGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Aura Gems"
+    },
+    {
+     "id": "V2SocketedCurseGemCorrupted",
+     "group": "IncreaseSocketedCurseGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Curse Gems"
+    },
+    {
+     "id": "V2SocketedDurationGemCorrupted",
+     "group": "IncreaseSocketedDurationGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Duration Gems"
+    },
+    {
+     "id": "V2SocketedMinionGemCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Minion Gems"
+    },
+    {
+     "id": "V2SocketedProjectileGemCorrupted_",
+     "group": "IncreaseSocketedProjectileGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Projectile Gems"
+    },
+    {
+     "id": "V2SocketedSkillsManaMultiplierCorrupted__",
+     "group": "SocketedGemsHaveReducedManaCost",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Socketed Skill Gems get a 90% Cost & Reservation Multiplier"
+    },
+    {
+     "id": "V2SocketedTrapOrMineGemCorrupted",
+     "group": "IncreasedSocketedTrapOrMineGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Trap or Mine Gems"
+    },
+    {
+     "id": "V2SocketedWarcryGemCorrupted",
+     "group": "LocalSocketedWarcryGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Warcry Gems"
+    }
+   ]
+  }
+ ],
+ "Body Armour": [
+  {
+   "example_bases": [
+    "Plate Vest",
+    "Chestplate",
+    "Copper Plate"
+   ],
+   "n_bases": 124,
+   "mods": [
+    {
+     "id": "V2AdditionalPhysicalDamageReductionWhileStationaryCorrupted_",
+     "group": "PhysicalDamageReductionWhileNotMoving",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(3-5)% additional Physical Damage Reduction while stationary"
+    },
+    {
+     "id": "V2AllResistancesCorrupted",
+     "group": "AllResistancesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(14-16)% to all Elemental Resistances"
+    },
+    {
+     "id": "V2ChaosResistanceCorrupted",
+     "group": "ChaosResistance",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+(19-29)% to Chaos Resistance"
+    },
+    {
+     "id": "V2GemLevelCorrupted",
+     "group": "IncreaseSocketedGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+1 to Level of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedDamageCorrupted_",
+     "group": "IncreasedDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(40-50)% increased Damage"
+    },
+    {
+     "id": "V2IncreasedMaximumEnergyShieldCorrupted",
+     "group": "MaximumEnergyShieldPercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Energy Shield"
+    },
+    {
+     "id": "V2IncreasedMaximumLifeCorrupted",
+     "group": "MaximumLifeIncreasePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Life"
+    },
+    {
+     "id": "V2MaximumResistanceCorrupted",
+     "group": "MaximumResistances",
+     "required_level": 80,
+     "weight": 1000,
+     "text": "+1% to all maximum Resistances"
+    },
+    {
+     "id": "V2ReducedChaosDamageTakenCorrupted",
+     "group": "ChaosDamageTakenPercentage",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "(6-4)% reduced Chaos Damage taken"
+    },
+    {
+     "id": "V2ReducedColdDamageTakenCorrupted",
+     "group": "ColdDamageTaken",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "(6-4)% reduced Cold Damage taken"
+    },
+    {
+     "id": "V2ReducedExtraDamageFromCriticalStrikesBodyCorrupted__",
+     "group": "ReducedExtraDamageFromCrits",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "You take 50% reduced Extra Damage from Critical Strikes"
+    },
+    {
+     "id": "V2ReducedFireDamageTakenCorrupted",
+     "group": "FireDamageTaken",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "(6-4)% reduced Fire Damage taken"
+    },
+    {
+     "id": "V2ReducedLightningDamageTakenCorrupted",
+     "group": "LightningDamageTaken",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "(6-4)% reduced Lightning Damage taken"
+    },
+    {
+     "id": "V2SocketedAoEGemCorrupted",
+     "group": "IncreasedSocketedAoEGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed AoE Gems"
+    },
+    {
+     "id": "V2SocketedAuraGemCorrupted",
+     "group": "IncreaseSocketedAuraGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Aura Gems"
+    },
+    {
+     "id": "V2SocketedCurseGemCorrupted",
+     "group": "IncreaseSocketedCurseGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Curse Gems"
+    },
+    {
+     "id": "V2SocketedDurationGemCorrupted",
+     "group": "IncreaseSocketedDurationGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Duration Gems"
+    },
+    {
+     "id": "V2SocketedMinionGemCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Minion Gems"
+    },
+    {
+     "id": "V2SocketedProjectileGemCorrupted_",
+     "group": "IncreaseSocketedProjectileGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Projectile Gems"
+    },
+    {
+     "id": "V2SocketedTrapOrMineGemCorrupted",
+     "group": "IncreasedSocketedTrapOrMineGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Trap or Mine Gems"
+    },
+    {
+     "id": "V2SocketedWarcryGemCorrupted",
+     "group": "LocalSocketedWarcryGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Warcry Gems"
+    }
+   ]
+  }
+ ],
+ "Boots": [
+  {
+   "example_bases": [
+    "Iron Greaves",
+    "Steel Greaves",
+    "Plated Greaves"
+   ],
+   "n_bases": 83,
+   "mods": [
+    {
+     "id": "V2ActionSpeedCorrupted",
+     "group": "ActionSpeedReduction",
+     "required_level": 75,
+     "weight": 250,
+     "text": "(6-4)% increased Action Speed"
+    },
+    {
+     "id": "V2AllResistancesCorrupted",
+     "group": "AllResistancesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(14-16)% to all Elemental Resistances"
+    },
+    {
+     "id": "V2ChanceToGainOnslaughtOnKillCorrupted_",
+     "group": "ChanceToGainOnslaughtOnKill",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(10-15)% chance to gain Onslaught for 4 seconds on Kill"
+    },
+    {
+     "id": "V2ChanceToSpellDodgeCorrupted_",
+     "group": "ChanceToSuppressSpells",
+     "required_level": 45,
+     "weight": 1000,
+     "text": "+(6-9)% chance to Suppress Spell Damage"
+    },
+    {
+     "id": "V2ChaosResistanceCorrupted",
+     "group": "ChaosResistance",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+(19-29)% to Chaos Resistance"
+    },
+    {
+     "id": "V2GemLevelCorrupted",
+     "group": "IncreaseSocketedGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+1 to Level of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedMaximumEnergyShieldCorrupted",
+     "group": "MaximumEnergyShieldPercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Energy Shield"
+    },
+    {
+     "id": "V2IncreasedMaximumLifeCorrupted",
+     "group": "MaximumLifeIncreasePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Life"
+    },
+    {
+     "id": "V2MaximumEnduranceChargesCorruption",
+     "group": "MaximumEnduranceCharges",
+     "required_level": 75,
+     "weight": 1000,
+     "text": "+1 to Maximum Endurance Charges"
+    },
+    {
+     "id": "V2MaximumFireResistanceCorrupted",
+     "group": "MaximumFireResist",
+     "required_level": 55,
+     "weight": 1000,
+     "text": "+2% to maximum Fire Resistance"
+    },
+    {
+     "id": "V2MovementVelocityCorrupted",
+     "group": "MovementVelocity",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-10)% increased Movement Speed"
+    },
+    {
+     "id": "V2RegenerateLifePerSecondWhileMovingCorrupted_",
+     "group": "LifeRegenerationWhileMoving",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "Regenerate 100 Life per second while moving"
+    },
+    {
+     "id": "V2SocketedAoEGemCorrupted",
+     "group": "IncreasedSocketedAoEGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed AoE Gems"
+    },
+    {
+     "id": "V2SocketedAuraGemCorrupted",
+     "group": "IncreaseSocketedAuraGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Aura Gems"
+    },
+    {
+     "id": "V2SocketedCurseGemCorrupted",
+     "group": "IncreaseSocketedCurseGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Curse Gems"
+    },
+    {
+     "id": "V2SocketedDurationGemCorrupted",
+     "group": "IncreaseSocketedDurationGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Duration Gems"
+    },
+    {
+     "id": "V2SocketedMinionGemCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Minion Gems"
+    },
+    {
+     "id": "V2SocketedProjectileGemCorrupted_",
+     "group": "IncreaseSocketedProjectileGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Projectile Gems"
+    },
+    {
+     "id": "V2SocketedTrapOrMineGemCorrupted",
+     "group": "IncreasedSocketedTrapOrMineGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Trap or Mine Gems"
+    },
+    {
+     "id": "V2SocketedWarcryGemCorrupted",
+     "group": "LocalSocketedWarcryGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Warcry Gems"
+    },
+    {
+     "id": "V2UnaffectedByBurningGroundCorrupted",
+     "group": "GroundEffectEffectiveness",
+     "required_level": 32,
+     "weight": 500,
+     "text": "Unaffected by Burning Ground"
+    },
+    {
+     "id": "V2UnaffectedByChilledGroundCorrupted",
+     "group": "GroundEffectEffectiveness",
+     "required_level": 32,
+     "weight": 500,
+     "text": "Unaffected by Chilled Ground"
+    },
+    {
+     "id": "V2UnaffectedByDesecratedGroundCorrupted",
+     "group": "GroundEffectEffectiveness",
+     "required_level": 32,
+     "weight": 250,
+     "text": "Unaffected by Desecrated Ground"
+    },
+    {
+     "id": "V2UnaffectedByShockedGroundCorrupted",
+     "group": "GroundEffectEffectiveness",
+     "required_level": 32,
+     "weight": 500,
+     "text": "Unaffected by Shocked Ground"
+    },
+    {
+     "id": "V2UnwaveringStanceCorrupted",
+     "group": "Keystone",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Unwavering Stance"
+    }
+   ]
+  }
+ ],
+ "Gloves": [
+  {
+   "example_bases": [
+    "Iron Gauntlets",
+    "Plated Gauntlets",
+    "Bronze Gauntlets"
+   ],
+   "n_bases": 80,
+   "mods": [
+    {
+     "id": "V2AllResistancesCorrupted",
+     "group": "AllResistancesCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+(14-16)% to all Elemental Resistances"
+    },
+    {
+     "id": "V2ChaosResistanceCorrupted",
+     "group": "ChaosResistance",
+     "required_level": 1,
+     "weight": 500,
+     "text": "+(19-29)% to Chaos Resistance"
+    },
+    {
+     "id": "V2CurseOnHitConductivity",
+     "group": "CurseOnHitLevel",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Conductivity on Hit"
+    },
+    {
+     "id": "V2CurseOnHitDespair",
+     "group": "CurseOnHitDespair",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Despair on Hit"
+    },
+    {
+     "id": "V2CurseOnHitElementalWeaknessCorrupted",
+     "group": "CurseOnHitLevelElementalWeakness",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Elemental Weakness on Hit"
+    },
+    {
+     "id": "V2CurseOnHitEnfeeble",
+     "group": "CurseOnHitEnfeeble",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Enfeeble on Hit"
+    },
+    {
+     "id": "V2CurseOnHitFlammability",
+     "group": "CurseOnHitLevel",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Flammability on Hit"
+    },
+    {
+     "id": "V2CurseOnHitFrostbite",
+     "group": "CurseOnHitLevel",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Frostbite on Hit"
+    },
+    {
+     "id": "V2CurseOnHitPunishment",
+     "group": "MapPlayerPunishment",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Punishment on Hit"
+    },
+    {
+     "id": "V2CurseOnHitTemporalChainsCurrupted",
+     "group": "CurseOnHitLevelTemporalChains",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Temporal Chains on Hit"
+    },
+    {
+     "id": "V2CurseOnHitVulnerabilityCorrupted",
+     "group": "CurseOnHitLevelVulnerability",
+     "required_level": 30,
+     "weight": 1000,
+     "text": "Curse Enemies with Vulnerability on Hit"
+    },
+    {
+     "id": "V2GemLevelCorrupted",
+     "group": "IncreaseSocketedGemLevel",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "+1 to Level of Socketed Gems"
+    },
+    {
+     "id": "V2IncreasedAtackCriticalStrikeCorruption",
+     "group": "AdditionalCriticalStrikeChanceWithAttacks",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "Attacks have +(0.5-0.8)% to Critical Strike Chance"
+    },
+    {
+     "id": "V2IncreasedAttackSpeedCorrupted",
+     "group": "IncreasedAttackSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-10)% increased Attack Speed"
+    },
+    {
+     "id": "V2IncreasedCastSpeedCorrupted_",
+     "group": "IncreasedCastSpeed",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-10)% increased Cast Speed"
+    },
+    {
+     "id": "V2IncreasedMaximumEnergyShieldCorrupted",
+     "group": "MaximumEnergyShieldPercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Energy Shield"
+    },
+    {
+     "id": "V2IncreasedMaximumLifeCorrupted",
+     "group": "MaximumLifeIncreasePercent",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(4-6)% increased maximum Life"
+    },
+    {
+     "id": "V2IncreasedSpellCriticalStrikeCorruption",
+     "group": "AdditionalCriticalStrikeChanceWithSpells",
+     "required_level": 60,
+     "weight": 1000,
+     "text": "+(0.5-0.8)% to Spell Critical Strike Chance"
+    },
+    {
+     "id": "V2MaxFrenzyChargesCorrupted",
+     "group": "MaximumFrenzyCharges",
+     "required_level": 75,
+     "weight": 1000,
+     "text": "+1 to Maximum Frenzy Charges"
+    },
+    {
+     "id": "V2MaximumColdResistanceCorrupted",
+     "group": "MaximumColdResist",
+     "required_level": 55,
+     "weight": 1000,
+     "text": "+2% to maximum Cold Resistance"
+    },
+    {
+     "id": "V2SocketedAoEGemCorrupted",
+     "group": "IncreasedSocketedAoEGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed AoE Gems"
+    },
+    {
+     "id": "V2SocketedAuraGemCorrupted",
+     "group": "IncreaseSocketedAuraGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Aura Gems"
+    },
+    {
+     "id": "V2SocketedCurseGemCorrupted",
+     "group": "IncreaseSocketedCurseGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Curse Gems"
+    },
+    {
+     "id": "V2SocketedDurationGemCorrupted",
+     "group": "IncreaseSocketedDurationGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Duration Gems"
+    },
+    {
+     "id": "V2SocketedMinionGemCorrupted",
+     "group": "IncreaseSpecificSocketedGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Minion Gems"
+    },
+    {
+     "id": "V2SocketedProjectileGemCorrupted_",
+     "group": "IncreaseSocketedProjectileGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Projectile Gems"
+    },
+    {
+     "id": "V2SocketedTrapOrMineGemCorrupted",
+     "group": "IncreasedSocketedTrapOrMineGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Trap or Mine Gems"
+    },
+    {
+     "id": "V2SocketedWarcryGemCorrupted",
+     "group": "LocalSocketedWarcryGemLevel",
+     "required_level": 20,
+     "weight": 1000,
+     "text": "+2 to Level of Socketed Warcry Gems"
+    }
+   ]
+  }
+ ],
+ "Quiver": [
+  {
+   "example_bases": [
+    "Cured Quiver",
+    "Rugged Quiver",
+    "Conductive Quiver"
+   ],
+   "n_bases": 29,
+   "mods": [
+    {
+     "id": "V2AddedChaosDamageToBowAttacksCorrupted1",
+     "group": "AddedChaosDamageToBowAttacksCorrupted",
+     "required_level": 81,
+     "weight": 250,
+     "text": "(23-29) to (37-43) Added Chaos Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedColdDamageToBowAttacksCorrupted1__",
+     "group": "AddedColdDamageToBowAttacksCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(8-11) to (18-21) Added Cold Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedColdDamageToBowAttacksCorrupted2",
+     "group": "AddedColdDamageToBowAttacksCorrupted",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "(20-25) to (38-45) Added Cold Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedColdDamageToBowAttacksCorrupted3",
+     "group": "AddedColdDamageToBowAttacksCorrupted",
+     "required_level": 75,
+     "weight": 500,
+     "text": "(29-35) to (55-62) Added Cold Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedFireDamageToBowAttacksCorrupted1__",
+     "group": "AddedFireDamageToBowAttacksCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(11-14) to (21-25) Added Fire Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedFireDamageToBowAttacksCorrupted2",
+     "group": "AddedFireDamageToBowAttacksCorrupted",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "(24-31) to (46-55) Added Fire Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedFireDamageToBowAttacksCorrupted3",
+     "group": "AddedFireDamageToBowAttacksCorrupted",
+     "required_level": 75,
+     "weight": 500,
+     "text": "(29-39) to (59-69) Added Fire Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedLightningDamageToBowAttacksCorrupted1_",
+     "group": "AddedLightningDamageToBowAttacksCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(1-3) to (38-39) Added Lightning Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedLightningDamageToBowAttacksCorrupted2",
+     "group": "AddedLightningDamageToBowAttacksCorrupted",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "(3-7) to (81-85) Added Lightning Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedLightningDamageToBowAttacksCorrupted3",
+     "group": "AddedLightningDamageToBowAttacksCorrupted",
+     "required_level": 75,
+     "weight": 500,
+     "text": "(3-8) to (101-106) Added Lightning Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedPhysicalDamageToBowAttacksCorrupted1",
+     "group": "AddedPhysicalDamageToBowAttacksCorrupted",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "(3-4) to (6-10) Added Physical Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedPhysicalDamageToBowAttacksCorrupted2___",
+     "group": "AddedPhysicalDamageToBowAttacksCorrupted",
+     "required_level": 31,
+     "weight": 1000,
+     "text": "(5-7) to (10-14) Added Physical Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AddedPhysicalDamageToBowAttacksCorrupted3",
+     "group": "AddedPhysicalDamageToBowAttacksCorrupted",
+     "required_level": 75,
+     "weight": 500,
+     "text": "(9-12) to (16-19) Added Physical Damage with Bow Attacks"
+    },
+    {
+     "id": "V2AdditionalArrowsCorrupted",
+     "group": "AdditionalArrows",
+     "required_level": 75,
+     "weight": 200,
+     "text": "Bow Attacks fire an additional Arrow"
+    },
+    {
+     "id": "V2AdditionalChainCorrupted",
+     "group": "Chain",
+     "required_level": 80,
+     "weight": 200,
+     "text": "Arrows Chain +1 times"
+    },
+    {
+     "id": "V2ChanceToSuppressSpells_",
+     "group": "ChanceToSuppressSpells",
+     "required_level": 75,
+     "weight": 200,
+     "text": "+(8-12)% chance to Suppress Spell Damage"
+    },
+    {
+     "id": "V2ColdDamageLifeLeechPermyriadCorrupted_",
+     "group": "ColdDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Cold Damage Leeched as Life"
+    },
+    {
+     "id": "V2FireDamageLifeLeechPermyriadCorrupted_",
+     "group": "FireDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Fire Damage Leeched as Life"
+    },
+    {
+     "id": "V2IncreasedProjectileDamageForEachChainCorrupted",
+     "group": "IncreasedProjectileDamageForEachChain",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Projectiles deal (20-25)% increased Damage with Hits and Ailments for each time they have Chained"
+    },
+    {
+     "id": "V2IncreasedProjectileDamageForEachPierceCorrupted",
+     "group": "ProjectileDamagePerEnemyPierced",
+     "required_level": 40,
+     "weight": 1000,
+     "text": "Projectiles deal (8-10)% increased Damage with Hits and Ailments for each Enemy Pierced"
+    },
+    {
+     "id": "V2LightningDamageLifeLeechPermyriadCorrupted",
+     "group": "LightningDamageLifeLeech",
+     "required_level": 50,
+     "weight": 1000,
+     "text": "0.5% of Lightning Damage Leeched as Life"
+    },
+    {
+     "id": "V2PhysicalDamageAddedAsColdCorrupted",
+     "group": "ColdDamageAsPortionOfDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Gain (8-12)% of Physical Damage as Extra Cold Damage"
+    },
+    {
+     "id": "V2PhysicalDamageAddedAsFireCorrupted",
+     "group": "FireDamageAsPortionOfDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Gain (8-12)% of Physical Damage as Extra Fire Damage"
+    },
+    {
+     "id": "V2PhysicalDamageAddedAsLightningCorrupted",
+     "group": "LightningDamageAsPortionOfDamage",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Gain (8-12)% of Physical Damage as Extra Lightning Damage"
+    },
+    {
+     "id": "V2PointBlankCorrupted",
+     "group": "Keystone",
+     "required_level": 1,
+     "weight": 1000,
+     "text": "Point Blank"
+    }
+   ]
+  }
+ ]
+}
