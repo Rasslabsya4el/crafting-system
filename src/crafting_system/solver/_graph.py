@@ -1,7 +1,7 @@
 """Reachable-state generation, exact self-loop elimination and the proper-policy analysis.
 
-The graph is stored in flat typed arrays (about 28 bytes per transition, against about 250 for
-lists of lists and the caller's `Action` objects), so that 2 * 10^7 transitions fit in memory.
+The graph is stored in flat typed arrays (about 28 bytes per transition stored and about 55 at the
+peak of a solve, against about 250 for lists of lists and the caller's `Action` objects), so that 2 * 10^7 transitions fit in memory.
 """
 
 import math
@@ -96,8 +96,8 @@ class Graph[S]:
     def original_action(self, k: int) -> Action[S]:
         """The action `k` as it was offered: true weights, self-loop included.
 
-        Equal to the caller's action up to what `Action` itself normalises: repeated successors
-        are merged (first position, summed weight) and zero weights are dropped.
+        Equal to the caller's action except that repeated successors are merged into one outcome
+        (at the first position, with the summed weight) and zero-weight outcomes are dropped.
         """
         low, high = self.tstart[k], self.tstart[k + 1]
         weights = self.big_weights.get(k)

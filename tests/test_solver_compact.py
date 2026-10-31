@@ -36,7 +36,7 @@ def test_the_policy_action_is_the_offered_action(outcomes):
     assert all(type(o.weight) is int for o in solution.policy["A"].outcomes)
 
 
-def test_repeated_successors_are_merged_and_zero_weights_dropped_as_in_the_action_itself():
+def test_repeated_successors_are_merged_and_zero_weights_dropped():
     offered = Action("go", 1.0, (Outcome("B", 1), Outcome("A", 2), Outcome("B", 4), Outcome(GOAL, 0), Outcome(GOAL, 3)))
     table = {"A": [offered], "B": [act("end", 1, (GOAL, 1))]}
 

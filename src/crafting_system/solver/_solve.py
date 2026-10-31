@@ -30,8 +30,8 @@ class Solution[S]:
     `values` holds the expected remaining cost of every reachable state: 0.0 for goals and
     `math.inf` for states with no proper policy. `policy` maps each reachable non-goal state with
     a finite value to its original action (true weights, self-loop included; rebuilt from the
-    solver's compact storage, so it equals the offered action up to what `Action` normalises:
-    repeated successors merged, zero weights dropped). `error_bound` is a
+    solver's compact storage, so repeated successors of the offered action are merged into one
+    outcome and zero-weight outcomes are dropped). `error_bound` is a
     certified relative bound: for every finite value, V(s) * (1 - error_bound) <= V*(s) <=
     V(s) * (1 + error_bound). It includes the float64 rounding of the probabilities, an
     amplification of about epsilon * value / g, so it may exceed the `tolerance` asked for, and it

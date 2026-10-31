@@ -68,8 +68,12 @@ def solve_bounds[S](
     starts = list(starts)
     options = {"tolerance": tolerance, "direct_solve_limit": direct_solve_limit, "max_sweeps": max_sweeps}
     below = solve(optimistic, starts, **options)
-    above = below if optimistic is pessimistic else solve(pessimistic, starts, **options)
     lower = {state: _lower_bound(value, below.error_bound) for state, value in below.values.items()}
+    optimistic_error = below.error_bound
+    above = below if optimistic is pessimistic else None
+    del below  # its policy is not needed: free it before the second solve
+    if above is None:
+        above = solve(pessimistic, starts, **options)
     upper = {state: _upper_bound(value, above.error_bound) for state, value in above.values.items()}
     for state, low in lower.items():
         if state in upper and low > upper[state]:
@@ -78,7 +82,7 @@ def solve_bounds[S](
                 "the two models are not an optimistic and a pessimistic pair"
             )
     gap = max((_gap(lower[state], upper[state]) for state in starts), default=0.0)
-    return Bounds(lower, upper, above.policy, gap, below.error_bound, above.error_bound)
+    return Bounds(lower, upper, above.policy, gap, optimistic_error, above.error_bound)
 
 
 def _lower_bound(value: float, error: float) -> float:
