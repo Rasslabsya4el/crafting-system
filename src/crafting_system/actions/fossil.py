@@ -158,10 +158,12 @@ class ApplyFossils(Action):
         `fossil_weights` cut to those tags (exact, but it tells apart sets that differ in a masked tag). The
         outcome records are the same list for every Tangled set, so they are not in the key.
 
-        The key is for sets of one catalog listing, which all apply to the base: it does not hold the
+        An influenced item has no key (None: no merging, exact). The key is for sets of one catalog listing, which all apply to the base: it does not hold the
         refusals of `_check_fossil` (the tags a fossil allows or forbids). It does not hold the item level
         either: the tags are read from the mods of the base's domain that have a spawn weight on it, at any level.
         """
+        if item.influences:  # the pool of an influenced item holds mods whose tags `_relevant_tags` does not read
+            return None
         records = [_record(data, name) for name in self.fossils]
         opulent = any(_special(record, "opulent") for record in records)
         sanctified = any(record.rolls_lucky for record in records)

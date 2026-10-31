@@ -20,6 +20,7 @@ So the work is per (state, offer) and per offer, and three things shrink it with
 ## Limits
 
 - The bound pruning needs the offers that move the item to another shape (a Fractured Fossil) to be dearer than the plan, or it keeps the twins only. A per-shape rho would lift this.
+- A fossil set has no `twin_key` on an influenced item (its pool holds mods the key does not read): nothing merges there.
 - A Tangled set costs a second to bound; sets cheaper than the best ratio are bounded, the others are left to the cost test.
 - `reach_bound` is proved never low and tested against the brute force; it is not tight (1.3 to 2.8 times on boots), which is why a few extra solve rounds are needed.
 - Timings are in the PR, not asserted (ADR-0014).

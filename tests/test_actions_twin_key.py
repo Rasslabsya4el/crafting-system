@@ -23,7 +23,7 @@ from crafting_system.actions import (
     catalog,
     fossil_actions,
 )
-from crafting_system.items import Item, Rarity
+from crafting_system.items import Influence, Item, Rarity
 
 # ---------------------------------------------------------------------------------------------
 # what two sets must share when their keys are equal
@@ -53,6 +53,16 @@ def classes_by_key(actions, data, item):
 
 # ---------------------------------------------------------------------------------------------
 # the default
+
+
+def test_an_influenced_item_has_no_key():
+    """The pool of an influenced item holds mods whose tags the key does not read, so no set is called a twin there."""
+    import dataclasses
+
+    influenced = dataclasses.replace(boots(), influences=frozenset({Influence.HUNTER}))
+
+    assert all(action.twin_key(DATA, influenced) is None for action in fossil_actions(DATA, boots())[:20])
+    assert fossil_actions(DATA, boots())[0].twin_key(DATA, boots()) is not None
 
 
 def test_an_action_that_declares_no_key_has_none():
