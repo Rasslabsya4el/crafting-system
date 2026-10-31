@@ -1,0 +1,33 @@
+# Given route for benchmark route R12: a "+1 Lightning" amulet with a fractured Lightning Resistance.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# It does not search for anything: in every state the FIRST rule whose conditions match is the one
+# that is followed. A goal state is never acted on. A state no rule matches is reported as a gap.
+# Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Fractured-lightning-resistance +1 Lightning amulet"):
+#   1. Start from an amulet with Lightning Resistance fractured.
+#   2. Harvest-reforge Lightning until it gains "+1 to Level of all Lightning Skill Gems".
+
+# Optional: a name for the route, shown in the report.
+name: R12, PoE Vault guide
+
+rules:
+  - # Optional `when`: every condition must hold. A rule without `when` matches every state.
+    # Conditions speak only of what the planner's compressed state holds:
+    #   rarity: rare            normal, magic or rare (or a list of them)
+    #   corrupted: false
+    #   fractured: none         or a list such as [{family: LightningResistance}]: every one must be fractured on the item
+    #   crafted_mods: false     whether the item holds a crafted mod or metamod
+    #   requirements:           the status of a requirement of the target, named as the target names it
+    #     - stat: "+1 to Level of all Lightning Skill Gems"   (or `family: ...`)
+    #       status: absent    absent, below or passing (or a list of them)
+    when:
+      rarity: rare
+      requirements:
+        - stat: "+1 to Level of all Lightning Skill Gems"
+          status: absent
+    # `do` is the name of an action as the solver prints it (here "Harvest Reforge Lightning" or
+    # "Chaos Orb"), or `restart` to buy the start item again.
+    do: Harvest Reforge Lightning

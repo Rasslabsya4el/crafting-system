@@ -77,8 +77,12 @@ A policy read as a person follows it: the main line of actions and where to go o
 _Avoid_: chain, path
 
 **Benchmark route**:
-A published crafting route (R01–R30 in the reference routes research) whose cost and odds a batch must match or beat.
+A published crafting route (R01–R30 in the reference routes research) whose cost and odds a batch must match or beat. Its guide's cost is its **Given route** evaluated at the same prices.
 _Avoid_: test craft, reference craft
+
+**Given route**:
+A route written down in a YAML file by an agent from a guide, and evaluated exactly as a fixed policy instead of searched for: ordered rules "when the compressed state matches these conditions, do this action", the first match wins, and a rule may restart by buying the start item again. A reachable state no rule covers is reported as a gap. It gives the guide's cost, which guides do not state, and `--route` also lets users compare their own route with the solver's.
+_Avoid_: guide policy, manual policy
 
 **Batch**:
 One stage of v1's action set (B1 to B4), finished when its benchmark routes pass.
