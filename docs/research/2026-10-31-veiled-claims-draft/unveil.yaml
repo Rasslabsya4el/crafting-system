@@ -32,14 +32,6 @@ rules:
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
-  - id: unveil.offer_agrees_with_an_independent_figure
-    statement: With a helmet prefix pool (9 families, weight 12000) and the Zombies/Skeleton family blocked (weight 2000), the offer algorithm gives P(+2 AoE offered) = 0.4375, against the 0.45 of the SKRYAH quiz slide of route R02.
-    source_kind: experiment
-    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/research/2026-10-30-5-reference-routes.md
-    quote: '{"n":6,"action":"Unveil +2 AoE.","repeat_until":"+2 AoE unveil","on_fail":"Repeat veiled stage.","probability":0.45,"probability_source":"SKRYAH slide transcription"}'
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
   - id: unveil.legacy_mods_have_weight_zero
     statement: 51 unveiled-domain mods have weight 0 on every base and are never offered, among them Trigger a Socketed Spell on Using a Skill (R07's target), the Damage over Time Multiplier prefixes, the quiver/flask legacy mods and the Avoid Elemental Ailments and Stun body armour mod.
     source_kind: datamined
