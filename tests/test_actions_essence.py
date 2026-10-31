@@ -344,9 +344,18 @@ def test_a_metamod_or_an_influence_makes_the_item_out_of_scope(name):
         meta = amulet(roll("DexMasterItemGenerationCannotChangeSuffixes", crafted=True))
         with pytest.raises(OutOfScopeError, match="metamod"):
             ApplyEssence(name).outcomes(DATA, meta)
+    sword = dataclasses.replace(DATA.base_items[AMULET], item_class="Thrusting One Hand Sword")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: sword})
     influenced = dataclasses.replace(amulet(rarity=Rarity.NORMAL), influences=frozenset({Influence.SHAPER}))
-    with pytest.raises(OutOfScopeError, match="influence"):
-        ApplyEssence(name).outcomes(DATA, influenced)
+    with pytest.raises(OutOfScopeError, match="influence class key"):
+        ApplyEssence(name).outcomes(data, influenced)
+
+
+@pytest.mark.parametrize("name", [HATRED, HYSTERIA])
+def test_an_influenced_amulet_takes_an_essence(name):
+    influenced = dataclasses.replace(amulet(rarity=Rarity.NORMAL), influences=frozenset({Influence.SHAPER}))
+
+    assert ApplyEssence(name).outcomes(DATA, influenced).retained.influences == influenced.influences
 
 
 def test_fractured_mods_that_fill_the_side_of_the_forced_mod_are_out_of_scope():

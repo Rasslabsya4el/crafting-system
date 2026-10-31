@@ -39,7 +39,7 @@ class ChaosOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not rare or is corrupted, and
-        `OutOfScopeError` for a jewel, an influenced item or one with a crafted metamod. Ordinary
+        `OutOfScopeError` for a jewel, an influenced item of a class with no influence class key, or one with a crafted metamod. Ordinary
         crafted mods are removed by the reroll like every mod that is not fractured.
         """
         if item.rarity is not Rarity.RARE:

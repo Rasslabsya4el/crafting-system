@@ -781,12 +781,15 @@ def test_hollow_and_glyphic_in_one_resonator_are_out_of_scope():
             outcomes_of(*names)
 
 
-def test_a_jewel_and_an_influenced_item_are_out_of_scope():
+def test_a_jewel_is_out_of_scope():
     with pytest.raises(OutOfScopeError, match="jewel"):
         outcomes_of("Scorched Fossil", item=boots(base=JEWEL))
+
+
+def test_an_influenced_item_takes_a_fossil():
     influenced = dataclasses.replace(boots(), influences=frozenset({Influence.ELDER}))
-    with pytest.raises(OutOfScopeError, match="influence"):
-        outcomes_of("Scorched Fossil", item=influenced)
+
+    assert {part.retained.influences for _, part in outcomes_of("Scorched Fossil", item=influenced).components} == {influenced.influences}
 
 
 def test_an_unknown_fossil_name_is_a_value_error():
@@ -914,13 +917,11 @@ def test_an_item_that_takes_no_resonator_has_no_fossil_and_no_action(item):
     assert fossil_actions(SMALL, item) == []
 
 
-def test_a_corrupted_or_influenced_item_has_no_fossil_and_no_action():
-    for item in (
-        dataclasses.replace(boots(), corrupted=True),
-        dataclasses.replace(boots(), influences=frozenset({Influence.SHAPER})),
-    ):
-        assert usable_fossils(SMALL, item) == []
-        assert fossil_actions(SMALL, item) == []
+def test_a_corrupted_item_has_no_fossil_and_no_action():
+    item = dataclasses.replace(boots(), corrupted=True)
+
+    assert usable_fossils(SMALL, item) == []
+    assert fossil_actions(SMALL, item) == []
 
 
 # the sampler follows the exact chances ----------------------------------------------------
