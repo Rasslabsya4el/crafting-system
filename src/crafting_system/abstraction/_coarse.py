@@ -340,7 +340,7 @@ class Coarsening:
                 return found.kernel
         elif found.error is None:
             return found.kernel
-        raise found.error
+        raise found.error.with_traceback(None)  # a cached refusal is raised many times: do not stack tracebacks on it
 
     def _evaluate(self, block: Block, action: Action) -> _Evaluation:
         if self._last is not None and self._last[0] == block and self._last[1] == action:
