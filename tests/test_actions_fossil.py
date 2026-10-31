@@ -789,7 +789,7 @@ def test_a_jewel_is_out_of_scope():
 def test_an_influenced_item_takes_a_fossil():
     influenced = dataclasses.replace(boots(), influences=frozenset({Influence.ELDER}))
 
-    assert outcomes_of("Scorched Fossil", item=influenced).retained.influences == influenced.influences
+    assert {part.retained.influences for _, part in outcomes_of("Scorched Fossil", item=influenced).components} == {influenced.influences}
 
 
 def test_an_unknown_fossil_name_is_a_value_error():
