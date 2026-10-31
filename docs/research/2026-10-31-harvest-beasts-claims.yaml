@@ -309,14 +309,6 @@ rules:
     patch_verified: "3.29.0"
     date_checked: 2026-10-31
 
-  - id: harvest_swap.damage_swap_refuses_conversion_mod
-    statement: "The Harvest craft that changes a damage modifier of one element into another is refused on a conversion modifier (\"% of Physical Damage Converted to Lightning Damage\"): the craft reports no valid modifiers, because the mod does not grant damage of that element. One report, one item; which added and increased damage mods qualify is open (O-07)."
-    source_kind: experiment
-    url: https://www.reddit.com/r/pathofexile/comments/1sdzjmn/
-    quote: "it says that there are no valid modifiers on this item"
-    patch_verified: "3.29.0"
-    date_checked: 2026-10-31
-
   - id: beastcraft.talisman_base_reroll_keeps_mods
     statement: "The Craicic Squid recipe rerolls the base type of a Talisman and keeps its implicit and explicit modifiers; the enchantment follows the base. The probabilities of the new base are not documented (O-11 of the note)."
     source_kind: official
