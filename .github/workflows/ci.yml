@@ -33,29 +33,7 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Point the cache directory at the runner's temp folder
-        run: echo "CRAFTING_CACHE_DIR=$RUNNER_TEMP/crafting-cache" >> "$GITHUB_ENV"
-      # The pinned repoe-fork export, cached by the pin: a new pin is a new key, so the data is fetched again.
-      - id: data
-        uses: actions/cache@v6.1.0
-        with:
-          path: ${{ runner.temp }}/crafting-cache
-          key: repoe-fork-${{ runner.os }}-${{ hashFiles('src/crafting_system/data/PIN.json') }}
-      - uses: astral-sh/setup-uv@v10.3.3
-        with:
-          version: "0.13.6"
-          enable-cache: true
-      - run: uv sync --locked
-      - name: Fetch the pinned game data (only on a cache miss)
-        if: steps.data.outputs.cache-hit != 'true'
-        run: |
-          for attempt in 1 2 3 4 5; do
-            uv run --no-sync python -m crafting_system.data fetch && exit 0
-            echo "fetch failed (attempt $attempt)"; sleep $((attempt * 15))
-          done
-          exit 1
-      - name: Check the game data against the pin
-        run: uv run --no-sync python -m crafting_system.data verify
+      - uses: ./.github/actions/real-data
       - name: Run shard ${{ matrix.shard }} of 8 on 4 processes
         run: >
           uv run --no-sync python .github/scripts/run_shard.py

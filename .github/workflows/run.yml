@@ -1,0 +1,81 @@
+name: Run a command
+
+# A heavy run on GitHub instead of on a developer's PC (ticket #165): benchmarks, profiling, research sweeps.
+# Started by hand: `gh workflow run run.yml --ref <branch> -f command='...'`. It checks out the branch, puts the pinned
+# game data in place (the same step as CI), runs the command in bash on 1 to 16 runners and uploads what the command
+# wrote into $OUT_DIR. See docs/ci.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "bash command, run from the repository root (uv run --no-sync ... works); write results into $OUT_DIR"
+        required: true
+        type: string
+      runners:
+        description: "how many runners run the command (1 to 16); each sees RUNNER_INDEX (1..N) and RUNNER_COUNT"
+        required: false
+        default: "1"
+        type: string
+      os:
+        description: "runner system"
+        required: false
+        default: ubuntu-latest
+        type: choice
+        options: [ubuntu-latest, windows-latest]
+      timeout_minutes:
+        description: "minutes before a runner is stopped (1 to 360)"
+        required: false
+        default: "60"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    outputs:
+      indices: ${{ steps.plan.outputs.indices }}
+    steps:
+      - id: plan
+        env:
+          RUNNERS: ${{ inputs.runners }}
+          TIMEOUT: ${{ inputs.timeout_minutes }}
+        run: |
+          case "$RUNNERS" in ([1-9]|1[0-6]) ;; (*) echo "runners must be 1 to 16, not '$RUNNERS'"; exit 1;; esac
+          case "$TIMEOUT" in ([1-9]|[1-9][0-9]|[12][0-9][0-9]|3[0-5][0-9]|360) ;; (*) echo "timeout_minutes must be 1 to 360, not '$TIMEOUT'"; exit 1;; esac
+          echo "indices=$(seq -s, 1 "$RUNNERS" | sed 's/^/[/; s/$/]/')" >> "$GITHUB_OUTPUT"
+
+  run:
+    name: run (${{ inputs.os }}, runner ${{ matrix.index }}/${{ inputs.runners }})
+    needs: plan
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: ${{ fromJSON(inputs.timeout_minutes) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        index: ${{ fromJSON(needs.plan.outputs.indices) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data
+      - name: Run the command
+        env:
+          COMMAND: ${{ inputs.command }}
+          RUNNER_INDEX: ${{ matrix.index }}
+          RUNNER_COUNT: ${{ inputs.runners }}
+        run: |
+          export OUT_DIR="$PWD/out"
+          mkdir -p "$OUT_DIR"
+          bash -c "$COMMAND" 2>&1 | tee "$OUT_DIR/output.log"
+          exit "${PIPESTATUS[0]}"
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: run-${{ inputs.os }}-${{ matrix.index }}
+          path: out/
+          if-no-files-found: warn
