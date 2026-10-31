@@ -96,7 +96,8 @@ def evaluate[S](
     the probability still in flight is at most `tail_mass`; it never runs past `max_bins` bins and
     reports what was left as `grid.unresolved_mass`. `work_budget` caps the DP's work when `resolution`
     is not given (see the module docstring). Raises `ValueError` for a bad argument or a
-    `resolution` above the smallest cost, and the solver's `ConvergenceError` if a moment solve
+    `resolution` above the smallest cost, a `max_bins` so large that a (bin, state) pair no longer fits
+    62 bits, and the solver's `ConvergenceError` if a moment solve
     cannot converge.
     """
     levels = tuple(_level(x, "quantile level") for x in quantile_levels)
@@ -107,6 +108,10 @@ def evaluate[S](
         raise ValueError(f"max_bins must be an integer of at least 1, got {max_bins!r}")
     if isinstance(work_budget, bool) or not isinstance(work_budget, Real) or not work_budget > 0.0:
         raise ValueError(f"work_budget must be a number above zero, got {work_budget!r}")
+    try:
+        work_budget = float(work_budget)
+    except OverflowError:
+        work_budget = math.inf
     if resolution is not None and (
         isinstance(resolution, bool)
         or not isinstance(resolution, Real)

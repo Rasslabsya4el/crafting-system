@@ -67,3 +67,9 @@ def test_the_step_never_exceeds_the_smallest_cost():
 def test_a_bad_work_budget_is_rejected(bad):
     with pytest.raises(ValueError, match="work_budget"):
         evaluate(layered(random.Random(5), 5), 0, is_goal, work_budget=bad)
+
+
+def test_a_budget_too_large_for_a_float_means_no_limit():
+    policy = layered(random.Random(6), 20)
+
+    assert evaluate(policy, 0, is_goal, work_budget=10**400) == evaluate(policy, 0, is_goal, work_budget=float("inf"))
