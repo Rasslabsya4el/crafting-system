@@ -223,11 +223,10 @@ def test_a_craft_of_the_fractured_family_is_illegal_in_both_models_and_other_cra
     pooling = Coarsening(AB, [{COLD, FIRE, MANA}])
     craft = BenchCraft(MANA_CRAFT)
     fractured_mana = item(roll(MANA_1, fractured=True), roll(LIFE_1))
-    fractured_cold_and_fire = item(roll(COLD_RESIST, fractured=True), roll(FIRE_RESIST), roll(LIFE_1))
     fractured_cold = item(roll(COLD_RESIST, fractured=True), roll(FIRE_RESIST), roll(LIFE_1))
 
     assert not legal(pooling, fractured_mana, craft, "lower") and not legal(pooling, fractured_mana, craft, "upper")
-    assert not legal(pooling, fractured_cold_and_fire, craft, "upper")
+    assert not legal(pooling, fractured_cold, craft, "upper")
     assert legal(pooling, fractured_cold, craft, "lower")  # Cold held exactly, Fire pooled: n = 1 <= k - |H| - 1 = 1
 
 
@@ -350,3 +349,26 @@ def test_the_reachable_blocks_of_the_upper_model_are_among_those_of_the_lower_an
 
     assert upper <= lower and len(lower) < len(exact)
     assert {pooling.coarsen(s) for s in exact} <= lower
+
+
+def test_reachable_and_a_model_refuse_an_action_that_is_not_block_invariant_instead_of_dropping_it():
+    pooling = coarsening(None)
+    start = pooling.coarsen(AB.compress(item(roll(MANA_1), roll(LIFE_1))))
+
+    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+        pooling.reachable([start], [CHAOS, RegalOrb()])
+    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+        CoarseModel(pooling, "lower", [CHAOS, RegalOrb()])
+
+
+def test_a_crafted_goal_mod_is_held_exactly_and_its_family_can_still_host_a_plain_craft_in_a_group():
+    goal = Goal((Wanted(frozenset({LIGHTNING_CRAFT})), Wanted(frozenset({LIFE_1, "IncreasedLife2"}))))
+    ab = abstraction(goal)
+    pooling = Coarsening(ab, [{LIGHTNING_RESIST, MANA}])
+    blocks = blocks_of(ab, pooling, ITEMS)
+
+    assert len(blocks) > 50
+    for block, states in blocks.items():
+        assert set(pooling.members(block)) == states
+    for action in OFFERS:
+        compare_members(action, ab, pooling, blocks)

@@ -24,6 +24,10 @@ it on one representative member of each way the families it reads (`Reads.famili
 for a craft of family `phi` in a pool of `k` with `n` pooled slots and `H` held, that is legal in the
 lower model if `n <= k - |H| - 1`, in the upper only if `n = 0`, and in neither if `phi` is in `H`.
 
+The crafted mods that a block can pool are those the data lists with the domain `crafted` and one family
+(a method that adds a crafted mod of another domain is not pooled: its slot stays exact). One `Coarsening`
+keeps a one-entry cache and is not for two threads.
+
 Soundness needs the members to contain every exact state that maps to the block, which they do (a
 member that no route can reach only makes the lower model offer more and the upper offer less).
 `tests/test_abstraction_coarse.py` and the contract suite compare every member of every block of the
@@ -48,6 +52,10 @@ from ._state import CompressedState, Slot
 Block = CompressedState
 Bound = Literal["lower", "upper"]
 POOLED = "~"  # a slot kind that starts with this names a pool of families (no family key or mod id does)
+
+
+def _slot_key(slot: Slot):
+    return slot.key
 
 
 @dataclass(frozen=True)
@@ -80,7 +88,7 @@ class Coarsening:
         self.abstraction = abstraction
         self._data = abstraction.data
         for action in abstraction.enabled:
-            self._require_invariant(action)
+            self.require_invariant(action)
         pool = build_pool(
             self._data, Item.build(self._data, base_id=abstraction.base_id, item_level=abstraction.item_level, rarity=Rarity.RARE)
         )
@@ -97,18 +105,25 @@ class Coarsening:
         self._zero = tuple(Status.ABSENT for _ in abstraction.goal.leaves)
         self._find_crafted_mods()
         self._last: tuple[Block, Action, _Evaluation] | None = None
+        self._slots: dict[Slot, Slot] = {}  # the pooled form of every slot seen
+        self._rerolls: dict[tuple, _Evaluation] = {}  # an erasing action sees the flags, the fractured and crafted mods only
 
     @classmethod
-    def pooling_irrelevant(cls, abstraction: Abstraction, size: int | None = None) -> "Coarsening":
+    def pooling_irrelevant(
+        cls, abstraction: Abstraction, size: int | None = None, start: CompressedState | None = None
+    ) -> "Coarsening":
         """Pool every told-apart family that no requirement and no goal-relevant craft cares about.
 
         The families, sorted by name, are cut into groups of `size` (all in one group when `size` is
-        None). A group may list families of both sides; its blocks pool them per side.
+        None). A group may list families of both sides; its blocks pool them per side. With the `start`
+        state, the families its fractured mods hold are left out: they stay held in every state of a
+        route, so no slot is ever pooled on them and they would only take a place in a group.
         """
         if size is not None and size < 1:
             raise ValueError(f"a group needs at least one family, got size {size}")
         probe = cls(abstraction)
-        candidates = sorted(probe.told_apart - probe.relevant_families)
+        always_held = probe._held_by_fractured(start) if start is not None else set()
+        candidates = sorted(probe.told_apart - probe.relevant_families - always_held)
         if not candidates:
             return probe
         step = len(candidates) if size is None else size
@@ -141,7 +156,8 @@ class Coarsening:
                 families |= reads.families or set()
         return frozenset(families)
 
-    def _require_invariant(self, action: Action) -> None:
+    def require_invariant(self, action: Action) -> None:
+        """Raise `OutOfScopeError` unless `action` declares `Reads.block_invariant` and names the families it reads."""
         reads = action.reads(self._data)
         if not reads.block_invariant:
             raise OutOfScopeError(
@@ -187,7 +203,9 @@ class Coarsening:
                 continue
             key = (Side(mod.generation_type), mod.families[0])
             if key in self._pools:
-                found[key].add(self.abstraction.crafted_slot(mod.id))
+                slot = self.abstraction.crafted_slot(mod.id)
+                if all(value is Status.ABSENT for value in slot.contribution):  # a crafted goal mod is held exactly
+                    found[key].add(slot)
         for key, slots in found.items():
             self._crafted[key] = min(slots, key=lambda slot: slot.key)
 
@@ -196,11 +214,17 @@ class Coarsening:
     def coarsen(self, state: CompressedState) -> Block:
         """The block of an exact state: the slots of pooled families get the kind of their pool."""
         slots = [self._coarse_slot(slot) for slot in state.slots]
-        if slots == list(state.slots):
+        if all(new is old for new, old in zip(slots, state.slots)):
             return state
-        return replace(state, slots=tuple(sorted(slots, key=lambda slot: slot.key)))
+        return replace(state, slots=tuple(sorted(slots, key=_slot_key)))
 
     def _coarse_slot(self, slot: Slot) -> Slot:
+        found = self._slots.get(slot)
+        if found is None:
+            found = self._slots[slot] = self._pooled_slot(slot)
+        return found
+
+    def _pooled_slot(self, slot: Slot) -> Slot:
         if any(value is not Status.ABSENT for value in slot.contribution):
             return slot
         if slot.crafted:
@@ -209,7 +233,7 @@ class Coarsening:
         else:
             family = slot.kind if slot.kind != ALIKE else None
         pool = self._pools.get((slot.side, family)) if family is not None else None
-        return slot if pool is None else replace(slot, kind=pool.kind)
+        return slot if pool is None else Slot(slot.side, pool.kind, slot.contribution, slot.crafted)
 
     def is_goal(self, block: Block) -> bool:
         """Whether the status of `block` meets the goal."""
@@ -221,11 +245,15 @@ class Coarsening:
         """Every exact state that `coarsen` maps to `block` (and, for a pooled crafted mod, has a crafted mod of that family)."""
         yield from self._members(block, None)
 
+    def _held_by_fractured(self, state: CompressedState) -> set[str]:
+        held: set[str] = set()
+        for entry in state.fractured:
+            held |= held_families(self._data.mods[entry.mod_id])
+        return held
+
     def _held(self, block: Block) -> set[str]:
         """The families that the fractured mods and the slots that are not pooled hold, in every member."""
-        held: set[str] = set()
-        for entry in block.fractured:
-            held |= held_families(self._data.mods[entry.mod_id])
+        held = self._held_by_fractured(block)
         for slot in block.slots:
             if slot.kind.startswith(POOLED):
                 continue
@@ -312,9 +340,19 @@ class Coarsening:
     def _evaluate(self, block: Block, action: Action) -> _Evaluation:
         if self._last is not None and self._last[0] == block and self._last[1] == action:
             return self._last[2]
-        self._require_invariant(action)
+        self.require_invariant(action)
         reads = action.reads(self._data)
-        marked = frozenset(reads.families) if reads.junk else frozenset()
+        if reads.junk:
+            found = self._run_members(block, action, frozenset(reads.families))
+        else:  # an erasing action looks at the flags, the fractured mods and the crafted mods: blocks that agree on them share it
+            key = (action, block.flags, block.fractured, tuple(slot for slot in block.slots if slot.crafted))
+            found = self._rerolls.get(key)
+            if found is None:
+                found = self._rerolls[key] = self._run_members(block, action, frozenset())
+        self._last = (block, action, found)
+        return found
+
+    def _run_members(self, block: Block, action: Action, marked: frozenset[str]) -> _Evaluation:
         kernel: Mapping[Block, Fraction] | None = None
         error: ActionError | None = None
         for member in self._members(block, marked):
@@ -328,17 +366,24 @@ class Coarsening:
                 for state, chance in exact.items():
                     pushed[self.coarsen(state)] += chance
                 kernel = dict(pushed)
-        found = _Evaluation(kernel, error)
-        self._last = (block, action, found)
-        return found
+        return _Evaluation(kernel, error)
 
-    def reachable(self, starts: Iterable[Block], actions: Iterable[Action], bound: Bound = "lower") -> frozenset[Block]:
-        """Every block reachable from `starts` by any of `actions` in the model of `bound`, the starts included."""
+    def reachable(
+        self, starts: Iterable[Block], actions: Iterable[Action], bound: Bound = "lower", *, stop_at_goal: bool = False
+    ) -> frozenset[Block]:
+        """Every block reachable from `starts` by any of `actions` in the model of `bound`, the starts included.
+
+        With `stop_at_goal` a block that meets the goal is not expanded (a solver does not expand goals).
+        """
         actions = tuple(actions)
+        for action in actions:
+            self.require_invariant(action)  # a refusal of the action itself is not a refusal in one state
         seen = set(starts)
         queue = list(seen)
         while queue:
             block = queue.pop()
+            if stop_at_goal and self.is_goal(block):
+                continue
             for action in actions:
                 try:
                     successors = self.kernel(block, action, bound)

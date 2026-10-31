@@ -144,6 +144,8 @@ class CoarseModel:
 
     def __init__(self, coarsening, bound: str, offers: Iterable[Action] = OFFERS):
         self.coarsening, self.bound, self.offers = coarsening, bound, tuple(offers)
+        for offer in self.offers:
+            coarsening.require_invariant(offer)  # a refused action is not one that is refused in some states: it is no model
 
     def is_goal(self, block: CompressedState) -> bool:
         return self.coarsening.is_goal(block)
