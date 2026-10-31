@@ -297,6 +297,10 @@ class Abstraction:
             status_of(leaf, mod.id, tier, _low_values(mod), crafted) for leaf in self.goal.leaves
         )
 
+    def passes(self, mod: Mod, leaf: int) -> bool:
+        """Whether `mod`, drawn by an action (its table tier, low rolls), gives leaf number `leaf` the status PASSING."""
+        return self._drawn_contribution(mod)[leaf] is Status.PASSING
+
     def _guard_roll(self, mod: Mod) -> None:
         """Raise `OutOfScopeError` when a leaf names `mod` and limits its roll: a rolled value is not modelled yet."""
         for leaf in self.goal.leaves:

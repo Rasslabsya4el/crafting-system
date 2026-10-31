@@ -25,6 +25,9 @@ is imported or tested for here.
   closure; an action that raises an `ActionError` in a state is skipped there),
   `family_types(tag, fossils)` (the families of the empty pool grouped by family type: the "family types
   of the amulet's junk"; with a resonator, of the pool its fossils make), `stats` (`CacheStats(kernels, hits)`).
+* `reach_bound(abstraction, state, action, leaves, exact=False)`: an upper bound, from the pool alone, on the
+  chance that one use of an erasing reroll makes every leaf of `leaves` PASSING (the exact chance with
+  `exact=True`; None for an action it cannot bound); the argument is in `_bound.py` (#118).
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 
@@ -91,6 +94,7 @@ No mechanic is decided here: this module only recombines the results of `actions
 claim of the rules registry.
 """
 
+from ._bound import reach_bound
 from ._goal import AtLeast, Goal, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
 from ._state import CompressedState, Flags, FracturedMod, Slot
@@ -108,4 +112,5 @@ __all__ = [
     "Status",
     "Wanted",
     "integer_weights",
+    "reach_bound",
 ]
