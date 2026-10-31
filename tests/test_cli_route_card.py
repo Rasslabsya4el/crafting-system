@@ -1,7 +1,7 @@
 """The item cards of the route view: a concrete item, the target, and the state after a step (ticket #78, piece B).
 
 The cards come from the small amulet pool and the fixture belt; the R12 start and goal cards also run on
-the real 3.29.3.3 dump, and skip cleanly when the cache is not there (CI has none).
+the real 3.29.3.3 dump, and skip cleanly when the cache is not there (CI fetches it, ticket #165).
 """
 
 import dataclasses

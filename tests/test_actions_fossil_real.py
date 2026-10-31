@@ -1,7 +1,7 @@
 """The per-use chance of what R08 and R09 wait for, and the size of the fossil action set, on the real 3.29.3.3 dump (ticket #61).
 
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`, set the cache folder with
-`CRAFTING_CACHE_DIR`). They skip cleanly when it is not there, which is the case in CI.
+`CRAFTING_CACHE_DIR`). They skip cleanly when it is not there; CI fetches it (ticket #165), so they run there.
 
 The pins are what the engine gave on the data of 3.29.3.3, to twelve digits (a regression pin: the
 independent check is the hand oracle of `test_actions_fossil.py` on a small world, and the sampler

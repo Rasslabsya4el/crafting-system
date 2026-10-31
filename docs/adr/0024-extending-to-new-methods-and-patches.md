@@ -25,6 +25,7 @@ Two more declarations carry decisions that used to hide in the CLI and in ADR-00
 ## Limits a later ticket must lift with a contract change
 
 - **Two-input actions** (ADR-0022): `outcomes(data, item)` takes one item; `extra_inputs`, a `Need` and a donor have no place in the contract yet.
+- **Implicits, quality and the unveil offer** were also outside the contract; [ADR-0027](0027-item-state-beyond-explicit-mods.md) (grill B2) lifts that limit by letting `Item` store them and `Reads`/`Adds` declare them.
 - **In-place value changes** (a Divine-like orb, #71): the kernel accepts only `Fixed` or `Outcomes` parts and `_split` matches mods by `(mod_id, fractured, crafted)`, so a changed roll would count as kept.
 - **`Adds` names only what is added by name** from the start item. For a drawn action it says that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
 - **The catalog looks at the start item's rarity** (essences of level 1 to 4, the orbs of magic items): those kinds are not listed for states a policy reaches later. Today no planner kind needs them.
