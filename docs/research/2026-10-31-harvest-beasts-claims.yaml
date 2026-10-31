@@ -1,0 +1,310 @@
+# Draft claims of research ticket #88 (note `2026-10-31-harvest-beasts.md`, ids HBS-xx).
+# Same fields as src/crafting_system/rules/claims/*.yaml. The `source_kind` list there is
+# official / wiki / datamined / experiment / coe / owner, so player (Reddit) reports and market prices
+# are not admitted as claims here: they are corroboration in the note and the price file (#40).
+# Claims whose source is `coe` rest on Craft of Exile's code only and need a main-chat decision
+# like D7 of #28 before they are admitted (O-01, O-02 of the note).
+# Suggested files: harvest_augment.yaml, harvest_swap.yaml, beastcraft.yaml.
+
+# ---- harvest_augment.yaml: "Add a new [tag] modifier and remove another random modifier" (M-29) ----
+rules:
+  - id: harvest_augment.add_remove_crafts_exist
+    statement: "Eleven Harvest crafts add a new modifier of the tag and remove another random modifier from a non-influenced item. `value` maps the craft's tag to its cost by lifeforce item (number of items per use); each also costs one Sacred Crystallised Lifeforce and no Crystallised Rancour."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Add a new Fire modifier and remove another random modifier from a non-Influenced item 15000 0 0 1 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      fire: {Wild Crystallised Lifeforce: 15000, Sacred Crystallised Lifeforce: 1}
+      cold: {Vivid Crystallised Lifeforce: 15000, Sacred Crystallised Lifeforce: 1}
+      lightning: {Primal Crystallised Lifeforce: 15000, Sacred Crystallised Lifeforce: 1}
+      physical: {Vivid Crystallised Lifeforce: 15000, Sacred Crystallised Lifeforce: 1}
+      life: {Wild Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      defence: {Primal Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      chaos: {Vivid Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      attack: {Wild Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      caster: {Primal Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      speed: {Vivid Crystallised Lifeforce: 20000, Sacred Crystallised Lifeforce: 1}
+      critical: {Primal Crystallised Lifeforce: 20000, Sacred Crystallised Lifeforce: 1}
+
+  - id: harvest_augment.needs_non_influenced_item
+    statement: "The add and remove crafts work only on an item without influence. Whether an Eldritch implicit, a fractured mod or another state also refuses the craft is not stated (O-06 of the note)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Version_history
+    quote: "Type-specific Exalted crafts (crafts that augmented modifiers of specific types to items) can now only be applied to non-influenced items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.removes_another_modifier
+    statement: "The craft removes \"another\" modifier than the one it adds, so the new modifier is never the one removed."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Harvest_crafting#Mechanics
+    quote: "Add a new Chaos modifier and remove another random modifier from a non-Influenced item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.add_first_then_remove
+    statement: "The craft adds the new modifier first and then removes one of the others; the new modifier is excluded from the removal. Order and exclusion are Craft of Exile's code (package.js:2342-2343); the wiki gives no order. Player reports agree (note HBS-02)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "craftDetail.add=poec_simRollAffix(null,crafts.ssaction,null,null,1,!0,!1,!1,!1,!1,!1,null,!1);if(crsim_hnerf){var ruleout=\"|\";for(var i=0;i<useaffixes.length;i++){if(useaffixes[i].id==craftDetail.add[0].id){ruleout+=i+\"|\"}}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.refused_when_no_room_to_add
+    statement: "The craft is refused on an item with 3 prefixes and 3 suffixes, and when the item has no open slot on the side of every modifier of the tag it could add. Craft of Exile checks the full item and that a modifier of the tag fits; player reports say the same (note HBS-03)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(useaffbt.suffix>=usemaxaffgrp.suffix&&useaffbt.prefix>=usemaxaffgrp.prefix){validity=!1;errors+=\"No space left to add\"}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.add_obeys_side_locks_and_cannot_roll
+    statement: "The added modifier obeys Prefixes Cannot Be Changed and Suffixes Cannot Be Changed (an open slot on a locked side can still be filled) and Cannot roll Attack Modifiers and Cannot roll Caster Modifiers."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Respected when adding, ignored when removing"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.removal_obeys_side_locks_ignores_cannot_roll
+    statement: "The removal never takes a modifier of a side locked by Prefixes / Suffixes Cannot Be Changed, and Cannot roll Attack / Caster Modifiers do not protect any modifier from it."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Metamods
+    quote: "The metamod does not protect mods from removal when used with other crafts that remove a single modifier, such as beastcrafting, Harvest, or Veiled Orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.removal_never_takes_fractured
+    statement: "A fractured modifier cannot be removed, so the removal of an add and remove craft never takes it."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
+    quote: "permanently locked to the item, being unable to be rerolled or removed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.removal_uniform_among_removable
+    statement: "The removed modifier is uniform among the modifiers that are not fractured, not on a locked side and not the new one; crafted mods and metamods are in the pool. Craft of Exile's code only (note HBS-05, O-02)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "function poec_simCatToRWeight(weight,apcat,mod){return weight}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.addition_weighted_by_tier_weight
+    statement: "The added modifier is drawn from the modifiers of the tag that the item can roll at its item level, in proportion to their weights (as the guaranteed draw of a tagged reforge, decision D7 of #28). Craft of Exile's code only (note O-01)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "craftDetail.add=poec_simRollAffix(null,crafts.ssaction,null,null,1,!0,!1,!1,!1,!1,!1,null,!1)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+# ---- harvest_swap.yaml: resistance and added-damage element swaps (M-30, M-31) ----
+  - id: harvest_swap.resistance_swaps_exist
+    statement: "Six Harvest crafts change a resistance modifier into the one of another element, 500 lifeforce of the colour of the target element (Fire Wild, Cold Vivid, Lightning Primal), no Rancour. `value` is {from: {to: cost}}."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Change a modifier that grants Cold Resistance into a similar-tier modifier that grants Fire Resistance 500 0 0 0 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      fire: {cold: {Vivid Crystallised Lifeforce: 500}, lightning: {Primal Crystallised Lifeforce: 500}}
+      cold: {fire: {Wild Crystallised Lifeforce: 500}, lightning: {Primal Crystallised Lifeforce: 500}}
+      lightning: {fire: {Wild Crystallised Lifeforce: 500}, cold: {Vivid Crystallised Lifeforce: 500}}
+
+  - id: harvest_swap.damage_swaps_exist
+    statement: "Six Harvest crafts change a fire, cold or lightning damage modifier into the one of another element, 500 lifeforce of the colour of the target element plus one Crystallised Rancour. `value` is {from: {to: cost}}."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Change a modifier that grants Cold Damage into a similar-tier modifier that grants Fire Damage 500 0 0 0 1"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      fire: {cold: {Vivid Crystallised Lifeforce: 500, Crystallised Rancour: 1}, lightning: {Primal Crystallised Lifeforce: 500, Crystallised Rancour: 1}}
+      cold: {fire: {Wild Crystallised Lifeforce: 500, Crystallised Rancour: 1}, lightning: {Primal Crystallised Lifeforce: 500, Crystallised Rancour: 1}}
+      lightning: {fire: {Wild Crystallised Lifeforce: 500, Crystallised Rancour: 1}, cold: {Vivid Crystallised Lifeforce: 500, Crystallised Rancour: 1}}
+
+  - id: harvest_swap.keeps_tier
+    statement: "A swap keeps the tier of the modifier. Whether the value inside the tier is rerolled is contested (O-08 of the note: the wiki says rerolled, a 2022 GGG line quoted on Reddit says resistances no longer reroll). How the tier is matched when the target element has no such tier at the item's level is not stated."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Harvest_Crafting
+    quote: "This craft preserves the tier, but not the roll within that tier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.resistance_beyond_plain_mod
+    statement: "The resistance swap works beyond the plain \"+#% to X Resistance\" mod, on the incursion hybrid resistance modifiers; Craft of Exile also lists the maximum-resistance modifier and the leech, physical-taken-as, conditional-clause and small-passive variants as sources."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Harvest_Crafting
+    quote: "This method works for modifiers beyond the generic \"+#% to (Element) Resistance\"."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.resistance_respects_side_locks
+    statement: "The resistance swap respects Prefixes / Suffixes Cannot Be Changed, so a resistance modifier on a locked side cannot be swapped. Craft of Exile does not implement this check; the wiki table wins."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Change Element of Resistance Respected Respected"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.damage_swap_excludes_crit_multiplier
+    statement: "The damage swap does not work on critical strike multiplier modifiers (3.28.0 hotfix 8, undocumented by GGG). Which other modifiers qualify as \"a modifier that grants X damage\" is open (O-07 of the note)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Harvest_crafting#Version_history
+    quote: "(Hotfix 8) The Harvest Crafting Option to change a modifier that grants X damage to a similar tier modifier granting Y damage no longer works on critical strike multiplier modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.rancour_obtainable
+    statement: "Crystallised Rancour, the extra cost of the damage swaps, is obtainable in 3.29: only from the Tier 4 Harvest bosses in the Overgrown Grove Atlas anomaly."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Overgrown_Grove
+    quote: "have a very high chance to drop a Crystallised Rancour"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.resistance_tier_levels_differ
+    statement: "The fire, cold and lightning resistance modifiers have the same value range at each tier number T1 to T8, but the required level of T2 to T5 differs by element, so \"same tier\" is a tier number and not a level (data for O-08). `value` is the required level by tier number."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "FireResist2 required_level 12; ColdResist2 required_level 14; LightningResist2 required_level 13"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      FireResistance: [1, 12, 24, 36, 48, 60, 72, 84]
+      ColdResistance: [1, 14, 26, 38, 50, 60, 72, 84]
+      LightningResistance: [1, 13, 25, 37, 49, 60, 72, 84]
+
+# ---- beastcraft.yaml: single-item beast recipes (M-33, M-35, M-36, M-38, M-39) ----
+  - id: beastcraft.recipe_beasts
+    statement: "The red beasts of the single-item recipes in 3.29; each recipe also takes the \"any rare creature\" beasts of the Blood Altar (four beasts in all, note O-13). `value` maps the recipe to its named beasts."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting#List_of_beast_recipes
+    quote: "Modify Mods on an Item Add a Prefix, Remove a Random Suffix Only works on rare items 1x Farric Wolf Alpha"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      add_prefix_remove_suffix: [Farric Wolf Alpha]
+      add_suffix_remove_prefix: [Farric Lynx Alpha]
+      add_metamod: [Wild Bristle Matron]
+      aspect_avian: ['Saqawal, First of the Sky']
+      aspect_cat: ['Farrul, First of the Plains']
+      aspect_crab: ['Craiceann, First of the Deep']
+      aspect_spider: ['Fenumus, First of the Night']
+      aspect_level_30: [the matching aspect beast, Black Mórrigan]
+      fracture_one_talisman: [Farric Frost Hellion Alpha]
+      fracture_two_talisman: [Fenumal Plagued Arachnid, Black Mórrigan]
+      reroll_talisman_base: [Craicic Squid]
+
+  - id: beastcraft.side_swap_uses_beast_level
+    statement: "The recipes that add a prefix and remove a suffix, or add a suffix and remove a prefix, decide the modifiers they can add by the level of the beast, ignoring the item level of the item. Where a beast's level comes from is open (O-03 of the note)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting
+    quote: "use the beast's level to determine the modifiers it can add, ignoring the item's actual item level"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.side_swap_needs_rare_and_open_slot
+    statement: "Both side-swap recipes work on rare items only and need an open slot on the side that is added."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Farric_Wolf_Alpha
+    quote: "The item requires an open prefix."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.side_swap_metamod_rules
+    statement: "For Add Prefix / Remove Suffix Prefixes Cannot Be Changed is respected (open prefixes may be filled), Suffixes Cannot Be Changed makes it add without removing, and Cannot roll Attack / Caster do not protect modifiers from the removal; for Add Suffix / Remove Prefix the two locks swap roles. The added modifier obeys Cannot roll Attack / Caster."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Beastcraft Add Prefix Remove Suffix Respected, but open prefixes may be filled Will add without removing Does not protect attack modifiers Does not protect caster modifiers"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.side_swap_removal_uniform
+    statement: "The removed modifier is uniform among the modifiers of the opposite side that are not fractured and not kept by a lock; the addition is drawn first. Craft of Exile's code only (note HBS-17, O-02)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "craftDetail.add=poec_simRollAffix(null,null,\"suffix\",null,1,!0,!1,!1,!1,!1,!1,null,!1);craftDetail.rem=poec_simRemoveAffix(null,\"prefix\",null,!0,!1,!1,!1,!1,null)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.metamod_one_of_five_if_allowed
+    statement: "Wild Bristle Matron adds one of the five metamods at random, only if it is allowed; with all suffixes full and one open prefix the only allowed one is Suffixes Cannot Be Changed. Equal odds among the allowed ones are not stated (O-09 of the note)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Wild_Bristle_Matron
+    quote: "The beastcraft adds one of these modifiers randomly to an item, and only if it is allowed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.metamod_needs_slot_and_crafted_room
+    statement: "The metamod beast craft needs an empty affix slot and an item on which a crafted mod could be added without removing another one first."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting#Harvest_beast_recipes
+    quote: "Requires an empty affix slot, and requires that a crafted mod could normally be added without removing another one first"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.metamod_ids
+    statement: "The five metamods and their sides. `value` maps the repoe-fork mod id to its generation type. Suffixes Cannot Be Changed is the only prefix."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "DexMasterItemGenerationCannotChangeSuffixes prefix Suffixed Suffixes Cannot Be Changed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      StrMasterItemGenerationCannotChangePrefixes: suffix
+      DexMasterItemGenerationCannotChangeSuffixes: prefix
+      IntMasterItemGenerationCannotRollAttackAffixes: suffix
+      StrDexMasterItemGenerationCannotRollCasterAffixes: suffix
+      StrIntMasterItemGenerationCanHaveMultipleCraftedMods: suffix
+
+  - id: beastcraft.aspect_mods
+    statement: "An aspect craft adds one suffix granting the skill: level 20, or level 30 with The Black Mórrigan. The suffixes are never rolled naturally (spawn weight 0), have required level 20 and the family `GrantedSkill`. `value` maps the repoe-fork mod id to the granted skill level."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "GrantsCatAspectCrafted item suffix 20 ['GrantedSkill'] Grants Level 20 Aspect of the Cat Skill [{'tag': 'default', 'weight': 0}]"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      GrantsCatAspectCrafted: 20
+      GrantsBirdAspectCrafted: 20
+      GrantsSpiderAspectCrafted: 20
+      GrantsCrabAspectCrafted: 20
+      GrantsCatAspectCrafted30: 30
+      GrantsBirdAspectCrafted30: 30
+      GrantsSpiderAspectCrafted30: 30
+      GrantsCrabAspectCrafted30: 30
+
+  - id: beastcraft.aspect_needs_open_suffix
+    statement: "An aspect craft is refused on an item with no open suffix and on an item that already holds an aspect. Craft of Exile's code (package.js:2395-2396) with player reports; whether the aspect counts as the item's one crafted mod is open (O-12 of the note)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(useiaffbt.suffix>=usecmaxaffgrp.suffix){errors=applyLang(\"No space to add aspect\")}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.talisman_fracture
+    statement: "A beast recipe fractures one modifier on a rare Talisman with at least 4 modifiers, another fractures two on a rare Talisman with at least 6; both replaced the Split recipes in 3.29.0. Which modifiers are chosen is open (O-10 of the note)."
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "The Beastcrafting option to Split an item into two has been replaced with a new option that Fractures a Modifier on a Rare Talisman with at least 4 Modifiers."
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.talisman_fracture_refused_on_fractured_or_influenced
+    statement: "The Talisman fracture recipes do not work on an influenced or a fractured item."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting#List_of_beast_recipes
+    quote: "Does not work on Influenced or Fractured items"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.talisman_base_reroll_keeps_mods
+    statement: "The Craicic Squid recipe rerolls the base type of a Talisman and keeps its implicit and explicit modifiers; the enchantment follows the base. The probabilities of the new base are not documented (O-11 of the note)."
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "The Bestiary craft to create a Rare Talisman has been replaced with a craft that Rerolls a Talisman base type, keeping the same Implicit and Explicit Modifiers."
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
