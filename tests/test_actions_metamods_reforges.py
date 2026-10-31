@@ -34,8 +34,9 @@ from crafting_system.items import ExplicitMod, Item, Rarity
 PCBC = "StrMasterItemGenerationCannotChangePrefixes"  # a suffix; locks the prefixes
 SCBC = "DexMasterItemGenerationCannotChangeSuffixes"  # a prefix; locks the suffixes
 NO_ATTACK = "IntMasterItemGenerationCannotRollAttackAffixes"  # a suffix
+NO_CASTER = "StrDexMasterItemGenerationCannotRollCasterAffixes"  # a suffix
 MULTI = "StrIntMasterItemGenerationCanHaveMultipleCraftedMods"  # a suffix; the brute force's stand-in for a metamod's slot
-WORLD = dataclasses.replace(TAGGED_DATA, mods={**TAGGED_DATA.mods, **{m: DATA.mods[m] for m in (PCBC, SCBC, NO_ATTACK, MULTI)}})
+WORLD = dataclasses.replace(TAGGED_DATA, mods={**TAGGED_DATA.mods, **{m: DATA.mods[m] for m in (PCBC, SCBC, NO_ATTACK, NO_CASTER, MULTI)}})
 
 
 def low(mod_id: str):
@@ -94,7 +95,7 @@ def test_each_tagged_reforge_keeps_the_locked_side_like_the_brute_force_with_tho
     assert {mod_id: outcomes.chance_all([mod_id]) for mod_id in SPAWNABLE} == expected
 
 
-def first_mod_mixture(craft, kept_fractured, standin):
+def first_mod_mixture(craft, kept_fractured, standin, blocked="attack"):
     """The brute-force chances when the first mod is filtered: the allowed tagged mods, then the rest unfiltered.
 
     `kept_fractured` are the mods that stay (as fractured mods), `standin` the metamod's slot. Returns None when no tagged mod is allowed.
@@ -107,7 +108,7 @@ def first_mod_mixture(craft, kept_fractured, standin):
         for family in build_pool(WORLD, base)
         if room[family.side.value] > 0
         for entry in family.mods
-        if tag in entry.mod.implicit_tags and "attack" not in entry.mod.implicit_tags
+        if tag in entry.mod.implicit_tags and blocked not in entry.mod.implicit_tags
     ]
     if not allowed:
         return None
@@ -123,6 +124,23 @@ def first_mod_mixture(craft, kept_fractured, standin):
 
 # SCBC keeps the suffixes, so Cannot roll Attack Modifiers (a suffix) and the resistance stay and the reroll is under the metamod
 FILTER_START = lambda: world_item(mod(LIFE_1), mod(RESIST_2), meta(SCBC), meta(NO_ATTACK))  # noqa: E731
+CASTER_START = lambda: world_item(mod(LIFE_1), mod(RESIST_2), meta(SCBC), meta(NO_CASTER))  # noqa: E731
+
+
+@pytest.mark.parametrize("craft", TABLE)
+def test_each_tagged_reforge_filters_the_guaranteed_mod_only_under_cannot_roll_caster(craft):
+    expected = first_mod_mixture(craft, [RESIST_2], MULTI, "caster")
+    start = CASTER_START()
+    if expected is None:  # the caster craft: every mod it could guarantee has the caster tag
+        with pytest.raises(NotApplicableError):
+            HarvestReforge(craft).outcomes(WORLD, start)
+        return
+
+    outcomes = HarvestReforge(craft).outcomes(WORLD, start)
+
+    assert {e.mod_id for e in outcomes.retained.mods} == {RESIST_2, NO_CASTER}
+    assert outcomes.guaranteed_blocked == {"caster"}
+    assert {mod_id: outcomes.chance_all([mod_id]) for mod_id in SPAWNABLE} == expected
 
 
 @pytest.mark.parametrize("craft", TABLE)
@@ -271,6 +289,17 @@ def test_a_likelihood_reforge_filters_the_first_mod_only_under_cannot_roll_attac
     assert outcomes.guaranteed_blocked == {"attack"}
     assert {mod_id: outcomes.chance_all([mod_id]) for mod_id in SPAWNABLE} == chances
     assert outcomes.chance_all([DAMAGE_1]) > 0  # an attack-tagged mod still comes after the first draw
+
+
+@pytest.mark.parametrize("more", [True, False], ids=["more", "less"])
+def test_a_likelihood_reforge_draws_nothing_when_the_kept_mods_fill_the_total(more):
+    # both locks keep all five mods, so the five held mods are the total and the attack filter has no draw to filter
+    full = world_item(mod(LIFE_1), mod(GEM), meta(SCBC), meta(PCBC), meta(NO_ATTACK))
+
+    outcomes = HarvestReforgeLikelihood(more).outcomes(WORLD, full)
+
+    assert outcomes.retained == full
+    assert {len(outcomes.retained.mods) + sum(count for _, count in o) for o in outcomes.distribution(lambda m: m.id)} == {5}
 
 
 def test_a_likelihood_reforge_is_refused_when_the_attack_filter_leaves_no_first_mod():

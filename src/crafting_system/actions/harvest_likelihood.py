@@ -80,7 +80,7 @@ class HarvestReforgeLikelihood(Action):
         retained = retained_item(data, item)
         total = max(len(item.mods), NEVER_FEWER_MODS.value["floor"])
         blocked = blocked_tags(data, retained)
-        if not blocked:
+        if not blocked or total <= len(retained.mods):  # nothing is drawn when the kept mods fill the total
             return Outcomes(data, retained, build_pool(data, retained, factor=reweigh), {total: Fraction(1)}, None)
         pool = mark_pool(build_pool(data, retained, factor=reweigh, tag_filter=False), FIRST_DRAW, lambda mod: True)
         result = Outcomes(data, retained, pool, {total: Fraction(1)}, FIRST_DRAW, None, blocked)
