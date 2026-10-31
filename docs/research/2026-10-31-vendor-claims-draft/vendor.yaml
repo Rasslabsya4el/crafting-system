@@ -1,7 +1,7 @@
 # Draft claims for src/crafting_system/rules/claims/vendor.yaml (research ticket #102, note 2026-10-31-vendor-recipes.md). Patch 3.29.3.3, checked 2026-10-31.
 rules:
   - id: vendor.recipe_makes_a_new_magic_item_with_one_mod
-    statement: The item-modifying vendor recipes of "create new item" type (boots movement speed, weapon flat damage, jewellery chaos resistance, the Whetstone weapon recipes) turn the input into a new Magic item that holds only the recipe's one mod, whatever the rarity or the other mods of the input. The input's quality, sockets, links, item level and influences are kept; enchantments, Eldritch implicits, Synthesised implicits, Incubators and Crucible trees are removed.
+    statement: The item-modifying vendor recipes of "create new item" type (boots movement speed, weapon flat damage, jewellery chaos resistance, the Whetstone weapon recipes) turn the input into a new Magic item that holds only the recipe's one mod, whatever the rarity or the other mods of the input. The input's quality, sockets, links and influences are kept; enchantments, Eldritch implicits, Synthesised implicits, Incubators and Crucible trees are removed. The result's item level is a separate, unsettled claim (vendor.item_level_of_the_result_is_not_settled).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Vendor_recipe_system
     quote: "All recipes of this type create a new base item (with randomized base defences). The following are removed: enchantments, Eldritch implicits, Synthesised implicits, Incubators, Crucible passive trees. The following are retained: quality, sockets, links, item level, influences"
@@ -22,17 +22,17 @@ rules:
       max_value: 30
 
   - id: vendor.weapon_flat_damage_tier_up
-    statement: A weapon (Normal for the lowest tier; Normal, Magic or Rare holding the explicit flat damage mod for the next tier) + the matching flask + an Orb of Augmentation give a Magic weapon with only that flat added damage mod one tier higher. Flasks and caps from the top of the ladder - added Physical Damage with a Granite Flask, T2; Fire with a Ruby Flask, Cold with a Sapphire Flask, Lightning with a Topaz Flask, T3 each. A hybrid local damage mod does not work.
+    statement: A weapon (Normal for the lowest tier; Normal, Magic or Rare holding the explicit flat damage mod for the next tier) + the matching flask + an Orb of Augmentation give a Magic weapon with only that flat added damage mod one tier higher. Flasks and caps from the top of the ladder - added Physical Damage with a Granite Flask, T2 (wiki; Craft of Exile agrees, maxtier 2); Fire with a Ruby Flask, Cold with a Sapphire Flask, Lightning with a Topaz Flask, T3 by the wiki only - Craft of Exile's table gives maxtier 2 for these three, and no other source decides (open point O-1 of the note). A hybrid local damage mod does not work.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Vendor_recipe_system
-    quote: "Magic Weapon with x added Physical Damage one tier higher Maximum tier is Tier 2 ... Magic Weapon with x added Fire Damage one tier higher Maximum tier is Tier 3"
+    quote: "Wiki: Magic Weapon with x added Physical Damage one tier higher Maximum tier is Tier 2 ... Magic Weapon with x added Fire Damage one tier higher Maximum tier is Tier 3. Craft of Exile package.js, the fire recipe: {\"id\":1972,\"tier\":\"+\",\"maxtier\":2}"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
     value:
       physical: {flask: granite_flask, max_tier_from_top: 2}
-      fire: {flask: ruby_flask, max_tier_from_top: 3}
-      cold: {flask: sapphire_flask, max_tier_from_top: 3}
-      lightning: {flask: topaz_flask, max_tier_from_top: 3}
+      fire: {flask: ruby_flask, max_tier_from_top: 3, coe_max_tier_from_top: 2, settled: false}
+      cold: {flask: sapphire_flask, max_tier_from_top: 3, coe_max_tier_from_top: 2, settled: false}
+      lightning: {flask: topaz_flask, max_tier_from_top: 3, coe_max_tier_from_top: 2, settled: false}
 
   - id: vendor.jewellery_chaos_resistance_tier_up
     statement: A Ring or Amulet (Normal for the lowest tier; Normal, Magic or Rare holding an explicit chaos resistance mod for the next tier) + an Amethyst Flask + an Orb of Augmentation give a Magic ring or amulet with only the chaos resistance mod one tier higher, up to T2 (26-30%).
@@ -46,7 +46,7 @@ rules:
       max_tier_from_top: 2
 
   - id: vendor.tier_caps_match_the_datamined_ladders
-    statement: The wiki's caps from the top of the ladder land on these mods in the 3.29.3.3 data - movement speed T2 is MovementVelocity5 (required level 55, 30%), chaos resistance T2 is ChaosResist5 (65, 26-30%), added Physical Damage T2 is LocalAddedPhysicalDamage8 (65, one-hand), added Fire, Cold and Lightning T3 are LocalAddedFireDamage8 (62), LocalAddedColdDamage8 (63) and LocalAddedLightningDamage8 (63). The ladders have 6, 6, 9 and 10 tiers, so the tiers the vendor cannot reach are the top one (movement speed 35%) or the top two (the elemental tiers at level 74/75 and 82).
+    statement: Each cap the wiki gives names a real mod in the 3.29.3.3 data, which shows the wiki's tier counting is consistent with the ladders; it does not decide the elemental cap, because a T2 cap (Cremating, Entombing, Electrocuting, level 74/75) exists in the data too. The mods the wiki's caps land on are - movement speed T2 is MovementVelocity5 (required level 55, 30%), chaos resistance T2 is ChaosResist5 (65, 26-30%), added Physical Damage T2 is LocalAddedPhysicalDamage8 (65, one-hand), added Fire, Cold and Lightning T3 are LocalAddedFireDamage8 (62), LocalAddedColdDamage8 (63) and LocalAddedLightningDamage8 (63). The ladders have 6, 6, 9 and 10 tiers. Inference, not proof - every wiki cap lands at required level 55 to 65 with the next tier up at 74 or higher (movement speed 55 and 86; physical 65 and 77; chaos resistance 65 and 81; elemental T3 at 62/63 with T2 at 74/75), which fits the wiki's T3 for the elemental ladders.
     source_kind: datamined
     url: https://repoe-fork.github.io/mods.json
     quote: "MovementVelocity5 required_level 55 base_movement_velocity_+% 30..30 spawn_weights boots 1000; ChaosResist5 required_level 65 base_chaos_damage_resistance_% 26..30; LocalAddedPhysicalDamage8 required_level 65; LocalAddedFireDamage8 required_level 62"
