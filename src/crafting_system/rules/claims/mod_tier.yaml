@@ -6,8 +6,8 @@ rules:
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "var tnum=poecd.tiers[crsim_data.iaffixes[i].id][crsim_settings.base].length-crsim_data.iaffixes[i].tindex"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: mod_tier.scope_is_mod_type
     statement: Tiers are counted among the mods of one mod type (not one family) and one generation type and one domain, and only among the mods that can spawn on the base (a positive spawn weight for its tags). The five "+1 to Level of all X Skill Gems" amulet prefixes share one family and are five different mod types, each its own tier 1. On every released item-domain base of 3.29.3.3 no two such mods share a required level, and no mod type spans two families.
