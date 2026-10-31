@@ -13,6 +13,13 @@ below the mod's required item level, with a family already on the item, on a ful
 item that already holds a crafted mod; a normal item and an item holding the multimod are
 `OutOfScopeError`. Remove Crafted Mods removes every crafted mod, metamods included.
 
+A Chaotic resonator with fossils is `ApplyFossils(("Dense Fossil", "Shuddering Fossil"))`: one
+action per set of one to four different fossils, the resonator size following from their number.
+Its `outcomes(data, item)` is a `FossilOutcomes`, a mixture of `Outcomes` (a Tangled Fossil draws one
+of 420 tag pairs and a Glyphic Fossil one forced mod) with the same `chance_all`, `distribution` and
+`sample`; `fossil_actions(data, item)` lists every set the item could take. See `fossil.py` for its
+refusals.
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -60,6 +67,7 @@ from .chaos import ChaosOrb
 from .draw import Outcome
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
+from .fossil import ApplyFossils, FossilOutcomes, Fractured, fossil_actions, usable_fossils
 from .harvest import HarvestReforge
 from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool
@@ -67,10 +75,13 @@ from .pool import PoolFamily, PoolMod, build_pool
 __all__ = [
     "ActionError",
     "ApplyEssence",
+    "ApplyFossils",
     "BenchCraft",
     "BenchOutcomes",
     "ChaosOrb",
     "CurrencyCost",
+    "FossilOutcomes",
+    "Fractured",
     "HarvestReforge",
     "NotApplicableError",
     "Outcome",
@@ -81,4 +92,6 @@ __all__ = [
     "RemoveCraftedMods",
     "bench_crafts",
     "build_pool",
+    "fossil_actions",
+    "usable_fossils",
 ]

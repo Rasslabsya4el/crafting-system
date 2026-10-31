@@ -25,12 +25,25 @@ from .draw import (
     total_distribution,
 )
 from .errors import NotApplicableError
-from .pool import PoolFamily, build_pool
+from .pool import ModFactor, PoolFamily, build_pool
 
 CHAOS_FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
 HARVEST_FRACTURED_MODS_KEPT = get_rule("harvest_reforge.fractured_mods_kept")
 REFUSED_WITHOUT_TAGGED_MOD = get_rule("harvest_reforge.refused_without_tagged_mod")
 VALUES_UNIFORM_INTEGERS = get_rule("affix_pool.values_uniform_integers")
+
+
+def retained_item(data: GameData, item: Item, forced: Mod | None = None) -> Item:
+    """`item` as a reroll leaves it before any draw: rare, with the fractured mods and the `forced` mod only.
+
+    The forced mod is rolled at its lowest values, whatever its level (`sample` rolls it).
+    """
+    kept = item.fractured_mods
+    if forced is not None:
+        tier = tier_table(data, item.base_id).get(forced.id, 1)  # an essence-only mod has no tier: 1
+        low = tuple(min(stat.min, stat.max) for stat in forced.stats)
+        kept = (*kept, ExplicitMod(forced.id, tier, low))
+    return item.changed(data, rarity=Rarity.RARE, mods=kept)
 
 
 @dataclass(frozen=True, eq=False)
@@ -62,31 +75,35 @@ class Outcomes:
         *,
         forced: Mod | None = None,
         max_level: int | None = None,
+        factor: ModFactor | None = None,
+        extra: Iterable[Mod] = (),
     ) -> "Outcomes":
         """The outcomes of rerolling `item` (already checked to be rerollable), guaranteeing `tag` if given.
 
         With `forced`, the mod is put on the retained rare item whatever its level, as a kept mod
         (the caller has checked that its family is free and its side has a slot), and `max_level`
-        caps the required level of the drawn mods. Raises `NotApplicableError` when `tag` is given
+        caps the required level of the drawn mods. `factor` multiplies the weight of every mod of the
+        pool (the fossils of a resonator; 0 drops the mod) and `extra` are mods that join the pool.
+        Raises `NotApplicableError` when `tag` is given
         and the pool holds no mod with it that the retained item has a free family and a free slot
         for.
         """
-        kept = item.fractured_mods
-        if forced is not None:
-            tier = tier_table(data, item.base_id).get(forced.id, 1)  # an essence-only mod has no tier: 1
-            low = tuple(min(stat.min, stat.max) for stat in forced.stats)
-            kept = (*kept, ExplicitMod(forced.id, tier, low))
-        retained = item.changed(data, rarity=Rarity.RARE, mods=kept)
-        pool = build_pool(data, retained, max_level)
-        result = cls(
-            data, retained, pool, total_distribution(), tag, None if forced is None else forced.id
-        )
+        retained = retained_item(data, item, forced)
+        pool = build_pool(data, retained, max_level, factor, extra)
+        result = cls.over(data, retained, pool, tag, forced)
         if tag is not None and not guaranteed_candidates(result.pool, result.free, tag):
             raise NotApplicableError(
                 f"the {tag} reforge cannot be used: the pool holds no {tag} mod "
                 "that the item has a free slot and a free family for"
             )
         return result
+
+    @classmethod
+    def over(
+        cls, data: GameData, retained: Item, pool: tuple[PoolFamily, ...], tag: str | None, forced: Mod | None
+    ) -> "Outcomes":
+        """The outcomes of drawing from a `pool` already built onto `retained` (see `retained_item`)."""
+        return cls(data, retained, pool, total_distribution(), tag, None if forced is None else forced.id)
 
     @property
     def free(self) -> Mapping[Side, int]:

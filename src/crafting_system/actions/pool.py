@@ -11,8 +11,10 @@ Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); on
 mods on the item do.
 """
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from fractions import Fraction
+from itertools import chain
 
 from crafting_system.data import GameData, Mod
 from crafting_system.items import Item, Side, UnknownBaseError, effective_weight
@@ -50,12 +52,28 @@ class PoolFamily:
         return sum((entry.weight for entry in self.mods), Fraction(0))
 
 
-def build_pool(data: GameData, item: Item, max_level: int | None = None) -> tuple[PoolFamily, ...]:
-    """The candidates for one more draw on `item`, grouped by family, in data order.
+@dataclass(frozen=True, slots=True)
+class Candidate:
+    """A mod that could be drawn next, with the weight it has before any fossil factor, and its family and side."""
+
+    mod: Mod
+    weight: Fraction
+    family: str
+    side: Side
+
+
+ModFactor = Callable[[Mod], Fraction]
+
+
+def pool_candidates(
+    data: GameData, item: Item, max_level: int | None = None, extra: Iterable[Mod] = ()
+) -> tuple[Candidate, ...]:
+    """Every mod that could be drawn next on `item`, with its weight on the base, in data order.
 
     `max_level` is a further cap on the required level of a candidate (the cap of a low essence on
     its random mods); the item level gate applies as well, so the effective limit is the lower of
-    the two.
+    the two. `extra` are mods of other domains that join the pool (the Delve mods that a Faceted
+    Fossil adds); they pass every other test of an ordinary candidate.
 
     Raises `OutOfScopeError` for a candidate that does not have exactly one family (none is
     drawable in domain `item` in 3.29.3.3) and for a family whose candidates sit on both sides.
@@ -64,14 +82,12 @@ def build_pool(data: GameData, item: Item, max_level: int | None = None) -> tupl
     if base is None:
         raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
     level_limit = item.item_level if max_level is None else min(item.item_level, max_level)
-    grouped: dict[str, list[PoolMod]] = {}
     sides: dict[str, Side] = {}
-    for mod in data.mods.values():
-        if (
-            mod.domain != base.domain
-            or mod.generation_type not in Side
-            or mod.required_level > level_limit
-        ):
+    candidates: list[Candidate] = []
+    own = ((mod, mod.domain == base.domain) for mod in data.mods.values())
+    joined = ((mod, True) for mod in extra)
+    for mod, in_domain in chain(own, joined):
+        if not in_domain or mod.generation_type not in Side or mod.required_level > level_limit:
             continue
         weight = effective_weight(mod, base.tags)
         if weight <= 0 or item.blocks(data, mod):
@@ -86,5 +102,36 @@ def build_pool(data: GameData, item: Item, max_level: int | None = None) -> tupl
             raise OutOfScopeError(
                 f"family {family} has candidates on both sides; a family on one side only is modelled"
             )
-        grouped.setdefault(family, []).append(PoolMod(mod, weight))
+        candidates.append(Candidate(mod, weight, family, side))
+    return tuple(candidates)
+
+
+def group_pool(candidates: Iterable[Candidate], factor: ModFactor | None = None) -> tuple[PoolFamily, ...]:
+    """The candidates grouped by family, each weight times `factor(mod)`; a mod whose factor is 0 is dropped.
+
+    A family keeps the order of its first candidate. `factor` is the weight factor of the fossils
+    in a resonator (`None`: every factor is 1).
+    """
+    grouped: dict[str, list[PoolMod]] = {}
+    sides: dict[str, Side] = {}
+    for candidate in candidates:
+        weight = candidate.weight if factor is None else candidate.weight * factor(candidate.mod)
+        if weight <= 0:
+            continue
+        sides[candidate.family] = candidate.side
+        grouped.setdefault(candidate.family, []).append(PoolMod(candidate.mod, weight))
     return tuple(PoolFamily(name, sides[name], tuple(mods)) for name, mods in grouped.items())
+
+
+def build_pool(
+    data: GameData,
+    item: Item,
+    max_level: int | None = None,
+    factor: ModFactor | None = None,
+    extra: Iterable[Mod] = (),
+) -> tuple[PoolFamily, ...]:
+    """The candidates for one more draw on `item`, grouped by family, in data order.
+
+    See `pool_candidates` for `max_level` and `extra`, `group_pool` for `factor`.
+    """
+    return group_pool(pool_candidates(data, item, max_level, extra), factor)
