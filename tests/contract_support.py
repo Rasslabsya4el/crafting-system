@@ -30,6 +30,7 @@ from collections import defaultdict
 from fractions import Fraction
 
 from abstraction_pool import (
+    FIRE_GEM,
     COLD_RESIST,
     DAMAGE_1,
     FIRE_RESIST,
