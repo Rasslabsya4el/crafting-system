@@ -16,6 +16,7 @@ from crafting_system.items import Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN
 
+from ._marking import marking_document, marking_lines, risk_lines
 from ._offers import without_ranges
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
@@ -86,8 +87,11 @@ def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
         parts.append(f"{verb} {label}")
     for slot in state.slots:
         if slot.crafted:
-            mod = data.mods[slot.kind]
-            parts.append(f"crafted {_without_ranges(mod.text or mod.name)}")
+            mod = data.mods.get(slot.kind)
+            if mod is None:  # a block pools the crafted mods of its irrelevant families under one kind
+                parts.append(f"crafted mod of {slot.side.value} (a family no requirement cares about)")
+            else:
+                parts.append(f"crafted {_without_ranges(mod.text or mod.name)}")
     junk = [slot for slot in state.slots if not slot.crafted]
     if junk:
         shown = [f"{n} {side.value}{'' if n == 1 else 'es'}" for side in Side if (n := sum(s.side is side for s in junk))]
@@ -207,6 +211,9 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     lines = []
     if target_name:
         lines.append(f"Target: {target_name}")
+    lines.extend(marking_lines(plan.approximation, shift, divine))
+    if plan.note:
+        lines.append(f"Note: {plan.note}")
     lines.append(f"Requirements: {'; '.join(plan.leaf_labels)}")
     lines.append(
         f"Prices: league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}, "
@@ -218,7 +225,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")
     for left in plan.left_out:
         lines.append(f"Not offered, {len(left.labels)} actions: {left.reason}")
-    lines.append(f"States solved: {len(plan.solution.values)}")
+    lines.append(f"{'Blocks' if plan.approximation else 'States'} solved: {len(plan.solution.values)}")
     lines.append("")
     lines.append("Policy (S = a state of the item; the start is S1)")
     printed: set[str] = set()
@@ -265,12 +272,18 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append("  The start item already meets the target.")
     lines.append("")
     lines.append("Result")
-    lines.append(f"  success chance  {percent(risk.success_probability.value)}")
-    lines.append(f"  mean cost       {interval(_shifted(risk.mean, shift), divine)}")
-    lines.append(f"  p50             {interval(_shifted(risk.p50, shift), divine)}")
-    lines.append(f"  p90             {interval(_shifted(risk.p90, shift), divine)}")
-    lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after buying it is")
-    lines.append(f"   {money(plan.mean_remaining)} Chaos by the solver and {money(risk.mean.value)} by the risk run)")
+    if risk is None:
+        mean = Estimate(plan.mean_remaining + shift, plan.approximation.lower + shift, plan.approximation.upper + shift)
+        lines.append(f"  mean cost       {interval(mean, divine)} (the policy's certified cost; see Answer)")
+        lines.extend(risk_lines())
+        lines.append(f"  (the start item, {money(shift)} Chaos, is included)")
+    else:
+        lines.append(f"  success chance  {percent(risk.success_probability.value)}")
+        lines.append(f"  mean cost       {interval(_shifted(risk.mean, shift), divine)}")
+        lines.append(f"  p50             {interval(_shifted(risk.p50, shift), divine)}")
+        lines.append(f"  p90             {interval(_shifted(risk.p90, shift), divine)}")
+        lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after buying it is")
+        lines.append(f"   {money(plan.mean_remaining)} Chaos by the solver and {money(risk.mean.value)} by the risk run)")
     if report.shares:
         lines.append("")
         lines.append("Single-draw weight shares on the start item, next to the chance of one use")
@@ -281,7 +294,10 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
             suffix = "" if use is None else f"; chance of one use {percent(use)}"
             lines.append(f"  {share.action}: {share.leaf}: {weight}{suffix}")
     lines.append("")
-    lines.append(f"Run time: solver {plan.solve_seconds * 1000:.0f} ms, risk.evaluate {plan.risk_seconds * 1000:.1f} ms")
+    if risk is None:
+        lines.append(f"Run time: both solvers {plan.solve_seconds * 1000:.0f} ms")
+    else:
+        lines.append(f"Run time: solver {plan.solve_seconds * 1000:.0f} ms, risk.evaluate {plan.risk_seconds * 1000:.1f} ms")
     if verification is not None:
         lines.append("")
         lines.extend(_verification_lines(verification, plan))
@@ -331,6 +347,31 @@ def _weight(value: Fraction) -> int | float:
     return int(value) if value.denominator == 1 else float(value)
 
 
+def _totals(plan: Plan, shift: float, divine: float) -> dict:
+    """The totals of the JSON: the odds and percentiles of an exact answer, only the certified interval of an approximate one."""
+    risk = plan.risk
+    if risk is None:
+        mean = Estimate(plan.mean_remaining, plan.approximation.lower, plan.approximation.upper)
+        return {
+            "mean_cost": _estimate(mean, shift),
+            "mean_cost_divine": _number((plan.mean_remaining + shift) / divine),
+            "mean_cost_without_start": _number(plan.mean_remaining),
+            "solver_error_bound": _number(plan.solution.error_bound),
+        }
+    return {
+        "success_probability": _estimate(risk.success_probability),
+        "mean_cost": _estimate(risk.mean, shift),
+        "p50": _estimate(risk.p50, shift),
+        "p90": _estimate(risk.p90, shift),
+        "cvar_level": risk.cvar_level,
+        "cvar": _estimate(risk.cvar, shift),
+        "mean_cost_divine": _number((risk.mean.value + shift) / divine),
+        "p90_divine": _number((risk.p90.value + shift) / divine),
+        "mean_cost_without_start": _number(plan.mean_remaining),
+        "solver_error_bound": _number(plan.solution.error_bound),
+    }
+
+
 def policy_document(report: Report, verification: Verification | None = None, *, target_name: str = "") -> dict:
     """The JSON policy: what to do in each reachable state, the transitions, and the totals.
 
@@ -343,6 +384,8 @@ def policy_document(report: Report, verification: Verification | None = None, *,
     document: dict = {
         "format": FORMAT,
         "unit": "chaos",
+        "answer": marking_document(plan.approximation, shift),
+        "note": plan.note,
         "target": target_name,
         "requirements": list(plan.leaf_labels),
         "prices": {
@@ -362,18 +405,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
         ],
         "offered_actions": [priced.label for priced in plan.offers],
         "states_solved": len(plan.solution.values),
-        "totals": {
-            "success_probability": _estimate(risk.success_probability),
-            "mean_cost": _estimate(risk.mean, shift),
-            "p50": _estimate(risk.p50, shift),
-            "p90": _estimate(risk.p90, shift),
-            "cvar_level": risk.cvar_level,
-            "cvar": _estimate(risk.cvar, shift),
-            "mean_cost_divine": _number((risk.mean.value + shift) / divine),
-            "p90_divine": _number((risk.p90.value + shift) / divine),
-            "mean_cost_without_start": _number(plan.mean_remaining),
-            "solver_error_bound": _number(plan.solution.error_bound),
-        },
+        "totals": _totals(plan, shift, divine),
         "states": [
             {
                 "id": state.id,
@@ -402,7 +434,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             }
             for share, use in report.shares
         ],
-        "timings_seconds": {"solver": plan.solve_seconds, "risk_evaluate": plan.risk_seconds},
+        "timings_seconds": {"solver": plan.solve_seconds, "risk_evaluate": None if risk is None else plan.risk_seconds},
     }
     if verification is not None:
         sim = verification.report

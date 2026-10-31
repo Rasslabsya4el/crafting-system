@@ -7,6 +7,11 @@ mean. Exit code 0 is a plan (and, with `--verify`, an agreeing simulation), 1 an
 simulation that does not agree. With `--route` the given route (a YAML file of rules, see `_route`)
 is evaluated as a fixed policy at the same prices and printed next to the policy's numbers.
 `python -m crafting_system.cli benchmark [--out DIR]` runs the benchmark routes (see `_benchmark`).
+
+A query whose exact run is forecast to take longer than `--budget` seconds (about a minute by default) is
+answered approximately, within a certified 1% of the exact mean, and marked so (ADR-0023, `_decide`);
+`--exact` solves it exactly however long it takes. An approximate answer gives no p90, no `--verify`, no
+`--route` and no route page yet.
 """
 
 import argparse
@@ -23,6 +28,7 @@ from crafting_system.solver import ConvergenceError
 from crafting_system.targets import TargetError, load_target
 
 from ._benchmark import benchmark_main
+from ._decide import BUDGET_SECONDS
 from ._inputs import load_target_prices, write_json
 from ._plan import PlanError, make_plan
 from ._report import build_report, policy_document, render_text
@@ -60,6 +66,8 @@ def main(
     parser.add_argument("--start-price", type=float, metavar="CHAOS", help="what the start item costs, in Chaos; wins over the price file")
     parser.add_argument("--route", metavar="ROUTE.yaml", help="also evaluate this given route (rules in YAML, see examples/routes/) as a fixed policy and compare it with the policy")
     parser.add_argument("--buy-spec", metavar="PATH", help="a buy spec YAML: the route view's buy step gets a trade-site search link built from it")
+    parser.add_argument("--exact", action="store_true", help="solve exactly however long it takes, never approximately")
+    parser.add_argument("--budget", type=float, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
     parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help=f"simulated crafts for --verify (default {DEFAULT_RUNS})")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help=f"random seed for --verify (default {DEFAULT_SEED})")
@@ -75,7 +83,9 @@ def main(
         if stale:
             print(f"Warning: {stale}", file=sys.stderr)
 
-        plan = make_plan(game, target, price_file, start_price=args.start_price)
+        plan = make_plan(game, target, price_file, start_price=args.start_price, budget=None if args.exact else args.budget)
+        if plan.approximation is not None and (args.verify or args.route):
+            raise PlanError("--verify and --route are not available for an approximate answer yet; run again with --exact")
         report = build_report(plan, game)
         route_path = Path(args.route) if args.route else None
         route = load_route(route_path, plan, game) if route_path is not None else None
@@ -92,12 +102,15 @@ def main(
         out = Path(args.json) if args.json else config.output_dir / f"{target_path.stem}.policy.json"
         write_json(out, document)
         print(f"JSON policy written to {out}")
-        spec = load_buy_spec(Path(args.buy_spec)) if args.buy_spec else None
-        page = write_route_page(
-            out.parent / f"{target_path.stem}.route.html", report, game, route=route, given=given,
-            buy_spec=spec, cache_dir=config.cache_dir, target_name=name,
-        )  # fmt: skip
-        print(f"Route view written to {page}")
+        if plan.approximation is not None:
+            print("Route view not written: it is not built for an approximate answer yet.")
+        else:
+            spec = load_buy_spec(Path(args.buy_spec)) if args.buy_spec else None
+            page = write_route_page(
+                out.parent / f"{target_path.stem}.route.html", report, game, route=route, given=given,
+                buy_spec=spec, cache_dir=config.cache_dir, target_name=name,
+            )  # fmt: skip
+            print(f"Route view written to {page}")
     except (TargetError, DataError, PriceFileNotFound, PlanError, ActionError, ConvergenceError, ValueError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
