@@ -13,6 +13,9 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
 * `weight_share`, `start_shares`: the guide's single-draw weight shares from the pool builder.
 * `parse_route`, `load_route`, `evaluate_route`: a given route (rules in YAML) read and evaluated as a fixed
   policy with `risk.evaluate`; `--route ROUTE.yaml` prints it next to the policy, first divergence and gaps included.
+* `write_route_page(path, report, data, ...)`: the route view, one self-contained HTML page next to the JSON
+  (`<target>.route.html`): the goal card, then a row per step with its card and the item after it; `--buy-spec`
+  gives the buy step its trade-site search link. The page model is `_route_view`, the HTML `_route_html`.
 * `main(argv)`: the command, and `main(["benchmark", "--out", DIR])`: the solver and the given route of every
   benchmark route, the published odds, machine info and run times, written to `benchmark.json`.
 

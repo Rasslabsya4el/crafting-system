@@ -1,4 +1,4 @@
-"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--verify] [--json PATH]`, and `benchmark`.
+"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--buy-spec PATH] [--verify] [--json PATH]`, and `benchmark`.
 
 This is the one place of the planner that reads the clock and the environment. It loads the game
 data from the cache, the target, and the price file with its hand overrides, makes the plan, prints
@@ -18,7 +18,7 @@ from pathlib import Path
 from crafting_system.actions import ActionError
 from crafting_system.config import load_config
 from crafting_system.data import DataError, GameData, load_game_data
-from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
+from crafting_system.prices import PriceFile, PriceFileNotFound, load_buy_spec, stale_warning
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import TargetError, load_target
 
@@ -28,6 +28,7 @@ from ._plan import PlanError, make_plan
 from ._report import build_report, policy_document, render_text
 from ._route import evaluate_route, load_route
 from ._route_report import render_route_text, route_document
+from ._route_view import write_route_page
 from ._verify import DEFAULT_RUNS, DEFAULT_SEED, verify
 
 COMMAND = "python -m crafting_system.cli"
@@ -58,6 +59,7 @@ def main(
     parser.add_argument("--json", metavar="PATH", help="where to write the JSON policy (default: <output dir>/<target>.policy.json)")
     parser.add_argument("--start-price", type=float, metavar="CHAOS", help="what the start item costs, in Chaos; wins over the price file")
     parser.add_argument("--route", metavar="ROUTE.yaml", help="also evaluate this given route (rules in YAML, see examples/routes/) as a fixed policy and compare it with the policy")
+    parser.add_argument("--buy-spec", metavar="PATH", help="a buy spec YAML: the route view's buy step gets a trade-site search link built from it")
     parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help=f"simulated crafts for --verify (default {DEFAULT_RUNS})")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help=f"random seed for --verify (default {DEFAULT_SEED})")
@@ -90,6 +92,12 @@ def main(
         out = Path(args.json) if args.json else config.output_dir / f"{target_path.stem}.policy.json"
         write_json(out, document)
         print(f"JSON policy written to {out}")
+        spec = load_buy_spec(Path(args.buy_spec)) if args.buy_spec else None
+        page = write_route_page(
+            out.parent / f"{target_path.stem}.route.html", report, game, route=route, given=given,
+            buy_spec=spec, cache_dir=config.cache_dir, target_name=name,
+        )  # fmt: skip
+        print(f"Route view written to {page}")
     except (TargetError, DataError, PriceFileNotFound, PlanError, ActionError, ConvergenceError, ValueError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
