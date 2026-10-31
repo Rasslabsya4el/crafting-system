@@ -301,6 +301,22 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
+  - id: beastcraft.talisman_reroll_outcome_counts
+    statement: "Rerolling a Talisman with a Craicic Squid draws its implicit from 37 observed outcomes with unequal weights; in 1,212 rerolls the counts were (outcome: count) Hits ignore Enemy Physical Damage Reduction 65, Projectiles Pierce 3 additional Targets 62, +1 to Maximum Frenzy Charges 59, 30% increased Effect of your Marks 59, 30% increased Global Defences 59, Damage Penetrates 15% Lightning Resistance 55, +1 to Maximum Endurance Charges 54, +1 to maximum number of Spectres 51, five outcomes at 50, 30% increased Projectile Speed 48, +2 to Level of all Herald Skill Gems 46, and so on down to 2 for Minions have +30% to Damage over Time Multiplier (the full table is in the note, O-11). The sampler, item level and squid level are not stated. Approximate: the counts are noisy and six wiki-listed bases were not seen."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1vyminu/
+    quote: "Someone on the Prohibed Library discord did a bunch of them, definitely weighted: total: 1212"
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.damage_swap_refuses_conversion_mod
+    statement: "The Harvest craft that changes a damage modifier of one element into another is refused on a conversion modifier (\"% of Physical Damage Converted to Lightning Damage\"): the craft reports no valid modifiers, because the mod does not grant damage of that element. One report, one item; which added and increased damage mods qualify is open (O-07)."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1sdzjmn/
+    quote: "it says that there are no valid modifiers on this item"
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+
   - id: beastcraft.talisman_base_reroll_keeps_mods
     statement: "The Craicic Squid recipe rerolls the base type of a Talisman and keeps its implicit and explicit modifiers; the enchantment follows the base. The probabilities of the new base are not documented (O-11 of the note)."
     source_kind: official
