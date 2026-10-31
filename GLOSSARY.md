@@ -184,6 +184,9 @@ _Avoid_: estimate, heuristic answer
 **Certified gap**:
 The upper bound over the lower bound, minus one: at least the true relative error of an approximate answer's mean cost. The owner's tolerance is a certified gap of at most 1%.
 
+**Tail cut**:
+Expanding exact states only where a coarse policy goes: the states it enters with an expected count above `theta` keep all their actions, and every other successor is a leaf worth the optimistic or the pessimistic value of its block. The bounds are never looser than the coarse ones and equal them when nothing is expanded (ADR-0023).
+
 ## Evidence
 
 **Admitted rule**:

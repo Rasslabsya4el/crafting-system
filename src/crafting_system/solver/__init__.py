@@ -8,6 +8,7 @@ from ._bounds import Bounds, solve_bounds
 from ._certify import ConvergenceError
 from ._model import Action, Model, Outcome, TabularModel
 from ._solve import Solution, solve
+from ._tail import TailCut, solve_tail_cut
 
 __all__ = [
     "Action",
@@ -17,6 +18,8 @@ __all__ = [
     "Outcome",
     "Solution",
     "TabularModel",
+    "TailCut",
     "solve",
     "solve_bounds",
+    "solve_tail_cut",
 ]
