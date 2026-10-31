@@ -1,0 +1,22 @@
+# Given route for benchmark route R11: an evasion helmet with a fractured Chaos Resistance.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# It does not search for anything: in every state the FIRST rule whose conditions match is the one
+# that is followed. A goal state is never acted on. A state no rule matches is reported as a gap.
+# Lines starting with # are comments and are ignored. The conditions and actions are explained in
+# examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (TbXie, "Elemental Hit of the Spectrum gear and flasks", docs/research/
+# 2026-10-30-5-reference-routes.md, id R11):
+#   1. Buy a helmet with a fractured Chaos Resistance and use Essences of Loathing, at least
+#      Shrieking, until it has the Evasion and Life prefixes and an open suffix.
+#   2. Finish with a crafted Resistance or Attribute (not part of the target, see the target file).
+
+name: R11, TbXie guide
+
+rules:
+  # The guide allows Shrieking or Deafening; this route uses the cheaper one, Shrieking.
+  - when:
+      rarity: rare
+    do: Shrieking Essence of Loathing

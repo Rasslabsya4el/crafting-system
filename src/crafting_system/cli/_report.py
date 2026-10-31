@@ -7,15 +7,16 @@ only, so it prints on any console. Costs are in Chaos Orbs with a Divine Orb equ
 """
 
 import math
-import re
 from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
+from crafting_system.items import Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN
 
+from ._offers import without_ranges
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
 from ._shares import WeightShare, start_shares
@@ -71,20 +72,43 @@ def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
 
 
 def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
-    """One line on a state: rarity, the fractured mods, and what each requirement leaf stands at."""
+    """One line on a state: rarity, the fractured mods, what each requirement leaf stands at, and the crafted and other mods.
+
+    The mods besides the fractured ones show only when the model tracks them (a bench action is offered):
+    the crafted mods by their text, and the rest as a count per side ("junk: 1 prefix, 2 suffixes").
+    """
     parts = [state.flags.rarity.value]
     for entry in state.fractured:
-        mod = data.mods[entry.mod_id]
+        mod = _fractured_mod_shown(plan, data, entry.mod_id)
         parts.append(f"fractured {_without_ranges(mod.text or mod.name)}")
     for label, status in zip(plan.leaf_labels, state.status):
         verb = {Status.PASSING: "has", Status.BELOW: "too weak:", Status.ABSENT: "lacks"}[status]
         parts.append(f"{verb} {label}")
+    for slot in state.slots:
+        if slot.crafted:
+            mod = data.mods[slot.kind]
+            parts.append(f"crafted {_without_ranges(mod.text or mod.name)}")
+    junk = [slot for slot in state.slots if not slot.crafted]
+    if junk:
+        shown = [f"{n} {side.value}{'' if n == 1 else 'es'}" for side in Side if (n := sum(s.side is side for s in junk))]
+        parts.append("other mods: " + ", ".join(shown))
     return "; ".join(parts)
 
 
-def _without_ranges(text: str) -> str:
-    """A mod text with its roll ranges as `#`: the state keeps no roll, so "(6-11)" would mislead."""
-    return re.sub(r"\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)", "#", text)
+_without_ranges = without_ranges
+
+
+def _fractured_mod_shown(plan: Plan, data: GameData, canonical_id: str):
+    """The mod to show for a fractured entry of a state: the start item's own mod of that family when it has one.
+
+    A state keeps the smallest id among equivalent mods, which can read quite unlike the mod on the item
+    (another mod of the same family), so the start item's fractured mod is the better name for it.
+    """
+    families = data.mods[canonical_id].families
+    for held in plan.target.start_item.fractured_mods:
+        if data.mods[held.mod_id].families == families:
+            return data.mods[held.mod_id]
+    return data.mods[canonical_id]
 
 
 def number_states(plan: Plan) -> dict[CompressedState, str]:
@@ -128,7 +152,7 @@ def build_report(plan: Plan, data: GameData) -> Report:
                 per_use_goal, tuple(transitions),
             )
         )  # fmt: skip
-    offers = [priced.offer for priced in plan.offers]
+    offers = [priced.offer for priced in plan.offers if priced.offer.shares]
     shares = start_shares(data, plan.target.start_item, offers, _goal_leaf_nodes(plan))
     return Report(plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares))
 
@@ -192,6 +216,9 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
     for dropped in plan.dropped:
         lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")
+    for left in plan.left_out:
+        lines.append(f"Not offered, {len(left.labels)} actions: {left.reason}")
+    lines.append(f"States solved: {len(plan.solution.values)}")
     lines.append("")
     lines.append("Policy (S = a state of the item; the start is S1)")
     printed: set[str] = set()
@@ -330,6 +357,11 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "price_source": plan.start_price.source,
         },
         "dropped_actions": [{"action": drop.label, "missing_prices": list(drop.missing)} for drop in plan.dropped],
+        "left_out_actions": [
+            {"reason": left.reason, "count": len(left.labels), "actions": list(left.labels)} for left in plan.left_out
+        ],
+        "offered_actions": [priced.label for priced in plan.offers],
+        "states_solved": len(plan.solution.values),
         "totals": {
             "success_probability": _estimate(risk.success_probability),
             "mean_cost": _estimate(risk.mean, shift),
