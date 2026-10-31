@@ -2,8 +2,8 @@
 
 An `Abstraction(data, goal, base_id, item_level, actions)` turns a concrete `Item` into a
 `CompressedState` and gives the exact kernel of an action on it: the rerolls `ChaosOrb()`,
-`HarvestReforge("lightning")` and `ApplyEssence(name)`, the bench's `BenchCraft(mod_id)` and
-`RemoveCraftedMods()`. `actions` are the enabled actions that read the mods besides the fractured
+`HarvestReforge("lightning")`, `ApplyEssence(name)` and the fossil sets `ApplyFossils(names)`, the
+bench's `BenchCraft(mod_id)` and `RemoveCraftedMods()`. `actions` are the enabled actions that read the mods besides the fractured
 ones (the bench; none by default): they decide what a state keeps.
 
 * `Goal`: the requirements as `Wanted` leaves (`mod_ids`, `min_tier`, `min_roll`, `not_crafted`)
@@ -21,13 +21,14 @@ ones (the bench; none by default): they decide what a state keeps.
 * `Abstraction.compress(item)`, `is_goal(state)`, `kernel(state, action)` (exact `Fraction`s that
   sum to 1, no zero entries), `signature(state, action)`, `reachable(starts, actions)` (breadth-first
   closure; an action that raises an `ActionError` in a state is skipped there),
-  `family_types(tag)` (the families of the empty pool grouped by family type: the "family types of
-  the amulet's junk"), `stats` (`CacheStats(kernels, hits)`).
+  `family_types(tag, fossils)` (the families of the empty pool grouped by family type: the "family types
+  of the amulet's junk"; with a resonator, of the pool its fossils make), `stats` (`CacheStats(kernels, hits)`).
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 
 What is stored and what is merged away. A Chaos Orb, a Harvest reforge and an essence erase every mod
-that is not fractured and redraw it (an essence also forces one mod, which stays), so their outcome
+that is not fractured and redraw it (an essence also forces one mod, which stays; a resonator does the
+same with the weights of its fossils, and a Hollow or Glyphic Fossil forces one), so their outcome
 depends only on the fractured mods (families, sides, count), the base, the item level, the flags
 and the action. With only those enabled, the junk that is not fractured is not stored: merging it is
 exact, and a state is the fractured mods, the flags and the status of each leaf. A fractured mod is
@@ -62,8 +63,19 @@ count and the free slots are known. The cost of a distribution is that of `Outco
 0.3 to 3 s for a real amulet with a coarse label, paid once per signature. A bench action draws
 nothing and has no cache.
 
-Widening for the rest of B1: an action that adds or removes one mod (Exalted, Annulment, Regal, a
-fossil) makes the outcome depend on the weights of the junk families too, so its family types must
+A resonator needs nothing more: the factors and blocks of its fossils are in the weights of the pool
+it builds, and the weights are in the family types, so the signature is set-independent. Sets with an
+equal pool (a fossil that touches no mod of the base, two sets that weigh the pool alike, a Chaos Orb)
+share one distribution. A Tangled or Glyphic Fossil makes a mixture of pools; each pool is cached by
+its own signature and the kernel is the sum over the pools by their probability. A Fractured
+Fossil fractures one finished mod, so the state records which one: the mod joins `fractured` by its
+canonical id. The engine counts classes, not families, so the fractured mod is found with one run per
+family type (that type's mods marked), cached by the pool signature and the label of the forced mod; it
+costs the number of family types times a plain distribution, which is why the action set of a target
+needs pruning (see ADR-0009).
+
+Widening for the rest of B1: an action that adds or removes one mod (Exalted, Annulment, Regal)
+makes the outcome depend on the weights of the junk families too, so its family types must
 add the pool weights; that is done in `Kinds` when the action is added.
 
 Out of scope: a `min_roll` on a mod that an action draws, forces or crafts. Its value is rolled and no
