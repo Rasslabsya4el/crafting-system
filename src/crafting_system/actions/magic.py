@@ -64,7 +64,7 @@ class TransmutationOrb(Action):
         return Reads.nothing()
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        return Adds(named=frozenset())
+        return Adds.erasing(named=frozenset())
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.
@@ -90,7 +90,7 @@ class AlterationOrb(Action):
         return Reads.nothing()
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        return Adds(named=frozenset())
+        return Adds.erasing(named=frozenset())
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.

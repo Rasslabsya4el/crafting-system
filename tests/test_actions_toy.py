@@ -103,8 +103,23 @@ def test_the_cli_offers_the_toy_with_its_resources(items, toy_registered):
 
 
 def test_the_plan_of_a_target_offers_the_toy(toy_registered):
-    plan = make_plan(DATA, load_target(R12, DATA), dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(0.5, "test")}))
+    prices = dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(0.5, "test")})
+    plan = make_plan(CONTRACT_DATA, load_target(R12, CONTRACT_DATA), prices)
     assert "Toy Annulment" in [priced.label for priced in plan.offers]
+    assert plan.dropped  # the crafts it keeps in play have no price in the file, and are reported as dropped
+
+
+def test_crafts_that_count_for_nothing_are_offered_while_an_action_keeps_the_crafted_mod(items):
+    start = items["rare_junk"]
+    goal = Goal((Wanted(frozenset({RESIST_2})),))
+
+    def crafts(offers):
+        return [offer.label for offer in offers if offer.label.startswith("Bench craft")]
+
+    assert crafts(offers_for(CONTRACT_DATA, goal, start.base_id, start).offers) == []
+    with registered(Kind("toy-annulment", toy_members, order=900)):  # it declares that a crafted mod can survive
+        offered = offers_for(CONTRACT_DATA, goal, start.base_id, start)
+    assert crafts(offered.offers) and not offered.left_out
 
 
 def test_the_kernel_of_the_toy_is_exact(items):

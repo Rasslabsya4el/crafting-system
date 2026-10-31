@@ -51,16 +51,23 @@ class Reads:
     * `needs_crafted`: the action can only be used on an item that holds a crafted mod (Remove
       Crafted Mods). A planner offers it only when the start item holds one or some other offered
       action adds one.
+    * `block_invariant`: when the junk families that no requirement and no craft tells apart are
+      pooled into blocks, the action's kernel pushed through the block map is the same for every
+      member of a block (only its legality may differ). An approximate answer built on blocks (ADR-0023)
+      uses an action only if it declares this; the default is False, which refuses. Declare it only
+      with the proof: an erasing reroll, whose outcome depends on the flags and the fractured mods, and
+      a deterministic craft. The contract suite compares the members of blocks on the fixture items.
     """
 
     junk: bool = True
     families: frozenset[str] | None = None
     needs_crafted: bool = False
+    block_invariant: bool = False
 
     @classmethod
-    def nothing(cls) -> "Reads":
+    def nothing(cls, *, block_invariant: bool = False) -> "Reads":
         """The action reads nothing of the junk (it erases it): rerolls."""
-        return cls(junk=False, families=frozenset())
+        return cls(junk=False, families=frozenset(), block_invariant=block_invariant)
 
 
 @dataclass(frozen=True)
@@ -75,6 +82,12 @@ class Adds:
     * `single_draw`: the first mod it draws is one draw over the pool of the item with only its
       fractured mods kept, among the mods with `tag` (all when None), so the weight share of ADR-0020
       is its chance (a Chaos Orb, a Harvest reforge).
+    * `keeps_crafted`: a crafted mod on the item survives the action. The default is True, the safe
+      value: a planner leaves out a bench craft that gives the goal nothing only when every other action
+      it offers declares False (they erase the crafted mod, so the craft would only take a slot).
+
+    `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
+    that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
     """
 
     named: frozenset[str] | None = None
@@ -82,11 +95,17 @@ class Adds:
     draws: bool = True
     tag: str | None = None
     single_draw: bool = False
+    keeps_crafted: bool = True
 
     @classmethod
-    def removal(cls) -> "Adds":
+    def removal(cls, *, keeps_crafted: bool = True) -> "Adds":
         """The action adds nothing (it only removes)."""
-        return cls(named=frozenset(), draws=False)
+        return cls(named=frozenset(), draws=False, keeps_crafted=keeps_crafted)
+
+    @classmethod
+    def erasing(cls, **fields) -> "Adds":
+        """An action that erases every mod but the fractured ones (and so the crafted ones too)."""
+        return cls(keeps_crafted=False, **fields)
 
 
 @runtime_checkable

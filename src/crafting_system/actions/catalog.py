@@ -74,6 +74,10 @@ def catalog(data: GameData, item: Item, *, planner_only: bool = False) -> tuple[
     found: dict[Action, None] = {}
     for entry in kinds(planner_only=planner_only):
         for action in entry.members(data, item):
+            try:
+                hash(action)
+            except TypeError:
+                raise TypeError(f"{action!r} of the kind {entry.name!r} is not hashable: make an action a frozen dataclass") from None
             found.setdefault(action)
     return tuple(found)
 

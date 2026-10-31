@@ -34,13 +34,16 @@ class HarvestReforge(Action):
         return f"Harvest Reforge {self.tag.title()}"
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
-        return dict(LIFEFORCE_COST.value[self.tag])
+        cost = LIFEFORCE_COST.value.get(self.tag)
+        if cost is None:
+            raise ValueError(f"the claim harvest_reforge.lifeforce_cost gives no cost for the {self.tag} reforge")
+        return dict(cost)
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.nothing()
+        return Reads.nothing(block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        return Adds(named=frozenset(), tag=TAGGED_RARE_REFORGE_EXISTS.value[self.tag], single_draw=True)
+        return Adds.erasing(named=frozenset(), tag=TAGGED_RARE_REFORGE_EXISTS.value[self.tag], single_draw=True)
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the reforge on `item`.

@@ -14,6 +14,8 @@ The checks, each against something written without the code under test:
   ADR-0019), unless the action fractures a mod (the fossil tests cover that one);
 * what the action declares agrees with what it does: an action that reads no junk keeps none, and an
   action that adds nothing unnamed only adds the mods it names;
+* the fracturing actions (a Fractured Fossil) are not compared with the brute force here: their kernel
+  has its own tests in `test_abstraction_fossil.py`;
 * the resources are whole counts of named things and price the offer from a fixture price file.
 
 The data is the fixture pool of `abstraction_pool.SMALL` plus the mods the fixture essences, fossils
@@ -27,7 +29,22 @@ import random
 from collections import defaultdict
 from fractions import Fraction
 
-from abstraction_pool import GEM, LEVEL, LIFE_1, LIFE_2, MANA_1, POOL_IDS, RESIST_1, RESIST_2, RESISTS
+from abstraction_pool import (
+    COLD_GEM,
+    COLD_RESIST,
+    DAMAGE_1,
+    FIRE_GEM,
+    FIRE_RESIST,
+    GEM,
+    LEVEL,
+    LIFE_1,
+    LIFE_2,
+    MANA_1,
+    POOL_IDS,
+    RESIST_1,
+    RESIST_2,
+    RESISTS,
+)
 from items_support import AMULET, DATA
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
@@ -178,6 +195,7 @@ def check_action(action: Action, item: Item, data=CONTRACT_DATA, goal: Goal = GO
     if not outcomes.fractures:
         check_kernel_equals_brute_force(action, reads, item, items, data, goal)
     check_resources_are_priced(action, item, data)
+    check_block_invariance(action, data, goal)
     return True
 
 
@@ -234,6 +252,10 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
         for _, result in items:
             drawn = [CONTRACT_DATA.mods[e.mod_id] for e in result.mods if not e.fractured and not e.crafted]
             assert any(adds.tag in mod.implicit_tags for mod in drawn), "every result holds a drawn mod with the guaranteed tag"
+    if not adds.keeps_crafted:
+        crafted = {entry.mod_id for entry in given.mods if entry.crafted}
+        for _, result in items:
+            assert not crafted & {entry.mod_id for entry in result.mods if entry.crafted}, "an action that erases the crafted mods leaves none"
     if adds.single_draw:
         assert adds.draws and not reads.junk and not adds.named, "a single draw reads no junk and forces no mod"
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
@@ -274,3 +296,65 @@ def check_resources_are_priced(action, item: Item, data) -> None:
     assert not dropped and len(priced) == 1, "every resource is found in a price file that names it"
     expected = sum(float(count) if name == CHAOS_ORB else 2.0 * count for name, count in resources.items())
     assert priced[0].cost == expected
+
+
+# --- block invariance ----------------------------------------------------------------------------
+
+
+def fixture_blocks() -> list[list[Item]]:
+    """Groups of items that differ only in a junk mod of a family no requirement of `GOAL` cares about.
+
+    A coarse state pools these families, so the members of a group are the members of one block.
+    """
+    blocks: list[list[Item]] = []
+    for suffixes in ((MANA_1, COLD_RESIST, FIRE_RESIST), (COLD_RESIST, FIRE_RESIST)):
+        blocks.append([_item(Rarity.RARE, _roll(RESIST_2), _roll(junk)) for junk in suffixes])
+        blocks.append([_item(Rarity.RARE, _roll(RESIST_1, fractured=True), _roll(junk)) for junk in suffixes])
+        blocks.append([_item(Rarity.MAGIC, _roll(junk)) for junk in suffixes])
+    blocks.append([_item(Rarity.RARE, _roll(RESIST_2), _roll(junk)) for junk in (DAMAGE_1, FIRE_GEM, COLD_GEM)])
+    crafted = _ordinary_crafted_mod()
+    if crafted is not None:
+        blocks.append(
+            [_item(Rarity.RARE, _roll(crafted, crafted=True), _roll(junk)) for junk in (COLD_RESIST, FIRE_RESIST)]
+        )
+    return blocks
+
+
+class _Pooled:
+    """Stands for the pooling of junk families in an `Abstraction`: it reads the count of the junk and no family."""
+
+    def __init__(self, junk: bool):
+        self.junk = junk
+
+    def reads(self, data) -> Reads:
+        return Reads(junk=self.junk, families=frozenset())
+
+
+def check_block_invariance(action: Action, data=CONTRACT_DATA, goal: Goal = GOAL) -> int:
+    """For an action that declares `block_invariant`: the members of a block on which it is legal give the same finished items.
+
+    The compressed finished items are listed by brute force per member, under an abstraction that pools
+    the junk families. Returns how many members were compared with another member of their block.
+    """
+    reads = action.reads(data)
+    if not reads.block_invariant:
+        return 0
+    ab = Abstraction(data, goal, AMULET, LEVEL, [_Pooled(reads.junk)])
+    compared = 0
+    for block in fixture_blocks():
+        seen: dict = {}
+        for member in block:
+            try:
+                outcomes = action.outcomes(data, member)
+            except ActionError:
+                continue
+            listed: dict = defaultdict(Fraction)
+            for chance, result in finished(outcomes, data):
+                listed[ab.compress(result)] += chance
+            key = ab.compress(member)
+            if key in seen:
+                assert dict(listed) == seen[key], "the members of a block give the same compressed finished items"
+                compared += 1
+            else:
+                seen[key] = dict(listed)
+    return compared

@@ -30,10 +30,10 @@ class ChaosOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.nothing()
+        return Reads.nothing(block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        return Adds(named=frozenset(), single_draw=True)
+        return Adds.erasing(named=frozenset(), single_draw=True)
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.

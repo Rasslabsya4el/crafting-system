@@ -18,6 +18,17 @@ An action answers five questions (`actions/contract.py`): `label(data)`, `outcom
 
 Each module registers its kinds, with an order number and a `planner` flag. `catalog(data, item)` lists the actions that can apply to the item or to what a policy makes of it; `planner_only` leaves out the kinds the planner cannot use yet (fossil sets, the orbs of magic items, Orb of Scouring, Orb of Alchemy), each with its reason. A new kind is offered by default. The planner's filters are over declarations, not classes: an action that only adds named crafted mods is offered when a mod it adds counts toward the target (the #60 rule), and an action that needs a crafted mod (`Reads.needs_crafted`) is offered when the start item holds one or another offered action adds one. Pruning for speed (#118) is a further filter over `adds` and `reads`; the claim history (#120) reads the claims.
 
+Two more declarations carry decisions that used to hide in the CLI and in ADR-0023. `Adds.keeps_crafted` (default True, the safe value) says whether a crafted mod survives the action: a bench craft that gives the target nothing is left out only while every other offered action declares False, so Exalted, Annulment or a metamod action needs no edit in `cli`. `Reads.block_invariant` (default False, refuse) says that the action's kernel, pushed through the pooling of junk families, is the same for every member of a block (ADR-0023, #125): it is set on the erasing rerolls (fossils included), the bench crafts and Remove Crafted Mods, and the contract suite compares the members of blocks on the fixture items. A `Finite` action is not invariant until someone proves it.
+
+## Limits a later ticket must lift with a contract change
+
+- **Two-input actions** (ADR-0022): `outcomes(data, item)` takes one item; `extra_inputs`, a `Need` and a donor have no place in the contract yet.
+- **In-place value changes** (a Divine-like orb, #71): the kernel accepts only `Fixed` or `Outcomes` parts and `_split` matches mods by `(mod_id, fractured, crafted)`, so a changed roll would count as kept.
+- **`Adds` names only what is added by name** from the start item. For a drawn action it says that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
+- **The catalog looks at the start item's rarity** (essences of level 1 to 4, the orbs of magic items): those kinds are not listed for states a policy reaches later. Today no planner kind needs them.
+- **Prices of essences, fossils and bench crafts** come from the game data's names, not from a claim's value; the claim says so.
+- The contract suite does not compare a fracturing action (Fractured Fossil) with the brute force; `test_abstraction_fossil.py` does.
+
 ## Verification
 
 `tests/contract_support.py` runs on every kind of the catalog without being edited: outcomes sum to one; the finished items listed from `components` give each mod the chance `chance_all` says; the sampler follows it within five standard errors; the kernel equals the brute force on the compressed finished items (layer 1, ADR-0019); what an action declares agrees with what it does; its resources price an offer from a fixture price file; its label round-trips through a given route. A toy action defined only in `tests/test_actions_toy.py` is offered by the CLI, gets exact kernels, runs in the simulator and passes the same checks, which is the test that the contract is enough.

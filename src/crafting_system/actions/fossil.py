@@ -113,19 +113,19 @@ class ApplyFossils(Action):
         return {self.resonator: 1, **{name: 1 for name in names}}
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.nothing()
+        return Reads.nothing(block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         """The mods a Hollow Fossil forces; None when a Glyphic Fossil chooses among several."""
         if data is None:
-            return Adds()
+            return Adds.erasing()
         named: set[str] = set()
         for name in self.fossils:
             record = _record(data, name)
             named.update(record.forced_mods)
             if record.corrupted_essence_chance >= 100 and not _special(record, "tangled") and not record.forced_mods:
-                return Adds()
-        return Adds(named=frozenset(named))
+                return Adds.erasing()
+        return Adds.erasing(named=frozenset(named))
 
     def outcomes(self, data: GameData, item: Item) -> FossilOutcomes:
         """The outcomes of using the resonator on `item`; see the module text for the refusals."""

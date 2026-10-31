@@ -10,11 +10,11 @@ import json
 
 import pytest
 from cli_support import R12, price_file
-from contract_support import CONTRACT_DATA, check_action, contract_pairs, fixture_items
+from contract_support import CONTRACT_DATA, check_action, check_block_invariance, contract_pairs, fixture_blocks, fixture_items
 from targets_support import DATA
 
 from crafting_system.abstraction import Goal, Wanted
-from crafting_system.actions import ActionError, catalog, kinds
+from crafting_system.actions import ActionError, Reads, RegalOrb, catalog, kinds
 from crafting_system.cli import PricedOffer, make_plan, parse_route
 from crafting_system.cli._offers import offer_of, offers_for
 from crafting_system.targets import load_target
@@ -88,3 +88,32 @@ def test_every_offer_label_of_the_planner_round_trips_through_a_given_route(name
         text = "rules:\n  - do: " + json.dumps(offer.label) + "\n"
         route = parse_route(text, only, DATA, "route.yaml")
         assert route.rules[0].do == offer.label
+
+
+def test_the_declared_block_invariant_kinds_are_compared_across_the_members_of_blocks():
+    compared = {}
+    for kind, action, _ in PAIRS:
+        compared[kind] = compared.get(kind, 0) + check_block_invariance(action)
+    for kind in ("chaos-orb", "harvest-reforge", "bench-craft", "remove-crafted-mods", "fossil-set"):
+        assert compared[kind] > 0, kind
+    # every other kind refuses by default: nothing was declared, nothing compared
+    for kind in ("alchemy-orb", "transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "scouring-orb"):
+        assert compared[kind] == 0, kind
+
+
+def test_block_invariance_is_refused_by_default():
+    assert Reads().block_invariant is False and Reads.nothing().block_invariant is False
+
+
+@dataclasses.dataclass(frozen=True)
+class WronglyInvariantRegal(RegalOrb):
+    """A Regal Orb that claims the block invariance it does not have: the pool total depends on the family held."""
+
+    def reads(self, data) -> Reads:
+        return Reads(junk=True, families=None, block_invariant=True)
+
+
+def test_a_wrong_block_invariance_claim_is_caught():
+    assert len(fixture_blocks()) > 3
+    with pytest.raises(AssertionError, match="members of a block"):
+        check_block_invariance(WronglyInvariantRegal())

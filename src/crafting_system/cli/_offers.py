@@ -156,8 +156,10 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
 
     * An action that only adds named crafted mods (a bench craft) is offered ONLY WHEN A MOD IT ADDS
       COUNTS TOWARD ONE OF THE GOAL'S REQUIREMENTS (a leaf names it and does not refuse a crafted mod,
-      `not_crafted`). Reason: in this slice every other action (Chaos Orb, Harvest reforge, an essence,
-      Remove Crafted Mods) removes the crafted mods, and without the multimod an item holds one crafted
+      `not_crafted`), AND ONLY WHILE EVERY OTHER OFFERED ACTION ERASES THE CRAFTED MODS (declares
+      `Adds.keeps_crafted` False; the default True keeps every craft in play, so an action that keeps
+      them needs no edit here). Reason: in this slice every other action (Chaos Orb, Harvest reforge, an
+      essence, Remove Crafted Mods) removes the crafted mods, and without the multimod an item holds one crafted
       mod, so a craft that gives the goal nothing only takes a slot and costs currency; it can never
       lower the mean. Leaving it out is exact, and it keeps the state space small: each craft that
       clashes with a family makes that family its own kind, so all 141 ring crafts would grow R05 from
@@ -169,13 +171,18 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
       offered only when the start item holds one or another offered action adds one.
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
+    candidates = list(catalog(data, start_item, planner_only=True))
+    # a craft that gives the goal nothing is useless while every other action erases the crafted mod
+    erased_by_all = not any(
+        action.adds(data, start_item).keeps_crafted for action in candidates if not _only_crafts(data, start_item, action)
+    )
     chosen: list[Action] = []
     left_out_crafts: list[str] = []
-    for action in catalog(data, start_item, planner_only=True):
-        adds = action.adds(data, start_item)
-        if adds.crafted and not adds.draws and adds.named is not None and not adds.named & counting:
-            left_out_crafts.append(action.label(data))
-            continue
+    for action in candidates:
+        if erased_by_all and _only_crafts(data, start_item, action):
+            if not action.adds(data, start_item).named & counting:
+                left_out_crafts.append(action.label(data))
+                continue
         chosen.append(action)
     chosen = usable_actions(data, start_item, chosen)
 
@@ -184,9 +191,11 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
         groups[action.label(data)].append(action)
     offers = []
     for label, actions in groups.items():
-        for action in actions:
-            name = label if len(actions) == 1 else f"{label} [{action.variant}]"
-            offers.append(offer_of(action, name, data, start_item))
+        variants = [action.variant for action in actions]
+        if len(set(variants)) != len(variants) or "" in variants:
+            variants = [str(number) for number in range(1, len(actions) + 1)]
+        for action, variant in zip(actions, variants):
+            offers.append(offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item))
 
     left_out = ()
     if left_out_crafts:
@@ -198,6 +207,12 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
             ),
         )
     return OfferSet(tuple(offers), left_out)
+
+
+def _only_crafts(data: GameData, item: Item, action: Action) -> bool:
+    """Whether the action only adds mods it names, as crafted mods (a bench craft)."""
+    adds = action.adds(data, item)
+    return adds.crafted and not adds.draws and adds.named is not None
 
 
 def usable_actions(data: GameData, start_item: Item, actions: Iterable[Action]) -> list[Action]:

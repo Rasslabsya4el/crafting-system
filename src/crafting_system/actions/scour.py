@@ -84,7 +84,7 @@ class ScouringOrb(Action):
         return Reads.nothing()
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        return Adds.removal()
+        return Adds.removal(keeps_crafted=False)
 
     def outcomes(self, data: GameData, item: Item) -> ScourOutcomes:
         """The outcome of using the orb on `item`.

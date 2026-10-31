@@ -51,14 +51,14 @@ class ApplyEssence(Action):
         return {self._record(data).name: 1}
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.nothing()
+        return Reads.nothing(block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         if data is None or item is None:
-            return Adds()
+            return Adds.erasing()
         base = data.base_items.get(item.base_id)
         mod_id = None if base is None else _forced_mod_id(self._record(data), base.item_class)
-        return Adds() if mod_id is None else Adds(named=frozenset({mod_id}))
+        return Adds.erasing() if mod_id is None else Adds.erasing(named=frozenset({mod_id}))
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the essence on `item`.

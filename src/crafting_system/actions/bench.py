@@ -166,7 +166,7 @@ class BenchCraft(Action):
         mod = data.mods.get(self.mod_id)
         if mod is None:
             raise ValueError(f"the craft {self.mod_id} names a mod that is not in the game data")
-        return Reads(junk=True, families=frozenset(mod.families))
+        return Reads(junk=True, families=frozenset(mod.families), block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset({self.mod_id}), crafted=True, draws=False)
@@ -241,10 +241,10 @@ class RemoveCraftedMods(Action):
 
     def reads(self, data: GameData) -> Reads:
         """It reads how many mods are left, not which: the count of the junk, no family."""
-        return Reads(junk=True, families=frozenset(), needs_crafted=True)
+        return Reads(junk=True, families=frozenset(), needs_crafted=True, block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        return Adds.removal()
+        return Adds.removal(keeps_crafted=False)
 
     def option(self, data: GameData) -> BenchOption:
         """The bench option that removes crafted mods; `ValueError` when the data has none."""
