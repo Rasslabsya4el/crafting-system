@@ -31,7 +31,7 @@ from crafting_system.targets import KOfN, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
-RUNS = 3_000
+RUNS = {"R10": 3_000, "R11": 300, "R05": 3_000}  # R11 takes about a thousand uses per finish, so fewer runs
 UNPRICED_ESSENCES = {
     f"{level} Essence of {name}"
     for level, name in [
@@ -91,12 +91,12 @@ def test_the_policy_reaches_the_goal_with_odds_mean_and_p90(solved):
 
 
 def test_verify_agrees_with_the_computed_mean(solved, data):
-    _, _, _, plan = solved
+    route_id, _, _, plan = solved
 
-    check = verify(data, plan, runs=RUNS, seed=11)
+    check = verify(data, plan, runs=RUNS[route_id], seed=11)
 
     assert check.agrees, check.reason
-    assert check.report.successes == RUNS
+    assert check.report.successes == RUNS[route_id]
 
 
 def test_only_the_crafts_whose_mod_counts_toward_a_requirement_are_offered(solved):
@@ -235,4 +235,6 @@ def test_the_tiers_the_target_asks_for_can_appear_at_its_item_level(solved, data
 
     for leaf in (found for node in target.requirements for found in leaves(node)):
         mods = [data.mods[m] for m in leaf.mod_ids if leaf.min_tier is None or tiers.get(m, 1) <= leaf.min_tier]
+        if all(mod.is_essence_only for mod in mods):
+            continue  # an essence forces its mod whatever the item level
         assert any(mod.required_level <= target.item_level for mod in mods), (leaf.family, leaf.min_tier)
