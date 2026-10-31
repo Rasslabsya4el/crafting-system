@@ -8,7 +8,7 @@ The owner has answered [#81](https://github.com/Rasslabsya4el/crafting-system/is
 
 1. **The tier cut is exact and checked.** For an item with `s >= 1` strands, every random mod draw sees only the `floor(100 / (2.5 s + 147.5) * (T - 1)) + 1` highest tiers of a mod type that has `T` eligible tiers. I recomputed every breakpoint cell of the wiki table with exact fractions (0 mismatches) and the formula reproduces the "lowest expected tier" of all 1,902 usable rows of the first author's published raw sheet (0 rows below the bound, 814 exactly on it). The cut uses the strands the item had *before* the craft. 0 strands means no cut.
 2. **Strands are spent at random.** Each currency spends a whole number up to a ceiling (8 / 16 / 50 / 80 …; Exalted by mod count). Fossils, Harvest, beastcrafting and the ordinary bench crafts spend none; three bench rerolls spend up to 50. This settles the 2025 Reddit disagreement the earlier note left open.
-3. **Orb of Remembrance is a re-roll, not an add.** It works on normal equipment, sets any count (also replaces an existing one) to a random number in 10..100, distribution normal(35, 25) redrawn into that range (mean 41.8). Fresh `chi²` fit on the author's own 2,255 results. It can be applied again and again, so the policy may re-roll for a better count.
+3. **Orb of Remembrance is a re-roll, not an add.** It works on normal equipment, sets any count (also replaces an existing one) to a random number in 10..100, distribution normal(35, 25) redrawn until it is in that range (u/sirgog's rule; observed mean 41.56 on the author's 2,255 results, chi-square 7.2 on 17 degrees of freedom against the model, whose own mean is 41.7 to 41.8). It can be applied again and again, so the policy may re-roll for a better count.
 4. **Orb of Unravelling** spends all strands to try to raise mods; the chance is a player-fitted linear model (approximate), the rest of its rules are on the wiki.
 5. **Foulborn orbs** are the strand cut with a fixed `+30 strands` (denominator 100 + 75). On a 0-strand item they keep ceil(N/2) tiers (N ≤ 6), floor(N/2) + 1 (N > 6); I checked that this is exactly the formula at denominator 175. They exist since 3.27.0 (not new in 3.29), and come only from the Genesis Tree.
 6. **The Genesis Tree** gives rare armour or jewellery (item level = the Wombgift's level) with up to +60 tier rating from three nodes plus an inherent rating GGG has not published, and mod-type tilts of ×4 / ×0.4. Nothing documents strands on born items.
@@ -16,7 +16,7 @@ The owner has answered [#81](https://github.com/Rasslabsya4el/crafting-system/is
 
 ## Evidence
 
-Under the map's evidence rule. Wiki pages read 2026-10-31 in the built-in browser (Anubis check passed). The wiki's formula and its breakpoint table come from the owner-trusted Reddit post ([/u/Macookta, 2026-09-26/27](https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/)), and the wiki cites it. **I could not re-read the post itself this session**: six `gpt-research` jobs failed (the worker process died three times, two timed out, one answered that Reddit was blocked and the search service returned 429). What the note takes from the post (Unravelling model, author's caveats) is therefore taken from the 2026-10-30 note, which was produced through the same skill and marks its quotes verbatim; those are marked below. The post's **raw data sheet** opens without Reddit, and I used it directly (below).
+Under the map's evidence rule. Wiki pages read 2026-10-31 in the built-in browser (Anubis check passed). **The owner-trusted post was read first-hand on 2026-10-31** through the Arctic Shift archive (`reddit_archive.py thread 1wr9445`: post body, 70 comments, authors and dates; the wiki cites the post for the formula). That read corrected three things in the earlier note and in my first version of this one: (1) u/sirgog's rule is "If the number is <10 or >100, discard it", not "if the number is 100"; (2) the archive copy of the post has the **original** destination-tier text (rank multipliers 1, 2, 3 on the weights); the author's later edit ("sum of its own weight and the eligible tiers above it") is known only from the earlier note, so it may postdate the archive snapshot; (3) the post's wand test of non-uniform weights (below) is the only data on the destination model. The post's **raw data sheet** opens without Reddit, and I used it directly.
 
 ### Memory Strands (kind `wiki`, confirmed by `experiment`)
 
@@ -64,7 +64,7 @@ Wiki table, read 2026-10-31: Transmutation, Augmentation, Alteration 0-8; Foulbo
 
 `10:20 11:32 12:31 13:21 14:31 15:36 16:25 17:37 18:32 19:40 20:43 21:45 22:39 23:37 24:32 25:38 26:37 27:43 28:35 29:50 30:43 31:42 32:48 33:30 34:55 35:35 36:46 37:32 38:44 39:51 40:43 41:46 42:48 43:31 44:34 45:41 46:34 47:37 48:32 49:33 50:39 51:40 52:36 53:34 54:27 55:31 56:31 57:24 58:21 59:34 60:23 61:22 62:20 63:28 64:23 65:22 66:21 67:21 68:17 69:19 70:18 71:14 72:15 73:17 74:14 75:11 76:8 77:9 78:9 79:6 80:14 81:7 82:6 83:5 84:8 85:5 86:2 87:8 88:5 89:5 90:5 91:3 92:3 93:3 94:5 95:1 97:2 98:2 100:3` (96 and 99 never occurred).
 
-The earlier note carried a hypothesis by [/u/sirgog](https://www.reddit.com/r/pathofexile/comments/1wr9445/comment/pcrqc6i/) (2026-09-29): "Generate a random number via normal distribution, mean 35, standard deviation 25 … If the number is 100, discard it". I tested it: the maximum-likelihood normal for the rounded value, truncated to 10..100, is mean 35 (34 to 35), sd 25 (25 to 25.5), and `N(35, 25)` has `chi² = 7.2` over 18 bins of five (17 degrees of freedom; p about 0.98), model mean 41.8 against 41.56 observed. The truncation at 10 is real: the same normal untruncated would put about 15 % of results (about 350) below 10; there are none, and the count at 10 is lower than its neighbours (20 against about 32), as rounding a continuous cut at 10.0 gives (13 expected; the fit is not sensitive to it). The number of 100s (3 against 1.5 expected) does not follow the "discard 100" part, so the upper end is "kept, tiny". Rule: **draw `round(N(35, 25))` and redraw until it is in 10..100.**
+[u/sirgog](https://www.reddit.com/r/pathofexile/comments/1wr9445/_/pcrqc6i/) (2026-09-29, read first-hand): "Generate a random number via normal distribution, mean 35, standard deviation 25. (Sample size too small to determine rounding)" and "If the number is <10 or >100, discard it and go back to step 1. Else, report the number." The author did not answer in the thread. I tested it: the maximum-likelihood normal for the rounded value, truncated to 10..100, is mean 35 (34 to 35), sd 25 (25 to 25.5), and `N(35, 25)` has `chi² = 7.2` over 18 bins of five (17 degrees of freedom; p about 0.98), model mean 41.7 to 41.8 depending on the exact bounds, against 41.56 observed. The truncation at 10 is real: the same normal untruncated would put about 15 % of results (about 350) below 10; there are none, and the count at 10 is lower than its neighbours (20 against about 32), as rounding a continuous cut at 10.0 gives (13 expected; the fit is not sensitive to it). The three results of exactly 100 (1.5 expected) agree with sirgog's ">100" (100 is kept). Rule: **draw `round(N(35, 25))` and redraw until it is in 10..100.**
 
 Whether the result depends on the previous count is not tested in the sheet (an Orb of Remembrance "randomises"; the post says the author rolled a talisman "to 100 memory strands with orbs of remembrance" by repeating).
 
@@ -72,9 +72,11 @@ Whether the result depends on the previous count is not tested in the sheet (an 
 
 [Orb of Unravelling](https://www.poewiki.net/wiki/Orb_of_Unravelling), read 2026-10-31: "Consumes all Memory Strands on an item to attempt to upgrade the tier of explicit modifiers based on the number of Memory Strands consumed"; "It is possible to consume all memory strands without upgrading any modifier tier."; "Other T1 affixes do not affect the chance to upgrade sub-T1 affixes."; "does not respect the Suffixes cannot be Changed or Prefixes cannot be Changed metamods."; "cannot upgrade influenced modifiers to an Elevated modifier. It also cannot upgrade a crafted modifier into a regular modifier, as of 3.26.0d."; 3.26.0d "Fixed a bug where Orb of Unravelling could be used on unidentified items." Drops from the Incarnation of Dread.
 
-The chance model is from the post (quotes taken from the earlier note, not re-read): `upgrade_chance = (strands * total_upgrade_candidate_weight)/(2 * total_side_weight)`, where the candidate weight is the sum of the weights of the higher tiers of the mod's type and the side weight is the total mod weight of that side; "Each modifier on the item is calculated independently."; "The number of memory strands only determines the chance for a modifier to upgrade vs. not upgrade. The number of tiers upgraded is not affected by the number of strands."; destination: "assigning each tier a weight consisting of the sum of its own weight and the eligible tiers above it" (corrected by the author's 2026-09-27 edit; originally multipliers 1, 2, 3 from the top). Author's confidence: "I'm not 100% confident the chance scales linearly", "I am confident in the breakpoints where the chance is guaranteed" (36,598 mods tested, no guaranteed-by-formula mod failed to upgrade). Sample sizes: 9,373 orbs; T9 at 32 strands 310/310 upgraded; T9 at 15 strands predicted 47.9 %, observed 63/150 = 42 %.
+The model is from the post (read first-hand 2026-10-31; the sample figures below are its own). Assertions: "Each modifier on the item is calculated independently. Having multiple upgradable modifiers does not hurt the chances for an individual modifier to upgrade."; "The number of memory strands only determines the chance for a modifier to upgrade vs. not upgrade. The number of tiers upgraded is not affected by the number of strands." Chance: `upgrade_chance = (strands * total_upgrade_candidate_weight)/(2 * total_side_weight)`, the candidate weight being the sum of the weights of the higher tiers of the mod's type, the side weight the total mod weight of that side (prefix or suffix). Tests: 9,373 orbs on 36,598 mods; T9 attribute mods on amulets at 32 strands 310 of 310 upgraded at least one tier, at 31 strands 14 of 15 (99 % predicted), at 15 strands 63 of 150 = 42 % (47.9 % predicted); "I'm not 100% confident the chance scales linearly, but I am confident in the breakpoints where the chance is guaranteed"; correlation of predicted chance and outcome 0.796. He also found that influence raises and a lower item level lowers the breakpoints (the total side weight), and that attack mods on regular wands carry a 0.5 generation weight that PoEDB and his code missed and Craft of Exile has.
 
-The two destination models agree only when the higher tiers have equal weights. The community calculator the wiki links ([unravel.port8080.sh](https://unravel.port8080.sh/)) still implements the **original** positional ×1, ×2, ×3 weights (page text: "Successful destinations use separate positional weights of ×1, ×2, ×3, starting with the highest eligible tier"), "Only natural equipment affixes are supported". The raw data (tab "Unravelling data", about 2 million lines of item text, columns include `upgrade_chance`, `upgrade_candidate_weights`, `tier_before`, `tier_after`) is public and could settle it; I did not analyse it.
+**Destination tier** (post, original text): "the new tier is chosen by using the modifier weights with a multiplier applied to make lower tiers more likely. The multiplier is 1 for the highest tier, 2 for the second, 3 for the third, etc." Tests: T9 mods with at least one upgrade, 1,611 cases, chi-square 3.233, p = 0.86 (uniform weights, ratio 1:2:3:…); T4 mods 3,825 cases, chi-square 1.480, p = 0.48; and the only non-uniform test: T4 lightning damage to spells on wands (weights T4 800, T3 800, T2 250, T1 60), 257 cases, final tier 1 / 2 / 3 observed 7 / 43 / 207 (2.72 / 16.73 / 80.54 %) against 2.03 / 16.89 / 81.08 % predicted with the rank multipliers and 16.67 / 33.33 / 50 % with weights ignored. The later edit of the post (known only from the earlier note: "the effective weight for each mod is the sum of its weight and the weight of the tiers above it") predicts 4.05 / 20.95 / 75.0 % for the wand case; my chi-square on the 257 cases is 0.62 for the rank model and 4.3 (2 degrees of freedom, p = 0.12) for the cumulative one: both survive, the rank model fits better. The author said the two are indistinguishable without more data.
+
+The community calculator the wiki links ([unravel.port8080.sh](https://unravel.port8080.sh/)) implements the rank multipliers (page text: "Successful destinations use separate positional weights of ×1, ×2, ×3, starting with the highest eligible tier"), "Only natural equipment affixes are supported". The raw data (tab "Unravelling data", about 2 million lines of item text, columns include `upgrade_chance`, `upgrade_candidate_weights`, `tier_before`, `tier_after`) is public and could settle the destination model and the linearity; I did not analyse it.
 
 ### Foulborn currency (kind `wiki`, `datamined`, `coe`)
 
@@ -106,216 +108,11 @@ So the **tier chosen** within a cut mod type is the same in all models (ratios o
 
 `git show archive/prototype`: no Memory Strand, Foulborn or Genesis code; its `docs/mechanics/INDEX.md` lists Foulborn and Genesis as "catalogue-only backlog". `main`: `affix_pool.no_memory_strands` (`src/crafting_system/rules/claims/affix_pool.yaml`) and `NO_MEMORY_STRANDS` (`actions/pool.py`) are the two places that hold the v1 assumption; `bench_craft.yaml` already says the 3.29 bench rerolls consume strands. `trade_query.py` already has a `memory_level` filter slot.
 
-## Draft claims for `src/crafting_system/rules/claims/`
+## Draft claims
 
-Twenty-two claims (YAML below; the seven fields each). The `experiment` claims cite the first author's published sheet; the Unravelling claim quotes the post through the earlier note.
+Twenty-eight claims in three files, checked with `load_registry(Path("docs/research/2026-10-31-memory-strands-claims"))` (28 rules load, quotes at most 200 characters): [`memory_strands.yaml`](2026-10-31-memory-strands-claims/memory_strands.yaml) (22), [`foulborn.yaml`](2026-10-31-memory-strands-claims/foulborn.yaml) (4), [`genesis_tree.yaml`](2026-10-31-memory-strands-claims/genesis_tree.yaml) (3). The build session copies them to `src/crafting_system/rules/claims/`. Changes against the first version (2026-10-31, main chat's check): the disputed weight rule `foulborn.weights_of_kept_tiers` is dropped (it is an open point); the spend ranges are split so each quote carries its claim; the two analyses of mine that had no source quote (`spend_distribution_provisional`, `rule_check_against_raw_data`) are not claims but evidence in this note; the Unravelling claims quote the post read first-hand; the Remembrance distribution quotes u/sirgog's rule.
 
-```yaml
-rules:
-  # --- Memory Strands: the property and the tier cut ---
-  - id: memory_strands.property
-    statement: >-
-      An equipment item carries a Memory Strands count from 1 to 100 (no strands is the count 0). The count survives crafts except for the amount the craft spends. It shows on the item text as "Memory Strands: N".
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "These are displayed with a value ranging from 1-100 on the item's tooltip."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.rollable_tiers
-    statement: >-
-      For an item with s >= 1 strands, a random mod add or replace draws a mod type's tier only among its `rollable_tiers(T, s) = floor(100 / (2.5 s + 147.5) * (T - 1)) + 1` highest tiers, T being the number of tiers of that mod type eligible on the base at the item level. The lowest tiers are removed. Computed in exact arithmetic, not floats: `floor(200 (T-1) / (295 + 5 s)) + 1` (8 tiers at 81 strands is exactly 2.0 and gives 3 rollable tiers, at 82 strands 2).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "rollable_tiers = floor((100/(2.5 * strands + 147.5)) * (total_tiers - 1)) + 1"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.cull_counts_eligible_tiers
-    statement: >-
-      The tier count T of the cut is the number of tiers of the mod type that the item level allows on that base (a tier the item level forbids is not counted and cannot roll anyway); the cut is made per mod type, so each mod type of the pool is cut on its own T.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "which means only T1 and T2 of this modifier can roll if all 8 tiers are eligible from item level."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.zero_is_no_cull
-    statement: >-
-      An item with 0 strands is not cut at all (every eligible tier rolls); the formula applies from 1 strand (1 strand already leaves 9 of 13 tiers).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "0	13	12	11	10	9	8	7	6	5	4	3	2"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.cut_uses_strands_before_spend
-    statement: >-
-      The cut of a craft is made from the strands the item had before the craft; the craft then spends its random amount.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "will deplete a random quantity of Memory Strands, and make it more likely to have outcomes of higher modifier tier based on the quantity of Memory Strands originally on the item."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.rule_check_against_raw_data
-    statement: >-
-      The formula with the pre-spend count reproduces the lowest rollable tier of all 1,902 usable rows of the first author's published raw sheet (Chaos, Alchemy, Regal, Exalted, Foulborn Augmentation and Regal, Scroll of Wisdom), with no observed tier below the bound and 814 rows exactly on it. Also holds for identification with a Scroll of Wisdom (51 rows).
-    source_kind: experiment
-    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: "Model 3: 2.5x + 47.5, no rounding"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  # --- What a craft spends ---
-  - id: memory_strands.spend_ranges
-    statement: >-
-      A craft spends a random whole number of strands up to a ceiling per currency (never below 0, never more than the item has): Transmutation, Augmentation, Alteration 8; Regal 16; Alchemy, Binding, Chaos, Chance 50; any Essence 80; Eldritch and Tainted Chaos 60; Veiled Chaos 80; Awakener's Orb 100; the bench rerolls 'Reroll the Rarity of a non-Unique item', 'Reroll 3 random modifiers on a Rare Item', 'Reroll a random modifier on a Rare Item' 50.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "the following crafting options do remove 0-50 memory strands, similar to Orb of Chance or Chaos Orb"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.spend_exalted_by_mod_count
-    statement: >-
-      The ceiling of an Exalted Orb (and the Eldritch, influence-named and Tainted Exalted variants) grows with the mods the item has when it is applied: 1 mod 16, 2 mods 22, 3 mods 26, 4 mods 32, 5 mods 34 (Tainted, 6 mods 38). The row for 0 mods is not shown by the game (wiki: likely 0-10).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "Despite not showing a range on the item, it can still consume an unspecified number of Memory Strands, likely 0-10."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.not_spent_by
-    statement: >-
-      Resonators (fossils), Harvest crafting, beastcrafting, the bench crafts other than the three rerolls, and the Veiled Exalted Orb spend no strands. Fracturing, Orb of Annulment, Scouring, Divine and Vaal are not listed by the wiki either way.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "Memory Strands are not consumed by the use of resonators, Harvest crafting, Beastcrafting, or crafting benches not using currency listed above"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.spend_distribution_provisional
-    statement: >-
-      Provisional: within its ceiling the spend looks like a uniform whole number (Foulborn Augmentation: 306 draws on items with 32 or more strands, spend 0 to 32, flat over five equal bins, 7 zeros of 306 against 9 expected; Alchemy flat in four of five bins). Chaos Orb is not flat (130 draws, first bin 45 of 130 against 26). Treat as uniform [0, ceiling] until a larger test says otherwise.
-    source_kind: experiment
-    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: "foulborn and misc currency data"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  # --- Orb of Remembrance ---
-  - id: memory_strands.remembrance_action
-    statement: >-
-      An Orb of Remembrance applies only to a normal-rarity equipment item; it sets the item's strand count to a new random number whatever the count was (it adds strands to an item that has none, and re-rolls an item that has some). It can be used again and again.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "Orb of Remembrance adds or randomises the quantity of Memory Strands on a normal rarity item. It is not necessary to deplete all Memory Strands before using this orb."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.remembrance_distribution
-    statement: >-
-      The strand count after an Orb of Remembrance is a whole number from 10 to 100 drawn from a normal distribution with mean 35 and standard deviation 25, redrawn until it lies in 10..100 (2,255 orbs: no result below 10; chi-square 7 on 17 degrees of freedom against that model; observed mean 41.56, median 39, quartiles 26 and 55, three results of exactly 100). The probability mass function is in the note.
-    source_kind: experiment
-    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: "mean 41.56097561 / 25th percentile 26 / median 39 / 75th percentile 55"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  # --- Orb of Unravelling ---
-  - id: memory_strands.unravelling_effect
-    statement: >-
-      An Orb of Unravelling applies to an identified equipment item with strands, spends all its strands (count 0 afterwards) and may raise the tier of its explicit mods; it may raise none. It ignores the prefix/suffix-cannot-be-changed metamods. It cannot raise an influenced mod to its Elevated form, and cannot turn a crafted mod into a regular one. A mod that is already the top tier is not raised, and top-tier mods do not change the chance of the others.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
-    quote: "Orb of Unravelling cannot upgrade influenced modifiers to an Elevated modifier. It also cannot upgrade a crafted modifier into a regular modifier, as of 3.26.0d."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: memory_strands.unravelling_chance_model
-    statement: >-
-      Approximate. Each explicit mod is tried on its own: it is raised with chance min(1, s * W_up / (2 * W_side)), W_up the sum of the weights of the mod type's higher tiers, W_side the total mod weight of its side (prefix or suffix) of the item's pool; if raised, the new tier is drawn from the higher tiers with weights, for each tier, its own weight plus the weights of the eligible tiers above it (equal to 1:2:3... for equal weights); the strand count changes only the chance, not how many tiers are climbed. The author does not claim the linear form is exact; the guaranteed points (chance 1) held in all 36,598 mods tested.
-    source_kind: experiment
-    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
-    quote: "upgrade_chance = (strands * total_upgrade_candidate_weight)/(2 * total_side_weight)"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-30
-
-  # --- Foulborn orbs ---
-  - id: foulborn.effect_tier_cull
-    statement: >-
-      A Foulborn Orb of Augmentation, Regal Orb or Exalted Orb acts like its plain version, but the draw only sees the highest `K(N)` tiers of each mod type, N being the number of eligible tiers: K = ceil(N/2) for N <= 6, floor(N/2) + 1 for N > 6 (N = 1..13 gives 1,1,2,2,3,3,4,5,5,6,6,7,7). The same numbers come out of the strands formula at 175 instead of 147.5 + 2.5 s, i.e. a denominator of 100 + 75, which is how the wiki words it: '+75 Modifier Tier Rating'. Exact arithmetic (8 tiers: 100/175 * 7 is exactly 4).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Foulborn_currency_item
-    quote: "it will only be able to roll the 4 highest eligible tiers and the lowest 3 tiers will be culled from the pool"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: foulborn.on_stranded_item
-    statement: >-
-      On an item with s >= 1 strands a Foulborn orb cuts as if the item had s + 30 strands: denominator 2.5 (s + 30) + 147.5 in `rollable_tiers`. The cut is made before the orb spends its strands. On an item with 0 strands the cut is the table above (denominator 175). The three orbs still spend strands (see foulborn.spend_ranges).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Modifier#Modifier_Tier_Rating
-    quote: "In this model, Foulborn currency adds +75 to MTR, or an effective +30 Memory Strands."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: foulborn.weights_of_kept_tiers
-    statement: >-
-      Disputed, see the note. The wiki's Foulborn page says the kept tiers of a mod type are multiplied by N / K (N eligible, K kept), so the ratios between kept tiers stay and the mod type's total weight against other mod types changes (800/400/200/100 from the lowest tier, two kept, becomes 400/200). The in-game text of the Modifier Tier Rating passive says instead that the removed tiers' chance is distributed among the higher tiers of the same mod type (type total unchanged).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Foulborn_currency_item
-    quote: "The weights of the remaining tiers of a modifier are then scaled independently according to a multiplier such that the relative weight ratios between the tiers of a modifier type remain the same"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: foulborn.spend_ranges
-    statement: >-
-      Foulborn Augmentation spends up to 32 strands, Foulborn Regal up to 48, Foulborn Exalted up to 62 on an item with 5 mods (smaller values for fewer mods are not published; PoEDB lists 28 as the single figure).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_Strands
-    quote: "Foulborn Orb of Augmentation	—	0-32"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: foulborn.availability
-    statement: >-
-      The three Foulborn orbs exist since 3.27.0 (drop level 68, 68, 80) and come only from the Genesis Tree, birthed from a Lavish Wombgift (currency womb, node Flawed Seeds for level 68 and above).
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Foulborn_Orb_of_Augmentation
-    quote: "Can be birthed from the Genesis Tree from a Lavish Wombgift."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  # --- Genesis Tree ---
-  - id: genesis_tree.equipment_womb_item
-    statement: >-
-      A Provisioning Wombgift grown in the equipment womb births rare armour or jewellery (jewels and fractured items by node choice); the item's base item level is the Wombgift's own level. The passives are free to respec; the equipment womb has at most 16 passive points in 3.29.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/The_Genesis_Tree
-    quote: "Rare equipment generated through the Genesis Tree have a base item level equal to the wombgift's specified level."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: genesis_tree.equipment_tier_rating
-    statement: >-
-      Three equipment-womb passives each give +20 Modifier Tier Rating to the birthed item (so +60 at most, on top of an inherent rating GGG lowered in 3.28.0 and 3.29.0 and has not published). The cut is made at birth, from the item's total rating (the Necropolis rule: the lowest `x / (100 + x)` share of each mod type's tiers is removed, wiki 'redistribution model').
-    source_kind: datamined
-    url: https://poedb.tw/us/Modifier_Tier_Rating
-    quote: "Birthed Equipment has +20 to Modifier Tier Rating"
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-
-  - id: genesis_tree.equipment_mod_type_weights
-    statement: >-
-      The equipment womb's mod-type passives are '300% increased chance' (weight x4) for one of 14 mod types (Physical, Fire, Cold, Lightning, Chaos, Life, Mana, Defences, Attributes, Resistance, Attack, Caster, Critical, Speed), and '60% reduced chance' (weight x0.4) for the same types (the multiplier reading of 'increased' and 'reduced' is the usual one, not stated by a source). Craft of Exile's Genesis table (1000 and 400, tier values 20/25/40/50) is older than 3.29.0 and loses.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/The_Genesis_Tree
-    quote: "Equipment Genesis Tree Notable Passives that grant increased chance for Modifiers of a specific type now have values of 300% (previously 500%)."
-    patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
-```
+Stale on `main` once these are admitted: `affix_pool.no_memory_strands` and the comment and constant `NO_MEMORY_STRANDS` in `actions/pool.py`; `bench_craft.rerolls_not_b1_actions` (its statement and owner quote say v1 start items carry no strands); ADR-0008's sentence "v1 start items carry no Memory Strands".
 
 ## Open points
 
@@ -339,8 +136,8 @@ rules:
 
 ## Questions for the owner
 
-Each stands alone; recommendation first.
+Each stands alone; recommendation first. (The first version had a question about the Genesis Tree as a plan step; the owner already decided in [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81), round 2, that the Genesis Tree joins later as one more way to get a start item, so it is dropped. What B5 needs from that decision is only that a start item may carry no strands and, later, a tree-born item with the rating the tree gave it.)
 
-1. **Orb of Unravelling with approximate odds in v1?** It is the only way to use up strands to *raise* existing mods; its chance rests on a player-fitted formula (exact only where the chance is 100 %, 42 % observed against 47.9 % predicted at 15 strands). *With it:* strands can be spent deliberately at the end of a plan, the plan's odds for that step are marked approximate. *Without it:* strands are only burned by crafting, a stranded item is never unravelled. **Recommend: include it, marked approximate** (the same marking the project already plans for other player-fitted rules).
-2. **Genesis Tree: a way to *get* an item, or a plan step?** *Item you already have (recommended):* you paste a tree-born item as the start item; no tree model. *Priced start source:* the planner compares "grow a Wombgift (feed Hiveblood) and craft the result" with "buy a base"; this needs the inherent tier rating GGG has not published, a price for Hiveblood (not tradeable: effectively free, limited), and an average over random items. **Recommend: the first for B5** and revisit when the numbers are known.
-3. **Do you or someone you trust want to check three things in the game?** (a) The tooltip of a Foulborn Exalted Orb on items with 1, 2, 3 and 4 mods (strand ceiling); (b) whether a fossil craft on a stranded item still cuts low tiers; (c) whether an Orb of Scouring leaves the strands on the item. **Recommend: no.** You are not a crafter and the agents have no game; instead the planner refuses to use a fossil, Harvest reroll or Scouring on a stranded item (unknown → not admitted, ADR-0004) and uses a ceiling of 62 for Foulborn Exalted until read.
+1. **Orb of Unravelling with approximate odds in v1?** It is the only way to use up strands to *raise* existing mods; its chance rests on a player-fitted formula (exact only where the chance is 100 %; 42 % observed against 47.9 % predicted at 15 strands) and its destination odds on a second fit. *With it:* strands can be spent deliberately at the end of a plan, the odds of that step are marked approximate. *Without it:* strands are only burned by crafting, a stranded item is never unravelled. **Recommend: include it, marked approximate** (the marking [#83](https://github.com/Rasslabsya4el/crafting-system/issues/83) builds).
+2. **Do you or someone you trust want to check three things in the game?** (a) The tooltip of a Foulborn Exalted Orb on items with 1, 2, 3 and 4 mods (strand ceiling); (b) whether a fossil craft on a stranded item still cuts low tiers; (c) whether an Orb of Scouring leaves the strands on the item. **Recommend: no.** You are not a crafter and the agents have no game; instead the planner refuses to use a fossil, Harvest reroll or Scouring on a stranded item (unknown, so not admitted, ADR-0004) and uses a ceiling of 62 for Foulborn Exalted until read.
+

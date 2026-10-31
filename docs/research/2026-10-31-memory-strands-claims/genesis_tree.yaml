@@ -1,0 +1,37 @@
+# Draft claims of research ticket #98 (family genesis_tree). See memory_strands.yaml for how they are checked.
+rules:
+  - id: genesis_tree.equipment_womb_item
+    statement: >-
+      A Provisioning Wombgift grown in the equipment womb births rare armour or jewellery (jewels and fractured
+      items by node choice); the item's base item level is the Wombgift's own level. The passives are free to
+      respec; the equipment womb has at most 16 passive points in 3.29.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/The_Genesis_Tree
+    quote: "Rare equipment generated through the Genesis Tree have a base item level equal to the wombgift's specified level."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: genesis_tree.equipment_tier_rating
+    statement: >-
+      Three equipment-womb passives each give +20 Modifier Tier Rating to the birthed item (so +60 at most),
+      on top of an inherent rating that GGG lowered in 3.28.0 and 3.29.0 and has not published. The cut is made
+      at birth from the item's total rating (the Necropolis rule: the lowest x / (100 + x) share of each mod
+      type's tiers is removed, wiki "redistribution model").
+    source_kind: datamined
+    url: https://poedb.tw/us/Modifier_Tier_Rating
+    quote: "Birthed Equipment has +20 to Modifier Tier Rating"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: genesis_tree.equipment_mod_type_weights
+    statement: >-
+      The equipment womb's notable passives give "300% increased chance" (weight x4) for one of 14 mod types
+      (Physical, Fire, Cold, Lightning, Chaos, Life, Mana, Defences, Attributes, Resistance, Attack, Caster,
+      Critical, Speed) and "60% reduced chance" (weight x0.4) for the same types. The multiplier reading of
+      "increased" and "reduced" is the usual one, not stated by a source. Craft of Exile's Genesis table (1000
+      and 400, tier values 20/25/40/50) is older than 3.29.0 and loses.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/The_Genesis_Tree
+    quote: "Equipment Genesis Tree Notable Passives that grant increased chance for Modifiers of a specific type now have values of 300% (previously 500%)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31

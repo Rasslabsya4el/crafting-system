@@ -1,0 +1,235 @@
+# Draft claims of research ticket #98 (family memory_strands). Not yet in src/; the build session copies them
+# to src/crafting_system/rules/claims/. Check: load_registry(Path("docs/research/2026-10-31-memory-strands-claims")).
+rules:
+  # --- The property and the tier cut ---
+  - id: memory_strands.property
+    statement: >-
+      An equipment item carries a Memory Strands count from 1 to 100 (no strands is the count 0). The count
+      survives crafts except for the amount the craft spends. It shows on the item text as "Memory Strands: N".
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "These are displayed with a value ranging from 1-100 on the item's tooltip."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.rollable_tiers
+    statement: >-
+      For an item with s >= 1 strands, a random mod add or replace draws a mod type's tier only among its
+      `rollable_tiers(T, s) = floor(100 / (2.5 s + 147.5) * (T - 1)) + 1` highest tiers, T being the number of
+      tiers of that mod type eligible on the base at the item level. The lowest tiers are removed. Computed in
+      exact arithmetic, not floats: `floor(200 (T-1) / (295 + 5 s)) + 1` (8 tiers at 81 strands is exactly 2.0
+      and gives 3 rollable tiers, at 82 strands 2). Checked against every breakpoint cell of the wiki table and
+      against 1,902 rows of the author's raw sheet (note, "Check against the raw sheet").
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "rollable_tiers = floor((100/(2.5 * strands + 147.5)) * (total_tiers - 1)) + 1"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.cull_counts_eligible_tiers
+    statement: >-
+      The tier count T of the cut is the number of tiers of the mod type that the item level allows on that base
+      (a tier the item level forbids is not counted and cannot roll anyway); the cut is made per mod type, so
+      each mod type of the pool is cut on its own T.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "which means only T1 and T2 of this modifier can roll if all 8 tiers are eligible from item level."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.zero_is_no_cull
+    statement: >-
+      An item with 0 strands is not cut at all (every eligible tier rolls); the formula applies from 1 strand
+      (1 strand already leaves 9 of 13 tiers).
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
+    quote: "|0|13|12|11|10|9|8|7|6|5|4|3|2|"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.cut_uses_strands_before_spend
+    statement: >-
+      The cut of a craft is made from the strands the item had before the craft; the craft then spends its
+      random amount.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "make it more likely to have outcomes of higher modifier tier based on the quantity of Memory Strands originally on the item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.identification_is_cut
+    statement: >-
+      Identifying a magic or rare item with a Scroll of Wisdom applies the same cut to its mods (the author
+      tested this little, and believes the rules are the same). A planner item is already identified, so this
+      matters only for a bought unidentified item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "When a magic or rare item is identified using a Scroll of Wisdom, the tiers of modifiers are more likely to be higher tiers proportional to the quantity of Memory Strands on the item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # --- What a craft spends ---
+  - id: memory_strands.spend_ranges_basic
+    statement: >-
+      Orb of Transmutation, Augmentation and Alteration spend a random whole number of strands from 0 to 8;
+      Regal Orb from 0 to 16. A craft never spends more than the item has.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "Orb of Transmutation , Orb of Augmentation , Orb of Alteration — 0-8; Regal Orb — 0-16"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.spend_ranges_chaos_family
+    statement: >-
+      Orb of Alchemy, Orb of Binding, Chaos Orb and Orb of Chance spend a random whole number of strands from
+      0 to 50.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "Orb of Alchemy , Orb of Binding , Chaos Orb — 0-50; Orb of Chance — 0-50"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.spend_ranges_essence
+    statement: Any essence of any tier spends a random whole number of strands from 0 to 80.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "Any tier Essence — 0-80"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.spend_ranges_special_orbs
+    statement: >-
+      Eldritch Chaos Orb and Tainted Chaos Orb spend 0 to 60, Veiled Chaos Orb 0 to 80, Awakener's Orb 0 to 100.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "Eldritch Chaos Orb — 0-60; Veiled Chaos Orb — 0-80; Tainted Chaos Orb — 0-60; Awakener's Orb — 0-100"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.spend_exalted_by_mod_count
+    statement: >-
+      The ceiling of an Exalted Orb (and the Eldritch, influence-named and Tainted Exalted variants) grows with
+      the mods the item has when it is applied: 1 mod 16, 2 mods 22, 3 mods 26, 4 mods 32, 5 mods 34 (Tainted,
+      6 mods 38). The row for 0 mods is not shown by the game (wiki: likely 0-10).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "# of modifiers 0 1 2 3 4 5 — Strands consumed Unknown* 0-16 0-22 0-26 0-32 0-34"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.spend_bench_rerolls
+    statement: >-
+      The three bench options "Reroll the Rarity of a non-Unique item", "Reroll 3 random modifiers on a Rare
+      Item" and "Reroll a random modifier on a Rare Item" spend 0 to 50 strands. Allflame crafting with a
+      listed currency spends strands as that currency does.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "the following crafting options do remove 0-50 memory strands, similar to Orb of Chance or Chaos Orb"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.not_spent_by
+    statement: >-
+      Resonators (fossils), Harvest crafting, beastcrafting, the bench crafts other than the three rerolls, and
+      the Veiled Exalted Orb spend no strands. Fracturing, Orb of Annulment, Scouring, Divine and Vaal are not
+      listed by the wiki either way.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "Memory Strands are not consumed by the use of resonators, Harvest crafting, Beastcrafting, or crafting benches not using currency listed above"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # --- Orb of Remembrance ---
+  - id: memory_strands.remembrance_action
+    statement: >-
+      An Orb of Remembrance applies only to a normal-rarity equipment item; it sets the item's strand count to a
+      new random number whatever the count was (it adds strands to an item that has none, and re-rolls an item
+      that has some). It can be used again and again.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "Orb of Remembrance adds or randomises the quantity of Memory Strands on a normal rarity item. It is not necessary to deplete all Memory Strands before using this orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.remembrance_distribution
+    statement: >-
+      The strand count after an Orb of Remembrance is a whole number from 10 to 100: a normal distribution with
+      mean 35 and standard deviation 25, redrawn while it is below 10 or above 100 (u/sirgog's fit to the
+      author's 2,255 results). Independent check on the author's raw sheet: no result below 10, maximum
+      likelihood mean 34 to 35 and sd 25 to 25.5, chi-square 7.2 on 17 degrees of freedom; observed mean 41.56,
+      median 39, quartiles 26 and 55, three results of exactly 100. Rounding of the draw is not known.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/_/pcrqc6i/
+    quote: "Generate a random number via normal distribution, mean 35, standard deviation 25. (Sample size too small to determine rounding) Step 2: If the number is <10 or >100, discard it and go back to step 1."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # --- Orb of Unravelling ---
+  - id: memory_strands.unravelling_effect
+    statement: >-
+      An Orb of Unravelling spends all the strands of the item (count 0 afterwards) to try to raise the tier of
+      its explicit mods; it may raise none of them.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
+    quote: "It is possible to consume all memory strands without upgrading any modifier tier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_limits
+    statement: >-
+      An Orb of Unravelling cannot raise an influenced mod to its Elevated form and cannot turn a crafted mod
+      into a regular one.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
+    quote: "Orb of Unravelling cannot upgrade influenced modifiers to an Elevated modifier. It also cannot upgrade a crafted modifier into a regular modifier, as of 3.26.0d."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_ignores_metamods
+    statement: >-
+      An Orb of Unravelling ignores the "Prefixes cannot be Changed" and "Suffixes cannot be Changed" metamods:
+      it may raise a protected mod.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
+    quote: "Orb of Unravelling does not respect the Suffixes cannot be Changed or Prefixes cannot be Changed metamods."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_needs_identified_item
+    statement: An Orb of Unravelling cannot be used on an unidentified item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
+    quote: "Fixed a bug where Orb of Unravelling could be used on unidentified items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_chance_model
+    statement: >-
+      Approximate (a player's fit; the author is not sure the chance is linear). Each explicit mod is tried on
+      its own: it is raised with chance min(1, s * W_up / (2 * W_side)), W_up the sum of the weights of the mod
+      type's higher tiers, W_side the total mod weight of its side (prefix or suffix) of the item's pool. The
+      strand count changes only the chance, not how many tiers are climbed. Tests: 36,598 mods from 9,373 orbs,
+      no mod the formula calls guaranteed failed to upgrade; T9 attribute mods at 32 strands 310 of 310
+      upgraded, at 31 strands 14 of 15 (99 % predicted), at 15 strands 63 of 150 (47.9 % predicted, 42 %
+      observed); correlation of predicted chance with outcome 0.796.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
+    quote: "In my data, I have 310 unravels of T9 attribute mods at 32 strands on amulets, and 310/310 upgraded at least one tier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_destination_tier
+    statement: >-
+      Approximate. When a mod is raised, the new tier is drawn among its higher tiers with weight = the tier's
+      mod weight times a rank multiplier: 1 for the highest tier, 2 for the second, 3 for the third and so on
+      (equal weights give 1:2:3:4 from the top). Tests: T9 mods with at least one upgrade, 1,611 cases,
+      chi-square 3.233 (p = 0.86); T4 mods 3,825 cases, p = 0.48; T4 lightning damage to spells on wands
+      (weights T4 800, T3 800, T2 250, T1 60) 257 cases: final tier 1 / 2 / 3 observed 2.72 / 16.73 / 80.54 %
+      against 2.03 / 16.89 / 81.08 % predicted. A later edit of the post (known from the earlier note only,
+      not in the archive copy) proposes "own weight plus the weights of the eligible tiers above" instead; the
+      two agree for equal weights and the wand data lean to the rank model (note).
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
+    quote: "When a modifier is upgraded, the new tier is chosen by using the modifier weights with a multiplier applied to make lower tiers more likely. The multiplier is 1 for the highest tier, 2 for the second, 3 for the third, etc."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
