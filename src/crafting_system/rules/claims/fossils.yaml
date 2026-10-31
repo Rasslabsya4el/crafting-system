@@ -1,10 +1,275 @@
-# Mechanic family: fossils (Delve fossils socketed into a resonator).
-# The wiki's "group" is this project's "family".
+# Mechanic family: fossils (Delve fossils socketed into a Chaotic resonator).
+# The wiki's "group" is this project's "family". Research ticket #9 (claims FOS-xx), the decisions
+# D4, D6, D10 to D13 and CHK-048 of issue #28, and its Craft of Exile checks of 2026-10-30.
 rules:
   - id: fossils.factor_stacking
     statement: When several fossils are socketed, the positive weight factors of the fossils that apply to a mod add, the negative factors multiply, and a factor of zero blocks the mod.
     source_kind: owner
     url: https://github.com/Rasslabsya4el/crafting-system/issues/2#issuecomment-6529150116
     quote: "Fossil factors stack as Craft of Exile does (additive positive factors, negatives multiply, blocks win)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  # Weights.
+  - id: fossils.weight_is_percent_factor
+    statement: A tag weight of a fossil record is a factor of weight / 100 on the weight of every mod that carries the tag (1000 is x10, 600 x6, 3000 x30, 15 x0.15); a weight of 0 blocks the mod. A factor of 1 or more is a boost, a factor below 1 a cut.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/fossils.json
+    quote: 'CurrencyDelveCraftingCasterMods: "positive_mod_weights": [{"tag": "caster", "weight": 1000}], "negative_mod_weights": [{"tag": "attack", "weight": 15}]'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.tags_are_implicit_tags
+    statement: A fossil tag matches a mod when it is in the `implicit_tags` of the mod, not in its `adds_tags`.
+    source_kind: datamined
+    url: https://github.com/repoe-fork/repoe/blob/master/RePoE/docs/mods.md
+    quote: "A list of the tags which apply to crafting methods like fossils and harvest crafting."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.boost_per_matching_tag
+    statement: A fossil boosts a mod once for every one of its tags that the mod carries, so a fossil with two matching tags (Bound on a mod tagged minion and aura) gives two terms. This replaces the wiki's "once per fossil" (FOS-06).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531135766
+    quote: "CHK-048 (does one fossil boost a mod once (wiki) or once per matching tag (Craft of Exile)). Decision: Craft of Exile's poec_getModdedWeight"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.block_wins
+    statement: If any socketed fossil has a tag of weight 0 that the mod carries, the weight of the mod is 0 whatever boost another fossil gives it. Opposing fossils (Scorched with Frigid) can be socketed together.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Resonator
+    quote: "Fossil modifiers that prevent certain types of modifiers from appearing supersede modifiers that grant more of a modifier type."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.hybrid_bypass
+    statement: A Corroded Fossil boosts a mod with a hybrid tag, and then no other fossil's boost or cut counts for the tags that the hybrid already covers (Corroded with Jagged on a bleed mod gives x10, not x20); a block still wins. `value` maps the hybrid tag (repoe `bleed`, `poison`) to the tags it covers (Craft of Exile's physical+ailment and chaos+ailment). Prismatic's hybrid entries are blocks, which the plain tags `bleed` and `poison` already are.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D11 Corroded/Prismatic bypass a second fossil's single-tag factor (fossils OPEN-02)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+    value: {bleed: [physical, ailment], poison: [chaos, ailment]}
+
+  - id: fossils.weights_exact
+    statement: Fossil weights are kept as exact fractions, they are not rounded to integers (126 x 0.15 stays 18.9).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D13 fossil weights kept as exact fractions (fossils OPEN-09)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.opulent_no_tagless
+    statement: An Opulent Fossil removes every mod that has no tag at all (empty `implicit_tags`) from the pool, on top of its boost of the tag `drop`.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Opulent_Fossil#Mechanics
+    quote: "Tagless modifiers are those without any tags."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.sanctified_level_factor
+    statement: A Sanctified Fossil multiplies the weight of a mod by 1 + (required level of the mod - `value`) / 100 (required level 1 gives 0.61, level 83 gives 1.43).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Fossil#Mechanics
+    quote: "All modifiers x (1 + 0.01 * (<modifier's required level> - 40))"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: 40
+
+  - id: fossils.sanctified_multiplies_whole_weight
+    statement: The Sanctified level factor multiplies the whole weight of the mod (base weight times the fossil tag factor), it is not one of the summed boosts; a blocked mod stays blocked.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
+    quote: "Sanctified multiplies the whole weight: weight = base weight x fossil tag factor x (1 + (tier level - 40)/100) x catalyst"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  # The fossils with their own rule.
+  - id: fossils.special_fossils
+    statement: The fossils that need their own rule, by their name in `fossils.json` (the rest only change tag weights).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/fossils.json
+    quote: '"name": "Tangled Fossil"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: {opulent: Opulent Fossil, tangled: Tangled Fossil, fractured: Fractured Fossil, bloodstained: Bloodstained Fossil, gilded: Gilded Fossil}
+
+  - id: fossils.bloodstained_is_corruption
+    statement: A Bloodstained Fossil rerolls the mods, makes the item corrupted and adds a corrupted implicit. The implicit is corruption (batch B4), so a resonator with a Bloodstained Fossil is out of scope.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Bloodstained_Fossil#Mechanics
+    quote: "The item will reroll all modifiers (in combination with other Fossils) and become corrupted"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.gilded_no_explicit_effect
+    statement: A Gilded Fossil adds the vendor-value implicit beside the existing implicits and changes no explicit mod, so it only takes a socket.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Gilded_Fossil#Mechanics
+    quote: "This implicit mod is separate from the item's actual implicit mod(s) and will not overwrite other implicit mods when applied"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.faceted_adds_mods
+    statement: A Faceted Fossil adds the three Delve suffixes of its `added_mods` to the pool (+1 to Level of Socketed Strength, Dexterity and Intelligence Gems).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Faceted_Fossil#Added_mods
+    quote: "The following fossil exclusive mods are added to the crafting pool when using this fossil:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.added_mods_take_fossil_weights
+    statement: The fossil weight factors also apply to the weights of the mods that a fossil adds.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Fossil#Mechanics
+    quote: "These weight multipliers also affect the weights of rolling fossil-exclusive explicit modifiers, such as from Glyphic Fossil or Faceted Fossil"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.hollow_forces_mod
+    statement: A Hollow Fossil guarantees the suffix `DelveAbyssJewelSocket1` of its `forced_mods` (Has 1 Abyssal Socket). It works on items that carry one of the `allowed_tags` of the record only.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hollow_Fossil#Mechanics
+    quote: "A resonator containing a Hollow Fossil has the effect of guaranteeing a suffix that grants Has 1 Abyssal Socket."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.glyphic_forces_corrupted_essence_mod
+    statement: A Glyphic Fossil guarantees one mod of the corrupted essences (Delirium, Horror, Hysteria, Insanity), the one each lists for the item class, and the other socketed fossils still decide which can appear.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Glyphic_Fossil#Mechanics
+    quote: "guaranteeing an essence modifier from any of the corrupted essences, which are Essence of Delirium, Essence of Horror, Essence of Hysteria and Essence of Insanity"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.glyphic_base_weight
+    statement: Each candidate mod of a Glyphic Fossil has a base weight of `value`, then only the tag factors of the socketed fossils apply (Craft of Exile calls its weight function without the Opulent and Sanctified rules there). A candidate that shares a family with a fractured mod is not a candidate.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D12 Glyphic base weight 1000 (fossils OPEN-07)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+    value: 1000
+
+  - id: fossils.forced_mod_counts_in_total
+    statement: The forced mod of a Hollow or Glyphic Fossil counts inside the total of 4, 5 or 6 mods, as a kept or locked mod does, so only the rest is drawn.
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D4 retained, locked, fractured and forced mods count inside the total"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.forced_mod_ignores_item_level
+    statement: The forced mod of a fossil is put on the item whatever its required level, as the forced mod of an essence is (Craft of Exile hands the Glyphic mod to the same reroll function the essences use).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
+    quote: "An essence's forced mod applies even above the item level"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.tangled_pair_uniform
+    statement: A Tangled Fossil applies one of the 420 outcome records of `fossils.json` (a boost of x30 on one tag and a block of another), each with the same probability. It may pick a tag that another fossil boosts (the terms add) or blocks (the block wins).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531291258
+    quote: "Tangled's pair uniform over the 420 RandomFossilOutcome records of fossils.json"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.tangled_adds_no_mods
+    statement: Since 3.16.0 a Tangled Fossil adds no mods to the pool, so the legacy `added_mods` and `corrupted_essence_chance` of its record are ignored.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tangled_Fossil#Version_history
+    quote: "Tangled Fossils now makes a random Modifier type much more likely, and prevents another random modifier type (previously granted any Fossil modifiers)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.fractured_fossil_fractures_one
+    statement: A resonator with a Fractured Fossil fractures one of the mods it rolls, chosen at random, after the reroll.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "Fractured Fossils now Fracture a random Modifier, and cannot be used on Fractured and Influenced items."
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-30
+
+  - id: fossils.fractured_fossil_refused_on_fractured_or_influenced
+    statement: A Fractured Fossil cannot be used on an item that has a fractured mod or an influence.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "Fractured Fossils now Fracture a random Modifier, and cannot be used on Fractured and Influenced items."
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-30
+
+  - id: fossils.fractured_mod_uniform
+    statement: The mod a Fractured Fossil fractures is uniform among all the explicit mods of the finished item, a forced mod included; the fossil weights do not influence the choice. Taken from the Fracturing Orb rule (uniform over every explicit mod).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D6 Fracturing Orb uniform over every explicit affix, crafted mods and metamods included"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-30
+
+  # Resonators.
+  - id: fossils.chaotic_resonator_sockets
+    statement: A Chaotic resonator has as many fossil sockets as `value` gives for its size, and holds a fossil in each (the fossils of one craft are as many as its sockets).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531423978
+    quote: "Chaotic resonator sockets: Primitive 1, Potent 2, Powerful 3, Prime 4"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: {Primitive: 1, Potent: 2, Powerful: 3, Prime: 4}
+
+  - id: fossils.resonator_rerolls_like_chaos
+    statement: A fully socketed Chaotic resonator rerolls every mod of a rare item and the number of mods as a Chaos Orb does (4, 5 or 6 mods at 8:3:1), with the pool weights changed by the fossils.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/2197540
+    quote: "There are two types of Resonators - Chaotic and Alchemical. These have the functionality of Chaos Orbs and Orbs of Alchemy respectively."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.fractured_mods_kept
+    statement: Fractured mods stay on the item through a resonator reroll, as through a Chaos Orb, and count inside the total.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Resonator#Mechanics
+    quote: "Chaotic and Alchemical Resonators function similarly to Chaos Orb and Orb of Alchemy respectively."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.resonator_rare_only
+    statement: A Chaotic resonator is used on a rare item only.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'DelveStackableSocketableCurrencyReroll1: "Reforges a rare item with new random modifiers", "Right click this item then left click a rare item to apply it."'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.no_duplicate_fossil
+    statement: A resonator holds at most one fossil of each type.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/2197540
+    quote: "Can we stack copies of the same fossils in a Resonator?"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.refused_on_corrupted
+    statement: A corrupted item takes no resonator.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.refused_by_metamod
+    statement: A resonator cannot be used on an item with a metamod (Prefixes Cannot Be Changed, Suffixes Cannot Be Changed, Cannot roll Attack Modifiers, Cannot roll Caster Modifiers); the multimod does not block it.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Resonator
+    quote: "Unlike these orbs, resonators cannot be used on items with metamods"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: fossils.use_restrictions
+    statement: A resonator inherits the use restrictions of its fossils. An item is refused when its base carries none of the `allowed_tags` of a socketed fossil (if it lists any) or one of its `forbidden_tags`.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Resonator
+    quote: "Resonators also inherit item use restrictions from socketed fossils."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
