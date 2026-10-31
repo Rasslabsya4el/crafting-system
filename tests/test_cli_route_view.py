@@ -184,7 +184,7 @@ def test_r12_is_a_buy_and_one_step_that_loops_until_the_gem(r12_plan):
 
     buy, reforge = section.rows
     assert [row.title for row in section.rows] == ["Buy R12 start amulet", "Harvest Reforge Lightning"]
-    assert labels_of(buy) == ["Accepts", "Cost per use", "Step cost"]
+    assert labels_of(buy) == ["Accepts", "Cost per use"]
     assert lines_of(buy, "Cost per use") == ["4 c"]
     assert labels_of(reforge) == ["Goal", "Chance per use", "Cost per use", "Uses on average", "Step cost", "On failure"]
     assert lines_of(reforge, "Goal") == [GEM_TEXT]
@@ -206,7 +206,7 @@ def test_the_goal_card_gives_route_mean_p90_and_prices(r12_plan):
     assert list(fields) == ["Route", "Mean", "9 runs in 10", "Prices"]  # no success line: it is 100%
     assert fields["Route"] == "Cheapest policy of the planner"
     assert fields["Mean"] == f"{money(risk.mean.value + 4.0)} ({risk.mean.value / 300 + 4 / 300:.2g} Divine)"
-    assert fields["9 runs in 10"].startswith("≤ ") and money(risk.p90.value + 4.0) in fields["9 runs in 10"]
+    assert fields["9 runs in 10"].endswith(" or less") and money(risk.p90.value + 4.0) in fields["9 runs in 10"]
     assert fields["Prices"] == "league Test, fetched 2026-10-30"
 
 
@@ -430,7 +430,7 @@ def test_a_step_from_which_no_run_finishes_says_so_without_cost_numbers(two_leaf
     assert row.title.startswith("Restart")
     assert lines_of(row, "Uses on average") == ["never finishes from here"]
     assert "Step cost" not in labels_of(row) and row.cost is None
-    assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"] == "never finishes: the route has gaps"
+    assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"] == "never finishes"
 
 
 def test_a_dead_end_of_the_planners_own_policy_is_a_no_action_row_too():

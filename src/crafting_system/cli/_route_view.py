@@ -53,6 +53,7 @@ from ._route_trade import BuyStep, buy_step
 PLANNER_LABEL = "Cheapest policy of the planner"
 NEVER_FINISHES = "never finishes from here"
 GAPS = "never finishes: the route has gaps"
+NEVER = "never finishes"
 
 # --- the model of the page -------------------------------------------------------------------------------
 
@@ -386,7 +387,6 @@ class _View:
             _plain("Accepts", *self.start_accepts()),
             self.trade_field(),
             _plain("Cost per use", *cost),
-            _plain("Step cost", money(price.chaos)) if price.chaos > 0 else None,
         )
         title = f"Buy {price.name}" if price.name else "Start item"
         after = card_of_item(self.data, self.plan.target.start_item)
@@ -434,8 +434,8 @@ class _View:
         def total(value: float) -> str:
             return f"{money(value + shift)} ({_divine(value + shift, divine)})"
 
-        mean = total(risk.mean.value) if math.isfinite(risk.mean.value) else GAPS
-        p90 = f"≤ {total(risk.p90.value)}" if math.isfinite(risk.p90.value) else "no finish in 9 runs of 10"
+        mean = total(risk.mean.value) if math.isfinite(risk.mean.value) else (GAPS if self.inp.reasons else NEVER)
+        p90 = f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else "no finish in 9 runs of 10"
         success = risk.success_probability.value
         fields = _fields(
             _plain("Route", self.inp.label),
@@ -496,5 +496,5 @@ def write_route_page(
     if route is not None and given is not None:
         sections.append(build_section(given_route_input(plan, route, given), data, buy, prefix="g-", anchor="given"))
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_page(Page(target_name or "Route view", tuple(sections))), encoding="utf-8")
+    path.write_text(render_page(Page(target_name or "Route view", tuple(sections))), encoding="utf-8", newline="\n")
     return path
