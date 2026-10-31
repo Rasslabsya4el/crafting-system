@@ -1,0 +1,66 @@
+<!doctype html>
+<!-- PROTOTYPE for ticket #58, throwaway: the route view the owner accepted on 2026-10-31.
+     R04 guide route; mod texts, essence tiers and bench costs from repoe-fork 3.29.3.3;
+     prices in Chaos and the 4%, 27% chances are invented. The real view is built in ticket #78. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R04 route view prototype</title>
+<style>
+:root{--text-primary:#1f1e1d;--text-secondary:#5f5e5a;--text-muted:#888780;--text-warning:#854f0b;--text-success:#27500a;--text-accent:#3c3489;
+--bg-success:#eaf3de;--bg-accent:#eeedfe;--border:#d3d1c7;--border-success:#97c459;--border-accent:#afa9ec;--border-warning:#ef9f27;--surface-0:#ffffff;--surface-1:#f8f7f3}
+@media (prefers-color-scheme: dark){:root{--text-primary:#f1efe8;--text-secondary:#b4b2a9;--text-muted:#888780;--text-warning:#fac775;--text-success:#c0dd97;--text-accent:#cecbf6;
+--bg-success:#173404;--bg-accent:#26215c;--border:#444441;--border-success:#3b6d11;--border-accent:#534ab7;--border-warning:#854f0b;--surface-0:#1f1e1d;--surface-1:#2c2c2a}}
+body{margin:0;padding:16px;background:var(--surface-0);color:var(--text-primary);font-family:system-ui,sans-serif}
+main{max-width:980px;margin:0 auto}
+.rw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
+@media (max-width:640px){.rw{grid-template-columns:1fr}}
+.cd{border:0.5px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--surface-1);font-size:12px;line-height:1.45}
+.cd h3{font-size:14px;font-weight:500;margin:0 0 6px}
+.f{display:grid;grid-template-columns:104px minmax(0,1fr);gap:4px 8px}
+.k{color:var(--text-muted)}.v{color:var(--text-primary)}.vl{color:var(--text-warning)}
+.nm{font-size:13px;font-weight:500;margin-bottom:3px}
+.pr{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px}
+.pl{font-size:11px;border:0.5px solid var(--border);border-radius:4px;padding:0 5px;color:var(--text-secondary)}
+.sd{font-size:11px;color:var(--text-muted);margin:5px 0 2px}
+.s{font-size:12px;padding:2px 7px;border-radius:6px;margin:2px 0;border:0.5px solid var(--border)}
+.w{background:var(--bg-success);color:var(--text-success);border-color:var(--border-success)}
+.c{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)}
+.a{color:var(--text-secondary)}.e{border-style:dashed;color:var(--text-muted);background:transparent}.i{color:var(--text-secondary);background:transparent}
+.b{font-size:11px;border:0.5px solid var(--border-warning);color:var(--text-warning);border-radius:4px;padding:0 4px;margin-left:4px}
+.ar{text-align:center;color:var(--text-muted);font-size:14px;margin:2px 0}
+.tg{border:1px solid var(--border-success)}.ml div{margin:1px 0}
+</style>
+</head>
+<body>
+<main id="root"></main>
+<script>
+const W=(t,b)=>['w',t,b],C=t=>['c',t,'crafted'],A=()=>['a','any mod'],AE=()=>['a','any mod or empty'],E=()=>['e','empty'];
+const pierce=W('Projectiles Pierce 2 additional Targets'),pierceF=W('Projectiles Pierce 2 additional Targets','fractured');
+const str=W('+(51-58) to Strength'),arrow=W('Bow Attacks fire an additional Arrow'),meta=C('Cannot roll Attack Modifiers');
+const life=W('+# to maximum Life · any of 10 tiers'),bow=W('#% increased Damage with Bow Skills · any of 5 tiers');
+const it=(r,P,S)=>({pr:[r,'item level 81+'],P,S});
+const fin=it('Rare',[pierceF,life,bow],[str,arrow,C('+(29-35)% to Fire Resistance')]);
+const L=(...xs)=>`<div class="ml">${xs.map(x=>`<div>${x}</div>`).join('')}</div>`;
+const F=o=>[['Goal',o.goal],['Accepts',o.ok],['Trade',o.trade],['Chance per use',o.ch],['Cost per use',o.pc],['Uses on average',o.n],['Step cost',o.sc],['On failure',o.miss,1]].filter(r=>r[1]);
+const steps=[
+{t:'Buy Penetrating Arrow Quiver',f:F({goal:'a white quiver to craft on',ok:L('Normal','item level 81+','no influence','not corrupted','not fractured'),trade:'search link, built by the program',pc:'≈5 c',n:'≈4',sc:'≈20 c'}),i:it('Normal',[E(),E(),E()],[E(),E(),E()])},
+{t:'Essence of Insanity',f:F({goal:'a rare quiver with Pierce',ok:'4, 5 or 6 mods, any',ch:L('Pierce: 100%','4 mods: 67%','5 mods: 25%','6 mods: 8%'),pc:'≈4 c',n:'≈1.1',sc:'≈5 c'}),i:it('Rare',[pierce,AE(),AE()],[AE(),AE(),AE()])},
+{t:'Orb of Annulment',f:F({goal:'exactly 4 mods, Pierce kept',ch:'Pierce kept: ≈92%',pc:'≈3 c',n:'≈0.4',sc:'≈1 c',miss:'Pierce removed (≈8%) → step 2'}),i:it('Rare',[pierce,A(),E()],[A(),A(),E()])},
+{t:'Fracturing Orb',f:F({goal:'Pierce fractured',ch:'25%',pc:'≈20 c',n:'≈4',sc:'≈80 c',miss:'another mod fractured (75%) → step 1'}),i:it('Rare',[pierceF,A(),E()],[A(),A(),E()])},
+{t:'Deafening Essence of Rage',f:F({goal:'Bow Attacks fire an additional Arrow',ok:'other mods: any',ch:'≈4%',pc:'≈6 c',n:'≈25',sc:'≈150 c',miss:'no Arrow → this step again'}),i:it('Rare',[pierceF,AE(),AE()],[str,arrow,AE()])},
+{t:'Orb of Annulment',f:F({goal:'only Pierce, Strength and Arrow left',ch:'≈27%',pc:'≈3 c',n:'≈1.5',sc:'≈5 c',miss:'Strength or Arrow removed (≈73%) → step 5'}),i:it('Rare',[pierceF,E(),E()],[str,arrow,E()])},
+{t:'Benchcraft: Cannot roll Attack Modifiers',f:F({goal:'no attack mods from now on',pc:'1 Divine Orb (≈180 c)',sc:'≈180 c'}),i:it('Rare',[pierceF,E(),E()],[str,arrow,meta])},
+{t:'Exalted Orb × 2',f:F({goal:'Life and Damage with Bow Skills',ok:'any tier',ch:'100%',pc:'≈15 c',n:'2',sc:'≈30 c'}),i:it('Rare',[pierceF,life,bow],[str,arrow,meta])},
+{t:'Benchcraft: Remove Crafted Mods, then a suffix',f:F({goal:'a useful suffix instead of the metamod',ok:L('+(29-35)% to Fire Resistance: 3 Chaos Orb','(7-12)% increased Attack Speed: 2 Chaos Orb'),pc:'1 Orb of Scouring + 2–3 Chaos Orb',sc:'≈5 c'}),i:fin}
+];
+const slot=s=>`<div class="s ${s[0]}">${s[1]}${s[2]?`<span class="b">${s[2]}</span>`:''}</div>`;
+const item=(x,cls)=>`<div class="cd ${cls||''}"><div class="nm">Penetrating Arrow Quiver</div><div class="pr">${x.pr.map(p=>`<span class="pl">${p}</span>`).join('')}</div><div class="sd">Implicit</div><div class="s i">Arrows Pierce an additional Target</div><div class="sd">Prefixes</div>${x.P.map(slot).join('')}<div class="sd">Suffixes</div>${x.S.map(slot).join('')}</div>`;
+const card=(n,s)=>`<div class="cd"><h3>${n}. ${s.t}</h3><div class="f">${s.f.map(r=>`<div class="k">${r[0]}</div><div class="${r[2]?'vl':'v'}">${r[1]}</div>`).join('')}</div></div>`;
+let h=`<div class="rw"><div class="cd tg"><h3>Route goal</h3><div class="f"><div class="k">Route</div><div class="v">guide R04, PoE Vault</div><div class="k">Mean</div><div class="v">≈900 c</div><div class="k">9 runs in 10</div><div class="v">≤ ≈2,000 c</div><div class="k">Prices</div><div class="v">invented</div></div></div>${item(fin,'tg')}</div>`;
+steps.forEach((s,k)=>{h+=`<div class="ar">↓</div><div class="rw">${card(k+1,s)}${item(s.i,k===steps.length-1?'tg':'')}</div>`;});
+document.getElementById('root').innerHTML=h;
+</script>
+</body>
+</html>
