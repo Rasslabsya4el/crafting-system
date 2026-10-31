@@ -177,3 +177,11 @@ def test_the_target_form_still_works_next_to_the_benchmark_command(tmp_path):
     code = main([str(R12), "--json", str(out)], data=DATA, prices=price_file(), env={}, today=TODAY)
 
     assert code == 0 and json.loads(out.read_text(encoding="utf-8"))["format"] == "crafting-system-policy/1"
+
+
+def test_the_benchmark_lists_r12_r10_r11_and_r05_with_their_target_and_route_files():
+    root = Path(__file__).resolve().parents[1]
+
+    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05"]
+    for bench in benchmark_module.BENCHMARKS:
+        assert (root / bench.target).is_file() and (root / bench.route).is_file(), bench.id

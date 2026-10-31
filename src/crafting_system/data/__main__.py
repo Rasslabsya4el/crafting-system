@@ -9,7 +9,9 @@ the word `pinned` (the active pin, checked against the hashes in code) or a full
 repoe-fork commit. A commit that is not the pin is downloaded once and its hashes are learned
 (see `candidate`); the lines to paste into `PIN` to move to it are printed after the diff. Only
 files that are missing or wrong are downloaded, and the diff covers mods, weights, families,
-tags, bench options, essences and fossils.
+tags, bench options, essences and fossils. After the diff comes the impact report (see `impact`):
+the targets, routes, claims and tests of this checkout that name something that changed;
+`--no-impact` leaves it out, and a copy of the package without a checkout around it prints none.
 
 A `DataError` prints `error: <message>` to stderr and exits 1; wrong usage exits 2 (argparse).
 The later cli module wraps this.
@@ -23,6 +25,7 @@ from .candidate import candidate_pin, pin_lines
 from .diff import diff_game_data
 from .errors import DataError, RawFormatError
 from .fetch import OpenUrl, fetch, verify_cache, version_folder
+from .impact import compute_impact, find_repo_root, render_impact
 from .load import load_game_data
 from .model import GameData
 from .pin import PIN, RepoePin, is_commit
@@ -62,7 +65,7 @@ def _load_version(version: str, pin: RepoePin, open_url: OpenUrl | None) -> tupl
     return data, f"commit {version[:12]}", learned
 
 
-def _diff(old: str, new: str, pin: RepoePin, open_url: OpenUrl | None) -> None:
+def _diff(old: str, new: str, pin: RepoePin, open_url: OpenUrl | None, *, impact: bool) -> None:
     old_data, old_label, old_learned = _load_version(old, pin, open_url)
     new_data, new_label, new_learned = _load_version(new, pin, open_url)
     text = diff_game_data(old_data, new_data, old_label=old_label, new_label=new_label)
@@ -70,6 +73,10 @@ def _diff(old: str, new: str, pin: RepoePin, open_url: OpenUrl | None) -> None:
     if reconfigure is not None:  # a console that cannot show a character gets an escape, not a crash
         reconfigure(errors="backslashreplace")
     print(text)
+    root = find_repo_root() if impact else None
+    if root is not None:
+        print()
+        print(render_impact(compute_impact(old_data, new_data, root), old_label, new_label))
     for learned in (old_learned, new_learned):
         if learned is not None:
             print(f"\nPin lines for commit {learned.commit} (paste into PIN in pin.py, with its new version):")
@@ -96,11 +103,16 @@ def main(argv: Sequence[str] | None = None, *, pin: RepoePin = PIN, open_url: Op
             "Print what changed from OLD to NEW in mods, weights, families, tags, bench options, essences "
             f"and fossils. Each of OLD and NEW is the word '{PINNED}' (the active pin) or a full "
             "40-character repoe-fork commit. A commit that is not the pin is downloaded once and its "
-            "hashes are learned; the lines to paste into PIN are printed after the diff."
+            "hashes are learned. The diff is followed by an impact report (the targets, routes, claims and "
+            "tests of this checkout that name something that changed; --no-impact leaves it out) and the "
+            "lines to paste into PIN."
         ),
     )
     compare.add_argument("old", type=_version, metavar="OLD", help=f"'{PINNED}' or a repoe-fork commit")
     compare.add_argument("new", type=_version, metavar="NEW", help=f"'{PINNED}' or a repoe-fork commit")
+    compare.add_argument(
+        "--no-impact", action="store_true", help="leave out the report of what the change touches in this repo"
+    )
     try:
         args = parser.parse_args(argv)
         if args.command == "diff":
@@ -120,7 +132,7 @@ def main(argv: Sequence[str] | None = None, *, pin: RepoePin = PIN, open_url: Op
             for pinned in pin.files:
                 print(_line(pinned.name, "ok", pinned.size, pinned.sha256))
         else:
-            _diff(old, new, pin, open_url)
+            _diff(old, new, pin, open_url, impact=not args.no_impact)
     except (DataError, ValueError) as error:  # ValueError: a broken crafting.toml or CRAFTING_CONFIG
         print(f"error: {error}", file=sys.stderr)
         return 1

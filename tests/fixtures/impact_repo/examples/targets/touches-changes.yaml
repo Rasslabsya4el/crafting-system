@@ -1,0 +1,9 @@
+# Fixture target for the impact report tests: it names things the seeded second version changes.
+base: Leather Belt
+item_level: 86
+requirements:
+  # ColdResist1 is changed in the seeded version, so its family is touched.
+  - family: ColdResistance
+    min_tier: 1
+  # The same mod named by its text: the range differs between the versions, the text with # does not.
+  - stat: "+#% to Cold Resistance"

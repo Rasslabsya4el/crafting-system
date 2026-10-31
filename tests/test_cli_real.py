@@ -110,9 +110,10 @@ def test_without_a_lifeforce_price_the_reforge_is_dropped_and_the_chaos_orb_poli
 
     document = read_json(out)
     assert code == 0
-    assert document["dropped_actions"] == [
-        {"action": "Harvest Reforge Lightning", "missing_prices": ["Primal Crystallised Lifeforce"]}
-    ]
+    dropped = {drop["action"]: drop["missing_prices"] for drop in document["dropped_actions"]}
+    assert dropped.pop("Harvest Reforge Lightning") == ["Primal Crystallised Lifeforce"]
+    assert dropped and all(name.startswith(("Bench craft", "Remove")) or "Essence of" in name for name in dropped)
+    # the price file of this test holds no essence and no bench currency
     (state,) = document["states"]
     assert state["action"] == "Chaos Orb"
     assert 0.0 < state["goal_chance_per_use"] < 0.01  # about 0.42% a Chaos Orb, the weights are huge integers

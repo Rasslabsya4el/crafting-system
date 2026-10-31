@@ -82,6 +82,28 @@ BENCHMARKS = (
             PublishedOdds("Harvest Reforge Lightning", GEM, NO_MODS, "1.338%"),
         ),
     ),
+    # The guides of these three publish no odds, so there is nothing to recompute (ticket #60).
+    BenchmarkRoute(
+        "R10",
+        "Fractured Movement Speed Intelligence boots (PoE Vault guide)",
+        "examples/targets/r10-fractured-boots.yaml",
+        "examples/routes/r10-fractured-boots.yaml",
+        (),
+    ),
+    BenchmarkRoute(
+        "R11",
+        "Fractured Chaos Resistance reservation helmet (TbXie guide)",
+        "examples/targets/r11-reservation-helmet.yaml",
+        "examples/routes/r11-reservation-helmet.yaml",
+        (),
+    ),
+    BenchmarkRoute(
+        "R05",
+        "Budget fractured All Attributes Strength ring (PoE Vault guide)",
+        "examples/targets/r05-strength-ring.yaml",
+        "examples/routes/r05-strength-ring.yaml",
+        (),
+    ),
 )
 
 # What a route can fail with; each is written into the route's entry, none ends the command.

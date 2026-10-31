@@ -1,0 +1,23 @@
+# Given route for benchmark route R05: a budget ring with a fractured All Attributes.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# It does not search for anything: in every state the FIRST rule whose conditions match is the one
+# that is followed. A goal state is never acted on. A state no rule matches is reported as a gap.
+# Lines starting with # are comments and are ignored. The conditions and actions are explained in
+# examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (PoE Vault, "Shrapnel Ballista Hierophant gear and flasks", docs/research/
+# 2026-10-30-5-reference-routes.md, id R05):
+#   1. Buy a ring with a fractured All Attributes.
+#   2. Use Deafening Essence of Rage until the other modifiers are useful ones, Life or
+#      Resistances.
+#   3. Catalyst quality (B2) and the bench on an open modifier (the target counts a crafted Life
+#      or Resistance, but the guide uses the bench only to fill a free slot after the rolls).
+
+name: R05, PoE Vault guide
+
+rules:
+  - when:
+      rarity: rare
+    do: Deafening Essence of Rage

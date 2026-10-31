@@ -1,0 +1,18 @@
+# R10 start item (docs/research/2026-10-30-5-reference-routes.md): rare Intelligence-base boots with
+# a fractured Movement Speed of 30% or more. The target file is examples/targets/r10-fractured-boots.yaml;
+# its `start_price` is the `name` below.
+#
+# The base is the one of the target (an Intelligence boot base, whose armour is Energy Shield), and
+# the item level is the one of the target, so the item bought is the item the planner starts from.
+name: R10 start boots
+base_type: Sorcerer Boots
+category: armour.boots
+rarity: rare
+item_level_min: 84
+corrupted: false
+mods:
+  # The English text of the trade site, because the family has mods with other texts. 30 is the
+  # lowest Movement Speed that passes the target (tier 2).
+  - stat: "#% increased Movement Speed"
+    minimum: 30
+    fractured: true

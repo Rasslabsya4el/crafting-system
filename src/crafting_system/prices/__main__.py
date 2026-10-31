@@ -50,6 +50,7 @@ from .trade_pricing import (
     merge_trade_prices,
     price_buy_spec,
     refuse_name_collision,
+    stale_trade_warnings,
     store_trade_price,
 )
 from .trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS, load_buy_spec
@@ -109,7 +110,9 @@ def main(
         overrides_path = default_overrides_path(config)
         if args.command == "fetch":
             instant = now if now is not None else datetime.now(UTC)
-            old_file = _old_price_file(price_path)
+            old_file, old_problem = _old_price_file(price_path)
+            if old_problem:
+                print(f"Warning: the old price file was not kept: {old_problem}")
             result = fetch_price_file(
                 get_json
                 if get_json is not None
@@ -125,7 +128,7 @@ def main(
                 overrides=load_overrides(overrides_path),
                 old_price_file=old_file,
             )
-            new_file, trade_warnings = merge_trade_prices(result.price_file, _old_price_file(price_path))
+            new_file, trade_warnings = merge_trade_prices(result.price_file, _old_price_file(price_path)[0])
             write_price_file(price_path, new_file)
             print(f"League {new_file.league}: {len(new_file.prices)} prices written to {price_path}")
             if result.thin:
@@ -138,9 +141,12 @@ def main(
         merged = load_prices(price_path, overrides_path)  # overrides count as priced
         if args.command == "check":
             print(f"League {merged.league}, fetched {merged.fetched_at:%Y-%m-%d}: {len(merged.prices)} prices")
-            stale = stale_warning(merged, today if today is not None else datetime.now(UTC).date())
+            day = today if today is not None else datetime.now(UTC).date()
+            stale = stale_warning(merged, day)
             if stale:
                 print(f"Warning: {stale}")
+            for line in stale_trade_warnings(merged, day):
+                print(f"Warning: {line}")
         missing = missing_prices(wanted, merged.prices)
         if missing:
             print(f"No price for {len(missing)} wanted resources:")
@@ -152,12 +158,17 @@ def main(
     return 0
 
 
-def _old_price_file(path: Path) -> PriceFile | None:
-    """The price file on disk, or None when there is none or it does not load (a fetch replaces it)."""
+def _old_price_file(path: Path) -> tuple[PriceFile | None, str | None]:
+    """(the price file on disk, None), or (None, why) when it does not load (a fetch replaces it).
+
+    A missing file is (None, None): there is nothing to report.
+    """
     try:
-        return load_price_file(path)
-    except (ValueError, OSError):
-        return None
+        return load_price_file(path), None
+    except PriceFileNotFound:
+        return None, None
+    except (ValueError, OSError) as error:
+        return None, str(error)
 
 
 def _trade(

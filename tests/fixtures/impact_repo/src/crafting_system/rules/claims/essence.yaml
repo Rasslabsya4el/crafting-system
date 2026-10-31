@@ -1,0 +1,9 @@
+rules:
+  - id: essence.fixture_changed
+    statement: A claim whose quote names an essence that the seeded second version changes.
+    quote: 'CurrencyEssenceHatred1: "mods": {"Amulet": "ColdDamagePercentEssence1"}'
+    patch_verified: "3.29.3.3"
+  - id: essence.fixture_untouched
+    statement: A claim that names only things the seeded second version leaves alone.
+    quote: 'CurrencyEssenceRage4 adds ChaosResist1 on a Belt'
+    patch_verified: "3.29.3.3"

@@ -10,14 +10,16 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
           corrupted: false
           fractured: none             # or [{family: LightningResistance}]: every listed family is fractured on the item
           crafted_mods: false         # the item holds a crafted mod or metamod
+          open_suffixes: 1            # at least this many free suffixes (open_prefixes likewise); needs a bench action offered
           requirements:               # the status of a requirement of the target, named by its selector
             - stat: "+1 to Level of all Lightning Skill Gems"    # or `family: ID`, as the target writes it
               status: absent          # absent, below or passing, or a list of them
         do: Harvest Reforge Lightning # an action as the solver prints it, or `restart`
 
 `restart` buys the start item again: an action that costs the start price and ends in the start state.
-Conditions speak only of what the compressed state holds; one it cannot answer yet (mods per side, free
-slots, metamods) is refused, not guessed. A goal state is never acted on. A reachable state that no rule
+Conditions speak only of what the compressed state holds; one it cannot answer yet (mods per side, metamods)
+is refused, not guessed. `open_prefixes` and `open_suffixes` count the free slots of a side, which the state holds only
+when a bench action is offered (the other mods are then kept as slots); without one they are refused. A goal state is never acted on. A reachable state that no rule
 covers (or where the game refuses the rule's action) is a GAP: it has no policy entry, so the route
 never finishes from there, which `risk.evaluate` reports as a success chance below 1 and an infinite
 mean. Errors are worded `<file>:<line>: <key path>: <problem>`, as the target loader's are.
@@ -30,9 +32,9 @@ from pathlib import Path
 from typing import NoReturn
 
 from crafting_system.abstraction import CompressedState, Status
-from crafting_system.actions import ActionError
+from crafting_system.actions import ActionError, BenchCraft, RemoveCraftedMods
 from crafting_system.data import GameData
-from crafting_system.items import Rarity
+from crafting_system.items import Rarity, Side, capacity
 from crafting_system.risk import RiskReport, evaluate
 from crafting_system.solver import Action, Outcome
 from crafting_system.targets import KOfN, Requirement, TargetError
@@ -46,7 +48,7 @@ from ._reach import policy_states
 RESTART = "restart"
 TOP_KEYS = ("name", "rules")
 RULE_KEYS = ("when", "do")
-WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "requirements")
+WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "requirements")
 REQUIREMENT_KEYS = ("stat", "family", "status")
 RARITIES = tuple(rarity.value for rarity in Rarity)
 STATUSES = tuple(status.name.lower() for status in Status)
@@ -54,7 +56,7 @@ STATUSES = tuple(status.name.lower() for status in Status)
 # Conditions a later ticket adds to the compressed state; until then a rule using one is refused.
 REFUSED_KEYS = (
     "prefixes", "suffixes", "free_prefixes", "free_suffixes", "free_slots", "metamods", "mods_per_side",
-    "open_prefixes", "open_suffixes", "prefix_count", "suffix_count", "crafted_prefixes", "crafted_suffixes",
+    "prefix_count", "suffix_count", "crafted_prefixes", "crafted_suffixes",
 )  # fmt: skip
 
 
@@ -72,6 +74,7 @@ class When:
     fractured_families: tuple[str, ...] = ()
     crafted: bool | None = None
     statuses: tuple[tuple[int, frozenset[Status]], ...] = ()  # (index of the requirement leaf, statuses allowed)
+    open_slots: tuple[tuple[Side, int, int], ...] = ()  # (side, capacity of the side, free slots wanted at least)
 
     def matches(self, state: CompressedState, data: GameData) -> bool:
         if self.rarities is not None and state.flags.rarity not in self.rarities:
@@ -85,6 +88,11 @@ class When:
         if self.fractured_families:
             held = {family for entry in state.fractured for family in data.mods[entry.mod_id].families}
             if not held.issuperset(self.fractured_families):
+                return False
+        for side, room, wanted in self.open_slots:
+            held = sum(data.mods[entry.mod_id].generation_type == side.value for entry in state.fractured)
+            held += sum(slot.side is side for slot in state.slots)
+            if room - held < wanted:
                 return False
         return all(state.status[index] in allowed for index, allowed in self.statuses)
 
@@ -267,6 +275,9 @@ class _Reader:
         for key, field in (("corrupted", "corrupted"), ("crafted_mods", "crafted")):
             if key in when:
                 fields[field] = self.flag(when, key, f"{path}.{key}")
+        open_slots = self.read_open_slots(when, path)
+        if open_slots:
+            fields["open_slots"] = open_slots
         if "fractured" in when:
             fields.update(self.read_fractured(when["fractured"], f"{path}.fractured", when.key_lines["fractured"]))
         if "requirements" in when:
@@ -274,6 +285,25 @@ class _Reader:
                 when["requirements"], f"{path}.requirements", when.key_lines["requirements"]
             )
         return When(**fields)
+
+    def read_open_slots(self, when: LineMap, path: str) -> tuple[tuple[Side, int, int], ...]:
+        found = []
+        for key, side in (("open_prefixes", Side.PREFIX), ("open_suffixes", Side.SUFFIX)):
+            if key not in when:
+                continue
+            value, line = when[key], when.key_lines[key]
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                self.fail(line, f"{path}.{key}", f"must be a whole number of free slots, 0 or more, got {describe(value)}")
+            if not any(isinstance(p.offer.action, (BenchCraft, RemoveCraftedMods)) for p in self.plan.offers):
+                self.fail(
+                    line,
+                    f"{path}.{key}",
+                    "the states of this plan keep no mods besides the fractured ones (no bench action is offered), "
+                    "so the free slots cannot be counted; leave the condition out",
+                )
+            room = capacity(self.data, self.plan.target.base_id, Rarity.RARE).of(side)
+            found.append((side, room, value))
+        return tuple(found)
 
     def read_rarities(self, when: LineMap, path: str) -> frozenset[Rarity]:
         value, line = when["rarity"], when.key_lines["rarity"]

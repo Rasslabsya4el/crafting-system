@@ -463,3 +463,58 @@ def test_the_route_composes_with_verify(tmp_path, capsys):
     document = read_json(out)
     assert code == 0 and "verification" in document and "given_route" in document
     assert "Given route" in capsys.readouterr().out
+
+
+# --- open slots (ticket #60) ---------------------------------------------------------------------
+
+
+def test_open_suffixes_is_refused_when_the_plan_keeps_no_mods_besides_the_fractured_ones(plan):
+    message = error_of(f"rules:\n  - when:\n      open_suffixes: 1\n    do: {CHAOS}\n", plan)
+
+    assert message.startswith("route.yaml:3: rules[0].when.open_suffixes: ")
+    assert "no bench action is offered" in message
+
+
+def test_open_suffixes_must_be_a_whole_number(plan):
+    message = error_of(f"rules:\n  - when:\n      open_suffixes: lots\n    do: {CHAOS}\n", plan)
+
+    assert message.startswith("route.yaml:3: rules[0].when.open_suffixes: must be a whole number")
+
+
+def test_open_prefixes_and_suffixes_count_what_is_free_on_the_item():
+    """A rare belt holds 3 prefixes and 3 suffixes; `open_*: n` asks for at least n of them free."""
+    from cli_support import price_file as prices_of
+    from items_support import item, roll
+
+    from crafting_system.actions import BenchCraft
+    from crafting_system.cli import Offer
+
+    belt = "Metadata/Items/Belts/Belt3"
+    target = parse_target(
+        f"base: Leather Belt\nitem_level: 86\nrequirements:\n  - family: IncreasedLife\nstart_item:\n  rarity: rare\n",
+        DATA,
+        source="belt.yaml",
+    )
+    offers = [Offer(CHAOS, ChaosOrb(), {CHAOS: 1}), Offer("Craft damage", BenchCraft("JunMaster2AllDamage2_"), {CHAOS: 4})]
+    belt_plan = make_plan(DATA, target, prices_of(), offers=offers)
+    route = read(
+        """
+        rules:
+          - when:
+              open_prefixes: 3
+            do: Chaos Orb
+          - when:
+              open_prefixes: 2
+              open_suffixes: 2
+            do: Craft damage
+          - do: Chaos Orb
+        """,
+        belt_plan,
+    )
+    state_of = lambda *mods: belt_plan.abstraction.compress(item(*mods, base_id=belt, item_level=86))  # noqa: E731
+    empty, two_held = state_of(), state_of(roll("IncreasedLife1"), roll("LightningResist1"))
+    crowded = state_of(roll("IncreasedLife1"), roll("JunMaster2AllDamage2_", crafted=True))  # two prefixes
+
+    assert [rule.when.matches(empty, DATA) for rule in route.rules] == [True, True, True]
+    assert [rule.when.matches(two_held, DATA) for rule in route.rules] == [False, True, True]
+    assert [rule.when.matches(crowded, DATA) for rule in route.rules] == [False, False, True]
