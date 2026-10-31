@@ -15,7 +15,7 @@ rules:
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
     quote: "D5 Annulment uniform, the other side's metamod a candidate (basic currency O-04/O-06, bench O-09)"
-    patch_verified: "3.29.0.3"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
   - id: annulment_orb.never_downgrades_rarity

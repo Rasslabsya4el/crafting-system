@@ -39,16 +39,16 @@ rules:
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: 'poec_simRollAffix(null,null,null,fossil,noaffix-prmods,!0,!1,enforcetag,igcrca,rfmlk,rfmlkt,rfmlkv,!1,"|",graveyard,overrideMaxAff)'
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: chaos_orb.dry_pool_leaves_fewer_mods
     statement: When no mod can be added any more (the pool is empty, or both sides are full) before the total is reached, the reroll stops and the item keeps the mods it has (decision D4 of issue #28, Craft of Exile row CHK-013).
     source_kind: coe
     url: https://github.com/Rasslabsya4el/crafting-system/blob/research/coe-wiki-checklist/docs/research/2026-10-30-coe-wiki-checklist.md
     quote: "a dry pool leaves fewer mods"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: chaos_orb.removes_crafted_mods
     statement: A Chaos Orb removes the ordinary crafted (bench) mods of the rare item like any other mod that is not fractured, so none is retained; the metamods, which change what the orb does, are in metamods.yaml (locks keep a side, Attack/Caster filter the draw).

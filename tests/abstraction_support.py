@@ -90,7 +90,7 @@ def passing_chance(kernel, leaf: int) -> Fraction:
 
 
 def real_game_data():
-    """The real 3.29.3.3 dump from the cache, or a clean skip when it is not there (CI has no cache)."""
+    """The real 3.29.3.3 dump from the cache, or a clean skip when it is not there (CI fetches it, ticket #165)."""
     try:
         return load_game_data()
     except MissingDataError as problem:
