@@ -31,3 +31,26 @@ ago, and the cheapest of those was a 1-Chaos listing from August.
 Both recordings were made with `status: available`. From #133 the query sends `securable` (instant
 buyout) and no listing-age window by default; the tests that compare a body with `search_body_r12_1week.json`
 swap in the new status. The recorded listings stay the price data of those tests.
+
+## Start items of the real routes (#163), 2026-10-31
+
+Four anonymous runs of `python -m crafting_system.prices trade --spec examples/buy/<spec>.yaml` against
+`Allflame` (patch 3.29), each one search and one fetch, with the #133 query: instant buyout (`status: securable`),
+no listing-age window, the mean of the 5 cheapest of the first 10 listings. `start_items/` keeps, per route
+(`r10` boots, `r11` helmet, `r05` ring, `r12` amulet):
+
+- `search_body_<route>.json`: the body that was sent (the buy spec of `examples/buy/` turned into stat ids).
+- `search_<route>.json`, `headers_search_<route>.json`: the search answer, unchanged, and its headers.
+- `fetch_<route>.json`, `headers_fetch_<route>.json`: the first 10 listings, trimmed as above; price, listing date
+  and the item's mods kept.
+
+| route | buy spec | search | price |
+|---|---|---|---|
+| R10 | `r10-start-boots.yaml` | fractured Movement Speed 30+, ilvl 84+, Sorcerer Boots | 17 c |
+| R11 | `r11-start-helmet.yaml` | fractured Chaos Resistance 31+ (tier 1), ilvl 84+, Lion Pelt | 20 c |
+| R05 | `r05-start-ring.yaml` | fractured +# to all Attributes 13+, ilvl 75+ | 2.6 c |
+| R12 | `r12-start-amulet.yaml` | fractured Lightning Resistance (any roll), ilvl 75+ | 1 c |
+
+Each price sits in `../../prices/routes-allflame-2026-10-31.json` with its date, listing count, query and query hash;
+`tests/test_prices_start_items.py` replays the recording against it. The instant-buyout cheapest listings of any age
+are often months old (July and August); that is the #133 rule, not a mistake of the recording.

@@ -1,0 +1,53 @@
+{
+ "query": {
+  "status": {
+   "option": "securable"
+  },
+  "stats": [
+   {
+    "type": "and",
+    "filters": [
+     {
+      "id": "fractured.stat_2250533757",
+      "disabled": false,
+      "value": {
+       "min": 30
+      }
+     }
+    ]
+   }
+  ],
+  "filters": {
+   "type_filters": {
+    "filters": {
+     "rarity": {
+      "option": "rare"
+     },
+     "category": {
+      "option": "armour.boots"
+     }
+    }
+   },
+   "misc_filters": {
+    "filters": {
+     "ilvl": {
+      "min": 84
+     },
+     "corrupted": {
+      "option": "false"
+     },
+     "mirrored": {
+      "option": "false"
+     },
+     "fractured_item": {
+      "option": "true"
+     }
+    }
+   }
+  },
+  "type": "Sorcerer Boots"
+ },
+ "sort": {
+  "price": "asc"
+ }
+}
