@@ -1,0 +1,5 @@
+rules:
+  - id: fossils.fixture_changed
+    statement: A claim naming a fossil that the seeded second version changes.
+    quote: 'CurrencyDelveCraftingFire boosts fire mods'
+    patch_verified: "3.29.3.3"
