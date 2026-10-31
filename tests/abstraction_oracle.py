@@ -11,7 +11,12 @@ kept mods count inside that total; every draw picks one candidate mod in proport
 from both sides together; the family of a drawn mod leaves the pool; a side holds three mods and a
 full side closes; a draw with no candidate left stops the reroll with fewer mods; a tagged reforge
 first draws one mod with the tag, in proportion to the weight of the tagged mods, and that draw
-counts inside the total too (and is made whatever the total is).
+counts inside the total too (and is made whatever the total is). An essence also puts its forced
+mod on the item before any draw (a kept mod: it counts inside the total and its family and side slot
+are used) and a low essence caps the required level of the drawn mods.
+
+The bench is plain code here too: `crafted_item` puts a crafted mod on an item, `uncrafted_item`
+takes every crafted mod off it.
 
 The walk is over ordered draws, kept as a distribution over the set of mod ids drawn so far: the
 chance of a set is the sum over the orders that reach it. A set with no candidate left stays as it
@@ -27,7 +32,7 @@ from fractions import Fraction
 
 from crafting_system.actions import build_pool
 from crafting_system.data import GameData, Mod
-from crafting_system.items import ExplicitMod, Item, tier_table
+from crafting_system.items import ExplicitMod, Item, Rarity, tier_table
 
 CAP = 3
 SIDES = ("prefix", "suffix")
@@ -49,13 +54,20 @@ def guaranteed_tag(action: object) -> str | None:
     return getattr(action, "tag", None)
 
 
-def finished_items(data: GameData, start: Item, tag: str | None = None) -> list[tuple[Item, Fraction]]:
+def finished_items(
+    data: GameData, start: Item, tag: str | None = None, *, forced: str | None = None, cap: int | None = None
+) -> list[tuple[Item, Fraction]]:
     """Every finished item of rerolling `start` (kept: its fractured mods) with its exact probability.
 
+    `forced` is the id of the forced mod of an essence and `cap` the level cap of a low essence.
     Raises `ValueError` when `tag` is given and no tagged mod can be drawn first. `start` is taken to
-    be a rare, uncorrupted, uninfluenced item without a crafted mod: refusals are not the oracle's business.
+    be an uncorrupted, uninfluenced item that the action accepts: refusals are not the oracle's business.
     """
-    retained = start.changed(data, mods=start.fractured_mods)
+    kept_mods = start.fractured_mods
+    if forced is not None:
+        low = tuple(min(stat.min, stat.max) for stat in data.mods[forced].stats)
+        kept_mods = (*kept_mods, ExplicitMod(forced, tier_table(data, start.base_id).get(forced, 1), low))
+    retained = start.changed(data, rarity=Rarity.RARE, mods=kept_mods)
     kept = len(retained.mods)
     room = {
         side: CAP - sum(data.mods[entry.mod_id].generation_type == side for entry in retained.mods)
@@ -63,7 +75,7 @@ def finished_items(data: GameData, start: Item, tag: str | None = None) -> list[
     }
     candidates = [
         Candidate(entry.mod, family.family, family.side.value, entry.weight)
-        for family in build_pool(data, retained)
+        for family in build_pool(data, retained, cap)
         for entry in family.mods
     ]
     by_id = {candidate.mod.id: candidate for candidate in candidates}
@@ -118,6 +130,17 @@ def finished_items(data: GameData, start: Item, tag: str | None = None) -> list[
 def _drawn(data: GameData, tiers: Mapping[str, int], mod_id: str) -> ExplicitMod:
     stats = data.mods[mod_id].stats
     return ExplicitMod(mod_id, tiers[mod_id], tuple(min(stat.min, stat.max) for stat in stats))
+
+
+def crafted_item(data: GameData, start: Item, mod_id: str) -> Item:
+    """`start` with the crafted mod `mod_id` added at the low end of its range."""
+    low = tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats)
+    return start.add_mod(data, ExplicitMod(mod_id, 1, low, crafted=True))
+
+
+def uncrafted_item(data: GameData, start: Item) -> Item:
+    """`start` without any crafted mod."""
+    return start.changed(data, mods=tuple(entry for entry in start.mods if not entry.crafted))
 
 
 def compressed_distribution(

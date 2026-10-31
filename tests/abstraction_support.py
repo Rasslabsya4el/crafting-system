@@ -54,21 +54,27 @@ def abstraction(goal: Goal | str = "r12", level: int = LEVEL) -> Abstraction:
     return Abstraction(SMALL, GOALS[goal] if isinstance(goal, str) else goal, AMULET, level)
 
 
-_FINISHED: dict[tuple[Item, str | None], list] = {}
+_FINISHED: dict[tuple, list] = {}
 
 
-def expected_kernel(ab: Abstraction, start: Item, action) -> dict[Hashable, Fraction]:
+def expected_kernel(
+    ab: Abstraction, start: Item, action, *, data=SMALL, forced: str | None = None, cap: int | None = None
+) -> dict[Hashable, Fraction]:
     """The brute-force kernel of `action` on `start`: every finished item, compressed and added up."""
     tag = guaranteed_tag(action)
-    if (start, tag) not in _FINISHED:
-        _FINISHED[start, tag] = finished_items(SMALL, start, tag)
-    return compressed_distribution(_FINISHED[start, tag], ab.compress)
+    key = (id(data), start, tag, forced, cap)
+    if key not in _FINISHED:
+        _FINISHED[key] = finished_items(data, start, tag, forced=forced, cap=cap)
+    return compressed_distribution(_FINISHED[key], ab.compress)
 
 
-def check_kernel(ab: Abstraction, start: Item, action) -> dict[CompressedState, Fraction]:
-    """Assert that the kernel of `compress(start)` equals the brute force exactly, and return it."""
+def check_kernel(ab: Abstraction, start: Item, action, **oracle) -> dict[CompressedState, Fraction]:
+    """Assert that the kernel of `compress(start)` equals the brute force exactly, and return it.
+
+    `oracle` is what the brute force needs to know about an essence: `data`, `forced` and `cap`.
+    """
     kernel = ab.kernel(ab.compress(start), action)
-    assert_same_distribution(kernel, expected_kernel(ab, start, action))
+    assert_same_distribution(kernel, expected_kernel(ab, start, action, **oracle))
     assert sum(kernel.values()) == 1
     return dict(kernel)
 
