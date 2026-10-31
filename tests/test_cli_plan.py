@@ -131,7 +131,8 @@ def test_an_action_without_a_price_is_dropped_and_listed(tmp_path, capsys):
 
     assert code == 0
     document = read_json(out)
-    assert document["dropped_actions"] == [{"action": "Harvest Reforge Lightning", "missing_prices": [LIFEFORCE]}]
+    dropped = {drop["action"]: drop["missing_prices"] for drop in document["dropped_actions"]}
+    assert dropped["Harvest Reforge Lightning"] == [LIFEFORCE]  # the other reforges lack their own lifeforce
     assert document["states"][0]["action"] == "Chaos Orb"
     assert "Dropped for lack of a price: Harvest Reforge Lightning" in capsys.readouterr().out
 
