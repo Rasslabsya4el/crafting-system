@@ -1,7 +1,7 @@
 """The per-click chances of route R13 (T1 life, double-resist belt by Alteration and Regal), on the real 3.29.3.3 dump (ticket #64).
 
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`, set the cache folder with
-`CRAFTING_CACHE_DIR`). They skip cleanly when it is not there, which is the case in CI.
+`CRAFTING_CACHE_DIR`). They skip cleanly when it is not there; CI fetches it (ticket #165), so they run there.
 
 The route (reference routes, R13): Alteration until the magic belt holds T1 Life and a T1 resistance,
 then a Regal Orb for a second T1 resistance. The base is the Leather Belt (the belt of the other

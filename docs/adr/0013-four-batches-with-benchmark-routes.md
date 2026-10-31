@@ -18,3 +18,12 @@ Origin: [Design grill round 1: foundations](https://github.com/Rasslabsya4el/cra
 - Every bench craft counts as unlocked (main chat, 2026-10-30, in [Owner decisions on B1 mechanics no source or Craft of Exile settles](https://github.com/Rasslabsya4el/crafting-system/issues/28)).
 - Methods the owner added to v1 on 2026-10-30 without a batch yet (Orb of Chance; sockets, links and colours; Harvest crafts other than reforges; Rog; Runesmithing; Foulborn currencies, Memory Strands and Orb of Remembrance; Hinekora's Lock; Tainted currencies) get their batch from [Every crafting method in 3.29 and its batch](https://github.com/Rasslabsya4el/crafting-system/issues/29).
 - Out of v1: Necropolis gravecrafting and the 3.29 league mechanic (owner, 2026-10-30).
+
+## Amendment: B2 as grilled ([Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93), 2026-10-31)
+
+The grill fixed what B2 contains; the designs are ADR-0025 to ADR-0030.
+
+- **Added to B2**: Harvest add/remove and the resistance and damage swaps; the Wild Bristle Matron and the side-swap beasts; aspects; the Talisman single and double fractures; the beast influence recipes, modelled as that influence's Exalted Orb and marked unverified.
+- **Not in B2**: Orb of Chance (no route uses it and the magic/rare split is unmeasured); it has no batch, so it stays out of v1 until one is charted.
+- **Out of v1**: Eldritch implicits on amulets; Randomise Influence; the Talisman base reroll; start items with a signature or double veil; Tainted catalysts.
+- **Route notes**: R20 starts from a bought base in B2 (the Awakener's Orb that makes its dual influence is B3). R07 is re-read in 3.29: the veiled Trigger mod has weight 0, so its route is the bench Trigger plus the unveiled minion speed. R05 gains its catalyst line (ADR-0029).

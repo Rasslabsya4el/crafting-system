@@ -64,16 +64,16 @@ rules:
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "poec_simRollAffix(null,forcetag,null,null,1,!0,!1,!1,igcrca,!1,!1,null,!1)"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: harvest_reforge.guaranteed_mod_counts_in_total
     statement: The drawn total of 4, 5 or 6 mods (8:3:1, as for a Chaos Orb) includes the guaranteed modifier and the fractured mods that stay; only the rest is drawn (decisions D3 and D4 of issue #28). The guaranteed modifier is drawn even when the kept mods already reach the total.
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "poec_simRollAffix(null,forcetag,null,null,1,!0,!1,!1,igcrca,!1,!1,null,!1); ... prmods++}"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-30
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
 
   - id: harvest_reforge.refused_on_corrupted
     statement: A corrupted item takes no Harvest reforge.

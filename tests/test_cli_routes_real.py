@@ -3,8 +3,8 @@
 The prices are `tests/fixtures/prices/routes-allflame-2026-10-31.json`: poe.ninja (and, for the tiers it
 does not list, poe.watch and an earlier league, each stamped in the file) of 2026-10-31 and the trade-API
 price of each start item, so the checks do not move with the market. These tests need the cached dump
-(`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_CACHE_DIR` at it) and skip cleanly without it, as in
-CI. Each route is planned once for the whole module; R05 takes minutes.
+(`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_CACHE_DIR` at it; CI fetches it, ticket #165) and skip
+cleanly without it. Each route is planned once per process that runs it; R05 takes minutes.
 
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees, and at the
 same prices the solver's mean is no more than the guide's given route's.
@@ -13,6 +13,7 @@ The route view pages of the three routes (ticket #96) are golden files, `tests/g
 planner's policy, the guide's route stacked under it, the buy step with its trade link. `UPDATE_GOLDEN=1` rewrites them.
 """
 
+import gzip
 import re
 from pathlib import Path
 
@@ -25,12 +26,12 @@ from crafting_system.cli import RESTART, build_report, evaluate_route, load_rout
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_view import build_section, route_input, write_route_page
-from crafting_system.config import load_config
 from crafting_system.prices import load_buy_spec, load_price_file
 from crafting_system.targets import KOfN, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+TRADE_STATS = ROOT / "tests" / "fixtures" / "trade" / "recorded" / "stats_full.json.gz"  # the trade site's stat list, 2026-10-31
 RUNS = {"R10": 3_000, "R11": 300, "R05": 3_000}  # R11 takes about a thousand uses per finish, so fewer runs
 UNPRICED_ESSENCES = {
     f"{level} Essence of {name}"
@@ -147,9 +148,9 @@ def test_the_states_of_a_policy_with_crafts_show_the_crafted_and_the_other_mods(
 
 def route_page(route_id, stem, plan, data, tmp_path) -> str:
     """The page the command writes for the route: the policy, the guide's route, the buy step's trade link."""
-    cache_dir = load_config().cache_dir
-    if not (cache_dir / "trade" / "stats.json").exists():
-        pytest.skip("the trade site's stat list is not in the cache, so the buy step has no trade link to compare")
+    cache_dir = tmp_path / "trade-cache"
+    (cache_dir / "trade").mkdir(parents=True)
+    (cache_dir / "trade" / "stats.json").write_bytes(gzip.decompress(TRADE_STATS.read_bytes()))
     route = load_route(ROOT / "examples" / "routes" / f"{stem}.yaml", plan, data)
     spec = load_buy_spec(ROOT / "examples" / "buy" / f"{BUY_SPECS[route_id]}.yaml")
     path = write_route_page(

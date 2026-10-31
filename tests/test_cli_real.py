@@ -1,7 +1,7 @@
 """R12 on the real 3.29.3.3 dump: the guide's numbers as weight shares, and the whole command (ticket #26).
 
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; point `CRAFTING_CACHE_DIR` at
-it) and skip cleanly without it, as in CI. The guide (PoE Vault, "Fractured-lightning-resistance +1
+it) and skip cleanly without it; CI fetches it (ticket #165). The guide (PoE Vault, "Fractured-lightning-resistance +1
 Lightning amulet") quotes single-draw weight shares; the pool builder reproduces them on the 3.29
 weights, ADR-0020. The solver's chance that the finished item holds the mod is reported next to them
 and is NOT compared with the guide: later draws of the same click feed it too.

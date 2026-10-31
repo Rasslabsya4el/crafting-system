@@ -1,7 +1,7 @@
 """The per-use chance of what R10, R11 and R05 wait for, on the real 3.29.3.3 dump (ticket #55).
 
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`, set the cache folder with
-`CRAFTING_CACHE_DIR`). They skip cleanly when it is not there, which is the case in CI.
+`CRAFTING_CACHE_DIR`). They skip cleanly when it is not there; CI fetches it (ticket #165), so they run there.
 
 The pins are exact fractions that the engine gave on the data of 3.29.3.3 (a regression pin: the
 independent check is the hand oracle of `test_actions_essence.py` on the fixture, and the sampler
