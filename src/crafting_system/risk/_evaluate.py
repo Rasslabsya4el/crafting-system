@@ -28,6 +28,14 @@ c_min the smallest cost (H = 64 c_min if the policy is not proper, so 200k bins 
 driven and reported, and a smaller `resolution` tightens it. An explicit `resolution` is used as
 given; one so small that cost / resolution overflows is a `ValueError`.
 
+Work budget (`resolution=None` only). The DP expands one entry per (state, bin) the mass reaches, so
+its work is about runs * edges * spread / D, with spread the width over which a state's arrival cost
+scatters (6 standard deviations of the total cost for a proper policy, the covered horizon
+otherwise) and `runs` 2 on an inexact grid. When that exceeds `work_budget` (default 3e8 entries,
+about a minute) the step is raised to the finest one that fits, at most the smallest cost; the
+intervals widen to match and stay certified, and the report's `grid.step` says what was used. An
+exact unit grid is given up in the same case. A small policy is never touched.
+
 Mean of a grid chain, for CVaR. The exact grid uses the solver mean of the real costs. An inexact
 grid solves again with the costs k_lo * D and k_hi * D to get the mean of each grid chain, and CVaR
 of each chain uses the matching end of its mean interval.
@@ -64,6 +72,8 @@ MIN_COST = 1e-150  # the second moment squares a cost: outside this range c * c 
 MAX_COST = 1e150
 COVERED_STEPS = 64  # an unproper policy's unit must let the DP cover this many of the smallest costs
 FINE_STEPS = 64  # default grid: the smallest cost is at least this many bins unless the horizon needs coarser
+WORK_BUDGET = 3e8  # default cap on the DP's expanded entries (about a minute); a larger policy gets a coarser grid
+SPREAD_SDS = 6.0  # the arrival cost of a state spreads over about this many standard deviations of the total cost
 
 
 def evaluate[S](
@@ -76,6 +86,7 @@ def evaluate[S](
     cvar_level: float = 0.9,
     tail_mass: float = 1e-9,
     max_bins: int = 200_000,
+    work_budget: float = WORK_BUDGET,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -83,7 +94,8 @@ def evaluate[S](
     reachable non-goal state without an entry is stuck. `quantile_levels` and `cvar_level` lie
     strictly between 0 and 1. The DP stops once the asked levels are certified (proper policy) or
     the probability still in flight is at most `tail_mass`; it never runs past `max_bins` bins and
-    reports what was left as `grid.unresolved_mass`. Raises `ValueError` for a bad argument or a
+    reports what was left as `grid.unresolved_mass`. `work_budget` caps the DP's work when `resolution`
+    is not given (see the module docstring). Raises `ValueError` for a bad argument or a
     `resolution` above the smallest cost, and the solver's `ConvergenceError` if a moment solve
     cannot converge.
     """
@@ -93,6 +105,8 @@ def evaluate[S](
         raise ValueError(f"tail_mass must be strictly between 0 and 1, got {tail_mass!r}")
     if isinstance(max_bins, bool) or not isinstance(max_bins, Integral) or max_bins < 1:
         raise ValueError(f"max_bins must be an integer of at least 1, got {max_bins!r}")
+    if isinstance(work_budget, bool) or not isinstance(work_budget, Real) or not work_budget > 0.0:
+        raise ValueError(f"work_budget must be a number above zero, got {work_budget!r}")
     if resolution is not None and (
         isinstance(resolution, bool)
         or not isinstance(resolution, Real)
@@ -133,10 +147,15 @@ def evaluate[S](
         )
     proper = chain.proper
     horizon = None
+    spread = COVERED_STEPS * c_min
     if proper:
         mean, variance, m1 = mean_and_variance(chain)
         horizon = m1[0] + HORIZON_SDS * math.sqrt(variance[0])
-    step = resolution if resolution is not None else _choose_step(costs, c_min, max_bins, horizon)
+        spread = SPREAD_SDS * math.sqrt(variance[0])
+    edges = sum(len(chain.succ[i]) for i in chain.finishing_states())
+    step = resolution
+    if step is None:
+        step = _choose_step(costs, c_min, max_bins, horizon, 2.0 * edges * spread / work_budget)
     low_bins, high_bins = _bin_costs(chain, step)
     exact = low_bins == high_bins
 
@@ -172,12 +191,15 @@ def _level(value: float, name: str) -> float:
     return float(value)
 
 
-def _choose_step(costs: Sequence[float], c_min: float, max_bins: int, horizon: float | None) -> float:
+def _choose_step(
+    costs: Sequence[float], c_min: float, max_bins: int, horizon: float | None, affordable: float
+) -> float:
+    """The grid step; `affordable` is the finest step whose DP stays within the work budget."""
     unit = exact_unit(costs)
     horizon = COVERED_STEPS * c_min if horizon is None else horizon
-    if unit is not None and horizon / unit <= max_bins:
+    if unit is not None and horizon / unit <= max_bins and unit >= affordable:
         return unit
-    return min(c_min, max(c_min / FINE_STEPS, horizon / max_bins))
+    return min(c_min, max(c_min / FINE_STEPS, horizon / max_bins, affordable))
 
 
 def _cost_bins(cost: float, step: float) -> tuple[int, int]:
