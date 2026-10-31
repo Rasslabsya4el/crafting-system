@@ -13,6 +13,7 @@ Keys (unknown keys are errors, with a close-match hint):
     requirements:           # required: a non-empty list; every entry must be met
       - stat: "+1 to Level of all Lightning Skill Gems"   # exact English stat text, or
       - family: LightningResistance                       # a family id (repoe `groups`)
+        mod: Intelligence8  # optional: one mod (game-data id) of the family or stat, so exactly that tier of it
         min_tier: 2         # optional: whole number >= 1; tier 1 is best, so 2 accepts tiers 1 and 2
         min_roll: 40        # optional: a number (single-stat mods) or a list, one number or null per stat
         not_crafted: true   # optional: true or false, default false

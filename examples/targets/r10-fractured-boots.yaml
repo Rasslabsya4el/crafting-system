@@ -11,15 +11,19 @@
 #      48 Intelligence, Life and an open suffix.
 #   2. Craft "#% chance to Avoid Elemental Ailments" at the crafting bench in the open suffix.
 #
-# How the vague words of the guide are read (each reading is a choice and can be changed here):
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's
+# rule for tiers: a mod whose tier the guide does not state is the TOP tier the item level allows
+# (nobody crafts that without a guaranteed top-tier mod); a mod the guide's essence or bench craft
+# forces is exactly that tier; a mod of the bought start item is the tier the buy spec prices.
 #   * "Intelligence base": boots whose armour is Energy Shield (they carry the game's int_armour tag).
 #     The base below is Sorcerer Boots; every Intelligence boot base has the same pool of mods.
-#   * "30%+ increased Movement Speed (fractured)": the fractured mod is a Movement Speed prefix
-#     of tier 2 (30%) or tier 1 (35%).
-#   * "48 Intelligence from Shrieking Essence of Spite": the essence adds "+(43-50) to Intelligence"
-#     (mod Intelligence8). On boots that is also the game's own tier 2 of Intelligence, so "tier 2 or
-#     better" is exactly "at least what the Shrieking essence gives". Tier 1 (51-55) is a bonus.
-#   * "Life": any tier of Life, rolled (not from the bench).
+#   * "30%+ increased Movement Speed (fractured)": the fractured mod is the bought one, the 30%
+#     tier (mod MovementVelocity5, tier 2); the buy spec prices a fractured Movement Speed of 30 or
+#     more, and 30 is the cheapest of those.
+#   * "48 Intelligence from Shrieking Essence of Spite": exactly what that essence adds,
+#     "+(43-50) to Intelligence" (mod Intelligence8, tier 2 on boots).
+#   * "Life": the top tier of Life at item level 84 (tier 1, +(115-129)), rolled (not from the bench).
+#   * "#% chance to Avoid Elemental Ailments": exactly the bench craft the guide uses, (16-20)%.
 #   * "an open suffix for the craft": the item has three suffixes; the fractured prefix, the Life
 #     prefix and the essence suffix leave room, so the planner may craft there.
 
@@ -37,32 +41,27 @@ influence: []
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
   # The fractured Movement Speed. A family is the game's own name for the group of mods that exclude
-  # each other. min_tier: 2 accepts tier 2 (30%) and tier 1 (35%), so "30%+". The fractured mod of
-  # the start item counts, and no other mod of this family can be added next to it.
-  # not_crafted: true refuses a Movement Speed copy that came from the crafting bench.
+  # each other. `mod` narrows it to one mod of the family, so exactly that tier: the 30% one. The
+  # fractured mod of the start item counts, and no other mod of this family can be added next to it.
   - family: MovementVelocity
-    min_tier: 2
-    not_crafted: true
+    mod: MovementVelocity5
 
-  # The Intelligence of the Shrieking Essence of Spite (see the readings above): tier 2 or better.
-  # not_crafted: true keeps the weak bench Intelligence (up to 30) out.
+  # The Intelligence of the Shrieking Essence of Spite (see the readings above), exactly that tier.
   - family: Intelligence
-    min_tier: 2
-    not_crafted: true
+    mod: Intelligence8
 
-  # Life, any tier, rolled by the essence reforge, not crafted.
-  # The guide says "preferably at least 70" Life, i.e. a roll of 70 or more (tier 4 and up). That is
-  # a roll limit on a mod the planner draws, which the planner cannot model yet: it waits for
-  # ticket #71 (Divine Orb and roll requirements on drawn mods). When #71 lands, add
-  #   min_roll: 70
-  # to this entry.
+  # Life, the top tier (min_tier: 1), rolled by the essence reforge, not crafted.
+  # The guide says only "preferably at least 70" Life, a soft wish; the owner's rule for a tier the
+  # guide does not state is the top tier, which is what is asked here.
   - family: IncreasedLife
+    min_tier: 1
     not_crafted: true
 
-  # "#% chance to Avoid Elemental Ailments", the bench craft. The bench copy counts, so there is
-  # no not_crafted mark here. This mod is also the one a Loathing essence forces on boots, so it
-  # can come from the essence or from the bench; the guide crafts it.
+  # "#% chance to Avoid Elemental Ailments", exactly the bench craft of the guide, (16-20)%
+  # (mod EinharMasterAvoidElementalAilments1); the other tiers and the Loathing essence's copy do
+  # not count.
   - family: AvoidElementalStatusAilments
+    mod: EinharMasterAvoidElementalAilments1
 
 # Where the crafting starts: boots that already have Movement Speed fractured.
 start_item:

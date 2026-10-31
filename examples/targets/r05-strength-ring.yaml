@@ -11,16 +11,21 @@
 #      Life or Resistances.
 #   3. Apply 20 Intrinsic Catalysts and use the crafting bench on any open modifier.
 #
-# How the vague words of the guide are read (each reading is a choice and can be changed here):
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's
+# rule for tiers: a mod whose tier the guide does not state is the TOP tier the item level allows
+# (nobody crafts that without a guaranteed top-tier mod); a mod the guide's essence or bench craft
+# forces is exactly that tier; a mod of the bought start item is the tier the buy spec prices.
 #   * "+12-16 to All Attributes": the game data has this mod as tier 1, "+(13-16) to all Attributes"
 #     (mod AllAttributes4); the next tier down is (9-12). The guide's 12 is read as that 13.
-#   * "Tier 1 Strength": the Strength the Deafening Essence of Rage adds, "+(51-58) to Strength"
-#     (mod StrengthEssence7_). It is tier 1, and so is the ordinary top Strength roll (51-55).
-#   * "Life or Resistances": at least one of Life and the three elemental resistances. The guide
-#     ends with "use the crafting bench on any open modifier", so a crafted Life or Resistance
-#     counts too (the group has no not_crafted). (The guide calls them prefixes; in the game Life
-#     is a prefix and the resistances are suffixes.) To insist on a rolled one, add
-#     `not_crafted: true` to the four lines of the last group.
+#   * "Tier 1 Strength": exactly the Strength the Deafening Essence of Rage adds, "+(51-58) to
+#     Strength" (mod StrengthEssence7_).
+#   * "Life or Resistances": at least one of Life and the three elemental resistances, each at the
+#     top tier the item level (75) allows: Life tier 1, +(100-114); the resistances tier 2, +(42-45)%
+#     (their tier 1 needs item level 84). The guide ends with "use the crafting bench on any open
+#     modifier", so a crafted Life or Resistance counts too (the group has no not_crafted), and a
+#     bench craft counts as tier 1 of what it crafts whatever its range. (The
+#     guide calls them prefixes; in the game Life is a prefix and the resistances are suffixes.) To
+#     insist on a rolled one, add `not_crafted: true` to the four lines of the last group.
 #   * "20 Intrinsic Catalysts" (quality): left out, it is B2. The bench craft of the guide is the
 #     crafted Life or Resistance above; a bench craft of no use to the requirements below is not
 #     offered by the planner anyway.
@@ -43,19 +48,23 @@ requirements:
     min_tier: 1
     not_crafted: true
 
-  # Tier 1 Strength, the one of the essence (see the readings above). not_crafted: true keeps the
-  # bench Strength (up to 30) and the bench "Strength and X" mods out.
+  # The Strength of the essence (see the readings above), exactly that tier. The bench Strength (up
+  # to 30) and the bench "Strength and X" mods are other mods and do not count.
   - family: Strength
-    min_tier: 1
-    not_crafted: true
+    mod: StrengthEssence7_
 
-  # "At least 1 of these 4": Life, or one of the three elemental resistances.
+  # "At least 1 of these 4": Life, or one of the three elemental resistances, each at the top tier
+  # the item level allows.
   - at_least: 1
     of:
       - family: IncreasedLife
+        min_tier: 1
       - family: FireResistance
+        min_tier: 2
       - family: ColdResistance
+        min_tier: 2
       - family: LightningResistance
+        min_tier: 2
 
 # Where the crafting starts: a ring that already has All Attributes fractured.
 start_item:
