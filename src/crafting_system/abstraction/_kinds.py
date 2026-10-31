@@ -9,12 +9,12 @@ action is not known to treat families alike, so with one of those every family i
 
 from collections.abc import Iterable
 
-from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, HarvestReforge, RemoveCraftedMods, build_pool
+from crafting_system.actions import ApplyEssence, ApplyFossils, BenchCraft, ChaosOrb, HarvestReforge, RemoveCraftedMods, build_pool
 from crafting_system.data import GameData, Mod
 from crafting_system.items import Item, Rarity, Side
 from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS
 
-ERASING = (ChaosOrb, HarvestReforge, ApplyEssence)
+ERASING = (ChaosOrb, HarvestReforge, ApplyEssence, ApplyFossils)
 ALIKE = ""  # the kind of a family that every enabled action treats like any other of its side
 
 
