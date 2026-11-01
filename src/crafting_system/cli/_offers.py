@@ -270,11 +270,12 @@ def offers_for(
 
     left_out = ()
     if kinds_named is not None:
-        # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used
+        # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used;
+        # a kind that needs Memory Strands is not mentioned either: this offer set never lists one (the planner does not pass `strands` yet, #277)
         skipped = tuple(
             entry.name
             for entry in kinds(planner_only=True)
-            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted)
+            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted) and not entry.needs_strands
         )
         if skipped:
             left_out += (
@@ -320,7 +321,8 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     usable = {entry.name for entry in kinds(planner_only=True)}
     exist = {entry.name for entry in kinds()}
     kind_names = {name for name in names if name in exist}
-    unready = sorted(kind_names - usable)
+    needing_strands = {entry.name for entry in kinds() if entry.needs_strands}  # the planner cannot plan with strands before #277
+    unready = sorted((kind_names - usable) | (kind_names & needing_strands))
     labels = {action.label(data) for action in catalog(data, start_item, planner_only=True, names=usable)}
     unknown = sorted(name for name in names if name not in exist and name not in labels)
     problems = []

@@ -328,3 +328,28 @@ def _finished(outcomes):
     from contract_support import finished
 
     return finished(outcomes, SMALL)
+
+
+# --- no answer without strands changes (the checker's finding on the left-out list) ---------------------------------------------
+
+
+def test_an_offer_set_with_named_kinds_and_no_strands_does_not_mention_the_foulborn_kinds():
+    from crafting_system.cli._offers import offers_for
+
+    item = fixture_items()["magic"]
+    goal = Goal((Wanted(frozenset({"LightningResist3"})),))
+
+    chosen = offers_for(CONTRACT_DATA, goal, item.base_id, item, ["chaos-orb"])
+
+    mentioned = {name for left in chosen.left_out for name in left.labels}
+    assert mentioned and not mentioned & set(KIND_NAMES)
+
+
+def test_naming_a_foulborn_kind_in_a_target_is_refused_until_the_planner_plans_with_strands():
+    from crafting_system.cli._offers import offers_for
+
+    item = fixture_items()["magic"]
+    goal = Goal((Wanted(frozenset({"LightningResist3"})),))
+
+    with pytest.raises(ValueError, match="foulborn-regal-orb"):
+        offers_for(CONTRACT_DATA, goal, item.base_id, item, ["foulborn-regal-orb"])
