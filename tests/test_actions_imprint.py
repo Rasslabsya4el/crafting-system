@@ -600,3 +600,59 @@ def test_the_kernel_key_of_a_move_is_its_kernel_so_two_restores_are_never_merged
     assert len(keys) == 1  # the other restores onto the state the item is in and is refused, as the kernel refuses it
     third = next(iter(ab.kernel(two, AnnulmentOrb())))
     assert ab.kernel_key(third, Imprint(ARACHNID, 2, 0)) != ab.kernel_key(third, Imprint(ARACHNID, 2, 1))
+
+
+# --- the paths a mutation check found open ----------------------------------------------------------
+
+
+def test_the_imprints_are_sorted_by_order_key_and_not_by_repr():
+    x, y = magic(LIFE_1, MANA_1), magic(LIFE_1)
+    ab = space(Imprint(CROAKER, 2), Restore(0))
+    held, current = ab.compress(x), ab.compress(y)
+    assert (repr(held) < repr(current)) != (held.order_key < current.order_key)  # the two orders differ for this pair
+    (made,) = ab.kernel(ab.compress(with_imprints(y, x)), Imprint(CROAKER, 2))
+    assert made.imprints == tuple(sorted({held, current}, key=lambda s: s.order_key))
+    assert made.imprints != tuple(sorted({held, current}, key=repr))
+
+
+@dataclasses.dataclass(frozen=True)
+class Corrupt(Action):
+    """A toy that corrupts the item and changes nothing else."""
+
+    def label(self, data=None) -> str:
+        return "Corrupt"
+
+    def resources(self, data=None) -> dict[str, int]:
+        return {"Toy": 1}
+
+    def reads(self, data) -> Reads:
+        return Reads(junk=True, families=frozenset())
+
+    def adds(self, data=None, item=None) -> Adds:
+        return Adds(named=frozenset(), draws=False)
+
+    def outcomes(self, data, item: Item) -> Finite:
+        return Finite(data, item, ((Fraction(1), item.changed(data, corrupted=True)),))
+
+
+def test_a_corrupting_action_forgets_the_imprints_and_a_state_that_differs_only_in_them_has_its_own_key():
+    ab = space(Imprint(ARACHNID), Corrupt(), ChaosOrb())
+    start = ab.compress(rare(RESIST_2, LIFE_1))
+    (held,) = ab.kernel(start, Imprint(ARACHNID))
+    (corrupted,) = ab.kernel(held, Corrupt())
+    assert corrupted.flags.corrupted and corrupted.imprints == ()
+    assert held != start and ab.kernel_key(held, ChaosOrb()) != ab.kernel_key(start, ChaosOrb())  # an ordinary action carries the imprints
+
+
+def test_a_fractured_fossil_forgets_the_imprints():
+    from test_abstraction_fossil import GOAL as FOSSIL_GOAL
+    from test_actions_fossil import BOOTS, DATA, boots
+
+    from crafting_system.actions import ApplyFossils
+
+    action = ApplyFossils(("Fractured Fossil", "Scorched Fossil"))
+    ab = Abstraction(DATA, FOSSIL_GOAL, BOOTS, 86, [action, Imprint(CROAKER)])
+    other = ab.compress(dataclasses.replace(boots(), rarity=Rarity.MAGIC))
+    state = dataclasses.replace(ab.compress(boots()), imprints=(other,))
+    kernel = ab.kernel(state, action)
+    assert kernel and all(result.fractured and result.imprints == () for result in kernel)

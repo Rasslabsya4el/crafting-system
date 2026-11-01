@@ -70,19 +70,19 @@ rules:
     date_checked: 2026-10-31
 
   - id: imprint.consumed_on_restore
-    statement: "UNVERIFIED by me (the forum is behind a Cloudflare challenge; quote relayed by the GPT researcher): a restored imprint is used up. 2014 player answer (game version 1.1, not rechecked for 3.29), one source."
+    statement: "UNVERIFIED by me (the forum is behind a Cloudflare challenge; quote relayed by the GPT researcher): a restored imprint is used up. 2014 player answer (not rechecked for 3.29), one source."
     source_kind: experiment
     url: https://www.pathofexile.com/forum/view-thread/868261
     quote: "losing the imprint"
-    patch_verified: "1.1.0"
+    patch_verified: "1.1.0"  # the registry wants a patch; the source is a 2014 forum answer and the game version is a guess
     date_checked: 2026-10-31
 
   - id: imprint.several_per_item
-    statement: "UNVERIFIED by me (relayed by the GPT researcher): an item may carry several imprints of different states, each used once; they share one name. 2014 player answers (game version 1.1, not rechecked for 3.29), two sources."
+    statement: "UNVERIFIED by me (relayed by the GPT researcher): an item may carry several imprints of different states, each used once; they share one name. 2014 player answers (not rechecked for 3.29), two sources."
     source_kind: experiment
     url: https://www.pathofexile.com/forum/view-thread/777720
     quote: "You can have as many imprints as your wealth allows you to."
-    patch_verified: "1.1.0"
+    patch_verified: "1.1.0"  # the registry wants a patch; the source is a 2014 forum answer and the game version is a guess
     date_checked: 2026-10-31
 
   - id: imprint.allflame_copy_not_restorable
