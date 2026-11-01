@@ -104,3 +104,11 @@ def test_an_out_of_scope_pool_is_refused_on_every_call():
     for _ in range(2):
         with pytest.raises(OutOfScopeError, match="IncreasedLife1.*2 families"):
             pool_candidates(data, amulet())
+
+
+def test_the_tag_filter_is_part_of_the_pool_key():
+    on = pool_candidates(DATA, amulet(), tag_filter=True)
+    off = pool_candidates(DATA, amulet(), tag_filter=False)
+
+    assert pool_candidates(DATA, amulet(), tag_filter=False) is off
+    assert pool_candidates(DATA, amulet(), tag_filter=True) is on
