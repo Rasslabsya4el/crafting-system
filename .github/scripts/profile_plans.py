@@ -2,8 +2,7 @@
 
     python .github/scripts/profile_plans.py --case r05 [--budget SECONDS] [--workers N] [--cprofile] --out $OUT_DIR
 
-Cases: the example targets by their short name (r05, r13, r08, r09, r10, r11, r12) and r04 (the quiver of the reference
-route, a copy of the target of #70). `--budget` goes to `make_plan` (0 forces the approximate answer, 60 is the CLI default);
+Cases: the example targets by their short name (r04, r05, r08, r09, r10, r11, r12, r13). `--budget` goes to `make_plan` (0 forces the approximate answer, 60 is the CLI default);
 without it the plan is exact; `--rates` injects the seconds per kernel outcome and per solved edge, as the real-route tests
 do, so that the exact-or-approximate decision does not depend on the machine. Prices are the fixture's, plus a MADE-UP
 price for every resource it lacks (none for the routes the fixture covers).
@@ -26,9 +25,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
-CASES = Path(__file__).resolve().parent / "profile_cases"
 EXAMPLES = {
-    "r05": "r05-strength-ring", "r08": "r08-energy-shield-boots", "r09": "r09-life-boots", "r10": "r10-fractured-boots",
+    "r04": "r04-penetrating-quiver", "r05": "r05-strength-ring", "r08": "r08-energy-shield-boots", "r09": "r09-life-boots", "r10": "r10-fractured-boots",
     "r11": "r11-reservation-helmet", "r12": "r12-lightning-amulet", "r13": "r13-life-resist-belt",
 }
 TIMERS: dict[str, list[float]] = {}  # stage -> [seconds, calls]
@@ -80,6 +78,7 @@ def install_timers() -> None:
     timed(_plan, "climb", "plan.climb (approximate ladder)")
     timed(_bound_prune, "reach_bound", "prune.reach_bound")
     timed(_plan._Model, "prefetch", "model.prefetch (keys here + the pool's distributions)")
+    timed(_plan._Model, "actions", "model.actions (calls = states expanded)")
     timed(Abstraction, "prime", "abstraction.prime (distributions in the pool)")
 
 
@@ -132,8 +131,6 @@ def build_case(case: str, data):
     """The target of a case."""
     from crafting_system.targets import load_target
 
-    if case == "r04":
-        return load_target(CASES / "r04-penetrating-quiver.yaml", data)
     return load_target(ROOT / "examples" / "targets" / f"{EXAMPLES[case]}.yaml", data)
 
 
@@ -151,7 +148,7 @@ def answer_hash(plan) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--case", required=True, choices=[*EXAMPLES, "r04"])
+    parser.add_argument("--case", required=True, choices=list(EXAMPLES))
     parser.add_argument("--budget", type=float, default=None)
     parser.add_argument("--rates", default=None, help="KERNEL,SOLVE seconds per unit to inject (e.g. 4e-5,7e-6)")
     parser.add_argument("--workers", type=int, default=None, help="sets CRAFTING_WORKERS (the product reads it; before #250 it is ignored)")
