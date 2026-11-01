@@ -25,3 +25,7 @@ Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (
 ## Amendment: the finish generalises to sockets ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
 
 The idea of this ADR, plan the part no mod action changes last and add its cost to the value of a goal state, also covers sockets and the quality of weapons and armour, which no B1 to B3 action changes. Sockets are not a closed-form cost: the finish is a small decision problem of its own (ADR-0045). The quality of a weapon or armour uses this ADR's formula for the gain per currency item (ADR-0049).
+
+## Amendment: a corrupted implicit makes the finish cost per try ([Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95), ADR-0039)
+
+A corrupted item takes no ordinary catalyst, so for a target that has a `quality` and asks for a corrupted implicit the catalysts go on **before** the Vaal Orb, the Locus or the Bloodstained resonator. The finish cost is then charged on each use of the corrupting action, not once on the goal state: every try uses a new item with its own catalysts, so every restart pays it again. The chance that the corrupted implicit's roll passes is averaged over the exact distribution of the realized quality (the last catalyst can pass the target percent). A target without a corrupted implicit keeps the rule above unchanged.
