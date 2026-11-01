@@ -1,0 +1,2045 @@
+{
+ "source": "socketLimit of each base in Path of Building's Data/Bases (helmet, body armour, gloves, boots, bow), read from data/pob_bases.json of the read-only prototype branch archive/prototype (tip da384a6). A test oracle for the class maximum of the items module (ADR-0046, ticket #227), not a source of rules. Jewellery has no limit and is left out.",
+ "bases": [
+  {
+   "name": "Arcane Vestment",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Arena Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Assassin's Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Astral Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Astral Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Battle Lamellar",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Battle Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Blood Raiment",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Bone Armour",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Bronze Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Buckskin Tunic",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Cabalist Regalia",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Carnal Armour",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Chain Hauberk",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Chainmail Doublet",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Chainmail Tunic",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Chainmail Vest",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Chestplate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Colosseum Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Commander's Brigandine",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Conjurer's Vestment",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Conquest Chainmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Conquest Lamellar",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Copper Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Coronal Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Crimson Raiment",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Crusader Chainmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Crusader Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Crypt Armour",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Cutthroat's Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Desert Brigandine",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Destiny Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Destroyer Regalia",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Devout Chainmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Dragonscale Doublet",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Eelskin Tunic",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Elegant Ringmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Exquisite Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Field Lamellar",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Frontier Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Full Chainmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Full Dragonscale",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Full Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Full Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Full Ringmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Full Scale Armour",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Full Wyrmscale",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Full Wyvernscale",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "General's Brigandine",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Gladiator Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Glorious Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Glorious Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Golden Mantle",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Golden Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Grand Ringmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Grasping Mail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Holy Chainmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Hussar Brigandine",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Infantry Brigandine",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Lacquered Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Latticed Ringmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Legion Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Light Brigandine",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Lordly Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Loricated Ringmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Mage's Vestment",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Majestic Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Marshall's Brigandine",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Necromancer Silks",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Necrotic Armour",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Nightweave Robe",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Occultist's Vestment",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Oiled Coat",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Oiled Vest",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Ornate Ringmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Padded Jacket",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Padded Vest",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Paladin's Hauberk",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Plate Vest",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Quilted Jacket",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Ringmail Coat",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Royal Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sacred Chainmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sacrificial Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sadist Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sage's Robe",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Saint's Hauberk",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Saintly Chainmail",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sanguine Raiment",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Savant's Robe",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Scale Doublet",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Scale Vest",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Scarlet Raiment",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Scholar's Robe",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sentinel Jacket",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Shabby Jerkin",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sharkskin Tunic",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Silk Robe",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Silken Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Silken Vest",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Silken Wrap",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Simple Robe",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sleek Coat",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Soldier's Brigandine",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Spidersilk Robe",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Strapped Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sun Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sun Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Supreme Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Syndicate's Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Thief's Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Titan Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Torturer Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Triumphant Lamellar",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Twilight Regalia",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Vaal Regalia",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Varnished Coat",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "War Plate",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Waxed Garb",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Widowsilk Robe",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Wild Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Wyrmscale Doublet",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Zodiac Leather",
+   "type": "Body Armour",
+   "socketLimit": 6
+  },
+  {
+   "name": "Ambush Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ancient Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Antique Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Arcanist Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Assassin's Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Basemetal Treads",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Brimstone Treads",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Bronzescale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Carnal Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Chain Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Chimerascale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Clasped Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Cloudwhisper Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Conjurer Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Crusader Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Darksteel Treads",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Deerskin Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Dragonscale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Dreamquest Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Duskwalk Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Eelskin Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Fugitive Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Goathide Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Golden Caligae",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Goliath Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Harpyskin Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Hydrascale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Infiltrator Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Iron Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ironscale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Leatherscale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Legion Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Leviathan Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Martyr Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Mesh Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Murder Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Nightwind Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Nubuck Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Paladin Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Phantom Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Plated Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Precursor Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Rawhide Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Reinforced Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ringmail Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Riveted Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Sabatons",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Sollerets",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sage Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Samite Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Satin Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Scholar Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Serpentscale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Shackled Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Shagreen Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sharkskin Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Silk Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Slink Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Soldier Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sorcerer Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Stealth Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Steel Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Steelscale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Stormrider Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Strapped Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Titan Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Trapper Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Two-Toned Boots (Armour/Energy Shield)",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Two-Toned Boots (Armour/Evasion)",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Two-Toned Boots (Evasion/Energy Shield)",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Vaal Greaves",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Velour Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Velvet Slippers",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Warlock Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Windbreak Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wool Shoes",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wrapped Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wyrmscale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wyvernscale Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Zealot Boots",
+   "type": "Boots",
+   "socketLimit": 4
+  },
+  {
+   "name": "Assassin Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Bone Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Citadel Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Composite Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Compound Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Crude Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Death Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Decimation Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Decurve Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Ethereal Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Foundry Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Grove Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Harbinger Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Hedron Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Highborn Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Imperial Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Ivory Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Long Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Maraketh Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Ranger Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Recurve Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Reflex Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Royal Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Short Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Sniper Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Solarine Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Spine Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Steelwood Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Thicket Bow",
+   "type": "Bow",
+   "socketLimit": 6
+  },
+  {
+   "name": "Aetherwind Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ambush Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ancient Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Antique Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Apothecary's Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Apprentice Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Arcanist Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Assassin's Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Bronze Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Bronzescale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Carnal Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Chain Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Chimerascale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Clasped Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Conjurer Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Crusader Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Deerskin Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Dragonscale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Eelskin Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Embroidered Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Fingerless Silk Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Fishscale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Goathide Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Golden Bracers",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Goliath Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Gripped Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Guarding Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Harpyskin Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Hydrascale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Infiltrator Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Iron Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ironscale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Legion Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Leviathan Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Leyline Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Martyr Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Mesh Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Murder Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Nexus Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Nubuck Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Paladin Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Phantom Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Plated Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Precursor Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Preserving Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Rawhide Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ringmail Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Riveted Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Gages",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sage Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Samite Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Satin Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Serpentscale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Shagreen Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sharkskin Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Silk Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Slink Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Soldier Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sorcerer Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Spiked Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Stealth Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Steel Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Steelscale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Strapped Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Thwarting Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Tinker Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Titan Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Trapper Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Trapsetter Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Vaal Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Velour Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Velvet Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Warlock Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wool Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wrapped Mitts",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wyrmscale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wyvernscale Gauntlets",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Zealot Gloves",
+   "type": "Gloves",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ancient Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Archdemon Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Atonement Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Aventail Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Barbute Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Battered Helm",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Blizzard Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Bone Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Bone Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Callous Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Close Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Cone Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Conqueror's Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Conquest Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Crusader Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Deicide Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Demon Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Dire Pelt",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Divine Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Eternal Burgonet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ezomyte Burgonet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Faithful Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Fencer Helm",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Festival Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Fluted Bascinet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Gale Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "General's Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Giantslayer Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Gilded Sallet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Gladiator Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Golden Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Golden Wreath",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Great Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Great Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Grizzly Pelt",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Harlequin Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Haunted Bascinet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Hubris Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Hunter Hood",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Imp Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Iron Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Iron Hat",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Iron Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Jester Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Knight Helm",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Lacquered Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Leather Cap",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Leather Hood",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Lich's Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Lion Pelt",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Lunaris Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Magistrate Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Majestic Pelt",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Mind Cage",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Moonlit Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Necromancer Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Nightmare Bascinet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Noble Tricorne",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Paladin Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Penitent Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Pig-Faced Bascinet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Plague Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Praetor Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Prophet Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Raven Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Reaver Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Regicide Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Royal Burgonet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Crest",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Runic Helm",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Rusted Coif",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sallet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Samnite Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Scare Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Secutor Helm",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Siege Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Silken Hood",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sinner Tricorne",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Solaris Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Soldier Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sorrow Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Steel Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Sunfire Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Torture Cage",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Torturer's Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Tribal Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Tricorne",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Ursine Pelt",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Vaal Mask",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Vine Circlet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Visored Sallet",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Winter Crown",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Wolf Pelt",
+   "type": "Helmet",
+   "socketLimit": 4
+  },
+  {
+   "name": "Zealot Helmet",
+   "type": "Helmet",
+   "socketLimit": 4
+  }
+ ]
+}
