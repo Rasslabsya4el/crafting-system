@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState
+from crafting_system.actions import grants_extra_crafted_slot
 from crafting_system.data import GameData
 from crafting_system.rules import get_rule, rule_by_id
 from crafting_system.simulator import SampledEstimate
@@ -105,6 +106,8 @@ def marking_document(approximation: Approximation | None, shift: float) -> dict:
 # --- the approximate inputs (ADR-0028) -------------------------------------------------------------------------
 
 APPROXIMATE_HEADING = "Approximate inputs (claims that no other source settles):"
+CRAFTED_LIMIT_CLAIM = "bench_craft.one_crafted_mod_by_default"  # read by every action that checks the limit of crafted mods
+STACKING_CLAIM = "enchantment.crafted_slot_with_multimod_takes_the_larger"
 
 
 JEWEL_ITEM_CLASSES = get_rule("affix_count.rare_jewel_max_per_side").value["item_classes"]
@@ -130,7 +133,10 @@ def approximate_inputs(
 ) -> tuple[ApproximateInput, ...]:
     """The approximate claims read by the actions `policy` takes in the states it reaches from the start, by claim id.
 
-    An action the plan offers but the policy never takes is not listed (ADR-0028).
+    An action the plan offers but the policy never takes is not listed (ADR-0028). The limit of crafted mods with the enchantment
+    of the extra crafted slot is the exception: that claim is not a constant of any action (it would be listed on every bench
+    craft), so it is named here when the start item holds the enchantment and an action of the policy checks the limit; it leans
+    to naming too many (the unsourced case is only the enchantment together with the multimod, ADR-0053).
     """
     ids: set[str] = set()
     for state in policy_states(plan.start, policy, plan.is_goal):
@@ -138,6 +144,8 @@ def approximate_inputs(
         if plan.is_goal(state) or action is None:
             continue
         ids |= plan.offer_of(action).offer.action.claims(data)  # type: ignore[attr-defined]
+    if CRAFTED_LIMIT_CLAIM in ids and grants_extra_crafted_slot(data, plan.abstraction.enchantment):
+        ids.add(STACKING_CLAIM)
     if not is_jewel(data, plan.target.base_id):
         ids = {claim for claim in ids if not claim.startswith(JEWEL_CLAIMS)}  # an action cites them for every item it takes
     rules = (rule_by_id(claim) for claim in sorted(ids))
