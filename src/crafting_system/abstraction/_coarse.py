@@ -115,6 +115,10 @@ class Coarsening:
     def __init__(
         self, abstraction: Abstraction, groups: Iterable[Collection[str]] = (), influences: frozenset[Influence] = frozenset()
     ):
+        if abstraction.rerolls_values:
+            raise OutOfScopeError(
+                "an enabled action rerolls values: its rollable mods are slots by mod id, which no family can be pooled over"
+            )
         self.abstraction = abstraction
         self.influences = influences
         self._data = abstraction.data

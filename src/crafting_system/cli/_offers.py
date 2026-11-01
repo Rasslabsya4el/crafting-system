@@ -13,11 +13,11 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, Reads, catalog, default_actions, kinds
+from crafting_system.actions import Action, ActionError, Reads, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
-from crafting_system.prices import CHAOS_ORB, PriceFile
+from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile
 
 RESTART = "restart"
 
@@ -77,7 +77,8 @@ def price_offers(
 ) -> tuple[tuple[PricedOffer, ...], tuple[DroppedOffer, ...]]:
     """The offers whose resources all have a price, and those that do not (with the names missing).
 
-    A Chaos Orb is worth 1 Chaos whether or not the file lists it.
+    A Chaos Orb is worth 1 Chaos whether or not the file lists it, and a Divine Orb the file's `chaos_per_divine` when
+    it lists no price for it (a Divine Orb is the unit of that rate, ticket #71).
     """
     priced: list[PricedOffer] = []
     dropped: list[DroppedOffer] = []
@@ -90,6 +91,8 @@ def price_offers(
             elif name in prices.prices:
                 entry = prices.prices[name]
                 parts.append((name, count, count * entry.chaos, entry.source))
+            elif name == DIVINE_ORB:
+                parts.append((name, count, count * prices.chaos_per_divine, "rate"))
             else:
                 missing.append(name)
         if missing:
@@ -183,16 +186,26 @@ def offers_for(
       It is left out and reported like a craft that counts for nothing.
     * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
       offered only when the start item holds one or another offered action adds one.
+    * An action that only changes rolled values (`Adds.needs_roll_limit`, a Divine Orb, #71) is offered only when the goal has a
+      roll limit (a leaf with a `min_roll` that asks for some value) on a mod that can occur on the item: the start item
+      holds it, a draw of its pool can give it, or another candidate adds it by name. Without such a limit no value
+      matters to the goal, so the orb would only cost currency. It is left out; the report names it only when the goal has a
+      roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
     kind_names, label_names = _split_names(data, start_item, kinds_named)
     named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
     candidates = []
     left_out_unwanted: list[str] = []
-    for action in _listed(data, start_item, kind_names, label_names):
+    listed = _listed(data, start_item, kind_names, label_names)
+    roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
+    left_out_rolls: list[str] = []
+    for action in listed:
         adds = action.adds(data, start_item)
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))
+        elif adds.needs_roll_limit and not roll_matters:
+            left_out_rolls.append(action.label(data))
         else:
             candidates.append(action)
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
@@ -239,6 +252,15 @@ def offers_for(
             "pay off by clearing a family from the pool, and the plan is the cheapest among the offered crafts only"
         )
         left_out += (LeftOut(reason, tuple(left_out_crafts)),)
+    if left_out_rolls and any(leaf.has_roll_limit for leaf in goal.leaves):  # a target without a roll limit needs no word about it
+        left_out = (
+            *left_out,
+            LeftOut(
+                "it only changes rolled values and the roll limit of the target is on a mod that cannot occur on the item, "
+                "so it would only cost currency",
+                tuple(left_out_rolls),
+            ),
+        )
     if left_out_unwanted:
         left_out = (
             *left_out,
@@ -282,6 +304,21 @@ def _listed(data: GameData, start_item: Item, kind_names: frozenset[str] | None,
         extra = [a for a in catalog(data, start_item, planner_only=True, names=usable) if a.label(data) in label_names]
         found.extend(action for action in extra if action not in found)
     return found
+
+
+def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed: Iterable[Action]) -> bool:
+    """Whether a roll limit of the goal is on a mod that can occur: held by the start item, drawable on it, or added by name."""
+    limited = {mod_id for leaf in goal.leaves if leaf.has_roll_limit for mod_id in leaf.mod_ids}
+    if not limited:
+        return False
+    if limited & {entry.mod_id for entry in start_item.mods}:
+        return True
+    if any(limited & (action.adds(data, start_item).named or frozenset()) for action in listed):
+        return True
+    try:
+        return bool(limited & drawable_mod_ids(data, start_item))
+    except ActionError:  # a pool the model cannot build: no proof the mod is out of reach, so keep the orb
+        return True
 
 
 def _only_crafts(data: GameData, item: Item, action: Action) -> bool:

@@ -9,3 +9,7 @@ The goal is about 1 minute per benchmark query, tracked by the benchmark command
 Two-input actions need a branching (least fixed point) solver; it arrives in B3 (ADR-0011).
 
 Origin: [Design grill round 1: foundations](https://github.com/Rasslabsya4el/crafting-system/issues/2) Q9 and "Settled before the grill" (Python first); [solver engineering research](../research/2026-10-30-4-solver-engineering.md).
+
+## Amendment: the Peek kind (B8, [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
+
+`solver` gains one kind beside `Action`: `Peek(label, cost, options, fallback)`, stdlib, with a non-linear but monotone and continuous backup computed by a sorted-tail sweep (ADR-0054). Value iteration from zero, policy iteration under a fixed acceptance set and the certificate stay as written; the exact self-loop elimination does not apply to a burn that returns to the Lock's own state, which the policy expansion turns into an ordinary cycle; a reaction that never accepts is an improper policy. `solver` still knows nothing of Path of Exile.

@@ -6,10 +6,12 @@ from fractions import Fraction
 
 import pytest
 from ssp_helpers import GOAL, act, model
+from ssp_input_oracles import _solve_fractions
 
 from crafting_system.solver import ConvergenceError, solve
 from crafting_system.solver import _component
 from crafting_system.solver._component import Bellman, _evaluate, _evaluate_sparse
+from crafting_system.solver._sparse import solve_substochastic
 
 
 class Belt:
@@ -237,3 +239,38 @@ def test_a_component_that_converges_in_its_first_sweeps_is_unchanged(args, start
 
     assert without.values == solution.values
     assert without.error_bound == solution.error_bound
+
+
+def exact_solution(matrix, rhs):
+    """V = rhs + matrix V in exact fractions (the dense reference)."""
+    size = len(rhs)
+    system = [[Fraction(int(i == j)) - Fraction(matrix[i][j]) for j in range(size)] for i in range(size)]
+    return _solve_fractions(system, [Fraction(c) for c in rhs])
+
+
+def as_rows(matrix):
+    """The sparse rows and the signed leak (1 minus the row sum, below 0 for a row above 1)."""
+    rows = [{j: p for j, p in enumerate(line) if p} for line in matrix]
+    return rows, [1.0 - sum(line) for line in matrix]
+
+
+def test_the_elimination_with_a_negative_leak_equals_the_dense_solve_of_a_subcritical_matrix():
+    # row 0 sums to 1.5 (an input with kappa 1.5), yet the spectral radius is below 1
+    matrix = [[0.0, 1.5, 0.0], [0.25, 0.0, 0.5], [0.25, 0.25, 0.0]]
+    base = [1.0, 2.0, 3.0]
+    rows, leak = as_rows(matrix)
+    assert leak[0] < 0.0
+
+    values = solve_substochastic(rows, leak, list(base))
+
+    expected = exact_solution(matrix, base)
+    assert all(v > 0 for v in expected)
+    assert values == pytest.approx([float(v) for v in expected], rel=1e-14)
+
+
+def test_the_elimination_with_a_negative_leak_refuses_a_supercritical_matrix():
+    # M = [[0, 2], [3/4, 0]]: rho = sqrt(1.5) > 1, so (I - M) V = c has no positive solution
+    matrix = [[0.0, 2.0], [0.75, 0.0]]
+    rows, leak = as_rows(matrix)
+
+    assert solve_substochastic(rows, leak, [1.0, 1.0]) is None

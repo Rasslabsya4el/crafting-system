@@ -1,0 +1,478 @@
+# Mechanic family: enchantment (Tempering Orb, Tailoring Orb, Harvest quality enchants, the extra crafted slot).
+# Research ticket #100 (note docs/research/2026-10-31-enchantments.md, the 28 draft claims admitted here by ticket #237),
+# design ADR-0050 to ADR-0053. The weight tables are the `value` of enchantment.body_armour_weight_classes and
+# enchantment.weapon_weights_depend_on_tag, printed by docs/research/2026-10-31-enchantments-samples.py (tests/test_enchantment_claims.py).
+rules:
+  - id: enchantment.heist_orbs_add_or_replace
+    statement: The Tempering Orb works on one weapon and the Tailoring Orb on one body armour; each adds an enchantment or replaces the one the item has, drawn from its own pool, and may reforge the item's sockets.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tempering_Orb
+    quote: "Adds or replaces an enchantment on a weapon"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.one_slot_new_replaces_old
+    statement: Enchantments have their own modifier slot, not the implicit slot; most items hold one at a time, and applying an enchantment to an enchanted item replaces the old one. A Harvest quality enchant is an enchantment of the same list, so it shares the slot (the exclusivity itself is open point O-05).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Enchantments
+    quote: "Applying an enchantment on an already enchanted item replaces the old enchantment with the new one."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.bench_removes_for_three_scouring
+    statement: The crafting bench removes the enchantment of a non-corrupted item for 3 Orbs of Scouring; the option is bench tier 0 (always available) and is offered for the 29 weapon, armour, jewellery and flask classes, body armour and every weapon class among them.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "bench[309].actions.remove_enchantments=true, cost={\"Metadata/Items/Currency/CurrencyConvertToNormal\":3}, bench_tier=0, 29 item classes"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.mirrored_and_corruption
+    statement: A mirrored item cannot receive an enchantment; corrupting an item does not remove its enchantment, and the bench removal needs a non-corrupted item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Enchantments
+    quote: "Mirrored cannot receive an enchantment."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.tailoring_not_on_fixed_sockets
+    statement: The Tailoring Orb cannot be used on an item with fixed sockets (Kaom's Heart, Replica Kaom's Heart, Skin of the Loyal, Skin of the Lords); all of them are unique items, so no ordinary target meets this refusal.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tailoring_Orb#Mechanics
+    quote: "Tailoring Orbs cannot be used on items with fixed sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.removed_from_pool_in_3_29_0
+    statement: Since 3.29.0 the enchantments related to white sockets and those that set all sockets to one colour no longer come from Tailoring or Tempering Orbs.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.29.0
+    quote: "Enchantments on Body Armour and Weapons related to White Sockets or those that set all Sockets to be Blue, Green or Red no longer appear on Heist Rewards or from Tailoring and Tempering Orbs."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.weapon_pool_136
+    statement: The Tempering Orb pool of 3.29 is the 136 weapon enchantments the wiki lists. The repoe-fork dump holds 181 weapon Heist enchant mods; the 45 extra are exactly the 12 white-socket and 33 all-sockets-one-colour mods (stat ids local_has_X_white_sockets, local_all_sockets_are_red/green/blue) that the 3.29.0 note removes.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "groups [EnchantmentHeistWeapon]: 181 mods, 45 with a white-socket or all-sockets-one-colour stat, 136 without; wiki Tempering_Orb 'List of enchantments': 136 rows"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.armour_pool_54
+    statement: The Tailoring Orb pool of 3.29 is 54 body armour enchantments. The dump and the wiki Tailoring Orb page both list 75 (rev 1681191, 26 July 2026, still showing the removed ones); removing the 6 white-socket and 15 all-sockets-one-colour mods per the 3.29.0 note leaves 54. The 54 is derived, not listed by any source.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "groups [EnchantmentHeistArmour]: 75 mods, 21 with a white-socket or all-sockets-one-colour stat, 54 without; wiki Tailoring_Orb 'List of enchantments': 75 rows incl. 'Enchantment White Sockets' and 'Enchantment Defence Modifier Effect and Only Red Sockets'"
+    approximate: true
+    approximate_reason: "No source lists the Tailoring Orb pool of 3.29: the wiki page and the dump still show 75 enchants, and 54 is that list minus the 21 mods the 3.29.0 note says were removed."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.pool_number_column_is_level
+    statement: The number beside each enchantment on the wiki is the mod's required_level, not a weight. The Heist enchant mods carry no spawn_weights and no generation_weights, so no source published with the game data gives their odds.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "WeaponEnchantmentHeistPhysicalEffect1: required_level 1, spawn_weights [], generation_weights [], generation_type unique; all 256 Heist enchant mods have empty weight lists"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.magnitude_enchants_scale_explicit_mods_by_tag
+    statement: A magnitude enchantment ("8% increased Explicit Life Modifier magnitudes") scales the explicit modifiers carrying that tag; a hybrid pairs two tags at 6% each, or one tag at 10-15% with a downside (25-50% less on another tag, 200% increased attribute requirements, -3 to maximum sockets).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Heist_Enchantments
+    quote: "the enchantment 8% increased Explicit Life Modifier magnitudes will enhance a modifier that normally grants \"+100 to Maximum Life\" to granting \"+108 to Maximum Life\""
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.crafted_slot_enchant
+    statement: One enchantment in each pool ("Can have 1 additional Crafted Modifier", required level 80, stat local_can_have_additional_crafted_mods = 1) lets the item hold one more crafted modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "ArmourEnchantmentHeistAdditionalCraftingModifier1: required_level 80, text \"Can have 1 additional Crafted Modifier\", stats [local_can_have_additional_crafted_mods 1..1]"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.raises_item_level_requirement
+    statement: An enchantment raises the item's level requirement up to 80% of the enchantment's mod level, rounded down (the wiki's own example is mod level 66 giving 52), so the level-69/70/80 enchants make a body armour or weapon need level 55 / 56 / 64.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Mod_Level
+    quote: "raising the level requirement up to 80% requirement of the mod (with the requirement rounded down to the nearest whole integer)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.heist_orb_source
+    statement: Tempering and Tailoring Orbs drop as one of the five choices in a Grand Heist Curio Display; Heist has been in the core game since 3.13.0 (the Grand Heist page, last edited 22 April 2026, has its version history to 3.28.0 and no removal).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Grand_Heist#Curio_Display_Rewards
+    quote: "The following rewards only drop from Curio Displays in Grand Heists."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.harvest_quality_enchants_14
+    statement: Fourteen Harvest enchants change what quality does, six for weapons (Physical Damage is not raised; instead +0.1 m range per 10%, 1% area per 4%, 1% accuracy per 2%, 1% attack speed per 8%, 1% critical chance per 4%, 1% elemental damage per 2%) and eight for body armour (Defences are not raised; instead +1 per 2% quality of Maximum Life, Maximum Mana, Strength, Dexterity, Intelligence, or +1% of Fire, Cold, Lightning Resistance).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "groups AlternateWeaponQuality (6) and AlternateArmourQuality (8), e.g. HarvestAlternateArmourQualityIncreasedLife: \"Quality does not increase Defences\\nGrants +1 to Maximum Life per 2% Quality\""
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.harvest_quality_enchant_costs
+    statement: The Lifeforce price of a quality enchant, in items of that lifeforce. Body armour (3,250 each) - Life, Strength, Fire Resistance Wild; Dexterity, Cold Resistance Vivid; Mana, Intelligence, Lightning Resistance Primal. Weapon (5,000 each) - Weapon Range, Area of Effect Wild; Accuracy, Attack Speed Vivid; Critical Strike Chance, Elemental Damage Primal. No Sacred or Rancour cost.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Enchant a Body Armour. Quality does not increase its Defences, grants +1 Maximum Life per 2% quality | 3250 | 0 | 0 | 0 | 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.quality_enchant_changes_only_its_stat
+    statement: A Harvest quality enchant changes only which stat quality gives (weapon Physical Damage, body armour Defences); the other effects of quality on the item are unchanged. Whether quality still scales the socket and link odds of Jeweller's and Fusing Orbs after the 3.29.0 sockets rework is not claimed here (ticket #99 found it unsettled).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Quality#Effect_on_items
+    quote: "This does not affect other aspects of quality such as the chance to have a certain number of sockets or links."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.crafted_slot_enchant_allows_several_bench_crafts
+    statement: The additional-crafted-modifier enchantment does what the "of Crafting" metamod does, so the item can carry more than one bench craft. How many it adds and whether it stacks with the metamod is open point O-06.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Crafting_bench
+    quote: "It is possible to craft more than one mod onto an item with the of Crafting meta-crafting mod, or a similar enchantment from Tempering Orbs, Tailoring Orbs or certain items found in Grand Heists."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # Player samples. source_kind `experiment` = a large-sample report by players.
+  # The sample ends at 3.27 and lists the pre-3.29 pools; the shares are for the 3.29 pool (removed rows dropped,
+  # the rest renormalised), which assumes GGG kept every weight. The numbers are reproduced by
+  # docs/research/2026-10-31-enchantments-samples.py.
+  - id: enchantment.pool_is_weighted
+    statement: The enchant pool is weighted, not uniform - measured on Curio Displays, a proxy for the orbs. Players' counts of 7,742 enchanted weapons and 5,078 enchanted body armours found in Grand Heist Curio Displays (13,845 wings, 3.23 to 3.27) give chi-square 19,025 against a uniform pool of 136 weapon enchants and 16,460 against 54 body-armour enchants. That the Tailoring Orb uses the same weights rests on a 291-click armour tally (claim enchantment.tailoring_orb_tally_matches_curio); for the Tempering Orb it is an inference, no weapon tally exists.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt3ptsj/
+    quote: "Since 3.23 I've been tracking blueprint curio case rewards with folks in the Prohibited Library Discord. Across 27,155 total items we've seen this mod 18 times on 2,032 enchanted armors and 9 times on 3,016 enchanted weapons."
+    approximate: true
+    approximate_reason: "No source states that the Tempering and Tailoring Orbs draw from the Curio Display table; a 263-click armour tally fits it, and for weapons there is no orb tally, so it is an inference."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.body_armour_weight_classes
+    statement: "Curio proxy for the Tailoring Orb weights, from the Curio-display body-armour counts of the 3.29 pool (4,318 items; not orb results). The weight of an enchant is the mean count per enchant of its kind: the plain 8% enchants each by their tag (Life 752, Defence 690, Resistance 504, Attribute 227, Mana 227), 40% reduced Attribute Requirements 456, 8% plus no colour 44.4 (15 enchants), six-plus-six hybrid 38.8 (6), 6% plus 25% less requirements 39.7 (3), All Sockets Linked 45, extra crafted modifier 36, 15% plus -3 sockets 22.2 (5), 15% plus 200% requirements 20.8 (5), 10-12% plus a penalty 18 (7), 6% plus All Sockets Linked 4.4 (5). Within each hybrid kind the counts are what one weight gives. The value holds `kinds` (a kind to the enchants and the sample items it has) and `kind_of` (a mod id to its kind); the weight of a mod is the items over the enchants of its kind."
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1dDDMRc3GAE4G0X-lJeLXSHaGtLLNf612nrFiOyCo0Vs/
+    quote: "Armor Enchant, All-Time: 8% increased Explicit Life Modifier magnitudes 752; 8% increased Explicit Defence Modifier magnitudes 690; 8% increased Explicit Resistance Modifier magnitudes 504; 40% reduced Attribute Requirements 456; ... Can have 1 additional Crafted Modifier 36 (75 rows, 5,078 items)"
+    approximate: true
+    approximate_reason: "The players' sample ends at 3.27 and the 3.29.0 note only says enchants were removed, so GGG keeping every weight is assumed; 81% of the sample is from area level 83 and no item-level gate is measured."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      kinds:
+        attribute_requirements_40: {enchants: 1, items: 456}
+        extra_crafted_modifier: {enchants: 1, items: 36}
+        minus_3_sockets: {enchants: 5, items: 111}
+        no_colour: {enchants: 15, items: 666}
+        penalty_hybrid: {enchants: 7, items: 126}
+        requirements_200: {enchants: 5, items: 104}
+        single_attribute: {enchants: 1, items: 227}
+        single_defence: {enchants: 1, items: 690}
+        single_life: {enchants: 1, items: 752}
+        single_mana: {enchants: 1, items: 227}
+        single_resistance: {enchants: 1, items: 504}
+        six_linked: {enchants: 5, items: 22}
+        six_requirements_25: {enchants: 3, items: 119}
+        six_six: {enchants: 6, items: 233}
+        sockets_linked: {enchants: 1, items: 45}
+      kind_of:
+        ArmourEnchantmentHeistAdditionalCraftingModifier1: extra_crafted_modifier
+        ArmourEnchantmentHeistAttributeEffect1: single_attribute
+        ArmourEnchantmentHeistAttributeEffectAttributeRequirementsPenalty1: requirements_200
+        ArmourEnchantmentHeistAttributeEffectDefenceEffectPenalty1: penalty_hybrid
+        ArmourEnchantmentHeistAttributeEffectLifeEffectPenalty1_: penalty_hybrid
+        ArmourEnchantmentHeistAttributeEffectNoBlueSockets1: no_colour
+        ArmourEnchantmentHeistAttributeEffectNoGreenSockets1: no_colour
+        ArmourEnchantmentHeistAttributeEffectNoRedSockets1: no_colour
+        ArmourEnchantmentHeistAttributeEffectSocketPenalty1: minus_3_sockets
+        ArmourEnchantmentHeistAttributeEffectSocketsAreLinked1: six_linked
+        ArmourEnchantmentHeistAttributeRequirements1: attribute_requirements_40
+        ArmourEnchantmentHeistDefenceEffect1: single_defence
+        ArmourEnchantmentHeistDefenceEffectAttributeEffect1: six_six
+        ArmourEnchantmentHeistDefenceEffectAttributeRequirements1: six_requirements_25
+        ArmourEnchantmentHeistDefenceEffectAttributeRequirementsPenalty1_: requirements_200
+        ArmourEnchantmentHeistDefenceEffectNoBlueSockets1: no_colour
+        ArmourEnchantmentHeistDefenceEffectNoGreenSockets1: no_colour
+        ArmourEnchantmentHeistDefenceEffectNoRedSockets1: no_colour
+        ArmourEnchantmentHeistDefenceEffectResistanceEffect1: six_six
+        ArmourEnchantmentHeistDefenceEffectResistanceEffectPenalty1: penalty_hybrid
+        ArmourEnchantmentHeistDefenceEffectSocketPenalty1: minus_3_sockets
+        ArmourEnchantmentHeistDefenceEffectSocketsAreLinked1: six_linked
+        ArmourEnchantmentHeistLifeEffect1: single_life
+        ArmourEnchantmentHeistLifeEffectAttributeEffect1_: six_six
+        ArmourEnchantmentHeistLifeEffectAttributeRequirements1: six_requirements_25
+        ArmourEnchantmentHeistLifeEffectAttributeRequirementsPenalty1_: requirements_200
+        ArmourEnchantmentHeistLifeEffectNoBlueSockets1: no_colour
+        ArmourEnchantmentHeistLifeEffectNoGreenSockets1__: no_colour
+        ArmourEnchantmentHeistLifeEffectNoRedSockets1: no_colour
+        ArmourEnchantmentHeistLifeEffectResistanceEffect1__: six_six
+        ArmourEnchantmentHeistLifeEffectResistanceEffectPenalty1: penalty_hybrid
+        ArmourEnchantmentHeistLifeEffectSocketPenalty1: minus_3_sockets
+        ArmourEnchantmentHeistLifeEffectSocketsAreLinked1_: six_linked
+        ArmourEnchantmentHeistManaEffect1: single_mana
+        ArmourEnchantmentHeistManaEffectAttributeEffect1: six_six
+        ArmourEnchantmentHeistManaEffectAttributeRequirements1: six_requirements_25
+        ArmourEnchantmentHeistManaEffectAttributeRequirementsPenalty1: requirements_200
+        ArmourEnchantmentHeistManaEffectNoBlueSockets1: no_colour
+        ArmourEnchantmentHeistManaEffectNoGreenSockets1: no_colour
+        ArmourEnchantmentHeistManaEffectNoRedSockets1_: no_colour
+        ArmourEnchantmentHeistManaEffectResistanceEffect1: six_six
+        ArmourEnchantmentHeistManaEffectResistanceEffectPenalty1: penalty_hybrid
+        ArmourEnchantmentHeistManaEffectSocketPenalty1: minus_3_sockets
+        ArmourEnchantmentHeistManaEffectSocketsAreLinked1: six_linked
+        ArmourEnchantmentHeistResistanceEffect1__: single_resistance
+        ArmourEnchantmentHeistResistanceEffectAttributeRequirementsPenalty1: requirements_200
+        ArmourEnchantmentHeistResistanceEffectDefenceEffectPenalty1__: penalty_hybrid
+        ArmourEnchantmentHeistResistanceEffectLifeEffectPenalty1: penalty_hybrid
+        ArmourEnchantmentHeistResistanceEffectNoBlueSockets1: no_colour
+        ArmourEnchantmentHeistResistanceEffectNoGreenSockets1: no_colour
+        ArmourEnchantmentHeistResistanceEffectNoRedSockets1: no_colour
+        ArmourEnchantmentHeistResistanceEffectSocketPenalty1: minus_3_sockets
+        ArmourEnchantmentHeistResistanceEffectSocketsAreLinked1_: six_linked
+        ArmourEnchantmentHeistSocketsAreLinked1: sockets_linked
+
+  - id: enchantment.weapon_weights_depend_on_tag
+    statement: Curio proxy for the Tempering Orb weights (no weapon orb tally exists, the equality is an inference). The weapon weights depend on the tag as well as the kind. In the Curio-display counts the plain 8% enchants run Critical 453, Speed 451, Physical 425, Caster damage 420, Attribute 261, Lightning 171, Fire 163, Cold 146, Ailment 126, Mana 124, Chaos 39 and the 40% reduced requirements 451; the 33 "8% plus no colour" enchants scatter 6.7 times their degrees of freedom around the kind mean 28 and the 28 six-plus-six hybrids 2.8 times around 41. The extra crafted modifier has 32 of 7,742 (0.41%). The value holds `count_of`, from the mod id of each of the 136 enchants of the 3.29 pool to its count in the sample, which is its weight.
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1dDDMRc3GAE4G0X-lJeLXSHaGtLLNf612nrFiOyCo0Vs/
+    quote: "Weapon Enchant, All-Time: 8% increased Explicit Critical Modifier magnitudes 453; 8% increased Explicit Speed Modifier magnitudes 451; 40% reduced Attribute Requirements 451; ... Can have 1 additional Crafted Modifier 32 (181 rows, 7,742 items)"
+    approximate: true
+    approximate_reason: "Same sample and the same two assumptions as the armour table (weights kept after 3.29.0, shares the same at every item level); a count of 15 to 50 per enchant carries 15% to 25% noise that is left in."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      count_of:
+        WeaponEnchantmentHeistAdditionalCraftingModifier1_: 32
+        WeaponEnchantmentHeistAilmentEffect1: 126
+        WeaponEnchantmentHeistAilmentEffectAttributeRequirement1_: 40
+        WeaponEnchantmentHeistAilmentEffectAttributeRequirementPenalty1: 19
+        WeaponEnchantmentHeistAilmentEffectNoBlueSockets1__: 30
+        WeaponEnchantmentHeistAilmentEffectNoGreenSockets1: 33
+        WeaponEnchantmentHeistAilmentEffectNoRedSockets1_: 29
+        WeaponEnchantmentHeistAilmentEffectSocketPenalty1__: 12
+        WeaponEnchantmentHeistAilmentEffectSocketsAreLinked1: 5
+        WeaponEnchantmentHeistAttributeEffect1: 261
+        WeaponEnchantmentHeistAttributeEffectAttributeRequirement1: 38
+        WeaponEnchantmentHeistAttributeEffectAttributeRequirementPenalty1: 20
+        WeaponEnchantmentHeistAttributeEffectDamageEffectPenalty1: 24
+        WeaponEnchantmentHeistAttributeEffectNoBlueSockets1_: 48
+        WeaponEnchantmentHeistAttributeEffectNoGreenSockets1: 50
+        WeaponEnchantmentHeistAttributeEffectNoRedSockets1: 49
+        WeaponEnchantmentHeistAttributeEffectSocketPenalty1: 26
+        WeaponEnchantmentHeistAttributeEffectSocketsAreLinked1_: 3
+        WeaponEnchantmentHeistAttributeRequirement1: 451
+        WeaponEnchantmentHeistCasterDamageEffect1: 420
+        WeaponEnchantmentHeistCasterDamageEffectAilmentEffect1_: 25
+        WeaponEnchantmentHeistCasterDamageEffectAttributeEffect1: 46
+        WeaponEnchantmentHeistCasterDamageEffectAttributeRequirement1_: 55
+        WeaponEnchantmentHeistCasterDamageEffectAttributeRequirementPenalty1: 26
+        WeaponEnchantmentHeistCasterDamageEffectCriticalEffect1: 51
+        WeaponEnchantmentHeistCasterDamageEffectCriticalEffectPenalty1: 23
+        WeaponEnchantmentHeistCasterDamageEffectNoBlueSockets1_: 28
+        WeaponEnchantmentHeistCasterDamageEffectNoGreenSockets1: 18
+        WeaponEnchantmentHeistCasterDamageEffectNoRedSockets1_: 16
+        WeaponEnchantmentHeistCasterDamageEffectSocketPenalty1__: 14
+        WeaponEnchantmentHeistCasterDamageEffectSocketsAreLinked1: 9
+        WeaponEnchantmentHeistCasterDamageEffectSpeedEffect1: 42
+        WeaponEnchantmentHeistCasterDamageEffectSpeedEffectPenalty1: 24
+        WeaponEnchantmentHeistChaosEffect1__: 39
+        WeaponEnchantmentHeistChaosEffectAilmentEffect1_: 37
+        WeaponEnchantmentHeistChaosEffectAttributeEffect1: 44
+        WeaponEnchantmentHeistChaosEffectAttributeRequirement1_: 44
+        WeaponEnchantmentHeistChaosEffectAttributeRequirementPenalty1: 23
+        WeaponEnchantmentHeistChaosEffectCriticalEffect1: 43
+        WeaponEnchantmentHeistChaosEffectCriticalEffectPenalty1: 26
+        WeaponEnchantmentHeistChaosEffectNoBlueSockets1: 11
+        WeaponEnchantmentHeistChaosEffectNoGreenSockets1: 17
+        WeaponEnchantmentHeistChaosEffectNoRedSockets1___: 11
+        WeaponEnchantmentHeistChaosEffectSocketPenalty1: 6
+        WeaponEnchantmentHeistChaosEffectSocketsAreLinked1_: 3
+        WeaponEnchantmentHeistChaosEffectSpeedEffect1_: 49
+        WeaponEnchantmentHeistChaosEffectSpeedEffectPenalty1: 22
+        WeaponEnchantmentHeistColdEffect1__: 146
+        WeaponEnchantmentHeistColdEffectAilmentEffect1: 20
+        WeaponEnchantmentHeistColdEffectAttributeEffect1: 43
+        WeaponEnchantmentHeistColdEffectAttributeRequirement1: 45
+        WeaponEnchantmentHeistColdEffectAttributeRequirementPenalty1_: 24
+        WeaponEnchantmentHeistColdEffectCriticalEffect1_: 35
+        WeaponEnchantmentHeistColdEffectCriticalEffectPenalty1: 30
+        WeaponEnchantmentHeistColdEffectNoBlueSockets1: 14
+        WeaponEnchantmentHeistColdEffectNoGreenSockets1: 21
+        WeaponEnchantmentHeistColdEffectNoRedSockets1: 19
+        WeaponEnchantmentHeistColdEffectSocketPenalty1_: 11
+        WeaponEnchantmentHeistColdEffectSocketsAreLinked1: 2
+        WeaponEnchantmentHeistColdEffectSpeedEffect1: 42
+        WeaponEnchantmentHeistColdEffectSpeedEffectPenalty1: 25
+        WeaponEnchantmentHeistCriticalEffect1_: 453
+        WeaponEnchantmentHeistCriticalEffectAttributeRequirement1_: 47
+        WeaponEnchantmentHeistCriticalEffectAttributeRequirementPenalty1: 17
+        WeaponEnchantmentHeistCriticalEffectDamageEffectPenalty1: 19
+        WeaponEnchantmentHeistCriticalEffectNoBlueSockets1: 40
+        WeaponEnchantmentHeistCriticalEffectNoGreenSockets1: 48
+        WeaponEnchantmentHeistCriticalEffectNoRedSockets1: 47
+        WeaponEnchantmentHeistCriticalEffectSocketPenalty1___: 15
+        WeaponEnchantmentHeistCriticalEffectSocketsAreLinked1: 9
+        WeaponEnchantmentHeistFireEffect1: 163
+        WeaponEnchantmentHeistFireEffectAilmentEffect1_: 21
+        WeaponEnchantmentHeistFireEffectAttributeEffect1: 45
+        WeaponEnchantmentHeistFireEffectAttributeRequirement1: 35
+        WeaponEnchantmentHeistFireEffectAttributeRequirementPenalty1: 20
+        WeaponEnchantmentHeistFireEffectCriticalEffect1: 53
+        WeaponEnchantmentHeistFireEffectCriticalEffectPenalty1: 29
+        WeaponEnchantmentHeistFireEffectNoBlueSockets1: 18
+        WeaponEnchantmentHeistFireEffectNoGreenSockets1_: 16
+        WeaponEnchantmentHeistFireEffectNoRedSockets1: 16
+        WeaponEnchantmentHeistFireEffectSocketPenalty1: 13
+        WeaponEnchantmentHeistFireEffectSocketsAreLinked1: 7
+        WeaponEnchantmentHeistFireEffectSpeedEffect1: 49
+        WeaponEnchantmentHeistFireEffectSpeedEffectPenalty1: 21
+        WeaponEnchantmentHeistLightningEffect1: 171
+        WeaponEnchantmentHeistLightningEffectAilmentEffect1: 30
+        WeaponEnchantmentHeistLightningEffectAttributeEffect1: 52
+        WeaponEnchantmentHeistLightningEffectAttributeRequirement1: 43
+        WeaponEnchantmentHeistLightningEffectAttributeRequirementPenalty1: 22
+        WeaponEnchantmentHeistLightningEffectCriticalEffect1: 44
+        WeaponEnchantmentHeistLightningEffectCriticalEffectPenalty1_: 21
+        WeaponEnchantmentHeistLightningEffectNoBlueSockets1_: 17
+        WeaponEnchantmentHeistLightningEffectNoGreenSockets1: 18
+        WeaponEnchantmentHeistLightningEffectNoRedSockets1: 14
+        WeaponEnchantmentHeistLightningEffectSocketPenalty1: 10
+        WeaponEnchantmentHeistLightningEffectSocketsAreLinked1: 9
+        WeaponEnchantmentHeistLightningEffectSpeedEffect1_: 49
+        WeaponEnchantmentHeistLightningEffectSpeedEffectPenalty1: 28
+        WeaponEnchantmentHeistManaEffect1: 124
+        WeaponEnchantmentHeistManaEffectAilmentEffect1: 20
+        WeaponEnchantmentHeistManaEffectAttributeEffect1_: 46
+        WeaponEnchantmentHeistManaEffectAttributeRequirement1: 41
+        WeaponEnchantmentHeistManaEffectAttributeRequirementPenalty1__: 21
+        WeaponEnchantmentHeistManaEffectCriticalEffect1: 31
+        WeaponEnchantmentHeistManaEffectCriticalEffectPenalty1: 23
+        WeaponEnchantmentHeistManaEffectNoBlueSockets1__: 23
+        WeaponEnchantmentHeistManaEffectNoGreenSockets1: 38
+        WeaponEnchantmentHeistManaEffectNoRedSockets1: 24
+        WeaponEnchantmentHeistManaEffectSocketPenalty1_: 12
+        WeaponEnchantmentHeistManaEffectSocketsAreLinked1: 4
+        WeaponEnchantmentHeistManaEffectSpeedEffect1: 61
+        WeaponEnchantmentHeistManaEffectSpeedEffectPenalty1: 27
+        WeaponEnchantmentHeistPhysicalEffect1: 425
+        WeaponEnchantmentHeistPhysicalEffectAilmentEffect1: 38
+        WeaponEnchantmentHeistPhysicalEffectAttributeEffect1____: 29
+        WeaponEnchantmentHeistPhysicalEffectAttributeRequirement1: 54
+        WeaponEnchantmentHeistPhysicalEffectAttributeRequirementPenalty1: 17
+        WeaponEnchantmentHeistPhysicalEffectCriticalEffect1: 38
+        WeaponEnchantmentHeistPhysicalEffectCriticalEffectPenalty1: 24
+        WeaponEnchantmentHeistPhysicalEffectNoBlueSockets1: 20
+        WeaponEnchantmentHeistPhysicalEffectNoGreenSockets1_: 17
+        WeaponEnchantmentHeistPhysicalEffectNoRedSockets1: 26
+        WeaponEnchantmentHeistPhysicalEffectSocketPenalty1: 12
+        WeaponEnchantmentHeistPhysicalEffectSocketsAreLinked1: 3
+        WeaponEnchantmentHeistPhysicalEffectSpeedEffect1: 50
+        WeaponEnchantmentHeistPhysicalEffectSpeedEffectPenalty1___: 23
+        WeaponEnchantmentHeistSocketsAreLinked1_: 41
+        WeaponEnchantmentHeistSpeedEffect1_: 451
+        WeaponEnchantmentHeistSpeedEffectAttributeRequirement1__: 57
+        WeaponEnchantmentHeistSpeedEffectAttributeRequirementPenalty1: 26
+        WeaponEnchantmentHeistSpeedEffectDamageEffectPenalty1: 20
+        WeaponEnchantmentHeistSpeedEffectNoBlueSockets1: 53
+        WeaponEnchantmentHeistSpeedEffectNoGreenSockets1: 42
+        WeaponEnchantmentHeistSpeedEffectNoRedSockets1: 50
+        WeaponEnchantmentHeistSpeedEffectSocketPenalty1: 24
+        WeaponEnchantmentHeistSpeedEffectSocketsAreLinked1__: 9
+
+  - id: enchantment.extra_crafted_modifier_curio_display_rate
+    statement: How often the extra-crafted-modifier enchant appears on enchanted items found in Curio Displays - not the chance of an orb click. 36 of 5,078 enchanted body armours (0.71%, 95% 0.51 to 0.98%) and 32 of 7,742 enchanted weapons (0.41%, 0.29 to 0.58%); on the 3.29 pool 0.83% and 0.48%. The chance that a Tempering or Tailoring Orb rolls it is unknown and may be 0 (open point O-07); do not read `curio_display_rate` as an orb probability.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt3ptsj/
+    quote: "we've seen this mod 18 times on 2,032 enchanted armors and 9 times on 3,016 enchanted weapons"
+    approximate: true
+    approximate_reason: "No source gives the orb's chance to roll this enchant and players disagree whether it can; it stays in the draw at its Curio weight as a click that misses, so the pools are the game's 136 and 54."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {curio_display_rate: {armour: 0.0083, weapon: 0.0048}, orb_probability: null}
+
+  - id: enchantment.tailoring_orb_tally_matches_curio
+    statement: A tally of 263 Tailoring Orb results (header 330; the sheet lists "40% reduced Attribute Requirements" twice with 24 each and one Defence-plus-white-socket row twice, each counted once here) fits the Curio-display shares on the 71 distinct enchants it lists, chi-square 5.0 on 5 degrees of freedom. The 8% Life and 8% Resistance rows are missing from it (about 82 clicks would be expected there under the Curio shares, the unexplained gap to 330 is 67), so the tally does not contradict the Curio shares but cannot confirm the Life and Resistance shares. It is armour only.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1gcr4is/_/ltvy0hq/
+    quote: "I've seen this data from someone ... Pretty accurate according to my experience"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.socket_stat_enchant_reforges_sockets
+    statement: The orb reforges the sockets only when it rolls an enchantment with a socket stat (no colour, All Sockets Linked, -3 to maximum Sockets); the links of the item break then. What is rerolled exactly is open point O-03.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1ltbc8g/_/n1pnic4/
+    quote: "It absolutely is not guaranteed to reroll sockets. It only rerolls them if you hit one of the enchantments that affects sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.quality_enchant_replaces_heist_enchant
+    statement: A Harvest quality enchant replaces a Tempering or Tailoring enchant and the reverse; they share the one enchantment slot.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt52u52/
+    quote: "And after that you can replace the enchant with harvest as/crit per quality (or currently one of the settlers enchant)."
+    approximate: true
+    approximate_reason: "No source states the exclusivity in numbers; it is inferred from the wiki's one-enchantment rule and two player quotes, and no counter-example was found."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.crafted_slot_takes_no_affix_slot
+    statement: The extra-crafted-modifier enchant sits in the enchantment slot, so it does not use an affix slot, where the "of Crafting" metamod ("can have 3 crafted mods") does. Whether the two stack is open point O-06.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1lvfm6b/_/n25ysbt/
+    quote: "normally the \"can have 3 crafted mods\" would block one affix slot and can't be annulled because of suffixes cannot be changed."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.crafted_slot_allows_two_crafts
+    statement: The extra-crafted-modifier enchant allows two crafted modifiers on the item. One player says so in a thread whose other replies agree ("It doesn't bypass the six mod limit"); no test is shown.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt4exla/
+    quote: "It just allows 2x crafted mods"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.tailoring_orb_leaves_memory_strands
+    statement: A Tailoring Orb does not consume Memory Strands (it changes the base, not the modifiers). It rests on this one reply plus the absence of the Tailoring and Tempering Orbs from the wiki's list of strand-spending currencies in the #98 claims (research/memory-strands, d6731e5, `memory_strands.spend_*`); no collision with #98, which does not name these orbs either way.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1pbtw60/_/nrt0pww/
+    quote: "They don't"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.magnitude_multiplies_flat_and_increased
+    statement: A magnitude enchant multiplies every tagged explicit modifier of the item, so a tagged flat part and a tagged "increased" part are each raised by the same percentage and the effects compound.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1qlsbrc/_/o1mcc5b/
+    quote: "it compounds since it increases both the flat and the %inc ES by 8%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+
+  # Added by ticket #237 (the design of B7, ADR-0052 and ADR-0053).
+  - id: enchantment.crafted_slot_with_multimod_takes_the_larger
+    statement: The limit of crafted mods held is the larger of the two counts, never their sum. With neither the extra crafted slot nor the multimod it is 1 (bench_craft.one_crafted_mod_by_default), with the extra slot 2 (two crafts), with the multimod 3 (itself and two crafts, metamods.multimod_raises_crafted_limit), with both 3. The extra slot takes no affix slot, so next to the multimod it adds no craft; what it buys is two crafts without the multimod's affix slot. The value is the limit by what the item holds.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/105#issuecomment-6556749700
+    quote: "with both the larger, 3, never the sum, marked `approximate`"
+    approximate: true
+    approximate_reason: "No source says whether the extra crafted slot and the multimod stack; the thread's poster combined them and three crafts were made, nobody states a fourth, so the larger of the two limits is the default of grill B7."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {neither: 1, extra_slot: 2, multimod: 3, both: 3}
+
+  - id: enchantment.scrap_gain_follows_catalyst_formula
+    statement: "Armourer's Scraps and Blacksmith's Whetstones give quality by the rule the catalysts follow, which depends on the item level and not on the rarity: one currency item adds floor(f) points of quality, or one more with probability frac(f), where f = max(1, min(30 * e^(-ilvl / 30) - 0.3, 20)) (the Quality page of the wiki), capped at 20%. The official 3.25 note groups the scraps and whetstones with the catalysts and says their amount is based on the item level; the formula itself is the wiki's, and no source checks it on scraps and whetstones."
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3531661
+    quote: "The rarity of the item is no longer relevant when applying Cartographer's Chisels, Blacksmith's Whetstones, Armourer's Scraps, Glassblower's Baubles, and Catalysts to non-Unique items. Instead, the amount of Quality they provide is now based on the item level."
+    approximate: true
+    approximate_reason: "The 3.25 note says the amount depends on the item level and the wiki's Quality page gives the formula, but no source checks that formula on Armourer's Scraps or Blacksmith's Whetstones."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01

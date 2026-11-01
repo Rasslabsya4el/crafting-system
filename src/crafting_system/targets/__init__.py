@@ -29,6 +29,14 @@ Keys (unknown keys are errors, with a close-match hint):
       type: intrinsic       # abrasive, accelerating, fertile, imbued, intrinsic, noxious, prismatic, tempering,
                             # turbulent, unstable, sinistral or dextral (any case)
       min_percent: 20       # whole number from 1 to 20
+    enchantment:            # optional: the enchantment wanted (ADR-0050); an item holds one, so only `any_of` exists
+      any_of:               # non-empty list; the item meets the target when its enchantment is any one of them
+        - "8% increased Explicit Life Modifier magnitudes"   # an enchantment by its exact English stat text (a two-line
+                            # text joins its lines with a newline), by its game-data mod id, or
+        - Life              # by a bare tag: the clean enchants of that tag (a positive magnitude on it, no socket rider,
+                            # no downside). An enchant with a rider or a downside is named by its own text or id.
+                            # The extra crafted slot ("Can have 1 additional Crafted Modifier") can be reached only by a
+                            # start item that already holds it; no orb is planned for it (ADR-0053).
     start_item:             # optional; absent means a fresh normal item of the base, level and influence
       rarity: rare          # normal, magic or rare; default rare when mods are given, else normal
       corrupted: false      # optional
@@ -44,6 +52,7 @@ Keys (unknown keys are errors, with a close-match hint):
       quality:              # optional: catalyst quality of the start item, `type` and `percent` (0 to 20)
         type: intrinsic
         percent: 20
+      enchantment: ArmourEnchantmentHeistLifeEffect1   # optional: the enchantment the item starts with, a mod id or its exact stat text
       veil_offer: [UnveiledPrefixLife1]   # optional: up to 3 mod ids offered for the one veiled placeholder in `mods`
     start_price: R12 start amulet   # optional: the name of the start item in the price file (what it costs to get)
     price_file: prices.json # optional path; a relative path counts from the target file's folder
@@ -71,11 +80,21 @@ from pathlib import Path
 from crafting_system.data import GameData
 
 from .errors import TargetError
-from .model import Condition, ImplicitRequirement, KOfN, Node, QualityRequirement, Requirement, Target
+from .model import (
+    Condition,
+    EnchantmentRequirement,
+    ImplicitRequirement,
+    KOfN,
+    Node,
+    QualityRequirement,
+    Requirement,
+    Target,
+)
 from .parse import parse_target_text
 
 __all__ = [
     "Condition",
+    "EnchantmentRequirement",
     "ImplicitRequirement",
     "KOfN",
     "Node",
