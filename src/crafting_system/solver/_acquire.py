@@ -60,6 +60,9 @@ class Acquisition[S]:
     want predicate for dominance: a state that dominates the wanted one (has everything `want`
     has) may end the acquisition early, so `reaches` may be wider than equality.
 
+    Starts of `solve` must be product states, made by `start(state)`; a plain base state is not
+    one and is not checked.
+
     An extra input that is not a `Need` raises `TypeError`, so a base model cannot mix plain and
     acquired inputs without notice. The product's actions are built on each call and not cached,
     as the solver calls them once per product state.
