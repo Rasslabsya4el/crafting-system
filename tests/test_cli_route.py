@@ -203,6 +203,27 @@ def test_fractured_conditions_read_the_fractured_mods_of_the_state(plan):
     assert none.policy == {} and len(none.gaps) == 1
 
 
+def test_fractured_without_matches_a_state_whose_fractured_mod_is_not_a_listed_family(plan):
+    lines = """
+        rules:
+          - when:
+              fractured:
+                without: [{family: FAMILY}]
+            do: REFORGE
+        """
+
+    other = evaluate_route(plan, read(lines.replace("FAMILY", "IncreasedLife").replace("REFORGE", REFORGE), plan), DATA)
+    same = evaluate_route(plan, read(lines.replace("FAMILY", "LightningResistance").replace("REFORGE", REFORGE), plan), DATA)
+
+    assert set(other.policy) == {plan.start} and other.gaps == ()  # the start fractures a Lightning Resistance, not a Life
+    assert same.policy == {} and len(same.gaps) == 1
+
+
+def test_fractured_without_needs_a_list_of_families(plan):
+    with pytest.raises(RouteError, match=r"rules\[0\]\.when\.fractured\.without"):
+        read("rules:" + chr(10) + "  - when:" + chr(10) + "      fractured:" + chr(10) + "        without: none" + chr(10) + "    do: Chaos Orb" + chr(10), plan)
+
+
 @pytest.mark.parametrize(
     ("when", "matches"),
     [

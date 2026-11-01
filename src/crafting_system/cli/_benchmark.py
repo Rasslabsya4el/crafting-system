@@ -34,6 +34,7 @@ from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, Target, load_target
 
+from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
 from ._offers import default_offers
 from ._plan import Plan, make_plan
@@ -71,9 +72,16 @@ class BenchmarkRoute:
     target: str
     route: str
     odds: tuple[PublishedOdds, ...]
+    outcomes: tuple[PublishedOutcome, ...] = ()
+    heavy: str | None = None  # why the planner needs hours here: `benchmark` then checks the published odds only, unless asked with --heavy
 
 
 GEM = "+1 to Level of all Lightning Skill Gems"
+PIERCE, STRENGTH, ARROW, LIFE_TOP = "AdditionalPierceEssence7", "StrengthEssence7_", "AdditionalArrowQuiver1_", "IncreasedLife9"
+NO_ATTACK, MULTIMOD = "IntMasterItemGenerationCannotRollAttackAffixes", "StrIntMasterItemGenerationCanHaveMultipleCraftedMods"
+SPEED, GEMS, DOT = "LocalIncreasedAttackSpeed5", "LocalIncreaseSocketedGemLevel1", "PoisonDamagePrefixInfluence4"
+BOW_TOP = "DamageWithBowSkills5"  # tier 2 of Damage with Bow Skills, the top tier at item level 81
+DOT_TIERS = ("PoisonDamagePrefixInfluence1__", "PoisonDamagePrefixInfluence2__", "PoisonDamagePrefixInfluence3", DOT)
 
 BENCHMARKS = (
     BenchmarkRoute(
@@ -129,7 +137,87 @@ BENCHMARKS = (
         "examples/routes/r09-life-boots.yaml",
         (),
     ),
+    BenchmarkRoute(
+        "R04",
+        "Insanity-fractured additional-arrow Penetrating Arrow Quiver (PoE Vault guide)",
+        "examples/targets/r04-penetrating-quiver.yaml",
+        "examples/routes/r04-penetrating-quiver.yaml",
+        (),
+        (
+            PublishedOutcome(
+                "Fracturing Orb", "fractures the Pierce", "a rare quiver with exactly 4 mods, the Pierce among them",
+                (PIERCE, LIFE_TOP, STRENGTH, ARROW), FRACTURED, (PIERCE,), "25%",
+            ),
+            PublishedOutcome(
+                "Exalted Orb", "adds Maximum Life or Increased Damage with Bow Skills (each of the two forced Exalted Orbs)",
+                "the quiver with the Pierce fractured, the Strength, the arrow and \"Cannot roll Attack Modifiers\"",
+                (PIERCE, STRENGTH, ARROW, NO_ATTACK), ADDS, (), "100%",
+                fractured=(PIERCE,), crafted=(NO_ATTACK,), families=("IncreasedLife", "DamageWithWeaponTypeSkill"),
+            ),
+            PublishedOutcome(  # the same Exalted Orb read at the target's tiers (owner rule: an unstated tier is the top tier)
+                "Exalted Orb", "adds the TOP tier of Maximum Life or of Increased Damage with Bow Skills (the target's tiers)",
+                "the quiver with the Pierce fractured, the Strength, the arrow and \"Cannot roll Attack Modifiers\"",
+                (PIERCE, STRENGTH, ARROW, NO_ATTACK), ADDS, (LIFE_TOP, BOW_TOP), "100%",
+                fractured=(PIERCE,), crafted=(NO_ATTACK,),
+            ),
+            PublishedOutcome(  # the second forced Exalted Orb: Maximum Life is already on the quiver
+                "Exalted Orb", "adds Increased Damage with Bow Skills (the second forced Exalted Orb), any tier",
+                "the quiver of the row above with Maximum Life added",
+                (PIERCE, STRENGTH, ARROW, NO_ATTACK, LIFE_TOP), ADDS, (), "100%",
+                fractured=(PIERCE,), crafted=(NO_ATTACK,), families=("DamageWithWeaponTypeSkill",),
+            ),
+            PublishedOutcome(
+                "Exalted Orb", "adds the TOP tier of Increased Damage with Bow Skills (the second Exalted Orb, the target's tier)",
+                "the quiver of the row above with Maximum Life added",
+                (PIERCE, STRENGTH, ARROW, NO_ATTACK, LIFE_TOP), ADDS, (BOW_TOP,), "100%",
+                fractured=(PIERCE,), crafted=(NO_ATTACK,),
+            ),
+        ),
+        heavy="the exact graph needs more memory than a 16 GB runner has (ticket #70)",
+    ),
+    BenchmarkRoute(
+        "R14",
+        "Toxic Rain Hunter bow with +1 socketed gems and chaos damage over time (Reddit guide)",
+        "examples/targets/r14-hunter-bow.yaml",
+        "examples/routes/r14-hunter-bow.yaml",
+        (),
+        (
+            PublishedOutcome(
+                "Orb of Annulment", "removes the Attack Speed", "a rare bow with 3 mods, the Attack Speed among them",
+                (SPEED, GEMS, DOT), REMOVED, (SPEED,), "33%",
+            ),
+            PublishedOutcome(
+                "Orb of Annulment", "removes the Attack Speed", "a rare bow with 2 mods, the Attack Speed among them",
+                (SPEED, GEMS), REMOVED, (SPEED,), "50%",
+            ),
+            PublishedOutcome(
+                "Exalted Orb", "adds +1 to Level of Socketed Gems or Chaos Damage over Time (the first forced Exalted Orb)",
+                "the bow with the Attack Speed, \"Can have up to 3 Crafted Modifiers\" and \"Cannot roll Attack Modifiers\"",
+                (SPEED, MULTIMOD, NO_ATTACK), ADDS, (GEMS, *DOT_TIERS), "100%", crafted=(MULTIMOD, NO_ATTACK),
+            ),
+            PublishedOutcome(  # the same Exalted Orb read at the target's tiers (owner rule: an unstated tier is the top tier)
+                "Exalted Orb", "adds +1 to Level of Socketed Gems or the TOP tier of Chaos Damage over Time (the target's tiers)",
+                "the bow with the Attack Speed, \"Can have up to 3 Crafted Modifiers\" and \"Cannot roll Attack Modifiers\"",
+                (SPEED, MULTIMOD, NO_ATTACK), ADDS, (GEMS, DOT), "100%", crafted=(MULTIMOD, NO_ATTACK),
+            ),
+            PublishedOutcome(  # the second forced Exalted Orb: +1 gems is already on the bow
+                "Exalted Orb", "adds Chaos Damage over Time (the second forced Exalted Orb), any tier",
+                "the bow of the rows above with +1 to Level of Socketed Gems added",
+                (SPEED, MULTIMOD, NO_ATTACK, GEMS), ADDS, DOT_TIERS, "100%", crafted=(MULTIMOD, NO_ATTACK),
+            ),
+            PublishedOutcome(
+                "Exalted Orb", "adds the TOP tier of Chaos Damage over Time (the second Exalted Orb, the target's tier)",
+                "the bow of the rows above with +1 to Level of Socketed Gems added",
+                (SPEED, MULTIMOD, NO_ATTACK, GEMS), ADDS, (DOT,), "100%", crafted=(MULTIMOD, NO_ATTACK),
+            ),
+        ),
+        heavy="the exact graph has at least 787,000 states, more than a 16 GB runner holds, and no approximate level exists for a route with metamods (ticket #70)",
+    ),
 )
+
+class _Skipped(Exception):
+    """A heavy route that `benchmark` leaves unsolved; its entry already says why."""
+
 
 # What a route can fail with; each is written into the route's entry, none ends the command.
 ROUTE_ERRORS = (ValueError, OSError, DataError, PriceFileNotFound, ActionError, ConvergenceError)
@@ -150,6 +238,7 @@ def benchmark_main(
         description="Run the solver and the given route of every benchmark route and write benchmark.json.",
     )
     parser.add_argument("--out", metavar="DIR", help="where to write benchmark.json (default: the output dir)")
+    parser.add_argument("--heavy", action="store_true", help="also solve the routes that take the planner hours (R04, R14); without it only their published odds are checked")
     args = parser.parse_args(list(argv))
 
     try:
@@ -160,7 +249,7 @@ def benchmark_main(
         entries = []
         used_prices: PriceFile | None = None
         for bench in BENCHMARKS:
-            entry, loaded = run_route(bench, game, root, config, prices, today)
+            entry, loaded = run_route(bench, game, root, config, prices, today, heavy=args.heavy)
             entries.append(entry)
             used_prices = used_prices or loaded
         document = {
@@ -208,7 +297,14 @@ def _commit(root: Path) -> str:
 
 
 def run_route(
-    bench: BenchmarkRoute, data: GameData, root: Path, config: Config, prices: PriceFile | None, today: date | None
+    bench: BenchmarkRoute,
+    data: GameData,
+    root: Path,
+    config: Config,
+    prices: PriceFile | None,
+    today: date | None,
+    *,
+    heavy: bool = False,
 ) -> tuple[dict, PriceFile | None]:
     """The entry of one benchmark route, and the price file it was run on (None when none was loaded).
 
@@ -232,6 +328,10 @@ def run_route(
     began = time.perf_counter()
     try:
         target = load_target(root / bench.target, data)
+        entry["published_odds"] = published_outcomes(data, target, bench.outcomes)  # needs no plan, so a refused route still has them
+        if bench.heavy is not None and not heavy:
+            entry["error"] = f"not solved: {bench.heavy} (run `benchmark --heavy` to solve it)"
+            raise _Skipped
         loaded = prices if prices is not None else load_target_prices(target.price_file, config)
         stale = stale_warning(loaded, today if today is not None else datetime.now(UTC).date())
         if stale:
@@ -246,13 +346,15 @@ def run_route(
         entry["solver"] = _totals(risk.success_probability, risk.mean, risk.p50, risk.p90, shift)
         entry["solver"]["seconds"] = plan.solve_seconds
         timings["solver"], timings["risk_evaluate"] = plan.solve_seconds, plan.risk_seconds
-        entry["published_odds"] = published_odds(data, plan, bench)
+        entry["published_odds"] += published_odds(data, plan, bench)
 
         route = load_route(root / bench.route, plan, data)
         result = evaluate_route(plan, route, data)
         entry["given_route"] = _given_route(plan, result, data, shift)
         timings["route_evaluate"] = result.seconds
         entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
+    except _Skipped:
+        pass
     except ROUTE_ERRORS as error:
         entry["error"] = _without_root(str(error), root)
     timings["total"] = time.perf_counter() - began
