@@ -316,13 +316,41 @@ def tier_table_data(levels_and_weights):
 
 
 def test_mods_that_tie_on_the_required_level_share_a_tier_and_stay_or_go_together():
-    # Levels 40, 30, 30, 20: three tiers; 2 strands keep two (levels 40 and 30), so both mods of level 30 stay and the level 20 mod goes.
+    # Levels 40, 30, 30, 20 are three tiers, not four. At 22 strands (D = 405) three tiers keep one and four would keep two:
+    # only the level 40 mod stays. At 2 strands three tiers keep two, so both mods of the shared tier stay and the level 20 mod goes.
     data = tier_table_data([(40, 100), (30, 200), (30, 300), (20, 400)])
+    assert (rollable_tiers(3, 22), rollable_tiers(4, 22)) == (1, 2)
     assert rollable_tiers(3, 2) == 2
 
-    pool = build_pool(data, amulet(item_level=86), cut=Cut(2, reading=WeightReading.DELETE_ONLY))
+    one = build_pool(data, amulet(item_level=86), cut=Cut(22, reading=WeightReading.DELETE_ONLY))
+    two = build_pool(data, amulet(item_level=86), cut=Cut(2, reading=WeightReading.DELETE_ONLY))
 
-    assert ids_of(pool, "IncreasedLife") == ["IncreasedLifeToy1", "IncreasedLifeToy2", "IncreasedLifeToy3"]
+    assert ids_of(one, "IncreasedLife") == ["IncreasedLifeToy1"]
+    assert ids_of(two, "IncreasedLife") == ["IncreasedLifeToy1", "IncreasedLifeToy2", "IncreasedLifeToy3"]
+
+
+def test_a_mod_type_that_has_mods_on_both_sides_is_cut_as_two_tier_tables():
+    # A table is a mod type of one generation type: the prefix tiers (levels 5, 11, 18) and the toy suffix tiers (50, 40) of one
+    # mod type are two tables. At 82 strands each keeps one tier; counted as one table of five tiers they would keep two.
+    template = DATA.mods["IncreasedLife1"]
+    mods = dict(DATA.mods)
+    for number, level in enumerate((50, 40), start=1):
+        mod_id = f"IncreasedLifeSuffixToy{number}"
+        mods[mod_id] = dataclasses.replace(
+            template,
+            id=mod_id,
+            generation_type="suffix",
+            families=("IncreasedLifeSuffixToy",),
+            required_level=level,
+            spawn_weights=(Weight("amulet", 1000), Weight("default", 0)),
+        )
+    data = dataclasses.replace(DATA, mods=mods)
+    assert (rollable_tiers(3, 82), rollable_tiers(2, 82), rollable_tiers(5, 82)) == (1, 1, 2)
+
+    pool = build_pool(data, amulet(item_level=86), cut=Cut(82))
+
+    assert ids_of(pool, "IncreasedLife") == ["IncreasedLife3"]
+    assert ids_of(pool, "IncreasedLifeSuffixToy") == ["IncreasedLifeSuffixToy1"]
 
 
 def test_cut_weights_returns_the_pairs_unchanged_when_the_cut_cannot_remove_a_tier():
@@ -370,6 +398,7 @@ def test_the_module_that_holds_the_cut_names_the_claims_it_reads():
     held = {value.id for value in vars(cut_module).values() if isinstance(value, Rule)}
 
     assert {
+        "affix_pool.no_memory_strands",
         "memory_strands.rollable_tiers",
         "memory_strands.weights_of_kept_tiers",
         "memory_strands.cull_counts_eligible_tiers",

@@ -34,6 +34,7 @@ from crafting_system.data import Mod
 from crafting_system.items import MAX_MEMORY_STRANDS, Item, MemoryStrandsError
 from crafting_system.rules import get_rule
 
+NO_STRANDS_NO_CUT = get_rule("affix_pool.no_memory_strands")  # the pool's side of the same rule: no strands, the ordinary pool
 ROLLABLE_TIERS = get_rule("memory_strands.rollable_tiers")
 CULL_COUNTS_ELIGIBLE_TIERS = get_rule("memory_strands.cull_counts_eligible_tiers")
 ZERO_IS_NO_CULL = get_rule("memory_strands.zero_is_no_cull")
