@@ -12,6 +12,8 @@ The owner requires flexibility across leagues ([#81](https://github.com/Rasslabs
 
 An action answers five questions (`actions/contract.py`): `label(data)`, `outcomes(data, item)` (exact `distribution`, `chance_all` and `sample`, plus `components`, the mixture the kernel is built from), `resources(data)`, `reads(data)` and `adds(data, item)`. `abstraction` builds the state from the `reads` of the enabled actions and the kernel from `outcomes` alone; `cli` builds its offers from the catalog, `resources` and `adds`; `simulator` samples `outcomes`. `tests/test_actions_no_concrete_imports.py` fails when a module outside `actions` names a concrete action class.
 
+A sixth question is optional: `twin_key(data, item)` (default None) is a cheap key such that two actions of one catalog listing with equal, non-None keys give equal `outcomes` on every item of that base, without building a pool. Sets of fossils declare it (12,696 sets of a boots item fall into about five thousand classes); `tests/test_actions_twin_key.py` checks that equal keys give equal outcomes, and pruning (#118) keeps only the cheapest of a class.
+
 `reads` is the one declaration that must be right: an action that reads nothing of the other mods **erases** them, which is why a state need not store them. An action that declares nothing reads every mod and tells every family apart: exact, but the state count can blow up. A new method is therefore correct by default and fast by declaration.
 
 ## The catalog and the planner

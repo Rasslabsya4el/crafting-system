@@ -174,6 +174,9 @@ def offers_for(
     * With `kinds_named` (the target's `actions:` key) only the kinds of those names are listed at all and the filters
       below see only them. That is the target's choice, not a proof: the plan is the cheapest among the named kinds,
       and the kinds not named are listed in `left_out`.
+    * An action that adds named mods only for a target that wants them (`Adds.wanted_only`, an aspect beast, #147) is
+      offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
+      It is left out and reported like a craft that counts for nothing.
     * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
       offered only when the start item holds one or another offered action adds one.
     """
@@ -185,7 +188,15 @@ def offers_for(
                 f"unknown action kind(s) {', '.join(unknown)}; the kinds the planner can use are "
                 + ", ".join(entry.name for entry in kinds(planner_only=True))
             )
-    candidates = list(catalog(data, start_item, planner_only=True, names=kinds_named))
+    named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
+    candidates = []
+    left_out_unwanted: list[str] = []
+    for action in catalog(data, start_item, planner_only=True, names=kinds_named):
+        adds = action.adds(data, start_item)
+        if adds.wanted_only and not (adds.named or frozenset()) & named:
+            left_out_unwanted.append(action.label(data))
+        else:
+            candidates.append(action)
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
     erased_by_all = not any(
         action.adds(data, start_item).keeps_crafted for action in candidates if not _only_crafts(data, start_item, action)
@@ -226,6 +237,14 @@ def offers_for(
             "pay off by clearing a family from the pool, and the plan is the cheapest among the offered crafts only"
         )
         left_out += (LeftOut(reason, tuple(left_out_crafts)),)
+    if left_out_unwanted:
+        left_out = (
+            *left_out,
+            LeftOut(
+                "it adds one fixed mod and the target wants none of those, so it only takes a slot and costs currency",
+                tuple(left_out_unwanted),
+            ),
+        )
     return OfferSet(tuple(offers), left_out)
 
 

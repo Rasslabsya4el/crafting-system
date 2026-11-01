@@ -23,12 +23,31 @@ NUMBERING = get_rule("mod_tier.numbering")
 SCOPE = get_rule("mod_tier.scope_is_mod_type")
 
 
+_TABLE_LIMIT = 32
+# (id(data), base_id) -> (data, table). Holding `data` keeps its id from being reused while cached.
+_TABLES: dict[tuple[int, str], tuple[GameData, Mapping[str, int]]] = {}
+
+
 def tier_table(data: GameData, base_id: str) -> Mapping[str, int]:
     """The tier of every mod that can spawn on the base `base_id`, by mod id; read-only.
 
     Mods that cannot spawn there (spawn weight 0 for the base's tags) are absent. Raises
-    `UnknownBaseError` when the base is not in the game data.
+    `UnknownBaseError` when the base is not in the game data. The table is cached per game data
+    object and base: a repeated call returns the same object.
     """
+    key = (id(data), base_id)
+    hit = _TABLES.get(key)
+    if hit is not None and hit[0] is data:
+        return hit[1]
+    table = _compute_tier_table(data, base_id)
+    if key not in _TABLES and len(_TABLES) >= _TABLE_LIMIT:
+        del _TABLES[next(iter(_TABLES))]
+    _TABLES[key] = (data, table)
+    return table
+
+
+def _compute_tier_table(data: GameData, base_id: str) -> Mapping[str, int]:
+    """`tier_table` without the cache."""
     base = data.base_items.get(base_id)
     if base is None:
         raise UnknownBaseError(f"base {base_id} is not in the game data")

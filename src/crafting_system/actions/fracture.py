@@ -67,7 +67,7 @@ class FracturingOrb(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # It draws nothing, but the fractured copy of a mod is not a mod "named" in advance: `named` stays None.
-        return Adds(draws=False)
+        return Adds(draws=False, fractures=True)
 
     def outcomes(self, data: GameData, item: Item) -> FractureOutcomes:
         """The outcomes of using the orb on `item`: one result per explicit mod, that mod fractured.

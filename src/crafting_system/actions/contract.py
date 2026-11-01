@@ -18,6 +18,8 @@ the base class answers for it unless its file holds several actions):
   module the class is defined in (the `X = get_rule("a.b")` every action file starts with), which is exact
   for a file of one action; an action whose file holds several that read different claims overrides it.
 
+An optional seventh, `twin_key(data, item)`, lets a set of fossils name its twins without a pool (#118).
+
 `abstraction` builds its states from `reads` and its kernels from `outcomes` alone; `cli` builds its
 offers from the catalog (`catalog.py`), `resources` and `adds`; `simulator` calls `outcomes(...).sample`.
 None of them imports a concrete action. The defaults of the base class are the safe ones: an action
@@ -113,6 +115,12 @@ class Adds:
     * `keeps_crafted`: a crafted mod on the item survives the action. The default is True, the safe
       value: a planner leaves out a bench craft that gives the goal nothing only when every other action
       it offers declares False (they erase the crafted mod, so the craft would only take a slot).
+    * `wanted_only`: a planner offers it only for a target that wants a mod it names (`named`), whatever
+      else the offers erase or keep (the aspect beasts: they add one fixed suffix and nothing else, so a
+      target that does not want it gains nothing from its price and its slot).
+    * `fractures`: one finished mod becomes fractured (a Fractured Fossil), so the fractured mods of the
+      item change. The default is False; an action that fractures must say so, because pruning by bound
+      (#118) holds the fractured mods of the start item fixed for every action it bounds.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -124,6 +132,8 @@ class Adds:
     tag: str | None = None
     single_draw: bool = False
     keeps_crafted: bool = True
+    wanted_only: bool = False
+    fractures: bool = False
 
     @classmethod
     def removal(cls, *, keeps_crafted: bool = True) -> "Adds":
@@ -214,6 +224,14 @@ class Action(ABC):
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
         return Adds()
+
+    def twin_key(self, data: GameData, item: Item) -> Hashable | None:
+        """A cheap key such that two actions of the catalog with equal, non-None keys give equal `outcomes`
+        on every item of the same base, item level and rarity they apply to (their kernels are equal in every
+        state), computed without building a pool. None (the default) says the action offers none; a planner
+        then keeps it apart. Used by pruning (#118) to keep only the cheapest of a class of twins.
+        """
+        return None
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         """The ids of the registry claims the result or the price depends on.

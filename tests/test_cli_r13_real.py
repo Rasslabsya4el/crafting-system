@@ -83,8 +83,10 @@ def test_only_the_crafts_whose_mod_counts_toward_a_requirement_are_offered(plan)
 
     assert crafts and all(craft.mod_id in counting for craft in crafts)
     assert any(isinstance(priced.offer.action, RemoveCraftedMods) for priced in plan.offers)
-    kinds_left, crafts_left = plan.left_out  # the kinds the target does not name, then the rest of the bench: none unpriced
-    assert "chaos-orb" in kinds_left.labels and len(crafts_left.labels) > 100
+    left = {entry.reason.split(",")[0]: entry.labels for entry in plan.left_out}  # none of it unpriced
+    kinds_left = next(labels for reason, labels in left.items() if "does not name these kinds" in reason)
+    crafts_left = next(labels for reason, labels in left.items() if "counts toward no requirement" in reason)
+    assert "chaos-orb" in kinds_left and len(crafts_left) > 100
 
 
 def test_the_target_names_the_guides_kinds_so_no_chaos_orb_is_offered(plan):

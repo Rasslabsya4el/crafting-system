@@ -20,7 +20,7 @@ The factor is an exact `Fraction`, never rounded (`WEIGHTS_EXACT`, D13).
 """
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 
 from crafting_system.data import Fossil, Mod
@@ -54,10 +54,31 @@ class FossilWeights:
     blocks: frozenset[str]
     opulent: bool = False
     sanctified: bool = False
+    memo: dict[tuple, Fraction] = field(default_factory=dict, compare=False, repr=False)
 
     def factor(self, mod: Mod, *, tags_only: bool = False) -> Fraction:
-        """The factor of `mod`: 0 for a blocked mod. With `tags_only` the Opulent and Sanctified rules are left out."""
+        """The factor of `mod`: 0 for a blocked mod. With `tags_only` the Opulent and Sanctified rules are left out.
+
+        A factor reads the tag set of the mod and, under a Sanctified Fossil, its required level, so it is
+        remembered per those (a pool of 300 mods has about 40 different tag sets).
+        """
         tags = frozenset(mod.implicit_tags)
+        level = mod.required_level if self.sanctified and not tags_only else None
+        key = (tags, level, tags_only)
+        known = self.memo.get(key)
+        if known is None:
+            known = self.memo[key] = self._factor(tags, level, tags_only)
+        return known
+
+    def tag_factor(self, tags: frozenset[str], *, tags_only: bool = False) -> Fraction:
+        """The factor of a mod with the tag set `tags`, without the Sanctified level rule (what `factor` multiplies)."""
+        key = (tags, None, tags_only)
+        known = self.memo.get(key)
+        if known is None:
+            known = self.memo[key] = self._factor(tags, None, tags_only)
+        return known
+
+    def _factor(self, tags: frozenset[str], level: int | None, tags_only: bool) -> Fraction:
         if tags & self.blocks:
             return Fraction(0)
         if self.opulent and not tags and not tags_only:
@@ -73,8 +94,8 @@ class FossilWeights:
             if tag in self.cuts and tag not in covered:
                 cut *= self.cuts[tag]
         factor = boost * cut
-        if self.sanctified and not tags_only:
-            factor *= ONE + Fraction(mod.required_level - SANCTIFIED_LEVEL_FACTOR.value, PERCENT)
+        if level is not None:
+            factor *= ONE + Fraction(level - SANCTIFIED_LEVEL_FACTOR.value, PERCENT)
         return factor
 
 
