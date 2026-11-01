@@ -136,9 +136,12 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
     out = capsys.readouterr().out
     assert '"R12 start amulet" = 0' in [line.strip() for line in out.splitlines()]
     assert f"add to {expected_overrides_file()} under [prices]:" in out
-    for route_id in ("R10", "R11", "R05", "R13"):  # their own files fail first in the test data, so none names a price
+    for route_id in ("R10", "R11", "R05"):  # their own files fail first in the test data, so none names a price
         assert entry_of(document, route_id)["error"] is not None
         assert "no price for the start item" not in entry_of(document, route_id)["error"]
+    belt = entry_of(document, "R13")  # a normal belt: its start price is the poe.ninja base price, and it has no buy spec
+    assert belt["missing_price"]["name"] == "Leather Belt (ilvl 86)" and belt["missing_price"]["buy_spec"] is None
+    assert "no price for the start item 'Leather Belt (ilvl 86)'" in belt["error"]
 
 
 def test_the_missing_start_price_of_r12_names_its_buy_spec_for_the_trade_api(tmp_path, capsys):
