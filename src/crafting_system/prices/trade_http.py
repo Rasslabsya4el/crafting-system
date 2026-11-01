@@ -491,16 +491,21 @@ class RateLimiter:
         """A request of this kind was sent but no answer came (timeout, cut-off): count it.
 
         The server may have counted the hit, so every window of the policy's last report is raised
-        by one hit and dated now (hits only expire with time, so this errs on the safe side).
+        by one hit and dated now. Hits that had already left their window by now (and a restriction
+        that had already run out) are first taken out, so an idle gap does not bring them back.
         """
         key = self._key(kind)
         if key not in self._last:
             return
-        report, _ = self._last[key]
-        rules = tuple(
-            (name, tuple((rule, RuleState(state.hits + 1, state.period, state.restricted)) for rule, state in pairs))
-            for name, pairs in report.rules
-        )
+        report, at = self._last[key]
+        passed = self._clock() - at
+
+        def counted(rule: RateRule, state: RuleState) -> tuple[RateRule, RuleState]:
+            hits = 0 if passed >= rule.period else state.hits
+            restricted = 0 if passed >= state.restricted else state.restricted
+            return rule, RuleState(hits + 1, state.period, restricted)
+
+        rules = tuple((name, tuple(counted(rule, state) for rule, state in pairs)) for name, pairs in report.rules)
         self._last[key] = (RateReport(report.policy, rules), self._clock())
 
     def before(self, kind: str) -> None:
@@ -607,7 +612,8 @@ class TradeClient:
         try:
             response = self.transport(HttpRequest(method, url, headers, body))
         except TradeError:
-            self.limiter.lost(kind)  # the server may have counted it although no answer came
+            # the site may have counted it although no answer came (or never saw it: a phantom hit)
+            self.limiter.lost(kind)
             raise
         backoff = self.limiter.after(kind, response.headers, response.status)
         return self._classify(response, what, backoff)

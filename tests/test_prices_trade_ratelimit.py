@@ -734,6 +734,16 @@ def test_a_request_lost_on_the_way_still_counts_as_a_hit() -> None:
     assert clock.sleeps == [10]
 
 
+def test_a_lost_request_after_an_idle_gap_does_not_revive_expired_hits() -> None:
+    clock = FakeClock()
+    limiter = RateLimiter(clock, clock.sleep, max_wait=120.0)
+    limiter.after("search", headers_of(SEARCH, state="3:10:0,7:60:0,29:300:0,29:21600:0"), 200)
+    clock.now += 1000.0  # the 10 s, 60 s and 300 s windows are long empty; the 6 h one is not
+    limiter.lost("search")
+    limiter.before("search")  # 29+1 of 600 is fine; the 29:300 hits must not come back as 30 of 30
+    assert clock.sleeps == []
+
+
 def test_a_failure_before_any_answer_leaves_nothing_to_wait_for() -> None:
     clock = FakeClock()
     limiter = RateLimiter(clock, clock.sleep)
