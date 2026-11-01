@@ -278,3 +278,10 @@ def test_the_offers_of_the_catalog_are_the_same_with_the_toy_but_for_the_toy():
     with registered(Kind("toy-enchanter", toy_members, order=900)):
         with_toy = [offer.label for offer in offers_for(DATA, GOAL, start.base_id, start).offers]
     assert sorted(with_toy) == sorted([*plain, "Toy Tempering"])
+
+
+def test_an_action_that_declares_nothing_may_set_the_enchantment_so_it_lifts_the_refusal_too():
+    # the default of `Action.adds` is "may change anything", which includes the enchantment: this is intended, not an accident
+    ab = Abstraction(DATA, GOAL, BODY, 84, [Undeclared()])
+    assert ab.sets_enchantment and ab.compress(body(enchantment=ARMOUR_EXTRA_SLOT))
+    assert not Abstraction(DATA, GOAL, BODY, 84, [UndeclaredButTheEnchantment()]).sets_enchantment

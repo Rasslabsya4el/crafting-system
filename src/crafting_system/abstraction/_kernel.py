@@ -274,6 +274,7 @@ class Abstraction:
         It never makes the state hold the enchantment: the state is the same size with such an action or without it, and
         what the actions read of the enchantment is the start item's (the constant `enchantment`). It only means `compress`
         accepts a finished item whose enchantment is not the start item's, so a result of that action can be compared.
+        An action that declares nothing says it may set one (`Action.adds`), so it turns this on too.
         """
         return self._sets_enchantment
 
