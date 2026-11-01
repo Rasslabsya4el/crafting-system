@@ -12,7 +12,7 @@ is always exact, as before.
 """
 
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 
@@ -250,13 +250,35 @@ def make_plan(
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
 
     began = time.perf_counter()
-    risk = evaluate(solution.policy, start, abstraction.is_goal)
+    risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start])
     risk_seconds = time.perf_counter() - began
 
     return Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out,
         solution, risk, solve_seconds, risk_seconds, None, note,
     )
+
+
+RISK_BINS = 200_000  # the default `max_bins` of `risk.evaluate`
+UNRESOLVED_BINS = 1_000
+
+
+def evaluate_risk(
+    policy: Mapping[CompressedState, Action[CompressedState]],
+    start: CompressedState,
+    is_goal: Callable[[CompressedState], bool],
+    mean: float,
+) -> RiskReport:
+    """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
+
+    The quantile grid cannot step over the cheapest action, so `RISK_BINS` of it cover `RISK_BINS` times the
+    cheapest cost. When that is less than the mean there is nothing to resolve (an Alteration spam costing 6,300
+    Chaos in steps of 0.0058, R13, #190): the run is cut to `UNRESOLVED_BINS`, the mean and the odds stay exact
+    and the quantiles and CVaR come back unresolved (infinite) at once instead of after minutes.
+    """
+    cheapest = min((action.cost for action in policy.values()), default=0.0)
+    bins = UNRESOLVED_BINS if RISK_BINS * cheapest < mean else RISK_BINS
+    return evaluate(policy, start, is_goal, max_bins=bins)
 
 
 def _finite(value: float) -> bool:

@@ -487,7 +487,9 @@ class _View:
             return f"{money(value + shift)} ({_divine(value + shift, divine)})"
 
         mean = total(risk.mean.value) if math.isfinite(risk.mean.value) else (GAPS if self.inp.reasons else NEVER)
-        p90 = f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else "no finish in 9 runs of 10"
+        p90 = f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else (
+            "not resolved on the grid (#190)" if risk.success_probability.value >= 1.0 else "no finish in 9 runs of 10"
+        )
         success = risk.success_probability.value
         note = "how often a step is used and what it costs are left out: the policy is too large to solve here"
         fields = _fields(

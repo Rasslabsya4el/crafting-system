@@ -21,6 +21,7 @@ from cli_support import read_json
 
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, main, make_plan, verify
+from crafting_system.cli._report import unresolved
 from crafting_system.prices import load_price_file
 from crafting_system.targets import KOfN, load_target
 
@@ -83,13 +84,14 @@ def test_only_the_crafts_whose_mod_counts_toward_a_requirement_are_offered(plan)
     assert len(left.labels) > 100
 
 
-def test_the_policy_reaches_the_goal_with_odds_mean_and_p90(plan):
+def test_the_policy_reaches_the_goal_with_exact_odds_and_mean_and_the_quantiles_are_unresolved(plan):
     risk = plan.risk
 
     assert risk.success_probability.value == pytest.approx(1.0)
     assert 0.0 < risk.mean.value < float("inf")
-    assert risk.p90.value >= risk.p50.value > 0.0
     assert plan.mean_remaining == pytest.approx(risk.mean.value, rel=1e-9)
+    # the grid cannot step over the 0.0058 Chaos of the Orb of Transmutation: p90 is not resolved (ticket #190)
+    assert unresolved(risk, risk.p50) and unresolved(risk, risk.p90)
 
 
 def test_verify_agrees_with_the_computed_mean(plan, data):
@@ -130,9 +132,13 @@ def test_the_command_returns_the_policy_and_verify_agrees(tmp_path, data, capsys
     document = read_json(out)
     totals = document["totals"]
     assert totals["success_probability"]["value"] == pytest.approx(1.0)
-    assert totals["mean_cost"]["value"] > BELT_PRICE and totals["p90"]["value"] >= totals["p50"]["value"] > 0
+    assert totals["mean_cost"]["value"] > BELT_PRICE
+    assert totals["quantiles_resolved"] is False and totals["p90"]["value"] is None
+    simulated = document["verification"]["simulated_p90"]
+    assert simulated["value"] > document["verification"]["simulated_mean_cost"]["value"]  # simulated, not certified
     assert document["verification"]["agrees"] is True
     assert document["given_route"]["gaps"] == []
     assert totals["mean_cost"]["value"] <= document["given_route"]["mean_cost"]["value"] * (1 + 1e-9)
     assert document["states"]
-    assert "p90" in capsys.readouterr().out
+    text = capsys.readouterr().out
+    assert "not resolved on the grid" in text and "simulated, not certified" in text
