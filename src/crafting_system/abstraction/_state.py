@@ -3,9 +3,9 @@
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
-from crafting_system.items import Influence, Rarity, Side
+from crafting_system.items import Influence, Quality, Rarity, Side
 
-from ._goal import Status, Wanted
+from ._goal import ImplicitWanted, Status, Wanted
 
 
 def _state_without_hash(self) -> dict:
@@ -93,6 +93,53 @@ class Slot:
 
 
 @dataclass(frozen=True)
+class ImplicitSide:
+    """One Eldritch side (Searing Exarch or Eater of Worlds) of the implicit pair (ADR-0025, ADR-0027).
+
+    `grade` is 0 for no implicit, then 1 Lesser to 6 Perfect. `contribution` is what the implicit gives each
+    implicit leaf of the goal (`Goal.implicits`), as a `Slot` holds it for a mod; all ABSENT for no implicit. The
+    family of the implicit is not kept: a family nobody asks for decides nothing, and one that is asked for shows in
+    the contribution. Dominance is not stored; it follows from the two grades.
+    """
+
+    grade: int
+    contribution: tuple[Status, ...]
+
+    def __hash__(self) -> int:
+        try:
+            return self._hash  # type: ignore[attr-defined]
+        except AttributeError:
+            value = hash((self.grade, self.contribution))
+            object.__setattr__(self, "_hash", value)
+            return value
+
+    __getstate__ = _state_without_hash
+
+
+@dataclass(frozen=True)
+class OfferedMod:
+    """One mod of the unveil offer: the canonical id of its kind and what it gives each leaf of the goal.
+
+    The canonical id is the smallest id among the unveiled mods of the same families and side that give the same
+    contribution (the rule of a fractured mod's id), so offers that differ only in mods the goal cannot tell apart
+    are one state. An offer holds up to three, sorted by `(mod_id, contribution)`.
+    """
+
+    mod_id: str
+    contribution: tuple[Status, ...]
+
+    def __hash__(self) -> int:
+        try:
+            return self._hash  # type: ignore[attr-defined]
+        except AttributeError:
+            value = hash((self.mod_id, self.contribution))
+            object.__setattr__(self, "_hash", value)
+            return value
+
+    __getstate__ = _state_without_hash
+
+
+@dataclass(frozen=True)
 class CompressedState:
     """The part of an item that decides what an action can do next.
 
@@ -100,22 +147,44 @@ class CompressedState:
     `slots` are the mods that are not fractured, sorted by `Slot.key` and kept as a multiset (a
     repeat is a second mod of that side and kind). A reroll-only abstraction keeps only the crafted
     slots, because every action it knows erases the other mods.
+
+    The three fields after them hold the item state beyond the explicit mods (ADR-0027) and are empty unless an
+    enabled action reads or changes that part of the item: `implicits` is the Eldritch pair, the Searing Exarch
+    side and then the Eater of Worlds side (`()` when not kept), `quality` the catalyst quality as the item
+    stores it, `offer` the mods of the unveil offer of the veiled placeholder, which then is one of the `slots`.
     """
 
     flags: Flags
     fractured: tuple[FracturedMod, ...]
     status: tuple[Status, ...]
     slots: tuple[Slot, ...] = ()
+    implicits: tuple[ImplicitSide, ...] = ()
+    quality: Quality | None = None
+    offer: tuple[OfferedMod, ...] = ()
 
     def __hash__(self) -> int:
         try:
             return self._hash  # type: ignore[attr-defined]
         except AttributeError:
-            value = hash((self.flags, self.fractured, self.status, self.slots))
+            value = hash((self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer))
             object.__setattr__(self, "_hash", value)
             return value
 
     __getstate__ = _state_without_hash
+
+    def __repr__(self) -> str:
+        """The dataclass repr, with the three item-state fields shown only when they hold something: the text of a B1 state is what it was before ticket #142 (goldens key by it)."""
+        text = f"flags={self.flags!r}, fractured={self.fractured!r}, status={self.status!r}, slots={self.slots!r}"
+        for name in ("implicits", "quality", "offer"):
+            value = getattr(self, name)
+            if value:
+                text += f", {name}={value!r}"
+        return f"CompressedState({text})"
+
+    @property
+    def held(self) -> tuple[tuple[ImplicitSide, ...], Quality | None, tuple[OfferedMod, ...]]:
+        """The item state beyond the explicit mods, as one key: what a memo of a kernel must tell states apart by besides the mods."""
+        return (self.implicits, self.quality, self.offer)
 
     @property
     def crafted(self) -> bool:
@@ -125,6 +194,20 @@ class CompressedState:
     def count(self, side: Side) -> int:
         """How many mods of `side` the item holds besides the fractured ones."""
         return sum(slot.side is side for slot in self.slots)
+
+
+def implicit_status_of(leaf: ImplicitWanted, mod_id: str, grade: int, values: tuple[int, ...]) -> Status:
+    """What an implicit gives `leaf`: ABSENT when it is not one of the leaf's mods, BELOW when its grade or a roll falls short, else PASSING."""
+    if mod_id not in leaf.mod_ids:
+        return Status.ABSENT
+    if leaf.min_grade is not None and grade < leaf.min_grade:
+        return Status.BELOW
+    if leaf.min_roll is None:
+        return Status.PASSING
+    if len(values) != len(leaf.min_roll):
+        return Status.BELOW
+    reached = all(wanted is None or got >= wanted for wanted, got in zip(leaf.min_roll, values))
+    return Status.PASSING if reached else Status.BELOW
 
 
 def best_of(width: int, vectors: Iterable[Sequence[int]]) -> tuple[Status, ...]:
