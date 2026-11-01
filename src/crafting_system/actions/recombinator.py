@@ -173,8 +173,8 @@ class Recombinator(Action):
         return Reads(junk=True, families=None, input_mods=True, implicits=True, quality=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits and the quality follow the base."""
-        return Adds(draws=True, fractures=True, implicits=True, quality=True)
+        """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits, the quality and the enchantment follow the base."""
+        return Adds(draws=True, fractures=True, implicits=True, quality=True, enchantment=True)
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The donor: it starts as a bare item of its base and influences and must become `donor`."""
