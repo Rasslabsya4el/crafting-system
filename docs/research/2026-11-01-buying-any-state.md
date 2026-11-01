@@ -289,7 +289,22 @@ So "lazy generation during the solve" cannot mean an unattended loop of queries:
 7. Concrete listings as offers (fetch the 10 cheapest, map each to its compressed state, one offer per distinct state), which needs the listing's mods mapped to game mods.
 8. Donors as buy offers inside `Need` (#211), mid-route bought intermediates, mods carried by a bought rare above the v1 cap, one-mod normal or magic bases, SSF mode (no prices), and the budget interplay (#323).
 
+## Decisions (owner, 2026-11-01)
+
+The owner answered the v1 questions of section 5. The design is recorded in [ADR-0061](../adr/0061-the-planner-chooses-its-start-base-and-a-fractured-start-from-a-priced-list.md) and, for the refresher, in an amendment to ADR-0007.
+
+- **Q1 yes.** The target's item level is a floor the planner may go below when the needed mods stay reachable.
+- **Q2 yes, with a change.** The user never refreshes anything: the system keeps the trade price list fresh with a scheduled refresher, anonymous requests at an interval within a request budget, through the existing limiter in `prices/trade_http.py` (it reads the `X-Rate-Limit-*` headers and stops on 429). It is a service component of the website, not a CLI step. ADR-0007 is amended for that refresher only. Risk, in one line: GGG's documentation does not list the trade endpoints and calls reverse-engineering outside it a Terms of Use breach (7i), so unattended use may be refused or the IP restricted.
+- **Q3 yes.** A poe.ninja row is enough for a plain base; fractured bases go through the trade data.
+- **Q4 yes.** A market exists at 10 or more listings; the price is the mean of the 5 cheapest.
+- **Q5 yes.** A bought rare carries at most 1 wanted mod in v1.
+- **Realism rails.** The owner accepts the listing-count rule but does not know whether it or a mod-count rule works better. Both are configurable rails (listing-count threshold, default 10; maximum wanted mods, default 1), and the planner reports which rail cut which offer, so they can be compared later.
+- **Recombinator item-level trick:** dropped, as section 1.4 says.
+- **Q6 to Q9 stay open v2 questions** (on #325). Q6 is partly answered by Q2: the system sends its own queries, rate-limited; what stays open is whether the planner may also ask for a state it needs during a plan (a bounded loop) rather than only list it for the refresher.
+
 ## 5. Questions for the owner's design grill
+
+Questions 1 to 5 are answered in the Decisions section above; questions 6 to 9 are open v2 questions.
 
 ### v1
 
