@@ -175,11 +175,14 @@ def test_a_roll_limit_that_asks_nothing_does_not_stop_the_kernel(action):
 
 
 @pytest.mark.parametrize("action", ACTIONS.values())
-def test_a_roll_limit_on_a_mod_that_can_be_drawn_is_out_of_scope(action):
+def test_a_roll_limit_on_a_mod_that_can_be_drawn_has_an_exact_kernel(action):
+    """Its layer 1 is `test_abstraction_rolls.py` (every value listed); here the pool is the real range 6..23, which is too big to list."""
     ab = abstraction(Goal((Wanted(RESISTS, min_roll=(10,)),)))
 
-    with pytest.raises(OutOfScopeError, match="roll"):
-        ab.kernel(ab.compress(fractured_item()), action)
+    kernel = ab.kernel(ab.compress(fractured_item()), action)
+
+    assert sum(kernel.values()) == 1 and all(type(chance) is Fraction for chance in kernel.values())
+    assert {state.status[0] for state in kernel} == {ABSENT, BELOW, PASSING}
 
 
 REFUSED = {
