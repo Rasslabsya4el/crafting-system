@@ -308,12 +308,15 @@ class Recombinator(Action):
         return Reads(junk=True, families=None, input_mods=True, implicits=True, quality=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits, the quality and the enchantment follow the base.
+        """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits, the quality, the enchantment and the sockets follow the base.
 
         The junk variant also says it puts a crafted mod on the result (one of its two crafts can stay); a crafted mod of the inputs
         survives in either case, so `keeps_crafted` stays at its default.
         """
-        return Adds(draws=True, fractures=True, implicits=True, quality=True, enchantment=True, crafted=bool(self.junk_crafts))
+        return Adds(
+            draws=True, fractures=True, implicits=True, quality=True, enchantment=True, crafted=bool(self.junk_crafts),
+            socket_count=True, socket_links=True, socket_colours=True,  # the base is one of the two inputs, and the sockets are its own (ticket #228)
+        )
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The donor: it starts as a bare item of its base and influences and must become `donor`."""

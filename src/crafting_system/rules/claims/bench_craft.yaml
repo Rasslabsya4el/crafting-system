@@ -82,7 +82,7 @@ rules:
         quote: "v1 start items carry no Memory Strands until Memory Strands get their batch"
 
   - id: bench_craft.other_options_not_mod_crafts
-    statement: The bench options that add no crafted mod and are not Remove Crafted Mods (flask enchants, sockets, links, colours, Remove Enchantments, Reroll the Rarity) are not modelled here; `bench_crafts` lists only the options with `add_explicit_mod`. Sockets, links and colours and the Orb of Chance have no batch yet.
+    statement: "The bench options that add no crafted mod and are not Remove Crafted Mods (flask enchants, Remove Enchantments, Reroll the Rarity) are not modelled here; `bench_crafts` lists only the options with `add_explicit_mod`. The Orb of Chance has no batch yet. The 13 socket options (the count, links and colours crafts) are not mod crafts either; they belong to the socket family (batch B6, ticket #228, ADR-0046 and ADR-0047), which lists them in `actions/socket_orbs.py`."
     source_kind: owner
     url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0013-four-batches-with-benchmark-routes.md
     quote: "Methods the owner added to v1 on 2026-10-30 without a batch yet (Orb of Chance; sockets, links and colours;"
