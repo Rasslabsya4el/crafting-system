@@ -1,0 +1,50 @@
+# Draft claims of research ticket #98 (family foulborn). See memory_strands.yaml for how they are checked.
+# patch_verified in this file: the last patch whose notes were read for the mechanic, not the pinned 3.29.3.3.
+# Wiki and datamined claims say 3.29.1 (the wiki version pages for 3.29.2 and later did not load on 2026-10-31); claims
+# from the Reddit post and its sheet say 3.29.0 (the post is dated 2026-09-26/27). Sources were read on 2026-10-31.
+rules:
+  - id: foulborn.effect_tier_cull
+    statement: >-
+      A Foulborn Orb of Augmentation, Regal Orb or Exalted Orb acts like its plain version, but the draw only
+      sees the highest `K(N)` tiers of each mod type, N being the number of eligible tiers: K = ceil(N/2) for
+      N <= 6, floor(N/2) + 1 for N > 6 (N = 1..13 gives 1,1,2,2,3,3,4,5,5,6,6,7,7). Source: wiki only, from a
+      private Discord test (Prohibited Library); no public data covers an item with 0 strands (the Reddit sheet
+      has only Foulborn orbs on items with strands). The same numbers come out of the strands formula with
+      denominator 175 (= 100 + 75), checked in exact arithmetic (8 tiers: 100/175 * 7 is exactly 4).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Foulborn_currency_item
+    quote: "it will only be able to roll the 4 highest eligible tiers and the lowest 3 tiers will be culled from the pool"
+    patch_verified: "3.29.1"
+    date_checked: 2026-10-31
+
+  - id: foulborn.on_stranded_item
+    statement: >-
+      On an item with s >= 1 strands a Foulborn orb cuts as if the item had s + 30 strands: denominator
+      2.5 (s + 30) + 147.5 in `rollable_tiers`. The cut is made before the orb spends its strands. The author
+      believes it from tests of Foulborn Augmentation and Regal on both sides of several breakpoints; the
+      Foulborn Exalted Orb is not tested by him. 491 Foulborn rows of his raw sheet fit.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
+    quote: "I believe using foulborn currency on an item with memory strands does indeed just add 75 to the value in the denominator of the formula, acting as if the item had 30 extra strands."
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+
+  - id: foulborn.spend_ranges
+    statement: >-
+      Foulborn Augmentation spends up to 32 strands, Foulborn Regal up to 48, Foulborn Exalted up to 62 on an
+      item with 5 mods (smaller ceilings for fewer mods are not published; PoEDB lists 28 as the single figure).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: "Foulborn Orb of Augmentation — 0-32; Foulborn Regal Orb — 0-48; Foulborn Exalted Orb, 5 modifiers — 0-62"
+    patch_verified: "3.29.1"
+    date_checked: 2026-10-31
+
+  - id: foulborn.availability
+    statement: >-
+      The three Foulborn orbs exist since 3.27.0 (drop level 68, 68, 80) and come only from the Genesis Tree,
+      birthed from a Lavish Wombgift.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Foulborn_Orb_of_Augmentation
+    quote: "Can be birthed from the Genesis Tree from a Lavish Wombgift."
+    patch_verified: "3.29.1"
+    date_checked: 2026-10-31

@@ -26,3 +26,7 @@ So the work is per (state, offer) and per offer, and three things shrink it with
 - Timings are in the PR, not asserted (ADR-0014).
 
 Related: ADR-0010 listed "FTVI-style bound pruning (unless fossil combinations make B1 too slow)"; this is a bound over offers, not over states, and it keeps the solver unchanged. ADR-0023 (approximate answers) is where what this cannot make fast goes.
+
+## Amendment: options of a Lock are not merged by equal kernel (B8, [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
+
+Step 2 above is exact for plain actions: of two offers with one kernel, only the cheaper can be chosen. Under a Lock it is not, because two currencies with one kernel are two independent previews and the best of two is better than one (ADR-0054). The options of a Peek are therefore taken from the full catalog, before twins, this merge and the bound pruning of step 4 (an offer the Lock-free optimum never needs can still win as one more independent preview), one per currency item; all the pruning still applies to the fallback and to every plain action.

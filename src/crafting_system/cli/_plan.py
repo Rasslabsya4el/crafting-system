@@ -229,6 +229,11 @@ def make_plan(
             "the target asks for implicits or quality, which the planner cannot plan yet"
             " (batch B2, tickets #142 onward)"
         )
+    if target.enchantment is not None:
+        raise PlanError(
+            "the target asks for an enchantment, which the planner cannot plan yet"
+            " (batch B7, ticket #242 onward)"
+        )
     goal = Goal.from_target(target)
     left_out: tuple[LeftOut, ...] = ()
     if offers is None:

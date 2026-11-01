@@ -7,6 +7,8 @@ Usage: python -I docs/research/2026-10-31-enchantments-samples.py <repoe-fork 3.
   tailoring_tally.csv "PoE Tailoring Orb weights", Sheet1 (a tally of Tailoring Orb clicks, header 330)
 Prints: totals, per-tier shares of the 3.29 pool (obsolete rows removed and the rest renormalised), the
 "Can have 1 additional Crafted Modifier" rate with a 95% interval, and the tally-vs-Curio comparison.
+The last block, after the line "== claim tables", is the JSON the claims `enchantment.body_armour_weight_classes` and
+`enchantment.weapon_weights_depend_on_tag` store as their `value` (ticket #237); a test runs this script and compares.
 """
 import csv
 import json
@@ -158,6 +160,61 @@ def pool_texts(mods):
     return pools
 
 
+ARMOUR_KINDS = {  # shape() of an armour enchant -> the kind name the claim stores
+    "40% reduced attribute requirements": "attribute_requirements_40",
+    "8% + no colour": "no_colour",
+    "6% + 6% two tags": "six_six",
+    "6% + 25% less attribute requirements": "six_requirements_25",
+    "all sockets linked": "sockets_linked",
+    "extra crafted modifier": "extra_crafted_modifier",
+    "15% + -3 maximum sockets": "minus_3_sockets",
+    "15% + 200% attribute requirements": "requirements_200",
+    "10-12% + 25-50% less on another tag": "penalty_hybrid",
+    "6% + all sockets linked": "six_linked",
+}
+
+
+def armour_kind(text):
+    """The weight class of a body armour enchant: its shape, with the plain 8% enchants told apart by tag."""
+    kind = shape(text)
+    if kind == "single 8% tag":
+        tag = re.fullmatch(r"8% increased Explicit (.+) Modifier magnitudes", text).group(1)
+        return "single_" + tag.lower().replace(" ", "_")
+    return ARMOUR_KINDS[kind]
+
+
+def pool_ids(mods):
+    """The 3.29 pools as text -> mod id, the key the claim tables use (the text is unique inside a pool)."""
+    pools = {}
+    for name, group in (("Weapon Enchant", "EnchantmentHeistWeapon"), ("Armor Enchant", "EnchantmentHeistArmour")):
+        keep = {}
+        for mod_id, v in mods.items():
+            if v["groups"] == [group] and not ({s["id"] for s in v["stats"]} & REMOVED_STATS):
+                text = norm(v["text"])
+                assert text not in keep, f"two mods of {group} read {text!r}"
+                keep[text] = mod_id
+        pools[name] = keep
+    return pools
+
+
+def claim_tables(mods, curio):
+    """The `value` of the two weight claims: armour per kind (its items and its enchants) and weapon per enchant."""
+    ids = pool_ids(mods)
+    kinds = {}
+    kind_of = {}
+    for text, mod_id in ids["Armor Enchant"].items():
+        kind = armour_kind(text)
+        entry = kinds.setdefault(kind, {"enchants": 0, "items": 0})
+        entry["enchants"] += 1
+        entry["items"] += curio["Armor Enchant"][text]
+        kind_of[mod_id] = kind
+    count_of = {mod_id: curio["Weapon Enchant"][text] for text, mod_id in ids["Weapon Enchant"].items()}
+    return {
+        "enchantment.body_armour_weight_classes": {"kinds": kinds, "kind_of": kind_of},
+        "enchantment.weapon_weights_depend_on_tag": {"count_of": count_of},
+    }
+
+
 def main(dump, data):
     mods = json.load(open(dump + "/mods.json", encoding="utf8"))
     pools = pool_texts(mods)
@@ -231,6 +288,8 @@ def main(dump, data):
     life_res = sum(c for t, c in ctal.items() if t in ("8% increased Explicit Life Modifier magnitudes", "8% increased Explicit Resistance Modifier magnitudes"))
     exp_lr = float(header[2]) * life_res / sum(ctal.values())
     print(f"   8% Life + 8% Resistance would be {exp_lr:.0f} of the header's {header[2]} clicks under the Curio shares; the tally rows add to {sum(tally.values())}, gap {float(header[2]) - sum(tally.values()):.0f}")
+    print("\n== claim tables")
+    print(json.dumps(claim_tables(mods, curio), indent=1, sort_keys=True))
 
 
 if __name__ == "__main__":

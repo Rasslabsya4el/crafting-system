@@ -1,5 +1,5 @@
 # Draft claims for the mechanic family `enchantment` (Tempering Orb, Tailoring Orb, Harvest quality enchants).
-# Research ticket #100; note docs/research/2026-10-31-enchantments.md. Not in src/: the main chat decides what is admitted.
+# Research ticket #100; note docs/research/2026-10-31-enchantments.md. Admitted into src/crafting_system/rules/claims/enchantment.yaml by ticket #237 (with two more claims and the weight tables); this file stays as the draft.
 # First pass claimed no weights (none published). The second pass adds the player-sample claims at the end (source_kind experiment).
 rules:
   - id: enchantment.heist_orbs_add_or_replace
