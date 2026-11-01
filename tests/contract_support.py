@@ -79,7 +79,7 @@ from crafting_system.actions import (
 )
 from crafting_system.data import BaseItem, Weight
 from crafting_system.cli._offers import offer_of, price_offers
-from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, tier_table
+from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, is_corrupted_implicit, tier_table
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
 
 
@@ -352,14 +352,23 @@ def check_sums_to_one(outcomes, data) -> None:
     assert sum(share for share, _ in outcomes.components) == 1, "the components sum to exactly one"
 
 
-def _held(items, mod_id: str) -> Fraction:
-    return sum((chance for chance, item in items if any(e.mod_id == mod_id for e in item.mods)), Fraction(0))
+def _held(items, mod_id: str, data=None) -> Fraction:
+    """The chance that a finished item holds `mod_id`: as a mod, or, for a corrupted implicit, as an implicit.
+
+    A corrupting action's `chance_all` counts the corrupted implicit it adds (ticket #261); the other implicits (Eldritch, base) are
+    not asked of `chance_all` by any action yet, so they are not counted here.
+    """
+    corrupted = data is not None and is_corrupted_implicit(data.mods[mod_id])
+    return sum(
+        (chance for chance, item in items if any(e.mod_id == mod_id for e in (*item.mods, *(item.implicits if corrupted else ())))),
+        Fraction(0),
+    )
 
 
 def check_chances_agree(outcomes, items, data) -> None:
     assert sum(chance for chance, _ in items) == 1, "the listed finished items sum to one"
     for mod_id in data.mods:
-        assert _held(items, mod_id) == outcomes.chance_all([mod_id]), f"chance_all of {mod_id} is the listed items'"
+        assert _held(items, mod_id, data) == outcomes.chance_all([mod_id]), f"chance_all of {mod_id} is the listed items'"
 
 
 def check_sampler_follows_the_chances(outcomes, items, data) -> None:
@@ -368,7 +377,7 @@ def check_sampler_follows_the_chances(outcomes, items, data) -> None:
     for _ in range(SAMPLES):
         drawn = outcomes.sample(rng)
         drawn.validate(data)
-        for mod_id in {entry.mod_id for entry in drawn.mods}:
+        for mod_id in {entry.mod_id for entry in (*drawn.mods, *(e for e in drawn.implicits if is_corrupted_implicit(data.mods[e.mod_id])))}:
             seen[mod_id] += 1
     for mod_id in data.mods:
         chance = float(outcomes.chance_all([mod_id]))

@@ -407,7 +407,7 @@ def test_tightness_on_the_real_sorcerer_boots():
     state = ab.compress(start)
     names = {(0,): "ES t3", (1,): "MS t1", (0, 1): "both"}
     rng = random.Random(118)
-    sets = rng.sample(fossil_actions(data, start), 20)
+    sets = rng.sample([a for a in fossil_actions(data, start) if "Bloodstained Fossil" not in a.fossils], 20)  # the report is about the reroll; a Bloodstained set corrupts too
     actions = [("Chaos", ChaosOrb()), *((" + ".join(name.removesuffix(" Fossil") for name in a.fossils), a) for a in sets)]
 
     print()

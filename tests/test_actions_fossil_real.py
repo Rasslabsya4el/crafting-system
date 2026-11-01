@@ -112,8 +112,10 @@ def test_the_sampler_agrees_with_the_exact_chance(data, route):
 def test_how_many_fossil_actions_a_boots_item_has(data):
     item = empty_rare(data, "Sorcerer Boots")
     actions = fossil_actions(data, item)
-    assert Counter(len(action.fossils) for action in actions) == {1: 24, 2: 275, 3: 2002, 4: 10395}
-    assert len(actions) == 12_696  # 24 usable fossils (all but Bloodstained), without Hollow + Glyphic sets
+    ordinary = [action for action in actions if "Bloodstained Fossil" not in action.fossils]
+    assert Counter(len(action.fossils) for action in ordinary) == {1: 24, 2: 275, 3: 2002, 4: 10395}
+    assert len(ordinary) == 12_696  # 24 fossils besides the Bloodstained one, without Hollow + Glyphic sets
+    assert len(actions) == 14_998  # with the Bloodstained Fossil (ticket #261): 25 usable fossils
     assert len(set(actions)) == len(actions)
 
 

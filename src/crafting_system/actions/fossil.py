@@ -11,16 +11,28 @@ with its probability, components that have the same pool merged). Every other se
 A Fractured Fossil fractures one of the finished mods: `distribution` then also gives `Fractured`
 labels (see there).
 
+A Bloodstained Fossil (ticket #261, ADR-0038) rerolls the item as the other fossils say and also corrupts it and adds one corrupted
+implicit from the pool of the item's class (`corrupted_pool.py`). `outcomes` is then a `BloodstainedOutcomes` (`bloodstained.py`):
+the reroll of the set without the Bloodstained Fossil, then the implicit draw, two independent numbers, so the chance of a goal is
+the reroll's chance times the draw's. The implicit replaces one implicit of the item chosen uniformly, or every implicit when the set
+holds a Gilded Fossil. The set declares `Adds.corrupts` and `Adds.asked_only`: a planner offers it only to a target that asks for a
+corrupted implicit, since for one that merely allows a corrupted item the same set without the Bloodstained Fossil is offered and
+this one would add a price and an implicit nobody wants. It rerolls the explicit mods itself, so it never declares `keeps_mods` and
+is not pruned to the states that pass (ADR-0036). It declares no block invariance: the coarse state holds no implicits. A set
+without the Bloodstained Fossil answers exactly as it did before the fossil was lifted from `OutOfScopeError`
+(`tests/test_actions_fossil_unchanged.py` compares a digest of their answers).
+
 Refusals, in this order:
 
 * `NotApplicableError`: the item is not rare or is corrupted; a socketed fossil forbids the base (a
-  base tag it does not allow, or one it forbids); the item holds a metamod other than the multimod;
-  a Fractured Fossil on an item with a fractured mod or an influence; the forced mod of a Hollow or
-  Glyphic Fossil shares a family with a fractured mod.
-* `OutOfScopeError`: a Bloodstained Fossil (its corrupted implicit is corruption, B4); a cluster jewel
-  (its pool depends on its enchantments) or a jewel base that exists as a unique only; Hollow and Glyphic in one resonator (no admitted
+  base tag it does not allow, or one it forbids, the heist tags for a Bloodstained Fossil); the item holds a metamod other than the
+  multimod; a Fractured Fossil on an item with a fractured mod or an influence; the forced mod of a Hollow or
+  Glyphic Fossil shares a family with a fractured mod; a Bloodstained Fossil on a base whose class has no corrupted implicit pool.
+* `OutOfScopeError`: a cluster jewel (its pool depends on its enchantments, and its corrupted pool is not checked), a Timeless Jewel
+  for a Bloodstained Fossil, or a jewel base that exists as a unique only; Hollow and Glyphic in one resonator (no admitted
   rule); a Tangled Fossil when the data holds no outcome records; fractured mods that fill the side
-  of the forced mod; a Glyphic Fossil whose candidates are all blocked or missing.
+  of the forced mod; a Glyphic Fossil whose candidates are all blocked or missing; a Bloodstained Fossil when the corrupted pool is
+  empty at the item level.
 * `ValueError`: raised at construction for no fossil, more than four or the same one twice, and by
   `outcomes` for a name that is no fossil of the data.
 
@@ -38,6 +50,8 @@ from crafting_system.data import Fossil, GameData, Mod, conflicts
 from crafting_system.items import Item, Rarity, Side, UnknownBaseError, capacity, effective_weight
 from crafting_system.rules import get_rule
 
+from .bloodstained import CLAIM_IDS as BLOODSTAINED_CLAIM_IDS
+from .bloodstained import BloodstainedOutcomes, ImplicitDraw
 from .catalog import kind
 from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
@@ -118,23 +132,43 @@ class ApplyFossils(Action):
         names = self.fossils if data is None else tuple(_record(data, name).name for name in self.fossils)
         return {self.resonator: 1, **{name: 1 for name in names}}
 
+    def _holds(self, data: GameData | None, special: str) -> bool:
+        """Whether the set holds the special fossil `special` (a key of `fossils.special_fossils`): by record when `data` is given, else by name.
+
+        A name that is no fossil of `data` counts by its name, so that `reads`, `adds` and `claims` never refuse a set that `outcomes` would.
+        """
+        wanted = SPECIAL_FOSSILS.value[special]
+        if data is None:
+            return wanted in self.fossils
+        by_name = _records(data)
+        return any((by_name[name].name if name in by_name else name) == wanted for name in self.fossils)
+
     def reads(self, data: GameData) -> Reads:
+        if self._holds(data, "bloodstained"):
+            # the reroll erases the junk; which implicit is replaced follows from the implicits the item holds; no coarse level: the coarse state keeps none
+            return Reads(junk=False, families=frozenset(), implicits=True)
         return Reads.nothing(block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """The mods a Hollow Fossil forces; None when a Glyphic Fossil chooses among several."""
+        """The mods a Hollow Fossil forces; None when a Glyphic Fossil chooses among several. A Bloodstained Fossil also corrupts (see the module text)."""
+        corrupts = self._holds(data, "bloodstained")
         if data is None:
-            return Adds.erasing(fractures=any(name in FRACTURED_FOSSIL_NAMES for name in self.fossils))
+            return _declared(corrupts, fractures=any(name in FRACTURED_FOSSIL_NAMES for name in self.fossils))
         named: set[str] = set()
         records = [_record(data, name) for name in self.fossils]
         fractures = any(_special(record, "fractured") for record in records)
         for record in records:
             named.update(record.forced_mods)
             if record.corrupted_essence_chance >= 100 and not _special(record, "tangled") and not record.forced_mods:
-                return Adds.erasing(fractures=fractures)
-        return Adds.erasing(named=frozenset(named), fractures=fractures)
+                return _declared(corrupts, fractures=fractures)
+        return _declared(corrupts, named=frozenset(named), fractures=fractures)
 
-    def outcomes(self, data: GameData, item: Item) -> FossilOutcomes:
+    def claims(self, data: GameData | None = None) -> frozenset[str]:
+        """The claims of this module, and those of the Bloodstained draw only when the set holds a Bloodstained Fossil."""
+        every = super().claims(data)
+        return every if self._holds(data, "bloodstained") else every - BLOODSTAINED_CLAIM_IDS
+
+    def outcomes(self, data: GameData, item: Item) -> FossilOutcomes | BloodstainedOutcomes:
         """The outcomes of using the resonator on `item`; see the module text for the refusals."""
         records = [_record(data, name) for name in self.fossils]
         if len({record.id for record in records}) != len(records):
@@ -145,9 +179,12 @@ class ApplyFossils(Action):
             raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
         for record in records:
             _check_fossil(record, base.tags, item)
+        corrupts = any(_special(record, "bloodstained") for record in records)
+        draw = ImplicitDraw.for_item(data, item, any(_special(record, "gilded") for record in records)) if corrupts else None
         _check_set(records)
         refuse_unmodelled(data, item, jewels=True)
-        return _build(data, item, records)
+        reroll = _build(data, item, records)
+        return reroll if draw is None else BloodstainedOutcomes(data, item, reroll, draw)
 
     def twin_key(self, data: GameData, item: Item) -> Hashable:
         """The key of the sets that give the same pools on the base of `item`, found without building one (#118).
@@ -186,6 +223,9 @@ class ApplyFossils(Action):
             any(_special(record, "fractured") for record in records),
             tuple(sorted(mod_id for record in records for mod_id in record.forced_mods)),
         )
+        if any(_special(record, "bloodstained") for record in records):
+            # the same pools and one more thing: it corrupts, and a Gilded Fossil makes the implicit replace every implicit
+            key += (("bloodstained", any(_special(record, "gilded") for record in records)),)
         if tangled:
             added_sets = {frozenset(mod.implicit_tags) for mod in added}
             tags = set().union(*tag_sets, *added_sets)
@@ -209,12 +249,42 @@ class ApplyFossils(Action):
             factors += tuple(weights.tag_factor(tags, tags_only=True) for tags in glyphic_sets)
         return key + (live, factors)
 
+RECORDS_CACHE_SIZE = 32
+_records_by_name: dict[int, tuple[GameData, dict[str, Fossil]]] = {}
+
+
+def _records(data: GameData) -> dict[str, Fossil]:
+    """The fossils of `data` by name and by record id, the first record that has the key; the Tangled outcome records (no name) are left out.
+
+    Built once per data object (the entry keeps `data`, so a reused `id` is told apart): `reads` and `adds` ask for it on every kernel.
+    """
+    hit = _records_by_name.get(id(data))
+    if hit is not None and hit[0] is data:
+        return hit[1]
+    found: dict[str, Fossil] = {}
+    for record in data.fossils.values():
+        if record.name:
+            found.setdefault(record.name, record)
+            found.setdefault(record.id, record)
+    if len(_records_by_name) >= RECORDS_CACHE_SIZE:
+        del _records_by_name[next(iter(_records_by_name))]
+    _records_by_name[id(data)] = (data, found)
+    return found
+
+
 def _record(data: GameData, name: str) -> Fossil:
     """The fossil named `name` (or with that record id); the Tangled outcome records are no fossils to socket."""
-    for record in data.fossils.values():
-        if name in (record.name, record.id) and record.name:
-            return record
-    raise ValueError(f"there is no fossil {name!r} in the game data")
+    record = _records(data).get(name)
+    if record is None:
+        raise ValueError(f"there is no fossil {name!r} in the game data")
+    return record
+
+
+def _declared(corrupts: bool, **fields) -> Adds:
+    """What a set adds: it erases every mod but the fractured ones, and with a Bloodstained Fossil it also corrupts (asked only)."""
+    if corrupts:
+        return Adds.corrupting(keeps_crafted=False, asked_only=True, **fields)
+    return Adds.erasing(**fields)
 
 
 TWIN_TAGS_CACHE_SIZE = 32
@@ -280,11 +350,6 @@ def _check_fossil(record: Fossil, base_tags: tuple[str, ...], item: Item) -> Non
         raise NotApplicableError(
             f"the {record.name} cannot be used on a fractured or an influenced item"
         )
-    if _special(record, "bloodstained"):
-        raise OutOfScopeError(
-            f"the {record.name} makes the item corrupted and adds a corrupted implicit, "
-            "which belongs to corruption (B4) and is not modelled"
-        )
 
 
 def _check_set(records: list[Fossil]) -> None:
@@ -303,7 +368,8 @@ def _check_set(records: list[Fossil]) -> None:
 def usable_fossils(data: GameData, item: Item) -> list[str]:
     """The names of the fossils that a resonator could hold on `item`: none when the item takes no resonator.
 
-    A fossil the item refuses on its own, or that is out of scope (Bloodstained), is left out.
+    A fossil the item refuses on its own is left out. The Bloodstained Fossil is listed when the item has a corrupted implicit pool
+    to draw from (it corrupts: `ApplyFossils.adds`) and left out when it has none.
     """
     try:
         _check_item(data, item)
@@ -320,6 +386,8 @@ def usable_fossils(data: GameData, item: Item) -> list[str]:
             continue
         try:
             _check_fossil(record, base.tags, item)
+            if _special(record, "bloodstained"):
+                ImplicitDraw.for_item(data, item, replaces_all=False)
         except ActionError:
             continue
         usable.append(record.name)
