@@ -34,7 +34,7 @@ The wiki says the recipes make "a new base item (with randomized base defences)"
 
 ## Prices
 
-A recipe's price is the sum of its goods: the Normal base (priced like any base, with the item level the target needs, because the result's level is the input's), the flasks, the Orbs of Augmentation and the gems. Orbs of Augmentation come from the price file's currency line. **Flasks and quality gems come from the trade API** (a Normal flask of the base type; the cheapest pair of gems of the tag with 20% quality or more), **and a hand price overrides them** (the hand-price file, [#323](https://github.com/Rasslabsya4el/crafting-system/issues/323)). Time and clicks are free, as in ADR-0007. The recipe is not random, so the cost of a chain is the sum of its steps and needs no chance node (ADR-0011): for boots, `base + 5 * (flask + augmentation)`.
+A recipe's price is the sum of its goods: the Normal base (priced like any base, with the item level the target needs, because the result's level is the input's), the flasks, the Orbs of Augmentation and the gems. Orbs of Augmentation come from the price file's currency line. **Flasks and quality gems come from the trade API** (a Normal flask of the base type; the cheapest set of two or more gems of the tag whose quality adds up to 40%), **and a hand price overrides them** (the hand-price file, [#323](https://github.com/Rasslabsya4el/crafting-system/issues/323)). Time and clicks are free, as in ADR-0007. The recipe is not random, so the cost of a chain is the sum of its steps and needs no chance node (ADR-0011): for boots, `base + 5 * (flask + augmentation)`.
 
 ## What this changes
 

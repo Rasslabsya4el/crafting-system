@@ -38,8 +38,8 @@ GEM_MODS_IN_THE_DATA = get_rule("vendor.spell_gem_level_mods_in_the_data")
 MINION_HELMET = get_rule("vendor.helmet_minion_gem_recipe")
 GEM_QUALIFICATION = get_rule("vendor.gem_qualification_is_uncorrupted_skill_gems")
 
-ELEMENTS = ("fire", "cold", "lightning")
-GEM_TAGS = ("physical", "fire", "cold", "lightning", "chaos")
+ELEMENTS = tuple(FLAT_ELEMENTAL_TIER_UP.value["elements"])
+GEM_TAGS = tuple(SPELL_GEM_WEAPON.value["tags"])
 COMMON_CLAIMS = (REFUSED_ON_FRACTURED_AND_CORRUPTED, ITEM_LEVEL_OF_THE_RESULT, BASE_TYPE_OF_THE_RESULT)
 TIER_UP_CLAIMS = (MAGIC_ITEM_WITH_ONE_MOD, TIER_CAPS_ON_THE_LADDERS, *COMMON_CLAIMS)
 GEM_CLAIMS = (GEM_MODS_IN_THE_DATA, GEM_QUALIFICATION, *COMMON_CLAIMS)
@@ -284,7 +284,7 @@ def _build_spell_gem(tag: str) -> Recipe:
         if base_kind in allowed
     }
     return _gem_recipe(
-        f"spell_gem_{tag}", f"Weapon with +1 to {tag.capitalize()} Spell Skill Gems",
+        f"spell_gem_{tag}", f"Weapon with +1 (+2 on a staff) to {tag.capitalize()} Spell Skill Gems",
         (SPELL_GEM_WEAPON, STAFF_GIVES_PLUS_TWO), _gem_input(tag, recipe_value), mods,
     )  # fmt: skip
 

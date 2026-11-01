@@ -109,6 +109,7 @@ def test_every_claim_comes_from_the_research_draft_or_is_one_of_the_three_added_
         draft_entry = draft_entries[claim_id]
         assert registry[claim_id].url == draft_entry["url"]
         assert registry[claim_id].source_kind.value == draft_entry["source_kind"]
+        assert registry[claim_id].quote in draft_entry["quote"] or draft_entry["quote"] in registry[claim_id].quote
 
 
 def test_the_recipe_ids_cover_the_five_recipes():
@@ -383,3 +384,19 @@ def test_the_tier_counts_agree_with_the_ladders_of_the_data(data):
         for step in steps:
             place = [mod.id for mod in ladder].index(step.mod_id)
             assert len(ladder) - place == step.tier_from_top, (recipe_id, step.mod_id)
+
+
+def test_the_claims_the_chains_do_not_build_from_still_agree_with_them():
+    registry = load_registry()
+    caps = registry["vendor.tier_caps_match_the_datamined_ladders"].value
+    ladder_mods = {"movement_speed": ("boots_movement_speed", "boots", 5), "chaos_resistance": ("jewellery_chaos_resistance", "ring", 5),
+                   "physical_one_hand": ("weapon_physical", "wand", 8), "fire_one_hand": ("weapon_fire", "wand", 8),
+                   "cold_one_hand": ("weapon_cold", "wand", 8), "lightning_one_hand": ("weapon_lightning", "wand", 8)}  # fmt: skip
+    for name, (recipe_id, kind, number) in ladder_mods.items():  # the cap mod is the last step of the wiki reading
+        assert recipe(recipe_id).steps(kind)[number - 1].mod_id == caps["cap_mods"][name], name
+    staff_level = registry["vendor.staff_spell_gem_recipe_gives_plus_two"].value["staff_gem_level"]
+    assert all(recipe(f"spell_gem_{tag}").steps("staff")[0].roll == (staff_level, staff_level) for tag in GEM_TAGS)
+    refused = registry["vendor.refused_on_fractured_and_corrupted_inputs"].value["refused_base_states"]
+    assert tuple(refused) == ("fractured", "corrupted")
+    one_mod = registry["vendor.recipe_makes_a_new_magic_item_with_one_mod"].value
+    assert (one_mod["result_rarity"], one_mod["result_mods"]) == ("magic", 1)
