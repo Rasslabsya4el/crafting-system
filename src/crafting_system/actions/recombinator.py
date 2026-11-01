@@ -35,19 +35,53 @@ count table has no row).
 
 The catalog lists the kind for an item in hand with two donors (a copy of the item, and a donor of other mods the base can roll); it
 is not a planner kind until the solver prices donors (#211, #212), the interval driver exists (#220) and the state of the
-recombinator is built (#217). The cost of one use is `recombinator.cost_per_combine` until ticket #216 prices it.
+recombinator is built (#217).
+
+The cost of one use (ADR-0035, ticket #216). No source gives a formula, so the cost is a constant per combine, from player reports, all
+marked `approximate` (ADR-0028) so the answer names them with their intervals: `recombinator_cost.dust_per_combine_reports_3_26` (point
+100,000 Thaumaturgic Dust) and `recombinator_cost.gold_per_combine_reports_3_26` (point 12,000 Gold). `resources` returns them as whole
+counts under the price-file names "Thaumaturgic Dust" and "Gold" (`DUST_NAME`, `GOLD_NAME`; an action imports no prices, a test checks the
+names against the prices crate), so the price file decides what a combine costs in Chaos (about 7 at the default prices).
+
+* **An influenced input.** A combine with an influenced input costs 1.5 times the Dust and 1.5 times the Gold
+  (`recombinator_cost.influenced_input_multiplies_both`, approximate: the 3.25 source says only "+50%"). The factor applies once, not
+  once per input. The donor carries its influences; the item in hand is not part of the action, so `hand_influenced` says whether it has
+  one (`True`/`False`; the catalog sets it from the item it lists the action for). With `None` (unspecified) only the donor's influences
+  count for the price. An action priced for an item with (without) an influence refuses an item without (with) one (`NotApplicableError`).
+* **The junk-craft variant** (`junk_crafts`, the mod ids of one bench craft on the item in hand and one on the donor). The Dust factor
+  0.5 (`recombinator_cost.junk_craft_halves_dust_3_26`, approximate: the least discount any report gives) applies to the Dust only, never
+  to the Gold. The Gold gains the two crafted mods at 323.5 Gold each (`recombinator_cost.gold_linear_in_mod_count_3_25`, approximate: one
+  author, 3.25), 647 in all, and the bench currencies of the two crafts are added to `resources`. Plain 100,000 / 12,000; influenced
+  150,000 / 18,000; junk 50,000 / 12,647; junk and influenced 75,000 / 18,971 (18,970.5 rounded half up). The cost is computed exactly with
+  fractions and turned into whole numbers by rounding half up at the end. The outcome is the kernel run on the two crafted inputs: the
+  crafted mod is exclusive, so it counts once per side, is drawn at the exclusive weight, and at most one stays on the output; the
+  crafted mods of the result are why the variant declares `Adds.crafted`. The result of the variant starts
+  from the item in hand as it was (before its craft). A full side, a family clash or the crafted limit make the variant not applicable
+  (the bench's own refusals).
+* **Which craft** (`junk_craft_for`, this build's choice; ADR-0035 says "the cheapest non-exclusive mod"): among the bench crafts offered
+  for the item class, metamods excluded (a metamod is not a non-exclusive mod), those the bench applies to the item, the one with the
+  lowest required level of its mod, then the fewest bench currency units, then the first mod id. The lowest level first, because the
+  reports tie the Dust discount to a low level or tier of the crafted mod; it is approximate and covered by
+  `recombinator_cost.junk_craft_halves_dust_3_26`.
+* **The setting.** The variant is offered only when the setting is on: `junk_craft_offered()` is a context manager that turns it on for
+  the catalog kind (`junk_craft_enabled()` reads it; a context variable, off by default). The config setting
+  `recombinator_junk_craft` turns it on once the kind is a planner kind (#217); until then nothing calls it but tests.
 """
 
-from collections.abc import Mapping
+import contextvars
+import math
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import cache
 from itertools import product
 
 from crafting_system.data import GameData
-from crafting_system.items import ExplicitMod, Item, Rarity, Side, capacity, spawn_weight
+from crafting_system.items import ExplicitMod, Item, Metamod, Rarity, Side, capacity, spawn_weight
 from crafting_system.rules import get_rule
 
+from .bench import BenchCraft, bench_crafts
 from .catalog import kind
 from .contract import Action, Adds, Axis, Need, Reading, Reads
 from .draw import jewel_class
@@ -55,7 +89,7 @@ from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .pool import drawable_mod_ids, item_tags, tiers_of
 
-__all__ = ["Recombinator"]
+__all__ = ["Recombinator", "junk_craft_enabled", "junk_craft_for", "junk_craft_offered"]
 
 TWO_ITEMS = get_rule("recombinator.inputs_magic_or_rare_same_class")
 CORRUPTED_REFUSED = get_rule("recombinator.corrupted_refused")
@@ -77,7 +111,11 @@ ONE_EXCLUSIVE = get_rule("recombinator.one_exclusive_per_item")
 EXCLUSIVE_ONCE = get_rule("recombinator.exclusive_counts_once_report_3_27")
 EXCLUSIVE_WEIGHT = get_rule("recombinator.exclusive_mod_weight")
 SELECTION = get_rule("recombinator.selection_weighted_formula_unknown")
-COST = get_rule("recombinator.cost_per_combine")
+DUST_PER_COMBINE = get_rule("recombinator_cost.dust_per_combine_reports_3_26")
+GOLD_PER_COMBINE = get_rule("recombinator_cost.gold_per_combine_reports_3_26")
+JUNK_DUST_FACTOR = get_rule("recombinator_cost.junk_craft_halves_dust_3_26")
+GOLD_PER_MOD = get_rule("recombinator_cost.gold_linear_in_mod_count_3_25")
+INFLUENCED_FACTOR = get_rule("recombinator_cost.influenced_input_multiplies_both")
 
 ALPHA_AXIS = Axis(
     "recombinator.alpha",
@@ -91,6 +129,10 @@ MAX_POOLED = 6
 MAX_EXPONENT = 16
 EXCLUSIVE_DOMAINS = frozenset({"crafted", "delve"})
 VEILED_DOMAIN = "veiled"
+DUST_NAME = "Thaumaturgic Dust"  # the price-file names (an action imports no prices; a test checks them against `crafting_system.prices`)
+GOLD_NAME = "Gold"
+METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
+_JUNK_CRAFT: contextvars.ContextVar[bool] = contextvars.ContextVar("recombinator_junk_craft", default=False)
 WHY_NOT_PLANNER = (
     "the solver takes no donors yet (#211, #212), the interval over its rule axis does not exist (#220) "
     "and the recombinator has no compressed state (#217)"
@@ -130,19 +172,78 @@ def _pool_ids(entries: list[_Entry], side: Side) -> list[int]:
     return [index for index, entry in enumerate(entries) if entry.side is side]
 
 
+def _exact(number: object) -> Fraction:
+    """A number of a claim as an exact fraction (a float through its printed form, so 323.5 is 647/2)."""
+    return Fraction(str(number))
+
+
+def _whole(amount: Fraction) -> int:
+    """`amount` rounded half up to a whole number."""
+    return math.floor(amount + Fraction(1, 2))
+
+
+@contextmanager
+def junk_craft_offered(enabled: bool = True) -> Iterator[None]:
+    """Turn the junk-craft variant on (or off) for the catalog kind inside the block; the setting is off by default and restored after."""
+    token = _JUNK_CRAFT.set(enabled)
+    try:
+        yield
+    finally:
+        _JUNK_CRAFT.reset(token)
+
+
+def junk_craft_enabled() -> bool:
+    """Whether the catalog offers the junk-craft variant now."""
+    return _JUNK_CRAFT.get()
+
+
+def junk_craft_for(data: GameData, item: Item) -> BenchCraft | None:
+    """The bench craft the junk variant puts on `item`, or None when the bench has none for it (see the module docstring).
+
+    Among the crafts offered for the item class that are no metamod and that the bench applies to the item: the lowest required level of the
+    mod, then the fewest bench currency units, then the first mod id.
+    """
+    base = data.base_items.get(item.base_id)
+    item_class = base.item_class if base is not None else None
+    sides = {side.value for side in Side}
+    best: tuple[tuple[int, int, str], BenchCraft] | None = None
+    for craft in bench_crafts(data):
+        mod = data.mods.get(craft.mod_id)
+        if mod is None or mod.generation_type not in sides or METAMOD_FAMILIES & set(mod.families):
+            continue
+        option = craft.option(data)
+        if item_class not in option.item_classes:
+            continue
+        try:
+            craft.outcomes(data, item)
+        except (NotApplicableError, OutOfScopeError):
+            continue
+        key = (mod.required_level, sum(entry.count for entry in craft.cost(data)), craft.mod_id)
+        if best is None or key < best[0]:
+            best = (key, craft)
+    return best[1] if best is not None else None
+
+
 @dataclass(frozen=True)
 class Recombinator(Action):
     """One use of the recombinator on the item in hand with the donor `donor` (the item the donor must be when it is used).
 
-    `table` is the count table, `"guide"` (the plan) or `"wiki"` (the sensitivity run).
+    `table` is the count table, `"guide"` (the plan) or `"wiki"` (the sensitivity run). `hand_influenced` says whether the item in hand
+    carries an influence (None: unspecified, and only the donor's influences count for the price); an action priced for one refuses the
+    other. `junk_crafts` are the mod ids of the two bench crafts of the junk-craft variant, the first for the item in hand and the second
+    for the donor (empty: no junk craft; any other length is an error).
     """
 
     donor: Item
     table: str = "guide"
+    hand_influenced: bool | None = None
+    junk_crafts: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.table not in TABLES:
             raise ValueError(f"the count table {self.table!r} is not one of {sorted(TABLES)}")
+        if len(self.junk_crafts) not in (0, 2):
+            raise ValueError("a junk craft is two bench crafts, one for the item in hand and one for the donor, or none")
 
     @property
     def variant(self) -> str:
@@ -151,7 +252,12 @@ class Recombinator(Action):
             for entry in self.donor.mods
         )
         influences = ",".join(sorted(influence.value for influence in self.donor.influences))
-        return f"{self.donor.base_id} {self.donor.item_level} {self.donor.rarity.value} [{influences}] {mods} {self.table}"
+        found = f"{self.donor.base_id} {self.donor.item_level} {self.donor.rarity.value} [{influences}] {mods} {self.table}"
+        if self.hand_influenced is not None:
+            found += f" hand_influenced={self.hand_influenced}"
+        if self.junk_crafts:
+            found += f" junk={'+'.join(self.junk_crafts)}"
+        return found
 
     def label(self, data: GameData | None = None) -> str:
         if data is None:
@@ -163,18 +269,37 @@ class Recombinator(Action):
                 raise ValueError(f"the donor holds a mod ({entry.mod_id}) that is not in the game data")
             texts.append(" ".join((mod.text or mod.name or mod.id).split()))
         suffix = " (wiki count table)" if self.table == "wiki" else ""
-        return f"Recombinator with a donor of {', '.join(sorted(texts))}{suffix}"
+        junk = " with a junk craft on each input" if self.junk_crafts else ""
+        return f"Recombinator with a donor of {', '.join(sorted(texts))}{suffix}{junk}"
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
-        return dict(COST.value)
+        """The Dust and the Gold of one combine (the module docstring has the rule), and the bench currencies of the two junk crafts."""
+        dust, gold = _exact(DUST_PER_COMBINE.value["point"]), _exact(GOLD_PER_COMBINE.value["point"])
+        if self.junk_crafts:
+            if data is None:
+                raise ValueError("a recombinator with a junk craft is priced from the bench data of its crafts, so it needs the data")
+            dust *= _exact(JUNK_DUST_FACTOR.value["factor_point"])  # the discount is on the Dust only
+            gold += len(self.junk_crafts) * _exact(GOLD_PER_MOD.value["gold_per_mod"])
+        if self.donor.influences or self.hand_influenced:
+            dust, gold = dust * _exact(INFLUENCED_FACTOR.value["factor"]), gold * _exact(INFLUENCED_FACTOR.value["factor"])
+        found = {DUST_NAME: _whole(dust), GOLD_NAME: _whole(gold)}
+        if data is not None:
+            for mod_id in self.junk_crafts:
+                for entry in BenchCraft(mod_id).cost(data):
+                    found[entry.currency] = found.get(entry.currency, 0) + entry.count
+        return found
 
     def reads(self, data: GameData) -> Reads:
         """Every mod of both inputs (the pool), and the implicits and the quality of the base."""
         return Reads(junk=True, families=None, input_mods=True, implicits=True, quality=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits, the quality and the enchantment follow the base."""
-        return Adds(draws=True, fractures=True, implicits=True, quality=True, enchantment=True)
+        """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits, the quality and the enchantment follow the base.
+
+        The junk variant also says it puts a crafted mod on the result (one of its two crafts can stay); a crafted mod of the inputs
+        survives in either case, so `keeps_crafted` stays at its default.
+        """
+        return Adds(draws=True, fractures=True, implicits=True, quality=True, enchantment=True, crafted=bool(self.junk_crafts))
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The donor: it starts as a bare item of its base and influences and must become `donor`."""
@@ -222,6 +347,17 @@ class Recombinator(Action):
         classes = {data.base_items[given.base_id].item_class for given in inputs}
         if len(classes) != 1:
             raise NotApplicableError(f"the recombinator takes two items of one item class, got {' and '.join(sorted(classes))}")
+        if self.hand_influenced is not None and bool(item.influences) != self.hand_influenced:
+            raise NotApplicableError(
+                f"this recombinator is priced for an item in hand {'with' if self.hand_influenced else 'without'} an influence, "
+                f"and the item {'has none' if self.hand_influenced else 'has one'}"
+            )
+        if self.junk_crafts:  # each input goes in with its bench craft on it; the bench's refusals make the variant not applicable
+            first, second = self.junk_crafts
+            inputs = (
+                BenchCraft(first).outcomes(data, item).components[0][1].result,
+                BenchCraft(second).outcomes(data, self.donor).components[0][1].result,
+            )
         results: dict[Item, Fraction] = {}
         for base_index in (0, 1):
             for result, chance in self._with_base(data, inputs, base_index, alpha).items():
@@ -372,7 +508,19 @@ def _recombinators(data: GameData, item: Item):
         return
     if any(data.mods[entry.mod_id].domain == VEILED_DOMAIN for entry in item.mods):
         return
-    yield Recombinator(item)
+    hand = bool(item.influences)  # the price follows whether the item in hand has an influence
+    donors = [item]
     other = _complement(data, item)
     if other is not None and other != item:
-        yield Recombinator(other)
+        donors.append(other)
+    for donor in donors:
+        yield Recombinator(donor, hand_influenced=hand)
+    if not junk_craft_enabled():
+        return
+    hand_craft = junk_craft_for(data, item)
+    if hand_craft is None:
+        return
+    for donor in donors:
+        donor_craft = junk_craft_for(data, donor)
+        if donor_craft is not None:
+            yield Recombinator(donor, hand_influenced=hand, junk_crafts=(hand_craft.mod_id, donor_craft.mod_id))

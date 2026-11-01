@@ -43,6 +43,6 @@ Origin: [Grill B3](https://github.com/Rasslabsya4el/crafting-system/issues/94) (
 - **A picked mod keeps its tier and roll** from its input. No source says the values are rerolled; Craft of Exile's stale Sentinel recombinator rerolls them.
 - **The output rarity** follows the mods (normal with none, magic with at most one per side, rare otherwise), from Craft of Exile's code alone (approximate).
 - **A result on another base or item level has no state.** The kernel refuses it (`Abstraction._check_same_item_space`, which checks the base and the item level only; the enchantment of the output follows the chosen base and is a constant of the problem, not a state); the compressed state of the recombinator is ticket #217. The catalog lists the kind (not a planner kind) with a copy of the item as the donor and a donor of other mods the base can roll.
-- The cost of one use is `recombinator.cost_per_combine` (ADR-0035's point values) until ticket #216 prices it.
+- The cost of one use is the rule of ADR-0035, built in ticket #216 (see its "As built").
 - **The side filled first is 1/2 each in every case**, including the one 3.26 reports (a side of exclusive mods only), which no number describes. Several exclusive mods on one side each draw at weight 1000 although they count once in the pooled count; no source covers that.
 - **The picked mod of a doubled pair** is the one picked entry (the item in hand's or the donor's), so the result keeps that input's roll.

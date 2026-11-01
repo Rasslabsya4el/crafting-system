@@ -1,8 +1,9 @@
 # Mechanic family: recombinator (the Kingsmarch bench, unpredictable mode only, M-44, ADR-0033, ticket #215).
 # The draft claims of the research note of ticket #90, trimmed of the predictable mode, the Ducat padding, the dead exclusive-mod
-# trick and the cost claims (ticket #216), plus four claims of the build. Unpredictable-mode numbers are player measurements
-# (Butsicles, patch 3.25, rechecked 3.26). APPROXIMATE (ADR-0028): the count tables, the selection exponent, the exclusive weight,
-# the output rarity and the cost are marked; the planner names them on every answer that reads them.
+# trick and the cost claims (they are in recombinator_cost.yaml, ticket #216), plus four claims of the build.
+# Unpredictable-mode numbers are player measurements
+# (Butsicles, patch 3.25, rechecked 3.26). APPROXIMATE (ADR-0028): the count tables, the selection exponent, the exclusive weight
+# and the output rarity are marked; the planner names them on every answer that reads them.
 rules:
 - id: recombinator.inputs_magic_or_rare_same_class
   statement: The bench takes two magic or rare equipment items of the same item class. Corrupted items and normal items are refused since 3.26.
@@ -341,15 +342,3 @@ rules:
   value: 1000
   approximate: true
   approximate_reason: The game data gives crafted and special mods weight 0 and only the guide author's assumption of 1000 gives a draw weight.
-- id: recombinator.cost_per_combine
-  statement: 'One combine consumes Thaumaturgic Dust and Gold; the value maps the price-file names to the point amounts of ADR-0035 (Dust 25,000 to 250,000, Gold 8,000 to 20,000 in the reports). Ticket #216 replaces it with the rule of recombinator_cost.yaml.'
-  source_kind: experiment
-  url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/
-  quote: costs over 100,000
-  patch_verified: 3.26.0
-  date_checked: 2026-11-01
-  value:
-    Thaumaturgic Dust: 100000
-    Gold: 12000
-  approximate: true
-  approximate_reason: No formula is published; single player reports with intervals of 25,000 to 250,000 Dust and 8,000 to 20,000 Gold.

@@ -16,6 +16,9 @@ The setting `recipe_starts` (same table, `true` or `false`, default `true`) lets
 the start items a vendor recipe can make and keep the cheapest total (ADR-0059, ticket #330). With `false`, or `--no-recipe-starts`
 for one run, the plan is the one made before recipe starts existed, byte for byte. Ticket #323 will turn every method on or off the
 same way; this is its first setting.
+
+The setting `recombinator_junk_craft` (same table, default `false`) offers the recombinator variant that crafts a cheap mod on each
+input first (ADR-0035, ticket #216).
 """
 
 import os
@@ -34,7 +37,7 @@ _PATH_SETTINGS = {
     "output": ("CRAFTING_OUTPUT_DIR", "local/output"),
 }
 
-_PLANNER_SETTINGS = ("memory_strands", "recipe_starts")
+_PLANNER_SETTINGS = ("memory_strands", "recipe_starts", "recombinator_junk_craft")
 
 
 @dataclass(frozen=True)
@@ -44,6 +47,7 @@ class Config:
     output_dir: Path
     memory_strands: bool = False
     recipe_starts: bool = True
+    recombinator_junk_craft: bool = False
 
 
 def find_project_root(start: Path | None = None, *, search_up_to: Path | None = None) -> Path:
@@ -86,6 +90,7 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
         output_dir=resolved["output"],
         memory_strands=planner.get("memory_strands", False),
         recipe_starts=planner.get("recipe_starts", True),
+        recombinator_junk_craft=planner.get("recombinator_junk_craft", False),
     )
 
 
