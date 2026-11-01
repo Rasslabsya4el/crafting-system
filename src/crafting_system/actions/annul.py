@@ -34,9 +34,11 @@ class AnnulmentOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        # What stays depends on which mods are on the item, so every family of the junk is told apart.
-        # `block_invariant` stays False: ADR-0023 calls Annulment "probably" invariant and no test proves it.
-        return Reads()
+        # It removes one of the removable slots uniformly, whatever family the slot holds, so the successor
+        # depends on the slots (their number and kinds) and no family is named. A family freed by the removal
+        # matters only to an action that reads families (a craft, an addition), and that action says so itself.
+        # Block-invariant (ADR-0023, #130): a pool of `n` slots out of `N` removable ones loses one with probability `n / N`.
+        return Reads(junk=True, families=frozenset(), block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # `keeps_crafted` stays True: a crafted mod is one of the mods it may remove, but it is not erased.
