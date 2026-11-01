@@ -10,7 +10,7 @@ each action as a (tag, cost, kernel) triple:
   `act_cost[a]` (finite, above zero) and `act_kernel[a]`;
 * kernel `k`: the edges `k_ptr[k]:k_ptr[k+1]` of `k_succ` (successor states), `k_wt` (integer weights, above zero) and
   `k_prob` (weight / total, correctly rounded). A kernel whose total weight is 2^62 or more keeps its exact weights in
-  `k_big[k]` (`k_wt` is zero there) and its probabilities from exact fractions.
+  `k_big[k]` (`k_wt` is zero there) and its probabilities from exact integer division.
 
 The module is generic like the rest of `solver/`: nothing here knows the game. It is the only place of `solver/` that
 uses numpy (ADR-0010 amended by ADR-0063).
@@ -19,7 +19,6 @@ uses numpy (ADR-0010 amended by ADR-0063).
 from array import array
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from fractions import Fraction
 
 import numpy as np
 
@@ -101,7 +100,7 @@ def expand_ranges(starts: np.ndarray, sizes: np.ndarray) -> np.ndarray:
 
 
 def probabilities(k_ptr: np.ndarray, k_wt: np.ndarray, k_big: dict[int, tuple[int, ...]]) -> np.ndarray:
-    """`weight / total` of every edge, per kernel (exact fractions for the big kernels)."""
+    """`weight / total` of every edge, per kernel (exact integer division for the big kernels)."""
     prob = np.empty(len(k_wt), dtype=np.float64)
     for k0, k1 in kernel_chunks(k_ptr):
         lo, hi = int(k_ptr[k0]), int(k_ptr[k1])
@@ -111,7 +110,7 @@ def probabilities(k_ptr: np.ndarray, k_wt: np.ndarray, k_big: dict[int, tuple[in
             prob[lo:hi] = k_wt[lo:hi] / np.repeat(totals, sizes)
     for kernel, weights in k_big.items():
         total = sum(weights)
-        prob[k_ptr[kernel] : k_ptr[kernel + 1]] = [float(Fraction(w, total)) for w in weights]
+        prob[k_ptr[kernel] : k_ptr[kernel + 1]] = [w / total for w in weights]  # int / int is correctly rounded
     return prob
 
 

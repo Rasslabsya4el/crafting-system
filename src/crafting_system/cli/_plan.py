@@ -31,6 +31,7 @@ from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
+from ._packed import SOLVERS, packed_result
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
 
@@ -246,6 +247,7 @@ def make_plan(
     strands: bool = False,
     solve_it: bool = True,
     start_price_of: StartPrice | None = None,
+    solver: str = "auto",
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -268,7 +270,15 @@ def make_plan(
     plan does not consider strands, as before; with either on, `PlanError` says the planner cannot plan with them yet
     (tickets of batch B5). `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
     not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the target's `start_price` name.
+
+    `solver` picks the exact solve (ticket #374, ADR-0063): "auto" (the default) walks the graph on packed arrays first and
+    solves it there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02), otherwise the
+    object solver solves it as it always did; "object" never packs; "packed" always does, and with 40 offers or more it
+    solves the offers left after the twins are merged, without the bound pruning (the cross-check of the two solvers).
+    The values are the same to the certificate; only the cost differs.
     """
+    if solver not in SOLVERS:
+        raise ValueError(f"solver must be one of {', '.join(SOLVERS)}, got {solver!r}")
     setting = strand_setting(target.start_item, asked=strands)
     if setting.on:
         raise PlanError(
@@ -358,18 +368,25 @@ def make_plan(
 
     began = time.perf_counter()
     pruned = None
-    if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
+    packed = None
+    many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
+    if many and solver != "packed":
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE)
         solution = pruned.solution
         left_out = (*left_out, *_pruned_left_out(pruned))
     else:
-        solution = solve(_Model(abstraction, start, priced), [start])
+        offered = tuple(merge_twins(data, target.start_item, priced)[0]) if many else priced
+        packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
+        solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
     solve_seconds = time.perf_counter() - began
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
 
     began = time.perf_counter()
-    risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start])
+    if packed is not None:  # the risk of the policy on the merged chain: the same mean, odds and quantiles, a chain that fits
+        risk = evaluate_risk(packed.risk_policy, packed.risk_start, packed.risk_is_goal, solution.values[start])
+    else:
+        risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start])
     risk_seconds = time.perf_counter() - began
 
     return Plan(

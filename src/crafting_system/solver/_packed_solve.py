@@ -195,8 +195,16 @@ def proper_states(work: Work, alive: np.ndarray, effective: np.ndarray) -> tuple
 # ---- evaluating a policy ---------------------------------------------------------------------------------------------
 
 
+STAGNATION = 150  # BiCGSTAB iterations without the residual halving after which the solve gives up and returns its best iterate
+
+
 def _bicgstab(matvec: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x0: np.ndarray, tol: float, max_iter: int):
     """BiCGSTAB for `matvec(x) = b`: returns `(x, relative residual, iterations)`; the best iterate seen."""
+    with np.errstate(all="ignore"):
+        return _bicgstab_run(matvec, b, x0, tol, max_iter)
+
+
+def _bicgstab_run(matvec, b, x0, tol, max_iter):
     x = x0.copy()
     r = b - matvec(x)
     bnorm = max(float(np.linalg.norm(b)), 1e-300)
@@ -206,9 +214,15 @@ def _bicgstab(matvec: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x0: np.
     rho = alpha = omega = 1.0
     v = np.zeros_like(b)
     p = np.zeros_like(b)
-    it = 0
+    it = since = 0
+    marked = rnorm
     while it < max_iter and rnorm > tol * bnorm:
         it += 1
+        since += 1
+        if best < 0.5 * marked:
+            marked, since = best, 0
+        elif since >= STAGNATION:
+            break
         rho_new = float(r_hat @ r)
         if rho_new == 0.0 or omega == 0.0:  # breakdown: restart the recurrence from the current iterate
             r_hat, rho, alpha, omega = r.copy(), 1.0, 1.0, 1.0
@@ -280,6 +294,11 @@ def evaluate_policy(
         matrix = np.eye(m) - matrix
         try:
             solved = np.linalg.solve(matrix, rhs)
+            for _ in range(2):  # iterative refinement: a stiff system loses digits in one solve
+                residual = rhs - matrix @ solved
+                if not np.max(np.abs(residual)) > 4 * EPS * np.max(np.abs(rhs)):
+                    break
+                solved = solved + np.linalg.solve(matrix, residual)
         except np.linalg.LinAlgError as error:
             raise ConvergenceError("the policy is improper: its linear system is singular", INF) from error
         info["linear_dense"] = info.get("linear_dense", 0) + 1
@@ -291,7 +310,7 @@ def evaluate_policy(
             extended[:m] = x
             return x - np.add.reduceat(weight * extended[column], offsets)
 
-        solved, residual, iterations = _bicgstab(matvec, rhs, start[states], tol, 20_000)
+        solved, residual, iterations = _bicgstab(matvec, rhs, start[states], tol, 5_000)
         info["linear_iterations"] = info.get("linear_iterations", 0) + iterations
         info["linear_residual"] = residual
     if not np.all(np.isfinite(solved)):

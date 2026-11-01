@@ -89,6 +89,7 @@ def no_solve(monkeypatch):
         return SimpleNamespace(solution=solved_nothing(start), twins=(), inapplicable=(), bounded=())
 
     monkeypatch.setattr(_plan, "solve", solve_whole)
+    monkeypatch.setattr(_plan, "packed_result", lambda *_, **__: None)  # S02 walks 106,002 states: this module only reads routes
     monkeypatch.setattr(_plan, "solve_pruned", solve_pruned_nothing)
     monkeypatch.setattr(_plan, "evaluate_risk", lambda *_: None)
 
