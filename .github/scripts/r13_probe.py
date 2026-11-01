@@ -17,8 +17,6 @@ from crafting_system.targets import load_target
 SETS = {
     "A": {"Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb"},
     "B": {"Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Chaos Orb"},
-    "C": {"Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Alchemy", "Orb of Scouring"},
-    "D": {"Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Alchemy", "Orb of Scouring", "Chaos Orb"},
     "E": None,  # everything with a price except the essences
     "F": "all",  # everything with a price
 }

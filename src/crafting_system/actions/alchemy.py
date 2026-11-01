@@ -38,7 +38,7 @@ class AlchemyOrb(Action):
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.
 
-        Raises `NotApplicableError` for an item that is not normal or is corrupted, and `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key. The draw is the one of a Chaos
+        Raises `NotApplicableError` for an item that is not normal or is corrupted, and `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key (a normal item holds no metamod). The draw is the one of a Chaos
         Orb on a rare item with no mod.
         """
         if item.rarity is not Rarity.NORMAL:
@@ -49,7 +49,7 @@ class AlchemyOrb(Action):
         return Outcomes.reroll(data, item, tag=None)
 
 
-@kind("alchemy-orb", order=70)
+@kind("alchemy-orb", order=70, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
 def _alchemy_orb(data: GameData, item: Item):
     if item.rarity is Rarity.NORMAL:
         yield AlchemyOrb()
