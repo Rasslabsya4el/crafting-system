@@ -464,7 +464,7 @@ def policy_reach(graph: PackedGraph, action: np.ndarray, start: int) -> np.ndarr
         frontier = frontier[action[frontier] >= 0]
         if not len(frontier):
             break
-        kernels = graph.act_kernel[action[frontier]]
+        kernels = np.unique(graph.act_kernel[action[frontier]])  # a kernel is shared by many states: expand it once
         idx = expand_ranges(graph.k_ptr[kernels], ksize[kernels])
         successors = np.unique(graph.k_succ[idx])
         frontier = successors[~seen[successors]].astype(np.int64)

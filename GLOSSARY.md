@@ -375,6 +375,13 @@ _Avoid_: transition table
 **Exact merge**:
 Treating concrete items as one compressed state when every action behaves identically on them. An approximate merge is one that is not exact; it is allowed only as a coarse state with an optimistic and a pessimistic model (ADR-0023).
 
+**Exact class**:
+The states of a graph that have the same goal status and the same set of (cost, distribution over classes) pairs, the coarsest such partition (found by refinement, `solver/_packed_merge.py`). The optimal value is a function of the class, and so are the mean, odds and quantiles of any policy that takes the same pair in each member. The packed solve merges to the classes before it solves (ADR-0063, ticket #374); R04 merges 2.0x, S02 5,300x.
+_Avoid_: bisimulation class, equivalence class
+
+**Packed graph**:
+A state graph held as flat numpy arrays with one stored kernel per distinct distribution, shared by every (state, offer) pair that has it; the form of the packed solve (`solver/_packed.py`). The object solver holds a transition per (state, action, outcome).
+
 **Coarse state**:
 A block of compressed states treated as one, used only to bound an answer: some slot kinds are renamed to a coarser kind, never a requirement's status, a slot count or a side. Its members are the compressed states it stands for.
 _Avoid_: abstract state
