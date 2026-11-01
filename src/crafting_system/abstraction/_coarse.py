@@ -58,7 +58,7 @@ from itertools import combinations, product
 from typing import Literal
 
 from crafting_system.actions import Action, ActionError, OutOfScopeError, build_pool
-from crafting_system.items import Item, Rarity, Side
+from crafting_system.items import Influence, Item, Rarity, Side
 
 from ._kernel import Abstraction
 from ._kinds import ALIKE, TYPE_PREFIX, held_families
@@ -99,15 +99,25 @@ class Coarsening:
     family, or is declared in a way that cannot be pooled, and `ValueError` for a family that is not told
     apart by the enabled actions (it is already merged by the state, or is not in the pool), that a
     requirement names, that two groups list, or whose family type is only partly in its group.
+
+    `influences` are those of the items the blocks stand for: the families of their influence mods join the
+    pool (and, being told apart by name in the state, can be pooled like the rest). The `pooling_*` builders take
+    them from the `start` state.
     """
 
-    def __init__(self, abstraction: Abstraction, groups: Iterable[Collection[str]] = ()):
+    def __init__(
+        self, abstraction: Abstraction, groups: Iterable[Collection[str]] = (), influences: frozenset[Influence] = frozenset()
+    ):
         self.abstraction = abstraction
+        self.influences = influences
         self._data = abstraction.data
         for action in abstraction.enabled:
             self.require_invariant(action)
         pool = build_pool(
-            self._data, Item.build(self._data, base_id=abstraction.base_id, item_level=abstraction.item_level, rarity=Rarity.RARE)
+            self._data,
+            Item.build(
+                self._data, base_id=abstraction.base_id, item_level=abstraction.item_level, rarity=Rarity.RARE, influences=influences
+            ),
         )
         self._side_of = {family.family: family.side for family in pool}
         self._weight = {family.family: family.weight for family in pool}  # the pool weight a family takes out when held
@@ -144,13 +154,14 @@ class Coarsening:
         """
         if size is not None and size < 1:
             raise ValueError(f"a group needs at least one family, got size {size}")
-        probe = cls(abstraction)
+        influences = start.flags.influences if start is not None else frozenset()
+        probe = cls(abstraction, (), influences)
         always_held = probe._held_by_fractured(start) if start is not None else set()
         candidates = sorted(probe.told_apart - probe.relevant_families - always_held)
         if not candidates:
             return probe
         step = len(candidates) if size is None else size
-        return cls(abstraction, [candidates[start : start + step] for start in range(0, len(candidates), step)])
+        return cls(abstraction, [candidates[at : at + step] for at in range(0, len(candidates), step)], influences)
 
     @classmethod
     def pooling_by_spread(
@@ -168,7 +179,8 @@ class Coarsening:
         """
         if spread < 0:
             raise ValueError(f"the spread is a weight difference and cannot be negative, got {spread}")
-        probe = cls(abstraction)
+        influences = start.flags.influences if start is not None else frozenset()
+        probe = cls(abstraction, (), influences)
         always_held = probe._held_by_fractured(start) if start is not None else set()
         groups: list[set[str]] = []
         for side in Side:
@@ -188,7 +200,7 @@ class Coarsening:
                 if last - first > 1:
                     groups.append({name for _, _, families in units[first:last] for name in families})
                 first = last
-        return cls(abstraction, groups)
+        return cls(abstraction, groups, influences)
 
     # --- which families may be pooled ---------------------------------------------------------------
 

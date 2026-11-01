@@ -18,7 +18,7 @@ from coarse_support import compare_members, compare_variants
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
 from crafting_system.actions import ActionError, AnnulmentOrb, AugmentationOrb, ExaltedOrb, RegalOrb, TransmutationOrb
-from crafting_system.items import Item, Rarity
+from crafting_system.items import Influence, Item, Rarity
 
 BASE = "Metadata/Items/Weapons/TwoHandWeapons/Bows/Bow16"
 LEVEL = 78
@@ -105,3 +105,16 @@ def test_annulment_gives_the_same_pushed_kernel_on_every_member_of_a_block_on_th
     _, ab, pooling = bow
 
     assert compare_members(AnnulmentOrb(), ab, pooling, blocks) > 0
+
+
+def test_the_pool_of_an_influenced_start_holds_the_families_of_its_influence_mods(bow):
+    data, ab, _ = bow
+    plain = Item.build(data, base_id=BASE, item_level=LEVEL, rarity=Rarity.NORMAL)
+    hunter = Item.build(data, base_id=BASE, item_level=LEVEL, rarity=Rarity.NORMAL, influences=frozenset({Influence.HUNTER}))
+
+    without = Coarsening.pooling_by_spread(ab, SPREAD, ab.compress(plain))
+    with_hunter = Coarsening.pooling_by_spread(ab, SPREAD, ab.compress(hunter))
+
+    assert with_hunter.influences == frozenset({Influence.HUNTER}) and without.influences == frozenset()
+    assert len(with_hunter.told_apart) > len(without.told_apart)  # the influence families are told apart by name in the state
+    assert sum(len(group) for group in with_hunter.groups) > sum(len(group) for group in without.groups)
