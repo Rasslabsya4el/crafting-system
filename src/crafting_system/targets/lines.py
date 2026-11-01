@@ -16,6 +16,12 @@ from yaml.events import AliasEvent, NodeEvent
 from .errors import TargetError
 
 MERGE_TAG = "tag:yaml.org,2002:merge"
+TWICE_HINTS = {
+    "enchantment": (
+        "an item holds one enchantment, so only one `enchantment:` can be written;"
+        " to accept several enchants, list them under `enchantment: {any_of: [...]}`"
+    )
+}
 
 
 class LineMap(dict):
@@ -73,6 +79,7 @@ class _LineLoader(yaml.SafeLoader):
                 raise TargetError(
                     f"{self.source}:{line}: {key}: this key is written twice in one mapping,"
                     f" first on line {result.key_lines[key]}"
+                    + (f"; {TWICE_HINTS[key]}" if key in TWICE_HINTS else "")
                 )
             result[key] = self.construct_object(value_node, deep=True)
             result.key_lines[key] = line

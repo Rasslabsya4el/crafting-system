@@ -1,7 +1,8 @@
-"""The concrete item: base, rarity, explicit mods, implicits, quality, the unveil offer, capacity, family conflicts, spawn weights and tiers. May import only: data, rules."""
+"""The concrete item: base, rarity, explicit mods, implicits, quality, the unveil offer, the enchantment, capacity, family conflicts, spawn weights and tiers. May import only: data, rules."""
 
 from .errors import (
     CapacityError,
+    EnchantmentError,
     FamilyConflictError,
     ImplicitError,
     ItemError,
@@ -12,6 +13,15 @@ from .errors import (
     UnknownModError,
     ValueRangeError,
     VeilOfferError,
+)
+from .enchantments import (
+    EXTRA_CRAFTED_SLOT_STAT,
+    EnchantClass,
+    EnchantInfo,
+    EnchantKind,
+    enchant_class,
+    enchant_info,
+    is_removed_enchant,
 )
 from .implicits import EldritchSide, ImplicitMod, eldritch_grade, eldritch_side, is_presence_variant
 from .model import (
@@ -32,12 +42,17 @@ from .tiers import mod_tier, tier_table
 
 __all__ = [
     "CATALYST_ITEM_CLASSES",
+    "EXTRA_CRAFTED_SLOT_STAT",
     "MAX_QUALITY",
     "VEILED_SEED_STAT",
     "Capacity",
     "CapacityError",
     "CatalystType",
     "EldritchSide",
+    "EnchantClass",
+    "EnchantInfo",
+    "EnchantKind",
+    "EnchantmentError",
     "ExplicitMod",
     "FamilyConflictError",
     "ImplicitError",
@@ -58,10 +73,13 @@ __all__ = [
     "VeilOfferError",
     "capacity",
     "effective_weight",
+    "enchant_class",
+    "enchant_info",
     "eldritch_grade",
     "eldritch_side",
     "generation_factor",
     "is_presence_variant",
+    "is_removed_enchant",
     "mod_tier",
     "spawn_weight",
     "tier_table",
