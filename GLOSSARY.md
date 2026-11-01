@@ -241,6 +241,10 @@ _Avoid_: sub-craft, donor craft
 **Branching component**:
 A strongly connected component of the solver's graph that contains an input edge, such as donors that need each other. Its equations are not a contraction; the solver finds their least fixed point from below.
 
+**Nested run**:
+How the simulator makes an input: before a two-input action is applied, each of its inputs is made by a run of its own (the input's sub-policy from its start item to its goal), the cost of that run is added to the run that asked, and only then is the action applied to the concrete items. Every attempt makes its inputs afresh, a retry included, and the donor is checked against what the action was priced with. The tree of runs shares one random stream and one step budget (ADR-0022, ticket #222).
+_Avoid_: sub-simulation
+
 **Value ceiling**:
 The cost above which the solver declares a state infinite, since a supercritical branching component never converges.
 
