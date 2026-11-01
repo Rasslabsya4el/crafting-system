@@ -34,7 +34,7 @@ A given route (YAML, ADR-0019) gains a rule form `lock`: the options looked at, 
 
 - **Layer 1 is unchanged**: no new kernel; the options reuse existing ones.
 - **Layer 2**: the simulator throws every option independently on a copy of the concrete item and applies the acceptance set. It checks the arithmetic of the Peek, not the independence, which is the owner's rule.
-- **Layer 3 has two oracles.** One is the explicit product expansion (states `(s, previews)`) of tiny models, solved by the existing solver, by brute force and by HiGHS. The other is the hand test of ADR-0054: with the fallback `F` = 66 (play B blind), 23.97 with the Lock before its price, 66 without, break-even 42.03. A fuzz includes burn self-loops, jewels without a burn, options with equal kernels (two independent draws, so the value must fall against one) and a trap that never accepts.
+- **Layer 3 has two oracles.** One is the explicit product expansion (states `(s, previews)`) of tiny models, solved by the existing solver, by brute force and by HiGHS. The other is the hand test of ADR-0054: with a fallback worth 66, 23.97 with the Lock before its price, 66 without, break-even 42.03. A fuzz includes burn self-loops, jewels without a burn, options with equal kernels (two independent draws, so the value must fall against one) and a trap that never accepts.
 - **Layer 4**: R29 with the Lock, run with `--verify`.
 
 ## Benchmarks
