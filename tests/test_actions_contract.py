@@ -65,7 +65,8 @@ def test_every_kind_applies_on_some_fixture_item():
 B1_KINDS_THAT_DECLARE_STRAND_USE = {
     "transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "alchemy-orb", "chaos-orb", "exalted-orb", "annulment-orb",
     "scouring-orb", "divine-orb", "fracturing-orb", "essence", "corrupted-essence", "fossil-set", "harvest-reforge",
-    "harvest-reforge-influence", "harvest-reforge-likelihood", "bench-craft", "remove-crafted-mods",
+    "harvest-reforge-influence", "harvest-reforge-likelihood", "bench-craft", "remove-crafted-mods", "harvest-quality-enchant", "tempering",
+    "tailoring",
 }  # ADR-0041's table for the actions of B1 (the later families declare their own rows: B5-11a to B5-11h)
 STRANDED = [name for name, item in ITEMS.items() if item.memory_strands]
 

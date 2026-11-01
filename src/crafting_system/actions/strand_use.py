@@ -62,6 +62,7 @@ __all__ = [
     "FOSSIL_HARVEST_NOT_CUT",
     "NOT_SPENT_BY",
     "SCOURING_KEEPS_STRANDS",
+    "TAILORING_LEAVES_STRANDS",
     "SPEND_BASIC",
     "SPEND_CHAOS_FAMILY",
     "SPEND_ESSENCE",
@@ -85,6 +86,7 @@ FOSSIL_HARVEST_NOT_CUT = get_rule("memory_strands.fossil_harvest_not_cut")
 ANNULMENT_KEEPS_STRANDS = get_rule("memory_strands.annulment_keeps_strands")
 SCOURING_KEEPS_STRANDS = get_rule("memory_strands.scouring_keeps_strands")
 DIVINE_KEEPS_STRANDS = get_rule("memory_strands.divine_keeps_strands")
+TAILORING_LEAVES_STRANDS = get_rule("enchantment.tailoring_orb_leaves_memory_strands")  # Tempering and Tailoring: the base changes, the mods and the count do not
 
 # The claims every cutting action rests on: the formula, the eligible tiers, 0 strands, the count before the spend, the kept weights.
 CUT_CLAIMS: tuple[Rule, ...] = (

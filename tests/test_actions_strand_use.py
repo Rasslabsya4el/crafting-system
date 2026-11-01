@@ -33,6 +33,7 @@ from crafting_system.actions import (
     DivineOrb,
     ExaltedOrb,
     FracturingOrb,
+    HarvestQualityEnchant,
     Kind,
     OutOfScopeError,
     RegalOrb,
@@ -41,6 +42,8 @@ from crafting_system.actions import (
     Spent,
     SpendLaw,
     StrandUse,
+    TailoringOrb,
+    TemperingOrb,
     TransmutationOrb,
     catalog,
     registered,
@@ -141,7 +144,10 @@ def test_the_strand_claims_stay_out_of_claims_so_no_answer_without_strands_lists
 
 
 def test_the_table_of_the_actions_that_neither_cut_nor_spend():
-    for action in (AnnulmentOrb(), ScouringOrb(), DivineOrb(), FracturingOrb(), RemoveCraftedMods(), ApplyFossils(("Aetheric Fossil",))):
+    for action in (
+        AnnulmentOrb(), ScouringOrb(), DivineOrb(), FracturingOrb(), RemoveCraftedMods(), ApplyFossils(("Aetheric Fossil",)),
+        TemperingOrb(), TailoringOrb(), HarvestQualityEnchant(),
+    ):  # fmt: skip
         use = action.strand_use(CONTRACT_DATA)
 
         assert use == StrandUse.untouched(*(rule_by_id(claim) for claim in use.claims)) and use.claims

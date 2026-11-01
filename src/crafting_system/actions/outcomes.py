@@ -31,7 +31,7 @@ The fractions are exact and can be thousands of bits long: `str()` of one can hi
 
 import random
 from collections.abc import Callable, Hashable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import cached_property
 
@@ -94,7 +94,8 @@ class Outcomes:
     item keeps out of the guaranteed draw of a reforge: the pool of a reforge is not filtered, since
     the metamod filters its first added mod only (D8 of issue #28). With `rolls_lucky` (a Sanctified Fossil in the
     resonator, `fossils.sanctified_values_lucky`) `sample` rolls each value of the drawn mods and of the forced mod
-    twice and keeps the better, the one nearer the stat's `max`; the kept mods keep the values they had. Build one with `Outcomes.reroll`.
+    twice and keeps the better, the one nearer the stat's `max`; the kept mods keep the values they had, except those in `rerolled`, whose values `sample` rolls afresh and whose tiers stay
+    (the influenced mods an Awakener's Orb keeps). Build one with `Outcomes.reroll`.
     """
 
     data: GameData
@@ -105,6 +106,7 @@ class Outcomes:
     forced: str | None = None
     guaranteed_blocked: frozenset[str] = frozenset()
     rolls_lucky: bool = False  # every value of the mods this reroll puts on the item is rolled twice and the better kept (a Sanctified Fossil)
+    rerolled: frozenset[str] = frozenset()  # ids of kept mods in `retained` whose values `sample` rolls afresh (an Awakener's Orb keeps the tier and rerolls the value)
 
     @classmethod
     def reroll(
@@ -155,14 +157,16 @@ class Outcomes:
         forced: Mod | None,
         guaranteed_blocked: frozenset[str] = frozenset(),
         rolls_lucky: bool = False,
+        rerolled: frozenset[str] = frozenset(),
     ) -> "Outcomes":
         """The outcomes of drawing from a `pool` already built onto `retained` (see `retained_item`).
 
-        With `rolls_lucky` the values of the mods the draw puts on the item are rolled twice, the better kept.
+        With `rolls_lucky` the values of the mods the draw puts on the item are rolled twice, the better kept. The kept
+        mods named in `rerolled` get new values in `sample`.
         """
         return cls(
             data, retained, pool, total_distribution(data, retained), tag, None if forced is None else forced.id, guaranteed_blocked,
-            rolls_lucky,
+            rolls_lucky, rerolled,
         )
 
     @classmethod
@@ -255,6 +259,11 @@ class Outcomes:
         )
         rolled = [entry.mod for entry in drawn]
         kept = tuple(entry for entry in self.retained.mods if entry.mod_id != self.forced)
+        if self.rerolled:
+            kept = tuple(
+                replace(entry, values=roll_values(rng, self.data.mods[entry.mod_id])) if entry.mod_id in self.rerolled else entry
+                for entry in kept
+            )
         if self.forced is not None:
             rolled.insert(0, self.data.mods[self.forced])
         new = tuple(
