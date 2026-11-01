@@ -184,6 +184,7 @@ def make_plan(
     offers: Iterable[Offer] | None = None,
     budget: float | None = None,
     rates: Rates | None = None,
+    solve_it: bool = True,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -199,7 +200,9 @@ def make_plan(
     `budget` (seconds) turns on the decision of ADR-0023: when the forecast of the exact run is longer, the
     answer is approximate within the tolerance if some coarse level reaches it, and `PlanError` says so
     when none exists and the exact run is not offered. `rates` injects the seconds per kernel outcome and per
-    solved edge instead of measuring them. None (the default) always solves exactly.
+    solved edge instead of measuring them. None (the default) always solves exactly. With `solve_it` False nothing is
+    solved: the plan holds the offers, the abstraction and the start, an empty policy and an infinite value, so that a
+    given route can be read and played on concrete items (`_route_sim`) when the graph is too large to solve (R04, R14).
     """
     price_of_start = resolve_start_price(target, prices, start_price)
     if target.implicits or target.quality is not None:
@@ -238,6 +241,9 @@ def make_plan(
     start = abstraction.compress(target.start_item)
 
     note = ""
+    if not solve_it:
+        unsolved = Solution({start: float("inf")}, {}, float("inf"))
+        return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out, unsolved, None, 0.0, 0.0)
     if budget is not None:
         forecast = merged = priced
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
