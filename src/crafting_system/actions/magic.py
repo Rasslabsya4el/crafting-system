@@ -1,4 +1,17 @@
-"""The orbs of magic items: Transmutation and Alteration (1 or 2 mods), Augmentation and Regal (one more mod)."""
+"""The orbs of magic items: Transmutation and Alteration (1 or 2 mods), Augmentation and Regal (one more mod).
+
+The orbs of the early crafting steps are `TransmutationOrb()` (normal to magic with 1 or 2 mods, 1/2
+each), `AlterationOrb()` (rerolls a magic item the same way), `AugmentationOrb()` (adds one mod to a
+magic item with a free slot), `RegalOrb()` (magic to rare, adds one mod) and `AlchemyOrb()` (normal to
+rare with 4, 5 or 6 mods, 8:3:1). Each returns an `Outcomes` like the Chaos Orb. They draw through
+`add.py`, the shared add: `add_one_mod(data, item, what)` (one more mod on an item that keeps all
+it has, the Exalted Orb's too) and `draw_onto(data, retained, totals)`; a present family is out of the
+pool, a full side closes, and an add of one mod with no legal mod is refused (`NotApplicableError`)
+and consumes nothing. `ScouringOrb()` has one result of probability 1, a `ScourOutcomes` with the
+same `chance_all`, `distribution` and `sample`: it removes every mod but the fractured ones and those on a
+side that a lock metamod protects, and the item is normal with none left, magic with one and rare with two or
+more; it keeps its influences.
+"""
 
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -15,6 +28,13 @@ from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .metamods import kept_by_reroll
 from .outcomes import Outcomes
+
+__all__ = [
+    "AlterationOrb",
+    "AugmentationOrb",
+    "RegalOrb",
+    "TransmutationOrb",
+]
 
 TRANSMUTATION_ACCEPTS_NORMAL_ONLY = get_rule("magic_orbs.transmutation_accepts_normal_only")
 ALTERATION_ACCEPTS_MAGIC_ONLY = get_rule("magic_orbs.alteration_accepts_magic_only")
