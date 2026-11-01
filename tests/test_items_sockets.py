@@ -9,6 +9,7 @@ from implicits_support import BELT, BOOTS, EXTENDED, SOME_BOOTS, make
 from items_support import AMULET, BODY
 from repoe_support import no_network  # noqa: F401
 
+from crafting_system.actions import NotApplicableError
 from crafting_system.data import StatRange
 from crafting_system.items import (
     MAX_PLAIN_QUALITY,
@@ -355,6 +356,18 @@ def test_changed_keeps_a_plain_quality():
     assert built.changed(EXTENDED, corrupted=True).quality == PlainQuality(20)
     assert built.changed(EXTENDED, sockets=SIX).quality == PlainQuality(20)
     assert built.changed(EXTENDED, quality=None).quality is None
+
+
+def test_a_plain_quality_scales_no_mod_and_is_no_quality_of_any_catalyst():
+    from crafting_system.actions import ApplyCatalyst, expected_catalysts_for, scaled_values
+
+    mod = EXTENDED.mods["ColdResist1"]
+    held = make(base_id=BODY, quality=PlainQuality(20))
+
+    assert scaled_values(mod, (30,), PlainQuality(20)) == (30,)
+    assert expected_catalysts_for(held, CatalystType.INTRINSIC) == expected_catalysts_for(make(base_id=BODY), CatalystType.INTRINSIC)
+    with pytest.raises(NotApplicableError, match="a ring, an amulet or a belt"):
+        ApplyCatalyst(CatalystType.INTRINSIC).outcomes(EXTENDED, held)
 
 
 # Abyssal Sockets
