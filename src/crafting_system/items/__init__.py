@@ -23,7 +23,15 @@ from .enchantments import (
     enchant_info,
     is_removed_enchant,
 )
-from .implicits import EldritchSide, ImplicitMod, eldritch_grade, eldritch_side, is_presence_variant
+from .implicits import (
+    EldritchSide,
+    ImplicitMod,
+    eldritch_grade,
+    eldritch_side,
+    fits_corrupted_implicit,
+    is_corrupted_implicit,
+    is_presence_variant,
+)
 from .model import (
     VEILED_SEED_STAT,
     Capacity,
@@ -77,8 +85,10 @@ __all__ = [
     "enchant_info",
     "eldritch_grade",
     "eldritch_side",
+    "fits_corrupted_implicit",
     "generation_factor",
     "is_battle_royale",
+    "is_corrupted_implicit",
     "is_presence_variant",
     "is_removed_enchant",
     "mod_tier",

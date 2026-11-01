@@ -28,7 +28,7 @@ from crafting_system.items import ExplicitMod, Item, Rarity
 from crafting_system.rules import Rule, get_rule
 
 from .catalog import kind
-from .contract import Action, Adds
+from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
@@ -111,6 +111,9 @@ class HarvestAddRemove(Action):
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(ADD_REMOVE_CRAFTS_EXIST.value[self.craft])
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads()  # every mod of the item, and none of the implicits, the quality or the offer (ADR-0027)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(tag=TAGGED_RARE_REFORGE_EXISTS.value[self.craft])
@@ -254,6 +257,12 @@ class HarvestResistanceSwap(Action):
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(RESISTANCE_SWAPS_EXIST.value[self.source][self.target])
 
+    def reads(self, data: GameData) -> Reads:
+        return Reads()  # every mod of the item, and none of the implicits, the quality or the offer (ADR-0027)
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds()  # a swap changes a mod for another and leaves the implicits, the quality and the offer alone (ADR-0027)
+
     def outcomes(self, data: GameData, item: Item) -> RolledFinite:
         """The outcomes of using the swap on `item`: one result per source mod that can be swapped, each with chance 1/n.
 
@@ -284,6 +293,12 @@ class HarvestDamageSwap(Action):
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(DAMAGE_SWAPS_EXIST.value[self.source][self.target])
+
+    def reads(self, data: GameData) -> Reads:
+        return Reads()  # every mod of the item, and none of the implicits, the quality or the offer (ADR-0027)
+
+    def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
+        return Adds()  # a swap changes a mod for another and leaves the implicits, the quality and the offer alone (ADR-0027)
 
     def outcomes(self, data: GameData, item: Item) -> RolledFinite:
         """The outcomes of using the swap on `item`, as `HarvestResistanceSwap.outcomes` but for the damage stats of the claim.

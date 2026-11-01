@@ -89,6 +89,13 @@ class Reads:
     * `rerolls_values`: the action changes the rolled values of mods the item holds, in place (a Divine
       Orb), so the result depends on which mod each slot stands for. The compressed state then tells apart
       the mods that a roll requirement of the goal looks at, by mod id (ticket #71).
+    * `implicits`, `quality`, `offer`: the result depends on the implicits of the item (an Eldritch Exalted Orb
+      reads the dominant side, an Orb of Conflict both grades), on its catalyst quality, or on the unveil offer
+      it holds (a Pick); the compressed state then stores that part of the item (ADR-0027, ticket #142). They
+      default to False in the dataclass, as `junk` defaults to True only for the base class: an action that
+      overrides `reads` says what it reads, and `Action.reads` itself (an action that declares nothing) reads all
+      three, like it reads every mod. An action that reads the offer reads the veiled placeholder, a mod of the
+      item, so it must read the junk too.
     """
 
     junk: bool = True
@@ -99,6 +106,14 @@ class Reads:
     variants: bool = False
     fractures: bool = False
     rerolls_values: bool = False
+    implicits: bool = False
+    quality: bool = False
+    offer: bool = False
+
+    @property
+    def item_state(self) -> bool:
+        """Whether the action reads the implicits, the quality or the offer of the item (ADR-0027)."""
+        return self.implicits or self.quality or self.offer
 
     @classmethod
     def adding(cls, *, block_invariant: bool = False, variants: bool = False) -> "Reads":
@@ -135,6 +150,11 @@ class Adds:
     * `needs_roll_limit`: the action changes only rolled values (a Divine Orb), so it can matter only for a target
       with a roll limit (`min_roll`) on a mod that can occur on the item; a planner offers it only then (ticket #71).
       The default is False.
+    * `implicits`, `quality`, `offer`: the action adds, replaces, removes or rerolls an implicit (an Ember, a Blessed
+      Orb, an Orb of Conflict), sets or changes the catalyst quality (a catalyst), or draws or uses up the unveil
+      offer (an Unveil, a Pick). The compressed state then stores that part of the item, so the change is seen
+      (ADR-0027, ticket #142). The dataclass default is False, which says the action leaves it alone; `Action.adds`
+      itself (an action that declares nothing) says True for all three, like it adds mods it does not name.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -149,6 +169,14 @@ class Adds:
     wanted_only: bool = False
     fractures: bool = False
     needs_roll_limit: bool = False
+    implicits: bool = False
+    quality: bool = False
+    offer: bool = False
+
+    @property
+    def item_state(self) -> bool:
+        """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027)."""
+        return self.implicits or self.quality or self.offer
 
     @classmethod
     def removal(cls, *, keeps_crafted: bool = True) -> "Adds":
@@ -260,16 +288,16 @@ class Action(ABC):
         """What one use consumes, by price-file name; read from claims. `data` may be None for an action that needs none."""
 
     def reads(self, data: GameData) -> Reads:
-        """What of the item the result depends on; the default is everything (see `Reads`)."""
-        return Reads()
+        """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality and the offer."""
+        return Reads(implicits=True, quality=True, offer=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """What the action puts on `item`; the default is mods it does not name.
+        """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality and the offer.
 
         `data` and `item` may be None for an action whose additions depend on neither (an orb); one
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
-        return Adds()
+        return Adds(implicits=True, quality=True, offer=True)
 
     def twin_key(self, data: GameData, item: Item) -> Hashable | None:
         """A cheap key such that two actions of the catalog with equal, non-None keys give equal `outcomes`

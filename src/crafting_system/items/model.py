@@ -45,6 +45,8 @@ from .implicits import (
     ImplicitMod,
     eldritch_grade,
     eldritch_side,
+    fits_corrupted_implicit,
+    is_corrupted_implicit,
 )
 from .quality import CATALYST_ITEM_CLASSES, Quality
 from .spawn import spawn_weight
@@ -382,12 +384,31 @@ class Item:
                         ImplicitError,
                     )
                 held[side] = entry.mod_id
+            elif is_corrupted_implicit(mod):
+                self._check_corrupted_implicit(entry, mod, base)
             else:
                 raise self._error(
-                    f"implicit {entry.mod_id} is neither an implicit of the base nor an Eldritch implicit",
+                    f"implicit {entry.mod_id} is neither an implicit of the base nor an Eldritch implicit"
+                    " nor a corrupted implicit",
                     ImplicitError,
                 )
             self._check_values(entry.mod_id, entry.values, mod)
+
+    def _check_corrupted_implicit(self, entry: ImplicitMod, mod: Mod, base: BaseItem) -> None:
+        """A corrupted implicit sits only on a corrupted item, at grade 0, and only a mod the base's corrupted pool holds (ADR-0036)."""
+        if not self.corrupted:
+            raise self._error(
+                f"implicit {entry.mod_id} is a corrupted implicit, which only a corrupted item holds; the item is not corrupted",
+                ImplicitError,
+            )
+        if entry.grade != BASE_GRADE:
+            raise self._error(
+                f"implicit {entry.mod_id} is a corrupted implicit, so its grade is {BASE_GRADE}, not {entry.grade}", ImplicitError
+            )
+        if not fits_corrupted_implicit(mod, base):
+            raise self._error(
+                f"implicit {entry.mod_id} is a corrupted implicit, but not one a {base.item_class} can get", ImplicitError
+            )
 
     def _check_quality(self, base: BaseItem) -> None:
         if self.quality is not None and base.item_class not in CATALYST_ITEM_CLASSES:
