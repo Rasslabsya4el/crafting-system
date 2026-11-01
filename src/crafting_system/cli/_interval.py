@@ -222,7 +222,7 @@ class IntervalAnswer:
                 words = f"{number_text(price.chaos_each * 1_000_000)} Chaos Orbs per million"
             else:
                 words = f"{price.chaos_each:g} Chaos Orbs each"
-            lines.append(f"{price.name}: {words} [{price.source}]")
+            lines.append(f"{price.name} at {words} [{price.source}]")
         if any(price.source == "default" for price in self.prices):
             lines.append("a default price is a guess, not a market price: set yours with a hand price in price_overrides.toml")
         return lines
@@ -356,7 +356,7 @@ def build_interval_answer[S, R: Hashable](
 
     # readings that differ only in an axis the plan does not read are one row (the plan costs the same in each)
     groups: dict[str, list[R]] = {}
-    for reading in result.readings:
+    for reading in _grid_order(result.readings):
         groups.setdefault(named(reading), []).append(reading)
     plan_row = result.plan.costs
     rows = tuple(
@@ -435,8 +435,17 @@ def build_interval_answer[S, R: Hashable](
     )
 
 
+def _grid_order[R: Hashable](readings: Iterable[R]) -> list[R]:
+    """The readings in the order of their values (the grid from the least exponent up), the plan reading not first; as given when they cannot be compared."""
+    found = list(readings)
+    try:
+        return sorted(found, key=lambda r: getattr(r, "values", r))
+    except TypeError:
+        return found
+
+
 def _robust_costs(route: Route, named: Callable, shifted: Callable) -> tuple[tuple[str, Estimate], ...]:
     seen: dict[str, Estimate] = {}
-    for reading, cost in route.costs.items():
-        seen.setdefault(named(reading), shifted(cost))
+    for reading in _grid_order(route.costs):
+        seen.setdefault(named(reading), shifted(route.costs[reading]))
     return tuple(seen.items())

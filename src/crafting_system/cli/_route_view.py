@@ -501,7 +501,7 @@ class _View:
             rule = ()
         else:  # the claims of every route the interval shows, each with its spread; the plan and its interval come first
             approximate = [
-                f"{item.claim}: {item.reason}" + (f" ({item.words})" if item.words else "") for item in interval.approximate_inputs
+                f"{item.claim}: {item.reason}" + (f" Spread: {item.words}." if item.words else "") for item in interval.approximate_inputs
             ]
             rule = tuple(_plain(label, *lines) for label, lines in interval.facts(divine))
         fields = _fields(

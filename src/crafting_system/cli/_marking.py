@@ -141,7 +141,7 @@ RANGE_CLAIMS = {
     "recombinator_cost.gold_per_combine_reports_3_26": (("point", "low", "high"), "Gold per combine"),
     "recombinator_cost.junk_craft_halves_dust_3_26": (
         ("factor_point", "factor_low", "factor_high"),
-        "as the factor on the Dust when each input carries a junk craft",
+        "factor on the Dust when each input carries a junk craft",
     ),
 }
 GRID_CLAIMS = {"recombinator.selection_weighted_formula_unknown": "the selection exponent alpha"}
@@ -161,7 +161,7 @@ def claim_interval(rule) -> tuple[Mapping[str, object], str] | None:
     if rule.id in RANGE_CLAIMS:
         keys, unit = RANGE_CLAIMS[rule.id]
         point, low, high = (float(rule.value[key]) for key in keys)
-        words = f"the plan uses {number_text(point)}; reports range from {number_text(low)} to {number_text(high)} {unit}"
+        words = f"the plan uses {number_text(point)}; reports range from {number_text(low)} to {number_text(high)} ({unit})"
         return {"kind": "range", "point": point, "low": low, "high": high, "unit": unit}, words
     if rule.id in GRID_CLAIMS:
         plan, grid = float(rule.value["plan"]), [float(x) for x in rule.value["grid"]]
