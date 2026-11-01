@@ -145,3 +145,21 @@ def test_r12_keeps_its_two_rerolls(label):
     plan = make_plan(DATA, load_target(R12, DATA), price_file())
 
     assert label in [priced.label for priced in plan.offers]
+
+
+def test_a_target_naming_action_kinds_is_offered_those_kinds_only_and_the_rest_is_listed():
+    goal = Goal((Wanted(frozenset({DAMAGE_1})),))
+    start = item(base_id=BELT)
+
+    chosen = offers_for(PRICED_DATA, goal, BELT, start, ["chaos-orb", "bench-craft", "remove-crafted-mods"])
+
+    labels = {offer.label for offer in chosen.offers}
+    assert "Chaos Orb" in labels and not any(label.startswith("Harvest") or "Essence" in label for label in labels)
+    assert crafts(chosen) == {DAMAGE_1}
+    named = chosen.left_out[0]
+    assert "essence" in named.labels and "harvest-reforge" in named.labels and "chaos-orb" not in named.labels
+
+
+def test_an_unknown_action_kind_is_refused_with_the_kinds_there_are():
+    with pytest.raises(ValueError, match="unknown action kind.*chaos-orb"):
+        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["chaos-orbs"])

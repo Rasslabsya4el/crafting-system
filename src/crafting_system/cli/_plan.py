@@ -208,7 +208,10 @@ def make_plan(
     goal = Goal.from_target(target)
     left_out: tuple[LeftOut, ...] = ()
     if offers is None:
-        chosen = offers_for(data, goal, target.base_id, target.start_item)
+        try:
+            chosen = offers_for(data, goal, target.base_id, target.start_item, target.actions)
+        except ValueError as error:
+            raise PlanError(str(error)) from error
         offers, left_out = chosen.offers, chosen.left_out
     priced, dropped = price_offers(offers, prices)
     if not priced:

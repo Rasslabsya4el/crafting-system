@@ -46,6 +46,7 @@ TOP_KEYS = (
     "start_item",
     "start_price",
     "price_file",
+    "actions",
 )
 REQUIREMENT_KEYS = ("family", "stat", "mod", "min_tier", "min_roll", "not_crafted")
 IMPLICIT_KEYS = ("family", "stat", "mod", "min_grade", "min_roll")
@@ -156,9 +157,24 @@ class _Reader:
         start_item = self.read_start_item(root, base_id, item_level, influences)
         price_file = self.read_price_file(root)
         start_price = self.text(root, "start_price", "start_price") if "start_price" in root else None
+        actions = self.read_actions(root["actions"], root.key_lines["actions"]) if "actions" in root else None
         return Target(
-            base_id, item_level, influences, requirements, start_item, price_file, start_price, implicits, quality
-        )
+            base_id, item_level, influences, requirements, start_item, price_file, start_price, implicits, quality,
+            actions,
+        )  # fmt: skip
+
+    def read_actions(self, names: object, line: int) -> tuple[str, ...]:
+        if not isinstance(names, LineList) or not len(names):
+            self.fail(line, "actions", f"must be a non-empty list of action kinds such as [chaos-orb], got {describe(names)}")
+        found: dict[str, int] = {}
+        for index, name in enumerate(names):
+            path = f"actions[{index}]"
+            if not isinstance(name, str) or not name.strip():
+                self.fail(names.item_lines[index], path, f"must be the name of an action kind (non-empty text), got {describe(name)}")
+            if name.strip() in found:
+                self.fail(names.item_lines[index], path, f"{describe(name)} is listed twice (first at actions[{found[name.strip()]}])")
+            found[name.strip()] = index
+        return tuple(found)
 
     def read_base(self, root: LineMap) -> str:
         name = self.text(root, "base", "base")

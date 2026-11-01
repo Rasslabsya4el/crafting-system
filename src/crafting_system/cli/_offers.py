@@ -9,11 +9,11 @@ missing price is dropped and reported (ADR-0007), never guessed.
 
 import random
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, Reads, catalog, default_actions
+from crafting_system.actions import Action, Reads, catalog, default_actions, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -145,7 +145,9 @@ class BuyStartItem(Action):
         return self.item
 
 
-def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> OfferSet:
+def offers_for(
+    data: GameData, goal: Goal, base_id: str, start_item: Item, kinds_named: Collection[str] | None = None
+) -> OfferSet:
     """The actions the model offers for a target on `base_id`: the planner kinds of the catalog, then the filters below.
 
     Every action of the `planner` kinds of `actions.catalog` that can apply to the start item is offered
@@ -169,11 +171,21 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
       the model is 100 offers and the states grow past what a plan can hold; the plan is then the cheapest
       among the offered crafts, not a proof against the rest (the report says so). REVISIT with the
       Exalted Orb and Annulment Orb (#67) and the metamods and the multimod (#68). The crafts left out are reported.
+    * With `kinds_named` (the target's `actions:` key) only the kinds of those names are listed at all and the filters
+      below see only them. That is the target's choice, not a proof: the plan is the cheapest among the named kinds,
+      and the kinds not named are listed in `left_out`.
     * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
       offered only when the start item holds one or another offered action adds one.
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
-    candidates = list(catalog(data, start_item, planner_only=True))
+    if kinds_named is not None:
+        unknown = sorted(set(kinds_named) - {entry.name for entry in kinds(planner_only=True)})
+        if unknown:
+            raise ValueError(
+                f"unknown action kind(s) {', '.join(unknown)}; the kinds the planner can use are "
+                + ", ".join(entry.name for entry in kinds(planner_only=True))
+            )
+    candidates = list(catalog(data, start_item, planner_only=True, names=kinds_named))
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
     erased_by_all = not any(
         action.adds(data, start_item).keeps_crafted for action in candidates if not _only_crafts(data, start_item, action)
@@ -199,6 +211,12 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
             offers.append(offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item))
 
     left_out = ()
+    if kinds_named is not None:
+        skipped = tuple(entry.name for entry in kinds(planner_only=True) if entry.name not in kinds_named)
+        if skipped:
+            left_out += (
+                LeftOut("the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones", skipped),
+            )
     if left_out_crafts:
         reason = (
             "its mod counts toward no requirement, so the craft only takes a slot and costs currency "
@@ -207,7 +225,7 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
             else "its mod counts toward no requirement; an offered action keeps crafted mods, so a craft could still "
             "pay off by clearing a family from the pool, and the plan is the cheapest among the offered crafts only"
         )
-        left_out = (LeftOut(reason, tuple(left_out_crafts)),)
+        left_out += (LeftOut(reason, tuple(left_out_crafts)),)
     return OfferSet(tuple(offers), left_out)
 
 

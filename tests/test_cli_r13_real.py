@@ -80,8 +80,14 @@ def test_only_the_crafts_whose_mod_counts_toward_a_requirement_are_offered(plan)
 
     assert crafts and all(craft.mod_id in counting for craft in crafts)
     assert any(isinstance(priced.offer.action, RemoveCraftedMods) for priced in plan.offers)
-    (left,) = plan.left_out  # the rest of the bench is left out and listed, none of it unpriced
-    assert len(left.labels) > 100
+    kinds_left, crafts_left = plan.left_out  # the kinds the target does not name, then the rest of the bench: none unpriced
+    assert "chaos-orb" in kinds_left.labels and len(crafts_left.labels) > 100
+
+
+def test_the_target_names_the_guides_kinds_so_no_chaos_orb_is_offered(plan):
+    labels = {priced.label for priced in plan.offers}
+
+    assert "Chaos Orb" not in labels and not any("Essence" in label or label.startswith("Harvest") for label in labels)
 
 
 def test_the_policy_reaches_the_goal_with_exact_odds_and_mean_and_the_quantiles_are_unresolved(plan):

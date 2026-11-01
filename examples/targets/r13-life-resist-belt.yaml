@@ -21,6 +21,12 @@ item_level: 86
 # poe.ninja base price. The planner buys it again whenever the route restarts.
 start_price: Leather Belt (ilvl 86)
 
+# The kinds of actions the planner may use: the guide's orbs and the bench. Without this line the
+# planner also offers every other orb it can use, a Chaos Orb among them, and a belt rerolled that way
+# has far more states than a plan can hold yet (the pruning of ticket #118 is for that); the plan is then
+# the cheapest among the named kinds, and the report lists the kinds left out.
+actions: [transmutation-orb, alteration-orb, augmentation-orb, regal-orb, bench-craft, remove-crafted-mods]
+
 # Everything below must be present on the finished item.
 requirements:
   # Tier-1 life. "family" is the game's own name for a group of mods that exclude each other.
