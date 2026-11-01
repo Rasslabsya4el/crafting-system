@@ -279,3 +279,61 @@ def test_stale_runs_older_than_their_own_timeout_or_silent_are_flagged():
     stuck_ci = ci_run(11, running=2)
     stuck_ci["run_started_at"] = "2026-11-01T12:00:00Z"
     assert "its timeout is 45 min" in heavy.stale_reason(stuck_ci, stuck_ci["jobs"], now, None)
+
+
+# ---- hardening after the checker's review --------------------------------------------------------------------------
+
+
+def test_a_github_error_while_waiting_is_retried_not_fatal():
+    api = FakeApi([])
+    calls = []
+    real = api.active_runs
+
+    def flaky():
+        calls.append(1)
+        if len(calls) < 3:
+            raise RuntimeError("GET /actions/workflows/ci.yml/runs: HTTP 502")
+        return real()
+
+    api.active_runs = flaky
+    assert heavy.cmd_run(api, args(runners=2)) == 0
+    assert len(calls) == 3  # two failed polls, then the one that dispatched
+    assert len(api.dispatched) == 1  # dispatched once, not once per retry
+
+
+def test_runs_held_before_any_job_exists_are_asked_for_and_counted():
+    api = FakeApi([])
+    asked = []
+    api.call = lambda path, *a, **k: asked.append(path) or {"workflow_runs": []}
+    api.active_runs = lambda: heavy.Api.active_runs(api)
+    heavy.Api.active_runs(api)
+    statuses = {path.split("status=")[1].split("&")[0] for path in asked}
+    assert {"queued", "in_progress", "pending", "waiting", "requested"} <= statuses
+    pending_ci = ci_run(12)  # a push held by the concurrency group: status pending, no jobs
+    assert counts(FakeApi([pending_ci]))[0] == heavy.CI_JOBS_PER_RUN
+
+
+def test_run_name_pattern_matches_the_run_name_of_run_yml():
+    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "run.yml").read_text(encoding="utf-8")
+    line = next(line for line in workflow.splitlines() if line.startswith("run-name:"))
+    rendered = line.split(":", 1)[1].strip().strip('"')
+    for name, value in (("runners", "7"), ("os", "windows-latest"), ("timeout_minutes", "45"), ("command", "echo x")):
+        rendered = rendered.replace("${{ inputs." + name + " }}", value)
+    assert heavy.parse_run_name(rendered) == (7, "windows-latest", 45)
+
+
+def test_log_stamp_pattern_finds_the_last_line_time():
+    text = chr(10).join(["2026-11-01T12:00:01.1234567Z first", "2026-11-01T12:31:09.9999999Z last", "no stamp here"])
+    import re
+
+    assert re.findall(heavy.LOG_STAMP, text, re.MULTILINE)[-1] == "2026-11-01T12:31:09"
+
+
+def test_lock_is_released_only_by_its_owner(tmp_path):
+    first = heavy.DispatchLock()
+    with first:
+        stolen = heavy.DispatchLock()
+        stolen.token = "someone else"
+        stolen.__exit__()  # not the owner: the lock stays
+        assert (first.path / "owner").exists()
+    assert not first.path.exists()

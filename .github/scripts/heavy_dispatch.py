@@ -45,12 +45,14 @@ SHORT_MINUTES = 60  # longest timeout without --long
 LONG_MINUTES = 360
 CI_TIMEOUT_MINUTES = 45  # a CI job times out at 30 minutes; a run older than this is stuck
 SILENT_MINUTES = 30
-ACTIVE = ("queued", "in_progress")
+ACTIVE = ("queued", "in_progress")  # job statuses that hold or wait for a runner
+PENDING_RUN = ("pending", "waiting", "requested")  # run statuses before any job exists, e.g. held by a concurrency group
 POLL_SECONDS = 60
 STATE_DIR = Path(tempfile.gettempdir()) / "crafting-heavy-dispatch"  # shared by every session on this PC
 LOCK_STALE_SECONDS = 300
 LEDGER_HOURS = 7
 
+LOG_STAMP = r"^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}[:][0-9]{2}[:][0-9]{2})"  # [:] keeps the drive-letter scan quiet
 RUN_NAME = re.compile(r"^heavy (\d+)x (\S+) t(\d+)")
 
 
@@ -201,7 +203,7 @@ class Api:
     def active_runs(self) -> list[dict]:
         runs = []
         for workflow in ("ci.yml", "run.yml"):
-            for status in ACTIVE:
+            for status in (*ACTIVE, *PENDING_RUN):
                 page = self.call(f"/actions/workflows/{workflow}/runs?status={status}&per_page=100")
                 runs.extend(page["workflow_runs"] if page else [])
         unique = {run["id"]: run for run in runs}
@@ -212,15 +214,27 @@ class Api:
         return page["jobs"] if page else []
 
     def last_output(self, job_id: int) -> dt.datetime | None:
-        """Time of the newest log line of a running job, if GitHub serves the log of a running job."""
+        """Time of the newest log line of a running job, if GitHub serves the log of a running job. The log lives
+        behind a redirect to another host, which must not get the token."""
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *args, **kwargs):
+                return None
+
         try:
             request = urllib.request.Request(f"{self.base}/actions/jobs/{job_id}/logs")
             request.add_header("Authorization", f"Bearer {self.token}")
-            with urllib.request.urlopen(request, timeout=60) as response:
-                text = response.read().decode("utf-8", "replace")
-        except (urllib.error.URLError, TimeoutError, OSError):
+            try:
+                with urllib.request.build_opener(NoRedirect).open(request, timeout=60) as response:
+                    text = response.read().decode("utf-8", "replace")
+            except urllib.error.HTTPError as error:
+                if error.code not in (301, 302, 303, 307, 308) or not error.headers.get("Location"):
+                    return None
+                with urllib.request.urlopen(error.headers["Location"], timeout=60) as response:
+                    text = response.read().decode("utf-8", "replace")
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError):
             return None
-        stamps = re.findall(r"^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}[:][0-9]{2}[:][0-9]{2})", text, re.MULTILINE)
+        stamps = re.findall(LOG_STAMP, text, re.MULTILINE)
         return parse_time(stamps[-1] + "Z") if stamps else None
 
 
@@ -262,21 +276,24 @@ def write_ledger(run_id: int, runners: int) -> None:
 
 class DispatchLock:
     """Two sessions on this PC must not both see free runners and both dispatch: one holds this lock from the
-    decision until its run shows up in the API."""
+    decision until its run shows up in the API. The lock is a directory in the PC's temp folder; it belongs to the
+    process that made it (a token file inside) and is taken over only when older than LOCK_STALE_SECONDS."""
 
     def __init__(self):
         self.path = STATE_DIR / "dispatch.lock"
+        self.token = f"{os.getpid()}-{time.time_ns()}"
 
     def __enter__(self):
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         while True:
             try:
                 os.mkdir(self.path)
+                (self.path / "owner").write_text(self.token, encoding="utf-8")
                 return self
-            except FileExistsError:
+            except OSError:  # FileExistsError, or PermissionError while another process removes it (Windows)
                 try:
                     if time.time() - self.path.stat().st_mtime > LOCK_STALE_SECONDS:
-                        os.rmdir(self.path)
+                        shutil.rmtree(self.path, ignore_errors=True)
                         continue
                 except OSError:
                     pass
@@ -284,7 +301,8 @@ class DispatchLock:
 
     def __exit__(self, *exc):
         try:
-            os.rmdir(self.path)
+            if (self.path / "owner").read_text(encoding="utf-8") == self.token:
+                shutil.rmtree(self.path, ignore_errors=True)
         except OSError:
             pass
 
@@ -327,25 +345,18 @@ def cmd_run(api: Api, args) -> int:
         )
     deadline = time.time() + args.max_wait * 60 if args.max_wait else None
     while True:
-        with DispatchLock():
-            floor = api.variable("HEAVY_FLOOR", DEFAULT_FLOOR)
-            reserve = api.variable("CI_RESERVE", DEFAULT_RESERVE)
-            ledger = read_ledger()
-            seen = snapshot(api, ledger)
-            ci_jobs, heavy = totals([(run, occ) for run, _, occ in seen])
-            budget = heavy_budget(floor, reserve, ci_jobs)
-            count = runners_to_start(heavy, args.runners, args.min_runners, budget)
-            line = (
-                f"CI jobs {ci_jobs}, heavy in flight {heavy}, budget {budget} "
-                f"(HEAVY_FLOOR={floor}, CI_RESERVE={reserve}), wanted {args.runners}"
-                + (f" (at least {args.min_runners})" if args.min_runners != args.runners else "")
-            )
-            if count:
-                print(f"{stamp()} {line} -> starting {count} runner(s)", flush=True)
-                if args.dry_run:
-                    print("dry run: nothing dispatched")
-                    return 0
-                return dispatch(api, args, count)
+        try:
+            with DispatchLock():
+                decided = decide(api, args)
+                if decided["count"] and not args.dry_run:
+                    print(f"{stamp()} {decided['line']} -> starting {decided['count']} runner(s)", flush=True)
+                    return dispatch(api, args, decided["count"])
+        except (RuntimeError, urllib.error.URLError, TimeoutError, OSError) as error:
+            decided = {"count": 0, "line": f"GitHub API error ({str(error)[:120]}), will retry"}
+        if decided["count"]:
+            print(f"{stamp()} {decided['line']} -> would start {decided['count']} runner(s); dry run: nothing dispatched")
+            return 0
+        line = decided["line"]
         if deadline and time.time() > deadline:
             print(f"{stamp()} {line} -> gave up after {args.max_wait} min of waiting", flush=True)
             return 2
@@ -354,6 +365,22 @@ def cmd_run(api: Api, args) -> int:
             return 3
         print(f"{stamp()} {line} -> waiting", flush=True)
         time.sleep(POLL_SECONDS)
+
+
+def decide(api: Api, args) -> dict:
+    """One look at the live counts: how many runners to start now (0 = wait) and the status line."""
+    floor = api.variable("HEAVY_FLOOR", DEFAULT_FLOOR)
+    reserve = api.variable("CI_RESERVE", DEFAULT_RESERVE)
+    seen = snapshot(api, read_ledger())
+    ci_jobs, heavy = totals([(run, occ) for run, _, occ in seen])
+    budget = heavy_budget(floor, reserve, ci_jobs)
+    count = runners_to_start(heavy, args.runners, args.min_runners, budget)
+    line = (
+        f"CI jobs {ci_jobs}, heavy in flight {heavy}, budget {budget} "
+        f"(HEAVY_FLOOR={floor}, CI_RESERVE={reserve}), wanted {args.runners}"
+        + (f" (at least {args.min_runners})" if args.min_runners != args.runners else "")
+    )
+    return {"count": count, "line": line}
 
 
 def dispatch(api: Api, args, count: int) -> int:
@@ -366,9 +393,13 @@ def dispatch(api: Api, args, count: int) -> int:
         "timeout_minutes": str(args.timeout_minutes),
     }
     api.call("/actions/workflows/run.yml/dispatches", "POST", {"ref": args.ref, "inputs": inputs})
+    # From here the run exists: never raise, or the caller would dispatch it a second time.
     for _ in range(30):  # the run shows up within seconds; holding the lock until then keeps the next session honest
         time.sleep(4)
-        fresh = [run for run in find_runs(api, args.ref) if run["id"] not in before]
+        try:
+            fresh = [run for run in find_runs(api, args.ref) if run["id"] not in before]
+        except (RuntimeError, urllib.error.URLError, TimeoutError, OSError):
+            continue
         fresh = [run for run in fresh if parse_time(run["created_at"]) >= started - dt.timedelta(seconds=30)]
         if fresh:
             run = max(fresh, key=lambda item: item["id"])
