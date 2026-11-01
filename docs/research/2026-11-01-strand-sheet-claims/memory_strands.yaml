@@ -28,7 +28,7 @@ rules:
       Exalted, Regal, the Foulborn orbs and identification; fossils, Harvest and essences are not in the sheet.
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: ",strands,currency,modifier,effective_tier,total_tiers,mtr,mtr_percent,lowest_expected_tier,item_before,item_after"
+    quote: "0,79,Foulborn Orb of Augmentation,Resplendent,1,11,320,0.2380952381,3"
     patch_verified: "3.29.0"
     date_checked: 2026-11-01
     approximate: true
@@ -89,6 +89,8 @@ rules:
     quote: "702,82,Scroll of Wisdom,Paragon's,1,1,252.5,0.2836879433,1"
     patch_verified: "3.29.0"
     date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "11 crafts, all on items with 82 strands; no second source."
 
   # --- CHANGED: the Unravelling chance is the linear formula, exactly, with our weights ---
   - id: memory_strands.unravelling_chance_model
@@ -99,7 +101,7 @@ rules:
       mods on wands included, the four Battle Royale duplicates left out. On 36,598 mods (24,698 on amulets, 8,702 on
       wands, 2,924 on rings, 197 on gloves, 77 on body armours) the fit is exact within error: p = min(1, a x) has
       a = 1.0011 (SE 0.0005); with p = min(1, a s^b r^c) the exponents are b = 1.000 (SE 0.012) and c = 1.000 (SE 0.012); 40
-      free bins of x gain 11.4 log-likelihood over the formula for 39 more parameters; observed against predicted rate
+      free bins of x gain 11.4 log-likelihood over the formula for 40 more parameters; observed against predicted rate
       agree in every bin of x from 0 to 1. All 12,201 mods with x at least 1 were raised, none of the 3,881 with W_up = 0
       was, and 58 of 3,507 mods with x between 0.95 and 1 were not (1.65% against 1.66%). The number of mods on the
       item does not change it. The apparent excess of the author's own predictions was his wand weights, which lack the
@@ -107,7 +109,7 @@ rules:
       formula (research #273). Tested classes only: amulets, wands, rings, gloves, body armours.
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: "strands,item_level,mod_family,mod_before_id,mod_after_id,mod_before_text,mod_after_text,mod_before,mod_after,tier_before,tier_after,tiers_upgraded,item_class,base_name,upgrade_chance,total_prefix_weight,total_suffix_weight,upgrade_candidate_weights,mod_count"
+    quote: "0,44,86,ItemFoundRarityIncreasePrefix,ItemFoundRarityIncreasePrefix1,ItemFoundRarityIncreasePrefix2,12(8-12)% increased Rarity of Items found,17(13-18)% increased Rarity of Items found,Magpie's,Pirate's,4,3,1,Amulets,Turquoise Amulet,0.7449209932,88600,125250,3000,1"
     patch_verified: "3.29.0"
     date_checked: 2026-11-01
     value: {chance: "min(1, s * W_up / (2 * W_side))", constant: 1, divisor: 2}
@@ -131,7 +133,7 @@ rules:
       1.25: -102 log-likelihood).
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: "strands,item_level,mod_family,mod_before_id,mod_after_id,mod_before_text,mod_after_text,mod_before,mod_after,tier_before,tier_after,tiers_upgraded,item_class,base_name,upgrade_chance,total_prefix_weight,total_suffix_weight,upgrade_candidate_weights,mod_count"
+    quote: "0,44,86,ItemFoundRarityIncreasePrefix,ItemFoundRarityIncreasePrefix1,ItemFoundRarityIncreasePrefix2,12(8-12)% increased Rarity of Items found,17(13-18)% increased Rarity of Items found,Magpie's,Pirate's,4,3,1,Amulets,Turquoise Amulet,0.7449209932,88600,125250,3000,1"
     patch_verified: "3.29.0"
     date_checked: 2026-11-01
     approximate: true
@@ -145,7 +147,7 @@ rules:
       tier that a cut at the item's strand count would have removed (a mod of 11 tiers at 15 strands would keep 6 tiers).
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: "strands,item_level,mod_family,mod_before_id,mod_after_id,mod_before_text,mod_after_text,mod_before,mod_after,tier_before,tier_after,tiers_upgraded,item_class,base_name"
+    quote: "0,44,86,ItemFoundRarityIncreasePrefix,ItemFoundRarityIncreasePrefix1,ItemFoundRarityIncreasePrefix2,12(8-12)% increased Rarity of Items found,17(13-18)% increased Rarity of Items found,Magpie's,Pirate's,4,3,1,Amulets,Turquoise Amulet,0.7449209932,88600,125250,3000,1"
     patch_verified: "3.29.0"
     date_checked: 2026-11-01
 

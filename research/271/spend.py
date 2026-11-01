@@ -237,7 +237,6 @@ def main() -> None:
         "fewest_strands_before": min(c["s"] for c in foul),
         "with_5_or_fewer_strands_before": sum(1 for c in foul if c["s"] <= 5),
         "with_10_or_fewer_strands_before": sum(1 for c in foul if c["s"] <= 10),
-        "second_foulborn_use_after_the_first_emptied_the_item": 0,
     }
     out_path.write_text(json.dumps(result, indent=1), encoding="utf-8")
 

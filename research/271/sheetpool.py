@@ -17,7 +17,7 @@ from itemtext import ModLine, ParsedItem, parse_item
 
 # Four Battle Royale duplicates of ordinary suffixes and prefixes ("IncreasedCastSpeed2Royale", ...) are spawnable in the
 # pinned export but are not in the game's tier tables: the sheet's own tier counts are one lower exactly for their mod
-# types (31 of 1,834 mods in the foulborn tab, 0 elsewhere) and the Unravelling sheet's weights leave them out.
+# types (31 of 1,834 mods in the foulborn tab; the Alteration tabs were only run with them left out) and the Unravelling sheet's weights leave them out.
 ROYALE_IDS = frozenset({"MovementVelocity2Royale", "IncreasedCastSpeed2Royale", "LocalIncreasedAttackSpeed2Royale____",
                         "IncreasedAttackSpeed2Royale"})
 

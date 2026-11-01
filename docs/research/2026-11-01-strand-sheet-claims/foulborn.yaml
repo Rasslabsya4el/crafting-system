@@ -8,7 +8,7 @@ rules:
       of the sheet (427 Augmentation, 64 Regal, 1 to 91 strands before) the log-likelihood of the observed mods is -1,809.6
       for the sum, -2,084.9 for the larger of the strand cut and the Foulborn cut at rating 75 (D = 175) and -2,064.0 for
       the beta emulator's rule (rating 100, the larger of the two cuts); on the 42 crafts with 10 strands or fewer -168.9
-      against -183.2. The bonus itself: 75 is the largest value the data allow (a bonus of 76 makes an observed craft impossible)
+      against -183.2 (there both larger-of rules give the strand cut alone, so this does not bear on rating 75 against 100). The bonus itself: 75 is the largest value the data allow (a bonus of 76 makes an observed craft impossible)
       and 72.5 is 13.5 log-likelihood units worse. Not answered: the cut of a Foulborn orb on an item with no strands (the sheet
       has no such craft).
     source_kind: experiment

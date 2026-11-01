@@ -874,7 +874,6 @@
   "with_zero_strands_before": 0,
   "fewest_strands_before": 1,
   "with_5_or_fewer_strands_before": 18,
-  "with_10_or_fewer_strands_before": 42,
-  "second_foulborn_use_after_the_first_emptied_the_item": 0
+  "with_10_or_fewer_strands_before": 42
  }
 }
