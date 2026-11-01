@@ -21,7 +21,6 @@ from enchant_support import (
     LIFE_SOCKET_PENALTY,
     LIFE_TEXT,
     QUALITY_LIFE,
-    SWORD,
     WEAPON_CRITICAL,
     WEAPON_EXTRA_SLOT,
 )
@@ -32,7 +31,6 @@ from crafting_system.targets import EnchantmentRequirement, TargetError, parse_t
 
 ARMOUR = "Simple Robe"
 WEAPON = "Rusted Sword"
-RESISTANCE_TAG_IDS = {"ArmourEnchantmentHeistResistanceEffect1__"}  # not in the slice: a tag the slice lacks
 
 
 def parse(text: str, *, base: str = ARMOUR):
