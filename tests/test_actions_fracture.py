@@ -190,4 +190,4 @@ def test_the_kind_lists_every_rarity_and_is_a_planner_kind_offered_only_when_nam
     assert FracturingOrb() not in catalog(DATA, rare(4), planner_only=True)  # not offered by default
     assert FracturingOrb() in catalog(DATA, rare(4), planner_only=True, names={"fracturing-orb"})
     registered = {entry.name: entry for entry in kinds()}["fracturing-orb"]
-    assert registered.planner is True and registered.default is False
+    assert registered.planner is True and registered.opt_in is True

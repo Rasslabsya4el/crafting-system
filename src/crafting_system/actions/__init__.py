@@ -112,6 +112,11 @@ have different weights took about 70 s, and a label that gives every mod its own
 The fractions are exact and can be thousands of bits long: `str()` of one can hit Python's
 4300-digit limit, so convert with `float()` or `Fraction.limit_denominator` to display it.
 
+The corrupted implicit pool of a base at an item level (`corrupted_implicit_pool(data, base_id, item_level)`, `corrupted_pool.py`,
+ADR-0037) is what a Vaal Orb, a Bloodstained resonator and the Locus of Corruption draw their implicit from: the corrupted mods of the
+base's domain with a positive weight on its first matching spawn tag and a required level of at most the item level. Cluster and
+Timeless jewels raise `OutOfScopeError`, a class with no pool `NotApplicableError`.
+
 The pool a draw uses is `build_pool(data, item)`: the mods that could be drawn next, grouped by
 family, with exact `Fraction` weights.
 """
@@ -125,6 +130,7 @@ from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, b
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
 from .contract import Action, ActionOutcomes, Adds, Fixed, Reads, Rerolled
+from .corrupted_pool import CorruptedImplicit, CorruptedImplicitPool, corrupted_implicit_pool
 from .divine import DivineOrb, DivineOutcomes
 from .draw import Outcome, guaranteed_candidates
 from .errors import ActionError, NotApplicableError, OutOfScopeError
@@ -167,6 +173,8 @@ __all__ = [
     "BenchCraft",
     "BenchOutcomes",
     "ChaosOrb",
+    "CorruptedImplicit",
+    "CorruptedImplicitPool",
     "CurrencyCost",
     "DivineOrb",
     "DivineOutcomes",
@@ -207,6 +215,7 @@ __all__ = [
     "blocked_tags",
     "build_pool",
     "catalog",
+    "corrupted_implicit_pool",
     "default_actions",
     "draw_onto",
     "drawable_mod_ids",

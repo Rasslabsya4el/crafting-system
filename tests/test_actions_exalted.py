@@ -159,4 +159,4 @@ def test_the_kind_is_in_the_catalog_for_every_rarity_and_is_a_planner_kind_offer
     assert ExaltedOrb() not in catalog(DATA, amulet(roll(LIFE)), planner_only=True)  # not offered by default
     assert ExaltedOrb() in catalog(DATA, amulet(roll(LIFE)), planner_only=True, names={"exalted-orb"})
     registered = {entry.name: entry for entry in kinds()}["exalted-orb"]
-    assert registered.planner is True and registered.default is False
+    assert registered.planner is True and registered.opt_in is True

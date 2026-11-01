@@ -180,4 +180,4 @@ def test_the_kind_lists_every_rarity_and_is_a_planner_kind_offered_only_when_nam
     assert AnnulmentOrb() not in catalog(DATA, amulet(roll(LIFE)), planner_only=True)  # not offered by default
     assert AnnulmentOrb() in catalog(DATA, amulet(roll(LIFE)), planner_only=True, names={"annulment-orb"})
     registered = {entry.name: entry for entry in kinds()}["annulment-orb"]
-    assert registered.planner is True and registered.default is False
+    assert registered.planner is True and registered.opt_in is True

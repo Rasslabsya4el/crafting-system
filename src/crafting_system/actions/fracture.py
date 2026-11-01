@@ -98,7 +98,7 @@ class FracturingOrb(Action):
 @kind(
     "fracturing-orb",
     order=82,
-    default=False,
+    opt_in=True,
 )
 def _fracturing_orb(data: GameData, item: Item):
     # a normal or magic item becomes rare on the way, so the kind is listed for it too

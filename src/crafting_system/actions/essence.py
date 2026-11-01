@@ -138,7 +138,7 @@ def _forced_mod_id(essence: Essence, item_class: str) -> str | None:
     return mod_id
 
 
-@kind("corrupted-essence", order=31, default=False)
+@kind("corrupted-essence", order=31, opt_in=True)
 def _corrupted_essences(data: GameData, item: Item):
     """The four corrupted essences (Hysteria, Insanity, Horror, Delirium) the item class takes, for a target that names them.
 

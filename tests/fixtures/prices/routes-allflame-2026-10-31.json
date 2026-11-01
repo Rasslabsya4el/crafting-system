@@ -3,12 +3,37 @@
   "fetched_at": "2026-10-31T12:37:32Z",
   "league": "Allflame",
   "prices": {
+    "Aberrant Fossil": {
+      "chaos": 12.12,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Aetheric Fossil": {
+      "chaos": 14.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Armourer's Scrap": {
       "chaos": 0.04312,
       "source": "poe.ninja"
     },
+    "Bloodstained Fossil": {
+      "chaos": 4.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Bound Fossil": {
+      "chaos": 5.97,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Chaos Orb": {
       "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Corroded Fossil": {
+      "chaos": 19.75,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
       "source": "poe.ninja"
     },
     "Deafening Essence of Anger": {
@@ -91,6 +116,16 @@
       "chaos": 14.05,
       "source": "poe.ninja"
     },
+    "Deft Fossil": {
+      "chaos": 11.31,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Dense Fossil": {
+      "chaos": 17.09,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Divine Orb": {
       "chaos": 372.2,
       "source": "poe.ninja"
@@ -104,22 +139,77 @@
       "chaos": 2.29,
       "source": "poe.ninja"
     },
+    "Faceted Fossil": {
+      "chaos": 138.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Fractured Fossil": {
+      "chaos": 121.6,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Fracturing Orb": {
       "chaos": 260.4,
       "note": "poe.ninja currency exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Frigid Fossil": {
+      "chaos": 8.08,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Fundamental Fossil": {
+      "chaos": 31.44,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
       "source": "poe.ninja"
     },
     "Gemcutter's Prism": {
       "chaos": 2.28,
       "source": "poe.ninja"
     },
+    "Gilded Fossil": {
+      "chaos": 185.5,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Glassblower's Bauble": {
       "chaos": 0.09313,
+      "source": "poe.ninja"
+    },
+    "Glyphic Fossil": {
+      "chaos": 70.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Hollow Fossil": {
+      "chaos": 190.8,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Jagged Fossil": {
+      "chaos": 12.18,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
       "source": "poe.ninja"
     },
     "Leather Belt (ilvl 86)": {
       "chaos": 10.0,
       "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: a normal Leather Belt of item level 86, 41 observations",
+      "source": "poe.ninja"
+    },
+    "Lucent Fossil": {
+      "chaos": 6.18,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Metallic Fossil": {
+      "chaos": 7.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Opulent Fossil": {
+      "chaos": 7.48,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
       "source": "poe.ninja"
     },
     "Orb of Alchemy": {
@@ -156,8 +246,38 @@
       "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: the cheapest normal Penetrating Arrow Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); the overview has no line below item level 82, and the guide says 81 or more",
       "source": "poe.ninja"
     },
+    "Potent Chaotic Resonator": {
+      "chaos": 1.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Powerful Chaotic Resonator": {
+      "chaos": 3.19,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Primal Crystallised Lifeforce": {
       "chaos": 0.03529,
+      "source": "poe.ninja"
+    },
+    "Prime Chaotic Resonator": {
+      "chaos": 155.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Primitive Chaotic Resonator": {
+      "chaos": 1.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Prismatic Fossil": {
+      "chaos": 0.2,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Pristine Fossil": {
+      "chaos": 12.1,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
       "source": "poe.ninja"
     },
     "R05 start ring": {
@@ -223,6 +343,116 @@
         "used": 5
       },
       "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 602 on the site, listed any time",
+      "source": "trade-api"
+    },
+    "R08 start boots": {
+      "chaos": 29.82716,
+      "detail": {
+        "date": "2026-11-01",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 22,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "ilvl": {
+                    "min": 86
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.boots"
+                  },
+                  "rarity": {
+                    "option": "normal"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Sorcerer Boots"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "d467d2c75cacc86cc4851e454966d8c884b9e4f4094b1b3ca65fb1609efe2e6e",
+        "used": 5
+      },
+      "note": "trade price of a normal base of item level 86 (29.8) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target",
+      "source": "trade-api"
+    },
+    "R09 start boots": {
+      "chaos": 5.02716,
+      "detail": {
+        "date": "2026-11-01",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 37,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "ilvl": {
+                    "min": 86
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.boots"
+                  },
+                  "rarity": {
+                    "option": "normal"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Two-Toned Boots"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "5df0f609e43627b47c12a3ab884def71f47c36c291610427e98328e8741e1f92",
+        "used": 5
+      },
+      "note": "trade price of a normal base of item level 86 (5.0) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target",
       "source": "trade-api"
     },
     "R10 start boots": {
@@ -423,6 +653,16 @@
       "chaos": 0.06364,
       "source": "poe.ninja"
     },
+    "Sanctified Fossil": {
+      "chaos": 87.25,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Scorched Fossil": {
+      "chaos": 7.14,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Screaming Essence of Anger": {
       "chaos": 0.9,
       "source": "poe.ninja"
@@ -515,6 +755,11 @@
       },
       "note": "poe.watch /exchange/ratios, 12-hour window",
       "source": "poe.watch"
+    },
+    "Serrated Fossil": {
+      "chaos": 12.84,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
     },
     "Shrieking Essence of Anger": {
       "chaos": 0.5,
@@ -617,6 +862,11 @@
     },
     "Shrieking Essence of Zeal": {
       "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Shuddering Fossil": {
+      "chaos": 21.28,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
       "source": "poe.ninja"
     },
     "Thicket Bow (ilvl 78, Hunter)": {

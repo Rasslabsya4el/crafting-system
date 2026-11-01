@@ -55,7 +55,7 @@ class ExaltedOrb(Action):
 @kind(
     "exalted-orb",
     order=75,
-    default=False,
+    opt_in=True,
 )
 def _exalted_orb(data: GameData, item: Item):
     # a normal or magic item becomes rare on the way (an essence, a Regal Orb), so the kind is listed for it too

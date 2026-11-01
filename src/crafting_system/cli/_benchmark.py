@@ -94,7 +94,7 @@ BENCHMARKS = (
             PublishedOdds("Harvest Reforge Lightning", GEM, NO_MODS, "1.338%"),
         ),
     ),
-    # The guides of these four publish no odds, so there is nothing to recompute (tickets #60 and #66).
+    # The guides of these six publish no odds, so there is nothing to recompute (tickets #60, #63 and #66).
     BenchmarkRoute(
         "R10",
         "Fractured Movement Speed Intelligence boots (PoE Vault guide)",
@@ -121,6 +121,20 @@ BENCHMARKS = (
         "Alt-regal tier-1 life double-resistance belt (Reddit guide)",
         "examples/targets/r13-life-resist-belt.yaml",
         "examples/routes/r13-life-resist-belt.yaml",
+        (),
+    ),
+    BenchmarkRoute(
+        "R08",
+        "Dense + Shuddering Energy Shield boots (PoE Vault guide)",
+        "examples/targets/r08-energy-shield-boots.yaml",
+        "examples/routes/r08-energy-shield-boots.yaml",
+        (),
+    ),
+    BenchmarkRoute(
+        "R09",
+        "Pristine + Shuddering Life boots (PoE Vault guide)",
+        "examples/targets/r09-life-boots.yaml",
+        "examples/routes/r09-life-boots.yaml",
         (),
     ),
     BenchmarkRoute(

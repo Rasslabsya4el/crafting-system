@@ -179,7 +179,7 @@ def offers_for(
       and the kinds not named are listed in `left_out`. A name may also be the label of ONE action (`Essence of
       Insanity`, `Bench craft Cannot roll Attack Modifiers`): that action is offered whatever the filters below say
       (a metamod craft counts toward no requirement and would be left out), and only the actions named that way are
-      listed of a kind that is not named as a whole. A kind with `default=False` (Exalted Orb, Annulment, Fracturing
+      listed of a kind that is not named as a whole. An `opt_in` kind (Exalted Orb, Annulment, Fracturing
       Orb) is offered only when named, as a kind or by its label (ticket #70).
     * An action that adds named mods only for a target that wants them (`Adds.wanted_only`, an aspect beast, #147) is
       offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
