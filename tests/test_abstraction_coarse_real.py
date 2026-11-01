@@ -2,7 +2,7 @@
 
 R05 is a ring (item level 86) with a fractured All Attributes, the goal Life and the forced Strength of the
 Deafening Essence of Rage, and every ring craft of the bench (141 in 3.29.3.3) with Remove Crafted Mods enabled.
-The exact state graph has 13,172 states and takes 906 s to build (ADR-0023, measured). The coarse blocks are
+The exact state graph had 13,172 states (14,350 since ticket #68) and took 906 s to build (ADR-0023, measured). The coarse blocks are
 found here without it: breadth-first from the start through the kernels of the lower model (goals are not expanded, as in
 the graph), one representative member each. The numbers of ADR-0023 are counts of the exact states' images, and the lower model reaches the same
 blocks. The counts do not depend on the machine; the time is reported by the run and never asserted (ADR-0014).
