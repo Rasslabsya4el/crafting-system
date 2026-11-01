@@ -21,6 +21,7 @@ from .errors import NotApplicableError
 from .harvest import check_reforgeable
 from .outcomes import Outcomes
 from .pool import influence_spawn_test
+from .strand_use import FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY, StrandUse
 
 __all__ = [
     "HarvestReforgeInfluence",
@@ -40,6 +41,9 @@ class HarvestReforgeInfluence(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Harvest Reforge Influence"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY)  # ADR-0041: a Harvest craft draws from the ordinary pool and spends nothing
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(LIFEFORCE_COST.value)

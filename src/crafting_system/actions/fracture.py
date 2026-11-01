@@ -20,6 +20,7 @@ from .draw import Outcome, refuse_unmodelled
 from .errors import NotApplicableError
 from .finite import Finite
 from .mixture import Fractured
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY, StrandUse
 
 __all__ = [
     "FractureOutcomes",
@@ -64,6 +65,9 @@ class FracturingOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Fracturing Orb"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY)  # ADR-0041: neither cuts nor spends: the count stays
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value)

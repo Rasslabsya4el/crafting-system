@@ -16,12 +16,13 @@ own spend comes after the cut (`memory_strands.cut_uses_strands_before_spend`), 
 `WeightReading` (ADR-0042): the plan reads the claim `memory_strands.weights_of_kept_tiers` (the sheet fit chose the refactored
 weight); the other two readings stay available as a parameter. `cut_weights` applies a cut to the weighted mods of a pool.
 
-A pool is cut only when the action asks for it: an action's contract says whether its draws cut (`Adds.cuts`, ADR-0041), and a fossil,
+A pool is cut only when the action asks for it: an action's contract says whether its draws cut (`Action.strand_use`, `StrandUse.cuts`,
+ADR-0041; the action passes `self.cut_of(data, item)` to its pool), and a fossil,
 a Harvest craft or a beast never does. Fixed mods (an essence's guaranteed mod, a crafted mod) are not drawn from a tier table by
 chance and are not cut either; the caller adds them outside the pool.
 
-The claims this module holds are named by an action that imports from it (`Action.claims`); a pool built without a cut names none of
-them, so no answer that does not use strands lists the (approximate) strand claims.
+The claims this module holds are not among `Action.claims`: a declaration cites them through `Action.strand_claims` (`strand_use.py`), so
+no answer that does not consider strands lists the (approximate) strand claims, however many actions import from this module.
 """
 
 from collections import defaultdict

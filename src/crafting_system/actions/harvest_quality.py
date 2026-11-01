@@ -40,6 +40,7 @@ from .catalog import kind
 from .contract import Action, Adds, Reads
 from .errors import NotApplicableError
 from .finite import Finite
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY, StrandUse
 
 __all__ = [
     "HarvestQualityEnchant",
@@ -83,6 +84,9 @@ class HarvestQualityEnchant(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return f"Harvest Quality Enchant {_words(self.mod_id)}"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(NOT_SPENT_BY, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: a Harvest craft draws no mod and spends nothing
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(ENCHANT_COSTS.value[self.mod_id])

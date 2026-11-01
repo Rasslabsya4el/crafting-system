@@ -6,11 +6,11 @@ holds no capacity filter: which sides still have room changes during a reroll, s
 it. Weights are exact fractions and never rounded.
 
 The item's tags for the spawn weights are the tags of its base plus one tag per influence
-(`item_tags`), so the mods of an influence join the pool. A draw that cuts (`Adds.cuts`, ADR-0041) passes a `Cut` (`cut.py`, ADR-0040): the pool
+(`item_tags`), so the mods of an influence join the pool. A draw that cuts (`StrandUse.cuts`, ADR-0041) passes a `Cut` (`cut.py`, ADR-0040): the pool
 then keeps the highest tiers of each tier table that the strand count and the Foulborn flag allow, and weighs them by the cut's reading
 (ADR-0042). The cut is made on the mods the level gate admits, before the mods the item holds block their families, so it never depends on
-what is on the item. With no cut, or with a cut of 0 strands and no Foulborn orb, the pool is the ordinary one. Until the spend and the
-compressed state carry the count (batch B5), the planner still refuses a run with strands (`make_plan`).
+what is on the item. With no cut, or with a cut of 0 strands and no Foulborn orb, the pool is the ordinary one. The spend is applied around
+`outcomes` (`strand_use.py`); until the compressed state carries the count (B5-4), the planner still refuses a run with strands (`make_plan`).
 A family can have mods on both sides (jewels): its `PoolFamily` come in a pair of one name (`partners`), and a draw takes the family out on both sides.
 The Attack and Caster metamods on the item filter the pool by tag (`metamods.py`). Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); only the explicit
 mods on the item do.
@@ -219,7 +219,7 @@ def pool_candidates(
 
     `cut` is the tier cut of the draw (`Cut`, ADR-0040): the strand count the item has before the craft and the Foulborn flag.
     The pool then holds only the highest tiers of each tier table, reweighed by the cut's reading (ADR-0042). The caller gives it
-    only for a draw that cuts (`Adds.cuts`); the count on `item` alone never cuts, so a fossil on an item with strands draws from the
+    only for a draw that cuts (`Action.cut_of`); the count on `item` alone never cuts, so a fossil on an item with strands draws from the
     ordinary pool. None, and a cut of 0 strands without a Foulborn orb, give the ordinary pool.
 
     Raises `OutOfScopeError` for a candidate that does not have exactly one family (none is
