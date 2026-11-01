@@ -45,6 +45,7 @@ from .implicits import (
     eldritch_side,
 )
 from .quality import CATALYST_ITEM_CLASSES, Quality
+from .spawn import spawn_weight
 
 
 class Rarity(StrEnum):
@@ -180,8 +181,8 @@ class Item:
             isinstance(entry, Influence) for entry in self.influences
         ):
             raise self._error("influences must be a frozenset of Influence")
-        if not all(isinstance(mod, ExplicitMod) for mod in self.mods):
-            raise self._error("mods must all be ExplicitMod")
+        if not all(isinstance(mod, ExplicitMod) and type(mod.mod_id) is str for mod in self.mods):
+            raise self._error("mods must all be ExplicitMod with a string mod id")
         ordered = tuple(sorted(self.mods, key=lambda mod: mod.mod_id))
         for mod in ordered:
             if type(mod.tier) is not int or not isinstance(mod.values, tuple):
@@ -206,8 +207,7 @@ class Item:
             isinstance(entry, ImplicitMod) for entry in self.implicits
         ):
             raise self._error("implicits must be a tuple of ImplicitMod", kind)
-        ordered = tuple(sorted(self.implicits, key=lambda entry: entry.mod_id))
-        for entry in ordered:
+        for entry in self.implicits:  # every entry is checked before the sort, which needs comparable ids
             if type(entry.mod_id) is not str or type(entry.grade) is not int or not isinstance(entry.values, tuple):
                 raise self._error(
                     f"implicit {entry.mod_id} needs a string id, an integer grade and a tuple of values", kind
@@ -219,6 +219,7 @@ class Item:
                     f"implicit {entry.mod_id} has grade {entry.grade}, outside {BASE_GRADE} to {MAX_ELDRITCH_GRADE}",
                     kind,
                 )
+        ordered = tuple(sorted(self.implicits, key=lambda entry: entry.mod_id))
         for first, second in zip(ordered, ordered[1:]):
             if first.mod_id == second.mod_id:
                 raise self._error(f"implicit {first.mod_id} is on the item twice", kind)
@@ -404,6 +405,7 @@ class Item:
             if mod_id not in data.mods:
                 raise self._error(f"offered mod {mod_id} is not in the game data", UnknownModError)
         offered = [data.mods[mod_id] for mod_id in self.veil_offer]
+        tags = data.base_items[self.base_id].tags
         for mod in offered:
             if mod.domain != UNVEILED_DOMAIN:
                 raise self._error(f"offered mod {mod.id} is of domain {mod.domain}, not {UNVEILED_DOMAIN}", kind)
@@ -412,6 +414,10 @@ class Item:
                     f"offered mod {mod.id} is a {mod.generation_type}, but the placeholder"
                     f" {placeholder.id} is a {placeholder.generation_type}",
                     kind,
+                )
+            if spawn_weight(mod, tags) <= 0:
+                raise self._error(
+                    f"offered mod {mod.id} has spawn weight 0 on this base, so it cannot be unveiled here", kind
                 )
         for index, first in enumerate(offered):
             for second in offered[index + 1 :]:
@@ -489,10 +495,23 @@ class Item:
         return self.free_slots(data, Side(mod.generation_type)) > 0 and not self.blocks(data, mod)
 
     def changed(self, data: GameData, **fields) -> Self:
-        """A new validated item with the given fields replaced."""
-        updated = replace(self, **fields).canonical(data)
+        """A new validated item with the given fields replaced.
+
+        When `mods` is replaced without `veil_offer` and no veiled placeholder is left, the offer is
+        cleared: it exists only for its placeholder.
+        """
+        updated = replace(self, **fields)
+        if "mods" in fields and "veil_offer" not in fields and not updated._has_placeholder(data):
+            updated = replace(updated, veil_offer=())  # the offer goes with its placeholder
+        updated = updated.canonical(data)
         updated.validate(data)
         return updated
+
+    def _has_placeholder(self, data: GameData) -> bool:
+        """Whether an explicit mod of domain `veiled` is on the item (a mod not in the game data counts as none)."""
+        return any(
+            entry.mod_id in data.mods and data.mods[entry.mod_id].domain == VEILED_DOMAIN for entry in self.mods
+        )
 
     def add_mod(self, data: GameData, mod: ExplicitMod) -> Self:
         """A new validated item with `mod` added."""

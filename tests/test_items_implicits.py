@@ -7,6 +7,7 @@ from repoe_support import no_network  # noqa: F401
 
 from crafting_system.items import (
     EldritchSide,
+    ExplicitMod,
     ImplicitError,
     ImplicitMod,
     Item,
@@ -153,6 +154,16 @@ def test_the_given_order_of_implicits_does_not_matter():
 def test_the_same_implicit_twice_is_rejected():
     with pytest.raises(ImplicitError, match=r"item on .*Belt4: implicit StrengthImplicitBelt1 is on the item twice"):
         make(implicits=(BASE, BASE))
+
+
+def test_a_mixed_type_list_of_ids_is_an_implicit_error_not_a_type_error():
+    with pytest.raises(ImplicitError, match="implicit 5 needs a string id"):
+        make(implicits=(ImplicitMod(5, 0, (1,)), ImplicitMod("a", 0, (1,))))
+
+
+def test_a_mixed_type_list_of_mod_ids_is_an_item_error_not_a_type_error():
+    with pytest.raises(ItemError, match="string mod id"):
+        make(ExplicitMod(5, 1, (1,)), ExplicitMod("IncreasedLife1", 1, (10,)))
 
 
 @pytest.mark.parametrize("bad", [[BASE], (BASE, "StrengthImplicitBelt1"), "StrengthImplicitBelt1"])

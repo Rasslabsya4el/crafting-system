@@ -43,9 +43,9 @@ def _eldritch(mod_id, generation_type, family, stats) -> Mod:
     return _mod(mod_id, generation_type, "item", family, stats, level=75)
 
 
-def _unveiled(mod_id, generation_type, family, stats) -> Mod:
+def _unveiled(mod_id, generation_type, family, stats, weight=100) -> Mod:
     mod = _mod(mod_id, generation_type, "unveiled", family, stats)
-    return dataclasses.replace(mod, spawn_weights=(Weight("default", 0),), implicit_tags=("unveiled_mod",))
+    return dataclasses.replace(mod, spawn_weights=(Weight("default", weight),), implicit_tags=("unveiled_mod",))
 
 
 EXARCH = "searing_exarch_implicit"
@@ -88,6 +88,8 @@ HAND_MADE = (
     _unveiled("UnveiledPrefixMana1", "prefix", "IncreasedMana", [("base_maximum_mana", 30, 40)]),
     _unveiled("UnveiledSuffixSpeed1", "suffix", "MovementVelocity", [("base_movement_velocity_+%", 10, 12)]),
     _unveiled("UnveiledSuffixCrit1", "suffix", "CriticalStrikeChance", [("critical_strike_chance_+%", 20, 30)]),
+    # an unveiled prefix that cannot spawn on any base (spawn weight 0), to see the offer refuse it
+    _unveiled("UnveiledPrefixZeroWeight1", "prefix", "ZeroWeight", [("base_maximum_life", 1, 2)], weight=0),
 )
 
 HEAVY_BELT = BaseItem(

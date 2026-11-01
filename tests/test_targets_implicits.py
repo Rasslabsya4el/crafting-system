@@ -288,6 +288,66 @@ def test_the_second_entry_of_the_list_is_the_one_named():
     assert_error(message, 7, "implicits[1].family", "not the family id of any implicit mod")
 
 
+# -- what can never be met on the base ---------------------------------------------------------------
+
+GREAVES = "base: Iron Greaves\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n"
+SHOCK_PINNACLE = "AvoidShockEldritchImplicitPinnaclePresence2"  # spawn weight 0 on the fixture belt
+SHOCK_UNIQUE = "AvoidShockEldritchImplicitUniquePresence4"  # spawn weight 350 on the fixture belt
+
+
+def test_an_eldritch_implicit_on_a_base_that_cannot_have_it_is_refused_at_the_selector():
+    message = parse_error(GREAVES + f'implicits:\n  - stat: "{AVOID_SHOCK}"\n', header=False)
+
+    assert_error(message, 6, "implicits[0].stat", "Iron Greaves (Boots)", "could never be met", "no implicits")
+
+
+def test_a_family_selector_is_refused_on_the_family_key():
+    message = parse_error(GREAVES + "implicits:\n  - family: AvoidShock\n", header=False)
+
+    assert_error(message, 6, "implicits[0].family", "Iron Greaves (Boots)")
+
+
+def test_the_implicit_of_another_base_is_refused_and_the_message_names_what_the_base_can_have():
+    message = parse_error("implicits:\n  - family: IncreasedLife\n")  # Heavy Belt: a Strength implicit, Eldritch ones
+
+    assert_error(message, 6, "implicits[0].family", "Heavy Belt (Belt)", "`StrengthImplicitBelt1`", "Eldritch implicits")
+
+
+def test_a_mod_named_by_mod_that_cannot_be_on_the_base_is_refused():
+    message = parse_error(f'implicits:\n  - stat: "{AVOID_SHOCK}"\n    mod: {SHOCK_PINNACLE}\n')
+
+    assert_error(message, 6, "implicits[0].stat", "could never be met")
+
+
+def test_a_presence_variant_with_a_spawn_weight_is_still_reached_by_mod():
+    target = parse(f'implicits:\n  - stat: "{AVOID_SHOCK}"\n    mod: {SHOCK_UNIQUE}\n')
+
+    assert target.implicits[0].mod_ids == {SHOCK_UNIQUE}
+
+
+def test_one_possible_mod_is_enough_to_load_the_selector():
+    assert parse(f'implicits:\n  - stat: "{AVOID_SHOCK}"\n').implicits[0].mod_ids == GRADES
+
+
+def test_quality_on_a_base_that_takes_no_catalyst_is_refused_on_the_quality_key():
+    message = parse_error(GREAVES + "quality:\n  type: intrinsic\n  min_percent: 20\n", header=False)
+
+    assert_error(message, 5, "quality", "Iron Greaves is a Boots", "Amulet, Belt, Ring", "could never be met")
+
+
+@pytest.mark.parametrize("base", ["Heavy Belt", "Leather Belt", "Paua Amulet"])
+def test_quality_on_a_belt_or_amulet_is_accepted(base):
+    text = f"base: {base}\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n"
+
+    assert parse(text + "quality:\n  type: intrinsic\n  min_percent: 20\n", header=False).quality is not None
+
+
+def test_quality_shape_errors_come_before_the_base_check():
+    message = parse_error(GREAVES + "quality: 20\n", header=False)
+
+    assert_error(message, 5, "quality", "must be a mapping")
+
+
 # -- quality: what is read, the errors -------------------------------------------------------------
 
 

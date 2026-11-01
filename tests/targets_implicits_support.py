@@ -14,7 +14,7 @@ import textwrap
 
 from implicits_support import EXTENDED
 
-from crafting_system.data import GameData
+from crafting_system.data import GameData, Weight
 from crafting_system.targets import Target, TargetError, parse_target
 
 AVOID_SHOCK = "#% chance to Avoid being Shocked"
@@ -51,7 +51,20 @@ def _texted() -> GameData:
         families=("Lone",),
         text="5% lone",
     )
+    mods.update(_with_weights(EXTENDED.mods | mods))
     return dataclasses.replace(EXTENDED, mods={**EXTENDED.mods, **mods})
+
+
+def _with_weights(mods: dict) -> dict:
+    """Spawn weights for the Eldritch implicits, as the real data has them but on the tag `belt`, which the fixture
+    Heavy Belt has (the real ones are on armour classes): 700 for a plain grade, 350 for a Unique-Enemy variant and 0
+    for the Pinnacle variant, as the real Avoid Shock mods have on boots. Only the Heavy Belt can have them here."""
+    found = {}
+    for mod_id, mod in mods.items():
+        if mod.generation_type in ("searing_exarch_implicit", "eater_of_worlds_implicit"):
+            weight = 0 if "Pinnacle" in mod_id else 350 if "Unique" in mod_id else 700
+            found[mod_id] = dataclasses.replace(mod, spawn_weights=(Weight("belt", weight), Weight("default", 0)))
+    return found
 
 
 TEXTED = _texted()

@@ -8,7 +8,16 @@ import pytest
 from abstraction_support import real_game_data
 from targets_support import EXAMPLES
 
-from crafting_system.items import CatalystType, ImplicitMod, Item, Quality, Rarity
+from crafting_system.items import (
+    CatalystType,
+    ImplicitMod,
+    Item,
+    Quality,
+    Rarity,
+    VeilOfferError,
+    spawn_weight,
+    veiled_placeholder,
+)
 from crafting_system.targets import load_target
 
 GRADES = {f"AvoidShockEldritchImplicit{grade}" for grade in range(1, 7)}
@@ -90,3 +99,18 @@ def test_r06_implicit_and_quality_are_met_only_at_35_and_20_percent_intrinsic(r0
     assert not r06.quality.is_met_by(belt(35, Quality(CatalystType.ABRASIVE, 20)))
     assert not r06.quality.is_met_by(belt(35, None))
     assert r06.unmet(done) == r06.requirements  # the explicit mods are still wanted
+
+
+def test_real_unveiled_mods_valid_for_velour_boots_validate_and_others_are_refused(real, r03):
+    boots = r03.base_id
+    tags = real.base_items[boots].tags
+    wanted = "JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently"
+    blocked = next(
+        mod.id for mod in real.mods.values() if mod.domain == "unveiled" and mod.generation_type == "prefix" and spawn_weight(mod, tags) == 0
+    )
+    held = (veiled_placeholder(real, "VeiledPrefix"),)
+    build = {"base_id": boots, "item_level": 100, "rarity": Rarity.RARE, "mods": held}
+
+    assert Item.build(real, veil_offer=(wanted,), **build).veil_offer == (wanted,)
+    with pytest.raises(VeilOfferError, match=f"{blocked} has spawn weight 0"):
+        Item.build(real, veil_offer=(blocked,), **build)

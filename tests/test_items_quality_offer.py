@@ -7,6 +7,7 @@ from implicits_support import BELT, BOOTS, EXTENDED, make, on_body, placeholder
 from items_support import BODY, DATA, roll
 from repoe_support import no_network  # noqa: F401
 
+from crafting_system.data import Weight
 from crafting_system.items import (
     CATALYST_ITEM_CLASSES,
     MAX_QUALITY,
@@ -290,15 +291,51 @@ def test_changed_keeps_sets_and_clears_the_offer():
 
     assert built.changed(EXTENDED, corrupted=True).veil_offer == OFFER
     assert built.changed(EXTENDED, veil_offer=()).veil_offer == ()
-    with pytest.raises(VeilOfferError):
-        built.changed(EXTENDED, mods=())
 
 
-def test_removing_the_placeholder_while_an_offer_is_held_is_rejected():
+def test_the_offer_vanishes_with_its_placeholder_on_boots():
+    built = make(placeholder(), base_id=BOOTS, veil_offer=OFFER)
+
+    assert built.remove_mod(EXTENDED, "VeiledPrefix").veil_offer == ()
+    assert built.changed(EXTENDED, mods=()).veil_offer == ()
+    assert built.changed(EXTENDED, mods=built.fractured_mods).veil_offer == ()
+
+
+def test_the_offer_stays_when_other_mods_change_and_the_placeholder_stays():
+    built = make(placeholder(), base_id=BOOTS, veil_offer=OFFER)
+    life = ExplicitMod("IncreasedLife1", 1, (10,))
+
+    assert built.add_mod(EXTENDED, life).veil_offer == OFFER
+    assert built.add_mod(EXTENDED, life).remove_mod(EXTENDED, "IncreasedLife1").veil_offer == OFFER
+    assert built.changed(EXTENDED, mods=(*built.mods, life)).veil_offer == OFFER
+
+
+def test_an_explicit_offer_given_with_mods_is_still_checked():
     built = make(placeholder(), veil_offer=OFFER)
 
     with pytest.raises(VeilOfferError, match="has 0"):
-        built.remove_mod(EXTENDED, "VeiledPrefix")
+        built.changed(EXTENDED, mods=(), veil_offer=OFFER)
+
+
+def test_a_build_with_an_offer_and_no_placeholder_is_still_rejected():
+    with pytest.raises(VeilOfferError, match="has 0"):
+        make(veil_offer=OFFER)
+
+
+def test_an_offered_mod_with_spawn_weight_zero_on_the_base_is_rejected():
+    with pytest.raises(VeilOfferError, match="UnveiledPrefixZeroWeight1 has spawn weight 0"):
+        make(placeholder(), veil_offer=("UnveiledPrefixLife1", "UnveiledPrefixZeroWeight1"))
+
+
+def test_an_offered_mod_whose_tag_the_base_lacks_is_rejected():
+    only_boots = dataclasses.replace(
+        EXTENDED.mods["UnveiledPrefixLife1"], spawn_weights=(Weight("boots", 1500), Weight("default", 0))
+    )
+    data = dataclasses.replace(EXTENDED, mods={**EXTENDED.mods, only_boots.id: only_boots})
+
+    Item.build(data, base_id=BOOTS, rarity=Rarity.RARE, item_level=84, mods=(placeholder(),), veil_offer=(only_boots.id,))
+    with pytest.raises(VeilOfferError, match="UnveiledPrefixLife1 has spawn weight 0"):
+        Item.build(data, base_id=BELT, rarity=Rarity.RARE, item_level=84, mods=(placeholder(),), veil_offer=(only_boots.id,))
 
 
 # items made before the new fields
@@ -324,3 +361,13 @@ def test_an_item_with_a_new_field_differs_from_one_without():
 def test_the_new_errors_are_item_errors():
     assert issubclass(QualityError, ItemError)
     assert issubclass(VeilOfferError, ItemError)
+
+
+def test_a_scouring_orb_on_an_item_with_an_offer_no_longer_crashes():
+    from crafting_system.actions import ScouringOrb
+
+    built = make(placeholder(), ExplicitMod("IncreasedLife1", 1, (10,)), base_id=BOOTS, veil_offer=OFFER)
+
+    results = ScouringOrb().outcomes(EXTENDED, built)
+
+    assert results.retained.veil_offer == () and results.retained.mods == ()

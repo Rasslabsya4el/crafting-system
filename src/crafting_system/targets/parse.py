@@ -10,8 +10,9 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import NoReturn
 
-from crafting_system.data import GameData
+from crafting_system.data import BaseItem, GameData
 from crafting_system.items import (
+    CATALYST_ITEM_CLASSES,
     MAX_QUALITY,
     CatalystType,
     ExplicitMod,
@@ -26,6 +27,7 @@ from crafting_system.items import (
     VeilOfferError,
     eldritch_grade,
     eldritch_side,
+    spawn_weight,
     veiled_placeholder,
 )
 
@@ -144,8 +146,13 @@ class _Reader:
         item_level = self.read_item_level(root)
         influences = self.read_influences(root)
         requirements = self.read_requirements(root["requirements"], "requirements", root.key_lines["requirements"])
-        implicits = self.read_implicits(root["implicits"], root.key_lines["implicits"]) if "implicits" in root else ()
-        quality = self.read_quality(root["quality"], root.key_lines["quality"]) if "quality" in root else None
+        implicits = (
+            self.read_implicits(root["implicits"], root.key_lines["implicits"], base_id) if "implicits" in root else ()
+        )
+        quality = None
+        if "quality" in root:
+            quality = self.read_quality(root["quality"], root.key_lines["quality"])
+            self.check_catalyst_base(base_id, root.key_lines["quality"])
         start_item = self.read_start_item(root, base_id, item_level, influences)
         price_file = self.read_price_file(root)
         start_price = self.text(root, "start_price", "start_price") if "start_price" in root else None
@@ -351,17 +358,17 @@ class _Reader:
 
     # -- implicits and quality -----------------------------------------------------------------------
 
-    def read_implicits(self, entries: object, line: int) -> tuple[ImplicitRequirement, ...]:
+    def read_implicits(self, entries: object, line: int, base_id: str) -> tuple[ImplicitRequirement, ...]:
         if not isinstance(entries, LineList):
             self.fail(line, "implicits", f"must be a list of implicit requirements, got {describe(entries)}")
         if not entries:
             self.fail(line, "implicits", "must hold at least one implicit requirement")
         return tuple(
-            self.read_implicit(entry, f"implicits[{index}]", entries.item_lines[index])
+            self.read_implicit(entry, f"implicits[{index}]", entries.item_lines[index], base_id)
             for index, entry in enumerate(entries)
         )
 
-    def read_implicit(self, entry: object, path: str, line: int) -> ImplicitRequirement:
+    def read_implicit(self, entry: object, path: str, line: int, base_id: str) -> ImplicitRequirement:
         if not isinstance(entry, LineMap):
             self.fail(line, path, f"must be a mapping (`family:` or `stat:`, then `mod`, `min_grade`, `min_roll`), got {describe(entry)}")
         self.check_keys(entry, path, IMPLICIT_KEYS)
@@ -396,6 +403,7 @@ class _Reader:
                     " Boss in your Presence) must name the variant that way",
                 )
             mod_ids = frozenset({mod_id})
+        self.check_implicit_possible(base_id, mod_ids, entry.key_lines[selector], f"{path}.{selector}")
         min_grade = None
         if "min_grade" in entry:
             min_grade = self.read_min_grade(entry, f"{path}.min_grade", mod_ids)
@@ -403,6 +411,44 @@ class _Reader:
         if "min_roll" in entry:
             min_roll = self.read_min_roll(entry, f"{path}.min_roll", mod_ids)
         return ImplicitRequirement(family, stat, mod_ids, min_grade, min_roll)
+
+    def check_implicit_possible(self, base_id: str, mod_ids: frozenset[str], line: int, path: str) -> None:
+        """Refuse an implicit selector none of whose mods can be on the base: it could never be met.
+
+        A mod can be there if the base lists it as its own implicit, or it is an Eldritch implicit with a
+        spawn weight above 0 on the base's tags (any grade or variant of it counts).
+        """
+        base = self.data.base_items[base_id]
+        if any(self.can_be_implicit_of(base, mod_id) for mod_id in mod_ids):
+            return
+        kinds = []
+        if base.implicits:
+            kinds.append(f"its own implicit {quoted(base.implicits)}")
+        if any(self.can_be_implicit_of(base, mod.id) for mod in self.data.mods.values() if eldritch_side(mod)):
+            kinds.append("Eldritch implicits")
+        self.fail(
+            line,
+            path,
+            f"no implicit this selector chooses can be on {base.name} ({base.item_class}), so it could never"
+            f" be met; this base can have {' and '.join(kinds) if kinds else 'no implicits'}",
+        )
+
+    def can_be_implicit_of(self, base: BaseItem, mod_id: str) -> bool:
+        if mod_id in base.implicits:
+            return True
+        mod = self.data.mods[mod_id]
+        return eldritch_side(mod) is not None and spawn_weight(mod, base.tags) > 0
+
+    def check_catalyst_base(self, base_id: str, line: int) -> None:
+        """Refuse `quality:` on a base whose item class takes no catalyst: it could never be met."""
+        base = self.data.base_items[base_id]
+        if base.item_class not in CATALYST_ITEM_CLASSES:
+            self.fail(
+                line,
+                "quality",
+                f"{base.name} is a {base.item_class}, and catalyst quality can only be put on"
+                f" {', '.join(sorted(CATALYST_ITEM_CLASSES))}, so it could never be met",
+            )
 
     def read_min_grade(self, entry: LineMap, path: str, mod_ids: frozenset[str]) -> int:
         line = entry.key_lines["min_grade"]
