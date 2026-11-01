@@ -1,0 +1,36 @@
+# Target for a jewel: a Cobalt Jewel with % increased maximum Life and two attack-speed mods (ticket #201).
+#
+# This file says WHAT you want to end with. It does not say how to craft it: the planner finds that.
+# Lines starting with # are comments and are ignored.
+#
+# A rare jewel holds at most 2 prefixes and 2 suffixes (not 3 and 3 like a ring or a belt), so this
+# target uses three of its four slots. Base jewels have no item level requirement on their mods
+# and no tiers, so the item level changes nothing for them (an abyss jewel is different).
+
+# The base item, by its English name as in the game.
+base: Cobalt Jewel
+
+# The item level of the jewel, a whole number from 1 to 100.
+item_level: 84
+
+# The jewel to start from: a rare one with no mod, which is what you hold after you scour a rare jewel.
+# Chaos Orbs reroll it. Without this block the crafting starts from a fresh white jewel.
+start_item:
+  rarity: rare
+
+# The kinds of actions the planner may use. The ordinary orbs work on jewels; essences, the bench and
+# the recombinator do not (the claims in src/crafting_system/rules/claims/jewel.yaml).
+actions: [chaos-orb]
+
+# Everything below must be present on the finished jewel. "family" is the game's own name for a
+# group of mods that exclude each other.
+requirements:
+  # "(5-7)% increased maximum Life", a prefix.
+  - family: MaximumLifeIncreasePercent
+
+  # "(3-5)% increased Attack Speed", a suffix.
+  - family: IncreasedAttackSpeed
+
+  # "(6-8)% increased Attack Speed with Wands", a prefix: the second attack-speed mod. (With the two
+  # prefixes this takes, no other prefix can sit on the jewel.)
+  - family: SpecificWeaponSpeed

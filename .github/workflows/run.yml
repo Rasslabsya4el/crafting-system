@@ -1,9 +1,13 @@
 name: Run a command
 
 # A heavy run on GitHub instead of on a developer's PC (ticket #165): benchmarks, profiling, research sweeps.
-# Started by hand: `gh workflow run run.yml --ref <branch> -f command='...'`. It checks out the branch, puts the pinned
-# game data in place (the same step as CI), runs the command in bash on 1 to 16 runners and uploads what the command
-# wrote into $OUT_DIR. See docs/ci.md.
+# Started only through the dispatcher (ticket #249), which waits until merge CI keeps a buffer of runners:
+# `python .github/scripts/heavy_dispatch.py run --ref <branch> --runners 4 --command '...'`; never `gh workflow run`.
+# It checks out the branch, puts the pinned game data in place (the same step as CI), runs the command in bash on
+# 1 to 16 runners and uploads what the command wrote into $OUT_DIR. See docs/ci.md.
+# The run name carries runners, system and timeout so the dispatcher can count a run before its jobs exist.
+
+run-name: "heavy ${{ inputs.runners }}x ${{ inputs.os }} t${{ inputs.timeout_minutes }}: ${{ inputs.command }}"
 
 on:
   workflow_dispatch:

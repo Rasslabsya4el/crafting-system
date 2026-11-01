@@ -1,0 +1,9 @@
+[{"id": "197a-free-suffix", "base": "Metadata/Items/Armours/Shields/ShieldInt16", "item_level": 100, "rarity": "rare",
+  "mods": ["LocalIncreasedEnergyShieldPercent8", "IncreasedLife10", "StrIntMasterItemGenerationCanHaveMultipleCraftedMods", "StrMasterItemGenerationCannotChangePrefixes", "DexMasterItemGenerationCannotChangeSuffixes"],
+  "actions": ["Harvest Reforge Fire", "Harvest Reforge Cold", "Harvest Reforge Lightning", "Harvest Reforge Physical"], "repeats": 1000},
+ {"id": "197b-no-free-slot", "base": "Metadata/Items/Armours/Shields/ShieldInt16", "item_level": 100, "rarity": "rare",
+  "mods": ["LocalIncreasedEnergyShieldPercent8", "IncreasedLife10", "FasterStartEnergyShieldRecharge5_", "StrIntMasterItemGenerationCanHaveMultipleCraftedMods", "StrMasterItemGenerationCannotChangePrefixes", "DexMasterItemGenerationCannotChangeSuffixes"],
+  "actions": ["Harvest Reforge Fire"], "repeats": 300},
+ {"id": "197c1-free-prefix-suffix-only-tag", "base": "Metadata/Items/Armours/Shields/ShieldInt16", "item_level": 100, "rarity": "rare",
+  "mods": ["LocalIncreasedEnergyShieldPercent8", "FasterStartEnergyShieldRecharge5_", "StrIntMasterItemGenerationCanHaveMultipleCraftedMods", "StrMasterItemGenerationCannotChangePrefixes", "DexMasterItemGenerationCannotChangeSuffixes"],
+  "actions": ["Harvest Reforge Critical", "Harvest Reforge Speed", "Harvest Reforge Attribute"], "repeats": 300}]

@@ -14,7 +14,7 @@ into `DIR/<case>.jsonl` (the runner workflow passes `$OUT_DIR`).
 One JSON line per fact goes to the console. Nothing is asserted: a number is printed as the product gives it, and a
 refusal of the product (`ActionError`, `OutOfScopeError`, `PlanError`) is printed as a line with its text. Anything
 else is a bug of the product or of this script and crashes with its traceback. The measurement is heavy: it runs on
-a runner (`.github/workflows/run.yml`, docs/ci.md), never on a developer's PC. Needs the game data in `CRAFTING_CACHE_DIR`.
+a runner (started through `.github/scripts/heavy_dispatch.py`, docs/ci.md), never on a developer's PC. Needs the game data in `CRAFTING_CACHE_DIR`.
 """
 
 import argparse

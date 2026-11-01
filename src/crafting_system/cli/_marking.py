@@ -24,7 +24,7 @@ from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
-from crafting_system.rules import rule_by_id
+from crafting_system.rules import get_rule, rule_by_id
 from crafting_system.simulator import SampledEstimate
 from crafting_system.solver import Action
 
@@ -107,6 +107,16 @@ def marking_document(approximation: Approximation | None, shift: float) -> dict:
 APPROXIMATE_HEADING = "Approximate inputs (claims that no other source settles):"
 
 
+JEWEL_ITEM_CLASSES = get_rule("affix_count.rare_jewel_max_per_side").value["item_classes"]
+JEWEL_CLAIMS = "jewel."  # the ids of the claims about jewels: they count for an answer on a jewel base only
+
+
+def is_jewel(data: GameData, base_id: str) -> bool:
+    """Whether `base_id` is a jewel base (the item classes of `affix_count.rare_jewel_max_per_side`)."""
+    base = data.base_items.get(base_id)
+    return base is not None and base.item_class in JEWEL_ITEM_CLASSES
+
+
 @dataclass(frozen=True)
 class ApproximateInput:
     """A claim marked `approximate` that an action of the policy reads, with the reason it is marked."""
@@ -128,6 +138,8 @@ def approximate_inputs(
         if plan.is_goal(state) or action is None:
             continue
         ids |= plan.offer_of(action).offer.action.claims(data)  # type: ignore[attr-defined]
+    if not is_jewel(data, plan.target.base_id):
+        ids = {claim for claim in ids if not claim.startswith(JEWEL_CLAIMS)}  # an action cites them for every item it takes
     rules = (rule_by_id(claim) for claim in sorted(ids))
     return tuple(ApproximateInput(rule.id, rule.approximate_reason) for rule in rules if rule.approximate)
 
