@@ -1,0 +1,66 @@
+# Target for the #312 measurement: R08 (Dense + Shuddering Energy Shield boots) with the Orb of Alchemy as a planner action.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Basic boots crafting", docs/research/2026-10-30-5-reference-routes.md, id R08):
+#   1. Use Potent Chaotic Resonators with a Dense Fossil and a Shuddering Fossil until the boots hold high
+#      Energy Shield and a desirable Movement Speed.
+#   2. Bench-craft Movement Speed (or more Energy Shield) in an open affix.
+#
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's rule for
+# tiers: a mod whose tier the guide does not state is the TOP tier the item level allows.
+#   * "Sorcerer Boots, item level 86": an Intelligence base (Energy Shield armour). 86 is what the 35% Movement
+#     Speed needs.
+#   * "high Energy Shield": the "#% increased Energy Shield" prefix (family DefencesPercent) at its top tier, tier 1,
+#     "(92-100)% increased Energy Shield" (mod LocalIncreasedEnergyShieldPercent7_, needs item level 84), rolled
+#     and not crafted. The flat Energy Shield prefixes and the hybrid ones are not asked for.
+#   * "35% increased Movement Speed or crafted Movement Speed": the rolled tier 1 (35%, mod MovementVelocity6, needs
+#     item level 86), or the bench's Movement Speed at its top tier: the plain craft, (20-24)% increased Movement
+#     Speed (mod EinharMasterMovementVelocity3, needs item level 68), or one of the three hybrid crafts, (18-20)% with
+#     "Cannot Be Chilled", with "chance to gain Onslaught on Kill" or with "increased Movement Speed if you haven't
+#     been Hit Recently". The lower tiers of the crafts are not asked for.
+#   * Start: a normal base of item level 86 bought on the trade site (poe.ninja lists no plain boots of that level)
+#     and made rare with an Orb of Alchemy; see `start_item` below for how that is modelled.
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+base: Sorcerer Boots
+
+# The item level of the boots, a whole number from 1 to 100.
+item_level: 86
+
+# Influences on the base. [] means none.
+influence: []
+
+# Research variant of ticket #312: the start is the NORMAL boots and the Orb of Alchemy is a planner action (as in
+# the first version of PR #247, which did not finish in 60 minutes). No `start_item`, so the start is a normal item.
+
+# The name the start item has in the price file, which is what it costs to get: the `name` of
+# examples/buy/r08-start-boots.yaml. The planner buys it again whenever the route restarts.
+start_price: R08 start boots
+
+# The kinds of actions the planner may use: the guide's fossils (with their resonators) and the bench. The kinds not named are not offered, and the report says so: the
+# plan is the cheapest among the named kinds. `fossil-set` is offered only when named.
+actions: [alchemy-orb, fossil-set, bench-craft]
+
+# Everything below must be present on the finished item.
+requirements:
+  # High Energy Shield: the top tier of "#% increased Energy Shield", rolled.
+  - family: DefencesPercent
+    min_tier: 1
+    not_crafted: true
+
+  # Movement Speed: the rolled 35%, or a crafted one.
+  - at_least: 1
+    of:
+      - family: MovementVelocity
+        min_tier: 1
+        not_crafted: true
+      - stat: "#% increased Movement Speed"
+        mod: EinharMasterMovementVelocity3
+      - stat: "#% increased Movement Speed\n#% increased Movement Speed if you haven't been Hit Recently"
+        mod: JunMaster2MovementVelocityAndMovementVelocityIfNotHitRecently3
+      - stat: "#% increased Movement Speed\n#% chance to gain Onslaught for 4 seconds on Kill"
+        mod: JunMaster2MovementVelocityAndOnslaughtOnKill3_
+      - stat: "#% increased Movement Speed\n100% chance to Avoid being Chilled"
+        mod: JunMaster2MovementVelocityAndCannotBeChilled3
