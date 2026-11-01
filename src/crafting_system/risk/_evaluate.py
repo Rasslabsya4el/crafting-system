@@ -10,6 +10,19 @@ the low end; it is 0 without a DP when the start itself cannot finish. Mean, var
 infinite whenever the success probability is below 1, and the quantile at a level above the top of
 the success bracket is infinite.
 
+Inputs (ADR-0022, `_inputs`, `_nested`). An action with `extra_inputs` pays, on every execution, one
+independent run per input copy, started at the input state and run by the same policy to a goal
+(so the policy lists the input states too; `is_goal` tells their goals). The chain then also
+reaches the input states, a state can finish only if an outcome and every input can, and the cost of
+an attempt is a random increment. The mean and the second moment come from the linear systems of
+`_inputs` (`(I - M) V = c`, certified by its residual; no certificate means a supercritical policy,
+whose cost has no finite mean, and it is reported like an improper one), the expected number of
+runs started at each input state (`RiskReport.input_runs`) from a row of `(I - M)^-1`, and the
+distribution from the budget DP with each input's pmf convolved in (`_nested`). A policy whose
+inputs sit in a cycle with their users (an input edge inside a strongly connected component) has no
+such order; its mean and variance are still exact but its quantiles and CVaR are reported
+unresolved. A policy without inputs takes the old path unchanged.
+
 The grid. Costs are floats, the DP counts whole bins of a step D. A cost c becomes k_hi =
 ceil(c / D) bins on the upper chain and k_lo = floor(c / D) on the lower one; a cost within 1e-12
 relative of a multiple of D is that multiple on both. The same trajectory then has
@@ -35,14 +48,15 @@ otherwise) and `runs` 2 on an inexact grid. When that exceeds `work_budget` (def
 about a minute) the step is raised to the finest one that fits, at most the smallest cost; the
 intervals widen to match and stay certified, and the report's `grid.step` says what was used. An
 exact unit grid is given up in the same case. A small policy is never touched.
+With inputs the DP is the nested one, whose work is about (runs * (starts * states + extra input copies))
+* (spread / D)^2 convolution cells (`nested_work`), counted at 1/30 of an entry against the same budget.
 
 Mean of a grid chain, for CVaR. The exact grid uses the solver mean of the real costs. An inexact
 grid solves again with the costs k_lo * D and k_hi * D to get the mean of each grid chain, and CVaR
 of each chain uses the matching end of its mean interval.
 
 Supported costs. Every cost of a state that can finish lies in [1e-150, 1e150], so the squares in
-the second moment stay representable; anything else is a `ValueError`. Actions with `extra_inputs`
-(multi-input, ADR-0011) are a `ValueError` too.
+the second moment stay representable; anything else is a `ValueError`.
 
 Rounding. All bounds hold up to ties within `grid.rounding` in probability (see `_budget`), and a
 cost within 1e-12 relative of a multiple of D counts as that multiple. Levels within `rounding`
@@ -60,9 +74,11 @@ from collections.abc import Callable, Mapping, Sequence
 from numbers import Integral, Real
 
 from ..solver import Action
+from . import _inputs, _moments
 from ._budget import BudgetRun, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
-from ._moments import interval, mean_and_variance, solve_costs
+from ._moments import interval, real_costs
+from ._nested import nested_work, run_nested
 from ._report import Estimate, GridInfo, RiskReport
 
 INFINITE = Estimate(math.inf, math.inf, math.inf)
@@ -73,6 +89,7 @@ MAX_COST = 1e150
 COVERED_STEPS = 64  # an unproper policy's unit must let the DP cover this many of the smallest costs
 FINE_STEPS = 64  # default grid: the smallest cost is at least this many bins unless the horizon needs coarser
 WORK_BUDGET = 3e8  # default cap on the DP's expanded entries (about a minute); a larger policy gets a coarser grid
+CELLS_PER_ENTRY = 30.0  # the nested DP's work counts convolution cells, each about this much cheaper than an expanded entry
 SPREAD_SDS = 6.0  # the arrival cost of a state spreads over about this many standard deviations of the total cost
 
 
@@ -121,11 +138,6 @@ def evaluate[S](
     for state, chosen in policy.items():
         if not isinstance(chosen, Action):
             raise ValueError(f"policy value for {state!r} must be an Action, got {chosen!r}")
-        if chosen.extra_inputs:
-            raise ValueError(
-                f"the action at state {state!r} has extra_inputs; multi-input actions "
-                "(ADR-0011) are not supported by risk metrics"
-            )
 
     no_grid = GridInfo(0.0, True, 0, 0.0, 0.0)
     chain = build_chain(policy, start, is_goal)
@@ -154,21 +166,27 @@ def evaluate[S](
     horizon = None
     spread = COVERED_STEPS * c_min
     if proper:
-        mean, variance, m1 = mean_and_variance(chain)
-        horizon = m1[0] + HORIZON_SDS * math.sqrt(variance[0])
-        spread = SPREAD_SDS * math.sqrt(variance[0])
-    edges = sum(len(chain.succ[i]) for i in chain.finishing_states())
+        try:
+            mean, variance, m1 = _mean_and_variance(chain)
+        except _inputs.NotSubcritical:  # every state can finish, but the runs need more than they make
+            proper = False
+        else:
+            horizon = m1[0] + HORIZON_SDS * math.sqrt(variance[0])
+            spread = SPREAD_SDS * math.sqrt(variance[0])
+    if chain.has_inputs and _inputs.branching(chain):
+        return _unordered_report(chain, (mean, variance) if proper else None, cvar_level, levels)
     step = resolution
     if step is None:
-        step = _choose_step(costs, c_min, max_bins, horizon, 2.0 * edges * spread / work_budget)
+        step = _choose_step(costs, c_min, max_bins, horizon, _affordable(chain, spread, work_budget))
     low_bins, high_bins = _bin_costs(chain, step)
     exact = low_bins == high_bins
 
     target = max([*levels, cvar_level]) if proper else None
-    low_run = run_budget(chain, low_bins, target=target, tail_mass=tail_mass, max_bins=max_bins)
+    horizon_bins = None if horizon is None else math.ceil(horizon / step)
+    low_run = _run(chain, low_bins, target, tail_mass, max_bins, horizon_bins)
     high_run = low_run
     if not exact:
-        high_run = run_budget(chain, high_bins, target=target, tail_mass=tail_mass, max_bins=max_bins)
+        high_run = _run(chain, high_bins, target, tail_mass, max_bins, horizon_bins)
     runs = (low_run,) if exact else (low_run, high_run)
 
     if proper:
@@ -186,7 +204,74 @@ def evaluate[S](
         step, exact, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs)
     )
     return RiskReport(
-        success, Estimate(*mean), Estimate(*variance), quantiles, Estimate(*cvar), cvar_level, grid
+        success,
+        Estimate(*mean),
+        Estimate(*variance),
+        quantiles,
+        Estimate(*cvar),
+        cvar_level,
+        grid,
+        _input_runs(chain) if proper and chain.has_inputs else {},
+    )
+
+
+def _mean_and_variance(chain: Chain):
+    """Solver moments for a chain without inputs, the linear systems of `_inputs` for one with."""
+    return _inputs.mean_and_variance(chain) if chain.has_inputs else _moments.mean_and_variance(chain)
+
+
+def _solve_costs(chain: Chain, costs: Sequence[float]) -> tuple[list[float], float]:
+    return _inputs.solve_costs(chain, costs) if chain.has_inputs else _moments.solve_costs(chain, costs)
+
+
+def _affordable(chain: Chain, spread: float, work_budget: float) -> float:
+    """The finest step whose DP stays within `work_budget`, by the cost model of the DP that will run."""
+    finishing = chain.finishing_states()
+    if not chain.has_inputs:
+        edges = sum(len(chain.succ[i]) for i in finishing)
+        return 2.0 * edges * spread / work_budget
+    return spread * math.sqrt(2.0 * nested_work(chain, 1) / (CELLS_PER_ENTRY * work_budget))
+
+
+def _run(
+    chain: Chain,
+    bins: Sequence[int],
+    target: float | None,
+    tail_mass: float,
+    max_bins: int,
+    horizon_bins: int | None,
+) -> BudgetRun:
+    if chain.has_inputs:
+        return run_nested(
+            chain, bins, target=target, tail_mass=tail_mass, max_bins=max_bins, horizon=horizon_bins
+        )
+    return run_budget(chain, bins, target=target, tail_mass=tail_mass, max_bins=max_bins)
+
+
+def _input_runs(chain: Chain) -> dict:
+    values, error = _inputs.solve_costs(chain, real_costs(chain))
+    uses = _inputs.expected_uses(chain, values, error)
+    return {chain.states[y]: Estimate(*u) for y, u in uses.items()}
+
+
+def _unordered_report(chain: Chain, moments, cvar_level: float, levels: Sequence[float]) -> RiskReport:
+    """The report for inputs in a cycle with their users: exact moments, quantiles and CVaR unresolved."""
+    unresolved = GridInfo(0.0, False, 0, 1.0, 0.0)
+    first = chain.action[0].cost  # every run pays the first action at least
+    quantiles = {x: Estimate(math.inf, first, math.inf) for x in levels}
+    if moments is None:
+        return RiskReport(Estimate(0.0, 0.0, 1.0), INFINITE, INFINITE, quantiles, INFINITE, cvar_level, unresolved)
+    mean, variance = moments
+    cvar = Estimate(math.inf, mean[1], math.inf)
+    return RiskReport(
+        Estimate(1.0, 1.0, 1.0),
+        Estimate(*mean),
+        Estimate(*variance),
+        quantiles,
+        cvar,
+        cvar_level,
+        unresolved,
+        _input_runs(chain),
     )
 
 
@@ -257,8 +342,8 @@ def _chain_means(
     """Mean of the lower and the upper grid chain, as `(low end for the lower, high end for the upper)`."""
     if exact:
         return mean[1], mean[2]
-    low_mean, low_error = solve_costs(chain, [float(k) * step for k in low_bins])
-    high_mean, high_error = solve_costs(chain, [float(k) * step for k in high_bins])
+    low_mean, low_error = _solve_costs(chain, [float(k) * step for k in low_bins])
+    high_mean, high_error = _solve_costs(chain, [float(k) * step for k in high_bins])
     return interval(low_mean[0], low_error)[0], interval(high_mean[0], high_error)[1]
 
 
