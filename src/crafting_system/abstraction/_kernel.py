@@ -43,8 +43,8 @@ from crafting_system.items import (
     is_corrupted_implicit,
     is_craftable_version,
     spawn_weight,
+    placeholder_families,
     tier_table,
-    veiled_families,
 )
 from crafting_system.items.model import VEILED_DOMAIN
 
@@ -210,8 +210,8 @@ class Abstraction:
         self._tracks_implicits = bool(goal.implicits) or any(r.implicits for r in reads) or any(a.implicits for a in adds)
         self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
-        veiled = veiled_families(data)  # an action that reads a veiled family refuses by whether the item holds a veiled mod: a state tells those mods apart
-        self._veiled_aware = any(r.junk and (r.families is None or bool(r.families & veiled)) for r in reads)
+        placeholders = placeholder_families(data)  # no ordinary mod has one: an action that reads one refuses by whether the item holds a veiled mod
+        self._veiled_aware = any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
         self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}

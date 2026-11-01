@@ -46,6 +46,13 @@ def veiled_families(data: GameData) -> frozenset[str]:
     )
 
 
+def placeholder_families(data: GameData) -> frozenset[str]:
+    """The families of the placeholders (`VeiledPrefix`, `VeiledSuffix`): no ordinary mod has one, so an action that reads one looks for a veiled mod."""
+    return _cached(
+        data, "placeholders", lambda: frozenset(family for mod in data.mods.values() if mod.domain == VEILED_DOMAIN for family in mod.families)
+    )
+
+
 def craftable_signatures(data: GameData) -> frozenset[tuple[str, frozenset[str]]]:
     """`(side, stat ids)` of every mod of the unveiled domain: a crafted mod of Jun with the same is its craftable version."""
     return _cached(
