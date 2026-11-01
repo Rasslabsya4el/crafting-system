@@ -107,7 +107,7 @@ from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, b
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
 from .contract import Action, ActionOutcomes, Adds, Fixed, Reads
-from .draw import Outcome
+from .draw import Outcome, guaranteed_candidates
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
 from .exalted import ExaltedOrb
@@ -178,6 +178,7 @@ __all__ = [
     "default_actions",
     "draw_onto",
     "fossil_actions",
+    "guaranteed_candidates",
     "kind",
     "kinds",
     "register",
