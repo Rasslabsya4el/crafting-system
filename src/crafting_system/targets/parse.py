@@ -17,6 +17,7 @@ from crafting_system.items import (
     CatalystType,
     ExplicitMod,
     ImplicitError,
+    EnchantmentError,
     ImplicitMod,
     Influence,
     Item,
@@ -27,13 +28,15 @@ from crafting_system.items import (
     VeilOfferError,
     eldritch_grade,
     eldritch_side,
+    enchant_class,
     spawn_weight,
     veiled_placeholder,
 )
 
+from .enchantment import EnchantmentResolver
 from .errors import TargetError
 from .lines import LineList, LineMap, load_with_lines
-from .model import ImplicitRequirement, KOfN, Node, QualityRequirement, Requirement, Target
+from .model import EnchantmentRequirement, ImplicitRequirement, KOfN, Node, QualityRequirement, Requirement, Target
 from .resolve import Resolver, Unresolved, close_matches, quoted
 
 TOP_KEYS = (
@@ -43,6 +46,7 @@ TOP_KEYS = (
     "requirements",
     "implicits",
     "quality",
+    "enchantment",
     "start_item",
     "start_price",
     "price_file",
@@ -51,8 +55,9 @@ TOP_KEYS = (
 REQUIREMENT_KEYS = ("family", "stat", "mod", "min_tier", "min_roll", "not_crafted")
 IMPLICIT_KEYS = ("family", "stat", "mod", "min_grade", "min_roll")
 QUALITY_KEYS = ("type", "min_percent")
+ENCHANTMENT_KEYS = ("any_of",)
 GROUP_KEYS = ("at_least", "of")
-START_ITEM_KEYS = ("rarity", "corrupted", "mods", "implicits", "quality", "veil_offer")
+START_ITEM_KEYS = ("rarity", "corrupted", "mods", "implicits", "quality", "enchantment", "veil_offer")
 START_MOD_KEYS = ("mod", "tier", "values", "fractured", "crafted")
 START_IMPLICIT_KEYS = ("mod", "values", "grade")
 START_QUALITY_KEYS = ("type", "percent")
@@ -63,6 +68,13 @@ MAX_ELDRITCH_GRADE = 6
 MIN_ITEM_LEVEL = 1
 MAX_ITEM_LEVEL = 100
 MAX_GROUP_DEPTH = 20
+ONE_ENCHANTMENT = (
+    "an item holds one enchantment, so a target cannot ask for two at once;"
+    " list the enchants that would do under `any_of`"
+)
+UNREACHABLE_ENCHANTMENT = (
+    "this enchantment cannot be reached by clicking orbs; give a start item that already has it, with its price"
+)
 
 
 def parse_target_text(
@@ -154,13 +166,18 @@ class _Reader:
         if "quality" in root:
             quality = self.read_quality(root["quality"], root.key_lines["quality"])
             self.check_catalyst_base(base_id, root.key_lines["quality"])
+        enchantment = None
+        if "enchantment" in root:
+            enchantment = self.read_enchantment(root["enchantment"], root.key_lines["enchantment"], base_id)
         start_item = self.read_start_item(root, base_id, item_level, influences)
+        if enchantment is not None:
+            self.check_enchantment_reachable(root["enchantment"], enchantment, base_id, start_item)
         price_file = self.read_price_file(root)
         start_price = self.text(root, "start_price", "start_price") if "start_price" in root else None
         actions = self.read_actions(root["actions"], root.key_lines["actions"]) if "actions" in root else None
         return Target(
             base_id, item_level, influences, requirements, start_item, price_file, start_price, implicits, quality,
-            actions,
+            actions, enchantment,
         )  # fmt: skip
 
     def read_actions(self, names: object, line: int) -> tuple[str, ...]:
@@ -516,6 +533,78 @@ class _Reader:
             self.fail(entry.key_lines["type"], path, f"must be one of {quoted(allowed)}, got {describe(value)}")
         return CatalystType(value.strip().lower())
 
+    # -- the enchantment -----------------------------------------------------------------------------
+
+    def enchantment_resolver(self, base_id: str, line: int, path: str) -> EnchantmentResolver:
+        base = self.data.base_items[base_id]
+        held = enchant_class(base)
+        if held is None:
+            self.fail(
+                line,
+                path,
+                f"{base.name} is a {base.item_class}, and only weapons and body armour hold an enchantment,"
+                " so the enchantment could never be met",
+            )
+        return EnchantmentResolver(self.data, held)
+
+    def read_enchantment(self, entry: object, line: int, base_id: str) -> EnchantmentRequirement:
+        if not isinstance(entry, LineMap):
+            hint = f"; {ONE_ENCHANTMENT}" if isinstance(entry, LineList) else ""
+            self.fail(line, "enchantment", f"must be a mapping with `any_of`, got {describe(entry)}{hint}")
+        if "all_of" in entry:
+            self.fail(entry.key_lines["all_of"], "enchantment.all_of", f"`all_of` cannot be met: {ONE_ENCHANTMENT}")
+        self.check_keys(entry, "enchantment", ENCHANTMENT_KEYS)
+        if "any_of" not in entry:
+            self.fail(entry.line, "enchantment.any_of", "this key is required but missing")
+        entries = entry["any_of"]
+        any_line = entry.key_lines["any_of"]
+        if not isinstance(entries, LineList) or not entries:
+            got = "an empty list" if isinstance(entries, LineList) else describe(entries)
+            self.fail(
+                any_line,
+                "enchantment.any_of",
+                f"must be a non-empty list of enchantments (a stat text, a mod id or a tag), got {got}",
+            )
+        resolver = self.enchantment_resolver(base_id, any_line, "enchantment")
+        found: dict[str, int] = {}
+        mod_ids: set[str] = set()
+        for index, name in enumerate(entries):
+            path = f"enchantment.any_of[{index}]"
+            line_of = entries.item_lines[index]
+            if not isinstance(name, str) or not name.strip():
+                self.fail(line_of, path, f"must be an enchantment (non-empty text), got {describe(name)}")
+            if name.strip() in found:
+                first = found[name.strip()]
+                self.fail(line_of, path, f"{describe(name)} is listed twice (first at enchantment.any_of[{first}])")
+            found[name.strip()] = index
+            try:
+                mod_ids |= resolver.resolve(name)
+            except Unresolved as problem:
+                self.fail(line_of, path, str(problem))
+        return EnchantmentRequirement(tuple(found), frozenset(mod_ids))
+
+    def check_enchantment_reachable(
+        self, entry: LineMap, wanted: EnchantmentRequirement, base_id: str, start_item: Item
+    ) -> None:
+        """Refuse an entry that is the extra crafted slot when the start item does not hold it: no orb is planned for it (ADR-0053)."""
+        resolver = self.enchantment_resolver(base_id, entry.line, "enchantment")
+        for index, name in enumerate(wanted.entries):
+            slot = resolver.extra_slot_ids(resolver.resolve(name))
+            if slot and start_item.enchantment not in slot:
+                self.fail(entry["any_of"].item_lines[index], f"enchantment.any_of[{index}]", UNREACHABLE_ENCHANTMENT)
+
+    def read_start_enchantment(self, value: object, line: int, base_id: str) -> str:
+        if not isinstance(value, str) or not value.strip():
+            self.fail(
+                line, "start_item.enchantment", f"must be an enchantment mod id or its exact stat text, got {describe(value)}"
+            )
+        resolver = self.enchantment_resolver(base_id, line, "start_item.enchantment")
+        try:
+            found = resolver.resolve(value, allow_tag=False)
+        except Unresolved as problem:
+            self.fail(line, "start_item.enchantment", str(problem))
+        return next(iter(found))
+
     # -- the start item ----------------------------------------------------------------------------
 
     def read_start_item(
@@ -530,6 +619,7 @@ class _Reader:
         offer: tuple[str, ...] = ()
         offer_lines: list[int] = []
         quality_line = line
+        enchantment_line = line
         if "start_item" in root:
             start = root["start_item"]
             line = root.key_lines["start_item"]
@@ -537,7 +627,7 @@ class _Reader:
                 self.fail(
                     line,
                     "start_item",
-                    "must be a mapping with `rarity`, `corrupted`, `mods`, `implicits`, `quality` and `veil_offer`,"
+                    "must be a mapping with `rarity`, `corrupted`, `mods`, `implicits`, `quality`, `enchantment` and `veil_offer`,"
                     f" got {describe(start)}",
                 )
             self.check_keys(start, "start_item", START_ITEM_KEYS)
@@ -550,6 +640,9 @@ class _Reader:
             if "quality" in start:
                 fields["quality"] = self.read_start_quality(start["quality"], start.key_lines["quality"])
                 quality_line = start.key_lines["quality"]
+            if "enchantment" in start:
+                enchantment_line = start.key_lines["enchantment"]
+                fields["enchantment"] = self.read_start_enchantment(start["enchantment"], enchantment_line, base_id)
             if "veil_offer" in start:
                 offer = self.read_veil_offer(start["veil_offer"], start.key_lines["veil_offer"])
                 offer_lines = start["veil_offer"].item_lines
@@ -577,6 +670,8 @@ class _Reader:
             message = str(problem)
             if isinstance(problem, QualityError):
                 self.fail(quality_line, "start_item.quality", message)
+            if isinstance(problem, EnchantmentError):
+                self.fail(enchantment_line, "start_item.enchantment", message)
             if isinstance(problem, VeilOfferError):
                 index = blamed_id(message, offer, last_written=True)
                 if index is None:
