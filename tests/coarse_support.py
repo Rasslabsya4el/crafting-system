@@ -17,6 +17,7 @@ what the invariance tests compare the coarse kernels with. Nothing here imports 
 """
 
 import dataclasses
+import random
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from fractions import Fraction
@@ -262,4 +263,67 @@ def compare_members(action: Action, ab: Abstraction, coarsening, blocks: dict[Co
         else:
             with pytest.raises(ActionError):
                 coarsening.kernel(block, action, "upper")
+    return compared
+
+
+TOLERANCE = 1e-12
+
+
+def backup(kernel, values: dict[CompressedState, float]) -> float:
+    """The expected continuation value of a kernel: the sum of chance times the value of the block."""
+    return sum(float(chance) * values[block] for block, chance in kernel.items())
+
+
+def refuses(coarsening, block: CompressedState, action: Action, bound: str) -> bool:
+    """Whether the model of `bound` does not offer `action` on `block` (it raises the action's own refusal)."""
+    try:
+        coarsening.variants(block, action, bound)
+    except ActionError:
+        return True
+    return False
+
+
+def compare_variants(
+    action: Action, ab: Abstraction, coarsening, blocks: dict[CompressedState, set[CompressedState]], *, draws: int = 20, seed: int = 172
+) -> int:
+    """Check the extremes claim of `action`, which declares variants, on `blocks`; how many members were compared beyond the first of each block.
+
+    For every block, every member that `coarsening.members` lists (the brute-force states among them) has its
+    exact kernel pushed through `coarsen`. Each variant kernel must equal the pushed kernel of some member;
+    for `draws` random positive values of the successor blocks (seeded) the backup of every member must lie
+    between the smallest and the largest backup of the variants (to `TOLERANCE`), so the models that take the
+    least or the most over the variants take it over all the members. The lower model must offer the action
+    when some member can take it and the upper only when every member can, and what the action raises comes
+    back otherwise.
+    """
+    rng = random.Random(seed)
+    compared = 0
+    for block, states in blocks.items():
+        members = set(coarsening.members(block))
+        assert states <= members, "the members of a block include every exact state of it"
+        legal: dict = {}
+        for member in members:
+            try:
+                legal[member] = pushed(coarsening, exact_kernel(ab, member, action))
+            except ActionError:
+                continue
+        compared += len(members) - 1
+        if not legal:
+            for bound in ("lower", "upper"):
+                assert refuses(coarsening, block, action, bound), "no member can take the action: neither model offers it"
+            continue
+        found = coarsening.variants(block, action, "lower")
+        assert found, "the lower model offers the action when some member can take it"
+        assert all(kernel in legal.values() for kernel in found), "every variant kernel is the pushed kernel of a member"
+        assert len({tuple(sorted(kernel.items(), key=repr)) for kernel in found}) == len(found), "the variants are distinct"
+        if len(legal) == len(members):
+            assert coarsening.variants(block, action, "upper") == found, "the upper model offers the action when every member can take it"
+        else:
+            assert refuses(coarsening, block, action, "upper"), "one member cannot take the action: the upper model does not offer it"
+        every = set().union(*legal.values(), *found)
+        for _ in range(draws):
+            values = {successor: rng.uniform(0.1, 10.0) for successor in every}
+            low, high = min(backup(k, values) for k in found), max(backup(k, values) for k in found)
+            for kernel in legal.values():
+                assert low - TOLERANCE <= backup(kernel, values) <= high + TOLERANCE, "a member's backup lies within the variants'"
     return compared

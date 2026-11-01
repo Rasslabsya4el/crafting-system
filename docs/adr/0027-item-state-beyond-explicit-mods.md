@@ -8,7 +8,9 @@ Until B2 an action read and wrote explicit mods, the influence set and the corru
 - **Quality**: the catalyst type and the percent, or none.
 - **The unveil offer**: for each veiled placeholder, the offer once drawn, or none.
 
-An item built before B2 has none of the three and behaves as it did. The explicit mods, the influence set and the corrupted flag are unchanged.
+An item built before B2 has none of the three and behaves as it did.
+
+**Amendment (grill B7):** `Item` stores a fourth thing, the **enchantment**: a mod id (a Tempering or Tailoring pool enchant, a Harvest quality enchant or the extra crafted slot) or none ([ADR-0050](0050-enchantments-as-a-finish-step.md)). `Reads` and `Adds` gain an `enchantment` declaration like the other three, but no action of B1 to B4 reads it, so the compressed state never keeps it; the limit of crafted mods reads the start item's enchantment as a problem constant (ADR-0053). An item built before B7 has none. The explicit mods, the influence set and the corrupted flag are unchanged.
 
 ## What actions declare
 
@@ -28,6 +30,10 @@ A Blessed Orb rerolls the value of each implicit that has a range, uniformly ins
 A requirement on a roll (ADR-0008) compares the **base roll**, the integer the item stores. With a catalyst quality the displayed value is the base roll scaled and rounded down (ADR-0029), so a requirement written in displayed values is turned into the smallest base roll that shows it.
 
 Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (decision list of 2026-10-31, owner round 1 on Blessed); [Blessed Orb, catalysts and Orb of Chance](https://github.com/Rasslabsya4el/crafting-system/issues/89); ADR-0009, ADR-0024.
+
+## Amendment: sockets and the quality of weapons and armour ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
+
+`Item` also stores its **sockets** (a colour per socket and the link groups, ADR-0046) and its **quality** has two kinds: the catalyst type and percent of jewellery, or the plain percent of a weapon or armour (ADR-0049); no item class has both. `Reads` and `Adds` gain a sockets declaration in the same way: an action declares whether it reads the count, links or colours and what it sets, and an action that declares nothing still reads everything and sets nothing it did not declare. The quality declaration now covers both kinds.
 
 ## Amendment: corrupted implicit requirements ([Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95), ADR-0036)
 

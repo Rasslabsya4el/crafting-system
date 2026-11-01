@@ -17,7 +17,8 @@ the exact run may take. The rule:
 calibration solve on the first layers of the pilot's own graph) unless the caller injects them, and builds the
 candidate levels. Tests inject the rates; no test depends on a machine (ADR-0014).
 
-The ladder is one tuple, `LADDER`: the coarse levels (kind "groups") and, after them, the tail cuts (kind "tail",
+The ladder is one tuple, `LADDER` (a query with an addition has `SPREAD_LADDER` in place of the coarse levels, by weight spread, ADR-0023
+variants): the coarse levels (kind "groups") and, after them, the tail cuts (kind "tail",
 ticket #129). A tail cut needs a coarse model for its leaves, so `decide` builds each on the finest coarse level whose
 own forecast fits and gives it that level's forecast; with no coarse level that fits there is no tail cut.
 """
@@ -27,7 +28,16 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from crafting_system.abstraction import Abstraction, Coarsening, CompressedState, Estimate, EstimateRefused
+from crafting_system.abstraction import (
+    ADDING_LIMIT,
+    DEFAULT_LIMIT,
+    Abstraction,
+    Coarsening,
+    CompressedState,
+    Estimate,
+    EstimateRefused,
+    needs_walk,
+)
 from crafting_system.actions import Action, OutOfScopeError
 from crafting_system.solver import Action as SolverAction
 from crafting_system.solver import ConvergenceError, Outcome, TabularModel, solve
@@ -38,6 +48,8 @@ BUDGET_SECONDS = 60.0  # "about a minute" (#81 Q2)
 TOLERANCE = 0.01  # the owner's tolerance: a certified gap of at most 1%
 EXACT_TRANSITIONS = 2_000_000  # the largest graph the product `solve` has been run on here (ADR-0023)
 SOLVE_RATE_CEILING = 5e-5  # seconds per edge: seven times what R05 measured; a query that fits at this rate is not calibrated
+PILOT_SHARE = 0.25  # the part of the budget a pilot walk with real kernel calls (an addition, Annulment) may take
+PILOT_FLOOR_SECONDS = 2.0  # but never less than this, so that a budget of 0 does not cut a small graph short
 SOLVE_RATE_FALLBACK = 2e-5  # used when the calibration has too little to measure
 CALIBRATION_EDGES = 60_000
 
@@ -47,12 +59,13 @@ class Level:
     """One rung of the ladder.
 
     Kind "groups": a coarse state with the irrelevant families in groups of `size` (None: all in one). Kind
-    "tail": the tail cut at `theta` (`solver.solve_tail_cut`) over the coarse state with groups of `size`, which
+    "spread": junk kinds pooled by weight, consecutive kinds whose per-family weights differ from the lightest of
+    their pool by at most `size` (ADR-0023, variants). Kind "tail": the tail cut at `theta` (`solver.solve_tail_cut`) over the coarse state with groups of `size`, which
     `decide` fills in with the level it sits on.
     """
 
     kind: str
-    size: int | None
+    size: float | None
     name: str
     theta: float | None = None
 
@@ -66,6 +79,27 @@ LADDER: tuple[Level, ...] = (
     Level("tail", None, "tail cut at theta 1e-4", 1e-4),
 )
 COARSE = tuple(level for level in LADDER if level.kind == "groups")
+SPREAD_LADDER: tuple[Level, ...] = (
+    Level("spread", 1000, "junk pooled by weight, spread 1000"),
+    Level("spread", 500, "junk pooled by weight, spread 500"),
+)  # for a query with an addition (variants): the spreads measured in #130, in weight units of the pool
+
+
+def with_variants(abstraction: Abstraction, actions: Iterable[Action]) -> bool:
+    """Whether an action declares variants (an addition): its query is answered on the spread ladder."""
+    return any(action.reads(abstraction.data).variants for action in actions)
+
+
+def ladder_for(abstraction: Abstraction, actions: Iterable[Action]) -> tuple[Level, ...]:
+    """The levels of a query: by weight spread when an action declares variants (an addition), else `LADDER`."""
+    return SPREAD_LADDER if with_variants(abstraction, actions) else LADDER
+
+
+def pool_level(abstraction: Abstraction, level: Level, start: CompressedState) -> Coarsening:
+    """The coarse state of one coarse rung."""
+    if level.kind == "spread":
+        return Coarsening.pooling_by_spread(abstraction, level.size, start)
+    return Coarsening.pooling_irrelevant(abstraction, level.size, start)
 
 
 @dataclass(frozen=True)
@@ -100,6 +134,7 @@ class Decision:
     predicted: float | None = None
     transitions: int | None = None
     estimate: Estimate | None = None
+    budget: float | None = None  # the seconds the query was decided against; `climb` bounds the time of the levels with it
 
 
 def minutes(seconds: float) -> str:
@@ -155,7 +190,7 @@ def choose(
         if found.estimate is None or found.estimate.seconds(r_kernel, r_solve) <= budget
     )
     if refusal is None and fits:
-        return Decision("approximate", fits, predicted=predicted, transitions=size, estimate=estimate)
+        return Decision("approximate", fits, predicted=predicted, transitions=size, estimate=estimate, budget=budget)
     why = refusal or (
         "no coarse level fits the time" if levels else "the irrelevant families are too few to pool, so no coarse level differs from the exact one"
     )
@@ -221,7 +256,10 @@ def decide(
     offered = [p for p in priced if not isinstance(p.offer.action, BuyStartItem)]
     actions = [p.offer.action for p in offered]
     try:
-        estimate = abstraction.estimate([start], actions, clock=clock)
+        walked = needs_walk(abstraction, actions)
+        estimate = abstraction.estimate(
+            [start], actions, clock=clock, limit=ADDING_LIMIT if walked else DEFAULT_LIMIT, seconds=max(budget * PILOT_SHARE, PILOT_FLOOR_SECONDS) if walked else None
+        )
     except EstimateRefused:
         return choose(None, 0.0, 0.0, budget)
     rates = rates or Rates()
@@ -234,10 +272,11 @@ def decide(
             r_solve = calibrate_solve_rate(abstraction, start, estimate, costs, clock)
     refusal = coarse_refusal(abstraction, actions)
     candidates = []
-    if refusal is None and estimate.seconds(r_kernel, r_solve) > budget:
+    if refusal is None and (estimate.seconds(r_kernel, r_solve) > budget or not estimate.complete):
         tried = set()
-        for level in COARSE:
-            pooling = Coarsening.pooling_irrelevant(abstraction, level.size, start)
+        spread = with_variants(abstraction, actions)
+        for level in SPREAD_LADDER if spread else COARSE:
+            pooling = pool_level(abstraction, level, start)
             if pooling.groups and frozenset(pooling.groups) not in tried:  # a finer rung that cuts nothing new is the same level
                 tried.add(frozenset(pooling.groups))
                 candidates.append(Candidate(level, estimate.coarsened(pooling), pooling))

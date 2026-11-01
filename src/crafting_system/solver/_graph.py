@@ -1,4 +1,7 @@
-"""Reachable-state generation, exact self-loop elimination and the proper-policy analysis.
+"""Reachable-state generation, exact self-loop elimination and the finite-state analysis.
+
+The analysis (`proper_states`) finds the states with a proper policy, then the structurally
+infinite ones among them (the mass-closed pre-check, ADR-0022 guard 1).
 
 An action may also take other states as inputs (ADR-0022): their values are paid on every attempt.
 Inputs are edges of the dependency graph (they order the components) but not of the outcome graph
@@ -13,7 +16,7 @@ from array import array
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
-from ._model import Action, Model, Outcome
+from ._model import Action, Model, Outcome, VariantAction
 from ._scc import strongly_connected_components
 
 _WEIGHT_LIMIT = 1 << 64  # weights at or above this do not fit the `Q` array and are kept apart
@@ -187,6 +190,11 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
             continue
         graph.goal.append(False)
         for action in tuple(model.actions(state)):
+            if isinstance(action, VariantAction):
+                raise TypeError(
+                    f"state {state!r} offers a variant action: `solve` takes plain actions, "
+                    "use `solve_variants` or `solve_bounds`"
+                )
             merged: dict[int, int] = {}
             loop_at = -1
             for successor, weight in action.outcomes:
@@ -323,7 +331,9 @@ class _Reverse(_Leads):
         return self if self._out is None else self._out
 
 
-def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
+def proper_states[S](
+    graph: Graph[S], banned: Iterable[int] = frozenset()
+) -> tuple[list[bool], list[bool]]:
     """The states with a proper policy, and the actions that never risk a dead state.
 
     The set is the greatest fixpoint Y of: goals, plus states with an action whose successors all
@@ -332,9 +342,33 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
     `(alive, in_y)`: `alive[k]` is True for retained actions, `in_y[s]` for finite states, and
     `alive[k]` holds exactly when the owner of `k`, every successor of `k` and every input of `k`
     are in Y. An input of a dead state is dead too (death runs along input edges), but only
-    outcomes count for reaching the goal. A finite state with a proper policy can still cost
-    infinity when a policy needs two copies of what it makes (ADR-0022): the value iteration of
-    `solve_cyclic` decides that.
+    outcomes count for reaching the goal.
+
+    A state in `banned` (state indices) starts outside Y: its actions are not alive, nor is any
+    action that has it as an outcome or an input, and the death spreads from there exactly as
+    from any state without a retained action.
+
+    A finite state with a proper policy can still cost infinity when every policy needs as much
+    of what it makes as it makes (ADR-0022). The structural cases are decided here, by the
+    mass-closed pre-check `_mass_closed` (ADR guard 1): the states it finds are banned and the
+    analysis is made again, until none is left. What it does not see (a component critical
+    through its weights, or one that is supercritical only for some policies) is left to the
+    value ceiling and the value iteration of `solve_cyclic`. With no inputs in the graph the
+    pre-check is skipped and the result is that of `_settle` alone.
+    """
+    banned = frozenset(banned)
+    while True:
+        alive, in_y = _settle(graph, banned)
+        if not graph.inputs:
+            return alive, in_y
+        closed = _mass_closed(graph, alive, in_y)
+        if not closed:
+            return alive, in_y
+        banned |= closed
+
+
+def _settle[S](graph: Graph[S], banned: frozenset[int]) -> tuple[list[bool], list[bool]]:
+    """One pass of the finite-state analysis (see `proper_states`), with `banned` outside Y.
 
     Whether a state is in Y depends only on the states it can reach, so the strongly connected
     components of the dependency graph (outcomes and inputs) are settled sink-first and a
@@ -346,7 +380,7 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
     has_inputs = len(graph.inputs) > 0
     alive = [False] * len(graph.owner)
     in_y = [False] * n_states
-    cycle = _Cycle(graph, alive, in_y)
+    cycle = _Cycle(graph, alive, in_y, banned)
     offsets, edges = graph.dependency_graph()
     components = strongly_connected_components(offsets, edges, range(n_states))
     for cid, component in enumerate(components):
@@ -354,6 +388,8 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
             cycle.settle(component, cid)
             continue
         state = component[0]
+        if banned and state in banned:
+            continue
         if graph.goal[state]:
             in_y[state] = True
             continue
@@ -366,13 +402,93 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
     return alive, in_y
 
 
+def _mass_closed[S](graph: Graph[S], alive: list[bool], in_y: list[bool]) -> set[int]:
+    """The greatest set D of non-goal states of Y in which every alive action sends mass >= 1 into D.
+
+    The mass of an action into D is an exact integer test: the weight of its non-self outcomes
+    that lie in D plus `W` times the copies of its inputs that lie in D, against `L`, the weight
+    of its non-self outcomes (`W` is `L` plus the self-loop weight). Over `L` it is the row sum
+    of `M` in `V = c + M V`; every policy restricted to D then has all row sums at least 1, so
+    `rho(M) >= 1` and its value is infinite (ADR-0022, guard 1). It must run on the settled Y:
+    a state outside Y is no mass and an action that touches one is not alive.
+
+    A linear worklist, not repeated passes. Each alive action keeps its current mass. The first
+    pass counts it against all of Y and collects the owners that already fail; only if there are
+    any are the predecessor lists built (lazily, from the alive actions of the survivors), and a
+    state that leaves D subtracts its contribution from every alive action pointing at it, by
+    outcome or by input, and drops the owner of any action whose mass falls below `L`. Python
+    integers throughout: weights reach 2^64 and beyond, where floats would round.
+    """
+    n_states = len(graph.states)
+    first, owner, goal, self_loop = graph.first, graph.owner, graph.goal, graph.self_loop
+    targets, tstart, weights, big = graph.targets, graph.tstart, graph.weights, graph.big_weights
+    inputs, istart, copies = graph.inputs, graph.istart, graph.copies
+    candidates = [s for s in range(n_states) if in_y[s] and not goal[s]]
+    cand = bytearray(n_states)
+    for s in candidates:
+        cand[s] = 1
+    in_d = bytearray(cand)
+    need = [0] * len(owner)  # L of each alive action of a candidate
+    mass = [0] * len(owner)  # its current mass into D
+
+    def parts(k):
+        """Outcome states and weights of `k` (true integers), `L` and `W`."""
+        low, high = tstart[k], tstart[k + 1]
+        w = big.get(k)
+        if w is None:
+            w = weights[low:high]
+        leave = sum(w)
+        loop = self_loop.get(k)
+        return targets[low:high], w, leave, leave + (loop[1] if loop is not None else 0)
+
+    failing: list[int] = []
+    for s in candidates:
+        for k in range(first[s], first[s + 1]):
+            if alive[k]:
+                outs, w, leave, total = parts(k)
+                low, high = istart[k], istart[k + 1]
+                got = sum(x for j, x in zip(outs, w) if cand[j])
+                got += total * sum(c for y, c in zip(inputs[low:high], copies[low:high]) if cand[y])
+                need[k], mass[k] = leave, got
+                if got < leave:
+                    failing.append(s)
+                    break
+    if not failing:
+        return set(candidates)  # nobody falls: all of Y (less the goals) is closed
+    for s in failing:
+        in_d[s] = 0
+    pred: dict[int, list[tuple[int, int]]] = {}  # state -> (action, its contribution)
+    for s in candidates:
+        if in_d[s]:
+            for k in range(first[s], first[s + 1]):
+                if alive[k]:
+                    outs, w, _, total = parts(k)
+                    for j, x in zip(outs, w):
+                        if cand[j]:
+                            pred.setdefault(j, []).append((k, x))
+                    low, high = istart[k], istart[k + 1]
+                    for y, c in zip(inputs[low:high], copies[low:high]):
+                        if cand[y]:
+                            pred.setdefault(y, []).append((k, total * c))
+    queue = failing
+    while queue:
+        for k, amount in pred.get(queue.pop(), ()):
+            o = owner[k]
+            if in_d[o]:
+                mass[k] -= amount
+                if mass[k] < need[k]:
+                    in_d[o] = 0
+                    queue.append(o)
+    return {s for s in candidates if in_d[s]}
+
+
 _CLIMB = 24  # steps up the forest `_Cycle._rehang` spends per candidate witness
 
 
 class _Cycle[S]:
     """Settles one cyclic component: safety peel and reachability, repaired instead of redone.
 
-    Every member starts in Y. An action is alive while its owner, all its successors and all its
+    Every member starts in Y, except the banned ones (they start out, with no alive action). An action is alive while its owner, all its successors and all its
     inputs are in Y; a member with no alive action leaves Y, which kills the actions into it by
     an outcome or an input edge (the peel, a worklist touching each edge once). The remaining
     members must also reach the outside of the component (final members of Y) through alive
@@ -389,9 +505,12 @@ class _Cycle[S]:
     (decremental reachability has no known linear algorithm).
     """
 
-    def __init__(self, graph: Graph[S], alive: list[bool], in_y: list[bool]) -> None:
+    def __init__(
+        self, graph: Graph[S], alive: list[bool], in_y: list[bool], banned: frozenset[int]
+    ) -> None:
         count = len(graph.states)
         self.graph = graph
+        self.banned = banned  # members that start outside Y (and never come in)
         self.pred: _Reverse | None = None  # set for the component being settled
         self.alive = alive
         self.in_y = in_y
@@ -405,11 +524,14 @@ class _Cycle[S]:
 
     def settle(self, members: list[int], cid: int) -> None:
         graph, alive, in_y, live, comp = self.graph, self.alive, self.in_y, self.live, self.comp
+        banned = self.banned
         for s in members:
             comp[s] = cid
-            in_y[s] = True
+            in_y[s] = not banned or s not in banned
         self.pred = _Reverse(graph, members)
         for s in members:
+            if banned and s in banned:
+                continue  # no action of a banned member is alive
             for k in graph.state_actions[s]:
                 # members count as in Y, outside is final
                 if all(in_y[j] for j in graph.succ[k]) and (
@@ -419,7 +541,7 @@ class _Cycle[S]:
                     live[s] += 1
         queue = [s for s in members if live[s] == 0]
         for s in queue:
-            in_y[s] = False
+            in_y[s] = False  # a banned member is here too: it has nothing alive, and is out already
         self._peel(queue)  # nothing is reached yet, so no witness can be cut
         self._reach_all(members, cid)
         queue = [s for s in members if in_y[s] and self.witness[s] < 0]
