@@ -22,6 +22,7 @@ from crafting_system.items import (
     ItemError,
     MemoryStrandsError,
     Rarity,
+    has_memory_strands_line,
     memory_strands_line,
     read_memory_strands,
 )
@@ -146,6 +147,13 @@ def test_a_line_that_is_not_a_count_is_not_mistaken_for_one():
     assert read_memory_strands("Memory Strands Orb: 5\nSome Memory Strands: 5") == 0
 
 
+def test_a_text_has_the_line_only_when_the_label_starts_a_line_of_its_own():
+    assert has_memory_strands_line(PASTED) and has_memory_strands_line("memory strands: 0")
+    assert not has_memory_strands_line("") and not has_memory_strands_line(PASTED.replace("Memory Strands: 57\n", ""))
+    assert not has_memory_strands_line("Item Level: 84 Memory Strands: 57")  # the lines of a folded text, joined
+    assert not has_memory_strands_line("Memory Strands : 57") and not has_memory_strands_line("Memory  Strands: 57")
+
+
 @pytest.mark.parametrize("count", [-1, 101, True, 1.5])
 def test_the_line_of_a_bad_count_is_refused(count):
     with pytest.raises(MemoryStrandsError):
@@ -201,6 +209,25 @@ def test_a_bad_key_is_blamed_on_its_line_and_key_path(body, words):
 
     assert message.startswith("t.yaml:6: start_item.memory_strands: "), message
     assert words in message
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Item Level: 84 Memory Strands: 57", "Memory Strands : 57", "Memory  Strands: 57", "57 Memory Strands:"],
+)
+def test_a_text_whose_count_is_not_on_a_line_of_its_own_is_refused_not_read_as_no_strands(text):
+    message = parse_error(start(f'memory_strands: "{text}"'))
+
+    assert message.startswith("t.yaml:6: start_item.memory_strands: "), message
+    assert 'must hold the line "Memory Strands: N"' in message and "on a line of its own" in message
+
+
+def test_a_pasted_item_folded_into_one_line_by_yaml_is_refused_not_read_as_no_strands():
+    folded = "memory_strands: >\n" + textwrap.indent(PASTED, "  ")
+
+    message = parse_error(start(folded))
+
+    assert "on a line of its own" in message and "folded" in message
 
 
 def test_a_misspelled_key_gets_a_hint():

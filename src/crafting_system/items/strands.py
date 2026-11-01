@@ -22,6 +22,11 @@ def memory_strands_line(count: int) -> str | None:
     return f"{STRANDS_LABEL}: {count}" if count else None
 
 
+def has_memory_strands_line(text: str) -> bool:
+    """Whether a pasted item text holds a `Memory Strands:` line of its own (a line that starts with the label, whatever its case)."""
+    return any(_LINE.fullmatch(line) for line in text.splitlines())
+
+
 def read_memory_strands(text: str) -> int:
     """The count of a pasted item text: the number on its `Memory Strands: N` line, 0 when the text has no such line.
 
@@ -39,5 +44,4 @@ def read_memory_strands(text: str) -> int:
     digits = value.strip().lstrip("0")  # a line of thousands of digits must not reach int()
     if len(digits) > len(str(MAX_MEMORY_STRANDS)) or int(digits or 0) > MAX_MEMORY_STRANDS:
         raise MemoryStrandsError(f"{value.strip()[:12]} memory strands is more than the {MAX_MEMORY_STRANDS} an item can hold")
-    count = int(digits or 0)
-    return count
+    return int(digits or 0)

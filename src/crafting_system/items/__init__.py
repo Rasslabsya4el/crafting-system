@@ -47,7 +47,7 @@ from .model import (
 )
 from .quality import CATALYST_ITEM_CLASSES, MAX_QUALITY, CatalystType, Quality
 from .spawn import effective_weight, generation_factor, spawn_weight
-from .strands import MAX_MEMORY_STRANDS, memory_strands_line, read_memory_strands
+from .strands import MAX_MEMORY_STRANDS, has_memory_strands_line, memory_strands_line, read_memory_strands
 from .tiers import mod_tier, tier_table
 
 __all__ = [
@@ -91,6 +91,7 @@ __all__ = [
     "eldritch_side",
     "fits_corrupted_implicit",
     "generation_factor",
+    "has_memory_strands_line",
     "is_corrupted_implicit",
     "is_presence_variant",
     "is_removed_enchant",

@@ -31,6 +31,7 @@ from crafting_system.items import (
     eldritch_grade,
     eldritch_side,
     enchant_class,
+    has_memory_strands_line,
     read_memory_strands,
     spawn_weight,
     veiled_placeholder,
@@ -870,8 +871,13 @@ class _Reader:
         """The Memory Strands count of the start item: a whole number from 0 to 100, or a pasted item text holding the line `Memory Strands: N`."""
         path = "start_item.memory_strands"
         if isinstance(value, str):
-            if "memory strands:" not in value.lower():
-                self.fail(line, path, f'a text must hold the line "Memory Strands: N" of the pasted item, got {describe(value)}')
+            if not has_memory_strands_line(value):  # a count that is not on a line of its own would otherwise read as 0, silently
+                self.fail(
+                    line,
+                    path,
+                    'a text must hold the line "Memory Strands: N" of the pasted item, on a line of its own'
+                    f" (a folded text joins its lines), got {describe(value)}",
+                )
             try:
                 return read_memory_strands(value)
             except MemoryStrandsError as problem:
