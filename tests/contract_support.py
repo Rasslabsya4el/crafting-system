@@ -49,6 +49,9 @@ from abstraction_pool import (
 )
 from beasts_support import aspect_mods
 from coarse_support import blocks_of, compare_members, compare_variants, concrete_items
+from influence_support import P1, PLAIN, S1, influence_data
+from influence_support import helmet as contract_helmet
+from influence_support import roll as roll_on_helmet
 from items_support import AMULET, DATA
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
@@ -194,6 +197,38 @@ def fixture_items() -> dict[str, Item]:
     if crafted is not None:
         items["rare_crafted"] = _item(Rarity.RARE, _roll(RESIST_2), _roll(crafted, crafted=True))
     return items
+
+
+INFLUENCE_DATA = influence_data(CONTRACT_DATA)  # the contract data with a helmet base and influence mods (ticket #154)
+
+
+def extra_fixture_items() -> dict[str, tuple[tuple[str, ...], Item]]:
+    """Items on the helmet of `INFLUENCE_DATA`, with the names of the kinds that are asked about them (and no other kind).
+
+    The amulet of the fixture is no body armour, boots, gloves or helmet, so the Orb of Dominance (ticket #154) has nothing to do
+    on it; the helmet has no mod of the fixture pool, so the other kinds would draw nothing on it. Each of these items is for the
+    kinds named with it. Both helmets are at item level 84.
+    """
+    return {
+        "helmet_two_shaper": (
+            ("orb-of-dominance",),
+            contract_helmet(roll_on_helmet(P1, 3), roll_on_helmet(S1, 2), influences=frozenset({Influence.SHAPER})),
+        ),
+        "helmet_plain": (("influenced-exalted-orb",), contract_helmet(roll_on_helmet(PLAIN, 1))),
+    }
+
+
+def extra_pairs(per_kind: int = 3) -> list[tuple[str, Action, str]]:
+    """`(kind name, action, item name)` as `contract_pairs`, for `extra_fixture_items`."""
+    found = []
+    for name, (kind_names, item) in extra_fixture_items().items():
+        for entry in kinds():
+            if entry.name not in kind_names:
+                continue
+            members = list(entry.members(INFLUENCE_DATA, item))
+            picked = members if len(members) <= per_kind else [members[0], members[len(members) // 2], members[-1]]
+            found.extend((entry.name, action, name) for action in picked)
+    return found
 
 
 def contract_pairs(per_kind: int = 3) -> list[tuple[str, Action, str]]:

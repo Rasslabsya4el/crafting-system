@@ -11,7 +11,17 @@ import json
 import pytest
 from abstraction_pool import FIRE_RESIST
 from cli_support import R12, price_file
-from contract_support import CONTRACT_DATA, check_action, check_block_invariance, contract_pairs, fixture_blocks, fixture_items
+from contract_support import (
+    CONTRACT_DATA,
+    INFLUENCE_DATA,
+    check_action,
+    check_block_invariance,
+    contract_pairs,
+    extra_fixture_items,
+    extra_pairs,
+    fixture_blocks,
+    fixture_items,
+)
 from targets_support import DATA
 
 from crafting_system.abstraction import Goal, Wanted
@@ -22,6 +32,8 @@ from crafting_system.targets import load_target
 
 PAIRS = contract_pairs()
 ITEMS = fixture_items()
+EXTRA_PAIRS = extra_pairs()  # the kinds that need a base of their own, asked about the items of `extra_fixture_items`
+EXTRA_ITEMS = {name: item for name, (_, item) in extra_fixture_items().items()}
 
 
 def _id(pair) -> str:
@@ -35,11 +47,23 @@ def test_the_action_meets_the_contract(pair):
     check_action(action, ITEMS[item])
 
 
+@pytest.mark.parametrize("pair", EXTRA_PAIRS, ids=_id)
+def test_the_action_meets_the_contract_on_the_helmet(pair):
+    _, action, item = pair
+    check_action(action, EXTRA_ITEMS[item], INFLUENCE_DATA)  # False where the game refuses it here: the kernel refuses it too
+
+
 def test_every_kind_applies_on_some_fixture_item():
     applied = set()
     for kind, action, item in PAIRS:
         try:
             action.outcomes(CONTRACT_DATA, ITEMS[item])
+        except ActionError:
+            continue
+        applied.add(kind)
+    for kind, action, item in EXTRA_PAIRS:
+        try:
+            action.outcomes(INFLUENCE_DATA, EXTRA_ITEMS[item])
         except ActionError:
             continue
         applied.add(kind)

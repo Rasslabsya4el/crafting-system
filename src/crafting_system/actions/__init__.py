@@ -74,6 +74,12 @@ grants an aspect skill at level 20 or 30, and is offered only when a target name
 level of the beast and not of the item, then removes one mod of the other side uniformly). A beast craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
 None is a planner kind yet.
 
+The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
+that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
+68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
+unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
+influence's orb for an item that has it (unverified, approximate). None is a planner kind yet (#155).
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -150,6 +156,7 @@ from .harvest import HarvestReforge
 from .harvest_augment import HarvestAddRemove, HarvestDamageSwap, HarvestResistanceSwap
 from .harvest_influence import HarvestReforgeInfluence
 from .harvest_likelihood import HarvestReforgeLikelihood
+from .influence import BeastInfluenceRecipe, InfluencedExaltedOrb, OrbOfDominance, beast_recipe_resources, influence_pool
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
 from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags
 from .mixture import FossilOutcomes, Fractured, Mixture
@@ -170,6 +177,7 @@ __all__ = [
     "AlchemyOrb",
     "AlterationOrb",
     "AspectBeast",
+    "BeastInfluenceRecipe",
     "AnnulmentOrb",
     "ApplyEssence",
     "ApplyFossils",
@@ -201,11 +209,13 @@ __all__ = [
     "HarvestReforgeInfluence",
     "HarvestReforgeLikelihood",
     "HarvestResistanceSwap",
+    "InfluencedExaltedOrb",
     "Kind",
     "Mixture",
     "NotApplicableError",
     "Outcome",
     "Outcomes",
+    "OrbOfDominance",
     "OutOfScopeError",
     "PoolFamily",
     "PoolMod",
@@ -220,6 +230,7 @@ __all__ = [
     "TransmutationOrb",
     "WildBristleMatron",
     "add_one_mod",
+    "beast_recipe_resources",
     "allowed_by_tags",
     "bench_crafts",
     "blocked_tags",
@@ -231,6 +242,7 @@ __all__ = [
     "drawable_mod_ids",
     "fossil_actions",
     "guaranteed_candidates",
+    "influence_pool",
     "kind",
     "kinds",
     "recipe_resources",

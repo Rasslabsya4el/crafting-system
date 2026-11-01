@@ -1,4 +1,4 @@
-"""Command line of the data layer: `python -m crafting_system.data fetch|verify|diff|pin`.
+"""Command line of the data layer: `python -m crafting_system.data fetch|verify|diff|pin|elevated`.
 
 `fetch` downloads the pinned repoe-fork files into the cache folder (only what is missing or
 wrong) and checks their hashes; `verify` re-checks the cache without any network. One line per
@@ -21,12 +21,18 @@ files them under the version's cache folder so no second download follows, check
 `fetch`, and only then rewrites `PIN.json`. A commit without VERSION takes the version from the
 commit message (`Export <version>`) on GitHub.
 
+`elevated COE_FOLDER` rebuilds `elevated.json`, the link from each top-tier influence mod to its Elevated mod, from Craft of Exile's
+`poec_data.json` in COE_FOLDER (git-ignored third-party data, `sources/raw/coe/` of the main checkout) and the cached pinned `mods.json`
+(see `elevated`); it prints how many mods it linked and how many table entries it could not.
+
 A `DataError` prints `error: <message>` to stderr and exits 1; wrong usage exits 2 (argparse).
 The later cli module wraps this.
 """
 
 import argparse
 import dataclasses
+import hashlib
+import json
 import os
 import sys
 from collections.abc import Sequence
@@ -35,11 +41,13 @@ from pathlib import Path
 
 from .candidate import MANIFEST_NAME, candidate_pin
 from .diff import diff_game_data
+from .elevated import ELEVATED_FILE, build_elevated, parse_poec_data, render_elevated
 from .errors import DataError, FetchError, RawFormatError
-from .fetch import OpenUrl, fetch, verify_cache, version_folder
+from .fetch import OpenUrl, fetch, read_verified_files, verify_cache, version_folder
 from .impact import compute_impact, find_repo_root, render_impact
 from .load import load_game_data
 from .model import GameData
+from .normalize import MODS_FILE
 from .pin import PIN, PIN_FILE, RepoePin, is_commit, write_pin
 from .resolve import Export, export_of_commit, is_version_name, resolve_version
 
@@ -214,6 +222,21 @@ def _drop_learned(commit: str) -> None:
         pass  # something else is in it: leave it
 
 
+def _elevated(coe_folder: Path, output: Path, pin: RepoePin) -> None:
+    """Write the Elevated mapping of Craft of Exile's table in `coe_folder` against the pinned export, and print the tally."""
+    try:
+        raw = (coe_folder / "poec_data.json").read_bytes()
+    except OSError as error:
+        raise DataError(f"cannot read poec_data.json in {coe_folder}: {error}") from error
+    mods = json.loads(read_verified_files(pin)[MODS_FILE])
+    document = build_elevated(
+        parse_poec_data(raw.decode("utf-8")), mods, repoe_version=pin.version, poec_data_sha256=hashlib.sha256(raw).hexdigest()
+    )
+    output.write_text(render_elevated(document), encoding="utf-8", newline="\n")
+    entries = sum(row["entries"] for row in document["unresolved"])
+    print(f"{output}: {len(document['elevated'])} top-tier mods linked to an Elevated mod; {len(document['unresolved'])} kinds of table entry ({entries} keys) not linked")
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -264,6 +287,17 @@ def main(
     move.add_argument(
         "version", type=_version_name, nargs="?", metavar="VERSION", help="the game version of a commit (3.29.4.1)"
     )
+    elevated = commands.add_parser(
+        "elevated",
+        help="rebuild elevated.json (top-tier influence mod -> Elevated mod) from Craft of Exile's data",
+        description=(
+            "Read poec_data.json from COE_FOLDER (Craft of Exile's data, git-ignored) and the cached pinned mods.json, "
+            "link every top-tier influence mod of Craft of Exile's Elevated table to its mod in the export, and write "
+            "src/crafting_system/data/elevated.json (or --output). Run it again whenever the pin moves."
+        ),
+    )
+    elevated.add_argument("coe_folder", type=Path, metavar="COE_FOLDER", help="the folder holding poec_data.json")
+    elevated.add_argument("--output", type=Path, default=ELEVATED_FILE, help="the file to write (default: elevated.json beside the package)")
     try:
         args = parser.parse_args(argv)
         if args.command == "diff":
@@ -286,6 +320,8 @@ def main(
                 print(_line(pinned.name, "ok", pinned.size, pinned.sha256))
         elif args.command == "pin":
             _pin(args.target, args.version, pin, pin_file, open_url)
+        elif args.command == "elevated":
+            _elevated(args.coe_folder, args.output, pin)
         else:
             sides = (_side(old, pin, open_url), _side(new, pin, open_url))
             if sides[0].spec == sides[1].spec:  # two names of one export
