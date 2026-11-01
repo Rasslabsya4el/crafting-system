@@ -26,7 +26,7 @@ from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
 from ._approx import Approximation, climb
-from ._bound_prune import Pruned, solve_pruned
+from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
 from ._prune import solver_actions
@@ -241,13 +241,19 @@ def make_plan(
 
     note = ""
     if budget is not None:
-        decision = decide(abstraction, start, priced, budget, rates)
+        forecast = merged = priced
+        if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
+            # The exact run solves a small set first and proves the rest not needed: it is forecast on that set, not on
+            # a pilot over thousands of fossil sets. An approximate answer is made of all the offers, twins merged.
+            merged = tuple(merge_twins(data, target.start_item, priced)[0])
+            forecast = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE))
+        decision = decide(abstraction, start, forecast, budget, rates)
         note = decision.message
         if decision.action == "refused":
             raise PlanError(decision.message)
         if decision.action == "approximate":
             try:
-                solved = climb(decision, start, priced)
+                solved = climb(decision, start, merged)
             except ValueError as error:
                 raise PlanError(str(error)) from error
             return Plan(

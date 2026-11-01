@@ -1,0 +1,14 @@
+# R09 start item (docs/research/2026-10-30-5-reference-routes.md): a normal (white) Two-Toned Boots of item
+# level 86, the Life base of the guide ("Two-Toned Boots or preferred Life base"). The target file is
+# examples/targets/r09-life-boots.yaml; its `start_price` is the `name` below.
+#
+# poe.ninja's base overview has no plain Two-Toned Boots of item level 86 (the plain boots it lists stop at
+# item level 82, four observations), so the price is the owner's trade rule: instant buyout, listings of any
+# age, the mean of the 5 cheapest. The price file entry adds one Orb of Alchemy, which makes the base rare
+# (see `start_item` in the target).
+name: R09 start boots
+base_type: Two-Toned Boots
+category: armour.boots
+rarity: normal
+item_level_min: 86
+corrupted: false
