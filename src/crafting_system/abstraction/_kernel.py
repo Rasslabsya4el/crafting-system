@@ -187,10 +187,13 @@ class Abstraction:
     # --- what depends on the influences ----------------------------------------------------------------
 
     def _adds_metamod(self, action: Action) -> bool:
-        """Whether `action` adds a lock or an Attack/Caster metamod by name (a bench craft of one)."""
+        """Whether `action` adds a lock or an Attack/Caster metamod: by name (a bench craft of one), or as a crafted mod it picks among the families it reads (the Wild Bristle Matron)."""
         blocking = {metamod.value for metamod in BLOCKING}
-        named = action.adds(self.data).named or ()
-        return any(blocking & set(self.data.mods[mod_id].families) for mod_id in named if mod_id in self.data.mods)
+        adds = action.adds(self.data)
+        if adds.named is None:
+            families = action.reads(self.data).families
+            return bool(adds.crafted and families and blocking & set(families))
+        return any(blocking & set(self.data.mods[mod_id].families) for mod_id in adds.named if mod_id in self.data.mods)
 
     def _new_context(self, influences: frozenset[Influence], tiers: Mapping[str, int]) -> _Context:
         kinds = Kinds(

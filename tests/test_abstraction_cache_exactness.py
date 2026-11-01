@@ -157,3 +157,11 @@ def test_a_fractured_mod_whose_twin_family_has_other_tags_is_still_told_apart_fr
     ]
 
     check(ab, after, HarvestReforge(tag))
+
+
+def test_an_action_that_picks_a_metamod_among_the_families_it_reads_makes_the_state_model_metamods():
+    from abstraction_removals_support import BOW_DATA, REMOVING
+    from crafting_system.actions.beast_mods import WildBristleMatron
+
+    assert abstraction(actions=REMOVING).models_metamods is False
+    assert abstraction(actions=(*REMOVING, WildBristleMatron()), data=BOW_DATA).models_metamods is True
