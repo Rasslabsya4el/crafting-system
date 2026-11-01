@@ -17,7 +17,7 @@ from collections import deque
 from fractions import Fraction
 
 import pytest
-from abstraction_pool import COLD_RESIST, DAMAGE_1, FIRE_RESIST, GEM, LIFE_1, MANA_1, RESIST_2
+from abstraction_pool import COLD_RESIST, CRAFTED as LOCK_SUFFIXES, DAMAGE_1, FIRE_RESIST, GEM, LIFE_1, MANA_1, RESIST_2
 from abstraction_veiled_support import (
     DATA,
     OTHER_CRAFT_ARMOUR,
@@ -196,6 +196,22 @@ def test_the_veiled_exalted_orb_refuses_a_state_by_whether_the_item_holds_a_veil
             ability.kernel(ability.compress(item), VeiledExaltedOrb())
     for name, item in accepted.items():
         assert dict(ability.kernel(ability.compress(item), VeiledExaltedOrb())) == concrete_pushforward(ability, DATA, item, VeiledExaltedOrb()), name
+
+
+def test_the_veiled_chaos_orb_is_refused_by_a_state_that_keeps_a_veiled_mod_on_a_locked_side_and_not_an_ordinary_one():
+    # the crafted Dex lock sits on a prefix and protects the suffixes; with the metamods modelled the state keeps every mod, so it can see what the reroll would keep
+    ability = ab(metamods=True)
+    lock = rolled(LOCK_SUFFIXES, crafted=True)
+    for kept in (holder(SUF), rolled(SPEED), rolled(CRIT), rolled(HYBRID)):
+        item = amulet(lock, kept, rolled(RESIST_2))
+        with pytest.raises(NotApplicableError, match="would keep the veiled mod"):
+            VeiledChaosOrb().outcomes(DATA, item)
+        with pytest.raises(NotApplicableError, match="would keep the veiled mod"):
+            ability.kernel(ability.compress(item), VeiledChaosOrb())
+    ordinary = amulet(lock, rolled(SPEED_ORDINARY), rolled(RESIST_2))  # the same family as the unveiled Speed, and no veiled mod
+    assert dict(ability.kernel(ability.compress(ordinary), VeiledChaosOrb())) == concrete_pushforward(ability, DATA, ordinary, VeiledChaosOrb())
+    veil_on_the_open_side = amulet(lock, holder(PRE), rolled(RESIST_2))  # the placeholder is rerolled away with the open prefixes
+    assert dict(ability.kernel(ability.compress(veil_on_the_open_side), VeiledChaosOrb())) == concrete_pushforward(ability, DATA, veil_on_the_open_side, VeiledChaosOrb())
 
 
 def test_the_craftable_version_of_a_veiled_mod_is_not_merged_with_another_crafted_mod_of_its_family():
