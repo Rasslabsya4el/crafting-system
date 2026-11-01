@@ -238,14 +238,15 @@ def free_action_lines(plan: Plan, risk) -> list[str]:
     """What the percentiles hold to when the plan has free actions (ticket #349): they are counted apart from the grid, and the bound is stated.
 
     The free actions are priced at an epsilon so that the solver sees a positive cost; the risk run counts them at that price but not on its
-    grid, so every percentile and the CVaR are certified to within `free_allowance` Chaos, except with chance `free_tail`. The solver's own
+    grid, so every percentile is certified to within `free_allowance` Chaos, except with chance `free_tail`, and the CVaR to within `free_cvar_allowance`. The solver's own
     certified error (a relative figure) is given with it. Empty for a plan without free actions.
     """
-    if risk.grid.free_allowance <= 0.0:
+    if risk.grid.free_tail <= 0.0:
         return []
     return [
-        f"  (free actions are counted at {money_small(free_action_price(plan))} Chaos each and apart from the percentile grid: the percentiles and the",
-        f"   CVaR hold to within {money_small(risk.grid.free_allowance)} Chaos, except with chance {risk.grid.free_tail:.0e}; the solver's error bound is {plan.solution.error_bound:.1e}, relative)",
+        f"  (free actions are counted at {money_small(free_action_price(plan))} Chaos each and apart from the percentile grid: the percentiles hold to within",
+        f"   {money_small(risk.grid.free_allowance)} Chaos, except with chance {risk.grid.free_tail:.0e}, and the CVaR to within {money_small(risk.grid.free_cvar_allowance)} Chaos;",
+        f"   the solver's error bound is {plan.solution.error_bound:.1e}, relative)",
     ]
 
 
@@ -456,12 +457,13 @@ def _totals(plan: Plan, shift: float, divine: float) -> dict:
 
 def _free_totals(plan: Plan, risk) -> dict:
     """Only for a plan with free actions (ticket #349): their price, and how far the percentiles and the CVaR hold because of it."""
-    if risk.grid.free_allowance <= 0.0:
+    if risk.grid.free_tail <= 0.0:
         return {}
     return {
         "free_action_cost": _number(free_action_price(plan)),
         "free_action_allowance": _number(risk.grid.free_allowance),
         "free_action_tail": _number(risk.grid.free_tail),
+        "free_action_cvar_allowance": _number(risk.grid.free_cvar_allowance),
     }
 
 

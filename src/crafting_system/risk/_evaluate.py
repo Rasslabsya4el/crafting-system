@@ -202,7 +202,8 @@ def evaluate[S](
             f"costs must lie in the supported range {MIN_COST:g} to {MAX_COST:g} so that "
             f"their squares stay representable, got {c_min!r} to {max(costs)!r}"
         )
-    free = _free.free_states(chain, free_cost) if free_cost is not None and chain.proper and not chain.has_inputs else []
+    free_found = _free.free_states(chain, free_cost) if free_cost is not None else []
+    free = free_found if chain.proper and not chain.has_inputs else []
     if resolution is not None and not free:
         _check_resolution(resolution, c_min)
     proper = chain.proper
@@ -226,8 +227,8 @@ def evaluate[S](
             return apart
         if resolution is not None:
             _check_resolution(resolution, c_min)
-        if free_fallback_bins is not None:
-            max_bins = min(max_bins, free_fallback_bins)
+    if free_found and free_fallback_bins is not None:  # the free grid was not built (or not possible): the caller's cut for the ordinary one
+        max_bins = min(max_bins, free_fallback_bins)
     if (
         resolution is None and proper and not chain.has_inputs
         and beyond_ordinary_grid(mean[0], variance[0], max([*levels, cvar_level]), c_min, max_bins)
@@ -331,12 +332,13 @@ def _free_report(
         low_run, high_run = _both((run_budget, (folded.chain, low_bins), run), (run_budget, (folded.chain, high_bins), run))
     mean_low, mean_high, owed = _free.free_means(chain, free, step, low_bins, high_bins, _solve_costs)
     cvar = _free.cvar(cvar_level, step, low_run, high_run, mean_low, mean_high, owed)
+    cvar_allowance = owed / (1.0 - cvar_level)
     quantiles = {x: Estimate(*_free.quantile(x, step, low_run, high_run, allowance)) for x in levels}
     if not all(math.isfinite(e.high) for e in (*quantiles.values(), Estimate(*cvar))):
         return None  # the grid did not reach a level: the ordinary and the coarse grid may (they were not tried yet)
     runs = (low_run,) if low_run is high_run else (low_run, high_run)
     grid = GridInfo(
-        step, False, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs), allowance, _free.FREE_TAIL
+        step, False, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs), allowance, _free.FREE_TAIL, cvar_allowance
     )
     return RiskReport(
         Estimate(1.0, 1.0, 1.0), Estimate(*mean), Estimate(*variance), quantiles, Estimate(*cvar), cvar_level, grid

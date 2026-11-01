@@ -258,6 +258,17 @@ def test_the_fallback_runs_at_the_fallback_bins_the_caller_asked_for(monkeypatch
     assert same(report, evaluate(policy, "placeholder", is_goal, max_bins=40))
 
 
+def test_the_callers_cut_holds_for_a_policy_with_inputs_and_a_free_action_too():
+    inputs = {
+        "s": Action("craft", 2.0, (("s", 1), ("goal", 1)), extra_inputs=("d",)),
+        "d": Action("donor", 1e-6, (("d", 1), ("goal", 3))),
+    }
+
+    report = evaluate(inputs, "s", is_goal, free_cost=1e-6, max_bins=150_000, free_fallback_bins=40)
+
+    assert same(report, evaluate(inputs, "s", is_goal, max_bins=40))
+
+
 def test_a_level_the_free_grid_does_not_reach_is_left_to_the_ordinary_grid():
     policy = veil_loop(5.0, 5e-6)
 

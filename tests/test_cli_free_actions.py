@@ -249,8 +249,8 @@ def test_the_text_and_the_json_of_a_veil_plan_show_the_percentiles_and_state_the
     totals = policy_document(report)["totals"]
 
     assert math.isfinite(plan.risk.p90.high) and "not resolved on the grid" not in text
-    assert "free actions are counted at 5e-06 Chaos each" in text and "the percentiles and the" in text
+    assert "free actions are counted at 5e-06 Chaos each" in text and "the percentiles hold to within" in text and "and the CVaR to within" in text
     assert totals["quantiles_resolved"] is True
     assert totals["free_action_allowance"] == pytest.approx(plan.risk.grid.free_allowance) and totals["free_action_tail"] == 1e-9
-    assert totals["free_action_cost"] == pytest.approx(5e-6)
+    assert totals["free_action_cost"] == pytest.approx(5e-6) and totals["free_action_cvar_allowance"] > 0.0
     assert totals["solver_error_bound"] == plan.solution.error_bound < 1e-8  # the solver's bound is still reported
