@@ -207,6 +207,7 @@ class Abstraction:
         self._tracks_implicits = bool(goal.implicits) or any(r.implicits for r in reads) or any(a.implicits for a in adds)
         self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
+        self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
         self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}
@@ -266,6 +267,17 @@ class Abstraction:
     def tracks_quality(self) -> bool:
         """Whether a state holds the catalyst quality: an enabled action reads or changes it."""
         return self._tracks_quality
+
+    @property
+    def sets_enchantment(self) -> bool:
+        """Whether an enabled action declares that it sets the enchantment (`Adds.enchantment`, ADR-0050, ticket #238).
+
+        It never makes the state hold the enchantment: the state is the same size with such an action or without it, and
+        what the actions read of the enchantment is the start item's (the constant `enchantment`). It only means `compress`
+        accepts a finished item whose enchantment is not the start item's, so a result of that action can be compared.
+        An action that declares nothing says it may set one (`Action.adds`), so it turns this on too.
+        """
+        return self._sets_enchantment
 
     @property
     def tracks_offer(self) -> bool:
@@ -353,7 +365,7 @@ class Abstraction:
                 f"item on {item.base_id} at level {item.item_level} does not fit an abstraction "
                 f"of {self.base_id} at level {self.item_level}"
             )
-        if item.enchantment != self.enchantment:
+        if item.enchantment != self.enchantment and not self._sets_enchantment:
             raise ValueError(
                 f"item with enchantment {item.enchantment!r} does not fit an abstraction built with enchantment {self.enchantment!r}: "
                 "the enchantment is a constant of the problem, pass it as `enchantment`"
@@ -444,6 +456,16 @@ class Abstraction:
             )
         self._check_enabled(action)
         return self._mixture_kernel(state, self._prepared(state, action))
+
+    def prime(self, requests: Iterable[tuple[CompressedState, Action]], *, workers: int | None = None) -> int:
+        """Compute ahead, in a process pool, the label distributions that `kernel` of these (state, action) pairs would compute.
+
+        Changes no result, only when the work is done (ticket #250; `_prime.py`). Returns the number of distributions it made;
+        0 with one worker (`CRAFTING_WORKERS=1`), where there is no fork, or when fewer than two are missing.
+        """
+        from ._prime import prime
+
+        return prime(self, requests, workers=workers)
 
     def kernel_key(self, state: CompressedState, action: Action) -> Hashable:
         """A key of the kernel of `action` on `state`, cheaper than the kernel: equal keys, equal kernels.
@@ -934,6 +956,7 @@ class Abstraction:
                 raise
             self._check_type_blind(state, outcomes)
             self._check_fracture_without_partners(state, outcomes)
+            self._check_same_item_space(outcomes)
             prepared = _Prepared(outcomes, origins, item=item)
             self._prepared_by[key] = prepared
         return prepared
@@ -972,6 +995,20 @@ class Abstraction:
                 "the item holds a fractured mod known only as a family type, and whether the game refuses this action "
                 "depends on which family of the type was fractured"
             )
+
+    def _check_same_item_space(self, outcomes: ActionOutcomes) -> None:
+        """Refuse a result that is an item of another base or another item level than this abstraction's (a recombinator).
+
+        A state stands for the items of one base at one item level, so the state of such a result does not exist. The enchantment
+        is not checked here: it is a constant of the problem and not part of the state (ADR-0050). Raises `OutOfScopeError`.
+        """
+        for _, part in outcomes.components:
+            made = part.retained
+            if (made.base_id, made.item_level) != (self.base_id, self.item_level):
+                raise OutOfScopeError(
+                    f"the result is an item on {made.base_id} at item level {made.item_level}, and this abstraction stands for items on "
+                    f"{self.base_id} at item level {self.item_level}: the state of another base or item level is not modelled"
+                )
 
     def _check_fracture_without_partners(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
         """Refuse a fracture, or a fractured mod known only as a family type, on a pool with a family that has mods on both sides.

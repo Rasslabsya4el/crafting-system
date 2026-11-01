@@ -291,17 +291,14 @@ def test_a_wrong_declaration_is_caught(items):
 
 
 def test_input_free_actions_are_unchanged_bit_for_bit():
-    """An action that declares no input and no axis has one reading, and the call with a reading is the call without.
+    """No action of the catalog that takes no input has an axis, one reading is all there is, and the call with a reading is the call without.
 
-    A kind whose actions declare inputs or axes (the Awakener's Orb, #213) is not input-free and is skipped here: the contract suite
-    runs it at every reading. Everything else of the catalog must be input-free and is compared.
-    """
-    compared = 0
+    The two-input actions of the catalog (the Awakener's Orb, the recombinator) are left out: they name their inputs and axes, and their own suites test them."""
     for _, action, name in contract_pairs():
         item = fixture_items()[name]
-        if action.inputs(CONTRACT_DATA, item) or action.rule_axes(CONTRACT_DATA):
+        if action.inputs(CONTRACT_DATA, item):
             continue
-        compared += 1
+        assert action.rule_axes(CONTRACT_DATA) == ()
         assert model_readings(CONTRACT_DATA, [action]) == (Reading(),)
         stray = Reading.of({"toy.pick": Fraction(1, 4)})
         try:
@@ -316,4 +313,3 @@ def test_input_free_actions_are_unchanged_bit_for_bit():
         for label in (lambda mod: mod.id, lambda mod: mod.generation_type):
             assert dict(through.distribution(label)) == dict(plain.distribution(label))
         assert all(through.chance_all([mod_id]) == plain.chance_all([mod_id]) for mod_id in CONTRACT_DATA.mods)
-    assert compared > 50  # nearly every action of the catalog is input-free
