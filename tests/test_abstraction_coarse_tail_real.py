@@ -5,7 +5,7 @@ Deafening Essence of Rage, and the essence, Remove Crafted Mods and every ring c
 Prices are the placeholders of ADR-0023 (essence 2 Chaos, each bench option the Chaos value of what it consumes in a
 made-up table); only the ratios count. The exact optimum from the ADR, 2.159763, was found by numpy value iteration on
 the 13,172-state graph (measured, not certified); here no exact graph is built: the coarse state of the irrelevant
-families pooled in one group (365 blocks) gives the leaf bounds and the cut expands the states its policy enters. The
+families pooled in one group (738 blocks since #68, 365 before) gives the leaf bounds and the cut expands the states its policy enters. The
 ADR's sweep found no gap at any `theta`, since the leaves are already exact; so does this one. The sweep down to 1e-6
 (thousands of states, tens of minutes) is run by hand and its numbers are in the pull request; the test takes the two
 largest `theta` of it. Counts and bounds do not depend on the machine; the time is reported by the run and never
@@ -96,7 +96,7 @@ def test_with_nothing_expanded_the_bounds_are_the_coarse_ones_and_bracket_the_op
     found = cut(r05, math.inf)
 
     assert (found.bounds.lower[r05["start"]], found.bounds.upper[r05["start"]]) == (coarse.lower[block], coarse.upper[block])
-    assert found.expanded == frozenset() and len(coarse.lower) == 365
+    assert found.expanded == frozenset() and len(coarse.lower) == 738
     assert coarse.lower[block] <= OPTIMUM + 1e-6 and OPTIMUM - 1e-6 <= coarse.upper[block]
     assert coarse.gap < 1e-4  # ADR-0023: M1 has no gap on R05
 
