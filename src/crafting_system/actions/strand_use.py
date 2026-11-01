@@ -68,6 +68,7 @@ __all__ = [
     "SPEND_ESSENCE",
     "SPEND_EXALTED",
     "SPEND_LAW_UNIFORM",
+    "SPEND_SPECIAL_ORBS",
     "Spent",
     "SpendLaw",
     "StrandUse",
@@ -78,6 +79,7 @@ SPEND_BASIC = get_rule("memory_strands.spend_ranges_basic")  # Transmutation, Au
 SPEND_CHAOS_FAMILY = get_rule("memory_strands.spend_ranges_chaos_family")  # Alchemy, Chaos 50
 SPEND_ESSENCE = get_rule("memory_strands.spend_ranges_essence")  # any essence 80
 SPEND_EXALTED = get_rule("memory_strands.spend_exalted_by_mod_count")  # 16, 22, 26, 32, 34, 38 by the mods before the craft
+SPEND_SPECIAL_ORBS = get_rule("memory_strands.spend_ranges_special_orbs")  # value: eldritch_chaos 60, veiled_chaos 80, awakeners 100 (B5-11a, b, f)
 SPEND_LAW_UNIFORM = get_rule("memory_strands.spend_law_uniform")
 # The claims behind the actions that neither cut nor spend (`StrandUse.untouched`).
 NOT_SPENT_BY = get_rule("memory_strands.not_spent_by")  # resonators, Harvest, beasts, benches; the wiki lists Fracturing, Annulment, Scouring, Divine neither way
