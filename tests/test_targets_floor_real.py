@@ -96,7 +96,7 @@ PINNED = [
     "r12-lightning-amulet",
     "r14-hunter-bow",
 ]
-LOWERED = {"r08-energy-shield-boots": 84, "r13-life-resist-belt": 84, "j01-cobalt-life-attack-speed": 1}  # the ticket's R08 and R13; a jewel's mods all open at level 1
+LOWERED = {"r08-energy-shield-boots": 84, "r13-life-resist-belt": 84, "j01-cobalt-life-attack-speed": 1, "v01-minion-helmet": 64}  # the ticket's R08 and R13; a jewel's mods all open at level 1; V01's tier-1 Life opens at 64 (ticket #331)
 
 
 @pytest.mark.parametrize("stem", PINNED)
