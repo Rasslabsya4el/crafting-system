@@ -141,7 +141,7 @@ from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
 from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags
 from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
-from .pool import PoolFamily, PoolMod, build_pool, tiers_of
+from .pool import PoolFamily, PoolMod, build_pool, drawable_mod_ids, tiers_of
 from .scour import ScouringOrb, ScourOutcomes
 
 def default_actions() -> tuple[Action, ...]:
@@ -209,6 +209,7 @@ __all__ = [
     "catalog",
     "default_actions",
     "draw_onto",
+    "drawable_mod_ids",
     "fossil_actions",
     "guaranteed_candidates",
     "kind",
