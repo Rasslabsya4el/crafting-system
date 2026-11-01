@@ -37,7 +37,7 @@ from .model import (
     veiled_placeholder,
 )
 from .quality import CATALYST_ITEM_CLASSES, MAX_QUALITY, CatalystType, Quality
-from .spawn import effective_weight, generation_factor, spawn_weight
+from .spawn import effective_weight, generation_factor, is_battle_royale, spawn_weight
 from .tiers import mod_tier, tier_table
 
 __all__ = [
@@ -78,6 +78,7 @@ __all__ = [
     "eldritch_grade",
     "eldritch_side",
     "generation_factor",
+    "is_battle_royale",
     "is_presence_variant",
     "is_removed_enchant",
     "mod_tier",
