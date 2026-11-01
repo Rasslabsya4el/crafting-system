@@ -279,7 +279,9 @@ def check_kinds_declare_item_state() -> int:
         for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
             part = kind.reads_item_state_while_not_planner
-            if part:
+            if part == "any":  # a kind outside the planner that declares the item state it needs (the veiled orbs, #144)
+                assert not kind.planner, kind.name
+            elif part:
                 assert not kind.planner and not adds.item_state, kind.name
                 assert getattr(reads, part) and not any(getattr(reads, other) for other in {"implicits", "quality", "offer"} - {part}), kind.name
             else:

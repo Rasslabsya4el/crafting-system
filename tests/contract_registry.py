@@ -5,6 +5,10 @@ puts a module `tests/contract_fixtures_<family>.py` beside its tests, and that m
 
 * `register_fixture_mods(source)`: `source()` returns a dict of mods (by id) that join the fixture data (`contract_support.CONTRACT_DATA`),
   for the family whose actions name mods the fixture pool lacks; or
+* `register_fixture_amulet(name, item)`: an item on the fixture amulet that every kind is asked about, besides the ordinary ones of
+  `contract_support.fixture_items` (a veiled placeholder, an offer); `item()` builds it late, so it may import `contract_support`;
+* `register_free_actions(*classes)`: actions whose `resources` may be empty (they consume nothing: an unveil);
+* `register_forced_put_back(*classes)`: actions that read no junk yet may put back a mod they erased, which is then forced, not kept;
 * `register_extra_item(name, kinds, data, item)`: an item on a base of its own, asked about for the kinds named and no other kind;
   `data()` is the game data the item lives in and `item()` builds it, both with no argument and both run late, after
   `contract_support` is loaded, so they may import it.
@@ -40,6 +44,9 @@ class _Spec:
 
 
 _MOD_SOURCES: list[Callable[[], dict]] = []
+_AMULETS: dict[str, Callable[[], object]] = {}
+_FREE: list[type] = []
+_FORCED: list[type] = []
 _EXTRA: dict[str, _Spec] = {}
 _LOADED: list[str] = []
 
@@ -47,6 +54,36 @@ _LOADED: list[str] = []
 def register_fixture_mods(source: Callable[[], dict]) -> None:
     """Add the mods `source()` returns to the fixture data."""
     _MOD_SOURCES.append(source)
+
+
+def register_fixture_amulet(name: str, item: Callable[[], object]) -> None:
+    """Ask every kind about the item `item()` on the fixture amulet, as about the ordinary `fixture_items`."""
+    if name in _AMULETS:
+        raise ValueError(f"the fixture item {name!r} is registered twice")
+    _AMULETS[name] = item
+
+
+def register_free_actions(*classes: type) -> None:
+    """The contract suite lets an action of these classes have no `resources`."""
+    _FREE.extend(classes)
+
+
+def register_forced_put_back(*classes: type) -> None:
+    """The contract suite does not count the forced mod of an action of these classes as a mod it kept."""
+    _FORCED.extend(classes)
+
+
+def fixture_amulets() -> dict[str, object]:
+    """The registered amulet items by name, built."""
+    return {name: build() for name, build in _AMULETS.items()}
+
+
+def is_free_action(action: object) -> bool:
+    return isinstance(action, tuple(_FREE))
+
+
+def puts_back_forced_mod(action: object) -> bool:
+    return isinstance(action, tuple(_FORCED))
 
 
 def register_extra_item(name: str, kinds: tuple[str, ...], data: Callable[[], object], item: Callable[[], object]) -> None:

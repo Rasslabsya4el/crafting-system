@@ -55,7 +55,15 @@ from abstraction_pool import (
     RESISTS,
 )
 from coarse_support import blocks_of, compare_members, compare_variants, concrete_items
-from contract_registry import ExtraFixture, extra_items, fixture_mods, load_family_fixtures
+from contract_registry import (
+    ExtraFixture,
+    extra_items,
+    fixture_amulets,
+    fixture_mods,
+    is_free_action,
+    load_family_fixtures,
+    puts_back_forced_mod,
+)
 from items_support import AMULET, DATA
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
@@ -203,6 +211,7 @@ def fixture_items() -> dict[str, Item]:
         # their family in the fixture, because the compressed state forgets which tier of a family a junk mod was (#149)
         "rare_resists": _item(Rarity.RARE, _roll(FIRE_RESIST), _roll(COLD_DAMAGE)),
     }
+    items.update(fixture_amulets())  # the items the families register (the veiled orbs' placeholder and offer, ticket #144)
     crafted = _ordinary_crafted_mod()
     if crafted is not None:
         items["rare_crafted"] = _item(Rarity.RARE, _roll(RESIST_2), _roll(crafted, crafted=True))
@@ -415,7 +424,8 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
     if not reads.junk:
         for _, part in outcomes.components:
-            kept = {entry.mod_id for entry in part.retained.mods if not entry.fractured and not entry.crafted}
+            forced = getattr(part, "forced", None) if puts_back_forced_mod(action) else None  # a mod it erased may be put back: forced, not kept
+            kept = {entry.mod_id for entry in part.retained.mods if not entry.fractured and not entry.crafted and entry.mod_id != forced}
             assert not kept & junk, "an action that reads no junk erases it"
     if adds.named is not None and not adds.draws:
         held = {(entry.mod_id, entry.fractured, entry.crafted) for entry in given.mods}
@@ -533,7 +543,7 @@ def check_axes_and_inputs(action: Action, item: Item, data, readings: tuple[Read
 
 def check_resources_are_priced(action, item: Item, data) -> None:
     resources = action.resources(data)
-    assert resources, "one use consumes something"
+    assert resources or is_free_action(action), "one use consumes something, unless the action's family registers it as free"
     assert all(isinstance(name, str) and name and isinstance(count, int) and count > 0 for name, count in resources.items())
     prices = {name: PriceEntry(2.0, "test") for name in resources if name != CHAOS_ORB}
     file = PriceFile("Test", datetime.datetime(2026, 10, 31, tzinfo=datetime.UTC), 300.0, prices)

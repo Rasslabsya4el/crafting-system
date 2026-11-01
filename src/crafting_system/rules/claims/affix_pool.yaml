@@ -140,17 +140,36 @@ rules:
     date_checked: 2026-11-01
 
   - id: affix_pool.royale_duplicates_do_not_spawn
-    statement: 'Approximate. Four mods of the pinned export, MovementVelocity2Royale, IncreasedCastSpeed2Royale, IncreasedAttackSpeed2Royale and LocalIncreasedAttackSpeed2Royale____ (Battle Royale copies at required level 4 or 5, named "Sprinter''s", "of Nimbleness" and "of Ease" twice), have spawn weights on ordinary bases but are not mods the game rolls, so a pool and a tier table leave them out. Evidence: on 27,886 mods of the strand sheet the sheet''s own count of tiers of a mod type (total_tiers) equals ours exactly when they are left out and is one lower for exactly the four mod types when they are in (31 of 1,834 mods in the foulborn and misc currency tab); the sheet''s Unravelling weights for amulets (suffixes 125,250 at item levels 85 and 86) do not contain them; the total of the amulet suffix weights at item level 86 in the local copy of Craft of Exile is 125,250, ours is 126,050 with them and 125,250 without. Effect: the four mod types have one tier too many and a pool total too high (amulet suffixes by 800, wand suffixes by 1,500), which changes the cut of ADR-0040 for them and the chance of the Orb of Unravelling.'
+    statement: >-
+      Approximate. A mod of the export whose id holds the word "Royale" (the value's id_marker) is a Battle Royale copy and
+      is not rolled by the game, so its spawn weight is 0 on every item: a pool, a tier table and a weight sum leave it out.
+      The export has no field that marks these mods; the id is the only mark (the value also lists the four ids that have spawn weights, as the evidence the marker is checked against). In the pinned export 3.29.3.3, 139 mods carry it:
+      135 have no spawn weight anyway (unique, chest, monster, area and flask mods), and four are copies of ordinary mods that have spawn weights on
+      ordinary bases, MovementVelocity2Royale ("Sprinter's", prefix, level 5), IncreasedCastSpeed2Royale ("of Nimbleness"),
+      IncreasedAttackSpeed2Royale and LocalIncreasedAttackSpeed2Royale____ (both "of Ease", suffixes, level 4). Evidence: on
+      27,886 mods of the strand sheet the sheet's own count of tiers of a mod type (total_tiers) equals ours exactly when they are
+      left out and is one lower for exactly the four mod types when they are in (31 of 1,834 mods in the foulborn and misc
+      currency tab); the sheet's Unravelling weights for amulets (suffixes 125,250 at item levels 85 and 86) do not contain them;
+      the total of the amulet suffix weights at item level 86 in the local copy of Craft of Exile is 125,250, ours was 126,050
+      with them and is 125,250 without. Effect when they were in: the movement speed, cast speed and attack speed mod types had
+      one tier too many and the pools a total too high (amulet suffixes by 800, wand suffixes by 1,500), which changes the cut
+      of ADR-0040 and the chance of the Orb of Unravelling. The quoted row of the foulborn tab shows the sheet's count for the
+      top attack speed suffix, "of Grandmastery" (IncreasedAttackSpeed4): tier 1 of 4; the pool counts 4 tiers of that mod type
+      on gloves and a quiver without IncreasedAttackSpeed2Royale and counted 5 with it. No other leftover of another mode
+      was found in the pools: of the 2,725 prefixes and suffixes of the item domain with a spawn weight, the only ones
+      whose weighted tags no released base carries (and no influence adds) are the 51 Necropolis crafting mods and the
+      11 mods of the Deepwater sword, so they are in no ordinary pool (ticket #310).
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: 426,52,Foulborn Orb of Augmentation,of Grandmastery,1,4,252.5,0.2836879433,1
-    patch_verified: 3.29.0
+    quote: "426,52,Foulborn Orb of Augmentation,of Grandmastery,1,4,252.5,0.2836879433,1"
+    patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
-    value:
-      excluded_ids:
-      - MovementVelocity2Royale
-      - IncreasedCastSpeed2Royale
-      - IncreasedAttackSpeed2Royale
-      - LocalIncreasedAttackSpeed2Royale____
     approximate: true
-    approximate_reason: Three sources agree (the sheet's tier counts, the sheet's pool weights, Craft of Exile's totals); no first-party statement.
+    approximate_reason: "Three sources agree (the sheet's tier counts, the sheet's pool weights, Craft of Exile's totals); no first-party statement."
+    value:
+      id_marker: Royale
+      excluded_ids:
+        - MovementVelocity2Royale
+        - IncreasedCastSpeed2Royale
+        - IncreasedAttackSpeed2Royale
+        - LocalIncreasedAttackSpeed2Royale____

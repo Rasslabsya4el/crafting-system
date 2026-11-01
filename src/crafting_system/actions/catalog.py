@@ -26,7 +26,8 @@ Two declarations are read by the shared tests, which therefore name no kind (tic
 that is the only one the kind works on (`"armour"`: body armours, boots, gloves and helmets; the fixture items of the contract suite
 are amulets, so the suite does not require that the kind applies to one, and fails when it does). `reads_item_state_while_not_planner`
 names the one part of the item state (`"implicits"`, `"quality"` or `"offer"`) that a kind outside the planner reads, so the item-state
-suite expects that part to be declared by its actions and the others not. Both are empty for an ordinary kind.
+suite expects that part to be declared by its actions and the others not; `"any"` says that the kind declares whatever part it needs
+(the veiled orbs, which declare the offer) and only requires that it is no planner kind. Both are empty for an ordinary kind.
 """
 
 from collections.abc import Callable, Collection, Iterable, Iterator

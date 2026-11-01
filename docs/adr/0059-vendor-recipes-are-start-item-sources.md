@@ -1,0 +1,45 @@
+# Vendor recipes are start-item sources chosen outside the solver
+
+Five vendor recipes make an item with a chosen mod from cheap goods. The owner put all five into v1 ([#102](https://github.com/Rasslabsya4el/crafting-system/issues/102), decision comment of 2026-11-01); the rules are the research note [`2026-10-31-vendor-recipes.md`](../research/2026-10-31-vendor-recipes.md) (PR #327). This is build ticket 1 of 3 ([#329](https://github.com/Rasslabsya4el/crafting-system/issues/329)): the decisions, the claims and the step tables. The start options built from them are [#330](https://github.com/Rasslabsya4el/crafting-system/issues/330); the report and a benchmark are [#331](https://github.com/Rasslabsya4el/crafting-system/issues/331).
+
+## The five recipes
+
+| Recipe | Input | Other goods | Result |
+|---|---|---|---|
+| Boots movement speed (`boots_movement_speed`) | Normal boots | a Quicksilver Flask and an Orb of Augmentation per step, 5 steps | Magic boots, only movement speed, 10 / 15 / 20 / 25 / 30% (T6 up to T2) |
+| Weapon flat damage (`weapon_physical`, `weapon_fire`, `weapon_cold`, `weapon_lightning`) | a Normal weapon | a Granite (Physical), Ruby (Fire), Sapphire (Cold) or Topaz (Lightning) Flask and an Orb of Augmentation per step | Magic weapon, only that added damage, up to T2 (Physical) or T3 / T2 (elemental, below) |
+| Jewellery chaos resistance (`jewellery_chaos_resistance`) | a Normal ring or amulet | an Amethyst Flask and an Orb of Augmentation per step, 5 steps | Magic jewellery, only chaos resistance, 5-10% up to 26-30% (T6 up to T2) |
+| Spell-gem weapon (`spell_gem_<tag>`, five tags) | a Normal wand, sceptre, rune dagger or staff | two or more quality gems of the tag, 40% quality in all; no flask, no orb | Magic weapon with +1 to Level of all Spell Skill Gems of the tag (+2 on a staff) |
+| Minion helmet (`minion_helmet`) | a Normal helmet | two or more quality gems with the Minion tag, 40% in all | Magic helmet with +1 to Level of all Minion Skill Gems |
+
+A tier-up recipe is a chain: from a Normal base each step gives the next rung of the mod's ladder, taking the Magic item the step before made, so 30% movement speed is five recipes in a row. The other recipes of the wiki page (the two Whetstone recipes, the Onyx amulet, the 5-to-1 and the currency recipes) are out of v1: they give low tiers, random items or currency, and their claims stay in the research folder. Jewels have no recipe that picks a mod.
+
+## A recipe is a start-item source, chosen outside the solver
+
+A vendor recipe is **not an action of a route**. The recipe wipes every other mod of the input, so inside a route it is worth using only on a Normal or near-empty item, which is a start item. The planner offers the plain start item and each recipe-made start item, **plans each of them, and keeps the cheapest total** (the start item's price, which is the recipe's goods, plus the plan's mean cost). The choice is made outside the solver: one plan per start option. It works with today's solver and with the solver that takes donors (#312); nothing in `solver` learns about recipes. The comparison and the report are #330 and #331.
+
+This **amends ADR-0043's "acquisition methods are not modelled" for vendor recipes only**. A Genesis-born item is just a pasted start item whose price is whatever the user pastes; a vendor recipe is priced from market inputs and so changes the answer, which is why it is modelled. A recipe-made item is a priced start option, not a second way to paste one.
+
+## What the recipe data holds
+
+`crafting_system.items.vendor_recipes` lists, for each recipe, the base kinds it takes and the step table: at each step the flask, the number of Orbs of Augmentation, the gems (tag, count, total quality), and the mod and tier the step gives, counted from the top of the mod's ladder (T1 is the best). It reads the claims of [`vendor.yaml`](../../src/crafting_system/rules/claims/vendor.yaml) and holds no number of its own; every claim in the file is cited by some recipe, and a test says so. A recipe asked for a base kind it does not take is refused with `BaseKindError` (a staff takes the physical recipe of its own two-hand ladder; a sceptre takes no chaos spell-gem recipe, because the data has no such mod). The input must not be fractured or corrupted (`vendor.refused_on_fractured_and_corrupted_inputs`).
+
+## The elemental cap is a rule axis
+
+The wiki caps the Fire, Cold and Lightning chains at **T3** (eight recipes from Normal); Craft of Exile's table says **T2** (nine recipes) for these as for every tier-up recipe. The data holds a rung at each, and no other source decides (research O-1). So the cap is a **rule axis** `elemental_cap` of two readings (ADR-0033): `wiki` (the plan's, T3) and `coe` (T2). The answer shows the cost over both beside the plan's. The physical cap (T2) is agreed by both sources and has no axis. No in-game check is asked for now; if the conflict stays open it goes on the owner's list ([#182](https://github.com/Rasslabsya4el/crafting-system/issues/182)). Axis machinery for the readings belongs to #330, which prices the start option at each reading.
+
+## The base type and the item level are kept, marked `approximate`
+
+The wiki says the recipes make "a new base item (with randomized base defences)" and does not say whether the base type stays; the recipe page and the Item level page also word the item level of the result differently. The plan keeps **the input's base type and the input's item level**. Both claims are `approximate` (ADR-0028), and so is the rule for which gems count: the recipe data takes uncorrupted skill gems only (`vendor.gem_qualification_is_uncorrupted_skill_gems`). Every answer that uses a vendor start item lists them. Defence rolls are not targets, so a new roll does not matter.
+
+## Prices
+
+A recipe's price is the sum of its goods: the Normal base (priced like any base, with the item level the target needs, because the result's level is the input's), the flasks, the Orbs of Augmentation and the gems. Orbs of Augmentation come from the price file's currency line. **Flasks and quality gems come from the trade API** (a Normal flask of the base type; the cheapest set of two or more gems of the tag whose quality adds up to 40%), **and a hand price overrides them** (the hand-price file, [#323](https://github.com/Rasslabsya4el/crafting-system/issues/323)). Time and clicks are free, as in ADR-0007. The recipe is not random, so the cost of a chain is the sum of its steps and needs no chance node (ADR-0011): for boots, `base + 5 * (flask + augmentation)`.
+
+## What this changes
+
+- ADR-0043 and ADR-0008 each point here (an amendment line in each).
+- `vendor.yaml` joins the rules registry with 14 claims, four of them `approximate` (the item level of the result, its base type, which gems count, the elemental cap). The claims the research drafted for the other recipes stay in the research folder.
+- The step tables are data; the start options and their pricing (#330) and the report and benchmark (#331) are built on them.
+
+Origin: [Research #102](https://github.com/Rasslabsya4el/crafting-system/issues/102) and its decision comment; [#329](https://github.com/Rasslabsya4el/crafting-system/issues/329); ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0011, ADR-0028, ADR-0033, ADR-0043.
