@@ -13,8 +13,6 @@ import pytest
 from coarse_support import CHAOS, CRAFTS, DATA, HYBRID_CRAFT, MANA, REMOVE
 from abstraction_pool import MANA_1
 
-from crafting_system import parallel
-from crafting_system.actions import ActionError
 from crafting_system.cli import Offer, build_report, make_plan, policy_document
 from crafting_system.cli._decide import Rates
 from crafting_system.prices import PriceFile
@@ -97,32 +95,24 @@ def test_the_solution_values_are_equal_to_the_last_bit(monkeypatch):
     }
 
 
-forked = pytest.mark.skipif(not parallel.can_inherit(), reason="the distributions are primed in forked workers; there is no fork here")
+def approximate_options(monkeypatch):
+    """A budget between the forecast of the first coarse level and the exact one, at injected rates (as `test_cli_approximate.py`)."""
+    from crafting_system.abstraction import Coarsening
+
+    exact = planned(monkeypatch, 1)
+    forecast = exact.abstraction.estimate([exact.start], [offer.action for offer in OFFERS])
+    pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
+    budget = (forecast.seconds(1.0, 1.0) + forecast.coarsened(pooling).seconds(1.0, 1.0)) / 2
+    return dict(budget=budget, rates=Rates(1.0, 1.0))
 
 
-@forked
-def test_primed_kernels_are_the_kernels_of_an_unprimed_abstraction(monkeypatch):
-    """`prime` fills the abstraction's caches in workers; every kernel it then returns equals the one computed on the spot."""
-    monkeypatch.setenv("CRAFTING_WORKERS", "2")
-    plan = planned(monkeypatch, 1)
-    states = [state for state in plan.solution.values if not plan.abstraction.is_goal(state)]
-    actions = [offer.action for offer in OFFERS]
-    requests = [(state, action) for state in states for action in actions]
-    fresh = type(plan.abstraction)(
-        DATA, plan.abstraction.goal, plan.abstraction.base_id, plan.abstraction.item_level, plan.abstraction.enabled,
-        metamods=plan.abstraction.models_metamods,
+def test_an_approximate_answer_is_byte_identical_for_one_and_many_workers(monkeypatch):
+    options = approximate_options(monkeypatch)
+    serial = planned(monkeypatch, 1, **options)
+    pooled = planned(monkeypatch, 4, **options)
+
+    assert serial.approximation is not None  # it really is the approximate answer
+    assert answer_of(pooled) == answer_of(serial)
+    assert (pooled.approximation.lower, pooled.approximation.upper, pooled.approximation.gap, pooled.approximation.level) == (
+        serial.approximation.lower, serial.approximation.upper, serial.approximation.gap, serial.approximation.level,
     )
-    reference = type(plan.abstraction)(
-        DATA, plan.abstraction.goal, plan.abstraction.base_id, plan.abstraction.item_level, plan.abstraction.enabled,
-        metamods=plan.abstraction.models_metamods,
-    )
-
-    made = fresh.prime(requests, workers=2)
-
-    assert made >= 2
-    for state, action in requests:
-        try:
-            expected = reference.kernel(state, action)
-        except ActionError:
-            continue
-        assert list(fresh.kernel(state, action).items()) == list(expected.items())
