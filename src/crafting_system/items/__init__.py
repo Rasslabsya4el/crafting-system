@@ -69,11 +69,13 @@ from .sockets import (
 from .spawn import effective_weight, generation_factor, is_battle_royale, spawn_weight
 from .strands import MAX_MEMORY_STRANDS, has_memory_strands_line, memory_strands_line, read_memory_strands
 from .tiers import mod_tier, tier_table
+from .veiled import GENERIC_PLACEHOLDERS, is_craftable_version, is_veiled_mod, placeholder_families, veiled_families
 
 __all__ = [
     "ABYSSAL_SOCKET_STAT",
     "CATALYST_ITEM_CLASSES",
     "EXTRA_CRAFTED_SLOT_STAT",
+    "GENERIC_PLACEHOLDERS",
     "MAX_MEMORY_STRANDS",
     "MAX_PLAIN_QUALITY",
     "MAX_QUALITY",
@@ -124,15 +126,19 @@ __all__ = [
     "generation_factor",
     "has_abyssal_socket",
     "has_memory_strands_line",
+    "is_abyssal_socket_mod",
     "is_battle_royale",
     "is_corrupted_implicit",
-    "is_abyssal_socket_mod",
+    "is_craftable_version",
     "is_presence_variant",
     "is_removed_enchant",
+    "is_veiled_mod",
     "memory_strands_line",
+    "placeholder_families",
     "mod_tier",
     "read_memory_strands",
     "spawn_weight",
     "tier_table",
+    "veiled_families",
     "veiled_placeholder",
 ]

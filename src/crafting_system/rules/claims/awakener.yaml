@@ -1,0 +1,168 @@
+# Mechanic family: awakener (the Awakener's Orb, M-43): two items of one class, each with one influence; the donor is
+# destroyed and the receiver is reforged as a rare item with both influences (ADR-0032). The first fifteen claims are the
+# draft claims of the research note of ticket #90; the last four were added by the build ticket #213. The claims
+# `pair_choice_uniform` and `survivor_coe` carry the result of the Craft of Exile emulator check of ticket #198.
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code alone or disagrees with
+# another trusted source; the planner names it on every answer that reads it.
+rules:
+  - id: awakener.two_items_same_class
+    statement: An Awakener's Orb takes a donor item and a receiver item of the same item class; the donor is destroyed.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Destroys an item, applying its influence to another of the same item class"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: awakener.receiver_reforged_rare_both_influences
+    statement: The receiver becomes a rare item with the influences of both inputs and new modifiers.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "The second item is reforged as a rare item with both influence types and new modifiers"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: awakener.one_influence_each_and_different
+    statement: Each input must carry exactly one influence and the two influences must differ; otherwise the orb is refused.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Awakener%27s_Orb#Mechanics
+    quote: "Each item must have exactly one influence."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.refused_on_corrupted
+    statement: Neither input may be corrupted.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Awakener%27s_Orb#Mechanics
+    quote: "both the donor item and the base item must be uncorrupted"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.keeps_base_level_sockets_quality_enchants
+    statement: The receiver keeps its base type, item level, sockets, links, quality and enchantments.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Awakener%27s_Orb#Mechanics
+    quote: "base type, item level, sockets, links, quality and enchantments are retained"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.one_influenced_mod_per_input_kept
+    statement: One influenced mod of each input is kept on the result (the tier stays, the value roll is redrawn); if an input has several, one is chosen at random. Prefix or suffix does not matter.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Awakener%27s_Orb#Mechanics
+    quote: "If an item has two or more influenced mods, one will be selected at random"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.pair_choice_uniform
+    statement: "Craft of Exile picks the kept pair uniformly among the pairs (an influenced mod of the receiver, an influenced mod of the donor) whose two mods are different mods of different influences; a pair that shares a mod group is drawn like any other and then reaches the group conflict (awakener.same_mod_group_keeps_one). The emulator (Wraecrafter Ultra, run headless from its local copy, ticket #198) kept both mods in 300 of 300 Awakener's Orbs on two Iron Rings with no shared group. The wiki (oldid 1697721, read 2026-09-20) says the same: one influenced mod from each, a random one when there are several."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'nvcombs.push({"m1":j,"m2":k})'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: awakener.same_mod_group_keeps_one
+    statement: When the two kept mods share a mod group, only one of them stays on the result and the other influence is still added. Which one is disputed (awakener.survivor_wiki, awakener.survivor_coe); the planner follows Craft of Exile and reports the interval between the two readings.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Awakener%27s_Orb#Mechanics
+    quote: "the two merged mods cannot share the same ModGroup"
+    approximate: true
+    approximate_reason: "The wiki and Craft of Exile disagree on which of two same-group mods survives, and no 3.29 game sample exists (in-game list #182, check 1)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.survivor_wiki
+    statement: The wiki says one of two same-group mods is discarded at random (no odds given); a donor reading of the group conflict is the other end of the interval.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Awakener%27s_Orb#Mechanics
+    quote: "one will be discarded at random"
+    approximate: true
+    approximate_reason: "The wiki gives no odds and Craft of Exile keeps the receiver's mod; the donor reading stands for the wiki's random choice at its other end (in-game list #182, check 1)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.survivor_coe
+    statement: "When the two kept influenced mods share a mod group, the receiver's mod stays and the donor's is dropped (the other slots are rerolled), and the donor's influence is still added. The Craft of Exile emulator (Wraecrafter Ultra, run headless from its local copy, package.js SHA256 faa6a774...f639) kept the receiver's mod in 1000 of 1000 Awakener's Orbs on two Iron Rings with Curse on Hit mods of the group CurseOnHitLevel, in both role orders (Crusader Conductivity receiving Warlord Flammability, and the reverse) (ticket #198)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "useaffixes.push(jQuery.parseJSON(JSON.stringify(woke.m1)));if(!mconflict){useaffixes.push("
+    approximate: true
+    approximate_reason: "The wiki (oldid 1697721) says one of two exclusive mods is discarded at random; only the game settles it (in-game list #182, check 1)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: awakener.rest_rerolled_like_chaos
+    statement: Every other modifier is rerolled as a Chaos Orb rerolls a rare (4, 5 or 6 mods, 8:3:1, affix_count.rare_reroll_ratio).
+    source_kind: coe
+    url: https://www.craftofexile.com/
+    quote: "rerolled as if using a chaos orb"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: awakener.kept_mods_count_in_total
+    statement: Craft of Exile draws the Chaos total minus the kept influenced mods that remain, so the kept mods count inside the 4/5/6 (one kept mod when the pair has a group conflict). The wiki is silent; unverified in the game.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "poec_simRollAffix(null,null,null,fossil,noaffix-prmods"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code says the kept mods count inside the total of 4, 5 or 6; the wiki is silent and the owner chose it (grill B3)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: awakener.ignores_metamods
+    statement: The reforge ignores the crafted metamods (Prefixes/Suffixes Cannot Be Changed and the like).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Awakener%27s_Orb#Mechanics
+    quote: "will ignore Mastercrafting Metamods like Suffixes Cannot Be Changed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.imprint_restores_receiver_only
+    statement: An imprint of the receiver made before the orb restores it; the destroyed donor cannot be restored.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Imprint#Mechanics
+    quote: "The donor base cannot be restored"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: awakener.survivor_player_report_2020
+    statement: "UNVERIFIED by me (relayed by the GPT researcher; before the 3.10 rule): one 2020 report of a ring where Assassin's Mark (donor) and Frostbite on hit (the other ring) met and only Frostbite remained. It does not say which item was the receiver; no report with donor and receiver swapped exists."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/elofd5/i_learned_a_very_expensive_mistake_with_awakeners/
+    quote: "I only received the frostbite on hit."
+    patch_verified: "3.9.2"
+    date_checked: 2026-10-31
+
+  - id: awakener.cost
+    statement: One use of an Awakener's Orb consumes one Awakener's Orb item; the value maps its price-file name (the item's name in the game data) to the number of items. The orb is drop-restricted, so its price comes from the market.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/AtlasExiles/ApplyInfluence: name "Awakener''s Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Awakener's Orb: 1}
+
+  - id: awakener.refused_below_item_level_68
+    statement: Craft of Exile disables the orb for an item of item level below 68 (influence needs 68); an influenced item always has it, so the rule never bites. The value is the lowest item level.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: '"required":{"ilvl":68,"woke":!0,"flags":["is_influenced","is_rare"]}'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: 68
+
+  - id: awakener.refused_without_influenced_mods
+    statement: The orb is refused when the receiver, or the donor, holds no influenced mod, or when no pair of different mods can be made of them.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'error=applyLang("No influence modifiers on item")'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: awakener.influenced_mod_is_influence_spawn
+    statement: An influenced mod of an item is a mod whose first spawn weight that the item has is one of its influence tags (harvest_reforge.influence_mod_is_influence_spawn), whatever the weight; the Assassin's Mark mods of a Shaper ring have weight 0 on ring_shaper and are influenced mods all the same (ticket #213, read from the 3.29.3.3 data).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "CurseOnHitAssassinsMarkUber2: spawn_weights ring_shaper 0, default 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
