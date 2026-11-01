@@ -47,3 +47,10 @@ An action that has **not declared** anything is **refused on an item with `s >= 
 A lock previews a craft's spend exactly (wiki). It belongs to B8, not here.
 
 Origin: [Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103) (draft decisions; the standing rule); [Research #98](https://github.com/Rasslabsya4el/crafting-system/issues/98); ADR-0004, ADR-0024, ADR-0028, ADR-0040.
+
+## Amendment: what the claims say after the sheet fit ([#274](https://github.com/Rasslabsya4el/crafting-system/issues/274), research [#271](https://github.com/Rasslabsya4el/crafting-system/issues/271) and [#273](https://github.com/Rasslabsya4el/crafting-system/issues/273))
+
+- **Every spend is a uniform whole number on 0 to its ceiling** (claim `memory_strands.spend_law_uniform`, `approximate`). The Chaos and Alchemy bins above came from counting the sheet's rows, not its crafts; counted as crafts both are uniform (p = 0.60 and 0.46). The "two currencies fail the test" paragraph and the word "bins" in the table no longer apply.
+- **The Exalted ceilings by the mods before the craft are 16, 22, 26, 32, 34, 38 for 0 to 5 mods** (claim `memory_strands.spend_exalted_by_mod_count`): the wiki's row moved by one mod, because two sheet crafts exceeded 32 and 34. The **Foulborn Exalted** row is the emulator's, moved the same way: 46, 52, 56, 60, 62, 66 (claim `foulborn.exalted_spend_by_mod_count`, `approximate`); the scaling 29, 40, 47, 58, 62 is dropped.
+- **Identification spends nothing** (claim `memory_strands.identification_spends_none`).
+- The inference "fossils, Harvest and beasts do not cut; Scouring, Annulment and Divine keep the count" now has player reports and the emulator's code behind it (claims `fossil_harvest_not_cut`, `cut_follows_spend_table`, `annulment_keeps_strands`, `scouring_keeps_strands`, `divine_keeps_strands`), still `approximate`. A recombination neither cuts nor spends and its output takes either base's count (claims `recombination_neither_cuts_nor_spends`, `recombinator_strands_from_either_base`).

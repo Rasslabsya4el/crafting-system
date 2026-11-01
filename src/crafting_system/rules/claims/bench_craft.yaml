@@ -68,12 +68,18 @@ rules:
     date_checked: 2026-10-31
 
   - id: bench_craft.rerolls_not_b1_actions
-    statement: The 3.29 bench rerolls ("Reroll 3 random Modifiers on a Rare Item", "Reroll a random Modifier on a Rare Item") are not B1 bench actions. They consume Memory Strands, which v1 start items do not carry.
+    statement: The 3.29 bench rerolls ("Reroll 3 random Modifiers on a Rare Item", "Reroll a random Modifier on a Rare Item", and the rarity reroll) are not B1 bench actions. They spend up to 50 Memory Strands (memory_strands.spend_bench_rerolls), which an item with strands loses; they stay out of the plan in batches B1 to B5, and a later batch that models them declares that spend (ADR-0041).
     source_kind: owner
-    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531984706
-    quote: "v1 start items carry no Memory Strands until Memory Strands get their batch"
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0041-every-action-declares-its-strand-use.md
+    quote: "not an action in B1 to B5"
     patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
+    date_checked: 2026-11-01
+    history:
+      - statement: The 3.29 bench rerolls ("Reroll 3 random Modifiers on a Rare Item", "Reroll a random Modifier on a Rare Item") are not B1 bench actions. They consume Memory Strands, which v1 start items do not carry.
+        held_until: "3.29.3.3"
+        source_kind: owner
+        url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531984706
+        quote: "v1 start items carry no Memory Strands until Memory Strands get their batch"
 
   - id: bench_craft.other_options_not_mod_crafts
     statement: The bench options that add no crafted mod and are not Remove Crafted Mods (flask enchants, sockets, links, colours, Remove Enchantments, Reroll the Rarity) are not modelled here; `bench_crafts` lists only the options with `add_explicit_mod`. Sockets, links and colours and the Orb of Chance have no batch yet.

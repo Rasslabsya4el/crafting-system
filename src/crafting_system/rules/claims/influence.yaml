@@ -1,0 +1,141 @@
+# Mechanic family: influence (the six influenced Exalted Orbs: Shaper's, Elder's, Crusader's, Hunter's, Redeemer's and Warlord's).
+# Research ticket #86 (claims INF-01 to INF-12, draft file docs/research/2026-10-31-influence-claims.yaml on the branch
+# research/influence, commit 3964011), the decisions of grill B2 (issue #93, ADR-0030) and ticket #154. The mod is drawn
+# through the shared add (actions/add.py, affix_pool.*, affix_draw.*) from the influence's own pool.
+#
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code alone, on sources that disagree,
+# or on a default the main chat chose where no source speaks; every answer that reads it names it.
+rules:
+  - id: influence.exalt_adds_influence_and_one_mod
+    statement: "Each of the six influenced Exalted Orbs adds its influence and one new explicit mod of that influence to a rare item."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_influence_adding_items
+    quote: "Adds Shaper influence and a new Shaper modifier to a rare item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: influence.exalt_refused_on_influenced_item
+    statement: "An influenced Exalted Orb is refused on every item that already has an influence, the orb's own influence included. The wiki's Influenced item page has one broader sentence that reads the other way; three orb pages, the item help text and Craft of Exile agree on refusal. The owner may check it in game (issue 93, round 2); until then: refused."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hunter%27s_Exalted_Orb
+    quote: "Cannot be used on influenced items, synthesised items, fractured items, or items with eldritch implicit modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The wiki's Influenced item page has one broader sentence that reads the other way, and the owner has not checked in game whether an orb of the item's own influence is refused (issue 93, round 2: unknown)."
+
+  - id: influence.exalt_refused_on_fractured_item
+    statement: "An influenced Exalted Orb is refused on a fractured item. (Synthesised items are not in the item model.)"
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Shaper%27s_Exalted_Orb
+    quote: "Cannot be used on items with Elder/Shaper/Conquerors influence, synthesised items, fractured items, or items with eldritch implicit modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: influence.exalt_refused_on_eldritch_implicit
+    statement: "An influenced Exalted Orb is refused on an item with an Eldritch implicit (an item with one cannot be given an influence). The Shaper's Exalted Orb page lead calls such an item non-influenced and so reads the other way, while its Mechanics section, the Hunter's page, the Modifier page and Craft of Exile refuse it; the owner's optional in-game check (issue 93, round 2) may change it."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Influenced_item#Mechanics
+    quote: "Fractured items, synthesised items and items with eldritch implicit modifiers are not considered influenced and cannot be given influences under any circumstances."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The Shaper's Exalted Orb page contradicts itself on an item with an Eldritch implicit, and the owner has not checked it in game."
+
+  - id: influence.exalt_rare_with_open_slot
+    statement: "An influenced Exalted Orb needs a rare item with an open prefix or suffix slot."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "\"required\":{\"rarity\":\"rare\",\"ilvl\":68,\"flags\":[\"is_influenced\",\"is_rare\"],\"open\":\"any\"}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+
+  - id: influence.exalt_min_item_level
+    statement: "An influenced Exalted Orb needs an item level of at least 68 (the value). Below it no influence mod can be rolled (the lowest required level of any influence mod with a spawn weight is 68 in the export), so the gate and an empty pool coincide."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "\"required\":{\"rarity\":\"rare\",\"ilvl\":68,\"flags\":[\"is_influenced\",\"is_rare\"],\"open\":\"any\"}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+    value: 68
+
+  - id: influence.exalt_draws_from_that_influence_only
+    statement: "The mod an influenced Exalted Orb adds is drawn only from the mods of the orb's influence; ordinary mods of the base are not in this pool. The draw is the shared single add: item level, family exclusion, side capacity, spawn weight."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "case 'shaper':poec_simAddInfluence(2);craftDetail.add=poec_simRollAffix(2,null,null,null,1,!0,!0,!1,!1,!1,!1,null,!1)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+
+  - id: influence.exalt_catalyst_quality_ignored
+    statement: "Catalyst quality does not change the spawn weights of the influenced Exalted Orb (Craft of Exile's code still applies a catalyst weight there: stale)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hunter%27s_Exalted_Orb#Version_history
+    quote: "Quality from catalyst no longer affect the spawn weight thus the help text of this currency has also changed."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: influence.exalt_respects_metamods
+    statement: "An influenced Exalted Orb respects Prefixes/Suffixes Cannot Be Changed (open slots on the locked side may still be filled) and Cannot roll Attack/Caster Modifiers. The wiki's table names the Conqueror variants; Craft of Exile treats the Shaper's and Elder's orbs alike, and so does this model."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Respected, but open prefixes may be filled"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: influence.exalt_conqueror_respects_type_blocks_since_3_9_2c
+    statement: "The Conqueror Exalted Orbs respect Cannot roll Attack/Caster Modifiers since 3.9.2c."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hunter%27s_Exalted_Orb#Version_history
+    quote: "Fixed a bug where Conqueror's Exalted Orbs didn't respect the \"Cannot roll Caster Modifiers\" and \"Cannot roll Attack Modifiers\" modifiers."
+    patch_verified: "3.9.2c"
+    date_checked: 2026-11-01
+
+  - id: influence.exalt_refused_on_corrupted
+    statement: "A corrupted item takes no influenced Exalted Orb."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: influence.exalt_refused_without_legal_mod
+    statement: "An influenced Exalted Orb on a rare item with an open slot but no mod that can roll (item level, families on the item, the open side has nothing for the class) is refused and nothing is consumed. Craft of Exile refuses it too (its console guard names the case as one that should not happen)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "Cannot roll more affixes, should not happen"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "Only Craft of Exile's guard speaks to the empty pool; the wiki is silent."
+
+  - id: influence.state_is_on_the_item
+    statement: "The influence belongs to the item: removing or rerolling its influenced mods, Orb of Scouring included, keeps the influence and the pool's influence tags."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Influenced_item#Mechanics
+    quote: "Items retain their influences when modified, even if an Orb of Scouring is used."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: influence.one_normally_two_by_awakener
+    statement: "An item has one influence; two only through an Awakener's Orb (15 pairs). No orb of this family makes a second influence, because each refuses influenced items."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Influenced_item#Mechanics
+    quote: "An item can normally have one influence type at a time"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: influence.cost
+    statement: "One use of an influenced Exalted Orb consumes one orb of its own kind; the value maps the influence to the price-file name of the orb (the item's name in the game data)."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddModToRareShaper: name "Shaper''s Exalted Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value:
+      shaper: Shaper's Exalted Orb
+      elder: Elder's Exalted Orb
+      crusader: Crusader's Exalted Orb
+      hunter: Hunter's Exalted Orb
+      redeemer: Redeemer's Exalted Orb
+      warlord: Warlord's Exalted Orb
