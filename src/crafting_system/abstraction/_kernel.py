@@ -975,16 +975,17 @@ class Abstraction:
             )
 
     def _check_same_item_space(self, outcomes: ActionOutcomes) -> None:
-        """Refuse a result that is an item of another base, item level or enchantment than this abstraction's (a recombinator).
+        """Refuse a result that is an item of another base or another item level than this abstraction's (a recombinator).
 
-        A state stands for the items of one base at one item level, so the state of such a result does not exist. Raises `OutOfScopeError`.
+        A state stands for the items of one base at one item level, so the state of such a result does not exist. The enchantment
+        is not checked here: it is a constant of the problem and not part of the state (ADR-0050). Raises `OutOfScopeError`.
         """
         for _, part in outcomes.components:
             made = part.retained
-            if (made.base_id, made.item_level, made.enchantment) != (self.base_id, self.item_level, self.enchantment):
+            if (made.base_id, made.item_level) != (self.base_id, self.item_level):
                 raise OutOfScopeError(
-                    f"the result is an item on {made.base_id} at level {made.item_level}, and this abstraction stands for items on "
-                    f"{self.base_id} at level {self.item_level}: the state of another base or level is not modelled"
+                    f"the result is an item on {made.base_id} at item level {made.item_level}, and this abstraction stands for items on "
+                    f"{self.base_id} at item level {self.item_level}: the state of another base or item level is not modelled"
                 )
 
     def _check_fracture_without_partners(self, state: CompressedState, outcomes: ActionOutcomes) -> None:

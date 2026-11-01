@@ -495,3 +495,13 @@ def test_doubling_raises_the_chance_of_the_doubled_mod():
     doubled = Recombinator(make(["RP25", "RP1000b"])).outcomes(DATA, item)  # RP25 on both inputs: two entries in the pool
     single = Recombinator(make(["RP400", "RP1000b"])).outcomes(DATA, item)
     assert held(doubled, "RP25") > held(single, "RP25")
+
+
+def test_a_result_of_another_item_level_has_no_state_either():
+    from crafting_system.abstraction import Abstraction
+
+    item, donor = make(["RP25", "RS500"], level=84), make(["RP1000a", "RS250"], level=70)
+    action = Recombinator(donor)
+    ab = Abstraction(DATA, CONTRACT_GOAL, item.base_id, item.item_level, [action])
+    with pytest.raises(OutOfScopeError, match="item level 79"):
+        ab.kernel(ab.compress(item), action)
