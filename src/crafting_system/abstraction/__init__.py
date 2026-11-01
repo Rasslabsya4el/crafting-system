@@ -33,7 +33,9 @@ is imported or tested for here.
 * `Abstraction.estimate(starts, actions)` (`_estimate.py`, ADR-0023): the pilot count. The states and transitions of the
   exact graph, found with one kernel per (reroll, key) and the bench legality by sets of families and free slots; an
   `Estimate` also forecasts a coarse level (`coarsened`) and gives a closed prefix of the graph for a calibration
-  solve (`first_layers`). An action of another shape raises `EstimateRefused`.
+  solve (`first_layers`). An action with no closed form (an addition, Annulment) is walked with its real kernel on
+  every state (`Estimate.walked`): `needs_walk(abstraction, actions)` says so beforehand and `ADDING_LIMIT` is the
+  smaller state limit for such a walk. `EstimateRefused` is raised when a walked kernel cannot be computed.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 
@@ -106,12 +108,14 @@ claim of the rules registry.
 """
 
 from ._coarse import Block, Coarsening
-from ._estimate import Estimate, EstimateRefused
+from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
 from ._goal import AtLeast, Goal, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
 from ._state import CompressedState, Flags, FracturedMod, Slot
 
 __all__ = [
+    "ADDING_LIMIT",
+    "DEFAULT_LIMIT",
     "Abstraction",
     "AtLeast",
     "Block",
@@ -128,4 +132,5 @@ __all__ = [
     "Status",
     "Wanted",
     "integer_weights",
+    "needs_walk",
 ]
