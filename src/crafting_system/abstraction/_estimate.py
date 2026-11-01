@@ -144,6 +144,10 @@ class _Pilot:
     """The walk itself (see the module docstring)."""
 
     def __init__(self, abstraction: Abstraction, actions: Iterable[Action], clock: Callable[[], float]):
+        if abstraction.rerolls_values:
+            raise EstimateRefused(
+                "an enabled action rerolls values: its rollable mods are slots by mod id, which the pilot count has no rule for"
+            )
         self.abstraction = abstraction
         self.data = abstraction.data
         self.clock = clock

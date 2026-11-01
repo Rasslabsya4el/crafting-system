@@ -75,7 +75,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: affix_pool.values_uniform_integers
-    statement: Each stat of a drawn mod rolls a uniform integer from its minimum to its maximum, both included. A stat whose minimum equals its maximum is fixed. Whether the stats of one mod roll independently is not admitted (research ticket #6, O-04); the sampler rolls them independently and no exact probability depends on it.
+    statement: Each stat of a drawn mod rolls a uniform integer from its minimum to its maximum, both included. A stat whose minimum equals its maximum is fixed. Whether the stats of one mod roll independently is not admitted (research ticket #6, O-04); the sampler rolls them independently, and the exact chance that a hybrid mod meets a roll limit on several stats depends on it (the product of the per-stat chances): see claim divine_orb.hybrid_stats_roll_independently, which carries that assumption.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Modifier#Mechanics_overview
     quote: "the actual value of the stat in the cases where minimum and maximum are not the same will be randomized within with equal chances"

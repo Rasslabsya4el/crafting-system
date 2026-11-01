@@ -96,8 +96,7 @@ def test_at_least_goal_and_roll_limit_on_drawn_mod():
     assert not goal.is_met((Status.BELOW, Status.ABSENT))
 
     limited = Abstraction(DATA, Goal((Wanted(frozenset({RESIST}), min_roll=(5,)),)), AMULET, 86)
-    with pytest.raises(OutOfScopeError):
-        limited.kernel(limited.compress(amulet()), ChaosOrb())
+    assert sum(limited.kernel(limited.compress(amulet()), ChaosOrb()).values()) == 1  # a drawn mod rolls its values (#71)
 
 
 def test_family_types_group_the_pool(abstraction):
