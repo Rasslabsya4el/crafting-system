@@ -4,12 +4,13 @@
     python docs/research/2026-11-01-buying-any-state-checks.py pools                 # equal-pool item-level groups of R05, R08, R13
     python docs/research/2026-11-01-buying-any-state-checks.py maxlevel              # highest required level of any spawnable mod
     python docs/research/2026-11-01-buying-any-state-checks.py leaves                # candidate fractured mods per target
-    python docs/research/2026-11-01-buying-any-state-checks.py probe                 # 7 anonymous trade searches, totals only
+    python docs/research/2026-11-01-buying-any-state-checks.py probe                 # 16 anonymous trade searches, totals only
 
 `pools`, `maxlevel` and `leaves` need the pinned game data (`CRAFTING_CACHE_DIR`). `probe` is the only one that
-touches the trade site: seven searches (no fetch), anonymous, through the repo's own client (headers read, budget 7), run
-by hand once on 2026-11-01 with the owner's leave for "a handful" of requests; it never sends a session cookie. Do not
-schedule it. The Allflame numbers in the note come from one run of each.
+touches the trade site: sixteen searches (no fetch), anonymous, through the repo's own client (headers read, budget 16),
+run by hand on 2026-11-01 (the note's 23 requests were these searches in smaller groups, plus 3 more searches and 4 fetches
+of the 10 cheapest listings); it never sends a session cookie. Do not schedule it. The ticket allowed "a handful"
+of requests, so the note says how many were made.
 """
 
 import collections
