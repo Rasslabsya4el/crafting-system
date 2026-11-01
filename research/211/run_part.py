@@ -22,10 +22,8 @@ if __name__ == "__main__":
             r = subprocess.run([sys.executable, os.path.join(HERE, "exp.py"), case], capture_output=True, text=True)
             line = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else json.dumps(dict(case=case, error=r.stderr[-400:]))
             print(case, round(time.perf_counter() - t), "s", flush=True)
-            sink.write(line + "
-"); sink.flush()
+            sink.write(line + chr(10)); sink.flush()
         if part - 1 < len(GAP):
             name, a, b = GAP[part - 1]
             r = subprocess.run([sys.executable, os.path.join(HERE, name), a, b], capture_output=True, text=True)
-            sink.write(json.dumps(dict(case=f"gap:{a}-{b}", output=r.stdout)) + "
-")
+            sink.write(json.dumps(dict(case=f"gap:{a}-{b}", output=r.stdout)) + chr(10))
