@@ -300,8 +300,9 @@ class _Pilot:
 
     # --- the walk ---------------------------------------------------------------------------------------
 
-    def run(self, starts: Iterable[CompressedState], limit: int) -> Estimate:
+    def run(self, starts: Iterable[CompressedState], limit: int, seconds: float | None = None) -> Estimate:
         seen = dict.fromkeys(starts)
+        deadline = None if seconds is None else self.clock() + seconds
         queue = deque(seen)
         transitions = 0
         scanned: set[int] = set()
@@ -319,7 +320,7 @@ class _Pilot:
                     if successor not in seen:
                         seen[successor] = None
                         queue.append(successor)
-            if len(seen) > limit:
+            if len(seen) > limit or (deadline is not None and self.clock() > deadline):
                 self.complete = False
                 break
         self.reached = list(seen)
@@ -385,13 +386,15 @@ def estimate(
     actions: Iterable[Action],
     *,
     limit: int = DEFAULT_LIMIT,
+    seconds: float | None = None,
     clock: Callable[[], float] = time.perf_counter,
 ) -> Estimate:
     """The pilot count of the graph of `actions` from `starts`; see the module docstring.
 
     `actions` are the actions of the model (every one that reads the junk must be among those the
-    abstraction was built with). The walk stops once `limit` states are reached and says so
+    abstraction was built with). The walk stops once `limit` states are reached, or `seconds` have passed on
+    `clock` (a walked action pays a real kernel call per state, so a caller bounds the pilot's own time), and says so
     (`complete` false); pass `ADDING_LIMIT` when `needs_walk(abstraction, actions)`. Raises `EstimateRefused`
     for a walked action whose kernel cannot be computed.
     """
-    return _Pilot(abstraction, actions, clock).run(starts, limit)
+    return _Pilot(abstraction, actions, clock).run(starts, limit, seconds)

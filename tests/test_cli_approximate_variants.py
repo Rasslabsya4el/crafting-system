@@ -268,7 +268,8 @@ def test_a_count_cut_short_is_never_taken_for_a_small_exact_graph_even_when_it_f
 
     decision = decide(exact.abstraction, exact.start, exact.offers, 1e12, RATES)
 
-    assert decision.action == "refused" and "the count stopped at" in decision.message
+    # the count is a lower bound: the exact run is not taken for small, the levels are tried without a forecast
+    assert decision.action == "approximate" and all(found.estimate is None for found in decision.levels)
 
 
 def test_only_a_query_with_a_walked_action_takes_the_smaller_pilot_limit(monkeypatch):

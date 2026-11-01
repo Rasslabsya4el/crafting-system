@@ -461,3 +461,17 @@ def test_the_first_layers_of_a_walked_query_carry_the_real_kernel():
             assert {s for s, _ in outcomes} == set(kernel)
             ratios = {Fraction(weight, sum(w for _, w in outcomes)) for _, weight in outcomes}
             assert ratios == set(kernel.values())
+
+
+def test_the_walk_stops_when_its_seconds_are_spent_and_says_the_counts_are_lower_bounds():
+    ab = Abstraction(DATA, LIFE_GOAL, AMULET, 84, [RegalOrb(), ExaltedOrb(), AnnulmentOrb(), AugmentationOrb()])
+    from coarse_support import item, roll
+
+    start = ab.compress(item(roll(MANA_1), rarity=Rarity.MAGIC))
+    actions = [*ADDERS, CHAOS]
+    full = ab.estimate([start], actions, clock=counter())
+
+    cut = ab.estimate([start], actions, seconds=3.0, clock=counter())  # the counting clock moves one unit per reading
+
+    assert full.complete and not cut.complete
+    assert cut.states < full.states and cut.walked

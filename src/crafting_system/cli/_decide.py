@@ -48,6 +48,8 @@ BUDGET_SECONDS = 60.0  # "about a minute" (#81 Q2)
 TOLERANCE = 0.01  # the owner's tolerance: a certified gap of at most 1%
 EXACT_TRANSITIONS = 2_000_000  # the largest graph the product `solve` has been run on here (ADR-0023)
 SOLVE_RATE_CEILING = 5e-5  # seconds per edge: seven times what R05 measured; a query that fits at this rate is not calibrated
+PILOT_SHARE = 0.25  # the part of the budget a pilot walk with real kernel calls (an addition, Annulment) may take
+PILOT_FLOOR_SECONDS = 2.0  # but never less than this, so that a budget of 0 does not cut a small graph short
 SOLVE_RATE_FALLBACK = 2e-5  # used when the calibration has too little to measure
 CALIBRATION_EDGES = 60_000
 
@@ -253,8 +255,10 @@ def decide(
     offered = [p for p in priced if not isinstance(p.offer.action, BuyStartItem)]
     actions = [p.offer.action for p in offered]
     try:
-        limit = ADDING_LIMIT if needs_walk(abstraction, actions) else DEFAULT_LIMIT
-        estimate = abstraction.estimate([start], actions, clock=clock, limit=limit)
+        walked = needs_walk(abstraction, actions)
+        estimate = abstraction.estimate(
+            [start], actions, clock=clock, limit=ADDING_LIMIT if walked else DEFAULT_LIMIT, seconds=max(budget * PILOT_SHARE, PILOT_FLOOR_SECONDS) if walked else None
+        )
     except EstimateRefused:
         return choose(None, 0.0, 0.0, budget)
     rates = rates or Rates()
@@ -267,7 +271,7 @@ def decide(
             r_solve = calibrate_solve_rate(abstraction, start, estimate, costs, clock)
     refusal = coarse_refusal(abstraction, actions)
     candidates = []
-    if refusal is None and estimate.seconds(r_kernel, r_solve) > budget:
+    if refusal is None and (estimate.seconds(r_kernel, r_solve) > budget or not estimate.complete):
         tried = set()
         spread = with_variants(abstraction, actions)
         for level in SPREAD_LADDER if spread else COARSE:
