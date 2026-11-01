@@ -38,6 +38,7 @@ GAP_TARGET = 0.02  # the coarsest step whose expected gap is at most this share 
 GAP_LIMIT = 0.1  # no coarse grid if even the best step leaves a gap above this share of the mean
 COSTS_TRIED = 12  # the costs, by share of the mean, whose fractions are tried as steps
 PARTS_TRIED = 64  # step = cost / m for m up to this
+DENSE_WORK = 1e11  # the most multiply-adds (bins to the horizon times cells of the matrix) of one dense run: a minute or so
 
 
 def expected_visits(chain: Chain) -> tuple[list[int], np.ndarray] | None:
@@ -53,7 +54,10 @@ def expected_visits(chain: Chain) -> tuple[list[int], np.ndarray] | None:
                 system[position[j], position[s]] -= p  # transposed: visits = e_0 (I - P)^-1
     start = np.zeros(len(states))
     start[position[0]] = 1.0
-    return states, np.linalg.solve(system, start)
+    try:
+        return states, np.linalg.solve(system, start)
+    except np.linalg.LinAlgError:  # a state that leaves with probability rounded to 0: the visits are not finite in floats
+        return None
 
 
 def whole_multiples(costs: np.ndarray, step: float) -> np.ndarray:
@@ -74,7 +78,8 @@ def choose_step(
     cost = np.array([chain.action[s].cost for s in states])
     distinct, inverse = np.unique(cost, return_inverse=True)
     weight = np.bincount(inverse, weights=visits)  # expected visits per distinct cost
-    floor = (mean + math.sqrt(variance * level / (1.0 - level))) / max_bins
+    horizon = mean + math.sqrt(variance * level / (1.0 - level))
+    floor = horizon / max_bins
     share = weight * distinct
     tried = distinct[np.argsort(share)[::-1][:COSTS_TRIED]]
     best: tuple[float, float] | None = None  # the least gap
@@ -84,6 +89,8 @@ def choose_step(
             step = float(base) / parts
             if step < floor:
                 break
+            if horizon / step * len(states) * (len(states) + 4) > DENSE_WORK:
+                continue
             gap = step * float(weight[~whole_multiples(distinct, step)].sum())
             if best is None or gap < best[1]:
                 best = (step, gap)

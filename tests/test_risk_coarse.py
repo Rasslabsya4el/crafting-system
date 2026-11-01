@@ -90,11 +90,12 @@ def test_the_ordinary_grid_is_kept_when_it_covers_the_level():
 
     plain = evaluate(policy, "S", is_goal, quantile_levels=LEVELS, max_bins=20_000)
 
+    assert not _coarse.beyond_ordinary_grid(plain.mean.value, plain.variance.value, 0.9, 0.01, 20_000)
     assert plain.grid.step == pytest.approx(0.01)
     assert plain.grid.exact
 
 
-def test_costs_that_share_no_good_step_keep_the_ordinary_unresolved_answer():
+def test_a_policy_with_one_cost_has_no_step_that_reaches_the_level_and_keeps_the_ordinary_answer():
     policy = {"S": Action("use", 0.001, (("goal", 1), ("S", 999_999)))}
 
     report = evaluate(policy, "S", is_goal, max_bins=1_000, max_coarse_bins=100_000)
@@ -124,3 +125,17 @@ def test_the_paley_zygmund_bound_is_below_the_exponential_quantile():
     for level in (0.5, 0.9, 0.99):
         bound = _coarse.quantile_lower_bound(mean, variance, level)
         assert 0.0 <= bound <= mean * math.log(1.0 / (1.0 - level))
+
+
+def test_a_state_that_leaves_with_probability_rounded_to_zero_keeps_the_ordinary_answer():
+    policy = {"S": Action("use", 1.0, (("goal", 1), ("S", 10**17)))}
+
+    report = evaluate(policy, "S", is_goal, max_bins=1_000, max_coarse_bins=100_000)
+
+    assert math.isinf(report.p90.value)
+
+
+@pytest.mark.parametrize("bins", [0, -3, 2.5, True])
+def test_max_coarse_bins_must_be_an_integer_of_at_least_one(bins):
+    with pytest.raises(ValueError, match="max_coarse_bins"):
+        evaluate(craft(), "S", is_goal, max_coarse_bins=bins)

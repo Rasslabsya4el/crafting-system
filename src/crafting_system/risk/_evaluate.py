@@ -59,7 +59,8 @@ lower chain gives an action cheaper than the step 0 bins (the free states are re
 distributions, `_fold`), the upper chain 1 bin, and the intervals widen by one step per visit of such
 an action (the expected gap is in `_coarse`). The DP is then dense (`_dense`) and runs up to
 `max_coarse_bins` bins (default `max_bins`). When no step has an expected gap within a tenth of the
-mean, or the chain is too large for the dense DP, the ordinary grid is used as before.
+mean, or the chain is too large for the dense DP, the ordinary grid is used as before. The trigger looks at the
+highest level asked: when only that level is out of reach, the lower levels come as brackets of the coarse grid too.
 
 Mean of a grid chain, for CVaR. The exact grid uses the solver mean of the real costs. An inexact
 grid solves again with the costs k_lo * D and k_hi * D to get the mean of each grid chain, and CVaR
@@ -139,6 +140,10 @@ def evaluate[S](
         raise ValueError(f"tail_mass must be strictly between 0 and 1, got {tail_mass!r}")
     if isinstance(max_bins, bool) or not isinstance(max_bins, Integral) or max_bins < 1:
         raise ValueError(f"max_bins must be an integer of at least 1, got {max_bins!r}")
+    if max_coarse_bins is not None and (
+        isinstance(max_coarse_bins, bool) or not isinstance(max_coarse_bins, Integral) or max_coarse_bins < 1
+    ):
+        raise ValueError(f"max_coarse_bins must be an integer of at least 1, or None, got {max_coarse_bins!r}")
     if isinstance(work_budget, bool) or not isinstance(work_budget, Real) or not work_budget > 0.0:
         raise ValueError(f"work_budget must be a number above zero, got {work_budget!r}")
     try:
