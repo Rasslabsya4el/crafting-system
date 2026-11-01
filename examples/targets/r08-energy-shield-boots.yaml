@@ -37,8 +37,8 @@ influence: []
 # Alchemy holds 4 to 6 random mods; tracking them (and the Alchemy as an action) multiplies the states, and a
 # plan of it did not finish in 60 minutes on a GitHub runner (run 41292010467), so the model starts from the rare
 # boots with no mod and the price of the start item includes the Alchemy. The cost of this reading: the Alchemy is
-# a free first draw of the same mods that a fossil use draws, so the mean cost is too high by about one use of the
-# first fossil set (about 1.6 Chaos in the solver's plan, about 38 Chaos in the guide's pair); which plan is
+# a free first draw of the same mods that a fossil use draws, so the mean cost is too high by at most about one use of
+# the first fossil set (about 1.6 Chaos in the solver's plan, about 38 Chaos in the guide's pair); which plan is
 # cheaper does not change.
 start_item:
   rarity: rare
