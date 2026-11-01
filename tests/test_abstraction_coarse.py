@@ -294,19 +294,31 @@ class AnnulmentLike(Action):
         raise AssertionError("the coarse state refuses before asking")
 
 
-@pytest.mark.parametrize("action", [AnnulmentLike(), RegalOrb()], ids=["annulment", "addition"])
-def test_an_action_that_is_not_declared_block_invariant_is_refused_in_both_models(action):
+@dataclasses.dataclass(frozen=True)
+class UndeclaredAddition(RegalOrb):
+    """An addition that declares neither block invariance nor variants."""
+
+    def reads(self, data) -> Reads:
+        return Reads.adding()
+
+
+@pytest.mark.parametrize("action", [AnnulmentLike(), UndeclaredAddition()], ids=["annulment_like", "addition"])
+def test_an_action_that_declares_neither_block_invariance_nor_variants_is_refused_in_both_models(action):
     pooling = coarsening(None)
     block = pooling.coarsen(AB.compress(item(roll(MANA_1), roll(LIFE_1))))
 
     for bound in ("lower", "upper"):
-        with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+        with pytest.raises(OutOfScopeError, match="declares no variants"):
             pooling.kernel(block, action, bound)
+        with pytest.raises(OutOfScopeError, match="declares no variants"):
+            pooling.variants(block, action, bound)
 
 
-def test_a_coarsening_cannot_be_built_over_an_enabled_action_that_is_not_block_invariant():
+def test_a_coarsening_cannot_be_built_over_an_enabled_action_that_declares_neither():
     with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
         Coarsening(abstraction(actions=(*ENABLED, AnnulmentLike())), [{MANA, COLD}])
+    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
+        Coarsening(abstraction(actions=(*ENABLED, UndeclaredAddition())), [{MANA, COLD}])
 
 
 @dataclasses.dataclass(frozen=True)
@@ -351,14 +363,14 @@ def test_the_reachable_blocks_of_the_upper_model_are_among_those_of_the_lower_an
     assert {pooling.coarsen(s) for s in exact} <= lower
 
 
-def test_reachable_and_a_model_refuse_an_action_that_is_not_block_invariant_instead_of_dropping_it():
+def test_reachable_and_a_model_refuse_an_action_that_declares_neither_instead_of_dropping_it():
     pooling = coarsening(None)
     start = pooling.coarsen(AB.compress(item(roll(MANA_1), roll(LIFE_1))))
 
     with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
-        pooling.reachable([start], [CHAOS, RegalOrb()])
+        pooling.reachable([start], [CHAOS, UndeclaredAddition()])
     with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
-        CoarseModel(pooling, "lower", [CHAOS, RegalOrb()])
+        CoarseModel(pooling, "lower", [CHAOS, UndeclaredAddition()])
 
 
 def test_a_crafted_goal_mod_is_held_exactly_and_its_family_can_still_host_a_plain_craft_in_a_group():
@@ -389,6 +401,22 @@ def test_an_action_that_adds_mods_and_keeps_the_junk_is_refused_even_if_it_says_
     block = pooling.coarsen(AB.compress(item(roll(MANA_1), roll(LIFE_1))))
     with pytest.raises(OutOfScopeError, match="pool weight"):
         pooling.kernel(block, InvariantAddition(), "lower")
-    assert RegalOrb().reads(DATA) == Reads.adding()  # the shipped additions declare it and are refused as undeclared
-    with pytest.raises(OutOfScopeError, match="not declared block-invariant"):
-        pooling.kernel(block, RegalOrb(), "upper")
+    assert RegalOrb().reads(DATA) == Reads.adding(variants=True)  # the shipped additions declare variants, not invariance
+
+
+@dataclasses.dataclass(frozen=True)
+class VariantsWithoutPoolWeight(RegalOrb):
+    def reads(self, data) -> Reads:
+        return Reads(junk=True, families=frozenset(), variants=True)
+
+
+@dataclasses.dataclass(frozen=True)
+class VariantsReadingEveryFamily(RegalOrb):
+    def reads(self, data) -> Reads:
+        return Reads(junk=True, families=None, pool_weight=True, variants=True)
+
+
+@pytest.mark.parametrize("action", [VariantsWithoutPoolWeight(), VariantsReadingEveryFamily()], ids=["no_pool_weight", "every_family"])
+def test_variants_need_the_pool_weight_and_named_families(action):
+    with pytest.raises(OutOfScopeError, match="declares variants but"):
+        Coarsening(abstraction(actions=(*ENABLED, action)), [{MANA, COLD}])
