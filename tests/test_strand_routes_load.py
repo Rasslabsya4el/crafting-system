@@ -29,6 +29,7 @@ from crafting_system.targets import parse_target
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = ROOT / "docs" / "research" / "2026-11-01-strand-routes-files"
+CHECKED = ["s02-fire-res-ring-showcase", "s11-remembrance-belt", "s13-unravelling-belt"]
 
 
 class FlatPrices(dict):
@@ -66,13 +67,20 @@ def data():
     return real_game_data()
 
 
-@pytest.mark.parametrize("stem", ["s02-fire-res-ring-showcase", "s11-remembrance-belt", "s13-unravelling-belt"])
-def test_the_route_without_its_strand_rules_is_read_against_the_plan_of_its_target(stem, data):
+@pytest.fixture(scope="module", params=CHECKED)
+def planned(request, data):
+    """(stem, plan) of one checked route. Module-scoped and parametrized, so the CI shards (tests/shard_support.py) treat
+    each plan as its own group and run the three on different slots; one group of three plans did not fit a slot's 25 minutes."""
+    stem = request.param
     target = parse_target(
         without_strand_words((FILES / "targets" / f"{stem}.yaml").read_text(encoding="utf-8")),
         data,
         source=stem,
     )
-    plan = make_plan(data, target, flat_price_file(), start_price=10.0)
+    return stem, make_plan(data, target, flat_price_file(), start_price=10.0)
+
+
+def test_the_route_without_its_strand_rules_is_read_against_the_plan_of_its_target(planned, data):
+    stem, plan = planned
     route_text = without_strand_words_in_rules((FILES / "routes" / f"{stem}.yaml").read_text(encoding="utf-8"))
     assert parse_route(route_text, plan, data, source=stem).rules
