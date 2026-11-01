@@ -21,6 +21,7 @@ from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
+from .strand_use import SPEND_EXALTED, SpendLaw, StrandUse
 
 __all__ = [
     "ExaltedOrb",
@@ -39,6 +40,11 @@ class ExaltedOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Exalted Orb"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 and its amendment: cuts; the ceiling follows the explicit mods on the item before the craft, 16, 22, 26, 32, 34, 38 for 0 to 5
+        by_mods = SPEND_EXALTED.value["ceiling_by_mods_before"]
+        return StrandUse.cutting(SpendLaw.by_mods(*(by_mods[count] for count in sorted(by_mods))), SPEND_EXALTED)
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value)
@@ -62,7 +68,7 @@ class ExaltedOrb(Action):
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Exalted Orb")
         refuse_unmodelled(data, item, jewels=True)
-        return add_one_mod(data, item, "an Exalted Orb")
+        return add_one_mod(data, item, "an Exalted Orb", cut=self.cut_of(data, item))
 
 
 @kind(

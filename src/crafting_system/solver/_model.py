@@ -65,6 +65,52 @@ class VariantAction[S]:
         object.__setattr__(self, "extra_inputs", tuple(self.extra_inputs))
 
 
+@dataclass(frozen=True, slots=True)
+class Peek[S]:
+    """A look-then-choose action: pay `cost`, throw the dice of every option at once, then take the best result.
+
+    The solver's kind for Hinekora's Lock (ADR-0054), and generic like `Action`: it knows nothing of the game. At a
+    state `s` the value of a Peek is `cost + E[min(min_a(c_a + V(o_a)), F)]`, where each option `a` is an `Action`
+    (its price `c_a` and its kernel), the `o_a` are drawn independently from the options' kernels, and `F` is the
+    value of the best `fallback` action, the way to give the Peek up (a plain action of the state, or a burn). With
+    no fallback the player must take a result. Looking is free: only the option that is taken pays its price.
+
+    `Action(label, cost, outcomes)` cannot carry this: there the choice is made before the dice are thrown.
+
+    An option never carries `extra_inputs`; the fallback may. `fallback` may be one `Action`, an iterable of
+    them or `None`. A state offers at most one `Peek`. `solve` does not accept it: `solve_peek` does.
+    """
+
+    label: Hashable
+    cost: float
+    options: tuple[Action[S], ...]
+    fallback: tuple[Action[S], ...] = ()
+
+    def __post_init__(self) -> None:
+        cost = _checked_cost(self.cost)
+        options = tuple(self.options)
+        if not options:
+            raise ValueError("a peek needs at least one option")
+        fallback = self.fallback
+        if fallback is None:
+            fallback = ()
+        elif isinstance(fallback, Action):
+            fallback = (fallback,)
+        else:
+            fallback = tuple(fallback)
+        for option in options:
+            if not isinstance(option, Action):
+                raise TypeError(f"a peek option must be an Action, got {option!r}")
+            if option.extra_inputs:
+                raise ValueError(f"a peek option never has extra inputs: {option.label!r}")
+        for action in fallback:
+            if not isinstance(action, Action):
+                raise TypeError(f"a peek fallback must be Actions, got {action!r}")
+        object.__setattr__(self, "cost", cost)
+        object.__setattr__(self, "options", options)
+        object.__setattr__(self, "fallback", fallback)
+
+
 def _checked_cost(cost: float) -> float:
     if isinstance(cost, bool) or not isinstance(cost, Real):
         raise ValueError(f"action cost must be a real number, got {cost!r}")
@@ -99,10 +145,11 @@ class Model[S](Protocol):
         """Goal states have value 0 and are never expanded."""
         ...
 
-    def actions(self, state: S) -> Iterable[Action[S] | VariantAction[S]]:
-        """The actions of a non-goal state; called at most once per state.
+    def actions(self, state: S) -> Iterable[Action[S] | VariantAction[S] | Peek[S]]:
+        """The actions of a non-goal state; called at most once per state (once per round under `solve_peek`).
 
-        `VariantAction`s may be mixed with `Action`s; only `solve_variants` and `solve_bounds` read them.
+        `VariantAction`s may be mixed with `Action`s; only `solve_variants` and `solve_bounds` read them. A `Peek`
+        may be mixed in too (at most one per state); only `solve_peek` reads it.
         """
         ...
 

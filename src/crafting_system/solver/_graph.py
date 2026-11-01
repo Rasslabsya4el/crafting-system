@@ -16,7 +16,7 @@ from array import array
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
-from ._model import Action, Model, Outcome, VariantAction
+from ._model import Action, Model, Outcome, Peek, VariantAction
 from ._scc import strongly_connected_components
 
 PREFETCH_BATCH = 4096  # the most pending states offered to a model's `prefetch` at once
@@ -204,6 +204,10 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
                 raise TypeError(
                     f"state {state!r} offers a variant action: `solve` takes plain actions, "
                     "use `solve_variants` or `solve_bounds`"
+                )
+            if isinstance(action, Peek):
+                raise TypeError(
+                    f"state {state!r} offers a peek: `solve` takes plain actions, use `solve_peek`"
                 )
             merged: dict[int, int] = {}
             loop_at = -1

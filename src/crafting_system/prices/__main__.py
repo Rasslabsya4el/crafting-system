@@ -43,14 +43,17 @@ from .trade_http import (
     urllib_transport,
     user_agent,
 )
+from .trade_market import DEFAULT_MIN_LISTINGS
 from .trade_pricing import (
     DEFAULT_K,
     DEFAULT_MAX_REQUESTS,
+    NotEnoughListings,
     entry_for,
     merge_trade_prices,
     price_buy_spec,
     refuse_name_collision,
     stale_trade_warnings,
+    store_market,
     store_trade_price,
 )
 from .trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS, load_buy_spec
@@ -86,6 +89,12 @@ def main(
     )
     trade.add_argument("--spec", required=True, help="YAML file with the buy spec")
     trade.add_argument("--k", type=int, default=DEFAULT_K, help="price as the mean of the k cheapest listings")
+    trade.add_argument(
+        "--min-listings",
+        type=int,
+        default=DEFAULT_MIN_LISTINGS,
+        help="a market needs at least this many listings on the site (the listing-count rail)",
+    )
     trade.add_argument(
         "--max-requests", type=int, default=DEFAULT_MAX_REQUESTS, help="most requests this run may send"
     )
@@ -210,17 +219,24 @@ def _trade(
         cookie,
     )
     instant = now if now is not None else datetime.now(UTC)
-    price = price_buy_spec(
-        spec,
-        game_mods,
-        price_file,
-        client,
-        config.cache_dir,
-        instant,
-        args.k,
-        args.refresh_stats,
-        None if args.indexed == "any" else args.indexed,
-    )
+    try:
+        price = price_buy_spec(
+            spec,
+            game_mods,
+            price_file,
+            client,
+            config.cache_dir,
+            instant,
+            args.k,
+            args.refresh_stats,
+            None if args.indexed == "any" else args.indexed,
+            args.min_listings,
+        )
+    except NotEnoughListings as error:
+        if error.market is not None:  # thin or none: kept as a state, the price file has no price for it
+            store_market(price_path, error.market)
+            print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}, not offered")
+        raise
     store_trade_price(price_path, price, entry_for(price))
     print(
         f"{price.name}: {price.chaos:g} Chaos ({to_divine(price.chaos, price_file):.4g} Divine), "

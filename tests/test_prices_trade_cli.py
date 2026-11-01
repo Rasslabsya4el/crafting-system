@@ -223,24 +223,43 @@ def test_a_429_reports_the_retry_after(tmp_path, trade, prices_path, capsys):
     assert "60" in capsys.readouterr().err
 
 
-def test_too_few_priced_listings_exit_1_and_leave_the_file(tmp_path, trade, prices_path, capsys):
+def test_too_few_priced_listings_exit_1_and_record_thin(tmp_path, trade, prices_path, capsys):
     trade.rows = [api_row(1), api_row(2), api_row(priced=False)]
-    before = prices_path.read_bytes()
+    before = load_price_file(prices_path)
 
     code = run(tmp_path, trade)
 
     assert code == 1
     assert "no price" in capsys.readouterr().err
-    assert prices_path.read_bytes() == before
+    saved = load_price_file(prices_path)
+    assert saved.prices == before.prices  # no price was made
+    record = saved.markets["R12 start amulet"]
+    assert (record.state, record.listings, record.usable) == ("thin", 910, 2)
 
 
-def test_a_search_with_no_listings_exits_1_and_leaves_the_file(tmp_path, trade, prices_path, capsys):
+def test_a_search_with_no_listings_exits_1_and_records_none(tmp_path, trade, prices_path, capsys):
     trade.search.update(total=0, result=[])
-    before = prices_path.read_bytes()
+    before = load_price_file(prices_path)
 
     assert run(tmp_path, trade) == 1
-    assert prices_path.read_bytes() == before
     assert capsys.readouterr().err.startswith("Error:")
+    saved = load_price_file(prices_path)
+    assert saved.prices == before.prices
+    record = saved.markets["R12 start amulet"]
+    assert (record.state, record.listings, record.usable) == ("none", 0, 0)
+
+
+def test_a_nine_listing_search_exits_1_and_records_thin(tmp_path, trade, prices_path, capsys):
+    trade.search.update(total=9)
+
+    assert run(tmp_path, trade) == 1
+    assert "only 9 listings" in capsys.readouterr().err
+    assert load_price_file(prices_path).markets["R12 start amulet"].state == "thin"
+
+
+def test_the_listing_count_rail_is_a_setting(tmp_path, trade, prices_path):
+    assert run(tmp_path, trade, "--min-listings", "1000") == 1  # 910 listings are thin under a rail of 1000
+    assert load_price_file(prices_path).markets["R12 start amulet"].state == "thin"
 
 
 def test_a_name_that_is_a_poe_ninja_price_is_refused(tmp_path, trade, prices_path, capsys):

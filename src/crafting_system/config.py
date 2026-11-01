@@ -18,6 +18,9 @@ for one run, the plan is the one made before recipe starts existed, byte for byt
 same way; this is its first setting.
 
 The setting `max_imprints` (same table, a whole number of at least 1, default 1) is the most imprints one item holds at a time (ADR-0060, ticket #219); the first imprint multiplies the real state space by about 200, so the default is 1 and a route that wants two sets it.
+
+The setting `recombinator_junk_craft` (same table, default `false`) offers the recombinator variant that crafts a cheap mod on each
+input first (ADR-0035, ticket #216).
 """
 
 import os
@@ -36,7 +39,7 @@ _PATH_SETTINGS = {
     "output": ("CRAFTING_OUTPUT_DIR", "local/output"),
 }
 
-_PLANNER_SETTINGS = ("memory_strands", "recipe_starts", "max_imprints")
+_PLANNER_SETTINGS = ("memory_strands", "recipe_starts", "recombinator_junk_craft", "max_imprints")
 
 
 @dataclass(frozen=True)
@@ -46,6 +49,7 @@ class Config:
     output_dir: Path
     memory_strands: bool = False
     recipe_starts: bool = True
+    recombinator_junk_craft: bool = False
     max_imprints: int = 1
 
 
@@ -90,6 +94,7 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
         memory_strands=planner.get("memory_strands", False),
         recipe_starts=planner.get("recipe_starts", True),
         max_imprints=planner.get("max_imprints", 1),
+        recombinator_junk_craft=planner.get("recombinator_junk_craft", False),
     )
 
 

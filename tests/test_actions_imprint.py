@@ -656,3 +656,14 @@ def test_a_fractured_fossil_forgets_the_imprints():
     state = dataclasses.replace(ab.compress(boots()), imprints=(other,))
     kernel = ab.kernel(state, action)
     assert kernel and all(result.fractured and result.imprints == () for result in kernel)
+
+
+def test_both_actions_declare_their_strand_use_so_a_stranded_item_is_not_refused():
+    stranded = dataclasses.replace(magic(LIFE_1), memory_strands=5)
+    (_, made), = Imprint(CROAKER).outcomes(CONTRACT_DATA, stranded).results
+    assert made.memory_strands == 5 and made.imprints[0].memory_strands == 5  # the imprint keeps the count
+    assert Imprint(CROAKER).strand_use(CONTRACT_DATA).spend is None and not Imprint(CROAKER).strand_use(CONTRACT_DATA).cuts
+    later = dataclasses.replace(made, memory_strands=2)
+    (_, back), = Restore(0).outcomes(CONTRACT_DATA, later).results
+    assert back.memory_strands == 5  # the count of the imprint, not the count the item had
+    assert Restore(0).strand_use(CONTRACT_DATA).spend is None

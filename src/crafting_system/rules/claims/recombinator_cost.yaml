@@ -1,0 +1,156 @@
+# Mechanic family: recombinator_cost (the Thaumaturgic Dust and the Gold of one recombination, ADR-0035, tickets #177 and #216).
+# The 14 draft claims of the research note of ticket #177, plus the influenced-input factor. No formula is published; the rules below
+# are constants, a first-hand 3.25 data set and player reports, each marked. APPROXIMATE (ADR-0028): the per-combine Dust and Gold with
+# their intervals, the junk-craft discount, the per-mod Gold of a junk craft and the influenced-input factor are read by the planner and
+# marked; the answer names them. The rest are provenance for the numbers and are read by no code.
+rules:
+- id: recombinator_cost.currencies
+  statement: A recombination costs Gold and Thaumaturgic Dust; the amount depends on the item level and the modifiers of the two inputs.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator
+  quote: depends on the item level and modifiers of the input items
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator_cost.datamined_constants
+  statement: The game files hold two Dust constants for the recombinator, a multiplier of 3 and an exponent times 100 of 75 (0.75). No Gold constant, no use and no formula is given with them; the quantity they apply to is not known.
+  source_kind: datamined
+  url: https://poedb.tw/us/Kingsmarch
+  quote: RecombinatorModDustCostMultiplier 3; RecombinatorModDustCostExponentTimes100 75
+  value:
+    multiplier: 3
+    exponent_times_100: 75
+  patch_verified: 3.29.3.3
+  date_checked: 2026-11-01
+- id: recombinator_cost.no_client_table
+  statement: The public client-table schema holds no recombinator cost table; `VillageSharedConstants` is a list of named integers and `RecombinableClasses` lists eligible item classes. The cost is computed by code the data files do not expose.
+  source_kind: datamined
+  url: https://raw.githubusercontent.com/poe-tool-dev/dat-schema/main/dat-schema/3_25_Settlers_of_Kalguur.gql
+  quote: 'type VillageSharedConstants { Id: string Value: i32 }'
+  patch_verified: 3.25.0
+  date_checked: 2026-11-01
+- id: recombinator_cost.gold_linear_in_mod_count_3_25
+  statement: In 3.25, with the same two wands, Gold rose in a straight line with the total number of mods on the two inputs (0, 2, 3, 4, 6 mods gave 3,237; 3,884; 4,207; 4,531; 5,178; about 323.5 per mod, ten units at no mods) and two different two-mod pairs gave the same Gold, so it did not depend on mod tiers. Crafted mods sit on the same line. One author, one patch, windows read by the researcher; the per-mod unit rises with item level and is not exactly the same for every pair (143 at item level 70/71, 365 at 85/86, 387 for one mitts pair).
+  source_kind: experiment
+  url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit?usp=sharing
+  quote: 'window readings (screenshots, no text), tab Recomb costs: 3,237 / 3,884 / 4,207 / 4,531 / 5,178 gold'
+  value:
+    gold_at_zero_mods: 3237
+    gold_per_mod: 323.5
+  patch_verified: 3.25.0
+  date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: One author, one patch (3.25) and one item level band; the per-mod Gold is used for the two mods a junk craft adds, in 3.26 and later.
+- id: recombinator_cost.dust_not_a_sum_3_25
+  statement: In 3.25 the Dust of a pair did not add up over mods. Two wands with no mods cost 42 Dust; one mod on each input (T5 suffix and T7 prefix) 217; two mods on one input (T8 prefix and T2 suffix) 438; adding two mods on the other input 512; two more mods 696. If each mod had a fixed value that rises with its level, a sum cannot give both 217 for the two lower-level mods and 74 for the two added higher-level mods; a sum with free per-mod values is not excluded.
+  source_kind: experiment
+  url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit?usp=sharing
+  quote: 'window readings (screenshots, no text), tab Recomb costs: 42, 217, 438, 281, 512, 696 dust'
+  value:
+    dust:
+    - 42
+    - 217
+    - 438
+    - 281
+    - 512
+    - 696
+  patch_verified: 3.25.0
+  date_checked: 2026-11-01
+- id: recombinator_cost.crafted_multimod_cheap_3_25
+  statement: In 3.25 two wands each holding only the crafted multimod "of Crafting" cost 51 Dust (42 with no mods); two wands each holding the multimod "of Crafting" and two crafted "of the Order" mods (high-level bench mods) cost 876. So being crafted does not make a mod cheap; the multimod is cheap, the "of the Order" crafts are not.
+  source_kind: experiment
+  url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit?usp=sharing
+  quote: 'window readings (screenshots, no text), tab Interesting Examples: 4,377 gold 51 dust; 2,288 gold 876 dust'
+  value:
+    dust_multimod_pair: 51
+    dust_six_order_crafts: 876
+  patch_verified: 3.25.0
+  date_checked: 2026-11-01
+- id: recombinator_cost.influence_plus_50_percent_3_25
+  statement: 'UNVERIFIED (one line in the author''s sheet, no window): influence on an input raises the recombination cost by 50%.'
+  source_kind: experiment
+  url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit?usp=sharing
+  quote: Influence increases recomb costs by 50%
+  value: 0.5
+  patch_verified: 3.25.0
+  date_checked: 2026-11-01
+- id: recombinator_cost.influenced_input_multiplies_both
+  statement: A combine with an influenced input costs 1.5 times the Dust and 1.5 times the Gold. The 3.25 line says only that influence raises the cost by 50% (recombinator_cost.influence_plus_50_percent_3_25), with no window and no word on Dust or Gold alone; R29 has influenced inputs, so the planner applies the factor to both until the owner's in-game readings replace it.
+  source_kind: owner
+  url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0035-the-cost-of-a-recombination.md
+  quote: the planner multiplies both Dust and Gold by 1.5 for a combine with an influenced input
+  value:
+    factor: 1.5
+  approximate: true
+  approximate_reason: One unverified line of a 3.25 sheet says influence adds 50%, not whether to Dust, Gold or both; applying it to both is the main chat's default.
+  patch_verified: 3.29.3.3
+  date_checked: 2026-11-01
+- id: recombinator_cost.junk_craft_halves_dust_3_26
+  statement: Butsicles (author of the 3.25 and 3.26 guides) advises crafting low-tier non-exclusive mods on the side of the item you do not care about; he says it lowers Dust by at least a factor of 2, and replies to a rare-armour report that costs can be 50,000 or less with two low-tier crafted mods on the item. Another commenter in the same thread says it can save 50% (u/No-Razzmatazz7854). Read on 3.26 on 2025-06-17 to 2025-06-18.
+  source_kind: experiment
+  url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/
+  quote: lower the dust cost by at least a factor of 2
+  value:
+    factor_point: 0.5
+    factor_low: 0.11
+    factor_high: 0.5
+  patch_verified: 3.26.0
+  date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: Only player reports (a factor of at least 2, one case 8.7); the point 0.5 is the least discount any report gives.
+- id: recombinator_cost.junk_craft_before_after_report_3_26
+  statement: 'UNVERIFIED single report (u/g00fy_goober, 2025-06-20, 3.26, uncontrolled: item levels, mods and tiers not stated): a "2 mod + 2 mod" recombination wanted about 260,000 Dust; after crafting the worst intelligence roll on both inputs it dropped to about 30,000, a factor of 8.7.'
+  source_kind: experiment
+  url: https://www.reddit.com/r/pathofexile/comments/1lfyxxd/
+  quote: crafted worst int roll on both and dropped to like 30k or something
+  value:
+    before: 260000
+    after: 30000
+  patch_verified: 3.26.0
+  date_checked: 2026-11-01
+- id: recombinator_cost.dust_rule_average_tier_report
+  statement: 'UNVERIFIED player assertion (u/Mangalorien, 2025-09-12, 3.26, nobody contradicted it, nobody posted numbers for it): the Dust cost is calculated from item level and the average tier of all the mods on each item; a low-tier bench craft lowers it, and two T1 prefix magic items can be tested before and after a junk suffix.'
+  source_kind: experiment
+  url: https://www.reddit.com/r/PathOfExileSSF/comments/1nf9z35/_/ndv8ogk/
+  quote: item level and average tier of all the mods on each item
+  patch_verified: 3.26.0
+  date_checked: 2026-11-01
+- id: recombinator_cost.dust_per_combine_reports_3_26
+  statement: 'UNVERIFIED (Butsicles, 2025-06-17: two T1 mods on magic items "easily" cost over 100,000 Dust; the planner interval of 25,000 to 250,000 without a junk craft summarises the reports in section 3 of the research note, from at least nine authors, 2025-03 to 2026-03).'
+  source_kind: experiment
+  url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/
+  quote: will easily give costs over 100,000
+  value:
+    point: 100000
+    low: 25000
+    high: 250000
+  patch_verified: 3.26.0
+  date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: No formula is published; player reports of 25,000 to 250,000 Dust per combine without a junk craft, and the point 100,000 is a round figure inside them.
+- id: recombinator_cost.gold_per_combine_reports_3_26
+  statement: 'UNVERIFIED (three reports, 2025-11 to 2026-03; two from forum or Reddit threads read second-hand): one combine costs 8,000 to 20,000 Gold; two magic items cost 10,000 (predictable) or 12,000 (unpredictable) Gold with 27,000 or 25,000 Dust; about 20,000 Gold and 150,000 Dust each for ten rare 2p and 3p combines.'
+  source_kind: experiment
+  url: https://www.pathofexile.com/forum/view-thread/3925127
+  quote: Unpredictable says 100% for 12k gold and 25k dust
+  value:
+    point: 12000
+    low: 8000
+    high: 20000
+  patch_verified: 3.26.0
+  date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: No formula is published; single player reports put one combine at 8,000 to 20,000 Gold, and the point 12,000 is the middle report.
+- id: recombinator_cost.idol_cost_cut_3_27
+  statement: 'UNVERIFIED (read second-hand from the official forum by the GPT researcher; not opened by me): the 3.27.0g hotfix lowered the Dust of idol recombination by 75% and its Gold by 50%. It is the only official recombinator cost change found after 3.26; equipment is not mentioned.'
+  source_kind: official
+  url: https://www.pathofexile.com/forum/view-thread/3910167
+  quote: (researcher's wording of the patch note) lowered Idol recombination Dust by 75% and Gold by 50%
+  patch_verified: 3.27.0g
+  date_checked: 2026-11-01
+- id: recombinator_cost.bench_rank_discount
+  statement: A Kingsmarch bench upgrade (rank 4 in the Maxroll table of November 2024) lists "25% reduced Recombination Cost". Which of Gold and Dust it applies to, and whether it is inside the reported numbers, is not known.
+  source_kind: wiki
+  url: https://maxroll.gg/poe/resources/recombination-guide
+  quote: 25% reduced Recombination Cost
+  patch_verified: 3.25.0
+  date_checked: 2026-11-01

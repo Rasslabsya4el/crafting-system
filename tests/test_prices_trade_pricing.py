@@ -291,6 +291,7 @@ def test_the_entry_carries_source_note_and_the_query(trade, spec, game_mods, tmp
         "date": "2026-10-30",
         "listings": 910,
         "used": 5,
+        "usable": 10,
         "k": 5,
         "query_hash": found.query_hash,
         "query": found.query,
@@ -298,7 +299,10 @@ def test_the_entry_carries_source_note_and_the_query(trade, spec, game_mods, tmp
 
 
 def made(name="Amulet", chaos=2.0) -> TradePrice:
-    return TradePrice(name, chaos, "Allflame", date(2026, 10, 30), 910, 5, 5, 10, {}, "h" * 64, {"query": {}})
+    return TradePrice(
+        name, chaos, "Allflame", date(2026, 10, 30), listings=910, used=5, usable=10, k=5, fetched=10,
+        dropped={}, query_hash="h" * 64, query={"query": {}},
+    )
 
 
 def test_storing_adds_the_entry_and_keeps_everything_else(tmp_path):
