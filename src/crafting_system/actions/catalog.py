@@ -14,6 +14,10 @@ for the start item and the policy then visits many states.
 
 A kind is `planner=False` when the planner cannot use it yet (a reason in `why_not`): it stays in the
 catalog and under the contract tests, and a planner that asks for `planner_only` leaves it out.
+
+A kind is `opt_in` when the planner can use it but offers it only when a target names it in `actions:` (the fossil
+sets: 12,696 of them on boots, which a target that is not about fossils must not pay for). `catalog(..., names=None)`
+leaves an opt-in kind out; `names` that include it list it.
 """
 
 from collections.abc import Callable, Collection, Iterable, Iterator
@@ -35,6 +39,7 @@ class Kind:
     order: int
     planner: bool = True
     why_not: str = field(default="", compare=False)
+    opt_in: bool = False
 
 
 _KINDS: dict[str, Kind] = {}
@@ -49,12 +54,12 @@ def register(entry: Kind) -> Kind:
 
 
 def kind(
-    name: str, *, order: int, planner: bool = True, why_not: str = ""
+    name: str, *, order: int, planner: bool = True, why_not: str = "", opt_in: bool = False
 ) -> Callable[[Callable[[GameData, Item], Iterable[Action]]], Callable[[GameData, Item], Iterable[Action]]]:
     """Decorator that registers a function `members(data, item)` as the kind `name`."""
 
     def decorate(members):
-        register(Kind(name, members, order, planner, why_not))
+        register(Kind(name, members, order, planner, why_not, opt_in))
         return members
 
     return decorate
@@ -71,12 +76,14 @@ def catalog(
 ) -> tuple[Action, ...]:
     """Every action of every kind that can apply to `item`, in catalog order.
 
-    With `planner_only` only the kinds the planner can use; with `names` only the kinds of those names.
-    The same action never appears twice.
+    With `planner_only` only the kinds the planner can use; with `names` only the kinds of those names (an `opt_in`
+    kind is listed only when named). The same action never appears twice.
     """
     found: dict[Action, None] = {}
     for entry in kinds(planner_only=planner_only):
         if names is not None and entry.name not in names:
+            continue
+        if names is None and entry.opt_in and planner_only:
             continue
         for action in entry.members(data, item):
             try:
