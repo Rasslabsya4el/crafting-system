@@ -84,6 +84,7 @@ import math
 from collections.abc import Callable, Mapping, Sequence
 from numbers import Integral, Real
 
+from .. import parallel
 from ..solver import Action
 from . import _inputs, _moments
 from ._budget import BudgetRun, run_budget, tail_mean
@@ -214,10 +215,13 @@ def evaluate[S](
 
     target = max([*levels, cvar_level]) if proper else None
     horizon_bins = None if horizon is None else math.ceil(horizon / step)
-    low_run = _run(chain, low_bins, target, tail_mass, max_bins, horizon_bins)
-    high_run = low_run
-    if not exact:
-        high_run = _run(chain, high_bins, target, tail_mass, max_bins, horizon_bins)
+    if exact:
+        low_run = high_run = _run(chain, low_bins, target, tail_mass, max_bins, horizon_bins)
+    else:
+        low_run, high_run = _both(
+            (_run, (chain, low_bins, target, tail_mass, max_bins, horizon_bins), {}),
+            (_run, (chain, high_bins, target, tail_mass, max_bins, horizon_bins), {}),
+        )
     runs = (low_run,) if exact else (low_run, high_run)
 
     if proper:
@@ -265,11 +269,11 @@ def _coarse_report(
     folded = fold_free(chain, low_bins)
     if folded is None or not fits_dense(folded.chain, low_bins, max_bins) or not fits_dense(chain, high_bins, max_bins):
         return None
-    low_run = run_dense(
-        folded.chain, low_bins, initial=folded.initial, goal_mass=folded.goal_mass,
-        target=target, tail_mass=tail_mass, max_bins=max_bins,
-    )
-    high_run = run_dense(chain, high_bins, initial=((0, 1.0),), target=target, tail_mass=tail_mass, max_bins=max_bins)
+    low_run, high_run = _both(
+        (run_dense, (folded.chain, low_bins), dict(
+            initial=folded.initial, goal_mass=folded.goal_mass, target=target, tail_mass=tail_mass, max_bins=max_bins)),
+        (run_dense, (chain, high_bins), dict(initial=((0, 1.0),), target=target, tail_mass=tail_mass, max_bins=max_bins)),
+    )  # fmt: skip
     mean_low, mean_high = _coarse_means(chain, step, low_bins, high_bins)
     cvar = _cvar(step, cvar_level, low_run, high_run, mean_low, mean_high, mean[0])
     quantiles = {x: _quantile(x, step, low_run, high_run, None) for x in levels}
@@ -327,6 +331,28 @@ def _run(
             chain, bins, target=target, tail_mass=tail_mass, max_bins=max_bins, horizon=horizon_bins
         )
     return run_budget(chain, bins, target=target, tail_mass=tail_mass, max_bins=max_bins)
+
+
+def _held(jobs: dict) -> dict:
+    return jobs
+
+
+def _call(name: str):
+    function, args, kwargs = parallel.context()[name]
+    return function(*args, **kwargs)
+
+
+def _both(low: tuple, high: tuple) -> tuple:
+    """The results of the lower and the upper run, each `(function, args, kwargs)`.
+
+    The two runs share nothing and each is a function of its own arguments, so they run side by side in a pool of two
+    when `CRAFTING_WORKERS` is above 1 (ticket #250); the pair is the same either way.
+    """
+    if parallel.worker_count() < 2:
+        return tuple(function(*args, **kwargs) for function, args, kwargs in (low, high))
+    with parallel.WorkerPool(_held, ({"low": low, "high": high},), workers=2) as pool:
+        found = pool.map(_call, ["low", "high"], chunk=1)
+    return found[0], found[1]
 
 
 def _input_runs(chain: Chain) -> dict:
