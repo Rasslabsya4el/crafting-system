@@ -48,14 +48,14 @@ CRAFTS = (BenchCraft("JunMaster2AllDamage2_"), BenchCraft("JunMaster2ArmourAndEn
 LIFE_LEAF = Wanted(frozenset({LIFE, "IncreasedLife2", LIFE_3}))
 
 
-def small_abstraction(goal, level: int = 84) -> Abstraction:
-    """The small amulet pool with its implicit, rerolls only: a state keeps no junk."""
-    return Abstraction(POOL, GOALS[goal], AMULET, level)
+def small_abstraction(goal, level: int = 84, *, metamods: bool = False) -> Abstraction:
+    """The small amulet pool with its implicit, rerolls only: a state keeps no junk (unless it models metamods)."""
+    return Abstraction(POOL, GOALS[goal], AMULET, level, metamods=metamods)
 
 
-def belt_abstraction() -> Abstraction:
+def belt_abstraction(*, metamods: bool = False) -> Abstraction:
     """The fixture belt with the bench crafts enabled: the junk of a state is tracked."""
-    return Abstraction(DATA, Goal((LIFE_LEAF,)), BELT, BELT_LEVEL, CRAFTS)
+    return Abstraction(DATA, Goal((LIFE_LEAF,)), BELT, BELT_LEVEL, CRAFTS, metamods=metamods)
 
 
 def belt(*mods, **fields):
@@ -238,8 +238,8 @@ def test_a_leaf_that_only_a_crafted_mod_can_give_is_still_shown_by_its_text():
 # --- the card of the state after a step: a reroll-only abstraction (the junk is not kept) ----------------
 
 
-def reroll_card(goal, *mods, **fields) -> ItemCard:
-    ab = small_abstraction(goal)
+def reroll_card(goal, *mods, metamods: bool = False, **fields) -> ItemCard:
+    ab = small_abstraction(goal, metamods=metamods)
     return card_of_states(ab, [ab.compress(small_item(*mods, **fields))])
 
 
@@ -371,9 +371,9 @@ def test_the_card_of_a_bought_item_can_show_the_range_of_the_tier_and_any_mod_fo
 
 
 def test_a_crafted_slot_is_a_crafted_row_after_the_fractured_and_wanted_ones():
-    card = reroll_card("r12", small_roll("FireResist1", fractured=True), small_roll(CRAFTED, crafted=True))
+    card = reroll_card("r12", small_roll("FireResist1", fractured=True), small_roll(CRAFTED, crafted=True), metamods=True)
 
-    assert card.prefixes == (Slot("Suffixes Cannot Be Changed", "crafted", ("crafted",)), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    assert card.prefixes == (Slot("Suffixes Cannot Be Changed", "crafted", ("crafted",)), EMPTY, EMPTY)  # metamods keep the junk: nothing else is held
 
 
 def test_a_normal_item_of_a_reroll_abstraction_is_all_empty():
@@ -394,8 +394,8 @@ def test_the_item_level_of_a_state_is_the_one_of_the_abstraction():
 # --- the card of the state after a step: junk tracked ---------------------------------------------------
 
 
-def belt_card(*mods, **fields) -> ItemCard:
-    ab = belt_abstraction()
+def belt_card(*mods, metamods: bool = False, **fields) -> ItemCard:
+    ab = belt_abstraction(metamods=metamods)
     return card_of_states(ab, [ab.compress(belt(*mods, **fields))])
 
 
@@ -427,7 +427,7 @@ def test_a_wanted_slot_of_a_tracked_state_is_drawn_by_its_leaf_and_is_not_junk()
 
 
 def test_a_metamod_of_a_tracked_state_is_a_crafted_row():
-    card = belt_card(roll(FIRE, fractured=True), roll(PREFIXES_LOCK, crafted=True))
+    card = belt_card(roll(FIRE, fractured=True), roll(PREFIXES_LOCK, crafted=True), metamods=True)
 
     assert card.suffixes == (
         Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",), "T1"),

@@ -137,8 +137,8 @@ def test_a_roll_limit_is_checked_against_the_values_stored_on_the_mod(min_roll, 
 
 def test_a_crafted_mod_sets_the_flag_and_fails_a_not_crafted_leaf():
     item = small_item(roll(CRAFTED, crafted=True))
-    asked = abstraction(Goal((Wanted(frozenset({CRAFTED}), not_crafted=True),)))
-    not_asked = abstraction(Goal((Wanted(frozenset({CRAFTED})),)))
+    asked = abstraction(Goal((Wanted(frozenset({CRAFTED}), not_crafted=True),)), metamods=True)  # the crafted mod is a lock metamod
+    not_asked = abstraction(Goal((Wanted(frozenset({CRAFTED})),)), metamods=True)
 
     assert asked.compress(item).crafted and asked.compress(item).status == (BELOW,)
     assert not_asked.compress(item).status == (PASSING,)

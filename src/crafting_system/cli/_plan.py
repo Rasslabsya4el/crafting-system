@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
-from crafting_system.actions import ActionError
+from crafting_system.actions import BLOCKING, ActionError
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
@@ -223,7 +223,8 @@ def make_plan(
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,)))
 
     enabled = [p.offer.action for p in priced if p.offer.action.reads(data).junk]
-    abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled)
+    holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
+    abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod)
     start = abstraction.compress(target.start_item)
     model = _Model(abstraction, start, priced)
 

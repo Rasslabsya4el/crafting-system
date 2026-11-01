@@ -63,7 +63,9 @@ class FracturingOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        return Reads()
+        # A mod the item holds becomes fractured: the count per side, and the pool weight the mod takes
+        # out of later draws (so the family type of the junk), no family by name.
+        return Reads(junk=True, families=frozenset(), pool_weight=True, fractures=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # It draws nothing, but the fractured copy of a mod is not a mod "named" in advance: `named` stays None.
@@ -97,7 +99,7 @@ class FracturingOrb(Action):
     "fracturing-orb",
     order=82,
     planner=False,
-    why_not="no compressed-state kernel for a fracture of a mod the item already holds yet (#69)",
+    why_not="not in the B1 offer set; which actions a target needs is pruning (#118)",
 )
 def _fracturing_orb(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:

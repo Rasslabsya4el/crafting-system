@@ -19,7 +19,7 @@ from coarse_support import CHAOS, DAMAGE_CRAFT, DATA as BASE_DATA, HYBRID_CRAFT,
 from items_support import AMULET
 
 from crafting_system.abstraction import Abstraction, Coarsening, EstimateRefused, Goal, Wanted
-from crafting_system.actions import ActionError, Adds, BenchCraft, ChaosOrb, RegalOrb
+from crafting_system.actions import BLOCKING, ActionError, Adds, BenchCraft, ChaosOrb, RegalOrb
 from crafting_system.items import Metamod, Rarity
 
 LIFE_GOAL = Goal((Wanted(frozenset({LIFE_1})),))
@@ -93,7 +93,8 @@ def random_case(seed):
     if rng.random() < 0.1:
         item = dataclasses.replace(item, corrupted=True)
     junk_readers = [*crafts, *removal]
-    ab = Abstraction(DATA, goal, AMULET, item.item_level, junk_readers)
+    holds_lock = bool(item.metamods(DATA) & BLOCKING)  # the state has to be built to hold a lock or an Attack/Caster metamod (#69)
+    ab = Abstraction(DATA, goal, AMULET, item.item_level, junk_readers, metamods=holds_lock)
     return ab, [ab.compress(item)], [*rerolls, *junk_readers]
 
 

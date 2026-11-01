@@ -249,16 +249,15 @@ def test_a_reroll_removes_an_ordinary_crafted_mod_and_equals_the_brute_force(act
     assert not any(state.crafted for state in kernel)
 
 
-@pytest.mark.parametrize(
-    ("action", "error"), [(ChaosOrb(), OutOfScopeError), (HYSTERIA, NotApplicableError)], ids=["chaos", "essence"]
-)
-def test_a_metamod_still_refuses_a_reroll(action, error):
-    # the compressed state does not model a lock yet (Chaos); an essence is refused by the game under it
-    ab = abstraction(COLD_LEAF)
+def test_a_metamod_needs_a_state_built_with_metamods_and_an_essence_is_refused_by_the_game_under_it():
     start = belt(roll(FIRE, fractured=True), roll(PREFIXES_LOCK, crafted=True))
+    without = abstraction(COLD_LEAF)
+    with_metamods = Abstraction(DATA, Goal((COLD_LEAF,)), BELT, LEVEL, CRAFTS, metamods=True)
 
-    with pytest.raises(error, match="metamod"):
-        ab.kernel(ab.compress(start), action)
+    with pytest.raises(OutOfScopeError, match="metamods=True"):
+        without.compress(start)
+    with pytest.raises(NotApplicableError, match="metamod"):
+        with_metamods.kernel(with_metamods.compress(start), HYSTERIA)
 
 
 # --- refusals of the bench, with the item the state stands for ---------------------------------------
@@ -327,7 +326,7 @@ def test_two_starts_with_one_compressed_state_have_one_kernel_and_both_equal_the
     assert first == second
 
 
-# --- the metamods (ticket #68): only the multimod is a bench limit; the others the state does not model yet ---
+# --- the metamods (ticket #68): only the multimod is a bench limit; the others need `metamods=True` (ticket #69) ---
 
 MULTIMOD = "StrIntMasterItemGenerationCanHaveMultipleCraftedMods"  # a suffix metamod
 
@@ -354,10 +353,10 @@ def test_a_fractured_crafted_mod_is_a_fractured_mod_of_the_state_and_stays_throu
     assert all(len(after.fractured) == 1 for after in kernel)
 
 
-def test_a_fractured_metamod_is_refused_by_the_compressed_state_for_a_reroll():
+def test_a_fractured_metamod_is_refused_by_a_state_built_without_metamods():
     ab = abstraction(COLD_LEAF)
     start = belt(roll(PREFIXES_LOCK, crafted=True, fractured=True), roll(LIFE))
 
     ChaosOrb().outcomes(DATA, start)  # the action models it
-    with pytest.raises(OutOfScopeError, match="metamod"):
-        ab.kernel(ab.compress(start), ChaosOrb())
+    with pytest.raises(OutOfScopeError, match="metamods=True"):
+        ab.compress(start)

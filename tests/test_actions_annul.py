@@ -169,7 +169,7 @@ def test_the_orb_is_named_priced_and_declared():
     assert action.label(DATA) == "Orb of Annulment"
     assert action.resources(DATA) == {"Orb of Annulment": 1}
     reads, adds = action.reads(DATA), action.adds(DATA, amulet())
-    assert reads.junk and reads.families is None and reads.block_invariant is False
+    assert reads.junk and reads.families == frozenset() and not reads.pool_weight and reads.block_invariant is False
     assert adds.named == frozenset() and not adds.draws and adds.keeps_crafted
 
 

@@ -41,7 +41,7 @@ from fractions import Fraction
 from itertools import combinations, product
 from typing import Literal
 
-from crafting_system.actions import Action, ActionError, OutOfScopeError, build_pool
+from crafting_system.actions import BLOCKING, Action, ActionError, OutOfScopeError, build_pool
 from crafting_system.items import Item, Rarity, Side
 
 from ._kernel import Abstraction
@@ -253,7 +253,13 @@ class Coarsening:
     def _held_by_fractured(self, state: CompressedState) -> set[str]:
         held: set[str] = set()
         for entry in state.fractured:
-            held |= held_families(self._data.mods[entry.mod_id])
+            mod = self._data.mods.get(entry.mod_id)
+            if mod is None:
+                raise OutOfScopeError(
+                    f"the state holds a fractured mod as the family type {entry.mod_id}: "
+                    "the family-group level has no rule for a fracture made mid-route"
+                )
+            held |= held_families(mod)
         return held
 
     def _held(self, block: Block) -> set[str]:
@@ -346,6 +352,11 @@ class Coarsening:
         if self._last is not None and self._last[0] == block and self._last[1] == action:
             return self._last[2]
         self.require_invariant(action)
+        if self._holds_blocking_metamod(block):
+            raise OutOfScopeError(
+                "the block holds a lock or an Attack/Caster metamod: a lock keeps the junk of its side through a reroll, "
+                "which the family-group level does not pool yet (#69)"
+            )
         reads = action.reads(self._data)
         if reads.junk:
             found = self._run_members(block, action, frozenset(reads.families))
@@ -356,6 +367,11 @@ class Coarsening:
                 found = self._rerolls[key] = self._run_members(block, action, frozenset())
         self._last = (block, action, found)
         return found
+
+    def _holds_blocking_metamod(self, block: Block) -> bool:
+        families, mods = {metamod.value for metamod in BLOCKING}, self._data.mods
+        ids = [slot.kind for slot in block.slots if slot.crafted] + [entry.mod_id for entry in block.fractured]
+        return any(mod_id in mods and families & set(mods[mod_id].families) for mod_id in ids)
 
     def _run_members(self, block: Block, action: Action, marked: frozenset[str]) -> _Evaluation:
         kernel: Mapping[Block, Fraction] | None = None
