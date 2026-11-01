@@ -5,11 +5,11 @@ Research ticket [#177](https://github.com/Rasslabsya4el/crafting-system/issues/1
 ## Answer in brief
 
 1. **No formula for the Dust or Gold of a recombination exists in any source I could reach.** The two datamined constants (PoEDB: multiplier 3, exponent 0.75) are the only numbers the game files give; the public client-table schema (`dat-schema`, 3.25 to 3.29 files) holds only a table of named integers (`VillageSharedConstants`: `Id`, `Value`) and the list of eligible item classes, so the calculation is not a recoverable table. The constants do not say what `x` is.
-2. **One first-hand data set exists, and nobody had used it: the screenshots in the 3.25 guide author's public sheet.** Tab "Recomb costs" and tab "Interesting Examples" hold eleven recombinator windows with both prices visible (section 2). From them: **Gold is a straight line in the total number of mods on the two inputs** (wands, 0 / 2 / 3 / 4 / 6 mods: 3,237 / 3,884 / 4,207 / 4,531 / 5,178, about +323 per mod) **and does not depend on mod tiers**; **Dust does not add up over mods** (a pair with two mods cost 438; adding two more mods made it 512, adding two more 696) and the same two-mod pair costs 217 or 438 depending on which mods it is. These are August 2024 numbers on a scale far smaller than the player reports of 2025 (tens to hundreds of times, section 3), so they give the shape, not the size.
-3. **The crafted-mod discount is not a property of "crafted".** What the data supports: Dust depends on the *kind* of mod (how high and rare it is), and on the pair as a whole in a way that is lowered by adding low mods; being crafted is neither necessary nor sufficient (3.25 screenshot: six crafted "of the Order" and "Upgraded" mods cost 876 Dust; two crafted multimod "of Crafting" mods cost 51, barely above the 42 of an empty pair). The only explicit statement of a rule is a player's (u/Mangalorien, 2025-09-12, 3.26): "item level and average tier of all the mods on each item", with a testable recipe; one earlier guess says average required level (u/ZerkerChoco, 2025-03-04, "I believe"). Five 3.25 points fit "Dust grows with the *average* of a per-mod quality over both items, not the sum" about as well as anything I tried (section 4), but the fit has a free choice of transform and is **not** accepted as a formula.
-4. **Gold does not follow the discount.** In 3.25 Gold depends on the mod *count* only, so a junk crafted mod adds one unit of Gold (about +8% at ten units, more on a small pair) while it lowers Dust. At the owner's default prices (150,000 Dust per Chaos, 500 Chaos per million Gold) Gold is about 85% to 95% of the cost of one combine, so the discount saves at most about 1 Chaos and costs about 1 Chaos in extra Gold plus the craft: **"craft a cheap mod first" is not worth offering at the defaults.** It becomes worth it only if Dust is priced several times dearer (section 6).
-5. **Cost rule for the planner (approximate, marked as such, interval from reports):** Gold 12,000 per combine (8,000 to 20,000); Dust 100,000 per combine (25,000 to 250,000), times 0.5 (0.11 to 0.5) when each input carries a low-tier crafted mod. At the defaults that is about 7 Chaos per combine (4 to 12). Section 5 gives it as a table with the evidence per number.
-6. **One in-game session settles it.** Section 7 lists ten item pairs the owner reads off the recombinator window (two bench crafts of about 1 Chaos each).
+2. **One first-hand data set exists, and nobody had used it: the screenshots in the 3.25 guide author's public sheet.** Tab "Recomb costs" and tab "Interesting Examples" hold thirteen recombinator windows with both prices visible (section 2). From them: **Gold is a straight line in the total number of mods on the two inputs** (wands, 0 / 2 / 3 / 4 / 6 mods: 3,237 / 3,884 / 4,207 / 4,531 / 5,178, about +323 per mod) **and does not depend on mod tiers**; **Dust does not add up over mods** if a mod's value rises with its level or tier, as every report says (a pair with two mods cost 438; adding two more mods made it 512, adding two more 696), and two different two-mod pairs cost 217 and 438. These are August 2024 numbers on rare and white items; the player reports of 2025 are larger (section 3), and whether that is a rescale, a magic-item multiplier or a steep top end is not known, so the windows give the shape, not the size.
+3. **The crafted-mod discount is not a property of "crafted".** What the data supports: Dust depends on the *kind* of mod (how high and rare it is), and on the pair as a whole in a way that is lowered by adding low mods; being crafted is neither necessary nor sufficient (3.25 screenshots: two inputs each holding one multimod "of Crafting" and two "of the Order" crafts cost 876 Dust; two inputs each holding only the multimod cost 51, barely above the 42 of an empty pair). The only explicit statement of a rule is a player's (u/Mangalorien, 2025-09-12, 3.26): "item level and average tier of all the mods on each item", with a testable recipe; one earlier guess says average required level (u/ZerkerChoco, 2025-03-04, "I believe"). Five 3.25 points fit "Dust grows with the *average* of a per-mod quality over both items, not the sum" better than the families I tried that sum (section 4), but the fit has a free choice of transform and is **not** accepted as a formula.
+4. **Gold does not follow the discount, on the 3.25 data.** In 3.25 Gold depends on the mod *count* only, so a junk crafted mod adds one unit of Gold (about +8% at ten units, +17% for a crafted mod on each input of a two-mod pair) while it lowers Dust; Gold before and after a junk craft in 3.26+ has not been measured (list pair 3 reads it). At the owner's default prices (150,000 Dust per Chaos, 500 Chaos per million Gold) Gold is about 86% to 96% of the cost of one combine, so the discount saves at most about 0.6 Chaos and costs about 1 Chaos in extra Gold plus the craft: **"craft a cheap mod first" is not worth offering at the defaults** (a statement resting on the 3.25 Gold line; break-even is inside the market's own price spread, section 5). It becomes worth it if Dust is priced several times dearer.
+5. **Cost rule for the planner (approximate, marked as such, interval from reports):** Gold 12,000 per combine (8,000 to 20,000); Dust 100,000 per combine without a junk craft (25,000 to 250,000), times 0.5 (0.11 to 0.5) when each input carries a low-tier crafted mod. At the defaults that is about 7 Chaos per combine (4 to 12). Section 5 gives it as a table with the evidence per number.
+6. **One in-game session settles it.** Section 7 lists eight item pairs the owner reads off the recombinator window without crafting, and two optional ones with one bench craft (about 1 Chaos each).
 
 ## How this was read
 
@@ -20,7 +20,7 @@ Evidence rule of map #1's Notes: best information available today; each claim sa
 | PDB | [poedb.tw/us/Kingsmarch](https://poedb.tw/us/Kingsmarch), constants table; [poedb.tw/us/Recombinator](https://poedb.tw/us/Recombinator) (no cost text) | 2026-11-01, by a fetch agent |
 | SCH | `poe-tool-dev/dat-schema`, files `3_25_Settlers_of_Kalguur.gql` and the 3.26 to 3.29 files: `VillageSharedConstants`, `RecombinableClasses` | 2026-11-01, `3_25` file read by me; the 3.26 to 3.29 files were read by the GPT researcher (no cost field either) |
 | SHEET | Butsicles' public sheet of the 3.25 guide (thread `1exyavx`, link in the post), downloaded as `.xlsx` into `.claude/scratch/t177-sheet/`, 14 tabs; the screenshots on tabs "Recomb costs" (6) and "Interesting Examples" (20) viewed by me | 2026-11-01 |
-| R-PSA | Reddit `1ldc3lz` (3.26 PSA, Butsicles, 2025-06-17; 127 comments), `1lfyxxd` (3.26 analysis, 190 comments) | read in full via the archive reader, 2026-11-01 |
+| R-PSA | Reddit `1ldc3lz` (3.26 PSA, Butsicles, 2025-06-17; 66 comments in the archive header), `1lfyxxd` (3.26 analysis, 81 comments in the header) | read in full via the archive reader, 2026-11-01 |
 | R-1j2 | Reddit `1j2up5k`, "Why is this simple Recombination Step over 150k Dust?", 2025-03-03 (56 comments) | read in full |
 | R-SSF | Reddit `1nf9z35` (r/PathOfExileSSF), 2025-09-12 | read in full |
 | R-oyb | Reddit `1oybm71`, "recomb solitaire with async trade", 2025-11-16 (159 comments); Reddit `1qs1qao`, `1qs6b5h` (Phrecia idol cost threads, 2026-01-31); Reddit `1rw4tl0` (2026-03-17) | read in full; only passages with Dust or Gold used |
@@ -42,7 +42,7 @@ So the sentence "`3 × x^0.75` per mod" in #90 stays a hint: the exponent 0.75 m
 
 ## 2. The 3.25 screenshots (first-hand; SHEET)
 
-All are 3.25 (August 2024, Sentinel-era window with white items still accepted), one pair per window, Gold and Dust read from the bottom bar. Wands: Profane Wand, implicit 14% cast speed. Mod levels are the 3.29 `mods.json` required levels (they have not moved for these mods; the 3.25 tier numbers are as the window printed them).
+All are 3.25 (August 2024, a window that still accepted white items), one pair per window, Gold and Dust read from the bottom bar. Wands: Profane Wand, implicit 14% cast speed. Mod levels are the 3.29 `mods.json` required levels (they have not moved for these mods; the 3.25 tier numbers are as the window printed them).
 
 | # | Left input (item level) | Right input (item level) | n mods | Gold | Dust |
 |---|---|---|---|---|---|
@@ -57,16 +57,18 @@ All are 3.25 (August 2024, Sentinel-era window with white items still accepted),
 | 8 | Eagle Cry (71): "of Crafting", two "of the Order" crafts | Demon's Horn (70): "of Crafting", two "of the Order" crafts | 6 | 2,288 | **876** |
 | 9 | Phantom Mitts (85): 6 mods, one "Upgraded" rank 3 | Phantom Mitts (86): 6 mods, one "Upgraded" rank 3 | 12 | 8,025 | **1,796** |
 | 10 | Phantom Mitts (86): 6 mods, one "Upgraded" rank 3 | Phantom Mitts (86): 5 mods, one "Upgraded" | 11 | 8,131 | **1,086** |
+| 11 | Noble Axe (71): "Essences" prefix, two "Upgraded" rank 2 crafts, "of Precision" T4, "of Crafting" | Sundering Axe (70): two "Upgraded" rank 2 crafts, "of Crafting" | 8 | 2,574 | **587** |
+| 12 | wand (85): "Runic" T1, "of Electrocution" T1, two crafted mods, an aspect, "of Crafting" | wand (85): "Archmage's" T2, "Zaffre" T1, "of the Ice" T2, "Chosen" craft, "of Crafting", "of the Order" | 12 | 8,025 | **2,387** |
 
 Also from the same sheet, tab "Interesting Examples", cell A13 (text, no window): "Influence increases recomb costs by 50%" (3.25).
 
-What the table shows (strength: screenshot, N = 11 windows, one author, one patch):
+What the table shows (strength: screenshot, N = 13 windows, one author, one patch):
 
 - **Gold.** Rows 0 to 5 (same wands, same item levels): Gold = 3,237 + 323.5 per mod, exactly linear (3,884 twice for two different two-mod pairs, so it does not see tiers). 3,237 is ten units of 323.7, so Gold = 323.7 × (10 + n) there. The unit changes with item level (rows 6 to 10: 143 at levels 70/71 for row 8, 344 for 84/84 in row 7, 365 for 84/86 in row 6 and for the 85/86 mitts in row 9) and is not exactly the same for all pairs (row 10 gives 387 per unit), so the "ten" is not safe outside the wands. Rows 6 and 7 are crafted-mod pairs and sit on the same line as natural mods.
-- **Dust, base.** A pair with no mods costs 42, which equals 1.5 × 84^0.75 (41.7) to rounding; that is the one place the datamined exponent shows (a match of one number, not a proof).
-- **Dust is not a sum over mods.** Row 2 (two mods on one input) costs 438; row 4 adds two mods on the other input and costs 512 (+74); row 5 adds two more and costs 696 (+184); row 1 (two mods, one per input) costs 217. A sum of per-mod terms must give row 4 − row 2 = value of "Sparking" + "of Puncturing" = 74, but "Polished" + "of Expertise" (row 1, lower levels 21 and 30) = 175. Mod count alone does not explain it either (row 7: six mods, 326).
-- **Crafted is not cheap by nature.** Row 6: two crafted multimod mods add 9 Dust to the empty pair; row 7: six crafted mods cost 284 above the empty pair; row 8: six crafted mods cost 876 (the empty-pair base at item level 70/71 is not known; it is 42 at 83/84). The "Upgraded" and "of the Order" crafts are the high-level bench mods; the multimod is not.
-- **Scale.** The same author's pages and Reddit give much bigger numbers a few months later (section 3). The 3.25 windows are a small-scale copy of the same shape at best. Which patch or hotfix rescaled Dust is not recorded; the 3.26 patch is the first for which player reports say "way higher".
+- **Dust, base.** A pair with no mods costs 42, which equals 1.5 × 84^0.75 (41.6) to rounding; the 1.5 is a free factor, so this is at most a one-number coincidence, not evidence that the datamined exponent is used this way.
+- **Dust is not a sum over mods, if a mod's value rises with its level or tier.** Row 2 (two mods on one input) costs 438; row 4 adds two mods on the other input and costs 512 (+74); row 5 adds two more and costs 696 (+184); row 1 (two mods, one per input) costs 217. If each mod had a fixed value rising with its level, row 4 - row 2 would be "Sparking" + "of Puncturing" (levels 33 and 44) = 74 while "Polished" + "of Expertise" (row 1, levels 21 and 30) = 175, which no rising value gives. A sum with free, unordered per-mod values still fits rows 1 to 5, and rows 1 and 2 also differ in how the mods are split across the inputs (row 2 has a white item); so this is a strong hint, not a proof. Mod count alone does not explain it either (row 7: six mods, 326).
+- **Crafted is not cheap by nature.** Row 6: two crafted multimod mods add 9 Dust to the empty pair; row 7: six crafted mods cost 284 above the empty pair; row 8: two multimods and four "of the Order" crafts cost 876 (the empty-pair base at item level 70/71 is not known; it is 42 at 83/84); rows 11 and 12 hold crafted mods too. The "Upgraded" and "of the Order" crafts are the high-level bench mods; the multimod is not.
+- **Scale.** The player reports of March 2025 (still 3.25) already give 5,000 to 150,000 Dust for magic pairs (section 3), against 42 to 2,387 in these windows, which are rare and white items (the mitts with 12 rare mods cost 1,796 to 2,387). A rescale between August 2024 and March 2025, a magic-item multiplier ("magic items have an insane dust multiplier", a 48-vote comment) or a steep top end of the mod ladder would each explain it; I cannot tell which. The 3.26 launch reports say "way higher" than 3.25 (1,500 to 40,000 for a first step).
 
 ## 3. The 3.26 to 3.29 numbers (player reports)
 
@@ -74,23 +76,25 @@ Each row: author, date, patch, N = 1 unless stated. All are Dust unless Gold is 
 
 | Report | Pair | Dust | Gold | Source |
 |---|---|---|---|---|
-| u/Soleil06, 2025-03-03, 3.25 Standard | two magic items, one T1 mod each (1p0s + 0p1s) | over 150,000 ("most recombs cost around 5k") | | R-1j2 |
+| u/Soleil06, 2025-03-03, 3.25 Standard | two magic items, one mod each (1p0s + 0p1s; T1 per commenters) | over 150,000 ("most recombs cost around 5k") | | R-1j2 |
 | u/Tabernaster, 2025-03-04 | two magic 1-mod items, same level: T1 cold + T1 lightning prefixes / T1 attack speed + T1 crit multiplier suffixes | about 50,000 / about 5,000 | | R-1j2 |
 | u/HockeyHocki, 2025-03-04 | T1 flat evasion/armour + life / T2 % evasion/armour + life | about 5,000 / about 40,000 | | R-1j2 |
-| Butsicles, 2025-06-17, 3.26 | two T1 mods on magic items | "easily over 100,000"; "as low as 50k or less" with two low crafted mods | | R-PSA |
+| Butsicles, 2025-06-17, 3.26 | two T1 mods on magic items | "easily over 100,000" (the "as low as 50k or less with two low crafted mods" is his reply to the rare-armour report below) | | R-PSA |
 | u/Godofdeathryuk, 2025-06-17 | rare armour with an extra T1 suffix | 250,000 | about 300,000 for a whole long craft | R-PSA |
 | u/g00fy_goober, 2025-06-20 | "2 mod + 2 mod" | about 260,000, then about 30,000 after crafting "worst int roll" on both | | `1lfyxxd` |
 | u/infectorAlex, 2025-06-20 | a first step | was 1,500 in 3.25, now 40,000 "even with 2 low tier mods crafted on" | | R-PSA |
 | u/ExiledYak, 2025-07-15 | two 1p/1s rares | 240,000 | | R-PSA |
 | u/Mangalorien, 2025-09-12, 3.26 | magic inputs, T1 prefix and no suffix | "100~200k per try" is the asker's; the answer says a junk suffix lowers it | | R-SSF |
 | durian_in_my_asshole, 2025-11-16, 3.27 | 2p + 3p shit bases, about 10 combines | 1.5 million total (about 150,000 each) | 200,000 total (about 20,000 each) | R-oyb |
-| u/Any-Replacement-5645, 2026-03-17 | rare 2p2s daggers | "100-150,000 per attempt" | | R-oyb |
+| u/Any-Replacement-5645, 2026-03-17 | a dagger craft (3 prefixes assumed by the answerer) | "100-150,000 per attempt" | | R-oyb |
 | u/lolfail9001, 2026-01-31, 3.27 | idols, predictable mode | 25,000 per attempt | | R-oyb |
 | `Spacecom#5362`, forum thread `3925127`, 2026-03-28 (GPT, second-hand) | magic prefix item + magic suffix item, mods and levels not stated | predictable 27,000 / unpredictable 25,000 | 10,000 / 12,000 | GPT |
 | u/bladomas, `1rxnycg`, 2026-03-19 (GPT, second-hand) | an item-level transfer pair, donor 86+ | about 12,000 | about 8,000 | GPT |
 | forum thread `3791340`, 2025-06-15 (GPT, second-hand) | two magic items | 50,000 | | GPT |
 
 Reading them together (strength: player reports, many authors, wide spread): a typical 3.26+ combine costs 25,000 to 250,000 Dust and 8,000 to 20,000 Gold; Dust moves by a factor of ten between pairs of the same kind (Tabernaster, HockeyHocki), Gold stays in a narrow band. Gold per unit of the 3.25 line (ten plus mods) is 830 to 1,300 for the three 3.26+ pairs (n = 2, 2 and about 5 to 8), about 2.3 to 3.6 times the 3.25 unit of about 365 at item level 86. N = 3, mod counts partly guessed.
+
+Against a small Gold interval: u/godlyhalo (`1nf9z35`, 2025-09, 3.26) estimates a triple-T1 project at 3 to 4 million Dust and 1 to 2 million Gold; if that is about 25 combines it is 40,000 to 80,000 Gold per combine, well above the table (the number of combines is not stated). Against a clean halving: u/infectorAlex still paid 40,000 for a first step "even with 2 low tier mods crafted on".
 
 Prices in the same threads (single comments, for the unit-price question): u/anraiki 2026-05-13 "15 divine for a 5 million gold rota" (#90); a 2025-11-16 comment in R-oyb, "Gold is 2.5d/1M and dust is ~0.5d/1M"; u/Pjatteri 2025-03-04 "buy binos for 50c … 1,3mil dust" (26,000 Dust per Chaos); durian 2025-11-16 "100k+ dust 1-5c uniques" (20,000 to 100,000 per Chaos).
 
@@ -102,15 +106,15 @@ Statements of the discount (all player reports):
 - u/No-Razzmatazz7854, 2025-06-18: "can save you 50% on dust cost … garbage early act craft".
 - u/g00fy_goober: 260,000 to about 30,000 (a factor of 8.7), the only before/after pair.
 - u/Mangalorien, 2025-09-12 (3.26): the rule is "item level and average tier of all the mods on each item"; "use as low ilvl items as you can"; lowest-tier bench craft such as 16-20% fire resistance; you can test by putting in two T1 prefix magic items, reading the Dust, crafting a junk suffix, reading again. No reply challenges it; nobody posts numbers for it. u/ZerkerChoco (2025-03-04): "I believe it's based on average ilvl requirement of the mods" (a guess, no data).
-- Earlier threads (R-1j2, 3.25): "magic items have an insane dust multiplier", cost is "mod rarity" (u/Aromatic-Grape8516, "IIRC"), "scale on weighting. T1 cold/lightning damage have an insanely low weighting at t1 (108 vs 1200 for the lower ranks)" (u/Moneypouch), required level 79 versus 84 for two mods "of the same weight" (u/Qancho). Nobody tested these. The data of R-1j2 is: same-level magic pairs, Dust ten times apart (rare T1 prefixes versus common T1 suffixes), and T1 flat (level 79) 5,000 versus T2 percent (level 84) 40,000.
+- Earlier threads (R-1j2, 3.25): "magic items have an insane dust multiplier", cost is "mod rarity" (u/Aromatic-Grape8516, "IIRC"), "scale on weighting. T1 cold/lightning damage have an insanely low weighting at t1 (108 vs 1200 for the lower ranks)" (u/Moneypouch), two mods "the same weight" at 5,000 and 40,000 (u/HockeyHocki) and their required levels 79 versus 84 (u/Qancho). Nobody tested these. The data of R-1j2 is: same-level magic pairs, Dust ten times apart (rare T1 prefixes versus common T1 suffixes), and T1 flat (level 79) 5,000 versus T2 percent (level 84) 40,000.
 - Contradicting: one retail-currency guide says unwanted crafted mods raise the cost. It is unsigned, sells currency, and no player says it; I set it aside. It may be a garbled form of the true statement that a crafted *high-level* mod (the "of the Order" crafts, row 8) is expensive.
 
 What this adds up to:
 
 1. **Which property.** Not "crafted". Dust depends on how high and how rare a mod is (level, tier or weight: the threads are split, and the three move together for most mods), and a low-tier mod does *not* add its own small cost: it lowers the cost of the pair. A crafted low-tier mod works because it is low-tier, and because bench crafts are cheap and always available; a natural T7 mod lowers the cost the same way (Mangalorien, "you can also use natural dog shit tier mods"). Crafted high-level mods raise it (row 8).
 2. **Sum or average.** The 3.25 rows 1 to 5 reject a sum. A search over simple families on the five two-sided wand rows (value = level, tier, 1/tier or 9 − tier; aggregate = sum, mean of all mods, mean per item summed, sum of powers, power of the sum, count times mean; power 0.1 to 4) ranks "mean of the value over all mods of both inputs, to a power near 2.5, times a constant, plus 42" first: with value 9 − tier it reproduces the five Dust values within 7% (223, 413, 277, 539, 689 against 217, 438, 281, 512, 696); with required level it is within 17% (row 2, 512 against 438, is the worst). Sum-type families are 13 to 23 times worse in squared relative error. This is a fit of two parameters (constant and power) to five points with a free choice of value function among five: it shows "mean-like" is the better family, nothing more. The constant 9 in "9 − tier" is not a property of the game (it equals the ladder length of the wands' mods used here) and the 2.5 is not the datamined 0.75. **Not a formula; not for the planner.**
-3. **Size of the discount.** From the reports: a factor of 2 (Butsicles' minimum; one more player says 50%), up to 8.7 (g00fy_goober). If Dust grows like a power near 2.5 of a mean, two junk mods added to four T1 mods lower the mean to about two thirds to three quarters and the cost by a factor of 2.3 to 2.8, below the 8.7 reported; so either the true power is larger, or the value function is steeper than 9 − tier near the top (the 3.25 "T1 flat, level 79" against "T2 percent, level 84" pair, a factor of 8, suggests a steep top end). I do not resolve this.
-4. **Does it work for any crafted mod, on either input, on both?** Reports say any low-tier non-exclusive craft, on either input (Butsicles: both inputs for a prefix pair; on the side you do not care about for a mixed pair). Nothing says one input is enough; "on both" is the repeated advice and the measured pair (g00fy) had it on both. The 3.25 sheet's only one-sided data (row 2 against row 4) does not test it. This is on the in-game list (section 7, pairs 3 and 4).
+3. **Size of the discount.** From the reports: a factor of 2 (Butsicles' minimum; one more player says 50%), up to 8.7 (g00fy_goober). If Dust grows like a power near 2.5 of a mean, two junk mods added to four T1 mods lower the mean to about two thirds to three quarters and the cost by a factor of 2.0 to 2.8, below the 8.7 reported; so either the true power is larger, or the value function is steeper than 9 − tier near the top (the 3.25 "T1 flat, level 79" against "T2 percent, level 84" pair, a factor of 8, suggests a steep top end). I do not resolve this.
+4. **Does it work for any crafted mod, on either input, on both?** Reports say any low-tier non-exclusive craft, on either input (Butsicles: both inputs for a prefix pair; on the side you do not care about for a mixed pair). Butsicles' advice for a four-T1 item is to craft two low mods "on the item" on the side you do not care about, so one input is enough in that case; "on both" is his advice for a pair of one-mod magic items, and the measured pair (g00fy) had it on both. The 3.25 sheet's only one-sided data (row 2 against row 4) does not test it. This is on the in-game list (section 7, pairs 3 and 4).
 5. **Side effects the planner must know.** A bench craft needs an open slot of its side; a prefix craft on a prefix-recombination hurts the success odds ("crafting prefixes for triple prefix combines makes your odds worse", R-PSA); for a prefix target the craft goes on the suffix side. Exclusive crafts (aspects, "of the Order"-type metamod-adjacent mods) change the pool and are not "regular" mods; the author's list of non-exclusive crafts is the sheet's tab 2 (Life, resistances, attributes, and so on). The junk craft can be removed with the bench for one Scouring Orb or a "Remove Crafted Mods" (R-oyb and `1vm0rxj`).
 
 ## 5. The cost rule for the planner
@@ -119,11 +123,12 @@ Approximate; every report below is a Reddit or forum report; the planner marks t
 
 | Quantity | Point | Interval | Evidence |
 |---|---|---|---|
-| Gold per combine | 12,000 | 8,000 to 20,000 | forum `3925127` (10,000 predictable and 12,000 unpredictable for two magic items), `1rxnycg` (8,000), R-oyb (about 20,000 each for rare 2p + 3p bases); Gold per unit 830 to 1,300 times (10 + mods) in 3.26+ against 365 in 3.25 |
+| Gold per combine | 12,000 | 8,000 to 20,000 | forum `3925127` (10,000 predictable and 12,000 unpredictable for two magic items), `1rxnycg` (8,000), R-oyb (about 20,000 each for rare 2p + 3p bases); a project estimate in `1nf9z35` would put it at 40,000 to 80,000 if it spans about 25 combines (section 3); Gold per unit 830 to 1,300 times (10 + mods) in 3.26+ against 365 in 3.25 |
 | Gold change for one extra mod | + 1 unit of about (10 + n) | | 3.25 wands, exact (rows 0 to 5); not measured in 3.26+ |
-| Dust per combine, pair of magic or rare inputs, at least one high-level (T1-like) mod | 100,000 | 25,000 to 250,000 | section 3, eleven reports from five authors in 3.26 and 3.27 |
-| Dust per combine, pair of low-tier mods only | 30,000 | 5,000 to 50,000 | 3.25 (HockeyHocki 5,000, Tabernaster 5,000), g00fy_goober (30,000), Butsicles (50,000) |
-| Dust factor with a low-tier non-exclusive craft on each input | 0.5 | 0.11 to 0.5 | Butsicles (at least 2), No-Razzmatazz (50%), g00fy_goober (1 ÷ 8.7) |
+| Dust per combine, no junk craft, pair of magic or rare inputs with a high-level (T1-like) mod | 100,000 | 25,000 to 250,000 | Butsicles ("easily over 100,000", two T1 magic items), Soleil06 (over 150,000, 3.25), Godofdeathryuk (250,000, rare armour), ExiledYak (240,000, rare 1p/1s), the asker in `1nf9z35` (100,000 to 200,000), forum `3925127` (25,000 to 27,000, mods not stated) |
+| Dust per combine after a junk craft (reported values, already discounted) | 50,000 | 30,000 to 150,000 | Butsicles (50,000 or less, rare armour), g00fy_goober (30,000), infectorAlex (40,000), durian (about 150,000 each for rare 2p + 3p bases, with junk suffixes in his recipe) |
+| Dust per combine, pair of magic one-mod items with common-weight T1 mods | 5,000 | | 3.25 (Tabernaster 5,000, HockeyHocki 5,000), N = 2 |
+| Dust factor with a low-tier non-exclusive craft on each input | 0.5 | 0.11 to 0.5 | Butsicles (at least 2), No-Razzmatazz (50%), g00fy_goober (1 / 8.7); the values above for "after a junk craft" are post-discount, so the factor applies only to the no-junk row |
 | Influence on an input | + 50% | | 3.25 sheet, one line, no window |
 | Idols | Dust × 0.25 and Gold × 0.5 against the equipment rule | | 3.27.0g (official, second-hand); B3 has no idol route |
 
@@ -135,9 +140,9 @@ At the owner's prices (150,000 Dust per Chaos, 500 Chaos per million Gold) one c
 | low | 0.17 (25,000) | 4 (8,000) | about 4 |
 | high | 1.7 (250,000) | 10 (20,000) | about 12 |
 
-Gold is 85% to 95% of the cost in all three rows. With the discount at the point (factor 0.5) Dust saves 0.33 Chaos (best case: 0.6 Chaos at the 0.11 factor and 100,000 Dust); the craft adds one Gold unit (+14% at n = 2 pairs: +0.8 Chaos on 6) and costs a bench craft and its later removal. **At the default prices the junk craft does not pay; the planner should not offer it unprompted.** The step still belongs in the action list, as an optional action ("craft the cheapest non-exclusive mod on the open side of each input", Dust × 0.5), because the owner may set a dearer Dust: break-even is about when Dust per combine (after discount) in Chaos exceeds the extra Gold plus the craft, roughly 1.5 Chaos, that is Dust priced at or below about 35,000 per Chaos for the 100,000 point (the market notes of section 3 range from 10,000 to 100,000 per Chaos, so it flips inside the market's own spread).
+Gold is 86% to 96% of the cost in all three rows. With the discount at the point (factor 0.5) Dust saves 0.33 Chaos (best case: 0.6 Chaos at the 0.11 factor and 100,000 Dust); the craft adds one Gold unit to each input (two units: +17% on a two-mod pair, about +1 Chaos on 6) and costs a bench craft and its later removal. **At the default prices the junk craft does not pay; the planner should not offer it unprompted.** This rests on the 3.25 Gold line; Gold before and after a junk craft in 3.26+ is not measured (list pair 3). The step still belongs in the action list, as an optional action ("craft the cheapest non-exclusive mod on the open side of each input", Dust x 0.5), because the owner may set a dearer Dust: break-even is when the Dust saved exceeds the extra Gold plus the craft, roughly 1.5 Chaos, that is Dust priced at or below about 33,000 per Chaos for the 100,000 point (the market notes of section 3 range from 10,000 to 100,000 per Chaos, so it flips inside the market's own spread).
 
-**Owner's note on the default.** The owner's default of 150,000 Dust per Chaos is at or beyond the cheap end of the market comments read here (10,000 to 100,000 per Chaos, five single comments from 2025-03 to 2025-11), while the Gold default (500 Chaos per million) matches the 2.5 Divine per million of the one 2025-11 comment at about 200 Chaos per Divine. Nothing is changed here; the price file is the owner's.
+**Owner's note on the default.** The owner's default of 150,000 Dust per Chaos is at or beyond the cheap end of the market comments read here (10,000 to 100,000 per Chaos, three single comments from 2025-03 to 2025-11, section 3), while the Gold default (500 Chaos per million) matches the 2.5 Divine per million of the one 2025-11 comment at an assumed 200 Chaos per Divine (my figure, not sourced). Nothing is changed here; the price file is the owner's.
 
 **What the planner stores.** `recombinator_cost` as a table in the price or rule data: `gold_per_combine` and `dust_per_combine` with point and interval, `junk_craft_dust_factor` with point and interval, `bench_rank_discount` unset until read from the game (rank 4 "25% reduced Recombination Cost"; it may already be inside every report above or in none), and `source: reports, approximate`. It does not compute Dust from mods: no formula supports it.
 
@@ -145,24 +150,31 @@ Gold is 85% to 95% of the cost in all three rows. With the discount at the point
 
 3.25 sheet: no. Gold read the same for two different two-mod pairs (rows 1 and 2) and moved only with the mod count, crafted or not (rows 6 and 7 sit on the line). 3.26+: no data with a before and after for Gold; the one pair with both modes (forum `3925127`) shows the unpredictable mode with a lower Dust and a higher Gold than the predictable mode (25,000 and 12,000 against 27,000 and 10,000), which only says Gold and Dust are separate functions. Not settled for 3.26+: pair 3 of section 7 reads both numbers.
 
-## 7. For the owner: in-game readings, no crafting beyond two bench crafts
+## 7. For the owner: in-game readings (the list for #182)
 
-Read the Gold and Dust off the window; no recombination is run. One item class for all pairs (a cheap one-handed weapon, wand or sceptre, so the bench crafts cost about 1 Chaos), two copies at item level 84 or above unless said otherwise, both in the window, mode set to unpredictable. Note the bench rank (shown on the bench) and take a screenshot with both item tooltips and both numbers in view; the main chat reads it.
+Read the Gold and Dust off the recombinator window; no recombination is run. Issue #182 says "no crafting", so list A uses only items that can be bought or already held (magic items from the trade site; "T1" means the top tier of the mod). List B needs one cheap bench craft each (about 1 Chaos) and is optional. One item class for all pairs (a cheap one-handed weapon, wand or sceptre), item level 84 or above unless said otherwise, mode on unpredictable unless said otherwise. Write down, for every pair: the two items' mods with tiers, both item levels, the Dust, the Gold, and the bench rank (shown on the bench). A screenshot with both item tooltips and both numbers in view is the best record; the main chat reads it.
+
+**List A, no crafting**
 
 | # | Left input | Right input | Settles |
 |---|---|---|---|
-| 1 | magic, one prefix of the lowest tier | magic, one prefix of the lowest tier | the low baseline |
-| 2 | magic, one T1 prefix | magic, one different T1 prefix | the high baseline (the 3.26 reports say about 100,000) |
-| 3 | pair 2, plus the cheapest low-tier craft (for example the lowest "+ to strength" suffix) on each | | the discount factor; also whether Gold moves (one more mod each) |
-| 4 | pair 2, craft on the left only | | whether one input is enough |
-| 5 | pair 2, with a *natural* lowest-tier suffix on each instead of a crafted one (alteration and augment until it appears) | | crafted against natural |
-| 6 | pair 2, with the *highest* bench craft you can afford on each (for example a top attribute or a multimod-free "Upgraded"-style craft) | | whether a high-level crafted mod raises the cost |
-| 7 | pair 1 at item level 68 and 68, against the same at 84 and 84 | | item level |
-| 8 | pair 2 with one T1 prefix of high weight (for example attack speed on the suffix side) on both, against a T1 prefix of low weight (for example T1 cold damage on a wand) at the same level | | weight against level (the 5,000 against 50,000 report) |
-| 9 | pair 2, mode switched to predictable | | the mode difference for Dust and Gold |
-| 10 | a rare pair, 3 mods each: three T1 / three T1, then the same with the lowest-tier mod replaced (alteration, no crafting) | | mean against sum for a larger pair |
+| 1 | magic, one prefix of the lowest tier, no suffix | the same kind, a different prefix of the lowest tier | the low baseline |
+| 2 | magic, one T1 prefix, no suffix | magic, a different T1 prefix, no suffix | the high baseline (the 3.26 reports say about 100,000 Dust) |
+| 3 | the two items of pair 2 (same T1 prefixes), but each also carries a natural suffix of the lowest tier (each has one prefix and one suffix; buy 1p1s items with those prefixes) | | the discount by a natural low mod; a drop in Dust here also separates "mean" from "sum" (a sum can only rise); and whether Gold moves with one more mod on each item |
+| 4 | pair 2 again with the low-tier suffix on the left item only (right item unchanged) | | whether one input is enough |
+| 5 | magic, one T1 suffix of weight 1000 and a higher required level (for example T1 cast speed, level 83) | magic, a different T1 suffix of weight 1000 and a lower level (for example T1 attack speed, level 77; read levels and weights off the poedb mod list) | level alone: same tier, weight and slot, different level |
+| 6 | pair 1 at item level 68 and 68, against the same kind of pair at 84 and 84 | | item level |
+| 7 | pair 2 with the mode switched to predictable | | the mode difference in Dust and Gold |
+| 8 | pair 2 with a middle-tier natural suffix (about T4) on each item instead of the lowest-tier one | | how the discount grows as the added mod gets lower (compare pairs 2, 8 and 3) |
 
-Ten windows are enough to choose between "mean of a per-mod value" and "sum" and to see whether the value follows level, tier or weight; two bench crafts (pairs 3 and 6 reuse them) cost about 2 Chaos in all. If the owner holds no suitable items, pairs 1 to 4 and 9 settle the planner's rule and are the minimum.
+**List B, optional (one bench craft each, about 1 Chaos)**
+
+| # | Pair | Settles |
+|---|---|---|
+| 9 | pair 2 with the cheapest low-tier craft on each item (for example the lowest "+ to strength" suffix) | crafted against natural (compare with pair 3) |
+| 10 | pair 2 with the highest craft you can afford on each item | whether a high-level crafted mod raises the cost |
+
+Pairs 1 to 4 and 7 settle the planner's rule for a natural low mod (the discount factor, one input or two, the mode); 3 also separates "mean" from "sum"; 5 and 8 narrow the value function (level against weight, how the discount grows). Weight against tier is not separated by this list. The crafted discount itself needs the two crafts of list B (pair 9 against pair 3).
 
 ## 8. What was not found and what changed my confidence
 
@@ -205,28 +217,28 @@ rules:
     date_checked: 2026-11-01
 
   - id: recombinator_cost.gold_linear_in_mod_count_3_25
-    statement: 'In 3.25, with the same two wands, Gold rose in a straight line with the total number of mods on the two inputs (0, 2, 3, 4, 6 mods gave 3,237; 3,884; 4,207; 4,531; 5,178; about 323.5 per mod, ten units at no mods) and two different two-mod pairs gave the same Gold, so it did not depend on mod tiers. Crafted mods counted as ordinary mods.'
+    statement: 'In 3.25, with the same two wands, Gold rose in a straight line with the total number of mods on the two inputs (0, 2, 3, 4, 6 mods gave 3,237; 3,884; 4,207; 4,531; 5,178; about 323.5 per mod, ten units at no mods) and two different two-mod pairs gave the same Gold, so it did not depend on mod tiers. Crafted mods sit on the same line. One author, one patch, windows read by the researcher; the per-mod unit rises with item level and is not exactly the same for every pair (143 at item level 70/71, 365 at 85/86, 387 for one mitts pair).'
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit?usp=sharing
-    quote: "tab Recomb costs: 3,237 / 3,884 / 4,207 / 4,531 / 5,178 gold"
+    quote: "window readings (screenshots, no text), tab Recomb costs: 3,237 / 3,884 / 4,207 / 4,531 / 5,178 gold"
     value: {gold_at_zero_mods: 3237, gold_per_mod: 323.5}
     patch_verified: "3.25.0"
     date_checked: 2026-11-01
 
   - id: recombinator_cost.dust_not_a_sum_3_25
-    statement: 'In 3.25 the Dust of a pair did not add up over mods. Two wands with no mods cost 42 Dust; one mod on each input (T5 suffix and T7 prefix) 217; two mods on one input (T8 prefix and T2 suffix) 438; adding two mods on the other input 512; two more mods 696. A sum of per-mod terms cannot give both 217 and 74 for the added mods.'
+    statement: 'In 3.25 the Dust of a pair did not add up over mods. Two wands with no mods cost 42 Dust; one mod on each input (T5 suffix and T7 prefix) 217; two mods on one input (T8 prefix and T2 suffix) 438; adding two mods on the other input 512; two more mods 696. If each mod had a fixed value that rises with its level, a sum cannot give both 217 for the two lower-level mods and 74 for the two added higher-level mods; a sum with free per-mod values is not excluded.'
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit?usp=sharing
-    quote: "tab Recomb costs: 42, 217, 438, 281, 512, 696 dust"
+    quote: "window readings (screenshots, no text), tab Recomb costs: 42, 217, 438, 281, 512, 696 dust"
     value: {dust: [42, 217, 438, 281, 512, 696]}
     patch_verified: "3.25.0"
     date_checked: 2026-11-01
 
   - id: recombinator_cost.crafted_multimod_cheap_3_25
-    statement: 'In 3.25 two wands each holding only the crafted multimod "of Crafting" cost 51 Dust (42 with no mods); six crafted high-level mods ("of the Order") cost 876. A crafted mod is cheap or dear by its own level, not because it is crafted.'
+    statement: 'In 3.25 two wands each holding only the crafted multimod "of Crafting" cost 51 Dust (42 with no mods); two wands each holding the multimod "of Crafting" and two crafted "of the Order" mods (high-level bench mods) cost 876. So being crafted does not make a mod cheap; the multimod is cheap, the "of the Order" crafts are not.'
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit?usp=sharing
-    quote: "tab Interesting Examples: 4,377 gold 51 dust; 2,288 gold 876 dust"
+    quote: "window readings (screenshots, no text), tab Interesting Examples: 4,377 gold 51 dust; 2,288 gold 876 dust"
     value: {dust_multimod_pair: 51, dust_six_order_crafts: 876}
     patch_verified: "3.25.0"
     date_checked: 2026-11-01
@@ -241,7 +253,7 @@ rules:
     date_checked: 2026-11-01
 
   - id: recombinator_cost.junk_craft_halves_dust_3_26
-    statement: 'Butsicles (author of the 3.25 and 3.26 guides, about 500 to 800 combines in 3.25) advises crafting low-tier non-exclusive mods on the side of the item you do not care about; he says it lowers Dust by at least a factor of 2, and costs can be 50,000 or less with two low-tier crafted mods. One more player reports 50%, one reports about 260,000 to about 30,000 (a factor of 8.7, uncontrolled). Read on 3.26 on 2025-06-17 to 2025-06-20.'
+    statement: 'Butsicles (author of the 3.25 and 3.26 guides) advises crafting low-tier non-exclusive mods on the side of the item you do not care about; he says it lowers Dust by at least a factor of 2, and replies to a rare-armour report that costs can be 50,000 or less with two low-tier crafted mods on the item. Another commenter in the same thread says it can save 50% (u/No-Razzmatazz7854). Read on 3.26 on 2025-06-17 to 2025-06-18.'
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/
     quote: "lower the dust cost by at least a factor of 2"
@@ -249,8 +261,17 @@ rules:
     patch_verified: "3.26.0"
     date_checked: 2026-11-01
 
+  - id: recombinator_cost.junk_craft_before_after_report_3_26
+    statement: 'UNVERIFIED single report (u/g00fy_goober, 2025-06-20, 3.26, uncontrolled: item levels, mods and tiers not stated): a "2 mod + 2 mod" recombination wanted about 260,000 Dust; after crafting the worst intelligence roll on both inputs it dropped to about 30,000, a factor of 8.7.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1lfyxxd/
+    quote: "crafted worst int roll on both and dropped to like 30k or something"
+    value: {before: 260000, after: 30000}
+    patch_verified: "3.26.0"
+    date_checked: 2026-11-01
+
   - id: recombinator_cost.dust_rule_average_tier_report
-    statement: 'UNVERIFIED player assertion (u/Mangalorien, 2025-09-12, 3.26, nobody contradicted it, nobody posted numbers for it): the Dust cost is calculated from item level and the average tier of all the mods on each item; a low-tier bench craft lowers it, and two T1 prefix magic items can be tested before and after a junk suffix. An earlier guess (u/ZerkerChoco, 2025-03-04) says average required level of the mods.'
+    statement: 'UNVERIFIED player assertion (u/Mangalorien, 2025-09-12, 3.26, nobody contradicted it, nobody posted numbers for it): the Dust cost is calculated from item level and the average tier of all the mods on each item; a low-tier bench craft lowers it, and two T1 prefix magic items can be tested before and after a junk suffix.'
     source_kind: experiment
     url: https://www.reddit.com/r/PathOfExileSSF/comments/1nf9z35/_/ndv8ogk/
     quote: "item level and average tier of all the mods on each item"
@@ -258,10 +279,10 @@ rules:
     date_checked: 2026-11-01
 
   - id: recombinator_cost.dust_per_combine_reports_3_26
-    statement: 'UNVERIFIED (reports, N about 11 from five authors, 2025-06 to 2026-03): one combine of magic or rare inputs holding a T1-like mod costs 25,000 to 250,000 Dust (typically about 100,000 to 150,000); pairs of low-tier mods only cost 5,000 to 50,000; the same kind of pair can cost ten times more for a rare, high-level mod than for a common one.'
+    statement: 'UNVERIFIED (Butsicles, 2025-06-17: two T1 mods on magic items "easily" cost over 100,000 Dust; the planner interval of 25,000 to 250,000 without a junk craft summarises the reports in section 3 of the research note, from at least nine authors, 2025-03 to 2026-03).'
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/
-    quote: "easily give costs over 100,000"
+    quote: "will easily give costs over 100,000"
     value: {point: 100000, low: 25000, high: 250000}
     patch_verified: "3.26.0"
     date_checked: 2026-11-01
@@ -279,7 +300,7 @@ rules:
     statement: 'UNVERIFIED (read second-hand from the official forum by the GPT researcher; not opened by me): the 3.27.0g hotfix lowered the Dust of idol recombination by 75% and its Gold by 50%. It is the only official recombinator cost change found after 3.26; equipment is not mentioned.'
     source_kind: official
     url: https://www.pathofexile.com/forum/view-thread/3910167
-    quote: "lowered Idol recombination Dust by 75% and Gold by 50%"
+    quote: "(researcher's wording of the patch note) lowered Idol recombination Dust by 75% and Gold by 50%"
     patch_verified: "3.27.0g"
     date_checked: 2026-11-01
 
