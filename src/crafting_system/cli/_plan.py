@@ -31,6 +31,7 @@ from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
+from . import _packed
 from ._packed import SOLVERS, packed_result
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
@@ -383,6 +384,8 @@ def make_plan(
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
 
     began = time.perf_counter()
+    if packed is not None and _packed.PROGRESS is not None:
+        _packed.PROGRESS(f"solved: mean {solution.values[start]!r}; evaluating the risk on the merged chain ({len(packed.risk_policy):,} classes)")
     if packed is not None:  # the risk of the policy on the merged chain: the same mean, odds and quantiles, a chain that fits
         risk = evaluate_risk(packed.risk_policy, packed.risk_start, packed.risk_is_goal, solution.values[start])
     else:

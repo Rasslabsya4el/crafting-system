@@ -441,6 +441,7 @@ def solve_packed(
             f"(residual {certificate.residual:.3g} of the cheapest cost): the merge or the solve is wrong",
             certificate.bound,
         )
+    say(f"certificate on the whole graph: bound {certificate.bound:.3g} ({info['certify_seconds']} s)")
     action = lift_policy(graph, reduced, kernel_map, cls, core.action)
     info["seconds"] = round(time.perf_counter() - began, 2)
     return PackedSolution(value, action, certificate.bound, classes.count, reduced, cls, core.action, info)

@@ -109,3 +109,19 @@ def test_an_unknown_solver_is_refused(data):
 
     with pytest.raises(ValueError, match="solver must be one of"):
         make_plan(data, target, load_price_file(PRICES), solver="gpu")
+
+
+def test_a_long_chain_gets_its_moments_from_the_packed_solve_with_the_same_numbers(data, monkeypatch):
+    from crafting_system.risk import _moments
+
+    target = load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", data)
+    prices = load_price_file(PRICES)
+    reference = make_plan(data, target, prices, solver="object")
+
+    monkeypatch.setattr(_moments, "PACKED_FROM_EDGES", 0)
+    again = make_plan(data, target, prices, solver="object")
+
+    assert again.risk.mean.value == pytest.approx(reference.risk.mean.value, rel=1e-9)
+    assert again.risk.variance.value == pytest.approx(reference.risk.variance.value, rel=1e-7)
+    assert again.risk.p50.value == pytest.approx(reference.risk.p50.value, rel=1e-9)
+    assert again.risk.p90.value == pytest.approx(reference.risk.p90.value, rel=1e-9)
