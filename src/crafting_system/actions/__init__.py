@@ -116,7 +116,7 @@ from .beasts import AspectBeast, TalismanFracture, TalismanFractureOutcomes, rec
 from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts, without_ranges
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
-from .contract import Action, ActionOutcomes, Adds, Fixed, Reads
+from .contract import Action, ActionOutcomes, Adds, Fixed, Reads, Rerolled
 from .draw import Outcome, guaranteed_candidates
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
@@ -162,6 +162,7 @@ __all__ = [
     "ExaltedOrb",
     "Finite",
     "Fixed",
+    "Rerolled",
     "FractureOutcomes",
     "FossilOutcomes",
     "Fractured",

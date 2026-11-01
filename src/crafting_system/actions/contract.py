@@ -78,6 +78,9 @@ class Reads:
     * `fractures`: the action may fracture a mod the item already holds (a Fracturing Orb), so a mod
       that was an ordinary slot becomes a fractured one. The compressed state then stores a fractured mod of
       a family told apart only by its family type as that type, not as a mod id (ticket #69).
+    * `rerolls_values`: the action changes the rolled values of mods the item holds, in place (a Divine
+      Orb), so the result depends on which mod each slot stands for. The compressed state then tells apart
+      the mods that a roll requirement of the goal looks at, by mod id (ticket #71).
     """
 
     junk: bool = True
@@ -86,6 +89,7 @@ class Reads:
     needs_crafted: bool = False
     block_invariant: bool = False
     fractures: bool = False
+    rerolls_values: bool = False
 
     @classmethod
     def adding(cls, *, block_invariant: bool = False) -> "Reads":
@@ -158,7 +162,7 @@ class ActionOutcomes(Protocol):
     """
 
     @property
-    def components(self) -> tuple[tuple[Fraction, "Outcomes | Fixed"], ...]: ...
+    def components(self) -> tuple[tuple[Fraction, "Outcomes | Fixed | Rerolled"], ...]: ...
 
     @property
     def fractures(self) -> bool: ...
@@ -185,6 +189,28 @@ class Fixed:
     @property
     def retained(self) -> Item:
         return self.result
+
+
+@dataclass(frozen=True, eq=False)
+class Rerolled:
+    """A result with the same mods, the values of some of them rerolled in place (a Divine Orb, ticket #71).
+
+    A part of `ActionOutcomes.components`, like `Fixed`, for an action that changes values and nothing else.
+    `given` is the item the action was used on and `retained` is that same item: no mod is added or removed.
+    `changed` are the mods whose values are rerolled, as `(mod id, fractured, crafted)` keys of `given`'s
+    mods (the fractured mods and the mods of a side that a lock protects are not in it). Each value of a
+    changed mod is drawn uniformly over the integers of its stat's range, independently per stat; with
+    `lucky` each value is rolled twice and the better one (the one nearer the stat's `max`) is kept.
+    """
+
+    data: GameData
+    given: Item
+    changed: frozenset[tuple[str, bool, bool]]
+    lucky: bool = False
+
+    @property
+    def retained(self) -> Item:
+        return self.given
 
 
 class Action(ABC):

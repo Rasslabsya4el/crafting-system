@@ -73,6 +73,7 @@ class Outcomes:
     tag: str | None
     forced: str | None = None
     guaranteed_blocked: frozenset[str] = frozenset()
+    rolls_lucky: bool = False  # every value of the mods this reroll puts on the item is rolled twice and the better kept (a Sanctified Fossil)
 
     @classmethod
     def reroll(
