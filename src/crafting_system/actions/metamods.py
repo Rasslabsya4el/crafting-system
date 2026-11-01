@@ -11,7 +11,9 @@ A metamod is a crafted mod that changes what the other actions may do. The item 
   `metamods.tag_is_implicit_tag`) and out of an Orb of Annulment's candidates. A reroll that removes the
   metamod itself is no longer under it (`metamods.reroll_needs_retained_carrier`): only a metamod the
   reroll keeps filters its draw.
-* `Can have up to 3 Crafted Modifiers` raises the limit of crafted mods to three (`crafted_limit`).
+* `Can have up to 3 Crafted Modifiers` raises the limit of crafted mods to three (`crafted_limit`). The enchantment
+  "Can have 1 additional Crafted Modifier" raises it to two without using an affix slot; with both the limit is the
+  larger of the two, three, never their sum (ADR-0053, `crafted_limit_of`).
 * Essences and resonators refuse the four metamods above (`refuse_blocking_metamod`).
 
 A metamod sits on the side opposite to the one it locks (the lock of prefixes is a suffix), so a
@@ -20,8 +22,8 @@ keeps everything.
 """
 
 from crafting_system.data import GameData, Mod
-from crafting_system.items import ExplicitMod, Item, Metamod, Side
-from crafting_system.rules import get_rule
+from crafting_system.items import ExplicitMod, Item, Metamod, Side, enchant_info
+from crafting_system.rules import get_rule, rule_by_id
 
 from .errors import NotApplicableError
 
@@ -32,6 +34,8 @@ REROLL_NEEDS_RETAINED_CARRIER = get_rule("metamods.reroll_needs_retained_carrier
 ESSENCE_REFUSED_BY_METAMOD = get_rule("metamods.essence_refused")
 MULTIMOD_RAISES_CRAFTED_LIMIT = get_rule("metamods.multimod_raises_crafted_limit")
 ONE_CRAFTED_MOD = get_rule("bench_craft.one_crafted_mod_by_default")
+# Both stay declared (the actions list them as claims they read); the "neither" and "multimod" entries of the table
+# in `crafted_limit_of` repeat their values, and a test compares them.
 
 LOCKED_SIDE: dict[Metamod, Side] = {
     Metamod.PREFIXES_CANNOT_CHANGE: Side.PREFIX,
@@ -78,10 +82,36 @@ def kept_by_reroll(data: GameData, item: Item) -> tuple[ExplicitMod, ...]:
     return tuple(entry for entry in item.mods if entry.fractured or entry.mod_id in locked)
 
 
+def grants_extra_crafted_slot(data: GameData, enchantment: str | None) -> bool:
+    """Whether `enchantment` (a mod id or None) is the one that lets an item hold one more crafted mod."""
+    mod = data.mods.get(enchantment) if enchantment is not None else None
+    info = enchant_info(mod) if mod is not None else None
+    return info is not None and info.extra_slot
+
+
+def crafted_limit_of(data: GameData, *, multimod: bool, enchantment: str | None) -> int:
+    """How many crafted mods an item holds at most, from what it has: 1 with neither, 2 with the extra slot, 3 with the multimod
+    (itself one of them), 3 with both: the larger of the two, never the sum (`enchantment.crafted_slot_with_multimod_takes_the_larger`).
+
+    The enchantment is a constant of the problem, which no action adds or removes, so the search passes the start item's to
+    this function (the compressed state does not hold it) while an action reads it from the item (`crafted_limit`).
+
+    The table is read here and not held as a constant of the module: a constant would make every bench craft and beast craft
+    list this approximate claim, whose "both" case matters only on an item that holds the enchantment and the multimod.
+    """
+    extra = grants_extra_crafted_slot(data, enchantment)
+    table = rule_by_id("enchantment.crafted_slot_with_multimod_takes_the_larger").value
+    if multimod and extra:
+        return table["both"]
+    if multimod:
+        return table["multimod"]
+    return table["extra_slot"] if extra else table["neither"]
+
+
 def crafted_limit(data: GameData, item: Item) -> int:
-    """How many crafted mods the item holds at most: one, or three with the multimod (itself one of them)."""
+    """How many crafted mods the item holds at most: one, two with the extra slot enchant, three with the multimod (itself one of them)."""
     multimod = Metamod.MULTIPLE_CRAFTED_MODS in item.metamods(data)
-    return MULTIMOD_RAISES_CRAFTED_LIMIT.value if multimod else ONE_CRAFTED_MOD.value
+    return crafted_limit_of(data, multimod=multimod, enchantment=item.enchantment)
 
 
 def refuse_blocking_metamod(data: GameData, item: Item, what: str) -> None:

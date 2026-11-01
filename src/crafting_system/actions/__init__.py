@@ -22,7 +22,7 @@ item) -> BenchOutcomes`, with the same `chance_all`, `distribution` and `sample`
 probability 1, and `cost(data)`, the price as `CurrencyCost(currency name, count)`. A bench craft
 is refused (`NotApplicableError`) on a corrupted item, for an item class the option is not offered for,
 below the mod's required item level, with a family already on the item, on a full side, and on an
-item that already holds as many crafted mods as it may (one, or three with the multimod); a normal item
+item that already holds as many crafted mods as it may (one, two with the extra crafted slot enchant, three with the multimod); a normal item
 is `OutOfScopeError`. Remove Crafted Mods removes every crafted mod that is not fractured, metamods included.
 
 A Chaotic resonator with fossils is `ApplyFossils(("Dense Fossil", "Shuddering Fossil"))`: one
@@ -64,7 +64,8 @@ the locked side through a reroll (Chaos, Alteration, Harvest), a Scouring and an
 still fill; `Cannot roll Attack` / `Caster Modifiers` keep the mods with that tag out of every draw on an item that
 still holds the metamod (a reroll that removes it is not filtered), out of an Annulment's candidates, and, on a
 Harvest reforge, out of the first (guaranteed) mod only; essences and resonators refuse the four; the multimod
-lifts the crafted-mod limit to three. No action raises `OutOfScopeError` for a metamod.
+lifts the crafted-mod limit to three, and the enchantment "Can have 1 additional Crafted Modifier" to two (the larger of
+the two with both, ADR-0053; `crafted_limit_of`). No action raises `OutOfScopeError` for a metamod.
 
 The beast crafts (`beasts.py`, ticket #147): `TalismanFracture(1 or 2)` fractures one or two mods of a rare Talisman,
 uniformly, as the Fracturing Orb does (4 or 6 mods needed), and `AspectBeast(aspect, level)` adds the suffix that
@@ -167,7 +168,7 @@ from .harvest_augment import HarvestAddRemove, HarvestDamageSwap, HarvestResista
 from .harvest_influence import HarvestReforgeInfluence
 from .harvest_likelihood import HarvestReforgeLikelihood
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
-from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags
+from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags, crafted_limit_of, grants_extra_crafted_slot
 from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool, drawable_mod_ids, partners, tiers_of
@@ -248,10 +249,12 @@ __all__ = [
     "catalog",
     "conflict_raise_chance",
     "corrupted_implicit_pool",
+    "crafted_limit_of",
     "default_actions",
     "draw_onto",
     "drawable_mod_ids",
     "fossil_actions",
+    "grants_extra_crafted_slot",
     "guaranteed_candidates",
     "implicit_pool",
     "item_dominant_side",
