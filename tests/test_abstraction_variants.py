@@ -120,7 +120,7 @@ def test_no_pool_is_a_coarsening_that_pools_nothing_and_a_negative_spread_is_ref
 
 
 def test_a_group_that_splits_a_family_type_is_refused():
-    with pytest.raises(ValueError, match=r"family type ~\d+, so every family of that type"):
+    with pytest.raises(ValueError, match=r"family type [~]\d+, so every family of that type"):
         Coarsening(TYPED, [{COLD, MANA}])
     with pytest.raises(ValueError, match="must be in its group"):
         Coarsening(MIXED, [{FIRE, MANA}])
