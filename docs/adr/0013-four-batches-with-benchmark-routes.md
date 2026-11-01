@@ -27,3 +27,13 @@ The grill fixed what B2 contains; the designs are ADR-0025 to ADR-0030.
 - **Not in B2**: Orb of Chance (no route uses it and the magic/rare split is unmeasured); it has no batch, so it stays out of v1 until one is charted.
 - **Out of v1**: Eldritch implicits on amulets; Randomise Influence; the Talisman base reroll; start items with a signature or double veil; Tainted catalysts.
 - **Route notes**: R20 starts from a bought base in B2 (the Awakener's Orb that makes its dual influence is B3). R07 is re-read in 3.29: the veiled Trigger mod has weight 0, so its route is the bench Trigger plus the unveiled minion speed. R05 gains its catalyst line (ADR-0029).
+
+## Amendment: B4 as grilled ([Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95), 2026-11-01)
+
+The grill fixed what B4 contains; the designs are ADR-0036 to ADR-0039.
+
+- **B4 is corruption without synthesis.** Synthesis can no longer be crafted in 3.29 ([#29](https://github.com/Rasslabsya4el/crafting-system/issues/29)), so the "and synthesis" of the list above is dropped.
+- **In B4**: the Vaal Orb, the Bloodstained Fossil and the Locus of Corruption (owner, answer 4: in, with a double-implicit share of 25%, approximate). A target may require a corrupted implicit (answer 1); a corrupting action is offered only for a target that asks for one or allows a corrupted item (answer 2). A corrupted item is final, so the corrupting actions are one chance of the goal each (ADR-0036).
+- **Out of v1**: Tainted Chaos, Exalted and Teardrop (answer 3: no published odds); Tainted Oil (anointments are not targets); Merrick's Ducat (Allflame is out of scope).
+- **Moved**: Tainted Jeweller's, Fusing, Chromatic and the bench socket crafts on corrupted items go to B6 (sockets); Hinekora's Lock on a corrupting action goes to B8.
+- **Benchmark**: B4 has no R-route; none of R01 to R30 uses corruption. A finder looks for one or two published corruption methods to use as given routes; if there is none, the acceptance numbers of ADR-0039 are the bar for B4.

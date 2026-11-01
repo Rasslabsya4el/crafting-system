@@ -28,3 +28,7 @@ A Blessed Orb rerolls the value of each implicit that has a range, uniformly ins
 A requirement on a roll (ADR-0008) compares the **base roll**, the integer the item stores. With a catalyst quality the displayed value is the base roll scaled and rounded down (ADR-0029), so a requirement written in displayed values is turned into the smallest base roll that shows it.
 
 Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (decision list of 2026-10-31, owner round 1 on Blessed); [Blessed Orb, catalysts and Orb of Chance](https://github.com/Rasslabsya4el/crafting-system/issues/89); ADR-0009, ADR-0024.
+
+## Amendment: corrupted implicit requirements ([Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95), ADR-0036)
+
+An `implicits:` entry may carry `corrupted: true`. Its selector is then resolved among the corrupted mods of the base's item class that can occur at the target's item level (ADR-0037's pool), and only among them; without the key a selector never sees corrupted mods. A requirement on its roll is a base roll as before. The target also gains the top-level key `allow_corrupted: true` (ADR-0036). Neither changes `Item` or the compressed state: a corrupted item is final, so the corrupted implicit is judged inside the kernel of the corrupting action and never held by a state the solver continues from. The Blessed Orb still refuses corrupted items (above).

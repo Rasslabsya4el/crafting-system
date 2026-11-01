@@ -17,3 +17,7 @@ The search ends at the goal state without quality; the finish cost, the expected
 Which lines the quality scales on a fractured or a bench-crafted mod, and that no other currency touches quality, rest on the research claims, which state their limits themselves; a claim that depends on the wiki formula carries `approximate` (ADR-0028).
 
 Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (decisions list, owner round 1 point 7); [Blessed Orb, catalysts and Orb of Chance](https://github.com/Rasslabsya4el/crafting-system/issues/89); ADR-0024, ADR-0027.
+
+## Amendment: a corrupted implicit makes the finish cost per try ([Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95), ADR-0039)
+
+A corrupted item takes no ordinary catalyst, so for a target that has a `quality` and asks for a corrupted implicit the catalysts go on **before** the Vaal Orb, the Locus or the Bloodstained resonator. The finish cost is then charged on each use of the corrupting action, not once on the goal state: every try uses a new item with its own catalysts, so every restart pays it again. The chance that the corrupted implicit's roll passes is averaged over the exact distribution of the realized quality (the last catalyst can pass the target percent). A target without a corrupted implicit keeps the rule above unchanged.

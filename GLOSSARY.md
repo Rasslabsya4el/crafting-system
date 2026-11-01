@@ -40,6 +40,10 @@ _Avoid_: Eldritch mod (an implicit is not an explicit mod)
 The strength of an Eldritch implicit, 1 Lesser to 6 Perfect, 0 for none; the reverse of `Tier`, where tier 1 is the best. Grades 5 and 6 come only from the Orb of Conflict.
 _Avoid_: Eldritch tier
 
+**Corrupted implicit**:
+An implicit that a corrupting action draws by weight from the corrupted pool of the item's class and item level, and that replaces one implicit of the item (ADR-0037). The pool is datamined (`generation_type: corrupted`); each mod of a family is its own draw.
+_Avoid_: Vaal implicit, corruption mod
+
 **Dominance**:
 The Eldritch side with the higher grade, or the only side that has an implicit; equal grades give none. Derived from the grades, never stored. The Eldritch Chaos, Exalted and Annulment Orbs act on the dominant side only.
 _Avoid_: dominance flag; Orb of Dominance (that is an influence craft)
@@ -77,8 +81,12 @@ One condition of a target: a mod, named by family or by English stat text, with 
 _Avoid_: constraint, filter
 
 **Implicit requirement**:
-One condition of a target on an implicit, written under `implicits:`: an implicit mod named by family or by English stat text, with a minimum Eldritch grade or a minimum base roll. It is resolved among implicits only, so a suffix of the same text is never chosen (ADR-0027). A condition on the catalyst quality is written under `quality:` (a type and a minimum percent).
+One condition of a target on an implicit, written under `implicits:`: an implicit mod named by family or by English stat text, with a minimum Eldritch grade or a minimum base roll. It is resolved among implicits only, so a suffix of the same text is never chosen (ADR-0027). A condition on the catalyst quality is written under `quality:` (a type and a minimum percent). With `corrupted: true` the entry is resolved among corrupted implicits only (ADR-0036).
 _Avoid_: implicit filter
+
+**Asked or allowed corruption**:
+A target asks for a corrupted item when an implicit requirement carries `corrupted: true`, and allows one with the top-level key `allow_corrupted: true`. A corrupting action is offered only then, and a corrupted item meets no other target (ADR-0036).
+_Avoid_: corruption flag
 
 **k-of-n requirement**:
 A requirement met when at least k of its n listed requirements are met.
@@ -110,6 +118,18 @@ _Avoid_: Conqueror's Exalted Orb (that names four of the six)
 **Catalyst quality**:
 The type and percent (to 20%) that a catalyst puts on a ring, amulet or belt. It scales matching modifier values and changes no odds, so it is a finish cost and not part of the compressed state (ADR-0029).
 _Avoid_: quality (an item has other kinds, such as the flat quality of gems)
+
+**Corrupting action**:
+An action that corrupts the item and so ends the item's life as an input: the Vaal Orb, a Bloodstained resonator, the Locus of Corruption. Its kernel has no continuing state; it is one chance that the outcome is the goal, and a dead end otherwise (ADR-0036).
+_Avoid_: corruption method
+
+**Brick**:
+The Vaal Orb or Locus outcome that rerolls the item into a rare of the same base with six random affixes (a full item: three prefixes and three suffixes; four mods on a jewel). For a target that asks for a corrupted implicit it is a dead end; for one that only allows a corrupted item it is a draw that can reach the goal (ADR-0037).
+_Avoid_: bad corruption, reroll outcome
+
+**Locus of Corruption**:
+The Corruption Altar of a tier 3 Incursion room: corrupts one item with one of four equal outcomes (two corrupted implicits, every white socket non-white, an influenced rare, destroyed). It has no currency price; the planner reads an owner-editable entry, default 0 Chaos. Its double-implicit share is 25% by the owner's decision, marked approximate (ADR-0038).
+_Avoid_: Corruption Altar, temple
 
 **Beast level**:
 The monster level of the beast that gates the mod a side-swap beast adds, instead of the item level. A setting, default 83, when a target names none.
