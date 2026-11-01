@@ -6,6 +6,10 @@ policy of the exact problem, on blocks) and what level it came from. `climb` wal
 stops at the first level whose certified gap is at most `TOLERANCE`; when none is, it keeps the narrowest interval
 and says so. Nothing here reads the clock but the `perf_counter` around the solves.
 
+An action with variants (an addition, ADR-0023) is a `VariantAction` of the solver: the optimistic model takes the cheapest
+variant, the pessimistic one the dearest. The policy of an approximate answer shows, for such an action, the variant that
+is dearest under the values found (nature's reply), so its transitions are the worst case the upper bound allows for.
+
 The bounds are of the cost still to pay from the start item (`Plan.mean_remaining` is the upper one); the price of
 the start item is added by whoever prints them.
 """
@@ -16,7 +20,7 @@ from dataclasses import dataclass
 
 from crafting_system.abstraction import CompressedState, integer_weights
 from crafting_system.actions import ActionError
-from crafting_system.solver import Action, Bounds, Outcome, Solution, solve_bounds
+from crafting_system.solver import Action, Bounds, Outcome, Solution, VariantAction, solve_bounds
 
 from ._decide import TOLERANCE, Candidate, Decision, exact_offer
 from ._offers import BuyStartItem, PricedOffer
@@ -58,11 +62,14 @@ class Solved:
 class BlockModel:
     """The solver's view of the blocks of a coarse state under the offered actions, in the model of `bound`."""
 
-    def __init__(self, coarsening, start: CompressedState, offers: Iterable[PricedOffer], bound: str) -> None:
+    def __init__(
+        self, coarsening, start: CompressedState, offers: Iterable[PricedOffer], bound: str, shared: dict | None = None
+    ) -> None:
         self.coarsening = coarsening
         self.start = start
         self.offers = tuple(offers)
         self.bound = bound
+        self.shared = {} if shared is None else shared  # block -> the actions of the side not asked for yet (a pair of models shares it)
         for priced in self.offers:
             if not isinstance(priced.offer.action, BuyStartItem):
                 coarsening.require_invariant(priced.offer.action)  # a refused action is not a model with fewer actions
@@ -71,6 +78,16 @@ class BlockModel:
         return self.coarsening.is_goal(block)
 
     def actions(self, block: CompressedState) -> list[Action[CompressedState]]:
+        """The actions of `block` in this model; both models of a pair are built in one pass, the other kept for its turn."""
+        if self.bound not in self.shared.get(block, ()):
+            self.shared[block] = {bound: self._build(block, bound) for bound in ("lower", "upper")}
+        sides = self.shared[block]
+        found = sides.pop(self.bound)
+        if not sides:
+            del self.shared[block]
+        return found
+
+    def _build(self, block: CompressedState, bound: str) -> list[Action[CompressedState]]:
         found = []
         for priced in self.offers:
             if isinstance(priced.offer.action, BuyStartItem):
@@ -78,12 +95,29 @@ class BlockModel:
                     found.append(Action(priced.label, priced.cost, (Outcome(self.start, 1),)))
                 continue
             try:
-                kernel = self.coarsening.kernel(block, priced.offer.action, self.bound)
+                kernels = self.coarsening.variants(block, priced.offer.action, bound)
             except ActionError:
                 continue
-            weights = integer_weights(kernel)
-            found.append(Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in weights.items())))
+            variants = tuple(tuple(Outcome(s, w) for s, w in integer_weights(kernel).items()) for kernel in kernels)
+            if len(variants) == 1:
+                found.append(Action(priced.label, priced.cost, variants[0]))
+            else:
+                found.append(VariantAction(priced.label, priced.cost, variants))
         return found
+
+
+def shown_policy(policy, values) -> dict:
+    """The policy with each `VariantAction` replaced by a plain action of its dearest variant under `values`."""
+    shown = {}
+    for state, action in policy.items():
+        if isinstance(action, VariantAction):
+            def worst(outcomes):
+                total = sum(weight for _, weight in outcomes)
+                return sum(weight * values[successor] for successor, weight in outcomes) / total
+
+            action = Action(action.label, action.cost, max(action.variants, key=worst))
+        shown[state] = action
+    return shown
 
 
 def solve_level(candidate: Candidate, start: CompressedState, offers: Iterable[PricedOffer]) -> Solved:
@@ -92,13 +126,14 @@ def solve_level(candidate: Candidate, start: CompressedState, offers: Iterable[P
     block = coarsening.coarsen(start)
     offers = tuple(offers)
     began = time.perf_counter()
+    shared: dict = {}
     bounds: Bounds[CompressedState] = solve_bounds(
-        BlockModel(coarsening, block, offers, "lower"), BlockModel(coarsening, block, offers, "upper"), [block]
+        BlockModel(coarsening, block, offers, "lower", shared), BlockModel(coarsening, block, offers, "upper", shared), [block]
     )
     seconds = time.perf_counter() - began
     if block not in bounds.upper:
         raise ValueError("the solver returned no value for the start block")
-    solution = Solution(bounds.upper, bounds.policy, bounds.pessimistic_error)
+    solution = Solution(bounds.upper, shown_policy(bounds.policy, bounds.upper), bounds.pessimistic_error)
     gap = bounds.gap_at(block)
     approximation = Approximation(
         bounds.lower[block], bounds.upper[block], gap, candidate.level.name, max(len(bounds.lower), len(bounds.upper)), TOLERANCE, coarsening

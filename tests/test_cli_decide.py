@@ -157,12 +157,21 @@ def test_the_cli_refuses_a_coarse_level_for_exactly_the_actions_that_do_not_decl
     assert seen["refused"] > 0 and seen["accepted"] > 0
 
 
+@dataclasses.dataclass(frozen=True)
+class UndeclaredRegal(RegalOrb):
+    """An addition that declares neither block invariance nor variants."""
+
+    def reads(self, data) -> Reads:
+        return Reads.adding()
+
+
 def test_the_reason_names_the_action_and_the_declaration():
     base = abstraction()
 
-    reason = coarse_refusal(base, [CHAOS, RegalOrb()])
+    reason = coarse_refusal(base, [CHAOS, UndeclaredRegal()])
 
     assert reason is not None and "Regal Orb" in reason
+    assert coarse_refusal(base, [CHAOS, RegalOrb()]) is None  # the shipped addition declares variants
 
 
 # --- decide on the committed fixture ---------------------------------------------------------------------------
@@ -219,9 +228,18 @@ def test_decide_forecasts_the_exact_graph_and_picks_the_levels_that_fit(exact):
     assert over.levels[0].estimate.states < forecast.states
 
 
+@dataclasses.dataclass(frozen=True)
+class BrokenRegal(RegalOrb):
+    """A Regal Orb whose outcomes cannot be computed (a `ValueError` that is no refusal): the pilot cannot count it."""
+
+    def outcomes(self, data, item):
+        raise ValueError("this action has no outcomes")
+
+
 def test_decide_runs_exact_when_the_pilot_cannot_count_the_actions(exact):
-    regal = [*priced(), PricedOffer(Offer("Regal Orb", RegalOrb(), {CH: 1}), 1.0, ())]
-    ab = Abstraction(DATA, exact.abstraction.goal, exact.abstraction.base_id, 84, [*(offer.action for offer in OFFERS[1:]), RegalOrb()])
+    broken = BrokenRegal()
+    regal = [*priced(), PricedOffer(Offer("Regal Orb", broken, {CH: 1}), 1.0, ())]
+    ab = Abstraction(DATA, exact.abstraction.goal, exact.abstraction.base_id, 84, [*(offer.action for offer in OFFERS[1:]), broken])
 
     decision = decide(ab, exact.start, regal, 0.0, Rates(1.0, 1.0))
 

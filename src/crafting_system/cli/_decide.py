@@ -17,7 +17,8 @@ the exact run may take. The rule:
 calibration solve on the first layers of the pilot's own graph) unless the caller injects them, and builds the
 candidate levels. Tests inject the rates; no test depends on a machine (ADR-0014).
 
-The ladder is one tuple, `LADDER`: a new kind of level (the tail cut) is a new entry with a builder in `_approx`.
+The ladder is one tuple, `LADDER` (or `SPREAD_LADDER` for a query with an addition, ADR-0023 variants): a new kind
+of level (the tail cut) is a new entry with a builder in `_approx`.
 """
 
 import time
@@ -25,7 +26,16 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from crafting_system.abstraction import Abstraction, Coarsening, CompressedState, Estimate, EstimateRefused
+from crafting_system.abstraction import (
+    ADDING_LIMIT,
+    DEFAULT_LIMIT,
+    Abstraction,
+    Coarsening,
+    CompressedState,
+    Estimate,
+    EstimateRefused,
+    needs_walk,
+)
 from crafting_system.actions import Action, OutOfScopeError
 from crafting_system.solver import Action as SolverAction
 from crafting_system.solver import ConvergenceError, Outcome, TabularModel, solve
@@ -42,10 +52,15 @@ CALIBRATION_EDGES = 60_000
 
 @dataclass(frozen=True)
 class Level:
-    """One rung of the ladder: a coarse state with the irrelevant families in groups of `size` (None: all in one)."""
+    """One rung of the ladder.
+
+    `kind` "groups": a coarse state with the irrelevant families in groups of `size` (None: all in one).
+    `kind` "spread": junk kinds pooled by weight, consecutive kinds whose per-family weights differ from the
+    lightest of their pool by at most `size` (ADR-0023, variants).
+    """
 
     kind: str
-    size: int | None
+    size: float | None
     name: str
 
 
@@ -54,6 +69,26 @@ LADDER: tuple[Level, ...] = (
     Level("groups", 8, "family groups of 8"),
     Level("groups", 4, "family groups of 4"),
 )
+
+
+SPREAD_LADDER: tuple[Level, ...] = (
+    Level("spread", 1000, "junk pooled by weight, spread 1000"),
+    Level("spread", 500, "junk pooled by weight, spread 500"),
+)  # for a query with an addition (variants): the spreads measured in #130, in weight units of the pool
+
+
+def ladder_for(abstraction: Abstraction, actions: Iterable[Action]) -> tuple[Level, ...]:
+    """The levels of a query: by weight spread when an action declares variants (an addition), else by family groups."""
+    if any(action.reads(abstraction.data).variants for action in actions):
+        return SPREAD_LADDER
+    return LADDER
+
+
+def pool_level(abstraction: Abstraction, level: Level, start: CompressedState) -> Coarsening:
+    """The coarse state of one rung."""
+    if level.kind == "spread":
+        return Coarsening.pooling_by_spread(abstraction, level.size, start)
+    return Coarsening.pooling_irrelevant(abstraction, level.size, start)
 
 
 @dataclass(frozen=True)
@@ -209,7 +244,8 @@ def decide(
     offered = [p for p in priced if not isinstance(p.offer.action, BuyStartItem)]
     actions = [p.offer.action for p in offered]
     try:
-        estimate = abstraction.estimate([start], actions, clock=clock)
+        walk = {"limit": ADDING_LIMIT if needs_walk(abstraction, actions) else DEFAULT_LIMIT}
+        estimate = abstraction.estimate([start], actions, clock=clock, **walk)
     except EstimateRefused:
         return choose(None, 0.0, 0.0, budget)
     rates = rates or Rates()
@@ -224,8 +260,8 @@ def decide(
     candidates = []
     if refusal is None and estimate.seconds(r_kernel, r_solve) > budget:
         tried = set()
-        for level in LADDER:
-            pooling = Coarsening.pooling_irrelevant(abstraction, level.size, start)
+        for level in ladder_for(abstraction, actions):
+            pooling = pool_level(abstraction, level, start)
             if pooling.groups and frozenset(pooling.groups) not in tried:  # a finer rung that cuts nothing new is the same level
                 tried.add(frozenset(pooling.groups))
                 candidates.append(Candidate(level, estimate.coarsened(pooling), pooling))

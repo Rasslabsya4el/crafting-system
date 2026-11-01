@@ -81,7 +81,7 @@ class ScouringOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.nothing()
+        return Reads.nothing(block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds.removal(keeps_crafted=False)

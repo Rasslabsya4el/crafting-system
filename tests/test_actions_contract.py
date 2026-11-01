@@ -95,13 +95,13 @@ def test_the_declared_block_invariant_kinds_are_compared_across_the_members_of_b
     compared = {}
     for kind, action, _ in PAIRS:
         compared[kind] = compared.get(kind, 0) + check_block_invariance(action)
-    for kind in ("chaos-orb", "harvest-reforge", "bench-craft", "remove-crafted-mods", "fossil-set", "annulment-orb"):
+    for kind in ("chaos-orb", "harvest-reforge", "bench-craft", "remove-crafted-mods", "fossil-set", "annulment-orb", "transmutation-orb", "alteration-orb", "scouring-orb"):
         assert compared[kind] > 0, kind
     # the additions declare variants: the backups of the members are compared with those of the variants
     for kind in ("augmentation-orb", "regal-orb", "exalted-orb"):
         assert compared[kind] > 0, kind
     # every other kind refuses by default: nothing was declared, nothing compared
-    for kind in ("alchemy-orb", "transmutation-orb", "alteration-orb", "scouring-orb"):
+    for kind in ("alchemy-orb",):
         assert compared[kind] == 0, kind
 
 
