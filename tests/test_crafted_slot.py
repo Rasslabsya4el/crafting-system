@@ -310,6 +310,7 @@ def a_plan(enchantment):
         is_goal=lambda state: state == "goal",
         offer_of=lambda action: SimpleNamespace(offer=SimpleNamespace(action=craft)),
         abstraction=SimpleNamespace(enchantment=enchantment),
+        target=SimpleNamespace(base_id=BODY),
     )
     return plan, {"start": step}
 

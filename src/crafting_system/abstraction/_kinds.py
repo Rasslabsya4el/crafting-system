@@ -23,6 +23,7 @@ told apart by MOD: all its mods have the kind `"$" + mod id`. The prefix is not 
 in `_coarse.py`), "~" (a family type), "@" (the tags of a mod) or "#" (a family without a name).
 """
 
+from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable
 
 from crafting_system.actions import BLOCKED_TAG, Action, build_pool
@@ -156,8 +157,13 @@ class Kinds:
             kind = MOD_PREFIX + mod.id
         elif self._everything or key in self._distinct or key not in self._listed_families():
             kind = key
+        elif self.by_weight:
+            types = self._type_kinds()
+            kind = types.get((key, mod.generation_type))
+            if kind is None:  # a mod on a side where its family has no weight: the family's own type (the one side it has)
+                kind = next((found for (name, _), found in types.items() if name == key), key)
         else:
-            kind = self._type_kinds()[key] if self.by_weight else ALIKE
+            kind = ALIKE
         if self.metamods:
             tags = protected_tags(mod)
             if tags:
@@ -242,18 +248,33 @@ class Kinds:
                 if family.side is side
                 and family.family not in self._distinct
                 and family.family not in self._families_by_mod()
-                and (kinds[family.family] if self.by_weight else ALIKE) == kind
+                and (kinds[family.family, family.side.value] if self.by_weight else ALIKE) == kind
             ]
         return self._members[(side, kind)]
 
-    def _type_kinds(self) -> dict[str, str]:
-        """The kind of each family of the pool that no action tells apart by name: one per family type, numbered in sorted order."""
+    def _type_kinds(self) -> dict[tuple[str, str], str]:
+        """The kind of each family of the pool that no action tells apart by name, by `(family, side)`: one per family type, numbered in sorted order.
+
+        A family with mods on both sides has a kind for each side. Its type holds the mods of the other
+        side too, because holding the one takes the other out of the pool: a family of one side never
+        shares a type with it.
+        """
         if self._types is None:
-            types = {
-                family.family: (family.side.value, tuple(sorted(self._shape(entry) for entry in family.mods)))
-                for family in self._pool()
-                if family.family not in self._distinct and family.family not in self._families_by_mod()
+            pool = self._pool()
+            shapes = {
+                (family.family, family.side.value): tuple(sorted(self._shape(entry) for entry in family.mods))
+                for family in pool
             }
+            sides_of: dict[str, list[str]] = defaultdict(list)
+            for name, side in shapes:
+                sides_of[name].append(side)
+            types = {}
+            for family in pool:
+                if family.family in self._distinct or family.family in self._families_by_mod():
+                    continue
+                side = family.side.value
+                other = tuple(sorted((o, shapes[family.family, o]) for o in sides_of[family.family] if o != side))
+                types[family.family, side] = (side, shapes[family.family, side], other)
             kinds = self._numbers.kinds_of(types.values())
             self._types = {name: kinds[kind] for name, kind in types.items()}
         return self._types
