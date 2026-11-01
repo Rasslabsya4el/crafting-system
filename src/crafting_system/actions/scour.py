@@ -109,6 +109,6 @@ class ScouringOrb(Action):
         return ScourOutcomes(data, item.changed(data, rarity=rarity, mods=kept))
 
 
-@kind("scouring-orb", order=80, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+@kind("scouring-orb", order=80)
 def _scouring_orb(data: GameData, item: Item):
     yield ScouringOrb()

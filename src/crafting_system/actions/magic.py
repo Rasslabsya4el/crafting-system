@@ -157,25 +157,25 @@ class RegalOrb(Action):
         return add_one_mod(data, item, "a Regal Orb", rarity=Rarity.RARE)
 
 
-@kind("transmutation-orb", order=71, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+@kind("transmutation-orb", order=71)
 def _transmutation_orb(data: GameData, item: Item):
     if item.rarity is Rarity.NORMAL:
         yield TransmutationOrb()
 
 
-@kind("alteration-orb", order=72, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+@kind("alteration-orb", order=72)
 def _alteration_orb(data: GameData, item: Item):
     if item.rarity in (Rarity.NORMAL, Rarity.MAGIC):
         yield AlterationOrb()
 
 
-@kind("augmentation-orb", order=73, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+@kind("augmentation-orb", order=73)
 def _augmentation_orb(data: GameData, item: Item):
     if item.rarity in (Rarity.NORMAL, Rarity.MAGIC):
         yield AugmentationOrb()
 
 
-@kind("regal-orb", order=74, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+@kind("regal-orb", order=74)
 def _regal_orb(data: GameData, item: Item):
     if item.rarity in (Rarity.NORMAL, Rarity.MAGIC):
         yield RegalOrb()

@@ -17,6 +17,10 @@ item_level: 86
 
 # No start_item block: the crafting starts from a fresh white (normal) Leather Belt.
 
+# What the belt costs, the name it has in the price file: a normal Leather Belt of item level 86, the
+# poe.ninja base price. The planner buys it again whenever the route restarts.
+start_price: Leather Belt (ilvl 86)
+
 # Everything below must be present on the finished item.
 requirements:
   # Tier-1 life. "family" is the game's own name for a group of mods that exclude each other.
