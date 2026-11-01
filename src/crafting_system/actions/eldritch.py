@@ -35,6 +35,17 @@ The Eldritch currency (`eldritch.py`, ticket #151, ADR-0025): `EldritchImplicitC
 `EldritchExaltedOrb()` and `EldritchAnnulmentOrb()` (they act on the dominant side, derived from the two grades: `item_dominant_side`) and
 `OrbOfConflict()` (raises one implicit by a grade and lowers the other, odds `conflict_raise_chance(difference)`). They work on a body
 armour, boots, gloves or helmet that is not corrupted and not influenced, and none is a planner kind yet.
+
+Memory Strands (ADR-0041, ticket #285, B5-11b; `strand_use.py`). Three of the five declare what they do with strands, and two stay
+undeclared. `EldritchChaosOrb` cuts and spends: its draw sees the tier cut of the count before the craft, and it uses up a uniform
+0 to 60 (claims `memory_strands.spend_ranges_special_orbs`, the wiki's "Eldritch Chaos Orb - 0-60", and
+`memory_strands.cut_follows_spend_table`, the emulator cuts a method that has a spend row). `EldritchImplicitCurrency` (Embers and
+Ichors) and `OrbOfConflict` neither cut nor spend (`StrandUse.untouched`, claim `memory_strands.cut_follows_spend_table`,
+`approximate`): they set implicits and draw no explicit mod from a tier table. No source speaks of them; the evidence is that the
+wiki's list of spends is closed and the emulator's spend table has no row for them. `EldritchExaltedOrb` and `EldritchAnnulmentOrb`
+declare nothing and stay refused on an item with strands: neither the ticket nor the ADR-0041 table names them, and no claim ties them
+to a source (the wiki's "Exalted-type orbs" row is not tied to the Eldritch Exalted Orb by any claim). The claims are in
+`strand_claims`, not in `claims`.
 """
 
 from collections.abc import Mapping
@@ -60,11 +71,13 @@ from crafting_system.rules import get_rule
 from .add import refuse_if_nothing_to_draw
 from .catalog import kind
 from .contract import Action, Adds, Reads
+from .cut import Cut
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .metamods import allowed_by_tags, blocked_tags, locked_sides, on_locked_side
 from .outcomes import Outcomes
 from .pool import PoolFamily, build_pool
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, SPEND_SPECIAL_ORBS, SpendLaw, StrandUse
 
 __all__ = [
     "EldritchAnnulmentOrb",
@@ -232,6 +245,12 @@ class EldritchImplicitCurrency(Action):
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset(), draws=False, implicits=True)
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 table, "Embers and Ichors, Orb of Conflict": no cut, no spend, `approximate`. No source speaks of them: the evidence is
+        # the closed spend list of the wiki and the emulator's spend table having no row for them. They set implicits and draw no
+        # explicit tier-table mod, so there is nothing to cut.
+        return StrandUse.untouched(CUT_FOLLOWS_SPEND_TABLE)
+
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         return frozenset(
             rule.id
@@ -283,9 +302,9 @@ def _implicit_currency(data: GameData, item: Item):
 # --- the three Eldritch orbs ---------------------------------------------------------------------------------------
 
 
-def _dominant_pool(data: GameData, retained: Item, side: Side) -> tuple[PoolFamily, ...]:
-    """The pool of the ordinary affix draw on `retained`, restricted to the families of `side`."""
-    return tuple(family for family in build_pool(data, retained) if family.side is side)
+def _dominant_pool(data: GameData, retained: Item, side: Side, cut: Cut | None = None) -> tuple[PoolFamily, ...]:
+    """The pool of the ordinary affix draw on `retained`, restricted to the families of `side`; `cut` is the tier cut of the draw, if it cuts."""
+    return tuple(family for family in build_pool(data, retained, cut=cut) if family.side is side)
 
 
 @dataclass(frozen=True)
@@ -304,6 +323,12 @@ class EldritchChaosOrb(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset())
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # Cuts (the emulator cuts a method that has a spend row) and uses up a uniform 0 to 60 (wiki "Eldritch Chaos Orb - 0-60").
+        return StrandUse.cutting(
+            SpendLaw.uniform(SPEND_SPECIAL_ORBS.value["eldritch_chaos"]), SPEND_SPECIAL_ORBS, CUT_FOLLOWS_SPEND_TABLE
+        )
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         return frozenset(
@@ -327,7 +352,7 @@ class EldritchChaosOrb(Action):
         side = SIDE_OF[_require_dominance(data, item, self.label())]
         kept = tuple(entry for entry in item.mods if entry.fractured or data.mods[entry.mod_id].generation_type != side.value)
         retained = item.changed(data, mods=kept)
-        return Outcomes.over(data, retained, _dominant_pool(data, retained, side), None, None)
+        return Outcomes.over(data, retained, _dominant_pool(data, retained, side, self.cut_of(data, item)), None, None)
 
 
 @dataclass(frozen=True)
@@ -516,6 +541,11 @@ class OrbOfConflict(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset(), draws=False, implicits=True)
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 table, "Embers and Ichors, Orb of Conflict": no cut, no spend, `approximate`. No source speaks of it: the evidence is
+        # the closed spend list of the wiki and the emulator's spend table having no row for it. It sets implicits only.
+        return StrandUse.untouched(CUT_FOLLOWS_SPEND_TABLE)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         return frozenset(
