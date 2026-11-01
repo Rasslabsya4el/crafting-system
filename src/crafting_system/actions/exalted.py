@@ -1,4 +1,12 @@
-"""The Exalted Orb: adds one random mod to a rare item that has an open slot, through the shared add."""
+"""The Exalted Orb: adds one random mod to a rare item that has an open slot, through the shared add.
+
+The orbs of the rare item are `ExaltedOrb()` (one more mod through the same shared add, on a rare item with an
+open slot), `AnnulmentOrb()` (removes one mod that is not fractured, uniformly, D5; the rarity stays) and
+`FracturingOrb()` (a rare item of 4 or more mods that is not influenced, fractured or corrupted: fractures one
+mod, uniformly, D6; a crafted mod or a metamod is a candidate, and a fractured one stays). The Exalted and Annulment orbs return an `Outcomes` and a `Finite`; the Fracturing Orb a `FractureOutcomes`,
+a `Finite` whose `fractures` is True. None is a planner kind yet. An influenced item draws from the pool of its
+base tags plus the influence tags (`item_tags` in `pool.py`), so the mods of an influence join every pool.
+"""
 
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -13,6 +21,10 @@ from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
+
+__all__ = [
+    "ExaltedOrb",
+]
 
 ACCEPTS_RARE_ONLY = get_rule("exalted_orb.accepts_rare_only")
 ADDS_ONE_MOD = get_rule("exalted_orb.adds_one_mod")

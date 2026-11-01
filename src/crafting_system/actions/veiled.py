@@ -52,6 +52,15 @@ from .metamods import kept_by_reroll, locked_sides, on_locked_side
 from .mixture import Mixture
 from .outcomes import Outcomes
 
+__all__ = [
+    "Pick",
+    "Unveil",
+    "VeiledChaosOrb",
+    "VeiledExaltedOrb",
+    "offer_distribution",
+    "offer_pool",
+]
+
 CHAOS_REROLLS_WITH_ONE_VEILED_MOD = get_rule("veiled.chaos_reforge_with_one_veiled_mod")
 EXALTED_REMOVES_THEN_ADDS_VEILED = get_rule("veiled.exalted_removes_then_adds_veiled")
 GENERIC_POOL_ONLY = get_rule("veiled.orbs_generic_pool_only")
@@ -395,25 +404,49 @@ class Pick(Action):
         return Finite(data, item, ((ONE, item.changed(data, mods=(*rest, picked))),))  # no placeholder left, so the offer goes
 
 
-@kind("veiled-chaos-orb", order=76, planner=False, why_not="the placeholder slot and the offer state of the compressed model are ticket #145")
+@kind(
+    "veiled-chaos-orb",
+    order=76,
+    planner=False,
+    why_not="the placeholder slot and the offer state of the compressed model are ticket #145",
+    reads_item_state_while_not_planner="any",  # they declare the offer (#144)
+)
 def _veiled_chaos_orb(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:
         yield VeiledChaosOrb()
 
 
-@kind("veiled-exalted-orb", order=77, planner=False, why_not="the placeholder slot and the offer state of the compressed model are ticket #145")
+@kind(
+    "veiled-exalted-orb",
+    order=77,
+    planner=False,
+    why_not="the placeholder slot and the offer state of the compressed model are ticket #145",
+    reads_item_state_while_not_planner="any",  # they declare the offer (#144)
+)
 def _veiled_exalted_orb(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:
         yield VeiledExaltedOrb()
 
 
-@kind("unveil", order=78, planner=False, why_not="the placeholder slot and the offer state of the compressed model are ticket #145")
+@kind(
+    "unveil",
+    order=78,
+    planner=False,
+    why_not="the placeholder slot and the offer state of the compressed model are ticket #145",
+    reads_item_state_while_not_planner="any",  # they declare the offer (#144)
+)
 def _unveil(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:  # a start item need not hold a placeholder: a veiled orb puts one on it
         yield Unveil()
 
 
-@kind("pick", order=79, planner=False, why_not="the placeholder slot and the offer state of the compressed model are ticket #145")
+@kind(
+    "pick",
+    order=79,
+    planner=False,
+    why_not="the placeholder slot and the offer state of the compressed model are ticket #145",
+    reads_item_state_while_not_planner="any",  # they declare the offer (#144)
+)
 def _pick(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:
         for index in range(1, MAX_VEIL_OFFER + 1):

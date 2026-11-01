@@ -14,6 +14,10 @@ from .errors import NotApplicableError, OutOfScopeError
 from .metamods import refuse_blocking_metamod
 from .outcomes import Outcomes
 
+__all__ = [
+    "ApplyEssence",
+]
+
 FORCED_MOD_BY_ITEM_CLASS = get_rule("essence.forced_mod_by_item_class")
 DAGGER_STAFF_TAKE_CLASS_MODS = get_rule("essence.dagger_staff_take_class_mods")
 NORMAL_ITEM_BECOMES_RARE_LIKE_ALCHEMY = get_rule("essence.normal_item_becomes_rare_like_alchemy")
