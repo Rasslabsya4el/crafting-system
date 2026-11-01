@@ -1,6 +1,7 @@
 """The one contract every crafting action meets, so a new method is one file and needs no edit elsewhere (ticket #108).
 
-An action is a frozen dataclass that subclasses `Action` and answers five questions:
+An action is a frozen dataclass that subclasses `Action` and answers five questions (and a sixth, `claims`, that
+the base class answers for it unless its file holds several actions):
 
 * `label(data)`: its stable name, the one a route's `do:` and the CLI print ("Chaos Orb", "Harvest
   Reforge Lightning", an essence's own name). Two actions of a catalog can share a label only when
@@ -12,6 +13,12 @@ An action is a frozen dataclass that subclasses `Action` and answers five questi
 * `reads(data)`: what of the item besides its fractured mods the result depends on (`Reads`).
 * `adds(data, item)`: what the action puts on the item (`Adds`), so a planner can ask whether it can
   matter for a target without running it.
+* `claims(data)`: the ids of the registry claims its result or price depends on, so an answer can name the
+  ones marked `approximate` (ADR-0028). The default is every `Rule` held as a module-level constant of the
+  module the class is defined in (the `X = get_rule("a.b")` every action file starts with), which is exact
+  for a file of one action; an action whose file holds several that read different claims overrides it.
+
+An optional seventh, `twin_key(data, item)`, lets a set of fossils name its twins without a pool (#118).
 
 `abstraction` builds its states from `reads` and its kernels from `outcomes` alone; `cli` builds its
 offers from the catalog (`catalog.py`), `resources` and `adds`; `simulator` calls `outcomes(...).sample`.
@@ -21,14 +28,17 @@ makes the state space large and no filter can drop it.
 """
 
 import random
+import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
+from functools import cache
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from crafting_system.data import GameData, Mod
 from crafting_system.items import Item
+from crafting_system.rules import Rule
 
 from .draw import Outcome
 
@@ -108,6 +118,9 @@ class Adds:
     * `wanted_only`: a planner offers it only for a target that wants a mod it names (`named`), whatever
       else the offers erase or keep (the aspect beasts: they add one fixed suffix and nothing else, so a
       target that does not want it gains nothing from its price and its slot).
+    * `fractures`: one finished mod becomes fractured (a Fractured Fossil), so the fractured mods of the
+      item change. The default is False; an action that fractures must say so, because pruning by bound
+      (#118) holds the fractured mods of the start item fixed for every action it bounds.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -120,6 +133,7 @@ class Adds:
     single_draw: bool = False
     keeps_crafted: bool = True
     wanted_only: bool = False
+    fractures: bool = False
 
     @classmethod
     def removal(cls, *, keeps_crafted: bool = True) -> "Adds":
@@ -176,7 +190,11 @@ class Fixed:
 
 
 class Action(ABC):
-    """Base of every action; subclass it as a frozen dataclass and fill in the five questions."""
+    """Base of every action; subclass it as a frozen dataclass and fill in the five questions.
+
+    `claims` answers the sixth by itself (see the module docstring); override it only when the module of
+    the class holds several actions that read different claims.
+    """
 
     @property
     def variant(self) -> str:
@@ -206,3 +224,42 @@ class Action(ABC):
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
         return Adds()
+
+    def twin_key(self, data: GameData, item: Item) -> Hashable | None:
+        """A cheap key such that two actions of the catalog with equal, non-None keys give equal `outcomes`
+        on every item of the same base, item level and rarity they apply to (their kernels are equal in every
+        state), computed without building a pool. None (the default) says the action offers none; a planner
+        then keeps it apart. Used by pruning (#118) to keep only the cheapest of a class of twins.
+        """
+        return None
+
+    def claims(self, data: GameData | None = None) -> frozenset[str]:
+        """The ids of the registry claims the result or the price depends on.
+
+        The default is every rule held as a constant of the module the class is defined in, of the modules
+        of its base classes, and, for a module of this package, of the modules of the package it imports
+        names from (`draw`, `outcomes`, `pool`, ...), one step and not transitively. It leans to naming too
+        many rather than too few, since an approximate input missing from an answer hides an uncertainty
+        (ADR-0028). A module that holds several actions reading different claims should override this with
+        the exact ids. `data` may be None, as for `resources`; the default ignores it.
+        """
+        modules = {cls.__module__ for cls in type(self).__mro__ if cls not in (Action, ABC, object)}
+        return frozenset().union(*(_module_claims(name) for name in modules))
+
+
+PACKAGE = __name__.rpartition(".")[0]
+SHARED_BY_ALL = frozenset({__name__, f"{PACKAGE}.catalog", f"{PACKAGE}.errors"})  # every action imports these: they say nothing about one
+
+
+@cache
+def _module_claims(name: str) -> frozenset[str]:
+    """The rule ids held by module `name`, and by the modules of `actions` it imports names from when it is one."""
+    modules = {name}
+    if name.startswith(PACKAGE + "."):
+        for value in vars(sys.modules[name]).values():
+            origin = getattr(value, "__module__", None)
+            if isinstance(origin, str) and origin.startswith(PACKAGE + ".") and origin not in SHARED_BY_ALL:
+                modules.add(origin)
+    return frozenset(
+        value.id for module in modules for value in vars(sys.modules[module]).values() if isinstance(value, Rule)
+    )

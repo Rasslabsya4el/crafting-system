@@ -3,9 +3,8 @@
 # on the branch research/harvest-beasts), the decisions of grill B2 (issue #93, ADR-0030) and ticket #147. The Talisman base reroll
 # (Craicic Squid) is out of v1.
 #
-# APPROXIMATE (ADR-0028): a claim whose statement starts with "Approximate:" rests on Craft of Exile's code or on a default the
-# main chat chose where no source speaks. The `approximate` field of the registry is ticket #143; until it lands the statement
-# carries the mark, and the claim is to be flagged then.
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code or on a default the main chat chose
+# where no source speaks.
 rules:
   - id: beastcraft.recipe_beasts
     statement: "The beasts each single-item recipe consumes in 3.29, as a price-file name and a count; `any_rare_creature` counts the rare beasts of any kind (the Blood Altar takes four beasts per recipe, named red beasts first and any rare beast for the rest). `value` maps the recipe to its beasts. The aspect recipes list the beast of their aspect (Saqawal Avian, Farrul Cat, Craiceann Crab, Fenumus Spider); the level 30 version adds The Black Mórrígan and one rare beast fewer."
@@ -64,18 +63,22 @@ rules:
     date_checked: 2026-10-31
 
   - id: beastcraft.side_swap_added_mod_is_a_draw
-    statement: "Approximate: the added mod of a side swap is drawn from the pool of its side as an Exalted Orb draws, in proportion to weight (families on the item and the Attack and Caster metamods respected), with the level cap of the beast instead of the item level. Craft of Exile's code only."
+    statement: "the added mod of a side swap is drawn from the pool of its side as an Exalted Orb draws, in proportion to weight (families on the item and the Attack and Caster metamods respected), with the level cap of the beast instead of the item level. Craft of Exile's code only."
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "craftDetail.add=poec_simRollAffix(null,null,\"suffix\",null,1,!0,!1,!1,!1,!1,!1,null,!1)"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code gives how a side swap draws the added mod."
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
   - id: beastcraft.side_swap_removal_uniform
-    statement: "Approximate: the removed modifier of a side swap is uniform among the mods of the opposite side that are not fractured; crafted mods and metamods are in the pool, and the addition is drawn first (it is on the other side, so it cannot be removed). Craft of Exile's code only."
+    statement: "the removed modifier of a side swap is uniform among the mods of the opposite side that are not fractured; crafted mods and metamods are in the pool, and the addition is drawn first (it is on the other side, so it cannot be removed). Craft of Exile's code only."
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "craftDetail.rem=poec_simRemoveAffix(null,\"prefix\",null,!0,!1,!1,!1,!1,null)"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code gives how a side swap picks the removed mod."
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -88,10 +91,12 @@ rules:
     date_checked: 2026-10-31
 
   - id: beastcraft.side_swap_refused_without_removable_mod
-    statement: "Approximate: a side swap on an item whose losing side holds no mod it may remove (no mod there, or every one fractured) and is not locked is refused. Craft of Exile's code only (\"No prefix to remove\"); the wiki states nothing."
+    statement: "a side swap on an item whose losing side holds no mod it may remove (no mod there, or every one fractured) and is not locked is refused. Craft of Exile's code only (\"No prefix to remove\"); the wiki states nothing."
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "No prefix to remove"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code gives this refusal; the wiki does not say."
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -104,10 +109,12 @@ rules:
     date_checked: 2026-10-31
 
   - id: beastcraft.metamod_odds_uniform
-    statement: "Approximate: Wild Bristle Matron draws uniformly among the metamods that are allowed on the item. No source gives counts of which metamod it added when several were allowed; this is the default of grill B2 (the evidence rule)."
+    statement: "Wild Bristle Matron draws uniformly among the metamods that are allowed on the item. No source gives counts of which metamod it added when several were allowed; this is the default of grill B2 (the evidence rule)."
     source_kind: owner
     url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0030-influence-harvest-and-beast-crafts-in-b2.md
     quote: "Odds: **uniform among the allowed metamods** (main chat, marked approximate)."
+    approximate: true
+    approximate_reason: "No source gives how often the Matron adds each metamod when several are allowed; uniform is the default of grill B2."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 
@@ -151,10 +158,12 @@ rules:
       GrantsCrabAspectCrafted30: 30
 
   - id: beastcraft.aspect_needs_open_suffix
-    statement: "Approximate: an aspect craft is refused on an item with no open suffix and on an item that already holds an aspect (the family GrantedSkill). Craft of Exile's code with player reports; no item level gate is applied, and the aspect does not count toward the limit of crafted mods (a player: it will not override a crafted resistance). Aspects are offered only when a target names one (grill B2)."
+    statement: "an aspect craft is refused on an item with no open suffix and on an item that already holds an aspect (the family GrantedSkill). Craft of Exile's code with player reports; no item level gate is applied, and the aspect does not count toward the limit of crafted mods (a player: it will not override a crafted resistance). Aspects are offered only when a target names one (grill B2)."
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
     quote: "No space to add aspect"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code and player reports give when an aspect craft is refused."
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
@@ -178,9 +187,11 @@ rules:
     date_checked: 2026-10-31
 
   - id: beastcraft.talisman_fracture_uniform
-    statement: "Approximate: the mod a Talisman fracture takes is uniform among all explicit mods (crafted mods and metamods included, all counting toward the minimum), as the Fracturing Orb's pick; the two-fracture recipe takes two distinct mods, every pair equally likely. The Talisman is a base of the amulet class carrying the tag `talisman`. The choice is the main chat's default (D6 of issue #28); no source says it for the beast."
+    statement: "the mod a Talisman fracture takes is uniform among all explicit mods (crafted mods and metamods included, all counting toward the minimum), as the Fracturing Orb's pick; the two-fracture recipe takes two distinct mods, every pair equally likely. The Talisman is a base of the amulet class carrying the tag `talisman`. The choice is the main chat's default (D6 of issue #28); no source says it for the beast."
     source_kind: owner
     url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0030-influence-harvest-and-beast-crafts-in-b2.md
     quote: "**Which mods are fractured is uniform** (main chat, marked approximate)."
+    approximate: true
+    approximate_reason: "No source says which mods a Talisman fracture takes; uniform, as the Fracturing Orb, is the default of grill B2."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31

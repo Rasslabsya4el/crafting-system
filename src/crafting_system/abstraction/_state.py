@@ -1,11 +1,16 @@
 """The compressed state: flags, the fractured mods, the other mods as slots, and the status of each leaf."""
 
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from crafting_system.items import Influence, Rarity, Side
 
 from ._goal import Status, Wanted
+
+
+def _state_without_hash(self) -> dict:
+    """What a pickle or a copy carries: the attributes except the cached hash, which depends on the process (string hashes are salted)."""
+    return {name: value for name, value in self.__dict__.items() if name != "_hash"}
 
 
 @dataclass(frozen=True)
@@ -16,6 +21,16 @@ class Flags:
     corrupted: bool
     influences: frozenset[Influence]
 
+    def __hash__(self) -> int:
+        try:
+            return self._hash  # type: ignore[attr-defined]
+        except AttributeError:
+            value = hash((self.rarity, self.corrupted, self.influences))
+            object.__setattr__(self, "_hash", value)
+            return value
+
+    __getstate__ = _state_without_hash
+
 
 @dataclass(frozen=True)
 class FracturedMod:
@@ -23,6 +38,16 @@ class FracturedMod:
 
     mod_id: str
     contribution: tuple[Status, ...]
+
+    def __hash__(self) -> int:
+        try:
+            return self._hash  # type: ignore[attr-defined]
+        except AttributeError:
+            value = hash((self.mod_id, self.contribution))
+            object.__setattr__(self, "_hash", value)
+            return value
+
+    __getstate__ = _state_without_hash
 
 
 @dataclass(frozen=True)
@@ -41,11 +66,25 @@ class Slot:
     kind: str
     contribution: tuple[Status, ...]
     crafted: bool = False
+    # The order slots are kept in, computed once: sorting reads it millions of times.
+    key: tuple[str, str, tuple[int, ...], bool] = field(init=False, compare=False, repr=False)
 
-    @property
-    def key(self) -> tuple[str, str, tuple[int, ...], bool]:
-        """The order slots are kept in."""
-        return (self.side.value, self.kind, tuple(int(value) for value in self.contribution), self.crafted)
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "key",
+            (self.side.value, self.kind, tuple(int(value) for value in self.contribution), self.crafted),
+        )
+
+    def __hash__(self) -> int:
+        try:
+            return self._hash  # type: ignore[attr-defined]
+        except AttributeError:
+            value = hash((self.side, self.kind, self.contribution, self.crafted))
+            object.__setattr__(self, "_hash", value)
+            return value
+
+    __getstate__ = _state_without_hash
 
 
 @dataclass(frozen=True)
@@ -62,6 +101,16 @@ class CompressedState:
     fractured: tuple[FracturedMod, ...]
     status: tuple[Status, ...]
     slots: tuple[Slot, ...] = ()
+
+    def __hash__(self) -> int:
+        try:
+            return self._hash  # type: ignore[attr-defined]
+        except AttributeError:
+            value = hash((self.flags, self.fractured, self.status, self.slots))
+            object.__setattr__(self, "_hash", value)
+            return value
+
+    __getstate__ = _state_without_hash
 
     @property
     def crafted(self) -> bool:

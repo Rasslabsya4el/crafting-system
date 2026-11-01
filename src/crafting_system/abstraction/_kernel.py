@@ -6,6 +6,7 @@ from collections.abc import Hashable, Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import reduce
+from operator import attrgetter
 
 from crafting_system.actions import (
     Action,
@@ -27,6 +28,19 @@ from ._state import CompressedState, Flags, FracturedMod, Slot, best_of, status_
 Label = Hashable  # the contribution to every leaf as ints; with junk slots kept, also the side and the kind
 FamilyType = tuple[Side, tuple[tuple[Label, Fraction, bool], ...]]
 ONE = Fraction(1)
+_SLOT_KEY = attrgetter("key")
+Expanded = tuple[tuple[tuple[Status, ...], tuple[Slot, ...], Fraction], ...]  # (best of the new mods, the slots they add, chance)
+
+
+class _Signature(tuple):
+    """A pool signature that remembers its hash: nested tuples of Fractions are slow to hash, and it keys every cache lookup."""
+
+    def __hash__(self) -> int:
+        try:
+            return self._hash  # type: ignore[attr-defined]
+        except AttributeError:
+            self._hash = value = tuple.__hash__(self)
+            return value
 
 
 @dataclass(frozen=True)
@@ -41,8 +55,9 @@ def integer_weights(kernel: Mapping[CompressedState, Fraction]) -> dict[Compress
     """The kernel as integers proportional to its probabilities, with no common factor."""
     if not kernel:
         return {}
-    common = reduce(math.lcm, (chance.denominator for chance in kernel.values()))
-    scaled = {state: int(chance * common) for state, chance in kernel.items()}
+    chances = [(state, chance.numerator, chance.denominator) for state, chance in kernel.items()]
+    common = math.lcm(*(denominator for _, _, denominator in chances))
+    scaled = {state: numerator * (common // denominator) for state, numerator, denominator in chances}
     divisor = reduce(math.gcd, scaled.values())
     return {state: weight // divisor for state, weight in scaled.items()}
 
@@ -61,6 +76,7 @@ class _Prepared:
     outcomes: ActionOutcomes
     origins: Origins
     signatures: tuple[Hashable, ...] | None = None
+    splits: "tuple[_Split, ...] | None" = None  # the split of every part, read once for `kernel` and `kernel_key`
 
 
 @dataclass(frozen=True)
@@ -100,6 +116,10 @@ class Abstraction:
         self._canonical: dict[tuple[str, tuple[Status, ...], bool], str] = {}
         self._prepared_by: dict[Hashable, _Prepared] = {}
         self._cache: dict[Hashable, dict[Hashable, Fraction]] = {}
+        self._expanded: dict[Hashable, Expanded] = {}
+        self._signatures: dict[Hashable, Hashable] = {}  # one object per equal pool signature, so a lookup by it is an identity hit
+        self._drawn_slots: dict[tuple, Slot] = {}
+        self._drawn_best: dict[tuple, tuple[Status, ...]] = {}
         self._fractures: dict[Hashable, tuple[tuple[Hashable, Fraction], ...]] = {}
         self._kernels = 0
         self._hits = 0
@@ -174,6 +194,49 @@ class Abstraction:
             )
         self._check_enabled(action)
         return self._mixture_kernel(state, self._prepared(state, action))
+
+    def kernel_key(self, state: CompressedState, action: Action) -> Hashable:
+        """A key of the kernel of `action` on `state`, cheaper than the kernel: equal keys, equal kernels.
+
+        `kernel_key(state, a) == kernel_key(state, b)` implies `kernel(state, a) == kernel(state, b)`
+        exactly (the converse does not hold: two kernels can be equal under different keys), so of the
+        actions that share a key at a state only one needs offering. It builds no state and no integer
+        weights, which is where the time of `kernel` goes; it makes the same checks (state width,
+        enabled, a fixed result that fractures) and raises what `kernel` raises before the distribution.
+
+        What the kernel reads is, per part of the outcomes, its probability `share`, its pool signature
+        (the cached label distribution; `("fixed",)` for a fixed result) and its split (flags, fractured
+        mods, kept and new slots, the status of the mods that stay); parts add up in a dict, so their
+        order does not matter and equal parts count (a multiset). Not in it: the `state` itself (the
+        kernel reads it only through the item given to the action, which the splits already carry),
+        and `_Split.new_ids`, which only names the new mods (the forced mods of two essences can differ
+        in id and give one kernel). A result that FRACTURES also reads the pool of each part (the
+        fractured mod is spread over its families; `_add_fractured`) and the forced mod, so for such a
+        part the key adds `part.forced` and the families of the pool with their mod ids and weights.
+        """
+        if len(state.status) != len(self.goal.leaves):
+            raise ValueError(
+                f"the state has {len(state.status)} statuses but the goal has {len(self.goal.leaves)} leaves: "
+                "it comes from another abstraction"
+            )
+        self._check_enabled(action)
+        prepared = self._prepared(state, action)
+        outcomes = prepared.outcomes
+        if outcomes.fractures and any(isinstance(part, Fixed) for _, part in outcomes.components):
+            raise ValueError("a fixed result cannot fracture a mod: only pool draws do (a Fractured Fossil's)")
+        parts: Counter = Counter()
+        for (share, part), signature, split in zip(
+            outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
+        ):
+            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status)
+            if outcomes.fractures:
+                pool = tuple(
+                    (family.family, tuple((entry.mod.id, entry.weight) for entry in family.mods))
+                    for family in part.pool
+                )
+                key = (*key, part.forced, pool)
+            parts[key] += 1
+        return (outcomes.fractures, frozenset(parts.items()))
 
     def _check_enabled(self, action: Action) -> None:
         if self._kinds.reads_junk(action) and action not in self._kinds.actions:
@@ -275,6 +338,10 @@ class Abstraction:
         return tuple(
             status_of(leaf, mod.id, tier, _low_values(mod), crafted) for leaf in self.goal.leaves
         )
+
+    def passes(self, mod: Mod, leaf: int) -> bool:
+        """Whether `mod`, drawn by an action (its table tier, low rolls), gives leaf number `leaf` the status PASSING."""
+        return self._drawn_contribution(mod)[leaf] is Status.PASSING
 
     def _profile(self, mod: Mod) -> tuple[int, ...]:
         """What `mod` gives each leaf as ints: the part of a family type that the goal decides."""
@@ -417,8 +484,7 @@ class Abstraction:
             raise ValueError("a fixed result cannot fracture a mod: only pool draws do (a Fractured Fossil's)")
         signatures = self._signatures_of(prepared)
         result: dict[CompressedState, Fraction] = defaultdict(Fraction)
-        for (share, part), signature in zip(outcomes.components, signatures):
-            split = self._split(part.retained, prepared.origins)
+        for (share, part), signature, split in zip(outcomes.components, signatures, self._splits_of(prepared)):
             if isinstance(part, Fixed):
                 self._add_fixed(result, share, split)
             elif outcomes.fractures:
@@ -426,6 +492,14 @@ class Abstraction:
             else:
                 self._add_drawn(result, share, part, signature, split)
         return dict(result)
+
+    def _splits_of(self, prepared: _Prepared) -> tuple[_Split, ...]:
+        """The split of every part of the outcomes (cached on `prepared`)."""
+        if prepared.splits is None:
+            prepared.splits = tuple(
+                self._split(part.retained, prepared.origins) for _, part in prepared.outcomes.components
+            )
+        return prepared.splits
 
     def _split(self, retained: Item, origins: Origins) -> _Split:
         """Read a part's retained item back into state terms.
@@ -472,23 +546,27 @@ class Abstraction:
     def _add_drawn(
         self, result: dict[CompressedState, Fraction], share: Fraction, part: Outcomes, signature, split: _Split
     ) -> None:
-        """Add the states of one pool: what stays, the forced mod and the new draws (slots when junk is kept)."""
-        width = len(self.goal.leaves)
-        tracked = self._kinds.tracked
-        stays = [*split.kept, *split.new]
-        for drawn, chance in self._distribution(signature, part).items():
-            if tracked:
-                best = best_of(width, (ints for (ints, _, _), _ in drawn))
-                slots = stays + [
-                    Slot(Side(side), kind, tuple(Status(value) for value in ints))
-                    for (ints, side, kind), count in drawn
-                    for _ in range(count)
-                ]
-                slots.sort(key=lambda slot: slot.key)
+        """Add the states of one pool: what stays, the forced mod and the new draws (slots when junk is kept).
+
+        What the draws add does not depend on the state, only on the signature, so `_expanded_distribution`
+        has it ready (the status and the sorted slots of each outcome); per state this merges it with
+        the mods that stay.
+        """
+        stays = sorted((*split.kept, *split.new), key=_SLOT_KEY)
+        stays_tuple = tuple(stays)
+        flags, fractured, stay_status = split.flags, split.fractured, split.status
+        whole = share == 1
+        for best, drawn, chance in self._expanded_distribution(signature, part):
+            if not drawn:
+                slots = stays_tuple
+            elif not stays:
+                slots = drawn
             else:
-                best, slots = tuple(Status(value) for value in drawn), sorted(stays, key=lambda slot: slot.key)
-            status = tuple(max(a, b) for a, b in zip(split.status, best))
-            result[CompressedState(split.flags, split.fractured, status, tuple(slots))] += share * chance
+                slots = tuple(sorted(stays + list(drawn), key=_SLOT_KEY))
+            state = CompressedState(flags, fractured, tuple(map(max, stay_status, best)), slots)
+            weight = chance if whole else share * chance
+            before = result.get(state)
+            result[state] = weight if before is None else before + weight
 
     def _add_fractured(
         self,
@@ -645,14 +723,51 @@ class Abstraction:
 
     def _pool_signature(self, part: Outcomes) -> Hashable:
         free = part.free
-        return (
-            part.tag,
-            len(part.retained.mods),
-            free[Side.PREFIX],
-            free[Side.SUFFIX],
-            tuple(sorted(part.totals.items())),
-            tuple(sorted(self._family_type(family, part.tag) for family in part.pool)),
+        signature = _Signature(
+            (
+                part.tag,
+                len(part.retained.mods),
+                free[Side.PREFIX],
+                free[Side.SUFFIX],
+                tuple(sorted(part.totals.items())),
+                tuple(sorted(self._family_type(family, part.tag) for family in part.pool)),
+            )
         )
+        return self._signatures.setdefault(signature, signature)
+
+    def _expanded_distribution(self, signature: Hashable, part: Outcomes) -> Expanded:
+        """`_distribution` read into state terms, cached by signature: `(best, slots, chance)` for each outcome.
+
+        `best` is what the new mods give each leaf (the per-leaf maximum, as `Status`), `slots` the slots
+        they add, sorted by `Slot.key` (none when the junk is not kept), `chance` its probability.
+        """
+        cached = self._expanded.get(signature)
+        if cached is not None:
+            self._hits += 1
+            return cached
+        width = len(self.goal.leaves)
+        tracked = self._kinds.tracked
+        entries = []
+        for drawn, chance in self._distribution(signature, part).items():
+            if tracked:
+                best = best_of(width, (ints for (ints, _, _), _ in drawn))
+                slots = sorted(
+                    (self._drawn_slot(ints, side, kind) for (ints, side, kind), count in drawn for _ in range(count)),
+                    key=_SLOT_KEY,
+                )
+            else:
+                best, slots = tuple(Status(value) for value in drawn), []
+            entries.append((self._drawn_best.setdefault(best, best), tuple(slots), chance))
+        cached = self._expanded[signature] = tuple(entries)
+        return cached
+
+    def _drawn_slot(self, ints: tuple[int, ...], side: str, kind: str) -> Slot:
+        """The slot of a new mod with the label `(ints, side, kind)`, one object for all the states."""
+        key = (ints, side, kind)
+        slot = self._drawn_slots.get(key)
+        if slot is None:
+            slot = self._drawn_slots[key] = Slot(Side(side), kind, tuple(Status(value) for value in ints))
+        return slot
 
     def _distribution(self, signature: Hashable, part: Outcomes) -> dict[Hashable, Fraction]:
         """The probability of what the new mods give, cached by signature.

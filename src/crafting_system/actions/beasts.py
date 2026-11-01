@@ -119,7 +119,7 @@ class TalismanFracture(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # It draws nothing, but the fractured copy of a mod is not a mod "named" in advance: `named` stays None.
-        return Adds(draws=False)
+        return Adds(draws=False, fractures=True)
 
     def outcomes(self, data: GameData, item: Item) -> TalismanFractureOutcomes:
         """The outcomes of the recipe on `item`: one result per mod, or per pair of distinct mods, fractured.

@@ -117,7 +117,7 @@ from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, b
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
 from .contract import Action, ActionOutcomes, Adds, Fixed, Reads
-from .draw import Outcome
+from .draw import Outcome, guaranteed_candidates
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
 from .exalted import ExaltedOrb
@@ -125,6 +125,7 @@ from .finite import Finite
 from .fossil import ApplyFossils, fossil_actions, usable_fossils
 from .fracture import FractureOutcomes, FracturingOrb
 from .harvest import HarvestReforge
+from .harvest_augment import HarvestAddRemove, HarvestDamageSwap, HarvestResistanceSwap
 from .harvest_influence import HarvestReforgeInfluence
 from .harvest_likelihood import HarvestReforgeLikelihood
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
@@ -162,9 +163,12 @@ __all__ = [
     "FossilOutcomes",
     "Fractured",
     "FracturingOrb",
+    "HarvestAddRemove",
+    "HarvestDamageSwap",
     "HarvestReforge",
     "HarvestReforgeInfluence",
     "HarvestReforgeLikelihood",
+    "HarvestResistanceSwap",
     "Kind",
     "Mixture",
     "NotApplicableError",
@@ -189,6 +193,7 @@ __all__ = [
     "default_actions",
     "draw_onto",
     "fossil_actions",
+    "guaranteed_candidates",
     "kind",
     "kinds",
     "recipe_resources",

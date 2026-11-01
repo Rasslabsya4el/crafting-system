@@ -1,0 +1,121 @@
+# Mechanic family: harvest_augment (the Harvest crafts "Add a new [tag] modifier and remove another random modifier").
+# Research ticket #88 (claims HBS-01 to HBS-06, note on `research/harvest-beasts`), grill B2 (issue #93: the three
+# comments of 2026-10-31), ADR-0030, ticket #148. A claim whose statement starts with "APPROXIMATE (ADR-0028)" rests on
+# no source but Craft of Exile's code or a choice of the main chat; ticket #143 turns that sentence into the
+# registry's `approximate` mark, and an answer then lists the claim among its approximate inputs.
+rules:
+  - id: harvest_augment.add_remove_crafts_exist
+    statement: "Eleven Harvest crafts add a new modifier of a tag and remove another random modifier from a non-influenced item. The key of `value` is the craft's name in lower case (the same names and tags as harvest_reforge.tagged_rare_reforge_exists, \"defence\" being the tag `defences`); the value maps the price-file name of each lifeforce item to the number of items one use costs. Each craft also takes one Sacred Crystallised Lifeforce and no Crystallised Rancour. A magic or a rare item takes the craft (the wiki names no rarity and Craft of Exile checks none); a normal item has nothing to remove."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Add a new Fire modifier and remove another random modifier from a non-Influenced item 15000 0 0 1 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      fire: {Wild Crystallised Lifeforce: 15000, Sacred Crystallised Lifeforce: 1}
+      cold: {Vivid Crystallised Lifeforce: 15000, Sacred Crystallised Lifeforce: 1}
+      lightning: {Primal Crystallised Lifeforce: 15000, Sacred Crystallised Lifeforce: 1}
+      physical: {Vivid Crystallised Lifeforce: 15000, Sacred Crystallised Lifeforce: 1}
+      life: {Wild Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      defence: {Primal Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      chaos: {Vivid Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      attack: {Wild Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      caster: {Primal Crystallised Lifeforce: 17500, Sacred Crystallised Lifeforce: 1}
+      speed: {Vivid Crystallised Lifeforce: 20000, Sacred Crystallised Lifeforce: 1}
+      critical: {Primal Crystallised Lifeforce: 20000, Sacred Crystallised Lifeforce: 1}
+
+  - id: harvest_augment.refused_on_influenced_item
+    statement: "The add and remove crafts work only on an item without influence; an influenced item refuses them (ADR-0030)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Version_history
+    quote: "Type-specific Exalted crafts (crafts that augmented modifiers of specific types to items) can now only be applied to non-influenced items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.works_on_fractured_and_eldritch_implicit
+    statement: "The add and remove crafts work on an item with an Eldritch implicit and on an item with a fractured modifier; neither state refuses them (the fractured modifier is only never the one removed: harvest_augment.removal_never_takes_fractured)."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93#issuecomment-6546727567
+    quote: "Harvest add/remove **works** on items with an Eldritch implicit or a fractured mod (#88 O-06 settled)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.refused_on_corrupted
+    statement: "A corrupted item takes no add and remove craft."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: harvest_augment.removes_another_modifier
+    statement: "The craft removes \"another\" modifier than the one it adds, so the new modifier is never the one removed."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Harvest_crafting#Mechanics
+    quote: "Add a new Chaos modifier and remove another random modifier from a non-Influenced item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.add_first_then_remove
+    statement: "The craft adds the new modifier first and then removes one of the others; the new modifier is excluded from the removal. The order is Craft of Exile's code (package.js:2342-2343) and player reports (note HBS-02); the wiki states none."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "craftDetail.add=poec_simRollAffix(null,crafts.ssaction,null,null,1,!0,!1,!1,!1,!1,!1,null,!1);if(crsim_hnerf){var ruleout=\"|\";for(var i=0;i<useaffixes.length;i++){if(useaffixes[i].id==craftDetail.add[0].id){ruleout+=i+\"|\"}}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.refused_when_no_room_to_add
+    statement: "The craft is refused on an item with no open slot on the side of any modifier of the tag that it could add (a full item included): the addition comes first and has nowhere to go. Craft of Exile checks the full item and that a modifier of the tag fits; player reports say the same (note HBS-03)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(useaffbt.suffix>=usemaxaffgrp.suffix&&useaffbt.prefix>=usemaxaffgrp.prefix){validity=!1;errors+=\"No space left to add\"}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.refused_when_nothing_to_remove
+    statement: "The craft is refused, and nothing is consumed, when no modifier could be removed after the addition (all are fractured, on a locked side, or there are none); Craft of Exile restores the item and shows an error."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "Unable to apply craft because there is no mod to remove!"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.add_obeys_side_locks_and_cannot_roll
+    statement: "The added modifier obeys Prefixes Cannot Be Changed and Suffixes Cannot Be Changed (an open slot on a locked side can still be filled) and Cannot roll Attack Modifiers and Cannot roll Caster Modifiers (a modifier with the tag is out of the draw)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Respected when adding, ignored when removing"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.removal_obeys_side_locks_ignores_cannot_roll
+    statement: "The removal never takes a modifier of a side locked by Prefixes / Suffixes Cannot Be Changed, and Cannot roll Attack / Caster Modifiers do not protect any modifier from it."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Metamods
+    quote: "The metamod does not protect mods from removal when used with other crafts that remove a single modifier, such as beastcrafting, Harvest, or Veiled Orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.removal_never_takes_fractured
+    statement: "A fractured modifier cannot be removed, so the removal of an add and remove craft never takes it."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
+    quote: "permanently locked to the item, being unable to be rerolled or removed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.removal_uniform_among_removable
+    statement: "APPROXIMATE (ADR-0028): no source but Craft of Exile's code. The removed modifier is uniform among the modifiers that are not fractured, not on a locked side and not the new one; ordinary crafted mods and metamods are in the pool (the code never reads the bench flag). Settled by the main chat in grill B2 (issue #93, O-02 of the note)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "function poec_simCatToRWeight(weight,apcat,mod){return weight}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_augment.addition_weighted_by_tier_weight
+    statement: "APPROXIMATE (ADR-0028): no source but Craft of Exile's code. The added modifier is drawn from the modifiers carrying the craft's tag that the item can roll (item level, family exclusion, generation weights, the Attack and Caster metamods) on a side with an open slot, in proportion to their weights, as the guaranteed draw of a tagged reforge (decision D7 of issue #28; O-01 of the note). The new modifier is rolled at the tier of the pool."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "craftDetail.add=poec_simRollAffix(null,crafts.ssaction,null,null,1,!0,!1,!1,!1,!1,!1,null,!1)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31

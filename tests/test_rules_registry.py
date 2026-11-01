@@ -20,6 +20,7 @@ from crafting_system.rules import (
     UnknownRuleError,
     get_rule,
     load_registry,
+    rule_by_id,
 )
 
 SEEDS = {
@@ -409,6 +410,51 @@ def test_a_rule_with_a_value_is_hashable(tmp_path):
     assert isinstance(hash(rule), int)
 
 
+# --- approximate claims (ADR-0028) --------------------------------------------------------------
+
+REASON = "Only Craft of Exile's code gives this count."
+
+
+def test_a_claim_without_the_mark_is_not_approximate(tmp_path):
+    rule = load_entry(tmp_path)["fam.thing"]
+
+    assert rule.approximate is False
+    assert rule.approximate_reason == ""
+
+
+def test_an_approximate_claim_loads_with_its_flag_and_reason(tmp_path):
+    rule = load_entry(tmp_path, approximate=True, approximate_reason=REASON)["fam.thing"]
+
+    assert rule.approximate is True
+    assert rule.approximate_reason == REASON
+
+
+@pytest.mark.parametrize(
+    ("changes", "words"),
+    [
+        ({"approximate": True}, "needs an approximate_reason"),
+        ({"approximate_reason": REASON}, "only with approximate: true"),
+        ({"approximate": False, "approximate_reason": REASON}, "must be true"),
+        ({"approximate": False}, "must be true"),
+        ({"approximate": "yes", "approximate_reason": REASON}, "must be true"),
+        ({"approximate": 1, "approximate_reason": REASON}, "must be true"),
+        ({"approximate": True, "approximate_reason": "first line\nsecond line"}, "one line"),
+        ({"approximate": True, "approximate_reason": "a block scalar\n"}, "one line"),
+        ({"approximate": True, "approximate_reason": ""}, "non-empty"),
+        ({"approximate": True, "approximate_reason": "   "}, "non-empty"),
+        ({"approximate": True, "approximate_reason": 5}, "non-empty"),
+    ],
+)
+def test_a_bad_approximate_mark_is_rejected_naming_the_claim(tmp_path, changes, words):
+    with pytest.raises(RegistryError) as raised:
+        load_entry(tmp_path, **changes)
+
+    message = str(raised.value)
+    assert "fam.yaml" in message
+    assert "fam.thing" in message
+    assert words in message
+
+
 # --- lookup by id -----------------------------------------------------------------------------
 
 
@@ -417,6 +463,12 @@ def test_an_unknown_rule_id_raises_an_error_naming_the_id():
         get_rule("nothing.here")
 
     assert isinstance(raised.value, KeyError)
+
+
+def test_rule_by_id_reads_the_same_registry_as_get_rule():
+    assert rule_by_id("fossils.factor_stacking") is get_rule("fossils.factor_stacking")
+    with pytest.raises(UnknownRuleError, match=r"nothing\.here"):
+        rule_by_id("nothing.here")
 
 
 def test_the_default_registry_is_loaded_once():

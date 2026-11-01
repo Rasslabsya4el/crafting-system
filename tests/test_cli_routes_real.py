@@ -107,7 +107,7 @@ def test_only_the_crafts_whose_mod_counts_toward_a_requirement_are_offered(solve
     counting = leaf_mods(target)
     crafts = [priced.offer.action for priced in plan.offers if isinstance(priced.offer.action, BenchCraft)]
     assert all(craft.mod_id in counting for craft in crafts)
-    (left,) = plan.left_out  # the rest of the bench is left out and listed, none of it unpriced
+    (left,) = [entry for entry in plan.left_out if "counts toward no requirement" in entry.reason]  # the rest of the bench is left out and listed, none of it unpriced (the pruning lists its own)
     assert len(left.labels) > 100
     assert any(isinstance(priced.offer.action, RemoveCraftedMods) for priced in plan.offers) == bool(crafts)
 
