@@ -346,9 +346,10 @@ def _both(low: tuple, high: tuple) -> tuple:
     """The results of the lower and the upper run, each `(function, args, kwargs)`.
 
     The two runs share nothing and each is a function of its own arguments, so they run side by side in a pool of two
-    when `CRAFTING_WORKERS` is above 1 (ticket #250); the pair is the same either way.
+    when `CRAFTING_WORKERS` is above 1 and workers can be forked (ticket #250); the pair is the same either way. A spawned
+    worker would be sent the chain by pickle twice, which costs more than a second run saves.
     """
-    if parallel.worker_count() < 2:
+    if parallel.worker_count() < 2 or not parallel.can_inherit():
         return tuple(function(*args, **kwargs) for function, args, kwargs in (low, high))
     with parallel.WorkerPool(_held, ({"low": low, "high": high},), workers=2) as pool:
         found = pool.map(_call, ["low", "high"], chunk=1)

@@ -63,8 +63,11 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
     if len(jobs) < MIN_JOBS:
         return 0
     listed = list(jobs.items())
-    with parallel.WorkerPool(_hold, (abstraction, listed), workers=min(workers, len(listed))) as pool:
-        results = pool.map(_compute, range(len(listed)), chunk=1)
+    try:
+        with parallel.WorkerPool(_hold, (abstraction, listed), workers=min(workers, len(listed))) as pool:
+            results = pool.map(_compute, range(len(listed)), chunk=1)
+    except Exception:  # a worker failed (a refusal, a dead process): store nothing, the kernel call computes and raises as a serial run does
+        return 0
     for ((kind, key), _), result in zip(listed, results):
         if kind == "draw":
             abstraction._cache[key] = result

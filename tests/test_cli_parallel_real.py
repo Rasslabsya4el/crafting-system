@@ -39,7 +39,20 @@ def answer(data, name: str, workers: int, monkeypatch) -> str:
 
 
 def test_r05_is_byte_identical_for_one_and_four_workers(data, monkeypatch):
-    assert answer(data, "r05-strength-ring", 4, monkeypatch) == answer(data, "r05-strength-ring", 1, monkeypatch)
+    from crafting_system.abstraction import _prime
+
+    made: list[int] = []
+    real = _prime.prime
+
+    def counting(abstraction, requests, **options):
+        made.append(real(abstraction, requests, **options))
+        return made[-1]
+
+    monkeypatch.setattr(_prime, "prime", counting)
+    pooled = answer(data, "r05-strength-ring", 4, monkeypatch)
+    if parallel.can_inherit():
+        assert sum(made) > 0  # the pool really made distributions
+    assert pooled == answer(data, "r05-strength-ring", 1, monkeypatch)
 
 
 @pytest.mark.skipif(not parallel.can_inherit(), reason="the distributions are primed in forked workers; there is no fork here")
