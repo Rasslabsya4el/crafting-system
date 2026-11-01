@@ -317,7 +317,7 @@ class OrbOfFusing(Action):
         return Adds.socket_action(links=True)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
-        found = {FUSING_REROLLS_LINKS_ONLY, FUSING_COST}
+        found = {CLASS_MAXIMUM, FUSING_REROLLS_LINKS_ONLY, FUSING_COST}
         found |= {OMEN_OF_CONNECTIONS, OMEN_OF_CONNECTIONS_COST} if self.omen else {FUSING_GROUP_SIZE_WEIGHTS, JEWELLER_IGNORES_QUALITY}
         return frozenset(rule.id for rule in found)
 
