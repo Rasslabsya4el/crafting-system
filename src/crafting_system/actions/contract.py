@@ -31,6 +31,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
+from functools import cache
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from crafting_system.data import GameData, Mod
@@ -217,8 +218,30 @@ class Action(ABC):
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         """The ids of the registry claims the result or the price depends on.
 
-        The default is the rules held as constants of the module the class is defined in. `data` may be
-        None, as for `resources`; the default ignores it.
+        The default is every rule held as a constant of the module the class is defined in, of the modules
+        of its base classes, and, for a module of this package, of the modules of the package it imports
+        names from (`draw`, `outcomes`, `pool`, ...), one step and not transitively. It leans to naming too
+        many rather than too few, since an approximate input missing from an answer hides an uncertainty
+        (ADR-0028). A module that holds several actions reading different claims should override this with
+        the exact ids. `data` may be None, as for `resources`; the default ignores it.
         """
-        module = sys.modules[type(self).__module__]
-        return frozenset(value.id for value in vars(module).values() if isinstance(value, Rule))
+        modules = {cls.__module__ for cls in type(self).__mro__ if cls not in (Action, ABC, object)}
+        return frozenset().union(*(_module_claims(name) for name in modules))
+
+
+PACKAGE = __name__.rpartition(".")[0]
+SHARED_BY_ALL = frozenset({__name__, f"{PACKAGE}.catalog", f"{PACKAGE}.errors"})  # every action imports these: they say nothing about one
+
+
+@cache
+def _module_claims(name: str) -> frozenset[str]:
+    """The rule ids held by module `name`, and by the modules of `actions` it imports names from when it is one."""
+    modules = {name}
+    if name.startswith(PACKAGE + "."):
+        for value in vars(sys.modules[name]).values():
+            origin = getattr(value, "__module__", None)
+            if isinstance(origin, str) and origin.startswith(PACKAGE + ".") and origin not in SHARED_BY_ALL:
+                modules.add(origin)
+    return frozenset(
+        value.id for module in modules for value in vars(sys.modules[module]).values() if isinstance(value, Rule)
+    )

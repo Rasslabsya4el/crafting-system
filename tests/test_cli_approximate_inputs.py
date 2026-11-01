@@ -29,7 +29,7 @@ from crafting_system.cli._route_report import render_route_text, route_document
 from crafting_system.cli._route_view import RouteInput, build_section, route_input
 from crafting_system.prices import CHAOS_ORB
 from crafting_system.risk import evaluate
-from crafting_system.rules import Rule, SourceKind
+from crafting_system.rules import Rule, SourceKind, get_rule, rule_by_id
 from crafting_system.solver import Solution
 from crafting_system.targets import Target
 
@@ -85,9 +85,14 @@ OFFERS = (
 )
 
 
+def lookup(rule_id: str) -> Rule:
+    """The toy rules, then the shipped registry (the toy actions subclass a real one, so they read its claims too)."""
+    return RULES[rule_id] if rule_id in RULES else rule_by_id(rule_id)
+
+
 @pytest.fixture(autouse=True)
 def toy_registry(monkeypatch):
-    monkeypatch.setattr(_marking, "rule_by_id", RULES.__getitem__)
+    monkeypatch.setattr(_marking, "rule_by_id", lookup)
 
 
 def toy_plan(label: str, offers=OFFERS) -> Plan:
@@ -150,7 +155,7 @@ def test_a_policy_that_takes_nothing_reads_nothing():
 
 def test_an_action_that_reads_only_unmarked_claims_says_nothing(monkeypatch):
     plan = toy_plan("Marked Chaos")
-    monkeypatch.setattr(_marking, "rule_by_id", dict(RULES, **{"toy.marked": TOY_PLAIN}).__getitem__)
+    monkeypatch.setattr(_marking, "rule_by_id", lambda rule_id: TOY_PLAIN if rule_id == "toy.marked" else lookup(rule_id))
 
     assert approximate_inputs(plan, plan.policy, DATA) == ()
 
@@ -192,7 +197,7 @@ def test_the_json_policy_lists_the_input_and_is_an_empty_list_when_there_is_none
 
 
 def test_an_answer_with_no_marked_claim_prints_no_new_line(monkeypatch):
-    monkeypatch.setattr(_marking, "rule_by_id", dict(RULES, **{"toy.marked": TOY_PLAIN}).__getitem__)
+    monkeypatch.setattr(_marking, "rule_by_id", lambda rule_id: TOY_PLAIN if rule_id == "toy.marked" else lookup(rule_id))
     report = build_report(toy_plan("Marked Chaos"), DATA)
 
     assert report.approximate_inputs == ()
@@ -262,6 +267,20 @@ def test_the_planner_and_a_given_route_each_list_their_own_inputs_on_the_page():
 
 
 def test_a_goal_card_with_no_marked_claim_has_no_such_field(monkeypatch):
-    monkeypatch.setattr(_marking, "rule_by_id", dict(RULES, **{"toy.marked": TOY_PLAIN}).__getitem__)
+    monkeypatch.setattr(_marking, "rule_by_id", lambda rule_id: TOY_PLAIN if rule_id == "toy.marked" else lookup(rule_id))
 
     assert "Approximate inputs" not in fields_of(route_input(toy_plan("Marked Chaos")))
+
+
+def test_a_claim_marked_in_the_registry_reaches_the_report_through_a_real_action(monkeypatch):
+    real = get_rule("chaos_orb.cost")
+    reason = "a toy mark on a real claim"
+    marked = dataclasses.replace(real, approximate=True, approximate_reason=reason)
+    monkeypatch.setattr(_marking, "rule_by_id", lambda rule_id: marked if rule_id == real.id else rule_by_id(rule_id))
+    plan = toy_plan("Chaos Orb", (Offer("Chaos Orb", ChaosOrb(), {CHAOS_ORB: 1}),))
+    report = build_report(plan, DATA)
+
+    assert report.approximate_inputs == (ApproximateInput("chaos_orb.cost", reason),)
+    assert f"  chaos_orb.cost: {reason}" in render_text(report).splitlines()
+    assert policy_document(report)["approximate_inputs"] == [{"claim": "chaos_orb.cost", "reason": reason}]
+    assert fields_of(route_input(plan))["Approximate inputs"] == [f"chaos_orb.cost: {reason}"]

@@ -41,6 +41,11 @@ class ToyAction(Action):
 
 
 @dataclasses.dataclass(frozen=True)
+class ChaosOrbSubclass(ChaosOrb):
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
 class OverridingToy(ToyAction):
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         return frozenset({TOY_TWO.id})
@@ -58,13 +63,23 @@ def test_the_data_argument_is_optional_and_ignored():
     assert ToyAction().claims(None) == ToyAction().claims()
 
 
-def test_a_chaos_orb_reports_the_four_claims_of_its_module():
-    assert ChaosOrb().claims() == {
-        "chaos_orb.accepts_rare_only",
-        "chaos_orb.rerolls_all_mods",
-        "chaos_orb.refused_on_corrupted",
-        "chaos_orb.cost",
-    }
+OWN_CLAIMS = {
+    "chaos_orb.accepts_rare_only",
+    "chaos_orb.rerolls_all_mods",
+    "chaos_orb.refused_on_corrupted",
+    "chaos_orb.cost",
+}
+
+
+def test_a_chaos_orb_reports_the_claims_of_its_module_and_of_the_helpers_it_draws_on():
+    claims = ChaosOrb().claims()
+
+    assert OWN_CLAIMS <= claims
+    assert {"chaos_orb.kept_mods_count_in_total", "affix_pool.draw_proportional_to_weight"} <= claims  # draw.py, outcomes.py
+
+
+def test_a_subclass_in_another_module_keeps_the_claims_of_its_parent():
+    assert OWN_CLAIMS <= ChaosOrbSubclass().claims()
 
 
 def test_the_restart_reads_no_claim():
