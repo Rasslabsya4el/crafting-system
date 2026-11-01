@@ -32,3 +32,15 @@ The Awakener's Orb (ADR-0032) and the recombinator are the actions that read a *
 The predictable mode (its PoE 1 formula is unpublished); idols (no route); the exclusive-mod and Ducat padding tricks; a Gold and Dust formula (ADR-0035).
 
 Origin: [Grill B3](https://github.com/Rasslabsya4el/crafting-system/issues/94) (round 1 answers 1, 3, 4a; "Selection rule after #175"); [Awakener's Orb, recombinators and imprints in 3.29](https://github.com/Rasslabsya4el/crafting-system/issues/90); [#175](https://github.com/Rasslabsya4el/crafting-system/issues/175); ADR-0012, ADR-0022, ADR-0028.
+
+## As built ([#215](https://github.com/Rasslabsya4el/crafting-system/issues/215))
+
+`actions/recombinator.py`, claims in `rules/claims/recombinator.yaml`. The action is `Recombinator(donor, count_table="guide")`: the donor is the one `Need`, the item in hand the other input; the result is a `Finite` list of items, so `chance_all`, the sampler and the kernel come for free. Where the sources and the ADR are silent the build chose, and marked it:
+
+- **The counts are renormalised.** The guide's rows 3 and 4 sum to 101 and are divided by it, so the figure of the research example at alpha 0 under the guide's row 4 is 54.95% (222/404), not the 55.5% of the unrenormalised row (222/400). The wiki's row 4 gives 55% at alpha 0 and 3.8% at alpha 1, as in the research table.
+- **Any exponent is accepted**, not only the grid; the axis `recombinator.alpha` lists the grid and the plan (1). Weights to a fractional power are taken as the exact value of the float, so every probability is an exact `Fraction` and sums to 1.
+- **An exclusive mod is drawn at weight 1000** (`recombinator.exclusive_mod_weight`, the guide author's assumption, approximate), because the data gives crafted and special mods weight 0. An exclusive mod is a crafted one, an essence-only one, or one its own input could not roll naturally (a beast aspect, a Breach or Incursion mod); the ADR's "elevated influenced" mods fall under the last test. Veiled mods are out of scope (the unveil offer would have to travel).
+- **A picked mod keeps its tier and roll** from its input. No source says the values are rerolled; Craft of Exile's stale Sentinel recombinator rerolls them.
+- **The output rarity** follows the mods (normal with none, magic with at most one per side, rare otherwise), from Craft of Exile's code alone (approximate).
+- **A result on another base or item level has no state.** The kernel refuses it (`Abstraction._check_same_item_space`); the compressed state of the recombinator is ticket #217. The catalog lists the kind (not a planner kind) with a copy of the item as the donor and a donor of other mods the base can roll.
+- The cost of one use is `recombinator.cost_per_combine` (ADR-0035's point values) until ticket #216 prices it.
