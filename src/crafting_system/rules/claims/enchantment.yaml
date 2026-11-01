@@ -124,6 +124,22 @@ rules:
     quote: "Enchant a Body Armour. Quality does not increase its Defences, grants +1 Maximum Life per 2% quality | 3250 | 0 | 0 | 0 | 0"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+    value:
+      # by mod id of the dump (the price-file name of the lifeforce item: the number of items); the first eight are body armour, the last six weapons
+      HarvestAlternateArmourQualityIncreasedLife: {Wild Crystallised Lifeforce: 3250}
+      HarvestAlternateArmourQualityStrength: {Wild Crystallised Lifeforce: 3250}
+      HarvestAlternateArmourQualityFireResistance: {Wild Crystallised Lifeforce: 3250}
+      HarvestAlternateArmourQualityDexterity: {Vivid Crystallised Lifeforce: 3250}
+      HarvestAlternateArmourQualityColdResistance: {Vivid Crystallised Lifeforce: 3250}
+      HarvestAlternateArmourQualityIncreasedMana: {Primal Crystallised Lifeforce: 3250}
+      HarvestAlternateArmourQualityIntelligence_: {Primal Crystallised Lifeforce: 3250}
+      HarvestAlternateArmourQualityLightningResistance: {Primal Crystallised Lifeforce: 3250}
+      HarvestAlternateWeaponQualityLocalMeleeWeaponRange_: {Wild Crystallised Lifeforce: 5000}
+      HarvestAlternateWeaponQualityAreaOfEffect_: {Wild Crystallised Lifeforce: 5000}
+      HarvestAlternateWeaponQualityAccuracyRatingIncrease_: {Vivid Crystallised Lifeforce: 5000}
+      HarvestAlternateWeaponQualityLocalIncreasedAttackSpeed: {Vivid Crystallised Lifeforce: 5000}
+      HarvestAlternateWeaponQualityLocalCriticalStrikeChance__: {Primal Crystallised Lifeforce: 5000}
+      HarvestAlternateWeaponQualityElementalDamagePercent: {Primal Crystallised Lifeforce: 5000}
 
   - id: enchantment.quality_enchant_changes_only_its_stat
     statement: A Harvest quality enchant changes only which stat quality gives (weapon Physical Damage, body armour Defences); the other effects of quality on the item are unchanged. Whether quality still scales the socket and link odds of Jeweller's and Fusing Orbs after the 3.29.0 sockets rework is not claimed here (ticket #99 found it unsettled).
