@@ -6,6 +6,7 @@ from .http_json import SourceError, http_get_json
 from .price_file import (
     CHAOS_ORB,
     DIVINE_ORB,
+    MarketRecord,
     PriceEntry,
     PriceFile,
     PriceFileNotFound,
@@ -31,13 +32,18 @@ from .trade_http import (
     urllib_transport,
     user_agent,
 )
+from .trade_market import DEFAULT_MIN_LISTINGS, TradeOffer, offer
 from .trade_pricing import (
     TRADE_SOURCE,
     NotEnoughListings,
+    TradeMarket,
     TradePrice,
+    assess_buy_spec,
     entry_for,
+    market_of_listings,
     merge_trade_prices,
     price_buy_spec,
+    store_market,
     store_trade_price,
 )
 from .trade_query import BuyMod, BuySpec, TradeSpecError, load_buy_spec
@@ -71,6 +77,14 @@ __all__ = [
     "to_divine",
     "write_price_file",
     "TRADE_SOURCE",
+    "DEFAULT_MIN_LISTINGS",
+    "MarketRecord",
+    "TradeMarket",
+    "TradeOffer",
+    "assess_buy_spec",
+    "market_of_listings",
+    "offer",
+    "store_market",
     "BudgetExceeded",
     "BuyMod",
     "BuySpec",

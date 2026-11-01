@@ -43,12 +43,36 @@ class PriceEntry:
     detail: Mapping[str, Any] | None = None  # a JSON object: how the price was found (#39)
 
 
+MARKET_THIN = "thin"
+MARKET_NONE = "none"
+MARKET_STATES = (MARKET_THIN, MARKET_NONE)
+
+
+@dataclass(frozen=True)
+class MarketRecord:
+    """A trade search that did not make a price, kept as a recorded state (#355).
+
+    `none`: the site answered a successful search with no listing (total 0). `thin`: it has listings but
+    too few to call a market (fewer than the listing-count rail, or too few that can be priced). Neither
+    is offered and neither is "unknown": the trade site said so on `date`, and the record ages like a price.
+    """
+
+    state: str  # MARKET_THIN or MARKET_NONE
+    league: str
+    date: date  # UTC date of the search
+    listings: int  # the search `total`
+    usable: int  # listings that could be priced (0 when none were fetched)
+    query_hash: str
+    query: Mapping[str, Any]
+
+
 @dataclass(frozen=True)
 class PriceFile:
     league: str
     fetched_at: datetime  # timezone-aware, whole seconds
     chaos_per_divine: float
     prices: dict[str, PriceEntry] = field(default_factory=dict)
+    markets: dict[str, MarketRecord] = field(default_factory=dict)  # thin / none trade searches, by name
 
 
 def default_price_file_path(config: Config) -> Path:
@@ -94,6 +118,8 @@ def write_price_file(path: Path, price_file: PriceFile) -> None:
             for name, entry in price_file.prices.items()
         },
     }
+    if price_file.markets:
+        document["markets"] = {name: _market_to_json(record) for name, record in price_file.markets.items()}
     text = json.dumps(document, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
     path.parent.mkdir(parents=True, exist_ok=True)
     handle, temp_name = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
@@ -104,6 +130,18 @@ def write_price_file(path: Path, price_file: PriceFile) -> None:
     except BaseException:
         Path(temp_name).unlink(missing_ok=True)
         raise
+
+
+def _market_to_json(record: MarketRecord) -> dict[str, Any]:
+    return {
+        "state": record.state,
+        "league": record.league,
+        "date": record.date.isoformat(),
+        "listings": record.listings,
+        "usable": record.usable,
+        "query_hash": record.query_hash,
+        "query": record.query,
+    }
 
 
 def load_price_file(path: Path) -> PriceFile:
@@ -168,7 +206,41 @@ def _price_file_from_document(document: object, path: Path) -> PriceFile:
         if canonical in prices:
             raise ValueError(f"{path}: {name!r} and another name give the same price name {canonical!r}")
         prices[canonical] = PriceEntry(float(raw["chaos"]), source, note, detail)
-    return PriceFile(league, fetched_at, float(chaos_per_divine), prices)
+    markets = _markets_from_document(document.get("markets", {}), path)
+    return PriceFile(league, fetched_at, float(chaos_per_divine), prices, markets)
+
+
+def _count(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _markets_from_document(raw_markets: object, path: Path) -> dict[str, MarketRecord]:
+    if not isinstance(raw_markets, dict):
+        raise ValueError(f"{path}: markets must be an object of name -> market record")
+    markets: dict[str, MarketRecord] = {}
+    for name, raw in raw_markets.items():
+        where = f"{path}: market {name!r}"
+        if not isinstance(raw, dict):
+            raise ValueError(f"{where} must be an object")
+        if raw.get("state") not in MARKET_STATES:
+            raise ValueError(f"{where}: state must be one of {', '.join(MARKET_STATES)}")
+        if not isinstance(raw.get("league"), str) or not raw["league"].strip():
+            raise ValueError(f"{where}: league must be a non-empty string")
+        try:
+            searched_on = date.fromisoformat(raw["date"])
+        except (KeyError, TypeError, ValueError):
+            raise ValueError(f"{where}: date must be an ISO date") from None
+        if not _count(raw.get("listings")) or not _count(raw.get("usable")):
+            raise ValueError(f"{where}: listings and usable must be whole numbers, zero or more")
+        if not isinstance(raw.get("query_hash"), str) or not isinstance(raw.get("query"), dict):
+            raise ValueError(f"{where}: query_hash must be a string and query an object")
+        canonical = canonical_price_name(name)
+        if canonical in markets:
+            raise ValueError(f"{path}: {name!r} and another name give the same market name {canonical!r}")
+        markets[canonical] = MarketRecord(
+            raw["state"], raw["league"], searched_on, raw["listings"], raw["usable"], raw["query_hash"], raw["query"]
+        )
+    return markets
 
 
 def _parse_timestamp(value: object, path: Path) -> datetime:
