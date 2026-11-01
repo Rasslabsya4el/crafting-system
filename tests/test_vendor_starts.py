@@ -56,6 +56,7 @@ from crafting_system.cli import (
     policy_document,
     render_text,
     vendor_recipe_starts,
+    verify,
 )
 from crafting_system.cli import _starts as starts_module
 from crafting_system.cli._start_options import combine, gem_price_name, good_name
@@ -272,6 +273,16 @@ def test_the_plan_of_the_chosen_start_is_the_plan_make_plan_gives_for_that_item(
 
     assert alone.mean_remaining == plan.mean_remaining and alone.policy == plan.policy
     assert alone.risk.mean.value == plan.risk.mean.value
+
+
+def test_the_simulator_plays_the_recipe_start_and_agrees_with_the_computed_mean():
+    plan = plan_with_starts(TOY, toy_target(), prices())
+
+    check = verify(TOY, plan, runs=600, seed=5)
+
+    assert plan.starts.chosen.key == BOOTS_KEY
+    assert check.agrees, check.reason
+    assert check.computed_mean == pytest.approx(FIVE_STEPS + plan.mean_remaining)  # the recipe start's price is in the mean
 
 
 def test_the_report_and_the_json_say_what_the_plan_started_from():
