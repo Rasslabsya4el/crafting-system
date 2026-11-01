@@ -11,6 +11,7 @@ from .catalog import kind
 from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError, OutOfScopeError
+from .metamods import refuse_blocking_metamod
 from .outcomes import Outcomes
 
 FORCED_MOD_BY_ITEM_CLASS = get_rule("essence.forced_mod_by_item_class")
@@ -65,9 +66,10 @@ class ApplyEssence(Action):
 
         Raises `ValueError` for a name that is no essence in `data`, `NotApplicableError` for a
         magic item, a rare item and an essence that works on normal items only, a corrupted item,
-        an item class that takes no essence, and a forced mod that shares a family with a fractured
+        an item class that takes no essence, an item with a lock or an Attack/Caster metamod (the multimod
+        does not block it), and a forced mod that shares a family with a fractured
         mod, and `OutOfScopeError` (no admitted rule covers it) for Essence of Desolation, a
-        jewel, an influenced item whose class has no influence class key, one with a metamod, one whose fractured mods fill the side of the forced
+        jewel, an influenced item whose class has no influence class key, one whose fractured mods fill the side of the forced
         mod, and a level 1 to 4 essence that has no cap in the data.
         """
         essence = self._record(data)
@@ -75,6 +77,7 @@ class ApplyEssence(Action):
             raise NotApplicableError("an essence works on a normal or rare item only, and this item is magic")
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no essence")
+        refuse_blocking_metamod(data, item, "an essence")
         if essence.name == DESOLATION_IS_NOT_A_B1_ACTION.value:
             raise OutOfScopeError(
                 f"{essence.name} is not a B1 action: it has no ordinary source in 3.29, so it is not modelled"

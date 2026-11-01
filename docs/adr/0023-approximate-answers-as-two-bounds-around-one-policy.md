@@ -57,11 +57,13 @@ Prototype in `.claude/scratch/83-approx/` of the main checkout (not committed; `
 
 | Level | Blocks | Build | Solve (both models) | Certified lower | Certified upper | Certified gap | Exact cost of the lifted policy |
 |---|---|---|---|---|---|---|---|
-| exact | 13,172 | 906 s | not run | (2.159763 measured) | | | |
-| M1: irrelevant families in one group | 365 | 38 s | 0.4 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
-| M2: irrelevant, groups of 8 | 1,582 | 135 s | not run | | | | |
-| M3: irrelevant, groups of 4 | 4,295 | 426 s | 30 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
+| exact | 13,172 (14,350 since #68) | 906 s | not run | (2.159763 measured) | | | |
+| M1: irrelevant families in one group | 365 (738 since #68) | 38 s | 0.4 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
+| M2: irrelevant, groups of 8 | 1,582 (2,129 since #68) | 135 s | not run | | | | |
+| M3: irrelevant, groups of 4 | 4,295 (5,081 since #68) | 426 s | 30 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
 | B2: all families in one group | 364 | not built | 0.1 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
+
+Ticket #68 lifted the multimod's dead end (a state holding "Can have up to 3 Crafted Modifiers" used to refuse every action), so the crafts after it are reachable and the exact state count and the block counts of the rows above grew as marked; the exact graph, the times and the costs were not measured again.
 
 "Build" is one representative per block through the real kernels, valid because of block-invariance (member differences 0); it ran while another job shared the machine, so it is an upper bound. The 0.0000% means below 1e-4: it includes the solver's `e` (3e-11). All gaps are zero here: the 109 crafts that give neither Life nor Strength never enter the best policy (32 crafts and 141 give the same optimum), and the one craft that matters is blocked only by a family that the block keeps apart. So R05 shows what pooling saves (36 times fewer blocks, the minute), not what it can cost.
 

@@ -52,7 +52,7 @@ is not fractured is a `Slot`, counted per side and kind. A family type is the fa
 enabled action treats alike; a family that an enabled craft would clash with is told apart (its kind
 is the family key), as is a family the pool does not list. Crafted mods are always slots, told apart
 by their canonical mod id; a reroll drops them (an ordinary crafted mod is erased like any other),
-and a state with a crafted metamod is refused by the rerolls as `OutOfScopeError`. A new action that
+and a state with a lock or Attack/Caster metamod is refused for the actions that read it, as `OutOfScopeError`. A new action that
 reads the mods says how it tells families apart in its `reads` (`Reads.families`); one that says nothing
 tells every family apart (exact, but the state count can blow up).
 
@@ -97,9 +97,10 @@ Transmutation, an Alteration, an Alchemy and a Scouring erase the junk and add n
 
 Out of scope: a `min_roll` on a mod that an action draws, forces or crafts. Its value is rolled and no
 exact roll distribution is built yet, so such a mod raises `OutOfScopeError`. A concrete item's mod is
-judged by its stored tier and values. A metamod has no reroll kernel: the rerolls refuse it. The
-multimod ("Can have up to 3 Crafted Modifiers") makes the bench refuse as well until its limit is
-modelled.
+judged by its stored tier and values. The compressed state does not model the metamods that change a draw
+(the two locks and the Attack/Caster pair) yet: a state that holds one is refused with `OutOfScopeError` for every
+action whose `Reads.metamods` is True, which is all but the bench (a bench craft and Remove Crafted Mods see a
+metamod as one more crafted mod). The multimod ("Can have up to 3 Crafted Modifiers") is only a bench limit.
 
 No mechanic is decided here: this module only recombines the results of `actions`, so it reads no
 claim of the rules registry.

@@ -40,8 +40,9 @@ class ExaltedOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, is full, or for which
-        no mod is legal, and `OutOfScopeError` for a jewel, an influenced item of a class with no
-        influence class key, or one with a crafted metamod.
+        no mod is legal, and `OutOfScopeError` for a jewel or an influenced item of a class with no
+        influence class key. An open slot of a locked side still fills; the Attack and Caster metamods
+        keep the mods with their tag out of the pool.
         """
         if item.rarity is not Rarity.RARE:
             raise NotApplicableError(f"an Exalted Orb works on a rare item only, and this item is {item.rarity}")

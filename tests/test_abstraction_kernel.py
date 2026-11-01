@@ -186,8 +186,6 @@ REFUSED = {
     "normal": lambda: small_item(rarity=Rarity.NORMAL),
     "magic": lambda: small_item(roll(LIFE_1), rarity=Rarity.MAGIC),
     "corrupted": lambda: dataclasses.replace(fractured_item(RESIST_2), corrupted=True),
-    "crafted_mod": lambda: small_item(roll(CRAFTED, crafted=True)),
-    "crafted_mod_and_fractured": lambda: small_item(roll(RESIST_2, fractured=True), roll(CRAFTED, crafted=True)),
     "corrupted_and_influenced": lambda: dataclasses.replace(
         fractured_item(), corrupted=True, influences=frozenset({Influence.HUNTER})
     ),
@@ -211,11 +209,12 @@ def test_an_item_the_action_refuses_is_refused_with_the_same_error(name, action)
         assert str(compressed.value) == str(direct.value)
 
 
-def test_a_crafted_mod_is_out_of_scope_even_though_the_rest_of_the_item_could_be_rerolled():
+def test_a_metamod_is_out_of_scope_for_the_compressed_state_although_the_action_accepts_the_item():
     item = small_item(roll(RESIST_2, fractured=True), roll(CRAFTED, crafted=True))
     ab = abstraction()
+    CHAOS.outcomes(SMALL, item)  # the action models the metamod (ticket #68) ...
 
-    with pytest.raises(OutOfScopeError, match="crafted"):
+    with pytest.raises(OutOfScopeError, match="metamod"):  # ... the compressed state does not yet
         ab.kernel(ab.compress(item), CHAOS)
 
 
