@@ -191,6 +191,8 @@ class Target:
     `enchantment` is the acceptable set for the item's enchantment, or None when the target asks for none.
     `allow_corrupted` lets the goal be a corrupted item that has no corrupted implicit (ADR-0036); a target that asks for a
     corrupted implicit (`asks_corrupted`) takes a corrupted item too, and any other target is never met by one.
+    `item_level_floor` and `tiers_top_at_item_level` are the author's word on how far the planner may plan below `item_level`
+    (ADR-0061, `floor.py`): a stated lowest level, and the statement that the tiers written are the top tiers of `item_level`.
     """
 
     base_id: str
@@ -205,6 +207,8 @@ class Target:
     actions: tuple[str, ...] | None = None
     enchantment: EnchantmentRequirement | None = None
     allow_corrupted: bool = False
+    item_level_floor: int | None = None
+    tiers_top_at_item_level: bool = False
 
     @property
     def asks_corrupted(self) -> bool:

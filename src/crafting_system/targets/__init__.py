@@ -62,6 +62,9 @@ Keys (unknown keys are errors, with a close-match hint):
     price_file: prices.json # optional path; a relative path counts from the target file's folder
     actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it offers by
                             # default); a name may also be the label of one action, e.g. "Essence of Insanity" (#70)
+    item_level_floor: 84    # optional (ADR-0061): the lowest item level the planner may plan at; 1 to `item_level`. Without it the planner
+                            # derives the floor from the tiers the requirements ask for (`floor.py`). It never goes below the derived one.
+    tiers_top_at_item_level: true   # optional (ADR-0061): the tiers written are "the top tier at `item_level`", so the level is not lowered
     allow_corrupted: true   # optional (ADR-0036): a corrupted item may be the goal even with no corrupted implicit; without this key
                             # and without a `corrupted: true` implicit, a corrupted item is never a goal
 
@@ -92,6 +95,17 @@ from pathlib import Path
 from crafting_system.data import GameData
 
 from .errors import TargetError
+from .floor import (
+    ItemLevelFloor,
+    ItemLevelOptions,
+    LevelGroup,
+    NodeLevel,
+    floor_of,
+    item_level_options,
+    level_groups,
+    refusal_at,
+    target_at_level,
+)
 from .model import (
     Condition,
     EnchantmentRequirement,
@@ -108,14 +122,23 @@ __all__ = [
     "Condition",
     "EnchantmentRequirement",
     "ImplicitRequirement",
+    "ItemLevelFloor",
+    "ItemLevelOptions",
     "KOfN",
+    "LevelGroup",
+    "NodeLevel",
     "Node",
     "QualityRequirement",
     "Requirement",
     "Target",
     "TargetError",
+    "floor_of",
+    "item_level_options",
+    "level_groups",
     "load_target",
     "parse_target",
+    "refusal_at",
+    "target_at_level",
 ]
 
 
