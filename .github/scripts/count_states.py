@@ -109,8 +109,7 @@ def main() -> None:
         for stat in snapshot.statistics("lineno")[:25]:
             print(f"{stat.size / 1e6:9.1f} MB {stat.count:>10} {stat.traceback[0]}")
         for stat in snapshot.statistics("traceback")[:6]:
-            print(f"{stat.size / 1e6:9.1f} MB {stat.count:>10}", *stat.traceback.format()[-8:], sep="
-    ")
+            print(f"{stat.size / 1e6:9.1f} MB {stat.count:>10}", *stat.traceback.format()[-8:], sep=chr(10) + "    ")
     if args.out:
         out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
