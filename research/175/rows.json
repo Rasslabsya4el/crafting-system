@@ -51,9 +51,15 @@
     {
      "cell": "hybrid flat t3",
      "col_side": "prefix",
-     "kind": "unmapped",
-     "group": "unmapped:hybridflat",
-     "weight": null
+     "kind": "natural",
+     "group": "BaseLocalDefencesAndLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 3000
     }
    ],
    "author_counts": [
@@ -63,7 +69,7 @@
     "3"
    ],
    "side_mismatch": false,
-   "drop_reason": "mod name not resolvable to a game mod"
+   "drop_reason": "kept mod not in the pool (typo or lost context)"
   },
   {
    "tab": "gloves",
@@ -186,9 +192,15 @@
     {
      "cell": "hybrid flat t3",
      "col_side": "prefix",
-     "kind": "unmapped",
-     "group": "unmapped:hybridflat",
-     "weight": null
+     "kind": "natural",
+     "group": "BaseLocalDefencesAndLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 3000
     }
    ],
    "author_counts": [
@@ -198,7 +210,7 @@
     "1"
    ],
    "side_mismatch": false,
-   "drop_reason": "mod name not resolvable to a game mod"
+   "drop_reason": "kept mod not in the pool (typo or lost context)"
   },
   {
    "tab": "gloves",

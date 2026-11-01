@@ -80,6 +80,7 @@ STEMS = {
     "ev%h": ("DefencesPercentAndStunRecovery", True, False),
     "ar/es%h": ("DefencesPercentAndStunRecovery", True, False),
     "ar/ev%h": ("DefencesPercentAndStunRecovery", True, False),
+    "hybridflat": ("BaseLocalDefencesAndLife", True, False),
     "life": ("IncreasedLife", False, False), "mana": ("IncreasedMana", True, False),
     "flatphys": ("PhysicalDamage", False, False), "ms": ("MovementVelocity", False, False),
     "flatcold": ("ColdDamage", False, False), "fireflat": ("FireDamage", False, False),
