@@ -18,7 +18,7 @@
 ## What this changes
 
 - The action is a two-input action of kind `awakener`; it needs the action contract to carry inputs (ADR-0024, "Limits").
-- The donor is a `Need` whose wanted state holds the influence and the influenced mod the route wants carried over, and nothing else of the donor matters to the result: the compressed state of the donor is its influence and that mod (ticket in the B3 chart).
+- The donor is a `Need` whose wanted state holds the influence and the influenced mod the route wants carried over, and nothing else of the donor matters to the result: the compressed state of the donor is its influence and that mod, as a **want** that the acquisition meets at the first donor with that projection, whatever else it holds (ADR-0059).
 - R18's Assassin's Mark text is checked against the 3.29 data before its target is written (owner, grill B3).
 
 Origin: [Grill B3](https://github.com/Rasslabsya4el/crafting-system/issues/94) (round 1, answers 4c and 4d; decisions list); [Awakener's Orb, recombinators and imprints in 3.29](https://github.com/Rasslabsya4el/crafting-system/issues/90); ADR-0011, ADR-0022, ADR-0028.
