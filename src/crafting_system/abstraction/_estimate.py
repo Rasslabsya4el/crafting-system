@@ -122,9 +122,11 @@ def _shape(data, action: Action) -> str:
     """How the pilot treats `action`: "reroll" (erases the junk), "craft" (a bench craft), "removal" (Remove Crafted Mods) or "walked"."""
     reads = action.reads(data)
     if not reads.junk:
-        return "reroll"
+        return "reroll"  # its real kernel is run once per key, which carries the implicits, the quality and the offer (`state.held`)
     adds = action.adds(data, None)
     named = adds.named
+    if reads.item_state or adds.item_state:
+        return "walked"  # the closed forms of a craft and of a removal change the slots only: an action that touches the implicits, the quality or the offer runs its real kernel
     if reads.families is not None and not reads.pool_weight and adds.crafted and not adds.draws and named is not None and len(named) == 1:
         return "craft"
     if reads.needs_crafted and not reads.pool_weight and named == frozenset() and not adds.draws:

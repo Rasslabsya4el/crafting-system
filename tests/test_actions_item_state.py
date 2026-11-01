@@ -77,8 +77,6 @@ def test_no_kind_of_the_catalog_declares_item_state_yet():
     for kind in kinds():
         for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
-            if kind.name in {"harvest-add-remove", "harvest-resistance-swap", "harvest-damage-swap"}:
-                continue  # these three never overrode `reads`: they declare nothing, so they read everything
             assert not reads.item_state and not adds.item_state, kind.name
 
 

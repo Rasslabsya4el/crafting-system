@@ -39,6 +39,7 @@ from item_state_support import (
 
 from crafting_system.abstraction import (
     Abstraction,
+    Coarsening,
     Goal,
     ImplicitSide,
     ImplicitWanted,
@@ -46,7 +47,7 @@ from crafting_system.abstraction import (
     Status,
     Wanted,
 )
-from crafting_system.actions import ActionError, AnnulmentOrb, ChaosOrb, OutOfScopeError, Reads
+from crafting_system.actions import ActionError, Adds, AnnulmentOrb, ChaosOrb, OutOfScopeError, Reads
 from crafting_system.items import CatalystType, ImplicitMod, Quality
 
 BOOTS_BASE = boots().base_id
@@ -357,14 +358,81 @@ def _real_graph(found, starts, actions):
     return len(seen), transitions
 
 
-def test_the_pilot_count_tells_states_apart_by_the_item_state_a_reroll_carries():
+@dataclasses.dataclass(frozen=True)
+class KeepsCrafted(ChaosOrb):
+    """A Chaos Orb that declares it keeps crafted mods: the pilot then keys its kernel by the crafted slots (the second branch of its key)."""
+
+    def adds(self, data=None, item=None) -> Adds:
+        return Adds(named=frozenset(), single_draw=True)
+
+
+@pytest.mark.parametrize(
+    ("reroll", "options"),
+    [(ChaosOrb(), {}), (KeepsCrafted(), {}), (ChaosOrb(), {"metamods": True})],
+    ids=["erases_crafted", "keeps_crafted", "models_metamods"],
+)
+def test_the_pilot_count_tells_states_apart_by_the_item_state_a_reroll_carries(reroll, options):
+    """The three branches of the pilot's memo key for a reroll: states that differ only in the quality are not merged."""
     goal = Goal((Wanted(frozenset({GEM})),))
-    found = ab(goal, [ToyCatalyst()])
+    found = ab(goal, [ToyCatalyst()], **options)
     starts = [found.compress(amulet(quality=intrinsic(percent))) for percent in (5, 10)]
-    actions = [ChaosOrb(), ToyCatalyst()]
+    actions = [reroll, ToyCatalyst()]
 
     ticks = itertools.count()
     pilot = found.estimate(starts, actions, clock=lambda: float(next(ticks)))
 
     assert (pilot.states, pilot.transitions) == _real_graph(found, starts, actions)
     assert {state.quality for state in found.reachable(starts, actions)} >= {intrinsic(5), intrinsic(10), intrinsic(20)}
+
+
+@dataclasses.dataclass(frozen=True)
+class QualityChaos(ChaosOrb):
+    """A Chaos Orb that says it reads the quality (an erasing reroll that does, so it is enabled): the family-group level keeps its block-invariance."""
+
+    def reads(self, data) -> Reads:
+        return dataclasses.replace(super().reads(data), quality=True)
+
+
+def test_the_family_group_level_keeps_the_item_state_of_the_block_a_reroll_is_run_on():
+    found = ab(GOAL, [QualityChaos()])
+    assert found.tracks_quality
+    coarse = Coarsening.pooling_irrelevant(found)
+    low_quality = found.compress(amulet(roll(RESIST_2), quality=intrinsic(5)))
+    high_quality = found.compress(amulet(roll(RESIST_2), quality=intrinsic(10)))
+
+    for bound in ("lower", "upper"):
+        for state in (low_quality, high_quality, low_quality):  # the second block must not get the cached result of the first
+            kernel = coarse.kernel(coarse.coarsen(state), QualityChaos(), bound)
+            assert kernel and {successor.quality for successor in kernel} == {state.quality}
+
+
+def test_the_pilot_does_not_count_an_action_that_touches_the_item_state_as_a_closed_form_craft():
+    from crafting_system.abstraction._estimate import _shape
+
+    @dataclasses.dataclass(frozen=True)
+    class CraftThatSetsQuality(ToyCatalyst):
+        def reads(self, data):
+            return Reads(junk=True, families=frozenset())
+
+        def adds(self, data=None, item=None):
+            return Adds(named=frozenset({"EinharMasterWeaponElementalDamage1_"}), crafted=True, draws=False, quality=True)
+
+    @dataclasses.dataclass(frozen=True)
+    class PlainCraft(CraftThatSetsQuality):
+        def adds(self, data=None, item=None):
+            return Adds(named=frozenset({"EinharMasterWeaponElementalDamage1_"}), crafted=True, draws=False)
+
+    assert _shape(ITEM_DATA, PlainCraft()) == "craft"
+    assert _shape(ITEM_DATA, CraftThatSetsQuality()) == "walked"
+    assert _shape(ITEM_DATA, ToyCatalyst()) == "walked"
+
+
+def test_the_pruning_by_bound_cuts_at_an_action_that_reads_the_item_state():
+    from crafting_system.cli._bound_prune import REROLL, TERMINAL, _kind_of
+    from crafting_system.cli._offers import Offer, PricedOffer
+
+    def kind(action):
+        return _kind_of(ITEM_DATA, amulet(roll(RESIST_2)), PricedOffer(Offer(action.label(), action, {}), 1.0, ()))[0]
+
+    assert kind(ChaosOrb()) == REROLL
+    assert kind(QualityChaos()) == TERMINAL  # an erasing reroll whose result depends on the quality: the chance read at one state does not hold at another
