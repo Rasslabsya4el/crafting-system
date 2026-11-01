@@ -416,8 +416,12 @@ def test_hollow_and_glyphic_in_one_resonator_stay_out_of_scope_with_a_bloodstain
 def test_a_refusal_of_the_game_comes_before_a_set_that_is_out_of_scope():
     """The order of the module text: `NotApplicableError` (no pool on these gloves) before `OutOfScopeError` (Hollow with Glyphic)."""
     gloves = boots(roll("LifeA"), base=NO_POOL_GLOVES)
+    hollow = next(record for record in DATA.fossils.values() if record.name == "Hollow Fossil")  # it works on boots only: let it take gloves
+    data = dataclasses.replace(DATA, fossils={**DATA.fossils, hollow.id: dataclasses.replace(hollow, allowed_tags=())})
     with pytest.raises(NotApplicableError, match="no corrupted implicit pool"):
-        bloodstained("Hollow", "Glyphic").outcomes(DATA, gloves)
+        bloodstained("Hollow", "Glyphic").outcomes(data, gloves)
+    with pytest.raises(OutOfScopeError, match="Hollow and Glyphic"):
+        plain("Hollow", "Glyphic").outcomes(data, gloves)  # without the Bloodstained Fossil the same set is out of scope
 
 
 def test_a_fractured_fossil_is_still_refused_on_a_fractured_item():

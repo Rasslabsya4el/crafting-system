@@ -88,7 +88,8 @@ class ImplicitDraw:
     from `pool`. An item stores an implicit only when it was given one (`Item`: the base's own implicits are not filled in), but the
     game's item has them: `unstored` is how many implicits of the base the item does not store, and each is as likely to be the
     replaced one as a stored one (ADR-0037: "chosen uniformly among the item's implicits, base and Eldritch ones alike"). When one
-    of those goes, every stored implicit stays; the unstored ones are not on the finished item either way.
+    of those goes, every stored implicit stays; the unstored ones are not on the finished item either way (so a base with two implicits
+    of its own that the item does not store gives `chance_all` 0 for each of them).
     """
 
     data: GameData
