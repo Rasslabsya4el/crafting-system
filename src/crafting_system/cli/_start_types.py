@@ -14,6 +14,7 @@ This module holds the records only; it imports nothing of the planner, so `Plan`
 from dataclasses import dataclass
 
 from crafting_system.items import Item
+from crafting_system.prices.price_source import SourcedPrice
 
 SOURCE_PLAIN = "plain"
 SOURCE_VENDOR_RECIPE = "vendor recipe"
@@ -39,7 +40,8 @@ class StartCandidate:
     `key` names the candidate in a run (`plain`, `vendor:weapon_fire:8`). `price` is the whole Chaos price of the item;
     for a recipe it is the sum of `goods`, for the plain start item the price the target names. `price_name` and
     `price_source` are what the report prints on the start line. `claims` are the ids of the claims behind a recipe-made item
-    that are marked `approximate` (ADR-0028). A candidate that exists only at some values of a rule axis names the axis in
+    that are marked `approximate` (ADR-0028). `sourced` is the price of a bought item under the profile's price source (ticket #357):
+    the trade and poe.ninja prices side by side, the fallback mark and the gap flag; the report prints it under the option. A candidate that exists only at some values of a rule axis names the axis in
     `axis` and the values in `reading_values` (ADR-0059: the elemental cap); `axis` None means it exists at every reading.
     """
 
@@ -56,6 +58,7 @@ class StartCandidate:
     claims: tuple[str, ...] = ()
     axis: str | None = None
     reading_values: tuple[str, ...] = ()
+    sourced: SourcedPrice | None = None
 
     def exists_in(self, reading: Reading) -> bool:
         """Whether this candidate can be had at `reading` of the rule axes (one without an axis exists at every reading)."""

@@ -23,10 +23,12 @@ import itertools
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
+from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
 from crafting_system.targets import Target
 
 from ._offers import Offer
@@ -100,19 +102,24 @@ def plan_with_starts(
     start_price: float | None = None,
     sources: tuple[StartSource, ...] = SOURCES,
     offers: Iterable[Offer] | None = None,
+    price_source: str = DEFAULT_PRICE_SOURCE,
+    price_gap_percent: float = DEFAULT_GAP_PERCENT,
+    today: date | None = None,
     **kwargs: Any,
 ) -> Plan:
     """Plan `target` from every start option and return the plan of the cheapest total, with the comparison in `Plan.starts`.
 
     `recipe_starts` is the user setting: false makes this exactly `make_plan`. `start_price` is the plain start item's price for
     this run (it does not apply to a recipe start, whose price is its goods). `kwargs` go to `make_plan` unchanged (`budget`,
-    `rates`, `strands`). `sources` are the start sources after the plain one. Raises `PlanError` as `make_plan` does when no
+    `rates`, `strands`). `sources` are the start sources after the plain one. `price_source` (`ninja`, `trade`, `both`), `price_gap_percent`
+    and `today` are the profile setting of ticket #357; they go to every source in its `StartContext` and change nothing for the plain
+    start item or for a recipe start, which are priced from the price file as before. Raises `PlanError` as `make_plan` does when no
     start option reaches the goal (the message is the plain start item's).
     """
     offers = tuple(offers) if offers is not None else None  # several plans read them
     if not recipe_starts:
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
-    listing = combine([source(StartContext(data, target, prices)) for source in sources])
+    listing = combine([source(StartContext(data, target, prices, price_source, price_gap_percent, today)) for source in sources])
     if not listing.candidates and not listing.refused:
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
 

@@ -58,6 +58,8 @@ def start_lines(choice: StartChoice) -> list[str]:
     ]
     for row in choice.considered:
         lines.append(_row(row))
+        if row.candidate.sourced is not None:
+            lines.extend(f"      {text}" for text in row.candidate.sourced.lines())
         if row.outcome == "chosen" and row.candidate.goods:
             parts = "; ".join(f"{count} {name} = {money(chaos)} [{source}]" for name, count, chaos, source in row.candidate.goods)
             lines.append(f"      hand the vendor: {parts}")
@@ -96,6 +98,7 @@ def _option(row: ConsideredStart) -> dict:
         "rule_axis": candidate.axis,
         "rule_axis_values": list(candidate.reading_values),
         "note": row.note,
+        **({"price": candidate.sourced.document()} if candidate.sourced is not None else {}),
     }
 
 

@@ -73,6 +73,7 @@ class PriceFile:
     chaos_per_divine: float
     prices: dict[str, PriceEntry] = field(default_factory=dict)
     markets: dict[str, MarketRecord] = field(default_factory=dict)  # thin / none trade searches, by name
+    ninja: dict[str, PriceEntry] = field(default_factory=dict)  # poe.ninja rows of names whose `prices` entry is a trade price, so both show side by side (#357)
 
 
 def default_price_file_path(config: Config) -> Path:
@@ -108,18 +109,12 @@ def write_price_file(path: Path, price_file: PriceFile) -> None:
         "league": price_file.league,
         "fetched_at": price_file.fetched_at.astimezone(UTC).strftime(_TIMESTAMP_FORMAT),
         "chaos_per_divine": price_file.chaos_per_divine,
-        "prices": {
-            name: {
-                "chaos": entry.chaos,
-                "source": entry.source,
-                **({"note": entry.note} if entry.note is not None else {}),
-                **({"detail": entry.detail} if entry.detail is not None else {}),
-            }
-            for name, entry in price_file.prices.items()
-        },
+        "prices": {name: _entry_to_json(entry) for name, entry in price_file.prices.items()},
     }
     if price_file.markets:
         document["markets"] = {name: _market_to_json(record) for name, record in price_file.markets.items()}
+    if price_file.ninja:
+        document["ninja"] = {name: _entry_to_json(entry) for name, entry in price_file.ninja.items()}
     text = json.dumps(document, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
     path.parent.mkdir(parents=True, exist_ok=True)
     handle, temp_name = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
@@ -130,6 +125,15 @@ def write_price_file(path: Path, price_file: PriceFile) -> None:
     except BaseException:
         Path(temp_name).unlink(missing_ok=True)
         raise
+
+
+def _entry_to_json(entry: PriceEntry) -> dict[str, Any]:
+    return {
+        "chaos": entry.chaos,
+        "source": entry.source,
+        **({"note": entry.note} if entry.note is not None else {}),
+        **({"detail": entry.detail} if entry.detail is not None else {}),
+    }
 
 
 def _market_to_json(record: MarketRecord) -> dict[str, Any]:
@@ -187,27 +191,47 @@ def _price_file_from_document(document: object, path: Path) -> PriceFile:
 
     prices = {}
     for name, raw in raw_prices.items():
-        if not isinstance(raw, dict):
-            raise ValueError(f"{path}: price {name!r} must be an object")
-        if not is_price(raw.get("chaos")):
-            raise ValueError(f"{path}: price {name!r}: chaos must be a number above zero")
+        entry = _entry_from_document(raw, name, "price", path)
         if name == CHAOS_ORB and raw["chaos"] != 1:
             raise ValueError(f"{path}: price {name!r}: Chaos Orb is always 1")
-        source = raw.get("source")
-        if not isinstance(source, str) or not source.strip():
-            raise ValueError(f"{path}: price {name!r}: source must be a non-empty string")
-        note = raw.get("note")
-        if note is not None and not isinstance(note, str):
-            raise ValueError(f"{path}: price {name!r}: note must be a string")
-        detail = raw.get("detail")
-        if detail is not None and not isinstance(detail, dict):
-            raise ValueError(f"{path}: price {name!r}: detail must be an object")
         canonical = canonical_price_name(name)
         if canonical in prices:
             raise ValueError(f"{path}: {name!r} and another name give the same price name {canonical!r}")
-        prices[canonical] = PriceEntry(float(raw["chaos"]), source, note, detail)
+        prices[canonical] = entry
     markets = _markets_from_document(document.get("markets", {}), path)
-    return PriceFile(league, fetched_at, float(chaos_per_divine), prices, markets)
+    ninja = _ninja_from_document(document.get("ninja", {}), path)
+    return PriceFile(league, fetched_at, float(chaos_per_divine), prices, markets, ninja)
+
+
+def _entry_from_document(raw: object, name: str, label: str, path: Path) -> PriceEntry:
+    """One entry of the `prices` or `ninja` block; `label` ("price" or "ninja") names the block in errors."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"{path}: {label} {name!r} must be an object")
+    if not is_price(raw.get("chaos")):
+        raise ValueError(f"{path}: {label} {name!r}: chaos must be a number above zero")
+    source = raw.get("source")
+    if not isinstance(source, str) or not source.strip():
+        raise ValueError(f"{path}: {label} {name!r}: source must be a non-empty string")
+    note = raw.get("note")
+    if note is not None and not isinstance(note, str):
+        raise ValueError(f"{path}: {label} {name!r}: note must be a string")
+    detail = raw.get("detail")
+    if detail is not None and not isinstance(detail, dict):
+        raise ValueError(f"{path}: {label} {name!r}: detail must be an object")
+    return PriceEntry(float(raw["chaos"]), source, note, detail)
+
+
+def _ninja_from_document(raw_ninja: object, path: Path) -> dict[str, PriceEntry]:
+    if not isinstance(raw_ninja, dict):
+        raise ValueError(f"{path}: ninja must be an object of name -> price entry")
+    ninja = {}
+    for name, raw in raw_ninja.items():
+        entry = _entry_from_document(raw, name, "ninja", path)
+        canonical = canonical_price_name(name)
+        if canonical in ninja:
+            raise ValueError(f"{path}: ninja {name!r} and another name give the same price name {canonical!r}")
+        ninja[canonical] = entry
+    return ninja
 
 
 def _count(value: object) -> bool:
