@@ -119,9 +119,17 @@ MALFORMED = {
     "empty quote": ({**HISTORY_ENTRY, "quote": " "}, "quote must be a non-empty string"),
     "long quote": ({**HISTORY_ENTRY, "quote": "x" * 401}, "at most 400 characters"),
     "empty statement": ({**HISTORY_ENTRY, "statement": ""}, "statement must be a non-empty string"),
-    "held until the claim's own patch": ({**HISTORY_ENTRY, "held_until": "3.29.3.3"}, "must be earlier than the claim's patch_verified"),
-    "held until after the claim's patch": ({**HISTORY_ENTRY, "held_until": "3.30.0.1"}, "must be earlier than the claim's patch_verified"),
+    "held until after the claim's patch": ({**HISTORY_ENTRY, "held_until": "3.30.0.1"}, "must not be later than the claim's patch_verified"),
 }
+
+
+def test_a_claim_rewritten_on_the_patch_it_was_verified_on_may_hold_its_old_text_until_that_patch(tmp_path):
+    """A design change (ticket #274: B5 turned 'items carry no strands' into 'only when the query says so') rewrites a claim
+    without a patch behind it, so the old text held until the patch the new one is verified on."""
+    rule = load_registry(claims_folder(tmp_path, with_history({**HISTORY_ENTRY, "held_until": "3.29.3.3"})))["fam.thing"]
+
+    assert [h.held_until for h in rule.history] == ["3.29.3.3"]
+    assert rule.patch_verified == "3.29.3.3"
 
 
 @pytest.mark.parametrize("entry, problem", MALFORMED.values(), ids=MALFORMED)

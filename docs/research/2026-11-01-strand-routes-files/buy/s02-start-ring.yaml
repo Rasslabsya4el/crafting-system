@@ -1,0 +1,9 @@
+# S02 start item (docs/research/2026-11-01-strand-routes.md): a normal Helical Ring of item level 84 or more. The target file
+# is docs/research/2026-11-01-strand-routes-files/targets/s02-fire-res-ring-showcase.yaml; its `start_price` is the `name` below. A comment on the post says
+# "Helical ring is 35+ divines baseline" (the base, at the showcase's date); the price file holds the price the plan uses.
+name: S02 start ring
+base_type: Helical Ring
+category: accessory.ring
+rarity: normal
+item_level_min: 84
+corrupted: false

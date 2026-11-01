@@ -6,7 +6,7 @@ holds no capacity filter: which sides still have room changes during a reroll, s
 it. Weights are exact fractions and never rounded.
 
 The item's tags for the spawn weights are the tags of its base plus one tag per influence
-(`item_tags`), so the mods of an influence join the pool. Items carry no Memory Strands (`NO_MEMORY_STRANDS`), so a draw is never tier-gated.
+(`item_tags`), so the mods of an influence join the pool. A draw is never tier-gated here yet (`NO_MEMORY_STRANDS`): the cut of an item with strands is the next ticket of batch B5, and until then the planner refuses a run with strands (`make_plan`).
 A family can have mods on both sides (jewels): its `PoolFamily` come in a pair of one name (`partners`), and a draw takes the family out on both sides.
 The Attack and Caster metamods on the item filter the pool by tag (`metamods.py`). Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); only the explicit
 mods on the item do.

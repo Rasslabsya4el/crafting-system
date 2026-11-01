@@ -321,9 +321,9 @@ def _parse_history(
                 f" ({parsed[-1].held_until}): list the history oldest first",
                 "held_until",
             )
-        if patch_order_key(item["held_until"]) >= patch_order_key(patch_verified):
+        if patch_order_key(item["held_until"]) > patch_order_key(patch_verified):
             raise fail(
-                f"held_until {item['held_until']} must be earlier than the claim's patch_verified"
+                f"held_until {item['held_until']} must not be later than the claim's patch_verified"
                 f" {patch_verified}: the claim was rewritten after it",
                 "held_until",
             )
