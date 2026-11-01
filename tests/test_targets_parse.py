@@ -211,3 +211,19 @@ def test_a_start_price_must_be_non_empty_text():
     message = parse_error("requirements:\n  - family: IncreasedLife\nstart_price: 5\n")
 
     assert message.startswith("t.yaml:5: ") and ": start_price: must be non-empty text" in message
+
+
+def test_the_actions_key_names_the_kinds_the_planner_may_use():
+    target = parse("requirements:\n  - family: IncreasedLife\nactions: [alteration-orb, ' regal-orb ']\n")
+
+    assert target.actions == ("alteration-orb", "regal-orb")
+    assert parse("requirements:\n  - family: IncreasedLife\n").actions is None
+
+
+def test_the_actions_key_must_be_a_non_empty_list_of_text_without_repeats():
+    head = "requirements:\n  - family: IncreasedLife\n"
+
+    assert ": actions: must be a non-empty list of action kinds" in parse_error(head + "actions: []\n")
+    assert ": actions: must be a non-empty list of action kinds" in parse_error(head + "actions: regal-orb\n")
+    assert ": actions[1]: must be the name of an action kind" in parse_error(head + "actions: [regal-orb, 5]\n")
+    assert "is listed twice (first at actions[0])" in parse_error(head + "actions: [regal-orb, regal-orb]\n")

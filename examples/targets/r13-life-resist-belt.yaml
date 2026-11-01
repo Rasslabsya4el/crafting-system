@@ -17,6 +17,17 @@ item_level: 86
 
 # No start_item block: the crafting starts from a fresh white (normal) Leather Belt.
 
+# What the belt costs, the name it has in the price file: a normal Leather Belt of item level 86, the
+# poe.ninja base price. The planner buys it again whenever the route restarts.
+start_price: Leather Belt (ilvl 86)
+
+# The kinds of actions the planner may use: the guide's orbs and the bench. Without this line the
+# planner also offers every other orb it can use, a Chaos Orb among them, and a belt rerolled that way
+# has far more states than a plan can hold yet (more than 43,000 after four minutes, and a GitHub runner
+# stopped the run with the pruning of ticket #118 in place); the plan is then the cheapest among the
+# named kinds, and the report lists the kinds left out.
+actions: [transmutation-orb, alteration-orb, augmentation-orb, regal-orb, bench-craft, remove-crafted-mods]
+
 # Everything below must be present on the finished item.
 requirements:
   # Tier-1 life. "family" is the game's own name for a group of mods that exclude each other.

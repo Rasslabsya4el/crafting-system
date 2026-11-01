@@ -1,0 +1,97 @@
+# Given route for benchmark route R13: an alt-regal belt with tier-1 life, two tier-1 resistances and a
+# crafted damage modifier.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# It does not search for anything: in every state the FIRST rule whose conditions match is the one
+# that is followed. A goal state is never acted on. A state no rule matches is reported as a gap.
+# Lines starting with # are comments and are ignored. The conditions and actions are explained in
+# examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (Reddit, 2021, docs/research/2026-10-30-5-reference-routes.md, id R13):
+#   1. Spam Orbs of Alteration on a magic belt until it holds tier-1 life and a tier-1 resistance.
+#   2. Use a Regal Orb for the second tier-1 resistance. Restart (buy the belt again) if the Regal gives
+#      anything else.
+#   3. Craft the damage modifier at the bench.
+#
+# The guide starts from a magic belt; the target starts from a normal one, so the first rule is the
+# Orb of Transmutation that makes it magic. The guide's "tier-1 resistance" is any of fire, cold and
+# lightning (the target asks for two of the three), and an unstated tier is the top tier (owner rule).
+
+name: R13, Reddit guide
+
+rules:
+  # Step 3: life and two tier-1 resistances are on the belt, in the three ways to pick two of the three.
+  # The target's damage modifier is a bench craft that the target does not mind the tier of; the
+  # highest one the belt's item level allows is used.
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: FireResistance
+          status: passing
+        - family: ColdResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: FireResistance
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: ColdResistance
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+
+  # Step 2: a rare belt that is not one of those is a Regal that gave something else: buy the belt again.
+  - when:
+      rarity: rare
+    do: restart
+
+  # Step 2: tier-1 life and a tier-1 resistance on the magic belt: the Regal Orb.
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: FireResistance
+          status: passing
+    do: Regal Orb
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: ColdResistance
+          status: passing
+    do: Regal Orb
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: Regal Orb
+
+  # Step 1: the magic belt lacks them: Alteration again.
+  - when:
+      rarity: magic
+    do: Orb of Alteration
+
+  # The belt is normal at the start (the guide's magic belt, made magic).
+  - when:
+      rarity: normal
+    do: Orb of Transmutation

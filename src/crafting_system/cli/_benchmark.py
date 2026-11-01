@@ -86,7 +86,7 @@ BENCHMARKS = (
             PublishedOdds("Harvest Reforge Lightning", GEM, NO_MODS, "1.338%"),
         ),
     ),
-    # The guides of these three publish no odds, so there is nothing to recompute (ticket #60).
+    # The guides of these four publish no odds, so there is nothing to recompute (tickets #60 and #66).
     BenchmarkRoute(
         "R10",
         "Fractured Movement Speed Intelligence boots (PoE Vault guide)",
@@ -106,6 +106,13 @@ BENCHMARKS = (
         "Budget fractured All Attributes Strength ring (PoE Vault guide)",
         "examples/targets/r05-strength-ring.yaml",
         "examples/routes/r05-strength-ring.yaml",
+        (),
+    ),
+    BenchmarkRoute(
+        "R13",
+        "Alt-regal tier-1 life double-resistance belt (Reddit guide)",
+        "examples/targets/r13-life-resist-belt.yaml",
+        "examples/routes/r13-life-resist-belt.yaml",
         (),
     ),
 )
