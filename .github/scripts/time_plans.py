@@ -86,6 +86,18 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     index, count = (int(piece) for piece in arguments.part.split("/"))
     routes = arguments.routes.split(",")[index - 1 :: count]
+    from crafting_system.cli import _bound_prune
+
+    def progress(line: str) -> None:
+        try:
+            import resource
+
+            line += f" (peak memory {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss // 1024} MB)"
+        except ImportError:  # no `resource` on Windows
+            pass
+        print("  ", line, flush=True)
+
+    _bound_prune.PROGRESS = progress
     data = load_game_data()
     for route in routes:
         if route in EXAMPLES:

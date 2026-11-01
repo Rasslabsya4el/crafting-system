@@ -105,6 +105,8 @@ PER_ROUND = 16  # the offers that fail the test and join S in one round
 SLACK = 1e-12  # float slack on rho and on the test
 HUGE = 1e300  # stands for an infinite rho (nothing can reach E): keeps 0 * rho at 0
 
+PROGRESS: Callable[[str], None] | None = None  # a measuring script sets it to see each phase as it ends (never set by the library)
+
 RESTART_KIND, CRAFT, REROLL, TERMINAL, REFUSED = "restart", "craft", "reroll", "terminal", "refused"
 
 
@@ -205,6 +207,8 @@ def solve_pruned(
         nonlocal clock
         now = time.perf_counter()
         phases.append((name, now - clock))
+        if PROGRESS is not None:
+            PROGRESS(f"{name}: {now - clock:.1f} s")
         clock = now
 
     # 1. twins
