@@ -131,7 +131,6 @@ def test_every_kind_is_run_by_the_contract_suite_unless_it_declares_a_class():
     covered = {kind for kind, _, _ in contract_pairs()} | {kind for kind, _, _ in extra_pairs()}
     limited = {entry.name for entry in kinds() if entry.applies_only_to}
     assert covered | limited == {entry.name for entry in kinds()}
-    assert limited and not limited & covered or True  # the armour-only kinds are asked about nothing but their own class
 
 
 def test_every_module_of_actions_documents_itself():

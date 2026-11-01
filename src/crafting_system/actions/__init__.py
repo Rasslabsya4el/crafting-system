@@ -25,9 +25,13 @@ __all__ = ["default_actions"]
 def _export_modules() -> None:
     """Import every module of the package in sorted order and export the names of its `__all__` (idempotent)."""
     exported = set(__all__)
+    owners: dict[str, str] = {}
     for info in sorted(_iter_modules(__path__), key=lambda found: found.name):
         module = _import_module(f"{__name__}.{info.name}")
         for name in getattr(module, "__all__", ()):
+            if name in owners and owners[name] != info.name:
+                raise ImportError(f"the name {name!r} is exported by both {owners[name]!r} and {info.name!r} of actions")
+            owners[name] = info.name
             globals()[name] = getattr(module, name)
             exported.add(name)
     __all__[:] = sorted(exported)

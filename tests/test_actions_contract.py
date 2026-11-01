@@ -58,7 +58,7 @@ def test_every_kind_applies_on_some_fixture_item():
     """The kinds that declare `applies_only_to` (the Eldritch currency, ticket #151) are exempt: their own suite
     (`test_actions_eldritch.py`) runs `check_action` on a boots fixture and checks that each kind applies there."""
     applied = check_every_kind_applies_on_some_fixture_item()
-    assert applied <= {entry.name for entry in kinds()}
+    assert applied == {entry.name for entry in kinds() if not entry.applies_only_to} | (applied & {entry.name for entry in kinds()})
 
 
 def test_a_kind_lists_each_action_once_per_item():
