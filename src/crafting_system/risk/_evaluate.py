@@ -349,11 +349,14 @@ def _both(low: tuple, high: tuple) -> tuple:
     when `CRAFTING_WORKERS` is above 1 and workers can be forked (ticket #250); the pair is the same either way. A spawned
     worker would be sent the chain by pickle twice, which costs more than a second run saves.
     """
-    if parallel.worker_count() < 2 or not parallel.can_inherit():
-        return tuple(function(*args, **kwargs) for function, args, kwargs in (low, high))
-    with parallel.WorkerPool(_held, ({"low": low, "high": high},), workers=2) as pool:
-        found = pool.map(_call, ["low", "high"], chunk=1)
-    return found[0], found[1]
+    if parallel.worker_count() >= 2 and parallel.can_inherit():
+        try:
+            with parallel.WorkerPool(_held, ({"low": low, "high": high},), workers=2) as pool:
+                found = pool.map(_call, ["low", "high"], chunk=1)
+            return found[0], found[1]
+        except Exception:  # a worker failed or was killed: run them here, as a serial run does
+            pass
+    return tuple(function(*args, **kwargs) for function, args, kwargs in (low, high))
 
 
 def _input_runs(chain: Chain) -> dict:

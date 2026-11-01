@@ -91,3 +91,13 @@ def test_map_chunks_gives_one_result_per_run_of_pieces_in_order(workers):
         found = pool.map_chunks(total_of, list(range(10)), chunk=4)
 
     assert found == [0 + 1 + 2 + 3 + 100, 4 + 5 + 6 + 7 + 100, 8 + 9 + 100]
+
+
+def fails(piece: int) -> int:
+    raise KeyError(piece)
+
+
+def test_an_error_in_a_worker_reaches_the_caller():
+    with WorkerPool(make_base, (0,), workers=2) as pool:
+        with pytest.raises(KeyError):
+            pool.map(fails, [1, 2, 3, 4])

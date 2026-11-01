@@ -36,3 +36,19 @@ def test_the_report_is_equal_for_one_and_two_workers(monkeypatch, name, options)
 
     assert pooled == serial
     assert not serial.grid.exact  # both runs happened
+
+
+def test_a_failed_pool_falls_back_to_the_serial_runs(monkeypatch):
+    from crafting_system import parallel
+
+    class Broken:
+        def __init__(self, *args, **options):
+            raise OSError("no processes")
+
+    monkeypatch.setenv("CRAFTING_WORKERS", "1")
+    serial = evaluate(craft(), "S", is_goal, quantile_levels=LEVELS, max_bins=20, max_coarse_bins=2000)
+    monkeypatch.setenv("CRAFTING_WORKERS", "2")
+    monkeypatch.setattr(parallel, "WorkerPool", Broken)
+    monkeypatch.setattr(parallel, "can_inherit", lambda: True)
+
+    assert evaluate(craft(), "S", is_goal, quantile_levels=LEVELS, max_bins=20, max_coarse_bins=2000) == serial

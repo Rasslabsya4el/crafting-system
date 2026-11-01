@@ -374,7 +374,7 @@ def _run(
         j_max = max((solution.values[s] for s in non_goal if _finite(solution.values[s])), default=0.0)
         bound = j_max * (1 + max(solution.error_bound, 1e-9)) + 1e-9
         failing: list[tuple[float, _Entry]] = []
-        if not infinite:  # the loop below raises each offer one level at a time; the offers' raises are independent, so do a level for all of them at once
+        if not infinite and parallel.worker_count() >= 2 and parallel.can_inherit():  # the loop below raises each offer one level at a time; the offers' raises are independent, so do a level for all of them at once (with one worker the loop is the old one)
             for level in (1, 2):
                 raise_together([
                     (entry, level)
