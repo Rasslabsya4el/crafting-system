@@ -9,7 +9,7 @@ missing price is dropped and reported (ADR-0007), never guessed.
 
 import random
 from collections import defaultdict
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal
@@ -73,6 +73,17 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     inputs = action.inputs(data, item) if data is not None else ()
     axes = action.rule_axes(data) if data is not None else ()
     return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes)
+
+
+def isolated_feeder(goal: Goal) -> Callable[[Need], bool]:
+    """The seed of the lazy offer loop (ADR-0062 decision 4): a `Need` whose donor holds only mods the goal names.
+
+    The loop starts by offering the actions whose donors are made of the target's own mods, "isolated feeders" (for a
+    recombinator the single target mods and their pairs). Any seed ends at the same value; this one saves rounds.
+    The test is on concrete items: a mod counts when a leaf of the goal lists it (`Wanted.mod_ids`).
+    """
+    named = frozenset(mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids)
+    return lambda need: all(entry.mod_id in named for entry in need.want.mods)
 
 
 def default_offers() -> tuple[Offer, ...]:

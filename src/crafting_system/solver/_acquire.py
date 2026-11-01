@@ -78,6 +78,10 @@ class Acquisition[S]:
     def start(self, state: S) -> tuple:
         return ("in", MAIN, state)
 
+    def product(self, want: object, state: S) -> tuple:
+        """The product state of the item wanted as `want` (`MAIN` or a base state) that is now in base state `state`."""
+        return ("in", want, state)
+
     def is_goal(self, product: tuple) -> bool:
         _, want, state = product
         if want is MAIN:

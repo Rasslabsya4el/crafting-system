@@ -7,6 +7,7 @@ and knows nothing of Path of Exile (`tests/test_solver_independence.py` guards t
 from ._acquire import MAIN, Acquisition, Need
 from ._bounds import Bounds, solve_bounds
 from ._certify import ConvergenceError
+from ._lazy import LazySolution, Round, solve_lazily
 from ._minmax import solve_variants
 from ._model import Action, Model, Outcome, Peek, TabularModel, VariantAction
 from ._peek import ExpandedModel, PeekNode, PeekSolution, Reaction, peek_backup, solve_peek
@@ -19,6 +20,7 @@ __all__ = [
     "Bounds",
     "ConvergenceError",
     "ExpandedModel",
+    "LazySolution",
     "MAIN",
     "Model",
     "Need",
@@ -28,6 +30,7 @@ __all__ = [
     "PeekNode",
     "PeekSolution",
     "Reaction",
+    "Round",
     "Solution",
     "TabularModel",
     "TailCut",
@@ -35,6 +38,7 @@ __all__ = [
     "peek_backup",
     "solve",
     "solve_bounds",
+    "solve_lazily",
     "solve_peek",
     "solve_tail_cut",
     "solve_variants",
