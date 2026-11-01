@@ -11,7 +11,9 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
 * `card_of_item(data, item)`: a concrete item, the start item. With `tiers` its mods carry their tier, with
   `rolled=False` they show the range of the tier, not the roll, and `filler` draws the slots it has no mod for.
 * `card_of_target(data, target)`: the goal. Each requirement leaf is a "wanted" slot on its mod's side,
-  the rest `any mod or empty`; a k-of-n group's members carry the note `at least k of n`.
+  the rest `any mod or empty`; a k-of-n group's members carry the note `at least k of n`. Each implicit
+  requirement is a wanted implicit (note `grade 3 or better, roll 30 or more`), the catalyst quality a
+  property (`Prismatic catalyst quality 12% or more`).
 * `card_of_states(abstraction, states)`: the item after a step, the join of the compressed states the
   step leads to. What a state keeps decides what it can say (see below).
 * `tracks_junk(abstraction)`: whether the abstraction keeps the mods that are not fractured.
@@ -23,6 +25,13 @@ meet (the candidates are those that spawn on the base at the item level and pass
 of all of them with `#` for the ranges, joined by ` or `, and the note `T2 or better` (`min_tier`) or
 `any tier`. A fractured mod of a state is stored by a canonical id that stands for every tier of the same
 contribution, so it is drawn the same way.
+
+Implicits (ADR-0027) are slots of the tone `implicit` in the same format. The implicits the base has and the
+item does not store are drawn as their ranges; a stored one carries its rolled values (its ranges when the
+card is not `rolled`). An Eldritch implicit has the note `grade 3 (Grand)` and the mark of its side (`searing
+exarch`, `eater of worlds`); a stored base implicit has neither. The catalyst quality is a property pill, a
+veiled placeholder reads `veiled prefix` or `veiled suffix` (its data has no text), and the offer of its
+unveiling is one slot per offered mod, with the tier it has on the base.
 
 The slots of a state. Fractured mods and crafted slots are shown as they are. A goal leaf that a state
 meets (PASSING) is a wanted slot on the leaf's side; one that it only half meets (BELOW) is the same
@@ -50,13 +59,26 @@ from typing import Literal
 from crafting_system.abstraction import CompressedState, Status, Wanted
 from crafting_system.abstraction import Slot as StateSlot
 from crafting_system.data import GameData, Mod
-from crafting_system.items import Influence, Item, Rarity, Side, capacity, tier_table
-from crafting_system.targets import KOfN, Target
+from crafting_system.items import (
+    EldritchSide,
+    ImplicitMod,
+    Influence,
+    Item,
+    Rarity,
+    Side,
+    capacity,
+    eldritch_side,
+    tier_table,
+)
+from crafting_system.targets import ImplicitRequirement, KOfN, Target
 
-Tone = Literal["wanted", "mod", "crafted", "any", "empty"]
+Tone = Literal["wanted", "mod", "crafted", "any", "empty", "implicit"]
 
 SIDES = (Side.PREFIX, Side.SUFFIX)
 CRAFTED_DOMAIN = "crafted"
+VEILED_DOMAIN = "veiled"
+GRADE_NAMES = {1: "Lesser", 2: "Greater", 3: "Grand", 4: "Exceptional", 5: "Exquisite", 6: "Perfect"}
+SIDE_NAMES = {EldritchSide.EXARCH: "searing exarch", EldritchSide.EATER: "eater of worlds"}
 _NUMBER = r"\d+(?:\.\d+)?"
 _RANGE = re.compile(rf"\(\s*(-?{_NUMBER})\s*-\s*(-?{_NUMBER})\s*\)")
 _LINK_WITH_LABEL = re.compile(r"\[[^\]|]*\|([^\]]*)\]")
@@ -70,7 +92,7 @@ class Slot:
 
     text: str  # exact mod text, or "any mod", "any mod or empty", "empty", "any mod with tag X"
     tone: Tone
-    marks: tuple[str, ...] = ()  # "fractured", "crafted", "veiled", "influence", "essence only"
+    marks: tuple[str, ...] = ()  # "fractured", "crafted", "veiled", "influence", "essence only", "searing exarch", "eater of worlds"
     note: str = ""  # "any of 10 tiers", "tier too low", "at least 1 of 2", "in some"; "" otherwise
 
 
@@ -79,11 +101,12 @@ class ItemCard:
     """An item as the page draws it. Each side has one slot per line, up to the capacity of a rare."""
 
     name: str
-    properties: tuple[str, ...]  # rarity first, then "item level N", influences, "corrupted": only what is there
-    implicits: tuple[str, ...]
+    properties: tuple[str, ...]  # rarity first, then "item level N", influences, quality, "corrupted": only what is there
+    implicits: tuple[Slot, ...]
     enchantments: tuple[str, ...]
     prefixes: tuple[Slot, ...]
     suffixes: tuple[Slot, ...]
+    offer: tuple[Slot, ...] = ()  # what a veiled placeholder offers when unveiled; drawn only when there is some
 
 
 ANY_MOD = Slot("any mod", "any")
@@ -104,7 +127,11 @@ def _hashes(text: str) -> str:
 
 
 def _own_text(mod: Mod) -> str:
-    return _clean(mod.text) if mod.text else (mod.name or mod.id)
+    if mod.text:
+        return _clean(mod.text)
+    if mod.name:
+        return mod.name
+    return f"veiled {mod.generation_type}" if mod.domain == VEILED_DOMAIN else mod.id  # a placeholder has no text
 
 
 def _factor(text_low: float, text_high: float, stat_low: int, stat_high: int) -> float | None:
@@ -168,17 +195,37 @@ def _title(rarity: Rarity) -> str:
     return rarity.value.title()
 
 
-def _properties(rarity: str, item_level: int, influences: Sequence[str], corrupted: str) -> tuple[str, ...]:
-    """Rarity, item level, influences, corrupted; `corrupted` is "" for none."""
-    return (rarity, f"item level {item_level}", *influences, *([corrupted] if corrupted else []))
+def _properties(
+    rarity: str, item_level: int, influences: Sequence[str], corrupted: str, quality: str = ""
+) -> tuple[str, ...]:
+    """Rarity, item level, influences, quality, corrupted; `quality` and `corrupted` are "" for none."""
+    shown = [*([quality] if quality else []), *([corrupted] if corrupted else [])]
+    return (rarity, f"item level {item_level}", *influences, *shown)
+
+
+def _quality(kind: str, percent: int, suffix: str = "") -> str:
+    return f"{kind.title()} catalyst quality {percent}%{suffix}"
 
 
 def _capacity(data: GameData, base_id: str, side: Side) -> int:
     return capacity(data, base_id, Rarity.RARE).of(side)
 
 
-def _implicits(data: GameData, base_id: str) -> tuple[str, ...]:
-    return tuple(mod_text(data.mods[mod_id]) for mod_id in data.base_items[base_id].implicits)
+def _implicits(data: GameData, base_id: str, stored: Sequence[ImplicitMod] = ()) -> tuple[Slot, ...]:
+    """The implicits the base has as ranges, leaving out those the item `stored` (they show their rolled values)."""
+    held = {entry.mod_id for entry in stored}
+    return tuple(
+        Slot(mod_text(data.mods[mod_id]), "implicit") for mod_id in data.base_items[base_id].implicits if mod_id not in held
+    )
+
+
+def _stored_implicit(data: GameData, entry: ImplicitMod, rolled: bool) -> Slot:
+    """A stored implicit: its rolled values (its ranges when not `rolled`); an Eldritch one has its grade and side."""
+    mod = data.mods[entry.mod_id]
+    side = eldritch_side(mod)
+    note = f"grade {entry.grade} ({GRADE_NAMES[entry.grade]})" if side is not None else ""
+    marks = (SIDE_NAMES[side],) if side is not None else ()
+    return Slot(mod_text(mod, entry.values if rolled else None), "implicit", marks, note)
 
 
 def _note(*parts: str) -> str:
@@ -245,6 +292,13 @@ def card_of_item(
     its tier as the note; with `rolled` False it shows the range of its tier, not the roll.
     """
     table = tier_table(data, item.base_id) if tiers else {}
+    stored = tuple(  # the base's implicit first, then the Eldritch ones by grade
+        _stored_implicit(data, entry, rolled) for entry in sorted(item.implicits, key=lambda entry: (entry.grade, entry.mod_id))
+    )
+    offer = tuple(
+        Slot(mod_text(mod), "mod", _marks(mod), _tier_note(table, [mod.id]))
+        for mod in (data.mods[mod_id] for mod_id in item.veil_offer)
+    )
     sides: dict[Side, tuple[Slot, ...]] = {}
     for side in SIDES:
         entries = sorted(
@@ -258,14 +312,18 @@ def card_of_item(
             rows.append(Slot(mod_text(mod, entry.values if rolled else None), tone, marks, _tier_note(table, [mod.id])))
         sides[side] = _fill(rows, _capacity(data, item.base_id, side), filler)
     influences = tuple(influence.value.title() for influence in sorted(item.influences))
-    properties = _properties(_title(item.rarity), item.item_level, influences, "corrupted" if item.corrupted else "")
+    quality = _quality(item.quality.type.value, item.quality.percent) if item.quality is not None else ""
+    properties = _properties(
+        _title(item.rarity), item.item_level, influences, "corrupted" if item.corrupted else "", quality
+    )
     return ItemCard(
         data.base_items[item.base_id].name,
         properties,
-        _implicits(data, item.base_id),
+        (*_implicits(data, item.base_id, item.implicits), *stored),
         (),
         sides[Side.PREFIX],
         sides[Side.SUFFIX],
+        offer,
     )
 
 
@@ -276,7 +334,8 @@ def card_of_target(data: GameData, target: Target) -> ItemCard:
     """The goal as an item: a wanted slot per requirement leaf on its mod's side, the rest `any mod or empty`.
 
     A leaf drawn from several mods says `any of N tiers` and writes its ranges as `#`; the members of a
-    k-of-n group carry `at least k of n`.
+    k-of-n group carry `at least k of n`. An implicit requirement is a wanted implicit, the quality
+    requirement a property pill.
     """
     tiers = tier_table(data, target.base_id)
     wanted: dict[Side, list[Slot]] = {side: [] for side in SIDES}
@@ -291,13 +350,22 @@ def card_of_target(data: GameData, target: Target) -> ItemCard:
 
     add(target.requirements, "")
     influences = tuple(influence.value.title() for influence in sorted(target.influences))
-    properties = _properties(_title(Rarity.RARE), target.item_level, influences, "")
+    need = target.quality
+    quality = _quality(need.type.value, need.min_percent, " or more") if need is not None else ""
+    properties = _properties(_title(Rarity.RARE), target.item_level, influences, "", quality)
     prefixes, suffixes = (
         _fill(wanted[side], _capacity(data, target.base_id, side), ANY_OR_EMPTY) for side in SIDES
     )
-    return ItemCard(
-        data.base_items[target.base_id].name, properties, _implicits(data, target.base_id), (), prefixes, suffixes
-    )
+    implicits = (*_implicits(data, target.base_id), *(_wanted_implicit(data, wish) for wish in target.implicits))
+    return ItemCard(data.base_items[target.base_id].name, properties, implicits, (), prefixes, suffixes)
+
+
+def _wanted_implicit(data: GameData, wish: ImplicitRequirement) -> Slot:
+    """An implicit requirement: the texts of its mods with `#` for the ranges, then the grade and rolls asked for."""
+    texts = dict.fromkeys(_hashes(_own_text(data.mods[mod_id])) for mod_id in sorted(wish.mod_ids))
+    grade = f"grade {wish.min_grade} or better" if wish.min_grade is not None else ""
+    rolls = [f"roll {roll} or more" for roll in wish.min_roll or () if roll is not None]
+    return Slot(" or ".join(texts), "wanted", (), _note(grade, *rolls))
 
 
 # --- the card of the state after a step -----------------------------------------------------------------
@@ -482,7 +550,8 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
     """The item after a step: the join of the compressed `states` it can be in (see the module docstring).
 
     `reader` is the `_StateReader` of `abstraction` when the caller draws many cards (it keeps what it looked up).
-    Raises `ValueError` for no state, and for a state that belongs to another goal.
+    A compressed state holds no implicits, quality or offer yet (ticket #69), so the card shows the base's
+    implicits as ranges, no quality and no offer. Raises `ValueError` for no state, and for a state that belongs to another goal.
     """
     if not states:
         raise ValueError("a card needs at least one state")
