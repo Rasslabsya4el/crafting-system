@@ -42,6 +42,15 @@ import numpy as np
 BIG = 1e30
 
 
+def rss_mb() -> float:
+    try:
+        import resource
+
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    except ImportError:
+        return 0.0
+
+
 def load(path: Path) -> dict:
     with open(path, "rb") as handle:
         return pickle.load(handle)
@@ -308,6 +317,7 @@ def main() -> None:
     data = load(Path(args.pickle))
     g, start, goal_class, restart_cost = data["graph"], data["start"], data["goal_class"], data["restart_cost"]
     flat = flatten(g)
+    say(f"peak memory after flattening {rss_mb():,.0f} MB")
     flat["class_sizes"] = np.asarray(data.get("class_sizes", np.ones(g["n"], dtype=np.int64)), dtype=np.int64)
     result_raw = data.get("raw")
     lb_arrays = data.get("lb_arrays") or {}
@@ -409,6 +419,7 @@ def main() -> None:
                     dr["lb_source"] = name
                     result.setdefault("decision_relevance", []).append(dr)
     result["branch_and_bound"] = rows
+    result["peak_rss_mb"] = round(rss_mb())
     text = json.dumps(result, indent=1)
     print(text)
     if args.out:
@@ -416,26 +427,30 @@ def main() -> None:
 
 
 def decision_relevance(flat, start, v_star, lb, ub, q_low, q_up, competitive, f, k, say):
-    """Lump the outcomes whose swing cannot change a settled choice; solve the pessimistic and the optimistic model."""
+    """Lump the outcomes whose swing cannot change a settled choice; solve the pessimistic and the optimistic model.
+
+    The margin of a state is taken over ALL its actions: the best action by upper Q against the lowest lower Q of the others.
+    A positive margin means the bounds settle the choice (the others were cut by the exact rule); only then the outcomes of the
+    chosen action get an allowance, margin / (2 * outcomes). A state with one action has no choice and no margin to spend.
+    """
     n = flat["n"]
     seen = reach(flat, start, competitive)
     best_up = state_min(flat, q_up)
     state = flat["state"]
-    n_comp = np.zeros(n, dtype=np.int64)
-    np.add.at(n_comp, state, competitive.astype(np.int64))
-    top = state_argmin(flat, np.where(competitive, q_up, np.inf), np.where(n_comp > 0, best_up, BIG))
-    low_masked = np.where(competitive, q_low, np.inf)
+    non_goal_action = ~flat["goal"][state]
+    top = state_argmin(flat, np.where(non_goal_action, q_up, np.inf), best_up)
     is_top = np.arange(len(state)) == top[state]
-    low_others = np.where(is_top, np.inf, low_masked)
+    low_others = np.where(is_top | ~non_goal_action, np.inf, q_low)
     others = np.full(n, np.inf)
     s = flat["nonempty_state"]
     if len(s):
         others[s] = np.minimum.reduceat(low_others, flat["ptr"][s])
     margin = others - np.where(top >= 0, q_up[np.maximum(top, 0)], np.inf)
+    n_actions = np.diff(flat["ptr"])
     relevant = seen & ~flat["goal"]
-    forced = relevant & (n_comp <= 1)
-    settled = relevant & (n_comp > 1) & (margin > 0)
-    allowance = np.where(competitive & settled[state], margin[state] / (2.0 * np.maximum(1, flat["sizes"])), 0.0)
+    forced = relevant & (n_actions <= 1)
+    settled = relevant & (n_actions > 1) & (margin > 0)
+    allowance = np.where(is_top & settled[state], margin[state] / (2.0 * np.maximum(1, flat["sizes"])), 0.0)
     swing = flat["p"] * (ub[flat["dst"]] - lb[flat["dst"]])
     a_edge = allowance[flat["act_of_edge"]]
     not_goal_dst = ~flat["goal"][flat["dst"]]
