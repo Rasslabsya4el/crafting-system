@@ -144,7 +144,7 @@ def test_the_essence_strength_of_r05_asks_no_level(data):
 
     strength = floor_of(data, parse_target(plain, data)).nodes[1]
 
-    assert (strength.label, strength.source, strength.level) == ("Strength", "essence", 1)
+    assert (strength.label, strength.source, strength.level) == ("Strength", "forced mod", 1)
 
 
 # -- a level below the floor ------------------------------------------------------------------------------------

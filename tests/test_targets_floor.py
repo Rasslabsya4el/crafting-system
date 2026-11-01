@@ -116,7 +116,7 @@ def test_an_essence_gives_its_mod_when_the_target_offers_it_and_no_other_does():
     left_out = floor(entry, tail="actions: [alteration-orb]\n")
 
     for found in (by_default, by_kind, by_label):
-        assert (found.nodes[0].source, found.nodes[0].level) == ("essence", 1)
+        assert (found.nodes[0].source, found.nodes[0].level) == ("forced mod", 1)
     assert left_out.nodes[0].level is None
 
 
@@ -130,8 +130,8 @@ def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_onl
 
     assert other_essence.nodes[0].level is None  # Hatred is not offered
     assert unnamed.nodes[0].level is None and unnamed.kind == "at target"  # corrupted essences are opt-in
-    assert (by_kind.nodes[0].source, by_kind.nodes[0].level) == ("essence", 1)  # the essence ignores the item level
-    assert (by_label.nodes[0].source, by_label.nodes[0].level) == ("essence", 1)
+    assert (by_kind.nodes[0].source, by_kind.nodes[0].level) == ("forced mod", 1)  # the essence ignores the item level
+    assert (by_label.nodes[0].source, by_label.nodes[0].level) == ("forced mod", 1)
     assert by_label.level == 1
 
 

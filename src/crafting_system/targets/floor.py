@@ -8,8 +8,8 @@ down the planner may go and which levels are one plan; it builds no start option
 * **The floor is the lowest level at which every requirement can be met.** A tier is absolute on a base (`items.tier_table`), so
   what a requirement asks for fixes the lowest level of the mods that give it: for each requirement the lowest `required_level` among
   the mods that pass its tier, its roll limit and `not_crafted`, from the sources the planner has: the pool of a random draw, the bench
-  (the mod's own required level, the crafted mod counting as tier 1 at its lowest roll) and an essence (its forced mod ignores the item
-  level, `essence.forced_mod_ignores_item_level`). The bench crafts and essences are those the target offers: the actions of the planner's catalog
+  (the mod's own required level, the crafted mod counting as tier 1 at its lowest roll) and a fixed mod an action forces (an essence, a fossil; it ignores the item
+  level, `essence.forced_mod_ignores_item_level`). They are those of the actions the target offers: the planner's catalog
   that its `actions:` names (a kind, or the label of one action; none is every default kind, corrupted essences left out). `at_least` groups take
   the k-th lowest of their members. A requirement the start item already meets asks nothing, but a mod the start item holds needs its
   own level. A requirement no source can give has no level; the target is then met at no level and the floor stays at the file's.
@@ -30,8 +30,6 @@ from dataclasses import dataclass, replace
 from crafting_system.actions import (
     Action,
     ActionError,
-    ApplyEssence,
-    BenchCraft,
     catalog,
     drawable_mod_ids,
     kinds,
@@ -69,7 +67,7 @@ AT_TARGET = "at target"
 class NodeLevel:
     """The lowest item level at which one top-level requirement can be met, and what sets it.
 
-    `level` is None when no source gives it at any level. `source` is `pool`, `bench`, `essence`, `start item` or `none`; `mod_id` is
+    `level` is None when no source gives it at any level. `source` is `pool`, `bench`, `forced mod`, `start item` or `none`; `mod_id` is
     the mod that sets the level (None for `start item` and `none`).
     """
 
@@ -192,14 +190,18 @@ class _Sources:
             for mod_id, tier in tiers_of(data, target.start_item).items()
             if data.mods[mod_id].domain == base.domain and data.mods[mod_id].generation_type in Side
         }
-        offered = _offered(data, target)
-        self.bench: frozenset[str] = frozenset(action.mod_id for action in offered if isinstance(action, BenchCraft))
-        self.essence: frozenset[str] = frozenset(
-            mod_id
-            for action in offered
-            if isinstance(action, ApplyEssence)
-            for mod_id in action.adds(data, target.start_item).named or ()
-        )
+        # What an offered action puts on the item by name (`Action.adds`): a crafted mod (the bench) is given at the mod's own required
+        # level; any other fixed mod (an essence's forced mod, a fossil's, an aspect's) ignores the item level.
+        self.bench: frozenset[str] = frozenset()
+        self.forced: frozenset[str] = frozenset()
+        for action in _offered(data, target):
+            adds = action.adds(data, target.start_item)
+            if not adds.named:
+                continue
+            if adds.crafted:
+                self.bench |= adds.named
+            else:
+                self.forced |= adds.named
 
     def lowest(self, wish: Requirement) -> NodeLevel:
         """The lowest level at which `wish` is met, with the mod and the source that give it."""
@@ -224,8 +226,8 @@ class _Sources:
             yield max(mod.required_level, MIN_ITEM_LEVEL), "pool"
         if mod.id in self.bench and not wish.not_crafted and _within(wish, BENCH_TIER) and _roll_passes(mod, wish.min_roll, high=False):
             yield max(mod.required_level, MIN_ITEM_LEVEL), "bench"
-        if mod.id in self.essence and _within(wish, tier if tier is not None else 1) and _roll_passes(mod, wish.min_roll, high=True):
-            yield MIN_ITEM_LEVEL, "essence"
+        if mod.id in self.forced and _within(wish, tier if tier is not None else 1) and _roll_passes(mod, wish.min_roll, high=True):
+            yield MIN_ITEM_LEVEL, "forced mod"
 
 
 def _node_levels(sources: _Sources, node: Node) -> tuple[int | None, NodeLevel]:
