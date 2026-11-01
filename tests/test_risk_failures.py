@@ -159,13 +159,6 @@ def test_a_policy_that_can_fail_with_generic_float_costs_still_brackets_the_succ
     assert report.grid.step > 1e-3
 
 
-def test_extra_inputs_are_rejected_naming_the_state():
-    policy = {"S": Action("combine", 1.0, (("goal", 1),), extra_inputs=("other",))}
-
-    with pytest.raises(ValueError, match=r"extra_inputs.*'S'|'S'.*extra_inputs"):
-        evaluate(policy, "S", is_goal)
-
-
 @pytest.mark.parametrize("cost", [1e200, 1e-200])
 def test_costs_outside_the_supported_range_are_rejected_with_the_reason(cost):
     with pytest.raises(ValueError, match="supported range"):

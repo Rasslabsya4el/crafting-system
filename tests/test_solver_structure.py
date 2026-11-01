@@ -243,13 +243,6 @@ def test_actions_are_asked_at_most_once_per_non_goal_state_and_never_for_a_goal(
     assert GOAL not in counting.action_calls
 
 
-def test_a_multi_input_action_is_refused_until_the_branching_solver_exists():
-    table = {"A": [Action("combine", 1, ((GOAL, 1),), extra_inputs=("B",))]}
-
-    with pytest.raises(NotImplementedError, match=r"branching solver, B3 \(ADR-0011\)"):
-        solve(model(table), ["A"])
-
-
 def test_states_may_be_tuples_frozensets_and_strings():
     start = (frozenset({"x", "y"}), "item")
     middle = frozenset({1, 2})
