@@ -1587,7 +1587,8 @@ class Abstraction:
             return None
         base = base_kind(slot.kind)
         if base.startswith(UNVEILED_PREFIX):  # a mod unveiled from the pool: the slot knows its family, not which of the family's mods it is
-            family = tuple(base[len(UNVEILED_PREFIX) :].split("|"))
+            key = base[len(UNVEILED_PREFIX) :]
+            family = () if key.startswith("#") else tuple(key.split("|"))  # a mod without a family is a kind "^#<id>": the group of the family-less ones
             group = self._canonical_groups().get((family, slot.side.value, UNVEILED_DOMAIN, False), ())
             if any(mod.id in self._roll_ids and is_rollable(self._law(mod, influences, lucky)) for mod in group):
                 raise OutOfScopeError(
