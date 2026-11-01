@@ -1,0 +1,11 @@
+# Mechanic family: tempering_orb (the price of one Tempering Orb, the currency that enchants a weapon). Ticket #239, design ADR-0050 and ADR-0051;
+# the rules of the draw are in enchantment.yaml.
+rules:
+  - id: tempering_orb.cost
+    statement: One use of a Tempering Orb consumes one Tempering Orb item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyHeistWeaponEnchant: name "Tempering Orb", description "Adds or replaces an enchantment on a weapon"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Tempering Orb: 1}
