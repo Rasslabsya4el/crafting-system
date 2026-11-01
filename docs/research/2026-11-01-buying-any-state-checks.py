@@ -4,11 +4,11 @@
     python docs/research/2026-11-01-buying-any-state-checks.py pools                 # equal-pool item-level groups of R05, R08, R13
     python docs/research/2026-11-01-buying-any-state-checks.py maxlevel              # highest required level of any spawnable mod
     python docs/research/2026-11-01-buying-any-state-checks.py leaves                # candidate fractured mods per target
-    python docs/research/2026-11-01-buying-any-state-checks.py probe                 # 16 anonymous trade searches, totals only
+    python docs/research/2026-11-01-buying-any-state-checks.py probe                 # 18 anonymous trade searches, totals only
 
 `pools`, `maxlevel` and `leaves` need the pinned game data (`CRAFTING_CACHE_DIR`). `probe` is the only one that
-touches the trade site: sixteen searches (no fetch), anonymous, through the repo's own client (headers read, budget 16),
-run by hand on 2026-11-01 (the note's 23 requests were these searches in smaller groups, plus 3 more searches and 4 fetches
+touches the trade site: eighteen searches (no fetch), anonymous, through the repo's own client (headers read, budget 18),
+run by hand on 2026-11-01 (the note's 26 requests were these searches in smaller groups, plus 3 repeated searches and 5 fetches
 of the 10 cheapest listings); it never sends a session cookie. Do not schedule it. The ticket allowed "a handful"
 of requests, so the note says how many were made.
 """
@@ -94,15 +94,15 @@ def leaves() -> None:
 
 
 def probe() -> None:
-    """Allflame, 2026-11-01: 16 searches (totals only) in three groups; the note also used 3 more searches and 4 fetches
-    of the same kind, listed in section 2.1 (23 requests in all)."""
+    """Allflame, 2026-11-01: 18 searches (totals only) in groups; the note also used 3 more searches and 5 fetches
+    (of the same kind; 26 requests in all)."""
     sys.path.insert(0, str(ROOT / "src"))
     from crafting_system.prices.trade_http import RateLimiter, RequestBudget, TradeClient, package_version, urllib_transport, user_agent
     from crafting_system.prices.trade_query import BuyMod, BuySpec, build_query
     from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
 
     stats = parse_trade_stats(json.load(gzip.open(ROOT / "tests" / "fixtures" / "trade" / "recorded" / "stats_full.json.gz"))["stats"])
-    client = TradeClient(urllib_transport(), user_agent(package_version()), RateLimiter(time.monotonic, time.sleep), RequestBudget(16), None)
+    client = TradeClient(urllib_transport(), user_agent(package_version()), RateLimiter(time.monotonic, time.sleep), RequestBudget(18), None)
 
     def belt(rarity, mods, level):
         return BuySpec("probe", rarity=rarity, mods=tuple(mods), base_type="Leather Belt", item_level_min=level)
@@ -127,6 +127,8 @@ def probe() -> None:
         ("C rare life + fire + cold", belt("rare", [life1, fire1, cold1], 84)),
         ("C rare fractured life", belt("rare", [frac1], 84)),
         ("C normal, no mods", belt("normal", [], 84)),
+        ("R08 boots rare, fractured Energy Shield % 92+, ilvl 84+", BuySpec("probe", rarity="rare", base_type="Sorcerer Boots", item_level_min=84, mods=(BuyMod("#% increased Energy Shield", 92, fractured=True),))),
+        ("R08 boots rare, fractured Energy Shield % 92+, ilvl 86+", BuySpec("probe", rarity="rare", base_type="Sorcerer Boots", item_level_min=86, mods=(BuyMod("#% increased Energy Shield", 92, fractured=True),))),
         ("ring rare ilvl 75+: fractured all attributes 13+ and life 100+", BuySpec("probe", rarity="rare", category="accessory.ring", item_level_min=75, mods=(BuyMod("+# to all Attributes", 13, fractured=True), BuyMod("+# to maximum Life", 100)))),
     ]
     for label, spec in probes:
