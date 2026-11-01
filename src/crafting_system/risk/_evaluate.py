@@ -51,6 +51,17 @@ exact unit grid is given up in the same case. A small policy is never touched.
 With inputs the DP is the nested one, whose work is about (runs * (starts * states + extra input copies))
 * (spread / D)^2 convolution cells (`nested_work`), counted at 1/30 of an entry against the same budget.
 
+Coarse grid (`resolution=None`, a proper policy without inputs; ticket #190). When the highest level asked
+certainly lies beyond `max_bins` times the smallest cost (`_coarse.beyond_ordinary_grid`), a step at most the
+smallest cost cannot reach it (R13: an Orb of Transmutation at 0.0058 Chaos next to a mean of 6,300). `_coarse.choose_step` then looks for a
+step above the smallest cost at which the actions that are visited often are whole multiples: the
+lower chain gives an action cheaper than the step 0 bins (the free states are replaced by their exit
+distributions, `_fold`), the upper chain 1 bin, and the intervals widen by one step per visit of such
+an action (the expected gap is in `_coarse`). The DP is then dense (`_dense`) and runs up to
+`max_coarse_bins` bins (default `max_bins`). When no step has an expected gap within a tenth of the
+mean, or the chain is too large for the dense DP, the ordinary grid is used as before. The trigger looks at the
+highest level asked: when only that level is out of reach, the lower levels come as brackets of the coarse grid too.
+
 Mean of a grid chain, for CVaR. The exact grid uses the solver mean of the real costs. An inexact
 grid solves again with the costs k_lo * D and k_hi * D to get the mean of each grid chain, and CVaR
 of each chain uses the matching end of its mean interval.
@@ -77,6 +88,9 @@ from ..solver import Action
 from . import _inputs, _moments
 from ._budget import BudgetRun, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
+from ._coarse import beyond_ordinary_grid, choose_step, expected_visits
+from ._dense import fits_dense, run_dense
+from ._fold import fold_free
 from ._moments import interval, real_costs
 from ._nested import nested_work, run_nested
 from ._report import Estimate, GridInfo, RiskReport
@@ -91,6 +105,8 @@ FINE_STEPS = 64  # default grid: the smallest cost is at least this many bins un
 WORK_BUDGET = 3e8  # default cap on the DP's expanded entries (about a minute); a larger policy gets a coarser grid
 CELLS_PER_ENTRY = 30.0  # the nested DP's work counts convolution cells, each about this much cheaper than an expanded entry
 SPREAD_SDS = 6.0  # the arrival cost of a state spreads over about this many standard deviations of the total cost
+FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean of the lower coarse chain (it needs a positive cost; the charge is taken off again)
+FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
 
 
 def evaluate[S](
@@ -104,6 +120,7 @@ def evaluate[S](
     tail_mass: float = 1e-9,
     max_bins: int = 200_000,
     work_budget: float = WORK_BUDGET,
+    max_coarse_bins: int | None = None,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -112,7 +129,8 @@ def evaluate[S](
     strictly between 0 and 1. The DP stops once the asked levels are certified (proper policy) or
     the probability still in flight is at most `tail_mass`; it never runs past `max_bins` bins and
     reports what was left as `grid.unresolved_mass`. `work_budget` caps the DP's work when `resolution`
-    is not given (see the module docstring). Raises `ValueError` for a bad argument or a
+    is not given (see the module docstring), and `max_coarse_bins` the most bins of the coarse grid (default `max_bins`).
+    Raises `ValueError` for a bad argument or a
     `resolution` above the smallest cost, a `max_bins` so large that a (bin, state) pair no longer fits
     62 bits, and the solver's `ConvergenceError` if a moment solve
     cannot converge.
@@ -123,6 +141,10 @@ def evaluate[S](
         raise ValueError(f"tail_mass must be strictly between 0 and 1, got {tail_mass!r}")
     if isinstance(max_bins, bool) or not isinstance(max_bins, Integral) or max_bins < 1:
         raise ValueError(f"max_bins must be an integer of at least 1, got {max_bins!r}")
+    if max_coarse_bins is not None and (
+        isinstance(max_coarse_bins, bool) or not isinstance(max_coarse_bins, Integral) or max_coarse_bins < 1
+    ):
+        raise ValueError(f"max_coarse_bins must be an integer of at least 1, or None, got {max_coarse_bins!r}")
     if isinstance(work_budget, bool) or not isinstance(work_budget, Real) or not work_budget > 0.0:
         raise ValueError(f"work_budget must be a number above zero, got {work_budget!r}")
     try:
@@ -175,6 +197,15 @@ def evaluate[S](
             spread = SPREAD_SDS * math.sqrt(variance[0])
     if chain.has_inputs and _inputs.branching(chain):
         return _unordered_report(chain, (mean, variance) if proper else None, cvar_level, levels)
+    if (
+        resolution is None and proper and not chain.has_inputs
+        and beyond_ordinary_grid(mean[0], variance[0], max([*levels, cvar_level]), c_min, max_bins)
+    ):
+        coarse = _coarse_report(
+            chain, mean, variance, levels, cvar_level, tail_mass, max_bins if max_coarse_bins is None else max_coarse_bins
+        )
+        if coarse is not None:
+            return coarse
     step = resolution
     if step is None:
         step = _choose_step(costs, c_min, max_bins, horizon, _affordable(chain, spread, work_budget))
@@ -213,6 +244,56 @@ def evaluate[S](
         grid,
         _input_runs(chain) if proper and chain.has_inputs else {},
     )
+
+
+def _coarse_report(
+    chain: Chain,
+    mean: tuple[float, float, float],
+    variance: tuple[float, float, float],
+    levels: Sequence[float],
+    cvar_level: float,
+    tail_mass: float,
+    max_bins: int,
+) -> RiskReport | None:
+    """The report on the coarse grid of `_coarse`, or `None` when the ordinary grid has to do (see the module docstring)."""
+    target = max([*levels, cvar_level])
+    chosen = choose_step(chain, mean[0], variance[0], target, max_bins)
+    if chosen is None:
+        return None
+    step = chosen[0]
+    low_bins, high_bins = _bin_costs(chain, step)
+    folded = fold_free(chain, low_bins)
+    if folded is None or not fits_dense(folded.chain, low_bins, max_bins) or not fits_dense(chain, high_bins, max_bins):
+        return None
+    low_run = run_dense(
+        folded.chain, low_bins, initial=folded.initial, goal_mass=folded.goal_mass,
+        target=target, tail_mass=tail_mass, max_bins=max_bins,
+    )
+    high_run = run_dense(chain, high_bins, initial=((0, 1.0),), target=target, tail_mass=tail_mass, max_bins=max_bins)
+    mean_low, mean_high = _coarse_means(chain, step, low_bins, high_bins)
+    cvar = _cvar(step, cvar_level, low_run, high_run, mean_low, mean_high, mean[0])
+    quantiles = {x: _quantile(x, step, low_run, high_run, None) for x in levels}
+    runs = (low_run, high_run)
+    grid = GridInfo(
+        step, False, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs)
+    )
+    return RiskReport(
+        Estimate(1.0, 1.0, 1.0), Estimate(*mean), Estimate(*variance), quantiles, Estimate(*cvar), cvar_level, grid
+    )
+
+
+def _coarse_means(chain: Chain, step: float, low_bins: Sequence[int], high_bins: Sequence[int]) -> tuple[float, float]:
+    """Mean of the lower and the upper coarse chain, as `(low end for the lower, high end for the upper)`.
+
+    The solver wants positive costs, so a free state is charged `FREE_BINS` bins and the charge is given back from
+    the expected visits of the free states (the mean is linear in the costs and the visits do not depend on them).
+    """
+    states, visits = expected_visits(chain)
+    free = math.fsum(v for s, v in zip(states, visits) if low_bins[s] == 0)
+    low_mean, low_error = _solve_costs(chain, [max(float(k), FREE_BINS) * step for k in low_bins])
+    high_mean, high_error = _solve_costs(chain, [float(k) * step for k in high_bins])
+    low = interval(low_mean[0], low_error)[0] - FREE_BINS * step * free * (1.0 + FREE_SLACK)
+    return max(low, 0.0), interval(high_mean[0], high_error)[1]
 
 
 def _mean_and_variance(chain: Chain):

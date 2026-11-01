@@ -73,8 +73,16 @@ class Reads:
       pooled into blocks, the action's kernel pushed through the block map is the same for every
       member of a block (only its legality may differ). An approximate answer built on blocks (ADR-0023)
       uses an action only if it declares this; the default is False, which refuses. Declare it only
-      with the proof: an erasing reroll, whose outcome depends on the flags and the fractured mods, and
-      a deterministic craft. The contract suite compares the members of blocks on the fixture items.
+      with the proof: an erasing reroll, whose outcome depends on the flags and the fractured mods, a
+      deterministic craft, and Annulment (a pool of `n` slots loses one with probability `n / N`,
+      whatever families they hold). The contract suite compares the members of blocks on the fixture items.
+    * `variants`: with `pool_weight`, the action's kernel on a member of a block depends on the member
+      only through the pool weight its pooled families hold, as a linear-fractional function (every
+      outcome probability is `(c_0 + sum_j c_j H_j) / (W - sum_j H_j)`, `H_j` the weight held in pool
+      `j`), so the best and the worst backup over the members are reached at the lightest or the
+      heaviest member of each pool (ADR-0023, "When the members differ: variants"). An approximate
+      answer takes those extreme members as the variants of the block. The default is False, which
+      refuses; an adding action that keeps the mods (Augmentation, Regal, Exalted) declares it.
     * `fractures`: the action may fracture a mod the item already holds (a Fracturing Orb), so a mod
       that was an ordinary slot becomes a fractured one. The compressed state then stores a fractured mod of
       a family told apart only by its family type as that type, not as a mod id (ticket #69).
@@ -85,12 +93,13 @@ class Reads:
     pool_weight: bool = False
     needs_crafted: bool = False
     block_invariant: bool = False
+    variants: bool = False
     fractures: bool = False
 
     @classmethod
-    def adding(cls, *, block_invariant: bool = False) -> "Reads":
+    def adding(cls, *, block_invariant: bool = False, variants: bool = False) -> "Reads":
         """The action keeps the junk and adds mods to it: the families count by the pool weight they take out."""
-        return cls(junk=True, families=frozenset(), pool_weight=True, block_invariant=block_invariant)
+        return cls(junk=True, families=frozenset(), pool_weight=True, block_invariant=block_invariant, variants=variants)
 
     @classmethod
     def nothing(cls, *, block_invariant: bool = False) -> "Reads":
