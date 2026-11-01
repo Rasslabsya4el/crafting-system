@@ -172,7 +172,9 @@ def test_the_planner_does_not_price_a_donor_as_free(items):
     prices = dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(0.0001, "test")})
     plan = make_plan(CONTRACT_DATA, load_target(R12, CONTRACT_DATA), prices, offers=_offers_with(ToyGraft(with_axis=False)))
     assert "Toy Graft" in [priced.label for priced in plan.offers]
-    assert "Toy Graft" not in [action.label for action in plan.policy.values()]
+    with pytest.raises(OutOfScopeError, match="#212"):  # the plan's own abstraction refuses it wherever the game takes it
+        plan.abstraction.kernel(plan.start, ToyGraft(with_axis=False))
+    assert plan.abstraction.inputs(plan.start, ToyGraft(with_axis=False)) == (Need(donor_start(), donor_want()),)  # but can be asked what it needs
 
 
 def test_the_planner_refuses_an_offered_axis_until_the_interval_driver_exists(graft_registered):
@@ -303,5 +305,7 @@ def test_input_free_actions_are_unchanged_bit_for_bit():
             continue
         through = action.outcomes_under(CONTRACT_DATA, item, stray)
         assert type(through) is type(plain)
-        assert through.components is not None and len(through.components) == len(plain.components)
         assert [share for share, _ in through.components] == [share for share, _ in plain.components]
+        for label in (lambda mod: mod.id, lambda mod: mod.generation_type):
+            assert dict(through.distribution(label)) == dict(plain.distribution(label))
+        assert all(through.chance_all([mod_id]) == plain.chance_all([mod_id]) for mod_id in CONTRACT_DATA.mods)

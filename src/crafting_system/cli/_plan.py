@@ -234,7 +234,7 @@ def make_plan(
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
-    axes = sorted({axis.name for p in priced for axis in p.offer.axes})
+    axes = sorted({axis.name for p in priced for axis in p.offer.action.rule_axes(data)})
     if axes:
         raise PlanError(
             f"an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading "

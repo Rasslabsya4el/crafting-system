@@ -235,7 +235,7 @@ class Abstraction:
         Raises what `kernel` raises when the action refuses the state's item.
         """
         self._check_enabled(action)
-        return action.inputs(self.data, self._prepared(state, action).item)
+        return action.inputs(self.data, self._prepare(state, action).item)
 
     @property
     def keeps_junk(self) -> bool:
@@ -859,6 +859,16 @@ class Abstraction:
         return tuple(implicits)
 
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
+        """`_prepare`, refusing an action that consumes other items when `allow_inputs` is False (every kernel goes through here)."""
+        prepared = self._prepare(state, action)
+        if not self._allow_inputs and action.inputs(self.data, prepared.item):
+            raise OutOfScopeError(
+                "the action consumes other items, and the planner does not price them yet (ticket #212): "
+                "its kernel would count them as free"
+            )
+        return prepared
+
+    def _prepare(self, state: CompressedState, action: Action) -> _Prepared:
         """The outcomes of `action` on the item `state` stands for (cached), and where that item's mods came from.
 
         An action that reads no junk erases it, so the item holds only the crafted slots; with `metamods`
@@ -888,11 +898,6 @@ class Abstraction:
             except NotApplicableError:
                 self._refusal_depends_on_the_family(state, erasing, action, origins)
                 raise
-            if not self._allow_inputs and action.inputs(self.data, item):
-                raise OutOfScopeError(
-                    "the action consumes other items, and the planner does not price them yet (ticket #212): "
-                    "its kernel would count them as free"
-                )
             self._check_type_blind(state, outcomes)
             self._check_fracture_without_partners(state, outcomes)
             prepared = _Prepared(outcomes, origins, item=item)
