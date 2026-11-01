@@ -153,8 +153,10 @@ def test_the_orb_is_named_priced_and_declared():
     assert adds.draws and adds.keeps_crafted and adds.named == frozenset()
 
 
-def test_the_kind_is_in_the_catalog_for_a_rare_item_only_and_not_a_planner_kind():
+def test_the_kind_is_in_the_catalog_for_every_rarity_and_is_a_planner_kind_offered_only_when_named():
     assert catalog(DATA, amulet(roll(LIFE))).count(ExaltedOrb()) == 1
-    assert ExaltedOrb() not in catalog(DATA, amulet(rarity=Rarity.NORMAL))
-    assert ExaltedOrb() not in catalog(DATA, amulet(roll(LIFE)), planner_only=True)
-    assert {entry.name: entry.planner for entry in kinds()}["exalted-orb"] is False
+    assert ExaltedOrb() in catalog(DATA, amulet(rarity=Rarity.NORMAL))  # a normal item becomes rare on the way (ticket #70)
+    assert ExaltedOrb() not in catalog(DATA, amulet(roll(LIFE)), planner_only=True)  # not offered by default
+    assert ExaltedOrb() in catalog(DATA, amulet(roll(LIFE)), planner_only=True, names={"exalted-orb"})
+    registered = {entry.name: entry for entry in kinds()}["exalted-orb"]
+    assert registered.planner is True and registered.opt_in is True
