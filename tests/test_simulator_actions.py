@@ -131,7 +131,7 @@ def test_a_chaos_orb_on_a_magic_item_is_refused_and_the_refusal_propagates():
 
 
 def test_an_item_no_rule_covers_raises_out_of_scope_and_it_propagates():
-    jewel = dataclasses.replace(DATA.base_items[AMULET], item_class="Jewel")
+    jewel = dataclasses.replace(DATA.base_items[AMULET], item_class="Jewel", domain="affliction_jewel")  # a cluster jewel
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: jewel})
     start = item(roll(RESIST), base_id=AMULET, item_level=86)
 

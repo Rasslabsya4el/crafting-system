@@ -24,7 +24,7 @@ from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
-from crafting_system.rules import rule_by_id
+from crafting_system.rules import get_rule, rule_by_id
 from crafting_system.simulator import SampledEstimate
 from crafting_system.solver import Action
 
@@ -107,13 +107,14 @@ def marking_document(approximation: Approximation | None, shift: float) -> dict:
 APPROXIMATE_HEADING = "Approximate inputs (claims that no other source settles):"
 
 
+JEWEL_ITEM_CLASSES = get_rule("affix_count.rare_jewel_max_per_side").value["item_classes"]
 JEWEL_CLAIMS = "jewel."  # the ids of the claims about jewels: they count for an answer on a jewel base only
 
 
 def is_jewel(data: GameData, base_id: str) -> bool:
     """Whether `base_id` is a jewel base (the item classes of `affix_count.rare_jewel_max_per_side`)."""
     base = data.base_items.get(base_id)
-    return base is not None and base.item_class in rule_by_id("affix_count.rare_jewel_max_per_side").value["item_classes"]
+    return base is not None and base.item_class in JEWEL_ITEM_CLASSES
 
 
 @dataclass(frozen=True)
