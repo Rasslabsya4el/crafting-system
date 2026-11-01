@@ -18,7 +18,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 from itertools import chain
 
-from crafting_system.data import GameData, Mod
+from crafting_system.data import BaseItem, GameData, Mod
 from crafting_system.items import Item, Side, UnknownBaseError, effective_weight, spawn_weight, tier_table
 from crafting_system.rules import get_rule
 
@@ -68,6 +68,9 @@ class Candidate:
 
 ModFactor = Callable[[Mod], Fraction]
 
+_ADMITTED_LIMIT = 32
+_ADMITTED: dict[tuple, tuple[GameData, tuple[tuple[Mod, Fraction], ...]]] = {}
+
 
 _POOL_LIMIT = 256
 # (id(data), base, item level, influences, max level, mod ids of the item, mod ids of extra, tag filter) -> (data, candidates).
@@ -112,6 +115,34 @@ def tiers_of(data: GameData, item: Item) -> Mapping[str, int]:
         for mod in group:
             table[mod.id] = 1 + sum(other.required_level > mod.required_level for other in group)
     return table
+
+
+def _admitted(
+    data: GameData, base: BaseItem, tags: tuple[str, ...], level_limit: int, extra: Iterable[Mod]
+) -> tuple[tuple[Mod, Fraction], ...]:
+    """The mods of the domain with a side, within the level limit and a positive weight on `tags`, with that weight, in data order.
+
+    What the item holds (its blocks, its metamods) is not in it, so it is the same for every item of one base, level
+    and influence: a state-space walk asks for thousands of pools and would otherwise weigh every mod of the game each time.
+    The entry keeps `data` alive, so its `id` cannot be reused while it is cached.
+    """
+    joined = tuple(extra)
+    key = (id(data), base.domain, tags, level_limit, tuple(mod.id for mod in joined))
+    found = _ADMITTED.get(key)
+    if found is not None and found[0] is data:
+        return found[1]
+    own = ((mod, mod.domain == base.domain) for mod in data.mods.values())
+    kept = []
+    for mod, in_domain in chain(own, ((mod, True) for mod in joined)):
+        if not in_domain or mod.generation_type not in Side or mod.required_level > level_limit:
+            continue
+        weight = effective_weight(mod, tags)
+        if weight > 0:
+            kept.append((mod, weight))
+    if len(_ADMITTED) >= _ADMITTED_LIMIT:
+        _ADMITTED.clear()
+    entry = _ADMITTED[key] = (data, tuple(kept))
+    return entry[1]
 
 
 def pool_candidates(
@@ -170,13 +201,8 @@ def _compute_pool_candidates(
     blocked = blocked_tags(data, item) if tag_filter else frozenset()
     level_limit = item.item_level if max_level is None else min(item.item_level, max_level)
     candidates: list[Candidate] = []
-    own = ((mod, mod.domain == base.domain) for mod in data.mods.values())
-    joined = ((mod, True) for mod in extra)
-    for mod, in_domain in chain(own, joined):
-        if not in_domain or mod.generation_type not in Side or mod.required_level > level_limit:
-            continue
-        weight = effective_weight(mod, tags)
-        if weight <= 0 or item.blocks(data, mod) or not allowed_by_tags(mod, blocked):
+    for mod, weight in _admitted(data, base, tags, level_limit, extra):
+        if item.blocks(data, mod) or not allowed_by_tags(mod, blocked):
             continue
         if len(mod.families) != 1:
             raise OutOfScopeError(

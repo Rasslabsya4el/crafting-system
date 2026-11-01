@@ -32,7 +32,7 @@ class ExaltedOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.adding()
+        return Reads.adding(variants=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset())
