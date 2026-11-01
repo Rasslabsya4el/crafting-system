@@ -14,12 +14,9 @@ from fractions import Fraction
 import pytest
 from abstraction_pool import DAMAGE_1, LIFE_1, LIFE_2, MANA_1, RESIST_1, RESIST_2, COLD_RESIST
 from awakener_oracle import chance_of_holding
+from awakener_support import CRUSADER_CLASH, CRUSADER_SUFFIX, SHAPER_PREFIX, SHAPER_SUFFIX
 from contract_support import (
     CONTRACT_DATA,
-    CRUSADER_CLASH,
-    CRUSADER_SUFFIX,
-    SHAPER_PREFIX,
-    SHAPER_SUFFIX,
     _item,
     _roll,
     check_action,

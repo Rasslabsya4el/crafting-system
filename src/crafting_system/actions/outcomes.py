@@ -4,6 +4,29 @@
 three ways in: `chance_all` (the chance that the finished item holds given mods), `distribution`
 (the exact distribution of the new mods seen through a caller's label, which is what the compressed
 state of the solver uses) and `sample` (one finished item, drawn at random, with rolled values).
+
+What an `Outcomes` gives, on the item before any mod is drawn (`retained`: a rare item with only the
+fractured mods of the original, which stay and count inside the total of 4, 5 or 6 mods, and, for an
+essence, its forced mod, which is on the item above the item level and counts inside the total too;
+a low essence (levels 1 to 4) also caps the required level of the drawn mods):
+
+* `chance_all(mod_ids)`: the exact `Fraction` chance that the finished item holds all of these mods,
+  kept or newly drawn, jointly; 0 when two of them share a family; `ValueError` for an unknown id.
+* `distribution(label)`: the exact distribution of the new mods seen through `label`, a pure
+  function from a `Mod` to a hashable. An `Outcome` is a frozenset of `(label, how many new mods got
+  it)` pairs; labels with a count of zero are left out and the kept mods (fractured, forced) are not in it. The
+  probabilities are `Fraction`s that sum to exactly 1. This is the input of the compressed state.
+* `sample(rng)`: one finished item from a seeded `random.Random`: the same process, with a value
+  rolled for every stat and the tier of every drawn mod. Values exist only here; no exact result
+  depends on them.
+
+Exactness and cost: nothing is rounded. Families the label cannot tell apart (same side, same
+weight per label) are counted, not identified, so the work grows with the number of distinct
+(side, weight, label) classes in the pool, not with the number of families. A real amulet pool
+(about 40 families) with a coarse label takes about 0.3 to 3 s; a pool of 40 families that all
+have different weights took about 70 s, and a label that gives every mod its own value is worse.
+The fractions are exact and can be thousands of bits long: `str()` of one can hit Python's
+4300-digit limit, so convert with `float()` or `Fraction.limit_denominator` to display it.
 """
 
 import random
@@ -29,6 +52,10 @@ from .errors import NotApplicableError
 from .metamods import blocked_tags, kept_by_reroll
 from .pool import ModFactor, PoolFamily, build_pool, mark_pool, tiers_of
 from .rolls import roll_values
+
+__all__ = [
+    "Outcomes",
+]
 
 CHAOS_FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
 HARVEST_FRACTURED_MODS_KEPT = get_rule("harvest_reforge.fractured_mods_kept")

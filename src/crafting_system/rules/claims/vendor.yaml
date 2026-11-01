@@ -1,0 +1,318 @@
+# Vendor recipes as start-item sources (ADR-0059, ticket #329). Promoted from docs/research/2026-10-31-vendor-claims-draft/vendor.yaml
+# (research #102): only the claims the five recipes of v1 need. Patch 3.29.3.3, checked 2026-10-31.
+#
+# The recipe data (crafting_system.items.vendor_recipes) reads the `value` of the claims below and holds no number of its own.
+# A ladder lists the rungs of one mod family from the lowest tier to the top; the tier of a rung counted from the top is
+# the length of the ladder minus its place (0-based). A tier-up recipe gives the rungs from the lowest up to the cap
+# `max_tier_from_top`, one rung per recipe, each from the Magic item the recipe before it made.
+rules:
+  - id: vendor.recipe_makes_a_new_magic_item_with_one_mod
+    statement: The tier-up vendor recipes (boots movement speed, weapon flat damage, jewellery chaos resistance) are of the "create new item" type. They turn the input into a new Magic item that holds only the recipe's one mod, whatever the rarity or the other mods of the input. The input's quality, sockets, links and influences are kept; enchantments, Eldritch implicits, Synthesised implicits, Incubators and Crucible trees are removed. The result's item level is a separate, unsettled claim (vendor.item_level_of_the_result_is_not_settled) and so is its base type (vendor.result_keeps_the_input_base_type).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "All recipes of this type create a new base item (with randomized base defences). The following are removed: enchantments, Eldritch implicits, Synthesised implicits, Incubators, Crucible passive trees. The following are retained: quality, sockets, links, item level, influences"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      result_rarity: magic
+      result_mods: 1
+      kept: [quality, sockets, links, influences]
+      removed: [enchantments, eldritch_implicits, synthesised_implicits, incubators, crucible_trees]
+
+  - id: vendor.refused_on_fractured_and_corrupted_inputs
+    statement: A fractured or corrupted item cannot be the base item of the "create new item" or "modify existing item" recipes.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Fractured items and corrupted items cannot be used as base items for these recipes."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      refused_base_states: [fractured, corrupted]
+
+  - id: vendor.item_level_of_the_result_is_not_settled
+    statement: Two wiki pages disagree in wording. The recipe page says the result takes the lowest item level among all the ingredients unless noted otherwise and, in the sections of the tier-up and gem recipes, lists item level as retained from the base item; the Item level page says modifying recipes "typically" keep the original item's level. Whether the flask or the gems (low-level goods) can lower the result's item level is therefore open. The planner carries the input's item level as the working assumption (the recipe data says so in `keeps_item_level`).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Item_level
+    quote: "Recipes that modify an item's modifiers typically keep the original item's ilvl. The 5-to-1 vendor recipe causes the lowest ilvl item inputted to be used on the output item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "The two wiki pages disagree in wording and no other source settles whether the flask or the gems lower the result's item level."
+    value:
+      result_item_level: input
+
+  - id: vendor.result_keeps_the_input_base_type
+    statement: The wiki says the "create new item" recipes make a new base item with randomized base defences, and does not say whether the base type changes. The recipes name their output by item class ("Magic Boots", "Magic Weapon"), and the one first-hand Reddit thread (1lai4k4) is split (u/caddph "give you back your same weapon with a guaranteed mod" against u/Ekkzzo "generates a new item"). The planner keeps the input's base type; the defence rolls are not targets.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "All recipes of this type create a new base item (with randomized base defences)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "The wiki's wording does not say whether the base type stays, and the one Reddit thread that touches it is split."
+    value:
+      result_base_type: input
+
+  - id: vendor.movement_speed_boots_tier_up
+    statement: Boots (Normal for the lowest tier; Normal, Magic or Rare holding an explicit movement speed mod for the next tier) + a Quicksilver Flask + an Orb of Augmentation give Magic boots with only the movement speed mod one tier higher, up to Cheetah's (T2, 30%). From Normal boots the first result is the lowest tier (10%), so 30% takes five recipes in a row. The ladder is the six rungs of the movement speed family in the 3.29.3.3 data, Hellion's 35% (T1) out of reach.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Quicksilver_Flask
+    quote: "This recipe outputs Magic Boots with 5% higher movement speed (and no other modifiers), up to a maximum of 30% (Cheetah's; T2)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      base_kinds: [boots]
+      flask: quicksilver_flask
+      orb: orb_of_augmentation
+      max_tier_from_top: 2
+      ladder:
+        - {mod_id: MovementVelocity1, required_level: 1, roll: [10, 10]}
+        - {mod_id: MovementVelocity2, required_level: 15, roll: [15, 15]}
+        - {mod_id: MovementVelocity3, required_level: 30, roll: [20, 20]}
+        - {mod_id: MovementVelocity4, required_level: 40, roll: [25, 25]}
+        - {mod_id: MovementVelocity5, required_level: 55, roll: [30, 30]}
+        - {mod_id: MovementVelocity6, required_level: 86, roll: [35, 35]}
+
+  - id: vendor.weapon_flat_damage_tier_up
+    statement: A weapon (Normal for the lowest tier; Normal, Magic or Rare holding the explicit added Physical Damage mod for the next tier) + a Granite Flask + an Orb of Augmentation give a Magic weapon with only that mod one tier higher, up to T2 (wiki; Craft of Exile agrees, maxtier 2). A hybrid local damage mod does not work. One-hand and two-hand weapons have their own ladders of nine rungs each (the one-hand classes, wands and sceptres included, take the one-hand ladder); the cap is the same tier counted from the top. The elemental versions are their own claim (vendor.weapon_elemental_damage_tier_up) because the sources disagree on their cap.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Magic Weapon with x added Physical Damage one tier higher Maximum tier is Tier 2"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      base_kinds:
+        one_hand: [claw, dagger, one_hand_axe, one_hand_mace, one_hand_sword, rune_dagger, sceptre, thrusting_one_hand_sword, wand]
+        two_hand: [bow, staff, two_hand_axe, two_hand_mace, two_hand_sword, warstaff]
+      flask: granite_flask
+      orb: orb_of_augmentation
+      max_tier_from_top: 2
+      ladders:
+        one_hand:
+          - {mod_id: LocalAddedPhysicalDamage1, required_level: 2}
+          - {mod_id: LocalAddedPhysicalDamage2, required_level: 13}
+          - {mod_id: LocalAddedPhysicalDamage3, required_level: 21}
+          - {mod_id: LocalAddedPhysicalDamage4, required_level: 29}
+          - {mod_id: LocalAddedPhysicalDamage5, required_level: 36}
+          - {mod_id: LocalAddedPhysicalDamage6, required_level: 46}
+          - {mod_id: LocalAddedPhysicalDamage7, required_level: 54}
+          - {mod_id: LocalAddedPhysicalDamage8, required_level: 65}
+          - {mod_id: LocalAddedPhysicalDamage9, required_level: 77}
+        two_hand:
+          - {mod_id: LocalAddedPhysicalDamageTwoHand1, required_level: 2}
+          - {mod_id: LocalAddedPhysicalDamageTwoHand2, required_level: 13}
+          - {mod_id: LocalAddedPhysicalDamageTwoHand3, required_level: 21}
+          - {mod_id: LocalAddedPhysicalDamageTwoHand4, required_level: 29}
+          - {mod_id: LocalAddedPhysicalDamageTwoHand5, required_level: 36}
+          - {mod_id: LocalAddedPhysicalDamageTwoHand6, required_level: 46}
+          - {mod_id: LocalAddedPhysicalDamageTwoHand7, required_level: 54}
+          - {mod_id: LocalAddedPhysicalDamageTwoHand8, required_level: 65}
+          - {mod_id: LocalAddedPhysicalDamageTwoHand9, required_level: 77}
+
+  - id: vendor.weapon_elemental_damage_tier_up
+    statement: A weapon (same inputs rule as the physical recipe) + a Ruby (Fire), Sapphire (Cold) or Topaz (Lightning) Flask + an Orb of Augmentation give a Magic weapon with only that added elemental damage mod one tier higher. The cap is a rule axis of two readings. The wiki says T3 ("Maximum tier is Tier 3"); Craft of Exile's table has maxtier 2 for these three (and for every tier-up recipe), and no other source decides. The data holds both, a T3 rung (62/63/63) and a T2 rung (74/75/74). The plan reads the wiki (T3, eight recipes from Normal); the other reading (T2, nine recipes) is the second model of the axis. A hybrid local damage mod does not work. The ladders have ten rungs (the level-82 Ravaging rung of the deepwater sword is not one of them).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Wiki: Magic Weapon with x added Fire Damage one tier higher Maximum tier is Tier 3. Craft of Exile package.js, the fire recipe: {\"id\":1972,\"tier\":\"+\",\"maxtier\":2}"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "The wiki caps the elemental recipes at T3 and Craft of Exile at T2; no other source decides, so the cap is a rule axis of two readings."
+    value:
+      base_kinds:
+        one_hand: [claw, dagger, one_hand_axe, one_hand_mace, one_hand_sword, rune_dagger, sceptre, thrusting_one_hand_sword, wand]
+        two_hand: [bow, staff, two_hand_axe, two_hand_mace, two_hand_sword, warstaff]
+      orb: orb_of_augmentation
+      axis: elemental_cap
+      plan_reading: wiki
+      max_tier_from_top: {wiki: 3, coe: 2}
+      elements:
+        fire:
+          flask: ruby_flask
+          ladders:
+            one_hand:
+              - {mod_id: LocalAddedFireDamage1, required_level: 1}
+              - {mod_id: LocalAddedFireDamage2, required_level: 11}
+              - {mod_id: LocalAddedFireDamage3, required_level: 18}
+              - {mod_id: LocalAddedFireDamage4, required_level: 26}
+              - {mod_id: LocalAddedFireDamage5, required_level: 33}
+              - {mod_id: LocalAddedFireDamage6, required_level: 42}
+              - {mod_id: LocalAddedFireDamage7, required_level: 51}
+              - {mod_id: LocalAddedFireDamage8, required_level: 62}
+              - {mod_id: LocalAddedFireDamage9, required_level: 74}
+              - {mod_id: LocalAddedFireDamage10_, required_level: 82}
+            two_hand:
+              - {mod_id: LocalAddedFireDamageTwoHand1, required_level: 1}
+              - {mod_id: LocalAddedFireDamageTwoHand2, required_level: 11}
+              - {mod_id: LocalAddedFireDamageTwoHand3, required_level: 18}
+              - {mod_id: LocalAddedFireDamageTwoHand4, required_level: 26}
+              - {mod_id: LocalAddedFireDamageTwoHand5, required_level: 33}
+              - {mod_id: LocalAddedFireDamageTwoHand6, required_level: 42}
+              - {mod_id: LocalAddedFireDamageTwoHand7, required_level: 51}
+              - {mod_id: LocalAddedFireDamageTwoHand8_, required_level: 62}
+              - {mod_id: LocalAddedFireDamageTwoHand9, required_level: 74}
+              - {mod_id: LocalAddedFireDamageTwoHand10, required_level: 82}
+        cold:
+          flask: sapphire_flask
+          ladders:
+            one_hand:
+              - {mod_id: LocalAddedColdDamage1, required_level: 2}
+              - {mod_id: LocalAddedColdDamage2, required_level: 12}
+              - {mod_id: LocalAddedColdDamage3, required_level: 19}
+              - {mod_id: LocalAddedColdDamage4, required_level: 27}
+              - {mod_id: LocalAddedColdDamage5, required_level: 34}
+              - {mod_id: LocalAddedColdDamage6, required_level: 43}
+              - {mod_id: LocalAddedColdDamage7, required_level: 52}
+              - {mod_id: LocalAddedColdDamage8, required_level: 63}
+              - {mod_id: LocalAddedColdDamage9, required_level: 75}
+              - {mod_id: LocalAddedColdDamage10__, required_level: 82}
+            two_hand:
+              - {mod_id: LocalAddedColdDamageTwoHand1, required_level: 2}
+              - {mod_id: LocalAddedColdDamageTwoHand2, required_level: 12}
+              - {mod_id: LocalAddedColdDamageTwoHand3, required_level: 19}
+              - {mod_id: LocalAddedColdDamageTwoHand4, required_level: 27}
+              - {mod_id: LocalAddedColdDamageTwoHand5, required_level: 34}
+              - {mod_id: LocalAddedColdDamageTwoHand6, required_level: 43}
+              - {mod_id: LocalAddedColdDamageTwoHand7, required_level: 52}
+              - {mod_id: LocalAddedColdDamageTwoHand8, required_level: 63}
+              - {mod_id: LocalAddedColdDamageTwoHand9, required_level: 75}
+              - {mod_id: LocalAddedColdDamageTwoHand10, required_level: 82}
+        lightning:
+          flask: topaz_flask
+          ladders:
+            one_hand:
+              - {mod_id: LocalAddedLightningDamage1, required_level: 3}
+              - {mod_id: LocalAddedLightningDamage2, required_level: 13}
+              - {mod_id: LocalAddedLightningDamage3, required_level: 19}
+              - {mod_id: LocalAddedLightningDamage4, required_level: 31}
+              - {mod_id: LocalAddedLightningDamage5, required_level: 34}
+              - {mod_id: LocalAddedLightningDamage6, required_level: 42}
+              - {mod_id: LocalAddedLightningDamage7, required_level: 51}
+              - {mod_id: LocalAddedLightningDamage8, required_level: 63}
+              - {mod_id: LocalAddedLightningDamage9, required_level: 74}
+              - {mod_id: LocalAddedLightningDamage10, required_level: 82}
+            two_hand:
+              - {mod_id: LocalAddedLightningDamageTwoHand1_, required_level: 3}
+              - {mod_id: LocalAddedLightningDamageTwoHand2, required_level: 13}
+              - {mod_id: LocalAddedLightningDamageTwoHand3, required_level: 19}
+              - {mod_id: LocalAddedLightningDamageTwoHand4, required_level: 31}
+              - {mod_id: LocalAddedLightningDamageTwoHand5, required_level: 34}
+              - {mod_id: LocalAddedLightningDamageTwoHand6, required_level: 42}
+              - {mod_id: LocalAddedLightningDamageTwoHand7, required_level: 51}
+              - {mod_id: LocalAddedLightningDamageTwoHand8, required_level: 63}
+              - {mod_id: LocalAddedLightningDamageTwoHand9, required_level: 74}
+              - {mod_id: LocalAddedLightningDamageTwoHand10, required_level: 82}
+
+  - id: vendor.jewellery_chaos_resistance_tier_up
+    statement: A Ring or Amulet (Normal for the lowest tier; Normal, Magic or Rare holding an explicit chaos resistance mod for the next tier) + an Amethyst Flask + an Orb of Augmentation give a Magic ring or amulet with only the chaos resistance mod one tier higher, up to T2 (26-30%). The ladder is the six rungs of the chaos resistance family, of Bameth 31-35% (T1) out of reach.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Magic Amulet or Ring with x% to Chaos Resistance one tier higher Maximum tier is Tier 2 ((26–30)% to Chaos Resistance)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      base_kinds: [amulet, ring]
+      flask: amethyst_flask
+      orb: orb_of_augmentation
+      max_tier_from_top: 2
+      ladder:
+        - {mod_id: ChaosResist1, required_level: 16, roll: [5, 10]}
+        - {mod_id: ChaosResist2, required_level: 30, roll: [11, 15]}
+        - {mod_id: ChaosResist3, required_level: 44, roll: [16, 20]}
+        - {mod_id: ChaosResist4, required_level: 56, roll: [21, 25]}
+        - {mod_id: ChaosResist5, required_level: 65, roll: [26, 30]}
+        - {mod_id: ChaosResist6, required_level: 81, roll: [31, 35]}
+
+  - id: vendor.tier_caps_match_the_datamined_ladders
+    statement: Each cap the wiki gives names a real mod in the 3.29.3.3 data, which shows the wiki's tier counting is consistent with the ladders; it does not decide the elemental cap, because a T2 cap (Cremating, Entombing, Electrocuting, level 74/75) exists in the data too. The mods the wiki's caps land on are - movement speed T2 is MovementVelocity5 (required level 55, 30%), chaos resistance T2 is ChaosResist5 (65, 26-30%), added Physical Damage T2 is LocalAddedPhysicalDamage8 (65, one-hand), added Fire, Cold and Lightning T3 are LocalAddedFireDamage8 (62), LocalAddedColdDamage8 (63) and LocalAddedLightningDamage8 (63). The ladders have 6, 6, 9 and 10 tiers. Inference, not proof - every wiki cap lands at required level 55 to 65 with the next tier up at 74 or higher (movement speed 55 and 86; physical 65 and 77; chaos resistance 65 and 81; elemental T3 at 62/63 with T2 at 74/75), which fits the wiki's T3 for the elemental ladders.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "MovementVelocity5 required_level 55 base_movement_velocity_+% 30..30 spawn_weights boots 1000; ChaosResist5 required_level 65 base_chaos_damage_resistance_% 26..30; LocalAddedPhysicalDamage8 required_level 65; LocalAddedFireDamage8 required_level 62"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      ladder_tiers: {movement_speed: 6, chaos_resistance: 6, physical: 9, fire: 10, cold: 10, lightning: 10}
+      cap_mods:
+        movement_speed: MovementVelocity5
+        chaos_resistance: ChaosResist5
+        physical_one_hand: LocalAddedPhysicalDamage8
+        fire_one_hand: LocalAddedFireDamage8
+        cold_one_hand: LocalAddedColdDamage8
+        lightning_one_hand: LocalAddedLightningDamage8
+
+  - id: vendor.spell_gem_level_weapon_recipe
+    statement: A Normal Rune Dagger, Sceptre, Staff or Wand + two or more quality gems whose combined quality is 40% and that all carry the tag (Physical, Fire, Cold, Lightning or Chaos) give a Magic weapon with +1 to Level of all Spell Skill Gems of that tag (+2 on a staff). The wiki's notes exclude the warstaff and the generic dagger; the dagger and sceptre rows differ by tag (no Chaos version for the Sceptre in the data, see vendor.spell_gem_level_mods_in_the_data). The recipe takes no flask and no Orb of Augmentation.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Magic Weapon with +1 to Level of all Fire Spell Skill Gems Magic Staff with +2 to Level of all Fire Spell Skill Gems Normal Rune Dagger/Sceptre/Staff/Wand 2 or more quality gems with a combined total of 40% quality & the Fire tag"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      input_rarity: normal
+      gem_count_min: 2
+      gem_quality_total: 40
+      tags: [physical, fire, cold, lightning, chaos]
+      bases: [rune_dagger, sceptre, staff, wand]
+
+  - id: vendor.staff_spell_gem_recipe_gives_plus_two
+    statement: Since 3.29.0 the staff version of the spell-gem recipe always gives +2 (the lowest tier of the staff mod became +2, so the recipe does too). The 3.29.0 patch notes do not mention it; the claim is the wiki's version history only, and the data agrees (the lowest staff rung is +2).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "The lowest tier for + physical/fire/cold/lightning/chaos skills on staff is now +2 instead of +(1-2), so the vendor recipe for a + skill level staff now always gives a +2 staff."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      staff_gem_level: 2
+
+  - id: vendor.spell_gem_level_mods_in_the_data
+    statement: The mods the spell-gem recipe produces are prefixes with required level 2 - Flame Shaper's, Frost Singer's, Thunderhand's (wand, sceptre, dagger, focus weight 250; staff two-hand version weight 1000), Lithomancer's (200 and 750), Mad Lord's (wand, dagger, focus 200, no sceptre; staff 750). On a staff the recipe gives the lowest of three rungs (+2, +3, +4), so tier 3 from the top. The helmet mod Taskmaster's (+1 Minion Skill Gems) is the lowest of two rungs (the other is Overseer's +2, level 75), a prefix of required level 14, helmet weight 250.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "GlobalFireSpellGemsLevel1_ prefix 'Flame Shaper's' required_level 2 fire_spell_skill_gem_level_+ 1..1 spawn_weights wand 250, sceptre 250, dagger 250, focus 250; GlobalFireSpellGemsLevelTwoHand1__ fire_spell_skill_gem_level_+ 2..2 staff 1000; GlobalIncreaseMinionSpellSkillGemLevel1 'Taskmaster's' required_level 14 helmet 250"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      spell_gem_tags:
+        physical:
+          one_hand: {mod_id: GlobalPhysicalSpellGemsLevel1, required_level: 2, gem_level: 1, tier_from_top: 1, base_kinds: [rune_dagger, sceptre, wand]}
+          staff: {mod_id: GlobalPhysicalSpellGemsLevelTwoHand1_, required_level: 2, gem_level: 2, tier_from_top: 3, base_kinds: [staff]}
+        fire:
+          one_hand: {mod_id: GlobalFireSpellGemsLevel1_, required_level: 2, gem_level: 1, tier_from_top: 1, base_kinds: [rune_dagger, sceptre, wand]}
+          staff: {mod_id: GlobalFireSpellGemsLevelTwoHand1__, required_level: 2, gem_level: 2, tier_from_top: 3, base_kinds: [staff]}
+        cold:
+          one_hand: {mod_id: GlobalColdSpellGemsLevel1_, required_level: 2, gem_level: 1, tier_from_top: 1, base_kinds: [rune_dagger, sceptre, wand]}
+          staff: {mod_id: GlobalColdSpellGemsLevelTwoHand1, required_level: 2, gem_level: 2, tier_from_top: 3, base_kinds: [staff]}
+        lightning:
+          one_hand: {mod_id: GlobalLightningSpellGemsLevel1, required_level: 2, gem_level: 1, tier_from_top: 1, base_kinds: [rune_dagger, sceptre, wand]}
+          staff: {mod_id: GlobalLightningSpellGemsLevelTwoHand1, required_level: 2, gem_level: 2, tier_from_top: 3, base_kinds: [staff]}
+        chaos:
+          one_hand: {mod_id: GlobalChaosSpellGemsLevel1, required_level: 2, gem_level: 1, tier_from_top: 1, base_kinds: [rune_dagger, wand]}
+          staff: {mod_id: GlobalChaosSpellGemsLevelTwoHand1, required_level: 2, gem_level: 2, tier_from_top: 3, base_kinds: [staff]}
+      minion_helmet: {mod_id: GlobalIncreaseMinionSpellSkillGemLevel1, required_level: 14, gem_level: 1, tier_from_top: 2, base_kinds: [helmet]}
+
+  - id: vendor.helmet_minion_gem_recipe
+    statement: A Normal Helmet + two or more quality gems with a combined 40% quality and the Minion tag give a Magic helmet with +1 to Level of all Minion Skill Gems. The recipe takes no flask and no Orb of Augmentation.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Magic Helmet with +1 to Level of all Minion Skill Gems Normal Helmet 2 or more quality gems with a combined total of 40% quality & the Minion tag"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      input_rarity: normal
+      gem_count_min: 2
+      gem_quality_total: 40
+      tag: minion
+      bases: [helmet]
+
+  - id: vendor.gem_qualification_is_uncorrupted_skill_gems
+    statement: The wiki's rows ask for "quality gems" with the tag and give no rule for support gems, Awakened gems or corrupted gems. The planner counts uncorrupted skill gems only, the narrowest reading, until a source or a test says more.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "2 or more quality gems with a combined total of 40% quality & the Minion tag"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "The wiki names no rule for support, Awakened or corrupted gems and no other source says."
+    value:
+      gem_kinds: [skill]
+      corrupted_gems: false

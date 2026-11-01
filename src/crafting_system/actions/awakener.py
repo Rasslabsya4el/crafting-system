@@ -68,6 +68,8 @@ RECEIVER, DONOR = "receiver", "donor"
 GROUP_CONFLICT_AXIS = Axis("awakener.group_conflict", (RECEIVER, DONOR), RECEIVER)
 """Which of two kept mods of one mod group survives: the receiver's (the plan, Craft of Exile) or the donor's."""
 
+__all__ = ["AwakenersOrb"]
+
 WHY_NOT_PLANNER = "the solver takes no donors yet (#211, #212) and the interval over its rule axis does not exist (#220)"
 
 _DONORS_LIMIT = 64
