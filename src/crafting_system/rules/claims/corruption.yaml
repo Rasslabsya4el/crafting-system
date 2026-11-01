@@ -1,0 +1,192 @@
+# Mechanic family: corruption (the Vaal Orb, the Locus of Corruption, the Bloodstained Fossil's implicit, corrupted items and the
+# corrupted implicit pools of 3.29). Research ticket #92 (claims 1 to 17 are the draft claims of docs/research/2026-10-31-corruption.md,
+# section 8; the pools are docs/research/2026-10-31-corruption-implicit-pools.json), the decisions of grill B4 (issue #95, ADR-0036 to
+# ADR-0039) and ticket #255. Three claims are the ADRs' additions: jewel_brick_fills_to_limit (ADR-0037), bloodstained_never_fails and
+# locus_two_implicit_share_decision (ADR-0038, owner answers 4 and 5 on issue #95).
+#
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code, on a community test of unknown size or on a
+# default the owner chose where the sources disagree. `locus_two_implicit_share_decision` keeps its interval in `value`.
+rules:
+  - id: corruption.vaal_equipment_four_outcomes
+    statement: "A Vaal Orb on equipment corrupts it and applies exactly one of four outcomes with equal chance: a corrupted implicit, one white socket turns non-white, a reroll into a rare of the same base with six random affixes and random sockets and links, nothing. The 1/4 split rests on old GGG statements the wiki cites and on Craft of Exile's code; no 3.29 count exists."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vaal_Orb#Equipment
+    quote: "Using a Vaal Orb on a piece of equipment will corrupt it and apply one of four possible outcomes. Each outcome has an equal chance of occurring."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {implicit: 0.25, socket_colour: 0.25, brick: 0.25, nothing: 0.25}
+
+  - id: corruption.vaal_uniform_in_coe_code
+    statement: "Craft of Exile picks the Vaal Orb's outcome uniformly from a four-entry table (its table reads white sockets, implicit, brick, nothing; the socket entry is a label only and still says white). Locus uses a table of white sockets, implicits, brick, destroy."
+    source_kind: coe
+    url: https://www.craftofexile.com/
+    quote: "var rolled=poec_rand(0,tbl.length,!0);var retterm=tbl[rolled];"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.vaal_socket_outcome_3_29
+    statement: "Since 3.29.0 the socket outcome of the Vaal Orb turns one random white socket non-white (ignoring attribute colour weights); with no white socket, or no socket, it changes nothing. It no longer makes a socket white. Read in the wiki's copy of the official notes (Stacey_GGG, 2026-07-16, GGG forum thread 3985332; the forum page itself was behind a Cloudflare check)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.29.0
+    quote: "This outcome instead now turns a random White Socket on the item to be a Non-White Socket."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.vaal_brick_rare_six_mods
+    statement: "The brick outcome makes the item a rare of the same base with six random affixes, randomises sockets and links, respects metamods when rolling, and keeps quality, enchantments, memory strands and base values. Whether fractured mods and metamod-locked sides survive is unresolved: the wiki says metamods are respected, Craft of Exile's code removes fractured mods and protection."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vaal_Orb#Equipment
+    quote: "This outcome does respect metamods when rolling affixes. The item will retain all of its other properties, including enchantments, quality, memory strands"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {affixes: 6}
+    approximate: true
+    approximate_reason: "wiki: metamods respected, nothing on fractured mods; Craft of Exile: neither"
+
+  - id: corruption.implicit_replaces_existing
+    statement: "A corrupted implicit from a Vaal Orb replaces the item's existing implicit; if the item has several, one is replaced at random. Explicit mods are not touched by this outcome."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vaal_Orb#Equipment
+    quote: "If the item already has an implicit modifier, it will be replaced by the new corruption implicit modifier. If it has more than one, one of them will be replaced at random."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.implicit_pool_by_item_class
+    statement: "The corrupted implicit is drawn by weight from the mods with generation_type corrupted whose first matching spawn tag gives a weight above 0 and whose required_level is at most the item level. The pool depends only on the item class; per-class pools are in docs/research/2026-10-31-corruption-implicit-pools.json."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "mods[\"V2AddedColdDamageCorrupted3\"]: generation_type=\"corrupted\", domain=\"item\", required_level=81, spawn_weights=[{tag: ring, weight: 250}, {tag: default, weight: 0}]"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.implicit_pool_matches_coe
+    statement: "Craft of Exile's corrupted pools have the same mod counts and total weights as the repoe pools for ring (39 mods, weight 31850), amulet (30, 28500) and belt (19, 18500) (my comparison of its data with repoe). Its pool builder keeps a tier only if the tier's ilvl is at most the item level; the exempt groups are 10, 11 and 13, and the corrupted modifiers belong to group 1 (Base), so they are cut by item level."
+    source_kind: coe
+    url: https://www.craftofexile.com/
+    quote: "if(htilvl<=iLvl||mod.id_mgroup==11||mod.id_mgroup==13||mod.id_mgroup==10)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.locus_four_outcomes
+    statement: "The Locus of Corruption's altar corrupts an uncorrupted item and applies one of four equal outcomes: two corrupted implicits, every white socket turns non-white (3.29.0), the item becomes an influenced rare with random affixes (respecting metamods), the item is destroyed."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Locus_of_Corruption
+    quote: "In addition to corrupting the item, one of four possible outcomes will be applied to it. Each has an equal chance of occurring."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {two_implicits: 0.25, sockets_non_white: 0.25, influenced_rare: 0.25, destroyed: 0.25}
+
+  - id: corruption.locus_two_implicit_share_observed
+    statement: "One player sheet of the Locus on Affliction (3.23, all 52 runs are named unique items, self-recorded by one player) counts 427 two-implicit outcomes in 1,612 items (26.5%, 95% interval 24.3% to 28.6%), consistent with 1/4. Other counts in the same Reddit threads are far lower: 2 in 22 temples (u/BERND_HENNING, 3.23), 1 in 28 (u/Cahecher, 3.25, item type not stated), 1 in over 30 Svallins (u/Wise-Constant-2582, 3.25), 1 in over 24 cloaks (same user, 3.24). The sheet may be the outlier; the share is unresolved."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1bl8mdz/
+    quote: "I recorded all my stats here in great detail"
+    patch_verified: "3.23.0"
+    date_checked: 2026-10-31
+    value: {n: 1612, two_implicits: 427}
+
+  - id: corruption.locus_second_implicit_other_group
+    statement: "In Craft of Exile's code the second implicit of a double corruption is drawn from the pool without the mods that share a mod group with the first. The wiki does not say."
+    source_kind: coe
+    url: https://www.craftofexile.com/
+    quote: "for(var zy=0;zy<vmp[i].modgroups.length;zy++){for(var zw=0;zw<affix.modgroups.length;zw++){if(vmp[i].modgroups[zy]==affix.modgroups[zw]){mconflict=!0}}}"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "only Craft of Exile's code supports it; the wiki is silent"
+
+  - id: corruption.locus_no_preview
+    statement: "Hinekora's Lock cannot foresee the result of corrupting an item at the altar."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Locus_of_Corruption#Version_history
+    quote: "Hinekora's Lock can no longer foresee the result of corrupting an item at the Altar of Corruption."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.corrupted_modifiable_exceptions
+    statement: "A corrupted item cannot be modified except by: the Crafting Bench (socket colour, number and links only), Tainted currency, a Tainted Catalyst, a Tainted Oil, and a few unique items that can be modified while corrupted. No other currency and no mod craft applies."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Mechanics
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.bench_corrupted_extra_vaal
+    statement: "A bench craft of socket number, socket colour or links on a corrupted item costs, besides its usual currency, the same number of Vaal Orbs. The three 3.29.0 options for non-white sockets are a separate claim, corruption.bench_non_white_options_extra_vaal."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Mechanics
+    quote: "It will cost additional Vaal Orbs equal to the number of currency items the recipe normally requires."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.bench_non_white_options_extra_vaal
+    statement: "The three 3.29.0 bench options for at least two, three or four non-white sockets (5 / 20 / 75 Chromatic Orbs) are taken to cost the same extra Vaal Orbs on a corrupted item as the other socket crafts, equal to the number of currency items the recipe normally requires. The wiki states the rule for socket number, colour and links; nothing states it for these three options, so this is a reading of the general rule (research note, section 8)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Mechanics
+    quote: "It will cost additional Vaal Orbs equal to the number of currency items the recipe normally requires."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "a reading of the general bench rule; no source states it for the three 3.29.0 non-white options"
+
+  - id: corruption.bloodstained_fossil_implicit
+    statement: "A resonator with a Bloodstained Fossil corrupts the item and adds a corrupted implicit like the Vaal Orb's implicit outcome; other fossils do not change that implicit."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Bloodstained_Fossil
+    quote: "it will also attempt to add a corrupted implicit modifier similar to the outcome of using a Vaal Orb and receiving a corrupted implicit"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.vaal_incompatible_with_allflame
+    statement: "The Vaal Orb cannot be used in Allflame crafting; Allflame crafting also refuses corrupted items, Tainted currency, socket and quality currency."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Allflame_crafting
+    quote: "The Vaal Orb is intentionally incompatible with Allflame crafting"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.jewel_vaal_outcomes
+    statement: "A Vaal Orb on a jewel applies one of four equal outcomes: a jewel corrupted implicit, a rare jewel of the same base, a corruption-exclusive unique jewel (only Cobalt, Crimson and Viridian bases have one; other bases give no effect instead), nothing. A unique result is a failed try for this project (#81). The affix count of the rare jewel is not stated."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vaal_Orb#Jewels
+    quote: "Using a Vaal Orb on a jewel will corrupt it and apply one of four possible outcomes. Each outcome has an equal chance of occurring."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.jewel_implicit_pool
+    statement: "The corrupted implicit of an ordinary jewel is drawn from 21 mods with weight 1000 each (domain misc, tag jewel), that of an abyss jewel from 21 mods with weight 1000 each (domain abyss_jewel, tag default); four of each need item level 33, 40, 40 or 60. The lists are in docs/research/2026-10-31-corruption-implicit-pools.json."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "mods[\"V2HinderImmunityCorrupted\"]: generation_type=\"corrupted\", domain=\"misc\", required_level=40, spawn_weights=[{tag: jewel, weight: 1000}, {tag: default, weight: 0}]"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: corruption.jewel_brick_fills_to_limit
+    statement: "A Vaal Orb brick on a jewel gives a rare jewel filled to the jewel's limit of two prefixes and two suffixes, four mods: Craft of Exile rerolls to a rare with 6 mods and caps each side at the item's affix limit. The wiki does not give the count. A target that asks for a corrupted implicit sees the brick as a dead end whatever the count."
+    source_kind: coe
+    url: https://www.craftofexile.com/
+    quote: 'poec_simRerollItem("rare",null,null,6,!0,!1,!1,!1,null,!1,!1,!1,!1)'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "only Craft of Exile's code gives the count; the wiki does not state it"
+    value: {affixes: 4}
+
+  - id: corruption.bloodstained_never_fails
+    statement: "A Bloodstained Fossil always adds its corrupted implicit: the use never fails to add it. The wiki's word \"attempt\" leaves room for a failure; the owner's knowledge decides it. The implicit is drawn from the Vaal Orb's pool at the item's level."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/95#issuecomment-6556328111
+    quote: "Bloodstained Fossil never fails to add the implicit (owner: as far as he knows it does not happen)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: corruption.locus_two_implicit_share_decision
+    statement: "The planner takes the Locus of Corruption's share of the two-implicit outcome as 25%, to be corrected later if evidence says otherwise. Sources disagree: the wiki, Craft of Exile and one player sheet give 25% to 26.5%; every other count found gives 8.8% (14 in about 160 tries). The interval 0.088 to 0.265 is kept in the value; the observed counts are corruption.locus_two_implicit_share_observed."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/95#issuecomment-6556328111
+    quote: "double-implicit chance 25%, to be corrected later if evidence says otherwise"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "sources disagree: wiki, Craft of Exile and one sheet 25% to 26.5%; other counts 8.8%"
+    value: {share: 0.25, interval_low: 0.088, interval_high: 0.265}

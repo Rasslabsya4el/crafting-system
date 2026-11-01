@@ -1,0 +1,92 @@
+# Mechanic family: tainted (the Tainted currencies of 3.29). Research ticket #92 (the ten draft claims of
+# docs/research/2026-10-31-corruption.md, section 8) and the decisions of grill B4 (issue #95, ADR-0036). B4 offers none of them but the
+# two socket orbs in B6's corrupted-socket finish (ADR-0036 "Sockets"); the claims stay so that the registry says why the others are not
+# offered (ADR-0004: what no admitted rule answers is invisible to the solver).
+#
+# APPROXIMATE (ADR-0028): the two 50% / 50% socket and link splits rest on one community test of unknown size.
+rules:
+  - id: tainted.chaos_reforge_or_clear
+    statement: "A Tainted Chaos Orb on a corrupted rare either reforges it or removes all its mods (fractured mods stay; the item takes the lowest rarity they allow, Normal if none). The branch chances are not published."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Chaos_Orb
+    quote: "fractured mods will not be removed, leaving the item at the lowest eligible rarity"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.exalted_add_or_remove
+    statement: "A Tainted Exalted Orb on a corrupted rare adds or removes one mod and never changes the rarity. The branch chances are not published."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Exalted_Orb
+    quote: "Tainted Exalted Orb is a currency item that unpredictably adds or removes a modifier on a corrupted item. It cannot upgrade or downgrade the rarity of an item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.divine_teardrop_tier_step
+    statement: "A Tainted Divine Teardrop moves each mod's tier by +1, -1 or 0 within the tiers the base can have; it skips crafted mods and ignores metamods. The chances are not published."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Divine_Teardrop
+    quote: "randomly increases the tier of each mod on an item by 1 tier, decreases it by 1 tier, or does nothing"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.jeweller_even_split
+    statement: "A Tainted Jeweller's Orb adds or removes one socket with 50% each (the wiki cites a direct community test, sample size unknown; the odds were changed in 3.19.0 and 3.19.1). Sockets it adds are white since 3.29.0; it cannot reach six sockets under item level 50."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Jeweller%27s_Orb
+    quote: "The chance to add or remove a socket are both 50%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {add: 0.5, remove: 0.5}
+    approximate: true
+    approximate_reason: "the wiki cites a community test of unknown size; the odds changed in 3.19.0 and 3.19.1"
+
+  - id: tainted.fusing_even_split
+    statement: "A Tainted Orb of Fusing adds or removes one link of the largest linked group with 50% each (the wiki cites a direct community test, sample size unknown; the odds were changed in 3.19.0 and 3.19.1)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Orb_of_Fusing
+    quote: "The chance to add or remove a link are both 50%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {add: 0.5, remove: 0.5}
+    approximate: true
+    approximate_reason: "the wiki cites a community test of unknown size; the odds changed in 3.19.0 and 3.19.1"
+
+  - id: tainted.chromatic_forces_non_white
+    statement: "Tainted Chromatic Orbs ignore attribute requirements and, since 3.29.0, force at least one non-white socket; quality raises the chance of more. The colour chances are not published (no sample size exists)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.29.0
+    quote: "Chromatic Orbs and Tainted Chromatic Orbs now force one of the Sockets on the item to be Non-White"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.scrap_whetstone_random_max_20
+    statement: "Tainted Armourer's Scrap and Tainted Blacksmith's Whetstone set a random quality, at most 20%, on a corrupted armour or weapon. The distribution is not published."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a corrupted armour to apply it. The maximum random quality is 20%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.catalyst_random_type_and_amount
+    statement: "A Tainted Catalyst sets a random catalyst quality type and amount, at most 20%, on a corrupted ring, amulet or belt and replaces other quality types. The distributions are not published."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Applies a random quality type and amount of quality to a Corrupted ring, amulet or belt"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.catalyst_source_trialmaster
+    statement: "Tainted Catalyst drops only from the Trialmaster in an Ultimatum encounter, not from Beyond demons."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Catalyst
+    quote: "Can be obtained as a boss drop from the Trialmaster in an Ultimatum encounter."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: tainted.source_beyond
+    statement: "Tainted currency drops from Beyond monsters and bosses; Tainted Catalyst is the exception (Ultimatum Trialmaster)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tainted_Chaos_Orb#Item_acquisition
+    quote: "Tainted Currency have a chance to drop from Beyond monsters, and is guaranteed to drop several random Tainted Currency from Beyond bosses."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31

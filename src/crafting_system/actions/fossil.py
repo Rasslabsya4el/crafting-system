@@ -448,6 +448,6 @@ def _check_forced(data: GameData, item: Item, forced: Mod, name: str) -> None:
         )
 
 
-@kind("fossil-set", order=60, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+@kind("fossil-set", order=60, opt_in=True)
 def _fossil_sets(data: GameData, item: Item):
     yield from fossil_actions(data, item)
