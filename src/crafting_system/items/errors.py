@@ -40,7 +40,13 @@ class ImplicitError(ItemError):
 
 
 class QualityError(ItemError):
-    """The catalyst quality is malformed (type, percent outside 0 to 20) or sits on a base that takes none."""
+    """The quality is malformed (a catalyst type or a percent outside its range) or sits on a base that takes none: a catalyst
+    quality on anything but a ring, an amulet or a belt, a plain quality on anything but a weapon or armour."""
+
+
+class SocketError(ItemError):
+    """The sockets of the item are malformed (colours, link groups that do not add up to the sockets) or do not fit its base:
+    more sockets than the class maximum, or sockets on an item class that has none."""
 
 
 class VeilOfferError(ItemError):

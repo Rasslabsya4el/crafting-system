@@ -1,5 +1,5 @@
 """The concrete item (ADR-0018): a base, an item level, a rarity, a set of explicit mods and, when given,
-implicits, a catalyst quality, an unveil offer, an enchantment (ADR-0027, ADR-0050), a Memory Strands count (ADR-0040) and the
+implicits, a quality, an unveil offer, an enchantment (ADR-0027, ADR-0050), a Memory Strands count (ADR-0040), sockets (ADR-0046) and the
 imprints it holds (ADR-0034, ADR-0060).
 
 An `Item` is a value: frozen, hashable, and equal to any other item with the same fields, whatever
@@ -7,10 +7,13 @@ order its mods were given in (mods are stored sorted by id). Building one checks
 need no game data; `Item.validate` checks the rest against a `GameData`, and `Item.build`,
 `changed`, `add_mod` and `remove_mod` always return an item that passed it. Implicits are stored only
 when given (the base's own implicits are not filled in), and an item built without implicits, quality
-offer, enchantment or strands behaves as it did before ADR-0027 and ADR-0040. The strand count is a whole number
-from 0 to 100, 0 by default; it is part of the item's equality and hash. The imprints are a tuple of items, each the item as it was
-when it was imprinted (no imprint of its own), in the order they were made; a restore returns the item to
-one of them. An item that is fractured or corrupted can use none (the actions refuse it, the compressed state forgets them). A veiled placeholder is an explicit mod of domain `veiled`
+offer, enchantment, strands or sockets behaves as it did before ADR-0027, ADR-0040 and ADR-0046. The strand count is a whole number
+from 0 to 100, 0 by default; it is part of the item's equality and hash. The quality is of two kinds (ADR-0049): the catalyst
+`Quality` of a ring, amulet or belt and the `PlainQuality` of a weapon or armour; `validate` refuses either on the other's base.
+The sockets are `Sockets` (a colour per socket and the link groups) or None, on a base of one of the 20 socket classes and at most
+its class maximum (`sockets.py`). The imprints are a tuple of items, each the item as it was when it was imprinted (no imprint of its own), in the order they were
+made; a restore returns the item to one of them. An item that is fractured or corrupted can use none (the actions refuse it, the
+compressed state forgets them). A veiled placeholder is an explicit mod of domain `veiled`
 whose seed changes nothing, so `build` and `changed` make the seed canonical (`Item.canonical`).
 Words follow ADR-0021: a "family" is the exclusion set of a mod.
 
@@ -38,6 +41,7 @@ from .errors import (
     MemoryStrandsError,
     ModSlotError,
     QualityError,
+    SocketError,
     UnknownBaseError,
     UnknownModError,
     ValueRangeError,
@@ -54,7 +58,8 @@ from .implicits import (
     fits_corrupted_implicit,
     is_corrupted_implicit,
 )
-from .quality import CATALYST_ITEM_CLASSES, Quality
+from .quality import CATALYST_ITEM_CLASSES, PLAIN_QUALITY_ITEM_CLASSES, PlainQuality, Quality
+from .sockets import SOCKET_ITEM_CLASSES, Sockets, class_maximum
 from .spawn import spawn_weight
 from .strands import MAX_MEMORY_STRANDS
 
@@ -177,10 +182,11 @@ class Item:
     influences: frozenset[Influence] = frozenset()
     corrupted: bool = False
     implicits: tuple[ImplicitMod, ...] = ()
-    quality: Quality | None = None
+    quality: Quality | PlainQuality | None = None
     veil_offer: tuple[str, ...] = ()
     enchantment: str | None = None
     memory_strands: int = 0
+    sockets: Sockets | None = None
     imprints: tuple["Item", ...] = ()
 
     def __post_init__(self) -> None:
@@ -220,6 +226,8 @@ class Item:
                 f"memory strands {self.memory_strands!r} is not a whole number from 0 to {MAX_MEMORY_STRANDS}",
                 MemoryStrandsError,
             )
+        if self.sockets is not None and not isinstance(self.sockets, Sockets):
+            raise self._error(f"sockets {self.sockets!r} is not a Sockets or None", SocketError)
         self._check_imprints()
 
     def _check_imprints(self) -> None:
@@ -254,8 +262,8 @@ class Item:
                 raise self._error(f"implicit {first.mod_id} is on the item twice", kind)
         return ordered
 
-    def _checked_quality(self) -> Quality | None:
-        if self.quality is not None and not isinstance(self.quality, Quality):
+    def _checked_quality(self) -> Quality | PlainQuality | None:
+        if self.quality is not None and not isinstance(self.quality, (Quality, PlainQuality)):
             raise self._error(f"quality {self.quality!r} is not a Quality or None", QualityError)
         if self.quality is not None and self.quality.percent == 0:
             return None  # one representation of "no quality"
@@ -313,8 +321,8 @@ class Item:
 
     def validate(self, data: GameData) -> None:
         """Raise an `ItemError` subclass for the first problem found, checking in this order: unknown
-        base, unknown mod, wrong slot or domain, wrong values, capacity, family conflict, implicits, quality, veil offer,
-        enchantment."""
+        base, unknown mod, wrong slot or domain, wrong values, capacity, family conflict, implicits, quality, sockets, veil
+        offer, enchantment."""
         base = data.base_items.get(self.base_id)
         if base is None:
             raise self._error("the base is not in the game data", UnknownBaseError)
@@ -330,6 +338,7 @@ class Item:
         self._check_families(data)
         self._check_implicits(data, base)
         self._check_quality(base)
+        self._check_sockets(base)
         self._check_veil_offer(data)
         self._check_enchantment(data, base)
         for entry in self.imprints:
@@ -436,11 +445,35 @@ class Item:
             )
 
     def _check_quality(self, base: BaseItem) -> None:
-        if self.quality is not None and base.item_class not in CATALYST_ITEM_CLASSES:
+        if self.quality is None:
+            return
+        if isinstance(self.quality, PlainQuality):
+            if base.item_class not in PLAIN_QUALITY_ITEM_CLASSES:
+                raise self._error(
+                    f"plain quality {self.quality.percent}% needs a weapon or armour base, one of item class"
+                    f" {', '.join(sorted(PLAIN_QUALITY_ITEM_CLASSES))}, this one is {base.item_class}",
+                    QualityError,
+                )
+        elif base.item_class not in CATALYST_ITEM_CLASSES:
             raise self._error(
                 f"quality {self.quality.type.value} {self.quality.percent}% needs a base of item class"
                 f" {', '.join(sorted(CATALYST_ITEM_CLASSES))}, this one is {base.item_class}",
                 QualityError,
+            )
+
+    def _check_sockets(self, base: BaseItem) -> None:
+        if self.sockets is None:
+            return
+        most = class_maximum(base)
+        if most is None:
+            raise self._error(
+                f"sockets need a weapon or armour base, one of item class {', '.join(sorted(SOCKET_ITEM_CLASSES))},"
+                f" this one is {base.item_class}",
+                SocketError,
+            )
+        if self.sockets.count > most:
+            raise self._error(
+                f"it has {self.sockets.count} sockets, but {base.name} ({base.item_class}) holds at most {most}", SocketError
             )
 
     def _check_veil_offer(self, data: GameData) -> None:

@@ -19,3 +19,7 @@ The finish (ADR-0045) is solved at two quality levels, **the start item's own an
 Whetstone and Scrap are added to the price names; both are cheap and can be priced from the currency exchange or the trade site as any currency.
 
 Origin: [Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104) (draft, with the wiki check of 2026-11-01); [Sockets, links and colours in 3.29](https://github.com/Rasslabsya4el/crafting-system/issues/99); [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81); ADR-0027, ADR-0029, ADR-0045, ADR-0047.
+
+## Amendment: the build of the item and the target ([#227](https://github.com/Rasslabsya4el/crafting-system/issues/227))
+
+`Quality` stays the catalyst kind (a type and 0 to 20%); the plain kind is the separate value `PlainQuality(percent)`, 0 to 30%, with `type` None, so `Item.quality` is `Quality | PlainQuality | None` and `Item.validate` refuses either kind on the other's item classes (`PLAIN_QUALITY_ITEM_CLASSES` are the 20 socket classes). A target's `quality: {min_percent}` on a weapon or armour (`PlainQualityRequirement`) takes 1 to 30, and a value above 20 is refused unless the start item already holds it, since Whetstones and Scraps stop at 20%. A start item's `quality: {percent}` on a weapon or armour takes 0 to 30. The type is left out on a weapon or armour; a `type` there is the catalyst form and is refused as before.

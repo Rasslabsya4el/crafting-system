@@ -31,7 +31,9 @@ the imprints of an item that is corrupted or holds a fractured mod, because none
 
 Exactness of the declarations. A Restore also restores the implicits, the quality and the unveil offer, but it declares none of them: a
 snapshot differs from the item in such a part only if some other action of the model changed it, and that action declares it, which makes
-the state keep it. The model of a route in which nothing changes the quality keeps no quality, and none is needed. The kind is not a
+the state keep it. The model of a route in which nothing changes the quality keeps no quality, and none is needed. Memory Strands: neither action declares
+`strand_use` yet, so both are refused on an item with one strand or more until ticket B5-11h (ADR-0041, `strand_use.py`) declares what an imprint keeps
+and what a restore brings back (`memory_strands.yaml`: an imprint restore changes the count). The kind is not a
 planner kind until the end-to-end ticket (#223) wires R15 and R17 and measures the state growth; the kernel and the state are here.
 """
 
@@ -48,7 +50,6 @@ from .contract import Action, Adds, ImprintMove, Reads
 from .draw import jewel_class
 from .errors import NotApplicableError
 from .finite import Finite
-from .strand_use import StrandUse
 
 __all__ = ["DEFAULT_MAX_IMPRINTS", "Imprint", "Restore", "imprint_actions"]
 
@@ -117,9 +118,6 @@ class Imprint(Action):
         text = f"Imprint with the {self.beast_name}"
         return text if self.replaces is None else f"{text}, replacing imprint {self.replaces + 1}"
 
-    def strand_use(self, data: GameData | None = None) -> StrandUse:
-        return StrandUse.untouched(RESTORES_STATE)  # ADR-0041: an imprint changes nothing of the item, so the count stays (it is kept in the imprint)
-
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return {self.beast_name: 1}
 
@@ -173,10 +171,6 @@ class Restore(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return f"Restore imprint {self.index + 1}"
-
-    def strand_use(self, data: GameData | None = None) -> StrandUse:
-        # ADR-0041: it neither cuts nor spends; the count of the item becomes the count of the imprint (imprint.restores_state: the Memory Strand count)
-        return StrandUse.untouched(RESTORES_STATE)
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return {}  # the imprint was paid for when it was made; the planner prices a free action at its epsilon (ADR-0026)

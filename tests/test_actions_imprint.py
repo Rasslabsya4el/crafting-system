@@ -194,13 +194,6 @@ def test_a_restore_returns_the_item_to_the_imprint_and_uses_it_up():
         Restore(0).outcomes(CONTRACT_DATA, rare(RESIST_2, LIFE_1))
 
 
-def test_a_restore_brings_back_the_strands_and_the_rarity_with_the_mods():
-    snapshot = dataclasses.replace(magic(LIFE_1), memory_strands=7)
-    later = dataclasses.replace(with_imprints(rare(RESIST_2, MANA_1), snapshot), memory_strands=2)
-    (_, back), = Restore(0).outcomes(CONTRACT_DATA, later).results
-    assert back.memory_strands == 7 and back.rarity is Rarity.MAGIC and [e.mod_id for e in back.mods] == [LIFE_1] and back.imprints == ()
-
-
 def test_a_recombinator_output_is_a_new_item_and_holds_no_imprint():
     # an action that builds a new item (Item.build) gives it no imprints, so nothing restores it (imprint.not_for_derived_items)
     from crafting_system.actions import Recombinator
@@ -658,12 +651,13 @@ def test_a_fractured_fossil_forgets_the_imprints():
     assert kernel and all(result.fractured and result.imprints == () for result in kernel)
 
 
-def test_both_actions_declare_their_strand_use_so_a_stranded_item_is_not_refused():
+def test_both_actions_are_refused_on_a_stranded_item_until_their_strand_ticket_declares_them():
+    from crafting_system.actions import OutOfScopeError
+
     stranded = dataclasses.replace(magic(LIFE_1), memory_strands=5)
-    (_, made), = Imprint(CROAKER).outcomes(CONTRACT_DATA, stranded).results
-    assert made.memory_strands == 5 and made.imprints[0].memory_strands == 5  # the imprint keeps the count
-    assert Imprint(CROAKER).strand_use(CONTRACT_DATA).spend is None and not Imprint(CROAKER).strand_use(CONTRACT_DATA).cuts
-    later = dataclasses.replace(made, memory_strands=2)
-    (_, back), = Restore(0).outcomes(CONTRACT_DATA, later).results
-    assert back.memory_strands == 5  # the count of the imprint, not the count the item had
-    assert Restore(0).strand_use(CONTRACT_DATA).spend is None
+    assert Imprint(CROAKER).strand_use(CONTRACT_DATA) is None and Restore(0).strand_use(CONTRACT_DATA) is None
+    with pytest.raises(OutOfScopeError, match="has not declared"):
+        Imprint(CROAKER).outcomes(CONTRACT_DATA, stranded)
+    with pytest.raises(OutOfScopeError, match="has not declared"):
+        Restore(0).outcomes(CONTRACT_DATA, dataclasses.replace(with_imprints(magic(MANA_1), magic(LIFE_1)), memory_strands=5))
+    Imprint(CROAKER).outcomes(CONTRACT_DATA, magic(LIFE_1))  # at 0 strands nothing changes
