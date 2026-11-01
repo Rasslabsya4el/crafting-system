@@ -76,6 +76,17 @@ The lazy loop and the unrestricted product give the same value in c2 and c3. In 
 - **The kernel of a class donor** averages the overlap of names (decision 3). T7's contract test compares it with the raw kernel on finished items, ADR-0019 layer 1.
 - **The price of a bad seed** is rounds and wants, never an answer: an empty seed gave the same value with four times the wants.
 
+## As built (ticket #212)
+
+`solver/_lazy.py` holds the loop (`solve_lazily`); `cli/_donors.py` makes the planner's offers a model for it (`DonorModel`, `solve_with_donors`) and `cli/_offers.py` the seed (`isolated_feeder`). Where the build differs from the prototype:
+
+- **The slack is relative and provable.** The prototype left a donor out when `q >= V (1 - 1e-9) - 1e-9`. The build takes `theta = 1 - slack` and leaves a donor out when `cost / theta + S >= V`, which makes `theta V_k` a sub-solution, so `theta V_k <= V* <= V_k`: the value is within the relative `slack` of the optimum, and `LazySolution.error_bound` is the certificate of `solve` plus the slack (tested with slacks of 0.2 and 0.9, where the error is visible).
+- **A state with an infinite value and an infinite determinized distance offers nothing.** If no sequence of actions of the full model reaches the want from there, no donor can help and the full model is infinite too (the prototype offered every donor at such a state).
+- **The model is explored whole once**, from the start and from the start of every `Need`: the determinized distance needs every state and every candidate's kernel of the full model, as in the prototype. The solve itself builds only what the offers reach. A candidate is an action with `extra_inputs`; plain actions are always offered; candidates of one state are told apart by `(label, extra_inputs)`.
+- **Equal-kernel merging (ADR-0031) is not applied to candidates**: two donors with one kernel cost different amounts to get.
+- **The check is one function (`_check`) over the values of a finished solve**, and the full model is one class (`_Space`); #312's search replaces the solve and the check and keeps the rest. The loop never merges states.
+- `make_plan` is not wired to it yet: the planner still refuses an action with inputs, because the report and the risk run do not read policies with inputs (tickets #221, #222 and the end-to-end tickets).
+
 ## The seam for more fields
 
 The only place that knows what a want holds is the projection function of the consuming action (decision 1): it maps a compressed donor to a `key`, a tuple of named fields, and the action's `Need` carries `(kind, key)`. Everything else only compares keys for equality: `Acquisition(reaches=...)` (key of the item reached against the key wanted), the lazy loop (a key names an acquisition process), the cache of kernels. Nothing reads a field by position or name, so a later **item-level band** or **base** field (for example when the planner chooses what to buy, [#337](https://github.com/Rasslabsya4el/crafting-system/issues/337), or when the recombinator's output level depends on both inputs) is added inside the projection function of the actions that read it, and no caller changes. A buy offer is an ordinary action of an acquisition process at a compressed state (ADR-0011), so it needs no change to the want either. What #337 decides about where buy offers sit is not decided here.
