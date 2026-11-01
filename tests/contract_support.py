@@ -551,10 +551,15 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
             assert result.veil_offer == (given.veil_offer if placeholder else ()), (
                 "an action that does not declare adds.offer leaves the offer as it was (it goes with its placeholder)"
             )
+        if not adds.imprints:
+            assert result.imprints in (given.imprints, ()), (
+                "an action that does not declare adds.imprints leaves the imprints as they were, or builds a new item that holds none (ticket #219)"
+            )
     without = {
         "implicits": (reads.implicits, bool(given.implicits), {"implicits": ()}),
         "quality": (reads.quality, given.quality is not None, {"quality": None}),
         "offer": (reads.offer, bool(given.veil_offer), {"veil_offer": ()}),
+        "imprints": (reads.imprints, bool(given.imprints), {"imprints": ()}),
     }
     for name, (declared, held, strip) in without.items():
         if declared or not held:
@@ -604,7 +609,9 @@ def _stripped(listed, strip: dict) -> dict:
     """The finished items with the chance of each, with the fields of `strip` taken off, added up by item."""
     found: dict = defaultdict(Fraction)
     for chance, result in listed:
-        found[dataclasses.replace(result, **strip)] += chance
+        # an imprint is the item as it was, so a part taken off the item is taken off the imprints it holds too (ticket #219)
+        nested = tuple(dataclasses.replace(held, **strip) for held in result.imprints)
+        found[dataclasses.replace(result, **{**strip, "imprints": strip.get("imprints", nested)})] += chance
     return dict(found)
 
 
