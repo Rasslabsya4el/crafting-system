@@ -8,7 +8,8 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
       - when:                         # optional; no `when` matches every state
           rarity: rare                # normal, magic or rare, or a list of them
           corrupted: false
-          fractured: none             # or [{family: LightningResistance}]: every listed family is fractured on the item
+          fractured: none             # or [{family: LightningResistance}]: every listed family is fractured on the item;
+                                      # or {without: [{family: Pierce}]}: some mod is fractured and none of the listed families is
           crafted_mods: false         # the item holds a crafted mod or metamod
           open_suffixes: 1            # at least this many free suffixes (open_prefixes likewise); needs a bench action offered
           requirements:               # the status of a requirement of the target, named by its selector
@@ -72,6 +73,7 @@ class When:
     corrupted: bool | None = None
     no_fractured: bool = False
     fractured_families: tuple[str, ...] = ()
+    fractured_without: tuple[str, ...] = ()  # a mod is fractured and it is none of these families (a mod held as its family type counts as another)
     crafted: bool | None = None
     statuses: tuple[tuple[int, frozenset[Status]], ...] = ()  # (index of the requirement leaf, statuses allowed)
     open_slots: tuple[tuple[Side, int, int], ...] = ()  # (side, capacity of the side, free slots wanted at least)
@@ -85,11 +87,19 @@ class When:
             return False
         if self.no_fractured and state.fractured:
             return False
-        if self.fractured_families:
-            held = {family for entry in state.fractured for family in data.mods[entry.mod_id].families}
+        if self.fractured_families:  # a mod fractured mid-route may be held as its family type ("~3"): it names no family here
+            held = {family for entry in state.fractured if entry.mod_id in data.mods for family in data.mods[entry.mod_id].families}
             if not held.issuperset(self.fractured_families):
                 return False
+        if self.fractured_without:
+            if not state.fractured:
+                return False
+            held = {family for entry in state.fractured if entry.mod_id in data.mods for family in data.mods[entry.mod_id].families}
+            if held.intersection(self.fractured_without):
+                return False
         for side, room, wanted in self.open_slots:
+            if any(entry.mod_id not in data.mods for entry in state.fractured):
+                return False  # the side of a mod held as its family type is not known, so the free slots cannot be counted
             held = sum(data.mods[entry.mod_id].generation_type == side.value for entry in state.fractured)
             held += sum(slot.side is side for slot in state.slots)
             if room - held < wanted:
@@ -322,6 +332,14 @@ class _Reader:
     def read_fractured(self, value: object, path: str, line: int) -> dict[str, object]:
         if isinstance(value, str) and value == "none":
             return {"no_fractured": True}
+        if isinstance(value, LineMap):
+            self.check_keys(value, path, ("without",))
+            if "without" not in value:
+                self.fail(value.line, f"{path}.without", "this key is required but missing")
+            inner = self.read_fractured(value["without"], f"{path}.without", value.key_lines["without"])
+            if "fractured_families" not in inner:
+                self.fail(value.key_lines["without"], f"{path}.without", "must be a list such as [{family: Pierce}]")
+            return {"fractured_without": inner["fractured_families"]}
         if not isinstance(value, LineList):
             self.fail(line, path, f"must be `none` or a list such as [{{family: LightningResistance}}], got {describe(value)}")
         if not value:

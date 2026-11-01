@@ -88,9 +88,8 @@ class AnnulmentOrb(Action):
 @kind(
     "annulment-orb",
     order=81,
-    planner=False,
-    why_not="not in the B1 offer set; which actions a target needs is pruning (#118)",
+    opt_in=True,
 )
 def _annulment_orb(data: GameData, item: Item):
-    if item.rarity is not Rarity.NORMAL:
-        yield AnnulmentOrb()
+    # a normal item gets mods on the way (an essence, an Orb of Transmutation), so the kind is listed for it too
+    yield AnnulmentOrb()
