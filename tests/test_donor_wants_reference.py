@@ -208,13 +208,14 @@ class Determinized:
         return self.memo[want]
 
 
-def lazy_solve(world, seed_donors, *, bound="expected", envelope=False):
+def lazy_solve(world, seed_donors, *, bound="expected", envelope=False, trace=None):
     """The loop of ADR-0059: solve, prove every other donor unneeded or offer it, repeat. Returns (solution, acquisition, offers, rounds).
 
     The lower bound is the value in hand on the checked states and the determinized distance elsewhere. By default every built
     state with a finite value is checked. With `envelope` only the states the policy in hand reaches are, and a state joins them
     when an action offered at a checked state falls below the value there only because its successor was not checked (what an
-    envelope search expands): the end test is the same, so the value is the same.
+    envelope search expands): the end test is the same, so the value is the same. `trace`, a dict, receives `pruned`, the
+    (state, donor, lower bound) of every donor left out in the last round, and `checked`, the states looked at over all rounds.
     """
     offers = {s: set(seed_donors(s)) for s in world.states()}
     det = Determinized(world)
@@ -237,6 +238,7 @@ def lazy_solve(world, seed_donors, *, bound="expected", envelope=False):
         else:
             members = set(values)
         violations = set()
+        pruned = []
         grown = True
         while grown:
             grown = False
@@ -273,6 +275,8 @@ def lazy_solve(world, seed_donors, *, bound="expected", envelope=False):
                         min(level(j) for j in dist) if bound == "support" else sum(float(p) * level(j) for j, p in dist.items())
                     )
                     if q >= v * (1 - 1e-9) - 1e-9:
+                        if d not in offers[s]:
+                            pruned.append((x, d, q))
                         continue
                     if d not in offers[s]:
                         violations.add((s, d))
@@ -289,6 +293,9 @@ def lazy_solve(world, seed_donors, *, bound="expected", envelope=False):
                             if y in values and y not in members:
                                 members.add(y)
                                 grown = True
+        if trace is not None:
+            trace["checked"] = trace.get("checked", 0) + len(members)
+            trace["pruned"] = pruned
         if not violations:
             return solution, acquisition, offers, rounds
         for s, d in violations:
@@ -401,6 +408,31 @@ def test_testing_only_the_states_the_policy_reaches_gives_the_same_value(seed):
     assert envelope.values[envelope_acquisition.start(())] == pytest.approx(full.values[full_acquisition.start(())], rel=1e-8)
 
 
+@pytest.mark.parametrize("envelope", [False, True])
+@pytest.mark.parametrize("seed", range(40))
+def test_every_bound_the_loop_uses_to_leave_a_donor_out_is_below_the_true_cost_of_that_action(seed, envelope):
+    """Admissibility, pair by pair: the lower bound on `cost + inputs + sum p V` is at most the same sum with the values of the full model."""
+    world = world_of(seed)
+    full, _ = world.solve(lambda s: world.donors())
+    trace = {}
+    lazy_solve(world, [lambda s: [], lambda s: [d for d in world.donors() if len(d) == 1]][seed % 2], envelope=envelope, trace=trace)
+    for (tag, want, s), d, bound in trace["pruned"]:
+        truth = world.costs["recomb"] + full.values[("in", d, ())] + sum(float(p) * full.values[(tag, want, j)] for j, p in world.recomb(s, d).items())
+        assert bound <= truth * (1 + 1e-9) + 1e-9, ((tag, want, s), d)
+
+
+@pytest.mark.parametrize("seed", range(40))
+def test_the_determinized_distance_is_below_the_value_of_every_state_of_every_acquisition(seed):
+    world = world_of(seed)
+    full, _ = world.solve(lambda s: world.donors())
+    det = Determinized(world)
+    for (tag, want, s), value in full.values.items():
+        if value == 0.0 or not math.isfinite(value):
+            continue
+        lower = det.to(world.goal if str(want) == "MAIN" else want).get(s, math.inf)
+        assert lower <= value * (1 + 1e-9) + 1e-9, ((tag, want, s), lower, value)
+
+
 def test_the_loop_leaves_donors_out_that_it_proves_unneeded():
     world = world_of(0)
     _, _, offers, _ = lazy_solve(world, lambda s: [])
@@ -408,7 +440,7 @@ def test_the_loop_leaves_donors_out_that_it_proves_unneeded():
     assert sum(len(v) for v in offers.values()) < possible // 2
 
 
-def test_the_lazy_product_is_smaller_and_its_branching_component_stays_within_the_direct_limit():
+def test_the_lazy_product_and_its_branching_component_are_smaller_than_those_of_the_product_with_every_donor():
     world = TinyWorld({"A": 100, "B": 100, "J": 500, "K": 500}, {"alt": 1, "exalt": 50, "annul": 20, "recomb": 140})
     iso = lambda s: [d for d in world.donors() if set(d) <= {"A", "B"}]
     lazy, lazy_acquisition, offers, _ = lazy_solve(world, iso)
@@ -418,9 +450,10 @@ def test_the_lazy_product_is_smaller_and_its_branching_component_stays_within_th
     assert len(lazy.values) < len(full.values) // 2
     assert len({w for (_, w, _) in lazy.values}) < len({w for (_, w, _) in full.values})
     small = branching_components(lazy_acquisition, lazy_acquisition.start(()))
-    assert small and small[0] <= 64  # the donors that feed each other still form a branching component, within the limit
     big = branching_components(full_acquisition, start)
-    assert big and big[0] > 64 > small[0]  # all donors at once: one branching component beyond `direct_solve_limit`
+    # the donors that feed each other still form a branching component; with every donor offered it is the whole product,
+    # beyond `direct_solve_limit` (64). At R25 size both are beyond it (ADR-0059), so the limit is no argument for the loop.
+    assert small and small[0] < big[0] and big[0] > 64
 
 
 # --- a donor class ends the acquisition at its first member ----------------------------------------------
