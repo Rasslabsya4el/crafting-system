@@ -279,7 +279,8 @@ class Recombinator(Action):
             mods = tuple(entries[index].mod for index in sorted(chosen))
             per_side = [sum(1 for index in chosen if entries[index].side is side) for side in Side]
             rarity = Rarity.NORMAL if not mods else Rarity.RARE if max(per_side) > 1 else Rarity.MAGIC
-            result = base.changed(data, item_level=level, rarity=rarity, mods=mods, corrupted=False, veil_offer=())
+            # the output is a new item: no imprint of the base restores it (imprint.not_for_derived_items, ticket #219)
+            result = base.changed(data, item_level=level, rarity=rarity, mods=mods, corrupted=False, veil_offer=(), imprints=())
             results[result] = results.get(result, Fraction(0)) + chance
         return results
 

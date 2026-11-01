@@ -586,6 +586,9 @@ class Abstraction:
             )
         self._check_enabled(action)
         prepared = self._prepared(state, action)
+        move = action.imprint_move()
+        if move is not None:  # the kernel of an imprint or a restore is one certain state, cheap: the key is the kernel itself
+            return ("imprint", tuple(self._imprint_kernel(state, action, move)))
         outcomes = prepared.outcomes
         self._check_parts(outcomes)
         parts: Counter = Counter()
