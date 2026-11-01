@@ -30,7 +30,7 @@ from crafting_system.prices import PriceFile
 from crafting_system.targets import Target
 
 from ._offers import Offer
-from ._plan import Plan, PlanError, StartPrice, make_plan, resolve_start_price
+from ._plan import Plan, PlanError, StartPrice, add_risk, make_plan, resolve_start_price
 from ._start_options import StartContext, StartList, StartSource, combine, vendor_recipe_starts
 from ._start_types import (
     SOURCE_PLAIN,
@@ -81,11 +81,11 @@ def _plan_candidate(
     """Plan `target` from `candidate` with the existing planner; a `PlanError` is an outcome, not a crash."""
     try:
         if candidate.key == PLAIN_KEY:
-            plan = make_plan(data, target, prices, start_price=override, **kwargs)
+            plan = make_plan(data, target, prices, start_price=override, with_risk=False, **kwargs)
         else:
             moved = dataclasses.replace(target, start_item=candidate.item, start_price=None)
             price = StartPrice(candidate.price_name, candidate.price, candidate.price_source)
-            plan = make_plan(data, moved, prices, start_price_of=price, **kwargs)
+            plan = make_plan(data, moved, prices, start_price_of=price, with_risk=False, **kwargs)
     except PlanError as error:
         return _Outcome(None, math.inf, math.inf, str(error), False)
     return _Outcome(plan, plan.mean_remaining, plan.start_price.chaos + plan.mean_remaining, None, plan.approximation is not None)
@@ -146,6 +146,7 @@ def plan_with_starts(
     chosen = next(candidate for candidate in order if candidate.key == chosen_key)
     plan = outcomes[chosen_key].plan
     assert plan is not None
+    plan = add_risk(plan)  # the risk grid is measured for the start that is kept, not for each one that was compared
     considered = []
     for candidate in order:
         outcome = outcomes.get(candidate.key)

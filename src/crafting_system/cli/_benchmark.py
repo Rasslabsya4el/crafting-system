@@ -41,6 +41,9 @@ from ._plan import Plan, make_plan
 from ._report import describe_state, money, number_states, percent
 from ._route import RouteResult, evaluate_route, load_route
 from ._shares import weight_share
+from ._start_report import first_step_document
+from ._start_step import first_step
+from ._starts import plan_with_starts
 
 FORMAT = "crafting-system-benchmark/1"
 FILE_NAME = "benchmark.json"
@@ -64,16 +67,34 @@ class PublishedOdds:
 
 
 @dataclass(frozen=True)
+class ExpectedStart:
+    """The start item a benchmark route is meant to begin from, and why that start wins (ADR-0059, ticket #331).
+
+    `key` is the key of the start candidate the plan should choose (`vendor:minion_helmet:1`; `plain` for the target's own start
+    item) and `why` is the explanation printed with the answer. A route with one is planned with the start options, not from the
+    target's own start item alone, and the entry records the choice and whether it is the expected one. It never fails the run.
+    """
+
+    key: str
+    why: str
+
+
+@dataclass(frozen=True)
 class BenchmarkRoute:
-    """A benchmark route that has a target and a given route; both paths count from the project root."""
+    """A benchmark route that has a target, usually a given route, and sometimes an expected start; paths count from the project root.
+
+    `route` is None for a route that has no guide to compare with (V01: no guide writes a route for a recipe-made start item); the
+    entry then has no given-route half. `start` is the expected start of a route that begins from a vendor recipe.
+    """
 
     id: str
     title: str
     target: str
-    route: str
+    route: str | None
     odds: tuple[PublishedOdds, ...]
     outcomes: tuple[PublishedOutcome, ...] = ()
     heavy: str | None = None  # why the planner needs hours here: `benchmark` then checks the published odds only, unless asked with --heavy
+    start: ExpectedStart | None = None
 
 
 GEM = "+1 to Level of all Lightning Skill Gems"
@@ -320,6 +341,7 @@ def run_route(
         "solver": None,
         "given_route": None,
         "published_odds": [],
+        "start": None,
         "solver_not_dearer": None,
         "timings_seconds": None,
     }
@@ -340,7 +362,8 @@ def run_route(
         entry["missing_price"] = missing
         if missing is not None:
             raise ValueError(_missing_message(missing))
-        plan = make_plan(data, target, loaded)
+        plan = make_plan(data, target, loaded) if bench.start is None else plan_with_starts(data, target, loaded)
+        entry["start"] = _start_entry(plan, data, bench.start)
         shift = plan.start_price.chaos
         risk = plan.risk
         entry["solver"] = _totals(risk.success_probability, risk.mean, risk.p50, risk.p90, shift)
@@ -348,11 +371,12 @@ def run_route(
         timings["solver"], timings["risk_evaluate"] = plan.solve_seconds, plan.risk_seconds
         entry["published_odds"] += published_odds(data, plan, bench)
 
-        route = load_route(root / bench.route, plan, data)
-        result = evaluate_route(plan, route, data)
-        entry["given_route"] = _given_route(plan, result, data, shift)
-        timings["route_evaluate"] = result.seconds
-        entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
+        if bench.route is not None:
+            route = load_route(root / bench.route, plan, data)
+            result = evaluate_route(plan, route, data)
+            entry["given_route"] = _given_route(plan, result, data, shift)
+            timings["route_evaluate"] = result.seconds
+            entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
     except _Skipped:
         pass
     except ROUTE_ERRORS as error:
@@ -360,6 +384,44 @@ def run_route(
     timings["total"] = time.perf_counter() - began
     entry["timings_seconds"] = timings
     return entry, loaded
+
+
+def _start_entry(plan: Plan, data: GameData, expected: ExpectedStart | None) -> dict | None:
+    """What the plan started from and what it was compared with: the expected start, the chosen one, every option's totals, the refusals.
+
+    None for a route that is planned from its own start item alone. Whether the chosen start is the expected one is recorded, never
+    enforced here (a test pins it).
+    """
+    if expected is None:
+        return None
+    choice = plan.starts
+    chosen = "plain" if choice is None else choice.chosen.key
+    options = []
+    refused = []
+    step = None
+    if choice is not None:
+        options = [
+            {
+                "key": row.candidate.key,
+                "label": row.candidate.label,
+                "outcome": row.outcome,
+                "start_price": _number(row.candidate.price),
+                "total": None if row.total is None else _number(row.total),
+            }
+            for row in choice.considered
+        ]
+        refused = [{"recipe": each.recipe, "reason": each.reason, "detail": each.detail} for each in choice.refused]
+        step = first_step(choice.chosen, data, plan.target)
+    return {
+        "expected": expected.key,
+        "why": expected.why,
+        "chosen": chosen,
+        "matches": chosen == expected.key,
+        "start_price": _number(plan.start_price.chaos),
+        "options": options,
+        "refused": refused,
+        "first_step": None if step is None else first_step_document(step),
+    }
 
 
 def _missing_start_price(target: Target, prices: PriceFile, root: Path, config: Config) -> dict | None:
@@ -519,6 +581,8 @@ def render_summary(document: dict) -> str:
         lines.append(f"{entry['id']}: {entry['title']}")
         if entry["solver"] is not None:
             lines.append("  solver       " + _summary_line(entry["solver"]))
+        if entry["start"] is not None:
+            lines.extend(_start_summary(entry["start"]))
         if entry["given_route"] is not None:
             given = entry["given_route"]
             lines.append("  given route  " + _summary_line(given) + f", {given['gaps']} gap(s)")
@@ -539,6 +603,19 @@ def render_summary(document: dict) -> str:
             lines.append(f"  add to {entry['missing_price']['overrides_file']} under [prices]:")
             lines.append(f"    {entry['missing_price']['override_line']}")
     return "\n".join(lines)
+
+
+def _start_summary(start: dict) -> list[str]:
+    verdict = "as expected" if start["matches"] else "NOT the expected one"
+    price = money(start["start_price"] or 0.0)
+    lines = [f"  start        {start['chosen']} ({verdict}; expected {start['expected']}), start price {price} Chaos"]
+    for option in start["options"]:
+        total = "not planned" if option["total"] is None else f"{money(option['total'])} Chaos in all"
+        lines.append(f"    {option['outcome']}: {option['label']}: {total}")
+    for refusal in start["refused"]:
+        lines.append(f"    refused: {refusal['recipe']}: {refusal['reason']}: {refusal['detail']}")
+    lines.append(f"  why          {start['why']}")
+    return lines
 
 
 def _summary_line(totals: dict) -> str:
