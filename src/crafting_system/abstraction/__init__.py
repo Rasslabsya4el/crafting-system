@@ -58,6 +58,9 @@ is imported or tested for here.
   solve (`first_layers`). An action with no closed form (an addition, Annulment) is walked with its real kernel on
   every state (`Estimate.walked`): `needs_walk(abstraction, actions)` says so beforehand and `ADDING_LIMIT` is the
   smaller state limit for such a walk. `EstimateRefused` is raised when a walked kernel cannot be computed.
+* `Abstraction(..., reading=...)` (ticket #210): the ordinary model of one `Reading` of the rule axes the enabled actions read
+  (`actions.model_readings`); every kernel is taken at it. `Abstraction.inputs(state, action)` gives the `Need`s of an action on
+  the item a state stands for, and `allow_inputs=False` (the planner's) refuses an action that has some (`OutOfScopeError`).
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 

@@ -1,0 +1,66 @@
+# Target for benchmark route R14: the Toxic Rain Hunter bow with +1 to socketed gems and Chaos Damage over Time.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft it: the
+# planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (Reddit, "Peuget guide", docs/research/2026-10-30-5-reference-routes.md, id R14):
+#   1. Orb of Alteration a Hunter Thicket Bow (item level 78 or more) until it has tier-1 Attack Speed.
+#   2. Regal Orb, then Orb of Annulment until only the Attack Speed is left (1/3 or 1/2 of the Annulments
+#      remove it; then start again).
+#   3. Craft "Can have up to 3 Crafted Modifiers" and "Cannot roll Attack Modifiers".
+#   4. Two Exalted Orbs: with no attack mods in the pool they add "+1 to Level of Socketed Gems" and
+#      "Chaos Damage over Time".
+#   5. Craft "+2 to Level of Socketed Support Gems" and "Chaos Damage over Time Multiplier".
+#
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's rule
+# for tiers: a mod whose tier the guide does not state is the TOP tier the item level allows; a mod the
+# guide's bench craft forces is exactly that craft.
+#   * "T1 Attack Speed": tier 1 of Attack Speed (17-19%), rolled.
+#   * "+1 to Level of Socketed Gems": its only tier. "Chaos Damage over Time": the Hunter prefix
+#     "(90-94)% increased Chaos Damage over Time" (PoisonDamagePrefixInfluence4, tier 1 at item level 78).
+#   * "crafted Chaos Damage over Time Multiplier": the top craft a bow takes, +(18-20)% (cost 4 Chaos Orbs);
+#     "crafted +2 to Level of Socketed Support Gems": +2 (cost 4 Exalted Orbs).
+#   * The guide's lists of "prefixes" and "suffixes" are not always the item's sides; the data decides.
+
+# The base item: a Thicket Bow, Hunter influence (the influence adds the prefixes above).
+base: Thicket Bow
+
+# The guide says item level 78 or more.
+item_level: 78
+
+influence: [hunter]
+
+# The actions the planner may use: the guide's orbs and bench. The metamods of steps 3 count toward no
+# requirement, so they are named by their label. The plan is the cheapest among these; the report lists
+# what was left out.
+actions:
+  - transmutation-orb
+  - alteration-orb
+  - augmentation-orb
+  - regal-orb
+  - annulment-orb
+  - exalted-orb
+  - bench-craft
+  - Bench craft Can have up to 3 Crafted Modifiers
+  - Bench craft Cannot roll Attack Modifiers
+  - remove-crafted-mods
+
+# Everything below must be present on the finished bow.
+requirements:
+  - family: IncreasedAttackSpeed
+    min_tier: 1
+    not_crafted: true
+  - family: IncreaseSocketedGemLevel
+    min_tier: 1
+    not_crafted: true
+  - family: WeaponCasterDamagePrefix
+    mod: PoisonDamagePrefixInfluence4
+    not_crafted: true
+  # The bench crafts of step 5 (they are crafted by nature).
+  - family: DamageOverTimeMultiplier
+    mod: JunMaster2ChaosDamageOverTimeMultiplier3
+  - family: IncreaseSpecificSocketedGemLevel
+    mod: JunMaster2LocalIncreaseSocketedSupportGemLevel2
+
+# The bow is bought as a Hunter base (normal), uncorrupted; its price name is the trade price below.
+start_price: Thicket Bow (ilvl 78, Hunter)
