@@ -31,7 +31,8 @@ from ._offers import without_ranges
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
 from ._shares import WeightShare, start_shares
-from ._start_report import start_document, start_lines
+from ._start_report import first_step_document, first_step_lines, start_document, start_lines
+from ._start_step import FirstStep, first_step
 from ._verify import SIGMAS, Verification
 
 FORMAT = "crafting-system-policy/1"
@@ -68,6 +69,7 @@ class Report:
     states: tuple[PolicyState, ...]
     shares: tuple[tuple[WeightShare, float | None], ...]  # a share and the kernel's per-use chance of the leaf
     approximate_inputs: tuple[ApproximateInput, ...] = ()  # the approximate claims the policy's actions read (ADR-0028)
+    first_step: FirstStep | None = None  # what is done before S1 when the start item is made at a vendor (ADR-0059, ticket #331)
 
 
 def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
@@ -178,6 +180,7 @@ def build_report(plan: Plan, data: GameData) -> Report:
     return Report(
         plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
         approximate_inputs(plan, plan.policy, data),
+        None if plan.starts is None else first_step(plan.starts.chosen, data, plan.target),
     )  # fmt: skip
 
 
@@ -262,6 +265,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
     lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
     lines.append(strands_line(plan))
+    if report.first_step is not None:
+        lines.extend(first_step_lines(report.first_step))
     if plan.starts is not None:
         lines.extend(start_lines(plan.starts))
     if len(plan.dropped) <= MAX_DROPPED_LINES:
@@ -456,7 +461,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "price_chaos": shift,
             "price_source": plan.start_price.source,
         },
-        **({"start_options": start_document(plan.starts)} if plan.starts is not None else {}),
+        **({"start_options": start_document(plan.starts, report.first_step)} if plan.starts is not None else {}),
         "dropped_actions": [{"action": drop.label, "missing_prices": list(drop.missing)} for drop in plan.dropped],
         "left_out_actions": [
             {"reason": left.reason, "count": len(left.labels), "actions": list(left.labels)} for left in plan.left_out

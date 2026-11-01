@@ -63,6 +63,7 @@ from ._route_card import ANY_OR_EMPTY, EMPTY, ItemCard, _StateReader, card_of_it
 from ._route_flow import Edge, Step, build_flow
 from ._route_html import render_page
 from ._route_trade import BuyStep, buy_step
+from ._start_step import FirstStep, first_step
 
 PLANNER_LABEL = "Cheapest policy of the planner"
 NEVER_FINISHES = "never finishes from here"
@@ -218,6 +219,9 @@ class _View:
         self.flow = build_flow(
             self.plan.start, inp.policy, self.ab.is_goal, inp.reasons, is_restart=lambda action: action.label == RESTART
         )
+        # a start item made at a vendor (ADR-0059): row 1 is the recipe, not a buy
+        starts = getattr(self.plan, "starts", None)  # a stand-in plan of a test has none
+        self.first: FirstStep | None = None if starts is None else first_step(starts.chosen, data, self.plan.target)
 
     # -- anchors and links ---------------------------------------------------------------------------------
 
@@ -385,6 +389,8 @@ class _View:
 
     def title(self, action: Action) -> str:
         if action.label == RESTART:
+            if self.first is not None:
+                return "Restart: make the start item at the vendor again"
             name = self.plan.start_price.name
             return f"Restart: buy {name} again" if name else "Restart: buy the start item again"
         offer = self.plan.offer_of(action).offer
@@ -397,7 +403,7 @@ class _View:
         return offer.label
 
     def trade_field(self) -> Field | None:
-        if self.buy is None:
+        if self.buy is None or self.first is not None:  # the buy spec describes the bought start item, not a recipe-made one
             return None
         lines = [Line("Search on the trade site", self.buy.url)]
         lines += [Line(f"not in the link: {mod}") for mod in self.buy.unresolved]
@@ -432,7 +438,24 @@ class _View:
                 return "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"
         return None
 
+    def vendor_row(self, step: FirstStep, final: bool) -> StepRow:
+        """Row 1 of a plan that starts from a vendor recipe: what is handed over, the recipes, the price; the item card is what comes back."""
+        hand = tuple(Line(f"{good.count} × {good.what} {money(good.chaos)}") for good in step.hand)
+        many = len(step.rounds) > 1
+        recipes = tuple(
+            Line(f"{f'{each.number}. ' if many else ''}{each.hand} → {each.gives} · T{each.tier}") for each in step.rounds
+        )
+        fields = _fields(
+            Field("Hand the vendor", hand),
+            Field("Recipes, each takes the item the one before made" if many else "Recipe", recipes),
+            _plain("Cost per use", money(step.price)),
+            _plain("Note", step.roll_note) if step.roll_note else None,
+        )
+        return StepRow(1, step.title, fields, self.start_card(), self.anchor(1), final, step.price)
+
     def buy_row(self, final: bool) -> StepRow:
+        if self.first is not None:
+            return self.vendor_row(self.first, final)
         price = self.plan.start_price
         cost = [money(price.chaos)] if price.chaos > 0 else ["free"]
         fields = _fields(
@@ -480,6 +503,18 @@ class _View:
         final = any(edge.kind == "goal" for edge in step.edges)
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost)
 
+    def start_field(self) -> Field | None:
+        """When the start item is made at a vendor: the start options with their totals, so the choice can be read off the page."""
+        if self.first is None or self.plan.starts is None:
+            return None
+        lines = []
+        for row in self.plan.starts.considered:
+            if row.total is None:
+                continue
+            head = "chosen" if row.outcome == "chosen" else "planned"
+            lines.append(f"{head}: {row.candidate.label}: {money(row.total)} in all (start {money(row.candidate.price)} + crafting {money(row.mean_remaining or 0.0)})")
+        return _plain("Start", *lines)
+
     def goal_card(self) -> GoalCard:
         plan, risk = self.plan, self.inp.risk
         shift, divine = plan.start_price.chaos, plan.prices.chaos_per_divine
@@ -496,6 +531,7 @@ class _View:
         approximate = [f"{item.claim}: {item.reason}" for item in approximate_inputs(plan, self.inp.policy, self.data)]
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,
+            self.start_field(),
             _plain("Mean", mean),
             _plain("9 runs in 10", p90),
             _plain("Success chance", chance_text(success)) if success < 1 - 1e-9 else None,
