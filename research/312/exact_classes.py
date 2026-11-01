@@ -589,7 +589,7 @@ def later(g: Graph, priced, blk, args, result: dict, began: float, out_dir, stem
     if args.stop_after_quotient:
         say(began, f"quotient {result['quotient']}")
         return
-    result["raw_reach"] = {
+    result["raw_reach"] = {} if args.skip_rails else {
         "no_change": L.raw_reach(g, 0)["reachable_states"],
         **{f"tau_{tau}": L.raw_reach(g, 0, tau=float(tau))["reachable_states"] for tau in args.taus.split(",") if tau},
         **{f"rail_{c}": L.raw_reach(g, 0, ceiling=float(c))["reachable_states"] for c in args.rails.split(",") if c},
@@ -616,6 +616,10 @@ def later(g: Graph, priced, blk, args, result: dict, began: float, out_dir, stem
     result["exact"] = value_of(q, start, "exact quotient")
     save()
     exact = result["exact"].get("value")
+    if args.skip_rails:  # a graph whose raw edges cannot be walked again (S02): straight to the projections
+        result["projections"] = projection_tests(g, priced, began, began + args.projection_deadline)
+        save()
+        return
 
     def shrunk(graph, st):
         """The part reachable from the start, then merged again by classes: (classes, graph, start)."""
@@ -686,6 +690,7 @@ def main() -> None:
     parser.add_argument("--coarse-lb", action="store_true", help="also solve optimistic coarse models (states told apart by cheap keys) and keep their lower bounds per class in the quotient file")
     parser.add_argument("--identity-partition", action="store_true", help="skip the refinement: each state is its own class (for a graph the first run showed does not merge)")
     parser.add_argument("--strand-stripped", action="store_true", help="the strand targets S02, S11, S13 as today's loaders read them (strand words removed, flat price of 1 chaos, start item 10 chaos)")
+    parser.add_argument("--skip-rails", action="store_true", help="skip the rails and the lumping (they walk the raw edges again) and go to the projection tests")
     parser.add_argument("--check-values", action="store_true", help="small graphs only: solve the whole graph and the quotient and compare")
     parser.add_argument("--out")
     args = parser.parse_args()
