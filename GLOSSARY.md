@@ -75,7 +75,7 @@ A number from 0 to 100 on an item. With one or more, every random mod draw that 
 _Avoid_: strand level, memory level (that is the trade filter's name)
 
 **Tier cut**:
-The removal of the lowest tiers from the tiers a draw can roll, by the item's strand count and a Foulborn orb's `+75`: `K = floor(100 (T - 1) / D) + 1` of `T` tiers stay. 0 strands without a Foulborn orb is no cut (ADR-0040).
+The removal of the lowest tiers from the tiers a draw can roll, by the item's strand count and a Foulborn orb's `+75`: `K = floor(100 (T - 1) / D) + 1` of `T` tiers stay. 0 strands without a Foulborn orb is no cut (ADR-0040). The pool takes it as a `Cut` (the count before the craft, the Foulborn flag, the weight reading) and only for a draw whose action declares `cuts`.
 _Avoid_: tier cull, tier filter
 
 **Cut class**:
@@ -326,7 +326,7 @@ Sets the strand count to 0 and gives each eligible explicit mod a chance, rising
 _Avoid_: Orb of Unraveling
 
 **Weight reading**:
-One of the three ways the sources give for what the kept tiers of a mod type weigh after a cut: redistribution (the plan), refactored weight, delete only. A rule axis (ADR-0042).
+One of the three ways the sources give for what the kept tiers of a mod type weigh after a cut: redistribution, refactored weight (the plan since the sheet fit), delete only. A rule axis (ADR-0042); in the pool it is `WeightReading`, a parameter of the `Cut`.
 
 ## State and solving
 
