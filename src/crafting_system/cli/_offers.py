@@ -13,7 +13,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, ActionError, Axis, Need, Reads, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, ActionError, Axis, Need, Reads, StrandUse, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -170,6 +170,11 @@ class BuyStartItem(Action):
 
     def reads(self, data: GameData) -> Reads:
         return Reads.nothing()
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041: it replaces the item, so it is no craft: nothing is cut or spent, and the strands of the item that comes back are the
+        # start item's own (what a stranded buy costs is ADR-0043's). It is declared so that the guard does not refuse a restart from a stranded item.
+        return StrandUse.untouched()
 
     def outcomes(self, data: GameData, item: Item) -> "BuyStartItem":  # type: ignore[override]
         return self

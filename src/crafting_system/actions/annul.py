@@ -18,6 +18,7 @@ from .contract import Action, Adds, Reads
 from .errors import NotApplicableError
 from .finite import Finite
 from .metamods import allowed_by_tags, blocked_tags, locked_sides, on_locked_side
+from .strand_use import ANNULMENT_KEEPS_STRANDS, CUT_FOLLOWS_SPEND_TABLE, StrandUse
 
 __all__ = [
     "AnnulmentOrb",
@@ -41,6 +42,9 @@ class AnnulmentOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Annulment"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(ANNULMENT_KEEPS_STRANDS, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: neither cuts nor spends: the count stays
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value)

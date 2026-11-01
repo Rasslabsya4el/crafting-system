@@ -3,7 +3,7 @@
 "Done when": at 0 strands without a Foulborn orb every pool equals today's; the pool keeps the `K` highest tiers of each tier table by
 the integer formula (the numbers the sources publish are `test_strands_cut.py`); a property test shows reading 1 keeps each family's total
 weight. Also here: the cut counts what the draw can roll (the level gate and an essence's cap), is made before the item's own mods
-block their families, and is made only when the caller gives the pool a `Cut`; the contract flag `Adds.cuts`; and no action that does not
+block their families, and is made only when the caller gives the pool a `Cut`; the declaration `strand_use` that gives it (`Action.cut_of`); and no action that does not
 use strands names a strand claim.
 """
 
@@ -362,24 +362,14 @@ def test_cut_weights_returns_the_pairs_unchanged_when_the_cut_cannot_remove_a_ti
 # --- the contract flag --------------------------------------------------------------------------------------------------------
 
 
-def test_an_adds_declaration_does_not_cut_unless_it_says_so():
-    assert Adds().cuts is False
-    assert Adds(cuts=True).cuts is True
-    assert Adds.removal().cuts is False and Adds.rerolling().cuts is False and Adds.erasing().cuts is False
-    assert Adds.erasing(cuts=True).cuts is True  # a reroll that draws may cut
-
-
-def test_an_action_that_draws_nothing_cannot_cut():
-    with pytest.raises(ValueError, match="cuts.*draws"):
-        Adds(cuts=True, draws=False)
-    with pytest.raises(ValueError):
-        Adds(cuts=True, named=frozenset({"X"}), draws=False)
-
-
-def test_no_action_of_the_planner_declares_that_it_cuts_yet():
-    # The declarations of ADR-0041 are the next ticket (B5-3); until then nothing cuts and every answer of B1 to B4 is as it was.
+def test_the_cut_is_declared_by_strand_use_and_adds_has_no_second_flag():
+    # ticket #276 moved the flag of #275 (`Adds.cuts`) into `Action.strand_use`: one declaration, not two
+    assert not hasattr(Adds(), "cuts")
+    item = amulet(rarity=Rarity.RARE)
     for action in (ChaosOrb(), AlterationOrb(), RegalOrb(), ExaltedOrb()):
-        assert action.adds(DATA, amulet(rarity=Rarity.RARE)).cuts is False, action
+        assert action.strand_use(DATA).cuts is True, action
+        assert action.cut_of(DATA, item) == Cut(0) and not action.cut_of(DATA, item).active, action  # 0 strands: a cut that keeps every tier
+        assert action.cut_of(DATA, dataclasses.replace(item, memory_strands=40)) == Cut(40), action
 
 
 def test_an_action_that_does_not_use_strands_names_no_strand_claim():

@@ -31,6 +31,7 @@ from .contract import Action, Adds, Fixed, Reads
 from .draw import Outcome
 from .errors import NotApplicableError, OutOfScopeError
 from .metamods import crafted_limit
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY, StrandUse
 
 __all__ = [
     "BenchCraft",
@@ -174,6 +175,9 @@ class BenchCraft(Action):
             raise ValueError(f"the craft {self.mod_id} names a mod that is not in the game data")
         return f"Bench craft {_one_line(without_ranges(mod.text or mod.name))}"
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(NOT_SPENT_BY, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: a bench craft picks its mod and spends nothing
+
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         if data is None:
             raise ValueError("a bench craft is priced from the bench data, so it needs the data")
@@ -246,6 +250,9 @@ class RemoveCraftedMods(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Remove Crafted Mods"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(NOT_SPENT_BY, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: a bench craft picks its mod and spends nothing
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         if data is None:

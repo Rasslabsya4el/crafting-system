@@ -48,8 +48,15 @@ the rules the action reads that the sources leave open (ADR-0033). An action wit
 item, reading=None)`; `outcomes_under(data, item, reading)` is the call that works for every action, and `model_readings(data,
 actions)` lists the readings of a model, the plan's first. `Reads.input_mods` says that the result depends on the mods of the
 inputs. A new kind with inputs is correct by default and needs no edit outside `actions`.
+
+Memory Strands (ticket #276, ADR-0041): one more question, `strand_use(data)`, answers a `StrandUse` (`strand_use.py`): whether the
+action's random draws cut tiers (`cuts`), the law of the strands it spends (`spend`) and the claims behind both. An action that
+answers None, the default, has declared nothing and is refused on an item with one strand or more; at 0 strands nothing changes.
+The refusal and the spend are made by `Action.__init_subclass__` around the `outcomes` of every subclass, and `cut_of(data, item)` is
+the `cut` an action that draws gives its pool. `strand_claims` lists the claims behind the declaration apart from `claims`.
 """
 
+import functools
 import itertools
 import random
 import sys
@@ -64,7 +71,10 @@ from crafting_system.data import GameData, Mod
 from crafting_system.items import Item
 from crafting_system.rules import Rule
 
+from .cut import Cut
 from .draw import Outcome
+from .errors import OutOfScopeError
+from .strand_use import Spent, StrandUse
 
 __all__ = [
     "Action",
@@ -221,10 +231,6 @@ class Adds:
       (`Goal.asks_corrupted`) and not for one that merely allows a corrupted item: there the same reroll without the corruption is offered
       and the corrupting one would only add a price and an implicit nobody wants (ADR-0038). The default is False: a Vaal Orb or a Locus
       is offered to a target that allows a corrupted item too, because its brick can end in the goal (ADR-0037).
-    * `cuts`: the random draws of explicit mods that the action makes see the tier cut of an item with Memory Strands (and of a Foulborn
-      orb): it builds its pool with a `Cut` (`cut.py`, ADR-0040, ADR-0041). It needs `draws`: a fixed result (an essence's guaranteed mod,
-      a bench mod) is never cut. The default is False, which says the action's draws see the ordinary pool whatever the item's count: a
-      fossil, a Harvest craft or a beast never cuts. The declaration is the action's alone; the pool cuts only when it is given a cut.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -246,11 +252,8 @@ class Adds:
     corrupts: bool = False
     keeps_mods: bool = False
     asked_only: bool = False
-    cuts: bool = False
 
     def __post_init__(self) -> None:
-        if self.cuts and not self.draws:
-            raise ValueError("`cuts` says the action's random draws see the tier cut: it needs `draws`")
         if self.corrupts and not self.implicits:
             raise ValueError("an action that corrupts adds a corrupted implicit, so it must declare `implicits` too")
         if self.keeps_mods and not self.corrupts:
@@ -452,6 +455,13 @@ class Action(ABC):
     the class holds several actions that read different claims.
     """
 
+    def __init_subclass__(cls, **kwargs) -> None:
+        """Wrap the `outcomes` a subclass defines in the strand guard (see `strand_use.py`): it refuses an undeclared action on an item with strands and applies the spend of a declared one."""
+        super().__init_subclass__(**kwargs)
+        own = cls.__dict__.get("outcomes")
+        if own is not None and not getattr(own, "_guards_strands", False):
+            cls.outcomes = _guarding_strands(own)
+
     @property
     def variant(self) -> str:
         """What tells this action from another with the same `label` (a bench craft: its mod id); "" for none."""
@@ -515,6 +525,30 @@ class Action(ABC):
             return self.outcomes(data, item)
         return self.outcomes(data, item, reading if reading is not None else Reading())  # type: ignore[call-arg]
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse | None:
+        """What the action does with Memory Strands (ADR-0041): whether its draws cut tiers, what it spends, and the claims behind it.
+
+        None (the default) says the action has declared nothing: it is refused on an item with one strand or more
+        (`OutOfScopeError`), so no action can silently ignore strands, and works as it always did at 0 strands. An action that
+        draws mods at random passes `self.cut_of(data, item)` to its pool; the spend is applied by `Action` itself around
+        `outcomes` (see `strand_use.py`). `data` may be None, as for `resources`.
+        """
+        return None
+
+    def strand_claims(self, data: GameData | None = None) -> frozenset[str]:
+        """The ids of the claims behind `strand_use`: what a plan that considers strands adds to its approximate inputs (ADR-0028).
+
+        They are kept apart from `claims`, so an answer that does not consider strands never lists the strand claims.
+        """
+        use = self.strand_use(data)
+        return frozenset() if use is None else use.claims
+
+    def cut_of(self, data: GameData | None, item: Item) -> Cut | None:
+        """The cut the action's random draws on `item` make: the cut of the count the item has before the craft when the action
+        declares `cuts`, None otherwise (a fossil on a stranded item draws from the ordinary pool). It is the `cut` of `build_pool`."""
+        use = self.strand_use(data)
+        return Cut.of(item) if use is not None and use.cuts else None
+
     def twin_key(self, data: GameData, item: Item) -> Hashable | None:
         """A cheap key such that two actions of the catalog with equal, non-None keys give equal `outcomes`
         on every item of the same base, item level and rarity they apply to (their kernels are equal in every
@@ -537,8 +571,40 @@ class Action(ABC):
         return frozenset().union(*(_module_claims(name) for name in modules))
 
 
+def _guarding_strands(outcomes: Callable) -> Callable:
+    """`outcomes` of an action, run through the strand guard: on an item with no strands it is called as it was.
+
+    With one strand or more an action that has not declared `strand_use` is refused (`OutOfScopeError`), before anything else; a
+    declared one gives its result as `outcomes` does, and when it spends, that result is a `Spent` (once: a subclass that calls
+    `super().outcomes` is guarded twice and wrapped once).
+    """
+
+    @functools.wraps(outcomes)
+    def guarded(self, data, item, *args, **kwargs):
+        count = getattr(item, "memory_strands", 0)
+        if not count:
+            return outcomes(self, data, item, *args, **kwargs)
+        use = self.strand_use(data)
+        if use is None:
+            raise OutOfScopeError(
+                f"{self.label(data)} has not declared what it does with Memory Strands (ADR-0041), and the item holds {count}; "
+                "an action that the strand table does not know is not modelled on a stranded item"
+            )
+        result = outcomes(self, data, item, *args, **kwargs)
+        if isinstance(result, Spent):  # the guard of a superclass already ran (same law), or the action returns another action's result:
+            result = result.given  # the spend is this action's own declaration, applied once
+        if use.spend is None:
+            return result
+        return Spent(result, data, use.spend, count, len(item.mods))
+
+    guarded._guards_strands = True  # type: ignore[attr-defined]
+    return guarded
+
+
 PACKAGE = __name__.rpartition(".")[0]
-SHARED_BY_ALL = frozenset({__name__, f"{PACKAGE}.catalog", f"{PACKAGE}.errors"})  # every action imports these: they say nothing about one
+SHARED_BY_ALL = frozenset(
+    {__name__, f"{PACKAGE}.catalog", f"{PACKAGE}.errors", f"{PACKAGE}.cut", f"{PACKAGE}.strand_use"}
+)  # every action imports these: they say nothing about one (the strand claims are `strand_claims`, not `claims`)
 
 
 @cache
@@ -550,6 +616,17 @@ def _module_claims(name: str) -> frozenset[str]:
             origin = getattr(value, "__module__", None)
             if isinstance(origin, str) and origin.startswith(PACKAGE + ".") and origin not in SHARED_BY_ALL:
                 modules.add(origin)
+    held = frozenset(value.id for module in modules for value in vars(sys.modules[module]).values() if isinstance(value, Rule))
+    return held - _strand_claim_ids()
+
+
+@cache
+def _strand_claim_ids() -> frozenset[str]:
+    """The ids of the claims `cut.py` and `strand_use.py` hold: an action that imports one of them as a constant (the ceiling it declares)
+    does not name it in `claims`; they are `strand_claims`, listed on an answer that considers strands."""
     return frozenset(
-        value.id for module in modules for value in vars(sys.modules[module]).values() if isinstance(value, Rule)
+        value.id
+        for module in (f"{PACKAGE}.cut", f"{PACKAGE}.strand_use")
+        for value in vars(sys.modules[module]).values()
+        if isinstance(value, Rule)
     )

@@ -28,6 +28,7 @@ from .harvest import check_reforgeable
 from .metamods import blocked_tags
 from .outcomes import Outcomes, retained_item
 from .pool import build_pool, mark_pool
+from .strand_use import FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY, StrandUse
 
 __all__ = [
     "HarvestReforgeLikelihood",
@@ -55,6 +56,9 @@ class HarvestReforgeLikelihood(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return f"Harvest Reforge {self._key.title()} Likely"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY)  # ADR-0041: a Harvest craft draws from the ordinary pool and spends nothing
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(LIFEFORCE_COST.value)
