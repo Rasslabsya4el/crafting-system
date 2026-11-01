@@ -36,6 +36,7 @@ from crafting_system.cli._bound_prune import merge_twins, starting_offers
 from crafting_system.cli._offers import RESTART, BuyStartItem, Offer, PricedOffer, offers_for, price_offers, usable_actions
 from crafting_system.cli._plan import resolve_start_price
 from crafting_system.data import load_game_data
+from crafting_system.items import Side
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
@@ -217,6 +218,38 @@ def walk(abstraction, start, priced, began, seconds, max_rss, max_states, verify
         if {s: int(w) for s, w in weights.items()} != stored:
             bad += 1
     return g, reason, {"key_checks": checked, "key_mismatches": bad}
+
+
+def coarse_lower_bounds(g: Graph, blk: np.ndarray, began: float) -> dict:
+    """Per exact class, the lower bound of the optimistic coarse models whose states are told apart by a cheap key of the state."""
+    import later_stages as L
+    import prune_analysis as P
+
+    n = g.expanded
+    cls = np.unique(blk[:n], return_inverse=True)[1]
+    count_classes = int(cls.max()) + 1
+
+    def counts(st):
+        return tuple(sum(slot.side is side for slot in st.slots) for side in Side)
+
+    keys = {
+        "status": lambda st, goal: (goal, st.status),
+        "status+rarity": lambda st, goal: (goal, st.flags.rarity, st.status),
+        "status+rarity+sides": lambda st, goal: (goal, st.flags.rarity, st.status, counts(st)),
+        "status+rarity+sides+fractured": lambda st, goal: (goal, st.flags.rarity, st.status, counts(st), tuple(f.mod_id for f in st.fractured)),
+    }
+    out = {}
+    for name, key in keys.items():
+        ids: dict = {}
+        cmap = np.array([ids.setdefault(key(g.states[r], g.goal[r]), len(ids)) for r in range(n)], dtype=np.int64)
+        plain = L.coarse_model(g, cmap, len(ids))
+        flat = P.flatten(plain)
+        value, info = P.solve_values(flat, flat["cost"], flat["p"], np.ones(len(flat["cost"]), dtype=bool), int(cmap[0]), lambda _t: None)
+        lb = np.zeros(count_classes)
+        np.maximum.at(lb, cls, value[cmap])
+        out[name] = {"lb": lb, "coarse_states": len(ids), "coarse_start_value": float(value[cmap[0]]), "info": info}
+        say(began, f"coarse lower bound {name}: {len(ids):,} coarse states, value of the start {value[cmap[0]]:.4f} ({info})")
+    return out
 
 
 # ---- the refinement ------------------------------------------------------------------------------------------------
@@ -516,11 +549,12 @@ def later(g: Graph, priced, blk, args, result: dict, began: float, out_dir, stem
         import pickle
 
         out_dir.mkdir(parents=True, exist_ok=True)
+        lb_arrays = coarse_lower_bounds(g, blk, began) if args.coarse_lb else {}
         with open(out_dir / f"{stem}.quotient.pkl", "wb") as handle:
             plain = {"n": q.expanded, "goal": bytes(q.goal), "act_ptr": q.act_ptr, "act_offer": q.act_offer, "act_cost": q.act_cost, "act_kernel": q.act_kernel, "k_succ": q.k_succ, "k_wt": q.k_wt}
             sizes = np.bincount(np.unique(blk[: g.expanded], return_inverse=True)[1])
             raw = {"states": g.expanded, "actions": len(g.act_offer), "kernels": len(g.k_succ), "edges": g.edges}
-            pickle.dump({"graph": plain, "start": start, "goal_class": goal_class, "restart_cost": restart_cost, "labels": [p.label for p in priced], "class_sizes": sizes, "raw": raw}, handle)
+            pickle.dump({"graph": plain, "start": start, "goal_class": goal_class, "restart_cost": restart_cost, "labels": [p.label for p in priced], "class_sizes": sizes, "raw": raw, "lb_arrays": lb_arrays}, handle)
     result["quotient"] = {"classes": q.expanded, "actions": len(q.act_offer), "kernels": len(q.k_succ), "edges": q.edges}
     if args.stop_after_quotient:
         say(began, f"quotient {result['quotient']}")
@@ -619,6 +653,8 @@ def main() -> None:
     parser.add_argument("--solve-max-classes", type=int, default=150_000)
     parser.add_argument("--reference-plan", action="store_true", help="also run the production exact plan of the target (small routes only)")
     parser.add_argument("--stop-after-quotient", action="store_true", help="big graphs: keep the quotient file and stop (the rails and the lumping run on the quotient by prune_analysis.py)")
+    parser.add_argument("--coarse-lb", action="store_true", help="also solve optimistic coarse models (states told apart by cheap keys) and keep their lower bounds per class in the quotient file")
+    parser.add_argument("--identity-partition", action="store_true", help="skip the refinement: each state is its own class (for a graph the first run showed does not merge)")
     parser.add_argument("--check-values", action="store_true", help="small graphs only: solve the whole graph and the quotient and compare")
     parser.add_argument("--out")
     args = parser.parse_args()
@@ -639,7 +675,11 @@ def main() -> None:
     }
     for mode in ("values",) if args.no_labels else ("values", "labels"):
         t0 = time.perf_counter()
-        blk, history = refine(g, priced, began, label_mode=(mode == "labels"), deadline=time.perf_counter() + args.refine_seconds)
+        if args.identity_partition:  # a graph that does not merge (R14): every state is its own class, no refinement
+            blk, history = np.arange(len(g.states)), [len(g.states)]
+            LAST["converged"] = True
+        else:
+            blk, history = refine(g, priced, began, label_mode=(mode == "labels"), deadline=time.perf_counter() + args.refine_seconds)
         result["converged_" + mode] = LAST["converged"]
         if not LAST["converged"]:
             result["complete"] = False  # the classes counted so far are a lower bound

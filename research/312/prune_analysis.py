@@ -294,9 +294,10 @@ def solve_values(flat: dict, cost: np.ndarray, p: np.ndarray, active: np.ndarray
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("pickle")
-    parser.add_argument("--factors", default="1.0,1.5,3.0")
+    parser.add_argument("--factors", default="0,1.0,1.5", help="incumbent factors f (the start is priced f * V*, every other state one restart more); 0 = a perfect incumbent in every state (UB = V*)")
     parser.add_argument("--steps", default="0,1,2,4,8,16,32")
     parser.add_argument("--dr-step", type=int, default=8)
+    parser.add_argument("--lb-steps", default="0,8", help="sweeps on top of a coarse-model lower bound")
     parser.add_argument("--out")
     args = parser.parse_args()
     began = time.perf_counter()
@@ -309,6 +310,7 @@ def main() -> None:
     flat = flatten(g)
     flat["class_sizes"] = np.asarray(data.get("class_sizes", np.ones(g["n"], dtype=np.int64)), dtype=np.int64)
     result_raw = data.get("raw")
+    lb_arrays = data.get("lb_arrays") or {}
     del data, g
     n = flat["n"]
     say(f"flat: {n:,} classes, {len(flat['cost']):,} actions, {len(flat['dst']):,} edges")
@@ -321,10 +323,17 @@ def main() -> None:
     q_star = q_values(flat, v_star)
     non_goal_action = ~flat["goal"][flat["state"]]
     optimal = (q_star <= v_star[flat["state"]] * (1 + 1e-9) + 1e-12) & non_goal_action
+    # how far from optimal the other actions are (relative to the value of their state), among the actions of the classes the optimal policy reaches
+    gap = (q_star - v_star[flat["state"]]) / np.maximum(v_star[flat["state"]], 1e-300)
+    in_floor = reach(flat, start, optimal)[flat["state"]] & non_goal_action & ~optimal
+    edges_of = [0.0, 1e-9, 1e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1.0, 10.0, float("inf")]
+    counts_ = np.histogram(np.minimum(gap[in_floor], 1e9), bins=[0.0, 1e-9, 1e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1.0, 10.0, 1e10])[0]
+    result["action_gap_histogram_in_optimal_reach"] = dict(zip(["<=1e-9 (ties)", "<=0.1%", "<=1%", "<=3%", "<=10%", "<=30%", "<=100%", "<=10x", ">10x"], counts_.tolist()))
     floor = reach(flat, start, optimal)
     result["floor"] = {"classes_reachable_by_optimal_actions": int(floor.sum()), "optimal_action_entries": int(optimal.sum()), "raw_states_in_those_classes": int(flat["class_sizes"][floor].sum())}
     say(f"the optimal policy reaches {int(floor.sum())} of {n} classes through {int(optimal.sum())} actions")
     lb0 = shortest_to_goal(flat)
+    lb0_finite = np.where(np.isfinite(lb0), lb0, 0.0)
     result["lb0_of_start"] = float(lb0[start])
     result["lb0_over_exact_start"] = float(lb0[start] / v_star[start])
     steps = sorted({int(x) for x in args.steps.split(",") if x})
@@ -334,6 +343,8 @@ def main() -> None:
         cap = restart_cost + f * v_star[start]
         ub = np.full(n, cap)
         ub[start] = f * v_star[start]
+        if f == 0:  # the best case for any cut: every state's upper bound is its own optimal value
+            ub = v_star.copy()
         ub[flat["goal"]] = 0.0
         lb = lb0.copy()
         lb[~np.isfinite(lb)] = 0.0
@@ -359,8 +370,44 @@ def main() -> None:
             }
             rows.append(row)
             say(str(row))
-            if k == args.dr_step:
+            if k == args.dr_step and f != 0:
                 result.setdefault("decision_relevance", []).append(decision_relevance(flat, start, v_star, lb, ub, q_low, q_up, competitive, f, k, say))
+    # lower bounds from the optimistic coarse models (exact_classes.py --coarse-lb): max of the model's bound and the sweeps' bound
+    for name, entry in lb_arrays.items():
+        for f in [float(x) for x in args.factors.split(",") if x]:
+            cap = restart_cost + f * v_star[start]
+            ub = np.full(n, cap)
+            ub[start] = f * v_star[start]
+            if f == 0:
+                ub = v_star.copy()
+            ub[flat["goal"]] = 0.0
+            lb = np.maximum(lb0_finite, entry["lb"])
+            lb[flat["goal"]] = 0.0
+            k = 0
+            for target in sorted({int(x) for x in args.lb_steps.split(",") if x}):
+                while k < target:
+                    lb = np.maximum(lb, state_min(flat, q_values(flat, lb)))
+                    ub = np.minimum(ub, state_min(flat, q_values(flat, ub)))
+                    k += 1
+                q_low = q_values(flat, lb)
+                q_up = q_values(flat, ub)
+                best_up = state_min(flat, q_up)
+                competitive = (q_low <= best_up[flat["state"]] * (1 + 1e-12) + 1e-12) & non_goal_action
+                seen = reach(flat, start, competitive)
+                reached_actions = competitive & seen[flat["state"]]
+                row = {
+                    "lb_source": name, "coarse_states": entry["coarse_states"], "incumbent_factor": f, "backups": k,
+                    "competitive_actions": int(competitive.sum()), "of_actions": int(non_goal_action.sum()), "competitive_actions_reached": int(reached_actions.sum()),
+                    "edges_of_those": int(sizes[reached_actions].sum()), "of_edges": int(sizes[non_goal_action].sum()), "classes_reachable": int(seen.sum()),
+                    "raw_states_in_reached_classes": int(flat["class_sizes"][seen].sum()), "lb_of_start_over_exact": float(lb[start] / v_star[start]),
+                    "ub_of_start_over_exact": float(ub[start] / v_star[start]),
+                }
+                rows.append(row)
+                say(str(row))
+                if k == args.dr_step and f == 1.0:
+                    dr = decision_relevance(flat, start, v_star, lb, ub, q_low, q_up, competitive, f, k, say)
+                    dr["lb_source"] = name
+                    result.setdefault("decision_relevance", []).append(dr)
     result["branch_and_bound"] = rows
     text = json.dumps(result, indent=1)
     print(text)

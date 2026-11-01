@@ -336,3 +336,52 @@ def policy_total_uses(solution, start: int, max_states: int = 4000) -> dict | No
     row = X[index[start]]
     ranked = sorted(((float(row[j]), label) for label, j in column.items()), reverse=True)
     return {label: round(value, 3) for value, label in ranked[:8]}
+
+
+def coarse_model(g: Graph, cmap: np.ndarray, count: int) -> dict:
+    """The OPTIMISTIC coarse model of a completely walked graph: one state per value of `cmap`, offering every action of every member.
+
+    Its optimal value never exceeds the optimal value of a member (a concrete policy is a policy of the coarse model that
+    always picks the action of the member it is in), so it is a lower bound that needs no walk of its own once the
+    coarse states are told apart by something cheap. Returns the plain dict `prune_analysis.flatten` reads.
+    """
+    n = g.expanded
+    assert n == len(g.states), "the coarse model needs a complete walk"
+    goal = bytearray(count)
+    for r in range(n):
+        if g.goal[r]:
+            goal[int(cmap[r])] = 1
+    cache: dict[int, int] = {}
+    content: dict = {}
+    k_succ: list = []
+    k_wt: list = []
+    best: list[dict[int, tuple[float, int]]] = [dict() for _ in range(count)]
+    for r in range(n):
+        if g.goal[r]:
+            continue
+        c = int(cmap[r])
+        for t in range(g.act_ptr[r], g.act_ptr[r + 1]):
+            kid = g.act_kernel[t]
+            ck = cache.get(kid)
+            if ck is None:
+                ub, ws = dist_of(cmap[g.k_succ[kid]], g.k_wt[kid])
+                key = (ub.tobytes(), ws.tobytes() if ws.dtype != object else tuple(int(x) for x in ws))
+                ck = content.get(key)
+                if ck is None:
+                    ck = len(k_succ)
+                    content[key] = ck
+                    k_succ.append(ub.astype(np.int32))
+                    k_wt.append(ws)
+                cache[kid] = ck
+            cost = g.act_cost[t]
+            if ck not in best[c] or cost < best[c][ck][0]:
+                best[c][ck] = (cost, g.act_offer[t])
+    act_ptr, act_offer, act_cost, act_kernel = [0], [], [], []
+    for c in range(count):
+        if not goal[c]:
+            for ck, (cost, offer) in best[c].items():
+                act_offer.append(offer)
+                act_cost.append(cost)
+                act_kernel.append(ck)
+        act_ptr.append(len(act_offer))
+    return {"n": count, "goal": bytes(goal), "act_ptr": act_ptr, "act_offer": act_offer, "act_cost": act_cost, "act_kernel": act_kernel, "k_succ": k_succ, "k_wt": k_wt}
