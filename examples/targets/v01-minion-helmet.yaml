@@ -1,0 +1,63 @@
+# Target for benchmark route V01: a helmet with "+1 to Level of all Minion Skill Gems" and top-tier Life,
+# crafted from a Normal base with the four basic orbs. The plan that wins starts at the vendor, not at the
+# bench (ticket #331, ADR-0059).
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# Why this route (docs/research/2026-10-31-vendor-recipes.md, "a Minion helmet"): the Minion helmet
+# recipe turns a Normal helmet and two or more Minion gems with 40% quality in all into a Magic helmet that holds
+# exactly "+1 to Level of all Minion Skill Gems". On a Normal Lion Pelt of item level 84 that mod is 250 of
+# 114,675 weight of the pool (one draw in 459), so an Orb of Transmutation or Alteration finds it rarely, while the
+# recipe makes it for the price of the base and the gems. The planner plans both starts and keeps the cheaper:
+# the recipe-made helmet (see `benchmark` and the route page for the numbers).
+#
+# The readings:
+#   * "+1 to Level of all Minion Skill Gems": the stat text, exactly as the ticket and the research note write it.
+#     On a helmet it is the +1 mod (tier 2 of the helmet's ladder, item level 14, weight 250); the +2 mod
+#     (tier 1, item level 75, weight 25) has another text and does not count. The recipe makes the +1 mod.
+#   * "top-tier Life": the owner's rule for a tier nobody states is the TOP tier the item level allows (tier 1),
+#     rolled, not from the bench.
+#   * The four orbs of the actions line are the cheapest set that crafts it: Transmutation, Alteration, Augmentation
+#     and the Regal Orb. Fewer kinds keep the state space small, so the benchmark solves in seconds.
+#
+# The prices of the goods come from the price file: the base ("Lion Pelt (ilvl 84)") and "Vendor recipe gems (minion, 40%
+# quality)", the cheapest set of Minion gems whose quality adds up to 40%.
+# The trade API does not price that line yet (ticket #360), so the target names a committed price file that holds a hand price
+# for it, and `benchmark` gives the same answer on every machine.
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+base: Lion Pelt
+
+# The item level of the helmet, a whole number from 1 to 100. The recipe keeps the level of the base it takes
+# (claim `vendor.item_level_of_the_result_is_not_settled`, approximate), so this is the level of the base you buy.
+item_level: 84
+# The tiers of this target are the top tiers the item level above allows (the rule at the top of this file), so the planner
+# must not plan a lower item level (ADR-0061, ticket #352).
+tiers_top_at_item_level: true
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
+# [] means none.
+influence: []
+
+# The kinds of actions the planner may use (the kind names are those of `crafting_system.actions.kinds()`).
+actions: [transmutation-orb, alteration-orb, augmentation-orb, regal-orb]
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The Minion gem level, by its exact English stat text.
+  - stat: "+1 to Level of all Minion Skill Gems"
+
+  # Life, the top tier (min_tier: 1), rolled, not crafted.
+  - family: IncreasedLife
+    min_tier: 1
+    not_crafted: true
+
+# Where the crafting starts when no recipe is used: a Normal Lion Pelt (no `start_item` means a fresh Normal item
+# of the base and level above). The planner also tries the start items a vendor recipe can make.
+# The name the start item has in the price file, which is what it costs to get.
+start_price: Lion Pelt (ilvl 84)
+
+# The price file of this route (a path from this file's folder): the committed poe.ninja snapshot of the other benchmark routes plus
+# hand prices for the base and the gem line (`tests/fixtures/prices/vendor-v01-2026-11-01.json`).
+price_file: ../../tests/fixtures/prices/vendor-v01-2026-11-01.json

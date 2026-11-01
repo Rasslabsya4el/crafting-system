@@ -13,7 +13,7 @@ is always exact, as before.
 
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
@@ -246,6 +246,7 @@ def make_plan(
     strands: bool = False,
     solve_it: bool = True,
     start_price_of: StartPrice | None = None,
+    with_risk: bool = True,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -268,6 +269,9 @@ def make_plan(
     plan does not consider strands, as before; with either on, `PlanError` says the planner cannot plan with them yet
     (tickets of batch B5). `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
     not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the target's `start_price` name.
+    With `with_risk` False the policy is solved but its risk (the p50, p90 and CVaR grid, which can take minutes where the solve takes
+    seconds) is left out, `Plan.risk` is None, and `add_risk` fills it in later: the choice among start options compares the
+    means and measures the risk of the one it keeps (ticket #331).
     """
     setting = strand_setting(target.start_item, asked=strands)
     if setting.on:
@@ -368,14 +372,27 @@ def make_plan(
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
 
-    began = time.perf_counter()
-    risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
-    risk_seconds = time.perf_counter() - began
+    risk, risk_seconds = None, 0.0
+    if with_risk:
+        began = time.perf_counter()
+        risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
+        risk_seconds = time.perf_counter() - began
 
     return Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out,
         solution, risk, solve_seconds, risk_seconds, None, note, pruned,
     )
+
+
+def add_risk(plan: Plan) -> Plan:
+    """`plan` with its risk measured, when `make_plan(with_risk=False)` left it out; a plan that has its risk, or an approximate one, is returned as is."""
+    if plan.risk is not None or plan.approximation is not None:
+        return plan
+    began = time.perf_counter()
+    risk = evaluate_risk(
+        plan.solution.policy, plan.start, plan.abstraction.is_goal, plan.solution.values[plan.start], free_cost=free_action_cost(plan.offers)
+    )
+    return replace(plan, risk=risk, risk_seconds=time.perf_counter() - began)
 
 
 RISK_BINS = 200_000  # the default `max_bins` of `risk.evaluate`

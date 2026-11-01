@@ -8,6 +8,7 @@ changes the cheapest total, the cheapest total at each of its readings with thei
 
 import math
 
+from ._start_step import FirstStep
 from ._start_types import NO_TARGET_MOD, SOURCE_PLAIN, ConsideredStart, Reading, RefusedStart, StartChoice
 
 OFF_HOW = "`--no-recipe-starts`, or recipe_starts = false under [planner] in crafting.toml, turns recipe starts off"
@@ -50,6 +51,31 @@ def _refusal(refusal: RefusedStart) -> str:
     return f"  refused: {refusal.name} ({refusal.recipe}{steps}){_scope(refusal.axis, refusal.reading_values)}: {refusal.reason}: {refusal.detail}"
 
 
+def _gives(text: str, note: str) -> str:
+    return f"{text}, {note}" if note else text
+
+
+def first_step_lines(step: FirstStep) -> list[str]:
+    """The text block on the first step of a plan that starts from a vendor recipe (ASCII only): the bill, the recipes, the item back, the price."""
+    lines = [f"First step, before S1: {step.title}", "  You hand the vendor:"]
+    for good in step.hand:
+        lines.append(f"    {good.label}: {money(good.chaos)} Chaos [{good.price_source}]")
+    if len(step.rounds) > 1:
+        lines.append("  Recipe by recipe (each takes the Magic item the recipe before made; the first takes the Normal base):")
+    else:
+        lines.append("  The recipe:")
+    for each in step.rounds:
+        label = f"recipe {each.number}: " if len(step.rounds) > 1 else ""
+        lines.append(f"    {label}{each.hand} -> {_gives(each.gives, f'T{each.tier}')}")
+    mods = " and ".join(_gives(text, note) for text, note in step.mods) or "no mod"
+    item = f"{step.properties[0]} {step.base}" + "".join(f", {each}" for each in step.properties[1:])
+    lines.append(f"  You get back: {item}, with only {mods} (the recipe wipes every other mod)")
+    if step.roll_note:
+        lines.append(f"  Roll: {step.roll_note}")
+    lines.append(f"  Start price: {money(step.price)} Chaos = the goods above; a restart makes the item again at this price")
+    return lines
+
+
 def start_lines(choice: StartChoice) -> list[str]:
     """The text block on the start options (ASCII only); the chosen start's goods follow its row."""
     lines = [
@@ -60,9 +86,6 @@ def start_lines(choice: StartChoice) -> list[str]:
         lines.append(_row(row))
         if row.candidate.sourced is not None:
             lines.extend(f"      {text}" for text in row.candidate.sourced.lines())
-        if row.outcome == "chosen" and row.candidate.goods:
-            parts = "; ".join(f"{count} {name} = {money(chaos)} [{source}]" for name, count, chaos, source in row.candidate.goods)
-            lines.append(f"      hand the vendor: {parts}")
     for refusal in choice.refused:
         if refusal.reason != NO_TARGET_MOD:
             lines.append(_refusal(refusal))
@@ -102,10 +125,12 @@ def _option(row: ConsideredStart) -> dict:
     }
 
 
-def start_document(choice: StartChoice) -> dict:
-    """The JSON `start_options` block: every option with its goods and totals, the refused, and the cheapest total per reading."""
+def start_document(choice: StartChoice, step: FirstStep | None = None) -> dict:
+    """The JSON `start_options` block: every option with its goods and totals, the refused, the cheapest total per reading and,
+    for a start made at a vendor, the first step (`first_step`, null otherwise)."""
     low, high = choice.total_range
     return {
+        "first_step": None if step is None else first_step_document(step),
         "chosen": choice.chosen.key,
         "options": [_option(row) for row in choice.considered],
         "refused": [
@@ -127,4 +152,31 @@ def start_document(choice: StartChoice) -> dict:
         "total_range_chaos": {"low": _number(low), "high": _number(high)},
         "reading_matters": choice.reading_matters,
         "approximate_claims": list(choice.claims),
+    }
+
+
+def first_step_document(step: FirstStep) -> dict:
+    """The JSON `first_step` block: the bill with roles, the recipes with tiers, the item that comes back, the price."""
+    return {
+        "recipe": step.recipe,
+        "title": step.title,
+        "hand": [
+            {
+                "role": good.role,
+                "count": good.count,
+                "name": good.name,
+                "what": good.what,
+                "chaos": good.chaos,
+                "price_source": good.price_source,
+            }
+            for good in step.hand
+        ],
+        "recipes": [{"number": each.number, "hand": each.hand, "gives": each.gives, "tier": each.tier} for each in step.rounds],
+        "gets": {
+            "base": step.base,
+            "properties": list(step.properties),
+            "mods": [{"text": text, "tier": note} for text, note in step.mods],
+        },
+        "roll_note": step.roll_note,
+        "price_chaos": step.price,
     }

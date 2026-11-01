@@ -95,6 +95,7 @@ PINNED = [
     "r11-reservation-helmet",
     "r12-lightning-amulet",
     "r14-hunter-bow",
+    "v01-minion-helmet",
 ]
 LOWERED = {"r08-energy-shield-boots": 84, "r13-life-resist-belt": 84, "j01-cobalt-life-attack-speed": 1}  # the ticket's R08 and R13; a jewel's mods all open at level 1
 
