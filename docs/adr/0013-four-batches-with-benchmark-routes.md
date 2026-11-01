@@ -28,6 +28,14 @@ The grill fixed what B2 contains; the designs are ADR-0025 to ADR-0030.
 - **Out of v1**: Eldritch implicits on amulets; Randomise Influence; the Talisman base reroll; start items with a signature or double veil; Tainted catalysts.
 - **Route notes**: R20 starts from a bought base in B2 (the Awakener's Orb that makes its dual influence is B3). R07 is re-read in 3.29: the veiled Trigger mod has weight 0, so its route is the bench Trigger plus the unveiled minion speed. R05 gains its catalyst line (ADR-0029).
 
+## Amendment: B5 as grilled ([Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103), 2026-11-01)
+
+The grill fixed what B5 contains; the designs are ADR-0040 to ADR-0044.
+
+- **In B5**: the strand count on the item and the cut of tiers (ADR-0040); the declaration of cut and spend on every action (ADR-0041); the weight readings of the kept tiers as a rule axis (ADR-0042); the Orb of Remembrance, stranded purchases and the three Foulborn orbs (ADR-0043); the Orb of Unravelling, marked approximate (ADR-0044).
+- **Not in B5**: the Genesis Tree and every other way of acquiring an item (owner: the final item does not differ, so a Genesis-born item is a start item); identification (admitted, unused); the three bench rerolls (no action, no route); Hinekora's Lock (B8); Allflame crafting.
+- **Benchmarks**: none of R01 to R30 uses strands, and the map gave B5 none. B5 passes on (1) the published numbers as acceptance tests (the wiki's table, the 1,902 sheet rows, the Foulborn list, the 2,255 Remembrance results, the Unravelling samples, ADR-0040 and ADR-0044), and (2) given routes with strands: published 3.29 crafts that use them if the route-finding research ticket finds any, otherwise **test routes** that an agent writes (stranded variants of B1 routes, a Remembrance-then-craft base, an Unravelling finish) and evaluates at equal prices. The owner accepted this: the system must reproduce the evidence gathered as closely as possible; matching the real game beyond that is not required.
+
 ## Amendment: B3 as grilled ([Grill B3](https://github.com/Rasslabsya4el/crafting-system/issues/94), 2026-11-01)
 
 The grill fixed what B3 contains; the designs are ADR-0032 to ADR-0035, with ADR-0012 and ADR-0022 amended.
