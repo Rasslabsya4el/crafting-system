@@ -162,12 +162,16 @@ def _start_item(context: StartContext, step: RecipeStep, tier: int, values: tupl
 
 
 def _touching(data: GameData, steps: tuple[RecipeStep, ...], leaves: tuple[Requirement, ...], labels: tuple[str, ...]) -> tuple[str, ...]:
-    """The labels of the requirements that count a mod of the family the recipe makes, at any tier (a cap above the ladder still touches)."""
-    families = {family for step in steps if step.mod_id in data.mods for family in data.mods[step.mod_id].families}
+    """The labels of the requirements that count a mod of the ladder the recipe climbs, at any tier (a cap above the ladder still touches).
+
+    A ladder is the mods of one mod type (the scope of a tier, `items.tiers`); the family is too wide, because the "+N to Level of
+    all X Skill Gems" mods of every tag share one family.
+    """
+    types = {data.mods[step.mod_id].type for step in steps if step.mod_id in data.mods}
     return tuple(
         label
         for leaf, label in zip(leaves, labels, strict=True)
-        if any(families & set(data.mods[mod_id].families) for mod_id in leaf.mod_ids if mod_id in data.mods)
+        if any(data.mods[mod_id].type in types for mod_id in leaf.mod_ids if mod_id in data.mods)
     )
 
 
