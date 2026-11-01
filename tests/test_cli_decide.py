@@ -140,6 +140,8 @@ def test_the_exact_run_is_offered_up_to_two_million_transitions_only():
 
 def declared_invariant(action, data) -> bool:
     reads = action.reads(data)
+    if reads.variants:
+        return reads.junk and reads.pool_weight and reads.families is not None
     return reads.block_invariant and not reads.pool_weight and not (reads.junk and reads.families is None)
 
 

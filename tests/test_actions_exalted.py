@@ -16,6 +16,7 @@ from crafting_system.actions import (
     ExaltedOrb,
     NotApplicableError,
     OutOfScopeError,
+    Reads,
     catalog,
     kinds,
 )
@@ -148,7 +149,7 @@ def test_the_orb_is_named_priced_and_declared():
 
     assert action.label(DATA) == "Exalted Orb"
     assert action.resources(DATA) == {"Exalted Orb": 1}
-    assert action.reads(DATA).block_invariant is False
+    assert action.reads(DATA) == Reads.adding(variants=True)
     adds = action.adds(DATA, amulet())
     assert adds.draws and adds.keeps_crafted and adds.named == frozenset()
 
