@@ -1,6 +1,6 @@
 """Count the reachable states of a target's exact graph, with progress (ticket #70; run by the `Run a command` workflow).
 
-    python .github/scripts/count_states.py TARGET.yaml [--drop LABEL,LABEL] [--limit N] [--seconds S] [--out DIR]
+    python .github/scripts/count_states.py TARGET.yaml [--drop LABEL,LABEL] [--limit N] [--seconds S] [--max-rss-mb M] [--out DIR]
 
 Breadth-first from the start state over every offer of the plan and `restart`, the same graph the exact solver walks.
 Every 30 seconds it prints `states found, states expanded, kernels, resident memory`; at the end (the graph is
@@ -35,6 +35,7 @@ def main() -> None:
     parser.add_argument("--drop", default="", help="offer labels to leave out, separated by commas")
     parser.add_argument("--limit", type=int, default=5_000_000)
     parser.add_argument("--seconds", type=float, default=19_000)
+    parser.add_argument("--max-rss-mb", type=float, default=13_000, help="stop before the runner runs out of memory")
     parser.add_argument("--out")
     args = parser.parse_args()
 
@@ -85,6 +86,9 @@ def main() -> None:
             print(f"{now - began:7.0f}s found {len(seen):>9,} expanded {index:>9,} transitions {transitions:>11,} rss {rss_mb():,.0f} MB", flush=True)
         if len(seen) >= args.limit:
             reason = "state limit"
+            break
+        if rss_mb() >= args.max_rss_mb:
+            reason = "memory limit"
             break
         if now - began >= args.seconds:
             reason = "time limit"
