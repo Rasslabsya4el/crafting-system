@@ -1,4 +1,4 @@
-"""Two shapes of the imprint state, as throwaway layers over any solver model (ADR-0059, ticket #218). Not collected as tests.
+"""Two shapes of the imprint state, as throwaway layers over any solver model (ADR-0060, ticket #218). Not collected as tests.
 
 An imprint stores the compressed state of the item and restores it later; it is used up when it restores
 (ADR-0034). Both shapes wrap a `base` model (anything with `is_goal` and `actions`, the planner's own model

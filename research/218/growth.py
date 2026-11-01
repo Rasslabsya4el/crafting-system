@@ -1,4 +1,4 @@
-"""State growth per extra imprint on the real models of the benchmark routes (ticket #218, ADR-0059).
+"""State growth per extra imprint on the real models of the benchmark routes (ticket #218, ADR-0060).
 
     python research/218/growth.py TARGET.yaml [--limits 0,1,2,3] [--out DIR]
 

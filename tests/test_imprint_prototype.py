@@ -1,4 +1,4 @@
-"""The two shapes of the imprint state against brute force and the exact LP (ADR-0059, ticket #218).
+"""The two shapes of the imprint state against brute force and the exact LP (ADR-0060, ticket #218).
 
 The truth is a literal game written out here and not taken from `imprint_prototype`: a state is the item's base state
 and the imprints it holds as a multiset (a duplicate is allowed, a throw-away costs a nominal amount), every rule of
@@ -144,7 +144,7 @@ def test_the_policy_of_shape_a_is_imprint_try_restore():
 
 @pytest.mark.parametrize("restore_cost, bound", [(1e-6, 1e-7), (1e-9, 1e-4), (1e-12, 0.05)])
 def test_the_certificate_loosens_with_a_smaller_restore_cost_but_the_value_stays_right(restore_cost, bound):
-    """The constant term of the cycle is the epsilon, so the bound grows like value / epsilon (ADR-0059): 3.6e-8, 3.6e-5, 0.037."""
+    """The constant term of the cycle is the epsilon, so the bound grows like value / epsilon (ADR-0060): 3.6e-8, 3.6e-5, 0.037."""
     layer = WithImprints(loop_model(), price=1, limit=1, imprintable=lambda s: s == "base", restore_cost=restore_cost)
     solution = solve(layer, [layer.start("base")])
 
