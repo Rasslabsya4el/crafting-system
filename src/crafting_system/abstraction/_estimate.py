@@ -13,7 +13,7 @@ expanded) but pays a kernel only where one is needed:
   does not call their kernel at all. It decides their legality itself, from the sets of families and the
   free slots (the rules of the bench: not on a corrupted or normal item, not on an empty one, not when a
   mod of the item shares a family with the craft, not on a full side, not when the item already holds
-  the crafted mods it may: one, or three with the multimod; Remove Crafted Mods needs a crafted mod and a mod left over).
+  the crafted mods it may: one, two with the enchantment of the extra crafted slot, three with the multimod; Remove Crafted Mods needs a crafted mod and a mod left over).
 
 That second logic is written apart from `BenchCraft.outcomes` on purpose: `tests/test_abstraction_estimate.py`
 compares its count with the real expansion on random crafts and starts;
@@ -38,16 +38,13 @@ from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
-from crafting_system.actions import Action, ActionError
+from crafting_system.actions import Action, ActionError, crafted_limit_of
 from crafting_system.items import Metamod, Rarity, Side, capacity
-from crafting_system.rules import get_rule
 
 from ._kernel import Abstraction, integer_weights
 from ._kinds import ALIKE, base_kind, held_families
 from ._state import CompressedState, best_of
 
-ONE_CRAFTED_MOD = get_rule("bench_craft.one_crafted_mod_by_default")
-MULTIMOD_LIMIT = get_rule("metamods.multimod_raises_crafted_limit")
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 DEFAULT_LIMIT = 400_000
 ADDING_LIMIT = 20_000  # the state limit for a query with walked actions: each state there pays a real kernel call
@@ -159,7 +156,10 @@ class _Pilot:
         self.walked: dict[Action, int] = {}  # action -> the number of kernels a coarse level needs for it (its variants)
         for action in actions:
             self._classify(action)
-        self.limit_crafted = ONE_CRAFTED_MOD.value
+        # the limit of crafted mods by what the item holds: the enchantment is a constant of the problem, the multimod is read from the state
+        self.limit_crafted = {
+            multimod: crafted_limit_of(self.data, multimod=multimod, enchantment=abstraction.enchantment) for multimod in (False, True)
+        }
         self._kernels: dict[Hashable, Mapping[CompressedState, Fraction] | None] = {}
         self._successors: dict[int, tuple[CompressedState, ...]] = {}  # id of a memoised kernel -> its states, listed once
         self._slot_metamods: dict[object, frozenset[str]] = {}
@@ -292,8 +292,8 @@ class _Pilot:
         if flags.corrupted or flags.rarity is Rarity.NORMAL or not (state.fractured or state.slots):
             return
         held, used, crafted = self._holds(state)
-        limit = MULTIMOD_LIMIT.value if Metamod.MULTIPLE_CRAFTED_MODS.value in self._metamods(state) else self.limit_crafted
-        if self.crafts and crafted < limit:  # the multimod lifts the limit of crafted mods from one to three (ticket #68)
+        limit = self.limit_crafted[Metamod.MULTIPLE_CRAFTED_MODS.value in self._metamods(state)]
+        if self.crafts and crafted < limit:  # the multimod and the extra crafted slot lift the limit of crafted mods (ticket #68, ADR-0053)
             room = capacity(self.data, self.abstraction.base_id, flags.rarity)
             for craft in self.crafts:
                 if used[craft.side] < room.of(craft.side) and not (craft.families & held):
