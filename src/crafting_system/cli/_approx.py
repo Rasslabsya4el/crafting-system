@@ -97,29 +97,32 @@ class BlockModel:
         """The actions of `block` in this model; both models of a pair are built in one pass, the other kept for its turn."""
         if block not in self.known:
             if self.bound not in self.shared.get(block, ()):
-                self.shared[block] = {bound: self._build(block, bound) for bound in ("lower", "upper")}
+                self.shared[block] = self._build(block)
             sides = self.shared[block]
             self.known[block] = sides.pop(self.bound)
             if not sides:
                 del self.shared[block]
         return self.known[block]
 
-    def _build(self, block: CompressedState, bound: str) -> list[Action[CompressedState]]:
-        found = []
+    def _build(self, block: CompressedState) -> dict[str, list[Action[CompressedState]]]:
+        """The actions of `block` in both models, one action at a time: the coarse state keeps the last evaluation, so the second bound is free."""
+        found: dict[str, list[Action[CompressedState]]] = {"lower": [], "upper": []}
         for priced in self.offers:
             if isinstance(priced.offer.action, BuyStartItem):
                 if block != self.start:
-                    found.append(Action(priced.label, priced.cost, (Outcome(self.start, 1),)))
+                    for actions in found.values():
+                        actions.append(Action(priced.label, priced.cost, (Outcome(self.start, 1),)))
                 continue
-            try:
-                kernels = self.coarsening.variants(block, priced.offer.action, bound)
-            except ActionError:
-                continue
-            variants = tuple(tuple(Outcome(s, w) for s, w in integer_weights(kernel).items()) for kernel in kernels)
-            if len(variants) == 1:
-                found.append(Action(priced.label, priced.cost, variants[0]))
-            else:
-                found.append(VariantAction(priced.label, priced.cost, variants))
+            for bound, actions in found.items():
+                try:
+                    kernels = self.coarsening.variants(block, priced.offer.action, bound)
+                except ActionError:
+                    continue
+                variants = tuple(tuple(Outcome(s, w) for s, w in integer_weights(kernel).items()) for kernel in kernels)
+                if len(variants) == 1:
+                    actions.append(Action(priced.label, priced.cost, variants[0]))
+                else:
+                    actions.append(VariantAction(priced.label, priced.cost, variants))
         return found
 
 
