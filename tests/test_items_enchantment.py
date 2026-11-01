@@ -45,9 +45,9 @@ def test_an_item_without_the_field_has_none_and_equals_one_built_with_none():
     assert hash(plain) == hash(build(enchantment=None))
 
 
-def test_the_field_is_last_so_an_item_built_before_it_keeps_its_positional_fields():
+def test_the_field_comes_after_the_older_ones_so_an_item_built_before_it_keeps_its_positional_fields():
     names = [field.name for field in dataclasses.fields(Item)]
-    assert names[-1] == "enchantment"
+    assert names[9:] == ["enchantment", "memory_strands"]  # a new field goes last (memory_strands, ADR-0040)
     assert names[:9] == [
         "base_id", "item_level", "rarity", "mods", "influences", "corrupted", "implicits", "quality", "veil_offer",
     ]  # fmt: skip

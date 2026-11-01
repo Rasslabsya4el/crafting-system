@@ -176,6 +176,17 @@ class Adds:
       alone; `Action.adds` itself (an action that declares nothing) says True. Like the reading, it is **not** part of
       `item_state`: the enchantment is a finish step and stays out of the compressed state, so declaring it does not
       change the number of states, and the action is offered like any other.
+    * `corrupts`: the action corrupts the item and adds a corrupted implicit drawn from the corrupted pool of its class (a Vaal Orb,
+      a Bloodstained resonator, the Locus of Corruption; ADR-0036). It needs `implicits`, since it puts an implicit on the item.
+      A corrupted item takes no further action, so every outcome is a corrupted item that is the goal or a dead end, and the plan
+      restarts from the start item as it does from any dead end. A planner offers such an action only for a target that asks for a
+      corrupted implicit or allows a corrupted item (`Goal.takes_corrupted`); for any other target it is absent from the offers.
+      The default is False, which says the action leaves the corruption as it was.
+    * `keeps_mods`: with `corrupts`, every outcome that can still be the goal of a target that asks for a corrupted implicit holds
+      the explicit mods the item held (a Vaal Orb and the Locus: their other outcomes, the brick among them, are dead ends for that
+      target, ADR-0037). The outcome cannot meet an explicit requirement the item did not meet, so a planner offers the action for
+      such a target only from a state in which every other requirement already passes (an exact pruning, ADR-0031, ADR-0036). A
+      resonator that rerolls the explicit mods itself leaves it False and is never pruned this way. The default is False.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -194,11 +205,24 @@ class Adds:
     quality: bool = False
     offer: bool = False
     enchantment: bool = False
+    corrupts: bool = False
+    keeps_mods: bool = False
+
+    def __post_init__(self) -> None:
+        if self.corrupts and not self.implicits:
+            raise ValueError("an action that corrupts adds a corrupted implicit, so it must declare `implicits` too")
+        if self.keeps_mods and not self.corrupts:
+            raise ValueError("`keeps_mods` says what a corrupting action leaves of the explicit mods: it needs `corrupts`")
 
     @property
     def item_state(self) -> bool:
         """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
         return self.implicits or self.quality or self.offer
+
+    @classmethod
+    def corrupting(cls, *, keeps_mods: bool = False, **fields) -> "Adds":
+        """An action that corrupts the item and adds a corrupted implicit (ADR-0036): it draws, and it changes the implicits."""
+        return cls(implicits=True, corrupts=True, keeps_mods=keeps_mods, **fields)
 
     @classmethod
     def removal(cls, *, keeps_crafted: bool = True) -> "Adds":

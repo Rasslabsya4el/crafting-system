@@ -1,0 +1,58 @@
+# Target for benchmark route S13 (a TEST ROUTE, not a published one): R13's alt-regal belt, bought as a
+# white belt with 82 Memory Strands and finished by an Orb of Unravelling.
+#
+# The requirements are R13's, word for word. 82 strands is where the cut keeps two tiers of an
+# eight-tier mod type (ADR-0040: K = 3 for 8 tiers from 75 to 81 strands, K = 2 from 82), the first count
+# of a cut class, which is what ADR-0043 offers as a stranded purchase. `memory_strands` is not read by
+# the target loader until B5-1 (#274).
+
+base: Leather Belt
+item_level: 86
+
+# R13's kinds plus the Orb of Unravelling (kind name proposed here; B5-8, #281, fixes it).
+actions: [unravelling-orb, transmutation-orb, alteration-orb, augmentation-orb, regal-orb, bench-craft, remove-crafted-mods]
+
+# Everything below must be present on the finished item.
+requirements:
+  # Tier-1 life. "family" is the game's own name for a group of mods that exclude each other.
+  # min_tier: 1 means only the best tier counts (tier 1 is the BEST; min_tier: 2 would accept T1
+  # and T2). not_crafted: true refuses a copy of the mod that came from the crafting bench.
+  - family: IncreasedLife
+    min_tier: 1
+    not_crafted: true
+
+  # "At least 2 of these 3": two tier-1 resistances out of fire, cold and lightning.
+  - at_least: 2
+    of:
+      - family: FireResistance
+        min_tier: 1
+        not_crafted: true
+      - family: ColdResistance
+        min_tier: 1
+        not_crafted: true
+      - family: LightningResistance
+        min_tier: 1
+        not_crafted: true
+
+  # "A crafted damage modifier". The route does not say which one, so this is an interpretation:
+  # either of the damage prefixes the crafting bench offers on a belt counts. Source: the
+  # crafting_bench_options.json of the pinned repoe-fork dump 3.29.3.3, the options whose item
+  # classes include Belt and whose mod is a damage prefix (the dump lists them under the master
+  # Niko). They are exactly these two families, two tiers each, and no other damage prefix:
+  #   AllDamage: (12-14)% increased Damage, needs item level 72; (15-17)%, needs item level 81
+  #   IncreasedWeaponElementalDamagePercent: (15-23)% increased Elemental Damage with Attack
+  #     Skills, needs item level 30; (24-32)%, needs item level 50
+  # The game data gives AllDamage a spawn weight of 0 on belts, so only the bench can add it;
+  # the bench copy is crafted by nature, so these two carry no not_crafted mark.
+  - at_least: 1
+    of:
+      - family: AllDamage                                  # "(12-14)% increased Damage" and its tiers
+      - family: IncreasedWeaponElementalDamagePercent      # "(15-23)% increased Elemental Damage with Attack Skills"
+
+# Where the crafting starts: a normal Leather Belt with 82 Memory Strands and no mod.
+start_item:
+  rarity: normal
+  memory_strands: 82
+
+# The name of the buy spec docs/research/2026-11-01-strand-routes-files/buy/s13-start-belt.yaml.
+start_price: S13 start belt

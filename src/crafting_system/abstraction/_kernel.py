@@ -40,6 +40,7 @@ from crafting_system.items import (
     Side,
     eldritch_grade,
     eldritch_side,
+    is_corrupted_implicit,
     spawn_weight,
     tier_table,
 )
@@ -417,7 +418,21 @@ class Abstraction:
         )
 
     def is_goal(self, state: CompressedState) -> bool:
-        """Whether `state` meets the goal: the status of the leaves, and for each Eldritch implicit wanted one side that passes it."""
+        """Whether `state` meets the goal: the requirements (`meets_requirements`), and the corruption the target says.
+
+        As for `Target.is_met_by` (ADR-0036): a corrupted state is a goal only for a goal that asks for a corrupted implicit or
+        allows a corrupted item, and a state that is not corrupted is never a goal of one that asks (the goal is a corrupted item).
+        The corrupted implicit an action adds is not kept in the state: the action that corrupts decides it, outcome by outcome.
+        """
+        if state.flags.corrupted:
+            if not self.goal.takes_corrupted:
+                return False
+        elif self.goal.asks_corrupted:
+            return False
+        return self.meets_requirements(state)
+
+    def meets_requirements(self, state: CompressedState) -> bool:
+        """Whether `state` meets every requirement but the corruption: the status of the leaves, and for each Eldritch implicit wanted one side that passes it."""
         if not self.goal.is_met(state.status):
             return False
         wanted = len(self.goal.implicits)
@@ -607,7 +622,10 @@ class Abstraction:
         """
         sides = {side: self._no_implicit for side in EldritchSide}
         for entry in implicits:
-            side = eldritch_side(self.data.mods[entry.mod_id])
+            mod = self.data.mods[entry.mod_id]
+            if is_corrupted_implicit(mod):
+                continue  # a corrupted item is final and the state keeps no corrupted implicit: the action that corrupts decides it (ADR-0036)
+            side = eldritch_side(mod)
             if side is None:
                 raise OutOfScopeError(
                     f"the item holds the base implicit {entry.mod_id}: the state holds the two Eldritch sides only"
