@@ -54,6 +54,12 @@ action's random draws cut tiers (`cuts`), the law of the strands it spends (`spe
 answers None, the default, has declared nothing and is refused on an item with one strand or more; at 0 strands nothing changes.
 The refusal and the spend are made by `Action.__init_subclass__` around the `outcomes` of every subclass, and `cut_of(data, item)` is
 the `cut` an action that draws gives its pool. `strand_claims` lists the claims behind the declaration apart from `claims`.
+
+Sockets (ticket #228, ADR-0046): `Reads` and `Adds` say which part of the sockets an action depends on and which it sets, as three flags each:
+`socket_count`, `socket_links` and `socket_colours`. An action that does not declare `adds.socket_*` leaves that part of the sockets as it was
+(the contract suite checks it on every fixture item that has sockets), and a socket action (`Adds.socket_action`: it adds no mod) changes no
+mod. Like the enchantment, the sockets are a finish step (ADR-0045) and **not** part of `item_state`: the compressed state of the mods does not
+hold them, so declaring them changes no state count and no offer.
 """
 
 import functools
@@ -149,6 +155,13 @@ class Reads:
       the item in hand, `input_mods` alone the inputs, both is both. The dataclass default is False, as for the other
       new fields; `Action.reads` (an action that declares nothing) says True, like it reads every mod. An action with no
       inputs has nothing to read there and the flag means nothing for it.
+    * `socket_count`, `socket_links`, `socket_colours`: the result (its chances, whether the game refuses the item, or another part of
+      the sockets) depends on the number of sockets, on the link groups or on the colours of the item (ticket #228, ADR-0046). Carrying
+      a part over to the same place unchanged is not reading it: a Jeweller's Orb keeps the colours of the sockets that stay and does
+      not read them. The contract suite checks `socket_links` and `socket_colours` by taking the part off (all sockets unlinked, all
+      white) on a fixture item that holds sockets. The default is False; `Action.reads` (an action that declares nothing) says True for
+      all three. Like the enchantment they are **not** part of `item_state`: the sockets are a finish step (ADR-0045) and stay out of the
+      compressed state of the mods.
     """
 
     junk: bool = True
@@ -164,11 +177,19 @@ class Reads:
     offer: bool = False
     input_mods: bool = False
     enchantment: bool = False
+    socket_count: bool = False
+    socket_links: bool = False
+    socket_colours: bool = False
 
     @property
     def item_state(self) -> bool:
-        """Whether the action reads the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
+        """Whether the action reads the implicits, the quality or the offer of the item (ADR-0027); the enchantment and the sockets are not one of them (ADR-0050, ADR-0045)."""
         return self.implicits or self.quality or self.offer
+
+    @property
+    def sockets(self) -> bool:
+        """Whether the action reads any part of the sockets (ADR-0046)."""
+        return self.socket_count or self.socket_links or self.socket_colours
 
     @classmethod
     def adding(cls, *, block_invariant: bool = False, variants: bool = False) -> "Reads":
@@ -231,6 +252,11 @@ class Adds:
       (`Goal.asks_corrupted`) and not for one that merely allows a corrupted item: there the same reroll without the corruption is offered
       and the corrupting one would only add a price and an implicit nobody wants (ADR-0038). The default is False: a Vaal Orb or a Locus
       is offered to a target that allows a corrupted item too, because its brick can end in the goal (ADR-0037).
+    * `socket_count`, `socket_links`, `socket_colours`: the action changes the number of sockets (a Jeweller's Orb, a bench craft), the link
+      groups (an Orb of Fusing) or the colours (a Chromatic Orb) of the item (ticket #228, ADR-0046). A change of the count changes the other
+      two as well, so it needs all three. The default is False, which says the action leaves that part as it was; `Action.adds` itself (an
+      action that declares nothing) says True for all three. Like the enchantment they are not part of `item_state`: the sockets are a finish
+      step and stay out of the compressed state of the mods (ADR-0045).
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -252,8 +278,13 @@ class Adds:
     corrupts: bool = False
     keeps_mods: bool = False
     asked_only: bool = False
+    socket_count: bool = False
+    socket_links: bool = False
+    socket_colours: bool = False
 
     def __post_init__(self) -> None:
+        if self.socket_count and not (self.socket_links and self.socket_colours):
+            raise ValueError("an action that changes the number of sockets changes the link groups and the colours too: declare all three")
         if self.corrupts and not self.implicits:
             raise ValueError("an action that corrupts adds a corrupted implicit, so it must declare `implicits` too")
         if self.keeps_mods and not self.corrupts:
@@ -263,8 +294,29 @@ class Adds:
 
     @property
     def item_state(self) -> bool:
-        """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
+        """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027); the enchantment and the sockets are not one of them (ADR-0050, ADR-0045)."""
         return self.implicits or self.quality or self.offer
+
+    @property
+    def sockets(self) -> bool:
+        """Whether the action changes any part of the sockets (ADR-0046)."""
+        return self.socket_count or self.socket_links or self.socket_colours
+
+    @property
+    def only_sockets(self) -> bool:
+        """Whether the action is declared as a socket action (`socket_action`): it changes sockets and adds no mod."""
+        return self.sockets and self.named == frozenset() and not self.draws
+
+    @classmethod
+    def socket_action(cls, *, count: bool = False, links: bool = False, colours: bool = False, **fields) -> "Adds":
+        """An action that changes sockets and nothing else: it adds no mod and draws none, so every mod of the item stays (ADR-0046, ADR-0045).
+
+        A change of `count` changes the links and the colours too. The contract suite checks, for an action declared this way, that no
+        result differs from the item in any mod.
+        """
+        if not (count or links or colours):
+            raise ValueError("a socket action changes the count, the links or the colours")
+        return cls(named=frozenset(), draws=False, socket_count=count, socket_links=links or count, socket_colours=colours or count, **fields)
 
     @classmethod
     def corrupting(cls, *, keeps_mods: bool = False, **fields) -> "Adds":
@@ -485,16 +537,18 @@ class Action(ABC):
         """What one use consumes, by price-file name; read from claims. `data` may be None for an action that needs none."""
 
     def reads(self, data: GameData) -> Reads:
-        """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality, the offer and the enchantment."""
-        return Reads(implicits=True, quality=True, offer=True, input_mods=True, enchantment=True)
+        """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality, the offer, the enchantment and the sockets."""
+        return Reads(
+            implicits=True, quality=True, offer=True, input_mods=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True
+        )
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality, the offer and the enchantment.
+        """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality, the offer, the enchantment and the sockets.
 
         `data` and `item` may be None for an action whose additions depend on neither (an orb); one
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
-        return Adds(implicits=True, quality=True, offer=True, enchantment=True)
+        return Adds(implicits=True, quality=True, offer=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True)
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The other items one use consumes besides `item` (a recombinator's donor, ADR-0022); none by default.

@@ -1,5 +1,9 @@
-# Sockets, links and colours (ADR-0045 to ADR-0049, grill B6 of issue #104). Ticket #227 (B6 S1) opens the file with the class
-# maximum the item and the target read; ticket #228 (S2) adds the claims of the socket orbs and the bench to it.
+# Sockets, links and colours (ADR-0045 to ADR-0049, grill B6 of issue #104). Ticket #227 (B6 S1) opened the file with the class
+# maximum the item and the target read; ticket #228 (S2) adds the claims of the socket orbs, the bench and the Omens: the 25 claims of
+# the research ticket #99 (branch research/sockets, c5376ae) with the changes the design resolution lists, the three claims checked on
+# the wiki on 2026-11-01, and the owner's answers of grill B6 round 1 as claims of kind owner. The marks are those of the table in ADR-0047
+# ("Marks and claims"): a claim is `approximate` exactly where the table says so. The ids of the claims the S3 and S6 tickets read
+# (the Chromatic Orb, Binding, the beasts) are written here already, so the file has one author.
 rules:
   - id: sockets.class_maximum_sockets
     statement: "The most sockets an item can have by type: one-handed weapons and shields 3; boots, helmets and gloves 4; body armours and two-handed weapons (bows, staves and warstaves included) 6. Gnarled Branch (a staff) has 3; other low-level bases with a smaller inventory size have unnamed exceptions, which this table does not know. The value holds the maximum of each of the 20 item classes the socket crafts of the bench are offered for (`by_class`) and the one base the wiki names (`by_base`, by base id)."
@@ -34,3 +38,423 @@ rules:
         Warstaff: 6
       by_base:
         Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff1: 3
+
+  # --- the three claims checked on the wiki on 2026-11-01 (the class maximum above is the first) ---
+
+  - id: sockets.quality_currency_gain_by_item_level
+    statement: "Blacksmith's Whetstone (weapons) and Armourer's Scrap (armour) raise quality by an amount that depends on the item level, not on the rarity, to at most 20%; unique items get 1%. The amount follows the formula of the Quality page, the one the catalysts use (claim for catalysts, ADR-0029). The old rule of +5% on a normal item, +2% on a magic and +1% on a rare is that of version 0.8.1."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Blacksmith%27s_Whetstone
+    quote: "The amount of quality a Blacksmith's Whetstone adds to the item is based on the item level for non-unique weapons, or 1% of it's a unique. ... The maximum quality is 20%. ... 3.25.0: the rarity of the item is no longer relevant ... the amount of Quality they provide is now based on the item level."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: sockets.binding_rolls_like_alchemy
+    statement: "An Orb of Binding upgrades a normal item to rare and functions the same way as an Orb of Alchemy, so its mod roll is Alchemy's (ADR-0048)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Binding
+    quote: "This orb can be used on most items without sockets, functioning the same way as an Orb of Alchemy."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  # --- the research claims (ticket #99): colour ---
+
+  - id: sockets.sockets_white_by_default
+    statement: Item sockets are white by default; each socket generated on an item has a small chance to be red, green or blue, in proportion to the item's attribute requirements, and the chance grows with item level.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "Item Sockets are now always White by default. Each Socket generated on an item has a small chance to roll as a Red, Green, or Blue Socket instead, and the selected colour will still be proportional to the attribute requirements of the item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.added_sockets_are_white
+    statement: A socket added by Jeweller's Orb, Tainted Jeweller's Orb, Orb of Binding or a bench craft is white.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "Currency that adds Sockets to items such as Jeweller's Orbs, Tainted Jeweller's Orbs and Orbs of Binding will always generate the added sockets as White. This includes adding sockets through the Crafting Bench."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.chromatic_forces_one_non_white
+    statement: "The 3.29.0 notes say a Chromatic Orb forces one socket non-white while the rest roll normally. The measured behaviour (see sockets.chromatic_roll_then_force) is that every socket rolls independently and one socket is forced non-white only if all rolled white."
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "Chromatic Orbs and Tainted Chromatic Orbs now force one of the Sockets on the item to be Non-White, while the rest of the Sockets on the item will roll colours normally. Higher Quality on items increases the chance for Non-White Sockets to appear."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.chromatic_roll_then_force
+    statement: "A Chromatic Orb rolls every socket independently, non-white with probability p and white otherwise; only if all sockets came out white is the first socket made non-white (its colour drawn separately). Fits 2,836 six-socket results in 8 cells of item level and quality (maximum-likelihood p inside the formula's interval in every cell; socket 1 non-white in 99% of rows at item level 2 and 15, 43% at item level 100 quality 0). On a one-socket item the socket is therefore always coloured (sockets.chromatic_one_socket_always_coloured). The owner takes Siveran's formula as the rule, so no mark goes on this claim (ADR-0047)."
+    source_kind: experiment
+    url: https://siveran.github.io/poedata.csv
+    quote: "Siveran, src/Main.ts, commit a140677 (2026-07-24): \"Chromatic orbs guarantee one non-white socket, but ONLY when they naturally roll ALL white sockets.\" Data: poedata.csv, 2,836 rows (Red,Green,Blue,White,Str,Dex,Int,ilvl,Quality,FirstSocketWasRGB); refit by the research ticket #99, 2026-10-31"
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+
+  - id: sockets.chromatic_nonwhite_chance
+    statement: "The chance that one rolled socket is non-white is p = 0.00375 * max(item level - 14, 1) * (1 + min(quality, 30) / 100). The data sample item levels 2 to 50, 85 and 100, qualities 0 to 20 and 60, and six-socket items only; between item level 51 and 84, for qualities 30 to 59 and for fewer than six sockets the formula interpolates, which the owner accepts without a mark (the quality cap of 30 is Siveran's code; quality from currency stops at 20%, so it binds only for a start item). Independent of the attribute requirement. The value holds the formula: slope numerator over denominator, the level offset and the quality cap."
+    source_kind: experiment
+    url: https://siveran.github.io/calc.html
+    quote: "calculateWhiteChance(e,t){return 1-.00375*Math.max(e-14,1)*(1+Math.min(t,30)/100)} (dist/bundle.js, \"Last updated July 24, 2026\"); fitted p per cell in the research note, e.g. ilvl 100 quality 20: 0.382 [0.360, 0.405] against 0.387"
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+    value: {slope_numerator: 375, slope_denominator: 100000, level_offset: 14, quality_cap: 30}
+
+  - id: sockets.chromatic_natural_colour_weights
+    statement: "A rolled non-white socket takes its colour by the old requirement weights: with one attribute a (total t = a): that colour 0.9*(10+a)/(t+20), each other colour 0.05 + 0.9*5/(t+20); with two attributes a colour 0.9*a/t and the missing colour 0.1; with three attributes a/t. Matches the natural sockets of the data within about two standard errors; it does not match the forced socket (sockets.chromatic_forced_socket_colour)."
+    source_kind: experiment
+    url: https://siveran.github.io/calc.html
+    quote: "getColorChances(e){var i,r=.9,a=e.total();switch(e.countNonZero()){case 1:i=e=>e>0?r*(10+e)/(a+15+5):.04999999999999999+r*(5/(a+15+5)); case 2:i=e=>e>0?r*e/a:1-r; case 3:i=e=>e/a}} (dist/bundle.js)"
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+
+  - id: sockets.chromatic_colour_weighted_by_requirements
+    statement: The colour of a rolled non-white socket is weighted by the item's strength, dexterity and intelligence requirements (red, green, blue); local modifiers that change the requirements count, global ones do not. The weights are in sockets.chromatic_natural_colour_weights (natural sockets); the forced socket differs.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Chromatic_Orb
+    quote: "The probability of each colour is weighted by the item's attribute requirements. Strength, dexterity, and intelligence increase the probability of red, green, and blue sockets respectively."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.chromatic_ignores_abyssal_sockets
+    statement: A Chromatic Orb does not change Abyssal sockets; since 3.29.2 it still makes a non-white socket among the item's gem sockets when the item has Abyssal sockets.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3994431
+    quote: "Fixed a bug where Chromatic Orbs would not always guarantee a non-White Socket if the item had Abyssal Sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.chromatic_forced_socket_colour
+    statement: "The colour of the socket a Chromatic Orb forces (every socket rolled white) is drawn with the same weights as a natural socket (Siveran's calculator uses them for it): the plan. The data show a flatter colour (about 47, 27, 26% for a strength item of requirement 25 or 180; 24, 52, 24% for dexterity 65); one third of the weights plus two thirds uniform stays within four points of all three cells and is the second reading. It matters only for a target that needs exactly one coloured socket. The value holds the second reading's shares."
+    source_kind: experiment
+    url: https://siveran.github.io/poedata.csv
+    quote: "Forced-socket cells of poedata.csv: strength 180 (item level 2) R/G/B 0.478/0.276/0.246 (n = 228); strength 25: 0.468/0.262/0.269 (n = 301); dexterity 65 (item level 26): about 0.24/0.52/0.24 after the natural sockets are removed; refit by the research ticket #99, 2026-10-31"
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "The data show the forced socket's colour flatter than the natural weights and nothing explains it; the plan follows Siveran's code and the owner's standing rule, the flatter reading is the second number (ADR-0047)."
+    value: {second_reading_natural_third: 1, second_reading_natural_over: 3, second_reading_uniform_third: 2, second_reading_uniform_over: 3}
+
+  - id: sockets.chromatic_one_socket_always_coloured
+    statement: A Chromatic Orb on a one-socket item always makes that socket coloured (the forced rule gives the only socket a colour when it rolled white).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/104#issuecomment-6556328366
+    quote: "b) A Chromatic on a one-socket item always makes it coloured: **yes**."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: sockets.chromatic_never_repeats_the_current_colours
+    statement: "A Chromatic Orb cannot return the colours the item already has: the result is the roll conditioned on differing from the current colours. It applies to every Chromatic Orb use, with an Omen too, and not to the bench craft."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/104#issuecomment-6556328366
+    quote: "d) A Chromatic **cannot** return the same colours (owner believes; check in the emulator, then #182 if it disagrees with other sources)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The owner's belief and a line of Siveran's commit log (repeat prevention) are the only sources; the data cannot test it (in-game list #182)."
+
+  - id: sockets.chromatic_ignores_requirement_mods
+    statement: The colour weights of the Chromatic Orb use the requirements of the item as the finish starts, and ignore mods that change the requirements (the finish is solved before the mods are known and such mods are rare).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0047-socket-odds-and-the-marks-they-carry.md
+    quote: "the colour weights ignoring requirement-changing mods (the finish is solved before the mods are known and such mods are rare)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "A modelling choice of the design (ADR-0047), not a measured rule: a local mod that changes the requirements changes the real weights."
+
+  - id: sockets.chromatic_not_sold_by_vendors
+    statement: Chromatic Orbs are no longer sold by town vendors for Jeweller's Orbs; the vendor price of a Chromatic Orb is gone.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.29.0
+    quote: "Chromatic Orbs are now rarer, and are no longer sold by vendors in towns in exchange for Jeweller's Orbs."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.vorici_add_remove_trick_gone
+    statement: The Vorici method (add a socket and remove it to reroll a new socket's colour) no longer works because every added socket is white.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Crafting_Bench
+    quote: "Prior to the socket colour system rework in version 3.29.0, players could add and remove a socket using the crafting bench recipes to \"reroll\" the colours of newly added sockets while keeping the colours on unremoved sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # --- the research claims: the number of sockets (Jeweller's Orb) ---
+
+  - id: sockets.jeweller_rerolls_count_to_a_different_number
+    statement: A Jeweller's Orb rerolls the number of sockets to a number different from the current one, never above the maximum of the item's class and item level, and is not usable on an item at its maximum.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Jeweller%27s_Orb
+    quote: "A Jeweller's orb will always roll a different number of sockets than the item had originally, but will not reroll an item with maximum sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.socket_count_weights
+    statement: "Socket count by item generation, weights for 1 to 6 sockets on a six-socket or three-socket item class: 50, 120, 100, 30, 5, 1, with minimum item levels 1, 1, 2, 25, 35, 50; four-socket classes use 100, 90, 80, 30. The Jeweller's Orb is taken to roll from these weights, renormalised without the current count and cut to the class maximum and the item-level gate; that it uses the generation weights is an inference. GGG's 2014 statement of the generation chances (sockets.jeweller_second_reading_2014_table) is the second reading."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Item_socket
+    quote: "Number of sockets | Minimum ilvl | Weight (6S & 3S) | Weight (4S): 1 | 1 | 50 | 100; 2 | 1 | 120 | 90; 3 | 2 | 100 | 80; 4 | 25 | 30 | 30; 5 | 35 | 5 | —; 6 | 50 | 1 | —"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "No measurement of the Jeweller's Orb exists; that it rolls from the item-generation weights is an inference, and the older 2014 table disagrees on 1 to 3 sockets (ADR-0047)."
+    value:
+      six_or_three: [50, 120, 100, 30, 5, 1]
+      four: [100, 90, 80, 30]
+      minimum_item_level: [1, 1, 2, 25, 35, 50]
+
+  - id: sockets.jeweller_second_reading_2014_table
+    statement: "GGG's chris_wilson gave in 2014 the chances of an item being generated with 1 to 6 sockets for a weapon able to get six: 100, 90, 80, 30, 5, 1 of 306. It is the second reading of the Jeweller's table for the six- and three-socket classes (the four-socket weights are the same in both readings): about 223 orbs against 215 from one to six sockets at item level 84. He warned that the authoritative data is server-only, and this is the chance of an item being generated with that many sockets, not a Jeweller's Orb table."
+    source_kind: official
+    url: https://www.reddit.com/r/pathofexile/comments/269vj5/chances_of_socket_numbers_accidentally_made/chp1zpo/
+    quote: "here are the correct numbers for a weapon that's able to get six sockets: 1 socket 32.68%, 2 sockets 29.41%, 3 sockets 26.14%, 4 sockets 9.80%, 5 sockets 1.63%, 6 sockets 0.33%"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "A 2014 staff statement about item generation, not about the Jeweller's Orb, with the staff's own warning that the authoritative numbers are server-only; kept as the second number beside the plan (ADR-0047)."
+    value:
+      six_or_three: [100, 90, 80, 30, 5, 1]
+
+  - id: sockets.jeweller_ignores_quality
+    statement: "Quality has no effect in the model of the Jeweller's Orb and the Orb of Fusing above 20%: the wiki says each 1% of quality improves the result by 1% without saying how, so ignoring it is the pessimistic default (the Fusing table is the 20% one, ADR-0047)."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0047-socket-odds-and-the-marks-they-carry.md
+    quote: "**Quality has no effect in the model** (the wiki says each 1% improves the result by 1% without saying how; ignoring it is pessimistic)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "No source says how the 1% per 1% enters the Jeweller's weights; the model leaves quality out, which can only overstate the cost."
+
+  - id: sockets.quality_one_percent_per_percent
+    statement: Each 1% of item quality improves the result of an Orb of Fusing or a Jeweller's Orb by 1%; quality is not consumed. Which weights the 1% multiplies is not stated (the model does not use it for the Jeweller's Orb, sockets.jeweller_ignores_quality). For the Chromatic Orb the factor on the non-white chance in Siveran's fitted formula is (1 + min(quality, 30) / 100); that it is the same rule as for Jeweller's and Fusing is an analogy.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/1596094
+    quote: "Each 1% quality improves the result by 1%. This makes the Fusing process 20% easier on 20% quality items, for example."
+    patch_verified: "2.2.0"
+    date_checked: 2026-10-31
+
+  - id: sockets.jeweller_keeps_old_sockets_when_adding
+    statement: When a Jeweller's Orb adds sockets, the old sockets keep their colours and links; the new sockets are white and unlinked.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/104#issuecomment-6556328366
+    quote: "a) When a Jeweller's Orb **adds** sockets, the old sockets **keep** their colours and links."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: sockets.jeweller_removes_sockets_from_the_end
+    statement: "When the new count is lower the last sockets are removed and the first ones keep their colours; a link group is cut where the sockets end. The bench count craft takes the same rule."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0046-socket-state-targets-and-the-contract.md
+    quote: "When the new count is **lower**, the last sockets are removed and the first ones keep their colours; a link group is cut where the sockets end."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The owner's answer covers adding sockets only; the removal rule and the bench count craft's use of it are the main chat's reading (in-game list #182)."
+
+  - id: sockets.omen_of_the_jeweller_max_sockets
+    statement: Omen of the Jeweller makes the next Jeweller's Orb roll the maximum number of sockets for the item's base type and item level.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Omen_of_the_Jeweller
+    quote: "When consumed, it causes your next Jeweller's Orb to roll the maximum number of sockets for an item's base type based on item level."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # --- the research claims: links (Orb of Fusing) ---
+
+  - id: sockets.fusing_rerolls_links_only
+    statement: An Orb of Fusing rerolls the links between the existing sockets; the number and colours of sockets stay; it cannot be used on an item whose sockets are all linked (and a one-socket item has nothing to link).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Fusing
+    quote: "An Orb of Fusing is a currency item that can be used to re-roll the links between sockets on a weapon or piece of armour. The colour and number of sockets remain unchanged."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.fusing_six_link_sample
+    statement: "On six-socket items with 20% quality, 100,000 Orbs of Fusing gave 100 six-links (0.100%; 95% interval 1 in 1244 to 1 in 836), 973 five-links including 152 with the unlinked socket first, and 44 items with no link. A 2017 sample; nothing in the wiki's history or the 3.29 notes says the odds changed since 2.2.0."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/75t1c9/i_used_100000_fusings_for_science_statistics/
+    quote: "gvieira, 2017-10-11: \"I used the fusings on several different items with 20% quality and 6S.\" (table recovered by the gpt-research run, not re-read first-hand)"
+    patch_verified: "3.0.0"
+    date_checked: 2026-10-31
+
+  - id: sockets.fusing_group_size_weights
+    statement: "An Orb of Fusing links sockets by sequential group sizes: from the first socket it draws a group size from one weight table cut to the sockets that remain and renormalised, then continues at the next socket. Fitted weights for group sizes 1 to 6 at 20% quality: 0.17818, 0.34818, 0.26766, 0.19672, 0.00826, 0.00100 (the value holds them as whole parts of 100,000). For 2 to 6 sockets the chance of all sockets linked is 66.1%, 33.7%, 19.9%, 0.83%, 0.10%. The table exists for 20% quality only, so the Orb of Fusing is offered at 20% quality or more and uses this table above it; below 20% the finish buys quality first (ADR-0049)."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/75t1c9/i_used_100000_fusings_for_science_statistics/
+    quote: "Mark_GGG, 2013-01-24 (forum thread 73004, NOT read first-hand: reported by the gpt-research run): \"Links aren't done individually. Starting at the first socket, there's a certain chance to link 6 sockects, a chance to link 5, a chance to link 4, etc.\" gvieira's single-weight-table fit: p0..p5 = 0.178184223, 0.348177081, 0.267663189, 0.196718817, 0.008256689, 0.001, correlation 0.9997"
+    patch_verified: "3.0.0"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "One 2017 dataset of 100,000 orbs on 20%-quality items, fitted by its author; nothing says the odds changed, nothing confirms it, and no table exists for other quality values (ADR-0047)."
+    value:
+      at_quality: 20
+      parts_of_100000: [17818, 34818, 26766, 19672, 826, 100]
+
+  - id: sockets.omen_of_connections_all_linked
+    statement: Omen of Connections makes the next Orb of Fusing link all the item's sockets.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Omen_of_Connections
+    quote: "When consumed by using an Orb of Fusing, all of the item's sockets will be linked."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # --- the research claims: the bench ---
+
+  - id: sockets.bench_socket_count_cost
+    statement: "The bench sets the number of sockets exactly (2, 3, 4, 5, 6) for 1, 3, 10, 70, 350 Jeweller's Orbs, at any item level, on the 20 weapon and armour classes (the count up to the class maximum); the new sockets are white. A bench craft is priced as its orb count times the orb price, with the names of the game data (as bench_craft.option_cost does). The value maps the count to the number of Jeweller's Orbs."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "bench[0..4].actions.change_socket_count=2..6, cost={\"Metadata/Items/Currency/CurrencyRerollSocketNumbers\": 1, 3, 10, 70, 350}, bench_tier=0, item_classes = 20 classes Dagger..Shield"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {2: 1, 3: 3, 4: 10, 5: 70, 6: 350}
+
+  - id: sockets.bench_link_cost
+    statement: "The bench links the sockets exactly (2, 3, 4, 5, 6 links) for 1, 3, 5, 150, 1500 Orbs of Fusing, on the same 20 classes, priced as the orb count times the orb price. The value maps the number of links to the number of Orbs of Fusing."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "bench[5..9].actions.link_sockets=2..6, cost={\"Metadata/Items/Currency/CurrencyRerollSocketLinks\": 1, 3, 5, 150, 1500}, bench_tier=0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {2: 1, 3: 3, 4: 5, 5: 150, 6: 1500}
+
+  - id: sockets.bench_link_makes_the_first_sockets_one_group
+    statement: The bench link craft for N links makes the first N sockets one linked group and leaves the rest unlinked.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0047-socket-odds-and-the-marks-they-carry.md
+    quote: "the link craft makes the first N sockets one group and leaves the rest unlinked"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "No source says which sockets the bench link craft links; the first N is the reading of the design (ADR-0047)."
+
+  - id: sockets.bench_colour_cost
+    statement: "The bench colour crafts guarantee at least two, three or four non-white sockets for 5, 20 or 75 Chromatic Orbs; the red, green and blue crafts no longer exist. The value maps the minimum to the number of Chromatic Orbs."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "bench[10..12].actions.color_sockets=\"NN\", \"NNN\", \"NNNN\", cost={\"Metadata/Items/Currency/CurrencyRerollSocketColours\": 5, 20, 75}; of 765 options only these 13 touch sockets, none names the colours R, G or B"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {2: 5, 3: 20, 4: 75}
+
+  - id: sockets.bench_at_least_n_non_white_is_a_conditioned_roll
+    statement: "A bench craft for at least 2, 3 or 4 non-white sockets is the Chromatic roll conditioned on at least that many non-white sockets; nothing says how the roll goes beyond the minimum."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0047-socket-odds-and-the-marks-they-carry.md
+    quote: "is the Chromatic roll conditioned on at least that many non-white sockets"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "Nothing in the sources says how the bench rolls the colours beyond the minimum; a conditioned Chromatic roll is the simplest reading (in-game list #182)."
+
+  - id: sockets.bench_on_corrupted_costs_vaal
+    statement: A socket-changing bench craft also works on a corrupted item, for one extra Vaal Orb per orb of the craft's cost. (A corrupted item is refused by the socket actions here; the crafts that cost Vaal Orbs are batch B4's.)
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Crafting_Bench
+    quote: "Players can use socket-modifying recipes on corrupted equipment, which will additionally cost a number of Vaal Orbs equivalent to the craft's default cost."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # --- the research claims: the Omen of Trichromatism, Binding, the beasts ---
+
+  - id: sockets.omen_of_trichromatism
+    statement: Omen of Trichromatism (renamed from Blanching in 3.29.0) makes the next Chromatic Orb give at least one red, one green and one blue socket; it cannot be used with a Tainted Chromatic Orb.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Omen_of_Trichromatism
+    quote: "It now will be Consumed when you use a Chromatic Orb on an item to guarantee at least one Red, Green and Blue Socket."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.omen_of_trichromatism_conditions_the_roll
+    statement: The Omen of Trichromatism makes the next Chromatic Orb a roll conditioned on holding at least one red, one green and one blue socket (the mechanism is not documented; a conditioned roll is the simplest reading).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0047-socket-odds-and-the-marks-they-carry.md
+    quote: "The next Chromatic Orb gives at least one red, one green and one blue socket: the roll conditioned on that, `approximate` (the mechanism is not documented; a conditioned roll is the simplest reading)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The mechanism of the Omen is not documented; the conditioned roll is the simplest reading (ADR-0047)."
+
+  - id: sockets.omen_of_trichromatism_below_three_sockets
+    statement: The Omen of Trichromatism on an item with fewer than three sockets is not offered (the owner expects the game to refuse it).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/104#issuecomment-6556328366
+    quote: "e) Omen of Trichromatism on an item with fewer than 3 sockets: unknown; owner expects an error (not applied). Default: not offered there."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The owner does not know and expects an error; the check goes on the owner's in-game list #182."
+
+  - id: sockets.binding_links_existing_sockets
+    statement: An Orb of Binding links the sockets the item already has and never adds sockets (a two-socket item becomes two-linked).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/104#issuecomment-6556328366
+    quote: "c) Orb of Binding: the draft's \"2 sockets give 4 linked\" was wrong. Binding links the **existing** sockets (a 2-socket item becomes 2-linked) and never adds sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: sockets.binding_loses_sockets_above_four
+    statement: An Orb of Binding gives up to four linked sockets; on an item with more than four sockets or links the extra sockets are lost, and the survivors keep their colours.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Binding
+    quote: "If used on an item with more than four sockets or links, the extra sockets will be lost."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "The wiki page contradicts itself on whether Binding adds sockets (the owner's play says it does not); the loss above four and the colours of the survivors are the wiki's only (ADR-0048)."
+
+  - id: sockets.black_morrigan_max_links_and_sockets
+    statement: "Two beast recipes with The Black Mórrígan modify an item to have the maximum possible links (with Craicic Sand Spitter) or the maximum possible number of sockets (with Craicic Shield Crab). What 'maximum possible' respects (item level, base type) is not documented."
+    source_kind: datamined
+    url: https://poedb.tw/us/Craicic_Sand_Spitter
+    quote: "Create Currency Items: Orb of Fusing; Create Currency Items: A Stack of 2 Orbs of Binding; Modify an Item: to Have Maximum Possible Links (Craicic Sand Spitter recipes); Modify an Item: to Have Maximum Possible Number of Sockets (https://poedb.tw/us/Craicic_Shield_Crab)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: sockets.black_morrigan_maximum_is_the_class_maximum
+    statement: "The Black Mórrígan recipes give the maximum sockets the item type allows (the class maximum, ignoring the item-level gate): the Shield Crab recipe the sockets, the Sand Spitter recipe the sockets all linked, read literally. Old sockets keep their colours and links, new ones are white and unlinked."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/104#issuecomment-6556328366
+    quote: "4. **Black Mórrígan recipes offered**, and \"maximum\" means the **maximum sockets the item type allows** (body armour and two-handers 6, shields 3, and so on), all linked for the link recipe."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "No source but the owner's answer; the research found the recipes unverified, and the narrower reading of the Sand Spitter (link only the sockets present) is on the owner's in-game list #182 (ADR-0048)."
+
+  # --- the price names (data names of the game's items; prices/price_names.py holds the same names for the price layer) ---
+
+  - id: sockets.jewellers_orb_cost
+    statement: "One Jeweller's Orb consumes one Jeweller's Orb item; the value maps its price-file name (the item's name in the game data) to the number of items. With the Omen of the Jeweller the use consumes the Omen as well (sockets.omen_of_the_jeweller_cost)."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRerollSocketNumbers: name "Jeweller''s Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Jeweller's Orb: 1}
+
+  - id: sockets.fusing_cost
+    statement: "One Orb of Fusing consumes one Orb of Fusing item; the value maps its price-file name to the number of items. With the Omen of Connections the use consumes the Omen as well (sockets.omen_of_connections_cost)."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRerollSocketLinks: name "Orb of Fusing"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Orb of Fusing: 1}
+
+  - id: sockets.omen_of_the_jeweller_cost
+    statement: "One use of the Omen of the Jeweller consumes one Omen of the Jeweller (priced beside the Jeweller's Orb it is used with); the value maps its price-file name to the number of items."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/AncestralOmenOnJewellersMakeFullSockets: name "Omen of the Jeweller"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Omen of the Jeweller: 1}
+
+  - id: sockets.omen_of_connections_cost
+    statement: "One use of the Omen of Connections consumes one Omen of Connections (priced beside the Orb of Fusing it is used with); the value maps its price-file name to the number of items."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/AncestralOmenOnFusingMakeFullLinks: name "Omen of Connections"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Omen of Connections: 1}
