@@ -195,7 +195,11 @@ def proper_states(work: Work, alive: np.ndarray, effective: np.ndarray) -> tuple
 # ---- evaluating a policy ---------------------------------------------------------------------------------------------
 
 
-STAGNATION = 150  # BiCGSTAB iterations without the residual halving after which the solve gives up and returns its best iterate
+STAGNATION = 400  # BiCGSTAB iterations without the best residual halving after which the run stops and returns its best iterate
+BICGSTAB_ITERATIONS = 4_000  # per run (the research solve of #312 used 4,000 and converged on R04 and R14)
+BICGSTAB_RESTARTS = 3  # further runs from the best iterate when one did not reach the tolerance
+DENSE_FALLBACK = 6_000  # policies of at most this many states fall back to the dense solve when BiCGSTAB did not converge
+DENSE_FALLBACK_RESIDUAL = 1e-10
 
 
 def _bicgstab(matvec: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x0: np.ndarray, tol: float, max_iter: int):
@@ -287,21 +291,25 @@ def evaluate_policy(
     position = np.full(work.n, m, dtype=np.int64)
     position[states] = np.arange(m)
     column = position[dst]
-    if m <= dense_limit:
+    def dense() -> np.ndarray:
         row = np.repeat(np.arange(m), sizes)
         inside = column < m
         matrix = np.bincount(row[inside] * m + column[inside], weights=weight[inside], minlength=m * m).reshape(m, m)
         matrix = np.eye(m) - matrix
         try:
-            solved = np.linalg.solve(matrix, rhs)
+            found = np.linalg.solve(matrix, rhs)
             for _ in range(2):  # iterative refinement: a stiff system loses digits in one solve
-                residual = rhs - matrix @ solved
+                residual = rhs - matrix @ found
                 if not np.max(np.abs(residual)) > 4 * EPS * np.max(np.abs(rhs)):
                     break
-                solved = solved + np.linalg.solve(matrix, residual)
+                found = found + np.linalg.solve(matrix, residual)
         except np.linalg.LinAlgError as error:
             raise ConvergenceError("the policy is improper: its linear system is singular", INF) from error
         info["linear_dense"] = info.get("linear_dense", 0) + 1
+        return found
+
+    if m <= dense_limit:
+        solved = dense()
     else:
         offsets = np.concatenate(([0], np.cumsum(sizes)[:-1]))
         extended = np.zeros(m + 1)
@@ -310,9 +318,16 @@ def evaluate_policy(
             extended[:m] = x
             return x - np.add.reduceat(weight * extended[column], offsets)
 
-        solved, residual, iterations = _bicgstab(matvec, rhs, start[states], tol, 5_000)
+        solved, residual, iterations = _bicgstab(matvec, rhs, start[states], tol, BICGSTAB_ITERATIONS)
+        for _ in range(BICGSTAB_RESTARTS):  # a stalled run starts again from its best iterate with a fresh recurrence
+            if residual <= 10 * tol:
+                break
+            solved, residual, more = _bicgstab(matvec, rhs, solved, tol, BICGSTAB_ITERATIONS)
+            iterations += more
         info["linear_iterations"] = info.get("linear_iterations", 0) + iterations
         info["linear_residual"] = residual
+        if residual > DENSE_FALLBACK_RESIDUAL and m <= DENSE_FALLBACK:  # a stiff system: the dense solve is slow but sure
+            solved = dense()
     if not np.all(np.isfinite(solved)):
         raise ConvergenceError("the evaluation of a policy did not give finite values", INF)
     values[states] = solved
