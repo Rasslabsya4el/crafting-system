@@ -54,11 +54,16 @@ from abstraction_pool import (
     RESIST_2,
     RESISTS,
 )
-from beasts_support import aspect_mods
 from coarse_support import blocks_of, compare_members, compare_variants, concrete_items
-from influence_support import P1, PLAIN, S1, influence_data
-from influence_support import helmet as contract_helmet
-from influence_support import roll as roll_on_helmet
+from contract_registry import (
+    ExtraFixture,
+    extra_items,
+    fixture_amulets,
+    fixture_mods,
+    is_free_action,
+    load_family_fixtures,
+    puts_back_forced_mod,
+)
 from items_support import AMULET, DATA
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
@@ -82,6 +87,8 @@ from crafting_system.cli._offers import offer_of, price_offers
 from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, tier_table
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
 
+
+load_family_fixtures()  # the families' own fixture modules (`contract_fixtures_*.py`) register what they add; none is named here
 
 ORDINARY_CRAFT = "EinharMasterWeaponElementalDamage1_"  # an ordinary crafted mod of the fixture, copied for the extra crafts
 COLD_CRAFT, FIRE_CRAFT, DAMAGE_CRAFT = "ContractCraftCold", "ContractCraftFire", "ContractCraftLightningDamage"
@@ -145,7 +152,7 @@ def _fixture_data():
             mods[ORDINARY_CRAFT], id=mod_id, type=mod_id, text=f"Test {mod_id}", families=mods[source].families, generation_type=side
         )
         options.append(dataclasses.replace(template, actions=dataclasses.replace(template.actions, add_explicit_mod=mod_id)))
-    mods.update(aspect_mods())  # the eight aspect suffixes of the beast crafts (ticket #147): nothing draws them
+    mods.update(fixture_mods())  # the mods the families register (the beast crafts' aspect suffixes, ticket #147)
     mods[HYBRID_JUNK] = dataclasses.replace(
         mods[COLD_RESIST], id=HYBRID_JUNK, families=(*mods[COLD_RESIST].families, *mods[MANA_1].families), spawn_weights=(), generation_weights=()
     )
@@ -204,39 +211,29 @@ def fixture_items() -> dict[str, Item]:
         # their family in the fixture, because the compressed state forgets which tier of a family a junk mod was (#149)
         "rare_resists": _item(Rarity.RARE, _roll(FIRE_RESIST), _roll(COLD_DAMAGE)),
     }
+    items.update(fixture_amulets())  # the items the families register (the veiled orbs' placeholder and offer, ticket #144)
     crafted = _ordinary_crafted_mod()
     if crafted is not None:
         items["rare_crafted"] = _item(Rarity.RARE, _roll(RESIST_2), _roll(crafted, crafted=True))
     return items
 
 
-INFLUENCE_DATA = influence_data(CONTRACT_DATA)  # the contract data with a helmet base and influence mods (ticket #154)
+def extra_fixture_items() -> dict[str, ExtraFixture]:
+    """The items on a base of their own that the families register (`contract_registry.register_extra_item`).
 
-
-def extra_fixture_items() -> dict[str, tuple[tuple[str, ...], Item]]:
-    """Items on the helmet of `INFLUENCE_DATA`, with the names of the kinds that are asked about them (and no other kind).
-
-    The amulet of the fixture is no body armour, boots, gloves or helmet, so the Orb of Dominance (ticket #154) has nothing to do
-    on it; the helmet has no mod of the fixture pool, so the other kinds would draw nothing on it. Each of these items is for the
-    kinds named with it. Both helmets are at item level 84.
+    Each is asked about the kinds named with it and no other kind, in the data it lives in (`.data`).
     """
-    return {
-        "helmet_two_shaper": (
-            ("orb-of-dominance",),
-            contract_helmet(roll_on_helmet(P1, 3), roll_on_helmet(S1, 2), influences=frozenset({Influence.SHAPER})),
-        ),
-        "helmet_plain": (("influenced-exalted-orb",), contract_helmet(roll_on_helmet(PLAIN, 1))),
-    }
+    return extra_items()
 
 
 def extra_pairs(per_kind: int = 3) -> list[tuple[str, Action, str]]:
     """`(kind name, action, item name)` as `contract_pairs`, for `extra_fixture_items`."""
     found = []
-    for name, (kind_names, item) in extra_fixture_items().items():
+    for name, extra in extra_fixture_items().items():
         for entry in kinds():
-            if entry.name not in kind_names:
+            if entry.name not in extra.kinds:
                 continue
-            members = list(entry.members(INFLUENCE_DATA, item))
+            members = list(entry.members(extra.data, extra.item))
             picked = members if len(members) <= per_kind else [members[0], members[len(members) // 2], members[-1]]
             found.extend((entry.name, action, name) for action in picked)
     return found
@@ -251,6 +248,32 @@ def contract_pairs(per_kind: int = 3) -> list[tuple[str, Action, str]]:
             picked = members if len(members) <= per_kind else [members[0], members[len(members) // 2], members[-1]]
             found.extend((entry.name, action, name) for action in picked)
     return found
+
+
+def check_every_kind_applies_on_some_fixture_item() -> set[str]:
+    """Every registered kind applies on some fixture item, except the kinds that declare `applies_only_to`; the names that applied.
+
+    A kind with `applies_only_to` (an armour-only kind, ticket #151) is not asked on the amulets of the fixture: it must not apply to
+    one, or it is not that class only; it may use the extra items of its own class, which are armour. No kind is named here.
+    """
+    items, extra = fixture_items(), extra_fixture_items()
+    limited = {entry.name for entry in kinds() if entry.applies_only_to}
+    applied: set[str] = set()
+    for kind, action, item in contract_pairs():
+        try:
+            action.outcomes(CONTRACT_DATA, items[item])
+        except ActionError:
+            continue
+        applied.add(kind)
+    assert not limited & applied, "a kind that applies to an amulet is not limited to one class: drop `applies_only_to` from its declaration"
+    for kind, action, item in extra_pairs():  # the extra items are of the class a limited kind works on
+        try:
+            action.outcomes(extra[item].data, extra[item].item)
+        except ActionError:
+            continue
+        applied.add(kind)
+    assert {entry.name for entry in kinds()} - limited <= applied
+    return applied
 
 
 # --- the brute force ----------------------------------------------------------------------------
@@ -401,7 +424,8 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
     if not reads.junk:
         for _, part in outcomes.components:
-            kept = {entry.mod_id for entry in part.retained.mods if not entry.fractured and not entry.crafted}
+            forced = getattr(part, "forced", None) if puts_back_forced_mod(action) else None  # a mod it erased may be put back: forced, not kept
+            kept = {entry.mod_id for entry in part.retained.mods if not entry.fractured and not entry.crafted and entry.mod_id != forced}
             assert not kept & junk, "an action that reads no junk erases it"
     if adds.named is not None and not adds.draws:
         held = {(entry.mod_id, entry.fractured, entry.crafted) for entry in given.mods}
@@ -519,7 +543,7 @@ def check_axes_and_inputs(action: Action, item: Item, data, readings: tuple[Read
 
 def check_resources_are_priced(action, item: Item, data) -> None:
     resources = action.resources(data)
-    assert resources, "one use consumes something"
+    assert resources or is_free_action(action), "one use consumes something, unless the action's family registers it as free"
     assert all(isinstance(name, str) and name and isinstance(count, int) and count > 0 for name, count in resources.items())
     prices = {name: PriceEntry(2.0, "test") for name in resources if name != CHAOS_ORB}
     file = PriceFile("Test", datetime.datetime(2026, 10, 31, tzinfo=datetime.UTC), 300.0, prices)

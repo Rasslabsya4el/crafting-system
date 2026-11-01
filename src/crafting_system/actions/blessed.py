@@ -52,6 +52,7 @@ NEW_VALUE_UNIFORM = get_rule("blessed_orb.new_value_uniform_in_range")
 PREVIOUS_VALUE_CAN_REPEAT = get_rule("blessed_orb.previous_value_can_repeat")
 COST = get_rule("blessed_orb.cost")
 ONE = Fraction(1)
+__all__ = ["BlessedOrb", "BlessedOutcomes"]
 
 
 def has_range(mod: Mod) -> bool:
@@ -161,6 +162,10 @@ class BlessedOrb(Action):
     order=88,
     planner=False,
     why_not="a requirement on the roll of an implicit, and the compressed state of a base implicit, are ticket #158",
+    # it works on an item that holds a ranged implicit (a ring, an amulet, a belt, a base with one), and none of the contract suite's
+    # fixture amulets does; the kernel of the compressed state refuses a base implicit before #158, so no extra item can carry it either
+    applies_only_to="an item with a ranged implicit",
+    reads_item_state_while_not_planner="any",  # it reads and rerolls the implicits
 )
 def _blessed_orb(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)

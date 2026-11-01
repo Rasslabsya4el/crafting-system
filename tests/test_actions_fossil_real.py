@@ -3,7 +3,8 @@
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`, set the cache folder with
 `CRAFTING_CACHE_DIR`). They skip cleanly when it is not there; CI fetches it (ticket #165), so they run there.
 
-The pins are what the engine gave on the data of 3.29.3.3, to twelve digits (a regression pin: the
+The pins are what the engine gave on the data of 3.29.3.3 once the Battle Royale copies are out of the pool
+(ticket #310; `MovementVelocity2Royale` used to add 1,000 to 1,500 to the boots pools), to twelve digits (a regression pin: the
 independent check is the hand oracle of `test_actions_fossil.py` on a small world, and the sampler
 below, which rolls the same resonators at random and must agree within five standard errors). Both
 routes are at item level 86 on the first released base the guide names:
@@ -31,10 +32,10 @@ HIGH_ES = ("DefencesPercent", 72)
 HIGH_LIFE = ("IncreasedLife", 44)
 TOP_SPEED_LEVEL = 86
 
-R08 = {"high": 0.19811686944378892, "ms35": 0.09905843472189446, "any_ms": 0.6934090430532612,
-       "high_ms35": 0.017696688444570067, "high_any_ms": 0.12387681911199047}  # fmt: skip
-R09 = {"high": 0.21109325278980284, "ms35": 0.13127508009028208, "any_ms": 0.9189255606319745,
-       "high_ms35": 0.02760619777718799, "high_any_ms": 0.19324338444031594}  # fmt: skip
+R08 = {"high": 0.20126546056572778, "ms35": 0.10768114196413651, "any_ms": 0.6460868517848191,
+       "high_ms35": 0.01926147715596514, "high_any_ms": 0.11556886293579084}  # fmt: skip
+R09 = {"high": 0.21165771077970283, "ms35": 0.14970395795152905, "any_ms": 0.8982237477091743,
+       "high_ms35": 0.031539849723239866, "high_any_ms": 0.1892390983394392}  # fmt: skip
 
 
 @pytest.fixture(scope="module")

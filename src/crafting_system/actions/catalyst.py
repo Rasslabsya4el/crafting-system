@@ -66,6 +66,16 @@ CLAIMS = frozenset(
     )
 )
 ONE = Fraction(1)
+__all__ = [
+    "ApplyCatalyst",
+    "base_roll_for",
+    "boosts",
+    "expected_catalysts",
+    "expected_catalysts_for",
+    "gain_law",
+    "scale_value",
+    "scaled_values",
+]
 PRECISION = 60  # decimal digits of the gain formula: far below any probability this project tells apart
 SIDE_OF = {CatalystType.SINISTRAL: "prefix", CatalystType.DEXTRAL: "suffix"}
 
@@ -210,6 +220,7 @@ class ApplyCatalyst(Action):
     order=90,
     planner=False,
     why_not="catalysts are a finish cost added to a goal state, offered when everything else of the target is met: ticket #158",
+    reads_item_state_while_not_planner="any",  # it reads and adds the quality
 )
 def _catalysts(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)

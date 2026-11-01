@@ -24,7 +24,7 @@ RESIST = "LightningResist1"
 GEM = "GlobalLightningGemLevel1"
 LIGHTNING = "lightning"
 LIFEFORCE_PRICE = 0.03458  # Primal Crystallised Lifeforce on poe.ninja, Allflame, 2026-10-31
-GUIDE_CHAOS_TOTAL = 213_850  # the guide's total for the natural odds: 200 / 213,850 = 0.0935%
+GUIDE_CHAOS_TOTAL = 213_850  # the guide's total for the natural odds: 200 / 213,850 = 0.0935%; the pool equals it since #310
 RUNS = 2_000
 
 
@@ -56,12 +56,12 @@ def test_reforge_lightning_with_the_fractured_lightning_resistance_is_200_in_695
     assert f"{float(Fraction(wanted, total)) * 100:.2f}%" == "2.88%"
 
 
-def test_the_chaos_share_at_item_level_86_is_200_in_214650_and_the_guide_is_800_lower(data):
+def test_the_chaos_share_at_item_level_86_is_200_in_213850_the_guides_number(data):
     wanted, total = weight_share(data, amulet(data, level=86, fractured_resist=False), [GEM], None)
 
-    assert (wanted, total) == (200, 214_650)
-    assert f"{float(Fraction(wanted, total)) * 100:.4f}%" == "0.0932%"
-    assert total - GUIDE_CHAOS_TOTAL == 800  # the guide's 200 / 213,850 = 0.0935%, cause not identified
+    assert (wanted, total) == (200, 213_850)
+    assert f"{float(Fraction(wanted, total)) * 100:.4f}%" == "0.0935%"
+    assert total == GUIDE_CHAOS_TOTAL  # the 800 more it had up to #310 were IncreasedCastSpeed2Royale, a Battle Royale copy
 
 
 def test_the_solver_chance_of_one_click_sits_next_to_the_shares_and_is_not_the_guides_number(data):
@@ -69,7 +69,7 @@ def test_the_solver_chance_of_one_click_sits_next_to_the_shares_and_is_not_the_g
 
     q = float(HarvestReforge(LIGHTNING).outcomes(data, target.start_item).chance_all([GEM]))
 
-    assert q == pytest.approx(0.031712, abs=1e-6)  # 3.17% for a click, against the share 2.88%: not compared
+    assert q == pytest.approx(0.031717, abs=1e-6)  # 3.17% for a click, against the share 2.88%: not compared
 
 
 def test_the_command_on_the_real_r12_amulet(tmp_path, data, capsys):
