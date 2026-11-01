@@ -1,0 +1,20 @@
+# S12 start item (a TEST ROUTE, docs/research/2026-11-01-strand-routes.md): R05's start ring, bought with
+# 60 Memory Strands. The target file is docs/research/2026-11-01-strand-routes-files/targets/s12-stranded-ring.yaml; its `start_price` is the
+# `name` below.
+#
+# `memory_strands` is the strand count the trade query asks for (the `memory_level` minimum filter of
+# src/crafting_system/prices/trade_query.py, instant buyout). ADR-0043 plans a listing "with at least m"
+# as an item with exactly m strands. The buy-spec loader does not read the key until B5-5 (#278), and no
+# price for a 60-strand ring has been fetched: the price file must hold one before B5-12 (#292) can run.
+name: S12 start ring
+category: accessory.ring
+memory_strands: 60
+rarity: rare
+item_level_min: 75
+corrupted: false
+mods:
+  # 13 is the lowest roll of tier 1 (the next tier down rolls up to 12). The English text of the
+  # trade site is used.
+  - stat: "+# to all Attributes"
+    minimum: 13
+    fractured: true
