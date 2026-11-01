@@ -18,7 +18,7 @@ Why a switch: the count can take up to 101 values (0 to 100 on a start item, 10 
 
 ## The cut
 
-An item with `s >= 1` strands sees, in every random mod draw that cuts (ADR-0041), only the highest tiers of each tier table. A tier does not depend on the item level (`items.tier_table`), so the cut counts what the draw can roll: `T` is the number of tiers of the mod type that pass the pool's level gate at the item's level (Craft of Exile's own code counts only those too), and the draw keeps the `K` best of those, not tiers 1 to K of the table. With `T` such tiers the draw keeps
+An item with `s >= 1` strands sees, in every random mod draw that cuts (ADR-0041), only the highest tiers of each tier table. A tier does not depend on the item level (`items.tier_table`), so the cut counts what the draw can roll: `T` is the number of tiers of the mod type that pass the pool's level gate at the item's level (for an essence, the lower of the item level and the essence's cap) (Craft of Exile's own code counts only those too), and the draw keeps the `K` best of those, not tiers 1 to K of the table. With `T` such tiers the draw keeps
 
 `K = floor(100 (T - 1) / D) + 1` top tiers, with `D = 100 + [s >= 1] (2.5 s + 47.5) + [Foulborn] 75`.
 
