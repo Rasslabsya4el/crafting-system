@@ -2,8 +2,8 @@
 import json, os, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-CASES = ["r18:c3:unres", "r18:c4:lazy", "r25:n8:raw:lazy", "r18:c3:lazy_pw"]
-GAP = [("gapsearch.py", str(a), str(a + 2)) for a in range(8, 16, 2)]
+CASES = ["r18:c3:unres", "r18:c4:lazy", "r25:n8:raw:lazy"]
+GAP = [("gapsearch.py", str(a), str(a + 2)) for a in range(8, 14, 2)]
 ITEMS = CASES + GAP
 
 if __name__ == "__main__":
