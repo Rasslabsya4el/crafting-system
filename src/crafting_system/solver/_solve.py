@@ -92,18 +92,7 @@ def solve[S](
     without it (the components already finished are not solved again). The certified bound is
     relative to that model. The default 1e12 is in the price unit of the model.
     """
-    if isinstance(tolerance, bool) or not isinstance(tolerance, Real) or not (
-        math.isfinite(tolerance) and tolerance > 0
-    ):
-        raise ValueError(f"tolerance must be finite and above zero, got {tolerance!r}")
-    if isinstance(max_sweeps, bool) or not isinstance(max_sweeps, Integral) or max_sweeps < 1:
-        raise ValueError(f"max_sweeps must be an integer of at least 1, got {max_sweeps!r}")
-    if (
-        isinstance(direct_solve_limit, bool)
-        or not isinstance(direct_solve_limit, Integral)
-        or direct_solve_limit < 0
-    ):
-        raise ValueError(f"direct_solve_limit must be an integer of at least 0, got {direct_solve_limit!r}")
+    check_options(tolerance, direct_solve_limit, max_sweeps)
     if (
         isinstance(value_ceiling, bool)
         or not isinstance(value_ceiling, Real)
@@ -201,3 +190,19 @@ def _describe(graph: Graph, component: list[int]) -> str:
         names.append(text if len(text) <= 60 else text[:57] + "...")
     more = len(component) - len(names)
     return f"a component of {len(component)} states ({', '.join(names)}{f' and {more} more' if more else ''})"
+
+
+def check_options(tolerance: object, direct_solve_limit: object, max_sweeps: object) -> None:
+    """Raise `ValueError` for a `tolerance`, `direct_solve_limit` or `max_sweeps` `solve` cannot use."""
+    if isinstance(tolerance, bool) or not isinstance(tolerance, Real) or not (
+        math.isfinite(tolerance) and tolerance > 0
+    ):
+        raise ValueError(f"tolerance must be finite and above zero, got {tolerance!r}")
+    if isinstance(max_sweeps, bool) or not isinstance(max_sweeps, Integral) or max_sweeps < 1:
+        raise ValueError(f"max_sweeps must be an integer of at least 1, got {max_sweeps!r}")
+    if (
+        isinstance(direct_solve_limit, bool)
+        or not isinstance(direct_solve_limit, Integral)
+        or direct_solve_limit < 0
+    ):
+        raise ValueError(f"direct_solve_limit must be an integer of at least 0, got {direct_solve_limit!r}")

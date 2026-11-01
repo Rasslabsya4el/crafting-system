@@ -62,7 +62,7 @@ class TransmutationOrb(Action):
         return dict(COST.value["transmutation"])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.nothing()
+        return Reads.nothing(block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds.erasing(named=frozenset())
@@ -88,7 +88,7 @@ class AlterationOrb(Action):
         return dict(COST.value["alteration"])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.nothing()
+        return Reads.nothing(block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds.erasing(named=frozenset())
@@ -118,7 +118,7 @@ class AugmentationOrb(Action):
         return dict(COST.value["augmentation"])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.adding()
+        return Reads.adding(variants=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset())
@@ -145,7 +145,7 @@ class RegalOrb(Action):
         return dict(COST.value["regal"])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads.adding()
+        return Reads.adding(variants=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset())

@@ -5,13 +5,20 @@ the pessimistic model offers at most that, so its best policy is a policy of the
 value is above that policy's cost: `V- <= V* <= J(pi) <= V+`. `solve` returns values with
 `V(1 - e) <= V* <= V(1 + e)`, so the certified lower bound is `V-(1 - e-)` and the upper bound
 `V+(1 + e+)`. Both are rounded outward, so float rounding never moves a bound inward.
+
+Variants (`VariantAction`, ADR-0023 "When the members differ: variants"). The optimistic model
+takes the best variant of an action: each variant is an `Action` of its own, and `solve` does the
+rest. The pessimistic model takes the worst one, a game solved by `solve_variants`, whose
+`error_bound` is the upper side only (`J(pi) <= V+ (1 + e+)`). A pessimistic model without any
+variant action is solved by `solve` as before.
 """
 
 import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
-from ._model import Action, Model
+from ._minmax import CachedModel, solve_variants
+from ._model import Action, Model, VariantAction
 from ._solve import solve
 
 INF = math.inf
@@ -60,20 +67,27 @@ def solve_bounds[S](
 ) -> Bounds[S]:
     """Solve both models from `starts` with the same options and certify the interval.
 
-    If `optimistic is pessimistic` the model is solved once and its one solution serves both sides.
-    The models are not otherwise checked, except that a state present in both bounds with its lower
-    bound above its upper bound raises `ValueError`: no pair of an optimistic and a pessimistic
-    model can do that, so the two models are not such a pair.
+    If `optimistic is pessimistic` and it offers no `VariantAction` the model is solved once and its
+    one solution serves both sides. With variant actions the optimistic side takes the best variant
+    and the pessimistic side the worst (`solve_variants`); `upper` then holds only the states of the
+    certified set of the pessimistic policy and the states with an infinite value, which includes
+    every start with a finite or infinite value. The caller's `actions` is asked once per state of
+    the pessimistic model when the two models are one. The models are not otherwise checked, except
+    that a state present in both bounds with its lower bound above its upper bound raises
+    `ValueError`: no pair of an optimistic and a pessimistic model can do that, so the two models
+    are not such a pair.
     """
     starts = list(starts)
     options = {"tolerance": tolerance, "direct_solve_limit": direct_solve_limit, "max_sweeps": max_sweeps}
-    below = solve(optimistic, starts, **options)
+    shared = CachedModel(optimistic) if optimistic is pessimistic else None  # one model, asked once
+    below = solve(_Split(optimistic if shared is None else shared), starts, **options)
     lower = {state: _lower_bound(value, below.error_bound) for state, value in below.values.items()}
     optimistic_error = below.error_bound
-    above = below if optimistic is pessimistic else None
+    above = below if shared is not None and not shared.has_variants else None
     del below  # its policy is not needed: free it before the second solve
     if above is None:
-        above = solve(pessimistic, starts, **options)
+        above = solve_variants(pessimistic if shared is None else shared, starts, **options)
+    shared = None
     upper = {state: _upper_bound(value, above.error_bound) for state, value in above.values.items()}
     for state, low in lower.items():
         if state in upper and low > upper[state]:
@@ -83,6 +97,33 @@ def solve_bounds[S](
             )
     gap = max((_gap(lower[state], upper[state]) for state in starts), default=0.0)
     return Bounds(lower, upper, above.policy, gap, optimistic_error, above.error_bound)
+
+
+class _Split[S]:
+    """The optimistic reading of a model: each variant of a `VariantAction` is an `Action` of its own.
+
+    The actions of a state without a variant action are returned as they are.
+    """
+
+    def __init__(self, model: Model[S]) -> None:
+        self.model = model
+
+    def is_goal(self, state: S) -> bool:
+        return self.model.is_goal(state)
+
+    def actions(self, state: S) -> Iterable[Action[S]]:
+        found = tuple(self.model.actions(state))
+        if not any(isinstance(action, VariantAction) for action in found):
+            return found
+        split: list[Action[S]] = []
+        for action in found:
+            if isinstance(action, VariantAction):
+                split.extend(
+                    Action(action.label, action.cost, outcomes, action.extra_inputs) for outcomes in action.variants
+                )
+            else:
+                split.append(action)
+        return split
 
 
 def _lower_bound(value: float, error: float) -> float:
