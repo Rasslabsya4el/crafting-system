@@ -1,0 +1,52 @@
+{
+  "_type": "Target",
+  "base_id": "Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword1",
+  "item_level": 80,
+  "influences": [],
+  "requirements": [
+    {
+      "_type": "Requirement",
+      "family": "IncreasedLife",
+      "stat": null,
+      "mod_ids": [
+        "IncreasedLife1",
+        "IncreasedLife2",
+        "IncreasedLife3",
+        "IncreasedLifeImplicitBelt1"
+      ],
+      "min_tier": null,
+      "min_roll": null,
+      "not_crafted": false
+    }
+  ],
+  "start_item": {
+    "_type": "Item",
+    "base_id": "Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword1",
+    "item_level": 80,
+    "rarity": "normal",
+    "mods": [],
+    "influences": [],
+    "corrupted": false,
+    "implicits": [],
+    "quality": {
+      "_type": "PlainQuality",
+      "percent": 8
+    },
+    "veil_offer": [],
+    "enchantment": null,
+    "memory_strands": 0,
+    "sockets": null
+  },
+  "price_file": null,
+  "start_price": null,
+  "implicits": [],
+  "quality": {
+    "_type": "PlainQualityRequirement",
+    "min_percent": 20
+  },
+  "actions": null,
+  "enchantment": null,
+  "allow_corrupted": false,
+  "sockets": null,
+  "start_sockets_assumed": false
+}
