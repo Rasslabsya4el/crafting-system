@@ -79,7 +79,7 @@ def hand_walk(data, item: Item, tag: str, side: str) -> dict[str, Fraction]:
             continue
         if tag not in mod.implicit_tags or held.intersection(mod.families):
             continue
-        spawn = next((w.weight for w in mod.spawn_weights if w.tag in base_tags), 0)
+        spawn = 0 if "Royale" in mod.id else next((w.weight for w in mod.spawn_weights if w.tag in base_tags), 0)  # a Battle Royale copy is not rolled (#310)
         if not spawn:
             continue
         factor = next((Fraction(w.weight, 100) for w in mod.generation_weights if w.tag in base_tags), Fraction(1))
@@ -167,7 +167,8 @@ def test_no_free_slot_refuses_the_reforge(tag, data):
         HarvestReforge(tag).outcomes(data, item)
 
 
-@pytest.mark.parametrize("tag", ["critical", "speed", "attribute"])
+# "speed" was a third tag here only through a Battle Royale suffix on the shield (#310); no ordinary speed mod fits it
+@pytest.mark.parametrize("tag", ["critical", "attribute"])
 def test_a_free_prefix_with_a_tag_that_only_suffixes_have_refuses_the_reforge(tag, data):
     """(c) Approximate: these tags have mods on the shield, but only suffixes, and the suffix side is full."""
     item = shield(data, OWNERS_SHIELD)

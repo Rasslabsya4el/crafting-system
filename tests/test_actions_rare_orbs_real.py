@@ -27,8 +27,8 @@ SOCKETS = "LocalIncreaseSocketedGemLevel1"  # +1 to Level of Socketed Gems, weig
 HUNTER_MOD = "LocalAddedChaosDamageAndPenetrationInfluence3"  # level 74, weight 400
 HUNTER = frozenset({Influence.HUNTER})
 
-PLAIN_POOL = {"prefix": 52930, "suffix": 55200}  # summed by the hand walk below
-HUNTER_POOL = {"prefix": 58930, "suffix": 59400}
+PLAIN_POOL = {"prefix": 52930, "suffix": 54200}  # summed by the hand walk below
+HUNTER_POOL = {"prefix": 58930, "suffix": 58400}
 
 
 @pytest.fixture(scope="module")
@@ -59,6 +59,8 @@ def hand_pool(data, base, level, extra_tags=()):
     for mod in data.mods.values():
         if mod.domain != base.domain or mod.generation_type not in sums or mod.required_level > level:
             continue
+        if "Royale" in mod.id:
+            continue  # a Battle Royale copy is not rolled by the game (`affix_pool.royale_duplicates_do_not_spawn`, #310)
         spawn = next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)
         if spawn == 0:
             continue
@@ -99,7 +101,7 @@ def test_the_hunter_tag_adds_families_and_leaves_the_ordinary_weights_alone(data
 
 def test_r14_an_exalted_orb_on_the_hunter_bow_with_the_t1_attack_speed_lands_the_sockets_with_the_pinned_chance(data):
     outcomes = ExaltedOrb().outcomes(data, bow(data, T1_ATTACK_SPEED))
-    family_weight = 5000  # the attack speed family, out of the pool
+    family_weight = 4000  # the attack speed family, out of the pool
     expected = Fraction(1000, sum(HUNTER_POOL.values()) - family_weight)
 
     assert outcomes.chance_all([T1_ATTACK_SPEED, SOCKETS]) == expected == Fraction(100, 11333)
@@ -111,7 +113,7 @@ def test_r14_a_hunter_mod_is_drawable_by_an_exalted_orb_only_on_the_influenced_b
     hunter = ExaltedOrb().outcomes(data, bow(data, T1_ATTACK_SPEED))
     plain = ExaltedOrb().outcomes(data, bow(data, T1_ATTACK_SPEED, influences=frozenset()))
 
-    assert hunter.chance_all([HUNTER_MOD]) == Fraction(400, sum(HUNTER_POOL.values()) - 5000)
+    assert hunter.chance_all([HUNTER_MOD]) == Fraction(400, sum(HUNTER_POOL.values()) - 4000)
     assert plain.chance_all([HUNTER_MOD]) == 0
 
 

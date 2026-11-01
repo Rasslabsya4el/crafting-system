@@ -101,7 +101,7 @@ def tier_table(data: GameData, base_id: str, influences: Iterable[Influence] = (
     tags = spawn_tags(data, base_id, influences)
     groups: dict[tuple[str, str, str], list[Mod]] = defaultdict(list)
     for mod in data.mods.values():
-        first = next((entry.weight for entry in mod.spawn_weights if entry.tag in tags), 0)
+        first = 0 if "Royale" in mod.id else next((entry.weight for entry in mod.spawn_weights if entry.tag in tags), 0)  # a Battle Royale copy is not rolled (#310)
         if first > 0:
             groups[(mod.type, mod.generation_type, mod.domain)].append(mod)
     return {
