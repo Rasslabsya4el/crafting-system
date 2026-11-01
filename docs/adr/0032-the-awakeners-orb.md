@@ -5,7 +5,7 @@
 ## The action
 
 - **Inputs.** Two non-corrupted, non-mirrored items of one item class, each rare or magic with **exactly one influence**, the two influences different (A1 to A3). Item level 68 or more (Craft of Exile; an influenced item always has it, so the rule never bites). The research left the list for fractured and synthesised items open; the planner refuses them too, which costs nothing because in 3.29 neither can carry an influence.
-- **The result** is a rare receiver with both influences. Base type, item level, sockets, links, quality and enchantments stay (A4). One influenced mod of each input is kept: the tier stays, the value is rerolled; if an input has several, the pair is drawn **uniformly among the valid pairs** (receiver mod, donor mod), valid meaning a different mod, and not one of the mod groups made mutually exclusive since 3.10 (A5, A9; such a pair is not drawn, it never reaches the conflict below). Two valid mods that share a mod group are drawn like any pair and reach the group conflict. The kept mods may be a prefix or a suffix.
+- **The result** is a rare receiver with both influences. Base type, item level, sockets, links, quality and enchantments stay (A4). One influenced mod of each input is kept: the tier stays, the value is rerolled; if an input has several, the pair is drawn **uniformly among the valid pairs** (receiver mod, donor mod), valid meaning a different mod (as built, ticket #213: a pair that shares a mod group is not excluded; see "As built"). Two mods that share a mod group are drawn like any pair and reach the group conflict. The kept mods may be a prefix or a suffix.
 - **The rest** is rerolled as a Chaos Orb rerolls a rare: a total of 4, 5 or 6 mods (8:3:1) **minus the kept mods that remain**, which count inside the total (owner, grill B3; with a group conflict one kept mod remains, so one is subtracted; the code of Craft of Exile is the reference and the build ticket checks it), drawn by the shared draw (item level, family exclusion, weights). The metamods (`Prefixes Cannot Be Changed` and the like) are ignored by the reforge (A8), so they do not protect anything; every mod that is not kept goes.
 - **Cost** of an attempt: the orb's market price (A12; drop-restricted) plus the acquisition cost of the donor state. A retry pays both again (ADR-0022).
 - **Imprint.** An imprint of the receiver made before the orb restores the receiver; the donor cannot be restored (A10).
@@ -17,7 +17,7 @@
 
 ## What this changes
 
-- The action is a two-input action of kind `awakener`; it needs the action contract to carry inputs (ADR-0024, "Limits").
+- The action is a two-input action of kind `awakeners-orb`; it needs the action contract to carry inputs (ADR-0024, "Limits").
 - The donor is a `Need` whose wanted state holds the influence and the influenced mod the route wants carried over, and nothing else of the donor matters to the result: the compressed state of the donor is its influence and that mod (ticket in the B3 chart).
 - R18's Assassin's Mark text is checked against the 3.29 data before its target is written (owner, grill B3).
 

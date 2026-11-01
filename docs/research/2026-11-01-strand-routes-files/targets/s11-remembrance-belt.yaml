@@ -1,0 +1,50 @@
+# Target for benchmark route S11 (a TEST ROUTE, not a published one): R13's alt-regal belt, started from a
+# fresh normal belt on which an Orb of Remembrance is allowed.
+#
+# The requirements are R13's, word for word (examples/targets/r13-life-resist-belt.yaml); the only
+# change is the list of action kinds, which gains `remembrance-orb` (ADR-0043). The belt is bought
+# normal with no strands and the strands come from the orb.
+
+base: Leather Belt
+item_level: 86
+start_price: Leather Belt (ilvl 86)
+
+# R13's kinds plus the Orb of Remembrance. The kind name is this file's proposal; B5-5 (#278) fixes it.
+actions: [remembrance-orb, transmutation-orb, alteration-orb, augmentation-orb, regal-orb, bench-craft, remove-crafted-mods]
+
+# Everything below must be present on the finished item.
+requirements:
+  # Tier-1 life. "family" is the game's own name for a group of mods that exclude each other.
+  # min_tier: 1 means only the best tier counts (tier 1 is the BEST; min_tier: 2 would accept T1
+  # and T2). not_crafted: true refuses a copy of the mod that came from the crafting bench.
+  - family: IncreasedLife
+    min_tier: 1
+    not_crafted: true
+
+  # "At least 2 of these 3": two tier-1 resistances out of fire, cold and lightning.
+  - at_least: 2
+    of:
+      - family: FireResistance
+        min_tier: 1
+        not_crafted: true
+      - family: ColdResistance
+        min_tier: 1
+        not_crafted: true
+      - family: LightningResistance
+        min_tier: 1
+        not_crafted: true
+
+  # "A crafted damage modifier". The route does not say which one, so this is an interpretation:
+  # either of the damage prefixes the crafting bench offers on a belt counts. Source: the
+  # crafting_bench_options.json of the pinned repoe-fork dump 3.29.3.3, the options whose item
+  # classes include Belt and whose mod is a damage prefix (the dump lists them under the master
+  # Niko). They are exactly these two families, two tiers each, and no other damage prefix:
+  #   AllDamage: (12-14)% increased Damage, needs item level 72; (15-17)%, needs item level 81
+  #   IncreasedWeaponElementalDamagePercent: (15-23)% increased Elemental Damage with Attack
+  #     Skills, needs item level 30; (24-32)%, needs item level 50
+  # The game data gives AllDamage a spawn weight of 0 on belts, so only the bench can add it;
+  # the bench copy is crafted by nature, so these two carry no not_crafted mark.
+  - at_least: 1
+    of:
+      - family: AllDamage                                  # "(12-14)% increased Damage" and its tiers
+      - family: IncreasedWeaponElementalDamagePercent      # "(15-23)% increased Elemental Damage with Attack Skills"

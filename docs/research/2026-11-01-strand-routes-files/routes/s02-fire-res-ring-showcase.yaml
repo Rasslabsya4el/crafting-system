@@ -1,0 +1,77 @@
+# Given route for benchmark route S02: the fire and all-resistance ring of a 3.29 Reddit crafting showcase, strands first.
+#
+# SOURCE (published, 3.29): u/DisciplesOfAres, "Thanks Allflame crafting, very cool.", r/pathofexile, 2026-08-17,
+# https://www.reddit.com/r/pathofexile/comments/1vqlc59/ (read 2026-11-01 through the Arctic Shift archive; the note is
+# docs/research/2026-11-01-strand-routes.md). Published
+# numbers: "Get 98 strands on the second" Orb of Remembrance; the Regal "consuming 14 strands bringing me down to 84"; the
+# reforging of Fire until "T1 Fire and T2 All Res or the other way around", then an Unravelling that makes the Fire
+# resistance T1; "a 35 Div base" (the Helical Ring base is "35+ divines baseline" in a comment) and "4 DIv worth of
+# Sulphur" for the final fracture. In a reply the author says of the strand orbs he held,
+# without naming which, "they're only 75c each". No total cost, no
+# attempt count for the reforges, no odds. The last step (the fracture) failed and is not part of the goal.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the same prices
+# as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml). In every state the FIRST rule whose
+# conditions match is the one that is followed. A goal state is never acted on. A state no rule matches is reported as a
+# gap. The conditions and actions are explained in examples/routes/r12-lightning-amulet.yaml.
+#
+# The showcase's steps and how this file reads them (each reading is `approximate`):
+#   1. "Hit it with 2 Orbs of Remembrance. Get 98 strands on the second": the orb is rolled on the normal ring until the
+#      count is 80 or more (the post's 98 was lucky: with ADR-0043's table 80 or more is 4.0% of orbs, 25 orbs on average;
+#      the threshold of 80 is this file's pick, the other showcase of 2026-09-17 starts "80+ memory strands").
+#   2. "Craft an affix at the bench and then Regal slam": the affix only makes the ring magic and the Harvest reforge below
+#      removes it, and the planner offers no bench craft that counts toward neither requirement (the target's fire and
+#      all-resistance leaves refuse a crafted copy), so an Orb of Transmutation stands in for it. That changes the spend:
+#      0 to 8 strands against none (ADR-0041). The Regal spends strands (14 in the post, ceiling 16).
+#   3. "Spam a bunch of reforge Fire until you hit either T1 Fire and T2 All Res or the other way around": the Harvest
+#      reforge repeats; it spends no strands (ADR-0041).
+#   4. "Unravel and the Fire Res gets upgraded to T1": an Orb of Unravelling when one of the two is at tier 1 and the
+#      other below it.
+#   Left out (not asked by the target): the Divine at the Vesper ("perfect rolls"), the random slam and the fracture at the
+#   Allflame bench (Allflame crafting is out of v1).
+#
+# The strand words are explained in the header of docs/research/2026-11-01-strand-routes-files/routes/s11-remembrance-belt.yaml and are read by the loader only
+# after B5-12 (#292); every other key and action is the loader's own.
+
+name: S02, 3.29 Reddit showcase (u/DisciplesOfAres), Helical Ring fire and all resistance
+
+rules:
+  # Step 4: one of the two is tier 1 and the other is below it, and strands remain: Unravel.
+  - when:
+      rarity: rare
+      memory_strands_at_least: 1
+      requirements:
+        - family: FireResistance
+          status: passing
+        - family: AllResistances
+          status: below
+    do: Orb of Unravelling
+  - when:
+      rarity: rare
+      memory_strands_at_least: 1
+      requirements:
+        - family: FireResistance
+          status: below
+        - family: AllResistances
+          status: passing
+    do: Orb of Unravelling
+
+  # Step 3: any other rare ring: the Harvest reforge of Fire again.
+  - when:
+      rarity: rare
+    do: Harvest Reforge Fire
+
+  # Step 2: the magic ring (the bench Fire Resistance made it magic): the Regal Orb.
+  - when:
+      rarity: magic
+    do: Regal Orb
+
+  # Step 1: a normal ring with 80 strands or more: make it magic (the post's bench craft, read as a Transmutation);
+  # with fewer, Remembrance again.
+  - when:
+      rarity: normal
+      memory_strands_at_least: 80
+    do: Orb of Transmutation
+  - when:
+      rarity: normal
+    do: Orb of Remembrance
