@@ -1,0 +1,47 @@
+,What is this all about?,
+,"The spreadsheets in this document contain data of items seen in Path of Exile Heist blueprint curio cases. The goal is to estimate relative ""drop"" rates for each of the items that Heist can offer.",
+,,
+,What do the colors mean?!,
+rare,"When an individual column has reached a minimum count of items seen, its cells are highlighted with colors that indicate the estimated chance to find a given item per curio case. Red is most rare, blue is most common. The Summary sheet has a key in the upper left indicating what percentage range each color corresponds to.",
+,,
+,,
+,,
+common,,
+,"The more items seen in a column, the more accurate the estimation will be (columns with low counts aren't colorized because their percentages would be unnaturally high).",
+,,
+,What are each of the sheets for?,
+,"Summary:
+An aggregated list of all rewards ever tracked for this project, broken down by league and player. It is designed to simply reveal the general weight distributions of rewards—and any changes over time—and does not take into account any factors that may skew the results (most significantly: area level)",
+,"Rewards by area:
+Tracks the amount of each reward seen in each blueprint area type. It is designed to reveal if any reward has a higher or lower chance to appear in a particular area type.",
+,"Rewards by alvl:
+Tracks the amount of each reward seen at each individual area level. It is designed to identify minimum and maximum drop levels for any rewards, as well as reveal any weight shifts that happen to an individual reward as area level changes.
+Note: MUCH more data is needed for the lower area levels for this sheet to start revealing information.","Note regarding the two alvl sheets:
+The black cells in any row indicate area levels below the item's drop level. Curio cases range from +1 to +3 levels from the area level, so it is expected to see drops in the three rightmost black cells in any row."
+,"Currency Stacks by alvl:
+The upper portion tracks the range of stack sizes observed for each currency type at each individual area level. It is designed to reveal if eligible stack sizes change based on the area level.
+
+The lower portion will show the spread of stack size encounters at each area level for the selected currency. It is designed to reveal if stack size weights change by area level (i.e. if higher area levels give bigger stacks more frequently).",
+,"logging_data:
+This is all of the raw data driving the rest of the spreadsheets.",
+,,
+,Sorting and manipulating,
+,"Google Sheets does not have good tools to let spreadsheet viewers sort or configure spreadsheets, so if you'd like to dig in to the data a bit more, you should make yourself a copy of the entire document. Doing so will let you:
+
+- sort any sheet by any column to see results in a different order
+- use the ""restrict to league"" dropdown on any sheet to reduce the results to a specific league
+- see the currency stack size spread for any individual currency reward
+- change the thresholds for the colored drop rate tiers
+- derive your own views of the data to investigate anything not revealed by the current sheets",
+,,
+,Things we don't know,
+,"There is discussion around some potential aspects that in theory could have an effect on reward drop weights, but none of these have been tracked or tested so far:
+
+- revealing more wings
+- revealing more reward rooms
+- mods/quant on the blueprint",
+,,
+,How to contribute data,
+,Check out the thread in the Prohibited Library Discord server.,
+,,
+,"Maintained by developershins (on PoE, Reddit, and the various PoE Discord servers)",

@@ -22,6 +22,9 @@ TAGGED_RARE_REFORGE_EXISTS = get_rule("harvest_reforge.tagged_rare_reforge_exist
 REROLLS_LIKE_CHAOS_WITH_GUARANTEED_TAG = get_rule("harvest_reforge.rerolls_like_chaos_with_guaranteed_tag")
 REFUSED_ON_CORRUPTED = get_rule("harvest_reforge.refused_on_corrupted")
 HARVEST_FILTERS_FIRST_ADDED_MOD = get_rule("metamods.harvest_filters_first_added_mod")
+# held so that `Action.claims()` names them on every answer that reads a reforge (the second is approximate, ADR-0028)
+GUARANTEED_MOD_FITS_THE_FREE_SLOTS = get_rule("harvest_reforge.guaranteed_mod_fits_the_free_slots")
+REFUSED_WHEN_NO_TAGGED_MOD_FITS = get_rule("harvest_reforge.refused_when_no_tagged_mod_fits_a_free_slot")
 LIFEFORCE_COST = get_rule("harvest_reforge.lifeforce_cost")
 
 
