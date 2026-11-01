@@ -1,7 +1,22 @@
 # CI: the whole suite on GitHub (ticket #165)
 
-Every pull request runs the full test suite, the real-data tests included, on GitHub's
-machines: Ubuntu and Windows, 8 shards each, 16 jobs at once. Nothing needs the 35-minute local run any more.
+The full test suite, the real-data tests included, runs on GitHub's machines in 8 shards per system. Nothing needs the
+35-minute local run any more.
+
+## Where each system runs (ticket #321)
+
+| Event | Systems | Test jobs | Who it is for |
+|---|---|---|---|
+| a push to a pull request | Ubuntu | 8, plus `CI summary` | the PR's own session: feedback while it works |
+| `workflow_dispatch` of `ci.yml` | Ubuntu and Windows | 16, plus `CI summary` | the integration run, and on-demand runs of `main` or any branch |
+
+No PR lands on its own CI. The main chat lands PRs only after an integration run: a `workflow_dispatch` of `ci.yml` on
+an `integ/...` branch that holds current `main` plus the PRs. That run is where Windows is checked, so the landing rule
+"green on Ubuntu and Windows" is met by it. A PR that needs Windows feedback early gets it by starting the workflow on
+its branch: `gh workflow run ci.yml --ref my-branch`.
+
+Why: 11 open PRs once held 121 CI jobs on the repository's 20 runners, and the oldest jobs waited 20 minutes. Running
+Windows on every PR push doubled that load for a result no landing used.
 
 ## How `main` is verified
 
@@ -26,18 +41,21 @@ workflow by hand: `gh workflow run ci.yml --ref main`.
   `tests/shard_durations.json`; a test with no stored time counts as the median one. A job runs 4 slots at once
   (`.github/scripts/run_shard.py`), so 8 jobs x 4 slots = 32 slots per system.
 - **The summary check, `CI summary`**, is the one to wait for (`.github/scripts/ci_summary.py`). It is green only
-  when all 16 shards left their results, no test failed, each shard ran exactly the tests it was given, the shards
-  together hold exactly the tests collected, and no test skipped for lack of the game data. It prints passed and
-  skipped totals per system, the skips by reason, the slowest shard and the slowest tests, and it uploads the
-  measured seconds as the artifact `shard-durations`.
+  when every shard of every system that ran (8 on a PR push, 16 on a dispatch) left its results, no test failed, each
+  shard ran exactly the tests it was given, the shards together hold exactly the tests collected, and no test skipped
+  for lack of the game data. It prints passed and skipped totals per system, the skips by reason, the slowest shard
+  and the slowest tests, and it uploads the measured seconds as the artifact `shard-durations` (on a PR push these are
+  the Ubuntu seconds alone, not the mean of both systems).
 
 The tests that cannot run on GitHub skip, and the summary lists them: those of `tests/test_proto_coe_comparison.py`
 need a local copy of Craft of Exile, which is third-party data that stays out of the repo (ADR-0003).
 
 ## Landing a pull request
 
-1. Update the PR branch with `main` (so the checks ran on what will be merged).
-2. Wait for `CI summary` to be green.
+1. Build the integration branch `integ/<date>-x`: current `main` plus the PRs to land.
+2. Dispatch `ci.yml` on it (`gh workflow run ci.yml --ref integ/<date>-x`) and wait for `CI summary` to be green:
+   that run is the Ubuntu and Windows check. A PR's own `CI summary` (Ubuntu only) is feedback for its session, not a
+   landing condition.
 3. Merge with `gh pr merge N --match-head-commit <sha of the tested head>`, so a push after the check cannot slip in.
 
 ## Running the suite on your own machine
@@ -59,8 +77,8 @@ runs a bash command from the repository root on 1 to 16 runners and uploads what
 split a sweep; `CRAFTING_CACHE_DIR` already holds the data. GitHub only lets a workflow be started by hand when its
 file is on the default branch; the code that runs is the code of `--ref`.
 
-The repository has **20 runner jobs at once**. One CI run takes 16 of them for about 7 minutes, a heavy run up to 16 for
-hours, so unchecked heavy runs would stall every pull request. **Every heavy run therefore goes through the
+The repository has **20 runner jobs at once**. One PR push takes 8 of them (Ubuntu only) and one dispatched CI run 16
+(Ubuntu and Windows), each for about 7 minutes; a heavy run takes up to 16 for hours, so unchecked heavy runs would stall every pull request. **Every heavy run therefore goes through the
 dispatcher, never `gh workflow run run.yml`:**
 
     python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 4 --command 'uv run --no-sync python bench.py --part $RUNNER_INDEX/$RUNNER_COUNT --out $OUT_DIR'
@@ -79,8 +97,8 @@ dispatches only while
 | `HEAVY_FLOOR` | 4 | Runners heavy runs always may use, even when CI is busy. |
 | `CI_RESERVE` | 4 | Runners kept free for merge CI on top of the jobs it already has. |
 
-With the defaults heavy runs may use 16 runners when no pull request is waiting, and only the floor of 4 when two CI
-runs are queued. The main chat turns the knobs without a commit (Settings, Secrets and variables, Actions, Variables, or
+With the defaults heavy runs may use 16 runners when no CI run is waiting, 8 when one pull request run is queued
+(8 jobs), and only the floor of 4 when two are (or one dispatched run, 16 jobs). The main chat turns the knobs without a commit (Settings, Secrets and variables, Actions, Variables, or
 `gh variable set HEAVY_FLOOR --body 6`); the next poll of every waiting dispatcher sees the new value. A heavy run that
 is queued or running counts against the budget from the moment it is dispatched, so two sessions cannot both take the
 same free runners (sessions on one PC also share a lock while they decide).

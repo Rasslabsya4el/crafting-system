@@ -13,7 +13,7 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, ActionError, Reads, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, ActionError, Axis, Need, Reads, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -27,7 +27,10 @@ class Offer:
     """One action and what a use of it consumes.
 
     `resources` maps a price-file name to how many of it one use takes. `tag` is the guaranteed mod
-    tag of a Harvest reforge and None for any other action.
+    tag of a Harvest reforge and None for any other action. `inputs` are the other items one use consumes on the
+    start item (`Action.inputs`, ADR-0022) and `axes` the rule axes the action reads (`Action.rule_axes`, ADR-0033);
+    both are empty for an action that has neither, which is every action of batches B1 and B2. The inputs of other
+    states are asked of the action there (`Abstraction.inputs`).
     """
 
     label: str
@@ -35,6 +38,8 @@ class Offer:
     resources: Mapping[str, int]
     tag: str | None = None
     shares: bool = True  # whether the report quotes a single-draw weight share (a Chaos Orb, a Harvest reforge)
+    inputs: tuple[Need, ...] = ()
+    axes: tuple[Axis, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -64,7 +69,9 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     `data` and `item` only matter to an action whose resources or additions depend on them (an essence, a bench craft).
     """
     adds = action.adds(data, item)
-    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw)
+    inputs = action.inputs(data, item) if data is not None else ()
+    axes = action.rule_axes(data) if data is not None else ()
+    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes)
 
 
 def default_offers() -> tuple[Offer, ...]:
@@ -191,6 +198,10 @@ def offers_for(
       holds it, a draw of its pool can give it, or another candidate adds it by name. Without such a limit no value
       matters to the goal, so the orb would only cost currency. It is left out; the report names it only when the goal has a
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
+    * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
+      implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
+      other target it is absent from the offers and the report says nothing about it. Which states offer it, for a target that
+      asks, is `solver_actions`' business (`_prune.py`).
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
     kind_names, label_names = _split_names(data, start_item, kinds_named)
@@ -202,6 +213,8 @@ def offers_for(
     left_out_rolls: list[str] = []
     for action in listed:
         adds = action.adds(data, start_item)
+        if adds.corrupts and not goal.takes_corrupted:
+            continue  # an item never arrives corrupted unasked, and the report does not mention what the target could never use
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))
         elif adds.needs_roll_limit and not roll_matters:
@@ -238,7 +251,12 @@ def offers_for(
 
     left_out = ()
     if kinds_named is not None:
-        skipped = tuple(entry.name for entry in kinds(planner_only=True) if entry.name not in kind_names)
+        # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used
+        skipped = tuple(
+            entry.name
+            for entry in kinds(planner_only=True)
+            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted)
+        )
         if skipped:
             left_out += (
                 LeftOut("the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones", skipped),

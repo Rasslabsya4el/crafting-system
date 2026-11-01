@@ -61,16 +61,46 @@ def say(began: float, text: str) -> None:
 # ---- the model: the same offers, abstraction and start as `make_plan` ---------------------------------------------
 
 
-def build_model(target_path: Path, offers_mode: str, with_restart: bool = True):
+def flat_prices():
+    """Every currency costs 1 chaos (the setting of tests/test_strand_routes_load.py, where the strand targets are planned)."""
+    import datetime
+
+    from crafting_system.prices import PriceEntry, PriceFile
+
+    class Flat(dict):
+        def __contains__(self, name):
+            return True
+
+        def __getitem__(self, name):
+            return PriceEntry(1.0, "test")
+
+        def get(self, name, default=None):
+            return PriceEntry(1.0, "test")
+
+    return PriceFile("Test", datetime.datetime(2026, 11, 1, tzinfo=datetime.UTC), 300.0, Flat())
+
+
+def build_model(target_path: Path, offers_mode: str, with_restart: bool = True, strand_stripped: bool = False):
+    import re
+
+    from crafting_system.targets import parse_target
+
     data = load_game_data()
-    target = load_target(target_path, data)
-    prices = load_price_file(PRICES)
+    if strand_stripped:  # S02, S11, S13 as today's loaders read them: no strand lines, no strand kinds, flat prices, start item 10 chaos
+        text = target_path.read_text(encoding="utf-8")
+        text = re.sub(r"(?m)^\s*memory_strands:.*\n", "", text)
+        text = re.sub(r"\b(?:remembrance-orb|unravelling-orb)\b,? ?", "", text)
+        target = parse_target(text, data, source=target_path.stem)
+        prices = flat_prices()
+    else:
+        target = load_target(target_path, data)
+        prices = load_price_file(PRICES)
     goal = Goal.from_target(target)
     chosen = offers_for(data, goal, target.base_id, target.start_item, target.actions)
     priced, dropped = price_offers(chosen.offers, prices)
     kept = usable_actions(data, target.start_item, [p.offer.action for p in priced])
     priced = tuple(p for p in priced if p.offer.action in kept)
-    price_of_start = resolve_start_price(target, prices, None)
+    price_of_start = resolve_start_price(target, prices, 10.0 if strand_stripped else None)
     if price_of_start.chaos > 0 and with_restart:
         bought = price_of_start.name or "start item"
         restart = Offer(RESTART, BuyStartItem(target.start_item), {bought: 1}, shares=False)
@@ -655,12 +685,13 @@ def main() -> None:
     parser.add_argument("--stop-after-quotient", action="store_true", help="big graphs: keep the quotient file and stop (the rails and the lumping run on the quotient by prune_analysis.py)")
     parser.add_argument("--coarse-lb", action="store_true", help="also solve optimistic coarse models (states told apart by cheap keys) and keep their lower bounds per class in the quotient file")
     parser.add_argument("--identity-partition", action="store_true", help="skip the refinement: each state is its own class (for a graph the first run showed does not merge)")
+    parser.add_argument("--strand-stripped", action="store_true", help="the strand targets S02, S11, S13 as today's loaders read them (strand words removed, flat price of 1 chaos, start item 10 chaos)")
     parser.add_argument("--check-values", action="store_true", help="small graphs only: solve the whole graph and the quotient and compare")
     parser.add_argument("--out")
     args = parser.parse_args()
     began = time.perf_counter()
     path = Path(args.target)
-    data, target, goal, abstraction, start, priced, info = build_model(path, args.offers, not args.no_restart)
+    data, target, goal, abstraction, start, priced, info = build_model(path, args.offers, not args.no_restart, args.strand_stripped)
     g_data_holder.update(data=data, target=target)
     say(began, f"model built: {info}; offers: {', '.join(p.label for p in priced[:12])}{' ...' if len(priced) > 12 else ''}")
     g, reason, checks = walk(abstraction, start, priced, began, args.seconds, args.max_rss_mb, args.max_states, args.verify_keys)

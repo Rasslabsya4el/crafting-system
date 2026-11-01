@@ -9,10 +9,17 @@ kind for an item; a module registers its kinds with the `kind` decorator, so a n
 and nothing outside `actions` imports a concrete action: `abstraction`, `cli` and `simulator` use the
 contract and the catalog only. See ADR-0024 (extending to new methods and patches).
 
+Two-item actions and rule axes (ticket #210, B3): two more questions, empty by default. `inputs(data, item)` is a tuple of
+`Need(start, want)`, the other items one use consumes (ADR-0022); `rule_axes(data)` is a tuple of `Axis(name, readings, plan)`,
+the rules the action reads that the sources leave open (ADR-0033). An action with axes takes a `Reading` in `outcomes(data,
+item, reading=None)`; `outcomes_under(data, item, reading)` is the call that works for every action, and `model_readings(data,
+actions)` lists the readings of a model, the plan's first. `Reads.input_mods` says that the result depends on the mods of the
+inputs. A new kind with inputs is correct by default and needs no edit outside `actions`.
+
 Random rerolls: `ChaosOrb()`, `HarvestReforge("lightning")` (sixteen tagged crafts, one per tag of the claim
 `harvest_reforge.tagged_rare_reforge_exists`), `HarvestReforgeInfluence()` (an influenced item, one influence mod
-guaranteed), `HarvestReforgeLikelihood(more=True)` (the mods the item holds are 90 times more, or with `more=False`
-90 times less, likely to return; the item keeps at least as many mods) and `ApplyEssence("Shrieking Essence of
+guaranteed), `HarvestReforgeLikelihood(more=True)` (the mods the item holds are 10 times more, or with `more=False`
+10 times less, likely to return; the item keeps at least as many mods) and `ApplyEssence("Shrieking Essence of
 Spite")` (an essence is named as in the game data or by its record id). Each has one method,
 `outcomes(data, item) -> Outcomes`, and `Outcomes` is the whole result.
 
@@ -22,7 +29,7 @@ item) -> BenchOutcomes`, with the same `chance_all`, `distribution` and `sample`
 probability 1, and `cost(data)`, the price as `CurrencyCost(currency name, count)`. A bench craft
 is refused (`NotApplicableError`) on a corrupted item, for an item class the option is not offered for,
 below the mod's required item level, with a family already on the item, on a full side, and on an
-item that already holds as many crafted mods as it may (one, or three with the multimod); a normal item
+item that already holds as many crafted mods as it may (one, two with the extra crafted slot enchant, three with the multimod); a normal item
 is `OutOfScopeError`. Remove Crafted Mods removes every crafted mod that is not fractured, metamods included.
 
 A Chaotic resonator with fossils is `ApplyFossils(("Dense Fossil", "Shuddering Fossil"))`: one
@@ -64,7 +71,8 @@ the locked side through a reroll (Chaos, Alteration, Harvest), a Scouring and an
 still fill; `Cannot roll Attack` / `Caster Modifiers` keep the mods with that tag out of every draw on an item that
 still holds the metamod (a reroll that removes it is not filtered), out of an Annulment's candidates, and, on a
 Harvest reforge, out of the first (guaranteed) mod only; essences and resonators refuse the four; the multimod
-lifts the crafted-mod limit to three. No action raises `OutOfScopeError` for a metamod.
+lifts the crafted-mod limit to three, and the enchantment "Can have 1 additional Crafted Modifier" to two (the larger of
+the two with both, ADR-0053; `crafted_limit_of`). No action raises `OutOfScopeError` for a metamod.
 
 The beast crafts (`beasts.py`, ticket #147): `TalismanFracture(1 or 2)` fractures one or two mods of a rare Talisman,
 uniformly, as the Fracturing Orb does (4 or 6 mods needed), and `AspectBeast(aspect, level)` adds the suffix that
@@ -73,6 +81,12 @@ grants an aspect skill at level 20 or 30, and is offered only when a target name
 `BeastSideSwap(Side.PREFIX or Side.SUFFIX, beast_level=83)` (Farric Wolf and Lynx: draws a mod on one side, capped by the
 level of the beast and not of the item, then removes one mod of the other side uniformly). A beast craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
 None is a planner kind yet.
+
+The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
+that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
+68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
+unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
+influence's orb for an item that has it (unverified, approximate). None is a planner kind yet (#155).
 
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
@@ -113,6 +127,12 @@ have different weights took about 70 s, and a label that gives every mod its own
 The fractions are exact and can be thousands of bits long: `str()` of one can hit Python's
 4300-digit limit, so convert with `float()` or `Fraction.limit_denominator` to display it.
 
+The Eldritch currency (`eldritch.py`, ticket #151, ADR-0025): `EldritchImplicitCurrency(side, grade)` (an Ember or an Ichor of grade 1 to
+4: an implicit drawn by the spawn weight of the item class, replacing every implicit but the other side's), `EldritchChaosOrb()`,
+`EldritchExaltedOrb()` and `EldritchAnnulmentOrb()` (they act on the dominant side, derived from the two grades: `item_dominant_side`) and
+`OrbOfConflict()` (raises one implicit by a grade and lowers the other, odds `conflict_raise_chance(difference)`). They work on a body
+armour, boots, gloves or helmet that is not corrupted and not influenced, and none is a planner kind yet.
+
 The corrupted implicit pool of a base at an item level (`corrupted_implicit_pool(data, base_id, item_level)`, `corrupted_pool.py`,
 ADR-0037) is what a Vaal Orb, a Bloodstained resonator and the Locus of Corruption draw their implicit from: the corrupted mods of the
 base's domain with a positive weight on its first matching spawn tag and a required level of at most the item level. Cluster and
@@ -130,7 +150,7 @@ from .beasts import AspectBeast, TalismanFracture, TalismanFractureOutcomes, rec
 from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts, without_ranges
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
-from .contract import Action, ActionOutcomes, Adds, Fixed, Reads, Rerolled
+from .contract import Action, ActionOutcomes, Adds, Axis, Fixed, Need, Reading, Reads, Rerolled, model_readings
 from .corrupted_pool import (
     CORRUPTING_KINDS,
     DEFAULT_CORRUPTING_KINDS,
@@ -140,6 +160,16 @@ from .corrupted_pool import (
 )
 from .divine import DivineOrb, DivineOutcomes
 from .draw import Outcome, guaranteed_candidates
+from .eldritch import (
+    EldritchAnnulmentOrb,
+    EldritchChaosOrb,
+    EldritchExaltedOrb,
+    EldritchImplicitCurrency,
+    OrbOfConflict,
+    conflict_raise_chance,
+    implicit_pool,
+    item_dominant_side,
+)
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
 from .exalted import ExaltedOrb
@@ -150,8 +180,9 @@ from .harvest import HarvestReforge
 from .harvest_augment import HarvestAddRemove, HarvestDamageSwap, HarvestResistanceSwap
 from .harvest_influence import HarvestReforgeInfluence
 from .harvest_likelihood import HarvestReforgeLikelihood
+from .influence import BeastInfluenceRecipe, InfluencedExaltedOrb, OrbOfDominance, beast_recipe_resources, influence_pool
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
-from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags
+from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags, crafted_limit_of, grants_extra_crafted_slot
 from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool, drawable_mod_ids, partners, tiers_of
@@ -170,12 +201,14 @@ __all__ = [
     "AlchemyOrb",
     "AlterationOrb",
     "AspectBeast",
+    "Axis",
     "AnnulmentOrb",
     "ApplyEssence",
     "ApplyFossils",
     "AugmentationOrb",
     "BLOCKED_TAG",
     "BLOCKING",
+    "BeastInfluenceRecipe",
     "BeastSideSwap",
     "BenchCraft",
     "BenchOutcomes",
@@ -187,6 +220,10 @@ __all__ = [
     "DEFAULT_CORRUPTING_KINDS",
     "DivineOrb",
     "DivineOutcomes",
+    "EldritchAnnulmentOrb",
+    "EldritchChaosOrb",
+    "EldritchExaltedOrb",
+    "EldritchImplicitCurrency",
     "ExaltedOrb",
     "Finite",
     "Fixed",
@@ -201,15 +238,20 @@ __all__ = [
     "HarvestReforgeInfluence",
     "HarvestReforgeLikelihood",
     "HarvestResistanceSwap",
+    "InfluencedExaltedOrb",
     "Kind",
     "Mixture",
+    "Need",
     "NotApplicableError",
+    "OrbOfDominance",
     "Outcome",
     "Outcomes",
+    "OrbOfConflict",
     "OutOfScopeError",
     "PoolFamily",
     "PoolMod",
     "partners",
+    "Reading",
     "Reads",
     "RegalOrb",
     "RemoveCraftedMods",
@@ -221,18 +263,26 @@ __all__ = [
     "WildBristleMatron",
     "add_one_mod",
     "allowed_by_tags",
+    "beast_recipe_resources",
     "bench_crafts",
     "blocked_tags",
     "build_pool",
     "catalog",
+    "conflict_raise_chance",
     "corrupted_implicit_pool",
+    "crafted_limit_of",
     "default_actions",
     "draw_onto",
     "drawable_mod_ids",
     "fossil_actions",
+    "grants_extra_crafted_slot",
     "guaranteed_candidates",
+    "implicit_pool",
+    "influence_pool",
+    "item_dominant_side",
     "kind",
     "kinds",
+    "model_readings",
     "recipe_resources",
     "register",
     "registered",
