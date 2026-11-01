@@ -193,6 +193,10 @@ class Spent:
     It is an `ActionOutcomes` that answers `components`, `fractures`, `chance_all` and `distribution` as `given` does (the spend does
     not depend on the mods drawn), and any other attribute of `given` (a pool, a retained item) too. `strands_after` is the exact
     distribution of the count after the craft, `before` the count the item had; `sample` sets the count of the finished item.
+
+    **The items of `components` and the items a caller builds from `distribution` keep the count before the craft** (the retained item
+    holds it, and the cut was made from it); only `strands_after` and `sample` say what is left. A consumer that stores the count in the
+    state (B5-4) pairs each outcome of `distribution` with each entry of `strands_after`: they are independent.
     """
 
     given: "ActionOutcomes"

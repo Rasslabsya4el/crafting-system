@@ -279,6 +279,43 @@ def test_a_cut_draw_is_exactly_the_cut_pool_of_the_count_before_the_craft():
     assert outcomes.pool != build_pool(DATA, outcomes.retained)
 
 
+@pytest.mark.parametrize(
+    ("action", "rarity", "mods"),
+    [
+        (TransmutationOrb(), Rarity.NORMAL, ()), (AlchemyOrb(), Rarity.NORMAL, ()), (AlterationOrb(), Rarity.MAGIC, (LIFE_1,)),
+        (AugmentationOrb(), Rarity.MAGIC, (LIFE_1,)), (RegalOrb(), Rarity.MAGIC, (LIFE_1,)), (ChaosOrb(), Rarity.RARE, (LIFE_1, RESIST_2)),
+        (ExaltedOrb(), Rarity.RARE, (LIFE_1, RESIST_2)),
+    ],
+)  # fmt: skip
+def test_every_cutting_action_draws_from_the_cut_pool_of_its_count(action, rarity, mods):
+    item = small_item(*(roll_of(mod_id) for mod_id in mods), rarity=rarity, memory_strands=60)
+
+    outcomes = action.outcomes(DATA, item)
+
+    assert outcomes.pool == build_pool(DATA, outcomes.retained, cut=Cut(60))
+    assert outcomes.pool != build_pool(DATA, outcomes.retained)
+
+
+def test_an_essence_draws_its_random_mods_from_the_cut_pool_under_its_level_cap_and_its_forced_mod_is_not_cut():
+    from crafting_system.actions import ApplyEssence
+    from crafting_system.actions.errors import ActionError
+
+    item = fixture_items()["normal_stranded"]
+    checked = capped = 0
+    for action in (member for entry in kinds() if entry.name == "essence" for member in entry.members(CONTRACT_DATA, item)):
+        try:
+            outcomes = action.outcomes(CONTRACT_DATA, item)
+        except ActionError:
+            continue
+        assert isinstance(action, ApplyEssence)
+        cap = action._record(CONTRACT_DATA).item_level_restriction if action._record(CONTRACT_DATA).level <= 4 else None
+        assert outcomes.pool == build_pool(CONTRACT_DATA, outcomes.retained, cap, cut=Cut(45)), action
+        assert outcomes.forced in {entry.mod_id for entry in outcomes.retained.mods}  # the forced mod sits on the item, outside the pool
+        checked += 1
+        capped += cap is not None
+    assert checked and capped  # at least one essence of each kind applied to the stranded normal item
+
+
 def test_a_fossil_at_60_strands_draws_from_the_uncut_pool():
     base = fixture_items()["rare_junk"]
     stranded = dataclasses.replace(base, memory_strands=60)
@@ -336,6 +373,16 @@ def test_a_toy_undeclared_action_is_refused_at_1_strand_and_offered_at_0():
             ToyReroll().outcomes(DATA, one)  # ...and refused at 1
         with pytest.raises(OutOfScopeError):
             ToyReroll().outcomes_under(DATA, dataclasses.replace(magic, memory_strands=100))
+
+
+def test_the_restart_is_not_refused_on_a_stranded_item_and_brings_back_the_start_item_with_its_own_count():
+    from crafting_system.cli._offers import BuyStartItem
+
+    start = small_item(roll_of(LIFE_1), rarity=Rarity.MAGIC, memory_strands=12)
+    current = dataclasses.replace(start, memory_strands=90)
+
+    assert BuyStartItem(start).outcomes(DATA, current).sample(random.Random(1)).memory_strands == 12
+    assert BuyStartItem(start).strand_use(DATA) == StrandUse.untouched()
 
 
 def test_the_toy_is_gone_with_its_registration():

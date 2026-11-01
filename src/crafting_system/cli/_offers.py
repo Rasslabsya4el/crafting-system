@@ -13,7 +13,7 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, ActionError, Axis, Need, Reads, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, ActionError, Axis, Need, Reads, StrandUse, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -148,6 +148,11 @@ class BuyStartItem(Action):
     def reads(self, data: GameData) -> Reads:
         return Reads.nothing()
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041: it replaces the item, so it is no craft: nothing is cut or spent, and the strands of the item that comes back are the
+        # start item's own (what a stranded buy costs is ADR-0043's). It is declared so that the guard does not refuse a restart from a stranded item.
+        return StrandUse.untouched()
+
     def outcomes(self, data: GameData, item: Item) -> "BuyStartItem":  # type: ignore[override]
         return self
 
@@ -201,7 +206,9 @@ def offers_for(
     * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
       implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
       other target it is absent from the offers and the report says nothing about it. Which states offer it, for a target that
-      asks, is `solver_actions`' business (`_prune.py`).
+      asks, is `solver_actions`' business (`_prune.py`). One that also declares `Adds.asked_only` (a fossil set with the Bloodstained
+      Fossil: its reroll exists without the corruption) is offered only when the goal asks for a corrupted implicit, not when it
+      merely allows a corrupted item (ADR-0038).
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
     kind_names, label_names = _split_names(data, start_item, kinds_named)
@@ -213,7 +220,7 @@ def offers_for(
     left_out_rolls: list[str] = []
     for action in listed:
         adds = action.adds(data, start_item)
-        if adds.corrupts and not goal.takes_corrupted:
+        if adds.corrupts and (not goal.takes_corrupted or (adds.asked_only and not goal.asks_corrupted)):
             continue  # an item never arrives corrupted unasked, and the report does not mention what the target could never use
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))

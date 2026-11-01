@@ -118,8 +118,8 @@ def command(tmp_path, monkeypatch):
     """The command on the fixture amulet; the plan is made with the fixture's offers and rates."""
     path = tmp_path / "amulet.yaml"
     path.write_text(TARGET, encoding="utf-8")
-    real = _main.make_plan
-    monkeypatch.setattr(_main, "make_plan", lambda *a, **k: real(*a, **{**k, "offers": OFFERS, "rates": RATES}))
+    real = _main.plan_with_starts
+    monkeypatch.setattr(_main, "plan_with_starts", lambda *a, **k: real(*a, **{**k, "offers": OFFERS, "rates": RATES}))
     monkeypatch.setattr(_main, "write_route_page", lambda path, *a, **k: path)
 
     def run(*arguments):
