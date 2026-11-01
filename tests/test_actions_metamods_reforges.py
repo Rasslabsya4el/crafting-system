@@ -252,7 +252,7 @@ def weighed(oracle_start, real, factor):
 @pytest.mark.parametrize("start", LOCK_STARTS)
 def test_a_likelihood_reforge_keeps_the_locked_side_like_the_brute_force(start, more):
     real, oracle_start = (build() for build in LOCK_STARTS[start])
-    factor = Fraction(90) if more else Fraction(1, 90)
+    factor = Fraction(10) if more else Fraction(1, 10)
     totals = {max(len(real.mods), 4): Fraction(1)}  # the item held 4 mods
     expected = expected_chances(finished_items(WORLD, oracle_start, None, pool=weighed(oracle_start, real, factor), totals=totals))
 
@@ -265,7 +265,7 @@ def test_a_likelihood_reforge_keeps_the_locked_side_like_the_brute_force(start, 
 @pytest.mark.parametrize("more", [True, False], ids=["more", "less"])
 def test_a_likelihood_reforge_filters_the_first_mod_only_under_cannot_roll_attack(more):
     real = FILTER_START()  # SCBC keeps the suffixes; held: life, resistance
-    factor = Fraction(90) if more else Fraction(1, 90)
+    factor = Fraction(10) if more else Fraction(1, 10)
     total = {max(len(real.mods), 4): Fraction(1)}
     base = world_item(*fractured(RESIST_2), mod(MULTI, fractured=True, crafted=True))
     first = [

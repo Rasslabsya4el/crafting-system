@@ -186,13 +186,13 @@ rules:
     value: {Wild Crystallised Lifeforce: 200}
 
   - id: harvest_reforge.likelihood_weight_factor
-    statement: Before a likelihood reforge draws, the weight of every mod of a family that the item holds a mod of (a fractured one, a crafted one and the ones the reroll removes included) is multiplied by `more` for the more likely craft and divided by `less` for the less likely one. The wiki gives no multiplier; the factor 90 is decision D9 of issue 28, from the Craft of Exile FAQ, and the less likely craft takes its reciprocal (the code of Craft of Exile pairs 10 with 0.1). The unit is the family, the exclusion set of affix_draw.family_exclusion. Craft of Exile boosts the same modifier id and the same modifier name, so a hybrid that shares a family with a plain mod is the one place the readings differ; the compressed state keeps families, not types. Craft of Exile's craft list also says both crafts ignore the Cannot roll Attack and Caster metamods and that the more likely one is bugged for attribute modifiers and prevents them; neither is modelled (the metamods are issue 68's, and the attribute note is one unconfirmed line of a third-party tool).
-    source_kind: coe
-    url: https://www.craftofexile.com/faq#How_is_the_harvest_reforge_more_likely_applied
-    quote: "mods that are present on the item before usage have their weight multiplied by 90"
-    patch_verified: "3.29.0.3"
-    date_checked: 2026-10-31
-    value: {more: 90, less: 90}
+    statement: Before a likelihood reforge draws, the weight of every mod of a family that the item holds a mod of (a fractured one, a crafted one and the ones the reroll removes included) is multiplied by `more` for the more likely craft and divided by `less` for the less likely one; both are 10. The game data of the two crafts (table HarvestCraftOptions, command reroll_with_current_tags_affinity_multiplier) holds the parameters 900 for Reforge More Likely and -90 for Reforge Less Likely, read as percent, +900% = x10 and -90% = x0.1; the code of Craft of Exile does the same (it weighs the held types by 10 for the more likely craft and by 0.1 for the less likely one). The factor 90 of the Craft of Exile FAQ ("reported to me" from the 3.11 datamine) is not used; it is stale (patch 3.19.0e raised the chances of these two crafts), and the earlier version of this claim held it (decision D9 of issue 28, corrected in issue 319). Open, not modelled - the unit that is boosted is the family, the exclusion set of affix_draw.family_exclusion; the command's name says "current tags affinity", the craft text says "same modifier types" and Craft of Exile boosts the same modifier id and the same modifier name, so none of these readings is settled, and a hybrid that shares a family with a plain mod is the one place they differ (the compressed state keeps families, not types). Craft of Exile's craft list also says both crafts ignore the Cannot roll Attack and Caster metamods and that the more likely one is bugged for attribute modifiers and prevents them; neither is modelled (the metamods are issue 68's, and the attribute note is one unconfirmed line of a third-party tool).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/master/current/poe/heuristics/csv/HarvestCraftOptions.csv
+    quote: 'reroll_with_current_tags_affinity_multiplier","900"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {more: 10, less: 10}
 
   - id: harvest_reforge.likelihood_never_fewer_mods
     statement: A likelihood reforge draws as many mods as the item held before, and at least `floor`, so it never leaves fewer; the fractured mods that stay count inside that number. This is the code of Craft of Exile, which passes the count of the item, with a floor, as the number to roll. Its FAQ adds that the item can roll more "if possible but it happens very rarely", which the code does not do, so the number is exact here.
