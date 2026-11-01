@@ -7,7 +7,7 @@ The Vaal Orb corrupts an item and applies one of four outcomes ([research #92](h
 Each has chance 1/4 ("Each outcome has an equal chance of occurring", wiki; Craft of Exile draws uniformly from a four-entry table; GGG staff statements of 2014 and 2015 that the wiki cites). Not marked `approximate`: the wiki and Craft of Exile's code agree, though no 3.29 count exists.
 
 1. **A corrupted implicit.** One mod is drawn by weight from the pool below. It **replaces one implicit of the item, chosen uniformly among the item's implicits** (base and Eldritch ones alike); an item with no implicit gains it. Each stat of the mod rolls uniformly in its range, integers, independently. Explicit mods are not touched.
-2. **A socket.** Since 3.29.0 one random white socket turns non-white (it changes nothing with no white socket). The state has no sockets until B6, so it is "nothing" for now and B6 gives it its effect.
+2. **A socket.** Since 3.29.0 one random white socket turns non-white (it changes nothing with no white socket). No target can mind that (ADR-0036, "Sockets"), so it is "nothing".
 3. **The brick.** The item becomes a rare of the same base with six random affixes and random sockets and links; it keeps enchantments, quality, memory strands and base values (wiki). Below.
 4. **Nothing** (the item is only corrupted).
 
