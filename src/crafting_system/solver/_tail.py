@@ -48,6 +48,10 @@ LEAF = "tail-cut leaf"  # the label of the one action of a leaf state
 PUSH_FLOOR = 1e-3  # mass below this fraction of `theta` waiting in an expanded state is not pushed on
 
 
+class NoPolicyError(ValueError):
+    """The coarse models have no proper policy from the start, so the tail cut has nothing to follow."""
+
+
 @dataclass(frozen=True, slots=True)
 class _Leaf:
     """A state that is cut: valued by the bound of its block."""
@@ -102,7 +106,7 @@ def solve_tail_cut[S, B](
     reach (the pessimistic model offers fewer actions than the exact one, so an action it does not offer can lead
     there) is added as a start and both are solved again, which leaves the earlier numbers as they were or
     tighter. `theta = math.inf` expands nothing. Raises `ValueError` for a `theta` below 0 or NaN, a start whose
-    block has no finite upper bound (no policy to follow), and a coarse policy action that the exact model does
+    block has no finite upper bound (no policy to follow: `NoPolicyError`), and a coarse policy action that the exact model does
     not offer in an expanded state.
     """
     if isinstance(theta, bool) or not (theta >= 0.0):  # also catches NaN
@@ -111,7 +115,7 @@ def solve_tail_cut[S, B](
     start_block = block_of(start)
     coarse = solve_bounds(optimistic, pessimistic, [start_block], **options)
     if coarse.upper[start_block] == math.inf:
-        raise ValueError(f"the coarse models have no proper policy from the start (block {start_block!r}): nothing to follow")
+        raise NoPolicyError(f"the coarse models have no proper policy from the start (block {start_block!r}): nothing to follow")
 
     offered: dict[S, tuple[Action[S], ...]] = {}  # the exact actions of every expanded state
     _expand(exact, coarse, block_of, start, theta, offered)

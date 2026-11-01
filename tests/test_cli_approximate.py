@@ -231,7 +231,11 @@ def test_a_tail_cut_that_expands_nothing_is_the_coarse_level(approximate):
 
     found = climbed(approximate, bad, tail(bad, float("inf"))).approximation
 
+    solved = climbed(approximate, tail(bad, float("inf")))  # alone: after the coarse level it would only tie, and the tie keeps the coarse one
+    start = approximate.abstraction.compress(approximate.target.start_item)
+
     assert found.expanded == 0 and found.gap == climbed(approximate, bad).approximation.gap
+    assert solved.start == start and solved.start in solved.solution.policy  # the start item still has an action: its block's
 
 
 def test_a_tail_cut_over_a_coarse_level_with_no_policy_is_skipped_not_an_error(approximate):

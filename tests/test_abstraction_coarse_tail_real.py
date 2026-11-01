@@ -36,6 +36,7 @@ CHAOS = {  # placeholder Chaos values of the currencies a bench option consumes
 }  # fmt: skip
 OPTIMUM = 2.159763  # ADR-0023, numpy value iteration on the exact graph, six digits
 THETAS = (1e-2, 1e-3)
+EXPANDED = {1e-2: 14, 1e-3: 151}  # measured with the entries rule of ADR-0023 (the prototype's visits gave 28 at 1e-2); they pin that rule
 
 
 class Priced:
@@ -108,7 +109,7 @@ def test_the_sweep_of_the_adr_keeps_the_bounds_around_the_optimum_and_opens_no_g
         assert found.bounds.lower[start] <= OPTIMUM + 1e-6 and OPTIMUM - 1e-6 <= found.bounds.upper[start], theta
         assert found.bounds.gap < 1e-4, theta  # the leaves are already exact, so no theta opens a gap
         assert start in found.expanded and before < found.expanded, theta  # a smaller theta expands more states
-        assert len(found.expanded) < 1000, theta  # of the 13,172 exact states
+        assert len(found.expanded) == EXPANDED[theta], theta  # of the 13,172 exact states
         before = found.expanded
         print(f"theta {theta:g}: expanded {len(found.expanded)}, leaves {found.leaves}, "
               f"bounds {found.bounds.lower[start]:.6f} .. {found.bounds.upper[start]:.6f}")  # fmt: skip

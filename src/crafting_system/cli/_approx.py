@@ -19,7 +19,17 @@ from dataclasses import dataclass
 
 from crafting_system.abstraction import CompressedState, integer_weights
 from crafting_system.actions import ActionError
-from crafting_system.solver import Action, Bounds, Outcome, Solution, TailCut, solve_bounds, solve_tail_cut
+from crafting_system.solver import (
+    Action,
+    Bounds,
+    ConvergenceError,
+    NoPolicyError,
+    Outcome,
+    Solution,
+    TailCut,
+    solve_bounds,
+    solve_tail_cut,
+)
 
 from ._decide import TOLERANCE, Candidate, Decision, exact_offer
 from ._offers import BuyStartItem, PricedOffer
@@ -183,11 +193,14 @@ def solve_tail_level(candidate: Candidate, start: CompressedState, models: Model
     )
     seconds = time.perf_counter() - began
     coarse = found.coarse
+    block_start = coarsening.coarsen(start)
 
     def shown(state: CompressedState) -> CompressedState:
         return state if state in found.expanded or coarsening.is_goal(state) else coarsening.coarsen(state)
 
     policy = dict(coarse.policy)
+    if not found.expanded and block_start in coarse.policy:  # nothing expanded: the start item follows the coarse policy of its block
+        policy[start] = coarse.policy[block_start]
     for state, action in found.bounds.policy.items():
         merged: defaultdict[CompressedState, int] = defaultdict(int)
         for outcome in action.outcomes:
@@ -215,10 +228,10 @@ def climb(decision: Decision, start: CompressedState, offers: Iterable[PricedOff
     for candidate in decision.levels:
         try:
             solved = solve_level(candidate, start, offers, models)
-        except ValueError:
+        except (NoPolicyError, ConvergenceError):
             if candidate.level.kind != "tail":
                 raise
-            continue  # the coarse state under a tail cut has no policy to follow: the levels before it already say so
+            continue  # a tail cut that has no policy to follow or does not converge leaves the levels before it as they are
         spent += solved.seconds
         if best is None or solved.approximation.gap < best.approximation.gap:
             best = solved
