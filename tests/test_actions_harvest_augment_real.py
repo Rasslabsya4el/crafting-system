@@ -21,7 +21,7 @@ from abstraction_support import real_game_data
 
 from crafting_system.actions import HarvestAddRemove, HarvestDamageSwap, HarvestResistanceSwap, NotApplicableError
 from crafting_system.cli._offers import offer_of, price_offers
-from crafting_system.items import ExplicitMod, Item, Rarity
+from crafting_system.items import ExplicitMod, ImplicitMod, Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile
 
 # the prices of 2026-10-31 in chaos; the Sacred price is the one that makes the Fire craft 283.75 (15000 Wild = 234, Sacred = 49.75)
@@ -258,3 +258,16 @@ def test_a_wand_at_item_level_62_cannot_take_the_cold_mod_that_needs_63(data, le
     else:
         with pytest.raises(NotApplicableError, match="above the item level"):
             HarvestDamageSwap("fire", "cold").outcomes(data, item)
+
+
+def test_an_eldritch_implicit_does_not_refuse_the_add_remove_craft_and_stays_on_the_item(data):
+    """The owner's answer (grill B2): the craft works on an item with an Eldritch implicit; the implicit is no explicit mod, so it is never removed."""
+    implicit = ImplicitMod("AvoidShockEldritchImplicit3", 3, (min(data.mods["AvoidShockEldritchImplicit3"].stats[0].min, data.mods["AvoidShockEldritchImplicit3"].stats[0].max),))
+    body = base_id(data, "Astral Plate")
+    life = ExplicitMod("IncreasedLife7", 1, (min(data.mods["IncreasedLife7"].stats[0].min, data.mods["IncreasedLife7"].stats[0].max),))
+    item = Item.build(data, base_id=body, item_level=86, rarity=Rarity.RARE, mods=(life,), implicits=(implicit,))
+    outcomes = HarvestAddRemove("life").outcomes(data, item)
+    assert outcomes.results
+    for chance, result in outcomes.results:
+        assert result.implicits == (implicit,)
+        assert [entry.mod_id for entry in result.mods if entry.mod_id == "IncreasedLife7"] == []  # the only removable mod is the old one
