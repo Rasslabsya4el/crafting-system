@@ -397,11 +397,12 @@ def test_the_declarations():
         assert not adds.draws and adds.keeps_crafted and adds.named is None
 
 
-def test_the_kind_lists_both_recipes_for_a_rare_talisman_and_is_not_a_planner_kind():
+def test_the_kind_lists_both_recipes_for_a_rare_talisman_and_is_an_opt_in_planner_kind():
     assert [a for a in catalog(BEAST_DATA, talisman(6)) if isinstance(a, TalismanFracture)] == [TalismanFracture(1), TalismanFracture(2)]
     assert [a for a in catalog(BEAST_DATA, talisman(0)) if isinstance(a, TalismanFracture)] == [TalismanFracture(1), TalismanFracture(2)]
     assert not [a for a in catalog(BEAST_DATA, rare(TALISMAN, (LIFE,), rarity=Rarity.MAGIC)) if isinstance(a, TalismanFracture)]
     assert not [a for a in catalog(DATA, rare(AMULET, SIX_MODS, data=DATA)) if isinstance(a, TalismanFracture)]
-    assert TalismanFracture(1) not in catalog(BEAST_DATA, talisman(6), planner_only=True)
+    assert TalismanFracture(1) not in catalog(BEAST_DATA, talisman(6), planner_only=True)  # opt-in: listed only when a target names the kind
+    assert TalismanFracture(1) in catalog(BEAST_DATA, talisman(6), planner_only=True, names={"talisman-fracture"})
     registered = {entry.name: entry for entry in kinds()}["talisman-fracture"]
-    assert registered.planner is False and registered.order == 83 and "#149" in registered.why_not
+    assert registered.planner and registered.opt_in and registered.order == 83 and not registered.why_not

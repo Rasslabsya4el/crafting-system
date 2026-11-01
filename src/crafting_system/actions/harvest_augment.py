@@ -69,8 +69,6 @@ RESPECTS_SIDE_LOCKS = get_rule("harvest_swap.respects_side_locks")
 FRACTURED_AND_CRAFTED_MODS_NOT_SWAPPED = get_rule("harvest_swap.fractured_and_crafted_mods_not_swapped")
 SWAP_REFUSED_ON_CORRUPTED = get_rule("harvest_swap.refused_on_corrupted")
 
-NO_COMPRESSED_KERNEL = "no compressed-state kernel for the Harvest add, remove and swap crafts yet (#149)"
-
 
 @dataclass(frozen=True, eq=False)
 class RolledFinite(Finite):
@@ -175,7 +173,7 @@ class HarvestAddRemove(Action):
         return RolledFinite(data, item, tuple(results))
 
 
-@kind("harvest-add-remove", order=23, planner=False, why_not=NO_COMPRESSED_KERNEL)
+@kind("harvest-add-remove", order=23, opt_in=True)
 def _harvest_add_remove(data: GameData, item: Item):
     if not item.influences:
         for craft in ADD_REMOVE_CRAFTS_EXIST.value:
@@ -191,6 +189,31 @@ def _check_swap_pair(swaps: Rule, source: str, target: str) -> None:
     if not isinstance(source, str) or not isinstance(target, str) or target not in swaps.value.get(source, {}):
         known = ", ".join(f"{a} to {b}" for a, targets in swaps.value.items() for b in targets)
         raise ValueError(f"there is no Harvest swap from {source!r} to {target!r}; known: {known}")
+
+
+_SWAP_FAMILIES: dict[tuple[int, str, str, str], tuple[GameData, frozenset[str]]] = {}
+
+
+def _swap_families(data: GameData, source_stats: Rule, source: str, target: str) -> frozenset[str]:
+    """The families of the drawable mods that can be a source or a target of the swap from `source` to `target`.
+
+    A mod qualifies by a stat of the claim written with either element. Such a mod keeps its tier through the swap and the
+    target's family is refused by a mod of the item that holds it, so the compressed state must tell these families apart by
+    mod (`Reads.by_mod`): the junk of any other family cannot change what a swap does. A mod of several families is never
+    drawable (`pool_candidates`), so it is left out; the answer is cached per game data object.
+    """
+    key = (id(data), source_stats.id, source, target)
+    hit = _SWAP_FAMILIES.get(key)
+    if hit is not None and hit[0] is data:
+        return hit[1]
+    stats = {template.replace("X", element) for template in source_stats.value for element in (source, target)}
+    found = frozenset(
+        mod.families[0]
+        for mod in data.mods.values()
+        if len(mod.families) == 1 and not stats.isdisjoint(stat.id for stat in mod.stats)
+    )
+    _SWAP_FAMILIES[key] = (data, found)
+    return found
 
 
 def _swap_outcomes(data: GameData, item: Item, source: str, target: str, source_stats: Rule, what: str) -> RolledFinite:
@@ -264,7 +287,10 @@ class HarvestResistanceSwap(Action):
         return dict(RESISTANCE_SWAPS_EXIST.value[self.source][self.target])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads()  # every mod of the item, and none of the implicits, the quality or the offer (ADR-0027)
+        # The result depends on the tier of each mod of a source or target family (the swap keeps it) and on the families a
+        # target would clash with: those families are told apart, by mod (#149). The implicits, the quality and the offer are not read (ADR-0027).
+        names = _swap_families(data, RESISTANCE_SOURCE_STATS, self.source, self.target)
+        return Reads(junk=True, families=names, by_mod=names)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds()  # a swap changes a mod for another and leaves the implicits, the quality and the offer alone (ADR-0027)
@@ -301,7 +327,10 @@ class HarvestDamageSwap(Action):
         return dict(DAMAGE_SWAPS_EXIST.value[self.source][self.target])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads()  # every mod of the item, and none of the implicits, the quality or the offer (ADR-0027)
+        # The result depends on the tier of each mod of a source or target family (the swap keeps it) and on the families a
+        # target would clash with: those families are told apart, by mod (#149). The implicits, the quality and the offer are not read (ADR-0027).
+        names = _swap_families(data, DAMAGE_SOURCE_STATS, self.source, self.target)
+        return Reads(junk=True, families=names, by_mod=names)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds()  # a swap changes a mod for another and leaves the implicits, the quality and the offer alone (ADR-0027)
@@ -316,14 +345,14 @@ class HarvestDamageSwap(Action):
         return _swap_outcomes(data, item, self.source, self.target, DAMAGE_SOURCE_STATS, "Harvest damage swap")
 
 
-@kind("harvest-resistance-swap", order=24, planner=False, why_not=NO_COMPRESSED_KERNEL)
+@kind("harvest-resistance-swap", order=24, opt_in=True)
 def _harvest_resistance_swaps(data: GameData, item: Item):
     for source, targets in RESISTANCE_SWAPS_EXIST.value.items():
         for target in targets:
             yield HarvestResistanceSwap(source, target)
 
 
-@kind("harvest-damage-swap", order=25, planner=False, why_not=NO_COMPRESSED_KERNEL)
+@kind("harvest-damage-swap", order=25, opt_in=True)
 def _harvest_damage_swaps(data: GameData, item: Item):
     for source, targets in DAMAGE_SWAPS_EXIST.value.items():
         for target in targets:

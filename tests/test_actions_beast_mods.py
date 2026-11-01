@@ -513,7 +513,7 @@ def test_the_declarations():
     assert adds.draws and adds.named is None and adds.keeps_crafted
 
 
-def test_the_kinds_are_offered_for_a_rare_item_only_and_are_not_planner_kinds():
+def test_the_kinds_are_offered_for_a_rare_item_only_and_are_opt_in_planner_kinds():
     item = item_of(ES1, FIRE)
     offered = catalog(SMALL, item)
 
@@ -521,10 +521,12 @@ def test_the_kinds_are_offered_for_a_rare_item_only_and_are_not_planner_kinds():
     assert [a for a in offered if isinstance(a, WildBristleMatron)] == [WildBristleMatron()]
     magic = catalog(SMALL, item_of(ES1, rarity=Rarity.MAGIC))
     assert not [a for a in magic if isinstance(a, (BeastSideSwap, WildBristleMatron))]
-    assert not [a for a in catalog(SMALL, item, planner_only=True) if isinstance(a, (BeastSideSwap, WildBristleMatron))]
+    assert not [a for a in catalog(SMALL, item, planner_only=True) if isinstance(a, (BeastSideSwap, WildBristleMatron))]  # opt-in: a target names them
+    named = {"beast-side-swap", "wild-bristle-matron"}
+    assert [a for a in catalog(SMALL, item, planner_only=True, names=named) if isinstance(a, (BeastSideSwap, WildBristleMatron))]
     registered = {entry.name: entry for entry in kinds()}
-    for name in ("beast-side-swap", "wild-bristle-matron"):
-        assert registered[name].planner is False and "#149" in registered[name].why_not
+    for name in named:
+        assert registered[name].planner and registered[name].opt_in and not registered[name].why_not
     assert (registered["beast-side-swap"].order, registered["wild-bristle-matron"].order) == (85, 86)
 
 

@@ -45,8 +45,6 @@ SIDE_SWAP_METAMOD_RULES = get_rule("beastcraft.side_swap_metamod_rules")
 SIDE_SWAP_REFUSED_WITHOUT_REMOVABLE_MOD = get_rule("beastcraft.side_swap_refused_without_removable_mod")
 REFUSED_ON_CORRUPTED = get_rule("bench_craft.refused_on_corrupted")
 
-WHY_NOT_PLANNER = "no compressed-state kernel for the beast crafts yet (#149)"
-
 
 def _low(mod: Mod) -> tuple[int, ...]:
     return tuple(min(stat.min, stat.max) for stat in mod.stats)
@@ -148,7 +146,7 @@ class WildBristleMatron(Action):
         )
 
 
-@kind("wild-bristle-matron", order=86, planner=False, why_not=WHY_NOT_PLANNER)
+@kind("wild-bristle-matron", order=86, opt_in=True)
 def _wild_bristle_matron(data: GameData, item: Item):
     if item.rarity is Rarity.RARE and _allowed_classes(data, item):
         yield WildBristleMatron()
@@ -244,7 +242,7 @@ class BeastSideSwap(Action):
         return Finite(data, item, tuple(results))
 
 
-@kind("beast-side-swap", order=85, planner=False, why_not=WHY_NOT_PLANNER)
+@kind("beast-side-swap", order=85, opt_in=True)
 def _beast_side_swaps(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:
         yield BeastSideSwap(Side.PREFIX)

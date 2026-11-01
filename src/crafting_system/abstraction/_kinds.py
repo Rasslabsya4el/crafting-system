@@ -145,10 +145,12 @@ class Kinds:
         self.fractures = False  # an enabled action may fracture a mod the item holds
         self.rerolls = False  # an enabled action rerolls the values of the mods the item holds
         self._rollable = rollable
+        self._declared_by_mod: set[str] = set()  # the families an enabled action looks inside (`Reads.by_mod`)
         for action in self.actions:
             reads = action.reads(data)
             self.fractures = self.fractures or reads.fractures
             self.rerolls = self.rerolls or reads.rerolls_values
+            self._declared_by_mod.update(reads.by_mod)
             if not reads.junk:
                 continue
             self.by_weight = self.by_weight or reads.pool_weight
@@ -248,9 +250,10 @@ class Kinds:
         raise ValueError(f"the state has more {side.value} slots of an ordinary family of that type than the pool has families")
 
     def _families_by_mod(self) -> set[str]:
-        """The families told apart by mod: those with a rollable mod, when an enabled action rerolls values; none otherwise."""
+        """The families told apart by mod: those with a rollable mod, when an enabled action rerolls values, and those an enabled action names (`Reads.by_mod`)."""
         if self._by_mod is None:
-            self._by_mod = {family_key(mod) for mod in self._rollable()} if self.rerolls else set()
+            rolled = {family_key(mod) for mod in self._rollable()} if self.rerolls else set()
+            self._by_mod = rolled | self._declared_by_mod
         return self._by_mod
 
     def _listed_families(self) -> set[str]:
