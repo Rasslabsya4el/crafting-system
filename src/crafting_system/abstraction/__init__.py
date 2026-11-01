@@ -30,6 +30,10 @@ is imported or tested for here.
   whose pooled slots have the kind of their pool) and `kernel(block, action, bound)` is the kernel of a
   block-invariant action in the optimistic (`"lower"`) or pessimistic (`"upper"`) model, per member. Any other
   action raises `OutOfScopeError`. `Coarsening.pooling_irrelevant(abstraction, size)` builds the groups.
+* `Abstraction.estimate(starts, actions)` (`_estimate.py`, ADR-0023): the pilot count. The states and transitions of the
+  exact graph, found with one kernel per (reroll, key) and the bench legality by sets of families and free slots; an
+  `Estimate` also forecasts a coarse level (`coarsened`) and gives a closed prefix of the graph for a calibration
+  solve (`first_layers`). An action of another shape raises `EstimateRefused`.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 
@@ -102,6 +106,7 @@ claim of the rules registry.
 """
 
 from ._coarse import Block, Coarsening
+from ._estimate import Estimate, EstimateRefused
 from ._goal import AtLeast, Goal, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
 from ._state import CompressedState, Flags, FracturedMod, Slot
@@ -113,6 +118,8 @@ __all__ = [
     "CacheStats",
     "Coarsening",
     "CompressedState",
+    "Estimate",
+    "EstimateRefused",
     "FamilyType",
     "Flags",
     "FracturedMod",
