@@ -83,12 +83,18 @@ rules:
     date_checked: 2026-10-30
 
   - id: affix_pool.no_memory_strands
-    statement: The planner's items carry no Memory Strands, so a draw is not tier-gated and the ordinary pool applies.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Memory_strand#Mechanics
-    quote: "When crafting on an item with memory strands, it will consume a random amount of it to increase the tier of the modifier it adds to the item."
+    statement: An item with no Memory Strands is not tier-gated and the ordinary pool applies; an item with one strand or more sees only the highest tiers of each tier table (memory_strands.rollable_tiers). The planner's items carry strands only when the start item shows them or the query turns them on (the setting memory_strands, `--strands`); with the setting off and no strands in the start item the ordinary pool applies and nothing about strands is considered (ADR-0040).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0040-the-strand-count-and-the-tier-cut.md
+    quote: "With no strands in the start item, a query leaves strands out"
     patch_verified: "3.29.3.3"
-    date_checked: 2026-10-30
+    date_checked: 2026-11-01
+    history:
+      - statement: The planner's items carry no Memory Strands, so a draw is not tier-gated and the ordinary pool applies.
+        held_until: "3.29.3.3"
+        source_kind: wiki
+        url: https://www.poewiki.net/wiki/Memory_strand#Mechanics
+        quote: "When crafting on an item with memory strands, it will consume a random amount of it to increase the tier of the modifier it adds to the item."
 
   - id: affix_pool.influence_tags
     statement: An influenced item has, besides the tags of its base, one tag per influence named "<class key>_<influence key>", and the spawn weights of an influence mod list such tags, so an influence mod joins the pool of an item with its tag and of no other (the weights of the ordinary mods do not change). The value maps each influence to its key (Hunter "basilisk", Redeemer "eyrie", Warlord "adjudicator") and each item class of the game data to its class key (a Thrusting One Hand Sword takes "sword" because its bases carry the base tag "sword" in the export and no influence tag with another sword-like prefix exists, so it can only draw the influence mods listed under "sword_<influence>"; ticket #68, read from the data, no source states it); an item class not listed has no admitted class key (jewels and flasks take no influence), so an influenced item of such a class is out of scope. The quote names Shaper; the other five keys and the 23 class keys are read from the data, where every one of the 138 influence tags in the spawn weights of the item-domain mods is one of these class keys with one of these influence keys, none missing or spare (research ticket 6, AFX-15). The tier of an influence mod counts among the mods of its type that can spawn with these tags (mod_tier.scope_is_mod_type); no source states it, it is the same rule on the influenced item.
@@ -137,7 +143,7 @@ rules:
     statement: >-
       Approximate. A mod of the export whose id holds the word "Royale" (the value's id_marker) is a Battle Royale copy and
       is not rolled by the game, so its spawn weight is 0 on every item: a pool, a tier table and a weight sum leave it out.
-      The export has no field that marks these mods; the id is the only mark. In the pinned export 3.29.3.3, 139 mods carry it:
+      The export has no field that marks these mods; the id is the only mark (the value also lists the four ids that have spawn weights, as the evidence the marker is checked against). In the pinned export 3.29.3.3, 139 mods carry it:
       135 have no spawn weight anyway (unique, chest, monster, area and flask mods), and four are copies of ordinary mods that have spawn weights on
       ordinary bases, MovementVelocity2Royale ("Sprinter's", prefix, level 5), IncreasedCastSpeed2Royale ("of Nimbleness"),
       IncreasedAttackSpeed2Royale and LocalIncreasedAttackSpeed2Royale____ (both "of Ease", suffixes, level 4). Evidence: on
@@ -160,4 +166,10 @@ rules:
     date_checked: 2026-11-01
     approximate: true
     approximate_reason: "Three sources agree (the sheet's tier counts, the sheet's pool weights, Craft of Exile's totals); no first-party statement."
-    value: {id_marker: Royale}
+    value:
+      id_marker: Royale
+      excluded_ids:
+        - MovementVelocity2Royale
+        - IncreasedCastSpeed2Royale
+        - IncreasedAttackSpeed2Royale
+        - LocalIncreasedAttackSpeed2Royale____

@@ -230,6 +230,13 @@ def _shifted(estimate: Estimate, shift: float) -> Estimate:
     return Estimate(estimate.value + shift, estimate.low + shift, estimate.high + shift)
 
 
+def strands_line(plan: Plan) -> str:
+    """The one line on Memory Strands (ADR-0040): when they were not considered it says so, so the omission is never hidden."""
+    if plan.strands.on:
+        return f"Memory Strands: considered ({plan.strands.why})"
+    return f"Memory Strands: not considered ({plan.strands.why})"
+
+
 def render_text(report: Report, verification: Verification | None = None, *, target_name: str = "") -> str:
     """The terminal report: inputs, the policy as a tree, the totals and, with `--verify`, the check."""
     plan = report.plan
@@ -250,6 +257,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     )
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
     lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
+    lines.append(strands_line(plan))
     if len(plan.dropped) <= MAX_DROPPED_LINES:
         for dropped in plan.dropped:
             lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")

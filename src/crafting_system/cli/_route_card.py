@@ -68,6 +68,7 @@ from crafting_system.items import (
     Side,
     capacity,
     eldritch_side,
+    memory_strands_line,
     tier_table,
 )
 from crafting_system.targets import ImplicitRequirement, KOfN, Target
@@ -196,10 +197,10 @@ def _title(rarity: Rarity) -> str:
 
 
 def _properties(
-    rarity: str, item_level: int, influences: Sequence[str], corrupted: str, quality: str = ""
+    rarity: str, item_level: int, influences: Sequence[str], corrupted: str, quality: str = "", strands: str = ""
 ) -> tuple[str, ...]:
-    """Rarity, item level, influences, quality, corrupted; `quality` and `corrupted` are "" for none."""
-    shown = [*([quality] if quality else []), *([corrupted] if corrupted else [])]
+    """Rarity, item level, influences, quality, Memory Strands, corrupted; `quality`, `strands` and `corrupted` are "" for none."""
+    shown = [*([quality] if quality else []), *([strands] if strands else []), *([corrupted] if corrupted else [])]
     return (rarity, f"item level {item_level}", *influences, *shown)
 
 
@@ -314,8 +315,9 @@ def card_of_item(
     influences = tuple(influence.value.title() for influence in sorted(item.influences))
     quality = _quality(item.quality.type.value, item.quality.percent) if item.quality is not None else ""
     properties = _properties(
-        _title(item.rarity), item.item_level, influences, "corrupted" if item.corrupted else "", quality
-    )
+        _title(item.rarity), item.item_level, influences, "corrupted" if item.corrupted else "", quality,
+        memory_strands_line(item.memory_strands) or "",
+    )  # fmt: skip
     return ItemCard(
         data.base_items[item.base_id].name,
         properties,

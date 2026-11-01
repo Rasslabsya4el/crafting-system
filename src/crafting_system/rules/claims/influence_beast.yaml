@@ -1,0 +1,47 @@
+# Mechanic family: influence_beast (the six beast recipes "Add a Mod to a <influence> Item").
+# Research ticket #86 (claims INF-26 and INF-27, draft file docs/research/2026-10-31-influence-claims.yaml on the branch
+# research/influence, commit 3964011), the decisions of grill B2 (issue #93, ADR-0030) and ticket #154.
+#
+# APPROXIMATE (ADR-0028): no source says which mod these recipes add, so the model borrows the pool of the influence's
+# Exalted Orb and the claim carries the approximate mark; the answer names it.
+rules:
+  - id: influence_beast.recipes
+    statement: "Six beast recipes add a mod to an item of one influence. The value maps the influence to the beasts one use consumes, as a price-file name and a count: the named red beast of the influence, a Craicic Maw, and two rare beasts of any kind (the Blood Altar takes four beasts per recipe, named red beasts first and any rare beast for the rest); `any_rare_creature` is priced at the setting beastcraft.any_rare_creature_price."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting
+    quote: "Add a Mod to a Shaper Item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value:
+      shaper: {Fenumal Devourer: 1, Craicic Maw: 1, any_rare_creature: 2}
+      elder: {Saqawine Blood Viper: 1, Craicic Maw: 1, any_rare_creature: 2}
+      crusader: {Farric Goliath: 1, Craicic Maw: 1, any_rare_creature: 2}
+      hunter: {Craicic Watcher: 1, Craicic Maw: 1, any_rare_creature: 2}
+      redeemer: {Fenumal Queen: 1, Craicic Maw: 1, any_rare_creature: 2}
+      warlord: {Fenumal Scrabbler: 1, Craicic Maw: 1, any_rare_creature: 2}
+
+  - id: influence_beast.uses_item_level
+    statement: "A beast recipe that adds a mod uses the item's item level, as other recipes that add mods do."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting
+    quote: "Other recipes that add modifiers use the item's item level as usual."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: influence_beast.adds_a_mod_of_that_influence
+    statement: "The recipe of an influence adds one mod to a rare item that already has that influence, drawn from the pool of that influence exactly as the influence's Exalted Orb would draw it (the item level, the families on the item, the side capacity, the spawn weights, the Prefixes/Suffixes Cannot Be Changed locks with open slots still filled, and the Cannot roll Attack/Caster Modifiers blocks); it needs an open slot and no legal mod means the recipe is refused. Only the pool is borrowed: the item has the influence already, so nothing is added to the influences. The wiki and the export do not say which mod the recipe adds, whether the item must carry the influence (the recipe's name says so), whether it needs an open slot or whether the metamods are respected."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93#issuecomment-6543904754
+    quote: "which mod the beast influence recipes add? (model as that influence's Exalted Orb, marked unverified)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "Unverified: no source says which mod the beast influence recipes add, so they borrow the pool of the influence's Exalted Orb (research ticket 86 O-09, grill B2)."
+
+  - id: influence_beast.refused_on_corrupted
+    statement: "A corrupted item takes no beast influence recipe."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01

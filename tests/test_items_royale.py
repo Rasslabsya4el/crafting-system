@@ -42,7 +42,10 @@ def prefix_suffix_tiers(data, base_id: str, mod_type: str, side: str) -> dict[st
 
 
 def test_the_claim_reads_the_marker_from_the_registry():
-    assert get_rule("affix_pool.royale_duplicates_do_not_spawn").value == {"id_marker": "Royale"}
+    value = get_rule("affix_pool.royale_duplicates_do_not_spawn").value
+
+    assert value["id_marker"] == "Royale"
+    assert set(value["excluded_ids"]) == set(FOUR)  # the four ids with spawn weights, listed as the evidence of the marker
 
 
 def test_the_fixture_gives_the_royale_copy_a_spawn_weight_in_the_raw_data_and_zero_in_the_rule():
