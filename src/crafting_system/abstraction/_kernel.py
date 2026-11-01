@@ -206,6 +206,7 @@ class Abstraction:
         self._tracks_implicits = bool(goal.implicits) or any(r.implicits for r in reads) or any(a.implicits for a in adds)
         self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
+        self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
         self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}
@@ -265,6 +266,16 @@ class Abstraction:
     def tracks_quality(self) -> bool:
         """Whether a state holds the catalyst quality: an enabled action reads or changes it."""
         return self._tracks_quality
+
+    @property
+    def sets_enchantment(self) -> bool:
+        """Whether an enabled action declares that it sets the enchantment (`Adds.enchantment`, ADR-0050, ticket #238).
+
+        It never makes the state hold the enchantment: the state is the same size with such an action or without it, and
+        what the actions read of the enchantment is the start item's (the constant `enchantment`). It only means `compress`
+        accepts a finished item whose enchantment is not the start item's, so a result of that action can be compared.
+        """
+        return self._sets_enchantment
 
     @property
     def tracks_offer(self) -> bool:
@@ -352,7 +363,7 @@ class Abstraction:
                 f"item on {item.base_id} at level {item.item_level} does not fit an abstraction "
                 f"of {self.base_id} at level {self.item_level}"
             )
-        if item.enchantment != self.enchantment:
+        if item.enchantment != self.enchantment and not self._sets_enchantment:
             raise ValueError(
                 f"item with enchantment {item.enchantment!r} does not fit an abstraction built with enchantment {self.enchantment!r}: "
                 "the enchantment is a constant of the problem, pass it as `enchantment`"

@@ -147,7 +147,9 @@ dropped. `compress` of an item that holds a lock or an Attack/Caster metamod rai
 The start item's enchantment (`enchantment`, a mod id) is a constant of the problem and is not in the state (ADR-0050, ADR-0053): no
 action adds or removes one. The items the kernel rebuilds hold it, so the limit of crafted mods an action reads from the item (one,
 two with the enchantment of the extra crafted slot, three with the multimod, three with both) is the one the pilot count uses
-(`crafted_limit_of`); `compress` refuses an item whose enchantment is another.
+(`crafted_limit_of`); `compress` refuses an item whose enchantment is another, unless an enabled action declares
+`Adds.enchantment` (a finish step such as a Tempering Orb, ticket #238): then it accepts one, and the state is the same
+either way. `Reads.enchantment` and `Adds.enchantment` are not `item_state`: no declaration of them makes a state hold the enchantment.
 An Orb of Annulment reads the count of the junk and, through the sides, tags and locks, which mods it may remove:
 its parts are fixed results and the removed mod's slot just disappears. A Fracturing Orb is a fixed result too:
 the slot of the fractured mod becomes a fractured mod. When an enabled action declares `Reads.fractures`, a
