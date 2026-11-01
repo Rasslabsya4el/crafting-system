@@ -121,10 +121,11 @@ def test_an_action_that_declares_nothing_reads_and_adds_the_enchantment_like_eve
     assert (adds.implicits, adds.quality, adds.offer, adds.enchantment) == (True,) * 4
 
 
-def test_no_kind_of_the_catalog_declares_the_enchantment_yet():
-    # B1 to B4 read and set no enchantment: the planner and the cache see no change in any registered kind
+def test_no_planner_kind_of_the_catalog_declares_the_enchantment_yet():
+    # B1 to B4 read and set no enchantment: the planner and the cache see no change in any kind they offer. A kind outside the planner
+    # (the recombinator, whose output takes the enchantment of its base) may declare it: nothing offers it yet.
     for item in (body(), body(enchantment=ARMOUR_EXTRA_SLOT), body(rarity=Rarity.NORMAL)):
-        for kind in kinds():
+        for kind in kinds(planner_only=True):
             for action in kind.members(DATA, item):
                 assert not action.reads(DATA).enchantment and not action.adds(DATA, item).enchantment, kind.name
 

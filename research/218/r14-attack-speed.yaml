@@ -1,0 +1,16 @@
+# The first loop of R14 and R15 on the real data (ticket #218): the Hunter Thicket Bow, Alteration spam until tier-1 Attack Speed,
+# Regal and Annulment. Small enough to walk with imprints (`growth.py`); it has magic states, which no B1 benchmark route passes.
+base: Thicket Bow
+item_level: 78
+influence: [hunter]
+actions:
+  - transmutation-orb
+  - alteration-orb
+  - augmentation-orb
+  - regal-orb
+  - annulment-orb
+requirements:
+  - family: IncreasedAttackSpeed
+    min_tier: 1
+    not_crafted: true
+start_price: Thicket Bow (ilvl 78, Hunter)

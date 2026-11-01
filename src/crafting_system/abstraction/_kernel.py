@@ -1024,6 +1024,7 @@ class Abstraction:
                 raise
             self._check_type_blind(state, outcomes)
             self._check_fracture_without_partners(state, outcomes)
+            self._check_same_item_space(outcomes)
             prepared = _Prepared(outcomes, origins, item=item)
             self._prepared_by[key] = prepared
         return prepared
@@ -1062,6 +1063,20 @@ class Abstraction:
                 "the item holds a fractured mod known only as a family type, and whether the game refuses this action "
                 "depends on which family of the type was fractured"
             )
+
+    def _check_same_item_space(self, outcomes: ActionOutcomes) -> None:
+        """Refuse a result that is an item of another base or another item level than this abstraction's (a recombinator).
+
+        A state stands for the items of one base at one item level, so the state of such a result does not exist. The enchantment
+        is not checked here: it is a constant of the problem and not part of the state (ADR-0050). Raises `OutOfScopeError`.
+        """
+        for _, part in outcomes.components:
+            made = part.retained
+            if (made.base_id, made.item_level) != (self.base_id, self.item_level):
+                raise OutOfScopeError(
+                    f"the result is an item on {made.base_id} at item level {made.item_level}, and this abstraction stands for items on "
+                    f"{self.base_id} at item level {self.item_level}: the state of another base or item level is not modelled"
+                )
 
     def _check_fracture_without_partners(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
         """Refuse a fracture, or a fractured mod known only as a family type, on a pool with a family that has mods on both sides.

@@ -1,0 +1,355 @@
+# Mechanic family: recombinator (the Kingsmarch bench, unpredictable mode only, M-44, ADR-0033, ticket #215).
+# The draft claims of the research note of ticket #90, trimmed of the predictable mode, the Ducat padding, the dead exclusive-mod
+# trick and the cost claims (ticket #216), plus four claims of the build. Unpredictable-mode numbers are player measurements
+# (Butsicles, patch 3.25, rechecked 3.26). APPROXIMATE (ADR-0028): the count tables, the selection exponent, the exclusive weight,
+# the output rarity and the cost are marked; the planner names them on every answer that reads them.
+rules:
+- id: recombinator.inputs_magic_or_rare_same_class
+  statement: The bench takes two magic or rare equipment items of the same item class. Corrupted items and normal items are refused since 3.26.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator
+  quote: combines two magic or rare equipment items of the same item class
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.corrupted_refused
+  statement: Corrupted items can no longer be recombined (3.26.0).
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator
+  quote: Corrupted items can no longer be recombinated.
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.both_inputs_consumed
+  statement: Both modes consume both inputs; the output is a new item, so no imprint of an input restores it.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator
+  quote: Both operating modes destroy the input items.
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.base_chosen_even
+  statement: In unpredictable mode each input is the base of the output with probability 1/2.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Base_creation
+  quote: Both inputs have equal chance to be selected.
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+  value: 0.5
+- id: recombinator.properties_from_chosen_base
+  statement: The output copies from the chosen base its base type, influences and influence-like status, anointments, enchantments, quality (catalysts included), implicits, sockets and links; item level is derived and the defence percentile is rerolled.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Base_creation
+  quote: Quality (including Catalysts)
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.item_level_formula
+  statement: The output item level is min(floor((A + B) / 2 + 2), max(A, B)).
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Base_creation
+  quote: average of the inputs' item level plus 2, rounded down
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.memory_strands_stay_with_base
+  statement: Memory Strands stay with the chosen base and are not combined.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/326_recomb_psas_a_few_useful_tipsconfirmations/
+  quote: Stay with base, do not combine
+  patch_verified: 3.26.0
+  date_checked: 2026-09-21
+- id: recombinator.pools_per_side
+  statement: The prefixes of both inputs form one pool and the suffixes another; the two sides are drawn independently, except for 1 prefix + 1 suffix on separate inputs, which gives 1p, 1s or 1p1s, one third each.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1exyavx/325_updated_guide_to_recombinators/
+  quote: 'only 3 outcomes: 1p/0s, 0p/1s and 1p1s'
+  patch_verified: 3.26.0
+  date_checked: 2026-09-21
+- id: recombinator.count_table
+  statement: The number of mods kept on a side depends only on the pooled count on that side (percent, the guide's figures; rows 3 and 4 sum to 101 and are renormalised by the action). Measured in 3.25, "largely the same" in 3.26.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1exyavx/325_updated_guide_to_recombinators/
+  quote: 'Table 1: Conditional final affix number distributions.'
+  patch_verified: 3.26.0
+  date_checked: 2026-09-21
+  value:
+    1:
+      0: 41
+      1: 59
+    2:
+      1: 67
+      2: 33
+    3:
+      1: 39
+      2: 52
+      3: 10
+    4:
+      1: 11
+      2: 59
+      3: 31
+    5:
+      2: 43
+      3: 57
+    6:
+      2: 28
+      3: 72
+  approximate: true
+  approximate_reason: Player measurements (the 3.25 guide, 217 to 424 events per row, largely the same in 3.26); the wiki rounds the same table differently.
+- id: recombinator.count_table_wiki
+  statement: The wiki's estimate of the same table, rounded differently; the action reads it as a second table for a sensitivity run.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Determining_the_number_of_modifier_affixes
+  quote: These estimated probabilities are described in Table 1.
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+  value:
+    1:
+      0: 41
+      1: 59
+    2:
+      1: 66.7
+      2: 33.3
+    3:
+      1: 40
+      2: 50
+      3: 10
+    4:
+      1: 10
+      2: 60
+      3: 30
+    5:
+      2: 43
+      3: 57
+    6:
+      2: 30
+      3: 70
+  approximate: true
+  approximate_reason: Player measurements (the 3.25 guide, 217 to 424 events per row, largely the same in 3.26); the wiki rounds the same table differently.
+- id: recombinator.output_capped_by_chosen_base
+  statement: The output holds at most the chosen base's affix cap per side (3 and 3 on an ordinary rare) even if the pool is larger.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Other_advanced_use_cases
+  quote: can still only select a maximum of 3 prefixes/suffixes
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.duplicates_enter_pool
+  statement: A mod present on both inputs enters the pool twice (mod doubling raises the pooled count and the chance of that mod being picked), but once one of them is picked the other is ineligible (same mod group).
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Modifier_doubling/blocking
+  quote: increase the chance for a strength roll to be chosen during modifier selection
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.mod_group_exclusion
+  statement: Once a mod is picked, every mod of the same mod group is ineligible for the rest of the draw.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Modifier_Selection
+  quote: all modifiers sharing its "mod group" are ineligible for selection
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.side_filled_first_even
+  statement: Prefixes or suffixes are filled first with probability 1/2 (measured in 3.25; 3.26 reports it no longer holds when one side holds only exclusive mods).
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Modifier_Selection
+  quote: The suffixes or prefixes are filled first with 50/50 odds.
+  patch_verified: 3.26.0
+  date_checked: 2026-10-31
+  value: 0.5
+  approximate: true
+  approximate_reason: Measured in 3.25 only; 3.26 reports it no longer holds when a side holds only exclusive mods, and no number says what it is then.
+- id: recombinator.nnn_needs_native_base
+  statement: A mod that needs a specific base (influenced, attribute-bound, base-type-bound) counts in the pool but cannot appear if the chosen base is not native to it. A fractured mod counts only if its own base is chosen.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Special_modifiers:_Non-native,_natural_modifiers_(NNN)
+  quote: cannot appear on the final recombinated item if their "native" condition is not satisfied
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.one_exclusive_per_item
+  statement: At most one exclusive mod (essence without a tier, beast aspect, veiled, crafted, metacrafted, delve, Breach and Incursion mods, elevated influenced mods) stays on the output; picking one removes the others of both pools.
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Special_modifiers:_Exclusive_Modifiers
+  quote: Only one modifier from this list can be present on a recombinated output item.
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+- id: recombinator.fewer_mods_when_inputs_cannot_roll
+  statement: Since 3.26 the output holds fewer mods on average when the inputs carry many mods that cannot normally roll on the item (veiled, essence).
+  source_kind: official
+  url: https://www.poewiki.net/wiki/Version_3.26.0
+  quote: fewer modifiers on the item on average
+  patch_verified: 3.26.0
+  date_checked: 2026-10-31
+- id: recombinator.exclusive_counts_once_report_3_27
+  statement: In February 2026 (3.27) several exclusive mods on one input still count as one mod in the pool.
+  source_kind: experiment
+  url: https://www.reddit.com/r/pathofexile/comments/1qx8y2z/_/o3uqisv/
+  quote: if there's multiple exclusive it counts as 1 mod in the pool now
+  patch_verified: 3.27.0
+  date_checked: 2026-10-31
+- id: recombinator.exclusive_counting_report
+  statement: Butsicles reports exclusive modifiers count as one on that side and the first side is no longer 50/50 when a side holds only exclusive mods (about 70 tests).
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/326_recomb_psas_a_few_useful_tipsconfirmations/
+  quote: exclusive modifiers only count as 1 modifier on that side
+  patch_verified: 3.26.0
+  date_checked: 2026-09-21
+- id: recombinator.selection_weighted_formula_unknown
+  statement: 'Which eligible mods are picked depends on spawn weight, higher weight more likely, and the formula is not published. The planner draws successively without replacement with chance proportional to weight^alpha (the mod group of each pick closed), plans at alpha 1 and reads the grid 0.4, 0.7, 1.0, 1.3, 1.6 (fit of #175: alpha 0.92, interval [0.36, 1.56] on gloves, [0.79, 1.76] pooled; alpha at or below 0 excluded).'
+  source_kind: wiki
+  url: https://www.poewiki.net/wiki/Recombinator#Modifier_Selection
+  quote: Higher weight modifiers are more likely to be selected
+  patch_verified: 3.29.3.3
+  date_checked: 2026-10-31
+  value:
+    plan: 1.0
+    grid:
+    - 0.4
+    - 0.7
+    - 1.0
+    - 1.3
+    - 1.6
+  approximate: true
+  approximate_reason: Fitted on 40 + 28 observations, weights 250 to 1500; weights below 250 extrapolated; no source gives the formula.
+- id: recombinator.rarer_mods_note_3_25_1
+  statement: Patch 3.25.1 raised the chance of rarer mods against the earlier rule; it does not say rarer mods are kept more often than common ones.
+  source_kind: official
+  url: https://www.poewiki.net/wiki/Version_3.25.1
+  quote: rarer Modifiers now have a much higher chance to be selected
+  patch_verified: 3.25.1
+  date_checked: 2026-10-31
+- id: recombinator.guide_higher_weight_more_likely
+  statement: A later edit of the guide (after 3.25.1; not in the first posted version) says higher-weight mods are more likely and tiers are irrelevant at equal weight; the exact formula is not fleshed out.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1exyavx/325_updated_guide_to_recombinators/
+  quote: modifiers with higher weights are more likely
+  patch_verified: 3.25.1
+  date_checked: 2026-09-21
+- id: recombinator.rare_targets_disadvantaged
+  statement: The guide's author says mod weights matter when more eligible mods than slots exist, and that this is not in the crafter's favour for rare or top-tier targets (+1 all spell skill gems, T1 flat elemental, T1 % physical). Direction only; no formula.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1exyavx/_/ljaltc5/
+  quote: Affix weights matter, but you want to avoid situations where they do
+  patch_verified: 3.25.1
+  date_checked: 2026-10-31
+- id: recombinator.weight_own_gloves_test
+  statement: 'The author''s own Standard test (all mods T1 except chaos resistance, weight 250 against 1000 for the other resistances): chaos resistance was kept in 7 of 15 two-mod results (47%). N = 15 cannot separate weight-proportional (about 29% for this setup, checker''s figure) from equal chance (about 67%). Date: 2024-08 (3.25.0 or 3.25.1, rows undated).'
+  source_kind: experiment
+  url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit#gid=49869311
+  quote: Easily testable if mod weight affects selection odds
+  patch_verified: 3.25.0
+  date_checked: 2026-10-31
+  value:
+    low_weight: 250
+    high_weight: 1000
+    low_kept: 7
+    trials: 15
+- id: recombinator.weight_retention_excerpt
+  statement: 'UNSOURCED excerpt in the same tab (Additional data from PYCKS, in-league data): chaos resistance (weight 250) kept 29%, other resistances (weight 1000) 75%. No N, no pool sizes, not reproducible from the visible cells. A hint, not a measurement.'
+  source_kind: experiment
+  url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit#gid=49869311
+  quote: chaos res was retained at a rate of 29% and the others at a rate of 75%
+  patch_verified: 3.25.0
+  date_checked: 2026-10-31
+  value:
+    low_weight: 250
+    high_weight: 1000
+    low_kept: 0.29
+    high_kept: 0.75
+- id: recombinator.kingsmarch_rarer_retained_upgrade
+  statement: The 3.25.0 league upgrade Rarer Modifiers are more likely to be retained changed the weights of rival mods relative to each other and does nothing when only one mod is in play (the one-mod count stays fixed). The wiki says the upgrades were likely removed with the 3.26 bench; whether any such tilt exists in the 3.26+ bench is not established.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1exyavx/_/lk007kc/
+  quote: It affects their weights relative to each other
+  patch_verified: 3.25.0
+  date_checked: 2026-10-31
+- id: recombinator.weighted_report_3_27
+  statement: 'UNVERIFIED anecdote, thread removed by the moderators as misinformation: with a T1 spell damage prefix (weight 40) against 1000 and 500, ten recombinations in a row returned the bad base and about 20 attempts gave no three-mod result. It is the only 3.27 weight-related report found; it also contradicts the 50/50 base rule, so it is more likely bad luck than a rule change.'
+  source_kind: experiment
+  url: https://www.reddit.com/r/pathofexile/comments/1p2knma/recombinator_odds_seem_to_be_weighted/
+  quote: results in (bad base with spell block) 10 times in a row
+  patch_verified: 3.27.0
+  date_checked: 2026-10-31
+- id: recombinator.weights_as_proportional_shares
+  statement: In 3.26 the guide's author computes recombination odds with spawn weights as proportional shares ("if we assume the weights are not modified in any way") and says the odds for low-weight mods fall below the equal-chance figure.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1lfyxxd/_/n1bu3an/
+  quote: For low weights it will be below this number.
+  patch_verified: 3.26.0
+  date_checked: 2026-10-31
+- id: recombinator.count_table_sample_sizes
+  statement: Events behind the 3.25 count table (author's sheet "Aggregated Mod data", 2024-08-21), per pooled count, as [zero, one, two, three] final mods; use them for the sampling error of recombinator.count_table.
+  source_kind: experiment
+  url: https://docs.google.com/spreadsheets/d/10slavP-n-rCjnu5sVFi9DQTUybI2ZDoBbZsZ2UxM7Xg/edit#gid=1624896422
+  quote: Aggregated Mod data
+  patch_verified: 3.25.1
+  date_checked: 2026-10-31
+  value:
+    1:
+    - 89
+    - 128
+    - 0
+    - 0
+    2:
+    - 0
+    - 196
+    - 84
+    - 0
+    3:
+    - 0
+    - 124
+    - 171
+    - 26
+    4:
+    - 0
+    - 47
+    - 241
+    - 136
+    5:
+    - 0
+    - 0
+    - 151
+    - 194
+    6:
+    - 0
+    - 0
+    - 82
+    - 219
+- id: recombinator.low_weight_below_even_chance
+  statement: In 3.26 the guide's author expects the odds of keeping an extremely low-weight mod to be below the equal-chance case.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1lfyxxd/326_recombinators_analysisguide/
+  quote: lower than 50% in the case of extremely low weight modifiers
+  patch_verified: 3.26.0
+  date_checked: 2026-09-21
+- id: recombinator.jewels_refused
+  statement: 'Jewels do not go into the bench: the planner refuses them (idols are not planned either).'
+  source_kind: owner
+  url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0033-the-unpredictable-recombinator.md
+  quote: they do not go into the bench
+  patch_verified: 3.29.3.3
+  date_checked: 2026-11-01
+- id: recombinator.output_rarity_follows_mods
+  statement: The output is normal with no mod, magic with one mod per side at most, and rare when a side holds two or more.
+  source_kind: coe
+  url: https://www.craftofexile.com/packages/package.js
+  quote: if(nump>0||nums>0){rarity="magic";if(nump>1||nums>1){rarity="rare"}}
+  patch_verified: 3.29.3.3
+  date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: Only Craft of Exile's code (the stale Sentinel recombinator) gives the rule; it matches the guide's 1p/1s results.
+- id: recombinator.exclusive_mod_weight
+  statement: An exclusive mod (crafted, essence-only or any mod its own input could not roll) is drawn as if its weight were 1000, the figure the guide's author computes with.
+  source_kind: owner
+  url: https://www.reddit.com/r/pathofexile/comments/1lfyxxd/326_recombinators_analysisguide/
+  quote: We assume all crafted mods have 1000
+  patch_verified: 3.26.0
+  date_checked: 2026-09-21
+  value: 1000
+  approximate: true
+  approximate_reason: The game data gives crafted and special mods weight 0 and only the guide author's assumption of 1000 gives a draw weight.
+- id: recombinator.cost_per_combine
+  statement: 'One combine consumes Thaumaturgic Dust and Gold; the value maps the price-file names to the point amounts of ADR-0035 (Dust 25,000 to 250,000, Gold 8,000 to 20,000 in the reports). Ticket #216 replaces it with the rule of recombinator_cost.yaml.'
+  source_kind: experiment
+  url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/
+  quote: costs over 100,000
+  patch_verified: 3.26.0
+  date_checked: 2026-11-01
+  value:
+    Thaumaturgic Dust: 100000
+    Gold: 12000
+  approximate: true
+  approximate_reason: No formula is published; single player reports with intervals of 25,000 to 250,000 Dust and 8,000 to 20,000 Gold.
