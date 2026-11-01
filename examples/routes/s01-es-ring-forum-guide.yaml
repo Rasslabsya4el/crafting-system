@@ -108,7 +108,8 @@ rules:
           status: passing
     do: Orb of Unravelling
 
-  # Step 4: otherwise the fossils again (any rare that is not one of the states above).
+  # Step 4: otherwise the fossils again (any rare that is not one of the states above). That includes a ring with the four
+  # mods and no open suffix, which the guide leaves open ("empty suffix" is a goal of the fossil step): it is rerolled.
   - when:
       rarity: rare
     do: Fossils Dense Fossil

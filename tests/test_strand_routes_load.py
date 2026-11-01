@@ -48,14 +48,16 @@ def flat_price_file() -> PriceFile:
     return PriceFile("Test", datetime.datetime(2026, 11, 1, tzinfo=datetime.UTC), 300.0, FlatPrices())
 
 
-def without_strand_rules(text: str) -> str:
-    """The route with every rule that uses a strand word removed, as the loader of today could read it."""
+def without_strand_words_in_rules(text: str) -> str:
+    """The route as the loader of today could read it: a rule that does a strand action is removed, and the strand
+    conditions of the others are dropped (S02's Transmutation, which waits for 80 strands, then applies to every normal ring)."""
     document = yaml.safe_load(text)
-    rules = [
-        rule
-        for rule in document["rules"]
-        if rule["do"] not in STRAND_ACTIONS and not any(key.startswith("memory_strands") for key in rule.get("when", {}))
-    ]
+    rules = []
+    for rule in document["rules"]:
+        if rule["do"] in STRAND_ACTIONS:
+            continue
+        when = {key: value for key, value in rule.get("when", {}).items() if not key.startswith("memory_strands")}
+        rules.append({"when": when, "do": rule["do"]} if when else {"do": rule["do"]})
     return yaml.safe_dump({"name": document["name"], "rules": rules}, sort_keys=False)
 
 
@@ -72,7 +74,7 @@ def test_the_route_without_its_strand_rules_is_read_against_the_plan_of_its_targ
         source=stem,
     )
     plan = make_plan(data, target, flat_price_file(), start_price=10.0)
-    route_text = without_strand_rules((ROOT / "examples" / "routes" / f"{stem}.yaml").read_text(encoding="utf-8"))
+    route_text = without_strand_words_in_rules((ROOT / "examples" / "routes" / f"{stem}.yaml").read_text(encoding="utf-8"))
     assert parse_route(route_text, plan, data, source=stem).rules
 
 
