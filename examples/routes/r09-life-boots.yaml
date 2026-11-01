@@ -1,0 +1,39 @@
+# Given route for benchmark route R09: Pristine + Shuddering Life boots.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# It does not search for anything: in every state the FIRST rule whose conditions match is the one
+# that is followed. A goal state is never acted on. A state no rule matches is reported as a gap.
+# Lines starting with # are comments and are ignored. The conditions and actions are explained in
+# examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (PoE Vault, "Basic boots crafting", docs/research/2026-10-30-5-reference-routes.md, id R09):
+#   1. Use 2-socket resonators (Potent Chaotic Resonators) with a Pristine Fossil and a Shuddering Fossil until
+#      the boots hold high Life and a Movement Speed.
+#   2. Bench-craft the missing useful modifier: Movement Speed, in an open prefix.
+#
+# The guide starts from a rare pair of boots; the target starts from a normal one, so the last rule is the
+# Orb of Alchemy that makes it rare (a fossil works on a rare item only).
+
+name: R09, PoE Vault guide
+
+rules:
+  # Step 2: the Life is there, the boots have no Movement Speed and a prefix is open: craft it. The
+  # guide does not say which of the three Movement Speed crafts; the one with "Cannot Be Chilled" is used.
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: MovementVelocity
+          status: absent
+      open_prefixes: 1
+    do: "Bench craft #% increased Movement Speed / 100% chance to Avoid being Chilled"
+  # Step 1: use the two fossils again (this is also the first use, on the boots the Alchemy made rare).
+  - when:
+      rarity: rare
+    do: Fossils Pristine Fossil + Shuddering Fossil
+  # The boots are normal at the start.
+  - when:
+      rarity: normal
+    do: Orb of Alchemy

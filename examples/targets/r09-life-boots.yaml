@@ -46,9 +46,9 @@ requirements:
       - family: MovementVelocity
         min_tier: 1
         not_crafted: true
-      - family: MovementVelocity
+      - stat: "#% increased Movement Speed\n#% increased Movement Speed if you haven't been Hit Recently"
         mod: JunMaster2MovementVelocityAndMovementVelocityIfNotHitRecently3
-      - family: MovementVelocity
+      - stat: "#% increased Movement Speed\n#% chance to gain Onslaught for 4 seconds on Kill"
         mod: JunMaster2MovementVelocityAndOnslaughtOnKill3_
-      - family: MovementVelocity
+      - stat: "#% increased Movement Speed\n100% chance to Avoid being Chilled"
         mod: JunMaster2MovementVelocityAndCannotBeChilled3

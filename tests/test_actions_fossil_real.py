@@ -24,7 +24,7 @@ from fractions import Fraction
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.actions import ApplyFossils, fossil_actions
+from crafting_system.actions import AlchemyOrb, ApplyFossils, catalog, fossil_actions
 from crafting_system.items import Item, Rarity
 
 HIGH_ES = ("DefencesPercent", 72)
@@ -121,3 +121,22 @@ def test_a_tangled_resonator_is_a_mixture_of_the_tag_pairs_that_differ_on_the_it
     outcomes = ApplyFossils(("Dense Fossil", "Tangled Fossil")).outcomes(data, empty_rare(data, "Sorcerer Boots"))
     assert sum(p for p, _ in outcomes.components) == 1
     assert 1 < len(outcomes.components) <= 420
+
+
+def boots_with(data, rarity: Rarity) -> Item:
+    """The empty Sorcerer Boots of item level 86 at `rarity` (validation takes no mod count, so magic has none here)."""
+    return Item.build(data, base_id=base_named(data, "Sorcerer Boots"), item_level=86, rarity=rarity, mods=())
+
+
+@pytest.mark.parametrize("rarity", [Rarity.NORMAL, Rarity.MAGIC, Rarity.RARE])
+def test_the_fossil_sets_of_a_normal_or_magic_boots_are_those_of_the_same_boots_made_rare(data, rarity):
+    listed = catalog(data, boots_with(data, rarity), names=["fossil-set"])
+    assert listed
+    assert list(listed) == fossil_actions(data, boots_with(data, Rarity.RARE))
+
+
+def test_a_normal_boots_planner_catalog_has_no_fossil_set_and_no_alchemy_orb_unless_named(data):
+    normal = boots_with(data, Rarity.NORMAL)
+    planned = catalog(data, normal, planner_only=True)
+    assert not any(isinstance(action, (ApplyFossils, AlchemyOrb)) for action in planned)
+    assert AlchemyOrb() in catalog(data, normal, names=["alchemy-orb"])
