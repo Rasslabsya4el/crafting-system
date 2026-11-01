@@ -1,0 +1,21 @@
+# Draft claim of research ticket #271 (family foulborn). Not yet in src/. Check:
+# load_registry(Path("docs/research/2026-11-01-strand-sheet-claims")).
+rules:
+  - id: foulborn.bonus_is_added_to_the_strand_denominator
+    statement: >-
+      A Foulborn orb on an item with strands adds 75 to the Modifier Tier Rating of the cut: the denominator D of
+      ADR-0040 is 2.5 s + 147.5 + 75, not the larger of the strand cut and a cut of the orb alone. On the 491 Foulborn crafts
+      of the sheet (427 Augmentation, 64 Regal, 1 to 91 strands before) the log-likelihood of the observed mods is -1,809.6
+      for the sum, -2,084.9 for the larger of the strand cut and the Foulborn cut at rating 75 (D = 175) and -2,064.0 for
+      the beta emulator's rule (rating 100, the larger of the two cuts); on the 42 crafts with 10 strands or fewer -168.9
+      against -183.2 (there both larger-of rules give the strand cut alone, so this does not bear on rating 75 against 100). The bonus itself: 75 is the largest value the data allow (a bonus of 76 makes an observed craft impossible)
+      and 72.5 is 13.5 log-likelihood units worse. Not answered: the cut of a Foulborn orb on an item with no strands (the sheet
+      has no such craft).
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: "0,79,Foulborn Orb of Augmentation,Resplendent,1,11,320,0.2380952381,3"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "75 is the largest bonus the data allow, with the post's statement; the cut on an item with no strands is open."
+    value: {bonus_to_rating: 75, combines_with_strands: sum}
