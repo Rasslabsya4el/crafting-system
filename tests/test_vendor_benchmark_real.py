@@ -150,7 +150,7 @@ def test_the_first_step_is_built_from_the_chosen_candidate_alone(plan, data):
 
 
 def test_the_text_report_is_the_golden(report):
-    assert_golden("v01_minion_helmet", masked(render_text(report, target_name="v01-minion-helmet.yaml")), suffix="txt")
+    assert_golden("v01_minion_helmet", masked(render_text(report, target_name="v01-minion-helmet.yaml")), extension="txt")
 
 
 def rounded(value, digits: int = 9):

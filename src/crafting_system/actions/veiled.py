@@ -28,6 +28,15 @@ keep the junk and the offer). In the compressed state (ADR-0009, ADR-0026) the p
 the same family (Movement Speed on boots), and the craftable version of an unveiled mod a crafted slot told apart from the other
 crafted mods of its family; so the refusals of the two orbs, which look for a veiled mod, are exact on a state. An item that holds
 an offer is a choice node: the compressed state allows no action there but a pick (an action that reads the offer).
+
+Memory Strands (ADR-0041, ticket #284, B5-11a). The Veiled Chaos Orb cuts and spends: its two pool draws take `self.cut_of(data, item)`
+(the placeholder is forced and the kept mods are fixed, so neither is cut) and it spends 0 to 80, the wiki's "Veiled Chaos Orb - 0-80"
+(`memory_strands.spend_ranges_special_orbs`; the cut follows the spend row, `memory_strands.cut_follows_spend_table`). The Veiled Exalted
+Orb neither cuts nor spends: the wiki says by name that it "does not consume Memory Strands" (`memory_strands.not_spent_by`), and it draws no
+mod of a tier table, only a placeholder. The unveil and the pick declare the same (no cut, no spend), but **no source speaks of the
+unveil itself**: the evidence is only that the wiki's list of what spends strands is closed and the emulator's spend table has no unveil
+row, so it is `approximate` (`memory_strands.cut_follows_spend_table`). The pick must declare too: it is the choice half of the unveil, and
+without it the unveil could never finish on a stranded item. The strand claims are `strand_claims`, not `claims`.
 """
 
 from collections.abc import Mapping
@@ -59,6 +68,7 @@ from .finite import Finite
 from .metamods import kept_by_reroll, locked_sides, on_locked_side
 from .mixture import Mixture
 from .outcomes import Outcomes
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY, SPEND_SPECIAL_ORBS, SpendLaw, StrandUse
 
 __all__ = [
     "Pick",
@@ -171,6 +181,10 @@ class VeiledChaosOrb(Action):
         # It puts one of two placeholders on the item, so it names neither; it throws away an offer that was drawn.
         return Adds.erasing(named=None, offer=True)
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041, #284: the random mods are cut (the placeholder is forced and the kept mods are fixed, so not cut) and it spends 0 to 80
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_SPECIAL_ORBS.value["veiled_chaos"]), SPEND_SPECIAL_ORBS, CUT_FOLLOWS_SPEND_TABLE)
+
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         rules = (
             CHAOS_REROLLS_WITH_ONE_VEILED_MOD, GENERIC_POOL_ONLY, PLAIN_AFFIX_NOT_CRAFTED, CHAOS_VEILED_COUNTS_IN_TOTAL,
@@ -203,9 +217,10 @@ class VeiledChaosOrb(Action):
         if not sides:
             raise NotApplicableError("the kept mods fill every prefix and suffix slot, so the veil has no room")
         share = Fraction(1, len(sides))
+        cut = self.cut_of(data, item)  # the count of `given` is that of `item`: clearing the offer leaves it alone
         return Mixture(
             data,
-            tuple((share, Outcomes.reroll(data, given, tag=None, forced=_placeholder_mod(data, side))) for side in sides),
+            tuple((share, Outcomes.reroll(data, given, tag=None, forced=_placeholder_mod(data, side), cut=cut)) for side in sides),
             False,
         )
 
@@ -228,6 +243,10 @@ class VeiledExaltedOrb(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=None, draws=False)  # one of two placeholders, so none by name; a crafted mod may be the one removed, so it is not erased
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041, #284: the wiki says by name that it does not consume Memory Strands; it draws no tier-table mod, only a placeholder
+        return StrandUse.untouched(NOT_SPENT_BY, CUT_FOLLOWS_SPEND_TABLE)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         rules = (
@@ -342,6 +361,11 @@ class Unveil(Action):
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset(), draws=False, offer=True)
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 row "unveil", #284: no cut, no spend, `approximate`. No source speaks of the unveil itself: the evidence is that
+        # the wiki's list of what spends strands is closed and the emulator's spend table has no unveil row (the offer is not a tier-table draw)
+        return StrandUse.untouched(CUT_FOLLOWS_SPEND_TABLE)
+
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         rules = (THREE_OPTIONS, UNVEIL_IS_FREE, OFFER_POOL, OFFER_DRAW, LEGACY_MODS_WEIGHT_ZERO, OFFER_DRAWN_ONCE, NO_OFFER_FILTER, GENERIC_POOL_ONLY)
         return frozenset(rule.id for rule in rules)
@@ -391,6 +415,11 @@ class Pick(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=None, draws=False, offer=True)
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # The choice half of the unveil (same evidence, same row: see `Unveil.strand_use`); it must declare too, or the unveil could
+        # never finish on a stranded item
+        return StrandUse.untouched(CUT_FOLLOWS_SPEND_TABLE)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         return frozenset(rule.id for rule in (THREE_OPTIONS, UNVEIL_IS_FREE, OFFER_DRAWN_ONCE))

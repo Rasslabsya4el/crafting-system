@@ -27,8 +27,10 @@ Every declaration cites the claims it rests on (`StrandUse.claims`). They are **
 considers strands adds to its approximate inputs (ADR-0028). This module and `cut` are shared by all actions for that reason
 (`contract.SHARED_BY_ALL`): importing a name from them does not make an action name their claims.
 
-The table of ADR-0041 for the actions of B1 is declared in each action's own module. The later families declare their own rows (the
-tickets B5-11a to B5-11h): until they do, their actions are refused on a stranded item.
+The table of ADR-0041 is declared in each action's own module: the actions of B1 (#276) and the veiled, Eldritch (Chaos, Embers, Ichors,
+Conflict), influenced Exalted, Dominance, beast influence, Blessed, catalyst and Awakener's actions (B5-11a to d and f). The rest declare their own
+rows (B5-11e, g and h: Harvest add/remove and swaps, the recombinator, imprints): until they do, they are refused on a stranded item, as are the
+Eldritch Exalted and Annulment Orbs, which no ticket or row of the table names.
 """
 
 import random
@@ -68,6 +70,7 @@ __all__ = [
     "SPEND_ESSENCE",
     "SPEND_EXALTED",
     "SPEND_LAW_UNIFORM",
+    "SPEND_SPECIAL_ORBS",
     "Spent",
     "SpendLaw",
     "StrandUse",
@@ -78,6 +81,7 @@ SPEND_BASIC = get_rule("memory_strands.spend_ranges_basic")  # Transmutation, Au
 SPEND_CHAOS_FAMILY = get_rule("memory_strands.spend_ranges_chaos_family")  # Alchemy, Chaos 50
 SPEND_ESSENCE = get_rule("memory_strands.spend_ranges_essence")  # any essence 80
 SPEND_EXALTED = get_rule("memory_strands.spend_exalted_by_mod_count")  # 16, 22, 26, 32, 34, 38 by the mods before the craft
+SPEND_SPECIAL_ORBS = get_rule("memory_strands.spend_ranges_special_orbs")  # value: eldritch_chaos 60, veiled_chaos 80, awakeners 100 (B5-11a, b, f)
 SPEND_LAW_UNIFORM = get_rule("memory_strands.spend_law_uniform")
 # The claims behind the actions that neither cut nor spend (`StrandUse.untouched`).
 NOT_SPENT_BY = get_rule("memory_strands.not_spent_by")  # resonators, Harvest, beasts, benches; the wiki lists Fracturing, Annulment, Scouring, Divine neither way

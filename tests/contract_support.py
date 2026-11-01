@@ -429,18 +429,21 @@ def check_cutting_kinds_differ_from_the_uncut_draw(data=CONTRACT_DATA) -> set[st
     """Every kind that declares `cuts` gives, on some stranded fixture item, other mods than it gives at 0 strands; the names that did.
 
     A cut can leave a draw as it was (a pool whose tables are one tier), so this is asked of the kind on all the items, not of each.
+    `data` governs the amulets of the fixture; the stranded extra items (`extra_fixture_items`: a family on a base of its own) bring their own data.
     """
     differing: set[str] = set()
     declared: set[str] = set()
-    for kind, action, name in contract_pairs():
-        item = fixture_items()[name]
-        use = action.strand_use(data)
+    extra = extra_fixture_items()  # a family on a base of its own (an influenced helmet) registers its stranded item there
+    asked = [(kind, action, fixture_items()[name], data) for kind, action, name in contract_pairs()]
+    asked += [(kind, action, extra[name].item, extra[name].data) for kind, action, name in extra_pairs()]
+    for kind, action, item, where in asked:
+        use = action.strand_use(where)
         if not item.memory_strands or use is None or not use.cuts:
             continue
         declared.add(kind)
         try:
-            cut = finished(action.outcomes_under(data, item), data)
-            plain = finished(action.outcomes_under(data, item.changed(data, memory_strands=0)), data)
+            cut = finished(action.outcomes_under(where, item), where)
+            plain = finished(action.outcomes_under(where, item.changed(where, memory_strands=0)), where)
         except ActionError:
             continue
         if _by_mods(cut) != _by_mods(plain):

@@ -13,12 +13,16 @@ Rule axes (ADR-0012 amended, ADR-0022; `_readings`). `solve_readings` takes one 
 solves each, evaluates every optimal policy under every reading and returns the plan, its cost interval over the whole
 grid, the route with the smallest worst case, the certified bracket of the robust optimum and the best route without the
 actions left out.
+
+`expected_total(policy, start, is_goal, weight)` is the expected total of a weight over the executions of a fixed policy, the
+runs of its inputs included: with weight 1 on the recombinations, the expected number of recombinations (ticket #221).
 """
 
 from ._evaluate import evaluate
 from ._free import is_free as is_free_cost
 from ._readings import Baseline, IntervalReport, Route, has_inputs, solve_readings
 from ._report import Estimate, GridInfo, RiskReport
+from ._visits import expected_total
 
 __all__ = [
     "Baseline",
@@ -28,6 +32,7 @@ __all__ = [
     "RiskReport",
     "Route",
     "evaluate",
+    "expected_total",
     "has_inputs",
     "is_free_cost",
     "solve_readings",

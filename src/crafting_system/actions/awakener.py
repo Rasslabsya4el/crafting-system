@@ -28,6 +28,12 @@ roll limit on it is refused there as for any forced mod.
 
 The catalog lists the kind only for a receiver with one influence; it is not a planner kind until the solver prices donors
 (#211, #212) and the interval driver exists (#220).
+
+Memory Strands (ADR-0041, ticket #289, B5-11f). The orb cuts and spends: the draw of the rerolled mods takes `self.cut_of(data, item)` and
+the count after the craft is `max(0, s - x)` for `x` uniform on 0 to 100, the wiki's "Awakener's Orb - 0-100"
+(`memory_strands.spend_ranges_special_orbs`; the cut follows the emulator's spend table, which has an Awakener's Orb row,
+`memory_strands.cut_follows_spend_table`). The two kept mods keep their tier, so they are not cut; the donor is destroyed, so its count
+is gone and is not modelled. Both readings of the group conflict cut and spend alike. The strand claims are `strand_claims`, not `claims`.
 """
 
 from collections.abc import Mapping
@@ -45,6 +51,7 @@ from .errors import NotApplicableError, OutOfScopeError
 from .mixture import Mixture
 from .outcomes import Outcomes
 from .pool import build_pool, influence_spawn_test, tiers_of
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, SPEND_SPECIAL_ORBS, SpendLaw, StrandUse
 
 TWO_ITEMS_SAME_CLASS = get_rule("awakener.two_items_same_class")
 REROLLED_AS_RARE_WITH_BOTH_INFLUENCES = get_rule("awakener.receiver_reforged_rare_both_influences")
@@ -148,6 +155,10 @@ class AwakenersOrb(Action):
     def rule_axes(self, data: GameData) -> tuple[Axis, ...]:
         return (GROUP_CONFLICT_AXIS,)
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041, #289: the rerolled mods are cut (the two kept mods keep their tier) and it spends 0 to 100; the donor's count is gone
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_SPECIAL_ORBS.value["awakeners"]), SPEND_SPECIAL_ORBS, CUT_FOLLOWS_SPEND_TABLE)
+
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The donor: it starts as a bare item of the donor's influence and must become a rare one that holds `donor_mod` alone.
 
@@ -202,6 +213,7 @@ class AwakenersOrb(Action):
         donor_mod = data.mods[donor.mod_id]
         influences = frozenset({*item.influences, self.donor_influence})
         share = Fraction(1, len(pairs))
+        cut = self.cut_of(data, item)  # the count of `retained` is that of `item`; the kept mods are fixed, so only the rerolled ones are cut
         parts: dict[tuple[str, ...], tuple[Fraction, Outcomes]] = {}
         for entry in pairs:
             mine = replace(entry, values=_low_values(data, entry.mod_id))
@@ -214,7 +226,7 @@ class AwakenersOrb(Action):
                 parts[ids] = (parts[ids][0] + share, parts[ids][1])
                 continue
             retained = item.changed(data, rarity=Rarity.RARE, influences=influences, mods=kept)
-            drawn = Outcomes.over(data, retained, build_pool(data, retained), None, None, rerolled=frozenset(ids))
+            drawn = Outcomes.over(data, retained, build_pool(data, retained, cut=cut), None, None, rerolled=frozenset(ids))
             parts[ids] = (share, drawn)
         return Mixture(data, tuple(parts.values()), False)
 

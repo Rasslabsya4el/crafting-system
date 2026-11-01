@@ -53,9 +53,9 @@ COLD_REQ = Requirement("ColdResistance", None, frozenset({COLD}))
 HYSTERIA_REQ = Requirement(None, "Elemental Penetration during Flask Effect", frozenset({HYSTERIA_MOD}))
 
 
-def assert_golden(name: str, html: str, *, suffix: str = "html") -> None:
-    """The page equals `tests/golden/<name>.html` (`suffix` names another kind: `txt` or `json`); `UPDATE_GOLDEN=1` writes it first, a missing file fails."""
-    path = GOLDEN / f"{name}.{suffix}"
+def assert_golden(name: str, html: str, extension: str = "html") -> None:
+    """The page equals `tests/golden/<name>.<extension>` (`html`, or `txt` for a text report); `UPDATE_GOLDEN=1` writes it first, a missing file fails."""
+    path = GOLDEN / f"{name}.{extension}"
     if os.environ.get("UPDATE_GOLDEN"):
         GOLDEN.mkdir(exist_ok=True)
         path.write_text(html, encoding="utf-8", newline="\n")
