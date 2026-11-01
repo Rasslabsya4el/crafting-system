@@ -27,6 +27,9 @@ CORRUPTED = "corrupted"
 ABYSS_JEWEL_TAG = "abyss_jewel"
 ABYSS_JEWEL_DOMAIN = "abyss_jewel"
 CLUSTER_JEWEL_DOMAIN = "affliction_jewel"
+# the domains whose items a Vaal Orb corrupts with an implicit: equipment, jewellery and quivers, jewels, abyss jewels. Other domains
+# also hold corrupted mods (maps, relics, grafts) that no corrupting action draws for an item of this project.
+POOL_DOMAINS = frozenset({"item", "misc", ABYSS_JEWEL_DOMAIN})
 TIMELESS_JEWEL_NAME = "Timeless Jewel"
 
 
@@ -109,8 +112,11 @@ def corrupted_implicit_pool(data: GameData, base_id: str, item_level: int) -> Co
 
     Raises `UnknownBaseError` for a base not in the game data, `OutOfScopeError` for a Cluster or Timeless jewel
     and `NotApplicableError` for a base whose item class has no corrupted implicit at all (a flask, a map, a gem).
+    `item_level` must be an integer of at least 1 (`ValueError` otherwise).
     A result is cached per game data object, base and item level.
     """
+    if isinstance(item_level, bool) or not isinstance(item_level, int) or item_level < 1:
+        raise ValueError(f"the item level must be an integer of at least 1, got {item_level!r}")
     key = (id(data), base_id, item_level)
     hit = _POOLS.get(key)
     if hit is not None and hit[0] is data:
@@ -128,6 +134,10 @@ def _compute(data: GameData, base_id: str, item_level: int) -> CorruptedImplicit
         raise UnknownBaseError(f"no base {base_id} in the game data")
     _refuse_unchecked(base)
     domain = ABYSS_JEWEL_DOMAIN if ABYSS_JEWEL_TAG in base.tags else base.domain
+    if domain not in POOL_DOMAINS:
+        raise NotApplicableError(
+            f"{base.name} ({base.item_class}) has no corrupted implicit pool: it is not equipment, jewellery, a quiver or a jewel"
+        )
     candidates = []
     any_level = False
     for mod in _corrupted_mods(data):

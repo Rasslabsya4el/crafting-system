@@ -26,6 +26,7 @@ ABYSS = "Metadata/Items/Jewels/JewelAbyssMelee"
 CLUSTER = "Metadata/Items/Jewels/JewelPassiveTreeExpansionLarge"
 TIMELESS = "Metadata/Items/Jewels/JewelTimeless"
 FLASK = "Metadata/Items/Flasks/FlaskLife1"
+MAP = "Metadata/Items/Maps/MapWorlds1"
 
 
 def mod(mod_id, *, weights, level=1, domain="item", generation_type="corrupted", group=None):
@@ -68,6 +69,7 @@ RAW_MODS = {
     "Zero": mod("Zero", weights=[("ring", 0), ("default", 0)]),
     "NotCorrupted": mod("NotCorrupted", weights=[("ring", 1000), ("default", 0)], generation_type="prefix"),
     "AbyssOnly": mod("AbyssOnly", weights=[("default", 1000)], domain="abyss_jewel"),
+    "MapOnly": mod("MapOnly", weights=[("default", 75)], domain="area"),
     "JewelOnly": mod("JewelOnly", weights=[("jewel", 1000), ("default", 0)], domain="misc", level=33),
 }
 RAW_BASES = {
@@ -78,6 +80,7 @@ RAW_BASES = {
     CLUSTER: base("Large Cluster Jewel", "Jewel", "affliction_jewel", ["jewel", "expansion_jewel_large", "default"]),
     TIMELESS: base("Timeless Jewel", "Jewel", "misc", ["jewel", "default"]),
     FLASK: base("Small Life Flask", "LifeFlask", "flask", ["flask", "default"]),
+    MAP: base("Tropical Island Map", "Map", "area", ["map", "default"]),
 }
 
 
@@ -159,6 +162,18 @@ def test_cluster_and_timeless_jewels_are_refused_with_a_reason(data, base_id, ki
 def test_a_class_with_no_pool_is_refused_with_the_class_named(data):
     with pytest.raises(NotApplicableError, match=r"Small Life Flask \(LifeFlask\).*no corrupted implicit pool"):
         corrupted_implicit_pool(data, FLASK, 100)
+
+
+def test_a_base_outside_equipment_and_jewels_is_refused_although_a_corrupted_mod_matches_its_default_tag(data):
+    # the map's own corrupted mod (domain area) lists the tag `default`; maps, relics and grafts hold such mods, no Vaal Orb draws them
+    with pytest.raises(NotApplicableError, match=r"Tropical Island Map \(Map\).*no corrupted implicit pool"):
+        corrupted_implicit_pool(data, MAP, 100)
+
+
+@pytest.mark.parametrize("level", [0, -3, 80.0, True, "80", None])
+def test_an_item_level_that_is_not_an_integer_of_at_least_1_is_refused(data, level):
+    with pytest.raises(ValueError, match="item level"):
+        corrupted_implicit_pool(data, RING, level)
 
 
 def test_an_unknown_base_is_refused(data):

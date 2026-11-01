@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.actions import OutOfScopeError, corrupted_implicit_pool
+from crafting_system.actions import NotApplicableError, OutOfScopeError, corrupted_implicit_pool
 
 COE_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "coe" / "corrupted_pools.json"
 HIGH = 100  # above the highest required level of any corrupted mod (85)
@@ -57,6 +57,21 @@ ORDINARY_JEWELS = (
     "Metadata/Items/Jewels/JewelStr",
     "Metadata/Items/Jewels/JewelDex",
     "Metadata/Items/Jewels/JewelInt",
+    "Metadata/Items/Jewels/JewelPrismatic",
+)
+# classes whose bases hold corrupted mods of another domain (maps, relics, grafts) or none that matches: no pool
+NO_POOL_CLASSES = (
+    "Map",
+    "MapKey",
+    "MiscMapItem",
+    "ExpeditionLogbook",
+    "Relic",
+    "SanctumSpecialRelic",
+    "RemovedItem",
+    "HiddenItem",
+    "LifeFlask",
+    "Active Skill Gem",
+    "StackableCurrency",
 )
 ABYSS_JEWELS = (
     "Metadata/Items/Jewels/JewelAbyssMelee",
@@ -148,6 +163,16 @@ def test_cluster_and_timeless_jewels_of_the_real_data_are_refused(data):
             corrupted_implicit_pool(data, base_id, HIGH)
 
 
+@pytest.mark.parametrize("item_class", NO_POOL_CLASSES)
+def test_a_class_with_no_pool_is_refused_for_every_base(data, item_class):
+    bases = [base for base in data.base_items.values() if base.item_class == item_class]
+
+    assert bases
+    for base in bases:
+        with pytest.raises(NotApplicableError, match="no corrupted implicit pool"):
+            corrupted_implicit_pool(data, base.id, HIGH)
+
+
 def test_a_ring_of_item_level_80_has_w_31100(data):
     pool = corrupted_implicit_pool(data, RING, 80)
     whole = corrupted_implicit_pool(data, RING, 83)
@@ -206,6 +231,30 @@ def test_ring_amulet_and_belt_equal_craft_of_exile_mod_by_mod(data, item_class, 
 
     assert ours == coe_pool(item_class, item_level)
     assert sum(ours.values()) > 0
+
+
+@pytest.mark.parametrize("item_class", ["Ring", "Amulet", "Belt"])
+@pytest.mark.parametrize("item_level", [40, 80, 100])
+def test_the_tiers_of_every_family_craft_of_exile_names_as_ours_are_the_same(data, item_class, item_level):
+    """Where a Craft of Exile group has the name of one of our families, its tiers are that family's tiers.
+
+    The two sources do not cut the families alike (Craft of Exile lists each aura of the Mana Reservation Efficiency family as a modifier,
+    some modifiers have no group), so the names are compared where they agree: a tier in the wrong family would show here.
+    """
+    pool = corrupted_implicit_pool(data, bases_of(data, item_class)[0].id, item_level)
+    ours: dict[str, Counter] = {}
+    for entry in pool.mods:
+        tier = key(entry.mod.required_level, entry.weight, [[stat.min, stat.max] for stat in entry.mod.stats])
+        ours.setdefault(entry.mod.families[0], Counter())[tier] += 1
+    theirs: dict[str, Counter] = {}
+    for row in coe_rows()[item_class]:
+        if row["group"] is not None and row["ilvl"] <= item_level:
+            theirs.setdefault(row["group"], Counter())[key(row["ilvl"], row["weight"], row["values"])] += 1
+
+    shared = ours.keys() & theirs.keys()
+    assert len(shared) >= 5
+    for family in shared:
+        assert ours[family] == theirs[family], family
 
 
 @pytest.mark.parametrize("item_class", ["Ring", "Amulet", "Belt"])
