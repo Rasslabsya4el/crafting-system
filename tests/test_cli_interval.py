@@ -78,7 +78,7 @@ def test_golden_text_head_of_the_tiny_case(tiny):
 def test_golden_json_interval_of_the_tiny_case(tiny):
     _, _, _, report = tiny
     document = policy_document(report)
-    shown = {"interval": document["interval"], "approximate_inputs": document["approximate_inputs"]}
+    shown = rounded({"interval": document["interval"], "approximate_inputs": document["approximate_inputs"]})
     assert_golden("interval_tiny", json.dumps(shown, indent=2, sort_keys=True) + "\n", "json")
 
 
