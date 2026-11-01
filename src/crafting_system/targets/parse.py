@@ -78,6 +78,8 @@ TOP_KEYS = (
     "price_file",
     "actions",
     "allow_corrupted",
+    "item_level_floor",
+    "tiers_top_at_item_level",
 )
 REQUIREMENT_KEYS = ("family", "stat", "mod", "min_tier", "min_roll", "not_crafted")
 IMPLICIT_KEYS = ("family", "stat", "mod", "min_grade", "min_roll", "corrupted")
@@ -220,12 +222,30 @@ class _Reader:
         actions = self.read_actions(root["actions"], root.key_lines["actions"]) if "actions" in root else None
         allow_corrupted = self.read_allow_corrupted(root) if "allow_corrupted" in root else False
         self.check_corruption(root, base_id, item_level, implicits, allow_corrupted, start_item, start_price, actions)
+        item_level_floor = self.read_item_level_floor(root, item_level) if "item_level_floor" in root else None
+        tiers_top = self.read_tiers_top(root) if "tiers_top_at_item_level" in root else False
         if sockets is not None:
             self.check_socket_scope(root, requirements, start_item)
         return Target(
             base_id, item_level, influences, requirements, start_item, price_file, start_price, implicits, quality,
-            actions, enchantment, allow_corrupted, sockets, assumed,
+            actions, enchantment, allow_corrupted, sockets, assumed, item_level_floor, tiers_top,
         )  # fmt: skip
+
+    def read_item_level_floor(self, root: LineMap, item_level: int) -> int:
+        value = root["item_level_floor"]
+        if not is_whole(value) or not MIN_ITEM_LEVEL <= value <= item_level:
+            self.fail(
+                root.key_lines["item_level_floor"],
+                "item_level_floor",
+                f"must be a whole number from {MIN_ITEM_LEVEL} to the item level ({item_level}), got {describe(value)}",
+            )
+        return value
+
+    def read_tiers_top(self, root: LineMap) -> bool:
+        value = root["tiers_top_at_item_level"]
+        if not isinstance(value, bool):
+            self.fail(root.key_lines["tiers_top_at_item_level"], "tiers_top_at_item_level", f"must be true or false, got {describe(value)}")
+        return value
 
     def read_allow_corrupted(self, root: LineMap) -> bool:
         value = root["allow_corrupted"]

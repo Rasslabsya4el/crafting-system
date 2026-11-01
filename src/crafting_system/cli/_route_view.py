@@ -55,6 +55,7 @@ from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 
 from . import _route_flow
+from ._interval import IntervalAnswer
 from ._marking import approximate_inputs
 from ._plan import Plan
 from ._report import Report
@@ -140,11 +141,12 @@ class RouteInput:
     policy: Mapping[CompressedState, Action[CompressedState]]
     risk: RiskReport
     reasons: Mapping[CompressedState, str] = field(default_factory=dict)
+    interval: IntervalAnswer | None = None  # the plan's interval over a rule axis (ticket #221); only the planner's own policy has one
 
 
-def route_input(plan: Plan) -> RouteInput:
-    """The planner's own policy."""
-    return RouteInput(PLANNER_LABEL, plan, plan.policy, plan.risk)
+def route_input(plan: Plan, interval: IntervalAnswer | None = None) -> RouteInput:
+    """The planner's own policy, with the interval of the plan when the answer read a rule axis."""
+    return RouteInput(PLANNER_LABEL, plan, plan.policy, plan.risk, interval=interval)
 
 
 def given_route_input(plan: Plan, route: Route, result: RouteResult) -> RouteInput:
@@ -493,12 +495,21 @@ class _View:
         )
         success = risk.success_probability.value
         note = "how often a step is used and what it costs are left out: the policy is too large to solve here"
-        approximate = [f"{item.claim}: {item.reason}" for item in approximate_inputs(plan, self.inp.policy, self.data)]
+        interval = self.inp.interval
+        if interval is None:
+            approximate = [f"{item.claim}: {item.reason}" for item in approximate_inputs(plan, self.inp.policy, self.data)]
+            rule = ()
+        else:  # the claims of every route the interval shows, each with its spread; the plan and its interval come first
+            approximate = [
+                f"{item.claim}: {item.reason}" + (f" Spread: {item.words}." if item.words else "") for item in interval.approximate_inputs
+            ]
+            rule = tuple(_plain(label, *lines) for label, lines in interval.facts(divine))
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,
             _plain("Mean", mean),
             _plain("9 runs in 10", p90),
             _plain("Success chance", chance_text(success)) if success < 1 - 1e-9 else None,
+            *rule,
             _plain("Approximate inputs", *approximate, tone="warn"),
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
             None if self.flow.measured else _plain("Note", note),
@@ -644,7 +655,7 @@ def write_route_page(
         searchable = [mod for mod in data.mods.values() if mod.text]  # a mod with no text (a veiled one) cannot be searched by
         buy = buy_step(buy_spec, plan.prices.league, searchable, _trade_stats(cache_dir))
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
-    policy = build_section(route_input(plan), data, buy, anchor="policy", route_field=not stacked)
+    policy = build_section(route_input(plan, report.interval), data, buy, anchor="policy", route_field=not stacked)
     sections = (policy,)
     if route is not None and given is not None:
         drawn = build_section(

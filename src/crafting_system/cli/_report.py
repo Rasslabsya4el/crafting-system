@@ -7,7 +7,7 @@ only, so it prints on any console. Costs are in Chaos Orbs with a Divine Orb equ
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState, Status
@@ -16,6 +16,7 @@ from crafting_system.items import Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN
 
+from ._interval import IntervalAnswer
 from ._marking import (
     ApproximateInput,
     approximate_inputs,
@@ -68,6 +69,17 @@ class Report:
     states: tuple[PolicyState, ...]
     shares: tuple[tuple[WeightShare, float | None], ...]  # a share and the kernel's per-use chance of the leaf
     approximate_inputs: tuple[ApproximateInput, ...] = ()  # the approximate claims the policy's actions read (ADR-0028)
+    interval: IntervalAnswer | None = None  # the plan's interval over a rule axis it reads (ADR-0012, ticket #221); None when it reads none
+
+
+def with_interval(report: Report, interval: IntervalAnswer | None) -> Report:
+    """The report of an answer that read a rule axis: the interval block is added and the approximate inputs are those of every route it shows.
+
+    With `None` (the plan reads no axis) the report is returned as it is, so such an answer says nothing about any axis.
+    """
+    if interval is None:
+        return report
+    return replace(report, interval=interval, approximate_inputs=interval.approximate_inputs)
 
 
 def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
@@ -234,6 +246,31 @@ def _shifted(estimate: Estimate, shift: float) -> Estimate:
     return Estimate(estimate.value + shift, estimate.low + shift, estimate.high + shift)
 
 
+def free_action_lines(plan: Plan, risk) -> list[str]:
+    """What the percentiles hold to when the plan has free actions (ticket #349): they are counted apart from the grid, and the bound is stated.
+
+    The free actions are priced at an epsilon so that the solver sees a positive cost; the risk run counts them at that price but not on its
+    grid, so every percentile is certified to within `free_allowance` Chaos, except with chance `free_tail`, and the CVaR to within `free_cvar_allowance`. The solver's own
+    certified error (a relative figure) is given with it. Empty for a plan without free actions.
+    """
+    if risk.grid.free_tail <= 0.0:
+        return []
+    return [
+        f"  (free actions are counted at {money_small(free_action_price(plan))} Chaos each and apart from the percentile grid: the percentiles hold to within",
+        f"   {money_small(risk.grid.free_allowance)} Chaos, except with chance {risk.grid.free_tail:.0e}, and the CVaR to within {money_small(risk.grid.free_cvar_allowance)} Chaos;",
+        f"   the solver's error bound is {plan.solution.error_bound:.1e}, relative)",
+    ]
+
+
+def free_action_price(plan: Plan) -> float:
+    """The price the planner gave the actions that consume nothing."""
+    return max((entry.cost for entry in plan.offers if not entry.offer.resources), default=0.0)
+
+
+def money_small(chaos: float) -> str:
+    return f"{chaos:.2g}"
+
+
 def strands_line(plan: Plan) -> str:
     """The one line on Memory Strands (ADR-0040): when they were not considered it says so, so the omission is never hidden."""
     if plan.strands.on:
@@ -251,6 +288,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if target_name:
         lines.append(f"Target: {target_name}")
     lines.extend(marking_lines(plan.approximation, shift, divine))
+    if report.interval is not None:
+        lines.extend(report.interval.text_lines(divine))
     lines.extend(approximate_lines(report.approximate_inputs))
     if plan.note:
         lines.append(f"Note: {plan.note}")
@@ -336,6 +375,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"  mean cost       {interval(_shifted(risk.mean, shift), divine)}")
         lines.append(f"  p50             {_quantile_text(risk, risk.p50, shift, divine)}")
         lines.append(f"  p90             {_quantile_text(risk, risk.p90, shift, divine)}")
+        lines.extend(free_action_lines(plan, risk))
         lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after buying it is")
         lines.append(f"   {money(plan.mean_remaining)} Chaos by the solver and {money(risk.mean.value)} by the risk run)")
     if report.shares:
@@ -425,6 +465,19 @@ def _totals(plan: Plan, shift: float, divine: float) -> dict:
         "p90_divine": _number((risk.p90.value + shift) / divine),
         "mean_cost_without_start": _number(plan.mean_remaining),
         "solver_error_bound": _number(plan.solution.error_bound),
+        **_free_totals(plan, risk),
+    }
+
+
+def _free_totals(plan: Plan, risk) -> dict:
+    """Only for a plan with free actions (ticket #349): their price, and how far the percentiles and the CVaR hold because of it."""
+    if risk.grid.free_tail <= 0.0:
+        return {}
+    return {
+        "free_action_cost": _number(free_action_price(plan)),
+        "free_action_allowance": _number(risk.grid.free_allowance),
+        "free_action_tail": _number(risk.grid.free_tail),
+        "free_action_cvar_allowance": _number(risk.grid.free_cvar_allowance),
     }
 
 
@@ -442,6 +495,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
         "unit": "chaos",
         "answer": marking_document(plan.approximation, shift),
         "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
+        **({"interval": report.interval.document()} if report.interval is not None else {}),
         "note": plan.note,
         "target": target_name,
         "requirements": list(plan.leaf_labels),

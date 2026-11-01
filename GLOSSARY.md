@@ -60,7 +60,7 @@ _Avoid_: unveil roll, options
 A state in which an unveil offer is drawn and not yet picked. Its only actions are Pick(k), one per shown mod.
 
 **Free action**:
-An action that consumes nothing (an unveil, a pick). The planner counts it at a millionth of the cheapest offer that costs something, because the solver needs a positive cost on every action (ADR-0026).
+An action that consumes nothing (an unveil, a pick). The planner counts it at a millionth of the cheapest offer that costs something, because the solver needs a positive cost on every action (ADR-0026). The risk run counts it apart from its grid and states the bound it adds to the percentiles and the CVaR (ticket #349).
 _Avoid_: zero-cost action
 
 **Unveil block**:
@@ -121,6 +121,14 @@ _Avoid_: stage
 **Start option**:
 One priced candidate a plan can start from, with its source: the target's own start item (`plain`) or the Magic item a vendor recipe makes. The planner plans each option and keeps the cheapest total of start price and expected crafting cost (ADR-0059). A later source, such as a bought item (research #337), is one more source of start options. In the code it is a `StartCandidate`.
 _Avoid_: start method
+
+**Item level floor**:
+The lowest item level the planner may plan a target at (ADR-0061). The target's `item_level` is where the guide put the level; the floor is the lowest level at which every requirement can still be met, derived from the tiers it asks for (a tier is absolute on a base), or stated by `item_level_floor`. A target whose tiers are "the top tier at that level" (`tiers_top_at_item_level`) and one that asks for a corrupted implicit are not lowered. In the code it is an `ItemLevelFloor` (`targets/floor.py`).
+_Avoid_: minimum item level (the file's number is not a minimum)
+
+**Level group**:
+Item levels that open the same pool of mods for a random draw, so they are one plan; the pool changes only at the required levels of its mods. The planner plans one option per group from the floor up, and the top group runs past the target's own level. In the code it is a `LevelGroup`.
+_Avoid_: level band
 
 ## Crafting
 
@@ -240,6 +248,10 @@ _Avoid_: sub-craft, donor craft
 
 **Branching component**:
 A strongly connected component of the solver's graph that contains an input edge, such as donors that need each other. Its equations are not a contraction; the solver finds their least fixed point from below.
+
+**Nested run**:
+How the simulator makes an input: before a two-input action is applied, each of its inputs is made by a run of its own (the input's sub-policy from its start item to its goal), the cost of that run is added to the run that asked, and only then is the action applied to the concrete items. Every attempt makes its inputs afresh, a retry included, and the donor is checked against what the action was priced with. The tree of runs shares one random stream and one step budget (ADR-0022, ticket #222).
+_Avoid_: sub-simulation
 
 **Value ceiling**:
 The cost above which the solver declares a state infinite, since a supercritical branching component never converges.

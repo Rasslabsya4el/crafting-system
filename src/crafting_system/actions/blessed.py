@@ -27,6 +27,8 @@ value, for a requirement on an implicit roll (ticket #158). `Reads.implicits` an
 compressed state keeps the implicits: until #158 it refuses an item that holds a base implicit (`OutOfScopeError`),
 and the kind is not a planner kind. A Blessed Orb on an item with no implicit stored, or one that stores a base implicit,
 is therefore tested here on the outcomes themselves and not through the kernel of `abstraction`.
+
+Memory Strands (ticket #287, ADR-0041): it neither cuts nor spends; the claim is memory_strands.cut_follows_spend_table (approximate).
 """
 
 import random
@@ -43,6 +45,7 @@ from .contract import Action, Adds, Reads
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .rolls import roll_values
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, StrandUse
 
 NEEDS_RANGED_IMPLICIT = get_rule("blessed_orb.needs_ranged_implicit")
 REFUSED_ON_CORRUPTED = get_rule("blessed_orb.refused_on_corrupted")
@@ -106,6 +109,10 @@ class BlessedOrb(Action):
 
     def resources(self, data: GameData | None = None) -> dict[str, int]:
         return dict(COST.value)
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 table: Blessed Orb neither cuts nor spends (approximate: no source speaks of it; the wiki's spend list and the emulator's spend table have no row for it). It rerolls the values of an implicit; nothing is drawn from a tier table.
+        return StrandUse.untouched(CUT_FOLLOWS_SPEND_TABLE)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         # exactly the claims this file cites: the helpers it imports (`finite`, `rolls`) hold none of their own
