@@ -18,8 +18,10 @@ a state has no finite value in hand nothing can be pruned, so every candidate th
 infinite (no sequence of actions reaches the want from there, so nothing helps and `M` is infinite too).
 
 What is returned is exact to two things: the certified `error_bound` of `solve` on the last round, and the **slack** of the
-test, a relative `slack` (default 1e-9): a candidate that would lower a value by less than that is not offered. The sum is
-`LazySolution.error_bound`.
+test, a relative `slack` s (default 1e-9), which makes the test a little weaker in the one way that stays provable: with
+`theta = 1 - s` the loop takes `theta L` for the sub-solution, and a candidate left out must satisfy `cost + theta S >= theta V`
+(`S` its inputs and successors at `L`), which is `cost / theta + S >= V`. Then `theta V_k <= V* <= V_k`, so the value is
+within the relative `s` of the optimum. The sum of the two is `LazySolution.error_bound`.
 
 The seam (ticket #312, exact merging and an envelope search): the loop touches the model in two places only, `_Space`
 (the base states, their candidates and the lower bounds `D`) and `_check` (which candidates fail the test given the values
@@ -298,7 +300,7 @@ def _check[S](
     """The candidates left out that the values of this solve do not prove unneeded, by base state.
 
     For every solved product state `x = (want, s)` with value `v` and every candidate at `s` not offered, the candidate is
-    unneeded when `cost + sum V(input) + sum p(j) L(j) >= v (1 - slack)`; `L(j)` is the value of `(want, j)` when it was
+    unneeded when `cost / (1 - slack) + sum V(input) + sum p(j) L(j) >= v` (the module docstring has the slack); `L(j)` is the value of `(want, j)` when it was
     solved with a finite value and `D_want(j)` otherwise, and `V(input)` likewise for the process of the input (module
     docstring). Terms are not negative, so a sum is dropped as soon as it passes the limit. A state with no finite value
     fails every candidate it has, unless `D` says the want cannot be reached from it at all.
@@ -319,22 +321,22 @@ def _check[S](
                 continue
             failing[state].update(key for key, _ in candidates if key not in held)
             continue
-        limit = value * (1.0 - slack)
+        theta = 1.0 - slack
         distance = space.to(want)
         for key, action in candidates:
             if key in held or key in failing[state]:
                 continue
             cost, chances, needs = space.prepared(state, key, action)
-            bound = cost
+            bound = cost / theta
             for need in needs:
                 inner = values.get(acquisition.product(need.want, need.start), infinity)
                 bound += inner if inner != infinity else space.acquisition(need.start, need.want)
-            if bound >= limit:
+            if bound >= value:
                 continue
             for successor, chance in chances:
                 level = values.get(acquisition.product(want, successor), infinity)
                 bound += chance * (level if level != infinity else distance.get(successor, infinity))
-                if bound >= limit:
+                if bound >= value:
                     break
             else:
                 failing[state].add(key)
