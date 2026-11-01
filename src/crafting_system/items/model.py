@@ -1,5 +1,6 @@
 """The concrete item (ADR-0018): a base, an item level, a rarity, a set of explicit mods and, when given,
-implicits, a catalyst quality, an unveil offer, an enchantment (ADR-0027, ADR-0050) and a Memory Strands count (ADR-0040).
+implicits, a catalyst quality, an unveil offer, an enchantment (ADR-0027, ADR-0050), a Memory Strands count (ADR-0040) and the
+imprints it holds (ADR-0034, ADR-0060).
 
 An `Item` is a value: frozen, hashable, and equal to any other item with the same fields, whatever
 order its mods were given in (mods are stored sorted by id). Building one checks the rules that
@@ -7,7 +8,9 @@ need no game data; `Item.validate` checks the rest against a `GameData`, and `It
 `changed`, `add_mod` and `remove_mod` always return an item that passed it. Implicits are stored only
 when given (the base's own implicits are not filled in), and an item built without implicits, quality
 offer, enchantment or strands behaves as it did before ADR-0027 and ADR-0040. The strand count is a whole number
-from 0 to 100, 0 by default; it is part of the item's equality and hash. A veiled placeholder is an explicit mod of domain `veiled`
+from 0 to 100, 0 by default; it is part of the item's equality and hash. The imprints are a tuple of items, each the item as it was
+when it was imprinted (no imprint of its own), in the order they were made; a restore returns the item to
+one of them. An item that is fractured or corrupted can use none (the actions refuse it, the compressed state forgets them). A veiled placeholder is an explicit mod of domain `veiled`
 whose seed changes nothing, so `build` and `changed` make the seed canonical (`Item.canonical`).
 Words follow ADR-0021: a "family" is the exclusion set of a mod.
 
@@ -30,6 +33,7 @@ from .errors import (
     EnchantmentError,
     FamilyConflictError,
     ImplicitError,
+    ImprintError,
     ItemError,
     MemoryStrandsError,
     ModSlotError,
@@ -177,6 +181,7 @@ class Item:
     veil_offer: tuple[str, ...] = ()
     enchantment: str | None = None
     memory_strands: int = 0
+    imprints: tuple["Item", ...] = ()
 
     def __post_init__(self) -> None:
         if type(self.item_level) is not int:
@@ -215,6 +220,15 @@ class Item:
                 f"memory strands {self.memory_strands!r} is not a whole number from 0 to {MAX_MEMORY_STRANDS}",
                 MemoryStrandsError,
             )
+        self._check_imprints()
+
+    def _check_imprints(self) -> None:
+        kind = ImprintError
+        if not isinstance(self.imprints, tuple) or not all(isinstance(entry, Item) for entry in self.imprints):
+            raise self._error("imprints must be a tuple of Item", kind)
+        for entry in self.imprints:
+            if entry.imprints:
+                raise self._error("an imprint is the item as it was and holds no imprint of its own", kind)
 
     def _checked_implicits(self) -> tuple[ImplicitMod, ...]:
         kind = ImplicitError
@@ -318,6 +332,8 @@ class Item:
         self._check_quality(base)
         self._check_veil_offer(data)
         self._check_enchantment(data, base)
+        for entry in self.imprints:
+            entry.validate(data)
 
     def _check_slot(self, entry: ExplicitMod, mod: Mod, base_domain: str) -> None:
         if mod.generation_type not in SIDE_VALUES:

@@ -1,0 +1,94 @@
+# Mechanic family: imprint (M-45): the two beast recipes that make an imprint of a magic item or of a rare Talisman, what an imprint restores,
+# when it is refused, and that it is used up and may be held several to an item (ADR-0034, ADR-0060). The eleven claims are the draft claims of
+# the research note of ticket #90 (the three that carry the stamp UNVERIFIED rest on 2014 forum answers relayed by the GPT researcher and on the
+# owner's decision, grill B3), built by ticket #219. The claim `imprint.beast_recipes` holds, as its value, the beast each recipe consumes by
+# price-file name.
+rules:
+  - id: imprint.eternal_orb_creates
+    statement: An Eternal Orb makes an imprint of an item; the Imprint restores that item to the imprinted state.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Creates an imprint of an item for later restoration"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: imprint.eternal_orb_not_dropped
+    statement: The Eternal Orb has not dropped in any league since 2.0.0; in Standard it can be bought on the Currency Exchange (3.28).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Imprint#Version_history
+    quote: "Eternal Orbs no longer drop in any league."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: imprint.beast_recipes
+    statement: "Two beast recipes make an imprint: of a magic item (Craicic Croaker) and of a rare Talisman (Fenumal Plagued Arachnid, since 3.29.0)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting
+    quote: "Create an Imprint Of a Rare Talisman"
+    value: {magic: Craicic Croaker, rare_talisman: Fenumal Plagued Arachnid}
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: imprint.restores_state
+    statement: Restoring reverts implicit and explicit mods, enchantments, quality amount and type, base defence values and Memory Strand count; influenced, synthesised and eldritch-implicit items are allowed.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Imprint#Mechanics
+    quote: "Imprints will revert the item's implicit and explicit modifiers"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: imprint.refused_on_fractured
+    statement: An imprint cannot be made of or used on a fractured item, and an imprint made before a Fracturing Orb cannot undo the fracture.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Imprint#Mechanics
+    quote: "Imprints cannot be made of or used on Fractured items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: imprint.refused_on_corrupted_mirrored
+    statement: An imprint cannot be made of or used on a corrupted or mirrored item (unless a modifier allows modifying it).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Imprint#Mechanics
+    quote: "cannot be created from or be used on corrupted or mirrored items"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: imprint.not_for_derived_items
+    statement: A new item made from the original (recombinator output, Allflame crafting, split items) cannot be restored with the original's imprint.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Imprint#Mechanics
+    quote: "the new item cannot have an Imprint used on it"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: imprint.talisman_craft_replaced_transform
+    statement: In 3.29.0 the Bestiary craft that turned an amulet into a Talisman became the craft that makes an imprint of a rare Talisman.
+    source_kind: official
+    url: https://www.poewiki.net/wiki/Version_3.29.0
+    quote: "replaced with a craft that creates an Imprint of a Rare Talisman"
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+
+  - id: imprint.consumed_on_restore
+    statement: "UNVERIFIED by me (the forum is behind a Cloudflare challenge; quote relayed by the GPT researcher): a restored imprint is used up. 2014 player answer (game version 1.1, not rechecked for 3.29), one source."
+    source_kind: experiment
+    url: https://www.pathofexile.com/forum/view-thread/868261
+    quote: "losing the imprint"
+    patch_verified: "1.1.0"
+    date_checked: 2026-10-31
+
+  - id: imprint.several_per_item
+    statement: "UNVERIFIED by me (relayed by the GPT researcher): an item may carry several imprints of different states, each used once; they share one name. 2014 player answers (game version 1.1, not rechecked for 3.29), two sources."
+    source_kind: experiment
+    url: https://www.pathofexile.com/forum/view-thread/777720
+    quote: "You can have as many imprints as your wealth allows you to."
+    patch_verified: "1.1.0"
+    date_checked: 2026-10-31
+
+  - id: imprint.allflame_copy_not_restorable
+    statement: "UNVERIFIED by me (relayed by the GPT researcher): an item made by Allflame crafting in 3.29 cannot be returned to a previous state by an imprint; consistent with the wiki rule that items made from the original cannot use its imprint. Reported 2026-07-30 for 3.29."
+    source_kind: experiment
+    url: https://www.pathofexile.com/forum/view-thread/3991369
+    quote: "cannot be returned to a previous state via Imprinting"
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
