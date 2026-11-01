@@ -2,7 +2,7 @@
 
 "Done when": on the routes R05 and R10 to R13 the offers (labels, resources, left-out reasons) and the kernels of the start
 state (every state by its `repr`, with its integer weight) are byte-identical to those of main before the ticket. The
-golden file `tests/golden/b1_unchanged_142.json` was written by `b1_unchanged_support.py` run on that code; the policies and
+golden file `tests/golden/b1_unchanged_142.json` was written by `b1_unchanged_support.py` run on the code of main without this ticket (6d0714e; the route R13 was re-made there because #247 made the fossil sets an opt-in kind, which now shows in its left-out kinds); the policies and
 means of R05, R10 and R11 are pinned the same way by `plans_118.json` (`test_prune_bound.py`), and the routes by the
 golden pages of the CLI tests. The fingerprints need the cached dump and skip cleanly without it, as in CI.
 """
