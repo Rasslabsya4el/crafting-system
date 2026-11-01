@@ -61,6 +61,6 @@ Consequences for the build:
 
 ## What is not decided here
 
-The compressed state of a donor, the recombinator kernel and its rule family, the imprint and Awakener's Orb actions, the choice of donors to offer (lazy generation, pruning with admissible lower bounds) are mechanics and abstraction work for the B3 grill ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)) and [#90](https://github.com/Rasslabsya4el/crafting-system/issues/90). The mechanics are now ADR-0032 to ADR-0035; the compressed state of a donor and the lazy choice of donors are prototype tickets of the B3 chart.
+The compressed state of a donor, the recombinator kernel and its rule family, the imprint and Awakener's Orb actions, the choice of donors to offer (lazy generation, pruning with admissible lower bounds) are mechanics and abstraction work for the B3 grill ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)) and [#90](https://github.com/Rasslabsya4el/crafting-system/issues/90). The mechanics are now ADR-0032 to ADR-0035; the compressed state of a donor is a prototype ticket of the B3 chart and the lazy choice of donors the build ticket after it.
 
 Origin: [Solver for two-input actions (B3)](https://github.com/Rasslabsya4el/crafting-system/issues/91); [multi-item and recombinators research](../research/2026-10-30-3-multi-item-recombinators.md); [solver engineering research](../research/2026-10-30-4-solver-engineering.md).
