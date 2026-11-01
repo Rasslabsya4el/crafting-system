@@ -238,3 +238,16 @@ class ToyLuckyChaos(Action):
 
     def outcomes(self, data: GameData, item: Item):
         return dataclasses.replace(ChaosOrb().outcomes(data, item), rolls_lucky=True)
+
+
+def with_new_values(
+    data: GameData, finished: Iterable[tuple[Item, Fraction]], start: Item, lucky: bool = False
+) -> list[tuple[Item, Fraction]]:
+    """Each finished item of an orb that adds mods (`abstraction_adds_oracle`), the values of the mods `start` did not hold rolled."""
+    held = {entry.mod_id for entry in start.mods}
+    result: dict[Item, Fraction] = defaultdict(Fraction)
+    for item, chance in finished:
+        for rolled_item, each in reroll_values(data, item, lambda entry: entry.mod_id not in held, lucky):
+            result[rolled_item] += chance * each
+    assert sum(result.values()) == 1
+    return list(result.items())

@@ -13,6 +13,7 @@ import itertools
 from fractions import Fraction
 
 import pytest
+from abstraction_adds_oracle import augmented, regaled
 from abstraction_oracle import assert_same_distribution, compressed_distribution, guaranteed_tag
 from abstraction_pool import CRAFTED, DAMAGES, GEM, LEVEL, LIFE_1, LIFE_2, LIVES, MANAS, RESIST_1, RESIST_2, RESISTS, DAMAGE_1, DAMAGE_2
 from abstraction_rolls_oracle import (
@@ -24,6 +25,7 @@ from abstraction_rolls_oracle import (
     rolled,
     tiny_item,
     value_cases,
+    with_new_values,
 )
 from items_support import AMULET
 
@@ -31,7 +33,18 @@ from crafting_system.abstraction import Abstraction, Coarsening, EstimateRefused
 from crafting_system.abstraction._rolls import is_rollable, multinomial, roll_law
 from crafting_system.abstraction._state import status_of
 from crafting_system.abstraction._kinds import MOD_PREFIX
-from crafting_system.actions import Action, Adds, ChaosOrb, Finite, HarvestReforge, OutOfScopeError, Reads
+from crafting_system.actions import (
+    Action,
+    Adds,
+    AugmentationOrb,
+    ChaosOrb,
+    ExaltedOrb,
+    Finite,
+    HarvestReforge,
+    OutOfScopeError,
+    Reads,
+    RegalOrb,
+)
 from crafting_system.data.model import StatRange
 from crafting_system.items import Rarity
 
@@ -253,6 +266,30 @@ def test_a_divine_orb_changes_nothing_a_goal_without_a_roll_limit_can_see():
     state = ab.compress(tiny_item(rolled(LIFE_1, 1), rolled(RESIST_1, 1)))
     assert dict(ab.kernel(state, DIVINE)) == {state: Fraction(1)}
     assert not ab.kind_of(TINY.mods[LIFE_1]).startswith(MOD_PREFIX)
+
+
+# --- the orbs that add a mod keep the junk, and tell its families apart by weight ----------------------------
+
+ADDS = {
+    "augmentation_on_a_prefix": (AugmentationOrb(), lambda: tiny_item(rolled(LIFE_1, 1), rarity=Rarity.MAGIC)),
+    "augmentation_on_a_suffix": (AugmentationOrb(), lambda: tiny_item(rolled(RESIST_1, 1), rarity=Rarity.MAGIC)),
+    "regal": (RegalOrb(), lambda: tiny_item(rolled(RESIST_2, 3), rarity=Rarity.MAGIC)),
+    "exalted": (ExaltedOrb(), lambda: tiny_item(rolled(LIFE_2, 5), rolled(RESIST_1, 1))),
+    "exalted_on_a_fracture": (ExaltedOrb(), lambda: tiny_item(rolled(DAMAGE_1, 1, 1, fractured=True), rolled(RESIST_1, 2))),
+}
+
+
+@pytest.mark.parametrize("enabled", [(), (DIVINE,)], ids=["by_weight", "by_weight_and_mod"])
+@pytest.mark.parametrize("goal", ["life_resist", "hybrid", "mixed"])
+@pytest.mark.parametrize("name", ADDS)
+def test_an_orb_that_adds_a_mod_rolls_it(name, goal, enabled):
+    """The drawn mod is one slot with the contribution of its roll; the family types are told apart by the law of their mods."""
+    orb, maker = ADDS[name]
+    start = maker()
+    ab = build(goal, orb, *enabled)
+    oracle = regaled if isinstance(orb, RegalOrb) else augmented  # an Exalted Orb is one more mod on a rare item, as an Augmentation on a magic one
+    expected = compressed_distribution(with_new_values(TINY, oracle(TINY, start), start), ab.compress)
+    assert_same_distribution(ab.kernel(ab.compress(start), orb), expected)
 
 
 # --- the law itself, against the listing of every roll --------------------------------------------------------
