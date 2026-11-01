@@ -16,7 +16,8 @@ regulates itself so that it never reaches them; it never probes a limit by hitti
   limiter makes the NEXT request wait the `Retry-After` time (or `backoff_base` without it), doubled
   for every 429 in a row and capped. A service that wants to keep going after `TradeRateLimited`
   simply calls again: the limiter does the waiting. A wait over `max_wait` is `TradeWaitTooLong`
-  (also a `TradeBlocked`), raised before anything is sent;
+  (also a `TradeBlocked`), raised before anything is sent. A request that got no answer (timeout,
+  cut-off) is counted as a hit anyway (`RateLimiter.lost`), because the site may have counted it;
 - a 401, 403, a Cloudflare challenge or an HTML page instead of JSON stops the run with
   `TradeBlocked`: no retry, no bypass, nothing is changed;
 - the limits it observes are logged (`logging.getLogger("crafting_system.prices.trade_http")`): the
@@ -54,6 +55,7 @@ _log = logging.getLogger(__name__)
 TRADE_URL = "https://www.pathofexile.com/api/trade"
 REPO_URL = "https://github.com/Rasslabsya4el/crafting-system"
 TIMEOUT_SECONDS = 30
+MIN_BACKOFF = 1.0  # seconds: the shortest pause after a 429
 MAX_FETCH_IDS = 10  # the trade site's limit for one fetch call
 SESSION_HINT = (
     "If you want to try with a session, set POESESSID in your environment yourself; "
@@ -434,6 +436,7 @@ class RateLimiter:
         wait = min(base * 2.0 ** min(count - 1, 64), self.backoff_cap)
         if retry_after is not None:
             wait = max(wait, retry_after)
+        wait = max(wait, MIN_BACKOFF)  # a `Retry-After: 0` after a 429 still gets a pause
         self._blocked_until[key] = self._clock() + wait
         shown = "none" if retry_after is None else f"{retry_after:g} s"
         _log.warning(
@@ -483,6 +486,22 @@ class RateLimiter:
                         rule.hits,
                         state.restricted,
                     )
+
+    def lost(self, kind: str) -> None:
+        """A request of this kind was sent but no answer came (timeout, cut-off): count it.
+
+        The server may have counted the hit, so every window of the policy's last report is raised
+        by one hit and dated now (hits only expire with time, so this errs on the safe side).
+        """
+        key = self._key(kind)
+        if key not in self._last:
+            return
+        report, _ = self._last[key]
+        rules = tuple(
+            (name, tuple((rule, RuleState(state.hits + 1, state.period, state.restricted)) for rule, state in pairs))
+            for name, pairs in report.rules
+        )
+        self._last[key] = (RateReport(report.policy, rules), self._clock())
 
     def before(self, kind: str) -> None:
         key = self._key(kind)
@@ -585,7 +604,11 @@ class TradeClient:
             headers["Cookie"] = f"POESESSID={self.session_cookie}"
         self.budget.spend(what)
         self.limiter.before(kind)
-        response = self.transport(HttpRequest(method, url, headers, body))
+        try:
+            response = self.transport(HttpRequest(method, url, headers, body))
+        except TradeError:
+            self.limiter.lost(kind)  # the server may have counted it although no answer came
+            raise
         backoff = self.limiter.after(kind, response.headers, response.status)
         return self._classify(response, what, backoff)
 

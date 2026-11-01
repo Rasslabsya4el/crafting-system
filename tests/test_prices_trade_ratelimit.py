@@ -699,3 +699,51 @@ def test_the_429_message_names_no_cookie() -> None:
     error = refusal(client)
     assert SECRET not in str(error) and SECRET not in repr(error)
     assert json.dumps(error.args).count(SECRET) == 0
+
+
+# --- a request that got no answer, and Retry-After: 0 ----------------------------------------
+
+
+class FailingThenAnswering:
+    """The first call answers, the next `failures` raise TradeError (the request may have reached
+    the site), then canned answers follow."""
+
+    def __init__(self, failures: int, *responses: HttpResponse) -> None:
+        self.failures = failures
+        self.responses = list(responses)
+        self.sent = 0
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        self.sent += 1
+        if 1 < self.sent <= 1 + self.failures:
+            raise TradeError("cannot reach: timed out")
+        return self.responses.pop(0)
+
+
+def test_a_request_lost_on_the_way_still_counts_as_a_hit() -> None:
+    # 3 hits are in the 5:10 window; margin 1 allows up to 4, so the next request is allowed
+    state = "3:10:0,3:60:0,3:300:0,3:21600:0"
+    clock = FakeClock()
+    transport = FailingThenAnswering(1, ok(headers_of(SEARCH, state=state)), ok())
+    client = TradeClient(transport, user_agent("9.9.9"), RateLimiter(clock, clock.sleep), RequestBudget(50))
+    client.search("Allflame", {})
+    with pytest.raises(TradeError):
+        client.search("Allflame", {})  # sent, timed out: the site may have counted it (now 4)
+    assert clock.sleeps == []
+    client.search("Allflame", {})  # a 5th hit would be above 5 - 1, so it waits the window out
+    assert clock.sleeps == [10]
+
+
+def test_a_failure_before_any_answer_leaves_nothing_to_wait_for() -> None:
+    clock = FakeClock()
+    limiter = RateLimiter(clock, clock.sleep)
+    limiter.lost("search")
+    limiter.before("search")
+    assert clock.sleeps == []
+
+
+def test_retry_after_zero_still_pauses_a_moment() -> None:
+    client, _, clock = make_client(limited("0"), ok())
+    assert refusal(client).backoff == 1.0
+    client.search("Allflame", {})
+    assert clock.sleeps == [1.0]
