@@ -163,3 +163,15 @@ def test_a_target_naming_action_kinds_is_offered_those_kinds_only_and_the_rest_i
 def test_an_unknown_action_kind_is_refused_with_the_kinds_there_are():
     with pytest.raises(ValueError, match="unknown action kind.*chaos-orb"):
         offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["chaos-orbs"])
+
+
+MAGIC_ORBS = {"Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb"}
+
+
+def test_a_rare_start_item_is_offered_none_of_the_orbs_of_magic_items_and_a_normal_one_is():
+    goal = Goal((Wanted(frozenset({LIFE})),))
+    rare = item(roll(LIFE), base_id=BELT)  # rare: the start items of R10, R11, R05 and R12
+    normal = item(base_id=BELT, rarity=Rarity.NORMAL)
+
+    assert not MAGIC_ORBS & {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, rare).offers}
+    assert MAGIC_ORBS <= {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, normal).offers}
