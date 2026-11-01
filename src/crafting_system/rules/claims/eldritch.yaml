@@ -4,6 +4,9 @@
 # Left out on purpose, because they contradict the Orb of Conflict model of ADR-0025 (owner, round 2 of grill B2, issue #93):
 # the draft's `conflict_odds_by_tier_difference` (the wiki's "50% and about 11% a tier") and `conflict_craft_of_exile_edges`
 # (Craft of Exile's flat 50/50). The fitted curve of `conflict_odds_fit` replaces both.
+# Written for the build, not in the draft: `ember_may_return_same_family`, `no_item_level_gate`, `chaos_count_follows_craft_of_exile`
+# (the open point of the draft's `chaos_rerolls_dominant_side`), `conflict_odds_fit` and `conflict_keeps_the_variant_it_moves_to`.
+# The draft's `each_use_is_one_currency` is renamed `cost` and gained the price-file name of each currency as its value.
 # APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code alone, on a fit to a player sample, or on a
 # default the main chat chose; the planner names it on every answer that reads it.
 rules:
@@ -149,12 +152,12 @@ rules:
     date_checked: 2026-11-01
 
   - id: eldritch.exalted_adds_one_to_dominant_side
-    statement: An Eldritch Exalted Orb adds one random modifier to the dominant side by the ordinary affix draw restricted to that side; it cannot be used when that side has no free slot or no modifier is legal there.
-    source_kind: datamined
-    url: https://repoe-fork.github.io/base_items.json
-    quote: "left click a rare item with The Searing Exarch or The Eater of Worlds dominance ... add a prefix modifier"
+    statement: An Eldritch Exalted Orb adds one random modifier to the dominant side; it cannot be used when that side has no free slot.
+    source_kind: coe
+    url: https://www.craftofexile.com/?a=emulator
+    quote: "case 'eldritchexalt': ... target = (searing ? \"prefix\" : \"suffix\") ... poec_simRollAffix(null,null,target,null,1,...)  else errtxt \"Cannot add another modifier\""
     patch_verified: "3.29.3.3"
-    date_checked: 2026-11-01
+    date_checked: 2026-10-31
 
   - id: eldritch.annul_removes_one_from_dominant_side
     statement: An Eldritch Orb of Annulment removes one modifier of the dominant side, uniformly among the modifiers it can remove; fractured modifiers, modifiers on a side that Prefixes or Suffixes Cannot Be Changed locks and modifiers protected by Cannot roll Attack/Caster are not candidates.
@@ -219,6 +222,32 @@ rules:
     quote: 'As "upgrading" a tier 6 implicit does nothing, the favourable outcome is 5/5.'
     approximate: true
     approximate_reason: "One player sample of 25 uses (6/4); Craft of Exile's code agrees, no other source states the edge."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.conflict_keeps_the_variant_it_moves_to
+    statement: An Orb of Conflict moves an implicit to the mod of the same family and variant (base, Unique-Presence or Pinnacle-Presence) one grade away, even where that mod has spawn weight 0 at that grade (a Unique-Presence mod at grade 1, a Pinnacle-Presence mod at grades 1 and 2), which no Ember draws. The data holds every one of these mods; no source says what the game does with them.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "AvoidShockEldritchImplicitUniquePresence1 ... spawn_weights: no_tier_6_eldritch_implicit 0, boots 0, default 0"
+    approximate: true
+    approximate_reason: "No source says whether the game keeps a Presence variant lowered to a grade where it has no weight, or draws another mod; the model keeps the mod the data holds."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: eldritch.divine_explicit_only
+    statement: A Divine Orb rerolls the values of explicit modifiers only; the value of an Eldritch implicit is not rerolled by it (it changes only by a new Ember, Ichor or by Conflict).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Divine_Orb
+    quote: "re-roll the values of all random explicit modifiers on a piece of equipment"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.vaal_replaces_one_implicit
+    statement: A Vaal Orb corruption replaces only one of the implicits of an item with Eldritch implicits.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Eldritch_implicit_modifier
+    quote: "If an implicit is replaced by corrupting an item with a Vaal Orb, only one of the implicits on the item will be replaced."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
 

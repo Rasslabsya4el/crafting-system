@@ -702,6 +702,7 @@ def test_each_action_names_only_the_claims_it_reads_and_the_approximate_ones_of_
         "eldritch.conflict_odds_fit",
         "eldritch.conflict_measured_odds",
         "eldritch.conflict_top_tier_raise_is_noop",
+        "eldritch.conflict_keeps_the_variant_it_moves_to",
     }
     for action in ALL_ACTIONS:
         assert all(rule_id.startswith(("eldritch.", "chaos_orb.", "affix_count.")) for rule_id in action.claims())

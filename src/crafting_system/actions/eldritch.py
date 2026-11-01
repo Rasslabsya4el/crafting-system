@@ -83,6 +83,8 @@ CONFLICT_RAISE_ONE_LOWER_OTHER = get_rule("eldritch.conflict_raise_one_lower_oth
 CONFLICT_ODDS_FIT = get_rule("eldritch.conflict_odds_fit")
 CONFLICT_MEASURED_ODDS = get_rule("eldritch.conflict_measured_odds")
 CONFLICT_TOP_TIER_NOOP = get_rule("eldritch.conflict_top_tier_raise_is_noop")
+CONFLICT_KEEPS_VARIANT = get_rule("eldritch.conflict_keeps_the_variant_it_moves_to")
+IMPLICIT_VALUE_RANGE = get_rule("eldritch.implicit_value_range")
 COST = get_rule("eldritch.cost")
 KEPT_MODS_COUNT_IN_TOTAL = get_rule("chaos_orb.kept_mods_count_in_total")
 RARE_REROLL_RATIO = get_rule("affix_count.rare_reroll_ratio")
@@ -218,7 +220,7 @@ class EldritchImplicitCurrency(Action):
             rule.id
             for rule in (
                 TARGETS, RARITY_AND_INFLUENCE, NOT_INFLUENCE, EMBER_REPLACES_IMPLICITS, MAY_RETURN_SAME_FAMILY, GRADE_IS_TIER,
-                POOL_BY_ITEM_CLASS, PRESENCE_VARIANT_WEIGHTS, NO_ITEM_LEVEL_GATE, COST,
+                POOL_BY_ITEM_CLASS, PRESENCE_VARIANT_WEIGHTS, IMPLICIT_VALUE_RANGE, NO_ITEM_LEVEL_GATE, COST,
             )
         )
 
@@ -499,7 +501,7 @@ class OrbOfConflict(Action):
             rule.id
             for rule in (
                 NOT_INFLUENCE, CONFLICT_REQUIRES_BOTH, CONFLICT_RAISE_ONE_LOWER_OTHER, CONFLICT_ODDS_FIT, CONFLICT_MEASURED_ODDS,
-                CONFLICT_TOP_TIER_NOOP, GRADE_IS_TIER, COST,
+                CONFLICT_TOP_TIER_NOOP, CONFLICT_KEEPS_VARIANT, GRADE_IS_TIER, IMPLICIT_VALUE_RANGE, COST,
             )
         )
 
