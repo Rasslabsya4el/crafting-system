@@ -23,7 +23,7 @@ The quality and the roll meet in one place. A requirement on a corrupted implici
 2. **Layer 2.** The simulator samples the three actions from the registry claims (the four outcomes, the pool, the replacement rule, the Locus share), not from the kernel code. The mean over many runs lies within five standard errors of the solver's value.
 3. **Layer 3.** The solver matches the LP and brute force on a toy of "craft, corrupt, restart on a miss".
 4. **Pools are pinned on the real export** (ADR-0037), and the Craft of Exile comparison of ring, amulet and belt joins the local Craft of Exile comparisons (the emulator tool of [#198](https://github.com/Rasslabsya4el/crafting-system/issues/198) checks the draws when it can).
-5. **Acceptance numbers** (no reference route uses corruption, so these stand in for layer 5; computed from the research's pool for a ring of item level 83 or more, W = 31,850):
+5. **Acceptance numbers** (no reference route uses corruption, so there are no published numbers for layer 5. These are regression numbers, computed from the research's pool for a ring of item level 83 or more, W = 31,850), checked by hand against the pool and, when the emulator tool of #198 exists, against Craft of Exile's draws; layer 4 runs on the given routes of the benchmark below when one is found:
 
 | Target | Vaal Orb | Locus (25% share, CoE's group rule) |
 |---|---|---|
@@ -32,7 +32,7 @@ The quality and the roll meet in one place. A requirement on a corrupted implici
 | all-resistances and chaos-resistance together | out of reach (one implicit) | 0.0252%, 3,962 |
 | all-resistances, ring of item level 80 (W = 31,100) | 0.804%, 124.4 | 1.731%, 57.8 |
 
-The first row is the headline: a quarter of the orbs give an implicit and 3.14% of those give the wanted one, so a ring with the wanted implicit costs about 127 rings and 127 orbs, and buying a finished corrupted ring may be cheaper than crafting one, which is why the buy spec exists (ADR-0036). The third row is an error when the file is read if the Locus is left out of the target's `actions:` (ADR-0036).
+The first row is the headline: a quarter of the orbs give an implicit and 3.14% of those give the wanted one, so a ring with the wanted implicit costs about 127 rings and 127 orbs, and buying a finished corrupted ring may be cheaper than crafting one, which is why the buy spec exists (ADR-0036). The third row is an error when the file is read if the Locus is left out of the target's `actions:` and nothing is bought (ADR-0036).
 
 ## The benchmark
 

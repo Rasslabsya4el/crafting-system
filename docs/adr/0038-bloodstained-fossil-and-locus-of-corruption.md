@@ -30,7 +30,7 @@ Sources disagree. The wiki and Craft of Exile say 1/4. One self-recorded player 
 
 ### What a use costs
 
-The Locus has no currency price. **A price-file entry "Locus of Corruption (use)", editable by the owner, default 0 Chaos** (the temple is not bought per use). The 1/4 destruction is modelled as the dead end it is, so a Locus try still pays the item it destroys, which the restart buys again. A target's `actions:` list (ADR-0024) can leave the Locus out for an owner who has no temple; the report names the entry and its default when a route uses the Locus.
+The Locus has no currency price. **A price-file entry "Locus of Corruption (use)", editable by the owner, default 0 Chaos** (the temple is not bought per use). The 1/4 destruction is modelled as the dead end it is, so a Locus try still pays the item it destroys, which the restart buys again. A target's `actions:` list (the key of the target file that names the kinds the planner may use, ADR-0024) can leave the Locus out for an owner who has no temple; the report names the entry and its default when a route uses the Locus.
 
 ### Against the Vaal Orb
 

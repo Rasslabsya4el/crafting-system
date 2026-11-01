@@ -129,7 +129,6 @@ _Avoid_: bad corruption, reroll outcome
 
 **Locus of Corruption**:
 The Corruption Altar of a tier 3 Incursion room: corrupts one item with one of four equal outcomes (two corrupted implicits, every white socket non-white, an influenced rare, destroyed). It has no currency price; the planner reads an owner-editable entry, default 0 Chaos. Its double-implicit share is 25% by the owner's decision, marked approximate (ADR-0038).
-_Avoid_: Corruption Altar, temple
 
 **Beast level**:
 The monster level of the beast that gates the mod a side-swap beast adds, instead of the item level. A setting, default 83, when a target names none.
