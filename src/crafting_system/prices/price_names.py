@@ -8,7 +8,7 @@ Callers that price an item build the name with `base_price_name`.
 
 The currencies, Omens and beasts of the socket family (batch B6, ticket #228) are priced under the name the game data gives the item, which
 is also the name the actions of `actions/socket_orbs.py` and the claims `sockets.*_cost` use for what one use consumes. The constants below
-are those names, in one place for the price layer; `tests/test_actions_sockets_prices.py` holds them equal to the claims.
+are those names, in one place for the price layer; `tests/test_actions_sockets_claims.py` holds them equal to the claims.
 """
 
 import re

@@ -32,7 +32,7 @@ their colours, a link group is cut where the sockets end): the owner's answer fo
 **The Orb of Fusing** rerolls the link groups by **sequential group sizes** (`sockets.fusing_group_size_weights`, `approximate`): from the first
 socket a group size is drawn from one weight table cut to the sockets that remain and renormalised, then the next group starts, until every socket
 is placed. The table (a 2017 fit of 100,000 orbs) exists for 20% quality only, so the orb is offered at 20% quality or more and uses it above that.
-It may leave the links as they were. With the **Omen of Connections** (`omen=True`) every socket is linked (exact). All linked has the chance
+It may leave the links as they were. With the **Omen of Connections** (`omen=True`) every socket is linked (exact, at any quality). All linked has the chance
 `w_n / (w_1 + ... + w_n)` for `n` sockets: 66.1, 33.7, 19.9, 0.83 and 0.10% for 2 to 6 (`SocketOutcomes.chance_all_linked`).
 
 **The bench** sets the count exactly (2 to 6 for 1, 3, 10, 70, 350 Jeweller's Orbs; any item level, up to the class maximum) and the links exactly
@@ -310,7 +310,7 @@ class OrbOfFusing(Action):
         return found
 
     def reads(self, data: GameData) -> Reads:
-        """The count (the group sizes are cut to the sockets that remain), the links (an item that is all linked is refused) and the plain quality (20% or more)."""
+        """The count (the group sizes are cut to the sockets that remain), the links (an item that is all linked is refused) and the plain quality (20% or more: the table's; the Omen does not need it, but a kind declares one thing)."""
         return Reads(junk=True, families=frozenset(), quality=True, socket_count=True, socket_links=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
@@ -325,7 +325,8 @@ class OrbOfFusing(Action):
         """The link groups the orb leaves: sequential group sizes from the first socket (all linked with the Omen); the colours and the count stay.
 
         Raises `NotApplicableError` for a corrupted item, a class with no sockets, a one-socket item and an item whose sockets are all linked;
-        `OutOfScopeError` for an item with no stated sockets or an Abyssal Socket, and for a weapon or armour below 20% quality (no table).
+        `OutOfScopeError` for an item with no stated sockets or an Abyssal Socket, and, without the Omen, for a weapon or armour below 20% quality
+        (no table); the Omen links every socket whatever the quality, so it asks none.
         """
         sockets, _ = _accept(data, item, "Orb of Fusing")
         if sockets.count == 1:
@@ -333,7 +334,7 @@ class OrbOfFusing(Action):
         if len(sockets.links) == 1:
             raise NotApplicableError("the sockets of the item are all linked, and an Orb of Fusing is not used on such an item")
         percent = item.quality.percent if isinstance(item.quality, PlainQuality) else 0
-        if percent < FUSING_MIN_QUALITY:
+        if percent < FUSING_MIN_QUALITY and not self.omen:
             raise OutOfScopeError(
                 f"the item has {percent}% quality; the only table of the Orb of Fusing is the one for {FUSING_MIN_QUALITY}% quality, "
                 "so it is offered from there (below it the finish buys quality first, ADR-0049)"
@@ -468,7 +469,14 @@ def _jewellers_orb(data: GameData, item: Item):
         yield JewellersOrb(omen=True)
 
 
-@kind("orb-of-fusing", order=101, planner=False, why_not=WHY_NOT_PLANNER, applies_only_to="weapon and armour")
+@kind(
+    "orb-of-fusing",
+    order=101,
+    planner=False,
+    why_not=WHY_NOT_PLANNER,
+    applies_only_to="weapon and armour",
+    reads_item_state_while_not_planner="quality",  # the table is the 20% one: the orb reads the plain quality (the Omen variant declares it too)
+)
 def _orb_of_fusing(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)
     if base is not None and class_maximum(base) is not None:

@@ -17,7 +17,7 @@ import itertools
 from fractions import Fraction
 
 import pytest
-from abstraction_pool import LIFE_1, RESIST_2
+from abstraction_pool import DAMAGE_1, FIRE_GEM, LIFE_1, RESIST_2
 from contract_support import CONTRACT_DATA, GOAL, check_action, check_socket_declarations, finished, fixture_items, extra_fixture_items
 from items_support import AMULET, BODY
 from sockets_support import (
@@ -181,7 +181,7 @@ EXTRA = extra_fixture_items()
 SOCKET_ITEMS = sorted(name for name in EXTRA if name.startswith("sockets_"))
 APPLIES = {  # the items an action is not refused on (the rest are refused by the game or by the rules)
     "jewellers-orb": {"sockets_body_three", "sockets_body_linked_stranded", "sockets_body_low_level", "sockets_sword_two", "sockets_bow_five"},
-    "orb-of-fusing": {"sockets_body_three", "sockets_body_linked_stranded", "sockets_body_low_level"},
+    "orb-of-fusing": {"sockets_body_three", "sockets_body_linked_stranded", "sockets_body_low_level", "sockets_bow_five"},  # the bow: the Omen only, it has no quality
     "bench-socket-count": {"sockets_body_three", "sockets_body_linked_stranded", "sockets_body_six_linked", "sockets_bow_five"},
     "bench-socket-links": {"sockets_body_three", "sockets_body_six_linked", "sockets_body_low_level", "sockets_bow_five"},
 }
@@ -350,21 +350,25 @@ def test_no_other_kind_changes_sockets():
 
         return Item.build(data, base_id=clone.id, item_level=84, rarity=rarity, mods=tuple(_roll(mod_id) for mod_id in mod_ids), sockets=sockets_of(R, G, B, links=(2, 1)))
 
-    held = [build(Rarity.NORMAL), build(Rarity.MAGIC, LIFE_1), build(Rarity.RARE, RESIST_2, LIFE_1)]
-    checked = set()
+    held = [build(Rarity.NORMAL), build(Rarity.MAGIC, LIFE_1), build(Rarity.RARE, RESIST_2, LIFE_1), build(Rarity.RARE, RESIST_2, LIFE_1, DAMAGE_1, FIRE_GEM)]
+    checked, members = set(), 0
     for item in held:
         for entry in kinds():
             if entry.name in SOCKET_KINDS:
                 continue
-            for action in list(entry.members(data, item))[:3]:
-                try:
-                    outcomes = action.outcomes_under(data, item)
-                except (NotApplicableError, OutOfScopeError):
-                    continue
-                reads, adds = action.reads(data), action.adds(data, item)
-                check_socket_declarations(action, reads, adds, finished(outcomes, data), item, data)
-                checked.add(entry.name)
-    assert len(checked) >= 15 and {"chaos-orb", "scouring-orb", "bench-craft", "essence"} <= checked
+            listed = list(entry.members(data, item))
+            for action in listed if len(listed) <= 10 else listed[:: len(listed) // 10]:  # up to ten members spread over the kind
+                for reading in model_readings(data, [action]):
+                    try:
+                        outcomes = action.outcomes_under(data, item, reading)
+                    except (NotApplicableError, OutOfScopeError):
+                        continue
+                    reads, adds = action.reads(data), action.adds(data, item)
+                    check_socket_declarations(action, reads, adds, finished(outcomes, data), item, data, reading)
+                    checked.add(entry.name)
+                    members += 1
+    assert len(checked) >= 15 and {"chaos-orb", "scouring-orb", "bench-craft", "essence", "exalted-orb", "fossil-set"} <= checked
+    assert members >= 60
 
 
 # --- the Jeweller's Orb -----------------------------------------------------------------------------------------------------------------
@@ -515,6 +519,9 @@ def test_expected_jewellers_orbs_by_value_iteration_over_the_kernel():
     """
     plan6, second6 = _expected_orbs(None, 6), _expected_orbs(SECOND, 6)
     plan5, second5 = _expected_orbs(None, 5), _expected_orbs(SECOND, 5)
+    table = lambda found, last: [round(found[c], 2) for c in range(1, last + 1)]  # noqa: E731
+    assert table(plan6, 5) == [214.91, 214.68, 214.74, 214.97, 215.05] and table(second6, 5) == [222.58, 222.62, 222.65, 222.81, 222.90]
+    assert table(plan5, 4) == [35.69, 35.47, 35.53, 35.76] and table(second5, 4) == [36.84, 36.87, 36.90, 37.07]
     assert round(plan6[1], 1) == 214.9 and round(second6[1], 1) == 222.6
     assert round(plan5[1], 1) == 35.7 and round(second5[3], 1) == 36.9
     for found, low, high in ((plan6, 214.6, 215.1), (second6, 222.5, 222.9), (plan5, 35.4, 35.8)):
@@ -582,7 +589,7 @@ def test_chance_all_equals_exhaustive_enumeration_on_four_sockets():
     # the contract's chance_all (the chance the finished item holds all of these mods): the mods are never touched
     for mod_ids in ([LIFE_1], [RESIST_2], [LIFE_1, RESIST_2], []):
         assert found.chance_all(mod_ids) == sum((chance for chance, result in found.results if {e.mod_id for e in result.mods} >= set(mod_ids)), Fraction(0)) == 1
-    assert found.chance_all(["Strength1"] if "Strength1" in DATA.mods else [list(DATA.mods)[0]]) in (0, 1)
+    assert found.chance_all([DAMAGE_1]) == 0  # a mod the item does not hold is never there
     assert found.chance_count(4) == 1 and found.chance_count(3) == 0
 
 
@@ -591,7 +598,7 @@ def test_fusing_links_from_the_first_socket_and_keeps_the_count_and_the_colours(
     for _, result in fusing(item).results:
         assert result.sockets.colours == item.sockets.colours and result.sockets.count == 6
         assert dataclasses.replace(result, sockets=item.sockets) == item
-    assert item.sockets in fusing(item).by_sockets or Sockets(item.sockets.colours, (2, 2, 1, 1)) in fusing(item).by_sockets  # it may leave them as they were
+    assert Sockets(item.sockets.colours, (2, 2, 1, 1)) in fusing(item).by_sockets  # the orb may leave the links as they were
 
 
 def test_the_links_the_item_holds_do_not_change_the_odds():
@@ -611,6 +618,31 @@ def test_the_omen_of_connections_links_every_socket():
     assert dict(OrbOfFusing(omen=True).resources(DATA)) == {"Orb of Fusing": 1, "Omen of Connections": 1}
     assert dict(OrbOfFusing().resources(DATA)) == {"Orb of Fusing": 1}
     assert OrbOfFusing(omen=True).label(DATA) == "Orb of Fusing with Omen of Connections"
+
+
+LARGEST_GROUP = {  # the research (ticket #99, section 2.4): the chance of each largest link group, in percent, recomputed by its author from the fitted weights
+    2: {1: 33.85, 2: 66.15},
+    3: {1: 7.60, 2: 58.69, 3: 33.71},
+    4: {1: 1.37, 2: 45.70, 3: 33.08, 4: 19.86},
+    5: {1: 0.24, 2: 31.26, 3: 44.44, 4: 23.23, 5: 0.83},
+    6: {1: 0.04, 2: 21.96, 3: 46.20, 4: 30.73, 5: 0.97, 6: 0.10},
+}
+
+
+@pytest.mark.parametrize("count", [2, 3, 4, 5, 6])
+def test_the_chance_of_each_largest_group_is_the_researchs_table(count):
+    largest = {}
+    for sockets, chance in fusing(socketed(white(count))).by_sockets.items():
+        largest[max(sockets.links)] = largest.get(max(sockets.links), 0) + float(chance) * 100
+    assert set(largest) == set(LARGEST_GROUP[count])
+    for size, percent in LARGEST_GROUP[count].items():
+        assert largest[size] == pytest.approx(percent, abs=0.011), (count, size)
+
+
+@pytest.mark.parametrize("quality", [0, 10, 19, 20, 30])
+def test_the_omen_of_connections_links_every_socket_at_any_quality(quality):
+    item = socketed(white(5, (2, 1, 1, 1)), quality=quality)
+    assert fusing(item, omen=True).by_sockets == {Sockets(item.sockets.colours, (5,)): 1}
 
 
 @pytest.mark.parametrize("quality", [20, 25, 30])
@@ -721,6 +753,23 @@ def test_the_bench_crafts_pass_the_contract_suite_at_every_count(name):
         check_action(BenchSocketCount(count), extra.item, BENCH)
     for links in range(2, 7):
         check_action(BenchSocketLinks(links), extra.item, BENCH)
+
+
+def test_the_socket_kinds_declare_the_item_state_they_read_and_none_they_change():
+    """As `item_state_support.check_kinds_declare_item_state`, on a socketed item (the suite's amulet lists no socket action)."""
+    item = socketed(white(3))
+    for entry in kinds():
+        if entry.name not in SOCKET_KINDS:
+            continue
+        members = list(entry.members(BENCH, item))
+        assert members, entry.name
+        for action in members:
+            reads, adds = action.reads(BENCH), action.adds(BENCH, None)
+            part = entry.reads_item_state_while_not_planner
+            assert not entry.planner and not adds.item_state, entry.name
+            assert getattr(reads, part) if part else not reads.item_state, entry.name
+            assert not any(getattr(reads, other) for other in {"implicits", "quality", "offer"} - {part}), entry.name
+    assert next(e for e in kinds() if e.name == "orb-of-fusing").reads_item_state_while_not_planner == "quality"
 
 
 # --- Memory Strands and claims ----------------------------------------------------------------------------------------------------------
