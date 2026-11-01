@@ -191,7 +191,8 @@ def lock_expansion(
         for b, (total, got) in enumerate(zip(totals, seen)):
             if b != a:
                 chance *= total - got
-        wins[a].append((result, chance))
+        if chance:  # a pair outranked by a better pair that is certain to come up can never win
+            wins[a].append((result, chance))
         seen[a] += weight
     nodes: dict[PeekNode, tuple[Action, ...]] = {}
     outcomes: list[Outcome] = []
@@ -209,6 +210,92 @@ def lock_expansion(
         nodes[node] = peek.fallback
         outcomes.append(Outcome(node, denominator - applied))
     return Action(peek.label, peek.cost, tuple(outcomes)), nodes
+
+
+def proper_levels(model: Model, states: Sequence[Hashable]) -> dict[Hashable, int]:
+    """The states from which some reaction and some plain policy reach a goal with probability 1, with their level.
+
+    The finite-state analysis of the Peek (almost-sure reachability, as the solver's own, but the Peek counts as a
+    choice made after the dice): a plain action is usable if every outcome and input is in the set `Z`; a Peek is
+    usable if some option has all its results in `Z` (the player can always take one) or some fallback action is
+    usable (the player can always give up). The level of a state is the round in which a usable action first has a
+    positive chance of leading into the states that already have a level (goals have level 0); `Z` shrinks to the
+    states that get one, until nothing changes. A state outside the answer has no proper policy at all.
+
+    Needed only when a Peek state has no Lock-free proper policy, which the planner never has (the restart is always
+    there); the solver stays correct on a model that does.
+    """
+    plain: dict[Hashable, list] = {}
+    peek: dict[Hashable, tuple] = {}
+    goals = []
+    for state in states:
+        if model.is_goal(state):
+            goals.append(state)
+            continue
+        actions, found = _split(state, model.actions(state))
+        plain[state] = [(_positive(a), tuple(a.extra_inputs)) for a in actions]
+        if found is not None:
+            peek[state] = (
+                [_positive(o) for o in found.options],
+                [(_positive(f), tuple(f.extra_inputs)) for f in found.fallback],
+            )
+    inside = set(plain) | set(goals)
+    while True:
+        level = dict.fromkeys(goals, 0)
+        round_ = 0
+        while True:
+            round_ += 1
+            new = [s for s in plain if s in inside and s not in level and _can_progress(s, plain, peek, inside, level)]
+            if not new:
+                break
+            level.update(dict.fromkeys(new, round_))
+        if len(level) == len(inside):
+            return level
+        inside = set(level)
+
+
+def _positive(action: Action) -> tuple:
+    return tuple(state for state, weight in action.outcomes if weight)
+
+
+def _can_progress(state, plain, peek, inside, level) -> bool:
+    def usable(outcomes, inputs):
+        return all(o in inside for o in outcomes) and all(i in inside for i in inputs)
+
+    for outcomes, inputs in plain[state]:
+        if usable(outcomes, inputs) and any(o in level for o in outcomes):
+            return True
+    if state in peek:
+        options, fallback = peek[state]
+        usable_fallback = [outcomes for outcomes, inputs in fallback if usable(outcomes, inputs)]
+        if usable_fallback or any(all(o in inside for o in outcomes) for outcomes in options):
+            if any(o in level for outcomes in options for o in outcomes):
+                return True
+            if any(o in level for outcomes in usable_fallback for o in outcomes):
+                return True
+    return False
+
+
+def layered_reaction(state: Hashable, peek: Peek, levels: Mapping[Hashable, int], ids: dict[Hashable, int]) -> Reaction:
+    """A proper acceptance set for a Peek state that has no Lock-free value, from the levels of `proper_levels`.
+
+    The pairs whose result has a level are ranked by it (best first, then state id and option order); those that
+    lower the state's own level are always taken, and the others only when no fallback action is usable, since then
+    the player cannot give up. A state with no level has no proper policy and takes nothing.
+    """
+    if state not in levels:
+        return ()
+    pairs = []
+    for a, option in enumerate(peek.options):
+        for result, _ in _merge(option).outcomes:
+            if result in levels:
+                pairs.append((levels[result], ids.setdefault(result, len(ids)), a, result))
+    pairs.sort(key=lambda pair: pair[:3])
+    can_give_up = any(
+        all(o in levels for o, w in f.outcomes if w) and all(i in levels for i in f.extra_inputs) for f in peek.fallback
+    )
+    taken = [pair for pair in pairs if pair[0] < levels[state]] if can_give_up else pairs
+    return tuple((pair[2], pair[3]) for pair in taken)
 
 
 def _split(state: Hashable, actions: Iterable) -> tuple[tuple, Peek | None]:
@@ -315,6 +402,8 @@ def solve_peek[S](
 
     The model's `actions` is asked again in every round, and must give equal answers. See the module text for the method.
     """
+    if isinstance(max_rounds, bool) or not isinstance(max_rounds, int) or max_rounds < 1:
+        raise ValueError(f"max_rounds must be an integer of at least 1, got {max_rounds!r}")
     options = dict(
         tolerance=tolerance, direct_solve_limit=direct_solve_limit, max_sweeps=max_sweeps, value_ceiling=value_ceiling
     )
@@ -332,6 +421,11 @@ def solve_peek[S](
     values, ids = first.values, {}
     peeks = dict(free.peeks)
     reactions = {state: choose_reaction(peek, values, ids) for state, peek in peeks.items()}
+    stuck = [state for state in peeks if values[state] == math.inf]
+    if stuck:  # no Lock-free policy there: start from a reaction that is proper wherever any reaction is
+        levels = proper_levels(model, list(values))
+        for state in stuck:
+            reactions[state] = layered_reaction(state, peeks[state], levels, ids)
     for rounds in range(1, max_rounds + 1):
         current = solve(ExpandedModel(model, reactions), roots, **options)
         better = {state: choose_reaction(peek, current.values, ids) for state, peek in peeks.items()}
@@ -344,6 +438,8 @@ def solve_peek[S](
 def _progress(before: Mapping[Hashable, float], after: Mapping[Hashable, float]) -> bool:
     """Whether the new values are lower than the old ones by more than a tie (a state may turn from infinite to finite)."""
     for state, old in before.items():
+        if isinstance(state, PeekNode):  # a pseudo-state changes with the reaction, not with the answer
+            continue
         new = after.get(state, old)
         if new < old and (old == math.inf or old - new > _STALL * old):
             return True
