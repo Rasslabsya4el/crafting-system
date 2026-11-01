@@ -271,11 +271,13 @@ def offers_for(
     left_out = ()
     if kinds_named is not None:
         # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used;
-        # a kind that needs Memory Strands is not mentioned either: this offer set never lists one (the planner does not pass `strands` yet, #277)
+        # a kind that needs Memory Strands is not mentioned either while the start item has none: the catalog does not list one then
+        # (the planner does not pass `strands` yet, #277)
+        absent = _strand_kinds_absent(start_item)
         skipped = tuple(
             entry.name
             for entry in kinds(planner_only=True)
-            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted) and not entry.needs_strands
+            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in absent
         )
         if skipped:
             left_out += (
@@ -310,6 +312,13 @@ def offers_for(
     return OfferSet(tuple(offers), left_out)
 
 
+def _strand_kinds_absent(start_item: Item) -> frozenset[str]:
+    """The kinds that exist only in a plan that considers Memory Strands, when `start_item` has none (as `catalog` lists them)."""
+    if start_item.memory_strands >= 1:
+        return frozenset()
+    return frozenset(entry.name for entry in kinds() if entry.needs_strands)
+
+
 def _split_names(data: GameData, start_item: Item, names: Collection[str] | None) -> tuple[frozenset[str] | None, frozenset[str]]:
     """The names of a target's `actions:` as (kinds, labels): a name is a kind of the catalog, else the label of one action.
 
@@ -321,8 +330,8 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     usable = {entry.name for entry in kinds(planner_only=True)}
     exist = {entry.name for entry in kinds()}
     kind_names = {name for name in names if name in exist}
-    needing_strands = {entry.name for entry in kinds() if entry.needs_strands}  # the planner cannot plan with strands before #277
-    unready = sorted((kind_names - usable) | (kind_names & needing_strands))
+    absent = _strand_kinds_absent(start_item)  # a kind that needs Memory Strands is no kind of this item's catalog until the planner passes `strands` (#277)
+    unready = sorted((kind_names - usable) | (kind_names & absent))
     labels = {action.label(data) for action in catalog(data, start_item, planner_only=True, names=usable)}
     unknown = sorted(name for name in names if name not in exist and name not in labels)
     problems = []
@@ -331,7 +340,7 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     if unready:
         problems.append(f"action kind(s) {', '.join(unready)} cannot be used by the planner yet")
     if problems:
-        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable))}")
+        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable - absent))}")
     return frozenset(kind_names), frozenset(name for name in names if name not in exist)
 
 

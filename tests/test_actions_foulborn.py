@@ -351,5 +351,20 @@ def test_naming_a_foulborn_kind_in_a_target_is_refused_until_the_planner_plans_w
     item = fixture_items()["magic"]
     goal = Goal((Wanted(frozenset({"LightningResist3"})),))
 
-    with pytest.raises(ValueError, match="foulborn-regal-orb"):
+    with pytest.raises(ValueError, match="foulborn-regal-orb") as refused:
         offers_for(CONTRACT_DATA, goal, item.base_id, item, ["foulborn-regal-orb"])
+    assert "the kinds the planner can use are" in str(refused.value)
+    assert "foulborn" not in str(refused.value).split("the kinds the planner can use are")[1]  # it does not list the kinds it just refused
+
+
+def test_a_stranded_start_item_has_the_kinds_in_its_catalog_so_they_are_named_or_left_out_like_any_other():
+    from crafting_system.cli._offers import offers_for
+
+    item = fixture_items()["magic_stranded"]
+    goal = Goal((Wanted(frozenset({"LightningResist3"})),))
+
+    left_out = offers_for(CONTRACT_DATA, goal, item.base_id, item, ["chaos-orb"]).left_out
+    named = offers_for(CONTRACT_DATA, goal, item.base_id, item, ["foulborn-regal-orb"])
+
+    assert set(KIND_NAMES) <= {name for left in left_out for name in left.labels}  # the catalog lists them for this item, so they are left out
+    assert any(offer.label == "Foulborn Regal Orb" for offer in named.offers)
