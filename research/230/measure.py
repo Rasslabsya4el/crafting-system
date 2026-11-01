@@ -82,9 +82,22 @@ def solve_mode(shared, sockets):
          states=len(sol.values))
 
 
+def fixture_dedicated(sockets):
+    cfg, red, key = fixture_model(sockets, False)
+    t = time.time()
+    B = dedicated.build(red, key)
+    tb = time.time() - t
+    t = time.time()
+    V, it, _, nres = dedicated.solve_anderson(B)
+    emit(mode="dedicated-fixture", sockets=sockets, states=B.N - 1, dense_edges=B.dense_edges, shell_entries=B.n_shell_entries,
+         build_s=round(tb, 2), solve_s=round(time.time() - t, 2), sweeps=it, value=V[1])
+
+
 if __name__ == "__main__":
     mode = sys.argv[1]
     if mode == "six":
         six(sys.argv[2], int(sys.argv[3]), int(sys.argv[4]))
+    elif mode == "fixture":
+        fixture_dedicated(int(sys.argv[2]))
     elif mode == "solve":
         solve_mode(sys.argv[2] == "shared", int(sys.argv[3]))
