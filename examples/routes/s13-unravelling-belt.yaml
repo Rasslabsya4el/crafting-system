@@ -1,0 +1,148 @@
+# Given route for benchmark route S13: R13's alt-regal belt with an Orb of Unravelling as the finish.
+#
+# SOURCE: none. This is a TEST ROUTE written for batch B5 (ticket #272, docs/research/2026-11-01-strand-routes.md).
+# It is R13 (examples/routes/r13-life-resist-belt.yaml) with one change: the Alterations and the Regal accept
+# a tier-1 OR tier-2 life and resistances, and the strands that are left are spent on one Orb of Unravelling,
+# which tries to raise each of those mods to tier 1. The shape (craft with currency that spends few strands or
+# none, keep the rest, finish with an Unravelling) is the one the 2025 claw craft of u/wateverlah publishes
+# (Reddit 1liwnwd, 78 strands, no odds or costs given); it is not a 3.29 craft.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the
+# same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml). In every
+# state the FIRST rule whose conditions match is the one that is followed. A goal state is never acted on.
+# A state no rule matches is reported as a gap. The conditions and actions are explained in
+# examples/routes/r12-lightning-amulet.yaml.
+#
+# The route:
+#   1. Buy a normal Leather Belt with 82 Memory Strands (examples/buy/s13-start-belt.yaml).
+#   2. Orb of Transmutation, then Orbs of Alteration until the magic belt has life and a resistance at tier 1 or 2.
+#   3. Regal Orb for a second resistance at tier 1 or 2; restart if the Regal gives anything else.
+#   4. Orb of Unravelling: it takes the count to 0 and tries each mod below tier 1 on its own
+#      (chance min(1, s * W_up / (2 * W_side)), ADR-0044). If the three mods are now at tier 1, craft the damage
+#      modifier at the bench; if not, buy the belt again.
+# An Unravelling needs strands left. The route does not check how many: it Unravels at 1 strand or more, so a
+# belt left with a handful of strands is nearly a restart; the benchmark records that cost.
+#
+# The strand words. The loader of the given routes (src/crafting_system/cli/_route.py) does not read strands
+# yet; these are the words that B5-12 (#292) adds to it, written with the names the ADRs give. Every other
+# key and action is the loader's own.
+#   when:  memory_strands_at_least: N   the item holds N strands or more (N from 1 to 100)
+#   when:  memory_strands_below: N      the item holds fewer than N strands (0 strands is below any N)
+#   do:    Orb of Remembrance           ADR-0043; offered for a normal equipment item (kind `remembrance-orb`)
+#   do:    Orb of Unravelling           ADR-0044; offered on an identified item with strands (kind `unravelling-orb`)
+# The query must turn strands on (`memory_strands = true` in crafting.toml, or `--strands`; ADR-0040). A start
+# item that holds strands turns them on by itself.
+
+name: S13, test route, R13 with an Unravelling finish
+
+rules:
+  # Step 4: life and two tier-1 resistances are on the belt (R13's three rules): the bench craft.
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: FireResistance
+          status: passing
+        - family: ColdResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: FireResistance
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: ColdResistance
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+
+  # Step 4: life and two resistances are on the rare belt but some are below tier 1, and strands remain: Unravel.
+  - when:
+      rarity: rare
+      memory_strands_at_least: 1
+      requirements:
+        - family: IncreasedLife
+          status: [passing, below]
+        - family: FireResistance
+          status: [passing, below]
+        - family: ColdResistance
+          status: [passing, below]
+    do: Orb of Unravelling
+
+  - when:
+      rarity: rare
+      memory_strands_at_least: 1
+      requirements:
+        - family: IncreasedLife
+          status: [passing, below]
+        - family: FireResistance
+          status: [passing, below]
+        - family: LightningResistance
+          status: [passing, below]
+    do: Orb of Unravelling
+
+  - when:
+      rarity: rare
+      memory_strands_at_least: 1
+      requirements:
+        - family: IncreasedLife
+          status: [passing, below]
+        - family: ColdResistance
+          status: [passing, below]
+        - family: LightningResistance
+          status: [passing, below]
+    do: Orb of Unravelling
+
+  # Step 3 or 4: any other rare belt (a Regal that gave something else, or an Unravelling that raised nothing
+  # and left 0 strands): buy the belt again.
+  - when:
+      rarity: rare
+    do: restart
+
+  # Step 3: life and a resistance, each at tier 1 or 2, on the magic belt: the Regal Orb.
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: [passing, below]
+        - family: FireResistance
+          status: [passing, below]
+    do: Regal Orb
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: [passing, below]
+        - family: ColdResistance
+          status: [passing, below]
+    do: Regal Orb
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: [passing, below]
+        - family: LightningResistance
+          status: [passing, below]
+    do: Regal Orb
+
+  # Step 2: the magic belt lacks them: Alteration again.
+  - when:
+      rarity: magic
+    do: Orb of Alteration
+
+  # Step 2: the bought belt is normal.
+  - when:
+      rarity: normal
+    do: Orb of Transmutation

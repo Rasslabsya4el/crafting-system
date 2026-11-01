@@ -1,0 +1,120 @@
+# Given route for benchmark route S01: the Crusader + Warlord energy-shield ring of the 3.29 forum guide, strands first.
+#
+# SOURCE (published, 3.29): Xeverous#1533, "[3.29] Forbidden Rite of Soul Sacrifice CoC Occultist/Assassin", the ring
+# section headed "expensive (10-100div) but very good", on the Path of Exile forum,
+# https://www.pathofexile.com/forum/view-thread/3882365 (guide updates dated 22.07.2026 and 07.09.2026; the thread was
+# last edited 2026-09-29). Read 2026-11-01. Published numbers: the whole craft costs "10-100div" ("varies depending how
+# good mods you accept"), and "Harvest Reforge Crit" has "~38% chance to hit any tier Warlord Crit multi". No other odds
+# and no other cost; docs/research/2026-11-01-strand-routes.md has the steps as the guide words them.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the same prices
+# as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml). In every state the FIRST rule whose
+# conditions match is the one that is followed. A goal state is never acted on. A state no rule matches is reported as a
+# gap. The conditions and actions are explained in examples/routes/r12-lightning-amulet.yaml.
+#
+# The guide's steps and how this file reads them (each reading is `approximate`):
+#   1. "Make or buy a Crusader + Warlord base. Explicit mods don't matter. Best ilvl is 84." Scour: the start item is the
+#      normal ring that is left (the target names no start_item; the buy spec prices it).
+#   2. "Apply Memory Strands": ONE Orb of Remembrance (the guide names no threshold and no repeat).
+#   3. "Transmute + Regal, the least strand-consuming way to make it Rare" (spend: 0 to 8 and 0 to 16, ADR-0041).
+#   4. "Dense Fossils until T1 Crusader %ES, T1 flat ES, any tier flat Evasion and an empty suffix". Fossils do not spend
+#      strands (ADR-0041). "You may use Orb of Unravelling at this point": read as: when the prefixes are there but one of
+#      the two energy-shield mods is below tier 1 and strands remain, one Unravelling.
+#   5. "Prefixes can no longer be changed" (the metamod), "Harvest Reforge Crit to get a Warlord Crit multi"; "if Harvest
+#      fails, lock prefixes and try again": the reforge repeats while the metamod stays.
+#   6. "Finish with a bench resist" (any single resistance; a crafted one counts). Left out: the Foulborn Exalted slam
+#      after "bench-block a specific attribute" (a craft the data does not list for rings), the Unravelling "if you haven't
+#      already" (nothing left to raise), and the Defence Catalyst (B2 quality, not asked by the target).
+#
+# The strand words are explained at the end of the header of examples/routes/s11-remembrance-belt.yaml and are read by
+# the loader only after B5-12 (#292); every other key and action is the loader's own.
+#   when:  memory_strands_at_least: N    when:  memory_strands_below: N    do: Orb of Remembrance    do: Orb of Unravelling
+
+name: S01, 3.29 forum guide (Xeverous), Crusader + Warlord energy-shield ring
+
+rules:
+  # Step 6: all four mods are there and no resistance yet: the bench resist. (With a resistance present the target is
+  # met and nothing is done.)
+  - when:
+      rarity: rare
+      requirements:
+        - family: EnergyShieldPercent
+          status: passing
+        - family: IncreasedEnergyShield
+          status: passing
+        - family: IncreasedEvasionRating
+          status: passing
+        - family: CriticalStrikeMultiplier
+          status: passing
+    do: "Bench craft +#% to Fire Resistance"
+
+  # Step 5: the three prefixes are there and the critical multiplier is not: lock the prefixes, then reforge.
+  - when:
+      rarity: rare
+      crafted_mods: false
+      requirements:
+        - family: EnergyShieldPercent
+          status: passing
+        - family: IncreasedEnergyShield
+          status: passing
+        - family: IncreasedEvasionRating
+          status: passing
+        - family: CriticalStrikeMultiplier
+          status: absent
+    do: "Bench craft Prefixes Cannot Be Changed"
+  - when:
+      rarity: rare
+      crafted_mods: true
+      requirements:
+        - family: EnergyShieldPercent
+          status: passing
+        - family: IncreasedEnergyShield
+          status: passing
+        - family: IncreasedEvasionRating
+          status: passing
+        - family: CriticalStrikeMultiplier
+          status: absent
+    do: Harvest Reforge Critical
+
+  # Step 4: the prefixes are there but an energy-shield mod is below tier 1 and strands remain: Unravel.
+  - when:
+      rarity: rare
+      memory_strands_at_least: 1
+      requirements:
+        - family: EnergyShieldPercent
+          status: below
+        - family: IncreasedEnergyShield
+          status: [passing, below]
+        - family: IncreasedEvasionRating
+          status: passing
+    do: Orb of Unravelling
+  - when:
+      rarity: rare
+      memory_strands_at_least: 1
+      requirements:
+        - family: EnergyShieldPercent
+          status: passing
+        - family: IncreasedEnergyShield
+          status: below
+        - family: IncreasedEvasionRating
+          status: passing
+    do: Orb of Unravelling
+
+  # Step 4: otherwise the fossils again (any rare that is not one of the states above).
+  - when:
+      rarity: rare
+    do: Fossils Dense Fossil
+
+  # Step 3: a magic ring: the Regal Orb.
+  - when:
+      rarity: magic
+    do: Regal Orb
+
+  # Step 2: a normal ring: one Orb of Remembrance, then (strands now above 0) Transmutation.
+  - when:
+      rarity: normal
+      memory_strands_below: 1
+    do: Orb of Remembrance
+  - when:
+      rarity: normal
+    do: Orb of Transmutation

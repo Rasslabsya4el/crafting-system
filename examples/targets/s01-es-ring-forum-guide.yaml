@@ -1,0 +1,46 @@
+# Target for benchmark route S01: the Crusader + Warlord energy-shield ring of the 3.29 forum guide.
+#
+# SOURCE (published, 3.29): Xeverous#1533, the ring section "expensive (10-100div) but very good" of
+# https://www.pathofexile.com/forum/view-thread/3882365 (read 2026-11-01; docs/research/2026-11-01-strand-routes.md).
+# The guide's end state: "T1 Crusader %ES, T1 flat ES, any tier flat Evasion", a Warlord critical multiplier ("any tier"),
+# and a bench resistance. It asks for no base ("Explicit mods don't matter"), so one plain ring base is picked, as R05
+# does (every ring has the same pool of explicit mods); and for item level 84 ("Best ilvl is 84").
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft it. The strand step is
+# in the route; the start is a normal ring with Crusader and Warlord influence (the guide scours its bought ring first), and
+# the query turns strands on by itself because the actions below include the Orb of Remembrance (ADR-0040).
+
+base: Amethyst Ring
+item_level: 84
+influence: [crusader, warlord]
+
+# The kinds of actions the planner may use: the guide's own (Remembrance and Unravelling are B5-5 and B5-8; the kind names
+# `remembrance-orb` and `unravelling-orb` are this file's proposal). The fossil set is not in the planner's offer set yet
+# (ticket #118), so a given route that names the fossils cannot be evaluated before it is.
+actions: [remembrance-orb, transmutation-orb, regal-orb, fossil-set, harvest-reforge, bench-craft, unravelling-orb]
+
+# The name of the buy spec examples/buy/s01-start-ring.yaml, which is what the dual-influence ring costs.
+start_price: S01 start ring
+
+requirements:
+  # "T1 Crusader %ES": the Crusader prefix "(13-15)% increased maximum Energy Shield" (mod
+  # GlobalEnergyShieldPercentInfluence3, item level 82), the best of its three tiers.
+  - family: EnergyShieldPercent
+    mod: GlobalEnergyShieldPercentInfluence3
+
+  # "T1 flat ES": "+(44-47) to maximum Energy Shield", tier 1 at item level 74 or more.
+  - family: IncreasedEnergyShield
+    min_tier: 1
+
+  # "any tier flat Evasion".
+  - family: IncreasedEvasionRating
+
+  # "a Warlord Crit multi", any tier (the Warlord suffix "+(14-22)% to Global Critical Strike Multiplier").
+  - family: CriticalStrikeMultiplier
+
+  # "Finish with a bench resist": any one elemental resistance; a crafted one counts (no not_crafted).
+  - at_least: 1
+    of:
+      - family: FireResistance
+      - family: ColdResistance
+      - family: LightningResistance

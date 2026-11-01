@@ -1,0 +1,12 @@
+# S01 start item (docs/research/2026-11-01-strand-routes.md): a ring with Crusader and Warlord influence of item level 84
+# or more, bought rare and scoured (the guide: "Make or buy a Crusader + Warlord base. Explicit mods don't matter").
+# The target file is examples/targets/s01-es-ring-forum-guide.yaml; its `start_price` is the `name` below. The price of the
+# scour is one more step the route would pay; here the item is priced as the normal ring it becomes.
+#
+# No base is named: the guide names none, and every plain ring has the same pool of mods.
+name: S01 start ring
+category: accessory.ring
+rarity: rare
+item_level_min: 84
+influence: [crusader, warlord]
+corrupted: false

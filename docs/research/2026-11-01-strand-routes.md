@@ -1,0 +1,120 @@
+# Published routes that use Memory Strands, and the three test routes next to them
+
+Research ticket [#272](https://github.com/Rasslabsya4el/crafting-system/issues/272) (B5 R2) of map [#1](https://github.com/Rasslabsya4el/crafting-system/issues/1), from the resolution of [Design grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103). It blocks B5-12 ([#292](https://github.com/Rasslabsya4el/crafting-system/issues/292)). Written 2026-11-01 against patch 3.29.3.3. The mechanics are ADR-0040 to ADR-0044 and [the strands note](2026-10-31-memory-strands.md); this note does not repeat them.
+
+## Answer in brief
+
+1. **Two published 3.29 strand routes were found, with a stated cost or odds, and are written as given routes** in the benchmark format:
+   - **S01**, `examples/routes/s01-es-ring-forum-guide.yaml`: the Crusader + Warlord energy-shield ring of the guide of Xeverous#1533 on the Path of Exile forum ([thread 3882365](https://www.pathofexile.com/forum/view-thread/3882365), updates of 2026-07-22 and 2026-09-07). Published: the whole craft is "10-100div", and the Harvest critical reforge has "~38% chance to hit any tier Warlord Crit multi". Steps: Remembrance, Transmute and Regal, Dense Fossils, the Unravelling, prefix lock, Harvest critical reforge, bench resistance.
+   - **S02**, `s02-fire-res-ring-showcase.yaml`: a Helical Ring made fire and all resistance by u/DisciplesOfAres ([Reddit 1vqlc59](https://www.reddit.com/r/pathofexile/comments/1vqlc59/), 2026-08-17). Published: "Get 98 strands on the second" Remembrance, the Regal "consuming 14 strands", a "35 Div base", strand orbs "75c each" (which orb is not said); no total cost, no attempt count.
+2. **A third published craft was found and not written**: the explode Twilight Regalia of u/RepulsiveScientist44 ([Reddit 1wij7a7](https://www.reddit.com/r/pathofexile/comments/1wij7a7/), 2026-09-17; 90 divines in the account, 50 left, "wasting 20+ divines", about 1 in 10+ for the first hit). It needs the Awakener's Orb and a beast lock (B3) in 19 steps; its numbers are in section 3 for when B3 has landed.
+3. **Three test routes cover the shapes the published ones do not** (the ticket's own list): **S11** R13 on a Remembrance-rolled belt, **S12** R05 on a ring bought with 60 strands, **S13** R13 with an Unravelling finish. Each says "TEST ROUTE" in its file; they are in section 4.
+4. **The loader reads these files' structure, not their strand words.** `src/crafting_system/cli/_route.py` has no strand condition and no Remembrance or Unravelling action yet. The files use two conditions (`memory_strands_at_least`, `memory_strands_below`) and two actions, named in the files; **B5-12 (#292) adds them to the loader**, B5-1 (#274) reads `memory_strands` in start items and B5-5 (#278) in buy specs. Until then `tests/test_strand_routes.py` (37 checks, about 6 seconds) reads every route with the loader's own YAML reader and checks its keys, its actions, its source line and its status conditions; **every target loads in the real target loader on the 3.29.3.3 dump** (with the strand words taken out), and every buy spec in the buy-spec loader. A route also names a **fossil** action (S01) that the planner does not offer yet (`fossil-set` is outside the B1 offer set, ticket #118), which the loader would also refuse today.
+5. **One published number does not match our model, and it is not settled.** The guide's "~38%" for the critical reforge is 3 of 8 equal candidates; our pool on that ring has 6 equal critical-tagged suffixes (3 tiers of Global Critical Strike Chance, 3 of the Warlord multiplier), so the model gives **50.3%** (section 5). The pass rule of ADR-0013 ("published odds match") records this, never fails a route on it. It needs the Craft of Exile emulator (not run here, section 5) before anything is changed.
+6. **Nothing here needs the owner's hands in the game.** The strand sources found agree with the ADR defaults (section 6), and the checks the routes rely on are already items 2 to 4 of the B5 section of [#182](https://github.com/Rasslabsya4el/crafting-system/issues/182).
+7. **Open inputs for B5-12:** the four strand words in the loader; prices for the start items (a dual-influence ring, a normal Helical Ring, a 60-strand ring, an 82-strand belt) and for the Orb of Remembrance and the Orb of Unravelling in the price file; the kind names `remembrance-orb` and `unravelling-orb` that the targets use (proposals; B5-5 and B5-8 fix them).
+
+## 1. What was searched, what was found, what was not
+
+Tools: the Arctic Shift archive reader (`reddit_archive.py`; reddit.com itself answers 403), the web search tool, direct page fetches, the Craft of Exile copy of 2026-09-20 in `sources/raw/coe/`, and the GPT researcher (two jobs: `20261101-135549-3c97` on luna, `20261101-141311-786e` on terra; its reports were checked against the primary pages below, and only what I read myself is used).
+
+| Where | Query or page | Result |
+|---|---|---|
+| Archive, thread read in full | [1wr9445](https://www.reddit.com/r/pathofexile/comments/1wr9445/) (u/Macookta, 70 comments) | The mechanics post; five strand crafts in his comment, no cost anywhere (section 2). |
+| Archive, thread read in full | [1wij7a7](https://www.reddit.com/r/pathofexile/comments/1wij7a7/), [1vqlc59](https://www.reddit.com/r/pathofexile/comments/1vqlc59/), [1vnclht](https://www.reddit.com/r/pathofexile/comments/1vnclht/) | Three 3.29 crafting showcases with costs; S02 is 1vqlc59 (sections 3 and 4). |
+| Archive, thread read in full | [1vc1e72](https://www.reddit.com/r/PathOfExileBuilds/comments/1vc1e72/) (r/PathOfExileBuilds, u/sirgog, 2026-08-01) | A Giantslayer Helmet craft with stranded base prices; Allflame Ducat route, out of v1 (section 3). |
+| Archive, thread read in full | [1liwnwd](https://www.reddit.com/r/pathofexile/comments/1liwnwd/), [1lre3w4](https://www.reddit.com/r/pathofexile/comments/1lre3w4/) (2025) | A claw craft with 78 strands (steps only), and general advice that agrees with ADR-0041 (section 6). Not 3.29. |
+| Archive, title search | `strand craft`, `memory strand`, `strands`, `strand`, `remembrance`, `unravel` (r/pathofexile, r/PathOfExileCrafting, 2026-07-24 to 2026-11-01) | One hit, [1v969f8](https://www.reddit.com/r/pathofexile/comments/1v969f8/), body `[removed]`. Several windows **timed out and were not searched** (2026-10-19 to 11-01, 09-24 to 10-07, 09-12 to 09-24, and four windows of r/PathOfExileCrafting from 08-05 to 10-19). The three showcases above came from the researcher's web search, not from this one. |
+| Fetch | [forum thread 3882365](https://www.pathofexile.com/forum/view-thread/3882365) | S01. |
+| Fetch | poebuilds.cc crafting index | One strand video, "The ONLY Guide You Will Ever Need For Endgame Crafting - Strand Allflame Crafting Guide - PoE 3.29" (Master T on the researcher's read, Fubgun on mine; the index lists the video, the page of the video gave no description or pinned comment). Allflame crafting is out of v1; a video cannot be read from here. |
+| Fetch | mmoexp.com (two articles), ezg.com | Store blogs. They state 150 to 200 divines of cost and 450 of value for a helmet, 66+ strands and a breakpoint table, with no method or source; one recipe does not match the game. **Not used.** u4gm.com answered 403. |
+| Fetch | [PoE forum thread 3825358](https://www.pathofexile.com/forum/view-thread/3825358) (2025-08-15) | A stranded-ring recipe with "best case ... 40-50d" at 2025 prices. Not 3.29 (section 3). |
+| Researcher | Mobalytics build pages | A Mobalytics Occultist guide (2026-08-05) lists Allflame strand crafts and "around 25 div" for the build's gear; Allflame is out of v1 and I did not open the page. Not used. |
+| Local files | `sources/raw/coe/` (Craft of Exile copy of 2026-09-20), grep `remembrance`, `unravel`, `strand` | No strand craft: only the unique "Cane of Unravelling" and the map mods that give strands. |
+| Not reached | poewiki.net (bot check); PoE Vault, Maxroll, Mobalytics strand guides; the video pages | Not searched or not readable. |
+
+**Not found:** a 3.29 craft that gives a measured success rate or an expected cost for a strand step; a count of the Remembrance orbs behind a strand count other than the two showcases' "2"; a price list of stranded bases other than sirgog's Giantslayer Helmet figures.
+
+## 2. The candidates of the ticket, one by one
+
+Macookta's comment [pcd0ppi](https://www.reddit.com/r/pathofexile/comments/1wr9445/_/pcd0ppi/) (2026-09-27, read first-hand) lists five crafts; none states a cost, and item 2 states one odds figure.
+
+| Candidate | What it says | Written as a route? |
+|---|---|---|
+| **Talisman rolled to 100 with Remembrance** (process notes of the post) | He "rolled a talisman to 100 memory strands with orbs of remembrance" and imprinted it as a checkpoint for his Unravelling tests. | **No**, a test setup. With ADR-0043's table an exact 100 is 0.065% per orb, one in about 1,540 orbs (modelled); his 2,255 results held three, against 1.46 expected. No player plans that. |
+| **"Cheap stranded base, recombine, influence Exalt"** (item 5, RF sceptres and amulets) | Bought mods on bad bases, isolated with a Ducat, recombined onto a cheap stranded base, a Hunter's Exalted Orb to finish: "I felt like they always hit T1 mods when I hit memory strands". | **No.** It needs the recombinator (B3) and Ducats (out), the mods are not named, and there is no number. Its mechanism agrees with ADR-0040: a two-tier influence table keeps only its top tier from 1 strand (K = 1). |
+| **A Remembrance-then-Alchemy/Chaos base** | No source describes it. The 2025 forum reply and S01/S02 roll with Remembrance and then use Transmute/Regal, fossils or Harvest, which spend little or nothing. | **No**, nothing to write down. |
+| Item 2: Allflame crafting 3x T1 defence prefixes on stranded body armours | "it felt close to a 50/50 shot to hit 3x T1", then a recombination onto a good base. | **No.** Allflame is out, the recombination is B3; the 50/50 is a feeling without a sample. |
+| Items 1, 3, 4 | Allflame transmute and regal, the beast-lock Awakener's Orb. | **No**, same reasons. |
+
+## 3. The published routes and the numbers beside them
+
+Every figure is a source's own. A figure I computed is marked "modelled".
+
+### S01, the forum guide of Xeverous#1533
+
+Steps as the guide words them (read 2026-11-01): make or buy a Crusader + Warlord base, ideally item level 84; scour; apply strands with an Orb of Remembrance; Transmute and Regal ("the least strand-consuming way to make it rare"); Dense Fossils until T1 Crusader % energy shield, T1 flat energy shield, any flat evasion and an empty suffix (fossils do not consume strands; the Orb of Unravelling "can be used at this point", restart if it fails); prefixes cannot be changed; Harvest reforge critical for a Warlord critical multiplier, repeated; if critical is the only suffix, bench-block an attribute and a Foulborn Exalted slam; finish with a bench resistance, an Orb of Unravelling if not yet used, and a Defence Catalyst. Essence of Woe is an alternative to the fossils.
+
+- **Cost:** "expensive (10-100div) but very good"; the guide says the cost "varies depending how good mods you accept". The author's clarification of 2026-09-07 covers Foulborn slams and Memory Strands among the choices (the researcher's read; I did not open that post).
+- **Odds:** "~38% chance to hit any tier Warlord Crit multi" for one Harvest critical reforge. No other.
+- **Written as:** Remembrance once (the guide names no threshold), Transmute, Regal, Dense Fossils, one Unravelling when an energy-shield mod is below tier 1 and strands remain, the prefix lock, the Harvest critical reforge, a bench fire resistance. **Left out:** the Foulborn Exalted slam (its attribute block is not a craft in the data for rings), the Catalyst (B2 quality, not asked by the target), the second Unravelling.
+- **The target** asks for the Crusader tier-1 `% increased maximum Energy Shield` (mod `GlobalEnergyShieldPercentInfluence3`), flat energy shield tier 1, any flat evasion, a critical multiplier of any tier, and one crafted-or-rolled elemental resistance. Base: an Amethyst Ring (the guide names none, as R05 does).
+
+### S02, u/DisciplesOfAres, "Thanks Allflame crafting, very cool."
+
+Steps (2026-08-17): "Hit it with 2 Orb of Remembrances. Get 98 strands on the second"; craft an affix at the bench and Regal ("consuming 14 strands bringing me down to 84"); spam Harvest reforge Fire "until you hit either T1 Fire and T2 All Res or the other way around"; "Unravel and the Fire Res gets upgraded to T1"; Divine at the Vesper; slam a random affix; a Fracturing Orb with "4 DIv worth of Sulphur", which "ruin[ed] a 35 Div base".
+
+- **Costs:** a "35 Div base" (a comment says "Helical ring is 35+ divines baseline"); "4 DIv worth of Sulphur" (Allflame, out of v1); the author says of the strand orbs he held "they're only 75c each" (not saying which). **Odds:** none stated; one observation of the Regal's spend, 14 of a ceiling of 16 (ADR-0041).
+- **Written as:** Remembrance until 80 strands or more (4.0% of orbs, 25 orbs on average, modelled; the post's two orbs were luck), a bench fire resistance to make it magic, Regal, Harvest reforge Fire, an Unravelling when one of the two resistances is at tier 1 and the other below. **Left out:** the Divine, the slam, the fracture.
+- **The target:** Fire Resistance tier 1 and all-Elemental-Resistances tier 1, neither crafted, on a Helical Ring of item level 84 (the post gives no level; 84 is where tier 1 fire, 46 to 48%, can roll).
+- Other numbers in the thread: a commenter on the "boat alch" way ("The amount of strands consumed is random, and it's frequently as low as 0 or 1"); the sheet's Alchemy bins (260 uses: 67, 16, 55, 65, 57) have a quarter of the uses in the lowest bin of ten, near that remark. Allflame crafting is out.
+
+### The third craft, not written: the explode Twilight Regalia (u/RepulsiveScientist44, 2026-09-17)
+
+Steps: a 90% base-percentile Twilight Regalia with "80+ memory strands", quality to 20%, two suffixes and no prefix, a Crusader Exalt slam, Harvest physical reforge for the T1 explode "for over 20k juice", "~5d of jagged fossils", a second base with a beast lock and an Awakener's Orb slam (bad luck), then "10k juice" more on the first base, a donor with elevated "physical taken as chaos" and the Awakener's Orb, an Orb of Unravelling to raise the resistance and regeneration to tier 1, a Divine. **Published:** "90 divines left", "wasting 20+ divines", "50 leftover divines" (so about 40 divines for the session); "the weight makes it ~1 in 10+ chance" (from Craft of Exile weights, the author's estimate). Comments: "10-12k juice per div"; Craft of Exile says "800something pure chaos rerolls" to hit the explode mod ("4, 5 div of juice at 50 per roll"); "We're talking 40d budget"; "With 60 strands most awa slams are pretty good." It needs the Awakener's Orb and beast locks (B3), so a given route waits for those actions.
+
+### Others
+
+- **Vengeance Fingers** ([1vnclht](https://www.reddit.com/r/pathofexile/comments/1vnclht/), u/Sh0wTim3123, 2026-08-13): "use orbs of rememberence till high memory strands" is one step of a corrupted-gloves craft with "Total Cost - over 25 mirrors in locks"; its stage odds (1 in 88,000 for the Awakener's Orb, 1 in 211 for a slam) are beyond B1 to B5. Not written.
+- **Giantslayer Helmet** (u/sirgog, [1vc1e72](https://www.reddit.com/r/PathOfExileBuilds/comments/1vc1e72/_/p101chd/), 2026-08-01): "buy Giantslayer Helmet bases with high memory strands from trade. 66-69 were usually <50c, 70-79 <120c", an Unravelling Orb "10c at the time" and an Allflame Unravelling "120c at the time". **The only published prices of stranded bases found** (a helmet, at the league's start; they "might have changed"). The craft uses Cyaxan's Ducat and Allflame: out of v1.
+- **2025 sources (not 3.29)**: the forum recipe of Piousqd (2025-08-15): scour an influenced base and "Orb of Remembrance (10d ea) until you get >50 strands", keep "over 70 left", fossils for triple attribute suffixes, lock suffixes, Unravelling to raise the attributes, Harvest reforge for the influence mod; "best case scenario, this craft is 40-50d" and "could easily end up being twice that" (the strands note found 56 chaos for the orb from PoEDB on 2026-10-31, so the 2025 price is stale). u/wateverlah's claw (2025-06-24): 78 strands, Harvest reforges (no spend), a fracture, a Veiled Exalted unveil, one Unravelling; no odds, no cost.
+
+### For the test routes: Remembrance and Unravelling
+
+- **Remembrance:** 2,255 orbs recorded by u/Macookta, mean 41.56, no result below 10, three at 100; u/sirgog's fit (normal, mean 35, standard deviation 25, discard below 10 or above 100). Modelled from ADR-0043's table (bounds 10.0 to 100.5): mean 41.84; 69.6% give 30 or more, 50.7% give 40 or more, 33.0% 50, 19.0% 60, 9.5% 70, 4.0% 80, 3.2% 82, 1.2% 90; the mean number of orbs to hold at least 40 is 1.97, 60 is 5.3, 80 is 25, 82 is 31. The community calculator (poedustcalculator.app/memory-strands; the researcher's read) reports mean 41.56 and median 39.
+- **Unravelling:** T9 attribute mods on an ilvl 86 amulet rose 310 of 310 at 32 strands (formula 100%), 14 of 15 at 31 (99%), 63 of 150 at 15 (formula 47.9%); 9,373 orbs; destination after a rise 2.67 / 5.46 / 7.70 / 10.30 / 13.66 / 17.07 / 20.61 / 22.53% (1,611 cases). "Unravelling a T3 to a T1 will be 1/3 at best."
+
+## 4. The three test routes
+
+Each is a fixed policy in the benchmark's format, compared with the solver's route at equal prices by B5-12. A hand-picked threshold is a hand pick, not a published number; the solver finds its own.
+
+| Id | Files | Built on | Start | Strand step |
+|---|---|---|---|---|
+| **S11** | `s11-remembrance-belt.yaml` (route, target) | R13 (Reddit 2021; [route](../../examples/routes/r13-life-resist-belt.yaml)), rules unchanged but for step 0 | a normal Leather Belt of level 86, R13's price | Remembrance while the belt holds fewer than 40 strands (50.7% of orbs reach 40, mean 1.97 orbs), then R13 |
+| **S12** | `s12-stranded-ring.yaml` (route, target, buy spec) | R05 (PoE Vault; [route](../../examples/routes/r05-strength-ring.yaml)), its single rule | R05's ring with a fractured All Attributes, bought with 60 strands | none; the essence rule of R05 on a stranded ring |
+| **S13** | `s13-unravelling-belt.yaml` (route, target, buy spec) | R13 with life and resistances accepted at tier 1 or 2 | a white belt with 82 strands (the first count where an 8-tier table keeps two tiers) | an Unravelling when the rare belt has the three mods and some are below tier 1; else restart |
+
+Reading choices (each a default, `approximate`): the threshold of 40; S13's 82 and its tier-2 accept (the guide wants tier 1, which the Unravelling then tries to deliver); S12 repeats R05's single rule because R05 says nothing about the count. A route that ignores the count after its first step is a deliberately naive policy: the benchmark shows how far the solver's route, which reads the count, beats it. The strand-spending steps (ADR-0041) are on the route's own head.
+
+## 5. A published odds figure our model does not give
+
+The guide of S01 says the Harvest critical reforge has "~38% chance to hit any tier Warlord Crit multi". I built the ring of the target (Amethyst Ring, item level 84, Crusader and Warlord, the three prefixes, `Prefixes Cannot Be Changed` crafted, so two suffix slots are free) in `HarvestReforge("critical")` on the 3.29.3.3 dump: the guaranteed critical-tagged suffix is drawn from **six** equal candidates (the three tiers of `Global Critical Strike Chance`, the three tiers of the Warlord `Global Critical Strike Multiplier`), so the Warlord multiplier is the guaranteed mod with 50%, and 50.3% of outcomes hold it once the second free slot's random draw is counted. **The guide's 38% is 3 of 8**: two more equal critical-tagged candidates, or another way of counting, or the author's own estimate (he does not say how he got it).
+
+What is known and not: our six come from the data tag `critical` of repoe-fork; the guide may count from Craft of Exile (the author does not say); the 3.29 game may carry two more tagged suffixes on a dual-influence ring than the dump. **The Craft of Exile emulator was not run here** (its tool, `tools/coe_emulator/`, is on the branch of #198 and not in this checkout; my own look at the data copy of 2026-09-20 did not find the pool quickly). The check for the main chat: `coe-emulator-check` with the S01 ring and `Harvest Reforge Critical` (CoE `hreroll`, mtype Critical 29) and the lock; if the emulator gives 3 of 8, the dump lacks two critical suffixes (a data question for the patch-update skill); if it gives 3 of 6, the guide's number is its author's estimate and our 50% stands. Until then B5-12 records the mismatch and does not fail on it (ADR-0013); it is not on the owner's list, because the emulator may settle it.
+
+## 6. Do the sources agree with the ADR defaults?
+
+They do; nothing here moves a default.
+
+- **Fossils and Harvest spend no strands:** u/kkuntdestroyer (2025-07-04): "you can fossil or harvest craft them and it doesnt use any strands"; u/g00fy_goober: "essences do take strands"; Xeverous: "Fossils don't consume Strands" (3.29); a commenter on the Regalia: Harvest reforge "preserves the strands" (3.29). ADR-0041 has fossils and Harvest not spending, essences up to 80. (Whether they *cut* is still the inference of ADR-0041, #182 item 2.)
+- **Transmute and Regal are the cheapest way to a rare in strands:** Xeverous. ADR-0041: 0 to 8 and 0 to 16 against 0 to 50 for Alchemy and Chaos.
+- **The Regal's spend:** one observation, 14 strands (ceiling 16).
+- **Recombination does not spend the base's strands:** Macookta's "methods that don't interact with strands" (ADR-0041, recombinator row).
+- **Remembrance is a normal-item action rolled until the count is good, and strands are carried through the middle of a craft and spent by an Unravelling at the end:** S01, S02, the Regalia and the 2025 claw agree. The planner takes that shape through its stop threshold (ADR-0043) and the Unravelling (ADR-0044).
+- **Imprints as a checkpoint:** Vengeance Fingers and the forum recipe restore an imprint when a Regal spends too much ("imprint back if the regal consumes to many strands"); ADR-0034's restore keeps the count.
+
+## 7. For the owner's list (#182) and the main chat
+
+- **No new line for #182**; the checks the routes rely on are already there (items 2, 3, 4 of the B5 section), and the emulator cannot reach strands. The one open question of this note (section 5) is for the emulator first.
+- **B5-12 inputs:** section "Answer in brief", point 7.
+- **If more published routes are wanted:** the video of the poebuilds.cc index and the Mobalytics Occultist guide would have to be read by someone who can watch or open them; both use Allflame crafting, which is out of v1.

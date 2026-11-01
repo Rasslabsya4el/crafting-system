@@ -1,0 +1,33 @@
+# Target for benchmark route S02: the fire and all-resistance ring of a 3.29 Reddit crafting showcase.
+#
+# SOURCE (published, 3.29): u/DisciplesOfAres, r/pathofexile, 2026-08-17, https://www.reddit.com/r/pathofexile/comments/1vqlc59/
+# (docs/research/2026-11-01-strand-routes.md). The goal of the reforges and the Unravelling is a tier-1 Fire Resistance and
+# a tier-1 all-Elemental-Resistances mod on the ring ("T1 Fire and T2 All Res or the other way around", then "the Fire Res
+# gets upgraded to T1"). The Divine, the slam and the fracture that follow are not asked.
+#
+# The ring base is a Helical Ring (a comment on the post prices the "Helical ring" at 35+ divines as a base); the post gives
+# no item level, so 84 is taken, the level at which tier 1 of Fire Resistance (46-48%) can roll.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft it.
+
+base: Helical Ring
+item_level: 84
+influence: []
+
+# The name of the buy spec examples/buy/s02-start-ring.yaml, which is what the normal Helical Ring costs.
+start_price: S02 start ring
+
+# The kinds of actions the planner may use: the showcase's own. `remembrance-orb` and `unravelling-orb` are this file's
+# proposals for the kind names (B5-5 and B5-8 fix them).
+actions: [remembrance-orb, regal-orb, harvest-reforge, bench-craft, unravelling-orb]
+
+requirements:
+  # Tier 1 Fire Resistance, "+(46-48)%" at item level 84. A crafted copy does not count.
+  - family: FireResistance
+    min_tier: 1
+    not_crafted: true
+
+  # Tier 1 all Elemental Resistances, "+(15-16)%" (the post's "T1 ... All Res"). A crafted copy does not count.
+  - family: AllResistances
+    min_tier: 1
+    not_crafted: true
