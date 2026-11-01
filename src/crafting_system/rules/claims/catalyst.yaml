@@ -1,0 +1,188 @@
+# Mechanic family: catalyst (jewellery quality). Research ticket #89, claims CAT-xx; admitted by grill B2 (#93, ADR-0029) and used by ticket #157.
+# Marked approximate: the cap past 20, the random rounding of the gain, the rounding of a scaled value and the side rule of Sinistral/Dextral (open points O-05 to O-08).
+rules:
+  - id: catalyst.thirteen_items_for_jewellery
+    statement: There are thirteen catalysts (Abrasive, Accelerating, Fertile, Imbued, Intrinsic, Noxious, Prismatic, Tempering, Turbulent, Unstable, Sinistral, Dextral, Tainted); each applies to a ring, amulet or belt only, stacks to 20, and replaces other quality types. Tainted works on corrupted jewellery only.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a ring, amulet or belt to apply it. Has greater effect on lower item level, non-unique jewellery. The maximum quality is 20%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.single_quality_type
+    statement: An item carries one catalyst quality type; a catalyst of a different type replaces it and quality starts again from 0%; a catalyst of the same type adds to it. Quality is capped at 20%.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Catalyst
+    quote: "Using a different type of catalyst on an item that already has quality will replace the quality type, starting again from 0%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.source_ultimatum_only
+    statement: >-
+      Since 3.29.0 Ultimatum is the only source of catalysts as drops and rewards (a stack holds 20).
+      Catalysts can also be obtained from the divination card The Finishing Touch (1x Fertile
+      Catalyst) and from three vendor recipes (3 catalysts of one type for 1 random catalyst; 1
+      normal jewellery with 20% quality for a matching catalyst; jewellery with a total of at least
+      40% of one quality type for a catalyst); none is modelled in B2.
+    source_kind: official
+    url: https://www.poewiki.net/wiki/Version_3.29.0
+    quote: "Ultimatum is now the exclusive source of Catalysts."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.gain_depends_on_item_level
+    statement: The quality a non-unique catalyst adds depends on the item's level and not on its rarity.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3531661
+    quote: "the amount of Quality they provide is now based on the item level"
+    patch_verified: "3.25.0"
+    date_checked: 2026-10-31
+
+  - id: catalyst.quality_capped_at_20
+    statement: Catalyst quality never exceeds 20%; a catalyst whose gain passes 20 leaves the item at 20 (the overflow case is not described by any source, open O-06).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "The maximum quality is 20%."
+    approximate: true
+    approximate_reason: "No source describes a catalyst whose gain passes 20; the cap at 20 is the reading of the stated maximum (open point O-06)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.magnitude_multiplier
+    statement: A modifier that matches the catalyst type, implicit or explicit, has its value multiplied by (100 + quality) / 100 (20% quality = x1.20).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Quality
+    quote: "Increased modifier magnitude based on catalyst tag; affects implicit and explicit affixes"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.magnitude_multiplier_in_code
+    statement: Craft of Exile adds quality/100 to a factor 1 for the first matching catalyst tag (so x1.20 at 20%, once per modifier); Path of Building returns (100 + quality) / 100 on the first matching tag. The three sources agree.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "val+=(crsim_catalyst.val/100);break"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.rounding_floor
+    statement: >-
+      A catalyst-scaled value is the stat's stored integer times (100 + quality) / 100, rounded down
+      in the stored unit; in integer arithmetic scaled = (v * (100 + q)) // 100. For stats whose
+      displayed value is the stored integer (the large majority of ring, amulet and belt modifiers)
+      a displayed target N at quality q needs a stored roll v >= ceil(100 * N / (100 + q)). That
+      threshold does NOT carry over to stats displayed in another unit: flat life regeneration
+      (stored per minute, shown per second, the GGG example), percent life regeneration and the
+      leech modifiers (stored in ten-thousandths) round in the stored unit and are then displayed
+      converted. Floor versus nearest is not separated by the one GGG example (open O-08).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "function poec_simApplyCatMod(val,mod){if(mod!=1){if(val-Math.floor(val)!=0){return Math.floor(((val*100)*mod))/100}else{return Math.floor(val*mod)}}else{return val}}"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code and one GGG example (whose fraction .4 does not separate rounding down from rounding to nearest) support rounding down; no in-game check exists (open point O-08)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.rounding_example_ggg
+    statement: GGG's example of a catalyst-scaled life regeneration roll - the stat is stored per minute as an integer, the scaled value is stored rounded down (20997 x 1.2 = 25196.4 stored as 25196) and only then divided by 60 for display (419.9). Shows that the rounding happens in the stored unit; its fraction (.4) does not separate floor from nearest.
+    source_kind: official
+    url: https://devtrackers.gg/pathofexile/p/c038cd2a-ggg-help-please-catalyst-no-worky-on-immortal-flesh
+    quote: "With the quality modifier, the base roll of 20997 becomes 25196.4, which rounds down to 25196 as the stored value."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.match_by_implicit_tags
+    statement: >-
+      Which modifiers a regular catalyst boosts is decided by the modifier's implicit_tags -
+      Abrasive attack; Accelerating speed; Fertile resource; Imbued caster; Intrinsic attribute;
+      Noxious physical_damage or chaos_damage; Prismatic resistance; Tempering defences; Turbulent
+      elemental_damage; Unstable critical. The quote is one row of PoEDB's Catalyst tags table, a
+      third-party reading of the game data (not GGG text and not the repoe export); Path of
+      Building's catalystTags and Craft of Exile's catalyst data agree. A modifier counts once
+      however many tags match and may match two catalyst types. On the 316 ordinary ring, amulet
+      and belt modifier records of 3.29.3.3 (spawn weight above zero on any of the three), PoEDB's
+      tag list and Path of Building's tag list pick exactly the same records for all ten catalysts
+      (census script in the branch).
+    source_kind: datamined
+    url: https://poedb.tw/us/Catalyst
+    quote: "Fertile Catalyst resource"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      abrasive: [attack]
+      accelerating: [speed]
+      fertile: [resource]
+      imbued: [caster]
+      intrinsic: [attribute]
+      noxious: [physical_damage, chaos_damage]
+      prismatic: [resistance]
+      tempering: [defences]
+      turbulent: [elemental_damage]
+      unstable: [critical]
+
+  - id: catalyst.sinistral_dextral_by_side
+    statement: A Sinistral Catalyst boosts the prefix modifiers and a Dextral Catalyst the suffix modifiers of the item (Mirage-only items); implicits are not prefixes or suffixes and are taken as not boosted (open O-07).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Catalyst
+    quote: "Adds quality that enhances Prefix modifiers on a ring, amulet or belt"
+    approximate: true
+    approximate_reason: "No source says whether a Sinistral or Dextral Catalyst also scales an implicit; it is taken as not (open point O-07)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.gain_formula_and_rounding
+    statement: >-
+      With f = max(1, min(30*exp(-ilvl/30) - 0.3, 20)), one catalyst adds floor(f) points with
+      probability 1 - frac(f) and floor(f) + 1 points with probability frac(f); an integer f adds
+      exactly f. Examples from the wiki table: ilvl 75 adds 2 points with 83.75% and 3 with 16.25%;
+      ilvl 84 adds 1 with 47.57% and 2 with 52.43%; ilvl 86 adds 1 with 59.34% and 2 with 40.66%;
+      ilvl 95 and up always adds 1. The wiki's table equals this formula; no player sample confirms
+      the random rounding (open O-05).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Quality#Amount
+    quote: "max(1, min(30*e^(-1/30*ilvl) - 3/10, 20))"
+    approximate: true
+    approximate_reason: "The wiki's table equals the formula, but no player sample confirms that the gain is rounded at random by its fraction (open point O-05)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.consumption_stopped_in_3_15
+    statement: >-
+      Since 3.15.0 catalyst quality no longer raises the chance of rolling a modifier with a
+      matching tag, and Augmentation, Regal Orb, Exalted Orb and Elderslayer's Exalted Orb no longer
+      reduce it on use. The 3.15.0 note says only "specific Currency"; no source says any other
+      currency (Chaos, Scouring, Annulment, essences, bench crafts) changes or removes catalyst
+      quality, and none of them did before (open O-09).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Catalyst#Version_history
+    quote: "Prior to version 3.15.0, catalyst quality on jewellery also increased the chances of hitting a modifier with matching tags when using an Orb of Augmentation, a Regal Orb, an Exalted Orb, or an Elderslayer's Exalted Orb on the item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: catalyst.refused_on_corrupted
+    statement: A corrupted item takes none of the ten regular catalysts nor the Sinistral and the Dextral; the Tainted Catalyst, which works on corrupted jewellery only, is not modelled (grill B2).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: catalyst.cost
+    statement: One use of a catalyst consumes one catalyst item of its type; the value maps each type to the price-file name of its item (the item's name in the game data).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyJewelleryQualityAttribute: name "Intrinsic Catalyst" (and the nine other regular ones, CurrencyJewelleryQualityPrefix "Sinistral Catalyst", CurrencyJewelleryQualitySuffix "Dextral Catalyst")'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value:
+      abrasive: Abrasive Catalyst
+      accelerating: Accelerating Catalyst
+      fertile: Fertile Catalyst
+      imbued: Imbued Catalyst
+      intrinsic: Intrinsic Catalyst
+      noxious: Noxious Catalyst
+      prismatic: Prismatic Catalyst
+      tempering: Tempering Catalyst
+      turbulent: Turbulent Catalyst
+      unstable: Unstable Catalyst
+      sinistral: Sinistral Catalyst
+      dextral: Dextral Catalyst
