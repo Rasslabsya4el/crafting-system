@@ -11,7 +11,7 @@ cleanly without it.
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees, and at the same
 prices the solver's mean is no more than the guide's given route's. The odds and the mean are exact; p90 is not resolved
 by the budget grid (the cheapest action, 0.0058 Chaos, is far below the cost scale, ticket #190) and the p90 `--verify`
-simulates is labelled as not certified. Four simulated crafts cannot reject a wrong mean (the detectable error is about
+simulates is labelled as not certified. Eight simulated crafts cannot reject a wrong mean (the detectable error is about
 the mean itself); the PR records the 20-run check.
 """
 
@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 TARGET = ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml"
 ROUTE = ROOT / "examples" / "routes" / "r13-life-resist-belt.yaml"
-RUNS = 4  # one simulated craft takes about 50 seconds here (about 50,000 uses of an orb), so --verify gets four runs
+RUNS = 8  # a simulated craft is about 50,000 orb uses and takes 10 s or more here, so --verify gets eight runs
 BELT = "Leather Belt (ilvl 86)"
 BELT_PRICE = 10.0  # poe.ninja BaseType overview, Allflame, 2026-11-01: a normal Leather Belt of item level 86
 ORBS_OF_THE_GUIDE = {"Orb of Transmutation", "Orb of Alteration", "Regal Orb"}
