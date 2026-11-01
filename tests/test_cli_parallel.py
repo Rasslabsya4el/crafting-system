@@ -13,8 +13,9 @@ import pytest
 from coarse_support import CHAOS, CRAFTS, DATA, HYBRID_CRAFT, MANA, REMOVE
 from abstraction_pool import MANA_1
 
+from crafting_system import parallel
+from crafting_system.actions import ActionError
 from crafting_system.cli import Offer, build_report, make_plan, policy_document
-from crafting_system.cli import _pool
 from crafting_system.cli._decide import Rates
 from crafting_system.prices import PriceFile
 from crafting_system.targets import parse_target
@@ -56,32 +57,34 @@ def planned(monkeypatch, workers: int, **options):
 
 
 @pytest.fixture
-def pool_calls(monkeypatch):
-    """The numbers of actions the state pool was asked to build per batch."""
-    sizes: list[int] = []
-    real = _pool.StatePool.build
+def primed(monkeypatch):
+    """The numbers of label distributions each `prime` call made in a process pool."""
+    from crafting_system.abstraction import _prime
 
-    def counting(self, tasks):
-        sizes.append(sum(len(positions) for _, positions in tasks))
-        return real(self, tasks)
+    made: list[int] = []
+    real = _prime.prime
 
-    monkeypatch.setattr(_pool.StatePool, "build", counting)
-    return sizes
+    def counting(abstraction, requests, **options):
+        found = real(abstraction, requests, **options)
+        made.append(found)
+        return found
+
+    monkeypatch.setattr(_prime, "prime", counting)
+    return made
 
 
-def test_one_worker_starts_no_pool(monkeypatch, pool_calls):
+def test_one_worker_primes_nothing(monkeypatch, primed):
     planned(monkeypatch, 1)
 
-    assert pool_calls == []
+    assert sum(primed) == 0
 
 
 @pytest.mark.parametrize("workers", [2, 4])
-def test_an_exact_plan_is_byte_identical_for_one_and_many_workers(monkeypatch, pool_calls, workers):
+def test_an_exact_plan_is_byte_identical_for_one_and_many_workers(monkeypatch, primed, workers):
     serial = answer_of(planned(monkeypatch, 1))
     pooled = answer_of(planned(monkeypatch, workers))
 
     assert pooled == serial
-    assert pool_calls and max(pool_calls) >= _pool.MIN_PENDING  # the pool really built actions
 
 
 def test_the_solution_values_are_equal_to_the_last_bit(monkeypatch):
@@ -92,3 +95,34 @@ def test_the_solution_values_are_equal_to_the_last_bit(monkeypatch):
     assert {s: (a.label, a.cost, a.outcomes) for s, a in pooled.policy.items()} == {
         s: (a.label, a.cost, a.outcomes) for s, a in serial.policy.items()
     }
+
+
+forked = pytest.mark.skipif(not parallel.can_inherit(), reason="the distributions are primed in forked workers; there is no fork here")
+
+
+@forked
+def test_primed_kernels_are_the_kernels_of_an_unprimed_abstraction(monkeypatch):
+    """`prime` fills the abstraction's caches in workers; every kernel it then returns equals the one computed on the spot."""
+    monkeypatch.setenv("CRAFTING_WORKERS", "2")
+    plan = planned(monkeypatch, 1)
+    states = [state for state in plan.solution.values if not plan.abstraction.is_goal(state)]
+    actions = [offer.action for offer in OFFERS]
+    requests = [(state, action) for state in states for action in actions]
+    fresh = type(plan.abstraction)(
+        DATA, plan.abstraction.goal, plan.abstraction.base_id, plan.abstraction.item_level, plan.abstraction.enabled,
+        metamods=plan.abstraction.models_metamods,
+    )
+    reference = type(plan.abstraction)(
+        DATA, plan.abstraction.goal, plan.abstraction.base_id, plan.abstraction.item_level, plan.abstraction.enabled,
+        metamods=plan.abstraction.models_metamods,
+    )
+
+    made = fresh.prime(requests, workers=2)
+
+    assert made >= 2
+    for state, action in requests:
+        try:
+            expected = reference.kernel(state, action)
+        except ActionError:
+            continue
+        assert list(fresh.kernel(state, action).items()) == list(expected.items())

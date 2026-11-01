@@ -68,7 +68,7 @@ def timed(owner, name: str, stage: str | None = None) -> None:
 
 def install_timers() -> None:
     from crafting_system.abstraction import Abstraction, Coarsening
-    from crafting_system.cli import _approx, _bound_prune, _decide, _plan, _pool
+    from crafting_system.cli import _approx, _bound_prune, _decide, _plan
     from crafting_system.solver import _bounds, _solve, _tail
 
     for name in ("kernel", "kernel_key"):
@@ -88,45 +88,8 @@ def install_timers() -> None:
     timed(_plan, "evaluate_risk", "plan.evaluate_risk (risk run)")
     timed(_plan, "climb", "plan.climb (approximate ladder)")
     timed(_bound_prune, "reach_bound", "prune.reach_bound")
-    timed(_pool.StatePool, "build", "pool.build (wall of the pool call)")
-    timed(_plan._Model, "prefetch", "model.prefetch (keys here + pool)")
-
-
-POOL_ROWS: list[dict] = []
-
-
-def install_pool_stats() -> None:
-    """Around each `StatePool.build`: its wall time, the same tasks built in this process, and what pickling their result costs."""
-    import pickle
-
-    from crafting_system import parallel
-    from crafting_system.cli import _pool
-
-    real = _pool.StatePool.build
-
-    def measured(self, tasks):
-        began = time.perf_counter()
-        results = real(self, tasks)
-        pooled = time.perf_counter() - began
-        local = parallel.WorkerPool(_pool._Worker, self._pool._args, workers=1)
-        began = time.perf_counter()
-        local.map_chunks(_pool._build_chunk, tasks, chunk=_pool.CHUNK)
-        here = time.perf_counter() - began
-        began = time.perf_counter()
-        blob = pickle.dumps(results, protocol=pickle.HIGHEST_PROTOCOL)
-        dumped = time.perf_counter() - began
-        began = time.perf_counter()
-        pickle.loads(blob)
-        loaded = time.perf_counter() - began
-        actions = sum(len(positions) for _, positions in tasks)
-        outcomes = sum(len(a.outcomes) for built in results for a in built if a is not None)
-        row = dict(tasks=len(tasks), actions=actions, outcomes=outcomes, pooled=round(pooled, 2), here=round(here, 2),
-                   dumps=round(dumped, 2), loads=round(loaded, 2), megabytes=round(len(blob) / 1e6, 1))
-        POOL_ROWS.append(row)
-        print("pool", json.dumps(row), flush=True)
-        return results
-
-    _pool.StatePool.build = measured
+    timed(_plan._Model, "prefetch", "model.prefetch (keys here + the pool's distributions)")
+    timed(Abstraction, "prime", "abstraction.prime (distributions in the pool)")
 
 
 def filled_prices(data, target, offers):
@@ -188,7 +151,6 @@ def main() -> None:
     parser.add_argument("--budget", type=float, default=None)
     parser.add_argument("--workers", type=int, default=None, help="sets CRAFTING_WORKERS (the product reads it; before #250 it is ignored)")
     parser.add_argument("--cprofile", action="store_true")
-    parser.add_argument("--pool-stats", action="store_true", help="measure each pool call against the same work done here, and what pickling it costs")
     parser.add_argument("--limit", type=float, default=None, help="stop the plan after this many seconds (Linux) and write what the timers saw so far")
     parser.add_argument("--out", required=True)
     arguments = parser.parse_args()
@@ -208,8 +170,6 @@ def main() -> None:
     chosen = offers if offers is not None else offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions).offers
     prices, missing = filled_prices(data, target, chosen)
     install_timers()
-    if arguments.pool_stats:
-        install_pool_stats()
     profiler = cProfile.Profile() if arguments.cprofile else None
     began = time.perf_counter()
     if profiler:
@@ -241,7 +201,6 @@ def main() -> None:
         "interrupted": plan is None,
         "stages": stages,
         "made_up_prices": missing,
-        "pool_calls": POOL_ROWS,
         "machine": {"system": platform.platform(), "cpus": os.cpu_count(), "python": platform.python_version()},
     }
     if plan is not None:

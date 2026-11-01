@@ -304,6 +304,16 @@ class Abstraction:
         self._check_enabled(action)
         return self._mixture_kernel(state, self._prepared(state, action))
 
+    def prime(self, requests: Iterable[tuple[CompressedState, Action]], *, workers: int | None = None) -> int:
+        """Compute ahead, in a process pool, the label distributions that `kernel` of these (state, action) pairs would compute.
+
+        Changes no result, only when the work is done (ticket #250; `_prime.py`). Returns the number of distributions it made;
+        0 with one worker (`CRAFTING_WORKERS=1`), where there is no fork, or when fewer than two are missing.
+        """
+        from ._prime import prime
+
+        return prime(self, requests, workers=workers)
+
     def kernel_key(self, state: CompressedState, action: Action) -> Hashable:
         """A key of the kernel of `action` on `state`, cheaper than the kernel: equal keys, equal kernels.
 

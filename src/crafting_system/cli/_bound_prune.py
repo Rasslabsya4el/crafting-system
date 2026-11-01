@@ -188,18 +188,16 @@ def solve_pruned(
     *,
     rounds: int = 8,
     min_offers: int = 40,
-    pool=None,
 ) -> Pruned:
     """Solve the plan of `priced` from `start` on as few offers as the certificate allows; see the module text.
 
     `item` is the start item (the twin key is read on it). With fewer than `min_offers` offers nothing is
-    left out but the twins (there is nothing to gain). `pool` (a `_pool.StatePool` of `priced`, or None) builds the actions of
-    the queued states in worker processes (ticket #250); it changes the time, not the answer. Raises what `solve` raises when even the fallback fails.
+    left out but the twins (there is nothing to gain). Raises what `solve` raises when even the fallback fails.
     """
     from ._plan import _Model  # _plan imports this module
 
     if len(priced) < min_offers:
-        everything = solve(_Model(abstraction, start, priced, pool=pool), [start])
+        everything = solve(_Model(abstraction, start, priced), [start])
         return Pruned(everything, tuple(priced), (), (), 1, 0.0, _largest(everything, abstraction), True, f"fewer than {min_offers} offers: nothing to gain")
     data = abstraction.data
     phases: list[tuple[str, float]] = []
@@ -239,7 +237,7 @@ def solve_pruned(
     cache: dict = {}
 
     def solve_on(offers: Iterable[PricedOffer]) -> Solution[CompressedState]:
-        return solve(_Model(abstraction, start, offers, cache, pool), [start])
+        return solve(_Model(abstraction, start, offers, cache), [start])
 
     def fallback(why: str, spent: int) -> Pruned:
         solution = solve_on(remaining)

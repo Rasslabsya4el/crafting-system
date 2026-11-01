@@ -16,6 +16,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 
+from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
 from crafting_system.actions import BLOCKING
 from crafting_system.data import GameData
@@ -29,7 +30,6 @@ from ._approx import Approximation, climb
 from ._bound_prune import Pruned, solve_pruned
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
-from ._pool import MIN_PENDING, StatePool, open_pool
 from ._prune import chosen_offers, solver_actions
 
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
@@ -96,55 +96,40 @@ class _Model:
     """
 
     def __init__(
-        self,
-        abstraction: Abstraction,
-        start: CompressedState,
-        offers: Iterable[PricedOffer],
-        cache: dict | None = None,
-        pool: StatePool | None = None,
+        self, abstraction: Abstraction, start: CompressedState, offers: Iterable[PricedOffer], cache: dict | None = None
     ) -> None:
         self.abstraction = abstraction
         self.start = start
         self.offers = tuple(offers)
         self.cache = cache  # (state, label, cost) -> solver action, shared by the solves of one plan
-        self.pool = pool  # workers that build the actions of the queued states together (#250); None builds them here
-        self.positions = pool.positions(self.offers) if pool is not None else None
-        self.window: dict = {}  # without a `cache`: the actions built ahead for the states still queued
         self.chosen: dict[CompressedState, list[PricedOffer]] = {}  # the offers chosen at the queued states (`prefetch` made the choice)
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.abstraction.is_goal(state)
 
     def prefetch(self, states: Sequence[CompressedState]) -> None:
-        """Build, in the pool, the actions that `actions` will need for the pending `states` and has not built yet."""
-        if self.pool is None or self.positions is None:
+        """Compute, side by side in a process pool, the label distributions that the queued `states` will need (ticket #250).
+
+        `actions` then finds them in the abstraction's cache. Nothing is built here and nothing changes in the answer; with
+        `CRAFTING_WORKERS=1` this does nothing.
+        """
+        if parallel.worker_count() < 2:
             return
-        cache = self.cache if self.cache is not None else self.window
-        if cache is self.window:
-            cache.clear()  # the states of the last window have all been taken
-        self.chosen.clear()
-        tasks, wanted = [], []
+        self.chosen.clear()  # the states of the last window have all been taken
+        requests = []
         for state in states:
             if self.abstraction.is_goal(state):
                 continue
             chosen = self.chosen[state] = chosen_offers(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL)
-            missing = [priced for priced in chosen if (state, priced.label, priced.cost) not in cache]
-            if missing:
-                tasks.append((state, self.pool.positions(missing)))
-                wanted.append((state, missing))
-        if sum(len(positions) for _, positions in tasks) < MIN_PENDING:
-            return
-        for (state, missing), built in zip(wanted, self.pool.build(tasks)):
-            for priced, action in zip(missing, built):
-                if action is not None:
-                    cache[(state, priced.label, priced.cost)] = action
+            for priced in chosen:
+                if self.cache is None or (state, priced.label, priced.cost) not in self.cache:
+                    if not isinstance(priced.offer.action, BuyStartItem):
+                        requests.append((state, priced.offer.action))
+        self.abstraction.prime(requests)
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
-        cache = self.cache
-        if cache is None and self.positions is not None:
-            cache = self.window  # a serial solve with no cache keeps none (a big graph would hold every action twice)
         chosen = self.chosen.pop(state, None)
-        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=cache, chosen=chosen)
+        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=self.cache, chosen=chosen)
 
 
 def offer_action(
@@ -293,13 +278,12 @@ def make_plan(
 
     began = time.perf_counter()
     pruned = None
-    with open_pool(abstraction, start, priced) as pool:  # None unless CRAFTING_WORKERS (or the cores) allow more than one
-        if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
-            pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, pool=pool)
-            solution = pruned.solution
-            left_out = (*left_out, *_pruned_left_out(pruned))
-        else:
-            solution = solve(_Model(abstraction, start, priced, pool=pool), [start])
+    if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
+        pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE)
+        solution = pruned.solution
+        left_out = (*left_out, *_pruned_left_out(pruned))
+    else:
+        solution = solve(_Model(abstraction, start, priced), [start])
     solve_seconds = time.perf_counter() - began
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
