@@ -191,7 +191,56 @@ A strongly connected component of the solver's graph that contains an input edge
 The cost above which the solver declares a state infinite, since a supercritical branching component never converges.
 
 **Selection rule**:
-One admissible way a recombinator chooses which mods to keep (ADR-0012). The admitted rules form a family; each is solved separately and the interval is read across them.
+One admissible way a recombinator chooses which mods to keep (ADR-0012). The admitted rules form a family; each is solved separately and the interval is read across them. Now the family `weight^alpha` read at the five points of the exponent grid (ADR-0033).
+
+**Selection exponent** (`alpha`):
+The power to which a mod's spawn weight is raised when a recombinator draws the mods it keeps. The plan uses 1; the data support 0.4 to 1.6; at or below 0 is excluded (ADR-0012, ADR-0033).
+_Avoid_: weight bias
+
+**Exponent grid**:
+The five readings of the selection exponent, 0.4, 0.7, 1.0, 1.3 and 1.6, all solved and cross-evaluated because the extreme of a route's chance is often between the ends.
+
+**Rule axis**:
+A rule the sources leave open, with a short list of readings: the selection exponent (five readings) and the Awakener's group conflict (two). A model's rule set is the product of the axes its enabled actions read; each reading is one ordinary model (ADR-0033).
+_Avoid_: scenario, variant (variants are ADR-0023's members of a block)
+
+**Recombinator**:
+The Kingsmarch bench that destroys two magic or rare items of one class and makes one new item from their mods. B3 plans the unpredictable mode only (ADR-0033).
+_Avoid_: recombinator output (say the output item), recomb
+
+**Pooled count**:
+The number of prefixes (or suffixes) of both inputs together, doubled mods counted twice and exclusive mods counted once; the count table gives the chance of each number of mods kept from it.
+
+**Doubling**:
+A mod present on both inputs: it enters the pool twice, so it is picked more often, and picking one closes the other.
+
+**Non-native mod**:
+A mod the chosen base cannot roll (an influenced or base-bound mod): it counts in the pool and never appears on the output.
+_Avoid_: NNN (the guide's abbreviation)
+
+**Exclusive mod**:
+A crafted, essence, beast-aspect, veiled or other special mod of which the recombinator keeps at most one, counted once per side in the pool.
+
+**Awakener's Orb**:
+Destroys a donor item to give a receiver of the same class both influences, one influenced mod from each input and a Chaos-style reroll of the rest (ADR-0032).
+_Avoid_: Awakener (the donor is not awakened)
+
+**Receiver and donor**:
+The two inputs of an Awakener's Orb: the receiver is the item in hand and survives as a rare, the donor is a `Need` and is destroyed.
+
+**Group conflict**:
+Two kept influenced mods of the Awakener's Orb that share a mod group, of which one survives. The plan keeps the receiver's; the donor's is the other reading of the rule axis, unconfirmed in the game (ADR-0032).
+
+**Imprint**:
+A snapshot of one magic item or rare Talisman, made by a beast (Craicic Croaker, Fenumal Plagued Arachnid) and used up when it restores the item. Several can be kept for one item (ADR-0034).
+_Avoid_: Eternal Orb (it is not offered), save point
+
+**Thaumaturgic Dust and Gold**:
+The two costs of one recombination. Each has a price in the price file; the amount per combine is a rule from reports, marked approximate (ADR-0035).
+_Avoid_: recombinator cost formula (none is known)
+
+**Junk craft**:
+An optional step before a recombination: a low-tier non-exclusive bench craft on the open side of each input, which cuts the Dust by about half. Offered only when a setting asks for it (ADR-0035).
 
 **Policy**:
 The action to take in every state reachable from the start item, with the expected remaining cost of each state. It is what the planner returns.

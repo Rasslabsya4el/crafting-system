@@ -26,7 +26,7 @@ The metamods (ticket #68) cost the compressed state no declaration of their own:
 
 ## Limits a later ticket must lift with a contract change
 
-- **Two-input actions** (ADR-0022): `outcomes(data, item)` takes one item; `extra_inputs`, a `Need` and a donor have no place in the contract yet.
+- **Two-input actions** (ADR-0022): `outcomes(data, item)` takes one item; `extra_inputs`, a `Need` and a donor have no place in the contract yet. Grill B3 designs the actions that need it (ADR-0032 to ADR-0035); a build ticket adds the inputs and the rule axis to the contract.
 - **Implicits, quality and the unveil offer** were also outside the contract; [ADR-0027](0027-item-state-beyond-explicit-mods.md) (grill B2) lifts that limit by letting `Item` store them and `Reads`/`Adds` declare them.
 - **In-place value changes** (a Divine-like orb, #71): lifted by the `Rerolled` part of `ActionOutcomes.components` (`actions/contract.py`: the item the action was given and the `(mod_id, fractured, crafted)` keys of the mods whose values are rerolled) with `Reads.rerolls_values`, so a kernel can tell a changed roll from a kept one; `actions/divine.py` is the first action to use it, and `Adds.needs_roll_limit` makes a planner offer such an action only for a target with a roll limit. Before it, the kernel accepted only `Fixed` or `Outcomes` parts and `_split` matched mods by `(mod_id, fractured, crafted)`, so a changed roll would have counted as kept.
 - **`Adds` names only what is added by name** from the start item. For a drawn action it says that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
