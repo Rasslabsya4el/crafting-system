@@ -8,6 +8,7 @@ from .registry import (
     UnknownRuleError,
     get_rule,
     load_registry,
+    rule_by_id,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "UnknownRuleError",
     "get_rule",
     "load_registry",
+    "rule_by_id",
 ]
