@@ -1084,12 +1084,17 @@ class Abstraction:
         """The split of every part of the outcomes (cached on `prepared`)."""
         if prepared.splits is None:
             prepared.splits = tuple(
-                self._split(part.retained, prepared.origins) for _, part in prepared.outcomes.components
+                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes) else frozenset())
+                for _, part in prepared.outcomes.components
             )
         return prepared.splits
 
-    def _split(self, retained: Item, origins: Origins) -> _Split:
+    def _split(self, retained: Item, origins: Origins, rerolled: frozenset[str] = frozenset()) -> _Split:
         """Read a part's retained item back into state terms.
+
+        `rerolled` are the ids of kept mods whose values the action rolls afresh (an Awakener's Orb keeps the tier of an
+        influenced mod and rerolls its value): the state keeps the contribution of the old roll, so under a goal with a roll limit
+        the result has no law and raises `OutOfScopeError`.
 
         A mod the item given to the action held is the fractured mod or slot it came from; a fractured
         mod whose unfractured form was a slot is that slot turned into a fractured mod (a Fracturing
@@ -1112,6 +1117,11 @@ class Abstraction:
                 fractured.append(origin)
                 contributions.append(origin.contribution)
             elif isinstance(origin, Slot):
+                if entry.mod_id in rerolled and self._has_laws:  # the slot does not say which mod of its family it stands for
+                    raise OutOfScopeError(
+                        f"the goal has a roll limit and the action keeps mod {entry.mod_id} but rolls its value afresh: "
+                        "the kept slot would keep the contribution of its old roll"
+                    )
                 kept.append(origin)
                 contributions.append(origin.contribution)
             else:
