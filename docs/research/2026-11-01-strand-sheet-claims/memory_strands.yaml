@@ -1,0 +1,158 @@
+# Draft claims of research ticket #271 (family memory_strands): what the fit of the strand sheet changes.
+# Not yet in src/. Each entry says CHANGED (an id of docs/research/2026-10-31-memory-strands-claims/memory_strands.yaml or a
+# claim that ADR-0041 to ADR-0044 ask the build to write) or NEW. The build ticket that promotes the memory_strands claims
+# (B5-1) takes these in place of the older drafts. Check: load_registry(Path("docs/research/2026-11-01-strand-sheet-claims")).
+# Source of every claim here: the public "Memory Strand Testing" sheet, read on 2026-11-01 (tabs named in each quote), the
+# project's pinned data (repoe-fork 3.29.3.3) and the scripts in research/271/. The quote is a line of the tab that the
+# statement is computed from (a header or a row); the numbers are in docs/research/2026-11-01-strand-sheet-fit.md.
+# patch_verified "3.29.0": the sheet is the author's data of the 3.29.0 league (posted 2026-09-27); no 3.29.x note read
+# changes strands, Unravelling or Foulborn orbs (research #98).
+rules:
+  # --- NEW: what the kept tiers weigh (answers ADR-0042's open rule; the axis collapses to this reading) ---
+  - id: memory_strands.weights_of_kept_tiers
+    statement: >-
+      Approximate (one data set, no first-party statement). When a strand cut removes the low tiers of a mod type, each
+      kept tier of that type weighs its old weight times T/K, T the tiers of the type before the cut and K the tiers
+      kept (the wiki's "refactored weight", reading 2 of ADR-0042); the type's share of its side grows or shrinks with
+      that factor, the ratios between its kept tiers stay. The other two readings of ADR-0042 are rejected: on 18,264
+      crafts (886 of the foulborn tab, 9,943 and 7,435 Alteration crafts of the two Alteration tabs) the total
+      log-likelihood of the observed mods is -96,794.0 for reading 2, -96,871.0 for reading 1 (redistribution, the type
+      keeps its total) and -96,968.7 for reading 3 (delete the low tiers, keep the weights). Differences 77.0 (SE 10.4,
+      bootstrap 95% 57.0 to 97.3) and 174.7 (SE 18.1). Reading 2 is ahead in each tab and in each band of strands. With
+      the factor written (T/K)^g, g = 1.00 with the 95% interval 0.90 to 1.11. For the mod types whose kept tiers carry
+      little of their weight (hybrid life and defence prefixes, flat elemental damage prefixes) 53 draws were seen
+      against 105.6 expected by reading 1, 48.7 by reading 2 and 41.2 by reading 3. Our T equals the sheet's own
+      total_tiers on all 27,886 mods of the three tabs once four Battle Royale duplicate mods are left out of the pool
+      (affix_pool.royale_duplicates_do_not_spawn).
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: ",strands,currency,modifier,effective_tier,total_tiers,mtr,mtr_percent,lowest_expected_tier,item_before,item_after"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "Fitted on one author's sheet; the wiki's Foulborn page states the same rule, the datamined tree text says redistribution."
+    value: {reading: refactored, factor: "T/K"}
+
+  # --- NEW (replaces the bins the ADR-0041 table plans for Chaos and Alchemy): the shape of every spend ---
+  - id: memory_strands.spend_law_uniform
+    statement: >-
+      A craft that spends strands draws a whole number uniformly on 0 to its ceiling and the item loses the smaller of
+      that and its count (the count never goes below 0). No currency in the sheet rejects it. Tests per craft, with
+      the exact chance of every spend and the exact covariance of the bins: Orb of Alteration, 17,377 crafts, chi-square
+      4.15 on 8 degrees of freedom (p = 0.84); Foulborn Orb of Augmentation 427 crafts, p = 0.25; Chaos Orb 155 crafts, p =
+      0.60; Orb of Alchemy 132 crafts, p = 0.46; Foulborn Regal Orb 64 crafts, p = 0.19; Regal Orb 13 crafts, p = 0.08. The
+      earlier "bins" for Chaos and Alchemy counted the rows of the tab, which lists a multi-mod craft once for each mod
+      it produced (155 Chaos crafts are 615 rows, 132 Alchemy crafts on normal items 580 rows); the 130 and 260 uses behind
+      them were 33 and 55 crafts. No spend is above its ceiling (largest: Alteration 8, Foulborn Augmentation 32, Foulborn Regal 43, Regal 16,
+      Chaos 48, Alchemy 50). Three entries of the Alteration tabs (spends of 40, 97 and 11, among 17,380) are left out as
+      typing errors.
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: "Starting Strands,Ending Strands,Prefix 1,Prefix 1 Tier,Prefix 1 Total Tiers,Prefix 2,Prefix 2 Tier,Prefix 2 Total Tiers,Prefix 3,Prefix 3 Tier,Prefix 3 Total Tiers"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+    value: {shape: uniform_integer, lowest: 0, count_after: "max(0, count - draw)"}
+
+  # --- CHANGED: the Exalted ceilings are indexed by the mods the item has AFTER the craft ---
+  - id: memory_strands.spend_exalted_by_mod_count
+    statement: >-
+      Approximate for the rows without data. The ceiling of an Exalted Orb's spend grows with the mods the item has after
+      the orb is applied (the wiki's table row "# of modifiers" counts the result): 1 mod 16, 2 mods 22, 3 mods 26,
+      4 mods 32, 5 mods 34, 6 mods 38. As a function of the mods before the craft: 0 mods 16, 1 mod 22, 2 mods 26, 3 mods 32,
+      4 mods 34, 5 mods 38. Data: 41 crafts on items with 4 mods before spent up to 33 (the planned ceiling for 4 mods before,
+      32, is exceeded; 34 is not) and 43 crafts on items with 5 mods before spent up to 38 (planned 34). The spends are uniform on
+      the new ceilings (chi-square p = 0.78 and 0.90). The rows for 0 to 3 mods before carry no sheet data and are the
+      same shift applied to the wiki's figures. The Foulborn Exalted Orb's row is scaled the same way
+      (ADR-0041: times 62/34, so 29, 40, 47, 58, 62 for 1 to 5 mods after, 69 for 6).
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: "1292,49,Exalted Orb,Hummingbird's,1,6,170,0.3703703704,2"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "Two item sizes (4 and 5 mods before) are measured; the others are the wiki's figures moved by one mod."
+    value: {ceiling_by_mods_before: {0: 16, 1: 22, 2: 26, 3: 32, 4: 34, 5: 38}}
+
+  # --- NEW: identification spends nothing ---
+  - id: memory_strands.identification_spends_none
+    statement: >-
+      Identifying an item with a Scroll of Wisdom spends no strands (the count after equals the count before in all 11
+      crafts, 51 rows, on items with 82 strands) although it applies the cut to the mods it reveals. The wiki lists no spend
+      for it.
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: "702,82,Scroll of Wisdom,Paragon's,1,1,252.5,0.2836879433,1"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+
+  # --- CHANGED: the Unravelling chance is the linear formula, exactly, with our weights ---
+  - id: memory_strands.unravelling_chance_model
+    statement: >-
+      Each explicit mod is raised on its own with chance min(1, s * W_up / (2 * W_side)), s the strands before, W_up the
+      sum of the weights of the higher tiers of the mod's type that the pool allows at the item level, W_side the total
+      weight of the whole pool of its side (prefix or suffix) of the base at that item level, the 0.5 weight of attack
+      mods on wands included, the four Battle Royale duplicates left out. On 36,598 mods (24,698 on amulets, 8,702 on
+      wands, 2,924 on rings, 197 on gloves, 77 on body armours) the fit is exact within error: p = min(1, a x) has
+      a = 1.0011 (SE 0.0005); with p = min(1, a s^b r^c) the exponents are b = 1.000 (SE 0.012) and c = 1.000 (SE 0.012); 40
+      free bins of x gain 11.4 log-likelihood over the formula for 39 more parameters; observed against predicted rate
+      agree in every bin of x from 0 to 1. All 12,201 mods with x at least 1 were raised, none of the 3,881 with W_up = 0
+      was, and 58 of 3,507 mods with x between 0.95 and 1 were not (1.65% against 1.66%). The number of mods on the
+      item does not change it. The apparent excess of the author's own predictions was his wand weights, which lack the
+      0.5 factor (his sums are 79,166 and 76,842, ours 64,836 and 65,342). Tested classes only: amulets, wands, rings,
+      gloves, body armours.
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: "strands,item_level,mod_family,mod_before_id,mod_after_id,mod_before_text,mod_after_text,mod_before,mod_after,tier_before,tier_after,tiers_upgraded,item_class,base_name,upgrade_chance,total_prefix_weight,total_suffix_weight,upgrade_candidate_weights,mod_count"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+    value: {chance: "min(1, s * W_up / (2 * W_side))", constant: 1, divisor: 2}
+
+  # --- CHANGED: the destination tier ---
+  - id: memory_strands.unravelling_destination_tier
+    statement: >-
+      Approximate. A mod that is raised goes to one of its higher tiers (the tiers above it that the pool allows at the item
+      level); the chance of a tier is proportional to the sum of its own weight and the weights of the tiers above it
+      (reading B of ADR-0044, the author's later edit). The rank-multiplier reading A of ADR-0044 (tier weight times 1, 2,
+      3 from the top) is rejected; B is closer than A but not exact. On 23,494 raised mods, of them 4,354 where the
+      candidate weights differ (on equal weights A and B are the same), log-likelihood of B minus A is +14.9 (SE 8.0), and
+      4,000 replays of the same mods give -31.6 (SD 8.0) when A is true and +32.1 (SD 8.0) when B is true: A is out by
+      5.8 SD, B by 2.1 SD (one-sided p = 0.015). The best mixture puts weight 0.73 on B (95% 0.49 to 0.98). Weights only
+      (log-likelihood -323 against A) and uniform are far out. The rank step is exact: on equal weights the shares follow
+      1:2:3:... from the top for every candidate count from 2 to 12 (11 chi-square tests, smallest p = 0.078) and a rank
+      power of 1.00 is the maximum (0.75: -126, 1.25: -102 log-likelihood). On the wand test of the post B gives chi-square
+      4.35 against 0.63 for A: the wand mods that favour B are spell damage on weapon (+4.0) and the mana mods (+3.3).
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: "strands,item_level,mod_family,mod_before_id,mod_after_id,mod_before_text,mod_after_text,mod_before,mod_after,tier_before,tier_after,tiers_upgraded,item_class,base_name,upgrade_chance,total_prefix_weight,total_suffix_weight,upgrade_candidate_weights,mod_count"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "B fits 2.1 SD short of its own expectation and the best mixture is 0.73 B; no first-party statement."
+    value: {reading: cumulative, weight: "own weight plus the weights of the tiers above"}
+
+  # --- NEW: the destination is not cut by the strands ---
+  - id: memory_strands.unravelling_destination_not_cut
+    statement: >-
+      The tier an Unravelling raises a mod to is not limited by the strand cut: 10,721 of the 23,494 raised mods went to a
+      tier that a cut at the item's strand count would have removed (a mod of 11 tiers at 15 strands would keep 6 tiers).
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: "strands,item_level,mod_family,mod_before_id,mod_after_id,mod_before_text,mod_after_text,mod_before,mod_after,tier_before,tier_after,tiers_upgraded,item_class,base_name"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+
+  # --- NEW: Remembrance and the old count ---
+  - id: memory_strands.remembrance_independent_of_old_count
+    statement: >-
+      Approximate. The strand count after an Orb of Remembrance does not depend on the count before it, if the 2,255 rows of
+      the tab are consecutive orbs on one item (the tab records only the new count, in the order of use, and does not say
+      so). Each row against the one before: Pearson correlation 0.017 (95% half-width 0.041, permutation p = 0.41),
+      slope 0.017 (SE 0.021), chi-square of independence on 3 by 3 bins 2.0 (4 degrees of freedom, p = 0.73), mean of the
+      next result 40.6 after a result below 25 and 41.9 after one of 50 or more.
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: "mean,41.56097561"
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The tab holds only the new count; the test speaks for consecutive orbs on one item, which the sheet does not state."
