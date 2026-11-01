@@ -1,0 +1,154 @@
+# Draft claims for src/crafting_system/rules/claims/vendor.yaml (research ticket #102, note 2026-10-31-vendor-recipes.md). Patch 3.29.3.3, checked 2026-10-31.
+rules:
+  - id: vendor.recipe_makes_a_new_magic_item_with_one_mod
+    statement: The item-modifying vendor recipes of "create new item" type (boots movement speed, weapon flat damage, jewellery chaos resistance, the Whetstone weapon recipes) turn the input into a new Magic item that holds only the recipe's one mod, whatever the rarity or the other mods of the input. The input's quality, sockets, links and influences are kept; enchantments, Eldritch implicits, Synthesised implicits, Incubators and Crucible trees are removed. The result's item level is a separate, unsettled claim (vendor.item_level_of_the_result_is_not_settled).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "All recipes of this type create a new base item (with randomized base defences). The following are removed: enchantments, Eldritch implicits, Synthesised implicits, Incubators, Crucible passive trees. The following are retained: quality, sockets, links, item level, influences"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.movement_speed_boots_tier_up
+    statement: Boots (Normal for the lowest tier; Normal, Magic or Rare holding an explicit movement speed mod for the next tier) + a Quicksilver Flask + an Orb of Augmentation give Magic boots with only the movement speed mod one tier higher, up to Cheetah's (T2, 30%). From Normal boots the first result is the lowest tier (10%), so 30% takes five recipes in a row.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Quicksilver_Flask
+    quote: "This recipe outputs Magic Boots with 5% higher movement speed (and no other modifiers), up to a maximum of 30% (Cheetah's; T2)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      ingredients: [boots, quicksilver_flask, orb_of_augmentation]
+      mod_family: MovementVelocity
+      max_tier_from_top: 2
+      max_value: 30
+
+  - id: vendor.weapon_flat_damage_tier_up
+    statement: A weapon (Normal for the lowest tier; Normal, Magic or Rare holding the explicit flat damage mod for the next tier) + the matching flask + an Orb of Augmentation give a Magic weapon with only that flat added damage mod one tier higher. Flasks and caps from the top of the ladder - added Physical Damage with a Granite Flask, T2 (wiki; Craft of Exile agrees, maxtier 2); Fire with a Ruby Flask, Cold with a Sapphire Flask, Lightning with a Topaz Flask, T3 by the wiki only - Craft of Exile's table gives maxtier 2 for these three, and no other source decides (open point O-1 of the note). A hybrid local damage mod does not work.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Wiki: Magic Weapon with x added Physical Damage one tier higher Maximum tier is Tier 2 ... Magic Weapon with x added Fire Damage one tier higher Maximum tier is Tier 3. Craft of Exile package.js, the fire recipe: {\"id\":1972,\"tier\":\"+\",\"maxtier\":2}"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      physical: {flask: granite_flask, max_tier_from_top: 2}
+      fire: {flask: ruby_flask, max_tier_from_top: 3, coe_max_tier_from_top: 2, settled: false}
+      cold: {flask: sapphire_flask, max_tier_from_top: 3, coe_max_tier_from_top: 2, settled: false}
+      lightning: {flask: topaz_flask, max_tier_from_top: 3, coe_max_tier_from_top: 2, settled: false}
+
+  - id: vendor.jewellery_chaos_resistance_tier_up
+    statement: A Ring or Amulet (Normal for the lowest tier; Normal, Magic or Rare holding an explicit chaos resistance mod for the next tier) + an Amethyst Flask + an Orb of Augmentation give a Magic ring or amulet with only the chaos resistance mod one tier higher, up to T2 (26-30%).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Magic Amulet or Ring with x% to Chaos Resistance one tier higher Maximum tier is Tier 2 ((26–30)% to Chaos Resistance)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      ingredients: [ring_or_amulet, amethyst_flask, orb_of_augmentation]
+      max_tier_from_top: 2
+
+  - id: vendor.tier_caps_match_the_datamined_ladders
+    statement: Each cap the wiki gives names a real mod in the 3.29.3.3 data, which shows the wiki's tier counting is consistent with the ladders; it does not decide the elemental cap, because a T2 cap (Cremating, Entombing, Electrocuting, level 74/75) exists in the data too. The mods the wiki's caps land on are - movement speed T2 is MovementVelocity5 (required level 55, 30%), chaos resistance T2 is ChaosResist5 (65, 26-30%), added Physical Damage T2 is LocalAddedPhysicalDamage8 (65, one-hand), added Fire, Cold and Lightning T3 are LocalAddedFireDamage8 (62), LocalAddedColdDamage8 (63) and LocalAddedLightningDamage8 (63). The ladders have 6, 6, 9 and 10 tiers. Inference, not proof - every wiki cap lands at required level 55 to 65 with the next tier up at 74 or higher (movement speed 55 and 86; physical 65 and 77; chaos resistance 65 and 81; elemental T3 at 62/63 with T2 at 74/75), which fits the wiki's T3 for the elemental ladders.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "MovementVelocity5 required_level 55 base_movement_velocity_+% 30..30 spawn_weights boots 1000; ChaosResist5 required_level 65 base_chaos_damage_resistance_% 26..30; LocalAddedPhysicalDamage8 required_level 65; LocalAddedFireDamage8 required_level 62"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.spell_gem_level_weapon_recipe
+    statement: A Normal Rune Dagger, Sceptre, Staff or Wand + two or more quality gems whose combined quality is 40% and that all carry the tag (Physical, Fire, Cold, Lightning or Chaos) give a Magic weapon with +1 to Level of all Spell Skill Gems of that tag (+2 on a staff). The wiki's notes exclude the warstaff and the generic dagger; the dagger and sceptre rows differ by tag (no Chaos version for the Sceptre in the data, see vendor.spell_gem_level_mods_in_the_data).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Magic Weapon with +1 to Level of all Fire Spell Skill Gems Magic Staff with +2 to Level of all Fire Spell Skill Gems Normal Rune Dagger/Sceptre/Staff/Wand 2 or more quality gems with a combined total of 40% quality & the Fire tag"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      input_rarity: normal
+      gem_quality_total: 40
+      bases: [rune_dagger, sceptre, staff, wand]
+
+  - id: vendor.staff_spell_gem_recipe_gives_plus_two
+    statement: Since 3.29.0 the staff version of the spell-gem recipe always gives +2 (the lowest tier of the staff mod became +2, so the recipe does too). The 3.29.0 patch notes do not mention it; the claim is the wiki's version history only.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "The lowest tier for + physical/fire/cold/lightning/chaos skills on staff is now +2 instead of +(1-2), so the vendor recipe for a + skill level staff now always gives a +2 staff."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.spell_gem_level_mods_in_the_data
+    statement: The mods the spell-gem recipe produces are prefixes of one tier each with required level 2 - Flame Shaper's, Frost Singer's, Thunderhand's (wand, sceptre, dagger, focus weight 250; staff two-hand version weight 1000), Lithomancer's (200 and 750), Mad Lord's (wand, dagger, focus 200, no sceptre; staff 750). The helmet mod Taskmaster's (+1 Minion Skill Gems) is a prefix of required level 14, helmet weight 250.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "GlobalFireSpellGemsLevel1_ prefix 'Flame Shaper's' required_level 2 fire_spell_skill_gem_level_+ 1..1 spawn_weights wand 250, sceptre 250, dagger 250, focus 250; GlobalFireSpellGemsLevelTwoHand1__ fire_spell_skill_gem_level_+ 2..2 staff 1000; GlobalIncreaseMinionSpellSkillGemLevel1 'Taskmaster's' required_level 14 helmet 250"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.helmet_minion_gem_recipe
+    statement: A Normal Helmet + two or more quality gems with a combined 40% quality and the Minion tag give a Magic helmet with +1 to Level of all Minion Skill Gems.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Magic Helmet with +1 to Level of all Minion Skill Gems Normal Helmet 2 or more quality gems with a combined total of 40% quality & the Minion tag"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.helmet_socketed_minion_recipe_replaced_in_3_19
+    statement: The 3.19.0 patch replaced the recipe for a helmet with +1 to Level of socketed Minion Gems; Craft of Exile still lists the old one.
+    source_kind: official
+    url: https://www.poewiki.net/wiki/Version_3.19.0
+    quote: "The Vendor Recipe for a Helmet with a +1 to Level of socketed Minion Gems modifier has been replaced with a new recipe."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.whetstone_weapon_recipes_low_tier
+    statement: A weapon of any rarity + a Rustic Sash + a Blacksmith's Whetstone give a Magic weapon with increased Physical Damage, the mod depending on the sash's rarity (Magic Heavy 40-49%, Rare Serrated 50-64%, Unique Wicked 65-84%); a Rune Dagger, Sceptre, Wand or generic Staff + a Chain Belt + a Whetstone give increased Spell Damage the same way (Apprentice's, Adept's, Scholar's). All are low tiers of their ladders (T16, T14 and T12 of 16 for the physical mod).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Weapon may be any rarity, recipe always makes a Magic item. Magic Rustic Sash - the \"Heavy\" mod (40-49% - level requirement 1)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.refused_on_fractured_and_corrupted_inputs
+    statement: A fractured or corrupted item cannot be the base item of the "create new item" or "modify existing item" recipes.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "Fractured items and corrupted items cannot be used as base items for these recipes."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.item_level_of_the_result_is_not_settled
+    statement: Two wiki pages disagree in wording. The recipe page says the result takes the lowest item level among all the ingredients unless noted otherwise and, in the sections of the tier-up and gem recipes, lists item level as retained from the base item; the Item level page says modifying recipes "typically" keep the original item's level. Whether the flask or the gems (low-level goods) can lower the result's item level is therefore open. The solver must carry the input's item level as the working assumption and mark it unverified.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Item_level
+    quote: "Recipes that modify an item's modifiers typically keep the original item's ilvl. The 5-to-1 vendor recipe causes the lowest ilvl item inputted to be used on the output item."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.five_to_one_is_a_random_unidentified_item
+    statement: Five Magic (or five Rare) items of the same base type give one unidentified item of that base type, rarity Magic (or Rare), with the lowest item level of the five and random mods; influence is not carried over, and Cluster Jewels get a random number of passives and small passive type. It is a source of random items, not of a chosen mod.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "The recipe does not transfer influence to the resulting item, even if all five components are from the same influence."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.onyx_amulet_recipes_keep_influence
+    statement: An amulet of any kind (corrupted too) + a red, a green and a blue gem give a Normal Onyx Amulet that keeps the input's influence and is not corrupted; an Astrolabe Amulet + the three gems gives a double-influenced Onyx Amulet with random influences.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Vendor_recipe_system
+    quote: "any influence present on the input amulet will persist to the resulting Onyx Amulet"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.flat_elemental_damage_to_spells_recipe_removed
+    statement: The recipes for a Magic weapon with flat Elemental Damage to Spells (ring + Magic Sceptre, Wand or Rune Dagger + Alteration) no longer exist since 3.21.0.
+    source_kind: official
+    url: https://www.poewiki.net/wiki/Version_3.21.0
+    quote: "The Vendor Recipe granting flat Elemental Damage to Spells no longer exists."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: vendor.coe_vendor_table_is_stale
+    statement: Craft of Exile's vendor table still lists the removed recipes (the three flat Elemental Damage to Spells ones, the helmet with socketed Minion Gems), caps every tier-up recipe at maxtier 2 although the wiki gives 3 for the elemental ones, and has a duplicated key (mwls) that hides one of its Whetstone recipes. It is not a source for this family; the wiki page is.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "\"mwcs\":{\"name\":\"Flat cold dmg to spells\",\"desc\":\"Magic Weapon with Adds # to # Cold Damage to Spells\""
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
