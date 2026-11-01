@@ -83,7 +83,7 @@ from crafting_system.actions import (
     model_readings,
 )
 from crafting_system.data import BaseItem, Weight
-from crafting_system.cli._offers import offer_of, price_offers
+from crafting_system.cli._offers import FREE_ACTION_SHARE, offer_of, price_offers
 from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, tier_table
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
 
@@ -551,6 +551,8 @@ def check_resources_are_priced(action, item: Item, data) -> None:
     priced, dropped = price_offers([offer], file)
     assert not dropped and len(priced) == 1, "every resource is found in a price file that names it"
     expected = sum(float(count) if name == CHAOS_ORB else 2.0 * count for name, count in resources.items())
+    if not resources:  # a free action costs the planner's epsilon, a share of the cheapest offer that costs something (here there is none)
+        expected = FREE_ACTION_SHARE
     assert priced[0].cost == expected
 
 

@@ -22,24 +22,41 @@ from .model import CRAFTED_DOMAIN, UNVEILED_DOMAIN, VEILED_DOMAIN
 JUN_BENCH = "JunMaster"  # the id prefix of the crafted mods of Jun, whose bench makes the craftable versions of the veiled mods
 GENERIC_PLACEHOLDERS: Mapping[str, str] = {"prefix": "VeiledPrefix", "suffix": "VeiledSuffix"}  # side -> the placeholder the orbs put on an item
 
-_SIGNATURE_LIMIT = 8
-_SIGNATURES: dict[int, tuple[GameData, frozenset[tuple[str, frozenset[str]]]]] = {}  # id(data) -> (data, signatures); the entry keeps `data` alive, so its id is not reused
+_CACHE_LIMIT = 8
+_CACHE: dict[tuple[int, str], tuple[GameData, object]] = {}  # (id(data), what) -> (data, value); the entry keeps `data` alive, so its id is not reused
+
+
+def _cached(data: GameData, what: str, build):
+    found = _CACHE.get((id(data), what))
+    if found is not None and found[0] is data:
+        return found[1]
+    value = build()
+    if len(_CACHE) >= _CACHE_LIMIT:
+        _CACHE.clear()
+    _CACHE[(id(data), what)] = (data, value)
+    return value
+
+
+def veiled_families(data: GameData) -> frozenset[str]:
+    """The families of the placeholders and of every mod of the unveiled domain: what an action that tells the veiled mods apart reads."""
+    return _cached(
+        data,
+        "families",
+        lambda: frozenset(family for mod in data.mods.values() if mod.domain in (VEILED_DOMAIN, UNVEILED_DOMAIN) for family in mod.families),
+    )
 
 
 def craftable_signatures(data: GameData) -> frozenset[tuple[str, frozenset[str]]]:
     """`(side, stat ids)` of every mod of the unveiled domain: a crafted mod of Jun with the same is its craftable version."""
-    found = _SIGNATURES.get(id(data))
-    if found is not None and found[0] is data:
-        return found[1]
-    signatures = frozenset(
-        (mod.generation_type, frozenset(stat.id for stat in mod.stats))
-        for mod in data.mods.values()
-        if mod.domain == UNVEILED_DOMAIN and mod.stats
+    return _cached(
+        data,
+        "signatures",
+        lambda: frozenset(
+            (mod.generation_type, frozenset(stat.id for stat in mod.stats))
+            for mod in data.mods.values()
+            if mod.domain == UNVEILED_DOMAIN and mod.stats
+        ),
     )
-    if len(_SIGNATURES) >= _SIGNATURE_LIMIT:
-        _SIGNATURES.clear()
-    _SIGNATURES[id(data)] = (data, signatures)
-    return signatures
 
 
 def is_craftable_version(data: GameData, mod: Mod) -> bool:

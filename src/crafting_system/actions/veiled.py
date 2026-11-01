@@ -14,14 +14,20 @@ Four actions, one file:
 * `Unveil()`: draws the offer of the placeholder, the chance node of ADR-0026: up to three mods of the unveiled pool of the
   placeholder's side, by the weight of the base, without replacement, one mod per family, after removing the families of the
   mods on the item. The offer is drawn once and stays on the item (`Item.veil_offer`); there is no offer filter and no item
-  level gate. It is free (`unveil.is_free_and_in_place`), so `resources` is empty: the solver's small positive cost is
-  the business of the compressed model (ticket #145).
+  level gate. It is free (`unveil.is_free_and_in_place`), so `resources` is empty: the planner counts it at a small positive
+  cost (`cli._offers.FREE_ACTION_SHARE`, ticket #145), which the solver needs.
 * `Pick(k)`, k = 1 to 3: the choice node. It replaces the placeholder with the k-th mod of the offer in mod id order, at
   its lowest values. There is no decline.
 
 An item with a signature placeholder, or with two, is out of scope (grill B2, `OutOfScopeError`); a jewel has no veiled
-pool, so the two orbs refuse it. The kinds are not planner kinds: the placeholder slot and the offer state belong to the
-compressed model of ticket #145.
+pool, so the two orbs refuse it.
+
+The four kinds are planner kinds since ticket #145, offered only when a target names them in `actions:` (`opt_in`: they make a state
+keep the junk and the offer). In the compressed state (ADR-0009, ADR-0026) the placeholder is a slot of the kind of its family
+(`VeiledPrefix`, `VeiledSuffix`), a mod unveiled from the pool a slot of the kind `^<family>`, never merged with an ordinary mod of
+the same family (Movement Speed on boots), and the craftable version of an unveiled mod a crafted slot told apart from the other
+crafted mods of its family; so the refusals of the two orbs, which look for a veiled mod, are exact on a state. An item that holds
+an offer is a choice node: the compressed state allows no action there but a pick (an action that reads the offer).
 """
 
 from collections.abc import Mapping
@@ -38,6 +44,7 @@ from crafting_system.items import (
     is_veiled_mod,
     spawn_weight,
     tier_table,
+    veiled_families,
     veiled_placeholder,
 )
 from crafting_system.items.model import MAX_VEIL_OFFER, UNVEILED_DOMAIN, VEILED_DOMAIN
@@ -110,12 +117,7 @@ def _cached(data: GameData, key: tuple, build):
 
 def unveil_families(data: GameData) -> frozenset[str]:
     """The families of the placeholders and of every mod of the unveiled domain: what an action that tells the veiled mods apart reads."""
-
-    def build() -> frozenset[str]:
-        found = {family for mod in data.mods.values() if mod.domain in (VEILED_DOMAIN, UNVEILED_DOMAIN) for family in mod.families}
-        return frozenset(found)
-
-    return _cached(data, ("families",), build)
+    return veiled_families(data)
 
 
 def is_veiled(data: GameData, entry: ExplicitMod) -> bool:
@@ -375,7 +377,8 @@ class Pick(Action):
         return {}  # unveiling costs nothing (unveil.is_free_and_in_place)
 
     def reads(self, data: GameData) -> Reads:
-        return Reads(junk=True, families=frozenset(), offer=True)
+        # It is refused when the chosen mod shares a family with a mod of the item, so the families of the unveiled pool are told apart.
+        return Reads(junk=True, families=unveil_families(data), offer=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=None, draws=False, offer=True)
@@ -407,8 +410,7 @@ class Pick(Action):
 @kind(
     "veiled-chaos-orb",
     order=76,
-    planner=False,
-    why_not="the placeholder slot and the offer state of the compressed model are ticket #145",
+    opt_in=True,  # the veiled kinds make a state keep the junk and the offer: a target that is not about a veiled mod must not pay for them
     reads_item_state_while_not_planner="any",  # they declare the offer (#144)
 )
 def _veiled_chaos_orb(data: GameData, item: Item):
@@ -419,8 +421,7 @@ def _veiled_chaos_orb(data: GameData, item: Item):
 @kind(
     "veiled-exalted-orb",
     order=77,
-    planner=False,
-    why_not="the placeholder slot and the offer state of the compressed model are ticket #145",
+    opt_in=True,  # the veiled kinds make a state keep the junk and the offer: a target that is not about a veiled mod must not pay for them
     reads_item_state_while_not_planner="any",  # they declare the offer (#144)
 )
 def _veiled_exalted_orb(data: GameData, item: Item):
@@ -431,8 +432,7 @@ def _veiled_exalted_orb(data: GameData, item: Item):
 @kind(
     "unveil",
     order=78,
-    planner=False,
-    why_not="the placeholder slot and the offer state of the compressed model are ticket #145",
+    opt_in=True,  # the veiled kinds make a state keep the junk and the offer: a target that is not about a veiled mod must not pay for them
     reads_item_state_while_not_planner="any",  # they declare the offer (#144)
 )
 def _unveil(data: GameData, item: Item):
@@ -443,8 +443,7 @@ def _unveil(data: GameData, item: Item):
 @kind(
     "pick",
     order=79,
-    planner=False,
-    why_not="the placeholder slot and the offer state of the compressed model are ticket #145",
+    opt_in=True,  # the veiled kinds make a state keep the junk and the offer: a target that is not about a veiled mod must not pay for them
     reads_item_state_while_not_planner="any",  # they declare the offer (#144)
 )
 def _pick(data: GameData, item: Item):

@@ -44,6 +44,7 @@ from crafting_system.items import (
     is_craftable_version,
     spawn_weight,
     tier_table,
+    veiled_families,
 )
 from crafting_system.items.model import VEILED_DOMAIN
 
@@ -209,6 +210,8 @@ class Abstraction:
         self._tracks_implicits = bool(goal.implicits) or any(r.implicits for r in reads) or any(a.implicits for a in adds)
         self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
+        veiled = veiled_families(data)  # an action that reads a veiled family refuses by whether the item holds a veiled mod: a state tells those mods apart
+        self._veiled_aware = any(r.junk and (r.families is None or bool(r.families & veiled)) for r in reads)
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
         self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}
@@ -817,12 +820,13 @@ class Abstraction:
         """What a canonical id stands for: the mods of the same families, side and domain.
 
         A veiled mod is told apart (ticket #145): a placeholder stands for itself only (the placeholders of the masters share the
-        family of the generic one), and the craftable version of an unveiled mod, which the Veiled Exalted Orb refuses, never
-        stands for another crafted mod of its family.
+        family of the generic one), and, while an enabled action reads the veiled families, the craftable version of an unveiled
+        mod, which the Veiled Exalted Orb refuses, never stands for another crafted mod of its family (without such an action
+        nothing refuses by it, so the merge stays and a B1 state is what it was).
         """
         if mod.domain == VEILED_DOMAIN:
             return (mod.families, mod.generation_type, mod.domain, mod.id)
-        return (mod.families, mod.generation_type, mod.domain, is_craftable_version(self.data, mod))
+        return (mod.families, mod.generation_type, mod.domain, self._veiled_aware and is_craftable_version(self.data, mod))
 
     def _canonical_groups(self) -> dict[tuple, list[Mod]]:
         """Every mod of the data by `_group_key`: the mods a canonical id stands for."""
