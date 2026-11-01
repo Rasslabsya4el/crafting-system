@@ -3,8 +3,8 @@
     python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 4 --command 'uv run --no-sync python bench.py --part $RUNNER_INDEX/$RUNNER_COUNT --out $OUT_DIR'
     python .github/scripts/heavy_dispatch.py status
 
-GitHub gives the repository 20 runner jobs at once. Merge CI (`ci.yml`) takes 16 for about 7 minutes per pull request
-push; heavy runs (`run.yml`) take 1 to 16 for up to hours. This script waits on the developer's PC (no runner is used
+GitHub gives the repository 20 runner jobs at once. CI (`ci.yml`) takes 8 (Ubuntu) for about 7 minutes per pull request
+push and 16 (Ubuntu and Windows) per dispatched run, the integration run; heavy runs (`run.yml`) take 1 to 16 for up to hours. This script waits on the developer's PC (no runner is used
 while it waits), reads the live job counts of both workflows and dispatches only while
 
     heavy_in_flight + requested <= HEAVY_BUDGET,   HEAVY_BUDGET = max(HEAVY_FLOOR, 20 - CI_RESERVE - ci_jobs)
@@ -37,7 +37,8 @@ from pathlib import Path
 
 DEFAULT_REPO = "Rasslabsya4el/crafting-system"
 TOTAL_RUNNERS = 20  # concurrent jobs the free plan gives the repository
-CI_JOBS_PER_RUN = 16  # tests: 2 systems x 8 shards; counted for a CI run whose jobs are not created yet
+CI_JOBS_PER_RUN = 16  # a dispatched CI run: 2 systems x 8 shards; counted for a CI run whose jobs are not created yet
+CI_JOBS_PER_PR_RUN = 8  # a pull_request CI run is Ubuntu only (ticket #321)
 DEFAULT_FLOOR = 4
 DEFAULT_RESERVE = 4
 MAX_RUNNERS = 16  # run.yml's own limit
@@ -97,7 +98,7 @@ def run_occupancy(run: dict, jobs: list[dict], ledger_runners: int = 0) -> dict:
     expected = 0
     if not matrix_made:
         if is_ci:
-            expected = CI_JOBS_PER_RUN
+            expected = CI_JOBS_PER_PR_RUN if run.get("event") == "pull_request" else CI_JOBS_PER_RUN
         else:
             named = parse_run_name(run.get("display_title", ""))
             expected = named[0] if named else ledger_runners
