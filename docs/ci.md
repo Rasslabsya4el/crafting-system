@@ -84,6 +84,20 @@ complete, predicted and pilot seconds) and, when it is approximate, the answer o
 `--yes-exact`) the states, edges, seconds and value of the exact graph, which the intervals of `levels` must bracket;
 `refusals` the text the product gives for the R04-like quiver and for the metamods of R14 proper.
 
+### Counting a graph and playing a route (#70)
+
+R04 and R14 are too large for the exact solver, and these two scripts measure them (never run them on a PC):
+
+    S='uv run --no-sync python .github/scripts'
+    gh workflow run run.yml --ref my-branch -f timeout_minutes=360 -f command="$S/count_states.py examples/targets/r04-penetrating-quiver.yaml --out \$OUT_DIR"
+    gh workflow run run.yml --ref my-branch -f timeout_minutes=300 -f command="$S/simulate_route.py examples/targets/r14-hunter-bow.yaml examples/routes/r14-hunter-bow.yaml --runs 2000 --out \$OUT_DIR"
+
+`count_states.py` walks the exact graph of a target (every offer and `restart`) and prints, every 30 seconds, the states
+found and expanded, the transitions and the resident memory; it stops at `--max-rss-mb` (default 13,000, a runner has 16 GB)
+and writes `<target>.count.json`. `simulate_route.py` plays a given route on concrete items (`make_plan(solve_it=False)` and
+`cli/_route_sim.py`) and writes its success rate, mean, p50 and p90 with intervals; a state no rule covers stops that run,
+and with `--skip-refused` a rule whose action the game refuses is skipped (for the `*-restart.yaml` routes).
+
 ## Keeping the shards balanced
 
 After a run, download the artifact `shard-durations` and commit it as `tests/shard_durations.json`. It holds the
