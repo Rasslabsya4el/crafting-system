@@ -42,9 +42,11 @@ class AnnulmentOrb(Action):
 
     def reads(self, data: GameData) -> Reads:
         # It reads how many mods there are per side and, through the locks and tags of the item, which of
-        # them it may remove: no family by name and no pool weight (a removal draws nothing).
-        # `block_invariant` stays False: ADR-0023 calls Annulment "probably" invariant and no test proves it.
-        return Reads(junk=True, families=frozenset(), block_invariant=False)
+        # them it may remove: no family by name and no pool weight (a removal draws nothing). The successor
+        # depends on the slots (their number and kinds), so a family freed by the removal matters only to an
+        # action that reads families (a craft, an addition), and that action says so itself.
+        # Block-invariant (ADR-0023, #130): a pool of `n` slots out of `N` removable ones loses one with probability `n / N`.
+        return Reads(junk=True, families=frozenset(), block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # `keeps_crafted` stays True: a crafted mod is one of the mods it may remove, but it is not erased.
