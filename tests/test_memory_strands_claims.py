@@ -226,8 +226,9 @@ def test_the_bench_rerolls_claim_is_rewritten_and_keeps_the_old_text_in_its_hist
 
 
 def test_the_superseded_claims_still_load_for_the_code_that_reads_them():
+    # The pool no longer holds `NO_MEMORY_STRANDS` (ticket #275: it takes the item's count through a `Cut`); the bench still reads its claim.
+    from crafting_system.actions import pool
     from crafting_system.actions.bench import REROLLS_NOT_B1
-    from crafting_system.actions.pool import NO_MEMORY_STRANDS
 
-    assert NO_MEMORY_STRANDS == REGISTRY["affix_pool.no_memory_strands"]
+    assert not hasattr(pool, "NO_MEMORY_STRANDS")
     assert REROLLS_NOT_B1 == REGISTRY["bench_craft.rerolls_not_b1_actions"]
