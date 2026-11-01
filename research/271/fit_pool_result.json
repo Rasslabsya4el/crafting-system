@@ -1,0 +1,684 @@
+{
+ "game_data_version": "3.29.3.3",
+ "datasets": {
+  "foulborn and misc currency data": {
+   "crafts": 886,
+   "left_out": {
+    "alchemy on a non-normal item": 16
+   },
+   "loglik": {
+    "redistribution": -6022.136032301751,
+    "refactored": -5988.653398304169,
+    "delete_only": -6014.5752245426775,
+    "no_cut": -7807.878881736406
+   },
+   "crafts_with_zero_probability": {
+    "redistribution": 0,
+    "refactored": 0,
+    "delete_only": 0,
+    "no_cut": 0
+   },
+   "our_T_equals_sheet_T": [
+    1834,
+    0
+   ],
+   "pairs": {
+    "refactored - redistribution": {
+     "delta_loglik": 33.482633997580656,
+     "se": 7.171942493197081,
+     "z": 4.66855862680724,
+     "boot_2.5": 19.46403348759686,
+     "boot_97.5": 47.205936404301276,
+     "crafts_a_better": 556,
+     "crafts_b_better": 198
+    },
+    "refactored - delete_only": {
+     "delta_loglik": 25.921826238507556,
+     "se": 6.765789608453662,
+     "z": 3.8313083525563623,
+     "boot_2.5": 12.785750078690286,
+     "boot_97.5": 38.63232917908831,
+     "crafts_a_better": 529,
+     "crafts_b_better": 355
+    },
+    "redistribution - delete_only": {
+     "delta_loglik": -7.560807759073097,
+     "se": 9.463816957506845,
+     "z": -0.798917370551609,
+     "boot_2.5": -26.496715344575023,
+     "boot_97.5": 11.219977074826767,
+     "crafts_a_better": 413,
+     "crafts_b_better": 473
+    }
+   },
+   "by_currency": {
+    "Chaos Orb": {
+     "crafts": 155,
+     "redistribution": -2063.4983335277284,
+     "refactored": -2057.341792490786,
+     "delete_only": -2062.725242763797,
+     "no_cut": -2614.4328274825666
+    },
+    "Exalted Orb": {
+     "crafts": 84,
+     "redistribution": -265.9915523622099,
+     "refactored": -262.50818694117766,
+     "delete_only": -263.89549608681955,
+     "no_cut": -330.12216308630076
+    },
+    "Foulborn Orb of Augmentation": {
+     "crafts": 427,
+     "redistribution": -1554.274862813596,
+     "refactored": -1543.6158485101191,
+     "delete_only": -1557.6236061888433,
+     "no_cut": -2042.7771685353748
+    },
+    "Foulborn Regal Orb": {
+     "crafts": 64,
+     "redistribution": -266.42838630720644,
+     "refactored": -265.9833387786242,
+     "delete_only": -266.3620371003349,
+     "no_cut": -331.6139074290146
+    },
+    "Orb of Alchemy": {
+     "crafts": 132,
+     "redistribution": -1690.3400089842016,
+     "refactored": -1679.358704695237,
+     "delete_only": -1684.7822883884292,
+     "no_cut": -2232.3258814413216
+    },
+    "Regal Orb": {
+     "crafts": 13,
+     "redistribution": -47.260143607132754,
+     "refactored": -46.660578073910074,
+     "delete_only": -47.26930595553564,
+     "no_cut": -62.739580262815196
+    },
+    "Scroll of Wisdom": {
+     "crafts": 11,
+     "redistribution": -134.34274469967534,
+     "refactored": -133.1849488143153,
+     "delete_only": -131.91724805891778,
+     "no_cut": -193.86735349901056
+    }
+   }
+  },
+  "Alteration, ilvl 86+ int body armour": {
+   "crafts": 9943,
+   "left_out": {
+    "no mods": 1
+   },
+   "loglik": {
+    "redistribution": -52719.75559970121,
+    "refactored": -52699.327233104224,
+    "delete_only": -52774.375100399186,
+    "no_cut": -64966.455892166865
+   },
+   "crafts_with_zero_probability": {
+    "redistribution": 0,
+    "refactored": 0,
+    "delete_only": 0,
+    "no_cut": 0
+   },
+   "our_T_equals_sheet_T": [
+    14927,
+    0
+   ],
+   "pairs": {
+    "refactored - redistribution": {
+     "delta_loglik": 20.42836659698867,
+     "se": 6.679019786836958,
+     "z": 3.0585875246617755,
+     "boot_2.5": 6.732638904317358,
+     "boot_97.5": 33.524983163296234,
+     "crafts_a_better": 9191,
+     "crafts_b_better": 711
+    },
+    "refactored - delete_only": {
+     "delta_loglik": 75.04786729496418,
+     "se": 11.488914128722785,
+     "z": 6.5321984701183595,
+     "boot_2.5": 52.18916405035292,
+     "boot_97.5": 96.63437676516976,
+     "crafts_a_better": 5133,
+     "crafts_b_better": 4769
+    },
+    "redistribution - delete_only": {
+     "delta_loglik": 54.619500697975525,
+     "se": 13.791071539861361,
+     "z": 3.9604972347583516,
+     "boot_2.5": 27.781855146346523,
+     "boot_97.5": 81.43781895387576,
+     "crafts_a_better": 4817,
+     "crafts_b_better": 5085
+    }
+   }
+  },
+  "Alteration, ilvl 85+ str helmet": {
+   "crafts": 7435,
+   "left_out": {
+    "no mods": 1
+   },
+   "loglik": {
+    "redistribution": -38129.15224250086,
+    "refactored": -38106.01892106346,
+    "delete_only": -38179.72195590507,
+    "no_cut": -47708.490868641704
+   },
+   "crafts_with_zero_probability": {
+    "redistribution": 0,
+    "refactored": 0,
+    "delete_only": 0,
+    "no_cut": 0
+   },
+   "our_T_equals_sheet_T": [
+    11125,
+    0
+   ],
+   "pairs": {
+    "refactored - redistribution": {
+     "delta_loglik": 23.13332143740255,
+     "se": 3.2500545969148384,
+     "z": 7.1178254849509885,
+     "boot_2.5": 15.904092618457728,
+     "boot_97.5": 28.584869277690206,
+     "crafts_a_better": 3887,
+     "crafts_b_better": 3544
+    },
+    "refactored - delete_only": {
+     "delta_loglik": 73.70303484160932,
+     "se": 12.213928085616928,
+     "z": 6.034343278015671,
+     "boot_2.5": 50.201666730227515,
+     "boot_97.5": 98.36712690684368,
+     "crafts_a_better": 3928,
+     "crafts_b_better": 3503
+    },
+    "redistribution - delete_only": {
+     "delta_loglik": 50.56971340420678,
+     "se": 12.586169188610539,
+     "z": 4.017879677794913,
+     "boot_2.5": 26.767063416203126,
+     "boot_97.5": 76.39308666746734,
+     "crafts_a_better": 3974,
+     "crafts_b_better": 3457
+    }
+   }
+  }
+ },
+ "all_crafts": {
+  "crafts": 18264,
+  "loglik": {
+   "redistribution": -96871.04387450383,
+   "refactored": -96793.99955247185,
+   "delete_only": -96968.67228084695
+  },
+  "pairs": {
+   "refactored - redistribution": {
+    "delta_loglik": 77.04432203197187,
+    "se": 10.373289278822213,
+    "z": 7.427183409341835,
+    "boot_2.5": 57.04370579283844,
+    "boot_97.5": 97.31359724569168,
+    "crafts_a_better": 13634,
+    "crafts_b_better": 4453
+   },
+   "refactored - delete_only": {
+    "delta_loglik": 174.67272837508108,
+    "se": 18.090576048639026,
+    "z": 9.655454193688978,
+    "boot_2.5": 139.60130533228082,
+    "boot_97.5": 210.7597850755004,
+    "crafts_a_better": 9590,
+    "crafts_b_better": 8627
+   }
+  }
+ },
+ "by_effective_strand_band": {
+  "effective strands 0-19": {
+   "crafts": 5327,
+   "redistribution": -30443.67389242483,
+   "refactored": -30428.665083036707,
+   "delete_only": -30450.731011296317
+  },
+  "20-49": {
+   "crafts": 6449,
+   "redistribution": -34879.42261728122,
+   "refactored": -34868.26066852923,
+   "delete_only": -34915.17510442183
+  },
+  "50-79": {
+   "crafts": 4341,
+   "redistribution": -21497.704679628834,
+   "refactored": -21469.170269455528,
+   "delete_only": -21527.81324774016
+  },
+  "80 and more": {
+   "crafts": 2147,
+   "redistribution": -10050.242685168943,
+   "refactored": -10027.903531450394,
+   "delete_only": -10074.952917388622
+  }
+ },
+ "subsets": {
+  "crafts with one added mod": {
+   "crafts": 9292,
+   "redistribution": -36676.99490136547,
+   "refactored": -36648.82682141781,
+   "delete_only": -36728.6028225504,
+   "refactored - redistribution": {
+    "delta_loglik": 28.168079947659443,
+    "se": 5.839498856949289,
+    "z": 4.823715294359215,
+    "boot_2.5": 16.66142076799961,
+    "boot_97.5": 39.012263853155936,
+    "crafts_a_better": 5305,
+    "crafts_b_better": 3892
+   }
+  },
+  "crafts with two or more added mods": {
+   "crafts": 8972,
+   "redistribution": -60194.048973138364,
+   "refactored": -60145.17273105405,
+   "delete_only": -60240.06945829655,
+   "refactored - redistribution": {
+    "delta_loglik": 48.87624208431244,
+    "se": 8.57232195756174,
+    "z": 5.701633971085064,
+    "boot_2.5": 32.317337615191455,
+    "boot_97.5": 65.59270219071402,
+    "crafts_a_better": 8329,
+    "crafts_b_better": 561
+   }
+  },
+  "Foulborn crafts": {
+   "crafts": 491,
+   "redistribution": -1820.7032491208024,
+   "refactored": -1809.5991872887432,
+   "delete_only": -1823.9856432891784,
+   "refactored - redistribution": {
+    "delta_loglik": 11.104061832059081,
+    "se": 3.914959034412939,
+    "z": 2.836316225649644,
+    "boot_2.5": 2.8125035713369733,
+    "boot_97.5": 18.109773962068697,
+    "crafts_a_better": 366,
+    "crafts_b_better": 92
+   }
+  },
+  "crafts that are not Foulborn": {
+   "crafts": 17773,
+   "redistribution": -95050.34062538303,
+   "refactored": -94984.40036518312,
+   "delete_only": -95144.68663755775,
+   "refactored - redistribution": {
+    "delta_loglik": 65.9402601999128,
+    "se": 9.598852431038766,
+    "z": 6.869598285175106,
+    "boot_2.5": 46.62328836519324,
+    "boot_97.5": 84.91747730439147,
+    "crafts_a_better": 13268,
+    "crafts_b_better": 4361
+   }
+  }
+ },
+ "crafts_where_T_agrees": {
+  "crafts": 18264,
+  "loglik": {
+   "redistribution": -96871.04387450383,
+   "refactored": -96793.99955247185,
+   "delete_only": -96968.67228084695
+  }
+ },
+ "profile_gamma_beta0": {
+  "0.0": -96968.67228084695,
+  "0.25": -96891.66339736793,
+  "0.5": -96837.33430910265,
+  "0.75": -96804.98130978848,
+  "1.0": -96793.99955247185,
+  "1.25": -96803.87230808579,
+  "1.5": -96834.1592058116,
+  "2.0": -96954.52785679331
+ },
+ "profile_beta_gamma0": {
+  "0.0": -96968.67228084695,
+  "0.25": -96893.15183657306,
+  "0.5": -96850.14817207049,
+  "0.75": -96841.72731540856,
+  "1.0": -96871.04387450383,
+  "1.25": -96942.61114607276,
+  "1.5": -97062.54361438775
+ },
+ "gamma_interval_95": [
+  0.9,
+  1.11
+ ],
+ "joint_gamma_beta": {
+  "0.5,0.0": -96837.33430910265,
+  "0.5,0.1": -96821.81748488254,
+  "0.5,0.25": -96807.69422486062,
+  "0.5,0.5": -96809.48285368845,
+  "0.75,0.0": -96804.98130978848,
+  "0.75,0.1": -96798.33029339716,
+  "0.75,0.25": -96797.37415827013,
+  "0.75,0.5": -96820.81800228945,
+  "1.0,0.0": -96793.99955247185,
+  "1.0,0.1": -96796.01166145323,
+  "1.0,0.25": -96807.94862975272,
+  "1.0,0.5": -96852.66533462716,
+  "1.25,0.0": -96803.87230808579,
+  "1.25,0.1": -96814.37875811801,
+  "1.25,0.25": -96838.98182800197,
+  "1.25,0.5": -96904.65709777795
+ },
+ "foulborn_bonus_profile": {
+  "crafts": 491,
+  "loglik_by_bonus_to_the_rating": {
+   "0.0": -1927.0683600173325,
+   "25.0": -1883.8397024012677,
+   "50.0": -1845.0786756895188,
+   "62.5": -1831.7921783856193,
+   "72.5": -1823.0782183217898,
+   "75.0": -1809.5991872887432,
+   "76.0": "impossible: an observed craft has probability 0",
+   "87.5": "impossible: an observed craft has probability 0",
+   "100.0": "impossible: an observed craft has probability 0"
+  }
+ },
+ "foulborn_with_strands_sum_or_larger_cut": {
+  "sum": {
+   "all 491 Foulborn crafts, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -1809.5991872887432,
+    "loglik_of_the_possible_crafts": -1809.5991872887432
+   },
+   "all 491 Foulborn crafts, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -1823.9856432891784,
+    "loglik_of_the_possible_crafts": -1823.9856432891784
+   },
+   "the 42 with 10 strands or fewer, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -168.85117897745673,
+    "loglik_of_the_possible_crafts": -168.85117897745673
+   },
+   "the 42 with 10 strands or fewer, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -170.72036699790434,
+    "loglik_of_the_possible_crafts": -170.72036699790434
+   }
+  },
+  "max_wiki": {
+   "all 491 Foulborn crafts, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -2084.929171787776,
+    "loglik_of_the_possible_crafts": -2084.929171787776
+   },
+   "all 491 Foulborn crafts, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -2091.279416048559,
+    "loglik_of_the_possible_crafts": -2091.279416048559
+   },
+   "the 42 with 10 strands or fewer, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -183.17040233117783,
+    "loglik_of_the_possible_crafts": -183.17040233117783
+   },
+   "the 42 with 10 strands or fewer, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -183.47604499455417,
+    "loglik_of_the_possible_crafts": -183.47604499455417
+   }
+  },
+  "max_emulator": {
+   "all 491 Foulborn crafts, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -2064.0339177936357,
+    "loglik_of_the_possible_crafts": -2064.0339177936357
+   },
+   "all 491 Foulborn crafts, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -2068.8301477751097,
+    "loglik_of_the_possible_crafts": -2068.8301477751097
+   },
+   "the 42 with 10 strands or fewer, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -183.17040233117783,
+    "loglik_of_the_possible_crafts": -183.17040233117783
+   },
+   "the 42 with 10 strands or fewer, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -183.47604499455417,
+    "loglik_of_the_possible_crafts": -183.47604499455417
+   }
+  }
+ },
+ "foulborn_tab_T_equals_sheet_T_without_leaving_out_the_royale_mods": [
+  1803,
+  31
+ ],
+ "calibration_one_added_mod": {
+  "crafts": 9292,
+  "classes": {
+   "T/K": {
+    "not trimmed (T/K = 1)": {
+     "observed": 29,
+     "redistribution": [
+      31.170314488853524,
+      5.421383330533042
+     ],
+     "refactored": [
+      31.695884945736456,
+      5.4677746162782475
+     ],
+     "delete_only": [
+      46.81833837345197,
+      6.672999905546724
+     ]
+    },
+    "T/K up to 1.5": {
+     "observed": 370,
+     "redistribution": [
+      357.27565215654477,
+      18.35798084751411
+     ],
+     "refactored": [
+      359.0444127761958,
+      18.40013031563672
+     ],
+     "delete_only": [
+      391.4505577349375,
+      19.175567103532217
+     ]
+    },
+    "T/K up to 2": {
+     "observed": 3740,
+     "redistribution": [
+      3781.870101393248,
+      59.390446646541065
+     ],
+     "refactored": [
+      3765.941233210196,
+      59.25756989515675
+     ],
+     "delete_only": [
+      3879.560039835349,
+      60.10686346170563
+     ]
+    },
+    "T/K above 2": {
+     "observed": 5153,
+     "redistribution": [
+      5121.683931961143,
+      68.90485590626118
+     ],
+     "refactored": [
+      5135.318469067875,
+      68.94888704310894
+     ],
+     "delete_only": [
+      4974.171064056316,
+      67.90202874935738
+     ]
+    }
+   },
+   "rho": {
+    "rho up to 0.6": {
+     "observed": 53,
+     "redistribution": [
+      105.57533755796577,
+      10.014043443019764
+     ],
+     "refactored": [
+      48.68298287648721,
+      6.868791149140881
+     ],
+     "delete_only": [
+      41.154773842777175,
+      6.336416917071305
+     ]
+    },
+    "rho 0.6 to 0.85": {
+     "observed": 6,
+     "redistribution": [
+      6.505375359733563,
+      2.2054005379420554
+     ],
+     "refactored": [
+      7.098867011440505,
+      2.2498233166792696
+     ],
+     "delete_only": [
+      6.577752873492906,
+      2.203628564112569
+     ]
+    },
+    "rho 0.85 to 1.15": {
+     "observed": 9233,
+     "redistribution": [
+      9179.919287082812,
+      92.39245813778719
+     ],
+     "refactored": [
+      9236.218150113462,
+      92.63707666178615
+     ],
+     "delete_only": [
+      9244.26747328427,
+      92.68627561170108
+     ]
+    },
+    "rho 1.15 to 1.6": {
+     "observed": 0,
+     "redistribution": [
+      0.0,
+      0.0
+     ],
+     "refactored": [
+      0.0,
+      0.0
+     ],
+     "delete_only": [
+      0.0,
+      0.0
+     ]
+    },
+    "rho above 1.6": {
+     "observed": 0,
+     "redistribution": [
+      0.0,
+      0.0
+     ],
+     "refactored": [
+      0.0,
+      0.0
+     ],
+     "delete_only": [
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "families_of_the_lowest_rho_class": {
+    "BaseLocalDefencesAndLife": {
+     "observed": 41,
+     "redistribution": 59.74,
+     "refactored": 35.03,
+     "delete_only": 27.41
+    },
+    "ColdDamage": {
+     "observed": 2,
+     "redistribution": 11.02,
+     "refactored": 3.48,
+     "delete_only": 3.46
+    },
+    "LightningDamage": {
+     "observed": 6,
+     "redistribution": 11.0,
+     "refactored": 3.47,
+     "delete_only": 3.46
+    },
+    "FireDamage": {
+     "observed": 4,
+     "redistribution": 10.98,
+     "refactored": 3.46,
+     "delete_only": 3.44
+    },
+    "IncreaseSpecificSocketedGemLevel": {
+     "observed": 0,
+     "redistribution": 8.91,
+     "refactored": 1.62,
+     "delete_only": 1.96
+    },
+    "PhysicalDamage": {
+     "observed": 0,
+     "redistribution": 0.55,
+     "refactored": 0.47,
+     "delete_only": 0.36
+    },
+    "LocalPhysicalDamagePercent": {
+     "observed": 0,
+     "redistribution": 1.46,
+     "refactored": 0.43,
+     "delete_only": 0.4
+    },
+    "LocalIncreasedPhysicalDamagePercentAndAccuracyRating": {
+     "observed": 0,
+     "redistribution": 1.41,
+     "refactored": 0.41,
+     "delete_only": 0.37
+    },
+    "WeaponCasterDamagePrefix": {
+     "observed": 0,
+     "redistribution": 0.18,
+     "refactored": 0.13,
+     "delete_only": 0.11
+    },
+    "SpellDamageAndMana": {
+     "observed": 0,
+     "redistribution": 0.17,
+     "refactored": 0.12,
+     "delete_only": 0.12
+    },
+    "LifeLeech": {
+     "observed": 0,
+     "redistribution": 0.08,
+     "refactored": 0.04,
+     "delete_only": 0.04
+    },
+    "IncreaseSocketedGemLevel": {
+     "observed": 0,
+     "redistribution": 0.06,
+     "refactored": 0.02,
+     "delete_only": 0.03
+    },
+    "DamageOverTimeMultiplier": {
+     "observed": 0,
+     "redistribution": 0.02,
+     "refactored": 0.01,
+     "delete_only": 0.01
+    }
+   }
+  }
+ }
+}
