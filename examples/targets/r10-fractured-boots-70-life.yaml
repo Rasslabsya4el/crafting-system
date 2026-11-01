@@ -1,0 +1,84 @@
+# Target for benchmark route R10, with the guide's "preferably at least 70" Life asked as a roll
+# (ticket #71): Intelligence-base boots with a fractured Movement Speed, an Intelligence suffix from a
+# Shrieking Essence of Spite, a Life prefix of at least 70 and a crafted
+# "#% chance to Avoid Elemental Ailments".
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Fractured Movement Speed intelligence boots", docs/research/
+# 2026-10-30-5-reference-routes.md, id R10):
+#   1. Buy boots with Movement Speed fractured. Use Shrieking Essence of Spite until the boots have
+#      48 Intelligence, Life and an open suffix.
+#   2. Craft "#% chance to Avoid Elemental Ailments" at the crafting bench in the open suffix.
+#
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's
+# rule for tiers: a mod whose tier the guide does not state is the TOP tier the item level allows
+# (nobody crafts that without a guaranteed top-tier mod); a mod the guide's essence or bench craft
+# forces is exactly that tier; a mod of the bought start item is the tier the buy spec prices.
+#   * "Intelligence base": boots whose armour is Energy Shield (they carry the game's int_armour tag).
+#     The base below is Sorcerer Boots; every Intelligence boot base has the same pool of mods.
+#   * "30%+ increased Movement Speed (fractured)": the fractured mod is the bought one, the 30%
+#     tier (mod MovementVelocity5, tier 2); the buy spec prices a fractured Movement Speed of 30 or
+#     more, and 30 is the cheapest of those.
+#   * "48 Intelligence from Shrieking Essence of Spite": exactly what that essence adds,
+#     "+(43-50) to Intelligence" (mod Intelligence8, tier 2 on boots).
+#   * "Life, preferably at least 70": a Life prefix rolled to 70 or more (any tier that can reach it), not from the bench.
+#   * "#% chance to Avoid Elemental Ailments": exactly the bench craft the guide uses, (16-20)%.
+#   * "an open suffix for the craft": the item has three suffixes; the fractured prefix, the Life
+#     prefix and the essence suffix leave room, so the planner may craft there.
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+base: Sorcerer Boots
+
+# The item level of the boots, a whole number from 1 to 100. The guide gives none; 84 lets every
+# tier of every mod appear, as in the R12 example.
+item_level: 84
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
+# [] means none.
+influence: []
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The fractured Movement Speed. A family is the game's own name for the group of mods that exclude
+  # each other. `mod` narrows it to one mod of the family, so exactly that tier: the 30% one. The
+  # fractured mod of the start item counts, and no other mod of this family can be added next to it.
+  - family: MovementVelocity
+    mod: MovementVelocity5
+
+  # The Intelligence of the Shrieking Essence of Spite (see the readings above), exactly that tier.
+  - family: Intelligence
+    mod: Intelligence8
+
+  # Life with a rolled value of at least 70, rolled by the essence reforge, not crafted. The guide says
+  # "+# to maximum Life, preferably at least 70" and names no tier, so no tier is asked: any tier whose
+  # roll reaches 70 counts, and `min_roll` has one entry for the mod's one stat. A Divine Orb rerolls
+  # the value inside its tier, so a Life that rolled below 70 in a tier that can reach it may be fixed.
+  - family: IncreasedLife
+    min_roll: [70]
+    not_crafted: true
+
+  # "#% chance to Avoid Elemental Ailments", exactly the bench craft of the guide, (16-20)%
+  # (mod EinharMasterAvoidElementalAilments1); the other tiers and the Loathing essence's copy do
+  # not count.
+  - family: AvoidElementalStatusAilments
+    mod: EinharMasterAvoidElementalAilments1
+
+# Where the crafting starts: boots that already have Movement Speed fractured.
+start_item:
+  rarity: rare
+  mods:
+    # The mod is named by its game-data id: MovementVelocity5 is "30% increased Movement Speed",
+    # tier 2 of Movement Speed on this base. The tier is taken as written, so it was checked by hand
+    # against the game data (3.29.3.3).
+    - mod: MovementVelocity5
+      tier: 2
+      # One whole number per stat of the mod, in the units of the game data.
+      values: [30]
+      # Locked in place by a Fracturing Orb.
+      fractured: true
+
+# The name the start item has in the price file, which is what it costs to get: the `name` of
+# examples/buy/r10-start-boots.yaml.
+start_price: R10 start boots
