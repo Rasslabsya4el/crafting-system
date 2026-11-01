@@ -122,6 +122,7 @@ def evaluate[S](
     max_bins: int = 200_000,
     work_budget: float = WORK_BUDGET,
     max_coarse_bins: int | None = None,
+    resolve_quantiles: bool = True,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -131,6 +132,9 @@ def evaluate[S](
     the probability still in flight is at most `tail_mass`; it never runs past `max_bins` bins and
     reports what was left as `grid.unresolved_mass`. `work_budget` caps the DP's work when `resolution`
     is not given (see the module docstring), and `max_coarse_bins` the most bins of the coarse grid (default `max_bins`).
+    With `resolve_quantiles` False a proper policy without inputs gets its exact odds, mean and variance and no budget DP:
+    the quantiles and the CVaR come back unresolved (infinite above, the first cost below), for a chain whose DP does
+    not fit in memory (the planner's packed route, ticket #374).
     Raises `ValueError` for a bad argument or a
     `resolution` above the smallest cost, a `max_bins` so large that a (bin, state) pair no longer fits
     62 bits, and the solver's `ConvergenceError` if a moment solve
@@ -198,6 +202,8 @@ def evaluate[S](
             spread = SPREAD_SDS * math.sqrt(variance[0])
     if chain.has_inputs and _inputs.branching(chain):
         return _unordered_report(chain, (mean, variance) if proper else None, cvar_level, levels)
+    if proper and not chain.has_inputs and not resolve_quantiles:
+        return _unordered_report(chain, (mean, variance), cvar_level, levels)
     if (
         resolution is None and proper and not chain.has_inputs
         and beyond_ordinary_grid(mean[0], variance[0], max([*levels, cvar_level]), c_min, max_bins)
@@ -382,7 +388,7 @@ def _unordered_report(chain: Chain, moments, cvar_level: float, levels: Sequence
         cvar,
         cvar_level,
         unresolved,
-        _input_runs(chain),
+        _input_runs(chain) if chain.has_inputs else {},
     )
 
 

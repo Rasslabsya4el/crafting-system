@@ -125,3 +125,22 @@ def test_a_long_chain_gets_its_moments_from_the_packed_solve_with_the_same_numbe
     assert again.risk.variance.value == pytest.approx(reference.risk.variance.value, rel=1e-7)
     assert again.risk.p50.value == pytest.approx(reference.risk.p50.value, rel=1e-9)
     assert again.risk.p90.value == pytest.approx(reference.risk.p90.value, rel=1e-9)
+
+
+def test_a_merged_chain_too_long_for_the_quantile_dp_keeps_exact_moments_and_says_so(data, monkeypatch):
+    import math
+
+    from crafting_system.cli import _plan
+
+    target = load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", data)
+    prices = load_price_file(PRICES)
+    reference = make_plan(data, target, prices, solver="packed")
+
+    monkeypatch.setattr(_plan, "RISK_QUANTILE_TRANSITIONS", 0)
+    cut = make_plan(data, target, prices, solver="packed")
+
+    assert cut.risk.success_probability.value == 1.0
+    assert cut.risk.mean.value == pytest.approx(reference.risk.mean.value, rel=1e-12)
+    assert cut.risk.variance.value == pytest.approx(reference.risk.variance.value, rel=1e-12)
+    assert math.isinf(cut.risk.p90.value) and math.isinf(cut.risk.cvar.value)
+    assert "p50, p90 and CVaR are not computed" in cut.note and reference.note == ""

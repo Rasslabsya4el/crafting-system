@@ -387,7 +387,15 @@ def make_plan(
     if packed is not None and _packed.PROGRESS is not None:
         _packed.PROGRESS(f"solved: mean {solution.values[start]!r}; evaluating the risk on the merged chain ({len(packed.risk_policy):,} classes)")
     if packed is not None:  # the risk of the policy on the merged chain: the same mean, odds and quantiles, a chain that fits
-        risk = evaluate_risk(packed.risk_policy, packed.risk_start, packed.risk_is_goal, solution.values[start])
+        moves = sum(len(action.outcomes) for action in packed.risk_policy.values())
+        resolve = moves <= RISK_QUANTILE_TRANSITIONS
+        risk = evaluate_risk(packed.risk_policy, packed.risk_start, packed.risk_is_goal, solution.values[start], resolve_quantiles=resolve)
+        if not resolve:
+            note = (note + " " if note else "") + (
+                f"The p50, p90 and CVaR are not computed: the policy's merged chain has {moves:,} transitions, more than the "
+                f"{RISK_QUANTILE_TRANSITIONS:,} the budget DP of the risk run holds in memory (it ran out of a 16 GB runner on R04). "
+                "The odds, mean and variance are exact."
+            )
     else:
         risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start])
     risk_seconds = time.perf_counter() - began
@@ -398,6 +406,7 @@ def make_plan(
     )
 
 
+RISK_QUANTILE_TRANSITIONS = 2_000_000  # a merged chain with more transitions gets no quantile DP (ticket #374): the DP's entries outgrew 16 GB on R04's 4.7 M
 RISK_BINS = 200_000  # the default `max_bins` of `risk.evaluate`
 UNRESOLVED_BINS = 1_000
 COARSE_BINS = 1_000_000  # the most bins of the coarse grid of `risk.evaluate` (ticket #190)
@@ -408,6 +417,8 @@ def evaluate_risk(
     start: CompressedState,
     is_goal: Callable[[CompressedState], bool],
     mean: float,
+    *,
+    resolve_quantiles: bool = True,
 ) -> RiskReport:
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
 
@@ -421,7 +432,7 @@ def evaluate_risk(
     """
     cheapest = min((action.cost for action in policy.values()), default=0.0)
     bins = UNRESOLVED_BINS if 2 * RISK_BINS * cheapest < mean else RISK_BINS
-    return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS)
+    return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS, resolve_quantiles=resolve_quantiles)
 
 
 def _pruned_left_out(pruned: Pruned) -> tuple[LeftOut, ...]:
