@@ -35,6 +35,25 @@ class Wanted:
 
 
 @dataclass(frozen=True)
+class ImplicitWanted:
+    """One Eldritch implicit wanted: a mod from `mod_ids` of at least grade `min_grade` (1 Lesser to 6 Perfect).
+
+    `min_roll` is the limit on its rolled values, as for `Wanted`; the compressed state does not model a roll of an
+    implicit yet (ticket #158), so an `Abstraction` refuses a goal that asks for one. A requirement on a base
+    implicit (grade 0) is not modelled either: the state holds the two Eldritch sides only.
+    """
+
+    mod_ids: frozenset[str]
+    min_grade: int | None = None
+    min_roll: tuple[int | None, ...] | None = None
+
+    @property
+    def has_roll_limit(self) -> bool:
+        """Whether `min_roll` asks for any value at all."""
+        return self.min_roll is not None and any(wanted is not None for wanted in self.min_roll)
+
+
+@dataclass(frozen=True)
 class AtLeast:
     """A k-of-n requirement: met when at least `k` of `members` are met."""
 
@@ -69,9 +88,15 @@ def _met(node: Node, statuses: Sequence[Status], start: int) -> tuple[bool, int]
 
 @dataclass(frozen=True)
 class Goal:
-    """Every requirement must hold; the leaves, depth-first in file order, are the positions of a status tuple."""
+    """Every requirement must hold; the leaves, depth-first in file order, are the positions of a status tuple.
+
+    `implicits` are the Eldritch implicits wanted besides, each of which must be passed by one side of the item
+    (ADR-0027); `CompressedState.implicits` holds what each side gives each of them. A goal built from a target
+    does not read them yet: the planner refuses a target with implicits until tickets #152 and #158.
+    """
 
     requirements: tuple[Node, ...]
+    implicits: tuple[ImplicitWanted, ...] = ()
 
     @cached_property
     def leaves(self) -> tuple[Wanted, ...]:

@@ -1,0 +1,147 @@
+# Draft claims of research ticket #273 (B5 R3), family memory_strands. Not yet in src/; the build session that promotes
+# docs/research/2026-10-31-memory-strands-claims/memory_strands.yaml takes these together with it.
+# Check: load_registry(Path("docs/research/2026-11-01-b5-r3-claims")).
+#
+# What each claim does to the B5 ADRs (they all keep the planner's default; they replace "an inference" or
+# "the post's silence" by a stated source, so the ADR sentence that says so must be updated by the build session):
+#   fossil_harvest_not_cut, cut_follows_spend_table     ADR-0041: fossils and Harvest "not cut" is no longer an inference alone.
+#   annulment_keeps_strands, scouring_keeps_strands, divine_keeps_strands, cut_follows_spend_table    ADR-0041: Scouring, Annulment, Divine, Fracturing "not in the spend list".
+#   recombinator_strands_from_either_base               ADR-0041 and ADR-0033: the output takes the count of either input, 1/2 each (the "nothing spent" half stays the author's play).
+#   unravelling_skips_fractured_and_veiled              ADR-0044: "Fractured mods are excluded ... in the claim the build writes".
+#   unravelling_side_weight_is_whole_pool               ADR-0044: W_side is the whole side pool (open point 7 of the note).
+#   remembrance_classes_observed                        ADR-0043: "the other equipment classes rest on the wiki's word".
+# Quotes of Craft of Exile are the shortest code fragment that shows the rule; no Craft of Exile file is kept in the repo.
+rules:
+  - id: memory_strands.fossil_harvest_not_cut
+    statement: >-
+      A fossil craft and a Harvest craft neither spend strands nor are they cut by them: players reported in
+      November 2025 (patch 3.27) that they "dont consume or benefit from strands", and in July 2025 a player asked
+      whether strands improve the tiers of crafts that do not consume them (Harvest, fossils) and was told no. The
+      planner already treats them so (ADR-0041); this is the first stated source.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1oqpunf/_/nnm5vvq/
+    quote: "They work the same as before. They dont consume or benefit from strands."
+    approximate: true
+    approximate_reason: "Player statements from 3.26 and 3.27 and the emulator's table agree, but the wiki is silent on the cut and no 3.29 test exists (in-game list #182, B5 check 2)."
+    patch_verified: "3.27.0"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.cut_follows_spend_table
+    statement: >-
+      In the Craft of Exile emulator the tier cut is applied to exactly the methods that have a row in its spend
+      table (transmutation, alteration, augmentation, the three Foulborn orbs, regal, alchemy, chaos, essence, the
+      Eldritch, Veiled and Tainted chaos orbs, every Exalted Orb, the Awakener's Orb) and to no other. A method
+      without a row (Orb of Scouring, Annulment, Divine, Vaal, fossils, Harvest, beasts, bench crafts) neither
+      cuts nor spends, and nothing but the spend table, Remembrance, Unravelling and an imprint restore changes the
+      count: Scouring and Annulment leave the count as it is. The wiki lists those orbs neither way.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe1.js
+    quote: "null!=gameConstants.memoryStrands[e]&&(this._memoryStrands=t)"
+    approximate: true
+    approximate_reason: "Only the emulator's code says it for Scouring, Annulment, Divine and Vaal; the wiki lists them neither way and no player report was found (in-game list #182, B5 check 1)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.annulment_keeps_strands
+    statement: >-
+      An Orb of Annulment spends no strands, and neither does the rarity-reroll bench craft of 3.26 (replaced in
+      3.27 by a spending one): a commenter on a 3.26 amulet craft says both leave the count and the author, who
+      lists "Annul other Prefixes" at step 7 and plans to spend the remaining strands with an Orb of Unravelling at
+      step 11, confirms the bench half. A 3.26 recipe also annuls an item empty "to save
+      strands" before an influence Exalted Orb, which spends more for each mod on the item.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1mq4l3y/_/n8obyjk/
+    quote: "Both that bench craft and the annul don't consume any strands."
+    approximate: true
+    approximate_reason: "One commenter and one recipe from 3.26 with no before and after counts (in-game list #182, B5 check 1)."
+    patch_verified: "3.26.0d"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.scouring_keeps_strands
+    statement: >-
+      An Orb of Scouring leaves the strands: a 3.29 recipe with a 362-point comment (the Foulborn Exalted thread)
+      transmutes with Allflame, scours the magic item and transmutes again, and tells the reader to take the option
+      whose strands are "at 40, 39, 38", so the count falls only by the transmutation, not by the scour. The
+      emulator agrees: no spend row, nothing resets the count. The author of a 3.26 amulet craft also scours at
+      step 7 and plans to unravel at step 11.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1ved7x1/_/p1ggk55/
+    quote: "Then you will scour the item normally. Then put it back in the allflame and transmute it again using sulphur. You will repeat this until you hit your desired affix sacrificing a bit of strand every time."
+    approximate: true
+    approximate_reason: "A recipe, not a counted test; the same comment later says \"If you run out of strands using transmute and scour\", which can be read as the scour spending (in-game list #182, B5 check 1)."
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.divine_keeps_strands
+    statement: >-
+      A Divine Orb spends no strands: the author of the 3.26 Mageblood craft of a Heavy Belt, which rolled the belt's
+      strands with the Orb of Remembrance ("over 69") and kept them through some 230,000 chance-and-scour bench
+      crafts and an imprint restore after each wrong unique, ends with "divine it (this does NOT consume strands)".
+      A Vaal Orb is only hovered over the Lock in that post, never applied, so Vaal stays at the wiki's "the
+      corrupted item keeps its memory strands".
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1m01psj/
+    quote: "When you (finally) hit mb, divine it (this does NOT consume strands), hinekora lock it and you're done"
+    approximate: true
+    approximate_reason: "One craft of 3.26, stated in a recipe with no before and after counts (in-game list #182, B5 check 1)."
+    patch_verified: "3.26.0d"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.recombinator_strands_from_either_base
+    statement: >-
+      A recombination hands over the strand count of one of its two inputs: a 3.26 guide combines a high-level base
+      with a 90+ strand base in the recombinator and says the strands of base B "migrate" onto base A in half of the
+      cases, and the author of a quiver guide of 2026-05 expects "memory strands" on the output. Neither says that
+      the inputs' strands are or are not spent; "nothing spent" is ADR-0041's reading of the guide author's play.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1lrigzv/
+    quote: "This gives a 50 / 50 chance that Base B’s strands migrate onto Base A."
+    approximate: true
+    approximate_reason: "One guide from 3.26 states the count; no one has published counts of the output, and the spend is not stated at all (in-game list #182, B5 check 7)."
+    patch_verified: "3.26.0d"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.unravelling_skips_fractured_and_veiled
+    statement: >-
+      An Orb of Unravelling never raises a fractured mod and never raises a veiled mod: the emulator skips a mod
+      with either flag before it computes the chance. Its other skipped mods are those outside the explicit
+      prefix and suffix types (implicits, crafted mods). The wiki and the post are silent on fractured and
+      veiled mods.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe1.js
+    quote: "if(t.fractured)return;if(t.veiled)return;"
+    approximate: true
+    approximate_reason: "Only the emulator's code says it; the wiki and the post are silent (in-game list #182, B5 check 6)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.unravelling_side_weight_is_whole_pool
+    statement: >-
+      The "total side weight" of the Unravelling chance is the total spawn weight of the item's whole prefix or
+      suffix pool at its item level, read as if the item had no explicit mod (the emulator strips them before it
+      reads the pool), not the pool left after the item's own mods. For an ordinary mod the chance is
+      min(1, s * W_up / (2 * W_side)), the formula of the post. For an essence or influenced mod the emulator uses
+      another form, min(1, s / 25 * W_up / W_group), which the post does not describe.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe1.js
+    quote: "Math.min(1,a*g/(2*f))"
+    approximate: true
+    approximate_reason: "A second implementation of the same player fit, not an independent test; the essence and influenced form is untested."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.remembrance_classes_observed
+    statement: >-
+      Players use an Orb of Remembrance on armour pieces, a belt and an amulet: a helmet (scoured to white, 73
+      strands on the first try, 3.26), a Heavy Belt (scoured, rolled again and again "until you have over 69",
+      3.26), boots (scoured to normal, 3.29, the 362-point recipe of the Foulborn Exalted thread), a body armour
+      (November 2025), an amulet (3.26, "until >70 Strand") and the author's talisman (3.29). No report of a jewel,
+      ring, weapon or flask was found. The emulator allows every item class but a strongbox, and requires a normal
+      item; the wiki says "normal equipment item".
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1ved7x1/_/p1ggk55/
+    quote: "Buy an orb of remembrance. Scour the boots to make it normal and slam the orb. Hopefully you get above 40ish."
+    approximate: true
+    approximate_reason: "Reports cover helmet, boots, belt, body armour and amulet only; jewels and the other classes rest on the wiki's word and the emulator's looser rule (in-game list #182, B5 check 3)."
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01

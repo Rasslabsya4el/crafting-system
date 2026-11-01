@@ -452,6 +452,8 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
     if isinstance(action, BuyStartItem):
         return RESTART_KIND, frozenset()
     reads = action.reads(data)
+    if reads.item_state:
+        return TERMINAL, frozenset()  # its result depends on the implicits, the quality or the offer, which the bound read at one state does not hold fixed
     if not reads.junk:
         return REROLL, frozenset()
     adds = action.adds(data, item)

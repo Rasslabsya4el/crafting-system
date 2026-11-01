@@ -13,7 +13,10 @@ The checks, each against something written without the code under test:
 * the kernel of `abstraction` equals the brute force on the compressed finished items (layer 1,
   ADR-0019), unless the action fractures a mod (the fossil tests cover that one);
 * what the action declares agrees with what it does: an action that reads no junk keeps none, and an
-  action that adds nothing unnamed only adds the mods it names;
+  action that adds nothing unnamed only adds the mods it names; one that does not declare `adds.implicits`,
+  `adds.quality` or `adds.offer` leaves the implicits, the quality and the offer as they were, and one that does
+  not declare `reads.implicits`, `reads.quality` or `reads.offer` gives the same result on the item without them
+  (ticket #142);
 * the fracturing actions (a Fractured Fossil) are not compared with the brute force here: their kernel
   has its own tests in `test_abstraction_fossil.py`;
 * the resources are whole counts of named things and price the offer from a fixture price file.
@@ -228,7 +231,7 @@ def finished(outcomes, data=CONTRACT_DATA) -> list[tuple[Fraction, Item]]:
 def _roll_in(data, mod_id: str) -> ExplicitMod:
     mod = data.mods[mod_id]
     values = tuple(min(stat.min, stat.max) for stat in mod.stats)
-    return ExplicitMod(mod_id, tier_table(data, AMULET).get(mod_id, 1), values)
+    return ExplicitMod(mod_id, tier_table(data, AMULET).get(mod_id, 1), values)  # only amulets are drawn onto in the brute force below
 
 
 # --- the checks ----------------------------------------------------------------------------------
@@ -254,6 +257,7 @@ def check_action(action: Action, item: Item, data=CONTRACT_DATA, goal: Goal = GO
     check_chances_agree(outcomes, items, data)
     check_sampler_follows_the_chances(outcomes, items, data)
     check_declarations_agree(action, reads, adds, outcomes, items, item)
+    check_item_state_declarations(action, reads, adds, items, item, data)
     if not outcomes.fractures and not _rerolls_values(outcomes):
         check_kernel_equals_brute_force(action, reads, item, items, data, goal)
     check_resources_are_priced(action, item, data)
@@ -275,7 +279,7 @@ def _rerolls_values(outcomes) -> bool:
 def check_kernel_refuses_too(action, item: Item, data, goal: Goal, refusal: type[ActionError]) -> None:
     """Where the action refuses the item, the kernel of the item's state refuses it the same way (the families the action reads are told apart)."""
     reads = action.reads(data)
-    ab = Abstraction(data, goal, AMULET, LEVEL, [action] if reads.junk else [])
+    ab = Abstraction(data, goal, item.base_id, item.item_level, [action] if reads.junk or reads.item_state else [])
     try:
         kernel = ab.kernel(ab.compress(item), action)
     except ActionError as raised:
@@ -352,9 +356,47 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
             assert adds.named & crafted or not adds.named, "the named mods are added as crafted mods"
 
 
+def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given: Item, data) -> None:
+    """The implicits, the quality and the offer: an action changes only what `adds` says, and reads only what `reads` says (ticket #142)."""
+    for _, result in items:
+        if not adds.implicits:
+            assert result.implicits == given.implicits, "an action that does not declare adds.implicits leaves the implicits as they were"
+        if not adds.quality:
+            assert result.quality == given.quality, "an action that does not declare adds.quality leaves the quality as it was"
+        if not adds.offer:
+            placeholder = any(data.mods[entry.mod_id].domain == "veiled" for entry in result.mods)
+            assert result.veil_offer == (given.veil_offer if placeholder else ()), (
+                "an action that does not declare adds.offer leaves the offer as it was (it goes with its placeholder)"
+            )
+    without = {
+        "implicits": (reads.implicits, bool(given.implicits), {"implicits": ()}),
+        "quality": (reads.quality, given.quality is not None, {"quality": None}),
+        "offer": (reads.offer, bool(given.veil_offer), {"veil_offer": ()}),
+    }
+    for name, (declared, held, strip) in without.items():
+        if declared or not held:
+            continue
+        bare = given.changed(data, **strip)
+        try:
+            other = action.outcomes(data, bare)
+        except ActionError:
+            raise AssertionError(f"an action that does not declare reads.{name} refuses the item once its {name} are taken off, but not with them") from None
+        assert _stripped(finished(other, data), strip) == _stripped(items, strip), (
+            f"an action that does not declare reads.{name} gives the same result on the item without its {name}"
+        )
+
+
+def _stripped(listed, strip: dict) -> dict:
+    """The finished items with the chance of each, with the fields of `strip` taken off, added up by item."""
+    found: dict = defaultdict(Fraction)
+    for chance, result in listed:
+        found[dataclasses.replace(result, **strip)] += chance
+    return dict(found)
+
+
 def check_kernel_equals_brute_force(action, reads: Reads, item: Item, items, data, goal: Goal) -> None:
-    enabled = [action] if reads.junk else []
-    ab = Abstraction(data, goal, AMULET, LEVEL, enabled)
+    enabled = [action] if reads.junk or reads.item_state else []
+    ab = Abstraction(data, goal, item.base_id, item.item_level, enabled)
     expected: dict = defaultdict(Fraction)
     for chance, result in items:
         expected[ab.compress(result)] += chance
