@@ -126,6 +126,11 @@ class Abstraction:
     The tiers of the mods come from the pool of the item's influences (`tiers_of`), so an influence mod has
     its own tier. The kernel of a random action is cached by pool signature: two states whose pools have
     the same multiset of family types share one label distribution.
+
+    `enchantment` is the mod id of the enchantment of the start item, or None. No action adds or removes one, so it is a constant of
+    the problem and not part of the state; the items the kernel rebuilds from a state hold it, so that an action sees what the
+    concrete item shows (the enchantment that lets an item hold two crafted mods, ADR-0053), and `compress` refuses an item whose
+    enchantment is another.
     """
 
     def __init__(
@@ -137,11 +142,15 @@ class Abstraction:
         actions: Iterable = (),
         *,
         metamods: bool = False,
+        enchantment: str | None = None,
     ):
         self.data = data
         self.goal = goal
         self.base_id = base_id
         self.item_level = item_level
+        self.enchantment = enchantment
+        if enchantment is not None:  # a mod id that does not fit the base is the caller's error, raised here and not at the first kernel
+            Item.build(data, base_id=base_id, item_level=item_level, rarity=Rarity.RARE, enchantment=enchantment)
         actions = tuple(actions)
         self._metamods = metamods or any(self._adds_metamod(action) for action in actions)
         self._roll_leaves = tuple(leaf for leaf in goal.leaves if leaf.has_roll_limit)  # a roll limit: a drawn mod rolls its values
@@ -255,6 +264,11 @@ class Abstraction:
             raise ValueError(
                 f"item on {item.base_id} at level {item.item_level} does not fit an abstraction "
                 f"of {self.base_id} at level {self.item_level}"
+            )
+        if item.enchantment != self.enchantment:
+            raise ValueError(
+                f"item with enchantment {item.enchantment!r} does not fit an abstraction built with enchantment {self.enchantment!r}: "
+                "the enchantment is a constant of the problem, pass it as `enchantment`"
             )
         if not self._metamods:
             held = item.metamods(self.data) & BLOCKING
@@ -651,6 +665,7 @@ class Abstraction:
             influences=flags.influences,
             corrupted=flags.corrupted,
             mods=tuple(mods),
+            enchantment=self.enchantment,
         )
         return item, origins
 
@@ -676,6 +691,7 @@ class Abstraction:
                     rarity=state.flags.rarity,
                     influences=state.flags.influences,
                     corrupted=state.flags.corrupted,
+                    enchantment=self.enchantment,
                 )
                 action.outcomes(self.data, bare)
                 raise

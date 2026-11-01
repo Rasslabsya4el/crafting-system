@@ -234,7 +234,9 @@ def make_plan(
 
     enabled = [p.offer.action for p in priced if p.offer.action.reads(data).junk]
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
-    abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod)
+    abstraction = Abstraction(
+        data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod, enchantment=target.start_item.enchantment
+    )
     start = abstraction.compress(target.start_item)
 
     note = ""
