@@ -75,13 +75,19 @@ def test_an_action_that_declares_nothing_reads_and_adds_everything():
 B2_READS_ITEM_STATE = {"influenced-exalted-orb": "implicits"}  # B2 kinds that read a part of the item state (no planner kind does)
 
 
+B3_ITEM_STATE = frozenset({"recombinator"})  # B3 kinds whose output copies the implicits and the quality of the chosen base (ticket #215); no planner kind
+
+
 def test_no_planner_kind_of_the_catalog_declares_item_state_yet():
     # B1 touches none of the three: the planner and the cache see no change in any registered kind that is offered.
     # An influenced Exalted Orb (ticket #154) reads the implicits, because it is refused on an Eldritch implicit; it is no planner kind yet.
     for kind in kinds():
         for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
-            if kind.name in B2_READS_ITEM_STATE:
+            if kind.name in B3_ITEM_STATE:
+                assert not kind.planner, kind.name
+                assert reads.implicits and reads.quality and adds.implicits and adds.quality, kind.name
+            elif kind.name in B2_READS_ITEM_STATE:
                 assert not kind.planner and not adds.item_state, kind.name
                 assert getattr(reads, B2_READS_ITEM_STATE[kind.name]) and not (reads.quality or reads.offer), kind.name
             else:
