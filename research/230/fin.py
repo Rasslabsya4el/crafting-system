@@ -35,6 +35,7 @@ class Cfg:
         self.prices = {"orb": 1, "omen": 1, **(prices or {})}
         self.actions = actions or ("JEW", "JEWO", "FUSE", "CONN", "CHROM", "TRI", "BC", "BL", "BK")
         self.jew_w = JEW_W4 if classmax == 4 else JEW_W6
+        self.sig = (classmax, self.gate, self.p, self.colour_w, self.forced_w)  # cache key (never id(): ids get reused)
 
 
 class Target:
@@ -77,7 +78,7 @@ def chrom_dist(cfg, n, mode=None, k=None):
 
     mode None = plain; 'tri' = conditioned on >= 1 red, green, blue; ('min', k) = conditioned on >= k non-white.
     """
-    key = ("chrom", id(cfg), n, mode)
+    key = ("chrom", cfg.sig, n, mode)
     if key in _cache:
         return _cache[key]
     p, w, fw = cfg.p, cfg.colour_w, cfg.forced_w
@@ -169,7 +170,7 @@ class RawModel:
         acts = []
         A = cfg.actions
         if "JEW" in A and n < cfg.maxn:
-            acts.append(("JEW", pr["orb"], {self.resize(s, m): v for m, v in fl(("jew", id(cfg), n), jew_dist(cfg, n)).items()}))
+            acts.append(("JEW", pr["orb"], {self.resize(s, m): v for m, v in fl(("jew", cfg.sig, n), jew_dist(cfg, n)).items()}))
         if "JEWO" in A and n < cfg.maxn:
             acts.append(("JEWO", pr["orb"] + pr["omen"], {self.resize(s, cfg.maxn): 1.0}))
         all_linked = len(groups) == 1
@@ -179,7 +180,7 @@ class RawModel:
             acts.append(("CONN", pr["orb"] + pr["omen"], {(n, cols, (n,)): 1.0}))
         for lab, mode, extra, excl in (("CHROM", None, 0, True), ("TRI", "tri", pr["omen"], True)):
             if lab in A and (lab != "TRI" or n >= 3):
-                d = fl(("c", id(cfg), n, mode), chrom_dist(cfg, n, mode))
+                d = fl(("c", cfg.sig, n, mode), chrom_dist(cfg, n, mode))
                 pc = d.get(cols, 0.0) if excl else 0.0
                 tot = 1.0 - pc
                 acts.append((lab, pr["orb"] + extra, {(n, c, groups): v / tot for c, v in d.items() if not (excl and c == cols)}))
@@ -196,6 +197,6 @@ class RawModel:
         if "BK" in A:
             for k, cost in BENCH_COLOUR_COST.items():
                 if k <= n:
-                    d = fl(("c", id(cfg), n, ("min", k)), chrom_dist(cfg, n, ("min", k)))
+                    d = fl(("c", cfg.sig, n, ("min", k)), chrom_dist(cfg, n, ("min", k)))
                     acts.append((("BK", k), cost * pr["orb"], {(n, c, groups): v for c, v in d.items()}))
         return acts
