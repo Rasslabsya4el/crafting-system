@@ -315,14 +315,15 @@ class Abstraction:
         self._check_enabled(action)
         prepared = self._prepared(state, action)
         outcomes = prepared.outcomes
-        if outcomes.fractures and any(isinstance(part, Fixed) for _, part in outcomes.components):
-            raise ValueError("a fixed result cannot fracture a mod: only pool draws do (a Fractured Fossil's)")
+        fixed = [isinstance(part, Fixed) for _, part in outcomes.components]
+        if outcomes.fractures and any(fixed) and not all(fixed):
+            raise ValueError("a mixture of fixed results and pool draws cannot fracture a mod: only pool draws (a Fractured Fossil) or fixed results (a Fracturing Orb) do")
         parts: Counter = Counter()
         for (share, part), signature, split in zip(
             outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
         ):
             key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status)
-            if outcomes.fractures:
+            if outcomes.fractures and not isinstance(part, Fixed):
                 pool = tuple(
                     (family.family, tuple((entry.mod.id, entry.weight) for entry in family.mods))
                     for family in part.pool
@@ -355,8 +356,9 @@ class Abstraction:
         outcomes = prepared.outcomes
         if all(isinstance(part, Fixed) for _, part in outcomes.components):
             return ("fixed", action)
-        if outcomes.fractures and any(isinstance(part, Fixed) for _, part in outcomes.components):
-            raise ValueError("a fixed result cannot fracture a mod: only pool draws do (a Fractured Fossil's)")
+        fixed = [isinstance(part, Fixed) for _, part in outcomes.components]
+        if outcomes.fractures and any(fixed) and not all(fixed):
+            raise ValueError("a mixture of fixed results and pool draws cannot fracture a mod: only pool draws (a Fractured Fossil) or fixed results (a Fracturing Orb) do")
         signatures = self._signatures_of(prepared)
         if len(signatures) == 1 and not outcomes.fractures:
             return signatures[0]

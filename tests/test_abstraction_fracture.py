@@ -189,6 +189,14 @@ def test_an_essence_forcing_a_mod_of_the_family_type_is_refused_not_answered_for
         ab.kernel(ab.compress(fire), essence)
 
 
+def test_the_fracturing_orb_has_a_kernel_key_wherever_it_has_a_kernel():
+    ab = fracturing()
+    state = ab.compress(start_of("gem"))
+
+    assert ab.kernel(state, FRACTURE)
+    assert ab.kernel_key(state, FRACTURE) == ab.kernel_key(state, FRACTURE)
+
+
 def test_the_fracturing_orb_refuses_what_the_game_refuses():
     ab, influenced = fracturing(), fracturing(level=78)
     refused = [
