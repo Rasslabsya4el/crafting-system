@@ -216,7 +216,15 @@ Another item an action consumes besides the one in hand (the donor of a recombin
 _Avoid_: ingredient, second item (when the solver's `extra_inputs` is meant)
 
 **Need**:
-What an action asks for as an input: a start item and the item wanted from it (`Action.inputs(data, item)`, empty for an action with none). The solver sees it as the start state of an acquisition process; which compressed state stands for the wanted item is decided where the planner builds the donor (ticket #211).
+What an action asks for as an input: a start item and the item wanted from it (`Action.inputs(data, item)`, empty for an action with none). The solver sees it as the start state of an acquisition process whose goal is a **want** (ADR-0062). Which `Need`s the planner offers is decided by the lazy offer loop, not listed up front.
+
+**Want**:
+The goal of an acquisition process: the projection of the donor that its consumer reads, not one item. The acquisition ends at the first item with that projection. For the Awakener's Orb it is the influence and the influenced mods; for the recombinator the whole compressed item, junk by weight class. Asking for one whole item instead is dearer and larger (ADR-0062).
+_Avoid_: target (the main target is the other kind of acquisition goal), donor state
+
+**Lazy offer loop**:
+The solve that offers donors as it needs them: solve with the donors offered so far, then offer every donor whose lower bound on the action does not exceed the value in hand, and solve again, until none does. Exact; its seed (isolated feeders, or a given route's donors) only changes the number of rounds (ADR-0062).
+_Avoid_: donor pruning (pruning is what the loop proves, not what it does)
 
 **Acquisition process**:
 The sub-problem whose value is an acquisition cost: the same actions as the main problem, aimed at one wanted state instead of the target, so that an input costs the value of reaching it. The main target is one more acquisition process.
