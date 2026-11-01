@@ -114,6 +114,10 @@ _Avoid_: vendor action, recipe action (it is never an action of a route)
 One recipe of a chain: a flask and an Orb of Augmentation, or the quality gems, and the mod and tier it gives counted from the top of the mod's ladder. A tier-up recipe is a chain of steps, each from the Magic item before it; the table is `Recipe.steps(base_kind)`.
 _Avoid_: stage
 
+**Start option**:
+One priced candidate a plan can start from, with its source: the target's own start item (`plain`) or the Magic item a vendor recipe makes. The planner plans each option and keeps the cheapest total of start price and expected crafting cost (ADR-0059). A later source, such as a bought item (research #337), is one more source of start options. In the code it is a `StartCandidate`.
+_Avoid_: start method
+
 ## Crafting
 
 **Primitive**:
