@@ -277,17 +277,14 @@ def mean_and_variance(
     return (m1[0], mean_low, mean_high), (variance, var_low, var_high), m1
 
 
-def expected_uses(
-    chain: Chain, values: Sequence[float], error: float
-) -> dict[int, tuple[float, float, float]]:
-    """Expected number of runs started at every input state, as `(value, low, high)`.
+def expected_visits(chain: Chain, values: Sequence[float], error: float) -> tuple[list[float], float, _System]:
+    """The expected number of visits of every state (all runs together) and a bound on their 1-norm error.
 
-    `values` and `error` are the mean cost of every state and its bound from `solve_costs` with the
-    real costs. The count at y is `sum_s N_s copies(s, y)` with N the expected visits of every state.
+    `values` and `error` are the mean cost of every state and its bound from `solve_costs` with the real costs. Returns
+    `(visits, slack, system)`: `visits[s]` is row 0 of `(I - M)^-1`, and the sum of the errors of the visits is at most `slack`
+    (infinite when `error` is 1 or more).
     """
     system = _proper_system(chain)
-    if chain.goal[0]:
-        return {}
     base = [0.0] * system.size
     base[0] = 1.0
     visits = _sweep(system, system.cols, tuple(reversed(system.comps)), base)
@@ -304,6 +301,20 @@ def expected_uses(
         slack = kappa * l1
     else:
         slack = math.inf
+    return visits, slack, system
+
+
+def expected_uses(
+    chain: Chain, values: Sequence[float], error: float
+) -> dict[int, tuple[float, float, float]]:
+    """Expected number of runs started at every input state, as `(value, low, high)`.
+
+    `values` and `error` are the mean cost of every state and its bound from `solve_costs` with the
+    real costs. The count at y is `sum_s N_s copies(s, y)` with N the expected visits of every state.
+    """
+    if chain.goal[0]:
+        return {}
+    visits, slack, system = expected_visits(chain, values, error)
 
     users: dict[int, list[tuple[int, int]]] = {}
     for s in system.nodes:
@@ -316,6 +327,19 @@ def expected_uses(
         relative = max(MIN_COUNT_ROUNDING, (len(users[y]) + 3) * EPS) * value
         uses[y] = (value, max(0.0, value - spread - relative), value + spread + relative)
     return uses
+
+
+def weighted_visits(
+    chain: Chain, values: Sequence[float], error: float, weight: Sequence[float]
+) -> tuple[float, float, float]:
+    """`(value, low, high)` of `sum_s N_s weight[s]` for non-negative weights, N the expected visits of every state."""
+    if chain.goal[0]:
+        return 0.0, 0.0, 0.0
+    visits, slack, system = expected_visits(chain, values, error)
+    value = math.fsum(visits[s] * weight[s] for s in system.nodes)
+    spread = max((weight[s] for s in system.nodes), default=0.0) * slack
+    relative = max(MIN_COUNT_ROUNDING, (len(system.nodes) + 3) * EPS) * value
+    return value, max(0.0, value - spread - relative), value + spread + relative
 
 
 def _branching(chain: Chain, system: _System) -> bool:

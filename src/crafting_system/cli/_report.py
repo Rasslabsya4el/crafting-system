@@ -7,7 +7,7 @@ only, so it prints on any console. Costs are in Chaos Orbs with a Divine Orb equ
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState, Status
@@ -16,6 +16,7 @@ from crafting_system.items import Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN
 
+from ._interval import IntervalAnswer
 from ._marking import (
     ApproximateInput,
     approximate_inputs,
@@ -68,6 +69,17 @@ class Report:
     states: tuple[PolicyState, ...]
     shares: tuple[tuple[WeightShare, float | None], ...]  # a share and the kernel's per-use chance of the leaf
     approximate_inputs: tuple[ApproximateInput, ...] = ()  # the approximate claims the policy's actions read (ADR-0028)
+    interval: IntervalAnswer | None = None  # the plan's interval over a rule axis it reads (ADR-0012, ticket #221); None when it reads none
+
+
+def with_interval(report: Report, interval: IntervalAnswer | None) -> Report:
+    """The report of an answer that read a rule axis: the interval block is added and the approximate inputs are those of every route it shows.
+
+    With `None` (the plan reads no axis) the report is returned as it is, so such an answer says nothing about any axis.
+    """
+    if interval is None:
+        return report
+    return replace(report, interval=interval, approximate_inputs=interval.approximate_inputs)
 
 
 def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
@@ -276,6 +288,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if target_name:
         lines.append(f"Target: {target_name}")
     lines.extend(marking_lines(plan.approximation, shift, divine))
+    if report.interval is not None:
+        lines.extend(report.interval.text_lines(divine))
     lines.extend(approximate_lines(report.approximate_inputs))
     if plan.note:
         lines.append(f"Note: {plan.note}")
@@ -481,6 +495,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
         "unit": "chaos",
         "answer": marking_document(plan.approximation, shift),
         "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
+        **({"interval": report.interval.document()} if report.interval is not None else {}),
         "note": plan.note,
         "target": target_name,
         "requirements": list(plan.leaf_labels),
