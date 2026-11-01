@@ -16,7 +16,17 @@ from crafting_system.items import Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN
 
-from ._marking import marking_document, marking_lines, risk_lines, verification_document, verification_lines
+from ._marking import (
+    ApproximateInput,
+    approximate_inputs,
+    approximate_inputs_document,
+    approximate_lines,
+    marking_document,
+    marking_lines,
+    risk_lines,
+    verification_document,
+    verification_lines,
+)
 from ._offers import without_ranges
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
@@ -54,6 +64,7 @@ class Report:
     ids: dict[CompressedState, str]
     states: tuple[PolicyState, ...]
     shares: tuple[tuple[WeightShare, float | None], ...]  # a share and the kernel's per-use chance of the leaf
+    approximate_inputs: tuple[ApproximateInput, ...] = ()  # the approximate claims the policy's actions read (ADR-0028)
 
 
 def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
@@ -158,7 +169,10 @@ def build_report(plan: Plan, data: GameData) -> Report:
         )  # fmt: skip
     offers = [priced.offer for priced in plan.offers if priced.offer.shares]
     shares = start_shares(data, plan.target.start_item, offers, _goal_leaf_nodes(plan))
-    return Report(plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares))
+    return Report(
+        plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
+        approximate_inputs(plan, plan.policy, data),
+    )  # fmt: skip
 
 
 def _leaf_chance(plan: Plan, share: WeightShare) -> float | None:
@@ -198,6 +212,18 @@ def interval(estimate: Estimate, divine: float) -> str:
     return text
 
 
+UNRESOLVED = "not resolved on the grid (the cost scale is far above the cheapest action, ticket #190)"
+
+
+def unresolved(risk, estimate: Estimate) -> bool:
+    """Whether a quantile or CVaR is infinite only because the budget grid could not reach it: the odds are 1."""
+    return math.isinf(estimate.value) and risk.success_probability.value >= 1.0
+
+
+def _quantile_text(risk, estimate: Estimate, shift: float, divine: float) -> str:
+    return UNRESOLVED if unresolved(risk, estimate) else interval(_shifted(estimate, shift), divine)
+
+
 def _shifted(estimate: Estimate, shift: float) -> Estimate:
     return Estimate(estimate.value + shift, estimate.low + shift, estimate.high + shift)
 
@@ -212,6 +238,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if target_name:
         lines.append(f"Target: {target_name}")
     lines.extend(marking_lines(plan.approximation, shift, divine))
+    lines.extend(approximate_lines(report.approximate_inputs))
     if plan.note:
         lines.append(f"Note: {plan.note}")
     lines.append(f"Requirements: {'; '.join(plan.leaf_labels)}")
@@ -280,8 +307,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     else:
         lines.append(f"  success chance  {percent(risk.success_probability.value)}")
         lines.append(f"  mean cost       {interval(_shifted(risk.mean, shift), divine)}")
-        lines.append(f"  p50             {interval(_shifted(risk.p50, shift), divine)}")
-        lines.append(f"  p90             {interval(_shifted(risk.p90, shift), divine)}")
+        lines.append(f"  p50             {_quantile_text(risk, risk.p50, shift, divine)}")
+        lines.append(f"  p90             {_quantile_text(risk, risk.p90, shift, divine)}")
         lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after buying it is")
         lines.append(f"   {money(plan.mean_remaining)} Chaos by the solver and {money(risk.mean.value)} by the risk run)")
     if report.shares:
@@ -313,13 +340,14 @@ def _verification_lines(check: Verification, plan: Plan) -> list[str]:
     cost = report.cost
     p90 = check.p90
     divine = plan.prices.chaos_per_divine
+    computed_p90 = UNRESOLVED if unresolved(plan.risk, plan.risk.p90) else money(check.computed_p90)
     return [
         f"Verification by simulation ({check.runs:,} runs, seed {check.seed}, at most {check.max_steps:,} uses per run)",
         f"  simulated mean cost {money(cost.value)} Chaos, {report.confidence:.0%} interval "
         f"{money(cost.low)} to {money(cost.high)} (normal approximation)",
         f"  computed mean cost  {money(check.computed_mean)} Chaos ({check.computed_mean / divine:.3g} Divine)",
-        f"  simulated p90       {money(p90.value)} Chaos, interval {money(p90.low)} to {money(p90.high)}; "
-        f"computed {money(check.computed_p90)}",
+        f"  simulated p90       {money(p90.value)} Chaos, interval {money(p90.low)} to {money(p90.high)} "
+        f"(simulated, not certified); computed {computed_p90}",
         f"  detectable error    a mean off by more than {check.detectable_error:.1%} is rejected "
         f"({SIGMAS:g} standard errors); a smaller error passes; more --runs see smaller ones",
         f"  successes {report.successes:,} of {report.runs:,}, mean uses per run {report.mean_steps:.1f}",
@@ -363,6 +391,7 @@ def _totals(plan: Plan, shift: float, divine: float) -> dict:
         "mean_cost": _estimate(risk.mean, shift),
         "p50": _estimate(risk.p50, shift),
         "p90": _estimate(risk.p90, shift),
+        "quantiles_resolved": not (unresolved(risk, risk.p50) or unresolved(risk, risk.p90)),
         "cvar_level": risk.cvar_level,
         "cvar": _estimate(risk.cvar, shift),
         "mean_cost_divine": _number((risk.mean.value + shift) / divine),
@@ -385,6 +414,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
         "format": FORMAT,
         "unit": "chaos",
         "answer": marking_document(plan.approximation, shift),
+        "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
         "note": plan.note,
         "target": target_name,
         "requirements": list(plan.leaf_labels),
@@ -458,7 +488,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
                 "low": verification.p90.low,
                 "high": verification.p90.high,
             },
-            "computed_p90": verification.computed_p90,
+            "computed_p90": None if verification.computed_p90 is None else _number(verification.computed_p90),
             "successes": sim.successes,
             "unfinished": sim.unfinished,
             "stopped": sim.stopped,

@@ -107,6 +107,11 @@
       "chaos": 0.09313,
       "source": "poe.ninja"
     },
+    "Leather Belt (ilvl 86)": {
+      "chaos": 10.0,
+      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: a normal Leather Belt of item level 86, 41 observations",
+      "source": "poe.ninja"
+    },
     "Orb of Alchemy": {
       "chaos": 0.02716,
       "source": "poe.ninja"

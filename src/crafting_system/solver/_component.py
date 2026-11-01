@@ -6,9 +6,18 @@ from dataclasses import dataclass
 
 from ._certify import own_multipliers, relative_error, rounding_allowance
 from ._graph import Graph
+from ._sparse import WORK_LIMIT, solve_substochastic
 
 IMPROVEMENT = 1e-12  # policy iteration switches action only on a relative gain this large
 MAX_POLICY_ITERATIONS = 100
+# A component above `direct_solve_limit` gets this many sweeps first; if they do not certify it,
+# sparse policy iteration takes over. Stiff components (an expected 1e5 steps) need ~1e5 sweeps; the
+# elimination costs about a hundred sweeps' work on the components met so far.
+SWEEPS_BEFORE_DIRECT = 300
+# Each sparse policy iteration is one exact evaluation and iterations are few in practice (a
+# handful for a stiff belt), but the exact count is unknown for a big component, so the cap is
+# generous: 1000 evaluations cost far more than the sweeps they replace long before it is reached.
+MAX_SPARSE_POLICY_ITERATIONS = 1000
 
 
 @dataclass(slots=True)
@@ -22,7 +31,8 @@ class Bellman:
     positions of the successors and inputs inside. `prob` holds p for an outcome and kappa for
     an input; kappa may be 1 or more, so for a `branching` component (an input inside) the
     matrix is not a contraction. `has_exit` is about outcomes only: an input never reaches the
-    goal. `ids[a]` is the global action id.
+    goal. `leak[a]` is the total probability of the outcome successors outside, summed directly
+    (not as 1 minus the inside part), for the sparse evaluation. `ids[a]` is the global action id.
     """
 
     states: list[int]
@@ -33,6 +43,7 @@ class Bellman:
     tptr: array
     inside: array
     prob: array
+    leak: array
     g: float  # smallest constant term (effective cost + fixed downstream part) of a retained action
     terms: int  # largest number of terms in one Bellman sum
     low_d: float  # min(1, lo of the exit successors and outside inputs)
@@ -51,7 +62,7 @@ def build_bellman[S](
     local = {state: position for position, state in enumerate(component)}
     targets, probs, tstart, cost = graph.targets, graph.probs, graph.tstart, graph.cost
     inputs, kappas, istart = graph.inputs, graph.kappa, graph.istart
-    ids, base, has_exit = array("i"), array("d"), bytearray()
+    ids, base, leak, has_exit = array("i"), array("d"), array("d"), bytearray()
     tptr, inside, prob = array("q", [0]), array("i"), array("d")
     astart = [0]
     g, terms, low_d, high_d = math.inf, 1, 1.0, 1.0
@@ -61,13 +72,14 @@ def build_bellman[S](
             if not alive[k]:
                 continue
             constant = cost[k]
-            exits = False
+            exits, outside = False, 0.0
             low, high = tstart[k], tstart[k + 1]
             for j, p in zip(targets[low:high], probs[low:high]):
                 position = local.get(j)
                 if position is None:
                     constant += p * value[j]
                     exits = True
+                    outside += p
                     if lo[j] < low_d:
                         low_d = lo[j]
                     if hi[j] > high_d:
@@ -94,11 +106,12 @@ def build_bellman[S](
             terms = max(terms, 1 + high - low + ihigh - ilow)
             ids.append(k)
             base.append(constant)
+            leak.append(outside)
             has_exit.append(exits)
             tptr.append(len(inside))
         astart.append(len(ids))
     return Bellman(
-        component, astart, ids, base, has_exit, tptr, inside, prob, g, terms, low_d, high_d, branching
+        component, astart, ids, base, has_exit, tptr, inside, prob, leak, g, terms, low_d, high_d, branching
     )
 
 
@@ -236,10 +249,37 @@ def _evaluate(bellman: Bellman, policy: list[int]) -> list[float] | None:
     return values
 
 
-def _policy_iteration(bellman: Bellman, policy: list[int]) -> list[float] | None:
+def _evaluate_sparse(
+    bellman: Bellman, policy: list[int], work_limit: int = WORK_LIMIT
+) -> list[float] | None:
+    """Solve the same system as `_evaluate` by sparse subtraction-free elimination (see `_sparse`).
+
+    The rows hold only the transitions inside the component and the leak the probability of those
+    outside, so no row sum is ever turned into `1 - p`. None for an improper policy, or when the
+    elimination would pass `work_limit` multiply-adds.
+    """
+    rows, leak, base = [], [], []
+    for a in policy:
+        row = {}
+        low, high = bellman.tptr[a], bellman.tptr[a + 1]
+        for j, p in zip(bellman.inside[low:high], bellman.prob[low:high]):
+            if p > 0.0:
+                row[j] = row.get(j, 0.0) + p
+        rows.append(row)
+        leak.append(bellman.leak[a])
+        base.append(bellman.base[a])
+    values = solve_substochastic(rows, leak, base, work_limit)
+    if values is None or not all(math.isfinite(v) and v > 0.0 for v in values):
+        return None
+    return values
+
+
+def _policy_iteration(
+    bellman: Bellman, policy: list[int], evaluate=_evaluate, iterations: int = MAX_POLICY_ITERATIONS
+) -> list[float] | None:
     values = None
-    for _ in range(MAX_POLICY_ITERATIONS):
-        values = _evaluate(bellman, policy)
+    for _ in range(iterations):
+        values = evaluate(bellman, policy)
         if values is None:
             return None
         changed = False
@@ -267,6 +307,12 @@ def solve_cyclic(
 ) -> CyclicResult:
     """Policy iteration for small components, then Gauss-Seidel sweeps until certified.
 
+    A component of at most `direct_solve_limit` states starts with dense policy iteration. A larger
+    one is swept first, for `SWEEPS_BEFORE_DIRECT` sweeps (all it gets if `max_sweeps` is smaller,
+    or if `direct_solve_limit` is 0, which forces sweeps only); if those do not certify it, sparse
+    policy iteration (subtraction-free elimination, exact however stiff the component) solves it
+    from the attractor policy, and the sweeps that remain continue from its values.
+
     A branching component (an input inside) is solved by the sweeps alone, from zeros, over all
     local states in index order: the attractor policy may be supercritical there (the matrix is
     not a contraction), while the iterate rises monotonically from 0 and stays at most the least
@@ -276,9 +322,10 @@ def solve_cyclic(
 
     Stops when the iteration's own relative error (the residuals `e`, `d` against `g`) is at most
     `tolerance`, or when both residuals are already at the rounding floor `delta` (more sweeps
-    could not improve the reported bound by more than a factor of about two); otherwise returns the best certified candidate seen, with `converged` False. The
-    reported multipliers also carry the operator mismatch `delta` (see `_certify`), so the reported
-    error can exceed `tolerance`; with no upper certificate the upper multiplier is infinite.
+    could not improve the reported bound by more than a factor of about two); otherwise returns the
+    best certified candidate seen, with `converged` False. The reported multipliers also carry the
+    operator mismatch `delta` (see `_certify`), so the reported error can exceed `tolerance`; with
+    no upper certificate the upper multiplier is infinite.
     """
     rho = rounding_allowance(bellman.terms)
     size = len(bellman.states)
@@ -307,19 +354,33 @@ def solve_cyclic(
             best = CyclicResult(list(candidate), choice, lower, upper, stop)
         return stop
 
+    def sweep(count: int) -> bool:
+        """Up to `count` sweeps; True when the result in `best` is final (certified, or overflowed)."""
+        for _ in range(count):
+            for local in order:
+                values[local] = _backup(bellman, values, local)[0]
+            if branching and best is not None and not math.isfinite(max(values)):
+                return True  # the iterate overflowed: infinite, not certified
+            if examine(values):
+                if branching and best.upper == math.inf:  # type: ignore[union-attr]
+                    best.converged = False  # type: ignore[union-attr]  # stopped with no upper certificate
+                return True
+        return False
+
     if size <= direct_solve_limit and not branching:
         solved = _policy_iteration(bellman, policy)
         if solved is not None:
             values = solved
             if examine(values):
                 return best  # type: ignore[return-value]
-    for _ in range(max_sweeps):
-        for local in order:
-            values[local] = _backup(bellman, values, local)[0]
-        if branching and best is not None and not math.isfinite(max(values)):
-            return best  # type: ignore[return-value]  # the iterate overflowed: infinite, not certified
-        if examine(values):
-            if branching and best.upper == math.inf:  # type: ignore[union-attr]
-                best.converged = False  # type: ignore[union-attr]  # stopped with no upper certificate
+    elif not branching and direct_solve_limit > 0 and max_sweeps >= SWEEPS_BEFORE_DIRECT:  # a limit of 0 forces sweeps only
+        if sweep(SWEEPS_BEFORE_DIRECT):
             return best  # type: ignore[return-value]
+        solved = _policy_iteration(bellman, policy, _evaluate_sparse, MAX_SPARSE_POLICY_ITERATIONS)
+        if solved is not None:
+            values[:] = solved
+            if examine(values):
+                return best  # type: ignore[return-value]
+        max_sweeps -= SWEEPS_BEFORE_DIRECT
+    sweep(max_sweeps)
     return best  # type: ignore[return-value]

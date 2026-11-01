@@ -1,0 +1,118 @@
+# Mechanic family: harvest_swap (the Harvest crafts that change a resistance or damage modifier into the one of another element).
+# Research ticket #88 (claims HBS-07 to HBS-14), grill B2 (issue #93, owner round 1 point 4 item 4), ADR-0030, ticket #148.
+# A statement that starts with "APPROXIMATE (ADR-0028)" rests on no source but Craft of Exile's code or a choice of the
+# main chat; ticket #143 turns that sentence into the registry's `approximate` mark.
+rules:
+  - id: harvest_swap.resistance_swaps_exist
+    statement: "Six Harvest crafts change a resistance modifier into the one of another element, 500 lifeforce of the colour of the target element (Fire Wild, Cold Vivid, Lightning Primal), no Sacred and no Rancour. `value` is {from: {to: cost}}, the cost mapping the price-file name of each item to the number of items one use takes."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Change a modifier that grants Cold Resistance into a similar-tier modifier that grants Fire Resistance 500 0 0 0 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      fire: {cold: {Vivid Crystallised Lifeforce: 500}, lightning: {Primal Crystallised Lifeforce: 500}}
+      cold: {fire: {Wild Crystallised Lifeforce: 500}, lightning: {Primal Crystallised Lifeforce: 500}}
+      lightning: {fire: {Wild Crystallised Lifeforce: 500}, cold: {Vivid Crystallised Lifeforce: 500}}
+
+  - id: harvest_swap.damage_swaps_exist
+    statement: "Six Harvest crafts change a fire, cold or lightning damage modifier into the one of another element, 500 lifeforce of the colour of the target element plus one Crystallised Rancour. `value` is {from: {to: cost}}, as for the resistance swaps."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Change a modifier that grants Cold Damage into a similar-tier modifier that grants Fire Damage 500 0 0 0 1"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      fire: {cold: {Vivid Crystallised Lifeforce: 500, Crystallised Rancour: 1}, lightning: {Primal Crystallised Lifeforce: 500, Crystallised Rancour: 1}}
+      cold: {fire: {Wild Crystallised Lifeforce: 500, Crystallised Rancour: 1}, lightning: {Primal Crystallised Lifeforce: 500, Crystallised Rancour: 1}}
+      lightning: {fire: {Wild Crystallised Lifeforce: 500, Crystallised Rancour: 1}, cold: {Vivid Crystallised Lifeforce: 500, Crystallised Rancour: 1}}
+
+  - id: harvest_swap.keeps_tier_rerolls_value
+    statement: "A swap keeps the tier of the modifier and rerolls its value inside the tier, uniformly over the integers of the target's range; a maximum-resistance modifier swaps the same way (the owner, grill B2 round 1). The tier is the tier number: the mods of the three elements have the same value range at each tier but different required levels (harvest_swap.target_above_item_level_refused)."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93#issuecomment-6546727567
+    quote: "Resistance swap: **the value is rerolled inside the tier, the tier is kept**; the same holds for maximum-resistance swaps too (#88 O-08 settled)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.resistance_source_stats
+    statement: "A modifier qualifies as a source of a resistance swap from the element E when one of its stats is `base_E_damage_resistance_%` (the plain resistance and its hybrids with leech or physical damage taken as the element) or `base_maximum_E_damage_resistance_%` (the maximum resistance); `value` lists the two stat ids with the element written X. The target is the modifier of the target element with the same stat ids (X replaced) on the same side and in the same domain, of the same tier number. The modifiers that grant two elements at once do not qualify, and a hybrid whose other stat has no twin of the target element (an ailment chance, for one) has no target and is not a source."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Harvest_Crafting
+    quote: "This method works for modifiers beyond the generic ‘+#% to (Element) Resistance’."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: ["base_X_damage_resistance_%", "base_maximum_X_damage_resistance_%"]
+
+  - id: harvest_swap.damage_source_stats
+    statement: "APPROXIMATE (ADR-0028): no source lists which modifiers a damage swap accepts, and Craft of Exile has no damage swap (its package.js, checked 2026-11-01, holds the resistance swaps only), so the set is the main chat's choice. A modifier qualifies as a source of a damage swap from the element E when one of its stats is `E_damage_+%` (increased damage), `local_minimum_added_E_damage`, `spell_minimum_added_E_damage` or `attack_minimum_added_E_damage` (added damage to a weapon, to spells, to attacks); `value` lists the four stat ids with the element written X. The hybrids that add one of these with penetration or a flat damage are included; conversion, extra damage, penetration alone, leech, avoidance, damage taken, damage over time and critical strike multiplier modifiers are not. The target is found as for the resistance swaps."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Change a modifier that grants Cold Damage into a similar-tier modifier that grants Fire Damage"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: ["X_damage_+%", "local_minimum_added_X_damage", "spell_minimum_added_X_damage", "attack_minimum_added_X_damage"]
+
+  - id: harvest_swap.damage_swap_excludes_crit_multiplier
+    statement: "Since 3.28.0 hotfix 8 the damage swap no longer works on critical strike multiplier modifiers (undocumented by GGG). No modifier of the item domain has both an element damage stat of harvest_swap.damage_source_stats and a critical strike multiplier stat in the 3.29.3.3 data, so the exclusion changes nothing of the source set."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Harvest_crafting#Version_history
+    quote: "(Hotfix 8) The Harvest Crafting Option to change a modifier that grants X damage to a similar tier modifier granting Y damage no longer works on critical strike multiplier modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.target_above_item_level_refused
+    statement: "The fire, cold and lightning resistance modifiers share the value range of each tier number T1 to T8 but their required levels differ for T2 to T5 (Fire 12/24/36/48, Cold 14/26/38/50, Lightning 13/25/37/49), and the added damage modifiers differ the same way. A swap into a target of the same tier number whose required level is above the item level is not possible: that modifier is not a source, and the craft is refused when no source is left (main chat, grill B2; the game's own behaviour here is not documented)."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "FireResist2 required_level 12; ColdResist2 required_level 14; LightningResist2 required_level 13"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.uniform_among_sources
+    statement: "APPROXIMATE (ADR-0028): no source but Craft of Exile's code. When several modifiers of the item qualify, the swap changes one of them chosen uniformly. A modifier does not qualify when the swap would leave a family twice on the item (a modifier of the target element is already there)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(success.fromind.length>1){var rnum=poec_rand(0,success.fromind.length,!0);swappick=success.fromind[rnum]}else{swappick=success.fromind[0]}"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+
+  - id: harvest_swap.refused_without_source
+    statement: "A swap is refused, and nothing is consumed, when no modifier of the item qualifies as a source."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "errors=\"Could not find a compatible \"+from+\" modifier on the item\""
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+
+  - id: harvest_swap.respects_side_locks
+    statement: "A swap respects Prefixes / Suffixes Cannot Be Changed: a modifier on a locked side is not a source. The wiki table gives this for the resistance swap; the damage swap is on no table and follows it (APPROXIMATE, ADR-0028: by analogy). The Cannot roll Attack and Caster metamods protect nothing from a swap."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Change Element of Resistance Respected Respected"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: harvest_swap.fractured_and_crafted_mods_not_swapped
+    statement: "A fractured modifier is not a source (it cannot be changed). APPROXIMATE (ADR-0028) for the crafted ones: an ordinary crafted (bench) modifier is not a source either, because it has no tier to keep; the main chat's choice, no source says."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Explicit_modifiers
+    quote: "permanently locked to the item, being unable to be rerolled or removed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: harvest_swap.refused_on_corrupted
+    statement: "A corrupted item takes no swap."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: harvest_swap.rancour_obtainable
+    statement: "Crystallised Rancour, the extra cost of the damage swaps, is obtainable in 3.29: only from the Tier 4 Harvest bosses in the Overgrown Grove Atlas anomaly."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Overgrown_Grove
+    quote: "have a very high chance to drop a Crystallised Rancour"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31

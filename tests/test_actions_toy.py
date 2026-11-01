@@ -109,17 +109,20 @@ def test_the_plan_of_a_target_offers_the_toy(toy_registered):
     assert plan.dropped  # the crafts it keeps in play have no price in the file, and are reported as dropped
 
 
-def test_crafts_that_count_for_nothing_are_offered_while_an_action_keeps_the_crafted_mod(items):
+def test_crafts_that_count_for_nothing_are_left_out_and_the_reason_says_when_that_is_not_a_proof(items):
     start = items["rare_junk"]
     goal = Goal((Wanted(frozenset({RESIST_2})),))
 
     def crafts(offers):
         return [offer.label for offer in offers if offer.label.startswith("Bench craft")]
 
-    assert crafts(offers_for(CONTRACT_DATA, goal, start.base_id, start).offers) == []
+    exact = offers_for(CONTRACT_DATA, goal, start.base_id, start)
+    assert crafts(exact.offers) == [] and "exact while every other action erases crafted mods" in exact.left_out[0].reason
     with registered(Kind("toy-annulment", toy_members, order=900)):  # it declares that a crafted mod can survive
         offered = offers_for(CONTRACT_DATA, goal, start.base_id, start)
-    assert crafts(offered.offers) and not offered.left_out
+    assert crafts(offered.offers) == []  # still left out: all of them would make the graph too big (R13, #66) ...
+    (left,) = offered.left_out
+    assert "keeps crafted mods" in left.reason and "cheapest among the offered crafts" in left.reason  # ... and the report says so
 
 
 def test_the_kernel_of_the_toy_is_exact(items):

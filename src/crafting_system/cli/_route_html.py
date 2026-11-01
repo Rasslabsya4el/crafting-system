@@ -45,7 +45,7 @@ a{color:var(--text-link)}
 .tg{border:1px solid var(--border-success)}.ml div{margin:1px 0}
 """
 
-_TONES = {"wanted": "w", "mod": "m", "crafted": "c", "any": "a", "empty": "e"}
+_TONES = {"wanted": "w", "mod": "m", "crafted": "c", "any": "a", "empty": "e", "implicit": "i"}
 
 
 def _link(href: str, text: str, external: bool = False) -> str:
@@ -87,7 +87,7 @@ def _item(card: ItemCard, target: bool = False) -> str:
     ]
     if card.implicits:
         parts.append('<div class="sd">Implicit</div>')
-        parts += [f'<div class="s i">{escape(text)}</div>' for text in card.implicits]
+        parts += [_slot(slot) for slot in card.implicits]
     if card.enchantments:
         parts.append('<div class="sd">Enchantment</div>')
         parts += [f'<div class="s i">{escape(text)}</div>' for text in card.enchantments]
@@ -95,6 +95,9 @@ def _item(card: ItemCard, target: bool = False) -> str:
     parts += [_slot(slot) for slot in card.prefixes]
     parts.append('<div class="sd">Suffixes</div>')
     parts += [_slot(slot) for slot in card.suffixes]
+    if card.offer:
+        parts.append('<div class="sd">Unveil offer</div>')
+        parts += [_slot(slot) for slot in card.offer]
     parts.append("</div>")
     return "".join(parts)
 

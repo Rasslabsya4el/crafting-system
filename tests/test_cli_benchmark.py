@@ -128,7 +128,7 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
 
     assert code == 0
     document = read_json(path)
-    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05"]
+    assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13"]
     entry = entry_of(document)
     assert entry["missing_price"]["name"] == "R12 start amulet"
     assert entry["missing_price"]["override_line"] == '"R12 start amulet" = 0'
@@ -139,6 +139,9 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
     for route_id in ("R10", "R11", "R05"):  # their own files fail first in the test data, so none names a price
         assert entry_of(document, route_id)["error"] is not None
         assert "no price for the start item" not in entry_of(document, route_id)["error"]
+    belt = entry_of(document, "R13")  # a normal belt: its start price is the poe.ninja base price, and it has no buy spec
+    assert belt["missing_price"]["name"] == "Leather Belt (ilvl 86)" and belt["missing_price"]["buy_spec"] is None
+    assert "no price for the start item 'Leather Belt (ilvl 86)'" in belt["error"]
 
 
 def test_the_missing_start_price_of_r12_names_its_buy_spec_for_the_trade_api(tmp_path, capsys):
@@ -228,9 +231,9 @@ def test_the_target_form_still_works_next_to_the_benchmark_command(tmp_path):
     assert code == 0 and json.loads(out.read_text(encoding="utf-8"))["format"] == "crafting-system-policy/1"
 
 
-def test_the_benchmark_lists_r12_r10_r11_and_r05_with_their_target_and_route_files():
+def test_the_benchmark_lists_r12_r10_r11_r05_and_r13_with_their_target_and_route_files():
     root = Path(__file__).resolve().parents[1]
 
-    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05"]
+    assert [bench.id for bench in benchmark_module.BENCHMARKS] == ["R12", "R10", "R11", "R05", "R13"]
     for bench in benchmark_module.BENCHMARKS:
         assert (root / bench.target).is_file() and (root / bench.route).is_file(), bench.id

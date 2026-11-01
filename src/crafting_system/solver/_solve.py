@@ -8,6 +8,8 @@ Known limits:
   mended again and again from inside the cycle and costs quadratic time (no linear algorithm is
   known for this almost-sure reachability on a general graph).
 * `ConvergenceError` carries only the best certified bound, no partial result.
+* Sparse elimination of a big component gives up after 2e8 multiply-adds (heavy fill-in, as in a
+  component where most states lead to most others); then only the sweeps are left.
 * A branching component (an action takes an input from a state of its own component: donors that
   need each other, an output recycled as a donor) is solved by value iteration alone, which may not
   converge within `max_sweeps` when the component is critical or its value is infinite. A model
@@ -66,8 +68,11 @@ def solve[S](
 
     `tolerance` is the stopping threshold on each cyclic component's own certified relative
     error; components of at most `direct_solve_limit` states are solved by policy iteration
-    first (0 forces value iteration everywhere). Raises `ConvergenceError` when a component
-    cannot reach `tolerance` within `max_sweeps` sweeps. A component where an input lies in the
+    first (0 forces value iteration everywhere). A larger component gets 300 sweeps; if they do
+    not reach `tolerance` and `max_sweeps` allows them, it is solved by sparse policy iteration
+    (exact elimination, so a stiff component of thousands of states needs no 1e5 sweeps), and any
+    remaining sweeps refine that. Raises `ConvergenceError` when a component cannot reach
+    `tolerance` within `max_sweeps` sweeps. A component where an input lies in the
     component itself uses value iteration only, whatever `direct_solve_limit` is, and raises the
     same error when it does not converge.
     """

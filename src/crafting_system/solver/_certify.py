@@ -58,7 +58,7 @@ EPSILON = sys.float_info.epsilon
 
 
 class ConvergenceError(RuntimeError):
-    """A component could not reach the tolerance within `max_sweeps`.
+    """A component could not reach the tolerance within `max_sweeps` (its sparse direct solve, if any, included).
 
     `error_bound` is the best certified relative bound reached so far (infinity when no upper
     certificate was ever found).

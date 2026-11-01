@@ -9,11 +9,11 @@ missing price is dropped and reported (ADR-0007), never guessed.
 
 import random
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, Reads, catalog, default_actions
+from crafting_system.actions import Action, Reads, catalog, default_actions, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -145,7 +145,9 @@ class BuyStartItem(Action):
         return self.item
 
 
-def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> OfferSet:
+def offers_for(
+    data: GameData, goal: Goal, base_id: str, start_item: Item, kinds_named: Collection[str] | None = None
+) -> OfferSet:
     """The actions the model offers for a target on `base_id`: the planner kinds of the catalog, then the filters below.
 
     Every action of the `planner` kinds of `actions.catalog` that can apply to the start item is offered
@@ -156,22 +158,50 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
 
     * An action that only adds named crafted mods (a bench craft) is offered ONLY WHEN A MOD IT ADDS
       COUNTS TOWARD ONE OF THE GOAL'S REQUIREMENTS (a leaf names it and does not refuse a crafted mod,
-      `not_crafted`), AND ONLY WHILE EVERY OTHER OFFERED ACTION ERASES THE CRAFTED MODS (declares
+      `not_crafted`). While EVERY OTHER OFFERED ACTION ERASES THE CRAFTED MODS (declares
       `Adds.keeps_crafted` False; the default True keeps every craft in play, so an action that keeps
-      them needs no edit here). Reason: in this slice every other action (Chaos Orb, Harvest reforge, an
+      them needs no edit here) this is exact: every other action (Chaos Orb, Harvest reforge, an
       essence, Remove Crafted Mods) removes the crafted mods, and without the multimod an item holds one crafted
       mod, so a craft that gives the goal nothing only takes a slot and costs currency; it can never
-      lower the mean. Leaving it out is exact, and it keeps the state space small: each craft that
+      lower the mean. Leaving it out keeps the state space small: each craft that
       clashes with a family makes that family its own kind, so all 141 ring crafts would grow R05 from
-      76 to 13,172 states (ticket #60, PR #79). REVISIT when an action that adds or removes one mod
-      without erasing the crafted mod lands (Exalted Orb and Annulment Orb, #67; metamods and the
-      multimod, #68): then a crafted mod can block a family before an Exalted Orb, a craft with no goal
-      contribution can pay off, and this rule no longer holds. The crafts left out are reported.
+      76 to 13,172 states (ticket #60, PR #79). When an offered action keeps the crafted mod (Augmentation
+      and Regal Orb, #66) a craft that counts for nothing could still pay off: it takes a slot or clears a
+      family out of the pool before the next orb. It is left out all the same, because every belt craft in
+      the model is 100 offers and the states grow past what a plan can hold; the plan is then the cheapest
+      among the offered crafts, not a proof against the rest (the report says so). REVISIT with the
+      Exalted Orb and Annulment Orb (#67) and the metamods and the multimod (#68). The crafts left out are reported.
+    * With `kinds_named` (the target's `actions:` key) only the kinds of those names are listed at all and the filters
+      below see only them. That is the target's choice, not a proof: the plan is the cheapest among the named kinds,
+      and the kinds not named are listed in `left_out`.
+    * An action that adds named mods only for a target that wants them (`Adds.wanted_only`, an aspect beast, #147) is
+      offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
+      It is left out and reported like a craft that counts for nothing.
     * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
       offered only when the start item holds one or another offered action adds one.
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
-    candidates = list(catalog(data, start_item, planner_only=True))
+    if kinds_named is not None:
+        usable = {entry.name for entry in kinds(planner_only=True)}
+        exist = {entry.name for entry in kinds()}
+        unknown = sorted(set(kinds_named) - exist)
+        unready = sorted((set(kinds_named) & exist) - usable)
+        problems = []
+        if unknown:
+            problems.append(f"unknown action kind(s) {', '.join(unknown)}")
+        if unready:
+            problems.append(f"action kind(s) {', '.join(unready)} cannot be used by the planner yet")
+        if problems:
+            raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable))}")
+    named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
+    candidates = []
+    left_out_unwanted: list[str] = []
+    for action in catalog(data, start_item, planner_only=True, names=kinds_named):
+        adds = action.adds(data, start_item)
+        if adds.wanted_only and not (adds.named or frozenset()) & named:
+            left_out_unwanted.append(action.label(data))
+        else:
+            candidates.append(action)
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
     erased_by_all = not any(
         action.adds(data, start_item).keeps_crafted for action in candidates if not _only_crafts(data, start_item, action)
@@ -179,10 +209,9 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
     chosen: list[Action] = []
     left_out_crafts: list[str] = []
     for action in candidates:
-        if erased_by_all and _only_crafts(data, start_item, action):
-            if not action.adds(data, start_item).named & counting:
-                left_out_crafts.append(action.label(data))
-                continue
+        if _only_crafts(data, start_item, action) and not action.adds(data, start_item).named & counting:
+            left_out_crafts.append(action.label(data))
+            continue
         chosen.append(action)
     chosen = usable_actions(data, start_item, chosen)
 
@@ -198,12 +227,27 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
             offers.append(offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item))
 
     left_out = ()
+    if kinds_named is not None:
+        skipped = tuple(entry.name for entry in kinds(planner_only=True) if entry.name not in kinds_named)
+        if skipped:
+            left_out += (
+                LeftOut("the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones", skipped),
+            )
     if left_out_crafts:
+        reason = (
+            "its mod counts toward no requirement, so the craft only takes a slot and costs currency "
+            "(exact while every other action erases crafted mods; see `offers_for`)"
+            if erased_by_all
+            else "its mod counts toward no requirement; an offered action keeps crafted mods, so a craft could still "
+            "pay off by clearing a family from the pool, and the plan is the cheapest among the offered crafts only"
+        )
+        left_out += (LeftOut(reason, tuple(left_out_crafts)),)
+    if left_out_unwanted:
         left_out = (
+            *left_out,
             LeftOut(
-                "its mod counts toward no requirement, so the craft only takes a slot and costs currency "
-                "(exact while every other action erases crafted mods; see `offers_for`)",
-                tuple(left_out_crafts),
+                "it adds one fixed mod and the target wants none of those, so it only takes a slot and costs currency",
+                tuple(left_out_unwanted),
             ),
         )
     return OfferSet(tuple(offers), left_out)

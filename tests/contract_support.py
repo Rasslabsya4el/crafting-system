@@ -44,6 +44,7 @@ from abstraction_pool import (
     RESIST_2,
     RESISTS,
 )
+from beasts_support import aspect_mods
 from coarse_support import blocks_of, compare_members, compare_variants, concrete_items
 from items_support import AMULET, DATA
 
@@ -97,6 +98,17 @@ def _fixture_data():
         families=(SHAPER_PREFIX,),
         spawn_weights=(Weight("amulet_shaper", 700), Weight("default", 0)),
     )
+    # a cold added-damage prefix, the lightning one with its stat ids and tag renamed, so that the Harvest damage swaps have a target
+    # (ticket #148): one tier of its own type, so it is tier 1, and the swaps find it from the tier-1 lightning damage mod
+    lightning = mods[DAMAGE_1]
+    mods[COLD_DAMAGE] = dataclasses.replace(
+        lightning,
+        id=COLD_DAMAGE,
+        type=COLD_DAMAGE,
+        families=(COLD_DAMAGE,),
+        implicit_tags=tuple("cold" if tag == "lightning" else tag for tag in lightning.implicit_tags),
+        stats=tuple(dataclasses.replace(stat, id=stat.id.replace("lightning", "cold")) for stat in lightning.stats),
+    )
     # crafts that clash with a mod of the pool: every ordinary crafted mod takes the family of a mana mod,
     # so the items that hold that life mod refuse the craft and a kernel that forgets the family is caught
     metamods = {metamod.value for metamod in Metamod}
@@ -114,6 +126,7 @@ def _fixture_data():
             mods[ORDINARY_CRAFT], id=mod_id, type=mod_id, text=f"Test {mod_id}", families=mods[source].families, generation_type=side
         )
         options.append(dataclasses.replace(template, actions=dataclasses.replace(template.actions, add_explicit_mod=mod_id)))
+    mods.update(aspect_mods())  # the eight aspect suffixes of the beast crafts (ticket #147): nothing draws them
     mods[HYBRID_JUNK] = dataclasses.replace(
         mods[COLD_RESIST], id=HYBRID_JUNK, families=(*mods[COLD_RESIST].families, *mods[MANA_1].families), spawn_weights=(), generation_weights=()
     )
@@ -123,10 +136,14 @@ def _fixture_data():
                 entry.item_id,
                 BaseItem(entry.item_id, entry.item_id.rsplit("/", 1)[-1], "StackableCurrency", "currency", 1, (), (), "released"),
             )
+    # the fixture amulet is a Talisman as far as the beast crafts go: the tag is all they read, and no mod spawns on it
+    amulet = bases[AMULET]
+    bases[AMULET] = dataclasses.replace(amulet, tags=(*amulet.tags, "talisman"))
     return dataclasses.replace(DATA, mods=mods, base_items=bases, bench_options=tuple(options))
 
 
 SHAPER_PREFIX = "ContractShaperPrefix1"
+COLD_DAMAGE = "ContractColdDamage1"
 CONTRACT_DATA = _fixture_data()
 TIERS = tier_table(CONTRACT_DATA, AMULET)
 GOAL = Goal((Wanted(frozenset({GEM})), Wanted(RESISTS), Wanted(frozenset({LIFE_1, LIFE_2}))))
@@ -164,6 +181,9 @@ def fixture_items() -> dict[str, Item]:
         "rare_fractured": _item(Rarity.RARE, _roll(RESIST_1, fractured=True), _roll(MANA_1)),
         "rare_four": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), _roll(DAMAGE_1), _roll(FIRE_GEM)),
         "rare_shaper": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), influences=frozenset({Influence.SHAPER})),
+        # a fire resistance and a cold damage, what the Harvest swaps change (fire to cold, cold to lightning); both are the only mod of
+        # their family in the fixture, because the compressed state forgets which tier of a family a junk mod was (#149)
+        "rare_resists": _item(Rarity.RARE, _roll(FIRE_RESIST), _roll(COLD_DAMAGE)),
     }
     crafted = _ordinary_crafted_mod()
     if crafted is not None:
@@ -295,6 +315,11 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
             assert not crafted & {entry.mod_id for entry in result.mods if entry.crafted}, "an action that erases the crafted mods leaves none"
     if adds.single_draw:
         assert adds.draws and not reads.junk and not adds.named, "a single draw reads no junk and forces no mod"
+    assert adds.fractures or not outcomes.fractures, "an action that fractures a mod says so in `adds`"
+    if not adds.fractures:
+        fractured = {entry.mod_id for entry in given.mods if entry.fractured}
+        for _, result in items:
+            assert fractured == {entry.mod_id for entry in result.mods if entry.fractured}, "an action that does not fracture leaves the fractured mods as they were"
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
     if not reads.junk:
         for _, part in outcomes.components:

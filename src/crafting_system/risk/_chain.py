@@ -28,7 +28,9 @@ class Chain[S]:
 
     `action[i]` is the policy action of an expanded state and `None` for a goal or a stuck state.
     `succ[i]` lists `(index, probability)` per distinct successor of an expanded state (zero
-    weights dropped, repeats merged, probability = weight / total weight).
+    weights dropped, repeats merged, probability = weight / total weight). `inputs[i]` lists the
+    states (by index, one entry per copy) the action of an expanded state consumes besides its
+    outcome.
     """
 
     states: tuple[S, ...]
@@ -36,10 +38,15 @@ class Chain[S]:
     action: tuple[Action[S] | None, ...]
     succ: tuple[tuple[tuple[int, float], ...], ...]
     can_finish: tuple[bool, ...]
+    inputs: tuple[tuple[int, ...], ...]
 
     @property
     def proper(self) -> bool:
         return all(self.can_finish)
+
+    @property
+    def has_inputs(self) -> bool:
+        return any(self.inputs)
 
     def finishing_states(self) -> list[int]:
         """Indices of the expanded states that can still reach a goal: the ones the budget DP moves mass through."""
@@ -54,7 +61,20 @@ def build_chain[S](
     goal: list[bool] = [False]
     action: list[Action[S] | None] = [None]
     succ: list[tuple[tuple[int, float], ...]] = [()]
+    inputs: list[tuple[int, ...]] = [()]
     queue = deque([0])
+
+    def reach(state: S) -> int:
+        if state not in index:
+            index[state] = len(states)
+            states.append(state)
+            goal.append(False)
+            action.append(None)
+            succ.append(())
+            inputs.append(())
+            queue.append(index[state])
+        return index[state]
+
     while queue:
         i = queue.popleft()
         if is_goal(states[i]):
@@ -69,30 +89,40 @@ def build_chain[S](
             if weight == 0:
                 continue
             total += weight
-            if target not in index:
-                index[target] = len(states)
-                states.append(target)
-                goal.append(False)
-                action.append(None)
-                succ.append(())
-                queue.append(index[target])
-            merged[index[target]] = merged.get(index[target], 0) + weight
+            j = reach(target)
+            merged[j] = merged.get(j, 0) + weight
         action[i] = chosen
         succ[i] = tuple((j, weight / total) for j, weight in merged.items())
+        inputs[i] = tuple(reach(y) for y in chosen.extra_inputs)
 
+    # a state finishes when some outcome finishes and every input does (least fixed point)
     reverse: list[list[int]] = [[] for _ in states]
+    users: list[list[int]] = [[] for _ in states]
+    owed = [0] * len(states)
     for i, edges in enumerate(succ):
         for j, _ in edges:
             reverse[j].append(i)
+        for y in inputs[i]:
+            users[y].append(i)
+        owed[i] = len(inputs[i])
     can_finish = list(goal)
+    moves_on = [False] * len(states)  # some outcome can finish
     queue = deque(i for i, flag in enumerate(goal) if flag)
     while queue:
         j = queue.popleft()
         for i in reverse[j]:
-            if not can_finish[i]:
+            moves_on[i] = True
+            if not can_finish[i] and owed[i] == 0:
                 can_finish[i] = True
                 queue.append(i)
-    return Chain(tuple(states), tuple(goal), tuple(action), tuple(succ), tuple(can_finish))
+        for i in users[j]:
+            owed[i] -= 1
+            if not can_finish[i] and owed[i] == 0 and moves_on[i]:
+                can_finish[i] = True
+                queue.append(i)
+    return Chain(
+        tuple(states), tuple(goal), tuple(action), tuple(succ), tuple(can_finish), tuple(inputs)
+    )
 
 
 def exact_unit(costs: Iterable[float]) -> float | None:
