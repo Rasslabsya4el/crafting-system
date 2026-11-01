@@ -290,7 +290,7 @@ The most sockets an item's class allows, 6 for body armour, two-handers and bows
 _Avoid_: socket limit
 
 **Forced socket**:
-The socket a Chromatic Orb makes non-white when every socket rolled white: the first one, so a one-socket item always becomes coloured. Its colour is the one approximate input of the colour model (ADR-0047).
+The socket a Chromatic Orb makes non-white when every socket rolled white: the first one, so a one-socket item always becomes coloured. Its colour is an approximate input of the colour model, with the repeat exclusion (ADR-0047).
 _Avoid_: guaranteed socket
 
 **Bound flag**:

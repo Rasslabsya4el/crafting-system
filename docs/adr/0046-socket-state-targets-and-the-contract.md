@@ -7,13 +7,13 @@ Until B6 an item has no sockets. B6's actions work on a socket count, link group
 - **Sockets**: one colour per socket (white, red, green or blue) in socket order, and the link groups as their sizes in the same order (`(3, 2, 1)` is sockets 1 to 3 linked, 4 and 5 linked, 6 alone). Fusing links by sequential group sizes from the first socket (ADR-0047), so groups are contiguous runs.
 - **Quality of a weapon or armour** (ADR-0049), beside the catalyst quality of jewellery (ADR-0027 amended).
 
-An item built before B6 has no sockets and behaves as it did. A **start item that states no sockets** is taken to have one white, unlinked socket: a pessimistic default that costs at most a few orbs, since the Jeweller's Orb rerolls the count anyway; the report says so. A start item may state sockets, links, colours and quality.
+An item built before B6 has no sockets and behaves as it did. When a target names sockets, a **start item that states none** is taken to have one white, unlinked socket (no socket is created for a target without sockets): a pessimistic default that costs at most a few orbs, since the Jeweller's Orb rerolls the count anyway; the report says so. A start item may state sockets, links, colours and quality.
 
 ## The class maximum and the item-level gate
 
 The most sockets an item can have is the minimum of its **class maximum** and, for the Jeweller's Orb, the **item-level gate**:
 
-- class maximum (wiki, "Item socket", checked 2026-11-01): body armour, two-handed weapons, bows and staves 6; helmets, gloves, boots 4; one-handed weapons and shields 3. The exception the wiki names inside the 20 classes of the bench data is the Gnarled Branch (a staff base with 3). The wiki adds that other low-level bases with a smaller inventory size have exceptions without naming them; Path of Building's `socketLimit` (the prototype, ADR-0016) is a test oracle, not a source, and every base where it differs from this table is listed in the S1 pull request for the main chat;
+- class maximum (wiki, "Item socket", checked 2026-11-01): body armour, two-handed weapons, bows and staves 6; helmets, gloves, boots 4; one-handed weapons and shields 3. The exception the wiki names inside the 20 classes of the bench data is the Gnarled Branch (a staff base with 3). The wiki adds that other low-level bases with a smaller inventory size have exceptions without naming them; the class table is the default and is marked `approximate` for that reason. Path of Building's `socketLimit` (the prototype, ADR-0016) is a test oracle, not a source: every base where it differs is reported in the S1 pull request as a finding and changes nothing silently;
 - item-level gate (wiki generation table): 3 sockets from item level 2, 4 from 25, 5 from 35, 6 from 50.
 
 The bench and the two Black Mórrígan recipes ignore the item-level gate and respect the class maximum (bench: wiki, "ignoring item level restrictions"; the beasts: the owner's answer, round 1 answer 4: "maximum" is what the item type allows). No target above the class maximum is reachable; a socket target beyond it is refused with the maximum named.
@@ -44,6 +44,6 @@ A socket action on a corrupted item is refused (the Tainted orbs and the bench c
 
 ## Buying a base with sockets
 
-Buy specs gain socket and link filters, so "buy a 5-link or 6-link base" competes with "finish by orbs" through the acquisition cost (ADR-0011). It is its own later slice (S7); the trade query layer reports sockets as not covered today.
+Buy specs gain socket and link filters, so "buy a 5-link or 6-link base" competes with "finish by orbs" through the acquisition cost (ADR-0011). It is its own later slice (S9); the trade query layer reports sockets as not covered today.
 
 Origin: [Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104) (round 1 answers 1, 3a, 4; draft decisions); [Sockets, links and colours in 3.29](https://github.com/Rasslabsya4el/crafting-system/issues/99); ADR-0008, ADR-0011, ADR-0016, ADR-0024, ADR-0027, ADR-0045.
