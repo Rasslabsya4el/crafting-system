@@ -50,10 +50,10 @@ from .add import refuse_if_nothing_to_draw
 from .beasts import ANY_RARE_CREATURE, ANY_RARE_CREATURE_PRICE, CHAOS_ORB
 from .catalog import kind
 from .contract import Action, Adds, Reads
+from .cut import Cut
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .harvest_influence import influence_spawn_test
-from .cut import Cut
 from .metamods import locked_sides, on_locked_side
 from .outcomes import Outcomes
 from .pool import INFLUENCE_TAGS, PoolFamily, build_pool, item_tags, tiers_of
