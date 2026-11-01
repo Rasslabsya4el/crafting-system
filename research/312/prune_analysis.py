@@ -87,7 +87,7 @@ def flatten(g: dict) -> dict:
     goal = np.frombuffer(g["goal"], dtype=np.uint8) == 1
     return {
         "n": n, "ptr": ptr, "cost": cost_e, "cost_raw": cost, "stay": stay, "state": state, "edge_ptr": edge_ptr, "sizes": sizes,
-        "dst": dst, "p": p_e, "act_of_edge": act_of_edge, "goal": goal,
+        "dst": dst, "p": p_e, "act_of_edge": act_of_edge, "goal": goal, "offer": np.array(g["act_offer"], dtype=np.int64),
         "nonempty_state": np.flatnonzero((np.diff(ptr) > 0) & ~goal),
     }
 
@@ -321,6 +321,7 @@ def main() -> None:
     flat["class_sizes"] = np.asarray(data.get("class_sizes", np.ones(g["n"], dtype=np.int64)), dtype=np.int64)
     result_raw = data.get("raw")
     lb_arrays = data.get("lb_arrays") or {}
+    labels = data.get("labels") or []
     del data, g
     n = flat["n"]
     say(f"flat: {n:,} classes, {len(flat['cost']):,} actions, {len(flat['dst']):,} edges")
@@ -342,6 +343,8 @@ def main() -> None:
     floor = reach(flat, start, optimal)
     result["floor"] = {"classes_reachable_by_optimal_actions": int(floor.sum()), "optimal_action_entries": int(optimal.sum()), "raw_states_in_those_classes": int(flat["class_sizes"][floor].sum())}
     say(f"the optimal policy reaches {int(floor.sum())} of {n} classes through {int(optimal.sum())} actions")
+    result["envelopes"] = envelopes(flat, start, q_star, v_star, non_goal_action, labels)
+    say("envelopes " + json.dumps(result["envelopes"]))
     lb0 = shortest_to_goal(flat)
     lb0_finite = np.where(np.isfinite(lb0), lb0, 0.0)
     result["lb0_of_start"] = float(lb0[start])
@@ -424,6 +427,33 @@ def main() -> None:
     print(text)
     if args.out:
         Path(args.out).write_text(text + "\n", encoding="utf-8")
+
+
+def envelopes(flat, start, q_star, v_star, non_goal_action, labels):
+    """The part of the graph an optimal (or near-optimal) policy reaches from the start: what an envelope search must hold at the least.
+
+    For each tolerance `eps` the actions kept are those within `eps` of their state's optimal value (eps = 0: the optimal policy).
+    `classes`/`raw_states` count what is reached through them; `pairs_kept` the (class, action) pairs kept there against
+    `pairs_in_reached_classes`, all the actions of the reached classes (what a search without per-state pruning would price);
+    `offers_used` the distinct offers among the kept pairs against `offers_total` (what pruning of offers at the root can remove at most).
+    """
+    state = flat["state"]
+    gap = (q_star - v_star[state]) / np.maximum(v_star[state], 1e-300)
+    out = {}
+    all_offers = np.unique(flat["offer"][non_goal_action])
+    for eps in (0.0, 1e-3, 1e-2, 3e-2, 1e-1):
+        keep = (gap <= eps + 1e-9) & non_goal_action
+        seen = reach(flat, start, keep)
+        kept_pairs = keep & seen[state]
+        in_reached = non_goal_action & seen[state]
+        used = np.unique(flat["offer"][kept_pairs])
+        out[f"{eps:g}"] = {
+            "classes": int(seen.sum()), "raw_states": int(flat["class_sizes"][seen].sum()), "pairs_kept": int(kept_pairs.sum()),
+            "pairs_in_reached_classes": int(in_reached.sum()), "pairs_in_all_classes": int(non_goal_action.sum()),
+            "edges_kept": int(flat["sizes"][kept_pairs].sum()), "offers_used": len(used), "offers_total": len(all_offers),
+            "offers_unused": [labels[i] if i < len(labels) else int(i) for i in all_offers if i not in set(used.tolist())][:12],
+        }
+    return out
 
 
 def decision_relevance(flat, start, v_star, lb, ub, q_low, q_up, competitive, f, k, say):
