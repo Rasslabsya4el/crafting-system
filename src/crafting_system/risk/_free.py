@@ -20,7 +20,7 @@ so E <= f N for N the number of visits of free states. Then C0 <= C <= C0 + E on
 * mean, variance, success probability are the solver's, with the real costs, as before.
 
 The allowance t and the tail are in `GridInfo.free_allowance` and `free_tail`, and the quantile and CVaR intervals already contain them.
-When a free component or a paying component is too large to fold, or the count of free visits does not settle in `COUNT_BINS`, there is no
+When a free component or a paying component is too large to fold (or there are more than `PAID_STATES_LIMIT` paying states), or the count of free visits does not settle in `COUNT_BINS`, there is no
 such grid and the caller keeps the ordinary one.
 """
 
@@ -33,6 +33,7 @@ from ._fold import fold_free
 from ._moments import interval
 
 FREE_TAIL = 1e-9  # the probability with which the free states may pay more than `free_allowance`
+PAID_STATES_LIMIT = 600  # the count of free visits folds the paying states away (GTH, cubic in the worst case): past this many it is not attempted
 COUNT_BINS = 100_000  # the most free visits the count DP follows
 PAID_CHARGE = 1e-3  # a paying state is charged this share of the free cost when the solver counts the free visits (it needs a positive cost)
 
@@ -53,6 +54,8 @@ def free_allowance(chain: Chain, free: Sequence[int]) -> tuple[float, int] | Non
     `None` when the paying states cannot be folded away or the count does not settle in `COUNT_BINS`.
     """
     largest = max(chain.action[i].cost for i in free)
+    if len(chain.finishing_states()) - len(free) > PAID_STATES_LIMIT:
+        return None
     bins = [0] * len(chain.states)
     for i in free:
         bins[i] = 1

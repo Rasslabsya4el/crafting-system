@@ -234,6 +234,30 @@ def _shifted(estimate: Estimate, shift: float) -> Estimate:
     return Estimate(estimate.value + shift, estimate.low + shift, estimate.high + shift)
 
 
+def free_action_lines(plan: Plan, risk) -> list[str]:
+    """What the percentiles hold to when the plan has free actions (ticket #349): they are counted apart from the grid, and the bound is stated.
+
+    The free actions are priced at an epsilon so that the solver sees a positive cost; the risk run counts them at that price but not on its
+    grid, so every percentile and the CVaR are certified to within `free_allowance` Chaos, except with chance `free_tail`. The solver's own
+    certified error (a relative figure) is given with it. Empty for a plan without free actions.
+    """
+    if risk.grid.free_allowance <= 0.0:
+        return []
+    return [
+        f"  (free actions are counted at {money_small(free_action_price(plan))} Chaos each and apart from the percentile grid: the percentiles and the",
+        f"   CVaR hold to within {money_small(risk.grid.free_allowance)} Chaos, except with chance {risk.grid.free_tail:.0e}; the solver's error bound is {plan.solution.error_bound:.1e}, relative)",
+    ]
+
+
+def free_action_price(plan: Plan) -> float:
+    """The price the planner gave the actions that consume nothing."""
+    return max((entry.cost for entry in plan.offers if not entry.offer.resources), default=0.0)
+
+
+def money_small(chaos: float) -> str:
+    return f"{chaos:.2g}"
+
+
 def strands_line(plan: Plan) -> str:
     """The one line on Memory Strands (ADR-0040): when they were not considered it says so, so the omission is never hidden."""
     if plan.strands.on:
@@ -336,6 +360,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"  mean cost       {interval(_shifted(risk.mean, shift), divine)}")
         lines.append(f"  p50             {_quantile_text(risk, risk.p50, shift, divine)}")
         lines.append(f"  p90             {_quantile_text(risk, risk.p90, shift, divine)}")
+        lines.extend(free_action_lines(plan, risk))
         lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after buying it is")
         lines.append(f"   {money(plan.mean_remaining)} Chaos by the solver and {money(risk.mean.value)} by the risk run)")
     if report.shares:
@@ -425,6 +450,18 @@ def _totals(plan: Plan, shift: float, divine: float) -> dict:
         "p90_divine": _number((risk.p90.value + shift) / divine),
         "mean_cost_without_start": _number(plan.mean_remaining),
         "solver_error_bound": _number(plan.solution.error_bound),
+        **_free_totals(plan, risk),
+    }
+
+
+def _free_totals(plan: Plan, risk) -> dict:
+    """Only for a plan with free actions (ticket #349): their price, and how far the percentiles and the CVaR hold because of it."""
+    if risk.grid.free_allowance <= 0.0:
+        return {}
+    return {
+        "free_action_cost": _number(free_action_price(plan)),
+        "free_action_allowance": _number(risk.grid.free_allowance),
+        "free_action_tail": _number(risk.grid.free_tail),
     }
 
 

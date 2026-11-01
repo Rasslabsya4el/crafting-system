@@ -242,6 +242,13 @@ def test_a_count_of_free_visits_that_does_not_settle_falls_back(monkeypatch):
     assert same(report, evaluate(policy, "placeholder", is_goal, max_bins=5_000))
 
 
+def test_a_policy_with_more_paying_states_than_the_limit_falls_back(monkeypatch):
+    monkeypatch.setattr(_free, "PAID_STATES_LIMIT", 0)
+    policy = veil_loop(5.0, 5e-6)
+
+    assert same(evaluate(policy, "placeholder", is_goal, free_cost=5e-6, max_bins=5_000), evaluate(policy, "placeholder", is_goal, max_bins=5_000))
+
+
 def test_the_fallback_runs_at_the_fallback_bins_the_caller_asked_for(monkeypatch):
     monkeypatch.setattr(_free, "COUNT_BINS", 3)
     policy = veil_loop(5.0, 5e-6)

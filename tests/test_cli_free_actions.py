@@ -7,6 +7,7 @@ share is small enough for a route's value to move by a millionth of a Chaos a us
 """
 
 import dataclasses
+import math
 import datetime
 
 import pytest
@@ -184,3 +185,72 @@ def test_the_mean_and_the_odds_of_the_veil_loop_are_exact_in_the_risk_report():
 
     assert risk.success_probability.value == 1.0
     assert risk.mean.value == pytest.approx(solution.values[start], rel=1e-9)
+
+
+# --- the risk run of a plan with free actions (ticket #349) ------------------------------------------------------------------------
+
+
+def test_the_percentiles_and_the_cvar_of_the_veil_loop_resolve_and_the_bound_of_the_epsilon_is_stated():
+    # a miss (3 in 13) costs a veil c and two free steps e more: C = (c + 2e) M + 2e with M geometric, so the 0.9 quantile (M = 1) is c + 4e
+    from crafting_system.cli._offers import free_action_cost
+
+    ability, start, entries, solution = loop(5.0)
+    free = free_action_cost(entries)
+    risk = evaluate_risk(solution.policy, start, ability.is_goal, solution.values[start], free_cost=free)
+
+    assert free == pytest.approx(5.0 * FREE_ACTION_SHARE)
+    assert math.isfinite(risk.p90.high) and math.isfinite(risk.cvar.high)
+    assert risk.p90.low <= 5.0 + 4 * free <= risk.p90.high
+    assert risk.p90.high - risk.p90.low == pytest.approx(risk.grid.free_allowance) and 0.0 < risk.grid.free_allowance < 1e-3
+    assert risk.grid.free_tail == 1e-9
+    assert risk.mean.value == pytest.approx(solution.values[start], rel=1e-9)  # the mean is still the exact one
+    r = 3 / 13
+    cvar = (5.0 + 4 * free) + (5.0 + 2 * free) * (r * r / (1 - r)) / 0.1
+    assert risk.cvar.low <= cvar <= risk.cvar.high
+
+
+def test_the_planner_names_no_free_cost_when_no_offer_is_free():
+    from crafting_system.cli._offers import free_action_cost
+
+    assert free_action_cost(priced([VeiledChaosOrb()])) is None
+    assert free_action_cost(priced(ACTIONS)) == pytest.approx(5.0 * FREE_ACTION_SHARE)
+
+
+def test_the_cut_follows_the_cheapest_action_that_costs_something_when_a_policy_holds_free_ones(monkeypatch):
+    from crafting_system.cli import _plan
+    from crafting_system.solver import Action as SolverAction
+    from crafting_system.solver import Outcome
+
+    seen = []
+    real = _plan.evaluate
+    monkeypatch.setattr(_plan, "evaluate", lambda *args, **kwargs: seen.append(kwargs) or real(*args, **kwargs))
+    goal = "goal"
+    policy = {
+        "start": SolverAction("free", 1e-9, (Outcome("work", 1),)),
+        "work": SolverAction("use", 1.0, (Outcome("work", 3), Outcome(goal, 1))),
+    }
+
+    risk = _plan.evaluate_risk(policy, "start", lambda state: state == goal, mean=4.0, free_cost=1e-9)
+    _plan.evaluate_risk(policy, "start", lambda state: state == goal, mean=4.0)
+
+    assert seen[0]["max_bins"] == _plan.RISK_BINS and seen[0]["free_cost"] == 1e-9  # a mean of 4 against a step of 1 is no cut
+    assert seen[0]["free_fallback_bins"] == _plan.UNRESOLVED_BINS  # ... but against the epsilon (2 x 200,000 x 1e-9 < 4) it would have been
+    assert "free_cost" not in seen[1]  # no free cost named: the call is the one of before
+    assert seen[1]["max_bins"] == _plan.UNRESOLVED_BINS
+    assert math.isfinite(risk.p90.high)
+
+
+def test_the_text_and_the_json_of_a_veil_plan_show_the_percentiles_and_state_the_bound(tmp_path):
+    from crafting_system.cli import build_report, make_plan, policy_document, render_text
+
+    plan = make_plan(DATA, veil_target(tmp_path), price_file(Veiled_Chaos_Orb=5.0))
+    report = build_report(plan, DATA)
+    text = render_text(report)
+    totals = policy_document(report)["totals"]
+
+    assert math.isfinite(plan.risk.p90.high) and "not resolved on the grid" not in text
+    assert "free actions are counted at 5e-06 Chaos each" in text and "the percentiles and the" in text
+    assert totals["quantiles_resolved"] is True
+    assert totals["free_action_allowance"] == pytest.approx(plan.risk.grid.free_allowance) and totals["free_action_tail"] == 1e-9
+    assert totals["free_action_cost"] == pytest.approx(5e-6)
+    assert totals["solver_error_bound"] == plan.solution.error_bound < 1e-8  # the solver's bound is still reported
