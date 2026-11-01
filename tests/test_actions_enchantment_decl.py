@@ -121,12 +121,17 @@ def test_an_action_that_declares_nothing_reads_and_adds_the_enchantment_like_eve
     assert (adds.implicits, adds.quality, adds.offer, adds.enchantment) == (True,) * 4
 
 
-def test_no_kind_of_the_catalog_declares_the_enchantment_yet():
+ENCHANT_KINDS = {"tempering", "tailoring"}  # the two heist orbs of ticket #239: the only kinds that set an enchantment
+
+
+def test_no_kind_of_the_catalog_declares_the_enchantment_but_the_two_heist_orbs():
     # B1 to B4 read and set no enchantment: the planner and the cache see no change in any registered kind
     for item in (body(), body(enchantment=ARMOUR_EXTRA_SLOT), body(rarity=Rarity.NORMAL)):
         for kind in kinds():
             for action in kind.members(DATA, item):
-                assert not action.reads(DATA).enchantment and not action.adds(DATA, item).enchantment, kind.name
+                assert not action.reads(DATA).enchantment, kind.name
+                assert action.adds(DATA, item).enchantment == (kind.name in ENCHANT_KINDS), kind.name
+    assert {kind.name for kind in kinds() if not kind.planner and kind.name in ENCHANT_KINDS} == ENCHANT_KINDS
 
 
 # --- the toy passes the contract suite -----------------------------------------------------------------
