@@ -110,6 +110,7 @@ class _Model:
         self.pool = pool  # workers that build the actions of the queued states together (#250); None builds them here
         self.positions = pool.positions(self.offers) if pool is not None else None
         self.window: dict = {}  # without a `cache`: the actions built ahead for the states still queued
+        self.chosen: dict[CompressedState, list[PricedOffer]] = {}  # the offers chosen at the queued states (`prefetch` made the choice)
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.abstraction.is_goal(state)
@@ -121,11 +122,12 @@ class _Model:
         cache = self.cache if self.cache is not None else self.window
         if cache is self.window:
             cache.clear()  # the states of the last window have all been taken
+        self.chosen.clear()
         tasks, wanted = [], []
         for state in states:
             if self.abstraction.is_goal(state):
                 continue
-            chosen = chosen_offers(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL)
+            chosen = self.chosen[state] = chosen_offers(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL)
             missing = [priced for priced in chosen if (state, priced.label, priced.cost) not in cache]
             if missing:
                 tasks.append((state, self.pool.positions(missing)))
@@ -141,7 +143,8 @@ class _Model:
         cache = self.cache
         if cache is None and self.positions is not None:
             cache = self.window  # a serial solve with no cache keeps none (a big graph would hold every action twice)
-        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=cache)
+        chosen = self.chosen.pop(state, None)
+        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=cache, chosen=chosen)
 
 
 def offer_action(

@@ -54,6 +54,7 @@ def solver_actions(
     *,
     merge_equal: bool = True,
     cache: dict | None = None,
+    chosen: list[PricedOffer] | None = None,
 ) -> list[Action[CompressedState]]:
     """The solver's actions at `state`: one per priced offer the game allows there, in the order of `offers`.
 
@@ -65,12 +66,14 @@ def solver_actions(
 
     `cache`, when given, holds the built solver action of each `(state, label, cost)`, so that solving
     again with more offers does not build a kernel twice (the choice among equal kernels is still made
-    on every call; only the action is reused).
+    on every call; only the action is reused). `chosen` is the result of `chosen_offers` when the caller has it already.
     """
     from ._plan import offer_action  # _plan imports this module
 
+    if chosen is None:
+        chosen = chosen_offers(abstraction, offers, state, start, merge_equal=merge_equal)
     found = []
-    for priced in chosen_offers(abstraction, offers, state, start, merge_equal=merge_equal):
+    for priced in chosen:
         built = None if cache is None else cache.get((state, priced.label, priced.cost))
         if built is None:
             try:

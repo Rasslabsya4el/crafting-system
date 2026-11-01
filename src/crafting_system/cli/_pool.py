@@ -26,9 +26,11 @@ MIN_PENDING = 24  # fewer pairs than this are built here: the round trip would c
 class _Worker:
     """What one worker process holds: its own abstraction, the start state and the offers by position."""
 
-    def __init__(self, spec: tuple, start: CompressedState, offers: Sequence[PricedOffer]) -> None:
-        data, goal, base_id, item_level, enabled, metamods = spec
-        self.abstraction = Abstraction(data, goal, base_id, item_level, enabled, metamods=metamods)
+    def __init__(self, abstraction: Abstraction | tuple, start: CompressedState, offers: Sequence[PricedOffer]) -> None:
+        if isinstance(abstraction, tuple):  # spawned: the pieces to build one from
+            data, goal, base_id, item_level, enabled, metamods = abstraction
+            abstraction = Abstraction(data, goal, base_id, item_level, enabled, metamods=metamods)
+        self.abstraction = abstraction  # forked: the parent's own, with the label distributions it has already computed
         self.start, self.offers = start, tuple(offers)
 
 
@@ -51,7 +53,10 @@ class StatePool:
     """Workers that build the solver action of an offer at a state; `positions` says where an offer sits in the pool's list."""
 
     def __init__(self, abstraction: Abstraction, start: CompressedState, offers: Sequence[PricedOffer], workers: int) -> None:
-        spec = (abstraction.data, abstraction.goal, abstraction.base_id, abstraction.item_level, abstraction.enabled, abstraction.models_metamods)
+        if parallel.can_inherit():
+            spec = abstraction  # forked workers share it as it is (copy on write) when the first batch is sent, warm
+        else:
+            spec = (abstraction.data, abstraction.goal, abstraction.base_id, abstraction.item_level, abstraction.enabled, abstraction.models_metamods)
         self.offers = tuple(offers)
         self.position_of = {id(offer): position for position, offer in enumerate(self.offers)}
         self._pool = parallel.WorkerPool(_Worker, (spec, start, self.offers), workers=workers)
