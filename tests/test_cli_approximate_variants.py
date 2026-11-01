@@ -121,6 +121,11 @@ def approximate(budget):
     return make_plan(DATA, parse_target(target_text(rarity), DATA, source="t.yaml"), PRICES, offers=offers, start_price=0.0, budget=budget, rates=RATES)
 
 
+
+def spread_rungs(decision):
+    """The spread rungs of a decision: the tail cuts that follow them on the finest rung are not rungs of the weight spread."""
+    return [found for found in decision.levels if found.level.kind == "spread"]
+
 # --- 1. the ladder follows the declarations ----------------------------------------------------------------------------
 
 
@@ -217,8 +222,8 @@ def test_over_the_budget_the_decision_is_approximate_and_its_levels_are_the_spre
     decision = decide(exact.abstraction, exact.start, exact.offers, budget, RATES)
 
     assert decision.action == "approximate" and decision.message == ""
-    assert [found.level for found in decision.levels] == list(SPREAD_LADDER)  # the two rungs pool different families
-    for found in decision.levels:
+    assert [found.level for found in spread_rungs(decision)] == list(SPREAD_LADDER)  # the two rungs pool different families
+    for found in spread_rungs(decision):
         assert found.coarsening is not None and found.coarsening.groups  # a rung that pools something
         assert found.estimate is not None and found.estimate.states < decision.estimate.states
     assert decision.estimate.walked and decision.estimate.complete
@@ -231,7 +236,7 @@ def test_a_rung_whose_own_forecast_does_not_fit_the_budget_is_left_out(exact, ru
 
     decision = decide(exact.abstraction, exact.start, exact.offers, between, RATES)
 
-    assert decision.action == "approximate" and [found.level for found in decision.levels] == [SPREAD_LADDER[0]]
+    assert decision.action == "approximate" and [found.level for found in spread_rungs(decision)] == [SPREAD_LADDER[0]]
 
 
 def test_the_rungs_are_the_ones_of_the_ladder_as_it_is_when_decide_runs_and_a_rung_that_cuts_nothing_new_is_dropped(exact, budget, monkeypatch):
@@ -240,8 +245,8 @@ def test_the_rungs_are_the_ones_of_the_ladder_as_it_is_when_decide_runs_and_a_ru
 
     decision = decide(exact.abstraction, exact.start, exact.offers, budget, RATES)
 
-    assert decision.action == "approximate" and [found.level for found in decision.levels] == [first, wide]
-    assert len({found.coarsening.groups for found in decision.levels}) == 2
+    assert decision.action == "approximate" and [found.level for found in spread_rungs(decision)] == [first, wide]
+    assert len({found.coarsening.groups for found in spread_rungs(decision)}) == 2
 
 
 def test_a_budget_above_the_forecast_is_exact(exact, rung_seconds):
@@ -259,7 +264,7 @@ def test_with_the_pilot_walk_cut_short_the_levels_have_no_forecast_and_are_still
     decision = decide(exact.abstraction, exact.start, exact.offers, 10.0, RATES)
 
     assert decision.estimate is not None and not decision.estimate.complete
-    assert decision.action == "approximate" and [found.level for found in decision.levels] == list(SPREAD_LADDER)
+    assert decision.action == "approximate" and [found.level for found in spread_rungs(decision)] == list(SPREAD_LADDER)
     assert all(found.estimate is None and found.coarsening is not None for found in decision.levels)
 
 
@@ -335,6 +340,7 @@ def test_the_json_holds_the_interval_the_gap_the_level_and_the_blocks_and_no_ris
 def test_a_ladder_of_one_rung_gives_a_gap_within_one_percent_or_the_narrowest_interval_with_the_message(exact, budget, monkeypatch, spread, reaches):
     level = spread_level(spread)
     monkeypatch.setattr(_decide, "SPREAD_LADDER", (level,))
+    monkeypatch.setattr(_decide, "LADDER", ())  # no tail cut after the rung
     rarity, offers = WORLDS[MAIN]
 
     plan = make_plan(DATA, exact.target, PRICES, offers=offers, start_price=0.0, budget=budget, rates=RATES)
@@ -356,6 +362,38 @@ def test_a_ladder_of_one_rung_gives_a_gap_within_one_percent_or_the_narrowest_in
         assert "run again with --exact (3,136 transitions" in found.message
         assert answer["message"] == found.message
         assert "Answer: approximate (the certified gap is " in text and "above the 1% tolerance" in text
+
+
+def test_a_tail_cut_follows_the_spread_rung_and_reaches_the_tolerance_the_rung_alone_misses(exact, budget, monkeypatch):
+    level = spread_level(1000)
+    monkeypatch.setattr(_decide, "SPREAD_LADDER", (level,))
+    rarity, offers = WORLDS[MAIN]
+
+    plan = make_plan(DATA, exact.target, PRICES, offers=offers, start_price=0.0, budget=budget, rates=RATES)
+
+    found = plan.approximation
+    assert found is not None and found.level.startswith("tail cut at theta") and found.level.endswith(level.name)
+    assert found.within_tolerance and found.message == ""
+    assert found.lower <= exact.mean_remaining <= found.upper
+    assert plan.mean_remaining == found.upper
+    assert all(hasattr(action, "outcomes") for action in plan.policy.values())  # no variant action reaches the report
+
+
+def test_the_levels_stop_when_the_time_they_are_allowed_is_spent_and_nothing_finished(exact, budget):
+    decision = dataclasses.replace(decide(exact.abstraction, exact.start, exact.offers, budget, RATES), budget=1.0)
+    ticks = iter(range(0, 10**6, 1000))  # every reading of the clock is 1000 s later: the ten budgets are gone at the first block
+
+    with pytest.raises(ValueError, match="no coarse level finished: the levels used the 10 s they are allowed"):
+        climb(decision, exact.start, exact.offers, lambda: float(next(ticks)))
+
+
+def test_a_decision_with_no_budget_has_no_time_limit_on_its_levels(exact, budget):
+    decision = decide(exact.abstraction, exact.start, exact.offers, budget, RATES)
+    ticks = iter(range(0, 10**6, 1000))
+
+    solved = climb(dataclasses.replace(decision, budget=None), exact.start, exact.offers, lambda: float(next(ticks)))
+
+    assert solved.approximation.lower <= exact.mean_remaining <= solved.approximation.upper
 
 
 # --- 5. the block model ------------------------------------------------------------------------------------------------

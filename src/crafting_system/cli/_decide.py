@@ -17,8 +17,8 @@ the exact run may take. The rule:
 calibration solve on the first layers of the pilot's own graph) unless the caller injects them, and builds the
 candidate levels. Tests inject the rates; no test depends on a machine (ADR-0014).
 
-The ladder is one tuple, `LADDER` (a query with an addition has `SPREAD_LADDER`, the coarse levels by weight spread
-and no tail cut, ADR-0023 variants): the coarse levels (kind "groups") and, after them, the tail cuts (kind "tail",
+The ladder is one tuple, `LADDER` (a query with an addition has `SPREAD_LADDER` in place of the coarse levels, by weight spread, ADR-0023
+variants): the coarse levels (kind "groups") and, after them, the tail cuts (kind "tail",
 ticket #129). A tail cut needs a coarse model for its leaves, so `decide` builds each on the finest coarse level whose
 own forecast fits and gives it that level's forecast; with no coarse level that fits there is no tail cut.
 """
@@ -82,7 +82,7 @@ COARSE = tuple(level for level in LADDER if level.kind == "groups")
 SPREAD_LADDER: tuple[Level, ...] = (
     Level("spread", 1000, "junk pooled by weight, spread 1000"),
     Level("spread", 500, "junk pooled by weight, spread 500"),
-)  # for a query with an addition (variants): the spreads measured in #130, in weight units of the pool; no tail cut follows
+)  # for a query with an addition (variants): the spreads measured in #130, in weight units of the pool
 
 
 def with_variants(abstraction: Abstraction, actions: Iterable[Action]) -> bool:
@@ -134,6 +134,7 @@ class Decision:
     predicted: float | None = None
     transitions: int | None = None
     estimate: Estimate | None = None
+    budget: float | None = None  # the seconds the query was decided against; `climb` bounds the time of the levels with it
 
 
 def minutes(seconds: float) -> str:
@@ -189,7 +190,7 @@ def choose(
         if found.estimate is None or found.estimate.seconds(r_kernel, r_solve) <= budget
     )
     if refusal is None and fits:
-        return Decision("approximate", fits, predicted=predicted, transitions=size, estimate=estimate)
+        return Decision("approximate", fits, predicted=predicted, transitions=size, estimate=estimate, budget=budget)
     why = refusal or (
         "no coarse level fits the time" if levels else "the irrelevant families are too few to pool, so no coarse level differs from the exact one"
     )
@@ -280,7 +281,7 @@ def decide(
                 tried.add(frozenset(pooling.groups))
                 candidates.append(Candidate(level, estimate.coarsened(pooling), pooling))
         fitting = [found for found in candidates if found.estimate is None or found.estimate.seconds(r_kernel, r_solve) <= budget]
-        if fitting and not spread:  # the tail cut takes its leaves from the finest coarse level that fits, and its forecast
+        if fitting:  # the tail cut takes its leaves from the finest coarse level that fits, and its forecast
             base = fitting[-1]
             for level in LADDER:
                 if level.kind == "tail":
