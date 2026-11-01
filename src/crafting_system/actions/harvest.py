@@ -17,6 +17,7 @@ from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
+from .strand_use import FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY, StrandUse
 
 __all__ = [
     "HarvestReforge",
@@ -56,6 +57,9 @@ class HarvestReforge(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return f"Harvest Reforge {self.tag.title()}"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY)  # ADR-0041: a Harvest craft draws from the ordinary pool and spends nothing
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         cost = LIFEFORCE_COST.value.get(self.tag)

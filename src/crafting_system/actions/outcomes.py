@@ -41,6 +41,7 @@ from crafting_system.items import ExplicitMod, Item, Rarity, Side, tier_table
 from crafting_system.rules import get_rule
 
 from .contract import ActionOutcomes
+from .cut import Cut
 from .draw import (
     Outcome,
     exact_distribution,
@@ -117,6 +118,7 @@ class Outcomes:
         factor: ModFactor | None = None,
         extra: Iterable[Mod] = (),
         guaranteed: Callable[[Mod], bool] | None = None,
+        cut: Cut | None = None,
     ) -> "Outcomes":
         """The outcomes of rerolling `item` (already checked to be rerollable), guaranteeing `tag` if given.
 
@@ -126,12 +128,13 @@ class Outcomes:
         pool (the fossils of a resonator; 0 drops the mod) and `extra` are mods that join the pool.
         With `guaranteed`, exactly the mods it accepts are the ones the guaranteed draw picks from,
         whatever their tags in the data (the pool then carries `tag` on those: the influence reforge).
-        Raises `NotApplicableError` when `tag` is given and the pool holds no mod with it that the
+        With a `cut` (`Action.cut_of`, ADR-0040) the pool holds only the highest tiers of each tier table, reweighed; the forced
+        mod is not drawn from a table and is not cut. Raises `NotApplicableError` when `tag` is given and the pool holds no mod with it that the
         retained item has a free family and a free slot for.
         """
         retained = retained_item(data, item, forced)
         blocked = blocked_tags(data, retained) if tag is not None else frozenset()
-        pool = build_pool(data, retained, max_level, factor, extra, tag_filter=tag is None)
+        pool = build_pool(data, retained, max_level, factor, extra, tag_filter=tag is None, cut=cut)
         if guaranteed is not None and tag is not None:
             pool = mark_pool(pool, tag, guaranteed)
         result = cls.over(data, retained, pool, tag, forced, blocked)
@@ -163,15 +166,15 @@ class Outcomes:
         )
 
     @classmethod
-    def fill(cls, data: GameData, retained: Item, totals: Mapping[int, Fraction]) -> "Outcomes":
+    def fill(cls, data: GameData, retained: Item, totals: Mapping[int, Fraction], cut: Cut | None = None) -> "Outcomes":
         """The outcomes of drawing onto `retained`, which keeps every mod it holds, up to a total.
 
         `totals` is the probability of each total number of mods of the finished item (the mods of
         `retained` included), so one add is `{len(retained.mods) + 1: 1}` and a draw never takes a
-        mod away. The pool is built on `retained`, whose rarity decides the capacity. Use `add_one_mod`
-        and `draw_onto` of `add.py`; `add_one_mod` refuses an add that has no legal mod.
+        mod away. The pool is built on `retained`, whose rarity decides the capacity, and cut by `cut` when it is given
+        (`Action.cut_of`). Use `add_one_mod` and `draw_onto` of `add.py`; `add_one_mod` refuses an add that has no legal mod.
         """
-        return cls(data, retained, build_pool(data, retained), totals, None, None)
+        return cls(data, retained, build_pool(data, retained, cut=cut), totals, None, None)
 
     @property
     def components(self) -> tuple[tuple[Fraction, "Outcomes"], ...]:
