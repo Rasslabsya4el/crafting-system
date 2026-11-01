@@ -10,9 +10,10 @@ solver. This file has four parts:
 * a seeded fuzz of random instances against the oracle, values and returned policy;
 * a coverage test that the fuzz really contains the cases the ticket asks for.
 
-Instances the solver cannot decide are not pinned: a supercritical component the solver cannot
-declare infinite raises `ConvergenceError` today and ticket #179 changes that, so the fuzz only
-counts them (as skips).
+A supercritical component is declared infinite (by the mass-closed pre-check or the value ceiling,
+ticket #179). The one case left undecided is a component critical through weights (rho exactly 1,
+the mass leaking): `solve` reports it with `ConvergenceError`, never as a value. The fuzz does not
+pin those instances, it counts them (as skips); `test_solver_branching.py` pins one by hand.
 """
 
 import functools
@@ -349,7 +350,7 @@ def test_fuzz_values_and_policy_equal_exact_brute_force_within_the_certified_bou
     except ConvergenceError:
         undecided = True
     if undecided and not every_state_finite(best):
-        pytest.skip("some state is infinite: the ceiling and pre-check of ticket #179 decide it")
+        pytest.skip("a component critical through weights: reported unresolved, never pinned")
     if undecided:  # every state is finite, so this is a slow near-critical instance: it must succeed
         solution = solve_every_state(spec, SLOW_SWEEPS)
     error = solution.error_bound
@@ -453,13 +454,30 @@ def test_the_fuzz_contains_the_cases_the_ticket_asks_for():
         assert count >= FEATURES[name][1], f"{name}: {count} of {len(SEEDS)} instances"
 
 
-def test_a_supercritical_branching_component_is_reported_unresolved_not_returned():
+def test_a_supercritical_branching_component_is_declared_infinite_not_returned():
     # A needs two B and B needs an A: both reach the goal by outcome, but the policy costs infinity
-    # (rho > 1). Until #179 declares such a component infinite, `solve` must say it could not decide
-    # (the iterate overflows or never certifies), and never hand back a finite-looking value.
+    # (rho > 1). Both are infinite and neither has a policy.
     table = {
         "A": [entry("two", 1, [(GOAL, 1)], ["B", "B"])],
         "B": [entry("one", 1, [(GOAL, 1)], ["A"])],
+    }
+    assert brute_force_inputs(spec_of(table)) == {"A": None, "B": None}
+
+    solution = solve(to_model(spec_of(table)), ["A"], max_sweeps=5000)
+
+    assert solution.values["A"] == solution.values["B"] == math.inf
+    assert solution.values[GOAL] == 0.0
+    assert solution.policy == {}
+
+
+def test_a_component_critical_through_weights_is_reported_unresolved_not_returned():
+    # A pays B once, with a self-loop of weight 4 that makes the retry pay it 5 times over (kappa 5);
+    # B leads back to A with probability 1/5: M = [[0, 5], [1/5, 0]], rho = 1 exactly. The mass does
+    # not close (B leaks) and the iterate grows linearly, so neither the pre-check nor the ceiling
+    # decides it: the oracle says infinite, the solver says it could not decide.
+    table = {
+        "A": [entry("pay-b", 1, [(GOAL, 1), ("A", 4)], ["B"])],
+        "B": [entry("back", 1, [(GOAL, 4), ("A", 1)])],
     }
     assert brute_force_inputs(spec_of(table)) == {"A": None, "B": None}
 
@@ -467,3 +485,5 @@ def test_a_supercritical_branching_component_is_reported_unresolved_not_returned
         solve(to_model(spec_of(table)), ["A"], max_sweeps=5000)
 
     assert raised.value.error_bound == math.inf
+    assert "a component of 2 states" in str(raised.value)
+    assert "'A'" in str(raised.value) and "'B'" in str(raised.value)

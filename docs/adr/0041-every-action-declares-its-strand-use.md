@@ -19,7 +19,7 @@ An action that has **not declared** anything is **refused on an item with `s >= 
 |---|---|---|---|
 | Orb of Transmutation, Augmentation, Alteration | yes | 8 | wiki table; the sheet (Foulborn Augmentation) |
 | Regal Orb | yes | 16 | wiki; 13 sheet rows |
-| Orb of Alchemy | yes | 50, bins | wiki; 649 sheet rows |
+| Orb of Alchemy, Orb of Binding (ADR-0048: it mods as an Alchemy) | yes | 50, bins | wiki lists both at 0-50; 649 Alchemy sheet rows |
 | Chaos Orb | yes | 50, bins | wiki; 615 sheet rows |
 | Exalted Orb and the influenced Exalted Orbs (ADR-0030) | yes | by the mods on the item before the craft: 1: 16, 2: 22, 3: 26, 4: 32, 5: 34 | wiki; 83 sheet rows. The note counts spends up to 38 against the table's largest ceiling of 34, so the sheet-fit research reads those rows by mod count and where a row shows a spend above the table's ceiling for the mod count read from its item text, the row's spend becomes the ceiling for that count |
 | Essences | the random mods; the guaranteed mod is fixed | 80 | wiki spend table; the cut is the wiki's general sentence on "currency that replaces or adds mods", no test: `approximate` |
@@ -28,6 +28,7 @@ An action that has **not declared** anything is **refused on an item with `s >= 
 | Foulborn Augmentation, Regal, Exalted (ADR-0043) | yes, with `+75` | 32; 48; the Exalted row times 62/34 | wiki; 491 sheet rows for the cut |
 | Fossils and resonators, Harvest crafts, beast crafts (aspects, swaps, influence recipes), bench crafts and metamods, Veiled Exalted Orb | no | none | wiki: "not consumed by … resonators, Harvest crafting, Beastcrafting, or crafting benches" and the Veiled Exalted by name |
 | Scouring, Annulment, Divine, Fracturing, Vaal | no | none | not in the wiki's spend list: `approximate` |
+| Jeweller's, Fusing and Chromatic Orbs, the socket bench crafts and Omens, quality orbs and bench quality (B6, ADR-0045 to 0049), enchantments and the Tailoring Orb (B7, ADR-0050; its claim `enchantment.tailoring_orb_leaves_memory_strands`) | no | none | not in the spend list; the Tailoring Orb by claim: `approximate` |
 | Blessed Orb, catalysts, Embers and Ichors, Orb of Conflict, Orb of Dominance, unveil | no | none | not in the spend list: `approximate` |
 | Recombinator (ADR-0033) | no | none; the output takes the count of its base, which is either input with probability 1/2, so the donor's count enters the result | the author's play: recombination "doesn't interact with strands", he buys cheap stranded bases "to transfer to": `approximate` |
 | Imprint restore (ADR-0034) | no | none; restores the count | wiki: "restored with imprints" |

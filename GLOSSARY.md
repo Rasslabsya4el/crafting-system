@@ -122,6 +122,34 @@ _Avoid_: Conqueror's Exalted Orb (that names four of the six)
 The type and percent (to 20%) that a catalyst puts on a ring, amulet or belt. It scales matching modifier values and changes no odds, so it is a finish cost and not part of the compressed state (ADR-0029).
 _Avoid_: quality (an item has other kinds, such as the flat quality of gems)
 
+**Finish cost**:
+A cost added to the value of a goal state because nothing earlier changes it: the expected catalysts for a target quality (ADR-0029) and the expected cost of the target's enchantment (ADR-0050). A restart that buys a new base pays it again.
+
+**Enchantment**:
+The one extra modifier an item holds besides its implicits and explicit mods; a new one replaces the old. It comes from a Tempering Orb (weapon), a Tailoring Orb (body armour) or a Harvest quality enchant. `Item.enchantment` stores it; it is out of the compressed state and a finish step (ADR-0050).
+_Avoid_: implicit (an enchantment has its own slot)
+
+**Enchant pool**:
+The enchantments one orb can draw: 136 for the Tempering Orb and 54 for the Tailoring Orb in 3.29, each with a weight taken from the players' Curio sample and marked approximate (ADR-0051).
+_Avoid_: enchant table
+
+**Clean enchant**:
+A pool enchant with a positive magnitude on a tag and no socket rider and no downside. A tag named alone in an `enchantment:` target stands for the clean enchants of that tag (ADR-0050).
+
+**Magnitude enchant**:
+A pool enchant that raises every explicit modifier carrying a tag by a percent ("8% increased Explicit Life Modifier magnitudes"): single tag at 6 to 8%, hybrids, or 10 to 15% with a downside (ADR-0051). It scales the flat and the increased parts alike.
+
+**Quality enchant**:
+One of the 14 Harvest enchantments (8 body armour, 6 weapon) that turn quality into another stat per percent. It is bought in Lifeforce, shares the enchantment slot with the pool enchants, and ends the plan with a quality line (ADR-0052).
+_Avoid_: quality (when the enchant is meant)
+
+**Quality line**:
+The last report line of a plan with a quality enchant: how many Armourer's Scraps or Blacksmith's Whetstones bring the item to 20% quality, and about what they cost. It is outside the search over mods (ADR-0052).
+
+**Extra crafted slot**:
+The enchantment "Can have 1 additional Crafted Modifier": two bench-crafted mods instead of one, no affix slot taken. The planner reaches it only on a bought start item that already has it; the limit of crafted mods reads it (ADR-0053).
+_Avoid_: second craft slot
+
 **Beast level**:
 The monster level of the beast that gates the mod a side-swap beast adds, instead of the item level. A setting, default 83, when a target names none.
 
@@ -298,6 +326,36 @@ _Avoid_: guess, assumption
 **Ruleset**:
 The one game patch and mode that all data and rules are pinned to; now PoE 1 3.29.3.3, ordinary.
 _Avoid_: league, version
+
+## Sockets and quality
+
+**Socket**:
+A gem slot of a weapon or armour, white or red, green or blue. Sockets are white by default since 3.29.0, and a gem of any colour fits any socket (ADR-0046). An item stores one colour per socket and its link groups.
+_Avoid_: slot (that is a mod slot, a prefix or suffix place)
+
+**Link group**:
+A run of sockets linked to each other, stored as sizes in socket order (`(3, 2, 1)`). A target's `links` asks for a group of at least that size, and its colours are counted in such a group (ADR-0046).
+_Avoid_: link chain, linked sockets (that is the whole set)
+
+**Finish**:
+The part of a plan that sets sockets and quality after the mods are done: its own small decision problem, solved apart and added to the value of each goal state (ADR-0045). A target with no sockets has none.
+_Avoid_: socketing, tail
+
+**Class maximum**:
+The most sockets an item's class allows, 6 for body armour, two-handers and bows, 4 for helmets, gloves and boots, 3 for one-handers and shields; the Jeweller's Orb is also bounded by the item-level gate (ADR-0046).
+_Avoid_: socket limit
+
+**Forced socket**:
+The socket a Chromatic Orb makes non-white when every socket rolled white: the first one, so a one-socket item always becomes coloured. Its colour is an approximate input of the colour model, with the repeat exclusion (ADR-0047).
+_Avoid_: guaranteed socket
+
+**Bound flag**:
+The one bit of the compressed state that says an Orb of Binding was used, kept only when the target names sockets, so that the finish starts from the sockets Binding left (ADR-0045, ADR-0048).
+_Avoid_: linked flag
+
+**Weapon and armour quality**:
+The plain percent (to 20% from currency) that Blacksmith's Whetstones and Armourer's Scraps put on a weapon or armour. It raises the Chromatic Orb's non-white chance and is bought before the orbs (ADR-0049); the catalyst quality of jewellery is another kind (ADR-0027).
+_Avoid_: quality (alone: say which kind)
 
 ## Prices
 

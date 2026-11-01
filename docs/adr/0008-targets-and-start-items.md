@@ -11,3 +11,7 @@ Origin: [Design grill round 1: foundations](https://github.com/Rasslabsya4el/cra
 ## Amendment: start items with Memory Strands ([Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103), 2026-11-01)
 
 The owner allowed a plan to start from a bought item that carries Memory Strands and to use an Orb of Remembrance on a fresh base ([#81](https://github.com/Rasslabsya4el/crafting-system/issues/81)). A start item therefore has an optional `memory_strands` count from 0 to 100: the key `memory_strands: N` in the item YAML and the pasted line `Memory Strands: N` (ADR-0040). **A target never asks for strands.** A Genesis-born or otherwise acquired item is just a start item; acquisition methods are not modelled (ADR-0043).
+
+## Amendment: sockets in targets and start items ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
+
+A target may carry `sockets: {count, links, colours: {R, G, B}}` and, on a weapon or armour, `quality: {min_percent}` (ADR-0046, ADR-0049). A socket requirement is a requirement of the finish, not of the mod problem: it adds no line to the mod requirements. A start item may state its sockets, links, colours and quality; when the target names sockets, one that states none has one white, unlinked socket (ADR-0046); otherwise it gets no socket.

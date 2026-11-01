@@ -8,16 +8,20 @@ other states it reaches are blocks that follow the coarse policy. `climb` walks 
 stops at the first level whose certified gap is at most `TOLERANCE`; when none is, it keeps the narrowest interval
 and says so. Nothing here reads the clock but the `perf_counter` around the solves.
 
+An action with variants (an addition, ADR-0023) is a `VariantAction` of the solver: the optimistic model takes the cheapest
+variant, the pessimistic one the dearest. The policy of an approximate answer shows, for such an action, the variant that
+is dearest under the values found (nature's reply), so its transitions are the worst case the upper bound allows for.
+
 The bounds are of the cost still to pay from the start item (`Plan.mean_remaining` is the upper one); the price of
 the start item is added by whoever prints them.
 """
 
 import time
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
-from crafting_system.abstraction import CompressedState, integer_weights
+from crafting_system.abstraction import BlockHoldsMetamod, CompressedState, integer_weights
 from crafting_system.actions import ActionError
 from crafting_system.solver import (
     Action,
@@ -27,6 +31,7 @@ from crafting_system.solver import (
     Outcome,
     Solution,
     TailCut,
+    VariantAction,
     solve_bounds,
     solve_tail_cut,
 )
@@ -69,11 +74,28 @@ class Solved:
     seconds: float
 
 
+LEVEL_ALLOWANCE = 10.0  # the levels of a `climb` may take this many budgets of seconds together (a level with no forecast is built to find its size)
+
+
+class LevelTimeout(RuntimeError):
+    """The levels of a `climb` used the time they were allowed before one reached the tolerance."""
+
+
 class BlockModel:
     """The solver's view of the blocks of a coarse state under the offered actions, in the model of `bound`."""
 
-    def __init__(self, coarsening, start: CompressedState, offers: Iterable[PricedOffer], bound: str) -> None:
+    def __init__(
+        self,
+        coarsening,
+        start: CompressedState,
+        offers: Iterable[PricedOffer],
+        bound: str,
+        shared: dict | None = None,
+        guard: Callable[[], None] | None = None,
+    ) -> None:
+        self.guard = guard  # called before each block is built; raises `LevelTimeout` when the time is spent
         self.known: dict[CompressedState, list[Action[CompressedState]]] = {}  # the tail-cut levels solve the same blocks again
+        self.shared = {} if shared is None else shared  # block -> the actions of the side not asked for yet (a pair of models shares it)
         self.coarsening = coarsening
         self.start = start
         self.offers = tuple(offers)
@@ -86,33 +108,67 @@ class BlockModel:
         return self.coarsening.is_goal(block)
 
     def actions(self, block: CompressedState) -> list[Action[CompressedState]]:
+        """The actions of `block` in this model; both models of a pair are built in one pass, the other kept for its turn."""
         if block not in self.known:
-            self.known[block] = self._actions(block)
+            if self.guard is not None:
+                self.guard()
+            if self.bound not in self.shared.get(block, ()):
+                self.shared[block] = self._build(block)
+            sides = self.shared[block]
+            self.known[block] = sides.pop(self.bound)
+            if not sides:
+                del self.shared[block]
         return self.known[block]
 
-    def _actions(self, block: CompressedState) -> list[Action[CompressedState]]:
-        found = []
+    def _build(self, block: CompressedState) -> dict[str, list[Action[CompressedState]]]:
+        """The actions of `block` in both models, one action at a time: the coarse state keeps the last evaluation, so the second bound is free."""
+        found: dict[str, list[Action[CompressedState]]] = {"lower": [], "upper": []}
         for priced in self.offers:
             if isinstance(priced.offer.action, BuyStartItem):
                 if block != self.start:
-                    found.append(Action(priced.label, priced.cost, (Outcome(self.start, 1),)))
+                    for actions in found.values():
+                        actions.append(Action(priced.label, priced.cost, (Outcome(self.start, 1),)))
                 continue
-            try:
-                kernel = self.coarsening.kernel(block, priced.offer.action, self.bound)
-            except ActionError:
-                continue
-            weights = integer_weights(kernel)
-            found.append(Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in weights.items())))
+            for bound, actions in found.items():
+                try:
+                    kernels = self.coarsening.variants(block, priced.offer.action, bound)
+                except BlockHoldsMetamod:
+                    raise  # the exact state offers actions here that blocks cannot: a model without them is no bound
+                except ActionError:
+                    continue
+                variants = tuple(tuple(Outcome(s, w) for s, w in integer_weights(kernel).items()) for kernel in kernels)
+                if len(variants) == 1:
+                    actions.append(Action(priced.label, priced.cost, variants[0]))
+                else:
+                    actions.append(VariantAction(priced.label, priced.cost, variants))
         return found
+
+
+def shown_policy(policy, values) -> dict:
+    """The policy with each `VariantAction` replaced by a plain action of its dearest variant under `values`."""
+    shown = {}
+    for state, action in policy.items():
+        if isinstance(action, VariantAction):
+
+            def worst(outcomes):
+                total = sum(weight for _, weight in outcomes)
+                return sum(weight * values[successor] for successor, weight in outcomes) / total
+
+            action = Action(action.label, action.cost, max(action.variants, key=worst))
+        shown[state] = action
+    return shown
 
 
 class ExactModel:
     """The exact compressed states under the offered actions (the tail cut expands them), remembering their actions."""
 
-    def __init__(self, abstraction, start: CompressedState, offers: Iterable[PricedOffer]) -> None:
+    def __init__(
+        self, abstraction, start: CompressedState, offers: Iterable[PricedOffer], guard: Callable[[], None] | None = None
+    ) -> None:
         self.abstraction = abstraction
         self.start = start
         self.offers = tuple(offers)
+        self.guard = guard  # as in `BlockModel`: called before each state is expanded
         self.known: dict[CompressedState, list[Action[CompressedState]]] = {}
 
     def is_goal(self, state: CompressedState) -> bool:
@@ -120,6 +176,8 @@ class ExactModel:
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
         if state not in self.known:
+            if self.guard is not None:
+                self.guard()
             found = []
             for priced in self.offers:
                 if isinstance(priced.offer.action, BuyStartItem):
@@ -138,23 +196,28 @@ class ExactModel:
 class Models:
     """What the levels of one `climb` share: the models of each coarse state and the exact model, so nothing is built twice."""
 
-    def __init__(self, start: CompressedState, offers: Iterable[PricedOffer]) -> None:
+    def __init__(self, start: CompressedState, offers: Iterable[PricedOffer], guard: Callable[[], None] | None = None) -> None:
         self.start = start
         self.offers = tuple(offers)
+        self.guard = guard
         self.blocks: dict[int, tuple[object, BlockModel, BlockModel]] = {}
         self.exact: ExactModel | None = None
 
     def of(self, coarsening) -> tuple[BlockModel, BlockModel]:
         block = coarsening.coarsen(self.start)
-        found = self.blocks.setdefault(
-            id(coarsening),
-            (coarsening, BlockModel(coarsening, block, self.offers, "lower"), BlockModel(coarsening, block, self.offers, "upper")),
-        )
+        if id(coarsening) not in self.blocks:
+            shared: dict = {}
+            self.blocks[id(coarsening)] = (
+                coarsening,
+                BlockModel(coarsening, block, self.offers, "lower", shared, self.guard),
+                BlockModel(coarsening, block, self.offers, "upper", shared, self.guard),
+            )
+        found = self.blocks[id(coarsening)]
         return found[1], found[2]
 
     def exact_model(self, abstraction) -> ExactModel:
         if self.exact is None:
-            self.exact = ExactModel(abstraction, self.start, self.offers)
+            self.exact = ExactModel(abstraction, self.start, self.offers, self.guard)
         return self.exact
 
 
@@ -171,7 +234,7 @@ def solve_level(candidate: Candidate, start: CompressedState, offers: Iterable[P
     seconds = time.perf_counter() - began
     if block not in bounds.upper:
         raise ValueError("the solver returned no value for the start block")
-    solution = Solution(bounds.upper, bounds.policy, bounds.pessimistic_error)
+    solution = Solution(bounds.upper, shown_policy(bounds.policy, bounds.upper), bounds.pessimistic_error)
     gap = bounds.gap_at(block)
     approximation = Approximation(
         bounds.lower[block], bounds.upper[block], gap, candidate.level.name, max(len(bounds.lower), len(bounds.upper)), TOLERANCE, coarsening
@@ -198,9 +261,9 @@ def solve_tail_level(candidate: Candidate, start: CompressedState, models: Model
     def shown(state: CompressedState) -> CompressedState:
         return state if state in found.expanded or coarsening.is_goal(state) else coarsening.coarsen(state)
 
-    policy = dict(coarse.policy)
-    if not found.expanded and block_start in coarse.policy:  # nothing expanded: the start item follows the coarse policy of its block
-        policy[start] = coarse.policy[block_start]
+    policy = shown_policy(coarse.policy, coarse.upper)
+    if not found.expanded and block_start in policy:  # nothing expanded: the start item follows the coarse policy of its block
+        policy[start] = policy[block_start]
     for state, action in found.bounds.policy.items():
         merged: defaultdict[CompressedState, int] = defaultdict(int)
         for outcome in action.outcomes:
@@ -216,27 +279,46 @@ def solve_tail_level(candidate: Candidate, start: CompressedState, models: Model
     return Solved(approximation, solution, start, seconds)
 
 
-def climb(decision: Decision, start: CompressedState, offers: Iterable[PricedOffer]) -> Solved:
+def climb(
+    decision: Decision, start: CompressedState, offers: Iterable[PricedOffer], clock: Callable[[], float] = time.perf_counter
+) -> Solved:
     """Try the levels of `decision` in order; the first within the tolerance wins, else the narrowest interval, with a message.
 
-    Raises `ValueError` when no level has a policy that reaches the goal (every upper bound is infinite).
+    The levels together may take `LEVEL_ALLOWANCE` budgets of seconds (a level with no forecast is built to find
+    its size, and may be large): when the time is spent the ladder stops where it is, with the narrowest interval
+    so far and a message that says so. Raises `ValueError` when no level has a policy that reaches the goal
+    (every upper bound is infinite) or none finished in the time.
     """
     offers = tuple(offers)
-    models = Models(start, offers)
+    allowed = LEVEL_ALLOWANCE * decision.budget if decision.budget else None  # a budget of 0 forces the approximate level and sets no limit
+    began = clock()
+
+    def guard() -> None:
+        if allowed is not None and clock() - began > allowed:
+            raise LevelTimeout(f"the levels used the {allowed:.0f} s they are allowed (ten times the budget)")
+
+    models = Models(start, offers, guard)
     best: Solved | None = None
-    spent = 0.0
+    stopped = ""
     for candidate in decision.levels:
         try:
             solved = solve_level(candidate, start, offers, models)
+        except LevelTimeout as timeout:
+            stopped = str(timeout)
+            break
+        except BlockHoldsMetamod as held:
+            stopped = stopped or f"a block holds a metamod ({held})"
+            continue  # this level cannot bound the route; the next may pool differently
         except (NoPolicyError, ConvergenceError):
             if candidate.level.kind != "tail":
                 raise
             continue  # a tail cut that has no policy to follow or does not converge leaves the levels before it as they are
-        spent += solved.seconds
         if best is None or solved.approximation.gap < best.approximation.gap:
             best = solved
         if solved.approximation.within_tolerance:
             break
+    if best is None and stopped:
+        raise ValueError(f"no coarse level finished: {stopped}; the exact run or a smaller list of crafts is needed")
     if best is None or best.approximation.upper == float("inf"):
         raise ValueError("no coarse level has a policy of the offered actions that reaches the goal; the exact run is needed")
     approximation = best.approximation
@@ -245,7 +327,7 @@ def climb(decision: Decision, start: CompressedState, offers: Iterable[PricedOff
             approximation.lower, approximation.upper, approximation.gap, approximation.level, approximation.blocks,
             approximation.tolerance, approximation.coarsening,
             f"No level reaches {TOLERANCE:.0%}: the narrowest certified interval has a gap of {approximation.gap:.2%} "
-            f"(level: {approximation.level}). " + exact_offer(decision.transitions, decision.predicted, decision.estimate is None or decision.estimate.complete),
+            f"(level: {approximation.level}). " + (f"The ladder stopped early: {stopped}. " if stopped else "") + exact_offer(decision.transitions, decision.predicted, decision.estimate is None or decision.estimate.complete),
             approximation.expanded,
         )  # fmt: skip
-    return Solved(approximation, best.solution, best.start, spent)
+    return Solved(approximation, best.solution, best.start, clock() - began)
