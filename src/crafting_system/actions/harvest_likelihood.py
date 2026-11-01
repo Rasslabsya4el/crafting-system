@@ -29,6 +29,10 @@ from .metamods import blocked_tags
 from .outcomes import Outcomes, retained_item
 from .pool import build_pool, mark_pool
 
+__all__ = [
+    "HarvestReforgeLikelihood",
+]
+
 LIKELIHOOD_REFORGES_EXIST = get_rule("harvest_reforge.likelihood_reforges_exist")
 LIKELIHOOD_WEIGHT_FACTOR = get_rule("harvest_reforge.likelihood_weight_factor")
 NEVER_FEWER_MODS = get_rule("harvest_reforge.likelihood_never_fewer_mods")
