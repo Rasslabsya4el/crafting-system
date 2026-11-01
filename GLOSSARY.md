@@ -265,8 +265,12 @@ The two inputs of an Awakener's Orb: the receiver is the item in hand and surviv
 Two kept influenced mods of the Awakener's Orb that share a mod group, of which one survives. The plan keeps the receiver's; the donor's is the other reading of the rule axis, unconfirmed in the game (ADR-0032).
 
 **Imprint**:
-A snapshot of one magic item or rare Talisman, made by a beast (Craicic Croaker, Fenumal Plagued Arachnid) and used up when it restores the item. Several can be kept for one item (ADR-0034).
+A snapshot of one magic item or rare Talisman, made by a beast (Craicic Croaker, Fenumal Plagued Arachnid) and used up when it restores the item. Several can be kept for one item (ADR-0034). In the planner it is a held snapshot in the item's state, not an input (ADR-0059).
 _Avoid_: Eternal Orb (it is not offered), save point
+
+**Snapshot** and **restore**:
+The snapshot is the compressed state an imprint was made at; the item's state holds a set of up to `max_imprints` of them. A restore moves the item to one of them and removes it from the set; the cost of getting the item into that state is not paid again, only the imprint was paid (ADR-0059).
+_Avoid_: copy (the first reading of ADR-0013 made the imprint a second item)
 
 **Thaumaturgic Dust and Gold**:
 The two costs of one recombination. Each has a price in the price file; the amount per combine is a rule from reports, marked approximate (ADR-0035).

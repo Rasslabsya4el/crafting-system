@@ -19,7 +19,7 @@ import pytest
 from imprint_prototype import RESTORE_COST, ImprintAndTry, WithImprints, all_bodies, count_states, spec_of
 from ssp_input_oracles import brute_force_inputs, lp_values_inputs, to_model
 
-from crafting_system.solver import MAIN, Acquisition, Action, Need, TabularModel, solve
+from crafting_system.solver import Acquisition, Action, Need, Outcome, TabularModel, solve
 
 EPS = Fraction(RESTORE_COST)
 CLOSE = 1e-4  # the nominal restore and throw-away costs move a value by a few millionths
@@ -327,6 +327,51 @@ def test_a_second_imprint_can_pay_though_rarely():
     assert (n, sorted(imprintable), price) == (7, [0, 1, 2, 3, 4, 6], 1)
     assert values[1] - values[2] == pytest.approx(0.01875, abs=1e-4)
     assert values[2] == pytest.approx(values[3], abs=1e-9)
+
+
+class Fallback:
+    """The base game without a held set: the state is `(s, w)` and one extra option, to restore, ends the game at `w`.
+
+    `w` is the value of an item that is back in the snapshot state with nothing held (`None`: no imprint held). An imprint
+    made at `s` leaves with `w` set to the value of `s` with nothing held. This is the game of one imprint with the snapshot
+    replaced by a number.
+    """
+
+    def __init__(self, base, goal, imprintable, price, empty):
+        self.base, self.goal, self.imprintable, self.price, self.empty = base, goal, imprintable, price, empty
+
+    def is_goal(self, state):
+        return state[0] in (self.goal, "stop")
+
+    def actions(self, state):
+        s, w = state
+        result = [
+            Action(a.label, a.cost, tuple(Outcome((t, w), weight) for t, weight in a.outcomes)) for a in self.base.actions(s)
+        ]
+        if w is not None:
+            result.append(Action("restore", RESTORE_COST + w, ((("stop", None), 1),)))
+        if self.imprintable(s) and s in self.empty:
+            result.append(Action("imprint", self.price, (((s, self.empty[s]), 1),)))
+        return result
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13])  # seeds 7 and 12 never reach an imprintable state
+def test_one_held_imprint_enters_the_value_only_as_the_value_of_its_state(seed):
+    """With one imprint the held state can be replaced by the number V(h, nothing held): a solver that walks values may carry that."""
+    base, imprintable, price = random_graph(seed)
+    layer = WithImprints(to_model(base), price=float(price), limit=1, imprintable=lambda s: s in imprintable)
+    values = solve(layer, [layer.start(0)]).values
+    empty = {s: v for (s, held), v in values.items() if not held}
+    checked = 0
+    for (s, held), value in values.items():
+        if len(held) != 1 or s not in range(max(base[0])) or next(iter(held)) not in empty:
+            continue
+        number = empty[next(iter(held))]
+        game = Fallback(layer._base, max(base[0]), lambda t: t in imprintable, float(price), empty)
+
+        assert solve(game, [(s, number)]).values[(s, number)] == pytest.approx(value, abs=1e-9)
+        checked += 1
+    assert checked
 
 
 # --- 4. What the first reading of ADR-0013 would charge --------------------------------------------------------------------------
