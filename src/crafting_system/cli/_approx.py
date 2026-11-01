@@ -37,7 +37,7 @@ class Approximation:
     level: str
     blocks: int
     tolerance: float
-    coarsening: object  # the `Coarsening` that built the blocks (a later ticket lifts the policy through it)
+    coarsening: object  # the `Coarsening` that built the blocks (`_lift` lifts the policy through it for `--verify`)
     message: str = ""
 
     @property

@@ -17,8 +17,8 @@ Refusals, in this order:
   base tag it does not allow, or one it forbids); the item holds a metamod other than the multimod;
   a Fractured Fossil on an item with a fractured mod or an influence; the forced mod of a Hollow or
   Glyphic Fossil shares a family with a fractured mod.
-* `OutOfScopeError`: a Bloodstained Fossil (its corrupted implicit is corruption, B4); a jewel or an
-  item with the multimod; Hollow and Glyphic in one resonator (no admitted
+* `OutOfScopeError`: a Bloodstained Fossil (its corrupted implicit is corruption, B4); a jewel
+  (an item with the multimod is in scope: the reroll removes it); Hollow and Glyphic in one resonator (no admitted
   rule); a Tangled Fossil when the data holds no outcome records; fractured mods that fill the side
   of the forced mod; a Glyphic Fossil whose candidates are all blocked or missing.
 * `ValueError`: raised at construction for no fossil, more than four or the same one twice, and by
@@ -34,12 +34,13 @@ from fractions import Fraction
 from itertools import combinations
 
 from crafting_system.data import Fossil, GameData, Mod, conflicts
-from crafting_system.items import Item, Metamod, Rarity, Side, UnknownBaseError, capacity, effective_weight
+from crafting_system.items import Item, Rarity, Side, UnknownBaseError, capacity, effective_weight
 from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
+from .metamods import refuse_blocking_metamod
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .fossil_weights import FossilWeights, fossil_weights
 from .mixture import FossilOutcomes
@@ -259,10 +260,7 @@ def _check_item(data: GameData, item: Item) -> None:
         raise NotApplicableError(f"a Chaotic resonator works on a rare item only, and this item is {item.rarity}")
     if item.corrupted:
         raise NotApplicableError("the item is corrupted, and a corrupted item takes no resonator")
-    blocking = item.metamods(data) - {Metamod.MULTIPLE_CRAFTED_MODS}
-    if blocking:
-        names = ", ".join(sorted(metamod.value for metamod in blocking))
-        raise NotApplicableError(f"a resonator cannot be used on an item with a metamod ({names})")
+    refuse_blocking_metamod(data, item, "a resonator")
 
 
 def _check_fossil(record: Fossil, base_tags: tuple[str, ...], item: Item) -> None:

@@ -1,12 +1,14 @@
 """The estimators behind `SimulationReport`, against numbers worked out by hand, and `Step` / argument checks."""
 
 import math
+import random
+from fractions import Fraction
 
 import pytest
-from simulator_support import DATA, ITEMS, FakeAction, holds_target
+from simulator_support import DATA, ITEMS, FakeAction, chain_policy, holds_target
 
 from crafting_system.simulator import SampledEstimate, Step, simulate
-from crafting_system.simulator._estimate import mean, proportion, quantile
+from crafting_system.simulator._estimate import cvar, mean, proportion, quantile
 
 Z95 = 1.959963984540054  # the 97.5% point of the standard normal, from a table
 
@@ -94,6 +96,95 @@ def test_a_quantile_level_must_be_strictly_between_zero_and_one(level):
 
     with pytest.raises(ValueError, match="quantile level"):
         report.quantile(level)
+
+
+def worst_share_mean(values, level):
+    """The mean of the worst 1 - level share of `values`, straight from the definition with exact Fractions:
+    take the largest values one run at a time, the last one only in part."""
+    tail = 1 - Fraction(repr(level))
+    left = tail * len(values)
+    total = Fraction(0)
+    for x in sorted(values, reverse=True):
+        take = min(Fraction(1), left)
+        total += take * Fraction(x)
+        left -= take
+        if left == 0:
+            break
+    return float(total / (tail * len(values)))
+
+
+def test_the_cvar_of_one_to_ten_at_ninety_percent_is_the_worst_run():
+    assert cvar(list(range(1, 11)), 0.9, 0.95).value == pytest.approx(10.0, rel=1e-12)
+
+
+def test_the_cvar_of_one_to_ten_at_85_percent_has_a_fractional_boundary_run():
+    # the worst 15% of ten runs is 1.5 runs: the run worth 10 and half of the run worth 9
+    # (10 + 0.5 * 9) / 1.5 = 29/3
+    assert cvar(list(range(1, 11)), 0.85, 0.95).value == pytest.approx(29 / 3, rel=1e-12)
+
+
+@pytest.mark.parametrize("level", [0.5, 0.73, 0.85, 0.9, 0.99])
+def test_the_cvar_is_the_mean_of_the_worst_share_by_definition(level):
+    values = [3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0, 5.0, 3.0]
+
+    assert cvar(values, level, 0.95).value == pytest.approx(worst_share_mean(values, level), rel=1e-12)
+
+
+def test_the_cvar_is_at_least_the_quantile_at_the_same_level():
+    shuffled = [((7 * i) % 101) for i in range(1, 101)]  # a permutation of 1..100
+
+    for level in (0.5, 0.9, 0.99):
+        assert cvar(shuffled, level, 0.95).value >= quantile(shuffled, level, 0.95).value
+    assert cvar(shuffled, 0.9, 0.95).value == pytest.approx(95.5, rel=1e-12)  # the mean of 91..100
+
+
+def test_the_cvar_at_a_level_near_zero_is_the_mean():
+    values = [((7 * i) % 101) for i in range(1, 101)]
+
+    assert cvar(values, 1e-6, 0.95).value == pytest.approx(mean(values, 0.95).value, rel=1e-5)
+
+
+def test_a_cvar_of_equal_values_is_that_value_with_no_standard_error():
+    estimate = cvar([3.0, 3.0, 3.0], 0.9, 0.95)
+
+    assert (estimate.value, estimate.standard_error, estimate.low, estimate.high) == (3.0, 0.0, 3.0, 3.0)
+
+
+@pytest.mark.parametrize("value, count", [(0.1, 3), (0.7, 3), (0.2, 6)])
+def test_a_cvar_of_a_repeated_cost_that_floats_cannot_sum_back_to_has_no_spread(value, count):
+    estimate = cvar([value] * count, 0.9, 0.95)
+
+    assert estimate.value == value
+    assert estimate.standard_error == 0.0
+    assert (estimate.low, estimate.high) == (value, value)
+
+
+def test_the_cvar_interval_covers_the_true_cvar_of_an_exponential_sample():
+    # exponential with mean 1: VaR at 0.9 is -ln(0.1), and the mean excess above it is 1, so CVaR = 1 - ln(0.1)
+    rng = random.Random(1)
+    sample = [rng.expovariate(1.0) for _ in range(20_000)]
+    true_cvar = 1.0 - math.log(1.0 - 0.9)
+
+    estimate = cvar(sample, 0.9, 0.999)
+
+    assert estimate.standard_error > 0.0
+    assert estimate.contains(true_cvar)
+
+
+@pytest.mark.parametrize("level", [0.0, 1.0, -0.1, 1.5, math.nan, math.inf, True, "0.5", "x", None])
+def test_a_cvar_level_must_be_strictly_between_zero_and_one(level):
+    report = simulate(DATA, lambda item: None, ITEMS["goal"], holds_target, runs=2, seed=1)
+
+    with pytest.raises(ValueError, match="cvar level"):
+        report.cvar(level)
+
+
+def test_the_report_cvar_is_the_cvar_of_its_costs():
+    chain = chain_policy({"S": (1.0, (("goal", 1), ("S", 2)))})
+    report = simulate(DATA, chain, ITEMS["S"], holds_target, runs=200, seed=4)
+
+    assert len(set(report.costs)) > 1
+    assert report.cvar(0.9) == cvar(report.costs, 0.9, report.confidence)
 
 
 def test_contains_is_inclusive_at_both_ends():

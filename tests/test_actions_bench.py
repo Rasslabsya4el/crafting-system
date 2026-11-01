@@ -171,11 +171,10 @@ def test_a_normal_item_is_out_of_scope_and_not_a_game_refusal():
         BenchCraft(DAMAGE_1).outcomes(DATA, belt(rarity=Rarity.NORMAL))
 
 
-def test_an_item_holding_the_multimod_is_out_of_scope_until_ticket_68():
-    start = belt(roll(LIFE), crafted(MULTIMOD))
+def test_an_item_holding_the_multimod_takes_a_craft_beside_it():
+    start = belt(roll(RESIST), crafted(MULTIMOD))
 
-    with pytest.raises(OutOfScopeError, match="multimod"):
-        BenchCraft(DAMAGE_1).outcomes(DATA, start)
+    assert BenchCraft(DAMAGE_1).outcomes(DATA, start).chance_all([DAMAGE_1, MULTIMOD]) == 1
 
 
 def test_an_item_with_no_mod_is_out_of_scope_for_a_craft():

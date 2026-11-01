@@ -2,9 +2,8 @@
 
 The orb needs a rare item with at least 4 mods that is not influenced, fractured or corrupted
 (synthesised and mirrored items are not in the item model). Every explicit mod has the same chance
-1/n to be the one fractured (D6 of issue #28). A crafted mod cannot be fractured here: the item model
-holds no fractured crafted mod (`Item` refuses a mod flagged both), so an item with a crafted mod, a
-metamod included, is out of scope until the model can hold it (together with the metamods, #68).
+1/n to be the one fractured (D6 of issue #28), a crafted mod or a metamod included; a fractured crafted
+mod stays on the item like any fractured mod (the item model holds it since ticket #68).
 """
 
 from collections.abc import Callable, Hashable, Mapping
@@ -18,7 +17,7 @@ from crafting_system.rules import get_rule
 from .catalog import kind
 from .contract import Action, Adds, Reads
 from .draw import Outcome
-from .errors import NotApplicableError, OutOfScopeError
+from .errors import NotApplicableError
 from .finite import Finite
 from .mixture import Fractured
 
@@ -74,8 +73,7 @@ class FracturingOrb(Action):
         """The outcomes of using the orb on `item`: one result per explicit mod, that mod fractured.
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, is influenced or has a
-        fractured mod, or has fewer than 4 mods, and `OutOfScopeError` for one with a crafted mod
-        (a fractured crafted mod has no place in the item model).
+        fractured mod, or has fewer than 4 mods. Crafted mods and metamods are candidates like the rest.
         """
         if item.rarity is not Rarity.RARE:
             raise NotApplicableError(f"a Fracturing Orb works on a rare item only, and this item is {item.rarity}")
@@ -86,10 +84,6 @@ class FracturingOrb(Action):
         if len(item.mods) < MIN_MODS:
             raise NotApplicableError(
                 f"a Fracturing Orb needs a rare item with at least {MIN_MODS} mods, and this item has {len(item.mods)}"
-            )
-        if item.crafted_mods:
-            raise OutOfScopeError(
-                "the item holds a crafted mod, and the orb could fracture it, but the item model holds no fractured crafted mod"
             )
         share = Fraction(1, len(item.mods))
         results = tuple(

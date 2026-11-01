@@ -313,10 +313,11 @@ def test_exact_forces_the_exact_run_whatever_the_forecast(command, capsys):
     assert "Answer:" not in capsys.readouterr().out
 
 
-def test_verify_and_a_given_route_are_refused_for_an_approximate_answer(command, budget, capsys, tmp_path):
-    code, _ = command("--budget", str(budget), "--verify")
+def test_a_given_route_is_refused_for_an_approximate_answer(command, budget, capsys, tmp_path):
+    code, _ = command("--budget", str(budget), "--route", str(tmp_path / "route.yaml"))
 
-    assert code == 1 and "not available for an approximate answer yet" in capsys.readouterr().err
+    assert code == 1
+    assert "--route is not available for an approximate answer yet; run again with --exact" in capsys.readouterr().err
 
 
 def test_a_query_that_cannot_be_pooled_runs_exactly_and_says_why(tmp_path, capsys):

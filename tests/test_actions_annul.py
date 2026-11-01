@@ -148,13 +148,16 @@ def test_an_item_with_no_mod_to_remove_is_refused_and_nothing_is_consumed():
         AnnulmentOrb().outcomes(DATA, all_fractured)
 
 
-def test_a_crafted_metamod_is_out_of_scope():
-    with pytest.raises(OutOfScopeError, match="crafted metamod"):
-        AnnulmentOrb().outcomes(DATA, amulet(roll(LIFE), roll(CRAFTED, crafted=True)))
+def test_a_crafted_metamod_is_a_candidate_on_the_other_side_of_its_lock():
+    # CRAFTED locks the suffixes and sits on the prefix side with the Life mod: both are candidates (D5)
+    outcomes = AnnulmentOrb().outcomes(DATA, amulet(roll(LIFE), roll(CRAFTED, crafted=True)))
+
+    assert outcomes.chance_all([LIFE]) == Fraction(1, 2)
+    assert outcomes.chance_all([CRAFTED]) == Fraction(1, 2)
 
 
 def test_an_influenced_item_of_any_class_is_in_scope_because_nothing_is_drawn():
-    sword = dataclasses.replace(DATA.base_items[BOW], item_class="Thrusting One Hand Sword")
+    sword = dataclasses.replace(DATA.base_items[BOW], item_class="Fishing Rod")
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, BOW: sword})
 
     assert AnnulmentOrb().outcomes(data, bow(roll(ATTACK_SPEED), roll(SOCKET))).chance_all([ATTACK_SPEED]) == Fraction(1, 2)

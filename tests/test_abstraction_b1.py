@@ -235,7 +235,7 @@ def test_an_action_that_reads_the_junk_must_be_enabled():
         plain.kernel(plain.compress(belt(roll(LIFE))), BenchCraft(DAMAGE))
 
 
-# --- a reroll drops the crafted flag, a metamod is still refused ------------------------------------
+# --- a reroll drops the crafted flag, a metamod is still refused (by the state or by the game) ------------------------------------
 
 
 @pytest.mark.parametrize("action", [ChaosOrb(), HYSTERIA], ids=["chaos", "essence"])
@@ -249,12 +249,15 @@ def test_a_reroll_removes_an_ordinary_crafted_mod_and_equals_the_brute_force(act
     assert not any(state.crafted for state in kernel)
 
 
-@pytest.mark.parametrize("action", [ChaosOrb(), HYSTERIA], ids=["chaos", "essence"])
-def test_a_metamod_still_refuses_a_reroll(action):
+@pytest.mark.parametrize(
+    ("action", "error"), [(ChaosOrb(), OutOfScopeError), (HYSTERIA, NotApplicableError)], ids=["chaos", "essence"]
+)
+def test_a_metamod_still_refuses_a_reroll(action, error):
+    # the compressed state does not model a lock yet (Chaos); an essence is refused by the game under it
     ab = abstraction(COLD_LEAF)
     start = belt(roll(FIRE, fractured=True), roll(PREFIXES_LOCK, crafted=True))
 
-    with pytest.raises(OutOfScopeError, match="metamod"):
+    with pytest.raises(error, match="metamod"):
         ab.kernel(ab.compress(start), action)
 
 
@@ -322,3 +325,39 @@ def test_two_starts_with_one_compressed_state_have_one_kernel_and_both_equal_the
     first = check_kernel(ab, one, HYSTERIA, data=DATA, forced=HYSTERIA_MOD)
     second = check_kernel(ab, other, HYSTERIA, data=DATA, forced=HYSTERIA_MOD)
     assert first == second
+
+
+# --- the metamods (ticket #68): only the multimod is a bench limit; the others the state does not model yet ---
+
+MULTIMOD = "StrIntMasterItemGenerationCanHaveMultipleCraftedMods"  # a suffix metamod
+
+
+def test_the_multimod_is_only_a_bench_limit_and_the_kernels_equal_the_brute_force():
+    ab = abstraction(COLD_LEAF)
+    start = belt(roll(REGEN, fractured=True), roll(MULTIMOD, crafted=True))
+
+    (after,) = ab.kernel(ab.compress(start), BenchCraft(DAMAGE))
+    reroll = check_kernel(ab, start, ChaosOrb(), data=DATA)
+
+    assert len([slot for slot in after.slots if slot.crafted]) == 2  # the multimod and the craft
+    assert not any(state.crafted for state in reroll)  # the reroll removes the multimod
+
+
+def test_a_fractured_crafted_mod_is_a_fractured_mod_of_the_state_and_stays_through_a_reroll():
+    ab = abstraction(COLD_LEAF)
+    start = belt(roll(DAMAGE, crafted=True, fractured=True), roll(LIFE), roll(REGEN))
+
+    state = ab.compress(start)
+    kernel = check_kernel(ab, start, ChaosOrb(), data=DATA)
+
+    assert len(state.fractured) == 1 and not state.crafted
+    assert all(len(after.fractured) == 1 for after in kernel)
+
+
+def test_a_fractured_metamod_is_refused_by_the_compressed_state_for_a_reroll():
+    ab = abstraction(COLD_LEAF)
+    start = belt(roll(PREFIXES_LOCK, crafted=True, fractured=True), roll(LIFE))
+
+    ChaosOrb().outcomes(DATA, start)  # the action models it
+    with pytest.raises(OutOfScopeError, match="metamod"):
+        ab.kernel(ab.compress(start), ChaosOrb())
