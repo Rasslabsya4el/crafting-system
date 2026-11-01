@@ -2,7 +2,7 @@
 #
 # SOURCE: none. This is a TEST ROUTE written for batch B5 (ticket #272, docs/research/2026-11-01-strand-routes.md).
 # It is R13 (examples/routes/r13-life-resist-belt.yaml) with one change: the Alterations and the Regal accept
-# a tier-1 OR tier-2 life and resistances, and the strands that are left are spent on one Orb of Unravelling,
+# life and resistances of ANY tier (the cut keeps the early draws to the top tiers while strands last), and the strands that are left are spent on one Orb of Unravelling,
 # which tries to raise each of those mods to tier 1. The shape (craft with currency that spends few strands or
 # none, keep the rest, finish with an Unravelling) is the one the 2025 claw craft of u/wateverlah publishes
 # (Reddit 1liwnwd, 78 strands, no odds or costs given); it is not a 3.29 craft.
@@ -15,8 +15,8 @@
 #
 # The route:
 #   1. Buy a normal Leather Belt with 82 Memory Strands (examples/buy/s13-start-belt.yaml).
-#   2. Orb of Transmutation, then Orbs of Alteration until the magic belt has life and a resistance at tier 1 or 2.
-#   3. Regal Orb for a second resistance at tier 1 or 2; restart if the Regal gives anything else.
+#   2. Orb of Transmutation, then Orbs of Alteration until the magic belt has life and a resistance of any tier.
+#   3. Regal Orb for a second resistance of any tier; restart if the Regal gives anything else.
 #   4. Orb of Unravelling: it takes the count to 0 and tries each mod below tier 1 on its own
 #      (chance min(1, s * W_up / (2 * W_side)), ADR-0044). If the three mods are now at tier 1, craft the damage
 #      modifier at the bench; if not, buy the belt again.
@@ -111,7 +111,7 @@ rules:
       rarity: rare
     do: restart
 
-  # Step 3: life and a resistance, each at tier 1 or 2, on the magic belt: the Regal Orb.
+  # Step 3: life and a resistance, each of any tier, on the magic belt: the Regal Orb.
   - when:
       rarity: magic
       requirements:

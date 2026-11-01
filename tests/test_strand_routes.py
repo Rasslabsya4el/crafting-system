@@ -62,7 +62,7 @@ KNOWN_LABELS = {
     "Fossils Dense Fossil",
     "Harvest Reforge Critical",
     "Harvest Reforge Fire",
-    "Bench craft +#% to Fire Resistance",
+    "Bench craft +#% to Fire Resistance [EinharMasterFireResist2]",
     "Bench craft Prefixes Cannot Be Changed",
 }
 

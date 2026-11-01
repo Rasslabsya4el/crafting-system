@@ -21,10 +21,16 @@
 #      strands (ADR-0041). "You may use Orb of Unravelling at this point": read as: when the prefixes are there but one of
 #      the two energy-shield mods is below tier 1 and strands remain, one Unravelling.
 #   5. "Prefixes can no longer be changed" (the metamod), "Harvest Reforge Crit to get a Warlord Crit multi"; "if Harvest
-#      fails, lock prefixes and try again": the reforge repeats while the metamod stays.
+#      fails, lock prefixes and try again": the model's reforge removes crafted mods, so the lock is crafted again
+#      (rule 2) before every reforge (rule 3).
 #   6. "Finish with a bench resist" (any single resistance; a crafted one counts). Left out: the Foulborn Exalted slam
 #      after "bench-block a specific attribute" (a craft the data does not list for rings), the Unravelling "if you haven't
 #      already" (nothing left to raise), and the Defence Catalyst (B2 quality, not asked by the target).
+#
+# What today's loader cannot read, apart from the strand words (found by the checker of PR #303, run on the 3.29.3.3 dump):
+# the fossil set is outside the planner's offer set (#118), and a bench craft is offered only when a requirement counts its
+# mod, which the metamod "Prefixes Cannot Be Changed" never is. So this route is a complete written policy but cannot be
+# evaluated before the offers change; B5-12 (#292) has to settle it.
 #
 # The strand words are explained at the end of the header of examples/routes/s11-remembrance-belt.yaml and are read by
 # the loader only after B5-12 (#292); every other key and action is the loader's own.
@@ -37,6 +43,7 @@ rules:
   # met and nothing is done.)
   - when:
       rarity: rare
+      open_suffixes: 1
       requirements:
         - family: EnergyShieldPercent
           status: passing
@@ -46,12 +53,13 @@ rules:
           status: passing
         - family: CriticalStrikeMultiplier
           status: passing
-    do: "Bench craft +#% to Fire Resistance"
+    do: "Bench craft +#% to Fire Resistance [EinharMasterFireResist2]"
 
   # Step 5: the three prefixes are there and the critical multiplier is not: lock the prefixes, then reforge.
   - when:
       rarity: rare
       crafted_mods: false
+      open_suffixes: 1
       requirements:
         - family: EnergyShieldPercent
           status: passing

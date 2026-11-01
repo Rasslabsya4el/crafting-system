@@ -26,7 +26,7 @@ requirements:
   # "T1 Crusader %ES": the Crusader prefix "(13-15)% increased maximum Energy Shield" (mod
   # GlobalEnergyShieldPercentInfluence3, item level 82), the best of its three tiers.
   - family: EnergyShieldPercent
-    mod: GlobalEnergyShieldPercentInfluence3
+    min_tier: 1
 
   # "T1 flat ES": "+(44-47) to maximum Energy Shield", tier 1 at item level 74 or more.
   - family: IncreasedEnergyShield

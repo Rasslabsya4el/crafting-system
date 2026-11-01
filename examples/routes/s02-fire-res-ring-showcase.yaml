@@ -19,8 +19,10 @@
 #   1. "Hit it with 2 Orbs of Remembrance. Get 98 strands on the second": the orb is rolled on the normal ring until the
 #      count is 80 or more (the post's 98 was lucky: with ADR-0043's table 80 or more is 4.0% of orbs, 25 orbs on average;
 #      the threshold of 80 is this file's pick, the other showcase of 2026-09-17 starts "80+ memory strands").
-#   2. "Craft an affix at the bench and then Regal slam": the affix is a bench Fire Resistance (the post names none); the
-#      Harvest reforge below removes it. The Regal spends strands (14 in the post, ceiling 16, ADR-0041).
+#   2. "Craft an affix at the bench and then Regal slam": the affix only makes the ring magic and the Harvest reforge below
+#      removes it, and the planner offers no bench craft that counts toward neither requirement (the target's fire and
+#      all-resistance leaves refuse a crafted copy), so an Orb of Transmutation stands in for it. That changes the spend:
+#      0 to 8 strands against none (ADR-0041). The Regal spends strands (14 in the post, ceiling 16).
 #   3. "Spam a bunch of reforge Fire until you hit either T1 Fire and T2 All Res or the other way around": the Harvest
 #      reforge repeats; it spends no strands (ADR-0041).
 #   4. "Unravel and the Fire Res gets upgraded to T1": an Orb of Unravelling when one of the two is at tier 1 and the
@@ -64,11 +66,12 @@ rules:
       rarity: magic
     do: Regal Orb
 
-  # Step 1: a normal ring with 80 strands or more: the bench craft; with fewer, Remembrance again.
+  # Step 1: a normal ring with 80 strands or more: make it magic (the post's bench craft, read as a Transmutation);
+  # with fewer, Remembrance again.
   - when:
       rarity: normal
       memory_strands_at_least: 80
-    do: "Bench craft +#% to Fire Resistance"
+    do: Orb of Transmutation
   - when:
       rarity: normal
     do: Orb of Remembrance

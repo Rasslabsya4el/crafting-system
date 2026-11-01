@@ -17,9 +17,10 @@ influence: []
 # The name of the buy spec examples/buy/s02-start-ring.yaml, which is what the normal Helical Ring costs.
 start_price: S02 start ring
 
-# The kinds of actions the planner may use: the showcase's own. `remembrance-orb` and `unravelling-orb` are this file's
+# The kinds of actions the planner may use: the showcase's own, with a Transmutation for its bench craft (the planner
+# offers no bench craft that counts toward neither requirement). `remembrance-orb` and `unravelling-orb` are this file's
 # proposals for the kind names (B5-5 and B5-8 fix them).
-actions: [remembrance-orb, regal-orb, harvest-reforge, bench-craft, unravelling-orb]
+actions: [remembrance-orb, transmutation-orb, regal-orb, harvest-reforge, unravelling-orb]
 
 requirements:
   # Tier 1 Fire Resistance, "+(46-48)%" at item level 84. A crafted copy does not count.
