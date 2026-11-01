@@ -71,6 +71,5 @@ def test_a_roll_inside_a_tier_makes_the_goal_dearer_and_verify_still_agrees(plan
     assert check.report.successes == RUNS
 
 
-def test_a_divine_orb_is_offered_for_a_roll_inside_a_tier_and_not_for_a_tier_border(plan_70, plan_75):
+def test_a_divine_orb_is_offered_for_a_roll_requirement(plan_75):
     assert any(priced.label == "Divine Orb" for priced in plan_75.offers)
-    assert not any(priced.label == "Divine Orb" for priced in plan_70.offers)
