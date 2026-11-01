@@ -1,5 +1,6 @@
 """The concrete item (ADR-0018): a base, an item level, a rarity, a set of explicit mods and, when given,
-implicits, a quality, an unveil offer, an enchantment (ADR-0027, ADR-0050), a Memory Strands count (ADR-0040) and sockets (ADR-0046).
+implicits, a quality, an unveil offer, an enchantment (ADR-0027, ADR-0050), a Memory Strands count (ADR-0040), sockets (ADR-0046) and the
+imprints it holds (ADR-0034, ADR-0060).
 
 An `Item` is a value: frozen, hashable, and equal to any other item with the same fields, whatever
 order its mods were given in (mods are stored sorted by id). Building one checks the rules that
@@ -10,7 +11,9 @@ offer, enchantment, strands or sockets behaves as it did before ADR-0027, ADR-00
 from 0 to 100, 0 by default; it is part of the item's equality and hash. The quality is of two kinds (ADR-0049): the catalyst
 `Quality` of a ring, amulet or belt and the `PlainQuality` of a weapon or armour; `validate` refuses either on the other's base.
 The sockets are `Sockets` (a colour per socket and the link groups) or None, on a base of one of the 20 socket classes and at most
-its class maximum (`sockets.py`). A veiled placeholder is an explicit mod of domain `veiled`
+its class maximum (`sockets.py`). The imprints are a tuple of items, each the item as it was when it was imprinted (no imprint of its own), in the order they were
+made; a restore returns the item to one of them. An item that is fractured or corrupted can use none (the actions refuse it, the
+compressed state forgets them). A veiled placeholder is an explicit mod of domain `veiled`
 whose seed changes nothing, so `build` and `changed` make the seed canonical (`Item.canonical`).
 Words follow ADR-0021: a "family" is the exclusion set of a mod.
 
@@ -33,6 +36,7 @@ from .errors import (
     EnchantmentError,
     FamilyConflictError,
     ImplicitError,
+    ImprintError,
     ItemError,
     MemoryStrandsError,
     ModSlotError,
@@ -183,6 +187,7 @@ class Item:
     enchantment: str | None = None
     memory_strands: int = 0
     sockets: Sockets | None = None
+    imprints: tuple["Item", ...] = ()
 
     def __post_init__(self) -> None:
         if type(self.item_level) is not int:
@@ -223,6 +228,15 @@ class Item:
             )
         if self.sockets is not None and not isinstance(self.sockets, Sockets):
             raise self._error(f"sockets {self.sockets!r} is not a Sockets or None", SocketError)
+        self._check_imprints()
+
+    def _check_imprints(self) -> None:
+        kind = ImprintError
+        if not isinstance(self.imprints, tuple) or not all(isinstance(entry, Item) for entry in self.imprints):
+            raise self._error("imprints must be a tuple of Item", kind)
+        for entry in self.imprints:
+            if entry.imprints:
+                raise self._error("an imprint is the item as it was and holds no imprint of its own", kind)
 
     def _checked_implicits(self) -> tuple[ImplicitMod, ...]:
         kind = ImplicitError
@@ -327,6 +341,8 @@ class Item:
         self._check_sockets(base)
         self._check_veil_offer(data)
         self._check_enchantment(data, base)
+        for entry in self.imprints:
+            entry.validate(data)
 
     def _check_slot(self, entry: ExplicitMod, mod: Mod, base_domain: str) -> None:
         if mod.generation_type not in SIDE_VALUES:

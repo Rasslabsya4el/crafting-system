@@ -82,6 +82,7 @@ __all__ = [
     "Adds",
     "Axis",
     "Fixed",
+    "ImprintMove",
     "Need",
     "Reading",
     "Reads",
@@ -143,6 +144,10 @@ class Reads:
       overrides `reads` says what it reads, and `Action.reads` itself (an action that declares nothing) reads all
       three, like it reads every mod. An action that reads the offer reads the veiled placeholder, a mod of the
       item, so it must read the junk too.
+    * `imprints`: the result depends on the imprints the item holds (a Restore takes one, an Imprint is refused when the cap is reached); the
+      compressed state then stores them (ADR-0060, ticket #219). The dataclass default is False, and so is `Action.reads`: an action that
+      declares nothing neither reads nor keeps an imprint of its own accord, the kernel carries the imprints through every action that
+      returns the item it was given (`Item.changed`) and drops them with an action that builds a new item.
     * `input_mods`: the result depends on the mods of the other items the action consumes (`Action.inputs`: the donor
       of a recombinator or of an Awakener's Orb), not only on the item in hand. `junk` and the other fields speak of
       the item in hand; with `input_mods` the declaration says which of the two items' mods are read: `junk` alone is
@@ -164,11 +169,12 @@ class Reads:
     offer: bool = False
     input_mods: bool = False
     enchantment: bool = False
+    imprints: bool = False
 
     @property
     def item_state(self) -> bool:
-        """Whether the action reads the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
-        return self.implicits or self.quality or self.offer
+        """Whether the action reads the implicits, the quality, the offer or the imprints of the item (ADR-0027, ADR-0060); the enchantment is not one of them (ADR-0050)."""
+        return self.implicits or self.quality or self.offer or self.imprints
 
     @classmethod
     def adding(cls, *, block_invariant: bool = False, variants: bool = False) -> "Reads":
@@ -231,6 +237,9 @@ class Adds:
       (`Goal.asks_corrupted`) and not for one that merely allows a corrupted item: there the same reroll without the corruption is offered
       and the corrupting one would only add a price and an implicit nobody wants (ADR-0038). The default is False: a Vaal Orb or a Locus
       is offered to a target that allows a corrupted item too, because its brick can end in the goal (ADR-0037).
+    * `imprints`: the action makes, replaces or uses up an imprint of the item (an Imprint, a Restore), so the compressed state stores the
+      imprints the item holds (ADR-0060, ticket #219). The default is False, which says the action leaves the imprints it was given alone
+      (or, if it builds a new item, drops them); `Action.adds` itself says False too, because the kernel carries them.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -252,6 +261,7 @@ class Adds:
     corrupts: bool = False
     keeps_mods: bool = False
     asked_only: bool = False
+    imprints: bool = False
 
     def __post_init__(self) -> None:
         if self.corrupts and not self.implicits:
@@ -263,8 +273,8 @@ class Adds:
 
     @property
     def item_state(self) -> bool:
-        """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
-        return self.implicits or self.quality or self.offer
+        """Whether the action changes the implicits, the quality, the offer or the imprints of the item (ADR-0027, ADR-0060); the enchantment is not one of them (ADR-0050)."""
+        return self.implicits or self.quality or self.offer or self.imprints
 
     @classmethod
     def corrupting(cls, *, keeps_mods: bool = False, **fields) -> "Adds":
@@ -289,6 +299,28 @@ class Adds:
     def erasing(cls, **fields) -> "Adds":
         """An action that erases every mod but the fractured ones (and so the crafted ones too)."""
         return cls(keeps_crafted=False, **fields)
+
+
+@dataclass(frozen=True)
+class ImprintMove:
+    """How an action moves the imprints of an item, in the terms of the compressed state (ADR-0060, ticket #219).
+
+    Two actions move them: one that **makes** an imprint of the item as it stands (`restore` False: it adds that state to the imprints held,
+    or, with `index` k, takes the place of the k-th), and one that **restores** the item to its k-th imprint (`restore` True: the item
+    becomes that state and the imprint is used up). The imprints a state holds are a set of states in a stable order, so an index names the
+    k-th of them. The action's `outcomes` on an item that holds the same number of imprints says whether the game refuses the move here, and
+    gives the item the concrete simulator uses; the compressed state cannot read the move off that item, because a placeholder imprint
+    stands for the state it was made at and two states can have one representative item.
+    """
+
+    restore: bool = False
+    index: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.restore and self.index is None:
+            raise ValueError("a restore names the imprint it restores")
+        if self.index is not None and self.index < 0:
+            raise ValueError(f"the imprints are numbered from 0, not {self.index}")
 
 
 @dataclass(frozen=True)
@@ -505,6 +537,14 @@ class Action(ABC):
         question, so `outcomes(data, item)` is the result of using it with these inputs.
         """
         return ()
+
+    def imprint_move(self) -> ImprintMove | None:
+        """How the action moves the imprints of the item (`ImprintMove`); None, the default, for an action that does not make or use one.
+
+        An action that answers it declares `Reads.imprints` and `Adds.imprints`, and its `outcomes` must agree with the move: the
+        compressed state applies the move to the state, and the contract suite compares it with `outcomes` on concrete items.
+        """
+        return None
 
     def rule_axes(self, data: GameData) -> tuple[Axis, ...]:
         """The rules the action reads that the sources leave open, each as an `Axis` with its readings; none by default.
