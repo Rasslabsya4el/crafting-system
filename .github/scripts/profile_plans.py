@@ -197,6 +197,7 @@ def main() -> None:
             states=len(plan.solution.values),
             offers=len(plan.offers),
             answer_sha256=answer_hash(plan),
+            pruning_phases=[[name, round(spent, 1)] for name, spent in plan.pruned.phases] if plan.pruned is not None else None,
         )
     tag = f"{arguments.case}-w{arguments.workers}" if arguments.workers is not None else arguments.case
     (out / f"{tag}.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
