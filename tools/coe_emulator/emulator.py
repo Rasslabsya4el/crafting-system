@@ -33,8 +33,6 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
-from playwright.sync_api import sync_playwright
-
 HERE = Path(__file__).resolve().parent
 DRIVER = HERE / "driver.js"
 SITE = "https://www.craftofexile.com"
@@ -64,6 +62,8 @@ def sha256(path: Path) -> str:
 
 def fetch(copy: Path) -> dict:
     copy.mkdir(parents=True, exist_ok=True)
+    from playwright.sync_api import sync_playwright
+
     kept = {}
 
     def handle(route, request):
@@ -102,6 +102,8 @@ class Emulator:
     def __init__(self, copy: Path) -> None:
         if not (copy / "packages" / "package.js").is_file():
             raise SystemExit(f"no local copy in {copy}; run `emulator.py fetch` first")
+        from playwright.sync_api import sync_playwright
+
         self.copy = copy
         self.errors: list[str] = []
         self._playwright = sync_playwright().start()

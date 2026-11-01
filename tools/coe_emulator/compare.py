@@ -28,6 +28,7 @@ import difflib
 import inspect
 import json
 import math
+import random
 import re
 import sys
 from collections import Counter
@@ -66,6 +67,7 @@ NOT_IN_EMULATOR = {
     "WildBristleMatron": "the emulator has no Wild Bristle Matron",
     "TalismanFracture": "the emulator has no talisman fracture",
 }
+OUR_SAMPLES = 20000
 INFLUENCE_GROUP = {"2": "shaper", "3": "elder", "4": "crusader", "5": "hunter", "6": "warlord", "7": "redeemer"}
 
 
@@ -326,16 +328,39 @@ def compare_action(data, coe: Coe, emulator: Emulator, item: Item, spec: dict, c
         row["distribution"] = table[:40]
         row["candidates"] += [f"outcome {t['mods']}: ours {t['ours']}, CoE {t['coe']:.4f}" for t in table if t["z"] is not None and abs(t["z"]) > 4]
         return row
+    # a draw of several mods: our side is a seeded sample of our own model (an exact marginal per mod
+    # costs seconds to minutes each), compared mod by mod and by the shape (prefixes, suffixes)
+    rng = random.Random(198)
+    samples = [outcomes.sample(rng) for _ in range(OUR_SAMPLES)]
+    ours_seen = Counter(entry.mod_id for sample in samples for entry in sample.mods)
     seen = Counter(m for mods, count in results.items() for m in mods for _ in range(count))
-    mods = [m for m, _ in seen.most_common(30) if not m.startswith("coe:")]
+    chosen = [m for m, _ in seen.most_common(25)] + [m for m, _ in ours_seen.most_common(25)]
     marginals = []
-    for mod_id in mods:
-        p = float(outcomes.chance_all([mod_id]))
-        z = z_score(p, seen[mod_id], n_ok)
-        marginals.append({"mod": mod_id, "ours": round(p, 5), "coe": round(seen[mod_id] / n_ok, 5), "z": None if z is None else round(z, 2)})
+    for mod_id in dict.fromkeys(m for m in chosen if not m.startswith("coe:")):
+        z = two_sample_z(ours_seen[mod_id], OUR_SAMPLES, seen[mod_id], n_ok)
+        marginals.append({"mod": mod_id, "ours": round(ours_seen[mod_id] / OUR_SAMPLES, 5), "coe": round(seen[mod_id] / n_ok, 5), "z": z})
     row["marginals"] = marginals
+    side = {mod_id: data.mods[mod_id].generation_type for mod_id in data.mods}
+    def shape_of(mods):
+        prefixes = sum(side.get(m) == "prefix" for m in mods)
+        return f"{prefixes}p{len(mods) - prefixes}s"
+    ours_shape = Counter(shape_of([e.mod_id for e in sample.mods]) for sample in samples)
+    coe_shape = Counter()
+    for mods, count in results.items():
+        coe_shape[shape_of([m for m in mods if not m.startswith("coe:")])] += count
+    row["shapes"] = [{"shape": k, "ours": round(ours_shape[k] / OUR_SAMPLES, 4), "coe": round(coe_shape[k] / n_ok, 4),
+                      "z": two_sample_z(ours_shape[k], OUR_SAMPLES, coe_shape[k], n_ok)} for k in sorted(set(ours_shape) | set(coe_shape))]
     row["candidates"] += [f"mod {m['mod']}: ours {m['ours']}, CoE {m['coe']}" for m in marginals if m["z"] is not None and abs(m["z"]) > 4]
+    row["candidates"] += [f"shape {m['shape']}: ours {m['ours']}, CoE {m['coe']}" for m in row["shapes"] if m["z"] is not None and abs(m["z"]) > 4]
     return row
+
+
+def two_sample_z(hits_a: int, n_a: int, hits_b: int, n_b: int) -> float | None:
+    """The z of two frequencies (pooled); None when both are 0 or both 1."""
+    pooled = (hits_a + hits_b) / (n_a + n_b)
+    if pooled in (0, 1):
+        return None
+    return round((hits_b / n_b - hits_a / n_a) / math.sqrt(pooled * (1 - pooled) * (1 / n_a + 1 / n_b)), 2)
 
 
 def run_check(data, coe: Coe, emulator: Emulator, spec: dict) -> dict:
@@ -365,7 +390,9 @@ def run_check(data, coe: Coe, emulator: Emulator, spec: dict) -> dict:
         "actions": {k: {"enabled": v["enabled"], "subsets": {s: e["enabled"] for s, e in v["subsets"].items()}} for k, v in legal["actions"].items()},
     }
     for action in chosen:
-        report["actions"].append(compare_action(data, coe, emulator, item, spec, coe_spec, donor_spec, action, spec.get("repeats", 1000)))
+        row = compare_action(data, coe, emulator, item, spec, coe_spec, donor_spec, action, spec.get("repeats", 1000))
+        report["actions"].append(row)
+        print(f"   {spec.get('id')}: {row['action']} done", file=sys.stderr, flush=True)
     return report
 
 
