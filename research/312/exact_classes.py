@@ -518,7 +518,9 @@ def later(g: Graph, priced, blk, args, result: dict, began: float, out_dir, stem
         out_dir.mkdir(parents=True, exist_ok=True)
         with open(out_dir / f"{stem}.quotient.pkl", "wb") as handle:
             plain = {"n": q.expanded, "goal": bytes(q.goal), "act_ptr": q.act_ptr, "act_offer": q.act_offer, "act_cost": q.act_cost, "act_kernel": q.act_kernel, "k_succ": q.k_succ, "k_wt": q.k_wt}
-            pickle.dump({"graph": plain, "start": start, "goal_class": goal_class, "restart_cost": restart_cost, "labels": [p.label for p in priced]}, handle)
+            sizes = np.bincount(np.unique(blk[: g.expanded], return_inverse=True)[1])
+            raw = {"states": g.expanded, "actions": len(g.act_offer), "kernels": len(g.k_succ), "edges": g.edges}
+            pickle.dump({"graph": plain, "start": start, "goal_class": goal_class, "restart_cost": restart_cost, "labels": [p.label for p in priced], "class_sizes": sizes, "raw": raw}, handle)
     result["quotient"] = {"classes": q.expanded, "actions": len(q.act_offer), "kernels": len(q.k_succ), "edges": q.edges}
     if args.stop_after_quotient:
         say(began, f"quotient {result['quotient']}")

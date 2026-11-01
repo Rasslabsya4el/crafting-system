@@ -307,10 +307,12 @@ def main() -> None:
     data = load(Path(args.pickle))
     g, start, goal_class, restart_cost = data["graph"], data["start"], data["goal_class"], data["restart_cost"]
     flat = flatten(g)
+    flat["class_sizes"] = np.asarray(data.get("class_sizes", np.ones(g["n"], dtype=np.int64)), dtype=np.int64)
+    result_raw = data.get("raw")
     del data, g
     n = flat["n"]
     say(f"flat: {n:,} classes, {len(flat['cost']):,} actions, {len(flat['dst']):,} edges")
-    result = {"classes": n, "actions": len(flat["cost"]), "edges": len(flat["dst"])}
+    result = {"classes": n, "actions": len(flat["cost"]), "edges": len(flat["dst"]), "raw_graph": result_raw, "raw_states_in_all_classes": int(flat["class_sizes"].sum())}
     all_active = np.ones(len(flat["cost"]), dtype=bool)
     v_star, info = solve_values(flat, flat["cost"], flat["p"], all_active, start, say)
     result["exact_value_of_start"] = float(v_star[start])
@@ -320,7 +322,7 @@ def main() -> None:
     non_goal_action = ~flat["goal"][flat["state"]]
     optimal = (q_star <= v_star[flat["state"]] * (1 + 1e-9) + 1e-12) & non_goal_action
     floor = reach(flat, start, optimal)
-    result["floor"] = {"classes_reachable_by_optimal_actions": int(floor.sum()), "optimal_action_entries": int(optimal.sum())}
+    result["floor"] = {"classes_reachable_by_optimal_actions": int(floor.sum()), "optimal_action_entries": int(optimal.sum()), "raw_states_in_those_classes": int(flat["class_sizes"][floor].sum())}
     say(f"the optimal policy reaches {int(floor.sum())} of {n} classes through {int(optimal.sum())} actions")
     lb0 = shortest_to_goal(flat)
     result["lb0_of_start"] = float(lb0[start])
@@ -353,7 +355,7 @@ def main() -> None:
                 "incumbent_factor": f, "backups": k, "backup_seconds_since_last_row": round(backup_seconds, 1),
                 "competitive_actions": int(competitive.sum()), "of_actions": int(non_goal_action.sum()),
                 "competitive_actions_reached": int(reached_actions.sum()), "edges_of_those": int(sizes[reached_actions].sum()), "of_edges": int(sizes[non_goal_action].sum()),
-                "classes_reachable": int(seen.sum()), "lb_of_start_over_exact": float(lb[start] / v_star[start]), "ub_of_start_over_exact": float(ub[start] / v_star[start]),
+                "classes_reachable": int(seen.sum()), "raw_states_in_reached_classes": int(flat["class_sizes"][seen].sum()), "lb_of_start_over_exact": float(lb[start] / v_star[start]), "ub_of_start_over_exact": float(ub[start] / v_star[start]),
             }
             rows.append(row)
             say(str(row))
