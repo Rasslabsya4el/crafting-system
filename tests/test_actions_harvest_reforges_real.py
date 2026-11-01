@@ -16,7 +16,13 @@ import pytest
 from abstraction_support import real_game_data
 from harvest_reforge_support import TABLE
 
-from crafting_system.actions import HarvestReforge, HarvestReforgeInfluence, HarvestReforgeLikelihood, NotApplicableError, build_pool
+from crafting_system.actions import (
+    HarvestReforge,
+    HarvestReforgeInfluence,
+    HarvestReforgeLikelihood,
+    NotApplicableError,
+    build_pool,
+)
 from crafting_system.items import ExplicitMod, Influence, Item, Rarity
 
 HUNTER_WEIGHT_ADDED = 10200  # test_actions_rare_orbs_real.py: HUNTER_POOL minus PLAIN_POOL, 34 and 25 families
