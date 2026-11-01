@@ -32,6 +32,7 @@ from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
 from ._prune import chosen_offers, solver_actions
+from ._start_types import StartChoice
 
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
 PRUNE_CORRUPTING = True  # corrupting offers of a target that asks are left out of the states that cannot reach its goal (exact, ADR-0036; a test turns it off)
@@ -99,6 +100,7 @@ class Plan:
     note: str = ""  # a plain-English remark on how the query was decided (empty when it simply fit)
     pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
     strands: StrandSetting = STRANDS_OFF  # whether Memory Strands were considered (ADR-0040); the report says so when not
+    starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
 
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
@@ -243,6 +245,7 @@ def make_plan(
     rates: Rates | None = None,
     strands: bool = False,
     solve_it: bool = True,
+    start_price_of: StartPrice | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -263,7 +266,8 @@ def make_plan(
     given route can be read and played on concrete items (`_route_sim`) when the graph is too large to solve (R04, R14).
     `strands` is the setting `memory_strands` of the query (ADR-0040): with it off and no strands on the start item the
     plan does not consider strands, as before; with either on, `PlanError` says the planner cannot plan with them yet
-    (tickets of batch B5).
+    (tickets of batch B5). `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
+    not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the target's `start_price` name.
     """
     setting = strand_setting(target.start_item, asked=strands)
     if setting.on:
@@ -271,7 +275,7 @@ def make_plan(
             f"Memory Strands are on ({setting.why}), which the planner cannot plan yet"
             " (batch B5, tickets #275 onward); the cut and the spend of strands are not built, so an answer would silently ignore them"
         )
-    price_of_start = resolve_start_price(target, prices, start_price)
+    price_of_start = start_price_of if start_price_of is not None else resolve_start_price(target, prices, start_price)
     if target.implicits or target.quality is not None:
         raise PlanError(
             "the target asks for implicits or quality, which the planner cannot plan yet"

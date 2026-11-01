@@ -10,7 +10,7 @@ missing price is dropped and reported (ADR-0007), never guessed.
 import random
 from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal
 from crafting_system.actions import Action, ActionError, Axis, Need, Reads, catalog, default_actions, drawable_mod_ids, kinds
@@ -20,6 +20,7 @@ from crafting_system.items import Item
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile
 
 RESTART = "restart"
+FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
 
 
 @dataclass(frozen=True)
@@ -97,6 +98,13 @@ def price_offers(
 
     A Chaos Orb is worth 1 Chaos whether or not the file lists it, and a Divine Orb the file's `chaos_per_divine` when
     it lists no price for it (a Divine Orb is the unit of that rate, ticket #71).
+
+    An action that consumes nothing (an unveil, a pick: `unveil.is_free_and_in_place`) costs `FREE_ACTION_SHARE` of the cheapest
+    offer that costs something, because the solver needs a positive cost on every action (ADR-0026, ticket #145). The share is a
+    compromise: a use must stay negligible next to the value of a route (a route of a million Chaos is moved by a Chaos at most),
+    yet a cycle of free steps and paid steps (veil, unveil, pick, veil again) lies in one component of the solver, whose certified
+    error is about `epsilon * value / g` for the smallest constant term `g` of the component, here the free step's cost. With a
+    share of 1e-6 a route of a few thousand Chaos is certified to about 1e-9 (`tests/test_cli_free_actions.py`).
     """
     priced: list[PricedOffer] = []
     dropped: list[DroppedOffer] = []
@@ -117,6 +125,10 @@ def price_offers(
             dropped.append(DroppedOffer(offer.label, tuple(sorted(missing))))
         else:
             priced.append(PricedOffer(offer, sum(part[2] for part in parts), tuple(parts)))
+    if any(not entry.offer.resources for entry in priced):
+        paid = [entry.cost for entry in priced if entry.cost > 0]
+        free_cost = FREE_ACTION_SHARE * min(paid) if paid else FREE_ACTION_SHARE
+        priced = [replace(entry, cost=free_cost) if not entry.offer.resources else entry for entry in priced]
     return tuple(priced), tuple(dropped)
 
 
@@ -212,7 +224,9 @@ def offers_for(
     * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
       implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
       other target it is absent from the offers and the report says nothing about it. Which states offer it, for a target that
-      asks, is `solver_actions`' business (`_prune.py`).
+      asks, is `solver_actions`' business (`_prune.py`). One that also declares `Adds.asked_only` (a fossil set with the Bloodstained
+      Fossil: its reroll exists without the corruption) is offered only when the goal asks for a corrupted implicit, not when it
+      merely allows a corrupted item (ADR-0038).
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
     kind_names, label_names = _split_names(data, start_item, kinds_named)
@@ -224,7 +238,7 @@ def offers_for(
     left_out_rolls: list[str] = []
     for action in listed:
         adds = action.adds(data, start_item)
-        if adds.corrupts and not goal.takes_corrupted:
+        if adds.corrupts and (not goal.takes_corrupted or (adds.asked_only and not goal.asks_corrupted)):
             continue  # an item never arrives corrupted unasked, and the report does not mention what the target could never use
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))

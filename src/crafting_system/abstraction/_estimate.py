@@ -42,7 +42,7 @@ from crafting_system.actions import Action, ActionError, crafted_limit_of
 from crafting_system.items import Metamod, Rarity, Side, capacity
 
 from ._kernel import Abstraction, integer_weights
-from ._kinds import ALIKE, base_kind, held_families
+from ._kinds import ALIKE, base_kind, held_families, kind_families
 from ._state import CompressedState, best_of
 
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
@@ -272,8 +272,7 @@ class _Pilot:
                 crafted += 1
                 held |= held_families(mods[slot.kind])
             elif base_kind(slot.kind) != ALIKE and not slot.kind.startswith("~"):
-                kind = base_kind(slot.kind)
-                held |= {kind} if kind.startswith("#") else set(kind.split("|"))
+                held |= kind_families(slot.kind)
         return held, used, crafted
 
     def expand(
@@ -295,8 +294,8 @@ class _Pilot:
         if not (self.crafts or self.removals):
             return
         flags = state.flags
-        if flags.corrupted or flags.rarity is Rarity.NORMAL or not (state.fractured or state.slots):
-            return
+        if flags.corrupted or flags.rarity is Rarity.NORMAL or not (state.fractured or state.slots) or state.offer:
+            return  # (an offer state is a choice node: a craft and a removal do not read the offer, so the kernel refuses them there, ADR-0026)
         held, used, crafted = self._holds(state)
         limit = self.limit_crafted[Metamod.MULTIPLE_CRAFTED_MODS.value in self._metamods(state)]
         if self.crafts and crafted < limit:  # the multimod and the extra crafted slot lift the limit of crafted mods (ticket #68, ADR-0053)

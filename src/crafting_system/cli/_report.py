@@ -31,6 +31,7 @@ from ._offers import without_ranges
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
 from ._shares import WeightShare, start_shares
+from ._start_report import start_document, start_lines
 from ._verify import SIGMAS, Verification
 
 FORMAT = "crafting-system-policy/1"
@@ -109,6 +110,9 @@ def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
     if junk:
         shown = [f"{n} {side.value}{'' if n == 1 else 'es'}" for side in Side if (n := sum(s.side is side for s in junk))]
         parts.append("other mods: " + ", ".join(shown))
+    if state.offer:  # in the order of Pick 1, 2, 3 (ADR-0026): without it "Pick 2" names nothing
+        offered = [_without_ranges(data.mods[entry.mod_id].text or data.mods[entry.mod_id].name) for entry in state.offer]
+        parts.append("unveil offer: " + " | ".join(f"{number}. {text}" for number, text in enumerate(offered, 1)))
     return "; ".join(parts)
 
 
@@ -258,6 +262,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
     lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
     lines.append(strands_line(plan))
+    if plan.starts is not None:
+        lines.extend(start_lines(plan.starts))
     if len(plan.dropped) <= MAX_DROPPED_LINES:
         for dropped in plan.dropped:
             lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")
@@ -284,7 +290,10 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         reach = "" if state.reach is None else f", reached with chance {percent(state.reach)}"
         lines.append(f"{pad}{state.id}: {state.description}")
         parts = " + ".join(f"{count} {resource}" for resource, count, _, _ in state.cost_parts)
-        lines.append(f"{pad}  do: {state.action} ({parts} = {money(state.cost)} Chaos each)")
+        if not state.cost_parts:  # an action that consumes nothing: the solver is given a negligible cost (ADR-0026)
+            lines.append(f"{pad}  do: {state.action} (free; counted at {state.cost:.1g} Chaos so that the solver sees a positive cost)")
+        else:
+            lines.append(f"{pad}  do: {state.action} ({parts} = {money(state.cost)} Chaos each)")
         lines.append(f"{pad}  expected cost from here {money(state.remaining)} Chaos{reach}")
         later = []
         for transition in state.transitions:
@@ -447,6 +456,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "price_chaos": shift,
             "price_source": plan.start_price.source,
         },
+        **({"start_options": start_document(plan.starts)} if plan.starts is not None else {}),
         "dropped_actions": [{"action": drop.label, "missing_prices": list(drop.missing)} for drop in plan.dropped],
         "left_out_actions": [
             {"reason": left.reason, "count": len(left.labels), "actions": list(left.labels)} for left in plan.left_out

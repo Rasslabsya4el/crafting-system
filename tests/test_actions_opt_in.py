@@ -1,6 +1,6 @@
 """An opt-in kind is a planner kind that a target has to name (ticket #63).
 
-The fossil sets (12,696 of them on boots) are `opt_in`: the planner can use them, but
+The fossil sets (12,696 of them on boots, 14,998 with the Bloodstained ones) are `opt_in`: the planner can use them, but
 the catalog and the offers leave them out unless the target lists them in `actions:` (`names` / `kinds_named`).
 The toy is registered for the length of a test (`registered`), over the fixture belt of `test_cli_offers`, so
 no real data is needed.
