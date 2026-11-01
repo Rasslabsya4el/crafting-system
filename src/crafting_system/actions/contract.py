@@ -583,7 +583,9 @@ def _guarding_strands(outcomes: Callable) -> Callable:
                 "an action that the strand table does not know is not modelled on a stranded item"
             )
         result = outcomes(self, data, item, *args, **kwargs)
-        if use.spend is None or isinstance(result, Spent):
+        if isinstance(result, Spent):  # the guard of a superclass already ran (same law), or the action returns another action's result:
+            result = result.given  # the spend is this action's own declaration, applied once
+        if use.spend is None:
             return result
         return Spent(result, data, use.spend, count, len(item.mods))
 
@@ -606,6 +608,17 @@ def _module_claims(name: str) -> frozenset[str]:
             origin = getattr(value, "__module__", None)
             if isinstance(origin, str) and origin.startswith(PACKAGE + ".") and origin not in SHARED_BY_ALL:
                 modules.add(origin)
+    held = frozenset(value.id for module in modules for value in vars(sys.modules[module]).values() if isinstance(value, Rule))
+    return held - _strand_claim_ids()
+
+
+@cache
+def _strand_claim_ids() -> frozenset[str]:
+    """The ids of the claims `cut.py` and `strand_use.py` hold: an action that imports one of them as a constant (the ceiling it declares)
+    does not name it in `claims`; they are `strand_claims`, listed on an answer that considers strands."""
     return frozenset(
-        value.id for module in modules for value in vars(sys.modules[module]).values() if isinstance(value, Rule)
+        value.id
+        for module in (f"{PACKAGE}.cut", f"{PACKAGE}.strand_use")
+        for value in vars(sys.modules[module]).values()
+        if isinstance(value, Rule)
     )

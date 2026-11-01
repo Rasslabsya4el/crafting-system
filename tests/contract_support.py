@@ -24,6 +24,12 @@ The checks, each against something written without the code under test:
   final: no action of the catalog applies to it. An action that does not declare `adds.corrupts` leaves the corruption as it was. One
   that also declares `adds.keeps_mods` cannot reach the goal of a target that asks for a corrupted implicit from a state that misses
   another requirement, which is what lets a planner offer it from the other states only;
+* Memory Strands (ticket #276, ADR-0041), on the fixture items that hold strands: an action that has not declared `strand_use` is
+  refused on them (`OutOfScopeError`); a declared one is refused only for the reasons it refuses the same item with no strands, its
+  result is a `Spent` exactly when it declares a spend, and the distribution of the count after the craft sums to one, follows the
+  law and is the one the sampler draws; a draw that does not declare `cuts` gives the mods it gives at 0 strands, and a cutting
+  action's draw differs from it on some stranded item (`check_cutting_kinds_differ_from_the_uncut_draw`). The kernel is not compared
+  on them: the compressed state does not carry the count until B5-4 (#277);
 * the fracturing actions (a Fractured Fossil) are not compared with the brute force here: their kernel
   has its own tests in `test_abstraction_fossil.py`;
 * the resources are whole counts of named things and price the offer from a fixture price file.
@@ -78,14 +84,17 @@ from crafting_system.actions import (
     Reading,
     Reads,
     Rerolled,
+    Spent,
     catalog,
     kinds,
     model_readings,
+    strands_after,
 )
 from crafting_system.data import BaseItem, Weight
 from crafting_system.cli._offers import offer_of, price_offers
 from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, tier_table
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
+from crafting_system.rules import rule_by_id
 
 
 load_family_fixtures()  # the families' own fixture modules (`contract_fixtures_*.py`) register what they add; none is named here
@@ -327,7 +336,10 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     try:
         outcomes = action.outcomes_under(data, item, reading)
     except ActionError as refusal:
-        check_kernel_refuses_too(action, item, data, goal, type(refusal), reading)
+        if item.memory_strands:
+            check_stranded_refusal(action, item, data, type(refusal), reading)
+        else:
+            check_kernel_refuses_too(action, item, data, goal, type(refusal), reading)
         return False
     name = action.label(data)
     assert isinstance(name, str) and name, "the label is a name"
@@ -341,7 +353,9 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     check_declarations_agree(action, reads, adds, outcomes, items, item)
     check_item_state_declarations(action, reads, adds, items, item, data, reading)
     check_corruption_declarations(action, reads, adds, items, item, data, goal)
-    if not outcomes.fractures and not _rerolls_values(outcomes):
+    if item.memory_strands:
+        check_strand_declarations(action, item, outcomes, items, data, reading)
+    elif not outcomes.fractures and not _rerolls_values(outcomes):
         check_kernel_equals_brute_force(action, reads, item, items, data, goal, reading)
     return True
 
@@ -355,6 +369,84 @@ def _rerolls_values(outcomes) -> bool:
     abstraction tests. Drop this skip once the kernel of a `Rerolled` part exists and `finished` lists the rolled items.
     """
     return any(isinstance(part, Rerolled) for _, part in outcomes.components)
+
+
+def check_stranded_refusal(action: Action, item: Item, data, refusal: type[ActionError], reading: Reading | None = None) -> None:
+    """The action refuses an item that holds strands (the kernel is not asked: the compressed state carries no count until #277).
+
+    An action that has not declared `strand_use` is refused with `OutOfScopeError`, whatever the item. A declared one is refused for the
+    reasons of the game only: it refuses the same item with no strands, for the same reason.
+    """
+    if action.strand_use(data) is None:
+        assert refusal is OutOfScopeError, "an action that has not declared strand_use is refused on an item with strands as out of scope"
+        return
+    bare = item.changed(data, memory_strands=0)
+    try:
+        action.outcomes_under(data, bare, reading)
+    except ActionError as raised:
+        assert type(raised) is refusal, "a declared action refuses a stranded item for the reason it refuses the item with no strands"
+    else:
+        raise AssertionError(f"{action.label(data)} declares its strand use yet refuses the stranded item ({refusal.__name__}) and not the same item with none")
+
+
+def check_strand_declarations(action: Action, item: Item, outcomes, items, data, reading: Reading | None = None) -> None:
+    """What a declared action does on an item with strands (ADR-0041): see the module docstring."""
+    use = action.strand_use(data)
+    assert use is not None, "an action that has not declared strand_use is refused on an item with strands, not run"
+    assert isinstance(use.claims, frozenset) and all(rule_by_id(claim).id == claim for claim in use.claims), "every claim behind a declaration is in the registry"
+    assert action.strand_claims(data) == use.claims
+    assert use.claims, "a declaration cites the claim it rests on"
+    assert ("memory_strands.rollable_tiers" in use.claims) == use.cuts, "an action cites the cut formula exactly when it cuts"
+    assert (use.spend is not None) == isinstance(outcomes, Spent), "the result is a Spent exactly when the action declares a spend"
+    after = strands_after(outcomes, item.memory_strands)
+    assert sum(after.values()) == 1, "the count after the craft is a distribution"
+    assert after == use.after(item), "the count after the craft is the declared law's, from the count before"
+    low = item.memory_strands - (use.spend.ceiling(len(item.mods)) if use.spend is not None else 0)
+    assert all(max(0, low) <= left <= item.memory_strands for left in after), "a craft never raises the count and never spends more than its ceiling"
+    rng = random.Random(20261101)
+    seen: dict[int, int] = defaultdict(int)
+    for _ in range(SAMPLES):
+        drawn = outcomes.sample(rng)
+        drawn.validate(data)
+        assert drawn.memory_strands in after, "the sampler draws a count the distribution allows"
+        seen[drawn.memory_strands] += 1
+    for left, chance in after.items():
+        error = SIGMAS * math.sqrt(float(chance) * (1 - float(chance)) / SAMPLES) + 1e-9
+        assert abs(seen[left] / SAMPLES - float(chance)) <= error, f"the sampler leaves {left} strands as often as the distribution says"
+    if not use.cuts:
+        bare = item.changed(data, memory_strands=0)
+        assert _by_mods(items) == _by_mods(finished(action.outcomes_under(data, bare, reading), data)), (
+            "an action that does not declare `cuts` draws the mods it draws at 0 strands"
+        )
+
+
+def _by_mods(listed) -> dict:
+    """The finished items with the chance of each, the strand count left out."""
+    return _stripped(listed, {"memory_strands": 0})
+
+
+def check_cutting_kinds_differ_from_the_uncut_draw(data=CONTRACT_DATA) -> set[str]:
+    """Every kind that declares `cuts` gives, on some stranded fixture item, other mods than it gives at 0 strands; the names that did.
+
+    A cut can leave a draw as it was (a pool whose tables are one tier), so this is asked of the kind on all the items, not of each.
+    """
+    differing: set[str] = set()
+    declared: set[str] = set()
+    for kind, action, name in contract_pairs():
+        item = fixture_items()[name]
+        use = action.strand_use(data)
+        if not item.memory_strands or use is None or not use.cuts:
+            continue
+        declared.add(kind)
+        try:
+            cut = finished(action.outcomes_under(data, item), data)
+            plain = finished(action.outcomes_under(data, item.changed(data, memory_strands=0)), data)
+        except ActionError:
+            continue
+        if _by_mods(cut) != _by_mods(plain):
+            differing.add(kind)
+    assert declared <= differing, f"a kind declares `cuts` yet never draws other mods than at 0 strands: {sorted(declared - differing)}"
+    return declared
 
 
 def check_kernel_refuses_too(action, item: Item, data, goal: Goal, refusal: type[ActionError], reading: Reading | None = None) -> None:
