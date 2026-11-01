@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 
-from crafting_system.cli import PlanError, load_route, make_plan
+from crafting_system.cli import PlanError, When, load_route, make_plan
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.cli._benchmark_outcomes import published_outcomes
 from crafting_system.cli._route_sim import simulate_route
@@ -90,6 +90,8 @@ def test_the_guides_route_and_its_completed_form_are_read_against_the_offers(uns
     same = [(rule.when, rule.do) for rule in as_written.rules]
     assert [(rule.when, rule.do) for rule in completed.rules[: len(same)]] == same
     assert len(completed.rules) == len(as_written.rules) + 1 and completed.rules[-1].do == "restart"
+    assert completed.rules[-1].when == When()  # the added rule catches every state the guide's rules do not
+    assert as_written.rules[-1].when != When()  # the guide's own rules do not: what they leave out is a gap
 
 
 def test_the_published_odds_are_recomputed_from_the_actions(data, route_id):
@@ -102,6 +104,8 @@ def test_the_published_odds_are_recomputed_from_the_actions(data, route_id):
             ("Fracturing Orb", "25%", "25%", True),  # the guide's 1 in 4
             ("Exalted Orb", "100%", "100%", True),  # the two prefixes are the only ones the metamod leaves, at any tier
             ("Exalted Orb", "100%", "13%", False),  # ... but at the top tier of each (the owner's reading) it is 2 in 15
+            ("Exalted Orb", "100%", "100%", True),  # the second one: Life is on, the Bow Skills damage is the only prefix left
+            ("Exalted Orb", "100%", "20%", False),  # ... at its top tier, 1 in 5
         ]
     else:
         assert rows == [
@@ -109,6 +113,8 @@ def test_the_published_odds_are_recomputed_from_the_actions(data, route_id):
             ("Orb of Annulment", "50%", "50%", True),  # 2 mods: 1 in 2
             ("Exalted Orb", "100%", "100%", True),  # gems or Chaos Damage over Time, at any tier
             ("Exalted Orb", "100%", "55%", False),  # ... at the top tier of the damage it is 11 in 20
+            ("Exalted Orb", "100%", "100%", True),  # the second one: +1 gems is on, Chaos Damage over Time is the only prefix left
+            ("Exalted Orb", "100%", "10%", False),  # ... at its top tier, 1 in 10
         ]
 
 

@@ -1,10 +1,11 @@
 # The route of R04 COMPLETED: r04-penetrating-quiver.yaml (the guide as written) plus one last rule that the guide does not have.
 #
-# The guide names no way out of some states (the Exalted Orbs added the wrong tiers and the prefixes are full, the
-# Fracturing Orb or an Annulment went somewhere the steps do not cover). r04-penetrating-quiver.yaml leaves those as gaps, so a run that
-# reaches one never finishes. This file adds a last rule, `restart` (buy the start item again, the guide's own
-# way out of its steps 3 and 4), for every state no earlier rule covers, so that the route has a finite cost to compare
-# with. It is the file's reading, not the guide's. Everything else is the same as r04-penetrating-quiver.yaml.
+# The guide names no way out of some states (the Exalted Orbs added the wrong tiers and the prefixes are full, an
+# Annulment went somewhere the steps do not cover). r04-penetrating-quiver.yaml leaves those as gaps, so a run that reaches one never
+# finishes. This file adds a last rule, `restart` (buy the start item again, the guide's own way out of its steps 3 and
+# 4), for every state no earlier rule covers, so that the route has a finite cost to compare with. It is the file's
+# reading, not the guide's. Everything else is the same as r04-penetrating-quiver.yaml. The simulation plays it with a rule skipped when the
+# game refuses its action, so a refused Exalted Orb falls through to the `restart` as well.
 
 # Given route for benchmark route R04: the Insanity-fractured additional-arrow Penetrating Arrow Quiver.
 #
@@ -132,9 +133,12 @@ rules:
           status: passing
     do: Orb of Annulment
 
-  # The Fracturing Orb fractured another mod: back to step 1.
+  # Step 4: the Fracturing Orb fractured another mod (a mod is fractured and it is not the Pierce): back to step 1.
+  # Any other state no rule covers is a gap of the guide.
   - when:
       rarity: rare
+      fractured:
+        without: [{family: Pierce}]
     do: restart
 
   # Not in the guide: any state no rule above covers: buy the start item again.

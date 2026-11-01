@@ -124,7 +124,10 @@ rules:
           status: passing
     do: Orb of Annulment
 
-  # The Fracturing Orb fractured another mod: back to step 1.
+  # Step 4: the Fracturing Orb fractured another mod (a mod is fractured and it is not the Pierce): back to step 1.
+  # Any other state no rule covers is a gap of the guide.
   - when:
       rarity: rare
+      fractured:
+        without: [{family: Pierce}]
     do: restart

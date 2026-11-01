@@ -74,10 +74,10 @@ rules:
         - family: IncreaseSpecificSocketedGemLevel
           status: absent
     do: Bench craft +2 to Level of Socketed Support Gems
+  # (the two rules above take the states that still have a free suffix, so the rule below is the one with none free)
   - when:
       rarity: rare
       crafted_mods: true
-      open_suffixes: 0
       requirements:
         - family: IncreaseSocketedGemLevel
           status: passing

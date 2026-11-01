@@ -1,7 +1,10 @@
 # R04 start item (docs/research/2026-10-30-5-reference-routes.md): a Penetrating Arrow Quiver of item level 81
 # or more, as it drops (normal), "uncorrupted, unfractured and no influence". The target file is
 # examples/targets/r04-penetrating-quiver.yaml; its `start_price` is the `name` below. poe.ninja's base
-# overview has no line at item level 81 (its lines start at 82), so the trade site prices it.
+# overview has no line at item level 81 (its lines start at 82), so this spec is the way to look the item up on the
+# trade site. The committed price (tests/fixtures/prices/routes-allflame-2026-10-31.json) is NOT this search's: it is the
+# poe.ninja line of the cheapest normal quiver of item level 81 or more with at least 5 observations (9 Chaos, item
+# level 85, 43 observations), because the trade search found 3 listings (mean 130 Chaos) against 43 observations.
 name: Penetrating Arrow Quiver (ilvl 81)
 base_type: Penetrating Arrow Quiver
 category: armour.quiver

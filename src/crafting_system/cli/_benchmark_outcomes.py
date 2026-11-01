@@ -87,6 +87,8 @@ def published_outcomes(data: GameData, target: Target, published: Iterable[Publi
     offers = {offer.label: offer.action for offer in offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions).offers}
     found = []
     for odds in published:
+        if odds.action not in offers:
+            raise ValueError(f"the published odds name the action {odds.action!r}, which the target does not offer")
         action: Action = offers[odds.action]
         share = chance_of(data, action.outcomes(data, item_of(data, target, odds)), odds.event, odds.mod_ids, odds.families)
         decimals = len(odds.published.rstrip("%").partition(".")[2])

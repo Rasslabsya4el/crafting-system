@@ -1,10 +1,11 @@
 # The route of R14 COMPLETED: r14-hunter-bow.yaml (the guide as written) plus one last rule that the guide does not have.
 #
-# The guide names no way out of some states (the Exalted Orbs added the wrong tiers and the prefixes are full, the
-# Fracturing Orb or an Annulment went somewhere the steps do not cover). r14-hunter-bow.yaml leaves those as gaps, so a run that
-# reaches one never finishes. This file adds a last rule, `restart` (buy the start item again, the guide's own
-# way out of its steps 3 and 4), for every state no earlier rule covers, so that the route has a finite cost to compare
-# with. It is the file's reading, not the guide's. Everything else is the same as r14-hunter-bow.yaml.
+# The guide names no way out of some states (the Exalted Orbs added the wrong tiers and the prefixes are full, an
+# Annulment went somewhere the steps do not cover). r14-hunter-bow.yaml leaves those as gaps, so a run that reaches one never
+# finishes. This file adds a last rule, `restart` (buy the start item again, the guide's own way out of its steps 3 and
+# 4), for every state no earlier rule covers, so that the route has a finite cost to compare with. It is the file's
+# reading, not the guide's. Everything else is the same as r14-hunter-bow.yaml. The simulation plays it with a rule skipped when the
+# game refuses its action, so a refused Exalted Orb falls through to the `restart` as well.
 
 # Given route for benchmark route R14: the Toxic Rain Hunter bow with +1 to socketed gems and Chaos Damage over Time.
 #
@@ -82,10 +83,10 @@ rules:
         - family: IncreaseSpecificSocketedGemLevel
           status: absent
     do: Bench craft +2 to Level of Socketed Support Gems
+  # (the two rules above take the states that still have a free suffix, so the rule below is the one with none free)
   - when:
       rarity: rare
       crafted_mods: true
-      open_suffixes: 0
       requirements:
         - family: IncreaseSocketedGemLevel
           status: passing
