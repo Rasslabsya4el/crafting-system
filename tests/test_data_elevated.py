@@ -161,8 +161,15 @@ def test_a_malformed_file_or_table_is_refused_with_a_clear_error(tmp_path):
         parse_poec_data("not a javascript assignment")
     with pytest.raises(ElevatedError, match="not '<base id>-<modifier id>'"):
         build_elevated(_with_table({"52": "1"}), MODS, repoe_version="1", poec_data_sha256="0")
-    with pytest.raises(ElevatedError, match="not there"):
-        build_elevated(_with_table({"52-10": "77"}), MODS, repoe_version="1", poec_data_sha256="0")
+    with pytest.raises(ElevatedError, match="not of the shape"):
+        build_elevated(_with_table({"52-10": "77"}), MODS, repoe_version="1", poec_data_sha256="0")  # no entry 77
+    entry_without_level = {"oname": "x", "nvalues": "[1]"}
+    with pytest.raises(ElevatedError, match="not of the shape"):
+        build_elevated(
+            {**COE, "maeven": {"bmods": {"52-10": "1"}, "ind": {"1": entry_without_level}}}, MODS, repoe_version="1", poec_data_sha256="0"
+        )
+    with pytest.raises(ElevatedError, match="not of the shape"):
+        build_elevated(_with_table(["52-10"]), MODS, repoe_version="1", poec_data_sha256="0")  # a list, not a table
 
 
 def test_the_file_is_read_from_a_javascript_assignment():

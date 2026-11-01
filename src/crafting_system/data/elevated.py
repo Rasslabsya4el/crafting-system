@@ -156,29 +156,33 @@ def build_elevated(coe: Mapping[str, Any], mods: Mapping[str, Any], *, repoe_ver
 
     linked: dict[str, set[str]] = defaultdict(set)
     failures: dict[tuple[str, str, str, str, str], int] = defaultdict(int)
-    for key in sorted(table):
-        parts = key.split("-")
-        if len(parts) != 2:
-            raise ElevatedError(f"Craft of Exile's Elevated table has the key {key!r}, which is not '<base id>-<modifier id>'")
-        base, modifier_id = parts
-        modifier = modifiers.get(modifier_id)
-        if modifier is None or modifier["id_mgroup"] not in influence_key or base_group.get(base) not in CLASS_OF_BASE_GROUP:
-            failures[("", "", "", key, "the table names a modifier or a base the step does not read")] += 1
-            continue
-        tag = f"{CLASS_OF_BASE_GROUP[base_group[base]]}_{influence_key[modifier['id_mgroup']]}"
-        family, side, text = modifier["modgroup"], modifier["affix"], template(modifier["name_modifier"])
+    try:
+        keys = sorted(table)
+    except TypeError as error:
+        raise ElevatedError(f"Craft of Exile's Elevated table is not a table of keys: {error}") from error
+    for key in keys:
         try:
+            parts = key.split("-")
+            if len(parts) != 2:
+                raise ElevatedError(f"Craft of Exile's Elevated table has the key {key!r}, which is not '<base id>-<modifier id>'")
+            base, modifier_id = parts
+            modifier = modifiers.get(modifier_id)
+            if modifier is None or modifier["id_mgroup"] not in influence_key or base_group.get(base) not in CLASS_OF_BASE_GROUP:
+                failures[("", "", "", key, "the table names a modifier or a base the step does not read")] += 1
+                continue
+            tag = f"{CLASS_OF_BASE_GROUP[base_group[base]]}_{influence_key[modifier['id_mgroup']]}"
+            family, side, text = modifier["modgroup"], modifier["affix"], template(modifier["name_modifier"])
             entry = entries[table[key]]
-        except (KeyError, IndexError, TypeError) as error:
-            raise ElevatedError(f"Craft of Exile's Elevated table key {key!r} points at an entry that is not there: {error}") from error
-        top =max(tiers.get(modifier_id, {}).get(base) or [{"ilvl": "0", "nvalues": "[]"}], key=lambda tier: int(tier["ilvl"]))
-        ordinary = _find_ordinary(mods, ordinary_on[tag], family, side, text, int(top["ilvl"]), _signature_of_values(top["nvalues"]))
-        if ordinary[0] is None:
-            failures[(tag, family, side, text, ordinary[1])] += 1
-            continue
-        elevated = _find_elevated(
-            mods, elevated_on[tag], family, side, template(entry["oname"]), int(entry["ilvl"]), _signature_of_values(entry["nvalues"])
-        )
+            top = max(tiers.get(modifier_id, {}).get(base) or [{"ilvl": "0", "nvalues": "[]"}], key=lambda tier: int(tier["ilvl"]))
+            ordinary = _find_ordinary(mods, ordinary_on[tag], family, side, text, int(top["ilvl"]), _signature_of_values(top["nvalues"]))
+            if ordinary[0] is None:
+                failures[(tag, family, side, text, ordinary[1])] += 1
+                continue
+            elevated = _find_elevated(
+                mods, elevated_on[tag], family, side, template(entry["oname"]), int(entry["ilvl"]), _signature_of_values(entry["nvalues"])
+            )
+        except (KeyError, IndexError, ValueError, TypeError, AttributeError) as error:
+            raise ElevatedError(f"Craft of Exile's Elevated table entry {key!r} is not of the shape the step reads: {error!r}") from error
         if elevated[0] is None:
             failures[(tag, family, side, text, elevated[1])] += 1
             continue

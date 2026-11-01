@@ -30,7 +30,7 @@ from influence_support import (
     roll,
 )
 
-from crafting_system.actions import NotApplicableError, OrbOfDominance, OutOfScopeError, catalog
+from crafting_system.actions import NotApplicableError, OrbOfDominance, OutOfScopeError, catalog, tiers_of
 from crafting_system.items import Influence, Rarity
 
 DATA = INFLUENCE_DATA
@@ -145,7 +145,9 @@ def test_the_next_tier_is_one_of_the_mods_own_influence_on_an_item_with_two_infl
     outcomes = OrbOfDominance(elevated=ELEVATED).outcomes(data, item)
 
     assert results(outcomes) == {frozenset({S2}): Fraction(1, 2), frozenset({P2}): Fraction(1, 2)}
-    assert {entry.tier for _, r in outcomes.results for entry in r.mods} == {1, 2}  # S2 is the top tier of its own chain, P2 the second
+    tiers = tiers_of(data, item)
+    stored = {entry.mod_id: entry.tier for _, r in outcomes.results for entry in r.mods}
+    assert stored == {S2: tiers[S2], P2: tiers[P2]} == {S2: 1, P2: 2}  # the tier numbers every other action gives these mods
 
 
 def test_a_lower_tier_needs_no_elevated_mapping():

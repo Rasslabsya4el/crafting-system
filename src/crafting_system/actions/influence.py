@@ -247,8 +247,9 @@ class OrbOfDominance(Action):
     def _upgraded(self, data: GameData, item: Item, entry: ExplicitMod, tiers: Mapping[str, int]) -> ExplicitMod:
         """`entry` one tier better (a top-tier mod: its Elevated version; an Elevated mod: itself), at the lowest values of the new mod.
 
-        The tiers of a mod are those of its own influence: on an item with two influences, two mods of one type can both spawn
-        (Elder's and Crusader's maximum Mana), and the next tier of an Elder mod is never the other influence's mod.
+        The next tier is a mod of the held mod's own influence: on an item with two influences, two mods of one type can both
+        spawn (Elder's and Crusader's maximum Mana), and the next tier of an Elder mod is never the other influence's mod. The
+        tier number stored is that of `tiers_of`, as for every other action.
         """
         mod = data.mods[entry.mod_id]
         if is_elevated(mod):
@@ -280,8 +281,8 @@ class OrbOfDominance(Action):
             raise OutOfScopeError(
                 f"the next tier of {mod.id} is ambiguous ({', '.join(sorted(other.id for other in next_tier))} share required level {level})"
             )
-        tier = 1 + sum(other.required_level > level for other in chain)
-        return ExplicitMod(next_tier[0].id, tier, _low(next_tier[0]))
+        # the chain only picks the mod; its tier number is the one every other action gives it (`tiers_of`)
+        return ExplicitMod(next_tier[0].id, tiers[next_tier[0].id], _low(next_tier[0]))
 
     def outcomes(self, data: GameData, item: Item) -> Finite:
         """The outcomes of using the orb on `item`: one result per ordered pair (removed, upgraded) of influenced mods, each 1/(n(n-1)).
