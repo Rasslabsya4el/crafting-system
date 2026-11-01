@@ -30,7 +30,7 @@ A Sanctified Fossil also makes the values lucky (`fossils.sanctified_values_luck
 """
 
 from collections.abc import Hashable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from itertools import combinations
 
@@ -453,4 +453,11 @@ def _check_forced(data: GameData, item: Item, forced: Mod, name: str) -> None:
 
 @kind("fossil-set", order=60, opt_in=True)
 def _fossil_sets(data: GameData, item: Item):
+    """Every set the item could take once it is rare: a normal or magic start item is listed as the rare it becomes.
+
+    A fossil works on a rare item only, but a policy reaches one from a normal start with an Orb of Alchemy, so the
+    sets are those of the same item made rare (its fractured mods, influences and corruption kept).
+    """
+    if item.rarity is not Rarity.RARE:
+        item = replace(item, rarity=Rarity.RARE)
     yield from fossil_actions(data, item)

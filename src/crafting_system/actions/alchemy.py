@@ -51,7 +51,7 @@ class AlchemyOrb(Action):
         return Outcomes.reroll(data, item, tag=None)
 
 
-@kind("alchemy-orb", order=70, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
+@kind("alchemy-orb", order=70, opt_in=True)
 def _alchemy_orb(data: GameData, item: Item):
     if item.rarity is Rarity.NORMAL:
         yield AlchemyOrb()
