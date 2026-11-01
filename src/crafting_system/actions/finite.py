@@ -14,7 +14,7 @@ from fractions import Fraction
 from functools import cached_property
 
 from crafting_system.data import GameData, Mod, conflicts
-from crafting_system.items import Item
+from crafting_system.items import Item, is_corrupted_implicit
 
 from .contract import Fixed
 from .draw import Outcome
@@ -50,7 +50,7 @@ class Finite:
         return False
 
     def chance_all(self, mod_ids: Iterable[str]) -> Fraction:
-        """The exact chance that the finished item holds all of `mod_ids` (0 when two share a family)."""
+        """The exact chance that the finished item holds all of `mod_ids`, explicit mods and corrupted implicits (0 when two share a family)."""
         wanted = set(mod_ids)
         unknown = sorted(wanted - self.data.mods.keys())
         if unknown:
@@ -59,9 +59,15 @@ class Finite:
         if any(conflicts(a, b) for index, a in enumerate(mods) for b in mods[index + 1 :]):
             return Fraction(0)
         return sum(
-            (chance for chance, item in self.results if wanted <= {entry.mod_id for entry in item.mods}),
+            (chance for chance, item in self.results if wanted <= self._held(item)),
             Fraction(0),
         )
+
+    def _held(self, item: Item) -> set[str]:
+        """The mods a result holds: its explicit mods and its corrupted implicits (a corrupting action's goal is one, ADR-0036)."""
+        held = {entry.mod_id for entry in item.mods}
+        held.update(entry.mod_id for entry in item.implicits if is_corrupted_implicit(self.data.mods[entry.mod_id]))
+        return held
 
     def distribution(self, label: Callable[[Mod], Hashable]) -> Mapping[Outcome, Fraction]:
         """The new mods of each result (those `given` does not hold) seen through `label`, with the result's probability."""

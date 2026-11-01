@@ -155,7 +155,7 @@ def real():
 def test_the_twin_classes_of_the_real_boots(real):
     base = next(base.id for base in real.base_items.values() if base.name == BOOTS)
     item = Item.build(real, base_id=base, item_level=86, rarity=Rarity.RARE, mods=())
-    actions = fossil_actions(real, item)
+    actions = [action for action in fossil_actions(real, item) if "Bloodstained Fossil" not in action.fossils]  # the sets of ticket #118
     keys = [action.twin_key(real, item) for action in actions]
     classes = defaultdict(list)
     for action, key in zip(actions, keys):
@@ -176,4 +176,24 @@ def test_the_twin_classes_of_the_real_boots(real):
     pairs = [rng.sample(rng.choice(plain), 2) for _ in range(300)]
     pairs += [rng.sample(rng.choice(tangled), 2) for _ in range(10)]
     for first, second in pairs:
+        assert signature(first, real, item) == signature(second, real, item), (first.fossils, second.fossils)
+
+
+def test_the_twin_classes_of_the_bloodstained_sets_of_the_real_boots(real):
+    """A Bloodstained set is twin to another with the same pools and the same Gilded flag (ticket #261, ADR-0038): never to a set without the fossil."""
+    base = next(base.id for base in real.base_items.values() if base.name == BOOTS)
+    item = Item.build(real, base_id=base, item_level=86, rarity=Rarity.RARE, mods=())
+    actions = fossil_actions(real, item)
+    corrupting = [action for action in actions if "Bloodstained Fossil" in action.fossils]
+    ordinary = {action.twin_key(real, item) for action in actions if "Bloodstained Fossil" not in action.fossils}
+    classes = classes_by_key(corrupting, real, item)
+    print(f"\n{len(corrupting)} Bloodstained sets: {len(classes)} distinct keys")
+
+    assert len(corrupting) == 2_302 and len(classes) < 2_300 and not ordinary & set(classes)
+    assert all(len({"Gilded Fossil" in m.fossils for m in members}) == 1 for members in classes.values())
+    rng = random.Random(261)
+    many = [members for members in classes.values() if len(members) > 1]
+    assert many
+    for _ in range(100):
+        first, second = rng.sample(rng.choice(many), 2)
         assert signature(first, real, item) == signature(second, real, item), (first.fossils, second.fossils)
