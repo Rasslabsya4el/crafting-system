@@ -28,6 +28,14 @@ The grill fixed what B2 contains; the designs are ADR-0025 to ADR-0030.
 - **Out of v1**: Eldritch implicits on amulets; Randomise Influence; the Talisman base reroll; start items with a signature or double veil; Tainted catalysts.
 - **Route notes**: R20 starts from a bought base in B2 (the Awakener's Orb that makes its dual influence is B3). R07 is re-read in 3.29: the veiled Trigger mod has weight 0, so its route is the bench Trigger plus the unveiled minion speed. R05 gains its catalyst line (ADR-0029).
 
+## Amendment: B5 as grilled ([Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103), 2026-11-01)
+
+The grill fixed what B5 contains; the designs are ADR-0040 to ADR-0044.
+
+- **In B5**: the strand count on the item and the cut of tiers (ADR-0040); the declaration of cut and spend on every action (ADR-0041); the weight readings of the kept tiers as a rule axis (ADR-0042); the Orb of Remembrance, stranded purchases and the three Foulborn orbs (ADR-0043); the Orb of Unravelling, marked approximate (ADR-0044).
+- **Not in B5**: the Genesis Tree and every other way of acquiring an item (owner: the final item does not differ, so a Genesis-born item is a start item); identification (admitted, unused); the three bench rerolls (no action, no route); Hinekora's Lock (B8); Allflame crafting.
+- **Benchmarks**: none of R01 to R30 uses strands, and the map gave B5 none. B5 passes on (1) the published numbers as acceptance tests (the wiki's table, the 1,902 sheet rows, the Foulborn list, the 2,255 Remembrance results, the Unravelling samples, ADR-0040 and ADR-0044), and (2) given routes with strands: published 3.29 crafts that use them if the route-finding research ticket finds any, otherwise **test routes** that an agent writes (stranded variants of B1 routes, a Remembrance-then-craft base, an Unravelling finish) and evaluates at equal prices. The owner accepted this: the system must reproduce the evidence gathered as closely as possible; matching the real game beyond that is not required.
+
 ## Amendment: B3 as grilled ([Grill B3](https://github.com/Rasslabsya4el/crafting-system/issues/94), 2026-11-01)
 
 The grill fixed what B3 contains; the designs are ADR-0032 to ADR-0035, with ADR-0012 and ADR-0022 amended.
@@ -56,3 +64,12 @@ The grill fixed what B4 contains; the designs are ADR-0036 to ADR-0039.
 - **Out of v1**: Tainted Oil (anointments are not targets); Merrick's Ducat (Allflame is out of scope).
 - **From B6**: B6 (ADR-0045) hands B4 the Tainted socket orbs, the bench socket crafts on corrupted items and the Vaal and Locus socket outcomes. B4 takes them (ADR-0036, "Sockets"), built after B6's socket state; Tainted Chromatic is out with the other Tainted orbs whose odds are unmeasured. Hinekora's Lock on a corrupting action goes to B8.
 - **Benchmark**: B4 has no R-route; none of R01 to R30 uses corruption. A finder looks for one or two published corruption methods to use as given routes; if there is none, the acceptance numbers of ADR-0039 are the bar for B4.
+
+## Amendment: B8 as grilled ([Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
+
+The grill fixed what B8 contains; the designs are ADR-0054 to ADR-0057.
+
+- **B8 is built**, the last batch, although at the Lock's price (about 270 Divine on 2026-10-31) it rarely enters a plan: the planner takes it only where it saves more than it costs, and every plan prints a line about it (owner, answers 1 and 4).
+- **In B8**: Hinekora's Lock as a `Peek` action (ADR-0054) with the previewable set of ADR-0055, which includes the Vaal Orb that B4 handed over (ADR-0036), and the burn and relock of ADR-0056. The previews of different currencies are independent (owner, from play).
+- **Out of v1 for the Lock**: the Awakener's Orb as a preview option; a foreseeing start item; the beast, drop and card ways to a Lock; the Sacred Orb (no action).
+- **Benchmarks**: R29 gets its Lock step back (ADR-0057). B3's R29 without the Lock stays as the baseline, and a synthetic target with a low Lock price shows the Lock appearing when it pays, and a corrupted-implicit target of B4 shows the Lock in front of the Vaal Orb. The pass rule is unchanged.

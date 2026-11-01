@@ -31,6 +31,10 @@ A requirement on a roll (ADR-0008) compares the **base roll**, the integer the i
 
 Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (decision list of 2026-10-31, owner round 1 on Blessed); [Blessed Orb, catalysts and Orb of Chance](https://github.com/Rasslabsya4el/crafting-system/issues/89); ADR-0009, ADR-0024.
 
+## Amendment: the Memory Strand count ([Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103), 2026-11-01)
+
+`Item` stores one more number, `memory_strands` (0 to 100), and `Reads`/`Adds` declare it the same way: a strand-cut draw and a strand spend read and add it, so the compressed state keeps it only when an enabled action reads it. An action that declares nothing still reads everything; on an item with strands such an action is refused (ADR-0041). Details: ADR-0040.
+
 ## Amendment: sockets and the quality of weapons and armour ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
 
 `Item` also stores its **sockets** (a colour per socket and the link groups, ADR-0046) and its **quality** has two kinds: the catalyst type and percent of jewellery, or the plain percent of a weapon or armour (ADR-0049); no item class has both. `Reads` and `Adds` gain a sockets declaration in the same way: an action declares whether it reads the count, links or colours and what it sets, and an action that declares nothing still reads everything and sets nothing it did not declare. The quality declaration now covers both kinds.
