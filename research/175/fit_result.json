@@ -1,0 +1,468 @@
+{
+ "counts": {
+  "gloves": 38,
+  "misc": 2,
+  "discord_wands": 28
+ },
+ "fits": {
+  "gloves": {
+   "mle": 0.95,
+   "lo": 0.38448230803926714,
+   "hi": 1.6114665408956699,
+   "loglik": -44.31850050082618
+  },
+  "misc": {
+   "mle": -0.43,
+   "lo": null,
+   "hi": 3.991224534776584,
+   "loglik": -2.8656913092642107
+  },
+  "gloves+misc": {
+   "mle": 0.92,
+   "lo": 0.3627150465056098,
+   "hi": 1.562664175879962,
+   "loglik": -47.42767342563415
+  },
+  "discord_wands (spell weight profiled)": {
+   "mle": 6.0,
+   "lo": 0.9798564685571031,
+   "hi": null,
+   "loglik": -3.9747974800763917
+  },
+  "discord_wands by fixed spell weight": {
+   "40": {
+    "mle": -1.86,
+    "lo": null,
+    "hi": -0.9891759942049619,
+    "loglik": -4.499816407613916
+   },
+   "100": {
+    "mle": -3.0,
+    "lo": null,
+    "hi": -1.9265451312101294,
+    "loglik": -5.099087233473384
+   },
+   "150": {
+    "mle": -3.0,
+    "lo": null,
+    "hi": -2.1795451120020832,
+    "loglik": -8.728852846274519
+   },
+   "200": {
+    "mle": -3.0,
+    "lo": null,
+    "hi": -1.420703188413114,
+    "loglik": -15.322415361976823
+   },
+   "400": {
+    "mle": 6.0,
+    "lo": 3.2928406643535992,
+    "hi": null,
+    "loglik": -3.9747974800763917
+   },
+   "500": {
+    "mle": 4.43,
+    "lo": 2.3203914366230927,
+    "hi": null,
+    "loglik": -4.029825237895138
+   },
+   "800": {
+    "mle": 2.71,
+    "lo": 1.4285331610936585,
+    "hi": 5.14746651295719,
+    "loglik": -4.117928460105611
+   },
+   "1000": {
+    "mle": 2.29,
+    "lo": 1.208307956927856,
+    "hi": 4.336999629778088,
+    "loglik": -4.143427435959116
+   },
+   "1500": {
+    "mle": 1.78,
+    "lo": 0.943988502847736,
+    "hi": 3.3734206142582295,
+    "loglik": -4.176173701297477
+   }
+  },
+  "pooled (spell weight profiled)": {
+   "mle": 1.23,
+   "lo": 0.7867488511088768,
+   "hi": 1.7557691137220244,
+   "loglik": -52.78225712146894
+  },
+  "pooled by fixed spell weight": {
+   "40": {
+    "mle": -0.25,
+    "lo": -0.5691682421140383,
+    "hi": 0.07056741267309398,
+    "loglik": -71.28390172680577
+   },
+   "100": {
+    "mle": 0.11,
+    "lo": -0.3047562198462758,
+    "hi": 0.5459468666295957,
+    "loglik": -72.3028672713701
+   },
+   "150": {
+    "mle": 0.45,
+    "lo": -0.02826803442429853,
+    "hi": 0.9624183671832405,
+    "loglik": -70.74834200921224
+   },
+   "200": {
+    "mle": 0.76,
+    "lo": 0.23198600230964916,
+    "hi": 1.3569516277193108,
+    "loglik": -68.31410314721263
+   },
+   "400": {
+    "mle": 1.4,
+    "lo": 0.8018719527593127,
+    "hi": 2.092830014660776,
+    "loglik": -59.829602745062196
+   },
+   "500": {
+    "mle": 1.43,
+    "lo": 0.8663241691683021,
+    "hi": 2.0916445580123337,
+    "loglik": -57.6612918413466
+   },
+   "800": {
+    "mle": 1.37,
+    "lo": 0.8696128089482003,
+    "hi": 1.956255476896779,
+    "loglik": -54.68778570593341
+   },
+   "1000": {
+    "mle": 1.32,
+    "lo": 0.8443372637804185,
+    "hi": 1.881320216324985,
+    "loglik": -53.81840009648482
+   },
+   "1500": {
+    "mle": 1.23,
+    "lo": 0.7867488511088768,
+    "hi": 1.7557691137220244,
+    "loglik": -52.78225712146894
+   }
+  }
+ },
+ "tests": {
+  "gloves+misc": {
+   "LR_vs_alpha0": 11.214,
+   "p_alpha0": 0.0008118225765593388,
+   "LR_vs_alpha1": 0.068,
+   "p_alpha1": 0.7943189670975876
+  },
+  "discord (s=1500)": {
+   "LR_vs_alpha0": 30.464,
+   "p_alpha0": 3.401383491232933e-08,
+   "LR_vs_alpha1": 3.226,
+   "p_alpha1": 0.07248266113227265
+  },
+  "pooled (s=1500)": {
+   "LR_vs_alpha0": 39.321,
+   "p_alpha0": 3.5953849555885304e-10,
+   "LR_vs_alpha1": 0.937,
+   "p_alpha1": 0.33304240711132216
+  },
+  "gloves+misc prefix sides only (no chaos)": {
+   "sides": 10,
+   "mle": 1.15,
+   "LR_vs_alpha0": 1.903,
+   "p_alpha0": 0.16772600283584096,
+   "LR_vs_alpha1": 0.027,
+   "p_alpha1": 0.8686494828047866
+  },
+  "heterogeneity gloves+misc vs wand tab (s=1500), 1 df": {
+   "LR": 2.357,
+   "p": 0.12473623198869384
+  }
+ },
+ "sensitivity_gloves_misc": {
+  "central": {
+   "mle": 0.92,
+   "lo": 0.3627150465056098,
+   "hi": 1.562664175879962,
+   "loglik": -47.42767342563415,
+   "sides": 40
+  },
+  "typed groups at their smallest weight": {
+   "mle": 0.9,
+   "lo": 0.3236612168385701,
+   "hi": 1.551011595480831,
+   "loglik": -48.07083053572834,
+   "sides": 40
+  },
+  "duplicate tiers: largest weight for all copies": {
+   "mle": 0.92,
+   "lo": 0.3627150465056098,
+   "hi": 1.562664175879962,
+   "loglik": -47.42767342563415,
+   "sides": 40
+  },
+  "duplicate tiers: smallest weight for all copies": {
+   "mle": 0.92,
+   "lo": 0.3627150465056098,
+   "hi": 1.562664175879962,
+   "loglik": -47.42767342563415,
+   "sides": 40
+  },
+  "duplicate tiers: a group held twice enters the pool once": {
+   "mle": 0.95,
+   "lo": 0.3861134083345367,
+   "hi": 1.58999913846823,
+   "loglik": -47.17592398626478,
+   "sides": 40
+  },
+  "chaos resistance weight 125 (half)": {
+   "mle": 0.62,
+   "lo": 0.23308665326151895,
+   "hi": 1.0756440944430463,
+   "loglik": -47.74469572031808,
+   "sides": 40
+  },
+  "chaos resistance weight 500": {
+   "mle": 1.46,
+   "lo": 0.55960721870291,
+   "hi": 2.4754255605966993,
+   "loglik": -47.70191853792396,
+   "sides": 40
+  },
+  "chaos resistance weight 1000 (no contrast with the res mods)": {
+   "mle": 0.73,
+   "lo": -0.34913950233326563,
+   "hi": 1.9681633524720028,
+   "loglik": -52.17997890633966,
+   "sides": 40
+  },
+  "drop ambiguous cell readings": {
+   "mle": 0.85,
+   "lo": 0.23783140182233042,
+   "hi": 1.559484109593675,
+   "loglik": -41.507076258273756,
+   "sides": 33
+  },
+  "prefix sides only": {
+   "mle": 1.15,
+   "lo": -0.4373473314983302,
+   "hi": 3.2415577511446405,
+   "loglik": -18.143903094517583,
+   "sides": 10
+  },
+  "suffix sides only": {
+   "mle": 0.89,
+   "lo": 0.303762337120459,
+   "hi": 1.5746940813465085,
+   "loglik": -29.246533747689448,
+   "sides": 30
+  },
+  "suffix sides with chaos resistance": {
+   "mle": 0.9,
+   "lo": 0.3043090569444492,
+   "hi": 1.599471650626444,
+   "loglik": -25.00637932061707,
+   "sides": 27
+  }
+ },
+ "sides_with_unequal_duplicate_tiers": 0,
+ "sides_with_any_duplicate_group": 4,
+ "goodness_of_fit": {
+  "gloves+misc": {
+   "observed_max_loglik": -47.43,
+   "sim_mean": -46.365,
+   "p_low": 0.42,
+   "n_sim": 1000
+  },
+  "calibration_at_mle": {
+   "250": {
+    "entries": 27,
+    "expected_kept": 6.6,
+    "observed_kept": 7
+   },
+   "500": {
+    "entries": 22,
+    "expected_kept": 8.7,
+    "observed_kept": 8
+   },
+   "600": {
+    "entries": 3,
+    "expected_kept": 1.86,
+    "observed_kept": 2
+   },
+   "1000": {
+    "entries": 84,
+    "expected_kept": 52.83,
+    "observed_kept": 53
+   }
+  },
+  "calibration_at_alpha0": {
+   "250": {
+    "entries": 27,
+    "expected_kept": 13.67,
+    "observed_kept": 7
+   },
+   "500": {
+    "entries": 22,
+    "expected_kept": 10.78,
+    "observed_kept": 8
+   },
+   "600": {
+    "entries": 3,
+    "expected_kept": 1.83,
+    "observed_kept": 2
+   },
+   "1000": {
+    "entries": 84,
+    "expected_kept": 43.72,
+    "observed_kept": 53
+   }
+  },
+  "calibration_at_alpha1": {
+   "250": {
+    "entries": 27,
+    "expected_kept": 6.12,
+    "observed_kept": 7
+   },
+   "500": {
+    "entries": 22,
+    "expected_kept": 8.53,
+    "observed_kept": 8
+   },
+   "600": {
+    "entries": 3,
+    "expected_kept": 1.87,
+    "observed_kept": 2
+   },
+   "1000": {
+    "entries": 84,
+    "expected_kept": 53.47,
+    "observed_kept": 53
+   }
+  },
+  "discord_calibration_s1500": {
+   "200": {
+    "entries": 11,
+    "expected_kept": 0.3,
+    "observed_kept": 0
+   },
+   "250": {
+    "entries": 17,
+    "expected_kept": 0.67,
+    "observed_kept": 1
+   },
+   "1500": {
+    "entries": 28,
+    "expected_kept": 27.03,
+    "observed_kept": 27
+   }
+  },
+  "shape_fit_gloves_misc": {
+   "alpha_only": [
+    -47.42992149013028,
+    0.9
+   ],
+   "beta_only": [
+    -49.772654909336374,
+    0.3
+   ],
+   "both": [
+    -47.396005324385285,
+    1.1,
+    -0.1
+   ]
+  },
+  "weight_class_free_fit": {
+   "sides": 37,
+   "power_law_loglik": -43.314,
+   "power_law_alpha": 0.98,
+   "free_loglik": -43.225,
+   "free_mult_250": 0.283,
+   "free_mult_500": 0.448,
+   "power_law_mult_250": 0.257,
+   "power_law_mult_500": 0.507,
+   "LR_free_vs_power": 0.178,
+   "p_value_1df": 0.673135052296934
+  }
+ },
+ "bootstrap": {
+  "gloves+misc": {
+   "n_boot": 5000,
+   "q025": 0.4,
+   "median": 0.93,
+   "q975": 1.63
+  },
+  "discord (s=1500)": {
+   "n_boot": 5000,
+   "q025": 1.15,
+   "median": 1.79,
+   "q975": 6.0
+  },
+  "pooled (s=1500)": {
+   "n_boot": 5000,
+   "q025": 0.84,
+   "median": 1.23,
+   "q975": 1.76
+  }
+ },
+ "rare_target_example": {
+  "alpha=0": {
+   "alpha": 0.0,
+   "p_rare_kept": 0.55
+  },
+  "alpha=1": {
+   "alpha": 1.0,
+   "p_rare_kept": 0.0383
+  },
+  "gloves+misc mle": {
+   "alpha": 0.92,
+   "p_rare_kept": 0.049
+  },
+  "gloves+misc lo": {
+   "alpha": 0.3627150465056098,
+   "p_rare_kept": 0.2489
+  },
+  "gloves+misc hi": {
+   "alpha": 1.562664175879962,
+   "p_rare_kept": 0.0066
+  },
+  "pooled mle": {
+   "alpha": 1.23,
+   "p_rare_kept": 0.0187
+  },
+  "pooled lo": {
+   "alpha": 0.7867488511088768,
+   "p_rare_kept": 0.0738
+  },
+  "pooled hi": {
+   "alpha": 1.7557691137220244,
+   "p_rare_kept": 0.0037
+  }
+ },
+ "keep_rate_by_weight_class": {
+  "definition": "expected share of pool entries kept in the informative sides, weight 250 against weight 1000",
+  "mle": {
+   "alpha": 0.92,
+   "keep_rate_250": 0.244,
+   "keep_rate_1000": 0.629,
+   "ratio": 0.389
+  },
+  "lo": {
+   "alpha": 0.3627150465056098,
+   "keep_rate_250": 0.393,
+   "keep_rate_1000": 0.567,
+   "ratio": 0.694
+  },
+  "hi": {
+   "alpha": 1.562664175879962,
+   "keep_rate_250": 0.13,
+   "keep_rate_1000": 0.68,
+   "ratio": 0.191
+  },
+  "observed": {
+   "keep_rate_250": 0.259,
+   "keep_rate_1000": 0.631
+  }
+ }
+}
