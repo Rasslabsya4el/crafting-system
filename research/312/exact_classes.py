@@ -521,7 +521,7 @@ def later(g: Graph, priced, blk, args, result: dict, began: float, out_dir, stem
             pickle.dump({"graph": plain, "start": start, "goal_class": goal_class, "restart_cost": restart_cost, "labels": [p.label for p in priced]}, handle)
     result["quotient"] = {"classes": q.expanded, "actions": len(q.act_offer), "kernels": len(q.k_succ), "edges": q.edges}
     if args.stop_after_quotient:
-        say(f"quotient {result['quotient']}")
+        say(began, f"quotient {result['quotient']}")
         return
     result["raw_reach"] = {
         "no_change": L.raw_reach(g, 0)["reachable_states"],
