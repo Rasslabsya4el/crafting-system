@@ -47,7 +47,7 @@ def test_an_item_without_the_field_has_none_and_equals_one_built_with_none():
 
 def test_the_field_comes_after_the_older_ones_so_an_item_built_before_it_keeps_its_positional_fields():
     names = [field.name for field in dataclasses.fields(Item)]
-    assert names[9:] == ["enchantment", "memory_strands", "sockets"]  # a new field goes last (memory_strands, ADR-0040; sockets, ADR-0046)
+    assert names[9:] == ["enchantment", "memory_strands", "sockets", "imprints"]  # a new field goes last (memory_strands, ADR-0040; sockets, ADR-0046; imprints, ADR-0060)
     assert names[:9] == [
         "base_id", "item_level", "rarity", "mods", "influences", "corrupted", "implicits", "quality", "veil_offer",
     ]  # fmt: skip

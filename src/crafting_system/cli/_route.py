@@ -43,6 +43,7 @@ from crafting_system.targets.lines import LineList, LineMap, load_with_lines
 from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
 
+from ._offers import free_action_cost
 from ._plan import Plan, evaluate_risk, offer_action
 from ._reach import policy_states
 
@@ -482,7 +483,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
             if weight > 0 and successor not in seen:
                 seen.add(successor)
                 order.append(successor)
-    risk = evaluate_risk(policy, plan.start, plan.is_goal, plan.mean_remaining)  # the route costs at least the solver's mean
+    risk = evaluate_risk(policy, plan.start, plan.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the route costs at least the solver's mean
 
     divergence = None
     for state in policy_states(plan.start, plan.policy, plan.is_goal):

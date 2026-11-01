@@ -28,6 +28,8 @@ base: Sorcerer Boots
 
 # The item level of the boots, a whole number from 1 to 100.
 item_level: 86
+# Not pinned (ADR-0061, ticket #352): the tier-1 Energy Shield % needs only item level 84 and the Movement Speed has a bench
+# source, so the planner may plan the boots at 84 or 85 as well; this file's 86 is the guide's level, not the lowest.
 
 # Influences on the base. [] means none.
 influence: []

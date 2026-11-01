@@ -62,6 +62,15 @@ an action (the expected gap is in `_coarse`). The DP is then dense (`_dense`) an
 mean, or the chain is too large for the dense DP, the ordinary grid is used as before. The trigger looks at the
 highest level asked: when only that level is out of reach, the lower levels come as brackets of the coarse grid too.
 
+Free actions (`free_cost`, a proper policy without inputs; ticket #349, `_free`). The planner prices an action that consumes nothing at
+an epsilon, 1e-6 of the cheapest offer that costs something, so a step set by the cheapest action would be that epsilon and the grid would
+cover a few Chaos of a route that costs hundreds. When the caller names that cost and the policy holds an action of it, the free states pay
+0 bins on both chains and are folded away (`_fold`), the step is chosen from the paying costs alone, and what the free states pay is counted
+apart: at most `t` (reported in `grid.free_allowance`, except with probability `grid.free_tail`) on every quantile, and at most `E[E] / (1 - L)`
+on the CVaR. `_free` has the argument. The grid is then never `exact`. When a component is too large to fold, the count of free visits does
+not settle, or a level is not reached, the ordinary and the coarse grid are tried as if no cost had been named (with `free_fallback_bins`
+as `max_bins`, so the caller's cut still holds). Without `free_cost`, or when no state is free, nothing differs from before.
+
 Mean of a grid chain, for CVaR. The exact grid uses the solver mean of the real costs. An inexact
 grid solves again with the costs k_lo * D and k_hi * D to get the mean of each grid chain, and CVaR
 of each chain uses the matching end of its mean interval.
@@ -86,7 +95,7 @@ from numbers import Integral, Real
 
 from .. import parallel
 from ..solver import Action
-from . import _inputs, _moments
+from . import _free, _inputs, _moments
 from ._budget import BudgetRun, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
 from ._coarse import beyond_ordinary_grid, choose_step, expected_visits
@@ -122,6 +131,8 @@ def evaluate[S](
     max_bins: int = 200_000,
     work_budget: float = WORK_BUDGET,
     max_coarse_bins: int | None = None,
+    free_cost: float | None = None,
+    free_fallback_bins: int | None = None,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -131,6 +142,9 @@ def evaluate[S](
     the probability still in flight is at most `tail_mass`; it never runs past `max_bins` bins and
     reports what was left as `grid.unresolved_mass`. `work_budget` caps the DP's work when `resolution`
     is not given (see the module docstring), and `max_coarse_bins` the most bins of the coarse grid (default `max_bins`).
+    `free_cost` names the cost of the actions that are free (the planner's epsilon, `_free`): of a proper policy without inputs that holds
+    such an action they are counted apart from the grid (see "Free actions" in the module docstring); `free_fallback_bins`, when given,
+    is the `max_bins` of the ordinary and coarse grids if that is not possible. Without `free_cost` nothing changes.
     Raises `ValueError` for a bad argument or a
     `resolution` above the smallest cost, a `max_bins` so large that a (bin, state) pair no longer fits
     62 bits, and the solver's `ConvergenceError` if a moment solve
@@ -158,6 +172,14 @@ def evaluate[S](
         or not (math.isfinite(resolution) and resolution > 0.0)
     ):
         raise ValueError(f"resolution must be finite and above zero, or None, got {resolution!r}")
+    if free_cost is not None and (
+        isinstance(free_cost, bool) or not isinstance(free_cost, Real) or not (math.isfinite(free_cost) and free_cost > 0.0)
+    ):
+        raise ValueError(f"free_cost must be finite and above zero, or None, got {free_cost!r}")
+    if free_fallback_bins is not None and (
+        isinstance(free_fallback_bins, bool) or not isinstance(free_fallback_bins, Integral) or free_fallback_bins < 1
+    ):
+        raise ValueError(f"free_fallback_bins must be an integer of at least 1, or None, got {free_fallback_bins!r}")
     for state, chosen in policy.items():
         if not isinstance(chosen, Action):
             raise ValueError(f"policy value for {state!r} must be an Action, got {chosen!r}")
@@ -180,11 +202,10 @@ def evaluate[S](
             f"costs must lie in the supported range {MIN_COST:g} to {MAX_COST:g} so that "
             f"their squares stay representable, got {c_min!r} to {max(costs)!r}"
         )
-    if resolution is not None and resolution > c_min * (1.0 + UNIT_TOLERANCE):
-        raise ValueError(
-            f"resolution {resolution!r} exceeds the smallest cost {c_min!r}: a step would "
-            "round to zero bins and the budget DP needs every step to cost at least one bin"
-        )
+    free_found = _free.free_states(chain, free_cost) if free_cost is not None else []
+    free = free_found if chain.proper and not chain.has_inputs else []
+    if resolution is not None and not free:
+        _check_resolution(resolution, c_min)
     proper = chain.proper
     horizon = None
     spread = COVERED_STEPS * c_min
@@ -198,6 +219,16 @@ def evaluate[S](
             spread = SPREAD_SDS * math.sqrt(variance[0])
     if chain.has_inputs and _inputs.branching(chain):
         return _unordered_report(chain, (mean, variance) if proper else None, cvar_level, levels)
+    if free:
+        apart = _free_report(
+            chain, free, mean, variance, levels, cvar_level, tail_mass, max_bins, resolution, work_budget, horizon, spread
+        )
+        if apart is not None:
+            return apart
+        if resolution is not None:
+            _check_resolution(resolution, c_min)
+    if free_found and free_fallback_bins is not None:  # the free grid was not built (or not possible): the caller's cut for the ordinary one
+        max_bins = min(max_bins, free_fallback_bins)
     if (
         resolution is None and proper and not chain.has_inputs
         and beyond_ordinary_grid(mean[0], variance[0], max([*levels, cvar_level]), c_min, max_bins)
@@ -247,6 +278,70 @@ def evaluate[S](
         cvar_level,
         grid,
         _input_runs(chain) if proper and chain.has_inputs else {},
+    )
+
+
+def _check_resolution(resolution: float, c_min: float) -> None:
+    if resolution > c_min * (1.0 + UNIT_TOLERANCE):
+        raise ValueError(
+            f"resolution {resolution!r} exceeds the smallest cost {c_min!r}: a step would "
+            "round to zero bins and the budget DP needs every step to cost at least one bin"
+        )
+
+
+def _free_report(
+    chain: Chain,
+    free: Sequence[int],
+    mean: tuple[float, float, float],
+    variance: tuple[float, float, float],
+    levels: Sequence[float],
+    cvar_level: float,
+    tail_mass: float,
+    max_bins: int,
+    resolution: float | None,
+    work_budget: float,
+    horizon: float,
+    spread: float,
+) -> RiskReport | None:
+    """The report with the free actions counted apart from the grid (`_free`), or `None` when the ordinary grid has to do."""
+    free_set = set(free)
+    paid = [chain.action[i].cost for i in chain.finishing_states() if i not in free_set]
+    if not paid:
+        return None
+    c_min = min(paid)
+    step = resolution
+    if step is None:
+        step = _choose_step(paid, c_min, max_bins, horizon, _affordable(chain, spread, work_budget))
+    else:
+        _check_resolution(step, c_min)
+    low_bins, high_bins = _bin_costs(chain, step)
+    for i in free:
+        low_bins[i] = high_bins[i] = 0
+    folded = fold_free(chain, low_bins)  # the same folded chain for both runs: the free states are 0 bins on each
+    if folded is None:
+        return None
+    counted = _free.free_allowance(chain, free)
+    if counted is None:
+        return None
+    allowance = counted[0] * counted[1]
+    target = min(max([*levels, cvar_level]) + _free.FREE_TAIL, 1.0)
+    run = dict(initial=folded.initial, goal_mass=folded.goal_mass, target=target, tail_mass=tail_mass, max_bins=max_bins)
+    if low_bins == high_bins:
+        low_run = high_run = run_budget(folded.chain, low_bins, **run)
+    else:
+        low_run, high_run = _both((run_budget, (folded.chain, low_bins), run), (run_budget, (folded.chain, high_bins), run))
+    mean_low, mean_high, owed = _free.free_means(chain, free, step, low_bins, high_bins, _solve_costs)
+    cvar = _free.cvar(cvar_level, step, low_run, high_run, mean_low, mean_high, owed)
+    cvar_allowance = owed / (1.0 - cvar_level)
+    quantiles = {x: Estimate(*_free.quantile(x, step, low_run, high_run, allowance)) for x in levels}
+    if not all(math.isfinite(e.high) for e in (*quantiles.values(), Estimate(*cvar))):
+        return None  # the grid did not reach a level: the ordinary and the coarse grid may (they were not tried yet)
+    runs = (low_run,) if low_run is high_run else (low_run, high_run)
+    grid = GridInfo(
+        step, False, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs), allowance, _free.FREE_TAIL, cvar_allowance
+    )
+    return RiskReport(
+        Estimate(1.0, 1.0, 1.0), Estimate(*mean), Estimate(*variance), quantiles, Estimate(*cvar), cvar_level, grid
     )
 
 

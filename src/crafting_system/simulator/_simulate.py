@@ -14,6 +14,20 @@ and the blocks may run in a process pool (ticket #250, `crafting_system.parallel
 workers, because a block's draws depend on its number only and the blocks are joined in order. Without `block`, or with
 `block >= runs`, there is the one stream and nothing is parallel.
 
+Nested runs (ticket #222, ADR-0022). A `Step` may list `inputs`: second items the action consumes. Before the action is applied
+the simulator makes each input by a run of its own (`Input.policy` from `Input.start` until `Input.is_goal`), in order, adds what
+those runs cost to the run that asked, then applies the action to the item in hand (bound to the donors the runs made when the
+step has `bind`) and checks each donor with `Input.matches` when it has one. Every attempt makes its inputs afresh, a retry
+included, and a nested run draws from the same stream as the run that asked, so the draws of a run stay in one fixed order. All
+the steps of the tree of runs count against `max_steps`, and the clicks of nested runs count in `mean_steps`. A nested run that
+is stopped or cut ends the run that asked for it the same way (stopped or unfinished), the cost paid until then counted. Inputs that ask for
+each other with no click between them end at `MAX_NESTING` (100) levels, the run unfinished. A block still draws from its own
+seeded stream only, so nested runs keep the report the same for any number of workers.
+
+With `reading` the simulator samples the actions under that reading of the rule axes (`action.outcomes_under(data, item, reading)`,
+for an action that has it) in every run and every nested run, instead of the plan's value: a reading is one global fact of the
+game (ADR-0033), so a nested run reads the same one as the run that asked for it.
+
 A refusal of the action (`NotApplicableError`, `OutOfScopeError`) is not caught: a policy that
 applies an action the game would refuse is a bug in the policy.
 
@@ -34,9 +48,10 @@ from crafting_system.items import Item
 
 from ._estimate import critical_value, mean, proportion
 from ._report import SimulationReport
-from ._step import Policy
+from ._step import DonorMismatchError, Policy
 
 DEFAULT_MAX_STEPS = 100_000
+MAX_NESTING = 100  # levels of inputs that ask for inputs; a deeper chain is cut and the run is unfinished
 
 
 def simulate(
@@ -52,6 +67,7 @@ def simulate(
     confidence: float = 0.95,
     block: int | None = None,
     workers: int | None = None,
+    reading: object | None = None,
 ) -> SimulationReport:
     """Run `policy` from `start` `runs` times and report the success rate and the cost.
 
@@ -59,14 +75,15 @@ def simulate(
     stop. `start_cost` (what `start` cost to get) is part of every run's total. Raises
     `ValueError` for a bad argument: `runs` an integer of at least 2, `seed` an integer,
     `start_cost` finite and not negative, `max_steps` an integer of at least 1, `confidence`
-    strictly between 0 and 1. Errors raised by the actions or the policy propagate.
+    strictly between 0 and 1. Errors raised by the actions or the policy propagate, and so does
+    `DonorMismatchError` from a nested run whose donor its `Input.matches` refuses.
     """
     _check_arguments(runs, seed, start_cost, max_steps, confidence)
     if block is not None and (isinstance(block, bool) or not isinstance(block, Integral) or block < 1):
         raise ValueError(f"block must be a whole number of 1 or more, got {block!r}")
     size = runs if block is None else min(block, runs)
     tasks = [(seed if number == 0 else f"{seed}/{number}", min(size, runs - first)) for number, first in enumerate(range(0, runs, size))]
-    shared = (data, policy, start, is_goal, float(start_cost), max_steps)
+    shared = (data, policy, start, is_goal, float(start_cost), max_steps, reading)
     # the policy is a closure: it is inherited by forked workers, not pickled, so where there is no fork the blocks run here
     if len(tasks) > 1 and parallel.can_inherit() and (workers is None or workers > 1):
         with parallel.WorkerPool(_shared, (shared,), workers=workers) as pool:
@@ -75,13 +92,14 @@ def simulate(
         parts = [_block(*shared, *task) for task in tasks]
     costs: list[float] = []
     paid_by_successes: list[float] = []
-    stopped = unfinished = steps_taken = 0
-    for block_costs, block_paid, block_stopped, block_unfinished, block_steps in parts:
+    stopped = unfinished = steps_taken = nested = 0
+    for block_costs, block_paid, block_stopped, block_unfinished, block_steps, block_nested in parts:
         costs.extend(block_costs)
         paid_by_successes.extend(block_paid)
         stopped += block_stopped
         unfinished += block_unfinished
         steps_taken += block_steps
+        nested += block_nested
     successes = len(paid_by_successes)
     return SimulationReport(
         runs=runs,
@@ -94,6 +112,7 @@ def simulate(
         mean_steps=steps_taken / runs,
         confidence=confidence,
         costs=tuple(costs),
+        nested_runs=nested,
     )
 
 
@@ -105,31 +124,81 @@ def _run_block(task: tuple) -> tuple:
     return _block(*parallel.context(), *task)
 
 
-def _block(data, policy, start, is_goal, start_cost, max_steps, seed, runs):
+def _sampler(action, data, item, reading):
+    """The action's outcomes on `item`: under `reading` when one is given and the action takes readings, else the plan's."""
+    if reading is not None:
+        under = getattr(action, "outcomes_under", None)
+        if under is not None:
+            return under(data, item, reading)
+    return action.outcomes(data, item)
+
+
+class _Tree:
+    """One run and the nested runs it makes: the stream, the step budget shared by the tree, the counts."""
+
+    __slots__ = ("data", "rng", "max_steps", "reading", "steps", "nested")
+
+    def __init__(self, data, rng, max_steps, reading):
+        self.data, self.rng, self.max_steps, self.reading = data, rng, max_steps, reading
+        self.steps = self.nested = 0
+
+    def walk(self, item, policy, is_goal, paid, depth=0):
+        """Run `policy` from `item` until a goal, a stop or the step budget: `(ending, last item, paid)`.
+
+        `ending` is "goal", "stopped" or "unfinished". `paid` comes in as what is already paid (the start cost) and goes out
+        with the cost of the steps added one by one, nested runs included. A run nested more than `MAX_NESTING` deep is
+        unfinished: inputs that ask for each other without a click between them would otherwise never end.
+        """
+        if depth > MAX_NESTING:
+            return "unfinished", item, paid
+        while True:
+            if is_goal(item):
+                return "goal", item, paid
+            step = policy(item)
+            if step is None:
+                return "stopped", item, paid
+            if self.steps == self.max_steps:
+                return "unfinished", item, paid
+            paid += step.cost
+            action = step.action
+            if step.inputs:
+                donors = []
+                for need in step.inputs:
+                    self.nested += 1
+                    ending, donor, spent = self.walk(need.start, need.policy, need.is_goal, need.start_cost, depth + 1)
+                    paid += spent
+                    if ending != "goal":
+                        return ending, item, paid
+                    if need.matches is not None and not need.matches(donor):
+                        raise DonorMismatchError(f"a nested run made a donor that its step refuses: {donor!r}")
+                    donors.append(donor)
+                if self.steps == self.max_steps:  # the nested runs used the last click: this step cannot be taken
+                    return "unfinished", item, paid
+                if step.bind is not None:
+                    action = step.bind(tuple(donors))
+            item = _sampler(action, self.data, item, self.reading).sample(self.rng)
+            self.steps += 1
+
+
+def _block(data, policy, start, is_goal, start_cost, max_steps, reading, seed, runs):
     """`runs` crafts drawn from `random.Random(seed)`: their costs, the costs of the successes and the counts."""
     rng = random.Random(seed)
     costs: list[float] = []
     paid_by_successes: list[float] = []
-    stopped = unfinished = steps_taken = 0
+    stopped = unfinished = steps_taken = nested = 0
     for _ in range(runs):
-        item, total, steps = start, start_cost, 0
-        while True:
-            if is_goal(item):
-                paid_by_successes.append(total)
-                break
-            step = policy(item)
-            if step is None:
-                stopped += 1
-                break
-            if steps == max_steps:
-                unfinished += 1
-                break
-            total += step.cost
-            item = step.action.outcomes(data, item).sample(rng)
-            steps += 1
+        tree = _Tree(data, rng, max_steps, reading)
+        ending, _, total = tree.walk(start, policy, is_goal, start_cost)
+        if ending == "goal":
+            paid_by_successes.append(total)
+        elif ending == "stopped":
+            stopped += 1
+        else:
+            unfinished += 1
         costs.append(total)
-        steps_taken += steps
-    return costs, paid_by_successes, stopped, unfinished, steps_taken
+        steps_taken += tree.steps
+        nested += tree.nested
+    return costs, paid_by_successes, stopped, unfinished, steps_taken, nested
 
 
 def _check_arguments(runs: object, seed: object, start_cost: object, max_steps: object, confidence: object) -> None:

@@ -11,171 +11,14 @@ dynamic programming over the picked sets and by the ordered draws of the formula
 """
 
 import heapq
-import itertools
 import math
-import random
 from fractions import Fraction
-from math import lcm
 
 import pytest
+from donor_world_support import TinyWorld, branching_components, product_spec, world_of
 from ssp_input_oracles import brute_force_inputs, lp_values_inputs
 
 from crafting_system.solver import Acquisition, Action, Need, solve
-
-# percent kept by pooled count (ADR-0033, the guide's table; renormalised per row)
-COUNT_TABLE = {1: {0: 41, 1: 59}, 2: {1: 67, 2: 33}, 3: {1: 39, 2: 52, 3: 10}, 4: {1: 11, 2: 59, 3: 31}}
-
-
-def scaled(dist):
-    denominator = lcm(*(Fraction(p).denominator for p in dist.values()))
-    return tuple((state, int(Fraction(p) * denominator)) for state, p in dist.items() if p)
-
-
-class TinyWorld:
-    """Items are sorted tuples of mod names (every mod its own family); `weights` maps a mod to its spawn weight."""
-
-    def __init__(self, weights, costs, cap=2):
-        self.weights, self.costs, self.cap = weights, costs, cap
-        self.goal = tuple(sorted(name for name in weights if name in "AB"))
-
-    def states(self):
-        names = sorted(self.weights)
-        return [c for n in range(self.cap + 1) for c in itertools.combinations(names, n)]
-
-    def donors(self):
-        return [s for s in self.states() if s]
-
-    def is_goal(self, state):
-        return state == self.goal
-
-    # --- kernels ---
-    def alt(self, state):
-        total = sum(self.weights.values())
-        return {(name,): Fraction(w, total) for name, w in self.weights.items()}
-
-    def exalt(self, state):
-        free = {n: w for n, w in self.weights.items() if n not in state}
-        if len(state) >= self.cap or not free:
-            return None
-        total = sum(free.values())
-        return {tuple(sorted(state + (n,))): Fraction(w, total) for n, w in free.items()}
-
-    def annul(self, state):
-        if not state:
-            return None
-        dist = {}
-        for i in range(len(state)):
-            rest = state[:i] + state[i + 1 :]
-            dist[rest] = dist.get(rest, 0) + Fraction(1, len(state))
-        return dist
-
-    def recomb(self, a, b):
-        """Dynamic programming over the picked sets: pooled entries (a mod on both inputs twice), a family closed once picked."""
-        entries = list(a) + list(b)
-        row = COUNT_TABLE[min(len(entries), 4)]
-        total = sum(row.values())
-        out = {}
-        for kept, percent in row.items():
-            dist = {(): Fraction(1)}
-            for _ in range(min(kept, self.cap)):
-                nxt = {}
-                for picked, p in dist.items():
-                    live = [(n, self.weights[n]) for n in entries if n not in picked]
-                    weight = sum(w for _, w in live)
-                    if not weight:
-                        nxt[picked] = nxt.get(picked, 0) + p
-                        continue
-                    for n in {n for n, _ in live}:
-                        share = Fraction(sum(w for m, w in live if m == n), weight)
-                        key = tuple(sorted(picked + (n,)))
-                        nxt[key] = nxt.get(key, 0) + p * share
-                dist = nxt
-            for picked, p in dist.items():
-                out[picked] = out.get(picked, 0) + p * Fraction(percent, total)
-        return out
-
-    def recomb_by_orders(self, a, b):
-        """The same kernel from the ordered draws of the formula, one entry at a time, closing its family."""
-        entries = list(a) + list(b)
-        row = COUNT_TABLE[min(len(entries), 4)]
-        total = sum(row.values())
-        out = {}
-
-        def draw(remaining, picked, left, p, percent):
-            if left == 0 or not remaining:
-                key = tuple(sorted(picked))
-                out[key] = out.get(key, 0) + p * Fraction(percent, total)
-                return
-            weight = sum(self.weights[n] for n in remaining)
-            for i, n in enumerate(remaining):
-                rest = [m for m in remaining if m != n]
-                draw(rest, picked + [n], left - 1, p * Fraction(self.weights[n], weight), percent)
-
-        for kept, percent in row.items():
-            draw(entries, [], min(kept, self.cap), Fraction(1), percent)
-        return out
-
-    # --- the base model of the solver ---
-    def model(self, offers):
-        world = self
-        cache = {}
-
-        class Model:
-            def is_goal(self, state):
-                return world.is_goal(state)
-
-            def actions(self, state):
-                if state in cache:
-                    return cache[state]
-                found = []
-                for label, kernel in (("alt", world.alt), ("exalt", world.exalt), ("annul", world.annul)):
-                    if label in world.costs and (dist := kernel(state)):
-                        found.append(Action(label, world.costs[label], scaled(dist)))
-                for donor in offers(state):
-                    found.append(
-                        Action(("recomb", donor), world.costs["recomb"], scaled(world.recomb(state, donor)), (Need((), donor),))
-                    )
-                cache[state] = tuple(found)
-                return cache[state]
-
-        return Model()
-
-    def solve(self, offers, **options):
-        acquisition = Acquisition(self.model(offers))
-        solution = solve(acquisition, [acquisition.start(())], **options)
-        return solution, acquisition
-
-
-def world_of(seed):
-    rng = random.Random(seed)
-    weights = {"A": rng.choice([1, 2, 5]), "B": rng.choice([1, 3, 9])}
-    if rng.random() < 0.7:
-        weights["J"] = rng.choice([2, 6, 20])
-    costs = {"alt": 1, "recomb": rng.choice([1, 3, 10])}
-    if rng.random() < 0.5:
-        costs["exalt"] = rng.choice([2, 5])
-    if rng.random() < 0.5:
-        costs["annul"] = rng.choice([1, 3])
-    return TinyWorld(weights, costs)
-
-
-def product_spec(acquisition, start):
-    """The reachable product as an oracle spec: goals and, per state, (label, cost, outcomes, inputs)."""
-    seen, stack, table, goals = {start}, [start], {}, set()
-    while stack:
-        x = stack.pop()
-        if acquisition.is_goal(x):
-            goals.add(x)
-            continue
-        rows = []
-        for a in acquisition.actions(x):
-            rows.append((a.label, Fraction(a.cost), [(o.state, o.weight) for o in a.outcomes], list(a.extra_inputs)))
-            for t in [o.state for o in a.outcomes] + list(a.extra_inputs):
-                if t not in seen:
-                    seen.add(t)
-                    stack.append(t)
-        table[x] = rows
-    return goals, table
 
 
 class Determinized:
@@ -301,45 +144,6 @@ def lazy_solve(world, seed_donors, *, bound="expected", envelope=False, trace=No
         for s, d in violations:
             offers[s].add(d)
 
-
-def branching_components(acquisition, start):
-    """Sizes of the strongly connected components of the product that hold an input edge (outcome and input edges alike)."""
-    order, edges = [start], {}
-    seen = {start}
-    for x in order:
-        out = []
-        if not acquisition.is_goal(x):
-            for a in acquisition.actions(x):
-                out += [(o.state, False) for o in a.outcomes] + [(y, True) for y in a.extra_inputs]
-        edges[x] = out
-        for y, _ in out:
-            if y not in seen:
-                seen.add(y)
-                order.append(y)
-    forward = {x: [y for y, _ in out] for x, out in edges.items()}
-    backward = {x: [] for x in order}
-    for x, ys in forward.items():
-        for y in ys:
-            backward[y].append(x)
-
-    def closure(root, graph):
-        found, stack = {root}, [root]
-        while stack:
-            for y in graph[stack.pop()]:
-                if y not in found:
-                    found.add(y)
-                    stack.append(y)
-        return found
-
-    done, sizes = set(), []
-    for x in order:
-        if x in done:
-            continue
-        component = closure(x, forward) & closure(x, backward)
-        done |= component
-        if any(is_input and y in component for z in component for y, is_input in edges[z]):
-            sizes.append(len(component))
-    return sorted(sizes, reverse=True)
 
 
 # --- the kernel of the fixture is the formula of ADR-0033 -------------------------------------------------
