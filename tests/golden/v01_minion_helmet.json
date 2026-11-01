@@ -153,11 +153,14 @@
   "left_out_actions": [
     {
       "reason": "the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones",
-      "count": 16,
+      "count": 23,
       "actions": [
         "chaos-orb",
         "harvest-reforge",
         "harvest-reforge-influence",
+        "harvest-add-remove",
+        "harvest-resistance-swap",
+        "harvest-damage-swap",
         "essence",
         "corrupted-essence",
         "bench-craft",
@@ -170,6 +173,10 @@
         "pick",
         "annulment-orb",
         "fracturing-orb",
+        "talisman-fracture",
+        "aspect-beast",
+        "beast-side-swap",
+        "wild-bristle-matron",
         "divine-orb"
       ]
     }

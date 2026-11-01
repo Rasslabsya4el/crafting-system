@@ -18,7 +18,7 @@ First step, before S1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 rec
 Start options (the cheapest total of start price and expected cost to craft wins; the plain start item is always one; `--no-recipe-starts`, or recipe_starts = false under [planner] in crafting.toml, turns recipe starts off):
   planned: the target's own start item (Lion Pelt (ilvl 84)): 1,348.94 Chaos = start 2.00 + crafting 1,346.94
   chosen: Helmet with +1 to Minion Skill Gems (vendor recipe): 866.40 Chaos = start 8.00 + crafting 858.40
-Not offered, 16 actions: the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones
+Not offered, 23 actions: the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones
 States solved: 786
 
 Policy (S = a state of the item; the start is S1)
