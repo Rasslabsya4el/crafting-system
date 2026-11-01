@@ -3,6 +3,8 @@
 * On an empty rare amulet of item level 86 the weight the guaranteed draw picks from, for each of the 16 crafts, equals a
   hand walk over the dump (first matching spawn tag, the mod's `implicit_tags` holding the craft's tag); Lightning's is the
   14,950 of the PoE Vault guide and the research (HRV-25).
+* A likelihood reforge weighs the mods of the families an amulet holds x10 (more likely) or x1/10 (less likely) against
+  the plain pool of the empty item, the factor of the game data's `HarvestCraftOptions` (+900 and -90 percent, issue #319).
 * On the Hunter Thicket Bow of item level 78 the guaranteed draw of the influence reforge picks from 10,200 of weight, the
   weight the Hunter tag adds to the pool (`test_actions_rare_orbs_real.py` pins it by another hand walk); the data's own
   `influence_mod` tag marks none of it, which is why the reforge does not use that tag.
@@ -14,8 +16,14 @@ import pytest
 from abstraction_support import real_game_data
 from harvest_reforge_support import TABLE
 
-from crafting_system.actions import HarvestReforge, HarvestReforgeInfluence, NotApplicableError
-from crafting_system.items import Influence, Item, Rarity
+from crafting_system.actions import (
+    HarvestReforge,
+    HarvestReforgeInfluence,
+    HarvestReforgeLikelihood,
+    NotApplicableError,
+    build_pool,
+)
+from crafting_system.items import ExplicitMod, Influence, Item, Rarity
 
 HUNTER_WEIGHT_ADDED = 10200  # test_actions_rare_orbs_real.py: HUNTER_POOL minus PLAIN_POOL, 34 and 25 families
 
@@ -114,3 +122,22 @@ def test_with_two_influences_the_guaranteed_draw_picks_from_the_weight_of_both(d
             expected += deciding.weight * factor
     picked = sum((e.weight for f in outcomes.pool for e in f.mods if "influence" in e.mod.implicit_tags), Fraction(0))
     assert picked == expected > HUNTER_WEIGHT_ADDED
+
+
+@pytest.mark.parametrize(("more", "factor"), [(True, Fraction(10)), (False, Fraction(1, 10))], ids=["more", "less"])
+def test_a_likelihood_reforge_weighs_the_held_families_ten_times_more_or_a_tenth(more, factor, data):
+    """A Coral Amulet (item level 86) holding T1 Increased Life: every real mod of that family gets `factor`, the rest keep their weight."""
+    item = amulet(data)
+    life = data.mods["IncreasedLife10"]
+    held = Item.build(
+        data, base_id=item.base_id, item_level=86, rarity=Rarity.RARE,
+        mods=(ExplicitMod(life.id, 1, tuple(min(s.min, s.max) for s in life.stats)),),
+    )  # fmt: skip
+    plain = {(f.family, e.mod.id): e.weight for f in build_pool(data, item) for e in f.mods}
+    boosted = {(f.family, e.mod.id): e.weight for f in HarvestReforgeLikelihood(more).outcomes(data, held).pool for e in f.mods}
+
+    assert boosted.keys() == plain.keys()
+    in_family = [key for key in plain if key[0] in life.families]
+    assert in_family and len(in_family) < len(plain)
+    for key, weight in boosted.items():
+        assert weight == plain[key] * (factor if key[0] in life.families else 1), key

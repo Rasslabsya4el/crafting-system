@@ -48,6 +48,17 @@ SIDE_BY_GENERATION_TYPE = {
 }
 
 
+def dominant_side(exarch_grade: int, eater_grade: int) -> EldritchSide | None:
+    """The dominant Eldritch side for the two grades (0 for no implicit, ADR-0025), derived and never stored.
+
+    The side with the higher grade is dominant; a lone implicit is dominant by itself (its rival has grade 0); equal
+    grades, or no implicit at all, give no dominance.
+    """
+    if exarch_grade == eater_grade:
+        return None
+    return EldritchSide.EXARCH if exarch_grade > eater_grade else EldritchSide.EATER
+
+
 @dataclass(frozen=True, slots=True)
 class ImplicitMod:
     """One implicit mod on an item.

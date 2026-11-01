@@ -58,7 +58,8 @@ Keys (unknown keys are errors, with a close-match hint):
       veil_offer: [UnveiledPrefixLife1]   # optional: up to 3 mod ids offered for the one veiled placeholder in `mods`
     start_price: R12 start amulet   # optional: the name of the start item in the price file (what it costs to get)
     price_file: prices.json # optional path; a relative path counts from the target file's folder
-    actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it can use)
+    actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it offers by
+                            # default); a name may also be the label of one action, e.g. "Essence of Insanity" (#70)
     allow_corrupted: true   # optional (ADR-0036): a corrupted item may be the goal even with no corrupted implicit; without this key
                             # and without a `corrupted: true` implicit, a corrupted item is never a goal
 

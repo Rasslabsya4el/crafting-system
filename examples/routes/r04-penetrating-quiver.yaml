@@ -1,0 +1,133 @@
+# Given route for benchmark route R04: the Insanity-fractured additional-arrow Penetrating Arrow Quiver.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# In every state the FIRST rule whose conditions match is the one that is followed. A goal state is never
+# acted on. A state no rule matches is reported as a gap: the guide does not say what to do there, and this
+# file does not invent it. The conditions and actions are explained in examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (PoE Vault, docs/research/2026-10-30-5-reference-routes.md, id R04), as the guide numbers it:
+#   1. Buy a quiver of item level 81 or more.
+#   2. Essence of Insanity (the Pierce).
+#   3. Orb of Annulment until the quiver has exactly 4 mods. If the Pierce is removed, go back to step 2.
+#   4. Fracturing Orb on the Pierce (1 in 4). If it fractures another mod, go back to step 1.
+#   5. Deafening Essence of Rage until "Bow Attacks fire an additional Arrow" (the essence gives the Strength).
+#   6. Keep one suffix open, Annulment if needed. If the Strength or the arrow is removed, go back to step 5.
+#   7. Craft "Cannot roll Attack Modifiers".
+#   8. Two Exalted Orbs: the only prefixes left are Maximum Life and Damage with Bow Skills.
+#   9. Remove the craft (the finish; not part of the target).
+#
+# Counting mods: a rare quiver always holds at least 4 mods in this route (an essence leaves 4, 5 or 6, and the
+# route annuls down to 4 and no further), so "4 or fewer" is "at least 2 slots free in all", which the rules
+# below write as the three ways to split 2 free slots over the two sides (the quiver has 3 prefixes, 3 suffixes).
+
+name: R04, PoE Vault guide
+
+rules:
+  # Step 2: the bought quiver is normal; the Essence of Insanity makes it a rare with 4 mods.
+  - when:
+      rarity: normal
+    do: Essence of Insanity
+
+  # Steps 5 to 8 need the Pierce fractured: look at that first.
+  # Step 8: the metamod is on the quiver, the Pierce is fractured, the Strength and the arrow are there:
+  # an Exalted Orb while a prefix is free. (Prefixes full before the Exalted Orbs, or full of the wrong
+  # tiers after them, is a gap of the guide: it names no way out.)
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+      crafted_mods: true
+      open_prefixes: 1
+      requirements:
+        - family: Strength
+          status: passing
+        - family: AdditionalArrows
+          status: passing
+    do: Exalted Orb
+
+  # Step 7: a suffix is free for the metamod, the Strength and the arrow are there.
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+      crafted_mods: false
+      open_suffixes: 1
+      requirements:
+        - family: Strength
+          status: passing
+        - family: AdditionalArrows
+          status: passing
+    do: Bench craft Cannot roll Attack Modifiers
+
+  # Step 6: no suffix free but the Strength and the arrow are there: an Orb of Annulment.
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+      crafted_mods: false
+      requirements:
+        - family: Strength
+          status: passing
+        - family: AdditionalArrows
+          status: passing
+    do: Orb of Annulment
+
+  # Step 5, and back to it from step 6: the Strength or the arrow is missing.
+  - when:
+      rarity: rare
+      fractured: [{family: Pierce}]
+      crafted_mods: false
+    do: Deafening Essence of Rage
+
+  # Step 3: the Pierce was annulled (or the quiver was rerolled without it): back to step 2.
+  - when:
+      rarity: rare
+      fractured: none
+      requirements:
+        - family: Pierce
+          status: absent
+      crafted_mods: false
+    do: Essence of Insanity
+
+  # Step 4 (exactly 4 mods, the Pierce there and not fractured yet): the Fracturing Orb, in the three ways
+  # to leave 2 slots free.
+  - when:
+      rarity: rare
+      fractured: none
+      open_prefixes: 2
+      requirements:
+        - family: Pierce
+          status: passing
+    do: Fracturing Orb
+  - when:
+      rarity: rare
+      fractured: none
+      open_prefixes: 1
+      open_suffixes: 1
+      requirements:
+        - family: Pierce
+          status: passing
+    do: Fracturing Orb
+  - when:
+      rarity: rare
+      fractured: none
+      open_suffixes: 2
+      requirements:
+        - family: Pierce
+          status: passing
+    do: Fracturing Orb
+
+  # Step 3: more than 4 mods and the Pierce is there: an Orb of Annulment.
+  - when:
+      rarity: rare
+      fractured: none
+      requirements:
+        - family: Pierce
+          status: passing
+    do: Orb of Annulment
+
+  # Step 4: the Fracturing Orb fractured another mod (a mod is fractured and it is not the Pierce): back to step 1.
+  # Any other state no rule covers is a gap of the guide.
+  - when:
+      rarity: rare
+      fractured:
+        without: [{family: Pierce}]
+    do: restart

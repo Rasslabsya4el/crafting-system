@@ -13,7 +13,7 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, ActionError, Reads, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, ActionError, Axis, Need, Reads, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -27,7 +27,10 @@ class Offer:
     """One action and what a use of it consumes.
 
     `resources` maps a price-file name to how many of it one use takes. `tag` is the guaranteed mod
-    tag of a Harvest reforge and None for any other action.
+    tag of a Harvest reforge and None for any other action. `inputs` are the other items one use consumes on the
+    start item (`Action.inputs`, ADR-0022) and `axes` the rule axes the action reads (`Action.rule_axes`, ADR-0033);
+    both are empty for an action that has neither, which is every action of batches B1 and B2. The inputs of other
+    states are asked of the action there (`Abstraction.inputs`).
     """
 
     label: str
@@ -35,6 +38,8 @@ class Offer:
     resources: Mapping[str, int]
     tag: str | None = None
     shares: bool = True  # whether the report quotes a single-draw weight share (a Chaos Orb, a Harvest reforge)
+    inputs: tuple[Need, ...] = ()
+    axes: tuple[Axis, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -64,7 +69,9 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     `data` and `item` only matter to an action whose resources or additions depend on them (an essence, a bench craft).
     """
     adds = action.adds(data, item)
-    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw)
+    inputs = action.inputs(data, item) if data is not None else ()
+    axes = action.rule_axes(data) if data is not None else ()
+    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes)
 
 
 def default_offers() -> tuple[Offer, ...]:
@@ -176,7 +183,11 @@ def offers_for(
       Exalted Orb and Annulment Orb (#67) and the metamods and the multimod (#68). The crafts left out are reported.
     * With `kinds_named` (the target's `actions:` key) only the kinds of those names are listed at all and the filters
       below see only them. That is the target's choice, not a proof: the plan is the cheapest among the named kinds,
-      and the kinds not named are listed in `left_out`.
+      and the kinds not named are listed in `left_out`. A name may also be the label of ONE action (`Essence of
+      Insanity`, `Bench craft Cannot roll Attack Modifiers`): that action is offered whatever the filters below say
+      (a metamod craft counts toward no requirement and would be left out), and only the actions named that way are
+      listed of a kind that is not named as a whole. An `opt_in` kind (Exalted Orb, Annulment, Fracturing
+      Orb) is offered only when named, as a kind or by its label (ticket #70).
     * An action that adds named mods only for a target that wants them (`Adds.wanted_only`, an aspect beast, #147) is
       offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
       It is left out and reported like a craft that counts for nothing.
@@ -189,27 +200,16 @@ def offers_for(
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
-    if kinds_named is not None:
-        usable = {entry.name for entry in kinds(planner_only=True)}
-        exist = {entry.name for entry in kinds()}
-        unknown = sorted(set(kinds_named) - exist)
-        unready = sorted((set(kinds_named) & exist) - usable)
-        problems = []
-        if unknown:
-            problems.append(f"unknown action kind(s) {', '.join(unknown)}")
-        if unready:
-            problems.append(f"action kind(s) {', '.join(unready)} cannot be used by the planner yet")
-        if problems:
-            raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable))}")
+    kind_names, label_names = _split_names(data, start_item, kinds_named)
     named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
     candidates = []
     left_out_unwanted: list[str] = []
-    listed = catalog(data, start_item, planner_only=True, names=kinds_named)
+    listed = _listed(data, start_item, kind_names, label_names)
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
     left_out_rolls: list[str] = []
     for action in listed:
         adds = action.adds(data, start_item)
-        if adds.wanted_only and not (adds.named or frozenset()) & named:
+        if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))
         elif adds.needs_roll_limit and not roll_matters:
             left_out_rolls.append(action.label(data))
@@ -222,7 +222,11 @@ def offers_for(
     chosen: list[Action] = []
     left_out_crafts: list[str] = []
     for action in candidates:
-        if _only_crafts(data, start_item, action) and not action.adds(data, start_item).named & counting:
+        if (
+            _only_crafts(data, start_item, action)
+            and not action.adds(data, start_item).named & counting
+            and action.label(data) not in label_names
+        ):
             left_out_crafts.append(action.label(data))
             continue
         chosen.append(action)
@@ -241,7 +245,7 @@ def offers_for(
 
     left_out = ()
     if kinds_named is not None:
-        skipped = tuple(entry.name for entry in kinds(planner_only=True) if entry.name not in kinds_named)
+        skipped = tuple(entry.name for entry in kinds(planner_only=True) if entry.name not in kind_names)
         if skipped:
             left_out += (
                 LeftOut("the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones", skipped),
@@ -273,6 +277,40 @@ def offers_for(
             ),
         )
     return OfferSet(tuple(offers), left_out)
+
+
+def _split_names(data: GameData, start_item: Item, names: Collection[str] | None) -> tuple[frozenset[str] | None, frozenset[str]]:
+    """The names of a target's `actions:` as (kinds, labels): a name is a kind of the catalog, else the label of one action.
+
+    No names (`None`) is every kind offered by default and no label. A name that is neither is an error, as is a
+    kind the planner cannot use yet.
+    """
+    if names is None:
+        return None, frozenset()
+    usable = {entry.name for entry in kinds(planner_only=True)}
+    exist = {entry.name for entry in kinds()}
+    kind_names = {name for name in names if name in exist}
+    unready = sorted(kind_names - usable)
+    labels = {action.label(data) for action in catalog(data, start_item, planner_only=True, names=usable)}
+    unknown = sorted(name for name in names if name not in exist and name not in labels)
+    problems = []
+    if unknown:
+        problems.append(f"unknown action kind(s) or action label(s) {', '.join(unknown)}")
+    if unready:
+        problems.append(f"action kind(s) {', '.join(unready)} cannot be used by the planner yet")
+    if problems:
+        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable))}")
+    return frozenset(kind_names), frozenset(name for name in names if name not in exist)
+
+
+def _listed(data: GameData, start_item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str]) -> list[Action]:
+    """The planner actions of the kinds named, plus those named by label (any planner kind, default or not)."""
+    found = list(catalog(data, start_item, planner_only=True, names=kind_names))
+    if label_names:
+        usable = {entry.name for entry in kinds(planner_only=True)}
+        extra = [a for a in catalog(data, start_item, planner_only=True, names=usable) if a.label(data) in label_names]
+        found.extend(action for action in extra if action not in found)
+    return found
 
 
 def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed: Iterable[Action]) -> bool:

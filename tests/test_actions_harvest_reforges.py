@@ -291,7 +291,7 @@ def test_the_likelihood_reforges_cost_two_hundred_wild_lifeforce():
 
 
 @pytest.mark.parametrize(
-    ("more", "weight"), [(True, Fraction(90)), (False, Fraction(1, 90))], ids=["more", "less"]
+    ("more", "weight"), [(True, Fraction(10)), (False, Fraction(1, 10))], ids=["more", "less"]
 )
 def test_the_held_family_is_left_out_with_the_closed_form_chance(more, weight):
     """Four of five one-weight families are drawn (the total is the floor of 4): the held one is left out when it is last.
@@ -323,8 +323,42 @@ def test_a_family_the_item_does_not_hold_keeps_its_plain_weight():
     outcomes = HarvestReforgeLikelihood(True).outcomes(TOY, toy_item(GEM))
     weights = {family.family: family.weight for family in outcomes.pool}
     held = TOY.mods[GEM].families[0]
-    assert weights[held] == 90
+    assert weights[held] == 10
     assert {w for name, w in weights.items() if name != held} == {1}
+
+
+def test_the_factor_is_ten_from_the_game_data_and_not_the_ninety_of_the_faq():
+    """HarvestCraftOptions holds +900 and -90 percent for the two crafts, read as x10 and x0.1 (issue #319)."""
+    rule = get_rule("harvest_reforge.likelihood_weight_factor")
+    assert rule.source_kind.value == "datamined"
+    assert rule.url.endswith("/HarvestCraftOptions.csv")
+    assert "900" in rule.quote
+    assert dict(rule.value) == {"more": 10, "less": 10}
+
+
+@pytest.mark.parametrize(("more", "factor"), [(True, Fraction(10)), (False, Fraction(1, 10))], ids=["more", "less"])
+def test_on_a_known_item_the_held_family_weighs_ten_times_more_or_a_tenth_against_the_others(more, factor):
+    """An amulet holding Increased Life and Lightning Resistance (tier 3), on the fixture excerpt of the real mods.
+
+    Each mod of the two held families weighs `factor` times its plain weight in the pool of the reforge and every other
+    mod its plain weight; the plain weights are those of the pool of the empty item.
+    """
+    start = small_item(roll(LIFE_1), roll(RESIST_1))
+    held = {family for entry in start.mods for family in SMALL.mods[entry.mod_id].families}
+    plain = {
+        (family.family, entry.mod.id): entry.weight
+        for family in build_pool(SMALL, start.changed(SMALL, mods=()))
+        for entry in family.mods
+    }
+    outcomes = HarvestReforgeLikelihood(more).outcomes(SMALL, start)
+    boosted = {(family.family, entry.mod.id): entry.weight for family in outcomes.pool for entry in family.mods}
+
+    assert boosted.keys() == plain.keys()
+    assert {name for name, _ in boosted} >= held
+    for key, weight in boosted.items():
+        assert weight == plain[key] * (factor if key[0] in held else 1), key
+    assert any(weight and key[0] in held for key, weight in plain.items())  # the held families have weight to scale
+    assert any(key[0] not in held for key in plain)
 
 
 def test_the_boost_covers_every_mod_of_the_family_and_a_fractured_or_crafted_mod_too():
@@ -362,7 +396,7 @@ def test_the_reforge_draws_as_many_mods_as_the_item_held_and_at_least_four(junk,
 @pytest.mark.parametrize("start", LIKELIHOOD_STARTS)
 def test_the_likelihood_reforge_equals_the_brute_force(start, more):
     start_item = LIKELIHOOD_STARTS[start]()
-    factor = Fraction(90) if more else Fraction(1, 90)
+    factor = Fraction(10) if more else Fraction(1, 10)
     totals = {max(len(start_item.mods), 4): Fraction(1)}
     expected = finished_items(SMALL, start_item, None, pool=held_weighted_pool(SMALL, start_item, factor), totals=totals)
 
