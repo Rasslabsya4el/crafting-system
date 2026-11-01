@@ -58,11 +58,19 @@ def test_a_corrupted_item_is_refused_by_the_game(orb, accepts):
 
 @pytest.mark.parametrize(("orb", "accepts"), ORBS, ids=IDS)
 @pytest.mark.parametrize("item_class", ["Jewel", "AbyssJewel"])
-def test_a_jewel_base_is_out_of_scope(orb, accepts, item_class):
+def test_a_jewel_base_is_in_scope(orb, accepts, item_class):
     jewel = dataclasses.replace(DATA.base_items[AMULET], item_class=item_class)
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: jewel})
 
-    with pytest.raises(OutOfScopeError, match=rf"jewel \({item_class}\).*regular items only"):
+    assert orb.outcomes(data, RARITIES[accepts]()).components  # jewel.ordinary_orbs_work_on_jewels
+
+
+@pytest.mark.parametrize(("orb", "accepts"), ORBS, ids=IDS)
+def test_a_cluster_jewel_base_is_out_of_scope(orb, accepts):
+    cluster = dataclasses.replace(DATA.base_items[AMULET], item_class="Jewel", domain="affliction_jewel")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: cluster})
+
+    with pytest.raises(OutOfScopeError, match="cluster jewel"):
         orb.outcomes(data, RARITIES[accepts]())
 
 

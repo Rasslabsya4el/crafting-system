@@ -17,6 +17,11 @@ and the state is only how many families of each class have been drawn plus the f
 are memoised. This is exact. The number of states grows with the number of distinct
 (side, weight per label) classes, not with the number of families, so a pool whose families all
 have different weights, or a label that tells many mods apart, gives many states.
+
+A family can have mods on both sides (five families of the base jewels do, `FAMILY_MAY_SPAN_BOTH_SIDES`). Its
+two `PoolFamily` are one unit: a draw picks one mod of the unit in proportion to weight among the sides
+that have room, and the unit leaves the pool whichever side it was drawn on. Units are interchangeable
+when their parts have the same sides and the same weights per label, as one-sided families are.
 """
 
 import random
@@ -47,31 +52,62 @@ GUARANTEED_MOD_COUNTS_IN_TOTAL = get_rule("harvest_reforge.guaranteed_mod_counts
 DRAW_PROPORTIONAL_TO_WEIGHT = get_rule("affix_pool.draw_proportional_to_weight")
 ONE_POOL_FOR_BOTH_SIDES = get_rule("affix_pool.one_pool_for_both_sides")
 FULL_SIDE_CLOSES = get_rule("affix_pool.full_side_closes")
+FAMILY_MAY_SPAN_BOTH_SIDES = get_rule("affix_pool.family_may_span_both_sides")
+NO_MOD_DOMAIN = "undefined"
+CLUSTER_JEWEL_DOMAINS = get_rule("jewel.cluster_pool_depends_on_enchantments")
+JEWEL_REROLL_COUNT = get_rule("jewel.reroll_mod_count")
 
 ONE = Fraction(1)
 
 
-def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = None) -> None:
+def jewel_class(data: GameData, item: Item) -> str | None:
+    """The item class of `item` when it is a jewel (`affix_count.rare_jewel_max_per_side` lists the classes), else None."""
+    base = data.base_items.get(item.base_id)
+    if base is not None and base.item_class in RARE_JEWEL_MAX_PER_SIDE.value["item_classes"]:
+        return base.item_class
+    return None
+
+
+def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = None, *, jewels: bool = False) -> None:
     """Raise `OutOfScopeError` for an item in a state no admitted rule covers yet.
 
     Called after each action's own checks of rarity and corruption, each of which cites its own claim.
-    A rare jewel is out of scope: the 8:3:1 ratio is the claim for regular items, not for jewels
-    (`jewel_reason` says what else is admitted for regular items only, for an action that is not a reroll).
-    Ordinary crafted mods are not: a reforge removes them (`chaos_orb.removes_crafted_mods`,
+    An action that works on jewels passes `jewels=True` (the claim `jewel.ordinary_orbs_work_on_jewels` holds
+    for the ordinary orbs, `jewel.fossils_work_on_jewels` for fossils); a jewel is still refused when it is a
+    cluster jewel, whose pool depends on its enchantments (`jewel.cluster_pool_depends_on_enchantments`).
+    Any other action refuses every jewel (`jewel_reason` says what else is admitted for regular items only).
+    Ordinary crafted mods are not out of scope: a reforge removes them (`chaos_orb.removes_crafted_mods`,
     `harvest_reforge.removes_crafted_mods`, `essence.reforge_removes_crafted_mods`), and neither is a
     metamod (`metamods.py` says what it changes).
     """
-    base = data.base_items.get(item.base_id)
-    if base is not None and base.item_class in RARE_JEWEL_MAX_PER_SIDE.value["item_classes"]:
+    item_class = jewel_class(data, item)
+    if item_class is None:
+        return
+    base = data.base_items[item.base_id]
+    if base.release_state == "unique_only" or base.domain == NO_MOD_DOMAIN:  # the Assembled Eye Jewel has the domain "undefined" and no mod
+        raise OutOfScopeError(
+            f"the item is a {base.name}, a base that exists as a unique item only (the wiki: it is found as a unique "
+            "and then converted to a non-unique rarity), so crafting it is not modelled"
+        )
+    if base.domain in CLUSTER_JEWEL_DOMAINS.value:
+        raise OutOfScopeError(
+            f"the item is a cluster jewel ({base.name}); its enchantments decide which mods it can roll "
+            "and the item state holds no enchantment, so crafting it is not modelled"
+        )
+    if not jewels:
         reason = jewel_reason or (
             "the 4, 5 or 6 mod ratio is admitted for regular items only, so rerolling a jewel is not modelled yet"
         )
-        raise OutOfScopeError(f"the item is a jewel ({base.item_class}); {reason}")
+        raise OutOfScopeError(f"the item is a jewel ({item_class}); {reason}")
 
 
-def total_distribution() -> Mapping[int, Fraction]:
-    """The probability of each total number of mods of a rerolled rare item, from the 8:3:1 ratio."""
-    ratio = RARE_REROLL_RATIO.value
+def total_distribution(data: GameData | None = None, item: Item | None = None) -> Mapping[int, Fraction]:
+    """The probability of each total number of mods of a rerolled rare item, from the 8:3:1 ratio.
+
+    A jewel (`item` on a jewel base of `data`) takes the 3 or 4 mods of `jewel.reroll_mod_count` (65:35).
+    """
+    jewel = data is not None and item is not None and jewel_class(data, item) is not None
+    ratio = JEWEL_REROLL_COUNT.value if jewel else RARE_REROLL_RATIO.value
     whole = sum(ratio.values())
     return {total: Fraction(share, whole) for total, share in ratio.items()}
 
@@ -109,71 +145,84 @@ def exact_distribution(
     labels: list[Hashable] = []
     label_index: dict[Hashable, int] = {}
     classes: dict[tuple, int] = {}
-    class_weights: list[tuple[tuple[int, Fraction], ...]] = []
+    class_parts: list[tuple[tuple[bool, tuple[tuple[int, Fraction], ...], Fraction], ...]] = []
     class_count: list[int] = []
-    on_prefix: list[bool] = []
     class_of: dict[str, int] = {}
     mod_label: dict[str, int] = {}
+    units: dict[str, list[PoolFamily]] = defaultdict(list)
     for family in pool:
-        by_label: dict[int, Fraction] = defaultdict(Fraction)
-        for entry in family.mods:
-            value = label(entry.mod)
-            index = label_index.setdefault(value, len(label_index))
-            if index == len(labels):
-                labels.append(value)
-            mod_label[entry.mod.id] = index
-            by_label[index] += entry.weight
-        weights = tuple(sorted(by_label.items()))
-        key = (family.side, weights)
+        units[family.family].append(family)
+    for name, sides in units.items():
+        parts = []
+        for family in sides:
+            by_label: dict[int, Fraction] = defaultdict(Fraction)
+            for entry in family.mods:
+                value = label(entry.mod)
+                index = label_index.setdefault(value, len(label_index))
+                if index == len(labels):
+                    labels.append(value)
+                mod_label[entry.mod.id] = index
+                by_label[index] += entry.weight
+            weights = tuple(sorted(by_label.items()))
+            parts.append((family.side is Side.PREFIX, weights, sum((w for _, w in weights), Fraction(0))))
+        key = tuple(sorted(parts))
         if key not in classes:
-            classes[key] = len(class_weights)
-            class_weights.append(weights)
+            classes[key] = len(class_parts)
+            class_parts.append(key)
             class_count.append(0)
-            on_prefix.append(family.side is Side.PREFIX)
         class_count[classes[key]] += 1
-        class_of[family.family] = classes[key]
+        class_of[name] = classes[key]
     width = len(labels)
-    class_total = [sum((w for _, w in weights), Fraction(0)) for weights in class_weights]
 
     @cache
     def walk(
         drawn: tuple[int, ...], room_prefix: int, room_suffix: int, picks: int
     ) -> dict[tuple[int, ...], Fraction]:
-        """The distribution of the label counts of the draws still to come from this state."""
+        """The distribution of the label counts of the draws still to come from this state.
+
+        A unit is a family: one part per side it has mods on, and drawing a mod of either part takes the unit out.
+        """
         nothing = {(0,) * width: ONE}
         if picks == 0:
             return nothing
-        eligible = [
-            index
-            for index, taken in enumerate(drawn)
-            if class_count[index] > taken and (room_prefix if on_prefix[index] else room_suffix) > 0
-        ]
-        if not eligible:
+        open_weight = {}
+        for index, taken in enumerate(drawn):
+            if class_count[index] > taken:
+                weight = sum(
+                    (total for on_prefix, _, total in class_parts[index] if (room_prefix if on_prefix else room_suffix) > 0),
+                    Fraction(0),
+                )
+                if weight:
+                    open_weight[index] = weight
+        if not open_weight:
             return nothing
-        total = sum((class_count[i] - drawn[i]) * class_total[i] for i in eligible)
+        total = sum(((class_count[i] - drawn[i]) * weight for i, weight in open_weight.items()), Fraction(0))
         result: dict[tuple[int, ...], Fraction] = defaultdict(Fraction)
-        for index in eligible:
+        for index in open_weight:
             remaining = class_count[index] - drawn[index]
-            child = walk(
-                drawn[:index] + (drawn[index] + 1,) + drawn[index + 1 :],
-                room_prefix - on_prefix[index],
-                room_suffix - (not on_prefix[index]),
-                picks - 1,
-            )
-            for lab, weight in class_weights[index]:
-                step = remaining * weight / total
-                for tally, chance in child.items():
-                    result[tally[:lab] + (tally[lab] + 1,) + tally[lab + 1 :]] += step * chance
+            for on_prefix, weights, _ in class_parts[index]:
+                if (room_prefix if on_prefix else room_suffix) <= 0:
+                    continue
+                child = walk(
+                    drawn[:index] + (drawn[index] + 1,) + drawn[index + 1 :],
+                    room_prefix - on_prefix,
+                    room_suffix - (not on_prefix),
+                    picks - 1,
+                )
+                for lab, weight in weights:
+                    step = remaining * weight / total
+                    for tally, chance in child.items():
+                        result[tally[:lab] + (tally[lab] + 1,) + tally[lab + 1 :]] += step * chance
         return dict(result)
 
     start = (0,) * len(class_count)
-    guaranteed: list[tuple[int, int, Fraction]] = []
+    guaranteed: list[tuple[int, bool, int, Fraction]] = []
     if tag is not None:
-        groups: dict[tuple[int, int, Fraction], int] = defaultdict(int)
+        groups: dict[tuple[int, bool, int, Fraction], int] = defaultdict(int)
         for family, entry in guaranteed_candidates(pool, free, tag, blocked):
-            groups[(class_of[family.family], mod_label[entry.mod.id], entry.weight)] += 1
-        tagged_total = sum((n * weight for (_, _, weight), n in groups.items()), Fraction(0))
-        guaranteed = [(cls, lab, n * weight / tagged_total) for (cls, lab, weight), n in groups.items()]
+            groups[(class_of[family.family], family.side is Side.PREFIX, mod_label[entry.mod.id], entry.weight)] += 1
+        tagged_total = sum((n * weight for (_, _, _, weight), n in groups.items()), Fraction(0))
+        guaranteed = [(cls, on_prefix, lab, n * weight / tagged_total) for (cls, on_prefix, lab, weight), n in groups.items()]
     tallies: dict[tuple[int, ...], Fraction] = defaultdict(Fraction)
     for total, chance in totals.items():
         picks = max(0, total - kept - (tag is not None))
@@ -181,11 +230,11 @@ def exact_distribution(
             for tally, inner in walk(start, free[Side.PREFIX], free[Side.SUFFIX], picks).items():
                 tallies[tally] += chance * inner
             continue
-        for cls, lab, step in guaranteed:
+        for cls, on_prefix, lab, step in guaranteed:
             inner_all = walk(
                 start[:cls] + (1,) + start[cls + 1 :],
-                free[Side.PREFIX] - on_prefix[cls],
-                free[Side.SUFFIX] - (not on_prefix[cls]),
+                free[Side.PREFIX] - on_prefix,
+                free[Side.SUFFIX] - (not on_prefix),
                 picks,
             )
             for tally, inner in inner_all.items():
@@ -217,7 +266,7 @@ def sample_new_mods(
 
     def take(candidates: list[tuple[PoolFamily, PoolMod]]) -> None:
         family, entry = rng.choices(candidates, weights=[floats[c[1].mod.id] for c in candidates])[0]
-        open_families.remove(family)
+        open_families[:] = [other for other in open_families if other.family != family.family]  # both sides of a family leave
         room[family.side] -= 1
         drawn.append(entry)
 

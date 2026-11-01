@@ -124,13 +124,16 @@ def test_a_candidate_without_a_family_is_out_of_scope():
         build_pool(data, amulet())
 
 
-def test_a_family_spread_over_both_sides_is_out_of_scope():
+def test_a_family_spread_over_both_sides_is_two_pool_families_of_one_name():
     mod = DATA.mods["IncreasedLife1"]
     flipped = dataclasses.replace(mod, id="IncreasedLifeOtherSide", generation_type="suffix")
     data = dataclasses.replace(DATA, mods={**DATA.mods, flipped.id: flipped})
 
-    with pytest.raises(OutOfScopeError, match="both sides"):
-        build_pool(data, amulet())
+    pool = build_pool(data, amulet())
+
+    parts = [family for family in pool if family.family == mod.families[0]]
+    assert sorted(family.side.value for family in parts) == ["prefix", "suffix"]
+    assert [entry.mod.id for family in parts if family.side.value == "suffix" for entry in family.mods] == [flipped.id]
 
 
 @pytest.mark.parametrize("level", [80, 84, 86])

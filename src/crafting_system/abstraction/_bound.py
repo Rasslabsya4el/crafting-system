@@ -56,7 +56,7 @@ exact engine on random pools.
 from collections.abc import Hashable, Mapping, Sequence
 from fractions import Fraction
 
-from crafting_system.actions import Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, guaranteed_candidates
+from crafting_system.actions import Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, guaranteed_candidates, partners
 from crafting_system.data import Mod
 from crafting_system.items import Side
 
@@ -274,6 +274,8 @@ def _passing_ids(abstraction: Abstraction, pool: Sequence[PoolFamily], leaf: int
 
 def _guard(abstraction: Abstraction, pool: Sequence[PoolFamily], leaves: Sequence[int]) -> None:
     """Raise `OutOfScopeError` when a leaf asks for a roll of a mod that the pool can draw."""
+    if partners(pool):
+        raise OutOfScopeError("a family with mods on both sides is not modelled in the bound, so no bound is given")
     ids = {entry.mod.id for family in pool for entry in family.mods}
     for index in leaves:
         leaf = abstraction.goal.leaves[index]

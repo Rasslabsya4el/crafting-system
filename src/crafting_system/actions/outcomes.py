@@ -131,7 +131,7 @@ class Outcomes:
         With `rolls_lucky` the values of the mods the draw puts on the item are rolled twice, the better kept.
         """
         return cls(
-            data, retained, pool, total_distribution(), tag, None if forced is None else forced.id, guaranteed_blocked,
+            data, retained, pool, total_distribution(data, retained), tag, None if forced is None else forced.id, guaranteed_blocked,
             rolls_lucky,
         )
 

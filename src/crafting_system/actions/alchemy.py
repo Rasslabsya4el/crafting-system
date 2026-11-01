@@ -17,6 +17,8 @@ ACCEPTS_NORMAL_ONLY = get_rule("alchemy.accepts_normal_only")
 COUNT_LIKE_CHAOS = get_rule("alchemy.count_like_chaos")
 REFUSED_ON_CORRUPTED = get_rule("magic_orbs.refused_on_corrupted")
 COST = get_rule("alchemy.cost")
+JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
+JEWEL_REROLL_COUNT = get_rule("jewel.reroll_mod_count")
 
 
 @dataclass(frozen=True)
@@ -38,14 +40,14 @@ class AlchemyOrb(Action):
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
         """The outcomes of using the orb on `item`.
 
-        Raises `NotApplicableError` for an item that is not normal or is corrupted, and `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key (a normal item holds no metamod). The draw is the one of a Chaos
+        Raises `NotApplicableError` for an item that is not normal or is corrupted, and `OutOfScopeError` for a cluster jewel or an influenced item of a class with no influence class key (a normal item holds no metamod). The draw is the one of a Chaos
         Orb on a rare item with no mod.
         """
         if item.rarity is not Rarity.NORMAL:
             raise NotApplicableError(f"an Orb of Alchemy works on a normal item only, and this item is {item.rarity}")
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Orb of Alchemy")
-        refuse_unmodelled(data, item)
+        refuse_unmodelled(data, item, jewels=True)
         return Outcomes.reroll(data, item, tag=None)
 
 
