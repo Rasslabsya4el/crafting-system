@@ -1,12 +1,13 @@
 """The concrete item (ADR-0018): a base, an item level, a rarity, a set of explicit mods and, when given,
-implicits, a catalyst quality, an unveil offer and an enchantment (ADR-0027, ADR-0050).
+implicits, a catalyst quality, an unveil offer, an enchantment (ADR-0027, ADR-0050) and a Memory Strands count (ADR-0040).
 
 An `Item` is a value: frozen, hashable, and equal to any other item with the same fields, whatever
 order its mods were given in (mods are stored sorted by id). Building one checks the rules that
 need no game data; `Item.validate` checks the rest against a `GameData`, and `Item.build`,
 `changed`, `add_mod` and `remove_mod` always return an item that passed it. Implicits are stored only
 when given (the base's own implicits are not filled in), and an item built without implicits, quality
-offer or enchantment behaves as it did before ADR-0027. A veiled placeholder is an explicit mod of domain `veiled`
+offer, enchantment or strands behaves as it did before ADR-0027 and ADR-0040. The strand count is a whole number
+from 0 to 100, 0 by default; it is part of the item's equality and hash. A veiled placeholder is an explicit mod of domain `veiled`
 whose seed changes nothing, so `build` and `changed` make the seed canonical (`Item.canonical`).
 Words follow ADR-0021: a "family" is the exclusion set of a mod.
 
@@ -30,6 +31,7 @@ from .errors import (
     FamilyConflictError,
     ImplicitError,
     ItemError,
+    MemoryStrandsError,
     ModSlotError,
     QualityError,
     UnknownBaseError,
@@ -50,6 +52,7 @@ from .implicits import (
 )
 from .quality import CATALYST_ITEM_CLASSES, Quality
 from .spawn import spawn_weight
+from .strands import MAX_MEMORY_STRANDS
 
 
 class Rarity(StrEnum):
@@ -173,6 +176,7 @@ class Item:
     quality: Quality | None = None
     veil_offer: tuple[str, ...] = ()
     enchantment: str | None = None
+    memory_strands: int = 0
 
     def __post_init__(self) -> None:
         if type(self.item_level) is not int:
@@ -206,6 +210,11 @@ class Item:
         object.__setattr__(self, "veil_offer", self._checked_veil_offer())
         if self.enchantment is not None and (type(self.enchantment) is not str or not self.enchantment):
             raise self._error(f"enchantment {self.enchantment!r} is not a mod id or None", EnchantmentError)
+        if type(self.memory_strands) is not int or not 0 <= self.memory_strands <= MAX_MEMORY_STRANDS:
+            raise self._error(
+                f"memory strands {self.memory_strands!r} is not a whole number from 0 to {MAX_MEMORY_STRANDS}",
+                MemoryStrandsError,
+            )
 
     def _checked_implicits(self) -> tuple[ImplicitMod, ...]:
         kind = ImplicitError

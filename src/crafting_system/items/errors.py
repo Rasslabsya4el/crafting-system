@@ -53,5 +53,10 @@ class EnchantmentError(ItemError):
     base (a weapon enchant on body armour, or a base that takes none)."""
 
 
+class MemoryStrandsError(ItemError):
+    """The Memory Strands count of the item is not a whole number from 0 to 100, or a pasted item text holds
+    the `Memory Strands:` line badly (twice, or with something other than a whole number)."""
+
+
 class TierError(ItemError):
     """A mod has no tier on a base because it cannot spawn there: its spawn weight is 0 for the base's tags."""

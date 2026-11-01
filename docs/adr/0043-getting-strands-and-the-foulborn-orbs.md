@@ -34,3 +34,7 @@ They are not new in 3.29 (3.27.0). Their prices are market prices only. A second
 - The unknowns of this ADR are `approximate` claims, so every answer that reads them lists them (ADR-0028).
 
 Origin: [Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103) (round 1 answers 2 and 4; the standing rule); [Research #98](https://github.com/Rasslabsya4el/crafting-system/issues/98); ADR-0007, ADR-0008, ADR-0024, ADR-0027, ADR-0028, ADR-0040, ADR-0041.
+
+## Amendment: the claims ([#274](https://github.com/Rasslabsya4el/crafting-system/issues/274))
+
+The Remembrance count is claim `memory_strands.remembrance_distribution` (value: mean 35, sd 25, accepted from 10 to below 100.5, rounded; `approximate`); it does not depend on the old count if the sheet's rows are consecutive orbs on one item (claim `remembrance_independent_of_old_count`, `approximate`). Players have used the orb on helmets, boots, a belt, body armour, an amulet and a talisman; jewels and the other classes rest on the wiki's word (claim `remembrance_classes_observed`). The Foulborn Exalted ceiling is the row 46, 52, 56, 60, 62, 66 by the mods before the craft (claim `foulborn.exalted_spend_by_mod_count`); on a stranded item the bonus is added to the denominator (claim `foulborn.bonus_is_added_to_the_strand_denominator`), and on a 0-strand item the cut is claim `foulborn.zero_strand_cut_matches_eleven_strands`, `approximate`.

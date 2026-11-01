@@ -1,4 +1,4 @@
-"""The concrete item: base, rarity, explicit mods, implicits, quality, the unveil offer, the enchantment, capacity, family conflicts, spawn weights and tiers. May import only: data, rules."""
+"""The concrete item: base, rarity, explicit mods, implicits, quality, the unveil offer, the enchantment, the Memory Strands count, capacity, family conflicts, spawn weights and tiers. May import only: data, rules."""
 
 from .errors import (
     CapacityError,
@@ -6,6 +6,7 @@ from .errors import (
     FamilyConflictError,
     ImplicitError,
     ItemError,
+    MemoryStrandsError,
     ModSlotError,
     QualityError,
     TierError,
@@ -47,11 +48,13 @@ from .model import (
 )
 from .quality import CATALYST_ITEM_CLASSES, MAX_QUALITY, CatalystType, Quality
 from .spawn import effective_weight, generation_factor, spawn_weight
+from .strands import MAX_MEMORY_STRANDS, has_memory_strands_line, memory_strands_line, read_memory_strands
 from .tiers import mod_tier, tier_table
 
 __all__ = [
     "CATALYST_ITEM_CLASSES",
     "EXTRA_CRAFTED_SLOT_STAT",
+    "MAX_MEMORY_STRANDS",
     "MAX_QUALITY",
     "VEILED_SEED_STAT",
     "Capacity",
@@ -69,6 +72,7 @@ __all__ = [
     "Influence",
     "Item",
     "ItemError",
+    "MemoryStrandsError",
     "Metamod",
     "ModSlotError",
     "Quality",
@@ -89,10 +93,13 @@ __all__ = [
     "eldritch_side",
     "fits_corrupted_implicit",
     "generation_factor",
+    "has_memory_strands_line",
     "is_corrupted_implicit",
     "is_presence_variant",
     "is_removed_enchant",
+    "memory_strands_line",
     "mod_tier",
+    "read_memory_strands",
     "spawn_weight",
     "tier_table",
     "veiled_placeholder",
