@@ -55,6 +55,7 @@ from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 
 from . import _route_flow
+from ._marking import approximate_inputs
 from ._plan import Plan
 from ._report import Report
 from ._route import RESTART, Route, RouteResult
@@ -492,11 +493,13 @@ class _View:
         )
         success = risk.success_probability.value
         note = "how often a step is used and what it costs are left out: the policy is too large to solve here"
+        approximate = [f"{item.claim}: {item.reason}" for item in approximate_inputs(plan, self.inp.policy, self.data)]
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,
             _plain("Mean", mean),
             _plain("9 runs in 10", p90),
             _plain("Success chance", chance_text(success)) if success < 1 - 1e-9 else None,
+            _plain("Approximate inputs", *approximate, tone="warn"),
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
             None if self.flow.measured else _plain("Note", note),
         )

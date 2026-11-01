@@ -1,7 +1,12 @@
 """How an answer says what it is: exact, or approximate within a certified gap (ADR-0023, ticket #127).
 
-This is the one place that words and serialises the marking, in text and in JSON, so that what a later ticket adds
-to it (the approximate inputs of #143) is added here. An exact answer prints nothing extra in the text and
+This is the one place that words and serialises the marking, in text and in JSON. It is also the home of the
+approximate inputs (ADR-0028, ticket #143): the claims marked `approximate` that the actions of a policy read.
+Those are an uncertainty in the model; the certified gap below is the solver's error given the model. They are
+independent (an exact answer can read an approximate claim, an approximate one can read none) and never joined
+into one percentage: the lines and the JSON key of one have nothing to do with those of the other.
+
+An exact answer prints nothing extra in the text and
 `{"approximate": false}` in the JSON; an approximate one prints its words, the two bounds, the level and the block
 count, and puts `approximate: true`, `lower`, `upper`, `gap`, `level` (and `blocks`, `tolerance`,
 `within_tolerance`, `message`) in the JSON. Bounds are totals, the price of the start item included, like the mean
@@ -13,11 +18,19 @@ figure that looks like them. The certified interval of the mean is the only cert
 """
 
 import math
+from collections.abc import Mapping
+from dataclasses import dataclass
 from fractions import Fraction
 
+from crafting_system.abstraction import CompressedState
+from crafting_system.data import GameData
+from crafting_system.rules import rule_by_id
 from crafting_system.simulator import SampledEstimate
+from crafting_system.solver import Action
 
 from ._approx import Approximation
+from ._plan import Plan
+from ._reach import policy_states
 from ._verify import CVAR_LEVEL, SIGMAS, Verification
 
 SIMULATED = "simulated, not certified"
@@ -87,6 +100,48 @@ def marking_document(approximation: Approximation | None, shift: float) -> dict:
         "within_tolerance": approximation.within_tolerance,
         "message": approximation.message,
     }
+
+
+# --- the approximate inputs (ADR-0028) -------------------------------------------------------------------------
+
+APPROXIMATE_HEADING = "Approximate inputs (claims that no other source settles):"
+
+
+@dataclass(frozen=True)
+class ApproximateInput:
+    """A claim marked `approximate` that an action of the policy reads, with the reason it is marked."""
+
+    claim: str
+    reason: str
+
+
+def approximate_inputs(
+    plan: Plan, policy: Mapping[CompressedState, Action[CompressedState]], data: GameData
+) -> tuple[ApproximateInput, ...]:
+    """The approximate claims read by the actions `policy` takes in the states it reaches from the start, by claim id.
+
+    An action the plan offers but the policy never takes is not listed (ADR-0028).
+    """
+    ids: set[str] = set()
+    for state in policy_states(plan.start, policy, plan.is_goal):
+        action = policy.get(state)
+        if plan.is_goal(state) or action is None:
+            continue
+        ids |= plan.offer_of(action).offer.action.claims(data)  # type: ignore[attr-defined]
+    rules = (rule_by_id(claim) for claim in sorted(ids))
+    return tuple(ApproximateInput(rule.id, rule.approximate_reason) for rule in rules if rule.approximate)
+
+
+def approximate_lines(inputs: tuple[ApproximateInput, ...]) -> list[str]:
+    """The text lines that name the approximate inputs of an answer (none when there are none)."""
+    if not inputs:
+        return []
+    return [APPROXIMATE_HEADING, *(f"  {item.claim}: {item.reason}" for item in inputs)]
+
+
+def approximate_inputs_document(inputs: tuple[ApproximateInput, ...]) -> list[dict]:
+    """The JSON `approximate_inputs`: one `{claim, reason}` per input, an empty list when there are none."""
+    return [{"claim": item.claim, "reason": item.reason} for item in inputs]
 
 
 # --- --verify of an approximate answer -------------------------------------------------------------------------

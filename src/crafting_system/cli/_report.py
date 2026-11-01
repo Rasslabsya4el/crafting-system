@@ -16,7 +16,17 @@ from crafting_system.items import Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN
 
-from ._marking import marking_document, marking_lines, risk_lines, verification_document, verification_lines
+from ._marking import (
+    ApproximateInput,
+    approximate_inputs,
+    approximate_inputs_document,
+    approximate_lines,
+    marking_document,
+    marking_lines,
+    risk_lines,
+    verification_document,
+    verification_lines,
+)
 from ._offers import without_ranges
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
@@ -54,6 +64,7 @@ class Report:
     ids: dict[CompressedState, str]
     states: tuple[PolicyState, ...]
     shares: tuple[tuple[WeightShare, float | None], ...]  # a share and the kernel's per-use chance of the leaf
+    approximate_inputs: tuple[ApproximateInput, ...] = ()  # the approximate claims the policy's actions read (ADR-0028)
 
 
 def _goal_leaf_nodes(plan: Plan) -> list[tuple[str, frozenset[str]]]:
@@ -158,7 +169,10 @@ def build_report(plan: Plan, data: GameData) -> Report:
         )  # fmt: skip
     offers = [priced.offer for priced in plan.offers if priced.offer.shares]
     shares = start_shares(data, plan.target.start_item, offers, _goal_leaf_nodes(plan))
-    return Report(plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares))
+    return Report(
+        plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
+        approximate_inputs(plan, plan.policy, data),
+    )  # fmt: skip
 
 
 def _leaf_chance(plan: Plan, share: WeightShare) -> float | None:
@@ -224,6 +238,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if target_name:
         lines.append(f"Target: {target_name}")
     lines.extend(marking_lines(plan.approximation, shift, divine))
+    lines.extend(approximate_lines(report.approximate_inputs))
     if plan.note:
         lines.append(f"Note: {plan.note}")
     lines.append(f"Requirements: {'; '.join(plan.leaf_labels)}")
@@ -399,6 +414,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
         "format": FORMAT,
         "unit": "chaos",
         "answer": marking_document(plan.approximation, shift),
+        "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
         "note": plan.note,
         "target": target_name,
         "requirements": list(plan.leaf_labels),
