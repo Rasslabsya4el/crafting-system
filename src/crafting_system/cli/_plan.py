@@ -241,7 +241,14 @@ def make_plan(
             "of it with the interval yet (ticket #220)"
         )
     abstraction = Abstraction(
-        data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod, allow_inputs=False
+        data,
+        goal,
+        target.base_id,
+        target.item_level,
+        enabled,
+        metamods=holds_metamod,
+        enchantment=target.start_item.enchantment,
+        allow_inputs=False,
     )
     start = abstraction.compress(target.start_item)
 
