@@ -28,12 +28,14 @@ rules:
 
   - id: foulborn.zero_strand_cut_matches_eleven_strands
     statement: >-
-      A Foulborn orb on an item with no strands already cuts tiers, and the cut is the one of about 11 strands:
-      the first author of the strands post saw that the tier restriction of Foulborn currency "exactly matched"
-      that of 10 to 11 strands, and 11 strands is the denominator 175 (= 100 + 75) of the formula. With D = 175
-      the kept tiers for N = 1..13 eligible tiers are the wiki's list 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7. This
-      adds the author's own observation to the wiki's private test; his sheet still has no Foulborn row on a
-      0-strand item, and he does not show the cells that he compared.
+      The cut of a Foulborn orb on its own is the cut of about 11 strands: the first author of the strands post
+      saw that the tier restriction of Foulborn currency "exactly matched" that of 10 to 11 strands, and 11
+      strands is the denominator 175 (= 100 + 75) of the formula. With D = 175 the kept tiers for N = 1..13
+      eligible tiers are the wiki's list 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7. The sentence does not say that the
+      item he compared had no strands (it reads as Foulborn alone, since an item with strands would add to them);
+      the reading for a 0-strand item is mine. The crafting AMA's cluster-jewel advice (jewels carry no strands:
+      "cull 1/2 (mid ilvl) or 1/3 (high ilvl)" of three tiers) fits D = 175 at 2 and 3 tiers but also fits the
+      emulator's rating of 100, so it does not separate the two. His sheet has no Foulborn row on a 0-strand item.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
     quote: "I noticed that the tier restricting behavior of foulborn currency exactly matched that of 10-11 memory strands, and 11 strands maps to a nice MTR number of 75."

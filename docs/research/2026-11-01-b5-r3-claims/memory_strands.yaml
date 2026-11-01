@@ -5,8 +5,8 @@
 # What each claim does to the B5 ADRs (they all keep the planner's default; they replace "an inference" or
 # "the post's silence" by a stated source, so the ADR sentence that says so must be updated by the build session):
 #   fossil_harvest_not_cut, cut_follows_spend_table     ADR-0041: fossils and Harvest "not cut" is no longer an inference alone.
-#   annulment_scouring_keep_strands, divine_keeps_strands, cut_follows_spend_table    ADR-0041: Scouring, Annulment, Divine, Fracturing "not in the spend list".
-#   recombinator_strands_from_either_base               ADR-0041 and ADR-0033: the output takes the count of either input, 1/2 each.
+#   annulment_keeps_strands, scouring_keeps_strands, divine_keeps_strands, cut_follows_spend_table    ADR-0041: Scouring, Annulment, Divine, Fracturing "not in the spend list".
+#   recombinator_strands_from_either_base               ADR-0041 and ADR-0033: the output takes the count of either input, 1/2 each (the "nothing spent" half stays the author's play).
 #   unravelling_skips_fractured_and_veiled              ADR-0044: "Fractured mods are excluded ... in the claim the build writes".
 #   unravelling_side_weight_is_whole_pool               ADR-0044: W_side is the whole side pool (open point 7 of the note).
 #   remembrance_classes_observed                        ADR-0043: "the other equipment classes rest on the wiki's word".
@@ -14,10 +14,10 @@
 rules:
   - id: memory_strands.fossil_harvest_not_cut
     statement: >-
-      A fossil or resonator craft and a Harvest craft neither spend strands nor are they cut by them: players
-      reported in November 2025 (patch 3.27) that they "dont consume or benefit from strands", and in July 2025 a
-      player asked whether strands improve the tiers of crafts that do not consume them (Harvest, fossils) and
-      was told no. The planner already treats them so (ADR-0041); this is the first stated source.
+      A fossil craft and a Harvest craft neither spend strands nor are they cut by them: players reported in
+      November 2025 (patch 3.27) that they "dont consume or benefit from strands", and in July 2025 a player asked
+      whether strands improve the tiers of crafts that do not consume them (Harvest, fossils) and was told no. The
+      planner already treats them so (ADR-0041); this is the first stated source.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1oqpunf/_/nnm5vvq/
     quote: "They work the same as before. They dont consume or benefit from strands."
@@ -42,19 +42,34 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
-  - id: memory_strands.annulment_scouring_keep_strands
+  - id: memory_strands.annulment_keeps_strands
     statement: >-
       An Orb of Annulment spends no strands, and neither does the rarity-reroll bench craft of 3.26 (replaced in
-      3.27 by a spending one); a Scouring Orb applied with "Prefixes cannot be changed" (removing only the
-      suffixes) is part of a 3.26 amulet craft that keeps its strands for the Orb of Unravelling at step 11. A
-      commenter states "annul" does not consume and the author confirms the bench half; the author lists "Annul
-      other Prefixes" and "PrefCantBeChanged + Scour" at step 7 and spends the remaining strands at step 11.
+      3.27 by a spending one): a commenter on a 3.26 amulet craft says both leave the count and the author, who
+      lists "Annul other Prefixes" at step 7 and plans to spend the remaining strands with an Orb of Unravelling at
+      step 11, answers "you're correct" for the bench half. A 3.26 recipe also annuls an item empty "to save
+      strands" before an influence Exalted Orb, which spends more for each mod on the item.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1mq4l3y/_/n8obyjk/
     quote: "Both that bench craft and the annul don't consume any strands."
     approximate: true
-    approximate_reason: "One commenter and one craft from 3.26 with no before and after counts; the Scouring half is read from the craft's order of steps (in-game list #182, B5 check 1)."
+    approximate_reason: "One commenter and one recipe from 3.26 with no before and after counts (in-game list #182, B5 check 1)."
     patch_verified: "3.26.0d"
+    date_checked: 2026-11-01
+
+  - id: memory_strands.scouring_keeps_strands
+    statement: >-
+      An Orb of Scouring leaves the strands: a 3.29 recipe with a 362-point comment (the Foulborn Exalted thread)
+      transmutes with Allflame, scours the magic item and transmutes again, and tells the reader to take the option
+      whose strands are "at 40, 39, 38", so the count falls only by the transmutation, not by the scour. The
+      emulator agrees: no spend row, nothing resets the count. The author of a 3.26 amulet craft also scours at
+      step 7 and plans to unravel at step 11.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1ved7x1/_/p1ggk55/
+    quote: "Then you will scour the item normally. Then put it back in the allflame and transmute it again using sulphur. You will repeat this until you hit your desired affix sacrificing a bit of strand every time."
+    approximate: true
+    approximate_reason: "A recipe, not a counted test; the same comment later says \"If you run out of strands using transmute and scour\", which can be read as the scour spending (in-game list #182, B5 check 1)."
+    patch_verified: "3.29.0"
     date_checked: 2026-11-01
 
   - id: memory_strands.divine_keeps_strands
@@ -74,15 +89,15 @@ rules:
 
   - id: memory_strands.recombinator_strands_from_either_base
     statement: >-
-      A recombination does not spend the strands of its inputs; the output takes the count of one of the two items,
-      with chance 1/2 each. A 3.26 guide combines a high-level base with a 90+ strand base in the recombinator and
-      expects the strands of base B to reach the output in half of the cases, and the author of the quiver guide
-      of 2026-05 expects "memory strands" on the output. This is the rule ADR-0033 and ADR-0041 use.
+      A recombination hands over the strand count of one of its two inputs: a 3.26 guide combines a high-level base
+      with a 90+ strand base in the recombinator and says the strands of base B "migrate" onto base A in half of the
+      cases, and the author of a quiver guide of 2026-05 expects "memory strands" on the output. Neither says that
+      the inputs' strands are or are not spent; "nothing spent" is ADR-0041's reading of the guide author's play.
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1lrigzv/
     quote: "This gives a 50 / 50 chance that Base B’s strands migrate onto Base A."
     approximate: true
-    approximate_reason: "One guide from 3.26 states it; recombinators changed since and nobody has published a count of the output strands (in-game list #182, B5 check 7)."
+    approximate_reason: "One guide from 3.26 states the count; no one has published counts of the output, and the spend is not stated at all (in-game list #182, B5 check 7)."
     patch_verified: "3.26.0d"
     date_checked: 2026-11-01
 
@@ -117,11 +132,12 @@ rules:
 
   - id: memory_strands.remembrance_classes_observed
     statement: >-
-      Players use an Orb of Remembrance on armour pieces, a belt and an amulet after scouring them to normal: a
-      helmet (73 strands on the first try, 3.26), a Heavy Belt (rolled again and again "until you have over 69",
-      3.26), boots (3.29, the 362-point recipe of the Foulborn Exalted thread), a body armour (November 2025) and
-      the author's talisman (3.29). No report of a jewel, ring, weapon or flask was found. The emulator allows
-      every item class but a strongbox; the wiki says "equipment".
+      Players use an Orb of Remembrance on armour pieces, a belt and an amulet: a helmet (scoured to white, 73
+      strands on the first try, 3.26), a Heavy Belt (scoured, rolled again and again "until you have over 69",
+      3.26), boots (scoured to normal, 3.29, the 362-point recipe of the Foulborn Exalted thread), a body armour
+      (November 2025), an amulet (3.26, "until >70 Strand") and the author's talisman (3.29). No report of a jewel,
+      ring, weapon or flask was found. The emulator allows every item class but a strongbox, and requires a normal
+      item; the wiki says "normal equipment item".
     source_kind: experiment
     url: https://www.reddit.com/r/pathofexile/comments/1ved7x1/_/p1ggk55/
     quote: "Buy an orb of remembrance. Scour the boots to make it normal and slam the orb. Hopefully you get above 40ish."

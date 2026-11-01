@@ -5,9 +5,9 @@ Research ticket [#273](https://github.com/Rasslabsya4el/crafting-system/issues/2
 ## Answer in brief
 
 1. **Craft of Exile has a second emulator that models strands, and it is current.** `beta.craftofexile.com` (code built 2026-10-31 20:50 UTC, data 3.29.3.3; its changelog adds "Memory strand behavior", "Orb of Remembrance" and "Orb of Unravelling" on 2026-09-30) implements the cut, the spend table, Remembrance, Unravelling, the Foulborn orbs and imprint restore. The copy in `sources/raw/coe/` and the main site's emulator (code built 2026-08-07, the one the headless harness of [#198](https://github.com/Rasslabsya4el/crafting-system/issues/198) drives) do not. The sentence "Craft of Exile's emulator models no strand craft" in ADR-0041 and in the B5 comment on [#182](https://github.com/Rasslabsya4el/crafting-system/issues/182) is true of that older copy only. I read the beta's public code; I did not run it, because the harness is built for the main site (a follow-up for #198: point it at the beta).
-2. **Players and the emulator agree with every ADR-0041 default that was an inference.** Fossils and Harvest neither spend nor are cut (players, 2025; the emulator cuts only the methods that have a spend row). Annulment, Scouring and Divine leave the count (players, 3.26; the emulator: no row, no reset). The spend ceilings are the wiki's. A recombination hands over either input's count (a guide, 3.26). Nothing found contradicts them. Not found: Vaal outcomes (the wiki already says the corrupted item keeps its strands), non-guaranteed essence mods, identification.
+2. **Players and the emulator agree with every ADR-0041 default that was an inference.** Fossils and Harvest neither spend nor are cut (players, 2025; the emulator cuts only the methods that have a spend row). Annulment, Scouring and Divine leave the count (recipes of players, 3.26 and 3.29, no counted tests; the emulator: no row, no reset). The spend ceilings are the wiki's. A recombination hands over either input's count (a guide, 3.26; nobody says whether the inputs' strands are spent). Nothing found contradicts them. Not found: Vaal outcomes (the wiki already says the corrupted item keeps its strands), non-guaranteed essence mods, identification.
 3. **One ADR default changes: the Foulborn Exalted ceilings.** The emulator holds the whole row by the number of mods before the craft: 46, 46, 52, 56, 60, 62 (0 to 5 mods; 62 at 5 mods is also the wiki's). ADR-0041 and ADR-0043 scaled the plain Exalted row and got 29, 40, 47, 58, 62; PoEDB lists one figure, 28. Draft claim `foulborn.exalted_spend_by_mod_count`, `approximate` (the emulator against PoEDB; nobody tested the orb).
-4. **The 0-strand Foulborn case has the post's own sentence behind it.** The first sweep quoted only the "both sides of some of these breakpoints" sentence. Section 1.1 of the post also says Foulborn's restriction "exactly matched that of 10-11 memory strands", and 11 strands is D = 175 (100 + 75), the ADR's value. The AMA's cluster-jewel advice (no strands on a jewel) gives the same cuts at 2 and 3 tiers.
+4. **The 0-strand Foulborn case gets a little more support.** The first sweep quoted only the "both sides of some of these breakpoints" sentence. Section 1.1 of the post also says Foulborn's restriction "exactly matched that of 10-11 memory strands", and 11 strands is D = 175 (100 + 75), the ADR's value. The sentence reads as Foulborn alone but does not say the compared item had no strands, so the 0-strand reading is still mine. The AMA's cluster-jewel advice (no strands on a jewel) gives the same cuts at 2 and 3 tiers as D = 175, and also as the emulator's rating of 100, so it does not choose between them. The case stays `approximate`.
 5. **Two conflicts with the emulator, both for the in-game list, neither changes the plan.** The emulator rates Foulborn at 100 (not 75) and uses the larger of the Foulborn cut and the strand cut instead of the sum: alone it gives kept-tier lists that differ from the wiki's at 8, 10, 12, 14 and 15 eligible tiers, and with strands it keeps more tiers than the post's additive rule in 800 of 1,500 cells. The post fits 491 Foulborn rows to the additive rule, so ADR-0040 stands. Two other emulator rules lose to data: its Remembrance distribution (chi-square 370 on 17 degrees of freedom against 7.2 for the ADR's) and its plain-weight Unravelling destination (p = 0.007 on the wand test of ADR-0044).
 6. **Weights of the kept tiers (point 1) are still untested** and no thread, post or emulator separates the readings of ADR-0042; the emulator is reading 3, as the older copy. Jewels and Remembrance, special mods under Unravelling, Divine and Vaal under a player's eye: not found (details in the table).
 
@@ -34,6 +34,7 @@ Threads read first-hand (id, topic): 1wr9445 the post; 1lre3w4 usages (2025-07);
 | Scouring, Annulment, Divine, Vaal, Fracturing, fossils, Harvest | no row, nothing resets the count | ADR-0041 |
 | Imprint restore | returns the stored item copy, strands included | ADR-0034 |
 | Recombinator | none | |
+| Other details | Remembrance needs a normal-rarity item; Unravelling treats a tier of weight 0 as weight 1; the Foulborn cut counts `N + 1` (the position of the last eligible tier), which equals the number of eligible tiers only when no lower tier is ineligible | ADR-0043 already requires a normal item; the other two are small and untested |
 
 `2026-11-01-b5-r3-checks.py` (standard library, no network) reproduces the three comparisons; its output on 2026-11-01:
 
@@ -46,7 +47,7 @@ The emulator's rules are the implementer's reading, not a test; where the post's
 
 ## Draft claims
 
-[`2026-11-01-b5-r3-claims/`](2026-11-01-b5-r3-claims/): ten claims, checked with `load_registry(Path("docs/research/2026-11-01-b5-r3-claims"))` (10 rules load). The build session that promotes `memory_strands.yaml` and `foulborn.yaml` of #98 copies them with those files.
+[`2026-11-01-b5-r3-claims/`](2026-11-01-b5-r3-claims/): eleven claims, checked with `load_registry(Path("docs/research/2026-11-01-b5-r3-claims"))` (11 rules load). The build session that promotes `memory_strands.yaml` and `foulborn.yaml` of #98 copies them with those files.
 
 | Claim | Source | Changes |
 |---|---|---|
@@ -54,8 +55,8 @@ The emulator's rules are the implementer's reading, not a test; where the post's
 | `foulborn.zero_strand_cut_matches_eleven_strands` | experiment (the post) | ADR-0040: "D = 175 on a 0-strand item rests on the wiki alone" gains the author's observation |
 | `memory_strands.fossil_harvest_not_cut` | experiment | ADR-0041: "not cut" is no longer an inference alone |
 | `memory_strands.cut_follows_spend_table` | coe | ADR-0041: Scouring, Annulment, Divine, Vaal, Fracturing: a stated source |
-| `memory_strands.annulment_scouring_keep_strands`, `memory_strands.divine_keeps_strands` | experiment | same |
-| `memory_strands.recombinator_strands_from_either_base` | experiment | ADR-0033 and ADR-0041 (the author's play becomes a guide's statement) |
+| `memory_strands.annulment_keeps_strands`, `memory_strands.scouring_keeps_strands`, `memory_strands.divine_keeps_strands` | experiment | same (recipes, no counted tests) |
+| `memory_strands.recombinator_strands_from_either_base` | experiment | ADR-0033 and ADR-0041: the count rule becomes a guide's statement; "nothing spent" stays the author's play |
 | `memory_strands.unravelling_skips_fractured_and_veiled` | coe | ADR-0044: "fractured excluded ... in the claim the build writes" now has its claim |
 | `memory_strands.unravelling_side_weight_is_whole_pool` | coe | ADR-0044 and open point 7 of #98: the `W_side` definition |
 | `memory_strands.remembrance_classes_observed` | experiment | ADR-0043: "other equipment classes rest on the wiki's word" |
@@ -66,7 +67,7 @@ Every claim but `foulborn.exalted_spend_by_mod_count` keeps the planner's number
 
 Posted as one comment there. Summary:
 
-- **Can come off the B5 list** (the emulator answers and agrees with the default, players agree): check 1 (Scouring, Annulment, Divine keep the count; Fracturing and Vaal are the emulator's and the wiki's word), check 2 (fossil and Harvest are not cut), check 6 (Unravelling skips fractured and veiled mods). Check 4 (essence respects the cut) is answered the same way for the emulator (essence has a row) and stays optional for the non-guaranteed mods.
+- **Answered by the emulator and the players, both agreeing with the default** (the claims stay `approximate`, so the checks are optional and the main chat may drop them): check 1 (Scouring, Annulment, Divine keep the count; Fracturing and Vaal are the emulator's and the wiki's word), check 2 (fossil and Harvest are not cut), check 6 (Unravelling skips fractured and veiled mods). Check 4 (essence respects the cut) is answered the same way for the emulator (essence has a row) and stays optional for the non-guaranteed mods.
 - **Changes:** check 5 (Foulborn Exalted on 1 to 4 mods): the default is now the emulator's row 46, 46, 52, 56, 60, 62 instead of 29, 40, 47, 58, 62; PoEDB's 28 conflicts; the tooltip settles it.
 - **Stays:** check 3 (Remembrance on a jewel): the wiki says equipment, the emulator allows jewels; default "jewels no".
 - **New, optional, expensive:** the Foulborn cut on an item with no strands and on one with strands: the post and wiki (rating 75, sum with the strand cut) against the emulator (rating 100, larger of the two). Default: the post and wiki. The first needs only a mod type with exactly 8 eligible tiers on a 0-strand magic item and about 40 Foulborn Augmentations (whether the 5th best tier ever appears: yes under the wiki, never under the emulator); the second the sheet-fit ticket can close from the post's 491 Foulborn rows before anyone spends a coin.
