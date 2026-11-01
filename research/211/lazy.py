@@ -93,7 +93,7 @@ class Determinized:
         return best
 
 
-def lazy_solve(world, start, universe_states, candidates, seed, *, bound="expected", max_rounds=50, log=print, per_want=False, refine=0, **options):
+def lazy_solve(world, start, universe_states, candidates, seed, *, bound="expected", max_rounds=50, log=print, per_want=False, refine=0, envelope=False, **options):
     """Returns (final solution, proc, acq, offers, rounds). `candidates(s)` lists every (kind, donor) that could be offered at s;
     `seed(s)` the donors offered at the start; `bound` is "expected" (c + acq + sum p L) or "support" (c + acq + min L over the support).
     `per_want`: donors are offered per product state (want, state) instead of per base state, so a donor process need not
@@ -115,7 +115,19 @@ def lazy_solve(world, start, universe_states, candidates, seed, *, bound="expect
         wants = {w for (_, w, _) in values}
         violations = set()
         checked = 0
-        for (tag, w, s), v in values.items():
+        checked_states = values
+        if envelope:
+            x0 = acq.start(start)
+            checked_states, stack = {x0: values[x0]}, [x0]
+            while stack:
+                x = stack.pop()
+                if x in sol.policy:
+                    a = sol.policy[x]
+                    for y in [o.state for o in a.outcomes] + list(a.extra_inputs):
+                        if y not in checked_states:
+                            checked_states[y] = values[y]
+                            stack.append(y)
+        for (tag, w, s), v in checked_states.items():
             if v == 0.0:
                 continue
             have = offered(w, s)

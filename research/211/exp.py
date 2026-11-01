@@ -33,7 +33,7 @@ def r25_case(config, mode, what):
         per_want = what.startswith("lazy_pw")
         refine = int(what.split("_r")[1].split("_")[0]) if "_r" in what else 0
         seed = (lambda s: []) if what.endswith("empty") else (lambda s: [("recomb", d) for d in donors if d[1] in ISO])
-        sol, proc, acq, offers, rounds = lazy_solve(w, start, S_, cands, seed, bound=bound, per_want=per_want, refine=refine, log=lambda *_: None)
+        sol, proc, acq, offers, rounds = lazy_solve(w, start, S_, cands, seed, bound=bound, per_want=per_want, refine=refine, envelope=("_env" in what), log=lambda *_: None)
         out.update(rounds=len(rounds), wants=rounds[-1]["wants"], product_states=len(sol.values),
                    offers=rounds[-1]["offers"], offers_possible=len(S_) * len(donors),
                    violations_per_round=[r["violations"] for r in rounds], V=sol.values[acq.start(start)], error_bound=sol.error_bound,

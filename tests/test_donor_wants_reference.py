@@ -208,8 +208,14 @@ class Determinized:
         return self.memo[want]
 
 
-def lazy_solve(world, seed_donors, *, bound="expected"):
-    """The loop of ADR-0059: solve, prove every other donor unneeded or offer it, repeat. Returns (solution, acquisition, offers, rounds)."""
+def lazy_solve(world, seed_donors, *, bound="expected", envelope=False):
+    """The loop of ADR-0059: solve, prove every other donor unneeded or offer it, repeat. Returns (solution, acquisition, offers, rounds).
+
+    The lower bound is the value in hand on the checked states and the determinized distance elsewhere. By default every built
+    state with a finite value is checked. With `envelope` only the states the policy in hand reaches are, and a state joins them
+    when an action offered at a checked state falls below the value there only because its successor was not checked (what an
+    envelope search expands): the end test is the same, so the value is the same.
+    """
     offers = {s: set(seed_donors(s)) for s in world.states()}
     det = Determinized(world)
     rounds = 0
@@ -217,29 +223,72 @@ def lazy_solve(world, seed_donors, *, bound="expected"):
         rounds += 1
         solution, acquisition = world.solve(lambda s: sorted(offers[s]))
         values = solution.values
+        start = acquisition.start(())
+        if envelope:
+            members, stack = {start}, [start]
+            while stack:
+                x = stack.pop()
+                if x in solution.policy:
+                    action = solution.policy[x]
+                    for y in [o.state for o in action.outcomes] + list(action.extra_inputs):
+                        if y not in members:
+                            members.add(y)
+                            stack.append(y)
+        else:
+            members = set(values)
         violations = set()
-        for (tag, want, s), v in values.items():
-            if v == 0.0:
-                continue
-            candidates = [d for d in world.donors() if d not in offers[s]]
-            if not math.isfinite(v):  # no value in hand here: nothing can be pruned
-                violations.update((s, d) for d in candidates)
-                continue
-            lower = det.to(world.goal) if str(want) == "MAIN" else det.to(want)
+        grown = True
+        while grown:
+            grown = False
+            for x in list(members):
+                tag, want, s = x
+                v = values[x]
+                if v == 0.0:
+                    continue
+                if not math.isfinite(v):  # no value in hand here: nothing can be pruned
+                    violations.update((s, d) for d in world.donors() if d not in offers[s])
+                    for a in acquisition.actions(x):  # without a policy in hand the whole closure has to be looked at
+                        for y in [o.state for o in a.outcomes] + list(a.extra_inputs):
+                            if y in values and y not in members:
+                                members.add(y)
+                                grown = True
+                    continue
+                lower = det.to(world.goal) if str(want) == "MAIN" else det.to(want)
 
-            def level(j):
-                got = values.get((tag, want, j))
-                return got if got is not None and math.isfinite(got) else lower.get(j, math.inf)
+                def level(j, tag=tag, want=want, lower=lower):
+                    y = (tag, want, j)
+                    if y in members and math.isfinite(values.get(y, math.inf)):
+                        return values[y]
+                    return lower.get(j, math.inf)
 
-            for d in candidates:
-                got = values.get(("in", d, ()))
-                acq = got if got is not None and math.isfinite(got) else det.to(d).get((), math.inf)
-                dist = world.recomb(s, d)
-                q = world.costs["recomb"] + acq + sum(float(p) * level(j) for j, p in dist.items())
-                if bound == "support":
-                    q = world.costs["recomb"] + acq + min(level(j) for j in dist)
-                if q < v * (1 - 1e-9) - 1e-9:
-                    violations.add((s, d))
+                def acquisition_level(d):
+                    y = ("in", d, ())
+                    if y in members and math.isfinite(values.get(y, math.inf)):
+                        return values[y]
+                    return det.to(d).get((), math.inf)
+
+                for d in world.donors():
+                    dist = world.recomb(s, d)
+                    q = world.costs["recomb"] + acquisition_level(d) + (
+                        min(level(j) for j in dist) if bound == "support" else sum(float(p) * level(j) for j, p in dist.items())
+                    )
+                    if q >= v * (1 - 1e-9) - 1e-9:
+                        continue
+                    if d not in offers[s]:
+                        violations.add((s, d))
+                        continue
+                    for y in [(tag, want, j) for j in dist] + [("in", d, ())]:  # offered: the successors were not checked, so check them
+                        if y in values and y not in members:
+                            members.add(y)
+                            grown = True
+                for label, kernel in (("alt", world.alt), ("exalt", world.exalt), ("annul", world.annul)):
+                    dist = kernel(s) if label in world.costs else None
+                    if dist and world.costs[label] + sum(float(p) * level(j) for j, p in dist.items()) < v * (1 - 1e-9) - 1e-9:
+                        for j in dist:
+                            y = (tag, want, j)
+                            if y in values and y not in members:
+                                members.add(y)
+                                grown = True
         if not violations:
             return solution, acquisition, offers, rounds
         for s, d in violations:
@@ -343,6 +392,15 @@ def test_the_lazy_loop_equals_the_product_with_every_donor_offered_and_the_linea
     assert rounds <= 4
 
 
+@pytest.mark.parametrize("seed", range(40))
+def test_testing_only_the_states_the_policy_reaches_gives_the_same_value(seed):
+    """What an envelope search (#312) would do: the lower bound is the value in hand inside the envelope and the determinized distance outside it."""
+    world = world_of(seed)
+    full, full_acquisition = world.solve(lambda s: world.donors())
+    envelope, envelope_acquisition, offers, _ = lazy_solve(world, lambda s: [], envelope=True)
+    assert envelope.values[envelope_acquisition.start(())] == pytest.approx(full.values[full_acquisition.start(())], rel=1e-8)
+
+
 def test_the_loop_leaves_donors_out_that_it_proves_unneeded():
     world = world_of(0)
     _, _, offers, _ = lazy_solve(world, lambda s: [])
@@ -386,3 +444,43 @@ def test_a_want_that_is_the_projection_a_consumer_reads_is_met_by_the_first_memb
     projected = cost_of("X", lambda s, w: s[0] == w)  # the projection of "XJ" is "X"
     assert exact == pytest.approx(1.0 + 0.5 * 4.0)
     assert projected == pytest.approx(1.0)
+
+
+def tiny_awakener(projection):
+    """A receiver that needs the Crusader mod ES, a Shaper donor that must carry AM, and the Awakener's Orb joining them.
+
+    The receiver rolls ES by Chaos Orb; the donor rolls AM alone, AM with a junk mod, or nothing, or is bought with AM alone.
+    The orb takes the receiver with ES and a donor with AM and gives the goal with chance 1/2, else the receiver is rerolled (R0).
+    `projection` True asks for the donor as the projection the orb reads (AM, whatever else is on it), False for AM alone.
+    """
+    from crafting_system.solver import TabularModel
+
+    table = {
+        "R0": [Action("chaos", 1.0, (("R1", 1), ("R0", 3)))],
+        "R1": [Action("awakener", 5.0, (("G", 1), ("R0", 1)), (Need("D0", "AM"),))],
+        "D0": [Action("chaos-d", 1.0, (("AM", 1), ("AM+J", 1), ("D0", 2))), Action("buy", 12.0, (("AM", 1),))],
+        "AM+J": [Action("annul", 3.0, (("AM", 1), ("J", 1)))],
+        "J": [Action("scour", 1.0, (("D0", 1),))],
+    }
+    model = TabularModel({"G"}, table)
+    reaches = (lambda s, want: s.startswith(want)) if projection else (lambda s, want: s == want)
+    acquisition = Acquisition(model, reaches=reaches)
+    return solve(acquisition, [acquisition.start("R0")]), acquisition
+
+
+@pytest.mark.parametrize("projection", [True, False])
+def test_the_tiny_awakener_case_equals_brute_force_with_the_donor_as_a_projection_or_whole(projection):
+    solution, acquisition = tiny_awakener(projection)
+    start = acquisition.start("R0")
+    spec = product_spec(acquisition, start)
+    best = brute_force_inputs(spec)
+    for state, value in solution.values.items():
+        if state in best and best[state] is not None:
+            assert value == pytest.approx(float(best[state]), rel=1e-9), state
+    # AM alone is a state "AM"; the projection also accepts "AM+J" (the orb never reads the junk), so it is never dearer
+    if projection:
+        assert solution.values[("in", "AM", "D0")] == pytest.approx(2.0, rel=1e-9)  # v = 1 + v / 2
+    else:
+        # by hand: v = 1 + w / 4 + v / 2 and w = 3 + (1 + v) / 2 (annul AM+J at 3: AM, or J then scour at 1), so v = 5
+        assert solution.values[("in", "AM", "D0")] == pytest.approx(5.0, rel=1e-9)
+
