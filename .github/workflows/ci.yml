@@ -7,9 +7,7 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:  # also the way to test `main` (or any ref) on demand; a push to `main` starts no run (ticket #308)
 
 permissions:
   contents: read

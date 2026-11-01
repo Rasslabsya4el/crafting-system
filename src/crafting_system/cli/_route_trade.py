@@ -15,7 +15,7 @@ from urllib.parse import quote
 from crafting_system.data import Mod
 from crafting_system.prices import BuyMod, BuySpec, TradeSpecError
 from crafting_system.prices.trade_query import StatFilter, build_query
-from crafting_system.prices.trade_stats import TradeStats, resolve_buy_mod
+from crafting_system.prices.trade_stats import TradeStats, named_mods, resolve_buy_mod
 
 TRADE_SEARCH = "https://www.pathofexile.com/trade/search"
 RANGE = re.compile(r"\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)")
@@ -53,7 +53,7 @@ def buy_step(spec: BuySpec, league: str, game_mods: Iterable[Mod], stats: TradeS
 
 def buy_mod_text(mod: BuyMod, game_mods: Iterable[Mod]) -> str:
     """The mod a buy spec asks for as the game words it, with `#` for the roll; a minimum is appended."""
-    text = _named_text(mod.stat, tuple(game_mods)) or mod.stat
+    text = _named_text(mod.stat, named_mods(mod, game_mods)) or mod.stat
     text = RANGE.sub("#", MARKUP.sub(r"\1", MARKUP_LABEL.sub(r"\1", text))).replace("\n", " / ")
     if mod.minimum is not None:
         text += f" (at least {mod.minimum:g})"
@@ -86,5 +86,5 @@ def _accepts(spec: BuySpec, mods: tuple[Mod, ...]) -> tuple[str, ...]:
     lines.append("corrupted" if spec.corrupted else "not corrupted")
     for mod in spec.mods:
         text = buy_mod_text(mod, mods)
-        lines.append(f"fractured: {text}" if mod.fractured else text)
+        lines.append(f"fractured: {text}" if mod.fractured else f"implicit: {text}" if mod.implicit else text)
     return tuple(lines)

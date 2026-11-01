@@ -15,22 +15,31 @@ Cluster and Timeless jewels are refused (`OutOfScopeError`): their pools are not
 ADR-0037); a base whose class has no pool at all is refused with `NotApplicableError`.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
+from types import MappingProxyType
 
 from crafting_system.data import BaseItem, GameData, Mod
 from crafting_system.items import UnknownBaseError, spawn_weight
+from crafting_system.items.implicits import (
+    CLUSTER_JEWEL_DOMAIN,
+    CORRUPTED_IMPLICIT,
+    CORRUPTED_POOL_DOMAINS,
+    TIMELESS_JEWEL_NAME,
+    corrupted_pool_domain,
+)
 
 from .errors import NotApplicableError, OutOfScopeError
 
-CORRUPTED = "corrupted"
-ABYSS_JEWEL_TAG = "abyss_jewel"
-ABYSS_JEWEL_DOMAIN = "abyss_jewel"
-CLUSTER_JEWEL_DOMAIN = "affliction_jewel"
-# the domains whose items a Vaal Orb corrupts with an implicit: equipment, jewellery and quivers, jewels, abyss jewels. Other domains
-# also hold corrupted mods (maps, relics, grafts) that no corrupting action draws for an item of this project.
-POOL_DOMAINS = frozenset({"item", "misc", ABYSS_JEWEL_DOMAIN})
-TIMELESS_JEWEL_NAME = "Timeless Jewel"
+CORRUPTED = CORRUPTED_IMPLICIT
+POOL_DOMAINS = CORRUPTED_POOL_DOMAINS  # the same set `items` uses to accept a corrupted implicit on an item
+# The kinds of action that corrupt an item and add a corrupted implicit, with the number one use adds and so replaces
+# (ADR-0036, ADR-0038): the Vaal Orb and a fossil set holding the Bloodstained Fossil give one, the Locus of Corruption
+# two. A target's `actions:` list names kinds, so a target is checked against these names.
+CORRUPTING_KINDS: Mapping[str, int] = MappingProxyType({"vaal": 1, "fossil-set": 1, "locus": 2})
+# the corrupting kinds a target that leaves out `actions:` may use: `fossil-set` is opt-in (see `catalog`)
+DEFAULT_CORRUPTING_KINDS: Mapping[str, int] = MappingProxyType({"vaal": 1, "locus": 2})
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,7 +142,7 @@ def _compute(data: GameData, base_id: str, item_level: int) -> CorruptedImplicit
     if base is None:
         raise UnknownBaseError(f"no base {base_id} in the game data")
     _refuse_unchecked(base)
-    domain = ABYSS_JEWEL_DOMAIN if ABYSS_JEWEL_TAG in base.tags else base.domain
+    domain = corrupted_pool_domain(base)
     if domain not in POOL_DOMAINS:
         raise NotApplicableError(
             f"{base.name} ({base.item_class}) has no corrupted implicit pool: it is not equipment, jewellery, a quiver or a jewel"

@@ -1,0 +1,56 @@
+{
+ "r05-strength-ring": {
+  "kernels": 45,
+  "kernels_sha": "31ce3b0aef26e30150dab88e38a1ea92f285445bd9112b91f04dbf75c8fc536f",
+  "left_out": 1,
+  "left_out_sha": "eabd74f25eb1347bd06feed0aca82debb1a208f29c77e24dc83f1bac507efc15",
+  "offers": 90,
+  "offers_sha": "0a41888549a197b41f8f526049dcd3900348fcab96c29ef9d2d5149a679e0d7f",
+  "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='AllAttributes4', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)),), status=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
+ },
+ "r10-fractured-boots": {
+  "kernels": 79,
+  "kernels_sha": "56af11950b6b8f6340b13f4c946a0a93637077b7fe1914f09899cacfb3f4cbc2",
+  "left_out": 1,
+  "left_out_sha": "f88699ccf59b2ee4c2c6d08aa8d1d35614b24a245e95c915ece85f2ec8c885f1",
+  "offers": 79,
+  "offers_sha": "230f26ac02b175b9f61c04a26dffb42e2804421e6c0d68b7e9f872e39f739eea",
+  "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='MovementVelocity5', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)),), status=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
+ },
+ "r10-fractured-boots-70-life": {
+  "kernels": 40,
+  "kernels_sha": "356000a0fa23366510e2f7199e52bf5f203db61e85078556c795388ee59611ae",
+  "left_out": 1,
+  "left_out_sha": "e8d87e3313843fd1deac6b81ffa24c3b2ea7233433b1b21756f239c9bed62647",
+  "offers": 80,
+  "offers_sha": "0b52eeb2c5ba67a3f84fc25730eb8857df565cf77988be518d6d4ad26d353a14",
+  "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='MovementVelocity5', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)),), status=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
+ },
+ "r11-reservation-helmet": {
+  "kernels": 77,
+  "kernels_sha": "6925dd6550e7bc84b01e2a72c78f4612eb164d8ed23ac8e2e392d9f42488af3f",
+  "left_out": 1,
+  "left_out_sha": "b137b62a27a02079a35df1a2e4503880a8a7f542e9b8e7f9da0fdeed01ac54b2",
+  "offers": 77,
+  "offers_sha": "6f99a2a2f06e08f323c38e52f72de0f4f17d1d57f0f8ee1f7e9f9e445ebbfb4b",
+  "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='ChaosResist6', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)),), status=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
+ },
+ "r12-lightning-amulet": {
+  "kernels": 40,
+  "kernels_sha": "3582842cfdb67efa559355f1fef84d39596e4b69711452e1b3107f9619c557f7",
+  "left_out": 1,
+  "left_out_sha": "90d977ff01a1488958ffcfba5b3ab11d231c4a6ad59eb5cde33ab7bf1f8301a4",
+  "offers": 80,
+  "offers_sha": "2134bfdf1a6d3e7364957b12a3b053b11e39694d5da18a84ebd2cd6fa3c5f4fb",
+  "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='LightningResist1', contribution=(<Status.ABSENT: 0>, <Status.PASSING: 2>)),), status=(<Status.ABSENT: 0>, <Status.PASSING: 2>), slots=())"
+ },
+ "r13-life-resist-belt": {
+  "kernels": 9,
+  "kernels_sha": "50270f87ecd87881c542a5b44aae0efc1adb861e7d715658b42bde4bc6540689",
+  "left_out": 2,
+  "left_out_sha": "911ad0d443a56ebba227ec5c4ebb1b6b67fab9baab6a60400822ce60801aa23a",
+  "offers": 9,
+  "offers_sha": "2a8e0fd8f0f2eceb18045ac2165fce185eccee9408923d980f9c446a138ea21d",
+  "start": "CompressedState(flags=Flags(rarity=<Rarity.NORMAL: 'normal'>, corrupted=False, influences=frozenset()), fractured=(), status=(<Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
+ }
+}

@@ -127,7 +127,7 @@ One of the six orbs (Shaper's, Elder's, Crusader's, Hunter's, Redeemer's, Warlor
 _Avoid_: Conqueror's Exalted Orb (that names four of the six)
 
 **Catalyst quality**:
-The type and percent (to 20%) that a catalyst puts on a ring, amulet or belt. It scales matching modifier values and changes no odds, so it is a finish cost and not part of the compressed state (ADR-0029).
+The type and percent (to 20%) that a catalyst puts on a ring, amulet or belt. It scales matching modifier values and changes no odds, so it is a finish cost; the compressed state keeps it only when an enabled action reads or changes it (ADR-0027, ADR-0029).
 _Avoid_: quality (an item has other kinds, such as the flat quality of gems)
 
 **Brick**:
@@ -192,10 +192,10 @@ What one use of an action consumes, by price-file name, with counts, read from a
 _Avoid_: cost (the price of the resources in Chaos)
 
 **Reads**:
-What of the item, besides its fractured mods, the result of an action depends on: nothing (the action erases the other mods and redraws), their number, or their number and some families. It decides what a compressed state must keep.
+What of the item, besides its fractured mods, the result of an action depends on: nothing (the action erases the other mods and redraws), their number, or their number and some families; and whether it also depends on the implicits, the quality or the unveil offer. It decides what a compressed state must keep.
 
 **Adds**:
-What an action puts on the item as far as can be told without running it: the mods it names, whether they are crafted, whether it draws from the pool and with which tag. A planner can ask it whether an action can matter for a target.
+What an action puts on the item as far as can be told without running it: the mods it names, whether they are crafted, whether it draws from the pool and with which tag. Whether it adds, replaces, removes or rerolls an implicit, sets the quality or draws the unveil offer is part of it. A planner can ask it whether an action can matter for a target.
 
 **Crafting method**:
 A technique players name, such as essence spam or fracture-then-reforge. Here it is a pattern that appears in a policy, never something coded.

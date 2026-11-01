@@ -135,6 +135,19 @@ class Resolver:
                 found.setdefault(family, set()).add(mod_id)
         return {family: frozenset(ids) for family, ids in found.items()}
 
+    def kind_of_text(self, wanted: str) -> str | None:
+        """Where the normalised stat text `wanted` is found among ordinary mods: "implicit" (an Eldritch or a base implicit),
+        "explicit" (a prefix or suffix), or None."""
+        if wanted in self._implicits_by_text:
+            return "implicit"
+        return "explicit" if wanted in self._mods_by_text else None
+
+    def kind_of_family(self, family: str) -> str | None:
+        """Where the family id `family` is found among ordinary mods: "implicit", "explicit" or None."""
+        if family in self._implicits_by_family:
+            return "implicit"
+        return "explicit" if family in self._mods_by_family else None
+
     def _without_presence(self, ids: frozenset[str]) -> frozenset[str]:
         """`ids` without the presence variants, or all of `ids` when nothing else is left."""
         plain = frozenset(mod_id for mod_id in ids if not is_presence_variant(self.data.mods[mod_id]))

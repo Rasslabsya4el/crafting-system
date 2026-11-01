@@ -547,7 +547,7 @@ class Coarsening:
         elif reads.junk:
             found = self._run_members(self._members(block, frozenset(reads.families)), action, True)
         else:  # an erasing action looks at the flags, the fractured mods and the crafted mods: blocks that agree on them share it
-            key = (action, block.flags, block.fractured, tuple(slot for slot in block.slots if slot.crafted))
+            key = (action, block.flags, block.fractured, tuple(slot for slot in block.slots if slot.crafted), block.held)
             found = self._rerolls.get(key)
             if found is None:
                 found = self._rerolls[key] = self._run_members(self._members(block, frozenset()), action, True)
