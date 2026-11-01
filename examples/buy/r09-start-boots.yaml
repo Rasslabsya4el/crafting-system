@@ -4,7 +4,8 @@
 #
 # poe.ninja's base overview has no plain Two-Toned Boots of item level 86 (the plain boots it lists stop at
 # item level 82, four observations), so the price is the owner's trade rule: instant buyout, listings of any
-# age, the mean of the 5 cheapest.
+# age, the mean of the 5 cheapest. The price file entry adds one Orb of Alchemy, which makes the base rare
+# (see `start_item` in the target).
 name: R09 start boots
 base_type: Two-Toned Boots
 category: armour.boots

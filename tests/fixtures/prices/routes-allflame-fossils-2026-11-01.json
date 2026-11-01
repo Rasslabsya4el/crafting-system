@@ -326,7 +326,7 @@
       "source": "trade-api"
     },
     "R08 start boots": {
-      "chaos": 29.8,
+      "chaos": 29.82716,
       "detail": {
         "date": "2026-11-01",
         "k": 5,
@@ -377,11 +377,11 @@
         "query_hash": "d467d2c75cacc86cc4851e454966d8c884b9e4f4094b1b3ca65fb1609efe2e6e",
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 22 on the site, listed any time",
+      "note": "trade price of a normal base of item level 86 (29.8) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target",
       "source": "trade-api"
     },
     "R09 start boots": {
-      "chaos": 5.0,
+      "chaos": 5.02716,
       "detail": {
         "date": "2026-11-01",
         "k": 5,
@@ -432,7 +432,7 @@
         "query_hash": "5df0f609e43627b47c12a3ab884def71f47c36c291610427e98328e8741e1f92",
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 37 on the site, listed any time",
+      "note": "trade price of a normal base of item level 86 (5.0) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target",
       "source": "trade-api"
     },
     "R10 start boots": {

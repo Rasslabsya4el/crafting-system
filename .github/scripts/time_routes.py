@@ -31,7 +31,7 @@ def main() -> None:
     arguments = parser.parse_args()
     out = Path(arguments.out)
     out.mkdir(parents=True, exist_ok=True)
-    faulthandler.dump_traceback_later(180, repeat=True, file=sys.stderr)
+    faulthandler.dump_traceback_later(int(__import__("os").environ.get("DUMP_AFTER", "180")), repeat=True, file=sys.stderr)
     began = time.perf_counter()
 
     def progress(line: str) -> None:

@@ -12,8 +12,7 @@
 #      Energy Shield and a desirable Movement Speed.
 #   2. Bench-craft Movement Speed in an open prefix.
 #
-# The guide starts from a rare pair of boots; the target starts from a normal one, so the last rule is the
-# Orb of Alchemy that makes it rare (a fossil works on a rare item only).
+# The guide starts from a rare pair of boots, as the target does (see `start_item` in the target).
 
 name: R08, PoE Vault guide
 
@@ -29,11 +28,7 @@ rules:
           status: absent
       open_prefixes: 1
     do: "Bench craft #% increased Movement Speed / 100% chance to Avoid being Chilled"
-  # Step 1: use the two fossils again (this is also the first use, on the boots the Alchemy made rare).
+  # Step 1: use the two fossils again (this is also the first use).
   - when:
       rarity: rare
     do: Fossils Dense Fossil + Shuddering Fossil
-  # The boots are normal at the start.
-  - when:
-      rarity: normal
-    do: Orb of Alchemy

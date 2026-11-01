@@ -16,8 +16,8 @@
 #   * "Movement Speed": as in R08, the rolled tier 1 (35%) or one of the three bench crafts at their top tier.
 #   * "useful Resistances if rolled" and "acceptable other modifiers": not required. The guide asks for them only
 #     "if rolled", so a resistance is a bonus of the item, not a goal of the plan.
-#   * Start: a normal Two-Toned Boots of item level 86, priced by the owner's rule for a bought item (poe.ninja
-#     lists no plain boots of that level), and made rare with an Orb of Alchemy.
+#   * Start: a normal base of item level 86 bought on the trade site (poe.ninja lists no plain boots of that level)
+#     and made rare with an Orb of Alchemy; see `start_item` below for how that is modelled.
 
 # Three bases of the game are named Two-Toned Boots (Metadata/Items/Armours/Boots/BootsAtlas1, 2 and 3: one each
 # for Armour and Evasion, Armour and Energy Shield, Evasion and Energy Shield), so the base is written by its id.
@@ -26,13 +26,21 @@ base: Metadata/Items/Armours/Boots/BootsAtlas1
 item_level: 86
 influence: []
 
-# No start_item block: the crafting starts from a normal (white) Two-Toned Boots.
+# The start: rare boots with no mod. The guide fossils a rare pair of boots and the first fossil erases whatever
+# it holds, so which mods the boots start with does not matter. A bought normal base made rare with an Orb of
+# Alchemy holds 4 to 6 random mods; tracking them (and the Alchemy as an action) multiplies the states, and a
+# plan of it did not finish in 60 minutes on a GitHub runner, so the model starts from the rare boots with no mod
+# and the price of the start item includes the Alchemy. This leaves out only the chance that the Alchemy itself
+# lands the goal, a chance far smaller than one fossil use has.
+start_item:
+  rarity: rare
+  mods: []
 
 # The name of the start item in the price file: the `name` of examples/buy/r09-start-boots.yaml.
 start_price: R09 start boots
 
-# See R08: the guide's fossils, the Orb of Alchemy that makes the boots rare, and the bench.
-actions: [alchemy-orb, fossil-set, bench-craft]
+# See R08: the guide's fossils and the bench.
+actions: [fossil-set, bench-craft]
 
 requirements:
   # High Life: the top tier, rolled.

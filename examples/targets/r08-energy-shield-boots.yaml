@@ -19,8 +19,8 @@
 #     needs item level 86), or one of the three bench crafts of Movement Speed at their top tier, (18-20)% with
 #     "Cannot Be Chilled", with "chance to gain Onslaught on Kill" or with "increased Movement Speed if you
 #     haven't been Hit Recently" (the bench offers nothing else for boots).
-#   * Start: a normal Sorcerer Boots of item level 86, priced by the owner's rule for a bought item (poe.ninja
-#     lists no plain boots of that level), and made rare with an Orb of Alchemy (a fossil works on a rare item only).
+#   * Start: a normal base of item level 86 bought on the trade site (poe.ninja lists no plain boots of that level)
+#     and made rare with an Orb of Alchemy; see `start_item` below for how that is modelled.
 
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Sorcerer Boots
@@ -31,16 +31,23 @@ item_level: 86
 # Influences on the base. [] means none.
 influence: []
 
-# No start_item block: the crafting starts from a normal (white) Sorcerer Boots.
+# The start: rare boots with no mod. The guide fossils a rare pair of boots and the first fossil erases whatever
+# it holds, so which mods the boots start with does not matter. A bought normal base made rare with an Orb of
+# Alchemy holds 4 to 6 random mods; tracking them (and the Alchemy as an action) multiplies the states, and a
+# plan of it did not finish in 60 minutes on a GitHub runner, so the model starts from the rare boots with no mod
+# and the price of the start item includes the Alchemy. This leaves out only the chance that the Alchemy itself
+# lands the goal, a chance far smaller than one fossil use has.
+start_item:
+  rarity: rare
+  mods: []
 
 # The name the start item has in the price file, which is what it costs to get: the `name` of
 # examples/buy/r08-start-boots.yaml. The planner buys it again whenever the route restarts.
 start_price: R08 start boots
 
-# The kinds of actions the planner may use: the guide's fossils (with their resonators), the Orb of Alchemy that
-# makes the normal boots rare, and the bench. The kinds not named are not offered, and the report says so: the
-# plan is the cheapest among the named kinds. `fossil-set` and `alchemy-orb` are offered only when named.
-actions: [alchemy-orb, fossil-set, bench-craft]
+# The kinds of actions the planner may use: the guide's fossils (with their resonators) and the bench. The kinds not named are not offered, and the report says so: the
+# plan is the cheapest among the named kinds. `fossil-set` is offered only when named.
+actions: [fossil-set, bench-craft]
 
 # Everything below must be present on the finished item.
 requirements:
