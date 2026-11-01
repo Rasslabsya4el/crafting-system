@@ -1,4 +1,4 @@
-"""The reference fixtures of ADR-0059 (ticket #211): donor wants, lazy `Need` generation and the size of the product.
+"""The reference fixtures of ADR-0062 (ticket #211): donor wants, lazy `Need` generation and the size of the product.
 
 A tiny recombinator world (items of up to two prefixes from the classes A, B and an optional junk J, an Alteration, an
 Exalted Orb, an Annulment and a recombination whose donor is a `Need`) is solved through `Acquisition` and compared with
@@ -209,7 +209,7 @@ class Determinized:
 
 
 def lazy_solve(world, seed_donors, *, bound="expected", envelope=False, trace=None):
-    """The loop of ADR-0059: solve, prove every other donor unneeded or offer it, repeat. Returns (solution, acquisition, offers, rounds).
+    """The loop of ADR-0062: solve, prove every other donor unneeded or offer it, repeat. Returns (solution, acquisition, offers, rounds).
 
     The lower bound is the value in hand on the checked states and the determinized distance elsewhere. By default every built
     state with a finite value is checked. With `envelope` only the states the policy in hand reaches are, and a state joins them
@@ -452,7 +452,7 @@ def test_the_lazy_product_and_its_branching_component_are_smaller_than_those_of_
     small = branching_components(lazy_acquisition, lazy_acquisition.start(()))
     big = branching_components(full_acquisition, start)
     # the donors that feed each other still form a branching component; with every donor offered it is the whole product,
-    # beyond `direct_solve_limit` (64). At R25 size both are beyond it (ADR-0059), so the limit is no argument for the loop.
+    # beyond `direct_solve_limit` (64). At R25 size both are beyond it (ADR-0062), so the limit is no argument for the loop.
     assert small and small[0] < big[0] and big[0] > 64
 
 
