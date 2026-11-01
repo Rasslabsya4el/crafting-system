@@ -294,8 +294,8 @@ class _Pilot:
         if not (self.crafts or self.removals):
             return
         flags = state.flags
-        if flags.corrupted or flags.rarity is Rarity.NORMAL or not (state.fractured or state.slots):
-            return
+        if flags.corrupted or flags.rarity is Rarity.NORMAL or not (state.fractured or state.slots) or state.offer:
+            return  # (an offer state is a choice node: a craft and a removal do not read the offer, so the kernel refuses them there, ADR-0026)
         held, used, crafted = self._holds(state)
         limit = self.limit_crafted[Metamod.MULTIPLE_CRAFTED_MODS.value in self._metamods(state)]
         if self.crafts and crafted < limit:  # the multimod and the extra crafted slot lift the limit of crafted mods (ticket #68, ADR-0053)

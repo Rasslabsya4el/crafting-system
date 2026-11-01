@@ -50,6 +50,7 @@ from crafting_system.actions import (
     AnnulmentOrb,
     BenchCraft,
     ChaosOrb,
+    DivineOrb,
     NotApplicableError,
     OutOfScopeError,
     Pick,
@@ -133,6 +134,15 @@ def test_layer_1_of_the_veiled_chaos_orb_on_items_of_every_kind_of_start():
     applied = {name: check_layer_1(ability, item, VeiledChaosOrb()) for name, item in starts().items()}
     # it is refused where a veiled mod would be kept (a fractured placeholder) and in an offer state (a choice node): both as refusals
     assert {name for name, took in applied.items() if not took} == {"fractured_veil", "offer"}
+
+
+def test_layer_1_of_the_veiled_chaos_orb_on_a_sample_of_every_item_the_other_actions_reach():
+    ability = ab()
+    items = closure(DATA, starts().values(), [VeiledExaltedOrb(), Unveil(), *PICKS, AnnulmentOrb()])
+    sample = items[::9]
+    assert len(sample) > 20
+    took = sum(check_layer_1(ability, item, VeiledChaosOrb()) for item in sample)
+    assert 0 < took < len(sample)  # some of the sample is refused (an offer state, a fractured veil), most is rerolled
 
 
 def test_layer_1_of_a_unveil_block_a_craft_taken_before_the_unveil():
@@ -397,6 +407,73 @@ def test_the_pilot_count_of_a_veil_model_is_the_graph_the_kernels_make():
     seen, transitions = real_graph(ability, [start], actions)
     assert (pilot.states, pilot.transitions) == (len(seen), transitions)
     assert any(state.offer for state in seen) and any(ability.is_goal(state) for state in seen)
+
+
+def test_the_pilot_count_leaves_the_crafts_and_removals_out_of_an_offer_state_as_the_kernel_does():
+    # a bench craft and Remove Crafted Mods read no offer, so an offer state refuses them: the pilot's closed forms must not offer them there
+    actions = [VeiledChaosOrb(), Unveil(), *PICKS, BenchCraft(CRAFTED_ARMOUR)]
+    ability = ab(GOAL_SPEED, actions=actions)
+    start = ability.compress(amulet(rolled(LIFE_1, fractured=True), rolled(DAMAGE_1, fractured=True), holder(SUF)))
+
+    pilot = ability.estimate([start], actions)
+
+    seen, transitions = real_graph(ability, [start], actions)
+    assert (pilot.states, pilot.transitions) == (len(seen), transitions)
+    assert any(state.offer for state in seen) and any(state.crafted for state in seen)
+    offered = next(state for state in seen if state.offer)
+    with pytest.raises(NotApplicableError, match="choice node"):
+        ability.kernel(offered, BenchCraft(CRAFTED_ARMOUR))
+
+
+def test_the_veiled_chaos_orb_alone_still_tells_the_craftable_version_of_a_veiled_mod_apart():
+    # nothing but the orb is enabled: it reads nothing of the junk, yet it refuses a fractured veiled mod, and a crafted mod can be fractured
+    ability = ab(actions=(VeiledChaosOrb(),), metamods=True)
+    jun = amulet(rolled(CRAFTED_ARMOUR, crafted=True, fractured=True), rolled(RESIST_2))
+    other = amulet(rolled(OTHER_CRAFT_ARMOUR, crafted=True, fractured=True), rolled(RESIST_2))
+    assert ability.compress(jun) != ability.compress(other)
+    with pytest.raises(NotApplicableError, match="would keep the veiled mod"):
+        ability.kernel(ability.compress(jun), VeiledChaosOrb())
+    assert dict(ability.kernel(ability.compress(other), VeiledChaosOrb())) == concrete_pushforward(ability, DATA, other, VeiledChaosOrb())
+
+
+def test_a_divine_orb_does_not_answer_for_a_mod_unveiled_from_the_pool_that_a_roll_limit_looks_at():
+    # the slot of an unveiled mod knows its family and not which mod of it, so its roll law is not known: refused, as for a crafted mod
+    goal = Goal((Wanted(frozenset({SPEED}), min_roll=(12,)),))
+    ability = Abstraction(DATA, goal, AMULET, LEVEL, (DivineOrb(),))
+    item = amulet(rolled(SPEED), rolled(RESIST_2))
+    with pytest.raises(OutOfScopeError, match="unveiled from the pool"):
+        ability.kernel(ability.compress(item), DivineOrb())
+    ordinary = amulet(rolled(SPEED_ORDINARY), rolled(RESIST_2))  # an ordinary mod of the family is another matter: nothing asks for its roll
+    assert ability.kernel(ability.compress(ordinary), DivineOrb())
+
+
+def tag_data():
+    """Two unveiled prefixes of one family and one weight that differ in the tag an Attack or Caster metamod looks at."""
+    from veiled_support import _mod
+
+    attack = dataclasses.replace(_mod("VeilTagAttack1", "prefix", "unveiled", ["VeilTagG"], [("veil_tag_g", 10, 20)], 1000), implicit_tags=("attack",))
+    caster = dataclasses.replace(_mod("VeilTagCaster1", "prefix", "unveiled", ["VeilTagG"], [("veil_tag_g", 10, 20)], 1000), implicit_tags=("caster",))
+    return dataclasses.replace(DATA, mods={**DATA.mods, attack.id: attack, caster.id: caster})
+
+
+def test_with_the_metamods_two_offered_mods_that_differ_in_a_protected_tag_are_not_one_kind():
+    # the pick of either makes a slot with its tag in the kind (an Attack metamod keeps the one out of draws and not the other), so the offer must not merge them
+    data = tag_data()
+    goal = Goal((Wanted(frozenset({MANA})),))
+    ability = Abstraction(data, goal, AMULET, LEVEL, (Unveil(), *PICKS), metamods=True)
+    items = {
+        name: amulet(holder(PRE, data), rolled(RESIST_2, data=data), veil_offer=(mod_id,), data=data)
+        for name, mod_id in (("attack", "VeilTagAttack1"), ("caster", "VeilTagCaster1"))
+    }
+    states = {name: ability.compress(item) for name, item in items.items()}
+    assert states["attack"] != states["caster"] and states["attack"].offer[0].mod_id != states["caster"].offer[0].mod_id
+    for name, item in items.items():
+        assert dict(ability.kernel(states[name], Pick(1))) == concrete_pushforward(ability, data, item, Pick(1)), name
+    kinds = {name: {slot.kind for slot in next(iter(ability.kernel(states[name], Pick(1)))).slots} for name in items}
+    assert "^VeilTagG@attack" in kinds["attack"] and "^VeilTagG@caster" in kinds["caster"]
+    # the same without the metamods: one kind, one canonical mod
+    plain = Abstraction(data, goal, AMULET, LEVEL, (Unveil(), *PICKS))
+    assert plain.compress(items["attack"]).offer == plain.compress(items["caster"]).offer
 
 
 def test_the_offer_states_of_a_model_are_counted_by_the_placeholder_states_that_draw_them():

@@ -46,10 +46,10 @@ from crafting_system.items import (
     spawn_weight,
     tier_table,
 )
-from crafting_system.items.model import VEILED_DOMAIN
+from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
 
 from ._goal import Goal, Status
-from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
+from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
 from ._rolls import Cells, RollLaw, is_rollable, multinomial, roll_law
 from ._state import (
     CompressedState,
@@ -211,7 +211,7 @@ class Abstraction:
         self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
         placeholders = placeholder_families(data)  # no ordinary mod has one: an action that reads one refuses by whether the item holds a veiled mod
-        self._veiled_aware = any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
+        self._veiled_aware = self._tracks_offer or any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
         self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
@@ -1578,7 +1578,7 @@ class Abstraction:
             return None
         if slot.crafted:
             own = self.data.mods[slot.kind]
-            group = self._canonical_groups()[(own.families, own.generation_type, own.domain)]
+            group = self._canonical_groups()[self._group_key(own)]
             if any(mod.id in self._roll_ids and is_rollable(self._law(mod, influences, lucky, True)) for mod in group):
                 raise OutOfScopeError(
                     f"a Divine Orb rerolls a crafted mod ({own.id}) that a roll limit looks at: the range of the real mod "
@@ -1586,6 +1586,15 @@ class Abstraction:
                 )
             return None
         base = base_kind(slot.kind)
+        if base.startswith(UNVEILED_PREFIX):  # a mod unveiled from the pool: the slot knows its family, not which of the family's mods it is
+            family = tuple(base[len(UNVEILED_PREFIX) :].split("|"))
+            group = self._canonical_groups().get((family, slot.side.value, UNVEILED_DOMAIN, False), ())
+            if any(mod.id in self._roll_ids and is_rollable(self._law(mod, influences, lucky)) for mod in group):
+                raise OutOfScopeError(
+                    f"a Divine Orb rerolls a mod unveiled from the pool ({base}) that a roll limit looks at: "
+                    "the slot does not say which mod of the family it is, so its new roll cannot be modelled"
+                )
+            return None
         if not base.startswith(MOD_PREFIX):
             return None
         cells = self._law(self.data.mods[base[len(MOD_PREFIX) :]], influences, lucky)

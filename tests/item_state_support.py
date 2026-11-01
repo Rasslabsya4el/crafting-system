@@ -280,7 +280,7 @@ def check_kinds_declare_item_state() -> int:
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
             part = kind.reads_item_state_while_not_planner
             if part == "any":  # a kind that declares the item state it needs (the veiled orbs, #144; planner kinds since #145)
-                continue
+                assert not kind.planner or kind.opt_in, kind.name  # a planner kind that touches the item state is offered only to a target that names it
             elif part:
                 assert not kind.planner and not adds.item_state, kind.name
                 assert getattr(reads, part) and not any(getattr(reads, other) for other in {"implicits", "quality", "offer"} - {part}), kind.name
