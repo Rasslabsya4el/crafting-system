@@ -13,7 +13,18 @@ module-level constant:
 The id is a literal on purpose: a test reads the source of the whole package and checks every
 `get_rule(...)` argument against the registry without running the code, so a reference to an
 unregistered claim fails the build. The same call also fails at import time. For the same reason
-`get_rule` must be called by that name, with exactly one argument.
+`get_rule` must be called by that name, with exactly one argument. Code that holds an id in a variable
+(the approximate inputs of an answer, ADR-0028) asks `rule_by_id` instead, which the check does not read.
+
+A claim may carry two optional fields beyond its provenance (ADR-0028):
+
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code gives this count."
+
+`approximate` is exactly `true` or absent (`false` is refused: a claim that is not approximate says
+nothing); it marks a claim that no other source settles, and every answer that reads it names it.
+`approximate_reason` is a non-empty one-line string, required with `approximate: true` and refused
+without it. They are the model's uncertainty, not the certified gap of ADR-0023.
 """
 
 import re
@@ -161,7 +172,8 @@ class Rule:
 
     The value is frozen on load (mappings read-only, lists tuples), so a rule is hashable and the
     cached registry cannot be changed by the code that reads it. `history` lists the earlier
-    versions of the claim, oldest first (empty for a claim that never changed).
+    versions of the claim, oldest first (empty for a claim that never changed). `approximate` marks a
+    claim that no other source settles, with the one-line `approximate_reason` (ADR-0028).
     """
 
     id: str
@@ -173,12 +185,14 @@ class Rule:
     date_checked: date
     value: Any = None
     history: tuple[HistoryEntry, ...] = ()
+    approximate: bool = False
+    approximate_reason: str = ""
 
 
 REQUIRED_FIELDS = (
     "id", "statement", "source_kind", "url", "quote", "patch_verified", "date_checked",
 )  # fmt: skip
-ALLOWED_FIELDS = (*REQUIRED_FIELDS, "value", "history")
+ALLOWED_FIELDS = (*REQUIRED_FIELDS, "value", "history", "approximate", "approximate_reason")
 HISTORY_REQUIRED_FIELDS = ("held_until", "source_kind", "url", "quote")
 HISTORY_FIELDS = (*HISTORY_REQUIRED_FIELDS, "statement", "value")
 
@@ -241,6 +255,24 @@ def _check_id(value: object, family: str) -> str | None:
         return f"id must look like <family>.<name> in lowercase snake_case, got {value!r}"
     if match.group(1) != family:
         return f"id family {match.group(1)!r} must equal the file name {family + CLAIMS_SUFFIX!r}"
+    return None
+
+
+def _check_approximate(entry: dict) -> str | None:
+    """The problem with the `approximate` / `approximate_reason` pair of a claim, or None."""
+    if "approximate" not in entry:
+        if "approximate_reason" in entry:
+            return "approximate_reason is allowed only with approximate: true"
+        return None
+    if entry["approximate"] is not True:
+        return f"approximate must be true when present (leave it out for a claim that is not approximate), got {entry['approximate']!r}"
+    if "approximate_reason" not in entry:
+        return "approximate: true needs an approximate_reason, one line on why no other source settles the claim"
+    reason = entry["approximate_reason"]
+    if not isinstance(reason, str) or not reason.strip():
+        return "approximate_reason must be a non-empty string"
+    if "\n" in reason or "\r" in reason:
+        return "approximate_reason must be one line, with no newline"
     return None
 
 
@@ -333,6 +365,8 @@ def _parse_entry(
             problem = check(entry[field])
             if problem is not None:
                 break
+    if problem is None:
+        problem = _check_approximate(entry)
     if problem is not None:
         raise fail(problem)
     if entry["id"] in seen:
@@ -413,6 +447,11 @@ def get_rule(rule_id: str) -> Rule:
 
     Call it with a string literal so the static check can read the id; see the module docstring.
     """
+    return rule_by_id(rule_id)
+
+
+def rule_by_id(rule_id: str) -> Rule:
+    """The rule with this id, for code that holds the id in a variable (`get_rule` takes a literal only)."""
     try:
         return _default_registry()[rule_id]
     except KeyError:
