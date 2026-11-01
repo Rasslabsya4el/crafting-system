@@ -4,6 +4,15 @@ Both are deterministic: the new mod is named by the bench option, never drawn. T
 same three methods as the random actions (`chance_all`, `distribution`, `sample`) on a
 `BenchOutcomes`, whose one outcome has probability 1. `cost` gives the price of the option as
 currency names and counts, for the price layer. Every craft counts as unlocked.
+
+The crafting bench has two deterministic ones, `BenchCraft(mod_id)` (one per bench option that adds a
+crafted mod, listed by `bench_crafts(data)`) and `RemoveCraftedMods()`. Each has `outcomes(data,
+item) -> BenchOutcomes`, with the same `chance_all`, `distribution` and `sample` and one outcome of
+probability 1, and `cost(data)`, the price as `CurrencyCost(currency name, count)`. A bench craft
+is refused (`NotApplicableError`) on a corrupted item, for an item class the option is not offered for,
+below the mod's required item level, with a family already on the item, on a full side, and on an
+item that already holds as many crafted mods as it may (one, two with the extra crafted slot enchant, three with the multimod); a normal item
+is `OutOfScopeError`. Remove Crafted Mods removes every crafted mod that is not fractured, metamods included.
 """
 
 import random
@@ -22,6 +31,15 @@ from .contract import Action, Adds, Fixed, Reads
 from .draw import Outcome
 from .errors import NotApplicableError, OutOfScopeError
 from .metamods import crafted_limit
+
+__all__ = [
+    "BenchCraft",
+    "BenchOutcomes",
+    "CurrencyCost",
+    "RemoveCraftedMods",
+    "bench_crafts",
+    "without_ranges",
+]
 
 ADDS_ONE_FIXED_MOD = get_rule("bench_craft.option_adds_one_fixed_mod")
 OPTION_ITEM_CLASSES = get_rule("bench_craft.option_item_classes")

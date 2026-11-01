@@ -32,6 +32,22 @@ offers from the catalog (`catalog.py`), `resources` and `adds`; `simulator` call
 None of them imports a concrete action. The defaults of the base class are the safe ones: an action
 that declares nothing reads every mod of the item and adds mods it does not name, which is exact but
 makes the state space large and no filter can drop it.
+
+**One contract (ticket #108).** Every action subclasses `Action` (`contract.py`) and answers five
+questions: `label(data)` (the stable name routes and the CLI use), `outcomes(data, item)` (the exact
+result), `resources(data)` (what one use consumes, by price-file name, read from claims), `reads(data)`
+(what of the item besides its fractured mods the result depends on: `Reads`) and `adds(data, item)`
+(what it puts on the item: `Adds`). The catalog (`catalog.py`) lists the actions of every registered
+kind for an item; a module registers its kinds with the `kind` decorator, so a new method is one file
+and nothing outside `actions` imports a concrete action: `abstraction`, `cli` and `simulator` use the
+contract and the catalog only. See ADR-0024 (extending to new methods and patches).
+
+Two-item actions and rule axes (ticket #210, B3): two more questions, empty by default. `inputs(data, item)` is a tuple of
+`Need(start, want)`, the other items one use consumes (ADR-0022); `rule_axes(data)` is a tuple of `Axis(name, readings, plan)`,
+the rules the action reads that the sources leave open (ADR-0033). An action with axes takes a `Reading` in `outcomes(data,
+item, reading=None)`; `outcomes_under(data, item, reading)` is the call that works for every action, and `model_readings(data,
+actions)` lists the readings of a model, the plan's first. `Reads.input_mods` says that the result depends on the mods of the
+inputs. A new kind with inputs is correct by default and needs no edit outside `actions`.
 """
 
 import itertools
@@ -49,6 +65,19 @@ from crafting_system.items import Item
 from crafting_system.rules import Rule
 
 from .draw import Outcome
+
+__all__ = [
+    "Action",
+    "ActionOutcomes",
+    "Adds",
+    "Axis",
+    "Fixed",
+    "Need",
+    "Reading",
+    "Reads",
+    "Rerolled",
+    "model_readings",
+]
 
 if TYPE_CHECKING:
     from .outcomes import Outcomes

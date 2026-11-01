@@ -19,6 +19,10 @@ from .errors import NotApplicableError
 from .finite import Finite
 from .metamods import allowed_by_tags, blocked_tags, locked_sides, on_locked_side
 
+__all__ = [
+    "AnnulmentOrb",
+]
+
 ACCEPTS_MAGIC_OR_RARE = get_rule("annulment_orb.accepts_magic_or_rare")
 REMOVES_ONE_MOD_UNIFORMLY = get_rule("annulment_orb.removes_one_mod_uniformly")
 NEVER_DOWNGRADES_RARITY = get_rule("annulment_orb.never_downgrades_rarity")

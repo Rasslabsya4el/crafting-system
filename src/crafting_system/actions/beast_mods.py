@@ -28,6 +28,11 @@ from .finite import Finite
 from .metamods import crafted_limit, locked_sides
 from .pool import build_pool, tiers_of
 
+__all__ = [
+    "BeastSideSwap",
+    "WildBristleMatron",
+]
+
 METAMOD_ONE_OF_FIVE = get_rule("beastcraft.metamod_one_of_five_if_allowed")
 METAMOD_ODDS_UNIFORM = get_rule("beastcraft.metamod_odds_uniform")
 METAMOD_NEEDS_SLOT_AND_ROOM = get_rule("beastcraft.metamod_needs_slot_and_crafted_room")
