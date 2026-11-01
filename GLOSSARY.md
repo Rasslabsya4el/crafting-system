@@ -192,7 +192,7 @@ What one use of an action consumes, by price-file name, with counts, read from a
 _Avoid_: cost (the price of the resources in Chaos)
 
 **Reads**:
-What of the item, besides its fractured mods, the result of an action depends on: nothing (the action erases the other mods and redraws), their number, or their number and some families; and whether it also depends on the implicits, the quality or the unveil offer. It decides what a compressed state must keep.
+What of the item, besides its fractured mods, the result of an action depends on: nothing (the action erases the other mods and redraws), their number, or their number and some families; and whether it also depends on the implicits, the quality or the unveil offer. For a two-input action it also says whether the result depends on the mods of its inputs, beside or instead of those of the item in hand (`input_mods`). It decides what a compressed state must keep.
 
 **Adds**:
 What an action puts on the item as far as can be told without running it: the mods it names, whether they are crafted, whether it draws from the pool and with which tag. Whether it adds, replaces, removes or rerolls an implicit, sets the quality or draws the unveil offer is part of it. A planner can ask it whether an action can matter for a target.
@@ -208,7 +208,7 @@ Another item an action consumes besides the one in hand (the donor of a recombin
 _Avoid_: ingredient, second item (when the solver's `extra_inputs` is meant)
 
 **Need**:
-What an action asks for as an input: a start item and the compressed state wanted from it. The solver sees it as the start state of an acquisition process.
+What an action asks for as an input: a start item and the item wanted from it (`Action.inputs(data, item)`, empty for an action with none). The solver sees it as the start state of an acquisition process; which compressed state stands for the wanted item is decided where the planner builds the donor (ticket #211).
 
 **Acquisition process**:
 The sub-problem whose value is an acquisition cost: the same actions as the main problem, aimed at one wanted state instead of the target, so that an input costs the value of reaching it. The main target is one more acquisition process.
@@ -231,8 +231,11 @@ _Avoid_: weight bias
 The five readings of the selection exponent, 0.4, 0.7, 1.0, 1.3 and 1.6, all solved and cross-evaluated because the extreme of a route's chance is often between the ends.
 
 **Rule axis**:
-A rule the sources leave open, with a short list of readings: the selection exponent (five readings) and the Awakener's group conflict (two). A model's rule set is the product of the axes its enabled actions read; each reading is one ordinary model (ADR-0033).
+A rule the sources leave open, with a short list of readings: the selection exponent (five readings) and the Awakener's group conflict (two). A model's rule set is the product of the axes its enabled actions read; each reading is one ordinary model (ADR-0033). An action lists its axes in `Action.rule_axes(data)` (each an `Axis`: a name, its readings and the plan's) and takes a `Reading` in `outcomes`.
 _Avoid_: scenario, variant (variants are ADR-0023's members of a block)
+
+**Reading**:
+One value of each rule axis a model reads, as a `Reading`; `model_readings` lists them for a set of actions, the plan's first (5, 2 or 10 for the B3 actions, one empty one for a model with no axis). An `Abstraction` made for a reading is the ordinary model of that reading.
 
 **Recombinator**:
 The Kingsmarch bench that destroys two magic or rare items of one class and makes one new item from their mods. B3 plans the unpredictable mode only (ADR-0033).

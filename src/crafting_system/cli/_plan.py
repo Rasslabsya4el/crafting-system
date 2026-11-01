@@ -234,8 +234,21 @@ def make_plan(
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
+    axes = sorted({axis.name for p in priced for axis in p.offer.action.rule_axes(data)})
+    if axes:
+        raise PlanError(
+            f"an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading "
+            "of it with the interval yet (ticket #220)"
+        )
     abstraction = Abstraction(
-        data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod, enchantment=target.start_item.enchantment
+        data,
+        goal,
+        target.base_id,
+        target.item_level,
+        enabled,
+        metamods=holds_metamod,
+        enchantment=target.start_item.enchantment,
+        allow_inputs=False,
     )
     start = abstraction.compress(target.start_item)
 

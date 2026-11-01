@@ -13,7 +13,7 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, ActionError, Reads, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, ActionError, Axis, Need, Reads, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -27,7 +27,10 @@ class Offer:
     """One action and what a use of it consumes.
 
     `resources` maps a price-file name to how many of it one use takes. `tag` is the guaranteed mod
-    tag of a Harvest reforge and None for any other action.
+    tag of a Harvest reforge and None for any other action. `inputs` are the other items one use consumes on the
+    start item (`Action.inputs`, ADR-0022) and `axes` the rule axes the action reads (`Action.rule_axes`, ADR-0033);
+    both are empty for an action that has neither, which is every action of batches B1 and B2. The inputs of other
+    states are asked of the action there (`Abstraction.inputs`).
     """
 
     label: str
@@ -35,6 +38,8 @@ class Offer:
     resources: Mapping[str, int]
     tag: str | None = None
     shares: bool = True  # whether the report quotes a single-draw weight share (a Chaos Orb, a Harvest reforge)
+    inputs: tuple[Need, ...] = ()
+    axes: tuple[Axis, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -64,7 +69,9 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     `data` and `item` only matter to an action whose resources or additions depend on them (an essence, a bench craft).
     """
     adds = action.adds(data, item)
-    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw)
+    inputs = action.inputs(data, item) if data is not None else ()
+    axes = action.rule_axes(data) if data is not None else ()
+    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes)
 
 
 def default_offers() -> tuple[Offer, ...]:
