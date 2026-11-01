@@ -332,7 +332,7 @@ def _run(
             jobs = [(entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level) for entry, level in batch]
             try:
                 with parallel.WorkerPool(_hold, (abstraction, bare, item, chosen, jobs), workers=min(parallel.worker_count(), len(jobs))) as pool:
-                    results = pool.map(_raise_job, range(len(jobs)))
+                    results = pool.map(_raise_job, range(len(jobs)), chunk=1)  # one at a time: the exact bounds differ in cost by orders of magnitude
             except Exception:  # a worker failed: raise them here, as a serial run does
                 results = None
             if results is not None:
