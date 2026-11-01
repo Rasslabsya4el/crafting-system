@@ -177,7 +177,8 @@ def test_a_third_prefix_is_never_drawn_by_a_reroll(data, orb, base_id):
 
     counts = side_counts(data, orb.outcomes(data, item))
 
-    assert counts == {(2, 2): 1}  # 4, 5 or 6 drawn at 8:3:1, and both sides close after two mods
+    assert set(counts) == {(2, 1), (1, 2), (2, 2)}  # 3 mods (65%) or 4 (35%, `jewel.reroll_mod_count`), never a third on a side
+    assert counts[2, 2] == Fraction(35, 100) and counts[2, 1] + counts[1, 2] == Fraction(65, 100)
 
 
 def test_a_third_prefix_is_never_drawn_by_an_exalted_orb(data):
@@ -296,7 +297,10 @@ def test_a_transmutation_holds_a_named_family_with_the_hand_chance(data, wanted)
 
 def test_a_chaos_orb_gives_a_life_and_two_attack_speed_families_with_the_hand_chance(data):
     wanted = ("MaximumLifeIncreasePercent", "IncreasedAttackSpeed", "SpecificWeaponSpeed")
-    hand = chance_of_families(table(data), {PREFIX: 2, SUFFIX: 2}, 4, wanted)
+    room = {PREFIX: 2, SUFFIX: 2}
+    hand = Fraction(65, 100) * chance_of_families(table(data), room, 3, wanted) + Fraction(35, 100) * chance_of_families(
+        table(data), room, 4, wanted
+    )
     label = lambda mod: mod.families[0] if mod.families[0] in wanted else None  # noqa: E731
 
     shown = ChaosOrb().outcomes(data, jewel(data, Rarity.RARE)).distribution(label)
@@ -350,9 +354,12 @@ def test_a_resonator_works_on_a_rare_jewel_and_cites_its_claim(data):
     assert plain.pool != part.pool
 
 
-def test_the_fractured_fossil_is_not_modelled_on_a_jewel(data):
-    with pytest.raises(OutOfScopeError, match="jewel"):
-        ApplyFossils.of("Fractured Fossil").outcomes(data, jewel(data, Rarity.RARE))
+def test_the_fractured_fossil_works_on_a_jewel_and_cites_its_claim(data):
+    action = ApplyFossils.of("Fractured Fossil")
+
+    outcomes = action.outcomes(data, jewel(data, Rarity.RARE))
+
+    assert outcomes.fractures and "jewel.fracturing_orb_works_on_jewels" in action.claims()
 
 
 def test_an_essence_is_refused_on_a_jewel_and_cites_its_claim(data):
@@ -378,29 +385,47 @@ def test_the_bench_is_refused_on_a_jewel_and_cites_its_claim(data):
 def test_a_cluster_jewel_is_refused_because_its_pool_depends_on_its_enchantments(data):
     item = jewel(data, Rarity.RARE, base_id=LARGE_CLUSTER)
 
-    for action in (ChaosOrb(), ExaltedOrb()):
+    for name in ("transmutation", "alteration", "augmentation", "regal", "alchemy", "chaos", "exalted"):
+        action, rarity = ORBS[name]
         with pytest.raises(OutOfScopeError, match="cluster jewel"):
-            action.outcomes(data, item)
+            action.outcomes(data, jewel(data, rarity, base_id=LARGE_CLUSTER))
     with pytest.raises(OutOfScopeError, match="cluster jewel"):
-        TransmutationOrb().outcomes(data, jewel(data, Rarity.NORMAL, base_id=LARGE_CLUSTER))
+        ApplyFossils.of("Scorched Fossil").outcomes(data, item)
     assert rule_by_id("jewel.cluster_pool_depends_on_enchantments").url == "https://www.poewiki.net/wiki/Cluster_Jewel"
 
 
-@pytest.mark.parametrize("action", [HarvestReforge("lightning"), FracturingOrb()])
-def test_an_action_that_is_not_modelled_on_a_jewel_says_so(data, action):
+def test_a_harvest_craft_is_not_modelled_on_a_jewel(data):
     with pytest.raises(OutOfScopeError, match="jewel"):
-        action.outcomes(data, jewel(data, Rarity.RARE, LIFE, ATTACK_SPEED, WAND_SPEED, SPELL_DAMAGE))
+        HarvestReforge("lightning").outcomes(data, jewel(data, Rarity.RARE, LIFE, ATTACK_SPEED, WAND_SPEED, SPELL_DAMAGE))
+
+
+def test_a_fracturing_orb_works_on_a_jewel_of_four_mods_only(data):
+    four = jewel(data, Rarity.RARE, LIFE, ATTACK_SPEED, WAND_SPEED, SPELL_DAMAGE)
+
+    result = FracturingOrb().outcomes(data, four)
+
+    assert len(result.results) == 4 and "jewel.fracturing_orb_works_on_jewels" in FracturingOrb().claims()
+    assert rule_by_id("jewel.fracturing_orb_works_on_jewels").approximate
+    with pytest.raises(NotApplicableError, match="at least 4"):
+        FracturingOrb().outcomes(data, jewel(data, Rarity.RARE, LIFE, ATTACK_SPEED, WAND_SPEED))
+
+
+@pytest.mark.parametrize("base_id", ["Metadata/Items/Jewels/JewelTimeless", "Metadata/Items/Jewels/JewelPrismatic", "Metadata/Items/Jewels/JewelAbyssConglomerate"])
+def test_a_base_that_exists_as_a_unique_only_is_out_of_scope(data, base_id):
+    with pytest.raises(OutOfScopeError, match="unique item only"):
+        ChaosOrb().outcomes(data, jewel(data, Rarity.RARE, base_id=base_id))
 
 
 def test_the_claims_of_the_jewel_rules_have_their_sources():
     ids = [
         "jewel.ordinary_orbs_work_on_jewels",
-        "jewel.reroll_count_is_capped_by_capacity",
+        "jewel.reroll_mod_count",
         "jewel.base_jewel_mods_have_no_level_or_tier",
         "jewel.abyss_mods_depend_on_item_level",
         "jewel.cluster_pool_depends_on_enchantments",
         "jewel.essence_takes_no_jewel",
         "jewel.fossils_work_on_jewels",
+        "jewel.fracturing_orb_works_on_jewels",
         "jewel.bench_adds_no_mod_to_jewels",
         "jewel.recombinator_refused",
         "affix_pool.family_may_span_both_sides",
@@ -410,4 +435,4 @@ def test_the_claims_of_the_jewel_rules_have_their_sources():
         rule = rule_by_id(rule_id)
         assert rule.url.startswith("https://") and rule.quote and rule.patch_verified == "3.29.3.3"
     assert rule_by_id("jewel.recombinator_refused").source_kind.value == "owner"
-    assert rule_by_id("jewel.reroll_count_is_capped_by_capacity").approximate
+    assert rule_by_id("jewel.reroll_mod_count").approximate

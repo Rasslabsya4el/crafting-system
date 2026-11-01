@@ -143,8 +143,13 @@ class Kinds:
         key = family_key(mod)
         if self._everything or key in self._distinct or key not in self._listed_families():
             kind = key
+        elif self.by_weight:
+            types = self._type_kinds()
+            kind = types.get((key, mod.generation_type))
+            if kind is None:  # a mod on a side where its family has no weight: the family's own type (the one side it has)
+                kind = next((found for (name, _), found in types.items() if name == key), key)
         else:
-            kind = self._type_kinds()[key, mod.generation_type] if self.by_weight else ALIKE
+            kind = ALIKE
         if self.metamods:
             tags = protected_tags(mod)
             if tags:

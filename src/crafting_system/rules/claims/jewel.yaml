@@ -13,16 +13,16 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
 
-  - id: jewel.reroll_count_is_capped_by_capacity
-    statement: A Chaos Orb or an Orb of Alchemy on a jewel draws a total of 4, 5 or 6 mods at 8:3:1 like on a regular rare item (the value), and the capacity of a rare jewel (2 prefixes and 2 suffixes) closes both sides after 4 mods, so the jewel ends with 4 mods unless the pool runs dry. The wiki gives the range "three to four" for an Orb of Alchemy on a jewel and no ratio, so a 3-mod result is not modelled. Replace the value by the ratio of 3 and 4 once a source gives it.
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Orb_of_Alchemy
-    quote: "three to four if used on jewels"
+  - id: jewel.reroll_mod_count
+    statement: A Chaos Orb or an Orb of Alchemy on a jewel (the 2 prefix + 2 suffix capacity) draws a total of 3 or 4 mods, 3 with chance 65% and 4 with 35% (the value gives the weights), instead of the 4, 5 or 6 of a regular item. The wiki gives the range, three to four, and no ratio; the ratio is Craft of Exile's. The emulator gave 3 mods in 1265 of 2000 Chaos Orbs on a rare Cobalt Jewel, 1296 of 2000 Alchemy Orbs and 1308 of 2000 Chaos Orbs on a Ghastly Eye Jewel.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "numOfAffixes={...,2:{3:{\"s\":0,\"e\":0.65},4:{\"s\":0.65,\"e\":1}}"
     approximate: true
-    approximate_reason: "The wiki gives a range of 3 to 4 mods for an Alchemy on a jewel, not the ratio; the 8:3:1 total capped by the 2 and 2 capacity gives 4 mods always."
+    approximate_reason: "The wiki says three to four mods for an Alchemy on a jewel; only Craft of Exile's code gives the 65% to 35% ratio."
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
-    value: {4: 8, 5: 3, 6: 1}
+    value: {3: 65, 4: 35}
 
   - id: jewel.base_jewel_mods_have_no_level_or_tier
     statement: The mods of the base jewels (Crimson, Viridian, Cobalt) have no item level requirement and no tiers, so the item level never gates a draw on them and every mod is tier 1. The data agrees (required level 1, one mod type per mod). The mods of the abyss jewels do depend on the item level.
@@ -80,5 +80,15 @@ rules:
     source_kind: owner
     url: https://github.com/Rasslabsya4el/crafting-system/issues/94
     quote: "Jewels do not go into the recombinator."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: jewel.fracturing_orb_works_on_jewels
+    statement: A Fracturing Orb, and a Fractured Fossil in a resonator, work on a rare jewel with at least 4 mods like on any rare item (the emulator has no jewel exception; a jewel has 4 mods at most, so it needs a full one). The compressed state of the planner does not follow a fracture on a jewel whose pool has a family with mods on both sides (a Cobalt or Viridian Jewel).
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/198#issuecomment-6556955470
+    quote: "the emulator fractures one in 400/400 (refused below 4 mods); it has no jewel exception"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's emulator says that a jewel can be fractured; no other source says either way."
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01

@@ -53,8 +53,9 @@ DRAW_PROPORTIONAL_TO_WEIGHT = get_rule("affix_pool.draw_proportional_to_weight")
 ONE_POOL_FOR_BOTH_SIDES = get_rule("affix_pool.one_pool_for_both_sides")
 FULL_SIDE_CLOSES = get_rule("affix_pool.full_side_closes")
 FAMILY_MAY_SPAN_BOTH_SIDES = get_rule("affix_pool.family_may_span_both_sides")
+NO_MOD_DOMAIN = "undefined"
 CLUSTER_JEWEL_DOMAINS = get_rule("jewel.cluster_pool_depends_on_enchantments")
-JEWEL_REROLL_COUNT = get_rule("jewel.reroll_count_is_capped_by_capacity")
+JEWEL_REROLL_COUNT = get_rule("jewel.reroll_mod_count")
 
 ONE = Fraction(1)
 
@@ -83,6 +84,11 @@ def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = Non
     if item_class is None:
         return
     base = data.base_items[item.base_id]
+    if base.release_state == "unique_only" or base.domain == NO_MOD_DOMAIN:  # the Assembled Eye Jewel has the domain "undefined" and no mod
+        raise OutOfScopeError(
+            f"the item is a {base.name}, a base that exists as a unique item only (the wiki: it is found as a unique "
+            "and then converted to a non-unique rarity), so crafting it is not modelled"
+        )
     if base.domain in CLUSTER_JEWEL_DOMAINS.value:
         raise OutOfScopeError(
             f"the item is a cluster jewel ({base.name}); its enchantments decide which mods it can roll "
@@ -98,8 +104,7 @@ def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = Non
 def total_distribution(data: GameData | None = None, item: Item | None = None) -> Mapping[int, Fraction]:
     """The probability of each total number of mods of a rerolled rare item, from the 8:3:1 ratio.
 
-    A jewel (`item` on a jewel base of `data`) takes the ratio of `jewel.reroll_count_is_capped_by_capacity`, which
-    is the same; the capacity of a rare jewel (2 and 2) then ends a draw at 4 mods.
+    A jewel (`item` on a jewel base of `data`) takes the 3 or 4 mods of `jewel.reroll_mod_count` (65:35).
     """
     jewel = data is not None and item is not None and jewel_class(data, item) is not None
     ratio = JEWEL_REROLL_COUNT.value if jewel else RARE_REROLL_RATIO.value

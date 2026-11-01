@@ -792,9 +792,8 @@ def test_a_jewel_takes_a_fossil_with_the_capacity_of_a_jewel():
     assert part.free == {Side.PREFIX: 2, Side.SUFFIX: 2}  # jewel.fossils_work_on_jewels, affix_count.rare_jewel_max_per_side
 
 
-def test_the_fractured_fossil_on_a_jewel_is_out_of_scope():
-    with pytest.raises(OutOfScopeError, match="jewel"):
-        outcomes_of("Fractured Fossil", item=boots(base=JEWEL))
+def test_the_fractured_fossil_works_on_a_jewel():
+    assert outcomes_of("Fractured Fossil", item=boots(base=JEWEL)).fractures  # jewel.fracturing_orb_works_on_jewels
 
 
 def test_a_cluster_jewel_is_out_of_scope():
@@ -930,10 +929,10 @@ def test_an_item_that_takes_no_resonator_has_no_fossil_and_no_action():
     assert fossil_actions(SMALL, item) == []
 
 
-def test_a_jewel_has_the_fossils_but_not_the_fractured_one():
+def test_a_jewel_has_the_fossils_the_fractured_one_included():
     names = usable_fossils(SMALL, boots(base=JEWEL))
 
-    assert "Scorched Fossil" in names and "Fractured Fossil" not in names
+    assert "Scorched Fossil" in names and "Fractured Fossil" in names
 
 
 def test_a_corrupted_item_has_no_fossil_and_no_action():

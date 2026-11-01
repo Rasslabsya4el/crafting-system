@@ -5,7 +5,8 @@ These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`, set the ca
 
 * The Chaos Orb plan of `examples/targets/j01-cobalt-life-attack-speed.yaml` (a rare Cobalt Jewel with %
   increased maximum Life and two attack-speed mods): one orb costs 1 Chaos and the plan rerolls until the jewel
-  holds the three families, so its mean is `1 / p` with `p` the chance that one reroll gives all three. The hand
+  holds the three families, so its mean is `1 / p` with `p` the chance that one reroll gives all three (a reroll of a
+  jewel draws 3 mods with chance 65% and 4 with 35%, `jewel.reroll_mod_count`). The hand
   chance comes from `jewel_oracle`, which reads the raw mods and walks the draw orders with fractions.
 * A magic route (Transmutation, then Alteration until the jewel holds the Life family): the Transmutation result has
   the same law as an Alteration result, so the mean is `Ct + (1 - q) Ca / q` with `q` the chance that a magic
@@ -71,7 +72,9 @@ def test_the_chaos_plan_offers_the_orb_alone_and_reaches_the_goal(chaos_plan):
 
 
 def test_the_chaos_plan_costs_the_inverse_of_the_hand_chance(chaos_plan, table):
-    p = chance_of_families(table, {PREFIX: 2, SUFFIX: 2}, 4, (LIFE, ATTACK_SPEED, WAND_SPEED))
+    wanted = (LIFE, ATTACK_SPEED, WAND_SPEED)
+    room = {PREFIX: 2, SUFFIX: 2}
+    p = Fraction(65, 100) * chance_of_families(table, room, 3, wanted) + Fraction(35, 100) * chance_of_families(table, room, 4, wanted)
     chaos = json.loads(PRICES.read_text(encoding="utf-8"))["prices"]["Chaos Orb"]["chaos"]
 
     assert chaos_plan.risk.mean.value == pytest.approx(chaos / float(p), rel=1e-9)
@@ -92,6 +95,20 @@ def test_the_magic_route_costs_what_the_hand_formula_says(data, prices, table, t
     assert plan.risk.mean.value == pytest.approx(transmutation + float(1 - q) * alteration / float(q), rel=1e-9)
 
 
+def test_the_magic_route_for_a_family_on_both_sides_costs_what_the_hand_formula_says(data, prices, table, tmp_path):
+    target_file = tmp_path / "cobalt-damage-form.yaml"
+    target_file.write_text(MAGIC_ROUTE.replace(LIFE, "DamageForm"), encoding="utf-8")
+    raw = json.loads(PRICES.read_text(encoding="utf-8"))["prices"]
+    transmutation, alteration = raw["Orb of Transmutation"]["chaos"], raw["Orb of Alteration"]["chaos"]
+    room = {PREFIX: 1, SUFFIX: 1}
+    q = (chance_of_families(table, room, 1, ("DamageForm",)) + chance_of_families(table, room, 2, ("DamageForm",))) / 2
+
+    plan = make_plan(data, load_target(target_file, data), prices)
+
+    assert set(table["DamageForm"]) == {PREFIX, SUFFIX}  # the family has weight on both sides of the Cobalt pool
+    assert plan.risk.mean.value == pytest.approx(transmutation + float(1 - q) * alteration / float(q), rel=1e-9)
+
+
 def test_the_command_returns_the_chaos_policy(data, prices, tmp_path):
     out = tmp_path / "policy.json"
 
@@ -101,6 +118,15 @@ def test_the_command_returns_the_chaos_policy(data, prices, tmp_path):
     totals = read_json(out)["totals"]
     assert totals["success_probability"]["value"] == pytest.approx(1.0)
     assert totals["mean_cost"]["value"] > 1000
+
+
+def test_the_answer_on_a_jewel_names_the_approximate_mod_count_and_one_on_a_belt_does_not(data, prices, tmp_path):
+    out = tmp_path / "policy.json"
+    main([str(TARGET), "--json", str(out)], data=data, prices=prices, env={})
+
+    listed = [item["claim"] for item in read_json(out)["approximate_inputs"]]
+
+    assert listed == ["jewel.reroll_mod_count"]
 
 
 def test_the_sampler_of_a_chaos_orb_follows_the_exact_chance_of_a_family(data):

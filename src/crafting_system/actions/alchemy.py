@@ -18,7 +18,7 @@ COUNT_LIKE_CHAOS = get_rule("alchemy.count_like_chaos")
 REFUSED_ON_CORRUPTED = get_rule("magic_orbs.refused_on_corrupted")
 COST = get_rule("alchemy.cost")
 JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
-JEWEL_REROLL_COUNT = get_rule("jewel.reroll_count_is_capped_by_capacity")
+JEWEL_REROLL_COUNT = get_rule("jewel.reroll_mod_count")
 
 
 @dataclass(frozen=True)

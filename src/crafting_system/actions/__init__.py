@@ -75,8 +75,8 @@ Refusals, raised by `outcomes` in this order (a message names the reason):
   shares a family with a fractured mod, or the item holds a lock or an Attack/Caster metamod (essence and resonator).
 * `OutOfScopeError`: the item is in a state no admitted rule covers yet: an influenced item of a class with no admitted influence class key, a magic
   item whose Orb of Alteration keeps an Attack or Caster metamod, a cluster jewel (its pool depends on its
-  enchantments), a jewel for the actions that are not modelled on one (Harvest crafts, the Fracturing Orb, the Fractured
-  Fossil; the ordinary orbs and fossils work on jewels, `jewel.ordinary_orbs_work_on_jewels`), a pool mod with other than one family; for an essence also
+  enchantments), a jewel for the actions that are not modelled on one (Harvest crafts; the ordinary orbs, fossils and the
+  Fracturing Orb work on jewels, `jewel.ordinary_orbs_work_on_jewels`), a base that exists as a unique only, a pool mod with other than one family; for an essence also
   Essence of Desolation (not a B1 action) and fractured mods that fill the side of the forced mod.
   A planner treats the action as unavailable.
 * `HarvestReforge("nothing")` raises `ValueError` at construction: only the admitted crafts exist; an

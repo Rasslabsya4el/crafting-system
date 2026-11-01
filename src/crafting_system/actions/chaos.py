@@ -18,7 +18,7 @@ REROLLS_ALL_MODS = get_rule("chaos_orb.rerolls_all_mods")
 REFUSED_ON_CORRUPTED = get_rule("chaos_orb.refused_on_corrupted")
 COST = get_rule("chaos_orb.cost")
 JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
-JEWEL_REROLL_COUNT = get_rule("jewel.reroll_count_is_capped_by_capacity")
+JEWEL_REROLL_COUNT = get_rule("jewel.reroll_mod_count")
 
 
 @dataclass(frozen=True)
