@@ -23,8 +23,8 @@ import math
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
 
-from crafting_system.actions.recombinator import DUST_NAME, GOLD_NAME, Recombinator
 from crafting_system.data import GameData
+from crafting_system.prices import DUST, GOLD
 from crafting_system.risk import Estimate, IntervalReport, Route, expected_total
 from crafting_system.solver import Action
 
@@ -219,9 +219,9 @@ class IntervalAnswer:
     def _price_lines(self) -> list[str]:
         lines = []
         for price in self.prices:
-            if price.name == DUST_NAME and price.chaos_each <= 1:
+            if price.name == DUST and price.chaos_each <= 1:
                 words = f"{number_text(round(1 / price.chaos_each))} per Chaos Orb"
-            elif price.name == GOLD_NAME and price.chaos_each * 1_000_000 >= 1:
+            elif price.name == GOLD and price.chaos_each * 1_000_000 >= 1:
                 words = f"{number_text(price.chaos_each * 1_000_000)} Chaos Orbs per million"
             else:
                 words = f"{price.chaos_each:g} Chaos Orbs each"
@@ -343,6 +343,11 @@ def build_interval_answer[S, R: Hashable](
     like the policy's own. `label` words a reading (`reading_text` by default); it gets the set of axis ids the plan reads.
     """
     shift = plan.start_price.chaos if shift is None else shift
+
+    def is_combine(action: Action) -> bool:
+        # a recombination is an action that prices itself on an interval (`resource_bounds`): the contract has no class to test for
+        return hasattr(plan.offer_of(action).offer.action, "resource_bounds")
+
     plan_actions = _walk(result.plan.policy, start, is_goal)
     used = frozenset(axis.name for action in plan_actions for axis in plan.offer_of(action).offer.axes)
     if not used:
@@ -372,10 +377,7 @@ def build_interval_answer[S, R: Hashable](
     )
     plan_reading = named(result.plan.reading)
 
-    combine_labels = {a.label for a in plan_actions if isinstance(plan.offer_of(a).offer.action, Recombinator)}
-
-    def is_combine(action: Action) -> bool:
-        return isinstance(plan.offer_of(action).offer.action, Recombinator)
+    combine_labels = {a.label for a in plan_actions if is_combine(a)}
 
     recombinations = None
     combines: list[CombineRow] = []
@@ -395,7 +397,7 @@ def build_interval_answer[S, R: Hashable](
             uses = expected_total(result.plan.policy, start, is_goal, lambda a, n=name: 1.0 if a.label == n else 0.0)
             goods = tuple((good, count) for good, count, _, _ in priced.parts if count)
             combines.append(CombineRow(priced.label, uses, goods, priced.cost, *points[name]))
-            for good in (DUST_NAME, GOLD_NAME):
+            for good in (DUST, GOLD):
                 if good in units and good not in prices:
                     prices[good] = PriceLine(good, units[good][0], units[good][1])
         below = expected_total(

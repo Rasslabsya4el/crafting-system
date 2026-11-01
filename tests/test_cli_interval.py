@@ -41,6 +41,17 @@ from crafting_system.solver import Acquisition
 ALPHA = ALPHA_AXIS.name
 
 
+def rounded(value, digits: int = 8):
+    """The document with every float rounded: the last digits of a certified bound are the platform's (the BLAS of the runner), not the report's."""
+    if isinstance(value, float):
+        return round(value, digits)
+    if isinstance(value, dict):
+        return {key: rounded(item, digits) for key, item in value.items()}
+    if isinstance(value, list):
+        return [rounded(item, digits) for item in value]
+    return value
+
+
 def head(text: str) -> str:
     """The report up to its requirements: the part that holds the answer, the interval and the approximate inputs (no run times)."""
     return text[: text.index("Requirements:")]
