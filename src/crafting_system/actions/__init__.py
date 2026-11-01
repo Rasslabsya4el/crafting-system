@@ -82,6 +82,12 @@ grants an aspect skill at level 20 or 30, and is offered only when a target name
 level of the beast and not of the item, then removes one mod of the other side uniformly). A beast craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
 None is a planner kind yet.
 
+The Awakener's Orb (`awakener.py`, ticket #213, ADR-0032) is the first real two-input action: `AwakenersOrb(base, level, donor
+influence, donor mod)` has one donor `Need` (a rare item of the other influence that holds the influenced mod to carry over) and
+one rule axis, the group conflict (`receiver` is the plan, `donor` the other reading). It keeps one influenced mod of the receiver
+and the donor's, picks the pair uniformly among the valid ones, and rerolls the rest as a Chaos Orb does, the kept mods counting
+inside the total. Its kind is not a planner kind until the solver prices donors (#211, #212).
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -139,6 +145,7 @@ family, with exact `Fraction` weights.
 from .add import add_one_mod, draw_onto
 from .alchemy import AlchemyOrb
 from .annul import AnnulmentOrb
+from .awakener import AwakenersOrb
 from .beast_mods import BeastSideSwap, WildBristleMatron
 from .beasts import AspectBeast, TalismanFracture, TalismanFractureOutcomes, recipe_resources
 from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts, without_ranges
@@ -199,6 +206,7 @@ __all__ = [
     "ApplyEssence",
     "ApplyFossils",
     "AugmentationOrb",
+    "AwakenersOrb",
     "BLOCKED_TAG",
     "BLOCKING",
     "BeastSideSwap",

@@ -109,6 +109,18 @@ def _fixture_data():
         families=(SHAPER_PREFIX,),
         spawn_weights=(Weight("amulet_shaper", 700), Weight("default", 0)),
     )
+    # for the Awakener's Orb (ticket #213): a second Shaper mod (a mana-leech-like suffix of a family of its own) and two Crusader mods
+    # a donor can hold: a suffix of a family of its own, and a prefix of the family of the Shaper prefix (a group conflict with it)
+    mana = mods[MANA_1]
+    mods[SHAPER_SUFFIX] = dataclasses.replace(
+        mana, id=SHAPER_SUFFIX, type=SHAPER_SUFFIX, families=(SHAPER_SUFFIX,), spawn_weights=(Weight("amulet_shaper", 500), Weight("default", 0))
+    )
+    mods[CRUSADER_SUFFIX] = dataclasses.replace(
+        mana, id=CRUSADER_SUFFIX, type=CRUSADER_SUFFIX, families=(CRUSADER_SUFFIX,), spawn_weights=(Weight("amulet_crusader", 400), Weight("default", 0))
+    )
+    mods[CRUSADER_CLASH] = dataclasses.replace(
+        shaper, id=CRUSADER_CLASH, type=CRUSADER_CLASH, families=(SHAPER_PREFIX,), spawn_weights=(Weight("amulet_crusader", 300), Weight("default", 0))
+    )
     # a cold added-damage prefix, the lightning one with its stat ids and tag renamed, so that the Harvest damage swaps have a target
     # (ticket #148): one tier of its own type, so it is tier 1, and the swaps find it from the tier-1 lightning damage mod
     lightning = mods[DAMAGE_1]
@@ -154,6 +166,9 @@ def _fixture_data():
 
 
 SHAPER_PREFIX = "ContractShaperPrefix1"
+SHAPER_SUFFIX = "ContractShaperSuffix1"
+CRUSADER_SUFFIX = "ContractCrusaderSuffix1"
+CRUSADER_CLASH = "ContractCrusaderClash1"  # a Crusader prefix of the family of SHAPER_PREFIX: the two meet in a group conflict
 COLD_DAMAGE = "ContractColdDamage1"
 CONTRACT_DATA = _fixture_data()
 TIERS = tier_table(CONTRACT_DATA, AMULET)
@@ -192,6 +207,10 @@ def fixture_items() -> dict[str, Item]:
         "rare_fractured": _item(Rarity.RARE, _roll(RESIST_1, fractured=True), _roll(MANA_1)),
         "rare_four": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), _roll(DAMAGE_1), _roll(FIRE_GEM)),
         "rare_shaper": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), influences=frozenset({Influence.SHAPER})),
+        # two Shaper mods (a prefix and a suffix): an Awakener's Orb with a Crusader donor keeps either one (ticket #213)
+        "rare_awakener": _item(
+            Rarity.RARE, _roll(SHAPER_PREFIX), _roll(SHAPER_SUFFIX), _roll(LIFE_1), influences=frozenset({Influence.SHAPER})
+        ),
         # a fire resistance and a cold damage, what the Harvest swaps change (fire to cold, cold to lightning); both are the only mod of
         # their family in the fixture, because the compressed state forgets which tier of a family a junk mod was (#149)
         "rare_resists": _item(Rarity.RARE, _roll(FIRE_RESIST), _roll(COLD_DAMAGE)),
