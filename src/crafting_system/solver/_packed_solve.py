@@ -38,6 +38,7 @@ from ._packed_merge import exact_classes, identity_classes, quotient
 
 EPS = sys.float_info.epsilon
 INF = math.inf
+ACCEPT_BOUND = 1e-6  # a certified relative bound at most this is accepted when the residual cannot reach `tolerance` (rounding floor)
 DENSE_LIMIT = 1500  # policies of at most this many states are evaluated by a dense solve, larger ones by BiCGSTAB
 CHUNK_EDGES = 4_000_000
 
@@ -129,6 +130,12 @@ class Work:
             terms[dst == np.repeat(self.act_state[a0:a1], sizes)] = 0.0
             out[a0:a1] = np.add.reduceat(terms, self.cum[a0:a1] - self.cum[a0])
         return out
+
+
+def _reached(certificate: Certificate, tolerance: float, accept_bound: float) -> bool:
+    """Whether a candidate is good enough to stop: its residual is within `tolerance` of the cheapest cost, or at the
+    rounding floor, or its certified relative bound is within `accept_bound` (a stiff graph cannot go below the floor)."""
+    return certificate.residual <= tolerance or certificate.at_floor or certificate.bound <= accept_bound
 
 
 def certify(graph: PackedGraph, value: np.ndarray, solved: np.ndarray, work: Work | None = None) -> Certificate:
@@ -351,6 +358,7 @@ def solve_graph(
     tolerance: float = 1e-10,
     dense_limit: int = DENSE_LIMIT,
     max_rounds: int = 500,
+    accept_bound: float = ACCEPT_BOUND,
     progress: Callable[[str], None] | None = None,
     info: dict | None = None,
 ) -> Core:
@@ -385,12 +393,12 @@ def solve_graph(
     info["rounds"] = rounds
     certificate = certify(graph, value, inside, work)
     refinements = 0
-    while not (certificate.residual <= tolerance or certificate.at_floor) and refinements < 3:
+    while not _reached(certificate, tolerance, accept_bound) and refinements < 3:
         refinements += 1
         value = evaluate_policy(work, leave, policy, value, dense_limit, 1e-15, info)
         certificate = certify(graph, value, inside, work)
     info["refinements"] = refinements
-    if not (certificate.residual <= tolerance or certificate.at_floor):
+    if not _reached(certificate, tolerance, accept_bound):
         raise ConvergenceError(
             f"the policy iteration on {n:,} states did not reach the tolerance {tolerance} "
             f"(residual {certificate.residual:.3g} of the cheapest cost)",
@@ -407,13 +415,15 @@ def solve_packed(
     tolerance: float = 1e-10,
     dense_limit: int = DENSE_LIMIT,
     max_rounds: int = 500,
+    accept_bound: float = ACCEPT_BOUND,
     merge: bool = True,
     progress: Callable[[str], None] | None = None,
 ) -> PackedSolution:
     """Minimise the mean cost to a goal from every state of `graph`: merged exactly, solved, certified on the unmerged graph.
 
     `tolerance` is the stopping threshold on the residual of the Bellman operator relative to the cheapest action of a state
-    (as `solve`'s); raises `ConvergenceError` when the iteration cannot reach it (nor the rounding floor).
+    (as `solve`'s). Raises `ConvergenceError` when the iteration cannot reach it, nor the rounding floor, nor a certified
+    bound of `accept_bound`; the bound of the result (`error_bound`) may exceed `tolerance` by the rounding of the sums.
     """
     say = progress or (lambda _text: None)
     info: dict = {"states": graph.n, "actions": graph.num_actions, "kernels": graph.num_kernels, "edges_stored": graph.num_edges}
@@ -426,7 +436,9 @@ def solve_packed(
     )
     say(f"merged {graph.n:,} states into {classes.count:,} classes, {reduced.num_actions:,} actions ({info['merge_seconds']} s)")
     mark = time.perf_counter()
-    core = solve_graph(reduced, tolerance=tolerance, dense_limit=dense_limit, max_rounds=max_rounds, progress=say, info=info)
+    core = solve_graph(
+        reduced, tolerance=tolerance, dense_limit=dense_limit, max_rounds=max_rounds, accept_bound=accept_bound, progress=say, info=info
+    )
     info["solve_seconds"] = round(time.perf_counter() - mark, 2)
     cls = classes.cls
     value = core.value[cls]
@@ -435,7 +447,7 @@ def solve_packed(
     certificate = certify(graph, value, solved)
     info["certify_seconds"] = round(time.perf_counter() - mark, 2)
     info["quotient_bound"] = core.certificate.bound
-    if not (certificate.residual <= tolerance or certificate.at_floor):
+    if not _reached(certificate, tolerance, accept_bound):
         raise ConvergenceError(
             f"the values of the merged graph do not satisfy the Bellman equation of the whole graph "
             f"(residual {certificate.residual:.3g} of the cheapest cost): the merge or the solve is wrong",
