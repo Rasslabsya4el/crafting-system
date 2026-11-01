@@ -26,7 +26,7 @@ After looking, the player may accept an option, apply an unpreviewed action, or 
 
 A burn is an ordinary unpreviewed action with its own kernel from `outcomes`, so the Peek needs no special case.
 
-- If the burn changes nothing the compressed state keeps (the sockets of a target with no socket requirement, the implicit of a target that does not read it), it leads back to `s`: `V(s)` appears on both sides, a self-loop whose chance is "no preview is good enough", which ADR-0010's self-loop elimination handles (in the policy expansion, a two-cycle through the Lock).
+- If the burn changes nothing the compressed state keeps (the sockets of a target with no socket requirement, the implicit of a target that does not read it), it leads back to `s`: `V(s)` appears on both sides, a self-loop whose chance is "no preview is good enough", which the solver handles as a cycle through the Lock in the policy expansion (ADR-0054; the self-loop elimination of ADR-0010 does not apply to it).
 - If it changes a dimension the state keeps (quality when it is a target, sockets and links once they are targets in B6, an enchantment once it is a target in B7), it is a move to another state `s'`, and `F(s)` uses `c_burn + V(s')`; there is no loop. A quality burn runs out at maximum quality, so it is a finite chain, never a free loop.
 
 When B6 and B7 add the real Chromatic Orb and anoint actions, those actions declare `burn`, the burn-only kinds of B8 are dropped, and the general rule above needs no edit.

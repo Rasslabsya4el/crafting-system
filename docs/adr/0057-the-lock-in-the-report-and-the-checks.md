@@ -16,9 +16,9 @@ Every plan prints one line about the Lock, even when it is not worth it (owner, 
 
 > Hinekora's Lock: not worth it; would pay below N Divine (now P).
 
-- **N** is the largest price at which one Lock, on a step of the plan without the Lock, already lowers the cost. For each state `s` the Lock-free plan visits, the gain is `g(s) = V(s) - E[ min( min_a ( c_a + V(o_a) ), F(s) ) ]`, the Peek of ADR-0054 at price 0 with the Lock-free values (one sweep per visited state, tens to hundreds of states, so almost no time). `N` is the largest `g(s)`, in Divine at the price file's rate. Below `N` the Lock at that state saves `g(s) - L` on every visit to it, so the plan really changes (policy improvement); above `N` the plan can still change only through a state the Lock-free plan does not visit, which the solver finds by its own search and the line does not claim. The line states only the first.
+- **N** is the price below which one Lock, on some step of the plan without the Lock, already lowers the cost. For each state `s` the Lock-free plan visits, the gain is `g(s) = V(s) - E[ min( min_a ( c_a + V(o_a) ), F(s) ) ]`, the Peek of ADR-0054 at price 0 with the Lock-free values (one sweep per visited state, tens to hundreds of states, so almost no time). `N` is the largest `g(s)`, in Divine at the price file's rate. Below `N` the Lock at that state saves `g(s) - L` on every visit to it, so the plan really changes (policy improvement); above `N` the plan can still change only through a state the Lock-free plan does not visit, which the solver finds by its own search and the line does not claim. The line states only the first.
 - With a Lock in the plan the line reads "Hinekora's Lock: step k, saves X Divine of the plan's mean at the current price P" and gives `N` as well.
-- With no previewable option on any visited state, or an item the Lock refuses, the line says so instead of a price.
+- The other cases each have their own wording, never silence: **no previewable option** on any visited state ("no previewable action in this plan"); **an item the Lock refuses** (corrupted, mirrored); **the Lock dropped by the target's `actions:`** ("switched off by the target"); **no price in the price file** ("no price, dropped", and `N` is still printed, since it does not need `P`); **an approximate answer** (ADR-0023), where the exact values `N` needs do not exist: the line says "not worth it at this price on the coarse bounds" when the pruning removed the Lock everywhere, and does not print `N`.
 - JSON: a `foresight` object with the price, `n`, the best state, whether the plan uses the Lock and the saving.
 - When the best `g(s)` comes from a `by_item_text` option, the line says "N counts <currencies> by item text".
 
@@ -34,7 +34,7 @@ A given route (YAML, ADR-0019) gains a rule form `lock`: the options looked at, 
 
 - **Layer 1 is unchanged**: no new kernel; the options reuse existing ones.
 - **Layer 2**: the simulator throws every option independently on a copy of the concrete item and applies the acceptance set. It checks the arithmetic of the Peek, not the independence, which is the owner's rule.
-- **Layer 3 has two oracles.** One is the explicit product expansion (states `(s, previews)`) of tiny models, solved by the existing solver, by brute force and by HiGHS. The other is the hand test of ADR-0054: 23.97 with the Lock before its price, 66 without, break-even 42.03. A fuzz includes burn self-loops, jewels without a burn, options with equal kernels (two independent draws, so the value must fall against one) and a trap that never accepts.
+- **Layer 3 has two oracles.** One is the explicit product expansion (states `(s, previews)`) of tiny models, solved by the existing solver, by brute force and by HiGHS. The other is the hand test of ADR-0054: with the fallback `F` = 66 (play B blind), 23.97 with the Lock before its price, 66 without, break-even 42.03. A fuzz includes burn self-loops, jewels without a burn, options with equal kernels (two independent draws, so the value must fall against one) and a trap that never accepts.
 - **Layer 4**: R29 with the Lock, run with `--verify`.
 
 ## Benchmarks

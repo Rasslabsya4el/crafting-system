@@ -14,4 +14,4 @@ Origin: [Design grill round 3: modules, verification, process](https://github.co
 
 ## Amendment: the Peek (B8, [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
 
-Layer 3 gains an oracle for the `Peek` kind: the explicit product expansion, with states `(s, previews)`, of tiny models, solved by the existing solver, brute force and HiGHS, and the hand test of ADR-0054 (23.97, 66, break-even 42.03). Layer 2 samples each option of a Lock independently on a copy of the concrete item. Layer 4 adds R29 with the Lock. The details are in ADR-0057.
+Layer 3 gains an oracle for the `Peek` kind: the explicit product expansion, with states `(s, previews)`, of tiny models, solved by the existing solver, brute force and HiGHS, and the hand test of ADR-0054 (fallback 66, 23.97 with the Lock before its price, break-even 42.03). Layer 2 samples each option of a Lock independently on a copy of the concrete item. Layer 4 adds R29 with the Lock. The details are in ADR-0057.

@@ -223,4 +223,4 @@ Origin: [Approximate answers within 1% when the exact state is too large](https:
 
 ## Amendment: the Lock has no coarse level unless it is pruned everywhere (B8, [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
 
-A `Peek` (ADR-0054) reads the pushed kernels of all its options at once through a non-linear backup, so the variant argument above does not carry over to it. A query with a Lock offered at any state has no coarse level, unless the exact pruning of ADR-0054, tested against the pessimistic values, removes the Lock from every state; the report then names the Lock as the reason for "no approximate level available".
+A `Peek` (ADR-0054) reads the pushed kernels of all its options at once through a non-linear backup, so the variant argument above does not carry over to it. A query with a Lock offered at any state has no coarse level, unless the exact pruning of ADR-0054, tested against the pessimistic values with `c_min` over the optimistic offer, removes the Lock from every state; the report then names the Lock as the reason for "no approximate level available".
