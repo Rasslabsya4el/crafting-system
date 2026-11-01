@@ -49,9 +49,9 @@ ACTIONS = {"chaos": CHAOS, "reforge": REFORGE}
 PASSING, BELOW, ABSENT = Status.PASSING, Status.BELOW, Status.ABSENT
 
 
-def abstraction(goal: Goal | str = "r12", level: int = LEVEL) -> Abstraction:
+def abstraction(goal: Goal | str = "r12", level: int = LEVEL, *, metamods: bool = False) -> Abstraction:
     """A fresh `Abstraction` of the small pool for a goal of `GOALS` (or a goal) at an item level."""
-    return Abstraction(SMALL, GOALS[goal] if isinstance(goal, str) else goal, AMULET, level)
+    return Abstraction(SMALL, GOALS[goal] if isinstance(goal, str) else goal, AMULET, level, metamods=metamods)
 
 
 _FINISHED: dict[tuple, list] = {}

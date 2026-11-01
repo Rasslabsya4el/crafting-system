@@ -50,6 +50,7 @@ from items_support import AMULET, DATA
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
 from crafting_system.actions import (
+    BLOCKING,
     Action,
     ActionError,
     Adds,
@@ -367,10 +368,22 @@ _WORLDS: dict = {}
 _COMPARED: dict = {}  # a kind is compared once however many fixture items list it
 
 
+def _adds_blocking_metamod(data, action: Action) -> bool:
+    """Whether the action adds a lock or an Attack/Caster metamod: it makes the state model metamods, which has no coarse level yet (#69)."""
+    blocking = {metamod.value for metamod in BLOCKING}
+    return any(blocking & set(data.mods[mod_id].families) for mod_id in action.adds(data).named or ())
+
+
 def _coarse_world(data, goal: Goal, extra: Action | None):
     """The exact abstraction (the catalog's crafts and Remove Crafted Mods enabled, and `extra` when it reads the junk),
     the coarsenings under test, and the blocks of the fixture items with their exact states (the brute force)."""
-    crafts = [action for entry in kinds() if entry.name in ("bench-craft", "remove-crafted-mods") for action in entry.members(data, _item(Rarity.RARE, _roll(LIFE_1)))]
+    crafts = [
+        action
+        for entry in kinds()
+        if entry.name in ("bench-craft", "remove-crafted-mods")
+        for action in entry.members(data, _item(Rarity.RARE, _roll(LIFE_1)))
+        if not _adds_blocking_metamod(data, action)
+    ]
     enabled = tuple(dict.fromkeys([*crafts, *([extra] if extra is not None else [])]))
     key = (id(data), goal, enabled)
     if key not in _WORLDS:

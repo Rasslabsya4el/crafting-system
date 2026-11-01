@@ -83,11 +83,9 @@ class Reads:
       heaviest member of each pool (ADR-0023, "When the members differ: variants"). An approximate
       answer takes those extreme members as the variants of the block. The default is False, which
       refuses; an adding action that keeps the mods (Augmentation, Regal, Exalted) declares it.
-    * `metamods`: the result depends on the item's lock and Attack/Caster metamods (`Prefixes` /
-      `Suffixes Cannot Be Changed`, `Cannot roll Attack` / `Caster Modifiers`): a lock keeps the mods of
-      a side, a tag metamod filters the pool. The compressed state of `abstraction` does not model
-      those yet and refuses an item that holds one for an action that reads them; the default True is the safe
-      value. A bench craft and Remove Crafted Mods see a metamod as one more crafted mod and declare False.
+    * `fractures`: the action may fracture a mod the item already holds (a Fracturing Orb), so a mod
+      that was an ordinary slot becomes a fractured one. The compressed state then stores a fractured mod of
+      a family told apart only by its family type as that type, not as a mod id (ticket #69).
     """
 
     junk: bool = True
@@ -96,7 +94,7 @@ class Reads:
     needs_crafted: bool = False
     block_invariant: bool = False
     variants: bool = False
-    metamods: bool = True
+    fractures: bool = False
 
     @classmethod
     def adding(cls, *, block_invariant: bool = False, variants: bool = False) -> "Reads":

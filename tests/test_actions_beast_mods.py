@@ -504,12 +504,12 @@ def test_the_rare_creature_price_is_a_setting():
 
 def test_the_declarations():
     matron, adds = WildBristleMatron().reads(SMALL), WildBristleMatron().adds(SMALL, item_of(ES1))
-    assert matron.junk and matron.block_invariant and matron.metamods is False and matron.families is not None
+    assert matron.junk and matron.block_invariant and matron.families is not None
     assert len(matron.families) == 5 and "ItemGenerationCannotChangeSuffixes" in matron.families
     assert (adds.named, adds.crafted, adds.draws) == (None, True, True)
 
     swap, adds = WOLF.reads(SMALL), WOLF.adds(SMALL, item_of(COLD))
-    assert swap.junk and swap.families is None and not swap.pool_weight and swap.metamods and not swap.block_invariant
+    assert swap.junk and swap.families is None and not swap.pool_weight and not swap.block_invariant
     assert adds.draws and adds.named is None and adds.keeps_crafted
 
 

@@ -34,7 +34,11 @@ class Flags:
 
 @dataclass(frozen=True)
 class FracturedMod:
-    """A fractured mod: the canonical id of its kind and what it gives each leaf of the goal."""
+    """A fractured mod: the canonical id of its kind and what it gives each leaf of the goal.
+
+    `mod_id` is a kind ("~3", with the tags of its mod: "~3@attack") instead of a mod id when an enabled
+    action may fracture a mod the item holds (`Reads.fractures`) and the mod's family is told apart only by its family type.
+    """
 
     mod_id: str
     contribution: tuple[Status, ...]
@@ -58,7 +62,8 @@ class Slot:
     enabled action treats alike has the kind "" (a family type: only its side and what it gives the
     goal count), or, when an enabled action adds mods and keeps the junk (`Reads.pool_weight`), a
     numbered family type "~n" (side, and the weights and goal contribution of the family's mods); any
-    other ordinary mod has its family key, so it stays identified. A crafted mod
+    other ordinary mod has its family key, so it stays identified. With metamods modelled, an ordinary
+    kind also carries the Attack/Caster tags of its mod ("~3@attack"). A crafted mod
     (a bench mod or a metamod) has its canonical mod id. `contribution` is what the mod gives each leaf.
     """
 

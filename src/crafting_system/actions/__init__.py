@@ -129,9 +129,10 @@ from .harvest_augment import HarvestAddRemove, HarvestDamageSwap, HarvestResista
 from .harvest_influence import HarvestReforgeInfluence
 from .harvest_likelihood import HarvestReforgeLikelihood
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
+from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags
 from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
-from .pool import PoolFamily, PoolMod, build_pool
+from .pool import PoolFamily, PoolMod, build_pool, tiers_of
 from .scour import ScouringOrb, ScourOutcomes
 
 def default_actions() -> tuple[Action, ...]:
@@ -151,6 +152,8 @@ __all__ = [
     "ApplyEssence",
     "ApplyFossils",
     "AugmentationOrb",
+    "BLOCKED_TAG",
+    "BLOCKING",
     "BeastSideSwap",
     "BenchCraft",
     "BenchOutcomes",
@@ -187,7 +190,9 @@ __all__ = [
     "TransmutationOrb",
     "WildBristleMatron",
     "add_one_mod",
+    "allowed_by_tags",
     "bench_crafts",
+    "blocked_tags",
     "build_pool",
     "catalog",
     "default_actions",
@@ -199,6 +204,7 @@ __all__ = [
     "recipe_resources",
     "register",
     "registered",
+    "tiers_of",
     "usable_fossils",
     "without_ranges",
 ]

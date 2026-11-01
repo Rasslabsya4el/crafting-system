@@ -41,9 +41,10 @@ class AnnulmentOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        # It removes one of the removable slots uniformly, whatever family the slot holds, so the successor
-        # depends on the slots (their number and kinds) and no family is named. A family freed by the removal
-        # matters only to an action that reads families (a craft, an addition), and that action says so itself.
+        # It reads how many mods there are per side and, through the locks and tags of the item, which of
+        # them it may remove: no family by name and no pool weight (a removal draws nothing). The successor
+        # depends on the slots (their number and kinds), so a family freed by the removal matters only to an
+        # action that reads families (a craft, an addition), and that action says so itself.
         # Block-invariant (ADR-0023, #130): a pool of `n` slots out of `N` removable ones loses one with probability `n / N`.
         return Reads(junk=True, families=frozenset(), block_invariant=True)
 
@@ -87,7 +88,7 @@ class AnnulmentOrb(Action):
     "annulment-orb",
     order=81,
     planner=False,
-    why_not="no compressed-state kernel for a removal that keeps the rest of the item yet (#69)",
+    why_not="not in the B1 offer set; which actions a target needs is pruning (#118)",
 )
 def _annulment_orb(data: GameData, item: Item):
     if item.rarity is not Rarity.NORMAL:

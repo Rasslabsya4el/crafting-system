@@ -57,11 +57,11 @@ from fractions import Fraction
 from itertools import combinations, product
 from typing import Literal
 
-from crafting_system.actions import Action, ActionError, OutOfScopeError, build_pool
+from crafting_system.actions import BLOCKING, Action, ActionError, OutOfScopeError, build_pool
 from crafting_system.items import Influence, Item, Rarity, Side
 
 from ._kernel import Abstraction
-from ._kinds import ALIKE, TYPE_PREFIX, held_families
+from ._kinds import ALIKE, TYPE_PREFIX, base_kind, held_families
 from ._goal import Status
 from ._state import CompressedState, Slot
 
@@ -335,6 +335,8 @@ class Coarsening:
         if slot.crafted:
             mod = self._data.mods.get(slot.kind)
             kind = self._kind_of.get(mod.families[0]) if mod is not None and len(mod.families) == 1 else None
+        else:
+            kind = base_kind(slot.kind) if slot.kind != ALIKE else None
         pool = self._pools.get((slot.side, kind)) if kind is not None else None
         return slot if pool is None else Slot(slot.side, pool.kind, slot.contribution, slot.crafted)
 
@@ -351,7 +353,13 @@ class Coarsening:
     def _held_by_fractured(self, state: CompressedState) -> set[str]:
         held: set[str] = set()
         for entry in state.fractured:
-            held |= held_families(self._data.mods[entry.mod_id])
+            mod = self._data.mods.get(entry.mod_id)
+            if mod is None:
+                raise OutOfScopeError(
+                    f"the state holds a fractured mod as the family type {entry.mod_id}: "
+                    "the family-group level has no rule for a fracture made mid-route"
+                )
+            held |= held_families(mod)
         return held
 
     def _held(self, block: Block) -> set[str]:
@@ -362,8 +370,10 @@ class Coarsening:
                 continue
             if slot.crafted:
                 held |= held_families(self._data.mods[slot.kind])
-            elif slot.kind != ALIKE and not slot.kind.startswith(TYPE_PREFIX):  # a family type that is not pooled holds no family of a pool
-                held |= {slot.kind} if slot.kind.startswith("#") else set(slot.kind.split("|"))
+            else:
+                kind = base_kind(slot.kind)
+                if kind != ALIKE and not kind.startswith(TYPE_PREFIX):  # a family type that is not pooled holds no family of a pool
+                    held |= {kind} if kind.startswith("#") else set(kind.split("|"))
         return held
 
     def _pooled_counts(self, block: Block) -> tuple[dict[tuple[Side, str], list[int]], list[Slot]]:
@@ -507,6 +517,11 @@ class Coarsening:
         if self._last is not None and self._last[0] == block and self._last[1] == action:
             return self._last[2]
         self.require_invariant(action)
+        if self._holds_blocking_metamod(block):
+            raise OutOfScopeError(
+                "the block holds a lock or an Attack/Caster metamod: a lock keeps the junk of its side through a reroll, "
+                "which the family-group level does not pool yet (#69)"
+            )
         reads = action.reads(self._data)
         if reads.variants:
             found = self._run_members(self._extremes(block), action, False)
@@ -519,6 +534,11 @@ class Coarsening:
                 found = self._rerolls[key] = self._run_members(self._members(block, frozenset()), action, True)
         self._last = (block, action, found)
         return found
+
+    def _holds_blocking_metamod(self, block: Block) -> bool:
+        families, mods = {metamod.value for metamod in BLOCKING}, self._data.mods
+        ids = [slot.kind for slot in block.slots if slot.crafted] + [entry.mod_id for entry in block.fractured]
+        return any(mod_id in mods and families & set(mods[mod_id].families) for mod_id in ids)
 
     def _run_members(self, members: Iterable[CompressedState], action: Action, invariant: bool) -> _Evaluation:
         """Run the exact kernel on each member: the distinct pushed kernels, the first refusal.

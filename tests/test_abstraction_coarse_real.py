@@ -10,13 +10,17 @@ blocks. The counts do not depend on the machine; the time is reported by the run
 The counts of ADR-0023 (365, 1,582, 4,295) were measured while a state holding the multimod "Can have up to 3 Crafted Modifiers"
 was a dead end (every action refused it as out of scope). Since ticket #68 the multimod lifts the limit of crafted mods to three, so
 the crafts that follow it are reachable: 738, 2,129 and 5,081 blocks. Without the multimod craft the one-group count is 358.
+
+Since ticket #69 an enabled craft that adds a lock or an Attack/Caster metamod makes the state model metamods (every mod is kept, told
+apart by family type), which the coarse level does not pool. The four such ring crafts are left out here (137 of the 141), and the blocks
+that the other crafts reach are 634, 1,910 and 4,652 (the 738, 2,129 and 5,081 above counted the dead-end states of the four).
 """
 
 import pytest
 from abstraction_support import real_game_data
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
-from crafting_system.actions import ApplyEssence, RemoveCraftedMods
+from crafting_system.actions import BLOCKING, ApplyEssence, RemoveCraftedMods
 from crafting_system.actions.bench import bench_crafts
 from crafting_system.items import ExplicitMod, Item, Rarity
 
@@ -26,11 +30,21 @@ FRACTURED, FORCED = "AllAttributes7", "StrengthEssence7_"
 ESSENCE = ApplyEssence("Deafening Essence of Rage")
 
 
+def blocking(data, craft) -> bool:
+    """Whether the craft adds a lock or an Attack/Caster metamod: the state then models metamods, which the coarse level does not pool (#69)."""
+    names = {metamod.value for metamod in BLOCKING}
+    return any(names & set(data.mods[mod_id].families) for mod_id in craft.adds(data).named)
+
+
 @pytest.fixture(scope="module")
 def r05():
     data = real_game_data()
     item_class = data.base_items[BASE].item_class
-    crafts = [craft for craft in bench_crafts(data) if item_class in craft.option(data).item_classes]
+    crafts = [
+        craft
+        for craft in bench_crafts(data)
+        if item_class in craft.option(data).item_classes and not blocking(data, craft)
+    ]
     life = Wanted(frozenset(mod.id for mod in data.mods.values() if mod.families == ("IncreasedLife",)))
     ab = Abstraction(data, Goal((life, Wanted(frozenset({FORCED})))), BASE, LEVEL, [RemoveCraftedMods(), *crafts])
     low = tuple(min(stat.min, stat.max) for stat in data.mods[FRACTURED].stats)
@@ -40,17 +54,17 @@ def r05():
     return ab, ab.compress(start), [ESSENCE, RemoveCraftedMods(), *crafts]
 
 
-def test_there_are_141_ring_crafts_and_the_goal_keeps_two_of_the_told_apart_families_exact(r05):
+def test_there_are_137_ring_crafts_without_the_metamod_ones_and_the_goal_keeps_two_of_the_told_apart_families_exact(r05):
     ab, start, offers = r05
 
     pooling = Coarsening.pooling_irrelevant(ab, None, start)
 
-    assert len(offers) - 2 == 141
+    assert len(offers) - 2 == 137  # the 141 ring crafts of the bench without the four that add a lock or an Attack/Caster metamod
     assert pooling.relevant_families & pooling.told_apart == {"IncreasedLife", "Strength"}
     assert sum(len(group) for group in pooling.groups) == 20  # the fractured All Attributes family is left out
 
 
-@pytest.mark.parametrize(("size", "blocks"), [(None, 738), (8, 2129), (4, 5081)], ids=["one_group", "groups_of_8", "groups_of_4"])
+@pytest.mark.parametrize(("size", "blocks"), [(None, 634), (8, 1910), (4, 4652)], ids=["one_group", "groups_of_8", "groups_of_4"])
 def test_the_irrelevant_families_pooled_give_the_blocks_of_the_adr(r05, size, blocks):
     ab, start, offers = r05
     pooling = Coarsening.pooling_irrelevant(ab, size, start)

@@ -197,7 +197,7 @@ REFUSED = {
 @pytest.mark.parametrize("name", REFUSED)
 def test_an_item_the_action_refuses_is_refused_with_the_same_error(name, action):
     item = REFUSED[name]()
-    ab = abstraction()
+    ab = abstraction(metamods="crafted" in name)  # the crafted mod is a lock metamod: the state has to be built to hold one
     with pytest.raises((NotApplicableError, OutOfScopeError)) as direct:
         action.outcomes(SMALL, item)
 
@@ -209,13 +209,13 @@ def test_an_item_the_action_refuses_is_refused_with_the_same_error(name, action)
         assert str(compressed.value) == str(direct.value)
 
 
-def test_a_metamod_is_out_of_scope_for_the_compressed_state_although_the_action_accepts_the_item():
+def test_a_metamod_is_out_of_scope_for_a_state_built_without_metamods_although_the_action_accepts_the_item():
     item = small_item(roll(RESIST_2, fractured=True), roll(CRAFTED, crafted=True))
     ab = abstraction()
     CHAOS.outcomes(SMALL, item)  # the action models the metamod (ticket #68) ...
 
-    with pytest.raises(OutOfScopeError, match="metamod"):  # ... the compressed state does not yet
-        ab.kernel(ab.compress(item), CHAOS)
+    with pytest.raises(OutOfScopeError, match="metamods=True"):  # ... a state built with metamods=False refuses to compress it (ticket #69)
+        ab.compress(item)
 
 
 def test_a_reforge_with_no_tagged_mod_to_draw_is_refused_while_a_chaos_orb_works():
