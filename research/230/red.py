@@ -17,16 +17,16 @@ def to_ints(dist):
 
 
 class Red:
-    def __init__(self, cfg, tgt, counts_only=False):
+    def __init__(self, cfg, tgt, merge=False):
         self.cfg, self.tgt = cfg, tgt
+        self.rc = tgt.reduce_colour if merge else (lambda c: c)  # merge: unnamed colours become white
         self.L = tgt.links
-        self.counts_only = counts_only
         self._tab = {}
 
     # --- keys --------------------------------------------------------------------------------------------------
     def key_of_raw(self, s):
         n, cols, groups = s
-        cols_r = tuple(self.tgt.reduce_colour(c) for c in cols)
+        cols_r = tuple(self.rc(c) for c in cols)
         return (n, cols_r, self._qual(groups))
 
     def _qual(self, groups):
@@ -58,7 +58,7 @@ class Red:
         real_i, D = to_ints(real)
         red = {}
         for c, w in real_i.items():
-            r = tuple(self.tgt.reduce_colour(x) for x in c)
+            r = tuple(self.rc(x) for x in c)
             red[r] = red.get(r, 0) + w
         out = (list(red.items()), real_i, D)
         self._tab[k] = out

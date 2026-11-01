@@ -43,27 +43,29 @@ def targets(maxn):
 def unit(u):
     (classmax, wn, pn, an, n0), chunk = u
     cfg = Cfg(classmax=classmax, colour_w=WEIGHTS[wn], prices=PRICES[pn], actions=ACTIONS[an])
-    start = (n0, (0,) * n0, (1,) * n0)
+    start = n0 if isinstance(n0, tuple) else (n0, (0,) * n0, (1,) * n0)
     G = dense.Graph(RawModel(cfg, None), start, expand_goals=True)
     rows = []
     for count, links, req in targets(cfg.maxn)[chunk::CHUNKS]:
         tgt = Target(count=count, links=links, req=req)
         goal = np.array([tgt.goal(n, c, runs_of(g)) for (n, c, g) in G.states])
         r = dense.solve(G, goal)
-        rec = {"spec": [classmax, wn, pn, an, n0], "count": count, "links": links, "req": req}
+        rec = {"spec": [classmax, wn, pn, an, list(n0) if isinstance(n0, tuple) else n0], "count": count, "links": links, "req": req}
         if r is None:
             rec["dead_end"] = True
         else:
-            red = Red(cfg, tgt)
+            red, redm = Red(cfg, tgt), Red(cfg, tgt, merge=True)
             key = red.key_of_raw(start)
             if red.is_goal(key):
-                rec.update(dense=0.0, dedicated=0.0)
+                rec.update(dense=0.0, dedicated=0.0, merged=0.0)
             else:
                 B = dedicated.build(red, key)
                 t = time.time()
                 V, it, secs, nres = dedicated.solve_anderson(B)
-                rec.update(dense=float(r[0][0]), dedicated=float(V[1]), sweeps=it, secs=round(time.time() - t, 3),
-                           states=B.N - 1, raw_states=G.N)
+                Bm = dedicated.build(redm, redm.key_of_raw(start))
+                Vm = dedicated.solve_anderson(Bm)[0]
+                rec.update(dense=float(r[0][0]), dedicated=float(V[1]), merged=float(Vm[1]), sweeps=it,
+                           secs=round(time.time() - t, 3), states=B.N - 1, merged_states=Bm.N - 1, raw_states=G.N)
         rows.append(rec)
     return rows
 
@@ -72,12 +74,14 @@ if __name__ == "__main__":
     out = os.environ.get("OUT_DIR", ".")
     idx, cnt = int(os.environ.get("RUNNER_INDEX", 1)), int(os.environ.get("RUNNER_COUNT", 1))
     only = sys.argv[1:] and sys.argv[1] or None  # optional: restrict to starts, e.g. "1"
-    specs = [(4, wn, pn, an, n0) for wn in WEIGHTS for pn in PRICES for an in ACTIONS for n0 in (1, 4)]
+    coloured = (3, (1, 0, 2), (2, 1))  # a start item that already has colours and a link
+    specs = [(cm, wn, pn, an, n0) for cm, starts in ((4, (1, 4, coloured)), (3, (1, 3))) for wn in WEIGHTS
+             for pn in PRICES for an in ACTIONS for n0 in starts]
     units = [(s, c) for s in specs for c in range(CHUNKS)]
     mine = [u for i, u in enumerate(units) if i % cnt == idx - 1]
     print("runner", idx, "of", cnt, "units", len(mine), flush=True)
     worst = 0.0
-    n = 0
+    n = nm = 0
     with open(os.path.join(out, f"cases-{idx}.jsonl"), "w") as f, Pool(int(os.environ.get("PROCS", 4))) as pool:
         for rows in pool.imap_unordered(unit, mine):
             for rec in rows:
@@ -85,9 +89,10 @@ if __name__ == "__main__":
                 if "dense" in rec:
                     n += 1
                     d = abs(rec["dense"] - rec["dedicated"]) / max(1.0, abs(rec["dense"]))
+                    nm += abs(rec["dense"] - rec["merged"]) / max(1.0, abs(rec["dense"])) > 1e-8
                     worst = max(worst, d)
                     if d > 1e-8:
                         print("MISMATCH", rec, flush=True)
             f.flush()
-            print("unit done; cases so far", n, "worst rel diff", worst, flush=True)
-    print("DONE cases", n, "worst rel diff", worst)
+            print("unit done; cases so far", n, "worst rel diff", worst, "merged variant off by >1e-8:", nm, flush=True)
+    print("DONE cases", n, "worst rel diff", worst, "merged variant off:", nm)
