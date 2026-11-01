@@ -109,7 +109,7 @@ def test_a_likelihood_reforge_kernel_equals_the_brute_force(start, more, goal):
     action = HarvestReforgeLikelihood(more)
     ab = Abstraction(SMALL, LIKELIHOOD_GOALS[goal], AMULET, LEVEL, [action])
     item_ = LIKELIHOOD_STARTS[start]()
-    factor = Fraction(90) if more else Fraction(1, 90)
+    factor = Fraction(10) if more else Fraction(1, 10)
     totals = {max(len(item_.mods), 4): Fraction(1)}
 
     kernel = ab.kernel(ab.compress(item_), action)

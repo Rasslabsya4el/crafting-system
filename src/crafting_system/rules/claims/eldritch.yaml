@@ -1,0 +1,275 @@
+# Mechanic family: eldritch (Embers, Ichors, Eldritch Chaos/Exalted/Annulment, Orb of Conflict, dominance).
+# Research ticket #85 (claims ELD-xx, branch research/eldritch at 6642ab7), built for ticket #151. Tier numbering of the claims: the
+# Eldritch grade of ADR-0025, 1 = Lesser ... 6 = Perfect (the wiki's order, the reverse of the game's mod tiers).
+# Left out on purpose, because they contradict the Orb of Conflict model of ADR-0025 (owner, round 2 of grill B2, issue #93):
+# the draft's `conflict_odds_by_tier_difference` (the wiki's "50% and about 11% a tier") and `conflict_craft_of_exile_edges`
+# (Craft of Exile's flat 50/50). The fitted curve of `conflict_odds_fit` replaces both.
+# Written for the build, not in the draft: `ember_may_return_same_family`, `no_item_level_gate`, `chaos_count_follows_craft_of_exile`
+# (the open point of the draft's `chaos_rerolls_dominant_side`), `conflict_odds_fit` and `conflict_keeps_the_variant_it_moves_to`.
+# The draft's `each_use_is_one_currency` is renamed `cost` and gained the price-file name of each currency as its value.
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code alone, on a fit to a player sample, or on a
+# default the main chat chose; the planner names it on every answer that reads it.
+rules:
+  - id: eldritch.ember_ichor_targets
+    statement: Eldritch Embers and Ichors can be used on a Body Armour, Boots, Gloves or Helmet only; they cannot add Eldritch implicits to amulets or any other class. The value lists the item classes of the game data.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Adds a Lesser Searing Exarch implicit modifier to a Body Armour, Boots, Gloves or Helmet"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: [Body Armour, Boots, Gloves, Helmet]
+
+  - id: eldritch.ember_ichor_rarity_and_influence
+    statement: An Ember or Ichor can be used on a normal, magic or rare item that is not Shaper, Elder or Conqueror influenced; it works on fractured items. A unique item cannot hold Eldritch implicits.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a normal, magic or rare item to apply it. Cannot be used on Shaper, Elder or Elderslayer influenced items."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.not_influence
+    statement: Eldritch implicits are not influence. An item cannot carry both Eldritch implicits and Shaper, Elder or Conqueror influence (each blocks the other), so none of the Eldritch currency is used on an influenced item; the item can still be fractured or split.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Eldritch_implicit_modifier
+    quote: "an item may not both be influenced and have Eldritch implicits"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.ember_replaces_implicits
+    statement: An Ember replaces every implicit of the item except Eater of Worlds implicits (including a previous Searing Exarch implicit); an Ichor replaces every implicit except Searing Exarch implicits. The item then holds at most one implicit of each Eldritch side.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "This replaces any existing implicit modifiers other than Eater of Worlds implicit modifiers"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.ember_may_return_same_family
+    statement: The draw of an Ember or an Ichor does not exclude the family the side already holds, so the same mod can come back. The data has no exclusion and Craft of Exile allows it; no other source says.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "poec_simAddEldritchImplicit"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code and the absence of an exclusion in the data give it (open point OPEN-03 of the research); no player report was found."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: eldritch.grade_is_tier
+    statement: The grade of an Ember or Ichor is the tier of the implicit it adds - Lesser 1, Greater 2, Grand 3, Exceptional 4. Tiers 5 (Exquisite) and 6 (Perfect) can only be reached by the Orb of Conflict.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Conflict
+    quote: "Orbs of Conflict are the only way to obtain Tier 5 and Tier 6"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.implicit_pool_by_item_class
+    statement: The implicit is drawn among the mods of its side that have the tier, weighted by the spawn weight of the item class (body_armour, boots, gloves or helmet); weights do not depend on the base type or attribute. The pool of a tier is the base mods at tier 1, base plus Unique-Presence at tier 2, base plus Unique-Presence plus Pinnacle-Presence at tiers 3 to 6. The model reads the weights from the game data, so a patch moves them with the data pin.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "IncreasedAttackSpeedEldritchImplicit1 ... spawn_weights: no_tier_6_eldritch_implicit 0, gloves 1000, default 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.presence_variant_weights
+    statement: 'A Unique-Presence variant ("While a Unique Enemy is in your Presence, ...") has 0.5 times and a Pinnacle-Presence variant ("While a Pinnacle Atlas Boss is in your Presence, ...") 0.2 times the weight of its base mod (one exception 0.25: gloves Eater, Chance to Aggravate Bleeding); the Unique-Presence mod has weight 0 at tier 1 and the Pinnacle-Presence mod at tiers 1 and 2.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "IncreasedAttackSpeedEldritchImplicitUniquePresence2 ... gloves 500; ...PinnaclePresence3 ... gloves 200"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.implicit_value_range
+    statement: "Each tier of an Eldritch implicit has a fixed integer range for its value (for example Exarch Avoid Shock 33-35 at tier 1, 39-41 at tier 3, 48-50 at tier 6); the rolled value lies in the range of the tier. The exact results hold every implicit at its lowest value; a roll limit on an implicit is not modelled yet (ticket #158)."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "AvoidShockEldritchImplicit3 ... (39-41)% chance to Avoid being Shocked"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.helmet_mana_cost_efficiency_3_29
+    statement: Since 3.29.0 the Searing Exarch helmet implicit family is Mana Cost Efficiency; Reduced Mana Cost of Attacks no longer rolls on helmets.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_Searing_Exarch_implicit_modifiers
+    quote: "Reduced Mana Cost of Attacks can no longer roll as Searing Exarch Implicit Modifiers on Helmets. This has been replaced with Mana Cost Efficiency Searing Exarch Implicit Modifiers on Helmets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.no_item_level_gate
+    statement: "An Ember or an Ichor of any grade applies to an item of any item level; the required level 75 of the Eldritch implicit mods is not a gate (the owner: an Ember works on level 60 boots)."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93
+    quote: "An Ember of any grade applies to level-60 boots (OPEN-04: no item-level gate)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.dominance_higher_tier
+    statement: Of the Searing Exarch and Eater of Worlds implicits the one with the higher tier is dominant; with equal tiers neither is dominant; an item with only one of the two implicits has that side dominant; an item with none has no dominance.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Eldritch_Chaos_Orb
+    quote: "If both mods are of the same tier (e.g. both mods are Exceptional tier), neither are dominant."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.dominance_sole_implicit
+    statement: A sole Eldritch implicit (the other side absent) is dominant.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Eldritch_implicit_modifier
+    quote: "(including if there is only one of either Eater or Exarch modifiers), it is considered \"dominated\" by the higher tier"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.dominant_side
+    statement: When the Searing Exarch is dominant the Eldritch orbs act on prefixes; when the Eater of Worlds is dominant they act on suffixes. An Eldritch Chaos, Exalted or Annulment Orb cannot be used on an item without dominance.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "If The Searing Exarch is dominant, add a prefix modifier / If The Eater of Worlds is dominant, add a suffix modifier"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.chaos_accepts_rare_only
+    statement: An Eldritch Chaos Orb and an Eldritch Exalted Orb can be used on a rare item only; an Eldritch Orb of Annulment on a magic or rare item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: '"left click a rare item with The Searing Exarch or The Eater of Worlds dominance" / "left click on a magic or rare item with ... dominance"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.chaos_rerolls_dominant_side
+    statement: An Eldritch Chaos Orb removes all unfractured modifiers of the dominant side and adds new random modifiers to that side from the ordinary affix draw; the other side and fractured modifiers stay. Since 3.17.2 the number of prefixes and suffixes is not preserved; how many are added back is eldritch.chaos_count_follows_craft_of_exile.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Eldritch_Chaos_Orb
+    quote: "The number of Prefix and Suffix modifiers on an item is no longer preserved when rerolling modifiers using an Eldritch Chaos Orb."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.chaos_count_follows_craft_of_exile
+    statement: An Eldritch Chaos Orb draws a total number of modifiers from the table of the Chaos Orb (4, 5 or 6 at 8:3:1, affix_count.rare_reroll_ratio), subtracts the modifiers that stay (the other side and the fractured ones) and adds the rest on the dominant side, up to its capacity; nothing is added when the kept modifiers already reach the total.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "poec_simRollAffix(null,null,target,null,noaffix-prmods,!0,!1"
+    approximate: true
+    approximate_reason: "No source states how many modifiers an Eldritch Chaos Orb puts back since 3.17.2; Craft of Exile's code is the only implementation (open point OPEN-01 of the research)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: eldritch.exalted_adds_one_to_dominant_side
+    statement: An Eldritch Exalted Orb adds one random modifier to the dominant side; it cannot be used when that side has no free slot.
+    source_kind: coe
+    url: https://www.craftofexile.com/?a=emulator
+    quote: "case 'eldritchexalt': ... target = (searing ? \"prefix\" : \"suffix\") ... poec_simRollAffix(null,null,target,null,1,...)  else errtxt \"Cannot add another modifier\""
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.annul_removes_one_from_dominant_side
+    statement: An Eldritch Orb of Annulment removes one modifier of the dominant side, uniformly among the modifiers it can remove; fractured modifiers, modifiers on a side that Prefixes or Suffixes Cannot Be Changed locks and modifiers protected by Cannot roll Attack/Caster are not candidates.
+    source_kind: coe
+    url: https://www.craftofexile.com/?a=emulator
+    quote: "case 'eldritchannul': ... keep = (searing ? \"prefix\" : \"suffix\") ... poec_simRemoveAffix(null,keep,null,!0,!1,!0,!1,!0,null)"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code gives that the removal is uniform among the removable modifiers of the dominant side."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.metamod_interaction
+    statement: Eldritch Chaos Orb ignores Prefixes Cannot Be Changed and Suffixes Cannot Be Changed and respects Cannot roll Attack/Caster Modifiers; Eldritch Exalted Orb respects all four (open slots on the locked side may still be filled); Eldritch Orb of Annulment respects all four. (Same as bench_metamods BEN-38 to BEN-40.)
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod
+    quote: "Eldritch Chaos Orb | Ignored | Ignored | Respected | Respected"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.conflict_requires_both
+    statement: An Orb of Conflict can be used on a non-unique item that has both a Searing Exarch and an Eater of Worlds implicit, and on no other item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Can only be used on items that have both a Searing Exarch and an Eater of Worlds implicit modifier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.conflict_raise_one_lower_other
+    statement: An Orb of Conflict raises the tier of one Eldritch implicit by one and lowers the tier of the other by one. A Lesser (tier 1) implicit that is lowered is removed from the item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "raise the strength of one Searing Exarch or Eater of Worlds modifier on an item and lower the strength of another. Lesser modifiers that have their strength lowered will be removed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.conflict_odds_fit
+    statement: "With d the grade of the higher implicit minus the grade of the lower one (d >= 0), the higher implicit is the one raised with probability p = 1 / (1 + exp(-(intercept - slope * d))), the lower one with 1 - p; at equal grades each side is raised with probability 1/2. The exact model rounds p to `places` decimal places. The sample covers d up to `last_sampled_difference`; a larger d is an extrapolation of the fit. The owner approved the formula (grill B2, round 2); applying it to the higher implicit is the main chat's reading (ADR-0025)."
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/13y05ag/
+    quote: "Orb of Conflict rates: ~(50 - 11n)% to upgrade per n tier difference"
+    approximate: true
+    approximate_reason: "A logistic fit to one 525-use player sample of 2023 (Standard); the wiki's 11% a tier and Craft of Exile's flat 50% disagree with it, and a difference of 4 or more is outside the sample."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {intercept: "0.10", slope: "0.52", places: 6, last_sampled_difference: 3}
+
+  - id: eldritch.conflict_measured_odds
+    statement: 'Measured chance that an Orb of Conflict raises the implicit the player wants raised, by the tier difference d = desired tier - other tier before the Conflict (525 Conflicts on Standard, June 2023, nine start states): d -2: 14/21; d -1: 28/49; d 0: 54/89; d +1: 81/201 (4/3: 40/101, 5/4: 41/100); d +2: 33/115 (5/3: 11/40, 4/2: 14/50, 6/4: 8/25); d +3: 6/50 (4/1). The counts are back-computed from the rounded percentages and n given in the post (its spreadsheet was not opened), so a count can be off by one. The odds depend on the tiers only, not on which mods they are (an assumption of the author, not tested). The logistic fit of eldritch.conflict_odds_fit matches these within the sampling error.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/13y05ag/
+    quote: "5/3 upgrade to 6/2: 28% (n=40)"
+    approximate: true
+    approximate_reason: "One player sample (525 Conflicts, one team, one league); the counts are recomputed from rounded percentages."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {"-2": [14, 21], "-1": [28, 49], "0": [54, 89], "1": [81, 201], "2": [33, 115], "3": [6, 50]}
+
+  - id: eldritch.conflict_top_tier_raise_is_noop
+    statement: When the implicit chosen to be raised is already Perfect (tier 6), the raise does nothing and the other implicit is still lowered by one tier (a 6/4 item becomes 6/3, measured 8 of 25; or the other side is the one chosen to be raised and the item becomes 5/5, 17 of 25).
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/13y05ag/
+    quote: 'As "upgrading" a tier 6 implicit does nothing, the favourable outcome is 5/5.'
+    approximate: true
+    approximate_reason: "One player sample of 25 uses (6/4); Craft of Exile's code agrees, no other source states the edge."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.conflict_keeps_the_variant_it_moves_to
+    statement: An Orb of Conflict moves an implicit to the mod of the same family and variant (base, Unique-Presence or Pinnacle-Presence) one grade away, even where that mod has spawn weight 0 at that grade (a Unique-Presence mod at grade 1, a Pinnacle-Presence mod at grades 1 and 2), which no Ember draws. The data holds every one of these mods; no source says what the game does with them.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "AvoidShockEldritchImplicitUniquePresence1 ... spawn_weights: no_tier_6_eldritch_implicit 0, boots 0, default 0"
+    approximate: true
+    approximate_reason: "No source says whether the game keeps a Presence variant lowered to a grade where it has no weight, or draws another mod; the model keeps the mod the data holds."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: eldritch.divine_explicit_only
+    statement: A Divine Orb rerolls the values of explicit modifiers only; the value of an Eldritch implicit is not rerolled by it (it changes only by a new Ember, Ichor or by Conflict).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Divine_Orb
+    quote: "re-roll the values of all random explicit modifiers on a piece of equipment"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.vaal_replaces_one_implicit
+    statement: A Vaal Orb corruption replaces only one of the implicits of an item with Eldritch implicits.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Eldritch_implicit_modifier
+    quote: "If an implicit is replaced by corrupting an item with a Vaal Orb, only one of the implicits on the item will be replaced."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.fracturing_allowed
+    statement: A Fracturing Orb works on items with Eldritch implicits, and Embers and Ichors work on fractured items (see fracturing FRA-06, FRA-24).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Eldritch_implicit_modifier
+    quote: "They can be split or fractured."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: eldritch.cost
+    statement: Each Ember, Ichor, Eldritch Chaos/Exalted/Annulment Orb or Orb of Conflict is one currency item per use. This rests on silence - the item texts name no other cost (no gold, no second item) - not on a positive statement. The value maps each action to the price-file name of its currency item, which is its name in the game data; Embers and Ichors by grade.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a rare item with The Searing Exarch or The Eater of Worlds dominance to apply it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value:
+      ember: {1: Lesser Eldritch Ember, 2: Greater Eldritch Ember, 3: Grand Eldritch Ember, 4: Exceptional Eldritch Ember}
+      ichor: {1: Lesser Eldritch Ichor, 2: Greater Eldritch Ichor, 3: Grand Eldritch Ichor, 4: Exceptional Eldritch Ichor}
+      chaos: Eldritch Chaos Orb
+      exalted: Eldritch Exalted Orb
+      annulment: Eldritch Orb of Annulment
+      conflict: Orb of Conflict

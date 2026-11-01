@@ -1,0 +1,11 @@
+# R14 start item (docs/research/2026-10-30-5-reference-routes.md): a Hunter-influenced Thicket Bow of item
+# level 78 or more, as it drops (normal). The target file is examples/targets/r14-hunter-bow.yaml; its
+# `start_price` is the `name` below. poe.ninja's base overview has no line for this base at item level 78
+# (its lines start at 82 and the Hunter ones hold two observations at most), so the trade site prices it.
+name: Thicket Bow (ilvl 78, Hunter)
+base_type: Thicket Bow
+category: weapon.bow
+rarity: nonunique
+item_level_min: 78
+influence: [hunter]
+corrupted: false
