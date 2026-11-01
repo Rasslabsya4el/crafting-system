@@ -1,0 +1,54 @@
+# Target for benchmark route R09: Pristine + Shuddering Life boots.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Basic boots crafting", docs/research/2026-10-30-5-reference-routes.md, id R09):
+#   1. Use 2-socket resonators (Potent Chaotic Resonators) with a Pristine Fossil and a Shuddering Fossil until
+#      the boots hold high Life, Movement Speed and acceptable other modifiers.
+#   2. Bench-craft the missing useful modifier.
+#
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's rule for
+# tiers: a mod whose tier the guide does not state is the TOP tier the item level allows.
+#   * "Two-Toned Boots or preferred Life base", item level 86: the Two-Toned Boots with Evasion and Energy Shield.
+#   * "high Life": the top tier of "+# to maximum Life", tier 1, +(115-129) (mod IncreasedLife8, needs item
+#     level 54), rolled and not crafted.
+#   * "Movement Speed": as in R08, the rolled tier 1 (35%) or one of the three bench crafts at their top tier.
+#   * "useful Resistances if rolled" and "acceptable other modifiers": not required. The guide asks for them only
+#     "if rolled", so a resistance is a bonus of the item, not a goal of the plan.
+#   * Start: a normal Two-Toned Boots of item level 86, priced by the owner's rule for a bought item (poe.ninja
+#     lists no plain boots of that level), and made rare with an Orb of Alchemy.
+
+# Three bases of the game are named Two-Toned Boots (Metadata/Items/Armours/Boots/BootsAtlas1, 2 and 3: one each
+# for Armour and Evasion, Armour and Energy Shield, Evasion and Energy Shield), so the base is written by its id.
+# BootsAtlas1 is the Evasion and Energy Shield one; all three have the same Life and Movement Speed mods.
+base: Metadata/Items/Armours/Boots/BootsAtlas1
+item_level: 86
+influence: []
+
+# No start_item block: the crafting starts from a normal (white) Two-Toned Boots.
+
+# The name of the start item in the price file: the `name` of examples/buy/r09-start-boots.yaml.
+start_price: R09 start boots
+
+# See R08: the guide's fossils, the Orb of Alchemy that makes the boots rare, and the bench.
+actions: [alchemy-orb, fossil-set, bench-craft]
+
+requirements:
+  # High Life: the top tier, rolled.
+  - family: IncreasedLife
+    min_tier: 1
+    not_crafted: true
+
+  # Movement Speed: the rolled 35%, or a crafted one (see R08).
+  - at_least: 1
+    of:
+      - family: MovementVelocity
+        min_tier: 1
+        not_crafted: true
+      - family: MovementVelocity
+        mod: JunMaster2MovementVelocityAndMovementVelocityIfNotHitRecently3
+      - family: MovementVelocity
+        mod: JunMaster2MovementVelocityAndOnslaughtOnKill3_
+      - family: MovementVelocity
+        mod: JunMaster2MovementVelocityAndCannotBeChilled3

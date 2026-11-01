@@ -1,0 +1,858 @@
+{
+  "chaos_per_divine": 372.2,
+  "fetched_at": "2026-10-31T12:37:32Z",
+  "league": "Allflame",
+  "prices": {
+    "Aberrant Fossil": {
+      "chaos": 12.12,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Aetheric Fossil": {
+      "chaos": 14.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Armourer's Scrap": {
+      "chaos": 0.04312,
+      "source": "poe.ninja"
+    },
+    "Bloodstained Fossil": {
+      "chaos": 4.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Bound Fossil": {
+      "chaos": 5.97,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Chaos Orb": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Corroded Fossil": {
+      "chaos": 19.75,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Anger": {
+      "chaos": 9.3,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Anguish": {
+      "chaos": 1.03,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Contempt": {
+      "chaos": 8.6,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Doubt": {
+      "chaos": 1.41,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Dread": {
+      "chaos": 4.36,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Envy": {
+      "chaos": 10.83,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Fear": {
+      "chaos": 3.8,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Greed": {
+      "chaos": 4.07,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Hatred": {
+      "chaos": 7.76,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Loathing": {
+      "chaos": 9.28,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Misery": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Rage": {
+      "chaos": 7.64,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Scorn": {
+      "chaos": 30.99,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Sorrow": {
+      "chaos": 3.11,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Spite": {
+      "chaos": 7.0,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Suffering": {
+      "chaos": 1.15,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Torment": {
+      "chaos": 2.15,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Woe": {
+      "chaos": 10.22,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Wrath": {
+      "chaos": 11.86,
+      "source": "poe.ninja"
+    },
+    "Deafening Essence of Zeal": {
+      "chaos": 14.05,
+      "source": "poe.ninja"
+    },
+    "Deft Fossil": {
+      "chaos": 11.31,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Dense Fossil": {
+      "chaos": 17.09,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Divine Orb": {
+      "chaos": 372.2,
+      "source": "poe.ninja"
+    },
+    "Exalted Orb": {
+      "chaos": 2.29,
+      "source": "poe.ninja"
+    },
+    "Faceted Fossil": {
+      "chaos": 138.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Fractured Fossil": {
+      "chaos": 121.6,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Frigid Fossil": {
+      "chaos": 8.08,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Fundamental Fossil": {
+      "chaos": 31.44,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Gemcutter's Prism": {
+      "chaos": 2.28,
+      "source": "poe.ninja"
+    },
+    "Gilded Fossil": {
+      "chaos": 185.5,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Glassblower's Bauble": {
+      "chaos": 0.09313,
+      "source": "poe.ninja"
+    },
+    "Glyphic Fossil": {
+      "chaos": 70.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Hollow Fossil": {
+      "chaos": 190.8,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Jagged Fossil": {
+      "chaos": 12.18,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Leather Belt (ilvl 86)": {
+      "chaos": 10.0,
+      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: a normal Leather Belt of item level 86, 41 observations",
+      "source": "poe.ninja"
+    },
+    "Lucent Fossil": {
+      "chaos": 6.18,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Metallic Fossil": {
+      "chaos": 7.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Opulent Fossil": {
+      "chaos": 7.48,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Orb of Alchemy": {
+      "chaos": 0.02716,
+      "source": "poe.ninja"
+    },
+    "Orb of Alteration": {
+      "chaos": 0.1001,
+      "source": "poe.ninja"
+    },
+    "Orb of Augmentation": {
+      "chaos": 0.01604,
+      "source": "poe.ninja"
+    },
+    "Orb of Chance": {
+      "chaos": 0.04383,
+      "source": "poe.ninja"
+    },
+    "Orb of Scouring": {
+      "chaos": 0.3668,
+      "source": "poe.ninja"
+    },
+    "Orb of Transmutation": {
+      "chaos": 0.005804,
+      "source": "poe.ninja"
+    },
+    "Potent Chaotic Resonator": {
+      "chaos": 1.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Powerful Chaotic Resonator": {
+      "chaos": 3.19,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Primal Crystallised Lifeforce": {
+      "chaos": 0.03529,
+      "source": "poe.ninja"
+    },
+    "Prime Chaotic Resonator": {
+      "chaos": 155.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Primitive Chaotic Resonator": {
+      "chaos": 1.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Prismatic Fossil": {
+      "chaos": 0.2,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Pristine Fossil": {
+      "chaos": 12.1,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "R05 start ring": {
+      "chaos": 2.6,
+      "detail": {
+        "date": "2026-10-31",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 602,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "fractured_item": {
+                    "option": "true"
+                  },
+                  "ilvl": {
+                    "min": 75
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "accessory.ring"
+                  },
+                  "rarity": {
+                    "option": "rare"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [
+                  {
+                    "disabled": false,
+                    "id": "fractured.stat_1379411836",
+                    "value": {
+                      "min": 13
+                    }
+                  }
+                ],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            }
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "bdb5af8472203c4fce6f8b9e43ceb12e956dcbe13e28a9a5d64cb7ef21081bca",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 602 on the site, listed any time",
+      "source": "trade-api"
+    },
+    "R08 start boots": {
+      "chaos": 29.8,
+      "detail": {
+        "date": "2026-11-01",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 22,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "ilvl": {
+                    "min": 86
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.boots"
+                  },
+                  "rarity": {
+                    "option": "normal"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Sorcerer Boots"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "d467d2c75cacc86cc4851e454966d8c884b9e4f4094b1b3ca65fb1609efe2e6e",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 22 on the site, listed any time",
+      "source": "trade-api"
+    },
+    "R09 start boots": {
+      "chaos": 5.0,
+      "detail": {
+        "date": "2026-11-01",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 37,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "ilvl": {
+                    "min": 86
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.boots"
+                  },
+                  "rarity": {
+                    "option": "normal"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Two-Toned Boots"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "5df0f609e43627b47c12a3ab884def71f47c36c291610427e98328e8741e1f92",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 37 on the site, listed any time",
+      "source": "trade-api"
+    },
+    "R10 start boots": {
+      "chaos": 17.0,
+      "detail": {
+        "date": "2026-10-31",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 156,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "fractured_item": {
+                    "option": "true"
+                  },
+                  "ilvl": {
+                    "min": 84
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.boots"
+                  },
+                  "rarity": {
+                    "option": "rare"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [
+                  {
+                    "disabled": false,
+                    "id": "fractured.stat_2250533757",
+                    "value": {
+                      "min": 30
+                    }
+                  }
+                ],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Sorcerer Boots"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "87d77da5263e8e3d965f3a7024311a646d396b09779a66684bc0cc05b29afb1d",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 156 on the site, listed any time",
+      "source": "trade-api"
+    },
+    "R11 start helmet": {
+      "chaos": 20.0,
+      "detail": {
+        "date": "2026-10-31",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 42,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "fractured_item": {
+                    "option": "true"
+                  },
+                  "ilvl": {
+                    "min": 84
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.helmet"
+                  },
+                  "rarity": {
+                    "option": "rare"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [
+                  {
+                    "disabled": false,
+                    "id": "fractured.stat_2923486259",
+                    "value": {
+                      "min": 31
+                    }
+                  }
+                ],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Lion Pelt"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "619adea02934d4015fa357f00c4f0aa3c28c5a9032587c3a4cff95ee852c81f2",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 42 on the site, listed any time",
+      "source": "trade-api"
+    },
+    "R12 start amulet": {
+      "chaos": 1.0,
+      "detail": {
+        "date": "2026-10-31",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 909,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "fractured_item": {
+                    "option": "true"
+                  },
+                  "ilvl": {
+                    "min": 75
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "accessory.amulet"
+                  },
+                  "rarity": {
+                    "option": "rare"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [
+                  {
+                    "disabled": false,
+                    "id": "fractured.stat_1671376347"
+                  }
+                ],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            }
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "71430f3c6f6a1b616e4150414f1519e16fc760a7971b72e67bba77f6447653b2",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 909 on the site, listed any time",
+      "source": "trade-api"
+    },
+    "Regal Orb": {
+      "chaos": 0.06364,
+      "source": "poe.ninja"
+    },
+    "Sanctified Fossil": {
+      "chaos": 87.25,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Scorched Fossil": {
+      "chaos": 7.14,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Anger": {
+      "chaos": 0.9,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Anguish": {
+      "chaos": 0.5,
+      "detail": {
+        "age_days": 99,
+        "current_league": "Allflame",
+        "date": "2026-06-13",
+        "league": "Mirage"
+      },
+      "note": "median of 7 poe.ninja daily rows in the 7 days ending 2026-06-13 of Mirage: the same league age in an older league (league day 99)",
+      "source": "poe.ninja-previous-league"
+    },
+    "Screaming Essence of Contempt": {
+      "chaos": 1.24,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Dread": {
+      "chaos": 5.0,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Envy": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Fear": {
+      "chaos": 4.0,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Hatred": {
+      "chaos": 2.795,
+      "detail": {
+        "age_days": 99,
+        "current_league": "Allflame",
+        "date": "2026-06-13",
+        "league": "Mirage"
+      },
+      "note": "median of 6 poe.ninja daily rows in the 7 days ending 2026-06-13 of Mirage: the same league age in an older league (league day 99)",
+      "source": "poe.ninja-previous-league"
+    },
+    "Screaming Essence of Loathing": {
+      "chaos": 0.6489,
+      "detail": {
+        "age_days": 99,
+        "current_league": "Allflame",
+        "date": "2026-06-13",
+        "league": "Mirage"
+      },
+      "note": "median of 7 poe.ninja daily rows in the 7 days ending 2026-06-13 of Mirage: the same league age in an older league (league day 99)",
+      "source": "poe.ninja-previous-league"
+    },
+    "Screaming Essence of Misery": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Rage": {
+      "chaos": 3.0,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Spite": {
+      "chaos": 0.3399,
+      "detail": {
+        "age_days": 99,
+        "current_league": "Allflame",
+        "date": "2026-06-13",
+        "league": "Mirage"
+      },
+      "note": "median of 7 poe.ninja daily rows in the 7 days ending 2026-06-13 of Mirage: the same league age in an older league (league day 99)",
+      "source": "poe.ninja-previous-league"
+    },
+    "Screaming Essence of Suffering": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Torment": {
+      "chaos": 5.0,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Woe": {
+      "chaos": 0.3333,
+      "source": "poe.ninja"
+    },
+    "Screaming Essence of Zeal": {
+      "chaos": 3.2666666666666666,
+      "detail": {
+        "date": "2026-10-31",
+        "league": "Allflame"
+      },
+      "note": "poe.watch /exchange/ratios, 12-hour window",
+      "source": "poe.watch"
+    },
+    "Serrated Fossil": {
+      "chaos": 12.84,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Anger": {
+      "chaos": 0.5,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Anguish": {
+      "chaos": 1.5,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Contempt": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Envy": {
+      "chaos": 4.0,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Fear": {
+      "chaos": 0.3425,
+      "detail": {
+        "age_days": 99,
+        "current_league": "Allflame",
+        "date": "2026-06-13",
+        "league": "Mirage"
+      },
+      "note": "median of 7 poe.ninja daily rows in the 7 days ending 2026-06-13 of Mirage: the same league age in an older league (league day 99)",
+      "source": "poe.ninja-previous-league"
+    },
+    "Shrieking Essence of Greed": {
+      "chaos": 3.0,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Hatred": {
+      "chaos": 0.7094,
+      "detail": {
+        "age_days": 99,
+        "current_league": "Allflame",
+        "date": "2026-06-13",
+        "league": "Mirage"
+      },
+      "note": "median of 3 poe.ninja daily rows in the 7 days ending 2026-06-13 of Mirage: the same league age in an older league (league day 99)",
+      "source": "poe.ninja-previous-league"
+    },
+    "Shrieking Essence of Loathing": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Misery": {
+      "chaos": 0.5,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Rage": {
+      "chaos": 6.2,
+      "detail": {
+        "date": "2026-10-31",
+        "league": "Allflame"
+      },
+      "note": "poe.watch /exchange/ratios, 12-hour window",
+      "source": "poe.watch"
+    },
+    "Shrieking Essence of Scorn": {
+      "chaos": 3.0,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Sorrow": {
+      "chaos": 0.5,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Spite": {
+      "chaos": 2.13,
+      "detail": {
+        "age_days": 99,
+        "current_league": "Allflame",
+        "date": "2026-06-13",
+        "league": "Mirage"
+      },
+      "note": "median of 5 poe.ninja daily rows in the 7 days ending 2026-06-13 of Mirage: the same league age in an older league (league day 99)",
+      "source": "poe.ninja-previous-league"
+    },
+    "Shrieking Essence of Suffering": {
+      "chaos": 8.2,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Torment": {
+      "chaos": 10.0,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Woe": {
+      "chaos": 2.0,
+      "source": "poe.ninja"
+    },
+    "Shrieking Essence of Wrath": {
+      "chaos": 4.53125,
+      "detail": {
+        "date": "2026-10-31",
+        "league": "Allflame"
+      },
+      "note": "poe.watch /exchange/ratios, 12-hour window",
+      "source": "poe.watch"
+    },
+    "Shrieking Essence of Zeal": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Shuddering Fossil": {
+      "chaos": 21.28,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Vaal Orb": {
+      "chaos": 0.3489,
+      "source": "poe.ninja"
+    }
+  },
+  "unit": "chaos"
+}
