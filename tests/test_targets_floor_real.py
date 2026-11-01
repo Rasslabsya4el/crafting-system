@@ -84,6 +84,40 @@ def test_r05_is_not_lowered_because_its_file_says_its_tiers_are_the_top_of_its_l
     assert refusal_at(data, target, 74) is not None and refusal_at(data, target, 75) is None
 
 
+PINNED = [
+    "r03-avoid-shock-boots",
+    "r04-penetrating-quiver",
+    "r05-strength-ring",
+    "r06-strength-heavy-belt",
+    "r09-life-boots",
+    "r10-fractured-boots",
+    "r10-fractured-boots-70-life",
+    "r11-reservation-helmet",
+    "r12-lightning-amulet",
+    "r14-hunter-bow",
+]
+LOWERED = {"r08-energy-shield-boots": 84, "r13-life-resist-belt": 84, "j01-cobalt-life-attack-speed": 1}  # the ticket's R08 and R13; a jewel's mods all open at level 1
+
+
+@pytest.mark.parametrize("stem", PINNED)
+def test_a_target_whose_tiers_are_the_top_of_its_level_stays_at_its_level(data, stem):
+    target = target_of(data, stem)
+
+    options = item_level_options(data, target)
+
+    assert target.tiers_top_at_item_level
+    assert (options.floor.level, options.floor.kind) == (target.item_level, "pinned")
+    assert refusal_at(data, target, target.item_level - 1) is not None
+
+
+def test_the_pinned_and_the_lowered_examples_are_every_example_target(data):
+    assert sorted([*PINNED, *LOWERED]) == STEMS
+    for stem, floor in LOWERED.items():
+        found = floor_of(data, target_of(data, stem))
+        assert (found.level, found.kind) == (floor, "derived")
+        assert not target_of(data, stem).tiers_top_at_item_level
+
+
 def test_r04_is_not_lowered_because_the_essence_that_gives_its_bow_skill_mod_is_not_offered(data):
     target = target_of(data, "r04-penetrating-quiver")
 
