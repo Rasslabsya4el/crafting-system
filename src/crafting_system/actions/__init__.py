@@ -115,6 +115,7 @@ from .finite import Finite
 from .fossil import ApplyFossils, fossil_actions, usable_fossils
 from .fracture import FractureOutcomes, FracturingOrb
 from .harvest import HarvestReforge
+from .harvest_augment import HarvestAddRemove, HarvestDamageSwap, HarvestResistanceSwap
 from .harvest_influence import HarvestReforgeInfluence
 from .harvest_likelihood import HarvestReforgeLikelihood
 from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
@@ -150,9 +151,12 @@ __all__ = [
     "FossilOutcomes",
     "Fractured",
     "FracturingOrb",
+    "HarvestAddRemove",
+    "HarvestDamageSwap",
     "HarvestReforge",
     "HarvestReforgeInfluence",
     "HarvestReforgeLikelihood",
+    "HarvestResistanceSwap",
     "Kind",
     "Mixture",
     "NotApplicableError",
