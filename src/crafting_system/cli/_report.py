@@ -31,6 +31,7 @@ from ._offers import without_ranges
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
 from ._shares import WeightShare, start_shares
+from ._start_report import start_document, start_lines
 from ._verify import SIGMAS, Verification
 
 FORMAT = "crafting-system-policy/1"
@@ -258,6 +259,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
     lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
     lines.append(strands_line(plan))
+    if plan.starts is not None:
+        lines.extend(start_lines(plan.starts))
     if len(plan.dropped) <= MAX_DROPPED_LINES:
         for dropped in plan.dropped:
             lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")
@@ -447,6 +450,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "price_chaos": shift,
             "price_source": plan.start_price.source,
         },
+        **({"start_options": start_document(plan.starts)} if plan.starts is not None else {}),
         "dropped_actions": [{"action": drop.label, "missing_prices": list(drop.missing)} for drop in plan.dropped],
         "left_out_actions": [
             {"reason": left.reason, "count": len(left.labels), "actions": list(left.labels)} for left in plan.left_out

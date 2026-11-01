@@ -216,6 +216,11 @@ class Adds:
       target, ADR-0037). The outcome cannot meet an explicit requirement the item did not meet, so a planner offers the action for
       such a target only from a state in which every other requirement already passes (an exact pruning, ADR-0031, ADR-0036). A
       resonator that rerolls the explicit mods itself leaves it False and is never pruned this way. The default is False.
+    * `asked_only`: with `corrupts`, the corruption comes with a reroll that exists without it (a Bloodstained resonator rerolls like the
+      same fossils without the Bloodstained Fossil), so a planner offers the action only for a target that asks for a corrupted implicit
+      (`Goal.asks_corrupted`) and not for one that merely allows a corrupted item: there the same reroll without the corruption is offered
+      and the corrupting one would only add a price and an implicit nobody wants (ADR-0038). The default is False: a Vaal Orb or a Locus
+      is offered to a target that allows a corrupted item too, because its brick can end in the goal (ADR-0037).
     * `cuts`: the random draws of explicit mods that the action makes see the tier cut of an item with Memory Strands (and of a Foulborn
       orb): it builds its pool with a `Cut` (`cut.py`, ADR-0040, ADR-0041). It needs `draws`: a fixed result (an essence's guaranteed mod,
       a bench mod) is never cut. The default is False, which says the action's draws see the ordinary pool whatever the item's count: a
@@ -240,6 +245,7 @@ class Adds:
     enchantment: bool = False
     corrupts: bool = False
     keeps_mods: bool = False
+    asked_only: bool = False
     cuts: bool = False
 
     def __post_init__(self) -> None:
@@ -249,6 +255,8 @@ class Adds:
             raise ValueError("an action that corrupts adds a corrupted implicit, so it must declare `implicits` too")
         if self.keeps_mods and not self.corrupts:
             raise ValueError("`keeps_mods` says what a corrupting action leaves of the explicit mods: it needs `corrupts`")
+        if self.asked_only and not self.corrupts:
+            raise ValueError("`asked_only` says that a corrupting action is offered only to a target that asks: it needs `corrupts`")
 
     @property
     def item_state(self) -> bool:

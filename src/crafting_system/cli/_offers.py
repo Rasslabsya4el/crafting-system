@@ -201,7 +201,9 @@ def offers_for(
     * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
       implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
       other target it is absent from the offers and the report says nothing about it. Which states offer it, for a target that
-      asks, is `solver_actions`' business (`_prune.py`).
+      asks, is `solver_actions`' business (`_prune.py`). One that also declares `Adds.asked_only` (a fossil set with the Bloodstained
+      Fossil: its reroll exists without the corruption) is offered only when the goal asks for a corrupted implicit, not when it
+      merely allows a corrupted item (ADR-0038).
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
     kind_names, label_names = _split_names(data, start_item, kinds_named)
@@ -213,7 +215,7 @@ def offers_for(
     left_out_rolls: list[str] = []
     for action in listed:
         adds = action.adds(data, start_item)
-        if adds.corrupts and not goal.takes_corrupted:
+        if adds.corrupts and (not goal.takes_corrupted or (adds.asked_only and not goal.asks_corrupted)):
             continue  # an item never arrives corrupted unasked, and the report does not mention what the target could never use
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))

@@ -956,6 +956,7 @@ class Abstraction:
                 raise
             self._check_type_blind(state, outcomes)
             self._check_fracture_without_partners(state, outcomes)
+            self._check_same_item_space(outcomes)
             prepared = _Prepared(outcomes, origins, item=item)
             self._prepared_by[key] = prepared
         return prepared
@@ -994,6 +995,20 @@ class Abstraction:
                 "the item holds a fractured mod known only as a family type, and whether the game refuses this action "
                 "depends on which family of the type was fractured"
             )
+
+    def _check_same_item_space(self, outcomes: ActionOutcomes) -> None:
+        """Refuse a result that is an item of another base or another item level than this abstraction's (a recombinator).
+
+        A state stands for the items of one base at one item level, so the state of such a result does not exist. The enchantment
+        is not checked here: it is a constant of the problem and not part of the state (ADR-0050). Raises `OutOfScopeError`.
+        """
+        for _, part in outcomes.components:
+            made = part.retained
+            if (made.base_id, made.item_level) != (self.base_id, self.item_level):
+                raise OutOfScopeError(
+                    f"the result is an item on {made.base_id} at item level {made.item_level}, and this abstraction stands for items on "
+                    f"{self.base_id} at item level {self.item_level}: the state of another base or item level is not modelled"
+                )
 
     def _check_fracture_without_partners(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
         """Refuse a fracture, or a fractured mod known only as a family type, on a pool with a family that has mods on both sides.
@@ -1069,12 +1084,17 @@ class Abstraction:
         """The split of every part of the outcomes (cached on `prepared`)."""
         if prepared.splits is None:
             prepared.splits = tuple(
-                self._split(part.retained, prepared.origins) for _, part in prepared.outcomes.components
+                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes) else frozenset())
+                for _, part in prepared.outcomes.components
             )
         return prepared.splits
 
-    def _split(self, retained: Item, origins: Origins) -> _Split:
+    def _split(self, retained: Item, origins: Origins, rerolled: frozenset[str] = frozenset()) -> _Split:
         """Read a part's retained item back into state terms.
+
+        `rerolled` are the ids of kept mods whose values the action rolls afresh (an Awakener's Orb keeps the tier of an
+        influenced mod and rerolls its value): the state keeps the contribution of the old roll, so under a goal with a roll limit
+        the result has no law and raises `OutOfScopeError`.
 
         A mod the item given to the action held is the fractured mod or slot it came from; a fractured
         mod whose unfractured form was a slot is that slot turned into a fractured mod (a Fracturing
@@ -1097,6 +1117,11 @@ class Abstraction:
                 fractured.append(origin)
                 contributions.append(origin.contribution)
             elif isinstance(origin, Slot):
+                if entry.mod_id in rerolled and self._has_laws:  # the slot does not say which mod of its family it stands for
+                    raise OutOfScopeError(
+                        f"the goal has a roll limit and the action keeps mod {entry.mod_id} but rolls its value afresh: "
+                        "the kept slot would keep the contribution of its old roll"
+                    )
                 kept.append(origin)
                 contributions.append(origin.contribution)
             else:

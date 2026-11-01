@@ -114,6 +114,22 @@ def item_tags(data: GameData, item: Item) -> tuple[str, ...]:
     return (*base.tags, *(f"{class_key}_{keys[influence.value]}" for influence in sorted(item.influences)))
 
 
+def influence_spawn_test(data: GameData, item: Item):
+    """The test of whether a mod is an influence mod of `item`: its first spawn weight that the item has is an influence tag.
+
+    The mod need not be able to spawn: a weight of 0 on an influence tag still makes it an influence mod (the Assassin's
+    Mark mods of a Shaper ring, weight 0 in 3.29). The influence reforge and the Awakener's Orb both read it this way.
+    """
+    tags = frozenset(item_tags(data, item))
+    influence_tags = tags - frozenset(data.base_items[item.base_id].tags)
+
+    def is_influence_mod(mod: Mod) -> bool:
+        deciding = next((entry.tag for entry in mod.spawn_weights if entry.tag in tags), None)
+        return deciding in influence_tags
+
+    return is_influence_mod
+
+
 def drawable_mod_ids(data: GameData, item: Item) -> frozenset[str]:
     """The ids of the mods a draw could give an item of `item`'s base, level and influences once it holds none.
 
