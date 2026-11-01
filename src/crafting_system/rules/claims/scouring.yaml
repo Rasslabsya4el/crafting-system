@@ -1,6 +1,6 @@
 # Mechanic family: scouring (the Orb of Scouring on a magic or rare item). Research ticket #7 (claims
-# CUR-xx) and the Craft of Exile rows CHK-025, CHK-026 of the claim checklist. Metamods are not modelled
-# yet (issue #68).
+# CUR-xx) and the Craft of Exile rows CHK-025, CHK-026 of the claim checklist. The metamods are in
+# metamods.yaml (issue #68).
 rules:
   - id: scouring.accepts_magic_or_rare
     statement: An Orb of Scouring can be used on a magic or rare item; a normal item takes none.
@@ -11,7 +11,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: scouring.removes_all_unprotected_mods
-    statement: An Orb of Scouring removes every explicit mod of the item that is not protected, an ordinary crafted mod included (the crafted metamod is removed with the other side, so it is no exception); the implicit mods, quality, sockets and links stay. Only a fractured mod is protected in the modelled states, since a metamod is out of scope.
+    statement: An Orb of Scouring removes every explicit mod of the item that is not protected, an ordinary crafted mod included (the crafted metamod is removed with the other side, so it is no exception); the implicit mods, quality, sockets and links stay. A fractured mod and every mod on a side that `Prefixes` or `Suffixes Cannot Be Changed` locks are protected (metamods.scouring_keeps_locked_side).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Orb_of_Scouring
     quote: "Implicit modifiers, quality, sockets, and links are not removed, as well as affixes protected by meta-crafting mods."

@@ -13,7 +13,7 @@ expanded) but pays a kernel only where one is needed:
   does not call their kernel at all. It decides their legality itself, from the sets of families and the
   free slots (the rules of the bench: not on a corrupted or normal item, not on an empty one, not when a
   mod of the item shares a family with the craft, not on a full side, not when the item already holds
-  the one crafted mod it may, nor the multimod, whose limit is not modelled; Remove Crafted Mods needs a crafted mod and a mod left over).
+  the crafted mods it may: one, or three with the multimod; Remove Crafted Mods needs a crafted mod and a mod left over).
 
 That second logic is written apart from `BenchCraft.outcomes` on purpose: `tests/test_abstraction_estimate.py`
 compares its count with the real expansion on random crafts and starts. An action of any other shape
@@ -41,6 +41,7 @@ from ._kinds import ALIKE, held_families
 from ._state import CompressedState, best_of
 
 ONE_CRAFTED_MOD = get_rule("bench_craft.one_crafted_mod_by_default")
+MULTIMOD_LIMIT = get_rule("metamods.multimod_raises_crafted_limit")
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 DEFAULT_LIMIT = 400_000
 
@@ -219,8 +220,8 @@ class _Pilot:
         if flags.corrupted or flags.rarity is Rarity.NORMAL or not (state.fractured or state.slots):
             return
         held, used, crafted = self._holds(state)
-        if self.crafts and crafted < self.limit_crafted and Metamod.MULTIPLE_CRAFTED_MODS.value not in self._metamods(state):
-            # the bench refuses a craft on an item that holds the multimod: its limit of three is not modelled
+        limit = MULTIMOD_LIMIT.value if Metamod.MULTIPLE_CRAFTED_MODS.value in self._metamods(state) else self.limit_crafted
+        if self.crafts and crafted < limit:  # the multimod lifts the limit of crafted mods from one to three (ticket #68)
             room = capacity(self.data, self.abstraction.base_id, flags.rarity)
             for craft in self.crafts:
                 if used[craft.side] < room.of(craft.side) and not (craft.families & held):

@@ -14,19 +14,19 @@ from fractions import Fraction
 from functools import cached_property
 
 from crafting_system.data import BenchOption, GameData, Mod, conflicts
-from crafting_system.items import ExplicitMod, Item, Metamod, Rarity, Side
+from crafting_system.items import ExplicitMod, Item, Rarity, Side
 from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Fixed, Reads
 from .draw import Outcome
 from .errors import NotApplicableError, OutOfScopeError
+from .metamods import crafted_limit
 
 ADDS_ONE_FIXED_MOD = get_rule("bench_craft.option_adds_one_fixed_mod")
 OPTION_ITEM_CLASSES = get_rule("bench_craft.option_item_classes")
 OPTION_COST = get_rule("bench_craft.option_cost")
 FOLLOW_AFFIX_RULES = get_rule("bench_craft.crafts_follow_affix_rules")
-ONE_CRAFTED_MOD = get_rule("bench_craft.one_crafted_mod_by_default")
 METAMODS_ARE_CRAFTED_MODS = get_rule("bench_craft.metamods_are_crafted_mods")
 REFUSED_ON_CORRUPTED = get_rule("bench_craft.refused_on_corrupted")
 EVERY_CRAFT_UNLOCKED = get_rule("bench_craft.every_craft_unlocked")
@@ -166,7 +166,7 @@ class BenchCraft(Action):
         mod = data.mods.get(self.mod_id)
         if mod is None:
             raise ValueError(f"the craft {self.mod_id} names a mod that is not in the game data")
-        return Reads(junk=True, families=frozenset(mod.families), block_invariant=True)
+        return Reads(junk=True, families=frozenset(mod.families), block_invariant=True, metamods=False)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset({self.mod_id}), crafted=True, draws=False)
@@ -188,10 +188,10 @@ class BenchCraft(Action):
         A corrupted item and an item class the option is not offered for are checked first, then a
         normal item or an item with no mod, then the rest. Raises `NotApplicableError` for a
         corrupted item, a class not offered, a family already on the item, a full side, and an item
-        that already holds a crafted mod; `OutOfScopeError` for a normal item or an item with no mod
-        (no admitted rule says what a craft does there) and for an item that holds the multimod
-        `Can have up to 3 Crafted Modifiers`, whose limit is not modelled yet. An item that fails
-        `Item.validate` raises its `ItemError`.
+        that already holds as many crafted mods as it may (one, or three with the multimod `Can have
+        up to 3 Crafted Modifiers`, which counts as one of them; a metamod is a crafted mod);
+        `OutOfScopeError` for a normal item or an item with no mod (no admitted rule says what a craft
+        does there). An item that fails `Item.validate` raises its `ItemError`.
         """
         option = self.option(data)
         mod = data.mods.get(self.mod_id)
@@ -214,22 +214,17 @@ class BenchCraft(Action):
         side = Side(mod.generation_type)
         if item.free_slots(data, side) <= 0:
             raise NotApplicableError(f"the item has no free {side.value} slot for the craft {self.mod_id}")
-        if Metamod.MULTIPLE_CRAFTED_MODS in item.metamods(data):
-            raise OutOfScopeError(
-                "the item holds the multimod 'Can have up to 3 Crafted Modifiers'; "
-                "the limit of three crafted mods is not modelled yet"
-            )
-        if len(item.crafted_mods) >= ONE_CRAFTED_MOD.value:
+        limit, held = crafted_limit(data, item), len(item.crafted_mods)
+        if held >= limit:
             raise NotApplicableError(
-                f"the item holds {len(item.crafted_mods)} crafted mod, which is the limit "
-                f"({ONE_CRAFTED_MOD.value}); remove it first"
+                f"the item holds {held} crafted mod{'' if held == 1 else 's'}, which is the limit ({limit}); remove it first"
             )
         return BenchOutcomes(data, item, mod)
 
 
 @dataclass(frozen=True)
 class RemoveCraftedMods(Action):
-    """The bench's Remove Crafted Mods: removes every crafted mod, metamods included."""
+    """The bench's Remove Crafted Mods: removes every crafted mod, metamods included, a fractured crafted mod excepted."""
 
     def label(self, data: GameData | None = None) -> str:
         return "Remove Crafted Mods"
@@ -241,7 +236,7 @@ class RemoveCraftedMods(Action):
 
     def reads(self, data: GameData) -> Reads:
         """It reads how many mods are left, not which: the count of the junk, no family."""
-        return Reads(junk=True, families=frozenset(), needs_crafted=True, block_invariant=True)
+        return Reads(junk=True, families=frozenset(), needs_crafted=True, block_invariant=True, metamods=False)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds.removal(keeps_crafted=False)
@@ -260,17 +255,18 @@ class RemoveCraftedMods(Action):
     def outcomes(self, data: GameData, item: Item) -> BenchOutcomes:
         """The outcome of removing every crafted mod of `item`.
 
+        A locked side protects nothing here, and a fractured crafted mod stays like any fractured mod.
         Raises `NotApplicableError` for a corrupted item, an item class the option is not offered
-        for, or an item with no crafted mod, and `OutOfScopeError` for a magic or rare item that would be
+        for, or an item with no crafted mod that is not fractured, and `OutOfScopeError` for a magic or rare item that would be
         left with no mod (no admitted rule says what it becomes). An item that fails `Item.validate`
         raises its `ItemError`.
         """
         item.validate(data)
         _refuse_if_corrupted(item, "Remove Crafted Mods")
         _refuse_if_class_not_offered(data, item, self.option(data), "Remove Crafted Mods")
-        if not item.crafted_mods:
-            raise NotApplicableError("the item holds no crafted mod, so there is nothing to remove")
-        kept = tuple(entry for entry in item.mods if not entry.crafted)
+        if not any(entry.crafted and not entry.fractured for entry in item.mods):
+            raise NotApplicableError("the item holds no crafted mod that is not fractured, so there is nothing to remove")
+        kept = tuple(entry for entry in item.mods if not entry.crafted or entry.fractured)
         if not kept:
             raise OutOfScopeError(
                 f"the item is {item.rarity} and holds only crafted mods; "

@@ -1,6 +1,6 @@
 # Mechanic family: annulment_orb (the Orb of Annulment on a magic or rare item). Research ticket #7 (claims
-# CUR-xx) and the decision D5 of issue #28. The crafted metamods are not modelled yet (issue #68): D5 makes
-# the other side's metamod a candidate there.
+# CUR-xx) and the decision D5 of issue #28. What the metamods do to an Annulment is in metamods.yaml (issue #68): D5 makes
+# the other side's metamod a candidate.
 rules:
   - id: annulment_orb.accepts_magic_or_rare
     statement: An Orb of Annulment can be used on a magic or rare item; a normal item takes none.

@@ -57,11 +57,13 @@ Prototype in `.claude/scratch/83-approx/` of the main checkout (not committed; `
 
 | Level | Blocks | Build | Solve (both models) | Certified lower | Certified upper | Certified gap | Exact cost of the lifted policy |
 |---|---|---|---|---|---|---|---|
-| exact | 13,172 | 906 s | not run | (2.159763 measured) | | | |
-| M1: irrelevant families in one group | 365 | 38 s | 0.4 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
-| M2: irrelevant, groups of 8 | 1,582 | 135 s | not run | | | | |
-| M3: irrelevant, groups of 4 | 4,295 | 426 s | 30 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
+| exact | 13,172 (14,350 since #68) | 906 s | not run | (2.159763 measured) | | | |
+| M1: irrelevant families in one group | 365 (738 since #68) | 38 s | 0.4 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
+| M2: irrelevant, groups of 8 | 1,582 (2,129 since #68) | 135 s | not run | | | | |
+| M3: irrelevant, groups of 4 | 4,295 (5,081 since #68) | 426 s | 30 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
 | B2: all families in one group | 364 | not built | 0.1 s | 2.159763 | 2.159763 | 0.0000% | 2.159763 |
+
+Ticket #68 lifted the multimod's dead end (a state holding "Can have up to 3 Crafted Modifiers" used to refuse every action), so the crafts after it are reachable and the exact state count and the block counts of the rows above grew as marked; the exact graph, the times and the costs were not measured again.
 
 "Build" is one representative per block through the real kernels, valid because of block-invariance (member differences 0); it ran while another job shared the machine, so it is an upper bound. The 0.0000% means below 1e-4: it includes the solver's `e` (3e-11). All gaps are zero here: the 109 crafts that give neither Life nor Strength never enter the best policy (32 crafts and 141 give the same optimum), and the one craft that matters is blocked only by a family that the block keeps apart. So R05 shows what pooling saves (36 times fewer blocks, the minute), not what it can cost.
 
@@ -131,8 +133,17 @@ The result carries the words "approximate (certified within X% of the exact mean
 
 - `Abstraction.estimate(starts, actions)` is the pilot count. It walks the graph the way `solve` does (a goal is not expanded) but runs the real kernel once per (reroll, key), the key being the flags, the fractured mods and, for a reroll that erases crafted mods, only which metamods are held (a crafted metamod makes a reroll refuse), and decides bench crafts and Remove Crafted Mods itself by sets of families and free slots. A property test compares its states and transitions with the real expansion on random craft subsets and starts. An action of another shape (an addition, say) raises `EstimateRefused` and the query is built exactly, without a forecast. `Estimate.coarsened(coarsening)` forecasts a coarse level from the same states (the blocks are the images of the reached states; a forecast, not a bound).
 - `cli._decide.choose(estimate, r_kernel, r_solve, budget, levels=, refusal=)` reads no clock. Predicted time is kernel outcomes times `r_kernel` plus solved edges times `r_solve` (for a coarse level two models are solved). Exact when it fits `--budget` (60 s by default); otherwise the levels of `LADDER` whose own forecast fits; with a `refusal` (an offered action that does not declare `Reads.block_invariant`) or no level that fits, the query is exact if it is at most 2,000,000 transitions and a `PlanError` ("no approximate level available ...") above that. `decide` runs the pilot and measures the rates unless they are injected: `r_kernel` is a repeated cached kernel call per outcome in the pilot, `r_solve` a short `solve` on a closed prefix of the pilot's own graph (not measured when the query fits even at 5e-5 s per edge, seven times R05's rate).
-- `--exact` solves exactly however long it takes. An approximate answer has no `--verify`, `--route` or route page yet.
+- `--exact` solves exactly however long it takes. An approximate answer has no `--route` or route page yet; its `--verify` is described under ticket #128 below.
 - The marking lives in `cli/_marking.py` (text and JSON `answer` object: `approximate`, `lower`, `upper`, `gap`, `level`, `blocks`, `tolerance`, `within_tolerance`, `message`). The bounds printed are totals with the start item's price; the gap is that of the cost still to pay, the larger one.
+
+### As built (ticket #128)
+
+- The lift lives in `cli/_lift.py`: `lift(plan, steps)` is a `simulator.Policy` that takes a concrete item, compresses it, looks the exact state up in the policy table first (a level may keep some states exact) and else maps it to its block with `plan.approximation.coarsening.coarsen` and looks the block up; a key with no step stops the run. It is sound because the actions on the ladder are block-invariant: the pessimistic policy's action for a block is legal on every member of it. It reads the coarsening of the approximation and nothing about the level, so a level added later needs no change. An exact plan goes through the same function with the plain `compress` lookup.
+- `--verify` of an approximate answer runs that policy with a fixed seed (1 by default) through the same `Memoized` actions. The verdict: it agrees when no run was unfinished or stopped and the simulated mean, within 5 standard errors on each side, meets `[lower, upper]` (totals, the start item's price included). The width is the 5 standard errors of the exact check, not the 95% interval that is printed: with a gap near 0 a 95% interval would reject a correct policy in one seed of twenty. The reason says whether the simulated mean lies below or above the certified interval. The detectable error is read against the middle of the bounds.
+- `simulator.SimulationReport.cvar(level)` is the new estimator (the mean of the worst `1 - level` share of the run costs, by the Rockafellar-Uryasev form `q + E[(X - q)+] / (1 - level)`, its interval a normal approximation of the influence function). `--verify` uses level 0.9, the default of `risk.evaluate`.
+- The text and the JSON of the verification are in `cli/_marking.py`. The text heads the block "Verification by simulation, not certified", and every line that shows a p90 or a CVaR number says "simulated" and "not certified". The JSON `verification` block has `label: "simulated, not certified"`, `simulated_mean_cost`, `simulated_p90`, `simulated_cvar` (with `level`), `certified_interval` and the verdict, and no `computed_p90`. A simulated interval is still never put in `risk.Estimate`.
+- What the check can and cannot see: the lifted policy's true mean is its value in the pessimistic model, i.e. at the upper bound, so the simulated mean sits near `upper`. The check therefore catches an `upper` that is too low and a `lower` above the policy's cost, not a `lower` that is merely too high or an `upper` that is merely loose; the certificate (ADR-0010 and the proof above) covers those, the simulation only guards the lift and the kernels.
+- Timings of a `--verify` run go in the PR and are never asserted (ADR-0014).
 
 ## Risk numbers of an approximate answer
 

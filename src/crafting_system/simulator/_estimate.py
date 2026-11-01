@@ -1,4 +1,4 @@
-"""The statistics of a sample of runs: mean, quantile and success rate, each with a confidence interval.
+"""The statistics of a sample of runs: mean, quantile, CVaR and success rate, each with a confidence interval.
 
 Everything is a normal approximation (Wilson for a proportion), good for thousands of runs and
 not for a handful. Plain `math` and `statistics`; no third-party library.
@@ -94,3 +94,26 @@ def quantile(values: Sequence[float], level: float, confidence: float) -> Sample
     upper = min(n, max(1, math.ceil(float(target) + spread)))
     low, high = ordered[lower - 1], ordered[upper - 1]
     return SampledEstimate(ordered[rank - 1], (high - low) / (2.0 * z), low, high)
+
+
+def cvar(values: Sequence[float], level: float, confidence: float) -> SampledEstimate:
+    """The conditional value at risk: the mean of the worst `1 - level` share of the sample (the upper tail).
+
+    That is the mean cost of the worst (1 - level) share of runs, the run at the quantile counted
+    for the part of it that is left. With q the empirical quantile `quantile` returns, it is q plus
+    the mean excess of the values over q, divided by the tail share (Rockafellar-Uryasev). The
+    interval is a normal approximation from the influence function of that form, which ignores the
+    quantile's own noise; it is first-order exact for this form. Good for thousands of runs, not a
+    handful. Needs at least two values, like `mean`.
+    """
+    n = len(values)
+    ordered = sorted(values)
+    exact = Fraction(repr(level))  # the level as written, so the tail share has no float noise
+    rank = min(n, max(1, math.ceil(n * exact)))
+    q = ordered[rank - 1]
+    tail = float(1 - exact)
+    value = q + math.fsum(max(x - q, 0.0) for x in values) / (n * tail)
+    influence = [q + max(x - q, 0.0) / tail for x in values]
+    error = math.sqrt(math.fsum((z - value) ** 2 for z in influence) / (n - 1)) / math.sqrt(n)
+    z = critical_value(confidence)
+    return SampledEstimate(value, error, max(q, value - z * error), value + z * error)

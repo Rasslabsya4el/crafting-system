@@ -7,7 +7,7 @@ it. Weights are exact fractions and never rounded.
 
 The item's tags for the spawn weights are the tags of its base plus one tag per influence
 (`item_tags`), so the mods of an influence join the pool. Items carry no Memory Strands (`NO_MEMORY_STRANDS`), so a draw is never tier-gated.
-Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); only the explicit
+The Attack and Caster metamods on the item filter the pool by tag (`metamods.py`). Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); only the explicit
 mods on the item do.
 """
 
@@ -22,6 +22,7 @@ from crafting_system.items import Item, Side, UnknownBaseError, effective_weight
 from crafting_system.rules import get_rule
 
 from .errors import OutOfScopeError
+from .metamods import allowed_by_tags, blocked_tags
 
 DOMAIN_MATCH = get_rule("affix_pool.domain_match")
 SIDE_IS_GENERATION_TYPE = get_rule("affix_pool.side_is_generation_type")
@@ -108,7 +109,12 @@ def tiers_of(data: GameData, item: Item) -> Mapping[str, int]:
 
 
 def pool_candidates(
-    data: GameData, item: Item, max_level: int | None = None, extra: Iterable[Mod] = ()
+    data: GameData,
+    item: Item,
+    max_level: int | None = None,
+    extra: Iterable[Mod] = (),
+    *,
+    tag_filter: bool = True,
 ) -> tuple[Candidate, ...]:
     """Every mod that could be drawn next on `item`, with its weight on the base, in data order.
 
@@ -117,6 +123,9 @@ def pool_candidates(
     the two. `extra` are mods of other domains that join the pool (the Delve mods that a Faceted
     Fossil adds); they pass every other test of an ordinary candidate.
 
+    The Attack and Caster metamods on `item` keep the mods with that tag out of the pool
+    (`blocked_tags`); `tag_filter=False` leaves them in (a Harvest reforge filters its first mod only).
+
     Raises `OutOfScopeError` for a candidate that does not have exactly one family (none is
     drawable in domain `item` in 3.29.3.3) and for a family whose candidates sit on both sides.
     """
@@ -124,6 +133,7 @@ def pool_candidates(
     if base is None:
         raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
     tags = item_tags(data, item)
+    blocked = blocked_tags(data, item) if tag_filter else frozenset()
     level_limit = item.item_level if max_level is None else min(item.item_level, max_level)
     sides: dict[str, Side] = {}
     candidates: list[Candidate] = []
@@ -133,7 +143,7 @@ def pool_candidates(
         if not in_domain or mod.generation_type not in Side or mod.required_level > level_limit:
             continue
         weight = effective_weight(mod, tags)
-        if weight <= 0 or item.blocks(data, mod):
+        if weight <= 0 or item.blocks(data, mod) or not allowed_by_tags(mod, blocked):
             continue
         if len(mod.families) != 1:
             raise OutOfScopeError(
@@ -192,9 +202,11 @@ def build_pool(
     max_level: int | None = None,
     factor: ModFactor | None = None,
     extra: Iterable[Mod] = (),
+    *,
+    tag_filter: bool = True,
 ) -> tuple[PoolFamily, ...]:
     """The candidates for one more draw on `item`, grouped by family, in data order.
 
-    See `pool_candidates` for `max_level` and `extra`, `group_pool` for `factor`.
+    See `pool_candidates` for `max_level`, `extra` and `tag_filter`, `group_pool` for `factor`.
     """
-    return group_pool(pool_candidates(data, item, max_level, extra), factor)
+    return group_pool(pool_candidates(data, item, max_level, extra, tag_filter=tag_filter), factor)
