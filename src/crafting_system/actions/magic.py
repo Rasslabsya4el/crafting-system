@@ -13,6 +13,7 @@ from .catalog import kind
 from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
+from .metamods import kept_by_reroll
 from .outcomes import Outcomes
 
 TRANSMUTATION_ACCEPTS_NORMAL_ONLY = get_rule("magic_orbs.transmutation_accepts_normal_only")
@@ -78,7 +79,7 @@ class TransmutationOrb(Action):
 
 @dataclass(frozen=True)
 class AlterationOrb(Action):
-    """One Orb of Alteration: rerolls a magic item to 1 or 2 mods, 1/2 each; the fractured mods stay and count inside."""
+    """One Orb of Alteration: rerolls a magic item to 1 or 2 mods, 1/2 each; the fractured mods and a locked side stay and count inside."""
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Alteration"
@@ -96,11 +97,13 @@ class AlterationOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic or is corrupted, and
-        `OutOfScopeError` for a jewel, an influenced item of a class with no influence class key, or one with a crafted metamod.
-        Ordinary crafted mods are removed by the reroll like every mod that is not fractured.
+        `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key.
+        Ordinary crafted mods are removed by the reroll like every mod that is not fractured, and the
+        mods of a side that `Prefixes` / `Suffixes Cannot Be Changed` locks stay and count inside the total.
         """
         _refuse(data, item, Rarity.MAGIC, "an Orb of Alteration")
-        retained = item.changed(data, mods=item.fractured_mods)
+        retained = item.changed(data, mods=kept_by_reroll(data, item))
+        # a metamod the reroll keeps (it sits on a locked side) filters the draw, as for a Chaos Orb
         return draw_onto(data, retained, magic_totals())
 
 
@@ -124,7 +127,8 @@ class AugmentationOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic, is corrupted, is full, or for which
-        no mod is legal, and `OutOfScopeError` for a jewel, an influenced item of a class with no influence class key, or one with a crafted metamod.
+        no mod is legal, and `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key.
+        The Attack and Caster metamods on the item keep the mods with their tag out of the pool.
         """
         _refuse(data, item, Rarity.MAGIC, "an Orb of Augmentation")
         return add_one_mod(data, item, "an Orb of Augmentation")
@@ -150,8 +154,8 @@ class RegalOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic, is corrupted, or for which no mod is
-        legal on the rare item, and `OutOfScopeError` for a jewel, an influenced item of a class with no influence class key, or one with a
-        crafted metamod.
+        legal on the rare item, and `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key.
+        The Attack and Caster metamods on the item keep the mods with their tag out of the pool.
         """
         _refuse(data, item, Rarity.MAGIC, "a Regal Orb")
         return add_one_mod(data, item, "a Regal Orb", rarity=Rarity.RARE)

@@ -12,7 +12,8 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
   the item class takes, Remove Crafted Mods, the bench crafts whose mod counts toward a requirement (the
   others are left out and listed, see `offers_for`), and `restart`, buying the start item again.
 * `build_report(plan, data)`, `render_text(report)`, `policy_document(report)`: the outputs.
-* `verify(data, plan)`: the simulator against the computed mean (a normal-approximate interval).
+* `verify(data, plan)`: the simulator against the computed mean (a normal-approximate interval); for an approximate
+  plan, the lifted policy (`_lift`) against the certified interval, with a simulated p90 and CVaR.
 * `weight_share`, `start_shares`: the guide's single-draw weight shares from the pool builder.
 * `parse_route`, `load_route`, `evaluate_route`: a given route (rules in YAML) read and evaluated as a fixed
   policy with `risk.evaluate`; `--route ROUTE.yaml` prints it next to the policy, first divergence and gaps included.

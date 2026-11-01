@@ -62,8 +62,9 @@ class HarvestReforgeInfluence(Action):
         """The outcomes of using the reforge on `item`.
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, has no influence, or whose pool
-        holds no influence mod that it can still take, and `OutOfScopeError` for a jewel, an influenced item whose
-        class has no influence class key, or one with a crafted metamod. Ordinary crafted mods are removed by the reroll.
+        holds no influence mod that it can still take (an Attack/Caster metamod that stays keeps the influence mods with
+        its tag out of the guaranteed draw), and `OutOfScopeError` for a jewel or an influenced item whose
+        class has no influence class key. Ordinary crafted mods are removed by the reroll; a locked side stays.
         """
         check_reforgeable(data, item)
         if not item.influences:
