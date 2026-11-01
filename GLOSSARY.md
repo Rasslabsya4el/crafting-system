@@ -273,7 +273,7 @@ The two inputs of an Awakener's Orb: the receiver is the item in hand and surviv
 Two kept influenced mods of the Awakener's Orb that share a mod group, of which one survives. The plan keeps the receiver's; the donor's is the other reading of the rule axis, unconfirmed in the game (ADR-0032).
 
 **Imprint**:
-A snapshot of one magic item or rare Talisman, made by a beast (Craicic Croaker, Fenumal Plagued Arachnid) and used up when it restores the item. Several can be kept for one item (ADR-0034). In the planner it is a held snapshot in the item's state, not an input (ADR-0060).
+A snapshot of one magic item or rare Talisman, made by a beast (Craicic Croaker, Fenumal Plagued Arachnid) and used up when it restores the item. Several can be kept for one item (ADR-0034); the planner keeps one by default (`max_imprints`). In the planner it is a held snapshot in the item's state, not an input (ADR-0060).
 _Avoid_: Eternal Orb (it is not offered), save point
 
 **Snapshot** and **restore**:
