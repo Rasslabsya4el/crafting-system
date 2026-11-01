@@ -82,6 +82,12 @@ grants an aspect skill at level 20 or 30, and is offered only when a target name
 level of the beast and not of the item, then removes one mod of the other side uniformly). A beast craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
 None is a planner kind yet.
 
+The recombinator (`recombinator.py`, ticket #215, ADR-0033), unpredictable mode: `Recombinator(donor)` takes the item in hand and one donor
+`Need` (a magic or rare item of the same class), chooses a base 1/2 each, pools the prefixes and the suffixes of both, takes the number kept
+on each side from the count table of the pooled count (`count_table="guide"` or `"wiki"`) and draws the kept mods one at a time with
+chance proportional to `weight ** alpha` (the rule axis `recombinator.alpha`: 0.4 to 1.6, the plan at 1), closing the mod group of each
+pick. Its result is a `Finite` list of items. Not a planner kind until donors are priced (#211, #212) and its state exists (#217).
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -179,6 +185,7 @@ from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags, craf
 from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool, drawable_mod_ids, partners, tiers_of
+from .recombinator import Recombinator
 from .scour import ScouringOrb, ScourOutcomes
 
 def default_actions() -> tuple[Action, ...]:
@@ -244,6 +251,7 @@ __all__ = [
     "Reading",
     "Reads",
     "RegalOrb",
+    "Recombinator",
     "RemoveCraftedMods",
     "ScouringOrb",
     "ScourOutcomes",
