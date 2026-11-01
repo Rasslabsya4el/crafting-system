@@ -11,3 +11,7 @@ The planner promises exact odds and costs (ADR-0001, ADR-0009), so each link of 
 For an ordinary query simulation is off by default and `--verify` turns it on; for benchmarks it is always on.
 
 Origin: [Design grill round 3: modules, verification, process](https://github.com/Rasslabsya4el/crafting-system/issues/4) Q19.
+
+## Amendment: the Peek (B8, [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
+
+Layer 3 gains an oracle for the `Peek` kind: the explicit product expansion, with states `(s, previews)`, of tiny models, solved by the existing solver, brute force and HiGHS, and the hand test of ADR-0054 (23.97, 66, break-even 42.03). Layer 2 samples each option of a Lock independently on a copy of the concrete item. Layer 4 adds R29 with the Lock. The details are in ADR-0057.

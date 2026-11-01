@@ -43,3 +43,7 @@ The metamods (ticket #68) cost the compressed state no declaration of their own:
 - A `typing.Protocol` alone: a new method could forget `reads` and silently be wrong. The base class gives the safe defaults.
 - Kernel dispatch on the kind of outcome (a bench result, a resonator result): every new shape would need a kernel edit. The kernel reads the mixture of parts (`Fixed` or a pool draw) that every outcome exposes.
 - The planner choosing actions by class or by a list in `cli`: the toy action would need an edit there.
+
+## Amendment: foresight in the contract (B8, [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
+
+The contract gains three optional declarations, each with a safe default: `previewable` (default `no`) with `currency_item`, which say whether and as what an action is an option of a Lock (ADR-0055), and `burn` (default False), which says that the action changes no mod and may give a Lock up (ADR-0056). A new kind, `Foresight`, sits beside `Action` for the Lock itself: a label, a legality test (corrupted, mirrored and unmodifiable items refused) and its resources, and no outcomes of its own, because the Peek of ADR-0054 builds them from the options. Nothing outside `actions` names a concrete action.

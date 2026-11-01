@@ -184,3 +184,7 @@ The recombinator interval comes from a family of selection rules, one solve per 
 - The memory of the solver (settled in [#126](https://github.com/Rasslabsya4el/crafting-system/issues/126)): `solve` held an `Action` per action and an `Outcome` per transition (about 250 bytes per transition); it now keeps flat arrays (about 30 bytes per transition stored, about 55 at the peak of a solve) and rebuilds only the policy's actions, and `solve_bounds` runs it twice. The table of time and peak memory is in that pull request.
 
 Origin: [Approximate answers within 1% when the exact state is too large](https://github.com/Rasslabsya4el/crafting-system/issues/83); [Owner decisions](https://github.com/Rasslabsya4el/crafting-system/issues/81) Q2; [Design grill round 1: foundations](https://github.com/Rasslabsya4el/crafting-system/issues/2) Q8; [state compression research](../research/2026-10-30-2-state-compression.md).
+
+## Amendment: the Lock has no coarse level unless it is pruned everywhere (B8, [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
+
+A `Peek` (ADR-0054) reads the pushed kernels of all its options at once through a non-linear backup, so the variant argument above does not carry over to it. A query with a Lock offered at any state has no coarse level, unless the exact pruning of ADR-0054, tested against the pessimistic values, removes the Lock from every state; the report then names the Lock as the reason for "no approximate level available".

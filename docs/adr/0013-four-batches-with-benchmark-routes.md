@@ -27,3 +27,12 @@ The grill fixed what B2 contains; the designs are ADR-0025 to ADR-0030.
 - **Not in B2**: Orb of Chance (no route uses it and the magic/rare split is unmeasured); it has no batch, so it stays out of v1 until one is charted.
 - **Out of v1**: Eldritch implicits on amulets; Randomise Influence; the Talisman base reroll; start items with a signature or double veil; Tainted catalysts.
 - **Route notes**: R20 starts from a bought base in B2 (the Awakener's Orb that makes its dual influence is B3). R07 is re-read in 3.29: the veiled Trigger mod has weight 0, so its route is the bench Trigger plus the unveiled minion speed. R05 gains its catalyst line (ADR-0029).
+
+## Amendment: B8 as grilled ([Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
+
+The grill fixed what B8 contains; the designs are ADR-0054 to ADR-0057.
+
+- **B8 is built**, the last batch, although at the Lock's price (about 270 Divine on 2026-10-31) it rarely enters a plan: the planner takes it only where it saves more than it costs, and every plan prints a line about it (owner, answers 1 and 4).
+- **In B8**: Hinekora's Lock as a `Peek` action (ADR-0054) with the previewable set of ADR-0055 and the burn and relock of ADR-0056. The previews of different currencies are independent (owner, from play).
+- **Out of v1 for the Lock**: the Awakener's Orb as a preview option; a foreseeing start item; the beast, drop and card ways to a Lock; the Sacred Orb (no action).
+- **Benchmarks**: R29 gets its Lock step back (ADR-0057). B3's R29 without the Lock stays as the baseline, and a synthetic target with a low Lock price shows the Lock appearing when it pays. The pass rule is unchanged.
