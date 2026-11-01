@@ -100,6 +100,7 @@ class TradePrice:
     date: date  # UTC date of the run
     listings: int  # the search `total`: how many listings the site has
     used: int  # listings in the mean, at most `k`
+    usable: int  # fetched listings that could be priced (the market rule's count)
     k: int
     fetched: int  # rows fetched
     dropped: Mapping[str, int]  # reason -> count
@@ -284,6 +285,7 @@ def market_of_listings(
             date=stamp,
             listings=total,
             used=len(cheapest),
+            usable=len(usable),
             k=k,
             fetched=len(rows),
             dropped=dropped,
@@ -387,6 +389,7 @@ def entry_for(price: TradePrice) -> PriceEntry:
         "date": price.date.isoformat(),
         "listings": price.listings,
         "used": price.used,
+        "usable": price.usable,
         "k": price.k,
         "query_hash": price.query_hash,
         "query": price.query,

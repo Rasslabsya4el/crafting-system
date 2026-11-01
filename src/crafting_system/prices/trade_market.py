@@ -100,6 +100,8 @@ def offer(
         return _offer_from_entry(price_file, name, entry, today, min_listings, max_age_days)
     if record is not None:
         age = (today - record.date).days
+        if age < 0:
+            return TradeOffer(name, STALE, reason="record is dated in the future", age_days=age)
         if record.league != price_file.league:
             return TradeOffer(name, UNKNOWN, reason=f"recorded for league {record.league}", age_days=age)
         if age > max_age_days:
@@ -118,7 +120,8 @@ def _offer_from_entry(
     price_file: PriceFile, name: str, entry: PriceEntry, today: date, min_listings: int, max_age_days: int
 ) -> TradeOffer:
     detail = entry.detail or {}
-    listings, usable = detail.get("listings"), detail.get("used")
+    listings = detail.get("listings")
+    usable = detail.get("usable", detail.get("used"))  # `used` (at most k) is all an older entry has
     counts = {
         "listings": listings if isinstance(listings, int) and not isinstance(listings, bool) else None,
         "usable": usable if isinstance(usable, int) and not isinstance(usable, bool) else None,
@@ -128,13 +131,17 @@ def _offer_from_entry(
         return TradeOffer(name, UNKNOWN, reason=f"price of league {detail['league']}", age_days=age, **counts)
     if age is None:
         return TradeOffer(name, STALE, reason="trade price has no usable date", **counts)
+    if age < 0:
+        return TradeOffer(name, STALE, reason="trade price is dated in the future", age_days=age, **counts)
     if age > max_age_days:
         return TradeOffer(
             name, STALE, reason=f"trade price is {age} days old (limit {max_age_days})", age_days=age, **counts
         )
-    state = classify(counts["listings"] or 0, counts["usable"] or 0, min_listings)
+    if counts["listings"] is None or counts["usable"] is None:
+        return TradeOffer(name, UNKNOWN, reason="trade price has no listing count", age_days=age, **counts)
+    state = classify(counts["listings"], counts["usable"], min_listings)
     if state != QUOTED:
-        reason = _count_reason(state, counts["listings"] or 0, counts["usable"] or 0, min_listings)
+        reason = _count_reason(state, counts["listings"], counts["usable"], min_listings)
         return TradeOffer(name, state, reason=reason, age_days=age, **counts)
     return TradeOffer(name, QUOTED, entry=entry, age_days=age, **counts)
 

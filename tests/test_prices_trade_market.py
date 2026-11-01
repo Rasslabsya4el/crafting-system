@@ -316,6 +316,26 @@ def test_a_recorded_state_goes_stale_after_seven_days_too():
     assert (got.state, got.offered, got.fresh) == ("stale", False, False)
 
 
+def test_the_usable_count_is_stored_apart_from_the_k_cheapest_used(trade, spec, game_mods, tmp_path):
+    with_listings(trade, 300, [api_row(n) for n in range(1, 9)])
+
+    market = assess(trade, spec, game_mods, tmp_path, k=2)
+    entry = entry_for(market.price)
+
+    assert (entry.detail["used"], entry.detail["usable"]) == (2, 8)
+    assert offer(file_with(replace(entry, detail={**entry.detail, "date": TODAY.isoformat()})), "Amulet", TODAY).offered
+
+
+def test_an_entry_without_counts_or_dated_in_the_future_is_not_offered():
+    no_counts = PriceEntry(2.0, TRADE_SOURCE, "n", {"league": "Allflame", "date": TODAY.isoformat()})
+    future = stored_entry(day=(TODAY + timedelta(days=2)).isoformat())
+    future_record = MarketRecord("none", "Allflame", TODAY + timedelta(days=2), 0, 0, "h", {"query": {}})
+
+    assert offer(file_with(no_counts), "Amulet", TODAY).state == "unknown"
+    assert offer(file_with(future), "Amulet", TODAY).state == "stale"
+    assert offer(file_with(record=future_record), "Amulet", TODAY).state == "stale"
+
+
 def test_a_name_with_nothing_recorded_is_unknown():
     got = offer(price_file(), "Amulet", TODAY)
 
