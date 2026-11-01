@@ -109,6 +109,7 @@ def test_the_policy_reaches_the_goal_with_exact_odds_and_mean_and_certified_quan
     assert 10_000 < risk.p90.low <= risk.p90.high < 20_000
     assert risk.p90.high - risk.p90.low < 0.05 * risk.p90.value
     assert math.isfinite(risk.cvar.value) and risk.cvar.value > risk.p90.low  # the mean of the worst tenth is above p90
+    assert risk.cvar.high - risk.cvar.low < 0.5 * risk.cvar.value  # the lower end is a tail mean, not just the quantile
 
 
 def test_the_solver_is_no_dearer_than_the_guides_given_route(plan, data):

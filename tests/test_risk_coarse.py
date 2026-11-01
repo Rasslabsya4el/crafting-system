@@ -55,6 +55,7 @@ def test_the_bracket_contains_the_exact_quantiles_and_cvar_of_the_unit_grid(coar
         assert math.isfinite(report.quantiles[level].high)
         assert contains(report.quantiles[level], exact.quantiles[level].value)
     assert contains(report.cvar, exact.cvar.value)
+    assert report.cvar.low > report.p90.low  # the lower end is the tail mean of the lower chain, not just the quantile
     assert report.success_probability.value == 1.0
 
 

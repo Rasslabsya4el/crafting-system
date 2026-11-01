@@ -88,7 +88,7 @@ from ..solver import Action
 from . import _inputs, _moments
 from ._budget import BudgetRun, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
-from ._coarse import beyond_ordinary_grid, choose_step
+from ._coarse import beyond_ordinary_grid, choose_step, expected_visits
 from ._dense import fits_dense, run_dense
 from ._fold import fold_free
 from ._moments import interval, real_costs
@@ -105,7 +105,8 @@ FINE_STEPS = 64  # default grid: the smallest cost is at least this many bins un
 WORK_BUDGET = 3e8  # default cap on the DP's expanded entries (about a minute); a larger policy gets a coarser grid
 CELLS_PER_ENTRY = 30.0  # the nested DP's work counts convolution cells, each about this much cheaper than an expanded entry
 SPREAD_SDS = 6.0  # the arrival cost of a state spreads over about this many standard deviations of the total cost
-FREE = 1e-150  # bins charged to a free state when the solver takes the mean of the lower coarse chain: it needs a positive cost, and this one is far below its error
+FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean of the lower coarse chain (it needs a positive cost; the charge is taken off again)
+FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
 
 
 def evaluate[S](
@@ -269,7 +270,7 @@ def _coarse_report(
         target=target, tail_mass=tail_mass, max_bins=max_bins,
     )
     high_run = run_dense(chain, high_bins, initial=((0, 1.0),), target=target, tail_mass=tail_mass, max_bins=max_bins)
-    mean_low, mean_high = _chain_means(chain, step, [max(k, FREE) for k in low_bins], high_bins, mean, False)
+    mean_low, mean_high = _coarse_means(chain, step, low_bins, high_bins)
     cvar = _cvar(step, cvar_level, low_run, high_run, mean_low, mean_high, mean[0])
     quantiles = {x: _quantile(x, step, low_run, high_run, None) for x in levels}
     runs = (low_run, high_run)
@@ -279,6 +280,20 @@ def _coarse_report(
     return RiskReport(
         Estimate(1.0, 1.0, 1.0), Estimate(*mean), Estimate(*variance), quantiles, Estimate(*cvar), cvar_level, grid
     )
+
+
+def _coarse_means(chain: Chain, step: float, low_bins: Sequence[int], high_bins: Sequence[int]) -> tuple[float, float]:
+    """Mean of the lower and the upper coarse chain, as `(low end for the lower, high end for the upper)`.
+
+    The solver wants positive costs, so a free state is charged `FREE_BINS` bins and the charge is given back from
+    the expected visits of the free states (the mean is linear in the costs and the visits do not depend on them).
+    """
+    states, visits = expected_visits(chain)
+    free = math.fsum(v for s, v in zip(states, visits) if low_bins[s] == 0)
+    low_mean, low_error = _solve_costs(chain, [max(float(k), FREE_BINS) * step for k in low_bins])
+    high_mean, high_error = _solve_costs(chain, [float(k) * step for k in high_bins])
+    low = interval(low_mean[0], low_error)[0] - FREE_BINS * step * free * (1.0 + FREE_SLACK)
+    return max(low, 0.0), interval(high_mean[0], high_error)[1]
 
 
 def _mean_and_variance(chain: Chain):
