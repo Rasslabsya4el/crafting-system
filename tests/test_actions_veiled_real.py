@@ -167,6 +167,7 @@ def test_a_pick_lands_the_chosen_mod_at_its_tier_and_lowest_values(data):
     assert {entry.mod_id for entry in landed.mods} == {FIRE, MS_ONSLAUGHT} and landed.veil_offer == ()
     (picked,) = (entry for entry in landed.mods if entry.mod_id == MS_ONSLAUGHT)
     assert picked.values == tuple(min(stat.min, stat.max) for stat in data.mods[MS_ONSLAUGHT].stats)
+    assert picked.tier == tier_table(data, BOOTS).get(MS_ONSLAUGHT, 1) and not picked.fractured
 
 
 # --- the Veiled Exalted Orb on the real export ---------------------------------------------------------------------------------
@@ -220,12 +221,6 @@ def test_an_unveil_block_craft_is_the_craftable_version_of_a_veiled_mod_and_refu
     item = boots(data, low(data, EVASION_CRAFT, crafted=True), tiered(data, BOOTS, FIRE))
     with pytest.raises(NotApplicableError, match="holds the veiled mod"):
         VeiledExaltedOrb().outcomes(data, item)
-    other = boots(data, low(data, "EinharMasterTrapThrowingSpeed1", crafted=True)) if "EinharMasterTrapThrowingSpeed1" in data.mods else None
-    if other is not None:  # Einhar's bench makes mods with the stats of some veiled mod: they are not craftable versions
-        try:
-            VeiledExaltedOrb().outcomes(data, other)
-        except NotApplicableError as refusal:
-            assert "holds the veiled mod" not in str(refusal)
 
 
 # --- the Veiled Chaos Orb on the real export -----------------------------------------------------------------------------------

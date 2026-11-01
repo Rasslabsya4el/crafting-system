@@ -169,7 +169,7 @@ def test_a_pick_needs_an_offer_and_a_mod_at_that_place():
         Pick(1).outcomes(DATA, amulet(holder(PRE)))
     short = amulet(holder(PRE), veil_offer=(VEIL_LIFE_1, MANA))
     Pick(2).outcomes(DATA, short)
-    with pytest.raises(NotApplicableError, match="no 3th"):
+    with pytest.raises(NotApplicableError, match="no mod number 3"):
         Pick(3).outcomes(DATA, short)
 
 
@@ -192,6 +192,18 @@ def test_a_pick_works_on_a_corrupted_item_and_keeps_the_other_mods_as_they_are()
     ((_, result),) = Pick(1).outcomes(DATA, drawn).results  # Crit sorts before Speed
     assert ids(result) == {CRIT, RESIST_2, LIFE_1} and result.corrupted
     assert {entry.mod_id for entry in result.mods if entry.fractured} == {RESIST_2}
+
+
+def test_a_fractured_placeholder_stays_fractured_when_it_is_picked():
+    # a fractured veil (a drop of the Syndicate maps, V-05) is unveiled and picked like any other: the chosen mod is fractured too
+    start = amulet(ExplicitMod(PRE, 1, holder(PRE).values, fractured=True), rolled(RESIST_2))
+    offered = [result for _, result in Unveil().outcomes(DATA, start).results]
+    assert offered and all(result.mods == start.mods for result in offered)
+    for result in offered:
+        ((_, landed),) = Pick(1).outcomes(DATA, result).results
+        fractured = {entry.mod_id for entry in landed.mods if entry.fractured}
+        assert fractured == {result.veil_offer[0]} and not any(DATA.mods[entry.mod_id].domain == "veiled" for entry in landed.mods)
+        assert landed.veil_offer == ()
 
 
 def test_a_picked_hybrid_takes_both_of_its_families():

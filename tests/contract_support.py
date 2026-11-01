@@ -60,8 +60,11 @@ from crafting_system.actions import (
     Adds,
     Fixed,
     OutOfScopeError,
+    Pick,
     Reads,
     Rerolled,
+    Unveil,
+    VeiledChaosOrb,
     kinds,
 )
 from crafting_system.data import BaseItem, Weight
@@ -348,7 +351,7 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
     if not reads.junk:
         for _, part in outcomes.components:
-            forced = getattr(part, "forced", None)  # a forced mod is put on the item, not kept: a Veiled Chaos Orb may put back the placeholder it erased
+            forced = getattr(part, "forced", None) if isinstance(action, VeiledChaosOrb) else None  # the placeholder it erased may be put back: forced, not kept
             kept = {entry.mod_id for entry in part.retained.mods if not entry.fractured and not entry.crafted and entry.mod_id != forced}
             assert not kept & junk, "an action that reads no junk erases it"
     if adds.named is not None and not adds.draws:
@@ -413,7 +416,7 @@ def check_kernel_equals_brute_force(action, reads: Reads, item: Item, items, dat
 
 def check_resources_are_priced(action, item: Item, data) -> None:
     resources = action.resources(data)
-    assert resources or action.adds(data, item).offer, "one use consumes something, unless it only draws or uses up an unveil offer (free: unveil.is_free_and_in_place)"
+    assert resources or isinstance(action, (Unveil, Pick)), "one use consumes something, unless it only draws or uses up an unveil offer (free: unveil.is_free_and_in_place)"
     assert all(isinstance(name, str) and name and isinstance(count, int) and count > 0 for name, count in resources.items())
     prices = {name: PriceEntry(2.0, "test") for name in resources if name != CHAOS_ORB}
     file = PriceFile("Test", datetime.datetime(2026, 10, 31, tzinfo=datetime.UTC), 300.0, prices)

@@ -389,7 +389,7 @@ class Pick(Action):
         return frozenset(rule.id for rule in (THREE_OPTIONS, UNVEIL_IS_FREE, OFFER_DRAWN_ONCE))
 
     def outcomes(self, data: GameData, item: Item) -> Finite:
-        """The outcomes of picking: the placeholder becomes the chosen mod, at its lowest values, and the offer is used up.
+        """The outcomes of picking: the placeholder becomes the chosen mod, at its lowest values (fractured if the placeholder was), and the offer is used up.
 
         Raises `NotApplicableError` when no offer is drawn, when it holds fewer than `index` mods, and when the chosen mod
         shares a family with a mod of the item; `OutOfScopeError` for a signature or double veil.
@@ -398,14 +398,14 @@ class Pick(Action):
         if not item.veil_offer:
             raise NotApplicableError("no offer is drawn, so there is nothing to pick")
         if self.index > len(item.veil_offer):
-            raise NotApplicableError(f"the offer holds {len(item.veil_offer)} mod(s), so there is no {self.index}th to pick")
+            raise NotApplicableError(f"the offer holds {len(item.veil_offer)} mod(s), so there is no mod number {self.index} to pick")
         (held,) = _placeholders(data, item)  # an offer needs exactly one placeholder (the item checks it)
         chosen = data.mods[item.veil_offer[self.index - 1]]
         rest = tuple(entry for entry in item.mods if entry.mod_id != held.mod_id)
         if any(conflicts(chosen, data.mods[entry.mod_id]) for entry in rest):
             raise NotApplicableError(f"the chosen mod {chosen.id} shares a family with a mod of the item")
         low = tuple(min(stat.min, stat.max) for stat in chosen.stats)
-        picked = ExplicitMod(chosen.id, tier_table(data, item.base_id).get(chosen.id, 1), low)
+        picked = ExplicitMod(chosen.id, tier_table(data, item.base_id).get(chosen.id, 1), low, fractured=held.fractured)  # a fractured veil stays fractured
         return Finite(data, item, ((ONE, item.changed(data, mods=(*rest, picked))),))  # no placeholder left, so the offer goes
 
 
