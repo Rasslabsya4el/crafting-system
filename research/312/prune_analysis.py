@@ -60,7 +60,19 @@ def flatten(g: dict):
     edge_ptr = np.concatenate(([0], np.cumsum(sizes)))
     dst = np.concatenate([g["k_succ"][k] for k in kernel]).astype(np.int64) if len(kernel) else np.zeros(0, dtype=np.int64)
     pr = np.concatenate([probs[k] for k in kernel]) if len(kernel) else np.zeros(0)
-    return {"n": n, "ptr": ptr, "cost": cost, "state": state, "edge_ptr": edge_ptr, "dst": dst, "p": pr, "goal": np.frombuffer(g["goal"], dtype=np.uint8) == 1}
+    # Self-loops are eliminated (exact: the cost of an action is its price over the chance to leave, the outcomes are
+    # those that leave). Repeating an action thousands of times is then one step, and the bounds converge.
+    sizes_all = np.diff(edge_ptr)
+    edge_state = np.repeat(state, sizes_all)
+    is_self = dst == edge_state
+    stay = np.add.reduceat(pr * is_self, edge_ptr[:-1]) if len(pr) else np.zeros(0)
+    stay[sizes_all == 0] = 0.0
+    leaves = 1.0 - stay
+    dead = leaves <= 1e-15
+    with np.errstate(divide="ignore", invalid="ignore"):
+        cost_e = np.where(dead, np.inf, cost / np.where(dead, 1.0, leaves))
+        p_e = np.where(is_self | np.repeat(dead, sizes_all), 0.0, pr / np.repeat(np.where(dead, 1.0, leaves), sizes_all))
+    return {"n": n, "ptr": ptr, "cost": cost_e, "cost_raw": cost, "stay": stay, "state": state, "edge_ptr": edge_ptr, "dst": dst, "p": p_e, "goal": np.frombuffer(g["goal"], dtype=np.uint8) == 1}
 
 
 def q_values(flat: dict, v: np.ndarray) -> np.ndarray:
@@ -170,7 +182,8 @@ def solve_lumped(g: dict, flat: dict, start: int, keep: np.ndarray, allowance: n
             extra = 0.0
             outs = []
             for d, w in zip(succ, wts):
-                swing_ok = allowance[t] > 0 and (w / total) * (UB_CACHE[d] - LB_CACHE[d]) <= allowance[t] and not flat["goal"][d]
+                p_eff = (w / total) / max(1e-300, 1.0 - flat["stay"][t])
+                swing_ok = allowance[t] > 0 and d != s and p_eff * (UB_CACHE[d] - LB_CACHE[d]) <= allowance[t] and not flat["goal"][d]
                 if swing_ok:
                     lump_w += w
                     extra += (w / total) * bound[d]
@@ -179,7 +192,7 @@ def solve_lumped(g: dict, flat: dict, start: int, keep: np.ndarray, allowance: n
             if lump_w:
                 outs.append(Outcome(goal_class, lump_w))
             sizes_total += len(outs)
-            acts.append(Action(f"a{t}", flat["cost"][t] + extra, tuple(outs)))
+            acts.append(Action(f"a{t}", flat["cost_raw"][t] + extra, tuple(outs)))
         table[s] = acts
     solution = solve(TabularModel(goals, table), [start])
     return solution.values[start], int(reachable.sum()), sizes_total
