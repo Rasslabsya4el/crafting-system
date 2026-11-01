@@ -62,12 +62,15 @@ class Proc:
         if kind == "recomb":
             dist = world.k_recomb(state, donor)
             cost = world.costs["recomb"]
+        elif kind == "awkf":  # the Awakener asked for a whole donor item instead of its projection
+            dist = world.k_awakener(state, donor)
+            cost = world.costs["awk"]
         else:
             dist = world.k_awakener(state, donor)
             cost = world.costs["awk"]
         if not dist:
             return None
-        need = Need(world.blank(donor[0]), ("full" if kind == "recomb" else "awk", donor))
+        need = Need(world.blank(donor[0]), ("awk" if kind == "awk" else "full", donor))
         return Action((kind, donor), cost, scaled(dist), (need,))
 
 

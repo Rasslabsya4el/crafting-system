@@ -78,7 +78,12 @@ def lazy_solve(world, start, universe_states, candidates, seed, *, bound="expect
         violations = set()
         checked = 0
         for (tag, w, s), v in values.items():
-            if not math.isfinite(v) or v == 0.0:
+            if v == 0.0:
+                continue
+            if not math.isfinite(v):  # no incumbent here: nothing can be pruned, offer every candidate
+                for kind, d in candidates(s):
+                    if (kind, d) not in offers[s]:
+                        violations.add((s, kind, d))
                 continue
             wkey = "MAIN" if str(w) == "MAIN" else w
             dw = det.dist(wkey)
