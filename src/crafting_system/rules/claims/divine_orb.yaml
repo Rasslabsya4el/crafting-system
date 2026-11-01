@@ -1,0 +1,82 @@
+# Mechanic family: divine_orb (the Divine Orb on a magic or rare item). Research ticket #7 (claims CUR-18 to CUR-23, CUR-28, open
+# items O-09 and O-11), the metamod matrix of the wiki, and ticket #71. How the values of a drawn mod are rolled (uniform over
+# the integers of each stat) is affix_pool.values_uniform_integers; the Sanctified Fossil's lucky values are in fossils.yaml.
+#
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on a reading no source states outright.
+rules:
+  - id: divine_orb.accepts_magic_rare_unique
+    statement: A Divine Orb can be used on a magic, rare or unique item; a normal item takes none. The item model holds no unique item, so the action accepts magic and rare items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Right click this item then left click a magic, rare or unique item to apply it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: divine_orb.rerolls_values_within_the_tier
+    statement: A Divine Orb rerolls the values of the explicit mods of the item and changes no mod and no tier; each new value stays inside the range of the same mod record. Only stats that have a range change.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Divine_Orb#Crafting
+    quote: "A Divine Orb will not change the tier of the affix; it will only re-roll within its current tier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: divine_orb.rerolls_crafted_mods
+    statement: A crafted (bench) mod is an explicit mod, so a Divine Orb rerolls its values like those of any other unfractured mod on a side no lock protects. No source says otherwise and none says so in as many words (research ticket #7, open item O-09).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Divine_Orb
+    quote: "can be used to re-roll the values of all random explicit modifiers on a piece of equipment"
+    approximate: true
+    approximate_reason: "No source states whether a Divine Orb rerolls the value of a crafted mod; the wiki says it rerolls the explicit modifiers and a crafted mod is one."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: divine_orb.hybrid_stats_roll_independently
+    statement: The stats of one mod (a hybrid mod has two or more) are rolled independently of each other, each uniform over its own range, so the roll of a mod is uniform over the product of its stats' ranges. The wiki states the equal chances for each stat; that the stats of a hybrid mod do not influence each other is the reading all exact roll chances of the model use (research ticket #6, open item O-04; ticket #7, O-11).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Mechanics_overview
+    quote: "the actual value of the stat in the cases where minimum and maximum are not the same will be randomized within with equal chances"
+    approximate: true
+    approximate_reason: "No source says whether the stats of a hybrid mod roll independently; the model assumes they do."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: divine_orb.fractured_mods_stay
+    statement: A fractured mod keeps its value under a Divine Orb, so it is never changed.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Divine_Orb#Crafting
+    quote: "Fractured modifiers cannot have their values rerolled."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: divine_orb.locks_protect_existing_mods
+    statement: "`Prefixes Cannot Be Changed` and `Suffixes Cannot Be Changed` protect every existing mod of the locked side from a Divine Orb, so none of them is rerolled; the mods of the other side, the metamod itself among them, are. `Cannot roll Attack Modifiers` and `Cannot roll Caster Modifiers` do not apply to a Divine Orb."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Divine Orb | Respected | Respected | n/a | n/a"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: divine_orb.refused_on_corrupted
+    statement: A corrupted item takes no Divine Orb.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: divine_orb.refused_without_changeable_mod
+    statement: A Divine Orb is not used on an item that has no mod it can change (no explicit mod, or every one fractured or on a side a lock protects) and nothing is consumed. Derived from divine_orb.fractured_mods_stay and divine_orb.locks_protect_existing_mods; no source states the refusal, it is the reading of "re-roll the values of all random explicit modifiers" with none to reroll.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Divine_Orb#Crafting
+    quote: "Fractured modifiers cannot have their values rerolled."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: divine_orb.cost
+    statement: One use of a Divine Orb consumes one Divine Orb item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyModValues: name "Divine Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Divine Orb: 1}

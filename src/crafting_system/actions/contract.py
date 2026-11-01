@@ -123,6 +123,9 @@ class Adds:
     * `fractures`: one finished mod becomes fractured (a Fractured Fossil), so the fractured mods of the
       item change. The default is False; an action that fractures must say so, because pruning by bound
       (#118) holds the fractured mods of the start item fixed for every action it bounds.
+    * `needs_roll_limit`: the action changes only rolled values (a Divine Orb), so it can matter only for a target
+      with a roll limit (`min_roll`) on a mod that can occur on the item; a planner offers it only then (ticket #71).
+      The default is False.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -136,11 +139,21 @@ class Adds:
     keeps_crafted: bool = True
     wanted_only: bool = False
     fractures: bool = False
+    needs_roll_limit: bool = False
 
     @classmethod
     def removal(cls, *, keeps_crafted: bool = True) -> "Adds":
         """The action adds nothing (it only removes)."""
         return cls(named=frozenset(), draws=False, keeps_crafted=keeps_crafted)
+
+    @classmethod
+    def rerolling(cls) -> "Adds":
+        """The action adds and removes no mod and changes values only (a Divine Orb).
+
+        `named` stays None, not an empty set: an empty set would make it a craft that adds nothing, which a
+        planner may leave out as useless, and a value reroll is not useless for a target with a roll limit.
+        """
+        return cls(named=None, draws=False, needs_roll_limit=True)
 
     @classmethod
     def erasing(cls, **fields) -> "Adds":

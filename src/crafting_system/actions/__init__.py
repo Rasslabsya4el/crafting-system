@@ -51,6 +51,14 @@ mod, uniformly, D6; a crafted mod or a metamod is a candidate, and a fractured o
 a `Finite` whose `fractures` is True. None is a planner kind yet. An influenced item draws from the pool of its
 base tags plus the influence tags (`item_tags` in `pool.py`), so the mods of an influence join every pool.
 
+The Divine Orb (`DivineOrb()`, `divine.py`, ticket #71) rerolls the values of the mods an item holds, in place, and nothing
+else: every explicit mod that is not fractured and not on a side a lock protects gets a fresh value per stat, uniform over the
+integers of its range, and the tiers stay. Its result is a `DivineOutcomes` whose only component is a `Rerolled` part
+(`contract.py`) with the `(mod id, fractured, crafted)` keys of the changed mods; it reads `Reads.rerolls_values` and declares
+`Adds.needs_roll_limit`, so a planner offers it only for a target with a roll limit. It refuses a normal or a corrupted item and
+an item with no mod to change. A Sanctified Fossil in a resonator sets `Outcomes.rolls_lucky` on every part of its result: each value
+of the mods it puts on the item is rolled twice and the better one kept (`rolls.py`).
+
 The five metamods (`metamods.py`, ticket #68): `Prefixes` / `Suffixes Cannot Be Changed` keep the mods of
 the locked side through a reroll (Chaos, Alteration, Harvest), a Scouring and an Annulment, and the open slots
 still fill; `Cannot roll Attack` / `Caster Modifiers` keep the mods with that tag out of every draw on an item that
@@ -117,6 +125,7 @@ from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, b
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
 from .contract import Action, ActionOutcomes, Adds, Fixed, Reads, Rerolled
+from .divine import DivineOrb, DivineOutcomes
 from .draw import Outcome, guaranteed_candidates
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
@@ -159,6 +168,8 @@ __all__ = [
     "BenchOutcomes",
     "ChaosOrb",
     "CurrencyCost",
+    "DivineOrb",
+    "DivineOutcomes",
     "ExaltedOrb",
     "Finite",
     "Fixed",
