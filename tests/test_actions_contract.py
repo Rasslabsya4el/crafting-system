@@ -99,6 +99,7 @@ def test_exactly_the_kinds_of_the_b1_table_declare_their_strand_use_and_every_ot
 def test_every_cutting_kind_draws_other_mods_than_at_0_strands_on_some_stranded_item():
     cutting = check_cutting_kinds_differ_from_the_uncut_draw()
     assert cutting >= {"transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "alchemy-orb", "chaos-orb", "exalted-orb", "essence"}
+    assert cutting >= {"veiled-chaos-orb", "awakeners-orb", "influenced-exalted-orb"}  # the last two cut on the stranded extra items only
     assert cutting.isdisjoint({"fossil-set", "harvest-reforge", "bench-craft", "annulment-orb", "scouring-orb", "divine-orb"})
 
 

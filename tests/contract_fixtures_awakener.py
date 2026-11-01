@@ -23,7 +23,6 @@ def _rare_awakener():
 register_fixture_amulet("rare_awakener", _rare_awakener)
 
 
-
 def _contract_data():
     from contract_support import CONTRACT_DATA  # late: contract_support loads this module while it builds CONTRACT_DATA
 

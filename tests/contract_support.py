@@ -429,6 +429,7 @@ def check_cutting_kinds_differ_from_the_uncut_draw(data=CONTRACT_DATA) -> set[st
     """Every kind that declares `cuts` gives, on some stranded fixture item, other mods than it gives at 0 strands; the names that did.
 
     A cut can leave a draw as it was (a pool whose tables are one tier), so this is asked of the kind on all the items, not of each.
+    `data` governs the amulets of the fixture; the stranded extra items (`extra_fixture_items`: a family on a base of its own) bring their own data.
     """
     differing: set[str] = set()
     declared: set[str] = set()
