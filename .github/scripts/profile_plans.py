@@ -68,7 +68,7 @@ def timed(owner, name: str, stage: str | None = None) -> None:
 
 def install_timers() -> None:
     from crafting_system.abstraction import Abstraction, Coarsening
-    from crafting_system.cli import _approx, _bound_prune, _decide, _plan
+    from crafting_system.cli import _approx, _bound_prune, _decide, _plan, _pool
     from crafting_system.solver import _bounds, _solve, _tail
 
     for name in ("kernel", "kernel_key"):
@@ -88,6 +88,8 @@ def install_timers() -> None:
     timed(_plan, "evaluate_risk", "plan.evaluate_risk (risk run)")
     timed(_plan, "climb", "plan.climb (approximate ladder)")
     timed(_bound_prune, "reach_bound", "prune.reach_bound")
+    timed(_pool.StatePool, "build", "pool.build (wall of the pool call)")
+    timed(_plan._Model, "prefetch", "model.prefetch (keys here + pool)")
 
 
 def filled_prices(data, target, offers):

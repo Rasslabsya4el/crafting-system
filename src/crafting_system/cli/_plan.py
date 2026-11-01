@@ -30,7 +30,7 @@ from ._bound_prune import Pruned, solve_pruned
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
 from ._pool import MIN_PENDING, StatePool, open_pool
-from ._prune import solver_actions
+from ._prune import chosen_offers, solver_actions
 
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
 PRUNE_BOUND = True  # twins and offers proved not needed are left out of the solve (exact; a test turns it off for the reference)
@@ -108,27 +108,40 @@ class _Model:
         self.offers = tuple(offers)
         self.cache = cache  # (state, label, cost) -> solver action, shared by the solves of one plan
         self.pool = pool  # workers that build the actions of the queued states together (#250); None builds them here
-        self.positions = pool.positions(self.offers) if pool is not None and pool.merge_equal == MERGE_EQUAL else None
-        self.ready: dict[CompressedState, list[Action[CompressedState]]] = {}
+        self.positions = pool.positions(self.offers) if pool is not None else None
+        self.window: dict = {}  # without a `cache`: the actions built ahead for the states still queued
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.abstraction.is_goal(state)
 
     def prefetch(self, states: Sequence[CompressedState]) -> None:
-        """Build the actions of the pending `states` in the pool; `actions` then hands them out (the same lists)."""
+        """Build, in the pool, the actions that `actions` will need for the pending `states` and has not built yet."""
         if self.pool is None or self.positions is None:
             return
-        pending = [state for state in states if state not in self.ready and not self.abstraction.is_goal(state)]
-        if len(pending) < MIN_PENDING:
+        cache = self.cache if self.cache is not None else self.window
+        if cache is self.window:
+            cache.clear()  # the states of the last window have all been taken
+        tasks, wanted = [], []
+        for state in states:
+            if self.abstraction.is_goal(state):
+                continue
+            chosen = chosen_offers(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL)
+            missing = [priced for priced in chosen if (state, priced.label, priced.cost) not in cache]
+            if missing:
+                tasks.append((state, self.pool.positions(missing)))
+                wanted.append((state, missing))
+        if sum(len(positions) for _, positions in tasks) < MIN_PENDING:
             return
-        for state, built in zip(pending, self.pool.actions_of(pending, self.positions)):
-            self.ready[state] = built
+        for (state, missing), built in zip(wanted, self.pool.build(tasks)):
+            for priced, action in zip(missing, built):
+                if action is not None:
+                    cache[(state, priced.label, priced.cost)] = action
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
-        built = self.ready.pop(state, None)
-        if built is not None:
-            return built
-        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=self.cache)
+        cache = self.cache
+        if cache is None and self.positions is not None:
+            cache = self.window  # a serial solve with no cache keeps none (a big graph would hold every action twice)
+        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=cache)
 
 
 def offer_action(
@@ -277,7 +290,7 @@ def make_plan(
 
     began = time.perf_counter()
     pruned = None
-    with open_pool(abstraction, start, priced, MERGE_EQUAL) as pool:  # None unless CRAFTING_WORKERS (or the cores) allow more than one
+    with open_pool(abstraction, start, priced) as pool:  # None unless CRAFTING_WORKERS (or the cores) allow more than one
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
             pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, pool=pool)
             solution = pruned.solution

@@ -15,6 +15,37 @@ from crafting_system.solver import Action
 from ._offers import RESTART, BuyStartItem, PricedOffer
 
 
+def chosen_offers(
+    abstraction: Abstraction,
+    offers: Iterable[PricedOffer],
+    state: CompressedState,
+    start: CompressedState,
+    *,
+    merge_equal: bool = True,
+) -> list[PricedOffer]:
+    """The offers whose actions the solver sees at `state`, in the order of `offers`: the allowed ones, equal kernels merged.
+
+    This is the choice `solver_actions` makes before it builds any kernel (the key is cheaper than the kernel).
+    """
+    allowed: list[tuple[PricedOffer, object]] = []  # (offer, kernel key or None for restart)
+    for priced in offers:
+        if priced.label == RESTART and state == start:
+            continue
+        if isinstance(priced.offer.action, BuyStartItem) or not merge_equal:
+            allowed.append((priced, None))
+            continue
+        try:
+            allowed.append((priced, abstraction.kernel_key(state, priced.offer.action)))
+        except ActionError:  # the game refuses it here, or no admitted rule covers it
+            continue
+
+    cheapest: dict[object, PricedOffer] = {}
+    for priced, key in allowed:
+        if key is not None and (key not in cheapest or priced.cost < cheapest[key].cost):
+            cheapest[key] = priced
+    return [priced for priced, key in allowed if key is None or cheapest[key] is priced]
+
+
 def solver_actions(
     abstraction: Abstraction,
     offers: Iterable[PricedOffer],
@@ -38,27 +69,8 @@ def solver_actions(
     """
     from ._plan import offer_action  # _plan imports this module
 
-    allowed: list[tuple[PricedOffer, object]] = []  # (offer, kernel key or None for restart)
-    for priced in offers:
-        if priced.label == RESTART and state == start:
-            continue
-        if isinstance(priced.offer.action, BuyStartItem) or not merge_equal:
-            allowed.append((priced, None))
-            continue
-        try:
-            allowed.append((priced, abstraction.kernel_key(state, priced.offer.action)))
-        except ActionError:  # the game refuses it here, or no admitted rule covers it
-            continue
-
-    cheapest: dict[object, PricedOffer] = {}
-    for priced, key in allowed:
-        if key is not None and (key not in cheapest or priced.cost < cheapest[key].cost):
-            cheapest[key] = priced
-
     found = []
-    for priced, key in allowed:
-        if key is not None and cheapest[key] is not priced:
-            continue
+    for priced in chosen_offers(abstraction, offers, state, start, merge_equal=merge_equal):
         built = None if cache is None else cache.get((state, priced.label, priced.cost))
         if built is None:
             try:

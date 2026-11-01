@@ -57,15 +57,15 @@ def planned(monkeypatch, workers: int, **options):
 
 @pytest.fixture
 def pool_calls(monkeypatch):
-    """The sizes of the batches the state pool was asked to build."""
+    """The numbers of actions the state pool was asked to build per batch."""
     sizes: list[int] = []
-    real = _pool.StatePool.actions_of
+    real = _pool.StatePool.build
 
-    def counting(self, states, positions):
-        sizes.append(len(states))
-        return real(self, states, positions)
+    def counting(self, tasks):
+        sizes.append(sum(len(positions) for _, positions in tasks))
+        return real(self, tasks)
 
-    monkeypatch.setattr(_pool.StatePool, "actions_of", counting)
+    monkeypatch.setattr(_pool.StatePool, "build", counting)
     return sizes
 
 
@@ -81,7 +81,7 @@ def test_an_exact_plan_is_byte_identical_for_one_and_many_workers(monkeypatch, p
     pooled = answer_of(planned(monkeypatch, workers))
 
     assert pooled == serial
-    assert pool_calls and max(pool_calls) >= _pool.MIN_PENDING  # the pool really built states
+    assert pool_calls and max(pool_calls) >= _pool.MIN_PENDING  # the pool really built actions
 
 
 def test_the_solution_values_are_equal_to_the_last_bit(monkeypatch):
