@@ -72,9 +72,14 @@ def test_an_action_that_declares_nothing_reads_and_adds_everything():
     assert (adds.implicits, adds.quality, adds.offer) == (True, True, True)
 
 
-def test_no_kind_of_the_catalog_declares_item_state_yet():
-    # B1 touches none of the three: the planner and the cache see no change in any registered kind
+B2_KINDS = {"blessed-orb", "catalyst"}  # the Blessed Orb reads and rerolls the implicits, a catalyst the quality (ticket #157)
+
+
+def test_no_kind_of_the_catalog_but_those_of_b2_declares_item_state():
+    # B1 touches none of the three: the planner and the cache see no change in any other registered kind
     for kind in kinds():
+        if kind.name in B2_KINDS:
+            continue
         for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
             assert not reads.item_state and not adds.item_state, kind.name

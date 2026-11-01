@@ -1,0 +1,53 @@
+# Mechanic family: blessed_orb (rerolls implicit values). Research ticket #89, claims BLE-xx; admitted by grill B2 (#93) and used by ticket #157.
+# The wiki's old-value exclusion is not a claim: the owner settled it the other way (blessed_orb.previous_value_can_repeat).
+rules:
+  - id: blessed_orb.needs_ranged_implicit
+    statement: A Blessed Orb needs an item with at least one implicit that has a range of values; items without implicits or with fixed-value implicits are not valid inputs. A corrupted item takes none (as for the ten basic orbs, CUR-21).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
+    quote: "It cannot be used on items without implicit modifiers or whose implicit modifiers do not have a range of values."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: blessed_orb.rerolls_implicit_values_only
+    statement: A Blessed Orb rerolls the values of the item's implicit modifiers inside each implicit's own range; the implicit's identity and every explicit modifier stay as they are.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: "Randomises the values of the implicit modifiers of an item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: blessed_orb.special_implicits_allowed
+    statement: Synthesised implicits and Eldritch implicits can be rerolled by a Blessed Orb (whether both Eldritch implicits are rerolled is not stated).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
+    quote: "They can be used on items with special implicits, such as synthesised items items with Eldritch implicit modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: blessed_orb.new_value_uniform_in_range
+    statement: Each rolled integer implicit value is drawn uniformly over the implicit's range, both ends included (decimal ranges in hundredths).
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "poec_simRerollImplicits ... poec_rand(useimplicits[i].nvalues[j][0],useimplicits[i].nvalues[j][1]+1,!0)"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code gives the law of a Blessed roll (uniform per stat, the stats of one implicit independent); no other source or player sample states it."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: blessed_orb.previous_value_can_repeat
+    statement: The value an implicit had before a Blessed Orb is not excluded from the new roll, so the new value is uniform over the whole range and can equal the old one. This settles the wiki's "can not roll the same implicit value" against it.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93#issuecomment-6546727567
+    quote: "the previous implicit value can roll again"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: blessed_orb.cost
+    statement: One use of a Blessed Orb consumes one Blessed Orb item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRerollImplicit: name "Blessed Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Blessed Orb: 1}

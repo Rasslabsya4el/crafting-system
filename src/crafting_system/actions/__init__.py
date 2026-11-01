@@ -74,6 +74,13 @@ grants an aspect skill at level 20 or 30, and is offered only when a target name
 level of the beast and not of the item, then removes one mod of the other side uniformly). A beast craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
 None is a planner kind yet.
 
+The Blessed Orb (`blessed.py`, ticket #157) rerolls the values of an item's ranged implicits, each stat uniform over its range with the old
+value allowed to repeat (the owner's answer); `BlessedOutcomes.value_law` is the exact law of one value. A corrupted item or one without a ranged
+implicit is `NotApplicableError`, an item with an Eldritch implicit `OutOfScopeError`. `ApplyCatalyst(CatalystType.INTRINSIC)` (`catalyst.py`)
+puts the quality of one catalyst on a ring, amulet or belt: the gain depends on the item level (`gain_law`, exact fractions), the cap is 20%, another
+type restarts from 0%; `expected_catalysts` is the exact mean number of catalysts to a quality, and `scale_value`, `boosts`, `scaled_values` and
+`base_roll_for` scale a mod's value. Both kinds are not planner kinds until ticket #158 (the compressed state of an implicit roll, the finish cost).
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -128,7 +135,18 @@ from .annul import AnnulmentOrb
 from .beast_mods import BeastSideSwap, WildBristleMatron
 from .beasts import AspectBeast, TalismanFracture, TalismanFractureOutcomes, recipe_resources
 from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts, without_ranges
+from .blessed import BlessedOrb, BlessedOutcomes
 from .catalog import Kind, catalog, kind, kinds, register, registered
+from .catalyst import (
+    ApplyCatalyst,
+    base_roll_for,
+    boosts,
+    expected_catalysts,
+    expected_catalysts_for,
+    gain_law,
+    scale_value,
+    scaled_values,
+)
 from .chaos import ChaosOrb
 from .contract import Action, ActionOutcomes, Adds, Fixed, Reads, Rerolled
 from .corrupted_pool import (
@@ -169,6 +187,7 @@ __all__ = [
     "Adds",
     "AlchemyOrb",
     "AlterationOrb",
+    "ApplyCatalyst",
     "AspectBeast",
     "AnnulmentOrb",
     "ApplyEssence",
@@ -179,6 +198,8 @@ __all__ = [
     "BeastSideSwap",
     "BenchCraft",
     "BenchOutcomes",
+    "BlessedOrb",
+    "BlessedOutcomes",
     "CORRUPTING_KINDS",
     "ChaosOrb",
     "CorruptedImplicit",
@@ -221,7 +242,9 @@ __all__ = [
     "WildBristleMatron",
     "add_one_mod",
     "allowed_by_tags",
+    "base_roll_for",
     "bench_crafts",
+    "boosts",
     "blocked_tags",
     "build_pool",
     "catalog",
@@ -229,13 +252,18 @@ __all__ = [
     "default_actions",
     "draw_onto",
     "drawable_mod_ids",
+    "expected_catalysts",
+    "expected_catalysts_for",
     "fossil_actions",
+    "gain_law",
     "guaranteed_candidates",
     "kind",
     "kinds",
     "recipe_resources",
     "register",
     "registered",
+    "scale_value",
+    "scaled_values",
     "tiers_of",
     "usable_fossils",
     "without_ranges",
