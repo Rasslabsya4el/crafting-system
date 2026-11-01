@@ -62,6 +62,28 @@ file is on the default branch, so this works once the file is on `main`; the cod
 Fetch the data into your own folder first with `python -m crafting_system.data fetch` only for a local run; on
 GitHub it is already there.
 
+### Measuring the variants level (#172)
+
+`.github/scripts/measure_variants.py` re-makes the table of ADR-0023 ("Additions and Annulment") with the product code, one
+JSON line per fact, and writes them to `$OUT_DIR/<case>.jsonl` (plus the console in `output.log`). One runner per case; it
+prints what the product does and asserts nothing. Never run it on a PC: the cases below are heavy.
+
+    S='uv run --no-sync python .github/scripts/measure_variants.py'
+    gh workflow run run.yml --ref my-branch -f command="$S levels --prices default --goal A --out \$OUT_DIR"
+    gh workflow run run.yml --ref my-branch -f command="$S levels --prices cheap --goal A --out \$OUT_DIR"
+    gh workflow run run.yml --ref my-branch -f command="$S levels --prices default --goal B --out \$OUT_DIR"
+    gh workflow run run.yml --ref my-branch -f command="$S endtoend --prices default --out \$OUT_DIR"
+    gh workflow run run.yml --ref my-branch -f timeout_minutes=360 -f command="$S exact --prices default --yes-exact --out \$OUT_DIR"
+    gh workflow run run.yml --ref my-branch -f timeout_minutes=360 -f command="$S exact --prices cheap --yes-exact --out \$OUT_DIR"
+    gh workflow run run.yml --ref my-branch -f timeout_minutes=120 -f command="$S refusals --out \$OUT_DIR"
+
+`levels` takes `--spreads 3000,2000,1500,1000,500` (the default) and gives, per spread, the pools, blocks, certified lower
+and upper bound, gap, the seconds of `solve_level` and of the pooling, and the size of the block models (variant actions
+and edges); `endtoend` gives the decision of `decide` at the rates it measures (levels, whether the pilot walk was
+complete, predicted and pilot seconds) and, when it is approximate, the answer of `climb`; `exact` (only with
+`--yes-exact`) the states, edges, seconds and value of the exact graph, which the intervals of `levels` must bracket;
+`refusals` the text the product gives for the R04-like quiver and for the metamods of R14 proper.
+
 ## Keeping the shards balanced
 
 After a run, download the artifact `shard-durations` and commit it as `tests/shard_durations.json`. It holds the
