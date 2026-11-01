@@ -12,6 +12,7 @@ import argparse
 import json
 import resource
 import time
+import tracemalloc
 from pathlib import Path
 
 from crafting_system.abstraction import Abstraction, Goal
@@ -37,7 +38,10 @@ def main() -> None:
     parser.add_argument("--seconds", type=float, default=19_000)
     parser.add_argument("--max-rss-mb", type=float, default=13_000, help="stop before the runner runs out of memory")
     parser.add_argument("--out")
+    parser.add_argument("--profile-memory", action="store_true", help="trace allocations (slow) and print the biggest sites at the end")
     args = parser.parse_args()
+    if args.profile_memory:
+        tracemalloc.start(6)
 
     data = load_game_data()
     path = Path(args.target)
@@ -99,6 +103,14 @@ def main() -> None:
         "offers": [p.label for p in priced],
     }
     print(json.dumps(summary), flush=True)
+    if args.profile_memory:
+        snapshot = tracemalloc.take_snapshot()
+        print("traced MB", sum(stat.size for stat in snapshot.statistics("filename")) / 1e6)
+        for stat in snapshot.statistics("lineno")[:25]:
+            print(f"{stat.size / 1e6:9.1f} MB {stat.count:>10} {stat.traceback[0]}")
+        for stat in snapshot.statistics("traceback")[:6]:
+            print(f"{stat.size / 1e6:9.1f} MB {stat.count:>10}", *stat.traceback.format()[-8:], sep="
+    ")
     if args.out:
         out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
