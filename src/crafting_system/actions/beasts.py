@@ -3,7 +3,7 @@
 A beast craft consumes red beasts (priced by name) and rare beasts of any kind: `recipe_resources` turns a
 recipe of `beastcraft.recipe_beasts` into the resources of an action, the rare beasts at the setting
 `rare_creature_price` (default `beastcraft.any_rare_creature_price`, 1 chaos each). The crafts here are the
-Talisman fractures and the aspects; the Wild Bristle Matron and the two side-swap beasts are in `beast_swaps`.
+Talisman fractures and the aspects; the Wild Bristle Matron and the two side-swap beasts are in `beast_mods`.
 Several rules rest on Craft of Exile alone and carry the approximate mark (ADR-0028).
 """
 
@@ -199,7 +199,7 @@ class AspectBeast(Action):
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # an ordinary explicit mod, not a crafted one: the domain of the aspect suffixes is `item`
-        return Adds(named=frozenset({self.mod_id}), crafted=False, draws=False)
+        return Adds(named=frozenset({self.mod_id}), crafted=False, draws=False, wanted_only=True)
 
     def outcomes(self, data: GameData, item: Item) -> Finite:
         """The outcome of the recipe on `item`: the aspect suffix added at its lowest values, with probability 1.

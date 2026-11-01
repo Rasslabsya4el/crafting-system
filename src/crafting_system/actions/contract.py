@@ -105,6 +105,9 @@ class Adds:
     * `keeps_crafted`: a crafted mod on the item survives the action. The default is True, the safe
       value: a planner leaves out a bench craft that gives the goal nothing only when every other action
       it offers declares False (they erase the crafted mod, so the craft would only take a slot).
+    * `wanted_only`: a planner offers it only for a target that wants a mod it names (`named`), whatever
+      else the offers erase or keep (the aspect beasts: they add one fixed suffix and nothing else, so a
+      target that does not want it gains nothing from its price and its slot).
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -116,6 +119,7 @@ class Adds:
     tag: str | None = None
     single_draw: bool = False
     keeps_crafted: bool = True
+    wanted_only: bool = False
 
     @classmethod
     def removal(cls, *, keeps_crafted: bool = True) -> "Adds":

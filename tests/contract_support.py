@@ -44,6 +44,7 @@ from abstraction_pool import (
     RESIST_2,
     RESISTS,
 )
+from beasts_support import aspect_mods
 from coarse_support import blocks_of, compare_members, concrete_items
 from items_support import AMULET, DATA
 
@@ -114,6 +115,7 @@ def _fixture_data():
             mods[ORDINARY_CRAFT], id=mod_id, type=mod_id, text=f"Test {mod_id}", families=mods[source].families, generation_type=side
         )
         options.append(dataclasses.replace(template, actions=dataclasses.replace(template.actions, add_explicit_mod=mod_id)))
+    mods.update(aspect_mods())  # the eight aspect suffixes of the beast crafts (ticket #147): nothing draws them
     mods[HYBRID_JUNK] = dataclasses.replace(
         mods[COLD_RESIST], id=HYBRID_JUNK, families=(*mods[COLD_RESIST].families, *mods[MANA_1].families), spawn_weights=(), generation_weights=()
     )
@@ -123,6 +125,9 @@ def _fixture_data():
                 entry.item_id,
                 BaseItem(entry.item_id, entry.item_id.rsplit("/", 1)[-1], "StackableCurrency", "currency", 1, (), (), "released"),
             )
+    # the fixture amulet is a Talisman as far as the beast crafts go: the tag is all they read, and no mod spawns on it
+    amulet = bases[AMULET]
+    bases[AMULET] = dataclasses.replace(amulet, tags=(*amulet.tags, "talisman"))
     return dataclasses.replace(DATA, mods=mods, base_items=bases, bench_options=tuple(options))
 
 

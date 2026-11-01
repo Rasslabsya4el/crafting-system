@@ -49,6 +49,11 @@ def _aspect_mod(aspect: str, level: int):
     )
 
 
+def aspect_mods() -> dict:
+    """The eight aspect suffixes by id."""
+    return {mod_id: _aspect_mod(aspect, level) for (aspect, level), mod_id in ASPECT_IDS.items()}
+
+
 def beast_data(*, talisman: bool = True, aspects: bool = True, data: GameData = DATA) -> GameData:
     """`data` (the fixture data) with the test Talisman base and/or the eight aspect suffixes added."""
     if talisman:
@@ -56,8 +61,7 @@ def beast_data(*, talisman: bool = True, aspects: bool = True, data: GameData = 
         base = dataclasses.replace(amulet, id=TALISMAN, name="Test Talisman", tags=(*amulet.tags, "talisman"))
         data = dataclasses.replace(data, base_items={**data.base_items, TALISMAN: base})
     if aspects:
-        mods = {mod_id: _aspect_mod(aspect, level) for (aspect, level), mod_id in ASPECT_IDS.items()}
-        data = dataclasses.replace(data, mods={**data.mods, **mods})
+        data = dataclasses.replace(data, mods={**data.mods, **aspect_mods()})
     return data
 
 

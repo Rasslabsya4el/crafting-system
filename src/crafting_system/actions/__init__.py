@@ -58,6 +58,12 @@ still holds the metamod (a reroll that removes it is not filtered), out of an An
 Harvest reforge, out of the first (guaranteed) mod only; essences and resonators refuse the four; the multimod
 lifts the crafted-mod limit to three. No action raises `OutOfScopeError` for a metamod.
 
+The beast crafts (`beasts.py`, ticket #147): `TalismanFracture(1 or 2)` fractures one or two mods of a rare Talisman,
+uniformly, as the Fracturing Orb does (4 or 6 mods needed), and `AspectBeast(aspect, level)` adds the suffix that
+grants an aspect skill at level 20 or 30, and is offered only when a target names it (`Adds.wanted_only`). A beast
+craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
+None is a planner kind yet.
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -103,6 +109,7 @@ family, with exact `Fraction` weights.
 from .add import add_one_mod, draw_onto
 from .alchemy import AlchemyOrb
 from .annul import AnnulmentOrb
+from .beasts import AspectBeast, TalismanFracture, TalismanFractureOutcomes, recipe_resources
 from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts, without_ranges
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
@@ -135,6 +142,7 @@ __all__ = [
     "Adds",
     "AlchemyOrb",
     "AlterationOrb",
+    "AspectBeast",
     "AnnulmentOrb",
     "ApplyEssence",
     "ApplyFossils",
@@ -166,6 +174,8 @@ __all__ = [
     "RemoveCraftedMods",
     "ScouringOrb",
     "ScourOutcomes",
+    "TalismanFracture",
+    "TalismanFractureOutcomes",
     "TransmutationOrb",
     "add_one_mod",
     "bench_crafts",
@@ -176,6 +186,7 @@ __all__ = [
     "fossil_actions",
     "kind",
     "kinds",
+    "recipe_resources",
     "register",
     "registered",
     "usable_fossils",
