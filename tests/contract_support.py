@@ -429,18 +429,21 @@ def check_cutting_kinds_differ_from_the_uncut_draw(data=CONTRACT_DATA) -> set[st
     """Every kind that declares `cuts` gives, on some stranded fixture item, other mods than it gives at 0 strands; the names that did.
 
     A cut can leave a draw as it was (a pool whose tables are one tier), so this is asked of the kind on all the items, not of each.
+    `data` governs the amulets of the fixture; the stranded extra items (`extra_fixture_items`: a family on a base of its own) bring their own data.
     """
     differing: set[str] = set()
     declared: set[str] = set()
-    for kind, action, name in contract_pairs():
-        item = fixture_items()[name]
-        use = action.strand_use(data)
+    extra = extra_fixture_items()  # a family on a base of its own (an influenced helmet) registers its stranded item there
+    asked = [(kind, action, fixture_items()[name], data) for kind, action, name in contract_pairs()]
+    asked += [(kind, action, extra[name].item, extra[name].data) for kind, action, name in extra_pairs()]
+    for kind, action, item, where in asked:
+        use = action.strand_use(where)
         if not item.memory_strands or use is None or not use.cuts:
             continue
         declared.add(kind)
         try:
-            cut = finished(action.outcomes_under(data, item), data)
-            plain = finished(action.outcomes_under(data, item.changed(data, memory_strands=0)), data)
+            cut = finished(action.outcomes_under(where, item), where)
+            plain = finished(action.outcomes_under(where, item.changed(where, memory_strands=0)), where)
         except ActionError:
             continue
         if _by_mods(cut) != _by_mods(plain):
@@ -551,10 +554,15 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
             assert result.veil_offer == (given.veil_offer if placeholder else ()), (
                 "an action that does not declare adds.offer leaves the offer as it was (it goes with its placeholder)"
             )
+        if not adds.imprints:
+            assert result.imprints in (given.imprints, ()), (
+                "an action that does not declare adds.imprints leaves the imprints as they were, or builds a new item that holds none (ticket #219)"
+            )
     without = {
         "implicits": (reads.implicits, bool(given.implicits), {"implicits": ()}),
         "quality": (reads.quality, given.quality is not None, {"quality": None}),
         "offer": (reads.offer, bool(given.veil_offer), {"veil_offer": ()}),
+        "imprints": (reads.imprints, bool(given.imprints), {"imprints": ()}),
     }
     for name, (declared, held, strip) in without.items():
         if declared or not held:
@@ -604,7 +612,9 @@ def _stripped(listed, strip: dict) -> dict:
     """The finished items with the chance of each, with the fields of `strip` taken off, added up by item."""
     found: dict = defaultdict(Fraction)
     for chance, result in listed:
-        found[dataclasses.replace(result, **strip)] += chance
+        # an imprint is the item as it was, so a part taken off the item is taken off the imprints it holds too (ticket #219)
+        nested = tuple(dataclasses.replace(held, **strip) for held in result.imprints)
+        found[dataclasses.replace(result, **{**strip, "imprints": strip.get("imprints", nested)})] += chance
     return dict(found)
 
 

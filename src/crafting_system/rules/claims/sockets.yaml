@@ -1,0 +1,36 @@
+# Sockets, links and colours (ADR-0045 to ADR-0049, grill B6 of issue #104). Ticket #227 (B6 S1) opens the file with the class
+# maximum the item and the target read; ticket #228 (S2) adds the claims of the socket orbs and the bench to it.
+rules:
+  - id: sockets.class_maximum_sockets
+    statement: "The most sockets an item can have by type: one-handed weapons and shields 3; boots, helmets and gloves 4; body armours and two-handed weapons (bows, staves and warstaves included) 6. Gnarled Branch (a staff) has 3; other low-level bases with a smaller inventory size have unnamed exceptions, which this table does not know. The value holds the maximum of each of the 20 item classes the socket crafts of the bench are offered for (`by_class`) and the one base the wiki names (`by_base`, by base id)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Item_socket
+    quote: "One-handed weapons and shields can only have up to 3 sockets max (Exception: Oni-Goroshi and The Goddess Unleashed). Boots, helmets and gloves can have up to 4 sockets. Body armours and Two-handed weapons can have up to 6 sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The wiki says other low-level bases with a smaller inventory size have exceptions and names only the Gnarled Branch, so the class table is a default; Path of Building's per-base limit is only a test oracle (ADR-0046)."
+    value:
+      by_class:
+        Body Armour: 6
+        Boots: 4
+        Bow: 6
+        Claw: 3
+        Dagger: 3
+        Gloves: 4
+        Helmet: 4
+        One Hand Axe: 3
+        One Hand Mace: 3
+        One Hand Sword: 3
+        Rune Dagger: 3
+        Sceptre: 3
+        Shield: 3
+        Staff: 6
+        Thrusting One Hand Sword: 3
+        Two Hand Axe: 6
+        Two Hand Mace: 6
+        Two Hand Sword: 6
+        Wand: 3
+        Warstaff: 6
+      by_base:
+        Metadata/Items/Weapons/TwoHandWeapons/Staves/Staff1: 3

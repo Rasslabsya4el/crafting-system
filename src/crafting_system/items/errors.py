@@ -40,7 +40,13 @@ class ImplicitError(ItemError):
 
 
 class QualityError(ItemError):
-    """The catalyst quality is malformed (type, percent outside 0 to 20) or sits on a base that takes none."""
+    """The quality is malformed (a catalyst type or a percent outside its range) or sits on a base that takes none: a catalyst
+    quality on anything but a ring, an amulet or a belt, a plain quality on anything but a weapon or armour."""
+
+
+class SocketError(ItemError):
+    """The sockets of the item are malformed (colours, link groups that do not add up to the sockets) or do not fit its base:
+    more sockets than the class maximum, or sockets on an item class that has none."""
 
 
 class VeilOfferError(ItemError):
@@ -56,6 +62,10 @@ class EnchantmentError(ItemError):
 class MemoryStrandsError(ItemError):
     """The Memory Strands count of the item is not a whole number from 0 to 100, or a pasted item text holds
     the `Memory Strands:` line badly (twice, or with something other than a whole number)."""
+
+
+class ImprintError(ItemError):
+    """The imprints of the item are not a tuple of items that hold no imprint themselves (ADR-0060)."""
 
 
 class TierError(ItemError):

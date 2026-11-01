@@ -17,6 +17,8 @@ the start items a vendor recipe can make and keep the cheapest total (ADR-0059, 
 for one run, the plan is the one made before recipe starts existed, byte for byte. Ticket #323 will turn every method on or off the
 same way; this is its first setting.
 
+The setting `max_imprints` (same table, a whole number of at least 1, default 1) is the most imprints one item holds at a time (ADR-0060, ticket #219); the first imprint multiplies the real state space by about 200, so the default is 1 and a route that wants two sets it.
+
 The setting `recombinator_junk_craft` (same table, default `false`) offers the recombinator variant that crafts a cheap mod on each
 input first (ADR-0035, ticket #216).
 """
@@ -37,7 +39,7 @@ _PATH_SETTINGS = {
     "output": ("CRAFTING_OUTPUT_DIR", "local/output"),
 }
 
-_PLANNER_SETTINGS = ("memory_strands", "recipe_starts", "recombinator_junk_craft")
+_PLANNER_SETTINGS = ("memory_strands", "recipe_starts", "recombinator_junk_craft", "max_imprints")
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,7 @@ class Config:
     memory_strands: bool = False
     recipe_starts: bool = True
     recombinator_junk_craft: bool = False
+    max_imprints: int = 1
 
 
 def find_project_root(start: Path | None = None, *, search_up_to: Path | None = None) -> Path:
@@ -90,6 +93,7 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
         output_dir=resolved["output"],
         memory_strands=planner.get("memory_strands", False),
         recipe_starts=planner.get("recipe_starts", True),
+        max_imprints=planner.get("max_imprints", 1),
         recombinator_junk_craft=planner.get("recombinator_junk_craft", False),
     )
 
@@ -120,7 +124,7 @@ def _config_file(env: Mapping[str, str], root: Path) -> tuple[Path | None, Path]
     return (project_file if project_file.is_file() else None), root
 
 
-def _read_document(path: Path) -> tuple[dict[str, str], dict[str, bool]]:
+def _read_document(path: Path) -> tuple[dict[str, str], dict[str, bool | int]]:
     """The `[paths]` and the `[planner]` tables of a config file, each checked."""
     try:
         document = tomllib.loads(path.read_bytes().decode("utf-8-sig"))
@@ -146,7 +150,7 @@ def _read_document(path: Path) -> tuple[dict[str, str], dict[str, bool]]:
     return paths, _read_planner(path, document.get("planner", {}))
 
 
-def _read_planner(path: Path, planner: object) -> dict[str, bool]:
+def _read_planner(path: Path, planner: object) -> dict[str, bool | int]:
     if not isinstance(planner, dict):
         raise ValueError(f"{path}: 'planner' must be a table")
     for key, value in planner.items():
@@ -154,6 +158,9 @@ def _read_planner(path: Path, planner: object) -> dict[str, bool]:
             raise ValueError(
                 f"{path}: unknown key {key!r} in [planner] (known: {', '.join(_PLANNER_SETTINGS)})"
             )
-        if type(value) is not bool:
+        if key == "max_imprints":
+            if not (type(value) is int and value >= 1):
+                raise ValueError(f"{path}: [planner] 'max_imprints' must be a whole number of at least 1")
+        elif type(value) is not bool:
             raise ValueError(f"{path}: [planner] {key!r} must be true or false")
     return planner

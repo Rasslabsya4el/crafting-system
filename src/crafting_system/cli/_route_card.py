@@ -204,8 +204,15 @@ def _properties(
     return (rarity, f"item level {item_level}", *influences, *shown)
 
 
-def _quality(kind: str, percent: int, suffix: str = "") -> str:
+def _quality(kind: str | None, percent: int, suffix: str = "") -> str:
+    if kind is None:  # the plain quality of a weapon or armour (ADR-0049)
+        return f"Quality {percent}%{suffix}"
     return f"{kind.title()} catalyst quality {percent}%{suffix}"
+
+
+def _kind(quality) -> str | None:  # noqa: ANN001
+    """The catalyst type name of a quality or of a quality requirement, or None for the plain quality of a weapon or armour."""
+    return None if quality.type is None else quality.type.value
 
 
 def _capacity(data: GameData, base_id: str, side: Side) -> int:
@@ -313,7 +320,7 @@ def card_of_item(
             rows.append(Slot(mod_text(mod, entry.values if rolled else None), tone, marks, _tier_note(table, [mod.id])))
         sides[side] = _fill(rows, _capacity(data, item.base_id, side), filler)
     influences = tuple(influence.value.title() for influence in sorted(item.influences))
-    quality = _quality(item.quality.type.value, item.quality.percent) if item.quality is not None else ""
+    quality = _quality(_kind(item.quality), item.quality.percent) if item.quality is not None else ""
     properties = _properties(
         _title(item.rarity), item.item_level, influences, "corrupted" if item.corrupted else "", quality,
         memory_strands_line(item.memory_strands) or "",
@@ -353,7 +360,7 @@ def card_of_target(data: GameData, target: Target) -> ItemCard:
     add(target.requirements, "")
     influences = tuple(influence.value.title() for influence in sorted(target.influences))
     need = target.quality
-    quality = _quality(need.type.value, need.min_percent, " or more") if need is not None else ""
+    quality = _quality(_kind(need), need.min_percent, " or more") if need is not None else ""
     properties = _properties(_title(Rarity.RARE), target.item_level, influences, "", quality)
     prefixes, suffixes = (
         _fill(wanted[side], _capacity(data, target.base_id, side), ANY_OR_EMPTY) for side in SIDES

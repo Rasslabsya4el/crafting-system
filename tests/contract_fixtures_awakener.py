@@ -6,7 +6,7 @@ own, one of the family of the Shaper prefix (a group conflict).
 """
 
 from awakener_support import SHAPER_PREFIX, SHAPER_SUFFIX, awakener_mods
-from contract_registry import register_fixture_amulet, register_fixture_mods
+from contract_registry import register_extra_item, register_fixture_amulet, register_fixture_mods
 
 from crafting_system.items import Influence, Rarity
 
@@ -21,3 +21,17 @@ def _rare_awakener():
 
 
 register_fixture_amulet("rare_awakener", _rare_awakener)
+
+
+def _contract_data():
+    from contract_support import CONTRACT_DATA  # late: contract_support loads this module while it builds CONTRACT_DATA
+
+    return CONTRACT_DATA
+
+
+def _rare_awakener_stranded():
+    return _rare_awakener().changed(_contract_data(), memory_strands=100)
+
+
+# Strands (ticket #289): the orb cuts the mods it rerolls; the stranded Shaper amulet of the strand fixtures holds no influenced mod, so the orb refuses it.
+register_extra_item("rare_awakener_stranded", ("awakeners-orb",), _contract_data, _rare_awakener_stranded)

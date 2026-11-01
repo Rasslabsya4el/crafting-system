@@ -19,6 +19,11 @@ A kind is `opt_in` when the planner can use it but offers it only when a target 
 sets: 12,696 of them on boots, which a target that is not about fossils must not pay for). `catalog(..., names=None)`
 leaves an opt-in kind out; `names` that include it list it.
 
+A kind is `needs_strands` when its actions exist only in a plan that considers Memory Strands (the Foulborn orbs, the Orb of Remembrance,
+the Orb of Unravelling; ADR-0040, "Strands are off unless the query has them"). `catalog(..., strands=False)` leaves such a kind out;
+`strands=True` (the setting `memory_strands` of the query) lists it, and so does an item that holds strands, which turns the setting on by
+itself. `kinds()` and the contract suites still see it, so a kind of this sort is checked like every other.
+
 A kind is `corrupting` when every action it lists corrupts (`Adds.corrupts`: the Vaal Orb, the Locus of Corruption). A planner
 leaves such a kind unmentioned in its report when the target takes no corrupted item (ADR-0036).
 
@@ -63,6 +68,7 @@ class Kind:
     corrupting: bool = False
     applies_only_to: str = ""
     reads_item_state_while_not_planner: str = ""
+    needs_strands: bool = False
 
 
 _KINDS: dict[str, Kind] = {}
@@ -86,11 +92,12 @@ def kind(
     corrupting: bool = False,
     applies_only_to: str = "",
     reads_item_state_while_not_planner: str = "",
+    needs_strands: bool = False,
 ) -> Callable[[Callable[[GameData, Item], Iterable[Action]]], Callable[[GameData, Item], Iterable[Action]]]:
     """Decorator that registers a function `members(data, item)` as the kind `name`."""
 
     def decorate(members):
-        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner))
+        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner, needs_strands))
         return members
 
     return decorate
@@ -103,16 +110,24 @@ def kinds(*, planner_only: bool = False) -> tuple[Kind, ...]:
 
 
 def catalog(
-    data: GameData, item: Item, *, planner_only: bool = False, names: Collection[str] | None = None
+    data: GameData,
+    item: Item,
+    *,
+    planner_only: bool = False,
+    names: Collection[str] | None = None,
+    strands: bool = False,
 ) -> tuple[Action, ...]:
     """Every action of every kind that can apply to `item`, in catalog order.
 
     With `planner_only` only the kinds the planner can use; with `names` only the kinds of those names (an `opt_in`
-    kind is listed only when named). The same action never appears twice.
+    kind is listed only when named). A `needs_strands` kind is listed only with `strands` or for an item that holds
+    strands. The same action never appears twice.
     """
     found: dict[Action, None] = {}
     for entry in kinds(planner_only=planner_only):
         if names is not None and entry.name not in names:
+            continue
+        if entry.needs_strands and not (strands or getattr(item, "memory_strands", 0) >= 1):
             continue
         if names is None and entry.opt_in and planner_only:
             continue

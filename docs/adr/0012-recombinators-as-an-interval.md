@@ -20,3 +20,5 @@ Origin: [Design grill round 1: foundations](https://github.com/Rasslabsya4el/cra
 - **The extremes are not at the ends** (interior extremes in 132 of 1,200 random cases), so the grid is always evaluated in full: `k` solves and `k^2` evaluations (ADR-0022, reworded). The same cross-evaluation gives the route with the best worst case and the certified bracket of ADR-0022; the report names that route beside the plan when it differs. The Awakener's group conflict (ADR-0032) has its own two-reading interval; the only comparison route anywhere is the best route without recombinators.
 
 Origin of the amendment: [Grill B3](https://github.com/Rasslabsya4el/crafting-system/issues/94), "Selection rule after #175"; ADR-0022, ADR-0033.
+
+As built in the report ([#221](https://github.com/Rasslabsya4el/crafting-system/issues/221)): the plan, its interval over the grid, the route without recombinators beside it, the route with the smallest worst case and the bracket are one block of text, JSON and route page; see "As built for the interval answer" in [ADR-0028](0028-approximate-inputs-named-on-every-answer.md).

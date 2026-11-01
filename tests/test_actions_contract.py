@@ -67,7 +67,12 @@ B1_KINDS_THAT_DECLARE_STRAND_USE = {
     "scouring-orb", "divine-orb", "fracturing-orb", "essence", "corrupted-essence", "fossil-set", "harvest-reforge",
     "harvest-reforge-influence", "harvest-reforge-likelihood", "bench-craft", "remove-crafted-mods", "harvest-quality-enchant", "tempering",
     "tailoring",
-}  # ADR-0041's table for the actions of B1 (the later families declare their own rows: B5-11a to B5-11h)
+    "veiled-chaos-orb", "veiled-exalted-orb", "unveil", "pick",  # B5-11a (#284)
+    "eldritch-implicit-currency", "eldritch-chaos-orb", "orb-of-conflict",  # B5-11b (#285); the Eldritch Exalted and Annulment Orbs stay refused
+    "influenced-exalted-orb", "orb-of-dominance", "beast-influence-recipe",  # B5-11c (#286)
+    "blessed-orb", "catalyst",  # B5-11d (#287)
+    "awakeners-orb",  # B5-11f (#289)
+}  # ADR-0041's table for the actions of B1 and the families of B5-11a to d and f (the others declare their own rows: B5-11e, g, h)
 STRANDED = [name for name, item in ITEMS.items() if item.memory_strands]
 
 
@@ -87,13 +92,14 @@ def test_exactly_the_kinds_of_the_b1_table_declare_their_strand_use_and_every_ot
         if use is None:
             with pytest.raises(OutOfScopeError, match="has not declared"):
                 action.outcomes_under(CONTRACT_DATA, ITEMS[item])
-    assert declared == B1_KINDS_THAT_DECLARE_STRAND_USE & {kind for kind, _, _ in PAIRS}
+    assert declared >= B1_KINDS_THAT_DECLARE_STRAND_USE & {kind for kind, _, _ in PAIRS}  # a family added since declares its own rows (its own tests)
     assert refused.isdisjoint(declared) and refused  # the veiled, Eldritch, influence, beast and Harvest add/remove kinds wait for their tickets
 
 
 def test_every_cutting_kind_draws_other_mods_than_at_0_strands_on_some_stranded_item():
     cutting = check_cutting_kinds_differ_from_the_uncut_draw()
     assert cutting >= {"transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "alchemy-orb", "chaos-orb", "exalted-orb", "essence"}
+    assert cutting >= {"veiled-chaos-orb", "awakeners-orb", "influenced-exalted-orb"}  # the last two cut on the stranded extra items only
     assert cutting.isdisjoint({"fossil-set", "harvest-reforge", "bench-craft", "annulment-orb", "scouring-orb", "divine-orb"})
 
 

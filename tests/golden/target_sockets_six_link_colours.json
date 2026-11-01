@@ -1,0 +1,88 @@
+{
+  "_type": "Target",
+  "base_id": "Metadata/Items/Armours/BodyArmours/BodyInt1",
+  "item_level": 84,
+  "influences": [],
+  "requirements": [
+    {
+      "_type": "Requirement",
+      "family": "IncreasedLife",
+      "stat": null,
+      "mod_ids": [
+        "IncreasedLife1",
+        "IncreasedLife2",
+        "IncreasedLife3",
+        "IncreasedLifeImplicitBelt1"
+      ],
+      "min_tier": 3,
+      "min_roll": null,
+      "not_crafted": false
+    }
+  ],
+  "start_item": {
+    "_type": "Item",
+    "base_id": "Metadata/Items/Armours/BodyArmours/BodyInt1",
+    "item_level": 84,
+    "rarity": "rare",
+    "mods": [
+      {
+        "_type": "ExplicitMod",
+        "mod_id": "IncreasedLife1",
+        "tier": 3,
+        "values": [
+          12
+        ],
+        "fractured": false,
+        "crafted": false
+      }
+    ],
+    "influences": [],
+    "corrupted": false,
+    "implicits": [],
+    "quality": {
+      "_type": "PlainQuality",
+      "percent": 12
+    },
+    "veil_offer": [],
+    "enchantment": null,
+    "memory_strands": 0,
+    "sockets": {
+      "_type": "Sockets",
+      "colours": [
+        "R",
+        "G",
+        "B",
+        "W",
+        "W",
+        "W"
+      ],
+      "links": [
+        3,
+        2,
+        1
+      ]
+    },
+    "imprints": []
+  },
+  "price_file": null,
+  "start_price": null,
+  "implicits": [],
+  "quality": {
+    "_type": "PlainQualityRequirement",
+    "min_percent": 20
+  },
+  "actions": null,
+  "enchantment": null,
+  "allow_corrupted": false,
+  "sockets": {
+    "_type": "SocketRequirement",
+    "count": 6,
+    "links": 6,
+    "red": 2,
+    "green": 2,
+    "blue": 2
+  },
+  "start_sockets_assumed": false,
+  "item_level_floor": null,
+  "tiers_top_at_item_level": false
+}

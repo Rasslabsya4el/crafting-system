@@ -23,14 +23,14 @@ from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
-from crafting_system.risk import RiskReport, evaluate
+from crafting_system.risk import RiskReport, evaluate, is_free_cost
 from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
 from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
-from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
+from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, free_action_cost, offers_for, price_offers, usable_actions
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
 
@@ -281,6 +281,11 @@ def make_plan(
             "the target asks for implicits or quality, which the planner cannot plan yet"
             " (batch B2, tickets #142 onward)"
         )
+    if target.sockets is not None:
+        raise PlanError(
+            "the target asks for sockets, which the planner cannot plan yet"
+            " (batch B6, tickets #228 and #231 onward): the finish of sockets is not built, so an answer would silently ignore them"
+        )
     if target.enchantment is not None:
         raise PlanError(
             "the target asks for an enchantment, which the planner cannot plan yet"
@@ -364,7 +369,7 @@ def make_plan(
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
 
     began = time.perf_counter()
-    risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start])
+    risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
     risk_seconds = time.perf_counter() - began
 
     return Plan(
@@ -383,8 +388,13 @@ def evaluate_risk(
     start: CompressedState,
     is_goal: Callable[[CompressedState], bool],
     mean: float,
+    free_cost: float | None = None,
 ) -> RiskReport:
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
+
+    `free_cost` is what `price_offers` charged the actions that consume nothing (`free_action_cost`). Those actions are counted apart from
+    the grid (ticket #349, `risk._free`): the step is set by the cheapest action that costs something, so a veil plan's quantiles and
+    CVaR resolve instead of stepping by the epsilon. If the policy holds none, or the grid cannot be built that way, nothing differs.
 
     The ordinary quantile grid cannot step over the cheapest action, so `RISK_BINS` of it cover `RISK_BINS` times
     the cheapest cost. When that is less than half the mean the p90 (and for a repeat-until-success policy the median)
@@ -396,7 +406,11 @@ def evaluate_risk(
     """
     cheapest = min((action.cost for action in policy.values()), default=0.0)
     bins = UNRESOLVED_BINS if 2 * RISK_BINS * cheapest < mean else RISK_BINS
-    return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS)
+    if free_cost is None or not any(is_free_cost(action.cost, free_cost) for action in policy.values()):
+        return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS)
+    paid = min((action.cost for action in policy.values() if not is_free_cost(action.cost, free_cost)), default=0.0)
+    apart = UNRESOLVED_BINS if 2 * RISK_BINS * paid < mean else RISK_BINS  # the grid is set by the actions that cost something
+    return evaluate(policy, start, is_goal, max_bins=apart, max_coarse_bins=COARSE_BINS, free_cost=free_cost, free_fallback_bins=bins)
 
 
 def _pruned_left_out(pruned: Pruned) -> tuple[LeftOut, ...]:
