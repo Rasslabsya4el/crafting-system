@@ -167,6 +167,8 @@ class _Tree:
                     if need.matches is not None and not need.matches(donor):
                         raise DonorMismatchError(f"a nested run made a donor that its step refuses: {donor!r}")
                     donors.append(donor)
+                if self.steps == self.max_steps:  # the nested runs used the last click: this step cannot be taken
+                    return "unfinished", item, paid
                 if step.bind is not None:
                     action = step.bind(tuple(donors))
             item = _sampler(action, self.data, item, self.reading).sample(self.rng)
