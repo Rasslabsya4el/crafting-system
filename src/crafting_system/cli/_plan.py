@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
-from crafting_system.actions import BLOCKING, ActionError
+from crafting_system.actions import BLOCKING
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
@@ -26,8 +26,14 @@ from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
 from ._approx import Approximation, climb
+from ._bound_prune import Pruned, solve_pruned
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
+from ._prune import solver_actions
+
+MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
+PRUNE_BOUND = True  # twins and offers proved not needed are left out of the solve (exact; a test turns it off for the reference)
+MIN_OFFERS_TO_PRUNE = 40  # fewer priced offers than this are solved whole
 
 
 class PlanError(ValueError):
@@ -62,6 +68,7 @@ class Plan:
     risk_seconds: float
     approximation: Approximation | None = None  # set when the answer is approximate: `start`, `solution` and `policy` are then of blocks
     note: str = ""  # a plain-English remark on how the query was decided (empty when it simply fit)
+    pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
 
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
@@ -87,24 +94,19 @@ class _Model:
     price; it is an action of every state but the start itself, where it would change nothing.
     """
 
-    def __init__(self, abstraction: Abstraction, start: CompressedState, offers: Iterable[PricedOffer]) -> None:
+    def __init__(
+        self, abstraction: Abstraction, start: CompressedState, offers: Iterable[PricedOffer], cache: dict | None = None
+    ) -> None:
         self.abstraction = abstraction
         self.start = start
         self.offers = tuple(offers)
+        self.cache = cache  # (state, label, cost) -> solver action, shared by the solves of one plan
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.abstraction.is_goal(state)
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
-        found = []
-        for priced in self.offers:
-            if priced.label == RESTART and state == self.start:
-                continue
-            try:
-                found.append(offer_action(self.abstraction, priced, state, self.start))
-            except ActionError:  # the game refuses it here, or no admitted rule covers it
-                continue
-        return found
+        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=self.cache)
 
 
 def offer_action(
@@ -226,7 +228,6 @@ def make_plan(
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
     abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod)
     start = abstraction.compress(target.start_item)
-    model = _Model(abstraction, start, priced)
 
     note = ""
     if budget is not None:
@@ -245,7 +246,13 @@ def make_plan(
             )  # fmt: skip
 
     began = time.perf_counter()
-    solution = solve(model, [start])
+    pruned = None
+    if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
+        pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE)
+        solution = pruned.solution
+        left_out = (*left_out, *_pruned_left_out(pruned))
+    else:
+        solution = solve(_Model(abstraction, start, priced), [start])
     solve_seconds = time.perf_counter() - began
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
@@ -256,8 +263,22 @@ def make_plan(
 
     return Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out,
-        solution, risk, solve_seconds, risk_seconds, None, note,
+        solution, risk, solve_seconds, risk_seconds, None, note, pruned,
     )
+
+
+def _pruned_left_out(pruned: Pruned) -> tuple[LeftOut, ...]:
+    """The offers the pruning left out of the solve, by reason (the plan still prices and evaluates all of them)."""
+    found = []
+    if pruned.twins:
+        found.append(LeftOut("same outcome as a cheaper offer", tuple(dropped for dropped, _ in pruned.twins)))
+    if pruned.inapplicable:
+        found.append(LeftOut("the game refuses it on this item wherever it can be", pruned.inapplicable))
+    if pruned.bounded:
+        found.append(
+            LeftOut("proved never better: even its best case costs more than the plan", pruned.bounded)
+        )
+    return tuple(found)
 
 
 def _finite(value: float) -> bool:

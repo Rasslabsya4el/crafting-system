@@ -25,6 +25,11 @@ is imported or tested for here.
   closure; an action that raises an `ActionError` in a state is skipped there),
   `family_types(tag, fossils)` (the families of the empty pool grouped by family type: the "family types
   of the amulet's junk"; with a resonator, of the pool its fossils make), `stats` (`CacheStats(kernels, hits)`).
+* `reach_bound(abstraction, state, action, leaves, exact=False)`: an upper bound, from the pool alone, on the
+  chance that one use of an erasing reroll makes every leaf of `leaves` PASSING (the exact chance with
+  `exact=True`; None for an action it cannot bound); the argument is in `_bound.py` (#118).
+* `keeps_shape(abstraction, state, action)`: whether every outcome of the action keeps the flags and the
+  fractured mods of the state (what a bound read at one state needs to hold at the next; #118).
 * `Coarsening(abstraction, groups)` (`_coarse.py`, ADR-0023): the coarse state. Families that no requirement
   cares about are pooled into groups; `coarsen(state)` maps an exact state to its `Block` (a `CompressedState`
   whose pooled slots have the kind of their pool) and `kernel(block, action, bound)` is the kernel of a
@@ -120,6 +125,7 @@ No mechanic is decided here: this module only recombines the results of `actions
 claim of the rules registry.
 """
 
+from ._bound import keeps_shape, reach_bound
 from ._coarse import Block, Coarsening
 from ._estimate import Estimate, EstimateRefused
 from ._goal import AtLeast, Goal, Status, Wanted
@@ -143,4 +149,6 @@ __all__ = [
     "Status",
     "Wanted",
     "integer_weights",
+    "keeps_shape",
+    "reach_bound",
 ]
