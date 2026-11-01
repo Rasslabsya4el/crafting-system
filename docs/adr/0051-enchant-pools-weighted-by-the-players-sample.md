@@ -40,7 +40,7 @@ The Craft of Exile code and data in the repo's `sources/raw/coe` hold no Temperi
 
 Computed from the counts above (armour with the kind means, so a test compares within the rounding of the digits shown), a hand oracle independent of the code:
 
-- body armour, clean Life (4 enchants): 20.1% per click, **5.0** orbs; any Life: 23.2%, 4.3; clean Resistance 14.4%, 7.0; clean Defence 18.5%, 5.4;
+- body armour, clean Life (4 enchants): 20.1% per click, **5.0** orbs; any Life: 23.2%, 4.3; clean Resistance 14.4%, 7.0; clean Defence 18.7%, 5.35 (the raw counts give 18.5%, 5.4);
 - weapon, clean Critical (9 enchants): 11.8% per click, **8.5** orbs; clean Speed 12.7%, 7.9; clean Physical 9.4%, 10.6.
 
 Prices are not asserted here. The orb prices come from the price file, whose source (#13) disagrees with the research's single-snapshot figures by a factor of 24; the plan uses the price layer's, not a number from a note.

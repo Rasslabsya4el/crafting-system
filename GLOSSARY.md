@@ -133,7 +133,7 @@ One of the 14 Harvest enchantments (8 body armour, 6 weapon) that turn quality i
 _Avoid_: quality (when the enchant is meant)
 
 **Quality line**:
-The last report line of a plan with a quality enchant: how many Armourer's Scraps or Blacksmith's Whetstones bring the item to 20% quality, and about what they cost. It is outside the search (ADR-0052).
+The last report line of a plan with a quality enchant: how many Armourer's Scraps or Blacksmith's Whetstones bring the item to 20% quality, and about what they cost. It is outside the search over mods (ADR-0052).
 
 **Extra crafted slot**:
 The enchantment "Can have 1 additional Crafted Modifier": two bench-crafted mods instead of one, no affix slot taken. The planner reaches it only on a bought start item that already has it; the limit of crafted mods reads it (ADR-0053).
