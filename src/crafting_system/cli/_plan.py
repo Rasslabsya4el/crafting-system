@@ -12,10 +12,11 @@ is always exact, as before.
 """
 
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 
+from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
 from crafting_system.actions import BLOCKING
 from crafting_system.data import GameData
@@ -30,7 +31,7 @@ from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
-from ._prune import solver_actions
+from ._prune import chosen_offers, solver_actions
 
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
 PRUNE_CORRUPTING = True  # corrupting offers of a target that asks are left out of the states that cannot reach its goal (exact, ADR-0036; a test turns it off)
@@ -130,12 +131,39 @@ class _Model:
         self.start = start
         self.offers = tuple(offers)
         self.cache = cache  # (state, label, cost) -> solver action, shared by the solves of one plan
+        self.chosen: dict[CompressedState, list[PricedOffer]] = {}  # the offers chosen at the queued states (`prefetch` made the choice)
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.abstraction.is_goal(state)
 
+    def prefetch(self, states: Sequence[CompressedState]) -> None:
+        """Compute, side by side in a process pool, the label distributions that the queued `states` will need (ticket #250).
+
+        `actions` then finds them in the abstraction's cache. Nothing is built here and nothing changes in the answer; with
+        `CRAFTING_WORKERS=1` this does nothing.
+        """
+        if parallel.worker_count() < 2:
+            return
+        self.chosen.clear()  # the states of the last window have all been taken
+        requests = []
+        for state in states:
+            if self.abstraction.is_goal(state):
+                continue
+            chosen = self.chosen[state] = chosen_offers(
+                self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING
+            )
+            for priced in chosen:
+                if self.cache is None or (state, priced.label, priced.cost) not in self.cache:
+                    if not isinstance(priced.offer.action, BuyStartItem):
+                        requests.append((state, priced.offer.action))
+        self.abstraction.prime(requests)
+
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
-        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING, cache=self.cache)
+        chosen = self.chosen.pop(state, None)
+        return solver_actions(
+            self.abstraction, self.offers, state, self.start,
+            merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING, cache=self.cache, chosen=chosen,
+        )  # fmt: skip
 
 
 def offer_action(

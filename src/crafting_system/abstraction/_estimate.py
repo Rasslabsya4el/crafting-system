@@ -279,6 +279,10 @@ class _Pilot:
         self, state: CompressedState
     ) -> Iterable[tuple[Action, tuple[CompressedState, ...], Mapping[CompressedState, Fraction] | None]]:
         """Each action that is legal on `state`, its successors and, for a reroll or a walked action, its kernel (None for a deterministic action)."""
+        self.abstraction.prime(  # the kernels below are cheap once their pools' distributions exist; those are made side by side (#250)
+            [(state, action) for action, keeps in self.rerolls.items() if (action, self._key(keeps, state)) not in self._kernels]
+            + [(state, action) for action in self.walked]
+        )
         for action, keeps in self.rerolls.items():
             found = self.kernel_of(action, keeps, state)
             if found:

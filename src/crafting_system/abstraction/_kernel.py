@@ -212,6 +212,7 @@ class Abstraction:
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
         placeholders = placeholder_families(data)  # no ordinary mod has one: an action that reads one refuses by whether the item holds a veiled mod
         self._veiled_aware = any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
+        self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
         self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}
@@ -272,6 +273,17 @@ class Abstraction:
     def tracks_quality(self) -> bool:
         """Whether a state holds the catalyst quality: an enabled action reads or changes it."""
         return self._tracks_quality
+
+    @property
+    def sets_enchantment(self) -> bool:
+        """Whether an enabled action declares that it sets the enchantment (`Adds.enchantment`, ADR-0050, ticket #238).
+
+        It never makes the state hold the enchantment: the state is the same size with such an action or without it, and
+        what the actions read of the enchantment is the start item's (the constant `enchantment`). It only means `compress`
+        accepts a finished item whose enchantment is not the start item's, so a result of that action can be compared.
+        An action that declares nothing says it may set one (`Action.adds`), so it turns this on too.
+        """
+        return self._sets_enchantment
 
     @property
     def tracks_offer(self) -> bool:
@@ -359,7 +371,7 @@ class Abstraction:
                 f"item on {item.base_id} at level {item.item_level} does not fit an abstraction "
                 f"of {self.base_id} at level {self.item_level}"
             )
-        if item.enchantment != self.enchantment:
+        if item.enchantment != self.enchantment and not self._sets_enchantment:
             raise ValueError(
                 f"item with enchantment {item.enchantment!r} does not fit an abstraction built with enchantment {self.enchantment!r}: "
                 "the enchantment is a constant of the problem, pass it as `enchantment`"
@@ -466,6 +478,16 @@ class Abstraction:
             )
         self._check_enabled(action)
         return self._mixture_kernel(state, self._prepared(state, action))
+
+    def prime(self, requests: Iterable[tuple[CompressedState, Action]], *, workers: int | None = None) -> int:
+        """Compute ahead, in a process pool, the label distributions that `kernel` of these (state, action) pairs would compute.
+
+        Changes no result, only when the work is done (ticket #250; `_prime.py`). Returns the number of distributions it made;
+        0 with one worker (`CRAFTING_WORKERS=1`), where there is no fork, or when fewer than two are missing.
+        """
+        from ._prime import prime
+
+        return prime(self, requests, workers=workers)
 
     def kernel_key(self, state: CompressedState, action: Action) -> Hashable:
         """A key of the kernel of `action` on `state`, cheaper than the kernel: equal keys, equal kernels.
