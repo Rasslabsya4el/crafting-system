@@ -29,7 +29,17 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.data import GameData, Mod, conflicts
-from crafting_system.items import ExplicitMod, Item, Rarity, Side, spawn_weight, tier_table, veiled_placeholder
+from crafting_system.items import (
+    GENERIC_PLACEHOLDERS as GENERIC_PLACEHOLDER_IDS,
+    ExplicitMod,
+    Item,
+    Rarity,
+    Side,
+    is_veiled_mod,
+    spawn_weight,
+    tier_table,
+    veiled_placeholder,
+)
 from crafting_system.items.model import MAX_VEIL_OFFER, UNVEILED_DOMAIN, VEILED_DOMAIN
 from crafting_system.rules import Rule, get_rule
 
@@ -68,9 +78,7 @@ NO_OFFER_FILTER = get_rule("unveil.no_offer_filter_no_level_gate")
 
 OWN_CLAIMS = frozenset(value.id for value in tuple(vars().values()) if isinstance(value, Rule))  # every claim of this file: each action names its own
 
-CRAFTED_DOMAIN = "crafted"
-JUN_BENCH = "JunMaster"  # the id prefix of the crafted mods of Jun, whose bench makes the craftable versions of the veiled mods
-PLACEHOLDER_IDS: Mapping[Side, str] = {Side.PREFIX: "VeiledPrefix", Side.SUFFIX: "VeiledSuffix"}  # the generic ones
+PLACEHOLDER_IDS: Mapping[Side, str] = {Side(side): mod_id for side, mod_id in GENERIC_PLACEHOLDER_IDS.items()}  # the generic ones
 GENERIC_PLACEHOLDERS = frozenset(PLACEHOLDER_IDS.values())
 ONE = Fraction(1)
 NO_VEILED_POOL = "a jewel has no veiled pool (Craft of Exile's veiled groups are the jewellery, body armour, boots, helmets, gloves, one-hand, two-hand and off-hand classes)"
@@ -101,31 +109,9 @@ def unveil_families(data: GameData) -> frozenset[str]:
     return _cached(data, ("families",), build)
 
 
-def _craftable_signatures(data: GameData) -> frozenset[tuple[str, frozenset[str]]]:
-    """`(side, stat ids)` of every mod of the unveiled domain: a crafted mod of Jun with the same is its craftable version (research VEI-20: 928 of 994).
-
-    Other masters craft mods with the same stats as some veiled mod (Einhar's trap and mine speed, spell block): they are not
-    craftable versions of a veiled mod, so only the ids of Jun's bench (`JunMaster...`) count.
-    """
-
-    def build():
-        return frozenset(
-            (mod.generation_type, frozenset(stat.id for stat in mod.stats))
-            for mod in data.mods.values()
-            if mod.domain == UNVEILED_DOMAIN and mod.stats
-        )
-
-    return _cached(data, ("signatures",), build)
-
-
 def is_veiled(data: GameData, entry: ExplicitMod) -> bool:
     """Whether the mod counts as a veiled mod for the orbs' refusals: a placeholder, a mod unveiled from the pool, or the craftable version of one."""
-    mod = data.mods[entry.mod_id]
-    if mod.domain in (VEILED_DOMAIN, UNVEILED_DOMAIN):
-        return True
-    if mod.domain == CRAFTED_DOMAIN and mod.stats and mod.id.startswith(JUN_BENCH):
-        return (mod.generation_type, frozenset(stat.id for stat in mod.stats)) in _craftable_signatures(data)
-    return False
+    return is_veiled_mod(data, data.mods[entry.mod_id])
 
 
 def _placeholders(data: GameData, item: Item) -> list[ExplicitMod]:
