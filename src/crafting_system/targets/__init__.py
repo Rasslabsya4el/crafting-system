@@ -19,6 +19,16 @@ Keys (unknown keys are errors, with a close-match hint):
         not_crafted: true   # optional: true or false, default false
       - at_least: 2         # a "k of n" entry: 1 <= k <= len(of)
         of: [...]           # requirements or nested at_least entries
+    implicits:              # optional: a non-empty list; every entry must be met (ADR-0027)
+      - stat: "#% chance to Avoid being Shocked"   # exact English stat text, or `family: <family id>`;
+                            # only implicit mods take part (Eldritch ones and the base's own), never a prefix or suffix
+        mod: AvoidShockEldritchImplicit3   # optional: one implicit mod; the only way to name an "in your Presence" variant
+        min_grade: 3        # optional: whole number 1 (Lesser) to 6 (Perfect); Eldritch implicits only
+        min_roll: 40        # optional: as for a requirement, the base roll the item stores
+    quality:                # optional: the catalyst quality (ADR-0029)
+      type: intrinsic       # abrasive, accelerating, fertile, imbued, intrinsic, noxious, prismatic, tempering,
+                            # turbulent, unstable, sinistral or dextral (any case)
+      min_percent: 20       # whole number from 1 to 20
     start_item:             # optional; absent means a fresh normal item of the base, level and influence
       rarity: rare          # normal, magic or rare; default rare when mods are given, else normal
       corrupted: false      # optional
@@ -27,6 +37,14 @@ Keys (unknown keys are errors, with a close-match hint):
           tier: 3           # whole number >= 1, stored as written (tier derivation is not built yet)
           values: [14]      # one whole number per stat; a bare number is allowed for one stat
           fractured: true   # optional; `crafted` is optional too
+      implicits:            # optional; the implicits the item starts with (none are filled in from the base)
+        - mod: AvoidShockEldritchImplicit3
+          values: [40]      # one whole number per stat; a bare number is allowed for one stat
+          grade: 3          # optional: 0 for a base implicit, 1 to 6 for an Eldritch one; taken from the mod if left out
+      quality:              # optional: catalyst quality of the start item, `type` and `percent` (0 to 20)
+        type: intrinsic
+        percent: 20
+      veil_offer: [UnveiledPrefixLife1]   # optional: up to 3 mod ids offered for the one veiled placeholder in `mods`
     start_price: R12 start amulet   # optional: the name of the start item in the price file (what it costs to get)
     price_file: prices.json # optional path; a relative path counts from the target file's folder
 
@@ -34,7 +52,12 @@ Exactly one of `family` and `stat` names a requirement's mod. `stat` is compared
 sides (a range such as `(10-24)` becomes `#`, `[X|Y]` markup becomes `Y`), so `+# to maximum Life`
 and `+(10-24) to maximum Life` are the same, and it selects every tier and variant of that text. `family`
 selects every mod of the family. Rolls (`min_roll`, `values`) are the raw numbers of the game data, for
-example life regeneration is per minute. How a mod got on the item does not matter unless `not_crafted`
+example life regeneration is per minute. A requirement on a roll compares the base roll the item
+stores, so a guide's value shown with catalyst quality is written as the base roll (35 Strength shown as
+42 with 20% quality, since 35 x 1.2 = 42) plus a `quality` entry. The stat text of an implicit is resolved
+among implicits only, so "#% chance to Avoid being Shocked" under `implicits:` never picks the suffix of the
+same text, and without `mod` it skips the "in your Presence" variants. A start mod of a veiled placeholder
+(domain `veiled`) may leave out `tier` and `values`: tier 1 and the canonical seed are used. How a mod got on the item does not matter unless `not_crafted`
 is set. The members of an `at_least` group are checked independently, so one mod can satisfy two of
 them (say a family and a stat text that select the same mod); groups may nest 20 levels deep. Merge keys
 (`<<`), anchors (`&name`) and aliases (`*name`) are not supported.
@@ -46,10 +69,21 @@ from pathlib import Path
 from crafting_system.data import GameData
 
 from .errors import TargetError
-from .model import KOfN, Node, Requirement, Target
+from .model import Condition, ImplicitRequirement, KOfN, Node, QualityRequirement, Requirement, Target
 from .parse import parse_target_text
 
-__all__ = ["KOfN", "Node", "Requirement", "Target", "TargetError", "load_target", "parse_target"]
+__all__ = [
+    "Condition",
+    "ImplicitRequirement",
+    "KOfN",
+    "Node",
+    "QualityRequirement",
+    "Requirement",
+    "Target",
+    "TargetError",
+    "load_target",
+    "parse_target",
+]
 
 
 def parse_target(
