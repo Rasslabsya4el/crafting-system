@@ -9543,8 +9543,14 @@
   {
    "tab": "ring_crafted",
    "rows": 114,
-   "rows_with_crafted_or_exclusive_cells": 7,
+   "rows_with_crafted_or_exclusive_cells": 9,
    "reason": "header: 'ALL MODS HERE ARE CRAFTED' (crafted against crafted, no natural weight)"
+  },
+  {
+   "tab": "temple",
+   "rows": 6,
+   "rows_with_crafted_or_exclusive_cells": 6,
+   "reason": "Temple mod (influence-like, exclusive) in every row"
   },
   {
    "tab": "infl_chest",

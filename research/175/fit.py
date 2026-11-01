@@ -275,6 +275,14 @@ def main(rows_json, out_json, n_boot, n_sim, seed):
     for name, prof in (("gloves+misc", profile(nat_curves)), ("discord (s=1500)", per_s[1500]), ("pooled (s=1500)", pooled_by_s[1500])):
         tests[name] = {"LR_vs_alpha0": round(lr_stat(prof, 0.0), 3), "p_alpha0": p_chi2_1(lr_stat(prof, 0.0)),
                        "LR_vs_alpha1": round(lr_stat(prof, 1.0), 3), "p_alpha1": p_chi2_1(lr_stat(prof, 1.0))}
+    # sides without chaos resistance do not depend on the weight assumed for an essence-made chaos mod
+    pre = [s for s in natural if s["side"] == "prefix"]
+    pp = profile(curves_for(pre))
+    tests["gloves+misc prefix sides only (no chaos)"] = {
+        "sides": len(pre), "mle": pp["mle"], "LR_vs_alpha0": round(lr_stat(pp, 0.0), 3), "p_alpha0": p_chi2_1(lr_stat(pp, 0.0)),
+        "LR_vs_alpha1": round(lr_stat(pp, 1.0), 3), "p_alpha1": p_chi2_1(lr_stat(pp, 1.0))}
+    het = 2 * (profile(nat_curves)["loglik"] + per_s[1500]["loglik"] - pooled_by_s[1500]["loglik"])
+    tests["heterogeneity gloves+misc vs wand tab (s=1500), 1 df"] = {"LR": round(het, 3), "p": p_chi2_1(het)}
     res["tests"] = tests
 
     # sensitivity of the central pooled estimate (gloves+misc only, so no nuisance)

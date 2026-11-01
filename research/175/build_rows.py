@@ -2,7 +2,7 @@
 
 Usage: python -I build_rows.py RAW_DIR MODS_JSON OUT_JSON
 
-RAW_DIR holds the tabs exported as CSV (gloves.csv, misc.csv, temple.csv, discord_wands.csv, wands.csv,
+RAW_DIR holds the tabs exported as CSV (gloves.csv, misc.csv, discord_wands.csv, temple.csv, wands.csv,
 practical.csv, crafted.csv, ring_crafted.csv, infl_chest.csv, highmod.csv, examples.csv). MODS_JSON is the pinned
 repoe-fork export (`mods.json`, patch 3.29.3.3). The output is one record per (combine, side): the pooled entries
 with their spawn weight, the kept groups and, when the side cannot be used, the reason.
@@ -145,7 +145,7 @@ def read_rows(path):
 
 
 def grid_tab(mods, rows, tab, only_classes):
-    """The standard layout of the gloves, misc and temple tabs: item 1 in columns 1-6, item 2 in 7-12, the base
+    """The standard layout of the gloves and misc tabs: item 1 in columns 1-6, item 2 in 7-12, the base
     picked in 13, the kept mods in 14-19 and the author's initial/final counts in 20-23."""
     out = []
     for lineno, row in enumerate(rows, start=1):
@@ -236,13 +236,14 @@ def discord_sides(rows):
     return out
 
 
-EXCLUSIVE = re.compile(r"craft|\(ess\)|ess|temple|\(inf\)|\(breach\)|aspect|multimod|multi craft|elreon|tora|runic|"
-                       r"dictator|merciless|haku|wed|breach|inf", re.I)
+EXCLUSIVE = re.compile(r"craft|\(ess\)|\bess\b|temple|\(inf\)|\(breach\)|aspect|multimod|multi craft|elreon|tora|runic|"
+                       r"dictator|merciless|haku|\bwed\b|breach|\binf\b", re.I)
 OTHER_TABS = {
     "wands": "crafted spell/cold damage mod in every row (weight unknown)",
     "practical": "crafted and exclusive mods (aspect, multimod, Tora, elemental penetration) in every row",
     "crafted": "tests of crafted-mod weights: every row holds bench-crafted mods",
     "ring_crafted": "header: 'ALL MODS HERE ARE CRAFTED' (crafted against crafted, no natural weight)",
+    "temple": "Temple mod (influence-like, exclusive) in every row",
     "infl_chest": "breach and influence exclusive mods in every row; the author collects count statistics only",
 }
 
@@ -271,7 +272,7 @@ def inventory(raw):
 def main(raw_dir, mods_json, out_json):
     raw, mods = Path(raw_dir), Mods(mods_json)
     sides, dropped_tabs = [], []
-    for tab, classes in (("gloves", {"gloves"}), ("misc", {"gloves", "boots", "helm"}), ("temple", {"gloves"})):
+    for tab, classes in (("gloves", {"gloves"}), ("misc", {"gloves", "boots", "helm"})):
         for record in grid_tab(mods, read_rows(raw / f"{tab}.csv"), tab, classes):
             sides.extend(sides_of(record))
     sides.extend(discord_sides(read_rows(raw / "discord_wands.csv")))
