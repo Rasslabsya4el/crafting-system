@@ -122,10 +122,59 @@ def is_jewel(data: GameData, base_id: str) -> bool:
 
 @dataclass(frozen=True)
 class ApproximateInput:
-    """A claim marked `approximate` that an action of the policy reads, with the reason it is marked."""
+    """A claim marked `approximate` that an action of the policy reads, with the reason it is marked.
+
+    `interval` is the claim's own spread where the answer carries one (ADR-0028, ticket #221): the low, the point the plan uses
+    and the high of a cost, the grid of an exponent, the difference between two tables; `words` says it in plain words. Both
+    are empty for a claim with no interval, and then the text and the JSON are what they were without them.
+    """
 
     claim: str
     reason: str
+    interval: Mapping[str, object] | None = None
+    words: str = ""
+
+
+# the claims whose spread the answer shows: value keys of (point, low, high) and the unit in plain words
+RANGE_CLAIMS = {
+    "recombinator_cost.dust_per_combine_reports_3_26": (("point", "low", "high"), "Thaumaturgic Dust per combine"),
+    "recombinator_cost.gold_per_combine_reports_3_26": (("point", "low", "high"), "Gold per combine"),
+    "recombinator_cost.junk_craft_halves_dust_3_26": (
+        ("factor_point", "factor_low", "factor_high"),
+        "as the factor on the Dust when each input carries a junk craft",
+    ),
+}
+GRID_CLAIMS = {"recombinator.selection_weighted_formula_unknown": "the selection exponent alpha"}
+TABLE_CLAIMS = {
+    "recombinator.count_table": "recombinator.count_table_wiki",
+    "recombinator.count_table_wiki": "recombinator.count_table",
+}
+
+
+def number_text(value: float) -> str:
+    """A claim's number in words: whole numbers with thousands separators, others with their digits (`0.11`, `1.3`)."""
+    return f"{value:,.0f}" if float(value).is_integer() else f"{value:g}"
+
+
+def claim_interval(rule) -> tuple[Mapping[str, object], str] | None:
+    """The spread of an approximate claim and its words, or None when the answer shows none for this claim (a fixed list of claims)."""
+    if rule.id in RANGE_CLAIMS:
+        keys, unit = RANGE_CLAIMS[rule.id]
+        point, low, high = (float(rule.value[key]) for key in keys)
+        words = f"the plan uses {number_text(point)}; reports range from {number_text(low)} to {number_text(high)} {unit}"
+        return {"kind": "range", "point": point, "low": low, "high": high, "unit": unit}, words
+    if rule.id in GRID_CLAIMS:
+        plan, grid = float(rule.value["plan"]), [float(x) for x in rule.value["grid"]]
+        shown = ", ".join(number_text(x) for x in grid)
+        words = f"the plan is made at {number_text(plan)}; its cost is read at {shown}"
+        return {"kind": "grid", "plan": plan, "grid": grid}, words
+    if rule.id in TABLE_CLAIMS:
+        other = TABLE_CLAIMS[rule.id]
+        a, b = rule.value, rule_by_id(other).value
+        gap = max(abs(float(a[row][n]) - float(b[row][n])) for row in a for n in a[row])
+        words = f"the guide's table is used; the wiki's rounding of the same table differs by up to {number_text(round(gap, 1))} points in a row"
+        return {"kind": "alternative_table", "other": other, "largest_difference_points": round(gap, 1)}, words
+    return None
 
 
 def approximate_inputs(
@@ -138,11 +187,23 @@ def approximate_inputs(
     craft), so it is named here when the start item holds the enchantment and an action of the policy checks the limit; it leans
     to naming too many (the unsourced case is only the enchantment together with the multimod, ADR-0053).
     """
-    ids: set[str] = set()
+    actions = []
     for state in policy_states(plan.start, policy, plan.is_goal):
         action = policy.get(state)
         if plan.is_goal(state) or action is None:
             continue
+        actions.append(action)
+    return approximate_inputs_of(plan, actions, data)
+
+
+def approximate_inputs_of(plan: Plan, actions, data: GameData) -> tuple[ApproximateInput, ...]:
+    """The approximate claims read by `actions` (solver actions of the plan's offers), by claim id; see `approximate_inputs`.
+
+    This is the list for a policy that is not a plain walk of outcomes, such as the policy of a product with inputs, whose
+    caller walks it and hands over the actions it takes.
+    """
+    ids: set[str] = set()
+    for action in actions:
         ids |= plan.offer_of(action).offer.action.claims(data)  # type: ignore[attr-defined]
     starts = getattr(plan, "starts", None)  # a stand-in plan of a test has none
     if starts is not None:
@@ -151,20 +212,33 @@ def approximate_inputs(
         ids.add(STACKING_CLAIM)
     if not is_jewel(data, plan.target.base_id):
         ids = {claim for claim in ids if not claim.startswith(JEWEL_CLAIMS)}  # an action cites them for every item it takes
-    rules = (rule_by_id(claim) for claim in sorted(ids))
-    return tuple(ApproximateInput(rule.id, rule.approximate_reason) for rule in rules if rule.approximate)
+    found = []
+    for rule in (rule_by_id(claim) for claim in sorted(ids)):
+        if not rule.approximate:
+            continue
+        spread = claim_interval(rule)
+        found.append(ApproximateInput(rule.id, rule.approximate_reason, *(spread or (None, ""))))
+    return tuple(found)
 
 
 def approximate_lines(inputs: tuple[ApproximateInput, ...]) -> list[str]:
     """The text lines that name the approximate inputs of an answer (none when there are none)."""
     if not inputs:
         return []
-    return [APPROXIMATE_HEADING, *(f"  {item.claim}: {item.reason}" for item in inputs)]
+    lines = [APPROXIMATE_HEADING]
+    for item in inputs:
+        lines.append(f"  {item.claim}: {item.reason}")
+        if item.words:
+            lines.append(f"      spread: {item.words}")
+    return lines
 
 
 def approximate_inputs_document(inputs: tuple[ApproximateInput, ...]) -> list[dict]:
-    """The JSON `approximate_inputs`: one `{claim, reason}` per input, an empty list when there are none."""
-    return [{"claim": item.claim, "reason": item.reason} for item in inputs]
+    """The JSON `approximate_inputs`: one `{claim, reason}` per input (and its `interval` when it has one), an empty list when there are none."""
+    return [
+        {"claim": item.claim, "reason": item.reason, **({"interval": {**item.interval, "words": item.words}} if item.interval else {})}
+        for item in inputs
+    ]
 
 
 # --- --verify of an approximate answer -------------------------------------------------------------------------
