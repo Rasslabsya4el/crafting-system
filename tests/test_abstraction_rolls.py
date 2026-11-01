@@ -1,7 +1,7 @@
 """Roll requirements on drawn mods and the rerolled values of a Divine Orb (#71), layer 1 of ADR-0019.
 
 A requirement leaf with `min_roll` is a roll limit. The mods a reroll draws roll their values, and the exact
-chance of each outcome is built (`_rolls.py`); a Divine Orb (here a toy `Rerolled` action, `ToyDivine`) rerolls
+chance of each outcome is built (`_rolls.py`); a Divine Orb (the real `DivineOrb` and a toy `Rerolled` action, `ToyDivine`, which also stands in for a lucky one) rerolls
 the values of the mods already on the item, so the state tells the rollable mods apart by mod id. Every kernel
 is compared, exactly, with the brute force of `abstraction_rolls_oracle`, which lists every concrete item with
 its values on the tiny pool (`TINY`: ranges of two to four integers).
@@ -22,6 +22,7 @@ from abstraction_rolls_oracle import (
     ToyLuckyChaos,
     divine_items,
     finished_with_values,
+    resonator_with_values,
     rolled,
     tiny_item,
     value_cases,
@@ -36,20 +37,31 @@ from crafting_system.abstraction._kinds import MOD_PREFIX
 from crafting_system.actions import (
     Action,
     Adds,
+    ApplyFossils,
     AugmentationOrb,
     ChaosOrb,
+    DivineOrb,
     ExaltedOrb,
     Finite,
     HarvestReforge,
+    NotApplicableError,
     OutOfScopeError,
     Reads,
     RegalOrb,
 )
+from crafting_system.data import Fossil
 from crafting_system.data.model import StatRange
 from crafting_system.items import Rarity
 
 PASSING, BELOW, ABSENT = Status.PASSING, Status.BELOW, Status.ABSENT
 CHAOS, REFORGE, DIVINE, LUCKY_DIVINE, LUCKY_CHAOS = ChaosOrb(), HarvestReforge("lightning"), ToyDivine(), ToyDivine(lucky=True), ToyLuckyChaos()
+REAL_DIVINE = DivineOrb()  # the real action (src/crafting_system/actions/divine.py); the toy stays the stand-in of the lucky one
+
+
+@pytest.fixture(params=[DIVINE, REAL_DIVINE], ids=["toy", "real"])
+def divine(request):
+    """The fair Divine Orb the layer-1 checks run on: the toy of the oracle, then the real `DivineOrb`."""
+    return request.param
 
 LIFE_ROLL = Wanted(LIVES, min_roll=(3,))  # Life 1 (1..4) passes with 3 and 4, Life 2 (5..8) always
 RESIST_ROLL = Wanted(RESISTS, min_roll=(2,))  # Resist 1 (1..2) passes with 2, the others always
@@ -85,11 +97,12 @@ def check_reroll(ab: Abstraction, start, action, *, lucky: bool = False):
     return kernel
 
 
-def check_divine(ab: Abstraction, start, action: ToyDivine = DIVINE):
-    """The kernel of the Divine Orb on `start` equals the brute force over the values of the changed mods."""
+def check_divine(ab: Abstraction, start, action):
+    """The kernel of the Divine Orb (the toy or the real one) on `start` equals the brute force over the values of the changed mods."""
     changed = action.outcomes(TINY, start).changed
     kernel = ab.kernel(ab.compress(start), action)
-    assert_same_distribution(kernel, compressed_distribution(divine_items(TINY, start, changed, action.lucky), ab.compress))
+    lucky = getattr(action, "lucky", False)
+    assert_same_distribution(kernel, compressed_distribution(divine_items(TINY, start, changed, lucky), ab.compress))
     return kernel
 
 
@@ -118,9 +131,9 @@ def test_the_chances_of_the_rolls_of_a_drawn_mod_are_exact(goal, start, action):
 
 @pytest.mark.parametrize("start", ["empty", "fractured_life_high", "fractured_damage"])
 @pytest.mark.parametrize("goal", ["life_resist", "hybrid", "two_leaves", "mixed"])
-def test_the_rolls_are_exact_when_the_junk_is_kept_as_slots_by_mod(goal, start):
+def test_the_rolls_are_exact_when_the_junk_is_kept_as_slots_by_mod(goal, start, divine):
     """With a Divine Orb enabled the junk is kept and a rollable mod is a slot by mod id: the drawn slots carry the rolled contribution."""
-    check_reroll(build(goal, DIVINE), STARTS[start](), CHAOS)
+    check_reroll(build(goal, divine), STARTS[start](), CHAOS)
 
 
 @pytest.mark.parametrize("action", [CHAOS, REFORGE], ids=["chaos", "reforge"])
@@ -139,10 +152,29 @@ def test_a_roll_limit_that_no_roll_meets_is_below_at_every_roll():
 
 @pytest.mark.parametrize("goal", ["life", "hybrid", "two_leaves"])
 @pytest.mark.parametrize("start", ["empty", "fractured_life_low"])
-@pytest.mark.parametrize("enabled", [(), (DIVINE,)], ids=["by_label", "by_mod"])
+@pytest.mark.parametrize("enabled", [(), (DIVINE,), (REAL_DIVINE,)], ids=["by_label", "by_mod", "by_real_mod"])
 def test_a_lucky_roll_keeps_the_better_of_two(goal, start, enabled):
     """A Sanctified Fossil's reroll (`Outcomes.rolls_lucky`): each value rolled twice, the nearer to the stat's max kept."""
     check_reroll(build(goal, *enabled), STARTS[start](), LUCKY_CHAOS, lucky=True)
+
+
+SANCTIFIED_ID = "Metadata/Items/Currency/CurrencyDelveCraftingLuckyModRolls"
+LUCKY_TINY = dataclasses.replace(
+    TINY, fossils={SANCTIFIED_ID: Fossil(SANCTIFIED_ID, "Sanctified Fossil", (), (), (), (), (), (), False, True, False, False, 0)}
+)
+SANCTIFIED = ApplyFossils(("Sanctified Fossil",))
+
+
+@pytest.mark.parametrize("goal", ["life", "hybrid", "two_leaves"])
+@pytest.mark.parametrize("start", ["empty", "fractured_life_low"])
+def test_a_real_sanctified_resonator_rolls_every_drawn_value_twice(goal, start):
+    """The real `ApplyFossils` with a Sanctified Fossil (`rolls_lucky` on every part), on the tiny pool, against the listing of every roll."""
+    ab = Abstraction(LUCKY_TINY, GOALS[goal], AMULET, LEVEL, ())
+    item = STARTS[start]()
+    outcomes = SANCTIFIED.outcomes(LUCKY_TINY, item)
+    assert all(part.rolls_lucky for _, part in outcomes.components)
+    kernel = ab.kernel(ab.compress(item), SANCTIFIED)
+    assert_same_distribution(kernel, compressed_distribution(resonator_with_values(LUCKY_TINY, SANCTIFIED, item, lucky=True), ab.compress))
 
 
 def test_a_lucky_draw_passes_more_often_than_a_fair_one():
@@ -169,17 +201,17 @@ def test_a_goal_without_a_roll_limit_has_the_same_signature_for_a_lucky_draw():
 # --- the Divine Orb: values rerolled in place ---------------------------------------------------------------
 
 
-def test_a_divine_orb_on_a_rollable_mod_below_the_roll_passes_half_the_time():
-    ab = build("life", DIVINE)
-    kernel = check_divine(ab, tiny_item(rolled(LIFE_1, 1)))
+def test_a_divine_orb_on_a_rollable_mod_below_the_roll_passes_half_the_time(divine):
+    ab = build("life", divine)
+    kernel = check_divine(ab, tiny_item(rolled(LIFE_1, 1)), divine)
     assert passing(kernel, 0) == Fraction(1, 2)  # 3 and 4 of 1..4
     assert sorted(kernel.values()) == [Fraction(1, 2), Fraction(1, 2)]
 
 
-def test_a_divine_orb_on_a_passing_mod_gives_the_same_chances():
-    ab = build("life", DIVINE)
-    below = ab.kernel(ab.compress(tiny_item(rolled(LIFE_1, 1))), DIVINE)
-    above = check_divine(ab, tiny_item(rolled(LIFE_1, 4)))
+def test_a_divine_orb_on_a_passing_mod_gives_the_same_chances(divine):
+    ab = build("life", divine)
+    below = ab.kernel(ab.compress(tiny_item(rolled(LIFE_1, 1))), divine)
+    above = check_divine(ab, tiny_item(rolled(LIFE_1, 4)), divine)
     assert above == below
 
 
@@ -189,16 +221,16 @@ def test_a_lucky_divine_orb_passes_three_times_in_four():
     assert passing(kernel, 0) == Fraction(3, 4)  # one minus both rolls under 3: (2/4) squared
 
 
-def test_a_hybrid_mod_needs_every_stat_and_the_stats_roll_independently():
-    ab = build("hybrid", DIVINE, LUCKY_DIVINE)
-    assert passing(check_divine(ab, tiny_item(rolled(DAMAGE_1, 1, 1))), 0) == Fraction(1, 4)
+def test_a_hybrid_mod_needs_every_stat_and_the_stats_roll_independently(divine):
+    ab = build("hybrid", divine, LUCKY_DIVINE)
+    assert passing(check_divine(ab, tiny_item(rolled(DAMAGE_1, 1, 1)), divine), 0) == Fraction(1, 4)
     assert passing(check_divine(ab, tiny_item(rolled(DAMAGE_1, 1, 1)), LUCKY_DIVINE), 0) == Fraction(9, 16)
-    assert passing(check_divine(ab, tiny_item(rolled(DAMAGE_2, 3, 1))), 0) == Fraction(1, 2)  # the first stat always meets 2
+    assert passing(check_divine(ab, tiny_item(rolled(DAMAGE_2, 3, 1)), divine), 0) == Fraction(1, 2)  # the first stat always meets 2
 
 
-def test_two_leaves_on_one_mod_share_the_one_roll():
-    ab = build("two_leaves", DIVINE)
-    kernel = check_divine(ab, tiny_item(rolled(LIFE_1, 1)))
+def test_two_leaves_on_one_mod_share_the_one_roll(divine):
+    ab = build("two_leaves", divine)
+    kernel = check_divine(ab, tiny_item(rolled(LIFE_1, 1)), divine)
     by_status = {state.status: chance for state, chance in kernel.items()}
     assert by_status == {
         (BELOW, BELOW): Fraction(1, 4),
@@ -220,51 +252,57 @@ STATES = {
 
 @pytest.mark.parametrize("name", STATES)
 @pytest.mark.parametrize("goal", ["life_resist", "mixed"])
-@pytest.mark.parametrize("divine", [DIVINE, LUCKY_DIVINE], ids=["fair", "lucky"])
+@pytest.mark.parametrize("divine", [DIVINE, REAL_DIVINE, LUCKY_DIVINE], ids=["fair", "real", "lucky"])
 def test_the_kernel_of_the_divine_orb_is_exact(name, goal, divine):
-    check_divine(build(goal, divine), STATES[name](), divine)
+    start = STATES[name]()
+    if divine is REAL_DIVINE and name == "one_fractured_only":  # the real orb refuses an item with no mod to change
+        ab = build(goal, divine)
+        with pytest.raises(NotApplicableError):
+            ab.kernel(ab.compress(start), divine)
+        return
+    check_divine(build(goal, divine), start, divine)
 
 
-def test_a_fractured_mod_keeps_its_value_whatever_the_divine_orb_does():
-    ab = build("life_resist", DIVINE)
-    kernel = check_divine(ab, tiny_item(rolled(LIFE_1, 1, fractured=True), rolled(RESIST_1, 1)))
+def test_a_fractured_mod_keeps_its_value_whatever_the_divine_orb_does(divine):
+    ab = build("life_resist", divine)
+    kernel = check_divine(ab, tiny_item(rolled(LIFE_1, 1, fractured=True), rolled(RESIST_1, 1)), divine)
     assert {state.status[0] for state in kernel} == {BELOW}  # the fractured Life stays below
     assert passing(kernel, 1) == Fraction(1, 2)  # the Resistance rolls 1 or 2
     assert all(state.fractured == ab.compress(tiny_item(rolled(LIFE_1, 1, fractured=True))).fractured for state in kernel)
 
 
-def test_a_mod_on_a_locked_side_keeps_its_value():
-    ab = build("life_resist", DIVINE, metamods=True)
+def test_a_mod_on_a_locked_side_keeps_its_value(divine):
+    ab = build("life_resist", divine, metamods=True)
     lock = rolled(CRAFTED, 1, crafted=True)  # Suffixes Cannot Be Changed
     start = tiny_item(rolled(LIFE_1, 1), rolled(RESIST_1, 1), lock)
-    changed = DIVINE.outcomes(TINY, start).changed
+    changed = divine.outcomes(TINY, start).changed
     assert changed == {(LIFE_1, False, False), (CRAFTED, False, True)}  # the Resistance sits on a locked side
-    kernel = check_divine(ab, start)
+    kernel = check_divine(ab, start, divine)
     assert {state.status[1] for state in kernel} == {BELOW}  # the locked Resistance stays at 1
     assert passing(kernel, 0) == Fraction(1, 2)
 
 
-def test_a_tier_bad_mod_of_a_rollable_family_stays_below_and_its_better_tier_rolls():
-    ab = build("tier_bad", DIVINE)
-    bad = check_divine(ab, tiny_item(rolled(LIFE_1, 4)))  # tier 2 of a leaf that wants tier 1: below at every roll
+def test_a_tier_bad_mod_of_a_rollable_family_stays_below_and_its_better_tier_rolls(divine):
+    ab = build("tier_bad", divine)
+    bad = check_divine(ab, tiny_item(rolled(LIFE_1, 4)), divine)  # tier 2 of a leaf that wants tier 1: below at every roll
     assert {state.status for state in bad} == {(BELOW,)} and sum(bad.values()) == 1
-    good = check_divine(ab, tiny_item(rolled(LIFE_2, 5)))
+    good = check_divine(ab, tiny_item(rolled(LIFE_2, 5)), divine)
     assert passing(good, 0) == Fraction(1, 2)  # 7 and 8 of 5..8
 
 
-def test_a_crafted_mod_that_a_leaf_limits_the_roll_of_is_out_of_scope():
-    ab = build("crafted", DIVINE, metamods=True)
+def test_a_crafted_mod_that_a_leaf_limits_the_roll_of_is_out_of_scope(divine):
+    ab = build("crafted", divine, metamods=True)
     start = tiny_item(rolled(CRAFTED, 1, crafted=True))
     with pytest.raises(OutOfScopeError, match="crafted"):
-        ab.kernel(ab.compress(start), DIVINE)
+        ab.kernel(ab.compress(start), divine)
     # the same item is fine when the Divine Orb is not used on it, and the reroll that erases the crafted mod too
     assert ab.kernel(ab.compress(start), CHAOS)
 
 
-def test_a_divine_orb_changes_nothing_a_goal_without_a_roll_limit_can_see():
-    ab = Abstraction(TINY, Goal((Wanted(LIVES), Wanted(RESISTS))), AMULET, LEVEL, [DIVINE])
+def test_a_divine_orb_changes_nothing_a_goal_without_a_roll_limit_can_see(divine):
+    ab = Abstraction(TINY, Goal((Wanted(LIVES), Wanted(RESISTS))), AMULET, LEVEL, [divine])
     state = ab.compress(tiny_item(rolled(LIFE_1, 1), rolled(RESIST_1, 1)))
-    assert dict(ab.kernel(state, DIVINE)) == {state: Fraction(1)}
+    assert dict(ab.kernel(state, divine)) == {state: Fraction(1)}
     assert not ab.kind_of(TINY.mods[LIFE_1]).startswith(MOD_PREFIX)
 
 
@@ -279,7 +317,7 @@ ADDS = {
 }
 
 
-@pytest.mark.parametrize("enabled", [(), (DIVINE,)], ids=["by_weight", "by_weight_and_mod"])
+@pytest.mark.parametrize("enabled", [(), (DIVINE,), (REAL_DIVINE,)], ids=["by_weight", "by_weight_and_mod", "by_weight_and_real_divine"])
 @pytest.mark.parametrize("goal", ["life_resist", "hybrid", "mixed"])
 @pytest.mark.parametrize("name", ADDS)
 def test_an_orb_that_adds_a_mod_rolls_it(name, goal, enabled):
@@ -353,8 +391,8 @@ def test_mods_that_share_a_law_spread_over_its_outcomes_by_the_multinomial(count
 # --- how the mods are told apart ----------------------------------------------------------------------------
 
 
-def test_with_a_divine_orb_every_mod_of_a_rollable_family_is_told_apart_by_its_id():
-    ab = build("life_resist", DIVINE)
+def test_with_a_divine_orb_every_mod_of_a_rollable_family_is_told_apart_by_its_id(divine):
+    ab = build("life_resist", divine)
     for mod_id in (LIFE_1, LIFE_2, RESIST_1, RESIST_2, "LightningResist3"):
         assert ab.kind_of(TINY.mods[mod_id]) == MOD_PREFIX + mod_id
     assert not ab.kind_of(TINY.mods[DAMAGE_1]).startswith(MOD_PREFIX)  # no requirement limits its roll
@@ -366,8 +404,8 @@ def test_without_a_divine_orb_no_mod_is_told_apart_by_its_id():
     assert not any(ab.kind_of(mod).startswith(MOD_PREFIX) for mod in TINY.mods.values())
 
 
-def test_an_item_with_a_rollable_mod_compresses_to_a_slot_of_its_id_with_the_contribution_of_its_values():
-    ab = build("life", DIVINE)
+def test_an_item_with_a_rollable_mod_compresses_to_a_slot_of_its_id_with_the_contribution_of_its_values(divine):
+    ab = build("life", divine)
     low, high = (ab.compress(tiny_item(rolled(LIFE_1, value))) for value in (1, 4))
     assert [slot.kind for slot in low.slots] == [slot.kind for slot in high.slots] == [MOD_PREFIX + LIFE_1]
     assert (low.slots[0].contribution, high.slots[0].contribution) == ((BELOW,), (PASSING,))
@@ -377,43 +415,49 @@ def test_an_item_with_a_rollable_mod_compresses_to_a_slot_of_its_id_with_the_con
 # --- through the graph --------------------------------------------------------------------------------------
 
 
-def test_two_divine_orbs_reach_exactly_the_states_one_reaches_and_roll_again_independently():
-    ab = build("life_resist", DIVINE)
+def test_two_divine_orbs_reach_exactly_the_states_one_reaches_and_roll_again_independently(divine):
+    ab = build("life_resist", divine)
     start = tiny_item(rolled(LIFE_1, 1), rolled(RESIST_1, 1))
     state = ab.compress(start)
-    once = ab.kernel(state, DIVINE)
-    expected = {ab.compress(item) for item, _ in divine_items(TINY, start, DIVINE.outcomes(TINY, start).changed)} | {state}
-    assert ab.reachable([state], [DIVINE]) == expected
+    once = ab.kernel(state, divine)
+    expected = {ab.compress(item) for item, _ in divine_items(TINY, start, divine.outcomes(TINY, start).changed)} | {state}
+    assert ab.reachable([state], [divine]) == expected
     twice: dict = {}
     for middle, chance in once.items():
-        for last, each in ab.kernel(middle, DIVINE).items():
+        for last, each in ab.kernel(middle, divine).items():
             twice[last] = twice.get(last, Fraction(0)) + chance * each
     assert twice == dict(once)  # the second roll forgets the first
 
 
-def test_the_graph_of_a_reroll_and_a_divine_orb_matches_the_brute_force_two_steps():
-    ab = build("life_resist", DIVINE)
+def test_the_graph_of_a_reroll_and_a_divine_orb_matches_the_brute_force_two_steps(divine):
+    ab = build("life_resist", divine)
     start = tiny_item(rolled(LIFE_1, 1, fractured=True))
-    reached = ab.reachable([ab.compress(start)], [DIVINE, CHAOS])
+    reached = ab.reachable([ab.compress(start)], [divine, CHAOS])
     expected = {ab.compress(item) for item, _ in finished(start, CHAOS)}
     shapes = {}
     for item, _ in finished(start, CHAOS):  # the values a Divine Orb leads to do not depend on the values it starts from
         shapes.setdefault(tuple((entry.mod_id, entry.fractured, entry.crafted) for entry in item.mods), item)
     for item in shapes.values():
-        expected |= {ab.compress(after) for after, _ in divine_items(TINY, item, DIVINE.outcomes(TINY, item).changed)}
+        expected |= {ab.compress(after) for after, _ in divine_items(TINY, item, divine.outcomes(TINY, item).changed)}
     assert reached == expected | {ab.compress(start)}
 
 
-def test_equal_kernel_keys_give_equal_kernels_and_the_changed_slots_are_in_the_key():
-    ab = build("life_resist", DIVINE, metamods=True)
-    states = [ab.compress(maker()) for maker in STATES.values()]
+def test_equal_kernel_keys_give_equal_kernels_and_the_changed_slots_are_in_the_key(divine):
+    ab = build("life_resist", divine, metamods=True)
+    states = []
+    for maker in STATES.values():
+        try:
+            divine.outcomes(TINY, maker())  # the real orb refuses an item with no mod to change
+        except NotApplicableError:
+            continue
+        states.append(ab.compress(maker()))
     by_key: dict = {}
     for state in states:
-        by_key.setdefault(ab.kernel_key(state, DIVINE), []).append(ab.kernel(state, DIVINE))
+        by_key.setdefault(ab.kernel_key(state, divine), []).append(ab.kernel(state, divine))
     assert all(kernels.count(kernels[0]) == len(kernels) for kernels in by_key.values())
     locked = ab.compress(tiny_item(rolled(LIFE_1, 1), rolled(RESIST_1, 1), rolled(CRAFTED, 1, crafted=True)))
     open_ = ab.compress(tiny_item(rolled(LIFE_1, 1), rolled(RESIST_1, 1)))
-    assert ab.kernel_key(locked, DIVINE) != ab.kernel_key(open_, DIVINE)
+    assert ab.kernel_key(locked, divine) != ab.kernel_key(open_, divine)
 
 
 # --- where it stops -----------------------------------------------------------------------------------------
@@ -469,12 +513,12 @@ def test_a_new_crafted_or_fixed_result_mod_that_a_roll_limit_looks_at_is_still_o
     assert sum(plain.kernel(plain.compress(tiny_item()), ToyCraft()).values()) == 1
 
 
-def test_the_pilot_count_the_family_groups_and_the_bound_refuse_a_divine_orb():
-    ab = build("life_resist", DIVINE)
+def test_the_pilot_count_the_family_groups_and_the_bound_refuse_a_divine_orb(divine):
+    ab = build("life_resist", divine)
     state = ab.compress(tiny_item(rolled(LIFE_1, 1)))
-    assert reach_bound(ab, state, DIVINE, [0]) is None
+    assert reach_bound(ab, state, divine, [0]) is None
     with pytest.raises(EstimateRefused):
-        ab.estimate([state], [DIVINE])
+        ab.estimate([state], [divine])
     with pytest.raises(OutOfScopeError):
         Coarsening(ab, [])
 

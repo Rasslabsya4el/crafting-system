@@ -20,6 +20,7 @@ from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from fractions import Fraction
 
+from abstraction_fossil import fossil_finished
 from abstraction_oracle import finished_items
 from abstraction_pool import (
     CRAFTED,
@@ -139,6 +140,17 @@ def finished_with_values(
     kept = {entry.mod_id for entry in start.fractured_mods} | ({forced} if forced else set())
     result: dict[Item, Fraction] = defaultdict(Fraction)
     for item, chance in finished_items(data, start, tag, forced=forced, cap=cap):
+        for rolled_item, each in reroll_values(data, item, lambda entry: entry.mod_id not in kept, lucky):
+            result[rolled_item] += chance * each
+    assert sum(result.values()) == 1
+    return list(result.items())
+
+
+def resonator_with_values(data: GameData, action, start: Item, lucky: bool = False) -> list[tuple[Item, Fraction]]:
+    """Every finished item of the resonator `action` on `start` (`abstraction_fossil.fossil_finished`), the values of every drawn mod rolled."""
+    kept = {entry.mod_id for entry in start.fractured_mods}
+    result: dict[Item, Fraction] = defaultdict(Fraction)
+    for item, chance in fossil_finished(data, action, start):
         for rolled_item, each in reroll_values(data, item, lambda entry: entry.mod_id not in kept, lucky):
             result[rolled_item] += chance * each
     assert sum(result.values()) == 1

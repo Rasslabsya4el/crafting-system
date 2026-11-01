@@ -65,7 +65,7 @@ def test_a_roll_limit_on_a_mod_that_cannot_occur_on_the_item_does_not_offer_it()
     assert [left.labels for left in offered.left_out if "roll limit" in left.reason] == [("Divine Orb",)]  # a limit was asked for, so the report says why
 
 
-def test_a_normal_start_item_still_offers_it_when_a_draw_may_give_the_mod():
+def test_a_normal_start_item_is_offered_no_divine_orb_even_when_a_draw_may_give_the_mod():
     # the catalog lists the orb only for magic and rare items, so a normal start has none to offer
     goal = Goal((Wanted(frozenset({LIFE}), min_roll=(20,)),))
 

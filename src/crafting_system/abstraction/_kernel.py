@@ -291,9 +291,10 @@ class Abstraction:
         """The exact distribution of the next compressed state after `action` on `state`.
 
         Raises what the action raises for the item the state stands for (`NotApplicableError`,
-        `OutOfScopeError`), `OutOfScopeError` for a roll limit on a mod the action draws, forces or
-        crafts, and `ValueError` for a state of another goal and for an action that reads the mods
-        besides the fractured ones and was not enabled.
+        `OutOfScopeError`), `OutOfScopeError` for a roll limit on a forced, crafted or fixed-result new mod
+        and for a Fractured Fossil whose pool holds a mod a roll limit tells apart (a mod the action draws
+        is fine: its roll is spread over its law), and `ValueError` for a state of another goal and for an
+        action that reads the mods besides the fractured ones and was not enabled.
         """
         if len(state.status) != len(self.goal.leaves):
             raise ValueError(
@@ -372,7 +373,9 @@ class Abstraction:
         has `("fossils", fractures, the parts)`, each part its probability and the signature of its
         pool, with the label of its forced mod when a mod is fractured. An action with a fixed result
         (a bench craft) draws nothing and has no cache: its signature is `("fixed", action)`, which
-        names the action and does not decide its kernel.
+        names the action and does not decide its kernel. A `Rerolled` part (a Divine Orb) is the same:
+        its signature `("rerolled", lucky)` names the kind only, and the kernel also reads which kept slots
+        are rerolled (`kernel_key` carries them).
 
         The forced mod of an essence is not in it: it is a kept mod, so the pool already leaves out its
         family, the kept count and the free slots already count it, and it cannot change the draw.
