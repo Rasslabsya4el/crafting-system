@@ -69,6 +69,7 @@ class ToyCorruption(Action):
     """Corrupts a rare item: half the time it gains `implicit_id` and keeps its mods, half the time only the fractured mods are left."""
 
     implicit_id: str = TOY_IMPLICIT
+    keeps: bool = True  # False: declares that the explicit mods are rerolled (a Bloodstained resonator), only the declaration is exercised
 
     def label(self, data: GameData | None = None) -> str:
         return "Toy Corruption"
@@ -80,7 +81,7 @@ class ToyCorruption(Action):
         return Reads(junk=True, families=frozenset())  # which mods the item holds decides what is kept; the implicits are not looked at
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        return Adds.corrupting(keeps_mods=True, draws=False)
+        return Adds.corrupting(keeps_mods=self.keeps, draws=False)
 
     def outcomes(self, data: GameData, item: Item) -> Finite:
         if item.corrupted:
@@ -337,6 +338,36 @@ def test_a_corrupting_offer_is_terminal_for_the_bound_pruning():
 
     start_item = fixture_items()["rare_junk"]
     assert _kind_of(TOY_DATA, start_item, _priced(ToyCorruption(), COST, start_item))[0] == TERMINAL
+
+
+def test_a_corrupting_action_never_keeps_the_shape_the_bound_pruning_holds_fixed():
+    """`raise_level` makes an offer terminal when `keeps_shape` is False: a corrupting action moves the flags, so it always is."""
+    from crafting_system.abstraction import keeps_shape
+
+    start_item = fixture_items()["rare_junk"]
+    ab, start, _ = _model(Goal((Wanted(RESISTS),), asks_corrupted=True), start_item, _priced(ToyCorruption(), COST, start_item))
+    assert keeps_shape(ab, start, ToyCorruption()) is False
+
+
+def test_a_corrupting_action_that_rerolls_the_mods_is_never_pruned_from_a_state_that_misses_a_requirement():
+    start_item = fixture_items()["rare_junk"].changed(TOY_DATA, mods=(_mod(LIFE_1),))  # no resistance
+    keeping, rerolling = _priced(ToyCorruption(), COST, start_item), _priced(ToyCorruption(keeps=False), COST, start_item)
+    ab, failing, _ = _model(Goal((Wanted(RESISTS),), asks_corrupted=True), start_item, keeping, rerolling)
+    assert corrupting_offer_pruned(ab, keeping, failing) is True
+    assert corrupting_offer_pruned(ab, rerolling, failing) is False  # its outcomes may meet the requirement the state misses
+
+
+def test_a_kind_marked_corrupting_lists_only_actions_that_corrupt(items, toy_registered):
+    from crafting_system.actions import kinds
+
+    seen = 0
+    for entry in kinds():
+        for item in items.values():
+            members = list(entry.members(TOY_DATA, item))
+            if members:
+                seen += 1
+                assert entry.corrupting == all(m.adds(TOY_DATA, item).corrupts for m in members), entry.name
+    assert seen
 
 
 def test_solver_actions_leaves_the_toy_in_when_pruning_is_off():
