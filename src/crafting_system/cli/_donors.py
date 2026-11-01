@@ -55,7 +55,7 @@ class DonorModel:
         self._with = tuple(p for p in self.offers if p not in self._free)
         self._cache: dict = {}
         self._built: dict[CompressedState, tuple[Action[CompressedState], ...]] = {}
-        self._needs: dict[tuple[CompressedState, str], tuple[ItemNeed, ...]] = {}
+        self._needs: dict[tuple[CompressedState, str, tuple], tuple[ItemNeed, ...]] = {}
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.abstraction.is_goal(state)
@@ -73,7 +73,7 @@ class DonorModel:
 
     def needs(self, state: CompressedState, action: Action[CompressedState]) -> tuple[ItemNeed, ...]:
         """The `Need`s of the action `actions(state)` gave, on concrete items (empty for an action without inputs)."""
-        return self._needs.get((state, action.label), ())
+        return self._needs.get((state, action.label, action.extra_inputs), ())
 
     def _candidate(self, state: CompressedState, priced: PricedOffer) -> Action[CompressedState] | None:
         """The action of one offer that takes inputs, with its `Need`s over compressed states; None where the game refuses it."""
@@ -84,9 +84,10 @@ class DonorModel:
             return None
         if not wanted:
             return built
-        self._needs[(state, priced.label)] = wanted
         compress = self.abstraction.compress
-        return dataclasses.replace(built, extra_inputs=tuple(Need(compress(n.start), compress(n.want)) for n in wanted))
+        candidate = dataclasses.replace(built, extra_inputs=tuple(Need(compress(n.start), compress(n.want)) for n in wanted))
+        self._needs[(state, candidate.label, candidate.extra_inputs)] = wanted
+        return candidate
 
 
 def solve_with_donors(

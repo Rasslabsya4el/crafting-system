@@ -146,7 +146,31 @@ def test_a_candidate_the_solve_needs_is_offered_in_a_later_round_and_one_that_ca
     assert needed.value == pytest.approx(8.0) and len(needed.rounds) == 2 and needed.offered_pairs == 1
     unneeded = solve_lazily(model(1.0), "r")  # chaos costs 1 x 4 = 4: the graft's bound 5 + 3 is above it, so it stays out
     assert unneeded.value == pytest.approx(4.0) and len(unneeded.rounds) == 1 and unneeded.offered_pairs == 0
-    assert needed.solution.policy["r" if False else needed.start].label == "graft"
+    assert needed.solution.policy[needed.start].label == "graft"
+
+
+def test_the_lower_bound_counts_the_distance_of_a_successor_that_was_not_solved():
+    """The donor's action leads to a state the first solve never built; its determinized distance (not infinity, not more) is what makes the graft worth offering."""
+    table = {
+        "r": [Action("chaos", 100.0, (("g", 1), ("r", 3))), Action("graft", 1.0, (("mid", 1),), (Need("buy", "donor"),))],
+        "buy": [Action("buy", 3.0, (("donor", 1),))],
+        "mid": [Action("fin", 1.0, (("g", 1),))],
+    }
+    lazy = solve_lazily(TabularModel({"g"}, table), "r")
+    assert lazy.value == pytest.approx(5.0) and len(lazy.rounds) == 2 and lazy.offered_pairs == 1  # 1 + 3 + 1, against 400 by chaos
+    assert lazy.solution.policy[lazy.start].label == "graft"
+
+
+def test_a_solved_state_with_no_way_to_the_goal_gets_no_donor():
+    """`trap` is built (chaos can fall into it) and has no value; no action of the model leads from it to the goal, so offering it a donor cannot help."""
+    table = {
+        "r": [Action("chaos", 1.0, (("g", 1), ("trap", 1))), Action("buy", 10.0, (("g", 1),))],
+        "trap": [Action("graft", 1.0, (("dead", 1),), (Need("trap", "nowhere"),))],
+    }
+    lazy = solve_lazily(TabularModel({"g"}, table), "r")
+    assert lazy.value == pytest.approx(10.0)
+    assert lazy.values[lazy.acquisition.product(lazy.acquisition.start("r")[1], "trap")] == math.inf  # it was solved, with no value
+    assert lazy.pairs == 1 and lazy.offered_pairs == 0 and len(lazy.rounds) == 1
 
 
 def test_a_model_whose_every_policy_is_infinite_is_reported_infinite():

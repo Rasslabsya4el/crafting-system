@@ -35,7 +35,7 @@ def test_the_lazy_run_stays_within_the_state_counts_of_the_adr(lazy, world):
     assert len(lazy.rounds) <= 2
     assert lazy.rounds[-1].wants <= 8  # the main target and seven donors: the single mods and the pairs, nothing with junk
     assert len(lazy.values) <= 504  # against 3,969 with every donor offered
-    assert lazy.offered_pairs <= 441  # the seed offers 7 feeders at 63 states; the ADR's 385 is the same seed minus 8 receivers
+    assert lazy.offered_pairs <= 441  # the seed offers its 7 feeders at all 63 states and the first solve proves the rest unneeded (the ADR counts 385 pairs; its counting rule is not recorded)
     assert lazy.rounds[-1].added == 0
 
 

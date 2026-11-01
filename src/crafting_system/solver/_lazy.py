@@ -17,6 +17,14 @@ and at an action left out exactly when `cost + sum V(input) + sum p(j) L(j) >= V
 a state has no finite value in hand nothing can be pruned, so every candidate there is offered, except where `D` itself is
 infinite (no sequence of actions reaches the want from there, so nothing helps and `M` is infinite too).
 
+What the argument covers, and what the tests carry. It takes `L` finite on the states an optimal policy of `M` reaches. A
+solved state with no finite value in hand and a finite `D` is outside it: there `L = D` can break `L <= T L` at an offered
+action that leads into the state, and `L = infinity` leaves `T_mu^n L` infinite. The loop offers every candidate at such a
+state, so at the end `M` and the product agree on its actions; that its value in `M` is then infinite as well is not proved
+here. It is checked: the first solve of the 40 random tiny worlds of `tests/test_solver_lazy.py` run from a seed of nothing has
+such states, and all 120 runs end at the value of the product with every candidate offered (brute force and the linear
+programme agree with it); no random world is infinite in the full model, so that case has the two hand-made models there.
+
 What is returned is exact to two things: the certified `error_bound` of `solve` on the last round, and the **slack** of the
 test, a relative `slack` s (default 1e-9), which makes the test a little weaker in the one way that stays provable: with
 `theta = 1 - s` the loop takes `theta L` for the sub-solution, and a candidate left out must satisfy `cost + theta S >= theta V`
