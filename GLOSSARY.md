@@ -122,6 +122,14 @@ _Avoid_: stage
 One priced candidate a plan can start from, with its source: the target's own start item (`plain`) or the Magic item a vendor recipe makes. The planner plans each option and keeps the cheapest total of start price and expected crafting cost (ADR-0059). A later source, such as a bought item (research #337), is one more source of start options. In the code it is a `StartCandidate`.
 _Avoid_: start method
 
+**Item level floor**:
+The lowest item level the planner may plan a target at (ADR-0061). The target's `item_level` is where the guide put the level; the floor is the lowest level at which every requirement can still be met, derived from the tiers it asks for (a tier is absolute on a base), or stated by `item_level_floor`. A target whose tiers are "the top tier at that level" (`tiers_top_at_item_level`) and one that asks for a corrupted implicit are not lowered. In the code it is an `ItemLevelFloor` (`targets/floor.py`).
+_Avoid_: minimum item level (the file's number is not a minimum)
+
+**Level group**:
+Item levels that open the same pool of mods for a random draw, so they are one plan; the pool changes only at the required levels of its mods. The planner plans one option per group from the floor up, and the top group runs past the target's own level. In the code it is a `LevelGroup`.
+_Avoid_: level band
+
 ## Crafting
 
 **Primitive**:

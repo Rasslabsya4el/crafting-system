@@ -41,6 +41,9 @@ base: Heavy Belt
 
 # The item level of the belt, a whole number from 1 to 100. The guide says "75+".
 item_level: 75
+# The tiers of this target are the top tiers the item level above allows (the rule at the top of this file), so the planner
+# must not plan a lower item level (ADR-0061, ticket #352).
+tiers_top_at_item_level: true
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # The guide allows Hunter or Elder; this file takes Hunter.

@@ -81,5 +81,7 @@
     "green": 2,
     "blue": 2
   },
-  "start_sockets_assumed": false
+  "start_sockets_assumed": false,
+  "item_level_floor": null,
+  "tiers_top_at_item_level": false
 }
