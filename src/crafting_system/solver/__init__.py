@@ -8,7 +8,8 @@ from ._acquire import MAIN, Acquisition, Need
 from ._bounds import Bounds, solve_bounds
 from ._certify import ConvergenceError
 from ._minmax import solve_variants
-from ._model import Action, Model, Outcome, TabularModel, VariantAction
+from ._model import Action, Model, Outcome, Peek, TabularModel, VariantAction
+from ._peek import ExpandedModel, PeekNode, PeekSolution, Reaction, peek_backup, solve_peek
 from ._solve import Solution, solve
 from ._tail import NoPolicyError, TailCut, solve_tail_cut
 
@@ -17,17 +18,24 @@ __all__ = [
     "Action",
     "Bounds",
     "ConvergenceError",
+    "ExpandedModel",
     "MAIN",
     "Model",
     "Need",
     "NoPolicyError",
     "Outcome",
+    "Peek",
+    "PeekNode",
+    "PeekSolution",
+    "Reaction",
     "Solution",
     "TabularModel",
     "TailCut",
     "VariantAction",
+    "peek_backup",
     "solve",
     "solve_bounds",
+    "solve_peek",
     "solve_tail_cut",
     "solve_variants",
 ]
