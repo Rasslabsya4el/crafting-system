@@ -181,6 +181,10 @@ class Adds:
       target, ADR-0037). The outcome cannot meet an explicit requirement the item did not meet, so a planner offers the action for
       such a target only from a state in which every other requirement already passes (an exact pruning, ADR-0031, ADR-0036). A
       resonator that rerolls the explicit mods itself leaves it False and is never pruned this way. The default is False.
+    * `cuts`: the random draws of explicit mods that the action makes see the tier cut of an item with Memory Strands (and of a Foulborn
+      orb): it builds its pool with a `Cut` (`cut.py`, ADR-0040, ADR-0041). It needs `draws`: a fixed result (an essence's guaranteed mod,
+      a bench mod) is never cut. The default is False, which says the action's draws see the ordinary pool whatever the item's count: a
+      fossil, a Harvest craft or a beast never cuts. The declaration is the action's alone; the pool cuts only when it is given a cut.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -200,8 +204,11 @@ class Adds:
     offer: bool = False
     corrupts: bool = False
     keeps_mods: bool = False
+    cuts: bool = False
 
     def __post_init__(self) -> None:
+        if self.cuts and not self.draws:
+            raise ValueError("`cuts` says the action's random draws see the tier cut: it needs `draws`")
         if self.corrupts and not self.implicits:
             raise ValueError("an action that corrupts adds a corrupted implicit, so it must declare `implicits` too")
         if self.keeps_mods and not self.corrupts:
