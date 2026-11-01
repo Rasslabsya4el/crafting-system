@@ -9,7 +9,7 @@ from array import array
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
-from ._model import Action, Model, Outcome
+from ._model import Action, Model, Outcome, VariantAction
 from ._scc import strongly_connected_components
 
 _WEIGHT_LIMIT = 1 << 64  # weights at or above this do not fit the `Q` array and are kept apart
@@ -147,6 +147,11 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
             continue
         graph.goal.append(False)
         for action in tuple(model.actions(state)):
+            if isinstance(action, VariantAction):
+                raise TypeError(
+                    f"state {state!r} offers a variant action: `solve` takes plain actions, "
+                    "use `solve_variants` or `solve_bounds`"
+                )
             if action.extra_inputs:
                 raise NotImplementedError(
                     "multi-input actions need the branching solver, B3 (ADR-0011)"

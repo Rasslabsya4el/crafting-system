@@ -58,18 +58,7 @@ def solve[S](
     first (0 forces value iteration everywhere). Raises `ConvergenceError` when a component
     cannot reach `tolerance` within `max_sweeps` sweeps.
     """
-    if isinstance(tolerance, bool) or not isinstance(tolerance, Real) or not (
-        math.isfinite(tolerance) and tolerance > 0
-    ):
-        raise ValueError(f"tolerance must be finite and above zero, got {tolerance!r}")
-    if isinstance(max_sweeps, bool) or not isinstance(max_sweeps, Integral) or max_sweeps < 1:
-        raise ValueError(f"max_sweeps must be an integer of at least 1, got {max_sweeps!r}")
-    if (
-        isinstance(direct_solve_limit, bool)
-        or not isinstance(direct_solve_limit, Integral)
-        or direct_solve_limit < 0
-    ):
-        raise ValueError(f"direct_solve_limit must be an integer of at least 0, got {direct_solve_limit!r}")
+    check_options(tolerance, direct_solve_limit, max_sweeps)
     graph = build_graph(model, starts)
     alive, in_y = proper_states(graph)
     count = len(graph.states)
@@ -126,3 +115,19 @@ def solve[S](
         },
         error_bound=total_error,
     )
+
+
+def check_options(tolerance: object, direct_solve_limit: object, max_sweeps: object) -> None:
+    """Raise `ValueError` for a `tolerance`, `direct_solve_limit` or `max_sweeps` `solve` cannot use."""
+    if isinstance(tolerance, bool) or not isinstance(tolerance, Real) or not (
+        math.isfinite(tolerance) and tolerance > 0
+    ):
+        raise ValueError(f"tolerance must be finite and above zero, got {tolerance!r}")
+    if isinstance(max_sweeps, bool) or not isinstance(max_sweeps, Integral) or max_sweeps < 1:
+        raise ValueError(f"max_sweeps must be an integer of at least 1, got {max_sweeps!r}")
+    if (
+        isinstance(direct_solve_limit, bool)
+        or not isinstance(direct_solve_limit, Integral)
+        or direct_solve_limit < 0
+    ):
+        raise ValueError(f"direct_solve_limit must be an integer of at least 0, got {direct_solve_limit!r}")

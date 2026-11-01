@@ -6,7 +6,8 @@ and knows nothing of Path of Exile (`tests/test_solver_independence.py` guards t
 
 from ._bounds import Bounds, solve_bounds
 from ._certify import ConvergenceError
-from ._model import Action, Model, Outcome, TabularModel
+from ._minmax import solve_variants
+from ._model import Action, Model, Outcome, TabularModel, VariantAction
 from ._solve import Solution, solve
 
 __all__ = [
@@ -17,6 +18,8 @@ __all__ = [
     "Outcome",
     "Solution",
     "TabularModel",
+    "VariantAction",
     "solve",
     "solve_bounds",
+    "solve_variants",
 ]
