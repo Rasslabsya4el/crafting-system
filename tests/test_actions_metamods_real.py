@@ -84,7 +84,7 @@ def hand_prefix_weights(data, base, level, extra_tags, blocked, held_families):
             continue
         if set(mod.implicit_tags) & blocked or set(mod.families) & held_families:
             continue
-        spawn = next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)
+        spawn = 0 if "Royale" in mod.id else next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)  # a Battle Royale copy is not rolled (#310)
         if spawn == 0:
             continue
         factor = next((Fraction(w.weight, 100) for w in mod.generation_weights if w.tag in tags), Fraction(1))
