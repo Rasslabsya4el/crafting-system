@@ -211,7 +211,7 @@ BENCHMARKS = (
                 (SPEED, MULTIMOD, NO_ATTACK, GEMS), ADDS, (DOT,), "100%", crafted=(MULTIMOD, NO_ATTACK),
             ),
         ),
-        heavy="the exact graph has more than 570,000 states and no approximate level exists for a route with metamods (ticket #70)",
+        heavy="the exact graph has at least 787,000 states, more than a 16 GB runner holds, and no approximate level exists for a route with metamods (ticket #70)",
     ),
 )
 

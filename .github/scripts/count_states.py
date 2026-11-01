@@ -2,7 +2,7 @@
 
     python .github/scripts/count_states.py TARGET.yaml [--drop LABEL,LABEL] [--limit N] [--seconds S] [--max-rss-mb M] [--out DIR]
 
-Breadth-first from the start state over every offer of the plan and `restart`, the same graph the exact solver walks.
+Breadth-first from the start state over every offer of the plan and `restart`, the same graph the exact solver walks (the bound pruning of `make_plan` needs 40 offers, and these targets have fewer).
 Every 30 seconds it prints `states found, states expanded, kernels, resident memory`; at the end (the graph is
 finished, the state limit or the time limit is reached) it prints the same and writes `<target>.count.json`. `--drop`
 leaves offers out by label (to see what a smaller list of actions would cost). Never run it on a PC: the graphs are large.

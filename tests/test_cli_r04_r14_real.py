@@ -4,7 +4,7 @@ R04 is the Insanity-fractured additional-arrow Penetrating Arrow Quiver, R14 the
 asked for and what was measured (see the pull request): the targets, the start items at their prices, the actions the
 guides use, the guides' routes, and the published odds all exist and are checked here. The planner's policy for either
 route was NOT produced: R04's exact graph holds 177,242 states and 535,910,746 transitions (a 16 GB runner is out of
-memory in about ten minutes), R14's holds at least 570,000 states, and neither has an approximate level, because both
+memory in about twelve minutes), R14's holds at least 787,000 states, and neither has an approximate level, because both
 model an Attack/Caster metamod (ADR-0023, #69). The CLI says so, which `test_the_default_run_is_refused...` pins.
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; CI fetches it) and skip cleanly without it.
 """
@@ -17,7 +17,7 @@ from abstraction_support import real_game_data
 
 from crafting_system.cli import PlanError, When, load_route, make_plan
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
-from crafting_system.cli._benchmark_outcomes import published_outcomes
+from crafting_system.cli._benchmark_outcomes import PublishedOutcome, published_outcomes
 from crafting_system.cli._route_sim import simulate_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
@@ -141,3 +141,11 @@ def test_a_route_can_be_played_on_concrete_items(unsolved, data, route_id):
 
     assert report.runs == 3 and report.successes + report.stopped + report.unfinished == 3
     assert all(cost >= unsolved.start_price.chaos for cost in report.costs)
+
+
+def test_an_outcome_naming_an_action_the_target_does_not_offer_is_a_value_error(data):
+    held = ("LocalIncreasedAttackSpeed5",)
+    odds = PublishedOutcome("Fracturing Orb", "fractures the Speed", "a bow", held, "fractured", held, "25%")
+
+    with pytest.raises(ValueError, match="which the target does not offer"):
+        published_outcomes(data, load_target(ROOT / ROUTES["R14"][0], data), [odds])
