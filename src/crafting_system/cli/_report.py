@@ -16,7 +16,7 @@ from crafting_system.items import Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN
 
-from ._marking import marking_document, marking_lines, risk_lines
+from ._marking import marking_document, marking_lines, risk_lines, verification_document, verification_lines
 from ._offers import without_ranges
 from ._plan import Plan, chance
 from ._reach import policy_states, reach_probabilities
@@ -300,7 +300,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"Run time: solver {plan.solve_seconds * 1000:.0f} ms, risk.evaluate {plan.risk_seconds * 1000:.1f} ms")
     if verification is not None:
         lines.append("")
-        lines.extend(_verification_lines(verification, plan))
+        lines.extend(verification_lines(verification) if plan.approximation else _verification_lines(verification, plan))
     return "\n".join(lines) + "\n"
 
 
@@ -438,6 +438,9 @@ def policy_document(report: Report, verification: Verification | None = None, *,
     }
     if verification is not None:
         sim = verification.report
+        if plan.approximation is not None:
+            document["verification"] = verification_document(verification)
+            return document
         document["verification"] = {
             "runs": verification.runs,
             "seed": verification.seed,

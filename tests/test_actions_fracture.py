@@ -19,7 +19,6 @@ from crafting_system.actions import (
     Fractured,
     FracturingOrb,
     NotApplicableError,
-    OutOfScopeError,
     catalog,
     kinds,
 )
@@ -163,14 +162,16 @@ def test_the_refusals_come_in_order_rarity_corruption_influence_count():
         FracturingOrb().outcomes(DATA, rare(2, influences=frozenset({Influence.SHAPER})))
 
 
-def test_a_crafted_mod_makes_the_item_out_of_scope_because_a_fractured_crafted_mod_has_no_place_in_the_model():
-    item = amulet(roll(MODS[0]), roll(MODS[3]), roll(MODS[4]), roll("JunMaster2AllDamage2_", crafted=True))
+@pytest.mark.parametrize("crafted_id", ["JunMaster2AllDamage2_", CRAFTED])
+def test_a_crafted_mod_and_a_metamod_are_candidates_like_the_rest(crafted_id):
+    item = amulet(roll(MODS[0]), roll(MODS[3]), roll(MODS[4]), roll(crafted_id, crafted=True))
 
-    with pytest.raises(OutOfScopeError, match="crafted mod"):
-        FracturingOrb().outcomes(DATA, item)
-    metamod = amulet(roll(MODS[0]), roll(MODS[3]), roll(MODS[4]), roll(CRAFTED, crafted=True))
-    with pytest.raises(OutOfScopeError, match="crafted mod"):
-        FracturingOrb().outcomes(DATA, metamod)
+    outcomes = FracturingOrb().outcomes(DATA, item)
+
+    assert len(outcomes.results) == 4 and {chance for chance, _ in outcomes.results} == {Fraction(1, 4)}
+    fractured = {result.fractured_mods[0].mod_id: result for _, result in outcomes.results}
+    assert crafted_id in fractured and fractured[crafted_id].fractured_mods[0].crafted
+    assert outcomes.chance_all([crafted_id]) == 1  # it stays on the item, fractured
 
 
 def test_the_orb_is_named_priced_and_declared():

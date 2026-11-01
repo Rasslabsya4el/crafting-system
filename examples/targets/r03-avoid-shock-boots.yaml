@@ -1,0 +1,95 @@
+# Target for benchmark route R03: Velour Boots with Movement Speed from a Veiled unveil, a crafted
+# Life, an Avoid Shock essence suffix, a Suppress Spell Damage suffix, a Fire Resistance suffix and a
+# 40% "chance to Avoid being Shocked" Searing Exarch implicit.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft
+# it: the planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (SKRYAH quiz, "Avoid-shock suppression Velour Boots", docs/research/
+# 2026-10-30-5-reference-routes.md, id R03):
+#   1. Get a boot with a fractured Suppress Spell Damage suffix.
+#   2. Use the Avoid Shock essence (Torment) until the boots roll the Fire Resistance you want.
+#   3. Lock the suffixes (Wild Bristle Matron), then use Veiled Chaos, block the prefix side
+#      (for example by crafting Life) and unveil Movement Speed; repeat the veiled stage if it fails.
+#   4. Craft Life, then use Grand Eldritch Embers until the boots show the Avoid Shock implicit.
+#
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's
+# rule for tiers: a mod whose tier the guide does not state is the TOP tier the item level allows
+# (nobody crafts that without a guaranteed top-tier mod); a mod the guide's essence or bench craft
+# forces is exactly that tier; a mod of the bought start item is the tier the buy spec prices.
+#   * "30% increased Movement Speed, 10% increased Movement Speed if you haven't been Hit Recently":
+#     the two-line prefix a Veiled Chaos unveil can show on boots, "(25-30)% increased Movement
+#     Speed / (10-12)% increased Movement Speed if you haven't been Hit Recently" (mod
+#     JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently). The 30 and the 10 of the
+#     guide are read as numbers inside those ranges, not as a minimum roll.
+#   * "+67 to maximum Life (crafted)": the bench craft whose range holds 67, "+(56-70) to maximum
+#     Life" (mod EinharMasterIncreasedLife4). It is a crafted mod, so it is a prefix of its own and
+#     the rolled Life prefixes do not count.
+#   * "60% chance to Avoid being Shocked": exactly what the Avoid Shock essence adds, "(56-60)%
+#     chance to Avoid being Shocked" (mod ChanceToAvoidShockEssence7), a suffix.
+#   * "+13% chance to Suppress Spell Damage (T1)": tier 1, "+(13-14)%" (mod ChanceToSuppressSpells5__).
+#   * "+43% to Fire Resistance (T2)": tier 2, "+(42-45)%" (mod FireResist7).
+#   * "40% chance to Avoid being Shocked (Searing Exarch implicit)": an implicit, not a suffix. The
+#     text "#% chance to Avoid being Shocked" under `implicits:` selects only the six Searing Exarch
+#     grades of it (AvoidShockEldritchImplicit1 to 6, "(33-35)%" up to "(48-50)%"). It does not
+#     select the suffix of the same text, nor the variants that need a Unique Enemy or a Pinnacle
+#     Boss in your Presence (name one with `mod:` if you want it). `min_roll: 40` is read as the
+#     value 40 or more: grade 3 ("(39-41)%") rolled 40 or 41, or any better grade.
+#   * "get suppression fracture boot": the start item below is a rare boot with the T1 Suppress Spell
+#     Damage suffix fractured. The guide gives no more, so no other mod is written, and no price: the
+#     file has no buy spec for it, so the planner treats it as free until one is added.
+
+# The base item, by its English name exactly as the game writes it (capital letters matter).
+base: Velour Boots
+
+# The item level of the boots, a whole number from 1 to 100. The guide says 100.
+item_level: 100
+
+# Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
+# [] means none.
+influence: []
+
+# Everything below must be present on the finished item (a list: every entry is required).
+requirements:
+  # The unveiled Movement Speed (see the readings above), exactly that mod. The family is the
+  # game's own name for the group of mods that exclude each other; `mod` narrows it to one mod.
+  - family: MovementVelocity
+    mod: JunMasterVeiledMovementVelocityAndMovementVelocityIfNotHitRecently
+
+  # The crafted Life, exactly the bench craft of the guide.
+  - family: IncreasedLife
+    mod: EinharMasterIncreasedLife4
+
+  # The suffix of the Avoid Shock essence, exactly that tier.
+  - family: ReducedShockChance
+    mod: ChanceToAvoidShockEssence7
+
+  # Suppress Spell Damage, tier 1. The fractured mod of the start item counts.
+  - family: ChanceToSuppressSpells
+    mod: ChanceToSuppressSpells5__
+
+  # Fire Resistance, tier 2 (the item level allows tier 1 as well; the guide asks for tier 2).
+  - family: FireResistance
+    mod: FireResist7
+
+# The implicit the boots must show. Every entry here is required too. `stat` is the English text
+# of the implicit; only implicit mods are looked at, so the Avoid Shock suffix is not confused with it.
+implicits:
+  - stat: "#% chance to Avoid being Shocked"
+    # The value, in the units of the game data: 40 or more. No grade is asked for, so any of the six
+    # grades counts as long as its value reaches 40.
+    min_roll: 40
+
+# Where the crafting starts: boots that already have Suppress Spell Damage fractured.
+start_item:
+  rarity: rare
+  mods:
+    # The mod is named by its game-data id: ChanceToSuppressSpells5__ is "+(13-14)% chance to
+    # Suppress Spell Damage", tier 1 on this base. The tier is taken as written, so it was checked
+    # by hand against the game data (3.29.3.3).
+    - mod: ChanceToSuppressSpells5__
+      tier: 1
+      # One whole number per stat of the mod, in the units of the game data.
+      values: [13]
+      # Locked in place by a Fracturing Orb.
+      fractured: true

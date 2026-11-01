@@ -10,6 +10,12 @@ Known limits:
 * `ConvergenceError` carries only the best certified bound, no partial result.
 * Sparse elimination of a big component gives up after 2e8 multiply-adds (heavy fill-in, as in a
   component where most states lead to most others); then only the sweeps are left.
+* A branching component (an action takes an input from a state of its own component: donors that
+  need each other, an output recycled as a donor) is solved by value iteration alone, which may not
+  converge within `max_sweeps` when the component is critical or its value is infinite. A model
+  whose policy needs two copies of what it makes can have a finite proper state and still cost
+  infinity (ADR-0022); the dense policy iteration, the value ceiling and the mass-closed
+  pre-check that decide this early are not built yet (#179).
 """
 
 import math
@@ -38,6 +44,11 @@ class Solution[S]:
     V(s) * (1 + error_bound). It includes the float64 rounding of the probabilities, an
     amplification of about epsilon * value / g, so it may exceed the `tolerance` asked for, and it
     is `math.inf` for a component whose upper side cannot be certified (values are still returned).
+
+    An action's `extra_inputs` are states whose value is paid on every attempt (ADR-0022); they
+    make the dependency graph of the components, so a donor is solved before the action that uses
+    it, and an action with a dead input is dead. A repeated input is one input with several
+    copies: the policy's action lists the distinct inputs grouped at the first position of each.
     """
 
     values: Mapping[S, float]
@@ -61,7 +72,9 @@ def solve[S](
     not reach `tolerance` and `max_sweeps` allows them, it is solved by sparse policy iteration
     (exact elimination, so a stiff component of thousands of states needs no 1e5 sweeps), and any
     remaining sweeps refine that. Raises `ConvergenceError` when a component cannot reach
-    `tolerance` within `max_sweeps` sweeps.
+    `tolerance` within `max_sweeps` sweeps. A component where an input lies in the
+    component itself uses value iteration only, whatever `direct_solve_limit` is, and raises the
+    same error when it does not converge.
     """
     if isinstance(tolerance, bool) or not isinstance(tolerance, Real) or not (
         math.isfinite(tolerance) and tolerance > 0
@@ -81,11 +94,14 @@ def solve[S](
 
     offsets, edges = array("q", [0]), array("i")  # state graph over the retained actions only
     targets, tstart, first = graph.targets, graph.tstart, graph.first
+    inputs, istart = graph.inputs, graph.istart
     for state in range(count):
         if in_y[state]:
             for k in range(first[state], first[state + 1]):
                 if alive[k]:
                     edges.extend(targets[tstart[k] : tstart[k + 1]])
+                    if inputs:  # inputs are dependency edges too: a donor in a cycle joins it
+                        edges.extend(inputs[istart[k] : istart[k + 1]])
         offsets.append(len(edges))
 
     value = [math.inf] * count

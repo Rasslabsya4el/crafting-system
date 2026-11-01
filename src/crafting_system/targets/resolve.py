@@ -6,6 +6,12 @@ each line is stripped (hybrid mods have two lines). The comparison is then exact
 so `+# to maximum Life` and `+(10-24) to maximum Life` name the same mods, and a fixed text such as
 `+1 to Level of all Lightning Skill Gems` matches literally. Only prefixes and suffixes with a text
 take part; a family id selects every mod of the family, whatever its generation type.
+
+Implicits are resolved the same way but among their own mods only (ADR-0027): the mods of the two
+Eldritch generation types plus every mod some base lists as an implicit. An implicit selector never
+returns an explicit prefix or suffix, nor the other way round. By default it also skips the
+"in your Presence" variants of an Eldritch implicit (same text as the base mod, conditional); a `mod:`
+key may still name one, so the full set is available with `with_presence=True`.
 """
 
 import difflib
@@ -14,6 +20,7 @@ from collections.abc import Iterable
 from functools import cached_property
 
 from crafting_system.data import GameData
+from crafting_system.items import eldritch_side, is_presence_variant
 
 TEXT_GENERATION_TYPES = frozenset({"prefix", "suffix"})
 RANGE = re.compile(r"\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)")
@@ -101,6 +108,82 @@ class Resolver:
         near = close_matches(family, self._mods_by_family)
         hint = f"; did you mean {quoted(near)}?" if near else ""
         raise Unresolved(f"`{family}` is not a family id in the game data{hint}")
+
+    @cached_property
+    def _implicit_mod_ids(self) -> frozenset[str]:
+        listed = {mod_id for base in self.data.base_items.values() for mod_id in base.implicits}
+        return frozenset(
+            mod.id
+            for mod in self.data.mods.values()
+            if eldritch_side(mod) is not None or mod.id in listed
+        )
+
+    @cached_property
+    def _implicits_by_text(self) -> dict[str, frozenset[str]]:
+        found: dict[str, set[str]] = {}
+        for mod_id in self._implicit_mod_ids:
+            mod = self.data.mods[mod_id]
+            if mod.text is not None:
+                found.setdefault(normalise_stat_text(mod.text), set()).add(mod_id)
+        return {text: frozenset(ids) for text, ids in found.items()}
+
+    @cached_property
+    def _implicits_by_family(self) -> dict[str, frozenset[str]]:
+        found: dict[str, set[str]] = {}
+        for mod_id in self._implicit_mod_ids:
+            for family in self.data.mods[mod_id].families:
+                found.setdefault(family, set()).add(mod_id)
+        return {family: frozenset(ids) for family, ids in found.items()}
+
+    def _without_presence(self, ids: frozenset[str]) -> frozenset[str]:
+        """`ids` without the presence variants, or all of `ids` when nothing else is left."""
+        plain = frozenset(mod_id for mod_id in ids if not is_presence_variant(self.data.mods[mod_id]))
+        return plain or ids
+
+    def implicit_mods_for_stat(self, text: str, *, with_presence: bool = False) -> frozenset[str]:
+        """Every implicit mod whose normalised text equals the normalised `text`; `Unresolved` if there is none.
+
+        The "in your Presence" variants are left out unless `with_presence` is set (they are left in when
+        they are all there is).
+        """
+        wanted = normalise_stat_text(text)
+        if not wanted:
+            raise Unresolved("the stat text is empty once markup such as [..] and blank lines are removed")
+        found = self._implicits_by_text.get(wanted)
+        if found is not None:
+            return found if with_presence else self._without_presence(found)
+        if text.strip() in self._implicits_by_family:
+            raise Unresolved(f"`{text.strip()}` is a family id; write `family: {text.strip()}`")
+        if wanted in self._mods_by_text:
+            raise Unresolved(
+                f'"{one_line(wanted)}" is the text of a prefix or suffix, not of an implicit;'
+                " write it under `requirements:`"
+            )
+        near = close_matches(wanted, self._implicits_by_text)
+        if near:
+            shown = ", ".join(f'"{one_line(match)}"' for match in near)
+            raise Unresolved(
+                f'no implicit mod has the text "{one_line(wanted)}"; closest implicit texts in the game data: {shown}'
+                " (a range like (10-24) can be written as # or in full; a two-line mod text joins its lines with \\n)"
+            )
+        raise Unresolved(f'no implicit mod in the game data has the text "{one_line(wanted)}"')
+
+    def implicit_mods_for_family(self, family: str, *, with_presence: bool = False) -> frozenset[str]:
+        """Every implicit mod that belongs to `family`; `Unresolved` if the id is unknown among implicits.
+
+        The "in your Presence" variants are left out unless `with_presence` is set.
+        """
+        found = self._implicits_by_family.get(family)
+        if found is not None:
+            return found if with_presence else self._without_presence(found)
+        if family in self._mods_by_family:
+            raise Unresolved(
+                f"`{family}` is a family id, but none of its mods is an implicit;"
+                " a prefix or suffix of it is written under `requirements:`"
+            )
+        near = close_matches(family, self._implicits_by_family)
+        hint = f"; did you mean {quoted(near)}?" if near else ""
+        raise Unresolved(f"`{family}` is not the family id of any implicit mod in the game data{hint}")
 
     def base_id(self, name: str) -> str:
         """The id of the base `name` (an id or an English name); `Unresolved` if none or several fit.

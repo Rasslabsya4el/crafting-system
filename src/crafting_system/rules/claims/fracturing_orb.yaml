@@ -1,5 +1,5 @@
 # Mechanic family: fracturing_orb (the Fracturing Orb on a rare item). Research ticket #12 (claims FRA-xx) and
-# the decisions D4, D6 of issue #28. The crafted metamods are not modelled yet (issue #68).
+# the decisions D4, D6 of issue #28. A crafted mod or a metamod is a candidate, and a fractured one stays on the item (issue #68).
 rules:
   - id: fracturing_orb.accepts_rare_only
     statement: A Fracturing Orb can be used on a rare item only.

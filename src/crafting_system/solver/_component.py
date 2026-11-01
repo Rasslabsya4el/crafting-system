@@ -27,9 +27,12 @@ class Bellman:
     Local state `l` owns the retained actions `astart[l]:astart[l + 1]`; an action `a` is
     identified by that index. Its backup is `base[a] + sum(prob[t] * V[inside[t]])` over the
     transitions `tptr[a]:tptr[a + 1]`, where `base` holds the effective cost plus the fixed
-    contribution of the successors outside the component and `inside` the local positions of
-    the successors inside. `leak[a]` is the total probability of the successors outside, summed
-    directly (not as 1 minus the inside part), for the sparse evaluation. `ids[a]` is the global action id.
+    contribution of the successors and inputs outside the component and `inside` the local
+    positions of the successors and inputs inside. `prob` holds p for an outcome and kappa for
+    an input; kappa may be 1 or more, so for a `branching` component (an input inside) the
+    matrix is not a contraction. `has_exit` is about outcomes only: an input never reaches the
+    goal. `leak[a]` is the total probability of the outcome successors outside, summed directly
+    (not as 1 minus the inside part), for the sparse evaluation. `ids[a]` is the global action id.
     """
 
     states: list[int]
@@ -43,8 +46,9 @@ class Bellman:
     leak: array
     g: float  # smallest constant term (effective cost + fixed downstream part) of a retained action
     terms: int  # largest number of terms in one Bellman sum
-    low_d: float  # min(1, lo of the exit successors)
-    high_d: float  # max(1, hi of the exit successors)
+    low_d: float  # min(1, lo of the exit successors and outside inputs)
+    high_d: float  # max(1, hi of the exit successors and outside inputs)
+    branching: bool = False  # some action takes an input from inside the component
 
 
 def build_bellman[S](
@@ -57,10 +61,12 @@ def build_bellman[S](
 ) -> Bellman:
     local = {state: position for position, state in enumerate(component)}
     targets, probs, tstart, cost = graph.targets, graph.probs, graph.tstart, graph.cost
+    inputs, kappas, istart = graph.inputs, graph.kappa, graph.istart
     ids, base, leak, has_exit = array("i"), array("d"), array("d"), bytearray()
     tptr, inside, prob = array("q", [0]), array("i"), array("d")
     astart = [0]
     g, terms, low_d, high_d = math.inf, 1, 1.0, 1.0
+    branching = False
     for state in component:
         for k in graph.state_actions[state]:
             if not alive[k]:
@@ -81,16 +87,32 @@ def build_bellman[S](
                 else:
                     inside.append(position)
                     prob.append(p)
+            ilow, ihigh = istart[k], istart[k + 1]
+            if ihigh > ilow:  # the inputs, after the outcomes: input-free arithmetic is untouched
+                for y, kappa in zip(inputs[ilow:ihigh], kappas[ilow:ihigh]):
+                    position = local.get(y)
+                    if position is None:
+                        constant += kappa * value[y]
+                        if lo[y] < low_d:
+                            low_d = lo[y]
+                        if hi[y] > high_d:
+                            high_d = hi[y]
+                    else:
+                        inside.append(position)
+                        prob.append(kappa)
+                        branching = True
             if constant < g:
                 g = constant
-            terms = max(terms, 1 + high - low)
+            terms = max(terms, 1 + high - low + ihigh - ilow)
             ids.append(k)
             base.append(constant)
             leak.append(outside)
             has_exit.append(exits)
             tptr.append(len(inside))
         astart.append(len(ids))
-    return Bellman(component, astart, ids, base, has_exit, tptr, inside, prob, leak, g, terms, low_d, high_d)
+    return Bellman(
+        component, astart, ids, base, has_exit, tptr, inside, prob, leak, g, terms, low_d, high_d, branching
+    )
 
 
 def backup_single(bellman: Bellman) -> tuple[float, int]:
@@ -291,6 +313,13 @@ def solve_cyclic(
     policy iteration (subtraction-free elimination, exact however stiff the component) solves it
     from the attractor policy, and the sweeps that remain continue from its values.
 
+    A branching component (an input inside) is solved by the sweeps alone, from zeros, over all
+    local states in index order: the attractor policy may be supercritical there (the matrix is
+    not a contraction), while the iterate rises monotonically from 0 and stays at most the least
+    fixed point, so it is a safe lower bound at every sweep. A critical or supercritical component
+    (infinite value) does not converge: it is returned with `converged` False when `max_sweeps`
+    run out, when the iterate overflows, or when it stops with no upper certificate.
+
     Stops when the iteration's own relative error (the residuals `e`, `d` against `g`) is at most
     `tolerance`, or when both residuals are already at the rounding floor `delta` (more sweeps
     could not improve the reported bound by more than a factor of about two); otherwise returns the
@@ -300,9 +329,13 @@ def solve_cyclic(
     """
     rho = rounding_allowance(bellman.terms)
     size = len(bellman.states)
-    policy, order = _attractor(bellman)
-    if len(order) != size:  # cannot happen: every state of the finite set can reach an exit
-        raise RuntimeError("internal error: a component state has no path to an exit")
+    branching = bellman.branching
+    if branching:
+        policy, order = [], range(size)
+    else:
+        policy, order = _attractor(bellman)
+        if len(order) != size:  # cannot happen: every state of the finite set can reach an exit
+            raise RuntimeError("internal error: a component state has no path to an exit")
     values = [0.0] * size
     best_error = math.inf
     best: CyclicResult | None = None
@@ -322,20 +355,25 @@ def solve_cyclic(
         return stop
 
     def sweep(count: int) -> bool:
+        """Up to `count` sweeps; True when the result in `best` is final (certified, or overflowed)."""
         for _ in range(count):
             for local in order:
                 values[local] = _backup(bellman, values, local)[0]
+            if branching and best is not None and not math.isfinite(max(values)):
+                return True  # the iterate overflowed: infinite, not certified
             if examine(values):
+                if branching and best.upper == math.inf:  # type: ignore[union-attr]
+                    best.converged = False  # type: ignore[union-attr]  # stopped with no upper certificate
                 return True
         return False
 
-    if size <= direct_solve_limit:
+    if size <= direct_solve_limit and not branching:
         solved = _policy_iteration(bellman, policy)
         if solved is not None:
             values = solved
             if examine(values):
                 return best  # type: ignore[return-value]
-    elif direct_solve_limit > 0 and max_sweeps >= SWEEPS_BEFORE_DIRECT:  # a limit of 0 forces sweeps only
+    elif not branching and direct_solve_limit > 0 and max_sweeps >= SWEEPS_BEFORE_DIRECT:  # a limit of 0 forces sweeps only
         if sweep(SWEEPS_BEFORE_DIRECT):
             return best  # type: ignore[return-value]
         solved = _policy_iteration(bellman, policy, _evaluate_sparse, MAX_SPARSE_POLICY_ITERATIONS)

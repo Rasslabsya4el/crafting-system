@@ -51,7 +51,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: chaos_orb.removes_crafted_mods
-    statement: A Chaos Orb removes the ordinary crafted (bench) mods of the rare item like any other mod that is not fractured, so none is retained; the metamods, which change what the orb does, are not modelled yet (issue #68).
+    statement: A Chaos Orb removes the ordinary crafted (bench) mods of the rare item like any other mod that is not fractured, so none is retained; the metamods, which change what the orb does, are in metamods.yaml (locks keep a side, Attack/Caster filter the draw).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Chaos_Orb#Mechanics
     quote: "they reroll all modifiers (and the number of modifiers) on a rare item"

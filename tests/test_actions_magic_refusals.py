@@ -68,7 +68,7 @@ def test_a_jewel_base_is_out_of_scope(orb, accepts, item_class):
 
 @pytest.mark.parametrize(("orb", "accepts"), ORBS, ids=IDS)
 def test_an_influenced_item_of_a_class_with_no_influence_class_key_is_out_of_scope(orb, accepts):
-    sword = dataclasses.replace(DATA.base_items[AMULET], item_class="Thrusting One Hand Sword")
+    sword = dataclasses.replace(DATA.base_items[AMULET], item_class="Fishing Rod")
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: sword})
     item = dataclasses.replace(RARITIES[accepts](), influences=frozenset({Influence.SHAPER}))
 
@@ -84,11 +84,10 @@ def test_an_influenced_amulet_is_in_scope(orb, accepts):
 
 
 @pytest.mark.parametrize("orb", [AlterationOrb(), AugmentationOrb(), RegalOrb()], ids=lambda orb: type(orb).__name__)
-def test_a_crafted_metamod_makes_a_magic_item_out_of_scope(orb):
+def test_a_crafted_metamod_leaves_a_magic_item_in_scope(orb):
     item = amulet(roll(CRAFTED, crafted=True), rarity=Rarity.MAGIC)
 
-    with pytest.raises(OutOfScopeError, match="crafted metamod"):
-        orb.outcomes(DATA, item)
+    assert sum(orb.outcomes(DATA, item).distribution(lambda mod: mod.id).values()) == 1
 
 
 @pytest.mark.parametrize(("orb", "accepts"), ORBS, ids=IDS)
@@ -160,5 +159,3 @@ def test_scouring_refuses_what_it_cannot_scour():
         ScouringOrb().outcomes(DATA, amulet(rarity=Rarity.NORMAL))
     with pytest.raises(NotApplicableError, match="corrupted"):
         ScouringOrb().outcomes(DATA, dataclasses.replace(amulet(), corrupted=True))
-    with pytest.raises(OutOfScopeError, match="crafted metamod"):
-        ScouringOrb().outcomes(DATA, amulet(roll(CRAFTED, crafted=True)))
