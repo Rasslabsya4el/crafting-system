@@ -62,12 +62,12 @@ def plan(data, route, plans):
     return plans[route]
 
 
-def test_the_start_boots_cost_their_trade_price_and_an_alchemy(plan, route):
+def test_the_start_boots_cost_their_trade_price_plus_an_alchemy(plan, route):
     _, name, chaos, _ = ROUTES[route]
 
     assert plan.start_price.name == name
     assert plan.start_price.chaos == pytest.approx(chaos)
-    assert plan.start_price.source == "trade"
+    assert plan.start_price.source == "trade-api"
 
 
 def test_the_fossil_sets_the_bench_crafts_and_the_restart_are_offered(plan, route):
