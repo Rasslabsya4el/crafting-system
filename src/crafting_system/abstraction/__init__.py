@@ -30,15 +30,24 @@ is imported or tested for here.
   `exact=True`; None for an action it cannot bound); the argument is in `_bound.py` (#118).
 * `keeps_shape(abstraction, state, action)`: whether every outcome of the action keeps the flags and the
   fractured mods of the state (what a bound read at one state needs to hold at the next; #118).
-* `Coarsening(abstraction, groups)` (`_coarse.py`, ADR-0023): the coarse state. Families that no requirement
-  cares about are pooled into groups; `coarsen(state)` maps an exact state to its `Block` (a `CompressedState`
-  whose pooled slots have the kind of their pool) and `kernel(block, action, bound)` is the kernel of a
-  block-invariant action in the optimistic (`"lower"`) or pessimistic (`"upper"`) model, per member. Any other
-  action raises `OutOfScopeError`. `Coarsening.pooling_irrelevant(abstraction, size)` builds the groups.
+* `Coarsening(abstraction, groups)` (`_coarse.py`, ADR-0023): the coarse state. Junk families that no requirement
+  cares about are pooled into groups (a pool is made of kinds: told-apart families and whole family types `~n`);
+  `coarsen(state)` maps an exact state to its `Block` (a `CompressedState` whose pooled slots have the kind of
+  their pool) and `kernel(block, action, bound)` is the kernel of an action in the optimistic (`"lower"`) or
+  pessimistic (`"upper"`) model, per member. A block-invariant action (`Reads.block_invariant`: an erasing reroll,
+  a bench craft, Remove Crafted Mods, Annulment) has one kernel. An action that adds mods and keeps the junk
+  (`Reads.variants`: Augmentation, Regal, Exalted) has up to `2^p` variant kernels, those of the members that hold
+  the lightest or the heaviest pool weight in each of the `p` pools: `variants(block, action, bound)` lists them
+  (the optimistic model takes the cheapest backup, the pessimistic the dearest) and `kernel` returns the one when
+  there is one. An action that declares neither raises `OutOfScopeError`. `Coarsening.pooling_irrelevant(abstraction,
+  size)` and `Coarsening.pooling_by_spread(abstraction, spread)` build the groups (the second pools consecutive kinds
+  by per-family weight, for the additions).
 * `Abstraction.estimate(starts, actions)` (`_estimate.py`, ADR-0023): the pilot count. The states and transitions of the
   exact graph, found with one kernel per (reroll, key) and the bench legality by sets of families and free slots; an
   `Estimate` also forecasts a coarse level (`coarsened`) and gives a closed prefix of the graph for a calibration
-  solve (`first_layers`). An action of another shape raises `EstimateRefused`.
+  solve (`first_layers`). An action with no closed form (an addition, Annulment) is walked with its real kernel on
+  every state (`Estimate.walked`): `needs_walk(abstraction, actions)` says so beforehand and `ADDING_LIMIT` is the
+  smaller state limit for such a walk. `EstimateRefused` is raised when a walked kernel cannot be computed.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 
@@ -126,13 +135,15 @@ claim of the rules registry.
 """
 
 from ._bound import keeps_shape, reach_bound
-from ._coarse import Block, Coarsening
-from ._estimate import Estimate, EstimateRefused
+from ._coarse import Block, BlockHoldsMetamod, Coarsening
+from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
 from ._goal import AtLeast, Goal, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
 from ._state import CompressedState, Flags, FracturedMod, Slot
 
 __all__ = [
+    "ADDING_LIMIT",
+    "DEFAULT_LIMIT",
     "Abstraction",
     "AtLeast",
     "Block",
@@ -151,4 +162,6 @@ __all__ = [
     "integer_weights",
     "keeps_shape",
     "reach_bound",
+    "BlockHoldsMetamod",
+    "needs_walk",
 ]

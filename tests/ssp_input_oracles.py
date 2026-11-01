@@ -18,20 +18,24 @@ solution on that closure (then the spectral radius of `M` is below one); otherwi
 infinite, even when the goal is reached with probability one (a state that needs two copies of
 what it makes). The optimum is the minimum over every deterministic stationary policy.
 
-Everything is exact `Fraction` arithmetic, with no solver code: the only import from the solver is
-the pair of classes `to_model` builds a model from. The Bellman linear programme of these
-problems is ticket #179 and not here.
+The exact functions are `Fraction` arithmetic with no solver code; the only import from the
+solver is the pair of classes `to_model` builds a model from. `lp_values_inputs` is the one float
+oracle: the Bellman linear programme of these problems (ticket #179) solved by HiGHS.
 
 * `random_input_spec`: seeded random small specs.
 * `evaluate_policy_exactly`: the exact value of one given policy at one state.
 * `policy_space`, `brute_force_inputs`: every policy, and the optimum per state.
 * `to_model`: the solver model of a spec.
+* `lp_values_inputs`: the Bellman LP (maximal subsolution) by HiGHS, for all-finite instances.
 """
 
 import itertools
 import random
 from fractions import Fraction
 
+import numpy as np
+
+import highspy
 from crafting_system.solver import Action, TabularModel
 
 
@@ -186,3 +190,61 @@ def brute_force_inputs(spec):
             if value is not None and (best[s] is None or value < best[s]):
                 best[s] = value
     return best
+
+
+def lp_values_inputs(spec):
+    """Optimal values from the Bellman LP of ADR-0022, for instances where every value is finite.
+
+    The maximal subsolution: maximise the sum of `x_s` subject to, for every action `a` of every
+    non-goal state `s` in the table, `x_s <= c_a + sum_t coefficient_t x_t` (the coefficients of
+    `_edges`: outcome probabilities and one 1 per input copy, goals fixed at 0, no self-loop
+    elimination, so the row of `s` carries `1 - p_self` on `x_s`), and `x >= 0`. When every optimal
+    value V* is finite this is V* exactly. Returns `{state: float}`, or None when HiGHS does not
+    report optimal: with an infinite V* the sum is unbounded (a state with no action, or one
+    outside the table, is unbounded too).
+
+    A non-None answer on an instance that has an infinite state is NOT V*; this function is only
+    meaningful for all-finite instances, which the caller must establish otherwise (for example
+    with `brute_force_inputs`).
+    """
+    goals, table = spec
+    states = {s for s in table if s not in goals}
+    for actions in table.values():
+        for action in actions:
+            states.update(t for t, _ in _edges(action) if t not in goals)
+    order = sorted(states, key=repr)
+    column = {s: i for i, s in enumerate(order)}
+    start, index, value, upper = [0], [], [], []
+    for state in order:
+        for action in table.get(state, []):
+            row = {column[state]: 1.0}
+            for t, coefficient in _edges(action):
+                if t not in goals:
+                    row[column[t]] = row.get(column[t], 0.0) - float(coefficient)
+            for position, coefficient in row.items():
+                index.append(position)
+                value.append(coefficient)
+            start.append(len(index))
+            upper.append(float(action[1]))
+    size = len(order)
+    lp = highspy.HighsLp()
+    lp.num_col_ = size
+    lp.num_row_ = len(upper)
+    lp.col_cost_ = -np.ones(size)
+    lp.col_lower_ = np.zeros(size)
+    lp.col_upper_ = np.full(size, highspy.kHighsInf)
+    lp.row_lower_ = np.full(len(upper), -highspy.kHighsInf)
+    lp.row_upper_ = np.array(upper)
+    lp.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+    lp.a_matrix_.start_ = np.array(start, dtype=np.int32)
+    lp.a_matrix_.index_ = np.array(index, dtype=np.int32)
+    lp.a_matrix_.value_ = np.array(value)
+    highs = highspy.Highs()
+    highs.setOptionValue("output_flag", False)
+    highs.setOptionValue("primal_feasibility_tolerance", 1e-10)
+    highs.setOptionValue("dual_feasibility_tolerance", 1e-10)
+    highs.passModel(lp)
+    highs.run()
+    if highs.getModelStatus() != highspy.HighsModelStatus.kOptimal:
+        return None
+    return dict(zip(order, highs.getSolution().col_value))

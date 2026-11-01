@@ -1,0 +1,233 @@
+# Draft claims for the mechanic family `enchantment` (Tempering Orb, Tailoring Orb, Harvest quality enchants).
+# Research ticket #100; note docs/research/2026-10-31-enchantments.md. Not in src/: the main chat decides what is admitted.
+# First pass claimed no weights (none published). The second pass adds the player-sample claims at the end (source_kind experiment).
+rules:
+  - id: enchantment.heist_orbs_add_or_replace
+    statement: The Tempering Orb works on one weapon and the Tailoring Orb on one body armour; each adds an enchantment or replaces the one the item has, drawn from its own pool, and may reforge the item's sockets.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tempering_Orb
+    quote: "Adds or replaces an enchantment on a weapon"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.one_slot_new_replaces_old
+    statement: Enchantments have their own modifier slot, not the implicit slot; most items hold one at a time, and applying an enchantment to an enchanted item replaces the old one. A Harvest quality enchant is an enchantment of the same list, so it shares the slot (the exclusivity itself is open point O-05).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Enchantments
+    quote: "Applying an enchantment on an already enchanted item replaces the old enchantment with the new one."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.bench_removes_for_three_scouring
+    statement: The crafting bench removes the enchantment of a non-corrupted item for 3 Orbs of Scouring; the option is bench tier 0 (always available) and is offered for the 29 weapon, armour, jewellery and flask classes, body armour and every weapon class among them.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "bench[309].actions.remove_enchantments=true, cost={\"Metadata/Items/Currency/CurrencyConvertToNormal\":3}, bench_tier=0, 29 item classes"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.mirrored_and_corruption
+    statement: A mirrored item cannot receive an enchantment; corrupting an item does not remove its enchantment, and the bench removal needs a non-corrupted item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Enchantments
+    quote: "Mirrored cannot receive an enchantment."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.tailoring_not_on_fixed_sockets
+    statement: The Tailoring Orb cannot be used on an item with fixed sockets (Kaom's Heart, Replica Kaom's Heart, Skin of the Loyal, Skin of the Lords); all of them are unique items, so no ordinary target meets this refusal.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Tailoring_Orb#Mechanics
+    quote: "Tailoring Orbs cannot be used on items with fixed sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.removed_from_pool_in_3_29_0
+    statement: Since 3.29.0 the enchantments related to white sockets and those that set all sockets to one colour no longer come from Tailoring or Tempering Orbs.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.29.0
+    quote: "Enchantments on Body Armour and Weapons related to White Sockets or those that set all Sockets to be Blue, Green or Red no longer appear on Heist Rewards or from Tailoring and Tempering Orbs."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.weapon_pool_136
+    statement: The Tempering Orb pool of 3.29 is the 136 weapon enchantments the wiki lists. The repoe-fork dump holds 181 weapon Heist enchant mods; the 45 extra are exactly the 12 white-socket and 33 all-sockets-one-colour mods (stat ids local_has_X_white_sockets, local_all_sockets_are_red/green/blue) that the 3.29.0 note removes.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "groups [EnchantmentHeistWeapon]: 181 mods, 45 with a white-socket or all-sockets-one-colour stat, 136 without; wiki Tempering_Orb 'List of enchantments': 136 rows"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.armour_pool_54
+    statement: The Tailoring Orb pool of 3.29 is 54 body armour enchantments. The dump and the wiki Tailoring Orb page both list 75 (rev 1681191, 26 July 2026, still showing the removed ones); removing the 6 white-socket and 15 all-sockets-one-colour mods per the 3.29.0 note leaves 54. The 54 is derived, not listed by any source.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "groups [EnchantmentHeistArmour]: 75 mods, 21 with a white-socket or all-sockets-one-colour stat, 54 without; wiki Tailoring_Orb 'List of enchantments': 75 rows incl. 'Enchantment White Sockets' and 'Enchantment Defence Modifier Effect and Only Red Sockets'"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.pool_number_column_is_level
+    statement: The number beside each enchantment on the wiki is the mod's required_level, not a weight. The Heist enchant mods carry no spawn_weights and no generation_weights, so no source published with the game data gives their odds.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "WeaponEnchantmentHeistPhysicalEffect1: required_level 1, spawn_weights [], generation_weights [], generation_type unique; all 256 Heist enchant mods have empty weight lists"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.magnitude_enchants_scale_explicit_mods_by_tag
+    statement: A magnitude enchantment ("8% increased Explicit Life Modifier magnitudes") scales the explicit modifiers carrying that tag; a hybrid pairs two tags at 6% each, or one tag at 10-15% with a downside (25-50% less on another tag, 200% increased attribute requirements, -3 to maximum sockets).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Heist_Enchantments
+    quote: "the enchantment 8% increased Explicit Life Modifier magnitudes will enhance a modifier that normally grants \"+100 to Maximum Life\" to granting \"+108 to Maximum Life\""
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.crafted_slot_enchant
+    statement: One enchantment in each pool ("Can have 1 additional Crafted Modifier", required level 80, stat local_can_have_additional_crafted_mods = 1) lets the item hold one more crafted modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "ArmourEnchantmentHeistAdditionalCraftingModifier1: required_level 80, text \"Can have 1 additional Crafted Modifier\", stats [local_can_have_additional_crafted_mods 1..1]"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.raises_item_level_requirement
+    statement: An enchantment raises the item's level requirement up to 80% of the enchantment's mod level, rounded down (the wiki's own example is mod level 66 giving 52), so the level-69/70/80 enchants make a body armour or weapon need level 55 / 56 / 64.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Mod_Level
+    quote: "raising the level requirement up to 80% requirement of the mod (with the requirement rounded down to the nearest whole integer)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.heist_orb_source
+    statement: Tempering and Tailoring Orbs drop as one of the five choices in a Grand Heist Curio Display; Heist has been in the core game since 3.13.0 (the Grand Heist page, last edited 22 April 2026, has its version history to 3.28.0 and no removal).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Grand_Heist#Curio_Display_Rewards
+    quote: "The following rewards only drop from Curio Displays in Grand Heists."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.harvest_quality_enchants_14
+    statement: Fourteen Harvest enchants change what quality does, six for weapons (Physical Damage is not raised; instead +0.1 m range per 10%, 1% area per 4%, 1% accuracy per 2%, 1% attack speed per 8%, 1% critical chance per 4%, 1% elemental damage per 2%) and eight for body armour (Defences are not raised; instead +1 per 2% quality of Maximum Life, Maximum Mana, Strength, Dexterity, Intelligence, or +1% of Fire, Cold, Lightning Resistance).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "groups AlternateWeaponQuality (6) and AlternateArmourQuality (8), e.g. HarvestAlternateArmourQualityIncreasedLife: \"Quality does not increase Defences\\nGrants +1 to Maximum Life per 2% Quality\""
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.harvest_quality_enchant_costs
+    statement: The Lifeforce price of a quality enchant, in items of that lifeforce. Body armour (3,250 each) - Life, Strength, Fire Resistance Wild; Dexterity, Cold Resistance Vivid; Mana, Intelligence, Lightning Resistance Primal. Weapon (5,000 each) - Weapon Range, Area of Effect Wild; Accuracy, Attack Speed Vivid; Critical Strike Chance, Elemental Damage Primal. No Sacred or Rancour cost.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
+    quote: "Enchant a Body Armour. Quality does not increase its Defences, grants +1 Maximum Life per 2% quality | 3250 | 0 | 0 | 0 | 0"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.quality_enchant_changes_only_its_stat
+    statement: A Harvest quality enchant changes only which stat quality gives (weapon Physical Damage, body armour Defences); the other effects of quality on the item are unchanged. Whether quality still scales the socket and link odds of Jeweller's and Fusing Orbs after the 3.29.0 sockets rework is not claimed here (ticket #99 found it unsettled).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Quality#Effect_on_items
+    quote: "This does not affect other aspects of quality such as the chance to have a certain number of sockets or links."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.crafted_slot_enchant_allows_several_bench_crafts
+    statement: The additional-crafted-modifier enchantment does what the "of Crafting" metamod does, so the item can carry more than one bench craft. How many it adds and whether it stacks with the metamod is open point O-06.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Crafting_bench
+    quote: "It is possible to craft more than one mod onto an item with the of Crafting meta-crafting mod, or a similar enchantment from Tempering Orbs, Tailoring Orbs or certain items found in Grand Heists."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # Second pass (player samples). source_kind `experiment` = a large-sample report by players.
+  # The sample ends at 3.27 and lists the pre-3.29 pools; the shares below are for the 3.29 pool (removed rows dropped,
+  # the rest renormalised), which assumes GGG kept every weight. The numbers are reproduced by
+  # docs/research/2026-10-31-enchantments-samples.py.
+  - id: enchantment.pool_is_weighted
+    statement: The enchant pool is weighted, not uniform - measured on Curio Displays, a proxy for the orbs. Players' counts of 7,742 enchanted weapons and 5,078 enchanted body armours found in Grand Heist Curio Displays (13,845 wings, 3.23 to 3.27) give chi-square 19,025 against a uniform pool of 136 weapon enchants and 16,460 against 54 body-armour enchants. That the Tailoring Orb uses the same weights rests on a 291-click armour tally (claim enchantment.tailoring_orb_tally_matches_curio); for the Tempering Orb it is an inference, no weapon tally exists.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt3ptsj/
+    quote: "Since 3.23 I've been tracking blueprint curio case rewards with folks in the Prohibited Library Discord. Across 27,155 total items we've seen this mod 18 times on 2,032 enchanted armors and 9 times on 3,016 enchanted weapons."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.body_armour_weight_classes
+    statement: Curio proxy for the Tailoring Orb weights. The Curio-display body-armour counts of the 3.29 pool (4,318 items; not orb results) show weights per kind of enchant (mean count per enchant). Single 8% tag 480 (Life 752, Defence 690, Resistance 504, Attribute 227, Mana 227); 40% reduced Attribute Requirements 456; 8% plus no colour 44 (15 enchants); six-plus-six hybrid 39; 6% plus 25% less requirements 40; All Sockets Linked 45; extra crafted modifier 36; 15% plus -3 sockets 22; 15% plus 200% requirements 21; 10-12% plus a penalty 18; 6% plus All Sockets Linked 4.4. Within each hybrid kind the counts are what one weight gives.
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1dDDMRc3GAE4G0X-lJeLXSHaGtLLNf612nrFiOyCo0Vs/
+    quote: "Armor Enchant, All-Time: 8% increased Explicit Life Modifier magnitudes 752; 8% increased Explicit Defence Modifier magnitudes 690; 8% increased Explicit Resistance Modifier magnitudes 504; 40% reduced Attribute Requirements 456; ... Can have 1 additional Crafted Modifier 36 (75 rows, 5,078 items)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {single_8pct_tag: 480, attribute_requirements_40: 456, no_colour: 44, six_six: 39, six_requirements_25: 40, sockets_linked: 45, extra_crafted_modifier: 36, minus_3_sockets: 22, requirements_200: 21, penalty_hybrid: 18, six_linked: 4.4}
+
+  - id: enchantment.weapon_weights_depend_on_tag
+    statement: Curio proxy for the Tempering Orb weights (no weapon orb tally exists, the equality is an inference). The weapon weights depend on the tag as well as the kind. In the Curio-display counts the plain 8% enchants run Critical 453, Speed 451, Physical 425, Caster damage 420, Attribute 261, Lightning 171, Fire 163, Cold 146, Ailment 126, Mana 124, Chaos 39 and the 40% reduced requirements 451; the 33 "8% plus no colour" enchants scatter 6.7 times their degrees of freedom around the kind mean 28 and the 28 six-plus-six hybrids 2.8 times around 41. The extra crafted modifier has 32 of 7,742 (0.41%).
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1dDDMRc3GAE4G0X-lJeLXSHaGtLLNf612nrFiOyCo0Vs/
+    quote: "Weapon Enchant, All-Time: 8% increased Explicit Critical Modifier magnitudes 453; 8% increased Explicit Speed Modifier magnitudes 451; 40% reduced Attribute Requirements 451; ... Can have 1 additional Crafted Modifier 32 (181 rows, 7,742 items)"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.extra_crafted_modifier_curio_display_rate
+    statement: How often the extra-crafted-modifier enchant appears on enchanted items found in Curio Displays - not the chance of an orb click. 36 of 5,078 enchanted body armours (0.71%, 95% 0.51 to 0.98%) and 32 of 7,742 enchanted weapons (0.41%, 0.29 to 0.58%); on the 3.29 pool 0.83% and 0.48%. The chance that a Tempering or Tailoring Orb rolls it is unknown and may be 0 (open point O-07); do not read `curio_display_rate` as an orb probability.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt3ptsj/
+    quote: "we've seen this mod 18 times on 2,032 enchanted armors and 9 times on 3,016 enchanted weapons"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: {curio_display_rate: {armour: 0.0083, weapon: 0.0048}, orb_probability: null}
+
+  - id: enchantment.tailoring_orb_tally_matches_curio
+    statement: A tally of 263 Tailoring Orb results (header 330; the sheet lists "40% reduced Attribute Requirements" twice with 24 each and one Defence-plus-white-socket row twice, each counted once here) fits the Curio-display shares on the 71 distinct enchants it lists, chi-square 5.0 on 5 degrees of freedom. The 8% Life and 8% Resistance rows are missing from it (about 82 clicks would be expected there under the Curio shares, the unexplained gap to 330 is 67), so the tally does not contradict the Curio shares but cannot confirm the Life and Resistance shares. It is armour only.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1gcr4is/_/ltvy0hq/
+    quote: "I've seen this data from someone ... Pretty accurate according to my experience"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.socket_stat_enchant_reforges_sockets
+    statement: The orb reforges the sockets only when it rolls an enchantment with a socket stat (no colour, All Sockets Linked, -3 to maximum Sockets); the links of the item break then. What is rerolled exactly is open point O-03.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1ltbc8g/_/n1pnic4/
+    quote: "It absolutely is not guaranteed to reroll sockets. It only rerolls them if you hit one of the enchantments that affects sockets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.quality_enchant_replaces_heist_enchant
+    statement: A Harvest quality enchant replaces a Tempering or Tailoring enchant and the reverse; they share the one enchantment slot.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt52u52/
+    quote: "And after that you can replace the enchant with harvest as/crit per quality (or currently one of the settlers enchant)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.crafted_slot_takes_no_affix_slot
+    statement: The extra-crafted-modifier enchant sits in the enchantment slot, so it does not use an affix slot, where the "of Crafting" metamod ("can have 3 crafted mods") does. Whether the two stack is open point O-06.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1lvfm6b/_/n25ysbt/
+    quote: "normally the \"can have 3 crafted mods\" would block one affix slot and can't be annulled because of suffixes cannot be changed."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.crafted_slot_allows_two_crafts
+    statement: The extra-crafted-modifier enchant allows two crafted modifiers on the item. One player says so in a thread whose other replies agree ("It doesn't bypass the six mod limit"); no test is shown.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1g93nen/_/lt4exla/
+    quote: "It just allows 2x crafted mods"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.tailoring_orb_leaves_memory_strands
+    statement: A Tailoring Orb does not consume Memory Strands (it changes the base, not the modifiers). It rests on this one reply plus the absence of the Tailoring and Tempering Orbs from the wiki's list of strand-spending currencies in the #98 claims (research/memory-strands, d6731e5, `memory_strands.spend_*`); no collision with #98, which does not name these orbs either way.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1pbtw60/_/nrt0pww/
+    quote: "They don't"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: enchantment.magnitude_multiplies_flat_and_increased
+    statement: A magnitude enchant multiplies every tagged explicit modifier of the item, so a tagged flat part and a tagged "increased" part are each raised by the same percentage and the effects compound.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1qlsbrc/_/o1mcc5b/
+    quote: "it compounds since it increases both the flat and the %inc ES by 8%."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
