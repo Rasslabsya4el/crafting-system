@@ -1,0 +1,12 @@
+base: Sorcerer Boots
+item_level: 84
+influence: []
+start_price: Sorcerer Boots (ilvl 84)
+actions: [transmutation-orb, alteration-orb, augmentation-orb, regal-orb, exalted-orb]
+requirements:
+  - family: MovementVelocity
+    mod: MovementVelocity5
+  - family: FireResistance
+    min_tier: 1
+  - family: ColdResistance
+    min_tier: 1

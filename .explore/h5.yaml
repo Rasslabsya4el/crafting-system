@@ -1,0 +1,10 @@
+base: Lion Pelt
+item_level: 84
+influence: []
+start_price: Lion Pelt (ilvl 84)
+actions: [transmutation-orb, alteration-orb, augmentation-orb, regal-orb, exalted-orb]
+requirements:
+  - stat: "+1 to Level of all Minion Skill Gems"
+  - family: IncreasedLife
+    min_tier: 1
+    not_crafted: true
