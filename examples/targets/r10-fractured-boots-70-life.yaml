@@ -55,7 +55,9 @@ requirements:
   # "+# to maximum Life, preferably at least 70" and names no tier, so no tier is asked: any tier whose
   # roll reaches 70 counts, and `min_roll` has one entry for the mod's one stat. A Divine Orb rerolls
   # the value inside its tier, so a Life that rolled below 70 in a tier that can reach it may be fixed.
-  - family: IncreasedLife
+  # The selector is the stat text, not the family: the Life family also holds two-stat mods, and one
+  # `min_roll` list cannot fit mods with different numbers of stats.
+  - stat: "+# to maximum Life"
     min_roll: [70]
     not_crafted: true
 
