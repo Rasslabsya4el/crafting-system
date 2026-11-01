@@ -40,6 +40,10 @@ _Avoid_: Eldritch mod (an implicit is not an explicit mod)
 The strength of an Eldritch implicit, 1 Lesser to 6 Perfect, 0 for none; the reverse of `Tier`, where tier 1 is the best. Grades 5 and 6 come only from the Orb of Conflict.
 _Avoid_: Eldritch tier
 
+**Corrupted implicit**:
+An implicit that a corrupting action draws by weight from the corrupted pool of the item's class and item level, and that replaces one implicit of the item (ADR-0037). The pool is datamined (`generation_type: corrupted`); each mod of a family is its own draw.
+_Avoid_: Vaal implicit, corruption mod
+
 **Dominance**:
 The Eldritch side with the higher grade, or the only side that has an implicit; equal grades give none. Derived from the grades, never stored. The Eldritch Chaos, Exalted and Annulment Orbs act on the dominant side only.
 _Avoid_: dominance flag; Orb of Dominance (that is an influence craft)
@@ -88,8 +92,12 @@ One condition of a target: a mod, named by family or by English stat text, with 
 _Avoid_: constraint, filter
 
 **Implicit requirement**:
-One condition of a target on an implicit, written under `implicits:`: an implicit mod named by family or by English stat text, with a minimum Eldritch grade or a minimum base roll. It is resolved among implicits only, so a suffix of the same text is never chosen (ADR-0027). A condition on the catalyst quality is written under `quality:` (a type and a minimum percent).
+One condition of a target on an implicit, written under `implicits:`: an implicit mod named by family or by English stat text, with a minimum Eldritch grade or a minimum base roll. It is resolved among implicits only, so a suffix of the same text is never chosen (ADR-0027). A condition on the catalyst quality is written under `quality:` (a type and a minimum percent). With `corrupted: true` the entry is resolved among corrupted implicits only (ADR-0036).
 _Avoid_: implicit filter
+
+**Asked or allowed corruption**:
+A target asks for a corrupted item when an implicit requirement carries `corrupted: true`, and allows one with the top-level key `allow_corrupted: true`. A corrupting action is offered only then, and a corrupted item meets no other target (ADR-0036).
+_Avoid_: corruption flag
 
 **k-of-n requirement**:
 A requirement met when at least k of its n listed requirements are met.
@@ -122,19 +130,34 @@ _Avoid_: Conqueror's Exalted Orb (that names four of the six)
 The type and percent (to 20%) that a catalyst puts on a ring, amulet or belt. It scales matching modifier values and changes no odds, so it is a finish cost and not part of the compressed state (ADR-0029).
 _Avoid_: quality (an item has other kinds, such as the flat quality of gems)
 
-**Finish cost**:
-A cost added to the value of a goal state because nothing earlier changes it: the expected catalysts for a target quality (ADR-0029) and the expected cost of the target's enchantment (ADR-0050). A restart that buys a new base pays it again.
+**Brick**:
+The Vaal Orb or Locus outcome that rerolls the item into a rare of the same base with six random affixes (a full item: three prefixes and three suffixes; four mods on a jewel). For a target that asks for a corrupted implicit it is a dead end; for one that only allows a corrupted item it is a draw that can reach the goal (ADR-0037).
+_Avoid_: bad corruption, reroll outcome
 
-**Enchantment**:
-The one extra modifier an item holds besides its implicits and explicit mods; a new one replaces the old. It comes from a Tempering Orb (weapon), a Tailoring Orb (body armour) or a Harvest quality enchant. `Item.enchantment` stores it; it is out of the compressed state and a finish step (ADR-0050).
-_Avoid_: implicit (an enchantment has its own slot)
+**Clean enchant**:
+A pool enchant with a positive magnitude on a tag and no socket rider and no downside. A tag named alone in an `enchantment:` target stands for the clean enchants of that tag (ADR-0050).
+
+**Corrupting action**:
+An action that corrupts the item and so ends the item's life as an input: the Vaal Orb, a Bloodstained resonator, the Locus of Corruption. Its kernel has no continuing state; it is one chance that the outcome is the goal, and a dead end otherwise (ADR-0036).
+_Avoid_: corruption method
 
 **Enchant pool**:
 The enchantments one orb can draw: 136 for the Tempering Orb and 54 for the Tailoring Orb in 3.29, each with a weight taken from the players' Curio sample and marked approximate (ADR-0051).
 _Avoid_: enchant table
 
-**Clean enchant**:
-A pool enchant with a positive magnitude on a tag and no socket rider and no downside. A tag named alone in an `enchantment:` target stands for the clean enchants of that tag (ADR-0050).
+**Enchantment**:
+The one extra modifier an item holds besides its implicits and explicit mods; a new one replaces the old. It comes from a Tempering Orb (weapon), a Tailoring Orb (body armour) or a Harvest quality enchant. `Item.enchantment` stores it; it is out of the compressed state and a finish step (ADR-0050).
+_Avoid_: implicit (an enchantment has its own slot)
+
+**Extra crafted slot**:
+The enchantment "Can have 1 additional Crafted Modifier": two bench-crafted mods instead of one, no affix slot taken. The planner reaches it only on a bought start item that already has it; the limit of crafted mods reads it (ADR-0053).
+_Avoid_: second craft slot
+
+**Finish cost**:
+A cost added to the value of a goal state because nothing earlier changes it: the expected catalysts for a target quality (ADR-0029) and the expected cost of the target's enchantment (ADR-0050). A restart that buys a new base pays it again.
+
+**Locus of Corruption**:
+The Corruption Altar of a tier 3 Incursion room: corrupts one item with one of four equal outcomes (two corrupted implicits, every white socket non-white, an influenced rare, destroyed). It has no currency price; the planner reads an owner-editable entry, default 0 Chaos. Its double-implicit share is 25% by the owner's decision, marked approximate (ADR-0038).
 
 **Magnitude enchant**:
 A pool enchant that raises every explicit modifier carrying a tag by a percent ("8% increased Explicit Life Modifier magnitudes"): single tag at 6 to 8%, hybrids, or 10 to 15% with a downside (ADR-0051). It scales the flat and the increased parts alike.
@@ -145,10 +168,6 @@ _Avoid_: quality (when the enchant is meant)
 
 **Quality line**:
 The last report line of a plan with a quality enchant: how many Armourer's Scraps or Blacksmith's Whetstones bring the item to 20% quality, and about what they cost. It is outside the search over mods (ADR-0052).
-
-**Extra crafted slot**:
-The enchantment "Can have 1 additional Crafted Modifier": two bench-crafted mods instead of one, no affix slot taken. The planner reaches it only on a bought start item that already has it; the limit of crafted mods reads it (ADR-0053).
-_Avoid_: second craft slot
 
 **Beast level**:
 The monster level of the beast that gates the mod a side-swap beast adds, instead of the item level. A setting, default 83, when a target names none.
@@ -202,7 +221,56 @@ A strongly connected component of the solver's graph that contains an input edge
 The cost above which the solver declares a state infinite, since a supercritical branching component never converges.
 
 **Selection rule**:
-One admissible way a recombinator chooses which mods to keep (ADR-0012). The admitted rules form a family; each is solved separately and the interval is read across them.
+One admissible way a recombinator chooses which mods to keep (ADR-0012). The admitted rules form a family; each is solved separately and the interval is read across them. Now the family `weight^alpha` read at the five points of the exponent grid (ADR-0033).
+
+**Selection exponent** (`alpha`):
+The power to which a mod's spawn weight is raised when a recombinator draws the mods it keeps. The plan uses 1; the data support 0.4 to 1.6; at or below 0 is excluded (ADR-0012, ADR-0033).
+_Avoid_: weight bias
+
+**Exponent grid**:
+The five readings of the selection exponent, 0.4, 0.7, 1.0, 1.3 and 1.6, all solved and cross-evaluated because the extreme of a route's chance is often between the ends.
+
+**Rule axis**:
+A rule the sources leave open, with a short list of readings: the selection exponent (five readings) and the Awakener's group conflict (two). A model's rule set is the product of the axes its enabled actions read; each reading is one ordinary model (ADR-0033).
+_Avoid_: scenario, variant (variants are ADR-0023's members of a block)
+
+**Recombinator**:
+The Kingsmarch bench that destroys two magic or rare items of one class and makes one new item from their mods. B3 plans the unpredictable mode only (ADR-0033).
+_Avoid_: recombinator output (say the output item), recomb
+
+**Pooled count**:
+The number of prefixes (or suffixes) of both inputs together, doubled mods counted twice and exclusive mods counted once; the count table gives the chance of each number of mods kept from it.
+
+**Doubling**:
+A mod present on both inputs: it enters the pool twice, so it is picked more often, and picking one closes the other.
+
+**Non-native mod**:
+A mod the chosen base cannot roll (an influenced or base-bound mod): it counts in the pool and never appears on the output.
+_Avoid_: NNN (the guide's abbreviation)
+
+**Exclusive mod**:
+A crafted, essence, beast-aspect, veiled or other special mod of which the recombinator keeps at most one, counted once per side in the pool.
+
+**Awakener's Orb**:
+Destroys a donor item to give a receiver of the same class both influences, one influenced mod from each input and a Chaos-style reroll of the rest (ADR-0032).
+_Avoid_: Awakener (the donor is not awakened)
+
+**Receiver and donor**:
+The two inputs of an Awakener's Orb: the receiver is the item in hand and survives as a rare, the donor is a `Need` and is destroyed.
+
+**Group conflict**:
+Two kept influenced mods of the Awakener's Orb that share a mod group, of which one survives. The plan keeps the receiver's; the donor's is the other reading of the rule axis, unconfirmed in the game (ADR-0032).
+
+**Imprint**:
+A snapshot of one magic item or rare Talisman, made by a beast (Craicic Croaker, Fenumal Plagued Arachnid) and used up when it restores the item. Several can be kept for one item (ADR-0034).
+_Avoid_: Eternal Orb (it is not offered), save point
+
+**Thaumaturgic Dust and Gold**:
+The two costs of one recombination. Each has a price in the price file; the amount per combine is a rule from reports, marked approximate (ADR-0035).
+_Avoid_: recombinator cost formula (none is known)
+
+**Junk craft**:
+An optional step before a recombination: a low-tier non-exclusive bench craft on the open side of each input, which cuts the Dust by about half. Offered only when a setting asks for it (ADR-0035).
 
 **Policy**:
 The action to take in every state reachable from the start item, with the expected remaining cost of each state. It is what the planner returns.

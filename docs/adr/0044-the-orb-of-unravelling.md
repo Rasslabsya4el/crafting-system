@@ -27,7 +27,7 @@ A mod that rises goes to one of its higher tiers, drawn by weight times a multip
 | **A. Rank multipliers** (the plan) | the tier's weight times 1 for the highest tier, 2 for the second, 3 for the third … | 2.03 / 16.89 / 81.08% predicted; observed 2.72 / 16.73 / 80.54% on 257 cases (chi-square 0.62) |
 | **B. Cumulative** | the tier's own weight plus the weights of the tiers above it | 4.05 / 20.95 / 75.0% predicted (chi-square 4.3, p = 0.12) |
 
-The archive copy of the post and the community calculator ([unravel.port8080.sh](https://unravel.port8080.sh/)) say A; a later edit of the post, known only from the earlier note, says B. Both survive the wand data, A fits better, and on equal weights the tests (T9: 1,611 cases, p = 0.86; T4: 3,825 cases, p = 0.48) cannot tell them apart. The destination is **not cut** by the item's strands (the number of tiers climbed does not depend on them). The two readings are the rule axis `unravel_destination` (ADR-0042, ADR-0033); the answer shows the cost over both beside the best route without strands.
+The archive copy of the post and the community calculator ([unravel.port8080.sh](https://unravel.port8080.sh/)) say A; a later edit of the post, known only from the earlier note, says B. Both survive the wand data, A fits better, and on equal weights the tests (T9: 1,611 cases, p = 0.86; T4: 3,825 cases, p = 0.48) cannot tell them apart. The destination is **not cut** by the item's strands (the number of tiers climbed does not depend on them). The two readings are the rule axis `unravel_destination` (ADR-0042, [ADR-0033](0033-the-unpredictable-recombinator.md)); the answer shows the cost over both beside the best route without strands.
 
 ## What it asks of the code
 
@@ -37,4 +37,4 @@ An Unravelling changes the tier of a mod **in place**, the limit of ADR-0024 tha
 
 310 of 310 at 32 strands for the T9 amulet case (the formula gives `p = 1` there, and `p = 1` wherever `s * W_up >= 2 * W_side`); 14 of 15 at 31 strands within the formula's 99%; the wand case 2.03 / 16.89 / 81.08% under A and 4.05 / 20.95 / 75.0% under B.
 
-Origin: [Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103) (round 1 answer 1); [Research #98](https://github.com/Rasslabsya4el/crafting-system/issues/98); ADR-0019, ADR-0024, ADR-0028, ADR-0033, ADR-0040, ADR-0041, ADR-0042.
+Origin: [Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103) (round 1 answer 1); [Research #98](https://github.com/Rasslabsya4el/crafting-system/issues/98); ADR-0019, ADR-0024, ADR-0028, [ADR-0033](0033-the-unpredictable-recombinator.md), ADR-0040, ADR-0041, ADR-0042.

@@ -38,3 +38,7 @@ Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (
 ## Amendment: sockets and the quality of weapons and armour ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
 
 `Item` also stores its **sockets** (a colour per socket and the link groups, ADR-0046) and its **quality** has two kinds: the catalyst type and percent of jewellery, or the plain percent of a weapon or armour (ADR-0049); no item class has both. `Reads` and `Adds` gain a sockets declaration in the same way: an action declares whether it reads the count, links or colours and what it sets, and an action that declares nothing still reads everything and sets nothing it did not declare. The quality declaration now covers both kinds.
+
+## Amendment: corrupted implicit requirements ([Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95), ADR-0036)
+
+An `implicits:` entry may carry `corrupted: true`. Its selector is then resolved among the corrupted mods of the base's item class that can occur at the target's item level (ADR-0037's pool), and only among them; without the key a selector never sees corrupted mods. A requirement on its roll is a base roll as before. The target also gains the top-level key `allow_corrupted: true` (ADR-0036). Neither changes `Item` or the compressed state: a corrupted item is final, so the corrupted implicit is judged inside the kernel of the corrupting action and never held by a state the solver continues from. The Blessed Orb still refuses corrupted items (above).

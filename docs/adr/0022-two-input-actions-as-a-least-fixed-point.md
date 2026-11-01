@@ -35,10 +35,12 @@ The prototype met guard 3 in 5 of 5000 random instances (0.1%), where brute forc
 
 ## The interval of ADR-0012 is a family of solves
 
-The wiki gives no formula, so the admissible selection rules are a family `R` of kernels (the boundary rule, the extreme rules, the wiki table). The solver takes no uncertainty in a kernel. For each rule in `R` the adapter builds one model and `solve` runs once (two rules suffice when the rules are ordered by how much they favour rare mods). Then, in `risk`:
+**Reworded by grill B3** ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)): this section first said "two rules suffice when the rules are ordered by how much they favour rare mods", and took the family `R` to be the two endpoint rules and a boundary rule. That fails: the extreme of a route's success chance is often **interior** in the exponent `alpha` of ADR-0012 (132 of 1,200 random cases), so `R` is the whole **grid** of `alpha` (five points, ADR-0033), `k` solves and `k^2` fixed-policy evaluations (5 solves and 25 evaluations for the grid; with the Awakener's group conflict as a second axis the product is 10 solves and 100 evaluations, and the conflict alone is 2 and 4, ADR-0032). The bracket below holds over the grid. The true optimum over a continuous `alpha` can lie outside it by whatever happens between grid points, so the reported interval is an inner bound until a finer grid says otherwise. The headline route is the optimum at `alpha = 1`; the route with the smallest worst case comes from the same evaluations.
+
+The wiki gives no formula, so the admissible selection rules are a family `R` of kernels (originally the boundary rule, the extreme rules and the wiki table; now the grid of `alpha`). The solver takes no uncertainty in a kernel. For each rule in `R` the adapter builds one model and `solve` runs once. Then, in `risk`:
 
 - every candidate policy `pi_r` is evaluated under every rule `r'` (fixed-policy linear systems, exact);
-- the reported route is the candidate with the smallest `max_r' J`, with interval `[min_r' J; max_r' J]`;
+- the candidate with the smallest `max_r' J` is the route with the best worst case, with interval `[min_r' J; max_r' J]` (after grill B3 the headline route is the plan at `alpha = 1` and this one is named beside it, ADR-0012);
 - the bracket of the true robust optimum `W* = min_pi max_r J` is certified: `max_r V_r <= W* <= min_candidates max_r' J`. A gap of zero proves the route optimal; otherwise the report shows the gap.
 
 A rule is one global fact of the game, not a choice nature makes at each visit, so a solver with a minimising player and a maximising nature would answer a wider question (an outer bound).
@@ -59,6 +61,6 @@ Consequences for the build:
 
 ## What is not decided here
 
-The compressed state of a donor, the recombinator kernel and its rule family, the imprint and Awakener's Orb actions, the choice of donors to offer (lazy generation, pruning with admissible lower bounds) are mechanics and abstraction work for the B3 grill ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)) and [#90](https://github.com/Rasslabsya4el/crafting-system/issues/90).
+The compressed state of a donor, the recombinator kernel and its rule family, the imprint and Awakener's Orb actions, the choice of donors to offer (lazy generation, pruning with admissible lower bounds) are mechanics and abstraction work for the B3 grill ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)) and [#90](https://github.com/Rasslabsya4el/crafting-system/issues/90). The mechanics are now ADR-0032 to ADR-0035; the compressed state of a donor is a prototype ticket of the B3 chart and the lazy choice of donors the build ticket after it.
 
 Origin: [Solver for two-input actions (B3)](https://github.com/Rasslabsya4el/crafting-system/issues/91); [multi-item and recombinators research](../research/2026-10-30-3-multi-item-recombinators.md); [solver engineering research](../research/2026-10-30-4-solver-engineering.md).

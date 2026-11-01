@@ -23,15 +23,17 @@ An action that has **not declared** anything is **refused on an item with `s >= 
 | Chaos Orb | yes | 50, bins | wiki; 615 sheet rows |
 | Exalted Orb and the influenced Exalted Orbs (ADR-0030) | yes | by the mods on the item before the craft: 1: 16, 2: 22, 3: 26, 4: 32, 5: 34 | wiki; 83 sheet rows. The note counts spends up to 38 against the table's largest ceiling of 34, so the sheet-fit research reads those rows by mod count and where a row shows a spend above the table's ceiling for the mod count read from its item text, the row's spend becomes the ceiling for that count |
 | Essences | the random mods; the guaranteed mod is fixed | 80 | wiki spend table; the cut is the wiki's general sentence on "currency that replaces or adds mods", no test: `approximate` |
-| Eldritch Chaos 60, Veiled Chaos 80, Tainted Chaos 60 (B4) | yes | as named | wiki; each lands with its action (B5 follow-ups) |
-| Awakener's Orb (ADR-0032) | the rerolled mods | 100, on the receiver | wiki; the donor is destroyed, its count is gone |
+| Eldritch Chaos 60, Veiled Chaos 80 | yes | as named | wiki; each lands with its action (B5 follow-ups) |
+| Awakener's Orb ([ADR-0032](0032-the-awakeners-orb.md)) | the rerolled mods | 100, on the receiver | wiki; the donor is destroyed, its count is gone |
 | Foulborn Augmentation, Regal, Exalted (ADR-0043) | yes, with `+75` | 32; 48; the Exalted row times 62/34 | wiki; 491 sheet rows for the cut |
 | Fossils and resonators, Harvest crafts, beast crafts (aspects, swaps, influence recipes), bench crafts and metamods, Veiled Exalted Orb | no | none | wiki: "not consumed by … resonators, Harvest crafting, Beastcrafting, or crafting benches" and the Veiled Exalted by name |
-| Scouring, Annulment, Divine, Fracturing, Vaal | no | none | not in the wiki's spend list: `approximate` |
+| Scouring, Annulment, Divine, Fracturing | no | none | not in the wiki's spend list: `approximate` |
+| Vaal Orb (B4) | no | none; the brick keeps the count | [ADR-0037](0037-the-vaal-orb.md), wiki: the corrupted item keeps its memory strands |
+| Tainted currencies | not offered | | out of B4 ([ADR-0036](0036-corruption-is-the-last-step.md)); a later batch declares them (wiki ceilings: Tainted Chaos 0-60, Tainted Exalted 6 mods 0-38) |
 | Jeweller's, Fusing and Chromatic Orbs, the socket bench crafts and Omens, quality orbs and bench quality (B6, ADR-0045 to 0049), enchantments and the Tailoring Orb (B7, ADR-0050; its claim `enchantment.tailoring_orb_leaves_memory_strands`) | no | none | not in the spend list; the Tailoring Orb by claim: `approximate` |
 | Blessed Orb, catalysts, Embers and Ichors, Orb of Conflict, Orb of Dominance, unveil | no | none | not in the spend list: `approximate` |
-| Recombinator (ADR-0033) | no | none; the output takes the count of its base, which is either input with probability 1/2, so the donor's count enters the result | the author's play: recombination "doesn't interact with strands", he buys cheap stranded bases "to transfer to": `approximate` |
-| Imprint restore (ADR-0034) | no | none; restores the count | wiki: "restored with imprints" |
+| Recombinator ([ADR-0033](0033-the-unpredictable-recombinator.md)) | no | none; the output takes the count of its base, which is either input with probability 1/2, so the donor's count enters the result | the author's play: recombination "doesn't interact with strands", he buys cheap stranded bases "to transfer to": `approximate` |
+| Imprint restore ([ADR-0034](0034-imprints-from-beasts.md)) | no | none; restores the count | wiki: "restored with imprints" |
 | Orb of Remembrance, Orb of Unravelling | see ADR-0043, ADR-0044 | | |
 | The three bench rerolls ("reroll 3 random modifiers", "reroll a random modifier", "reroll the rarity") | not an action in B1 to B5 | 50 | their claim (`bench_craft`) says "spend up to 50" instead of "v1 items carry none" |
 
