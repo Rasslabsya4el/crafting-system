@@ -104,12 +104,12 @@ rules:
     value: {opulent: Opulent Fossil, tangled: Tangled Fossil, fractured: Fractured Fossil, bloodstained: Bloodstained Fossil, gilded: Gilded Fossil}
 
   - id: fossils.bloodstained_is_corruption
-    statement: A Bloodstained Fossil rerolls the mods, makes the item corrupted and adds a corrupted implicit. The implicit is corruption (batch B4), so a resonator with a Bloodstained Fossil is out of scope.
+    statement: A Bloodstained Fossil rerolls the mods like any fossil, makes the item corrupted and adds a corrupted implicit. The implicit is corruption (batch B4, ADR-0038) and is drawn from the Vaal Orb's pool at the item's level; the use never fails to add it (claim corruption.bloodstained_never_fails).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Bloodstained_Fossil#Mechanics
     quote: "The item will reroll all modifiers (in combination with other Fossils) and become corrupted"
     patch_verified: "3.29.3.3"
-    date_checked: 2026-10-30
+    date_checked: 2026-11-01
 
   - id: fossils.gilded_no_explicit_effect
     statement: A Gilded Fossil adds the vendor-value implicit beside the existing implicits and changes no explicit mod, so it only takes a socket.

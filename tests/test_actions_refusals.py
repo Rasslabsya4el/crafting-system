@@ -38,14 +38,23 @@ def test_a_corrupted_item_is_refused_by_the_game_and_the_message_names_the_actio
         action.outcomes(DATA, dataclasses.replace(amulet(), corrupted=True))
 
 
-@pytest.mark.parametrize("action", ACTIONS)
 @pytest.mark.parametrize("item_class", ["Jewel", "AbyssJewel"])
-def test_a_jewel_base_is_out_of_scope(action, item_class):
+def test_a_jewel_base_is_in_scope_for_a_chaos_orb_and_out_of_scope_for_a_harvest_reforge(item_class):
     base = DATA.base_items[AMULET]
     jewel = dataclasses.replace(base, item_class=item_class)
     data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: jewel})
 
+    assert ChaosOrb().outcomes(data, amulet()).components  # jewel.ordinary_orbs_work_on_jewels
     with pytest.raises(OutOfScopeError, match=rf"jewel \({item_class}\).*regular items only"):
+        HarvestReforge("lightning").outcomes(data, amulet())
+
+
+@pytest.mark.parametrize("action", ACTIONS)
+def test_a_cluster_jewel_base_is_out_of_scope(action):
+    cluster = dataclasses.replace(DATA.base_items[AMULET], item_class="Jewel", domain="affliction_jewel")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: cluster})
+
+    with pytest.raises(OutOfScopeError, match="cluster jewel"):
         action.outcomes(data, amulet())
 
 

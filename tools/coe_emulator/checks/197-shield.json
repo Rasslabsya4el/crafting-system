@@ -1,0 +1,3 @@
+[{"id": "197-shield", "base": "Metadata/Items/Armours/Shields/ShieldInt16", "item_level": 100, "rarity": "rare",
+  "mods": ["LocalIncreasedEnergyShieldPercent8", "FasterStartEnergyShieldRecharge5_", "StrIntMasterItemGenerationCanHaveMultipleCraftedMods", "StrMasterItemGenerationCannotChangePrefixes", "DexMasterItemGenerationCannotChangeSuffixes"],
+  "actions": ["Harvest Reforge Fire", "Harvest Reforge Cold", "Harvest Reforge Lightning"], "repeats": 1000}]

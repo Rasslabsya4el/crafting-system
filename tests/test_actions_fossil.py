@@ -29,7 +29,7 @@ from crafting_system.actions import (
     fossil_actions,
     usable_fossils,
 )
-from crafting_system.items import ExplicitMod, Influence, Item, Rarity
+from crafting_system.items import ExplicitMod, Influence, Item, Rarity, Side
 
 # ---------------------------------------------------------------------------------------------
 # the world
@@ -786,9 +786,22 @@ def test_hollow_and_glyphic_in_one_resonator_are_out_of_scope():
             outcomes_of(*names)
 
 
-def test_a_jewel_is_out_of_scope():
-    with pytest.raises(OutOfScopeError, match="jewel"):
-        outcomes_of("Scorched Fossil", item=boots(base=JEWEL))
+def test_a_jewel_takes_a_fossil_with_the_capacity_of_a_jewel():
+    (_, part), = outcomes_of("Scorched Fossil", item=boots(base=JEWEL)).components
+
+    assert part.free == {Side.PREFIX: 2, Side.SUFFIX: 2}  # jewel.fossils_work_on_jewels, affix_count.rare_jewel_max_per_side
+
+
+def test_the_fractured_fossil_works_on_a_jewel():
+    assert outcomes_of("Fractured Fossil", item=boots(base=JEWEL)).fractures  # jewel.fracturing_orb_works_on_jewels
+
+
+def test_a_cluster_jewel_is_out_of_scope():
+    cluster = dataclasses.replace(DATA.base_items[JEWEL], domain="affliction_jewel")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, JEWEL: cluster})
+
+    with pytest.raises(OutOfScopeError, match="cluster jewel"):
+        outcomes_of("Scorched Fossil", item=boots(base=JEWEL), data=data)
 
 
 def test_an_influenced_item_takes_a_fossil():
@@ -909,17 +922,17 @@ def test_gloves_leave_the_hollow_fossil_out():
     assert sizes(fossil_actions(SMALL, item)) == {1: 3, 2: 3, 3: 1}
 
 
-@pytest.mark.parametrize(
-    "item",
-    [
-        boots(rarity=Rarity.NORMAL),
-        boots(base=JEWEL),
-    ],
-    ids=["normal", "jewel"],
-)
-def test_an_item_that_takes_no_resonator_has_no_fossil_and_no_action(item):
+def test_an_item_that_takes_no_resonator_has_no_fossil_and_no_action():
+    item = boots(rarity=Rarity.NORMAL)
+
     assert usable_fossils(SMALL, item) == []
     assert fossil_actions(SMALL, item) == []
+
+
+def test_a_jewel_has_the_fossils_the_fractured_one_included():
+    names = usable_fossils(SMALL, boots(base=JEWEL))
+
+    assert "Scorched Fossil" in names and "Fractured Fossil" in names
 
 
 def test_a_corrupted_item_has_no_fossil_and_no_action():
