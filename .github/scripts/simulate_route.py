@@ -81,8 +81,7 @@ def write(args, summary: dict) -> None:
     if args.out:
         out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
-        (out / f"{Path(args.route).stem}.sim.json").write_text(json.dumps(summary, indent=2) + "
-", encoding="utf-8")
+        (out / f"{Path(args.route).stem}.sim.json").write_text(json.dumps(summary, indent=2) + chr(10), encoding="utf-8")
 
 
 if __name__ == "__main__":
