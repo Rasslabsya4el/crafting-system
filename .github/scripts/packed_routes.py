@@ -67,13 +67,18 @@ def peak_mb() -> int:
 
 
 def watch_memory() -> None:
-    """Print the resident memory every 20 seconds (a runner that is shut down leaves no other trace of what it held)."""
+    """Print the resident memory every 5 seconds when it is large, else every 20 (a runner that is shut down leaves no other trace of what it held)."""
+    ticks = 0
     while True:
-        time.sleep(20)
+        time.sleep(5)
+        ticks += 1
         try:
             with open("/proc/self/status", encoding="utf-8") as handle:
                 rss = next(line for line in handle if line.startswith("VmRSS")).split()[1]
-            print(f"  memory: {int(rss) // 1024} MB resident", flush=True)
+            if ticks % 4 == 0 or int(rss) // 1024 > 6000:
+                print(f"  memory: {int(rss) // 1024} MB resident", flush=True)
+            if int(rss) // 1024 > 8000:  # a runner that runs out of memory leaves nothing: show where the main thread is
+                faulthandler.dump_traceback(file=sys.stdout)
         except OSError:
             return
 
