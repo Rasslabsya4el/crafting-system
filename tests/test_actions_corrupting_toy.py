@@ -101,7 +101,7 @@ def toy_members(data: GameData, item: Item):
 
 @pytest.fixture
 def toy_registered():
-    with registered(Kind(KIND, toy_members, order=901)):
+    with registered(Kind(KIND, toy_members, order=901, corrupting=True)):
         yield
 
 
@@ -228,11 +228,20 @@ def test_the_cli_offers_the_toy_for_a_target_with_corrupted_true_and_not_for_one
     assert "Chaos Orb" in _offered("")  # the other offers are as before
 
 
-def test_a_target_that_names_its_kinds_gets_the_toy_only_when_it_asks_or_allows_and_the_report_says_nothing_of_it(toy_registered):
-    target = parse("actions: [chaos-orb]\n")
-    chosen = offers_for(TARGET_DATA, Goal.from_target(target), target.base_id, target.start_item, target.actions)
-    assert "Toy Corruption" not in [offer.label for offer in chosen.offers]
-    assert all("Toy Corruption" not in left.labels for left in chosen.left_out)
+def test_the_report_says_nothing_of_a_corrupting_kind_for_a_target_that_takes_no_corrupted_item(toy_registered):
+    def left_out(text: str) -> tuple[str, ...]:
+        target = parse(text)
+        chosen = offers_for(TARGET_DATA, Goal.from_target(target), target.base_id, target.start_item, target.actions)
+        return tuple(name for entry in chosen.left_out for name in entry.labels)
+
+    assert KIND not in left_out("actions: [chaos-orb]\n")  # nothing of it could be used, so the "does not name these kinds" line leaves it out
+    assert KIND in left_out("actions: [chaos-orb]\nallow_corrupted: true\n")  # a target that could use it is told it was not named
+    assert "harvest-reforge" in left_out("actions: [chaos-orb]\n")  # the other kinds are listed as before
+
+
+def test_a_target_that_names_the_toy_kind_gets_it_only_when_it_takes_a_corrupted_item(toy_registered):
+    assert "Toy Corruption" not in _offered("actions: [toy-corruption]\n")
+    assert "Toy Corruption" in _offered("actions: [toy-corruption]\nallow_corrupted: true\n")
 
 
 def test_the_toy_offer_declares_what_the_planner_needs(toy_registered):
@@ -294,22 +303,27 @@ def test_the_pruned_toy_value_is_the_hand_oracle_and_the_pruning_changes_nothing
     assert values[True] == values[False] == 2 * COST + RESTART_COST
 
 
-def test_pruning_the_toy_to_the_states_that_pass_never_changes_the_value_on_a_fixture(monkeypatch):
+@pytest.mark.parametrize("cost", [COST, 0.01], ids=["priced", "nearly-free"])  # the solver takes no cost of 0, so the cheapest use is a cent
+@pytest.mark.parametrize("with_restart", [True, False], ids=["restart", "no-restart"])
+def test_pruning_the_toy_to_the_states_that_pass_never_changes_the_value_on_a_fixture(monkeypatch, cost, with_restart):
     """A Chaos Orb rerolls until a resistance shows, the toy corrupts it: solved whole and pruned, every shared state has one value."""
     from crafting_system.cli import _plan
 
     start_item = fixture_items()["rare_junk"].changed(TOY_DATA, mods=(_mod(LIFE_1),))
     chaos = _priced(ChaosOrb(), 1.0, start_item)
-    toy, restart = _priced(ToyCorruption(), COST, start_item), _restart(start_item)
+    toy = _priced(ToyCorruption(), cost, start_item)
+    offers = (chaos, toy, *([_restart(start_item)] if with_restart else []))
     goal = Goal((Wanted(RESISTS),), asks_corrupted=True)
     solved, offered = {}, {}
     for pruning in (True, False):
         monkeypatch.setattr(_plan, "PRUNE_CORRUPTING", pruning)
-        ab, start, model = _model(goal, start_item, chaos, toy, restart)
+        ab, start, model = _model(goal, start_item, *offers)
         solved[pruning] = solve(model, [start])
         offered[pruning] = {state: {a.label for a in model.actions(state)} for state in solved[pruning].values}
     pruned, whole = solved[True], solved[False]
-    assert pruned.values[start] == whole.values[start] and 0 < pruned.values[start] < float("inf")
+    assert pruned.values[start] == whole.values[start]
+    if with_restart:
+        assert 0 <= pruned.values[start] < float("inf")  # a dead end is a restart away, so the corrupting route is finite
     assert all(whole.values[state] == value for state, value in pruned.values.items() if state in whole.values)
     # it is a real test: the toy is an action of some states in the whole model and of fewer in the pruned one
     toy_states = lambda found: {state for state, labels in found.items() if "Toy Corruption" in labels}  # noqa: E731
@@ -318,9 +332,40 @@ def test_pruning_the_toy_to_the_states_that_pass_never_changes_the_value_on_a_fi
     assert all(ab_.meets_requirements(state) for state in toy_states(offered[True]) if not state.flags.corrupted)
 
 
+def test_a_corrupting_offer_is_terminal_for_the_bound_pruning():
+    from crafting_system.cli._bound_prune import TERMINAL, _kind_of
+
+    start_item = fixture_items()["rare_junk"]
+    assert _kind_of(TOY_DATA, start_item, _priced(ToyCorruption(), COST, start_item))[0] == TERMINAL
+
+
 def test_solver_actions_leaves_the_toy_in_when_pruning_is_off():
     start_item = fixture_items()["rare_junk"].changed(TOY_DATA, mods=(_mod(LIFE_1),))
     toy = _priced(ToyCorruption(), COST, start_item)
     ab, start, _ = _model(Goal((Wanted(RESISTS),), asks_corrupted=True), start_item, toy)
     assert [a.label for a in solver_actions(ab, [toy], start, start)] == []
     assert [a.label for a in solver_actions(ab, [toy], start, start, prune_corrupting=False)] == ["Toy Corruption"]
+
+
+# --- through the planner ---------------------------------------------------------------------------------
+
+
+def test_the_planner_offers_the_toy_to_a_target_that_allows_corruption_and_not_to_one_that_does_not(tmp_path, toy_registered):
+    """`make_plan` on R12 with the toy registered: the offer filter is the one the planner calls (a target that asks is refused until #152/#158)."""
+    from cli_support import R12, price_file
+    from targets_support import DATA
+
+    from crafting_system.cli import make_plan
+    from crafting_system.prices import PriceEntry
+    from crafting_system.targets import load_target
+
+    data = dataclasses.replace(DATA, mods={**DATA.mods, TOY_IMPLICIT: TOY_DATA.mods[TOY_IMPLICIT]})
+    prices = dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(5.0, "test")})
+    allowing = tmp_path / "allowing.yaml"
+    allowing.write_text(R12.read_text(encoding="utf-8") + "\nallow_corrupted: true\n", encoding="utf-8")
+    labels = {
+        name: [priced.label for priced in make_plan(data, load_target(path, data), prices).offers]
+        for name, path in (("allowing", allowing), ("plain", R12))
+    }
+    assert "Toy Corruption" in labels["allowing"] and "Toy Corruption" not in labels["plain"]
+    assert "Chaos Orb" in labels["plain"]

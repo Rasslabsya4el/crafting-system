@@ -13,16 +13,7 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import (
-    DEFAULT_CORRUPTING_KINDS,
-    Action,
-    ActionError,
-    Reads,
-    catalog,
-    default_actions,
-    drawable_mod_ids,
-    kinds,
-)
+from crafting_system.actions import Action, ActionError, Reads, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -257,9 +248,10 @@ def offers_for(
     left_out = ()
     if kinds_named is not None:
         # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used
-        unasked = frozenset() if goal.takes_corrupted else frozenset(DEFAULT_CORRUPTING_KINDS)
         skipped = tuple(
-            entry.name for entry in kinds(planner_only=True) if entry.name not in kinds_named and entry.name not in unasked
+            entry.name
+            for entry in kinds(planner_only=True)
+            if entry.name not in kinds_named and not (entry.corrupting and not goal.takes_corrupted)
         )
         if skipped:
             left_out += (
