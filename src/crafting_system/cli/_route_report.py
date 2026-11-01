@@ -7,6 +7,7 @@ gives it (`S1`, ...); a gap on a state the policy never reaches has no such id a
 from crafting_system.abstraction import CompressedState
 from crafting_system.data import GameData
 
+from ._marking import approximate_inputs, approximate_inputs_document, approximate_lines
 from ._report import Report, _estimate, _shifted, describe_state, interval, percent
 from ._route import Route, RouteResult
 
@@ -38,6 +39,7 @@ def render_route_text(report: Report, route: Route, result: RouteResult, data: G
     for label, given, found in (("mean cost", risk.mean, solver.mean), ("p50", risk.p50, solver.p50), ("p90", risk.p90, solver.p90)):
         lines.append(f"  {label:<15} {_interval(given, shift, divine)}")
         lines.append(f"  {'':<15} (policy {_interval(found, shift, divine)})")
+    lines.extend(approximate_lines(approximate_inputs(plan, result.policy, data)))
     lines.append("")
     divergence = result.divergence
     if divergence is None:
@@ -76,6 +78,7 @@ def route_document(report: Report, route: Route, result: RouteResult, data: Game
         "mean_cost": _estimate(risk.mean, shift),
         "p50": _estimate(risk.p50, shift),
         "p90": _estimate(risk.p90, shift),
+        "approximate_inputs": approximate_inputs_document(approximate_inputs(plan, result.policy, data)),
         "first_divergence": None
         if divergence is None
         else {

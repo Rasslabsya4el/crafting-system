@@ -1,6 +1,7 @@
 """The one contract every crafting action meets, so a new method is one file and needs no edit elsewhere (ticket #108).
 
-An action is a frozen dataclass that subclasses `Action` and answers five questions:
+An action is a frozen dataclass that subclasses `Action` and answers five questions (and a sixth, `claims`, that
+the base class answers for it unless its file holds several actions):
 
 * `label(data)`: its stable name, the one a route's `do:` and the CLI print ("Chaos Orb", "Harvest
   Reforge Lightning", an essence's own name). Two actions of a catalog can share a label only when
@@ -12,6 +13,10 @@ An action is a frozen dataclass that subclasses `Action` and answers five questi
 * `reads(data)`: what of the item besides its fractured mods the result depends on (`Reads`).
 * `adds(data, item)`: what the action puts on the item (`Adds`), so a planner can ask whether it can
   matter for a target without running it.
+* `claims(data)`: the ids of the registry claims its result or price depends on, so an answer can name the
+  ones marked `approximate` (ADR-0028). The default is every `Rule` held as a module-level constant of the
+  module the class is defined in (the `X = get_rule("a.b")` every action file starts with), which is exact
+  for a file of one action; an action whose file holds several that read different claims overrides it.
 
 `abstraction` builds its states from `reads` and its kernels from `outcomes` alone; `cli` builds its
 offers from the catalog (`catalog.py`), `resources` and `adds`; `simulator` calls `outcomes(...).sample`.
@@ -21,6 +26,7 @@ makes the state space large and no filter can drop it.
 """
 
 import random
+import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
@@ -29,6 +35,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from crafting_system.data import GameData, Mod
 from crafting_system.items import Item
+from crafting_system.rules import Rule
 
 from .draw import Outcome
 
@@ -172,7 +179,11 @@ class Fixed:
 
 
 class Action(ABC):
-    """Base of every action; subclass it as a frozen dataclass and fill in the five questions."""
+    """Base of every action; subclass it as a frozen dataclass and fill in the five questions.
+
+    `claims` answers the sixth by itself (see the module docstring); override it only when the module of
+    the class holds several actions that read different claims.
+    """
 
     @property
     def variant(self) -> str:
@@ -202,3 +213,12 @@ class Action(ABC):
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
         return Adds()
+
+    def claims(self, data: GameData | None = None) -> frozenset[str]:
+        """The ids of the registry claims the result or the price depends on.
+
+        The default is the rules held as constants of the module the class is defined in. `data` may be
+        None, as for `resources`; the default ignores it.
+        """
+        module = sys.modules[type(self).__module__]
+        return frozenset(value.id for value in vars(module).values() if isinstance(value, Rule))
