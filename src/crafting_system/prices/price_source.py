@@ -148,7 +148,7 @@ def ninja_row(price_file: PriceFile, name: str) -> PriceEntry | None:
 def gap_percent(first: float, second: float) -> float:
     """The dearer of two positive prices over the cheaper, in percent."""
     low, high = min(first, second), max(first, second)
-    return (high - low) * 100.0 / low  # not high / low - 1: that gives 10.000000000000009 for 110 against 100
+    return round((high - low) * 100.0 / low, 9)  # rounded: 1.1 against 1.0 is 10.000000000000009, not above a threshold of 10
 
 
 def source_price(

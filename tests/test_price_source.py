@@ -213,6 +213,8 @@ def test_ninja_with_no_ninja_row_is_not_offered_even_with_a_fresh_trade_price():
         (125.0, 100.0, 50.0, 25.0, False),  # a higher one clears the 25% case
         (110.0, 100.0, 10.0, 10.0, False),  # exactly 10% is not above 10 (no float noise)
         (130.0, 100.0, 30.0, 30.0, False),
+        (1.1, 1.0, 10.0, 10.0, False),  # float noise: 1.1 / 1.0 - 1 is 10.000000000000009
+        (1.3, 1.0, 30.0, 30.0, False),
         (100.0, 100.0, 20.0, 0.0, False),
     ],
 )
