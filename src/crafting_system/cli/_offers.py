@@ -167,11 +167,22 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
       without erasing the crafted mod lands (Exalted Orb and Annulment Orb, #67; metamods and the
       multimod, #68): then a crafted mod can block a family before an Exalted Orb, a craft with no goal
       contribution can pay off, and this rule no longer holds. The crafts left out are reported.
+    * An action that adds named mods only for a target that wants them (`Adds.wanted_only`, an aspect beast, #147) is
+      offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
+      It is left out and reported like a craft that counts for nothing.
     * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
       offered only when the start item holds one or another offered action adds one.
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
-    candidates = list(catalog(data, start_item, planner_only=True))
+    named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
+    candidates = []
+    left_out_unwanted: list[str] = []
+    for action in catalog(data, start_item, planner_only=True):
+        adds = action.adds(data, start_item)
+        if adds.wanted_only and not (adds.named or frozenset()) & named:
+            left_out_unwanted.append(action.label(data))
+        else:
+            candidates.append(action)
     # a craft that gives the goal nothing is useless while every other action erases the crafted mod
     erased_by_all = not any(
         action.adds(data, start_item).keeps_crafted for action in candidates if not _only_crafts(data, start_item, action)
@@ -204,6 +215,14 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
                 "its mod counts toward no requirement, so the craft only takes a slot and costs currency "
                 "(exact while every other action erases crafted mods; see `offers_for`)",
                 tuple(left_out_crafts),
+            ),
+        )
+    if left_out_unwanted:
+        left_out = (
+            *left_out,
+            LeftOut(
+                "it adds one fixed mod and the target wants none of those, so it only takes a slot and costs currency",
+                tuple(left_out_unwanted),
             ),
         )
     return OfferSet(tuple(offers), left_out)

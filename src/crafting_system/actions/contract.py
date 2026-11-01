@@ -115,6 +115,9 @@ class Adds:
     * `keeps_crafted`: a crafted mod on the item survives the action. The default is True, the safe
       value: a planner leaves out a bench craft that gives the goal nothing only when every other action
       it offers declares False (they erase the crafted mod, so the craft would only take a slot).
+    * `wanted_only`: a planner offers it only for a target that wants a mod it names (`named`), whatever
+      else the offers erase or keep (the aspect beasts: they add one fixed suffix and nothing else, so a
+      target that does not want it gains nothing from its price and its slot).
     * `fractures`: one finished mod becomes fractured (a Fractured Fossil), so the fractured mods of the
       item change. The default is False; an action that fractures must say so, because pruning by bound
       (#118) holds the fractured mods of the start item fixed for every action it bounds.
@@ -129,6 +132,7 @@ class Adds:
     tag: str | None = None
     single_draw: bool = False
     keeps_crafted: bool = True
+    wanted_only: bool = False
     fractures: bool = False
 
     @classmethod
