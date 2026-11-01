@@ -1,0 +1,2700 @@
+{
+  "format": "crafting-system-policy/1",
+  "unit": "chaos",
+  "answer": {
+    "approximate": false
+  },
+  "approximate_inputs": [
+    {
+      "claim": "vendor.gem_qualification_is_uncorrupted_skill_gems",
+      "reason": "The wiki names no rule for support, Awakened or corrupted gems and no other source says."
+    },
+    {
+      "claim": "vendor.item_level_of_the_result_is_not_settled",
+      "reason": "The two wiki pages disagree in wording and no other source settles whether the flask or the gems lower the result's item level."
+    },
+    {
+      "claim": "vendor.result_keeps_the_input_base_type",
+      "reason": "The wiki's wording does not say whether the base type stays, and the one Reddit thread that touches it is split."
+    }
+  ],
+  "note": "",
+  "target": "v01-minion-helmet.yaml",
+  "requirements": [
+    "+1 to Level of all Minion Skill Gems",
+    "family IncreasedLife (tier 1 or better, not crafted)"
+  ],
+  "prices": {
+    "league": "Allflame",
+    "fetched_at": "2026-10-31T12:37:32Z",
+    "chaos_per_divine": 372.2
+  },
+  "start": {
+    "state": "S1",
+    "price_name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+    "price_chaos": 8.0,
+    "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+  },
+  "start_options": {
+    "first_step": {
+      "recipe": "minion_helmet",
+      "title": "Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe",
+      "hand": [
+        {
+          "role": "base",
+          "count": 1,
+          "name": "Lion Pelt (ilvl 84)",
+          "what": "Lion Pelt (ilvl 84), a Normal base",
+          "chaos": 2.0,
+          "price_source": "hand"
+        },
+        {
+          "role": "gems",
+          "count": 1,
+          "name": "Vendor recipe gems (minion, 40% quality)",
+          "what": "2 or more uncorrupted skill gems with the Minion tag, 40% quality in all (the cheapest set)",
+          "chaos": 6.0,
+          "price_source": "hand"
+        }
+      ],
+      "recipes": [
+        {
+          "number": 1,
+          "hand": "2 or more uncorrupted skill gems with the Minion tag, 40% quality in all (the cheapest set)",
+          "gives": "+1 to Level of all Minion Skill Gems",
+          "tier": 2
+        }
+      ],
+      "gets": {
+        "base": "Lion Pelt",
+        "properties": [
+          "Magic",
+          "item level 84"
+        ],
+        "mods": [
+          {
+            "text": "+1 to Level of all Minion Skill Gems",
+            "tier": "T2"
+          }
+        ]
+      },
+      "roll_note": "",
+      "price_chaos": 8.0
+    },
+    "chosen": "vendor:minion_helmet:1",
+    "options": [
+      {
+        "key": "plain",
+        "source": "plain",
+        "label": "the target's own start item",
+        "outcome": "planned",
+        "recipe": null,
+        "steps": 0,
+        "start_price_chaos": 2.0,
+        "goods": [],
+        "mean_cost_without_start": 1346.9387888470606,
+        "total_chaos": 1348.9387888470606,
+        "approximate": false,
+        "rule_axis": null,
+        "rule_axis_values": [],
+        "note": ""
+      },
+      {
+        "key": "vendor:minion_helmet:1",
+        "source": "vendor recipe",
+        "label": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+        "outcome": "chosen",
+        "recipe": "minion_helmet",
+        "steps": 0,
+        "start_price_chaos": 8.0,
+        "goods": [
+          {
+            "name": "Lion Pelt (ilvl 84)",
+            "count": 1,
+            "chaos": 2.0,
+            "price_source": "hand"
+          },
+          {
+            "name": "Vendor recipe gems (minion, 40% quality)",
+            "count": 1,
+            "chaos": 6.0,
+            "price_source": "hand"
+          }
+        ],
+        "mean_cost_without_start": 858.3982957764944,
+        "total_chaos": 866.3982957764944,
+        "approximate": false,
+        "rule_axis": null,
+        "rule_axis_values": [],
+        "note": ""
+      }
+    ],
+    "refused": [],
+    "rule_axes": [],
+    "by_reading": [
+      {
+        "reading": {},
+        "chosen": "vendor:minion_helmet:1",
+        "total_chaos": 866.3982957764944
+      }
+    ],
+    "total_range_chaos": {
+      "low": 866.3982957764944,
+      "high": 866.3982957764944
+    },
+    "reading_matters": false,
+    "approximate_claims": [
+      "vendor.gem_qualification_is_uncorrupted_skill_gems",
+      "vendor.item_level_of_the_result_is_not_settled",
+      "vendor.result_keeps_the_input_base_type"
+    ]
+  },
+  "dropped_actions": [],
+  "left_out_actions": [
+    {
+      "reason": "the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones",
+      "count": 16,
+      "actions": [
+        "chaos-orb",
+        "harvest-reforge",
+        "harvest-reforge-influence",
+        "essence",
+        "corrupted-essence",
+        "bench-craft",
+        "remove-crafted-mods",
+        "fossil-set",
+        "exalted-orb",
+        "veiled-chaos-orb",
+        "veiled-exalted-orb",
+        "unveil",
+        "pick",
+        "annulment-orb",
+        "fracturing-orb",
+        "divine-orb"
+      ]
+    }
+  ],
+  "offered_actions": [
+    "Orb of Alteration",
+    "Orb of Augmentation",
+    "Regal Orb",
+    "restart"
+  ],
+  "states_solved": 786,
+  "totals": {
+    "success_probability": {
+      "value": 1.0,
+      "low": 1.0,
+      "high": 1.0
+    },
+    "mean_cost": {
+      "value": 866.3982957764941,
+      "low": 866.3982955790057,
+      "high": 866.3982959739826
+    },
+    "p50": {
+      "value": 597.04494,
+      "low": 595.866,
+      "high": 598.22388
+    },
+    "p90": {
+      "value": 1984.7615799999999,
+      "low": 1980.8237599999998,
+      "high": 1988.6993999999997
+    },
+    "quantiles_resolved": true,
+    "cvar_level": 0.9,
+    "cvar": {
+      "value": 2847.954048089403,
+      "low": 2842.3001345839702,
+      "high": 2853.607961594836
+    },
+    "mean_cost_divine": 2.3277761842463573,
+    "p90_divine": 5.332513648576034,
+    "mean_cost_without_start": 858.3982957764944,
+    "solver_error_bound": 1.1481493533693765e-09
+  },
+  "states": [
+    {
+      "id": "S1",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix",
+      "action": "Orb of Augmentation",
+      "cost_per_use": 0.01604,
+      "resources": [
+        {
+          "name": "Orb of Augmentation",
+          "count": 1,
+          "chaos": 0.01604,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.3982957764944,
+      "reach_probability": 1.0,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S2",
+          "probability": 0.35809018567639256
+        },
+        {
+          "to": "S5",
+          "probability": 0.3183023872679045
+        },
+        {
+          "to": "S3",
+          "probability": 0.10610079575596817
+        },
+        {
+          "to": "S7",
+          "probability": 0.07957559681697612
+        },
+        {
+          "to": "S4",
+          "probability": 0.0610079575596817
+        },
+        {
+          "to": "S9",
+          "probability": 0.03978779840848806
+        },
+        {
+          "to": "S6",
+          "probability": 0.01989389920424403
+        },
+        {
+          "to": "S8",
+          "probability": 0.017241379310344827
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
+      "action": "Regal Orb",
+      "cost_per_use": 0.06364,
+      "resources": [
+        {
+          "name": "Regal Orb",
+          "count": 1,
+          "chaos": 0.06364,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.2418380936055,
+      "reach_probability": 0.9837146794974958,
+      "goal_chance_per_use": 0.009487666034155597,
+      "transitions": [
+        {
+          "to": "goal",
+          "probability": 0.009487666034155597
+        },
+        {
+          "to": "S18",
+          "probability": 0.22770398481973433
+        },
+        {
+          "to": "S10",
+          "probability": 0.17077798861480076
+        },
+        {
+          "to": "S11",
+          "probability": 0.08538899430740038
+        },
+        {
+          "to": "S14",
+          "probability": 0.07590132827324478
+        },
+        {
+          "to": "S16",
+          "probability": 0.07590132827324478
+        },
+        {
+          "to": "S12",
+          "probability": 0.06641366223908918
+        },
+        {
+          "to": "S13",
+          "probability": 0.056925996204933584
+        },
+        {
+          "to": "S15",
+          "probability": 0.056925996204933584
+        },
+        {
+          "to": "S20",
+          "probability": 0.056925996204933584
+        },
+        {
+          "to": "S17",
+          "probability": 0.04364326375711575
+        },
+        {
+          "to": "S23",
+          "probability": 0.028462998102466792
+        },
+        {
+          "to": "S21",
+          "probability": 0.018975332068311195
+        },
+        {
+          "to": "S19",
+          "probability": 0.014231499051233396
+        },
+        {
+          "to": "S22",
+          "probability": 0.012333965844402278
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
+      "action": "Regal Orb",
+      "cost_per_use": 0.06364,
+      "resources": [
+        {
+          "name": "Regal Orb",
+          "count": 1,
+          "chaos": 0.06364,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.614125126345,
+      "reach_probability": 0.9269251460429463,
+      "goal_chance_per_use": 0.009057971014492754,
+      "transitions": [
+        {
+          "to": "goal",
+          "probability": 0.009057971014492754
+        },
+        {
+          "to": "S16",
+          "probability": 0.24456521739130435
+        },
+        {
+          "to": "S30",
+          "probability": 0.21739130434782608
+        },
+        {
+          "to": "S24",
+          "probability": 0.08152173913043478
+        },
+        {
+          "to": "S27",
+          "probability": 0.07246376811594203
+        },
+        {
+          "to": "S25",
+          "probability": 0.06340579710144928
+        },
+        {
+          "to": "S26",
+          "probability": 0.05434782608695652
+        },
+        {
+          "to": "S28",
+          "probability": 0.05434782608695652
+        },
+        {
+          "to": "S32",
+          "probability": 0.05434782608695652
+        },
+        {
+          "to": "S29",
+          "probability": 0.041666666666666664
+        },
+        {
+          "to": "S36",
+          "probability": 0.036231884057971016
+        },
+        {
+          "to": "S35",
+          "probability": 0.02717391304347826
+        },
+        {
+          "to": "S33",
+          "probability": 0.018115942028985508
+        },
+        {
+          "to": "S31",
+          "probability": 0.01358695652173913
+        },
+        {
+          "to": "S34",
+          "probability": 0.01177536231884058
+        }
+      ]
+    },
+    {
+      "id": "S4",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
+      "action": "Regal Orb",
+      "cost_per_use": 0.06364,
+      "resources": [
+        {
+          "name": "Regal Orb",
+          "count": 1,
+          "chaos": 0.06364,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.571240915142,
+      "reach_probability": 0.8743160187323316,
+      "goal_chance_per_use": 0.009107468123861567,
+      "transitions": [
+        {
+          "to": "goal",
+          "probability": 0.009107468123861567
+        },
+        {
+          "to": "S17",
+          "probability": 0.2459016393442623
+        },
+        {
+          "to": "S42",
+          "probability": 0.2185792349726776
+        },
+        {
+          "to": "S37",
+          "probability": 0.08196721311475409
+        },
+        {
+          "to": "S40",
+          "probability": 0.07285974499089254
+        },
+        {
+          "to": "S29",
+          "probability": 0.07285974499089254
+        },
+        {
+          "to": "S38",
+          "probability": 0.06375227686703097
+        },
+        {
+          "to": "S39",
+          "probability": 0.0546448087431694
+        },
+        {
+          "to": "S41",
+          "probability": 0.0546448087431694
+        },
+        {
+          "to": "S44",
+          "probability": 0.0546448087431694
+        },
+        {
+          "to": "S47",
+          "probability": 0.0273224043715847
+        },
+        {
+          "to": "S45",
+          "probability": 0.018214936247723135
+        },
+        {
+          "to": "S43",
+          "probability": 0.01366120218579235
+        },
+        {
+          "to": "S46",
+          "probability": 0.011839708561020037
+        }
+      ]
+    },
+    {
+      "id": "S5",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
+      "action": "Regal Orb",
+      "cost_per_use": 0.06364,
+      "resources": [
+        {
+          "name": "Regal Orb",
+          "count": 1,
+          "chaos": 0.06364,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.3190946507755,
+      "reach_probability": 0.9804888444889478,
+      "goal_chance_per_use": 0.009398496240601503,
+      "transitions": [
+        {
+          "to": "goal",
+          "probability": 0.009398496240601503
+        },
+        {
+          "to": "S18",
+          "probability": 0.25375939849624063
+        },
+        {
+          "to": "S53",
+          "probability": 0.15037593984962405
+        },
+        {
+          "to": "S48",
+          "probability": 0.08458646616541353
+        },
+        {
+          "to": "S51",
+          "probability": 0.07518796992481203
+        },
+        {
+          "to": "S30",
+          "probability": 0.07518796992481203
+        },
+        {
+          "to": "S49",
+          "probability": 0.06578947368421052
+        },
+        {
+          "to": "S50",
+          "probability": 0.05639097744360902
+        },
+        {
+          "to": "S52",
+          "probability": 0.05639097744360902
+        },
+        {
+          "to": "S55",
+          "probability": 0.05639097744360902
+        },
+        {
+          "to": "S42",
+          "probability": 0.043233082706766915
+        },
+        {
+          "to": "S58",
+          "probability": 0.02819548872180451
+        },
+        {
+          "to": "S56",
+          "probability": 0.018796992481203006
+        },
+        {
+          "to": "S54",
+          "probability": 0.014097744360902255
+        },
+        {
+          "to": "S57",
+          "probability": 0.012218045112781954
+        }
+      ]
+    },
+    {
+      "id": "S6",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
+      "action": "Regal Orb",
+      "cost_per_use": 0.06364,
+      "resources": [
+        {
+          "name": "Regal Orb",
+          "count": 1,
+          "chaos": 0.06364,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.7879030415388,
+      "reach_probability": 0.6849741057930184,
+      "goal_chance_per_use": 0.008857395925597875,
+      "transitions": [
+        {
+          "to": "goal",
+          "probability": 0.008857395925597875
+        },
+        {
+          "to": "S19",
+          "probability": 0.2391496899911426
+        },
+        {
+          "to": "S54",
+          "probability": 0.21257750221434898
+        },
+        {
+          "to": "S59",
+          "probability": 0.07971656333038087
+        },
+        {
+          "to": "S62",
+          "probability": 0.070859167404783
+        },
+        {
+          "to": "S31",
+          "probability": 0.070859167404783
+        },
+        {
+          "to": "S60",
+          "probability": 0.06200177147918512
+        },
+        {
+          "to": "S61",
+          "probability": 0.053144375553587246
+        },
+        {
+          "to": "S63",
+          "probability": 0.053144375553587246
+        },
+        {
+          "to": "S64",
+          "probability": 0.053144375553587246
+        },
+        {
+          "to": "S43",
+          "probability": 0.04074402125775022
+        },
+        {
+          "to": "S67",
+          "probability": 0.026572187776793623
+        },
+        {
+          "to": "S65",
+          "probability": 0.01771479185119575
+        },
+        {
+          "to": "S66",
+          "probability": 0.011514614703277236
+        }
+      ]
+    },
+    {
+      "id": "S7",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
+      "action": "Regal Orb",
+      "cost_per_use": 0.06364,
+      "resources": [
+        {
+          "name": "Regal Orb",
+          "count": 1,
+          "chaos": 0.06364,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.4693315719142,
+      "reach_probability": 0.9025543176669456,
+      "goal_chance_per_use": 0.00922509225092251,
+      "transitions": [
+        {
+          "to": "goal",
+          "probability": 0.00922509225092251
+        },
+        {
+          "to": "S20",
+          "probability": 0.24907749077490776
+        },
+        {
+          "to": "S55",
+          "probability": 0.22140221402214022
+        },
+        {
+          "to": "S68",
+          "probability": 0.08302583025830258
+        },
+        {
+          "to": "S71",
+          "probability": 0.07380073800738007
+        },
+        {
+          "to": "S32",
+          "probability": 0.07380073800738007
+        },
+        {
+          "to": "S69",
+          "probability": 0.06457564575645756
+        },
+        {
+          "to": "S70",
+          "probability": 0.055350553505535055
+        },
+        {
+          "to": "S72",
+          "probability": 0.055350553505535055
+        },
+        {
+          "to": "S44",
+          "probability": 0.042435424354243544
+        },
+        {
+          "to": "S75",
+          "probability": 0.027675276752767528
+        },
+        {
+          "to": "S73",
+          "probability": 0.01845018450184502
+        },
+        {
+          "to": "S64",
+          "probability": 0.013837638376383764
+        },
+        {
+          "to": "S74",
+          "probability": 0.011992619926199263
+        }
+      ]
+    },
+    {
+      "id": "S8",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
+      "action": "Regal Orb",
+      "cost_per_use": 0.06364,
+      "resources": [
+        {
+          "name": "Regal Orb",
+          "count": 1,
+          "chaos": 0.06364,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.8014733912025,
+      "reach_probability": 0.6527232778228719,
+      "goal_chance_per_use": 0.008841732979664015,
+      "transitions": [
+        {
+          "to": "goal",
+          "probability": 0.008841732979664015
+        },
+        {
+          "to": "S22",
+          "probability": 0.23872679045092837
+        },
+        {
+          "to": "S57",
+          "probability": 0.21220159151193635
+        },
+        {
+          "to": "S76",
+          "probability": 0.07957559681697612
+        },
+        {
+          "to": "S79",
+          "probability": 0.07073386383731212
+        },
+        {
+          "to": "S34",
+          "probability": 0.07073386383731212
+        },
+        {
+          "to": "S77",
+          "probability": 0.0618921308576481
+        },
+        {
+          "to": "S78",
+          "probability": 0.05305039787798409
+        },
+        {
+          "to": "S80",
+          "probability": 0.05305039787798409
+        },
+        {
+          "to": "S74",
+          "probability": 0.05305039787798409
+        },
+        {
+          "to": "S46",
+          "probability": 0.040671971706454466
+        },
+        {
+          "to": "S82",
+          "probability": 0.026525198938992044
+        },
+        {
+          "to": "S81",
+          "probability": 0.01768346595932803
+        },
+        {
+          "to": "S66",
+          "probability": 0.013262599469496022
+        }
+      ]
+    },
+    {
+      "id": "S9",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
+      "action": "Regal Orb",
+      "cost_per_use": 0.06364,
+      "resources": [
+        {
+          "name": "Regal Orb",
+          "count": 1,
+          "chaos": 0.06364,
+          "price_source": "poe.ninja"
+        }
+      ],
+      "expected_remaining_cost": 858.6845722596497,
+      "reach_probability": 0.816055641341837,
+      "goal_chance_per_use": 0.008976660682226212,
+      "transitions": [
+        {
+          "to": "goal",
+          "probability": 0.008976660682226212
+        },
+        {
+          "to": "S23",
+          "probability": 0.24236983842010773
+        },
+        {
+          "to": "S58",
+          "probability": 0.21543985637342908
+        },
+        {
+          "to": "S83",
+          "probability": 0.0807899461400359
+        },
+        {
+          "to": "S86",
+          "probability": 0.0718132854578097
+        },
+        {
+          "to": "S35",
+          "probability": 0.0718132854578097
+        },
+        {
+          "to": "S84",
+          "probability": 0.06283662477558348
+        },
+        {
+          "to": "S85",
+          "probability": 0.05385996409335727
+        },
+        {
+          "to": "S87",
+          "probability": 0.05385996409335727
+        },
+        {
+          "to": "S75",
+          "probability": 0.05385996409335727
+        },
+        {
+          "to": "S47",
+          "probability": 0.04129263913824058
+        },
+        {
+          "to": "S88",
+          "probability": 0.017953321364452424
+        },
+        {
+          "to": "S67",
+          "probability": 0.013464991023339317
+        },
+        {
+          "to": "S82",
+          "probability": 0.011669658886894075
+        }
+      ]
+    },
+    {
+      "id": "S10",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.8676836075444835,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S11",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.7662907764347063,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S12",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.7183252784105215,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S13",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.6861150666796328,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S14",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.744540042042333,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S15",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.6861150666796328,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S16",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.850679809568118,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S17",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.7666020729004959,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S18",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.94566655714072,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S19",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.5137695964961029,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S20",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.8117210022613444,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S21",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.42150618508228316,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S22",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.4777989353573037,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S23",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.6802062156836743,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S24",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.48119416810424587,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S25",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.4190746353053835,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S26",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.38208119261188145,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S27",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.45188884695794257,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S28",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.38208119261188145,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S29",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.48736483869285024,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S30",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.8344279726540411,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S31",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.23415354739841546,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S32",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.5551758918817257,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S33",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.17088950918741944,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S34",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.20932811687017372,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S35",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.3810196992028519,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S36",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.29189690034205595,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S37",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.3490552699196262,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S38",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.2943169625616857,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S39",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.2633440569008341,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S40",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.3227904288473085,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S41",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.2633440569008342,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S42",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.7439561010224626,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S43",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.14986875124472498,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S44",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.41846556428653275,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S45",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.10647426164502598,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S46",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.13243437496357857,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S47",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.26194828287289235,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S48",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.7427398495306194,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S49",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.6918843437105131,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S50",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.6580897194115376,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S51",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.7195993208361241,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S52",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.6580897194115376,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S53",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.8369383636255823,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S54",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.48311560524905045,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S55",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.7922714974771593,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S56",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.39083126467558904,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S57",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.4473156743595942,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S58",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.6529644836489414,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S59",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.1453400377612448,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S60",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.11681512140452788,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S61",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.1018265150202076,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S62",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.1313116830062873,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S63",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.10182651502020756,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S64",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.18794761825708045,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S65",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.036414120319868314,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S66",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.04678734341811028,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S67",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.10244183292986205,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S68",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.4146782308583951,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S69",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.3552654821383486,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S70",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.3207942901405881,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S71",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.3864066992562879,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S72",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.32079429014058813,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S73",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.13602134362919346,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S74",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.16695421895124474,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S75",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.3178477387435832,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S76",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.1282525542545845,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S77",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.10267837871739362,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S78",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.08932021821389251,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S79",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.11565032033556377,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S80",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.08932021821389254,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S81",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.031658573181222366,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S82",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.08994044900410987,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S83",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.2563350393119805,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S84",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.21141457817783876,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S85",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.1868559339313064,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S86",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.23453326765330232,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S87",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.1868559339313064,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "S88",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
+      "action": "restart",
+      "cost_per_use": 8.0,
+      "resources": [
+        {
+          "name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
+          "count": 1,
+          "chaos": 8.0,
+          "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+        }
+      ],
+      "expected_remaining_cost": 866.3982957764944,
+      "reach_probability": 0.07114829924591518,
+      "goal_chance_per_use": 0.0,
+      "transitions": [
+        {
+          "to": "S1",
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "single_draw_shares": []
+}

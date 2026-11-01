@@ -63,7 +63,7 @@ from ._route_card import ANY_OR_EMPTY, EMPTY, ItemCard, _StateReader, card_of_it
 from ._route_flow import Edge, Step, build_flow
 from ._route_html import render_page
 from ._route_trade import BuyStep, buy_step
-from ._start_step import FirstStep, first_step
+from ._start_step import ROLE_GEMS, FirstStep, first_step
 
 PLANNER_LABEL = "Cheapest policy of the planner"
 NEVER_FINISHES = "never finishes from here"
@@ -440,7 +440,9 @@ class _View:
 
     def vendor_row(self, step: FirstStep, final: bool) -> StepRow:
         """Row 1 of a plan that starts from a vendor recipe: what is handed over, the recipes, the price; the item card is what comes back."""
-        hand = tuple(Line(f"{good.count} × {good.what} {money(good.chaos)}") for good in step.hand)
+        hand = tuple(
+            Line(f"{good.what if good.role == ROLE_GEMS else f'{good.count} × {good.what}'} {money(good.chaos)}") for good in step.hand
+        )
         many = len(step.rounds) > 1
         recipes = tuple(
             Line(f"{f'{each.number}. ' if many else ''}{each.hand} → {each.gives} · T{each.tier}") for each in step.rounds

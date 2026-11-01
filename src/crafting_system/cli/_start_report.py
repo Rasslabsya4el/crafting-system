@@ -59,14 +59,14 @@ def first_step_lines(step: FirstStep) -> list[str]:
     """The text block on the first step of a plan that starts from a vendor recipe (ASCII only): the bill, the recipes, the item back, the price."""
     lines = [f"First step, before S1: {step.title}", "  You hand the vendor:"]
     for good in step.hand:
-        lines.append(f"    {good.count} {good.what}: {money(good.chaos)} Chaos [{good.price_source}]")
+        lines.append(f"    {good.label}: {money(good.chaos)} Chaos [{good.price_source}]")
     if len(step.rounds) > 1:
         lines.append("  Recipe by recipe (each takes the Magic item the recipe before made; the first takes the Normal base):")
     else:
         lines.append("  The recipe:")
     for each in step.rounds:
-        label = f"recipe {each.number}" if len(step.rounds) > 1 else "gives"
-        lines.append(f"    {label}: {each.hand} -> {_gives(each.gives, f'T{each.tier}')}")
+        label = f"recipe {each.number}: " if len(step.rounds) > 1 else ""
+        lines.append(f"    {label}{each.hand} -> {_gives(each.gives, f'T{each.tier}')}")
     mods = " and ".join(_gives(text, note) for text, note in step.mods) or "no mod"
     item = f"{step.properties[0]} {step.base}" + "".join(f", {each}" for each in step.properties[1:])
     lines.append(f"  You get back: {item}, with only {mods} (the recipe wipes every other mod)")

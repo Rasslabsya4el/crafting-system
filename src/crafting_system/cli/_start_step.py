@@ -46,6 +46,11 @@ class HandGood:
     chaos: float  # for all `count` of them
     price_source: str
 
+    @property
+    def label(self) -> str:
+        """The good as one line of the bill: "5 Quicksilver Flask"; the gems are one priced set, so they carry no count."""
+        return self.what if self.role == ROLE_GEMS else f"{self.count} {self.what}"
+
 
 @dataclass(frozen=True)
 class RecipeRound:

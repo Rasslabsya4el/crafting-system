@@ -234,6 +234,21 @@ BENCHMARKS = (
         ),
         heavy="the exact graph has at least 787,000 states, more than a 16 GB runner holds, and no approximate level exists for a route with metamods (ticket #70)",
     ),
+    # No guide writes a route for a recipe-made start item, so V01 has no given route: its answer is the start the plan chooses (ticket #331).
+    BenchmarkRoute(
+        "V01",
+        "Minion helmet with +1 to Level of all Minion Skill Gems and top Life, started from the vendor recipe (research note on vendor recipes)",
+        "examples/targets/v01-minion-helmet.yaml",
+        None,
+        (),
+        start=ExpectedStart(
+            "vendor:minion_helmet:1",
+            "The +1 Minion gems mod is 250 of 114,675 weight of a Lion Pelt's pool, about one draw in 459, so Transmutation and Alteration "
+            "find it rarely. The Minion helmet recipe makes a Magic helmet that holds exactly that mod for the base and two Minion gems "
+            "with 40% quality in all; the rest of the craft only has to add the top Life. At the prices of tests/fixtures/prices/vendor-v01-2026-11-01.json the recipe start costs "
+            "8 Chaos and the plan from it about 866 Chaos in all, against about 1,349 Chaos from the plain Normal helmet.",
+        ),
+    ),
 )
 
 class _Skipped(Exception):

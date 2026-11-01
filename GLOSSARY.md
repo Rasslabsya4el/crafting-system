@@ -122,6 +122,10 @@ _Avoid_: stage
 One priced candidate a plan can start from, with its source: the target's own start item (`plain`) or the Magic item a vendor recipe makes. The planner plans each option and keeps the cheapest total of start price and expected crafting cost (ADR-0059). A later source, such as a bought item (research #337), is one more source of start options. In the code it is a `StartCandidate`.
 _Avoid_: start method
 
+**First step**:
+What the owner does before the first state of the policy when the start item is made at a vendor: the bill (the Normal base, the flasks, the Orbs of Augmentation, the gems, each with its count and price), the recipes one by one with the mod and exact tier each gives, the Magic item that comes back, and the start price. It is in the text report, in the JSON (`start_options.first_step`) and in row 1 of the route page (ADR-0059, amendment of #331). In the code it is a `FirstStep`.
+_Avoid_: buy step (nothing is bought from another player), recipe action
+
 ## Crafting
 
 **Primitive**:
