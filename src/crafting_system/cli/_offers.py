@@ -132,6 +132,12 @@ def price_offers(
     return tuple(priced), tuple(dropped)
 
 
+def free_action_cost(priced: Iterable[PricedOffer]) -> float | None:
+    """What `price_offers` charged the actions that consume nothing, or `None` when the offers hold none (ticket #349)."""
+    costs = [entry.cost for entry in priced if not entry.offer.resources]
+    return max(costs) if costs else None
+
+
 # --- what the model offers for one target ------------------------------------------------------------
 
 
