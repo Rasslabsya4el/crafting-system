@@ -22,13 +22,16 @@ from crafting_system.items import (
     Influence,
     Item,
     ItemError,
+    MemoryStrandsError,
     Quality,
     QualityError,
     Rarity,
+    MAX_MEMORY_STRANDS,
     VeilOfferError,
     eldritch_grade,
     eldritch_side,
     enchant_class,
+    read_memory_strands,
     spawn_weight,
     veiled_placeholder,
 )
@@ -59,7 +62,7 @@ IMPLICIT_KEYS = ("family", "stat", "mod", "min_grade", "min_roll", "corrupted")
 QUALITY_KEYS = ("type", "min_percent")
 ENCHANTMENT_KEYS = ("any_of",)
 GROUP_KEYS = ("at_least", "of")
-START_ITEM_KEYS = ("rarity", "corrupted", "mods", "implicits", "quality", "enchantment", "veil_offer")
+START_ITEM_KEYS = ("rarity", "corrupted", "mods", "implicits", "quality", "enchantment", "veil_offer", "memory_strands")
 START_MOD_KEYS = ("mod", "tier", "values", "fractured", "crafted")
 START_IMPLICIT_KEYS = ("mod", "values", "grade")
 START_QUALITY_KEYS = ("type", "percent")
@@ -684,7 +687,8 @@ class _Reader:
                 self.fail(
                     line,
                     "start_item",
-                    "must be a mapping with `rarity`, `corrupted`, `mods`, `implicits`, `quality`, `enchantment` and `veil_offer`,"
+                    "must be a mapping with `rarity`, `corrupted`, `mods`, `implicits`, `quality`, `enchantment`, `veil_offer`"
+                    " and `memory_strands`,"
                     f" got {describe(start)}",
                 )
             self.check_keys(start, "start_item", START_ITEM_KEYS)
@@ -703,6 +707,8 @@ class _Reader:
             if "veil_offer" in start:
                 offer = self.read_veil_offer(start["veil_offer"], start.key_lines["veil_offer"])
                 offer_lines = start["veil_offer"].item_lines
+            if "memory_strands" in start:
+                fields["memory_strands"] = self.read_start_strands(start["memory_strands"], start.key_lines["memory_strands"])
             fields["rarity"] = self.read_rarity(start, bool(mods))
             if "corrupted" in start:
                 if not isinstance(start["corrupted"], bool):
@@ -859,6 +865,25 @@ class _Reader:
                 f"must be a whole number from 0 to {MAX_QUALITY}, got {describe(percent)}",
             )
         return Quality(catalyst, percent)
+
+    def read_start_strands(self, value: object, line: int) -> int:
+        """The Memory Strands count of the start item: a whole number from 0 to 100, or a pasted item text holding the line `Memory Strands: N`."""
+        path = "start_item.memory_strands"
+        if isinstance(value, str):
+            if "Memory Strands:" not in value:
+                self.fail(line, path, f'a text must hold the line "Memory Strands: N" of the pasted item, got {describe(value)}')
+            try:
+                return read_memory_strands(value)
+            except MemoryStrandsError as problem:
+                self.fail(line, path, str(problem))
+        if not is_whole(value) or not 0 <= value <= MAX_MEMORY_STRANDS:
+            self.fail(
+                line,
+                path,
+                f"must be a whole number from 0 to {MAX_MEMORY_STRANDS} or a pasted item text with a"
+                f' "Memory Strands: N" line, got {describe(value)}',
+            )
+        return value
 
     def read_veil_offer(self, entries: object, line: int) -> tuple[str, ...]:
         if not isinstance(entries, LineList):

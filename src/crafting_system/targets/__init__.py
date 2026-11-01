@@ -56,6 +56,8 @@ Keys (unknown keys are errors, with a close-match hint):
         percent: 20
       enchantment: ArmourEnchantmentHeistLifeEffect1   # optional: the enchantment the item starts with, a mod id or its exact stat text
       veil_offer: [UnveiledPrefixLife1]   # optional: up to 3 mod ids offered for the one veiled placeholder in `mods`
+      memory_strands: 57    # optional (ADR-0040): the Memory Strands count, a whole number from 0 to 100 (default 0); or a pasted item text
+                            # holding the game's line "Memory Strands: 57". A start item with 1 or more turns the strand setting on.
     start_price: R12 start amulet   # optional: the name of the start item in the price file (what it costs to get)
     price_file: prices.json # optional path; a relative path counts from the target file's folder
     actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it can use)
