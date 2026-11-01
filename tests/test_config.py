@@ -351,3 +351,35 @@ def test_config_module_imports_no_layer():
 
     assert not [name for name in absolute if name.startswith("crafting_system")]
     assert relative == []
+
+
+# --- the planner settings (ADR-0040 memory_strands, ADR-0059 recipe_starts) ---------------------------------------------------
+
+
+def test_recipe_starts_is_on_by_default_and_memory_strands_off(tmp_path):
+    config = load_config(env={}, project_root=tmp_path)
+
+    assert config.recipe_starts is True and config.memory_strands is False
+
+
+def test_recipe_starts_can_be_turned_off_in_the_planner_table(tmp_path):
+    write_toml(tmp_path / "crafting.toml", "[planner]\nrecipe_starts = false\nmemory_strands = true\n")
+
+    config = load_config(env={}, project_root=tmp_path)
+
+    assert config.recipe_starts is False and config.memory_strands is True
+
+
+@pytest.mark.parametrize("value", ['"no"', "0", "[]"])
+def test_recipe_starts_must_be_true_or_false(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f"[planner]\nrecipe_starts = {value}\n")
+
+    with pytest.raises(ValueError, match="recipe_starts.*true or false"):
+        load_config(env={}, project_root=tmp_path)
+
+
+def test_an_unknown_planner_key_names_both_known_settings(tmp_path):
+    write_toml(tmp_path / "crafting.toml", "[planner]\nrecipe_start = false\n")
+
+    with pytest.raises(ValueError, match="known: memory_strands, recipe_starts"):
+        load_config(env={}, project_root=tmp_path)

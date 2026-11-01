@@ -771,9 +771,13 @@ def test_a_not_applicable_error_comes_before_an_out_of_scope_one():
         outcomes_of("Scorched Fossil", item=item)
 
 
-def test_a_bloodstained_fossil_is_out_of_scope_alone_and_in_a_set():
+def test_a_bloodstained_fossil_is_refused_on_a_base_with_no_corrupted_implicit_pool():
+    """It is no longer out of scope (ticket #261); the boots of this world have no corrupted mod to draw, so the game has no implicit to add.
+
+    What it does where there is a pool is `test_actions_fossil_bloodstained.py`.
+    """
     for names in (("Bloodstained Fossil",), ("Scorched Fossil", "Bloodstained Fossil")):
-        with pytest.raises(OutOfScopeError, match="corrupt"):
+        with pytest.raises(NotApplicableError, match="no corrupted implicit pool"):
             outcomes_of(*names)
 
 

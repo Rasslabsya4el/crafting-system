@@ -11,6 +11,9 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
   model offers, for the target (`offers_for`): a Chaos Orb, the Harvest reforge of Lightning, every essence
   the item class takes, Remove Crafted Mods, the bench crafts whose mod counts toward a requirement (the
   others are left out and listed, see `offers_for`), and `restart`, buying the start item again.
+* `plan_with_starts(data, target, prices)`: `make_plan` for a target whose start item may also be made by a vendor recipe: it plans
+  each start option (`_start_options`) and keeps the cheapest total of start price and expected cost (ADR-0059, `_starts`); the
+  comparison is `Plan.starts`. With the setting `recipe_starts` off it is `make_plan`.
 * `build_report(plan, data)`, `render_text(report)`, `policy_document(report)`: the outputs.
 * `verify(data, plan)`: the simulator against the computed mean (a normal-approximate interval); for an approximate
   plan, the lifted policy (`_lift`) against the certified interval, with a simulated p90 and CVaR.
@@ -46,12 +49,16 @@ from ._plan import STRANDS_OFF, Plan, PlanError, StartPrice, StrandSetting, make
 from ._report import Report, build_report, policy_document, render_text
 from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
 from ._shares import WeightShare, start_shares, weight_share
+from ._start_options import StartContext, StartList, StartSource, vendor_recipe_starts
+from ._start_types import ConsideredStart, ReadingChoice, RefusedStart, StartCandidate, StartChoice
+from ._starts import plan_with_starts
 from ._verify import Verification, verify
 
 __all__ = [
     "RESTART",
     "STRANDS_OFF",
     "BuyStartItem",
+    "ConsideredStart",
     "Divergence",
     "DroppedOffer",
     "Gap",
@@ -64,9 +71,16 @@ __all__ = [
     "Report",
     "Route",
     "RouteError",
+    "ReadingChoice",
+    "RefusedStart",
     "RouteResult",
     "Rule",
+    "StartCandidate",
+    "StartChoice",
+    "StartContext",
+    "StartList",
     "StartPrice",
+    "StartSource",
     "StrandSetting",
     "Verification",
     "WeightShare",
@@ -79,11 +93,13 @@ __all__ = [
     "make_plan",
     "offers_for",
     "parse_route",
+    "plan_with_starts",
     "policy_document",
     "price_offers",
     "render_text",
     "start_shares",
     "strand_setting",
+    "vendor_recipe_starts",
     "verify",
     "weight_share",
 ]
