@@ -21,6 +21,12 @@ result depend on which mod each slot stands for, as far as a roll requirement of
 Every ordinary family with a mod whose roll changes what it gives the goal (a rollable mod, `_rolls.py`) is then
 told apart by MOD: all its mods have the kind `"$" + mod id`. The prefix is not "=" (that names a pool of families
 in `_coarse.py`), "~" (a family type), "@" (the tags of a mod) or "#" (a family without a name).
+
+A veiled mod is never an ordinary one (ticket #145, ADR-0026). A mod unveiled from the pool (domain `unveiled`) has the kind
+`"^" + family key`, whatever the enabled actions tell apart: it can share a family with an ordinary mod (Movement Speed on boots), and
+the Veiled Exalted Orb and the Veiled Chaos Orb refuse an item that holds a veiled mod, so the state must know which of the two a
+slot is. The veiled placeholder has the kind of its family (`"VeiledPrefix"`), which no ordinary pool lists, and its representative
+is always the generic placeholder the orbs put on an item.
 """
 
 from collections import defaultdict
@@ -28,13 +34,15 @@ from collections.abc import Callable, Hashable, Iterable
 
 from crafting_system.actions import BLOCKED_TAG, Action, build_pool
 from crafting_system.data import GameData, Mod
-from crafting_system.items import Item, Rarity, Side
-from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS
+from crafting_system.items import GENERIC_PLACEHOLDERS, Item, Rarity, Side
+from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS, UNVEILED_DOMAIN, VEILED_DOMAIN
 
 ALIKE = ""  # the kind of a family that every enabled action treats like any other of its side
 TYPE_PREFIX = "~"  # a kind that stands for a family type (pool weight), not for one family
 MOD_PREFIX = "$"  # a kind that stands for one mod (a family with a rollable mod, when an action rerolls values): "$<mod id>"
 TAG_MARK = "@"  # a kind with the protected tags of its mod: "<kind>@attack", "<kind>@attack+caster"
+UNVEILED_PREFIX = "^"  # a kind that stands for a mod unveiled from the pool: "^<family key>", never an ordinary mod of that family
+GENERIC_PLACEHOLDER_IDS = frozenset(GENERIC_PLACEHOLDERS.values())
 PROTECTED_TAGS = frozenset(BLOCKED_TAG.values())  # the tags an Attack or Caster metamod keeps out of a draw and an Annulment
 
 
@@ -62,6 +70,18 @@ def protected_tags(mod: Mod) -> frozenset[str]:
 def held_families(mod: Mod) -> set[str]:
     """The families a mod on an item occupies, one by one (a mod can have several)."""
     return set(mod.families) or {f"#{mod.id}"}
+
+
+def kind_families(kind: str) -> set[str]:
+    """The families a slot of an ordinary kind that is told apart by name holds: its family key ("A|B") split, a mod without a family ("#id") whole.
+
+    The kind of a mod unveiled from the pool ("^A|B") holds the same families as the key behind its mark. Not for a family type ("~3"),
+    a mod kind ("$id"), a crafted slot (a mod id) or ALIKE: those name no family.
+    """
+    base = base_kind(kind)
+    if base.startswith(UNVEILED_PREFIX):
+        base = base[len(UNVEILED_PREFIX) :]
+    return {base} if base.startswith("#") else set(base.split("|"))
 
 
 class TypeNumbers:
@@ -153,7 +173,9 @@ class Kinds:
         With `metamods` it also carries the protected tags of the mod (see the module docstring).
         """
         key = family_key(mod)
-        if key in self._families_by_mod():
+        if mod.domain == UNVEILED_DOMAIN:
+            kind = UNVEILED_PREFIX + key  # a veiled mod, told apart from the ordinary mods of its family whatever an action reads
+        elif key in self._families_by_mod():
             kind = MOD_PREFIX + mod.id
         elif self._everything or key in self._distinct or key not in self._listed_families():
             kind = key
@@ -202,6 +224,12 @@ class Kinds:
                 raise ValueError(f"the mod {mod.id} is not a {side.value} mod")
             if held_families(mod) & taken:
                 raise ValueError(f"two slots of the family of {mod.id}: one item cannot hold both")
+            taken |= held_families(mod)
+            return mod
+        if base.startswith(UNVEILED_PREFIX):
+            mod = self._mod_of(base[len(UNVEILED_PREFIX) :], side, tags, unveiled=True)
+            if held_families(mod) & taken:
+                raise ValueError(f"two slots of the family {base[len(UNVEILED_PREFIX) :]}: one item cannot hold both")
             taken |= held_families(mod)
             return mod
         if base != ALIKE and not base.startswith(TYPE_PREFIX):
@@ -288,16 +316,27 @@ class Kinds:
         shape = (self.profile(entry.mod), entry.weight)
         return (*shape, tuple(sorted(protected_tags(entry.mod)))) if self.metamods else shape
 
-    def _mod_of(self, key: str, side: Side, tags: frozenset[str] = frozenset()) -> Mod:
-        """A mod of the family `key` on `side` that an ordinary slot can hold, found in the data (with `metamods`, with exactly `tags`)."""
+    def _mod_of(self, key: str, side: Side, tags: frozenset[str] = frozenset(), *, unveiled: bool = False) -> Mod:
+        """A mod of the family `key` on `side` that a slot can hold, found in the data (with `metamods`, with exactly `tags`).
+
+        An ordinary kind never finds a mod unveiled from the pool; `unveiled` finds one of the unveiled domain. Of the
+        placeholders of a family it finds the generic one (`VeiledPrefix`, `VeiledSuffix`), the one the orbs put on an item.
+        """
         if self._by_family is None:
             grouped: dict[str, list[Mod]] = {}
             for mod in self.data.mods.values():
                 grouped.setdefault(family_key(mod), []).append(mod)
             self._by_family = grouped
         domain = self.data.base_items[self.base_id].domain
-        for mod in self._by_family.get(key, ()):
-            if mod.generation_type == side.value and mod.domain in ({domain} | EXPLICIT_EXTRA_DOMAINS) - {"crafted"}:
-                if not self.metamods or protected_tags(mod) == tags:
-                    return mod
-        raise ValueError(f"no {side.value} mod of the family {key} fits a base like {self.base_id}")
+        domains = {UNVEILED_DOMAIN} if unveiled else ({domain} | EXPLICIT_EXTRA_DOMAINS) - {"crafted", UNVEILED_DOMAIN}
+        found = [
+            mod
+            for mod in self._by_family.get(key, ())
+            if mod.generation_type == side.value
+            and mod.domain in domains
+            and (not self.metamods or protected_tags(mod) == tags)
+        ]
+        if not found:
+            raise ValueError(f"no {side.value} mod of the family {key} fits a base like {self.base_id}")
+        # the data order decides, except that a signature placeholder comes after the generic one
+        return min(found, key=lambda mod: mod.domain == VEILED_DOMAIN and mod.id not in GENERIC_PLACEHOLDER_IDS)

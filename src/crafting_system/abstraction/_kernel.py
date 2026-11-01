@@ -41,12 +41,15 @@ from crafting_system.items import (
     eldritch_grade,
     eldritch_side,
     is_corrupted_implicit,
+    is_craftable_version,
+    placeholder_families,
     spawn_weight,
     tier_table,
 )
+from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
 
 from ._goal import Goal, Status
-from ._kinds import MOD_PREFIX, TYPE_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
+from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
 from ._rolls import Cells, RollLaw, is_rollable, multinomial, roll_law
 from ._state import (
     CompressedState,
@@ -207,11 +210,14 @@ class Abstraction:
         self._tracks_implicits = bool(goal.implicits) or any(r.implicits for r in reads) or any(a.implicits for a in adds)
         self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
+        placeholders = placeholder_families(data)  # no ordinary mod has one: an action that reads one refuses by whether the item holds a veiled mod
+        self._veiled_aware = self._tracks_offer or any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
         self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
         self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}
         self._offered_ids: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], str] = {}
+        self._offer_groups: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], tuple[str, ...]] = {}  # (influences, canonical id, contribution) -> the ids it stands for, sorted
         self._contexts: dict[frozenset[Influence], _Context] = {}
         self._kinds = self._new_context(frozenset(), tier_table(data, base_id)).kinds
         if self._tracks_offer and not self._kinds.tracked:
@@ -378,6 +384,8 @@ class Abstraction:
                     f"the item holds a metamod ({names}) and this abstraction was built with metamods=False: "
                     "pass metamods=True to model what a lock or an Attack/Caster metamod changes"
                 )
+        if self._tracks_offer:
+            self._refuse_out_of_scope_veil(item)
         influences = item.influences
         fractured = sorted(
             (FracturedMod(self._fractured_id(entry, influences), self._contribution(entry)) for entry in item.fractured_mods),
@@ -402,6 +410,20 @@ class Abstraction:
             tuple(slots),
             *self._held_by(item.implicits, item.quality, item.veil_offer, influences),
         )
+
+    def _refuse_out_of_scope_veil(self, item: Item) -> None:
+        """Raise `OutOfScopeError` for an item with a signature placeholder or with two: out of v1 (grill B2).
+
+        Every placeholder shares the family `VeiledPrefix` or `VeiledSuffix`, so a state would hold a signature placeholder as the
+        generic one and unveil it from the generic pool. The actions refuse such an item, and so does the state that stands for it.
+        """
+        held = [entry for entry in item.mods if self.data.mods[entry.mod_id].domain == VEILED_DOMAIN]
+        if len(held) > 1:
+            raise OutOfScopeError("the item holds two veiled placeholders; a start item with a double veil is out of scope (grill B2)")
+        if held and held[0].mod_id not in GENERIC_PLACEHOLDER_IDS:
+            raise OutOfScopeError(
+                f"the item holds the signature placeholder {held[0].mod_id}; only the generic VeiledPrefix and VeiledSuffix are modelled (grill B2)"
+            )
 
     def _held_by(
         self,
@@ -677,28 +699,58 @@ class Abstraction:
         return found
 
     def _offer_of(self, offer: tuple[str, ...], influences: frozenset[Influence]) -> tuple[OfferedMod, ...]:
-        """The mods of an unveil offer as the state keeps them, sorted: each by the canonical id of its kind and what it gives each leaf."""
+        """The mods of an unveil offer as the state keeps them: each by the canonical id of its kind and what it gives each leaf.
+
+        They stay in the order the item stores them (mod id order), so that the k-th is the mod `Pick(k)` takes on the item and
+        on the state alike; two offers whose mods stand for the same kinds in the same order are one state.
+        """
         entries = []
         for mod_id in offer:
             mod = self.data.mods[mod_id]
             contribution = self._drawn_contribution(mod, False, influences)
             entries.append(OfferedMod(self._offered_id(mod, contribution, influences), contribution))
-        return tuple(sorted(entries, key=lambda entry: (entry.mod_id, entry.contribution)))
+        return tuple(entries)
 
     def _offered_id(self, mod: Mod, contribution: tuple[Status, ...], influences: frozenset[Influence]) -> str:
-        """The smallest id among the unveiled mods of the families and side of `mod` that give `contribution` and can spawn on this base."""
+        """The smallest id among the unveiled mods of the families and side of `mod` that give `contribution` and can spawn on this base.
+
+        With `metamods` the mods must also carry the same tags an Attack or Caster metamod looks at, as a canonical id does: the
+        slot a pick makes has them in its kind. The ids it stands for are kept (`_offer_groups`).
+        """
         key = (influences, mod.id, contribution)
         found = self._offered_ids.get(key)
         if found is None:
             tags = self.data.base_items[self.base_id].tags
-            group = self._canonical_groups()[(mod.families, mod.generation_type, mod.domain)]
-            matching = [
+            group = self._canonical_groups()[self._group_key(mod)]
+            wanted = protected_tags(mod)
+            matching = sorted(
                 other.id
                 for other in group
-                if spawn_weight(other, tags) > 0 and self._drawn_contribution(other, False, influences) == contribution
-            ]
-            found = self._offered_ids[key] = min(matching) if matching else mod.id
+                if spawn_weight(other, tags) > 0
+                and self._drawn_contribution(other, False, influences) == contribution
+                and (not self._metamods or protected_tags(other) == wanted)
+            ) or [mod.id]
+            found = self._offered_ids[key] = matching[0]
+            self._offer_groups[(influences, found, contribution)] = tuple(matching)
         return found
+
+    def _offered_mod_ids(self, offer: tuple[OfferedMod, ...], influences: frozenset[Influence]) -> tuple[str, ...]:
+        """The ids of an item that holds the offer of a state: for each entry a mod of its kind, the ids rising as the entries do.
+
+        An item sorts the ids of its offer, and the k-th of them is the mod `Pick(k)` takes, so the entries are given ids in
+        increasing order: each the smallest of its kind above the one before (the first is the canonical id itself, and one exists
+        for every offer an item can hold, since the ids of the item are such a choice). Raises `ValueError` for entries no item holds.
+        """
+        ids: list[str] = []
+        previous = ""
+        for entry in offer:
+            canonical = self._offered_id(self.data.mods[entry.mod_id], entry.contribution, influences)
+            chosen = next((other for other in self._offer_groups[(influences, canonical, entry.contribution)] if other > previous), None)
+            if chosen is None:
+                raise ValueError(f"the offer {[e.mod_id for e in offer]} is not the offer of an item: no mod of {entry.mod_id}'s kind is left above {previous!r}")
+            ids.append(chosen)
+            previous = chosen
+        return tuple(ids)
 
     def _drawn_contribution(
         self, mod: Mod, crafted: bool = False, influences: frozenset[Influence] = frozenset()
@@ -786,12 +838,24 @@ class Abstraction:
         """The canonical id of a mod of a concrete item (see `_canonical_for`)."""
         return self._canonical_for(self.data.mods[entry.mod_id], self._contribution(entry), entry.crafted, influences)
 
+    def _group_key(self, mod: Mod) -> tuple:
+        """What a canonical id stands for: the mods of the same families, side and domain.
+
+        A veiled mod is told apart (ticket #145): a placeholder stands for itself only (the placeholders of the masters share the
+        family of the generic one), and, while an enabled action reads the veiled families, the craftable version of an unveiled
+        mod, which the Veiled Exalted Orb refuses, never stands for another crafted mod of its family (without such an action
+        nothing refuses by it, so the merge stays and a B1 state is what it was).
+        """
+        if mod.domain == VEILED_DOMAIN:
+            return (mod.families, mod.generation_type, mod.domain, mod.id)
+        return (mod.families, mod.generation_type, mod.domain, self._veiled_aware and is_craftable_version(self.data, mod))
+
     def _canonical_groups(self) -> dict[tuple, list[Mod]]:
-        """Every mod of the data by (families, side, domain): the mods a canonical id stands for."""
+        """Every mod of the data by `_group_key`: the mods a canonical id stands for."""
         if self._canonical_group is None:
             groups: dict[tuple, list[Mod]] = defaultdict(list)
             for mod in self.data.mods.values():
-                groups[(mod.families, mod.generation_type, mod.domain)].append(mod)
+                groups[self._group_key(mod)].append(mod)
             self._canonical_group = groups
         return self._canonical_group
 
@@ -805,7 +869,7 @@ class Abstraction:
         key = (influences, own.id, contribution, crafted)
         found = self._canonical.get(key)
         if found is None:
-            group = self._canonical_groups()[(own.families, own.generation_type, own.domain)]
+            group = self._canonical_groups()[self._group_key(own)]
             tags = protected_tags(own)
             matching = [
                 mod.id
@@ -899,7 +963,7 @@ class Abstraction:
             mods=tuple(mods),
             implicits=self._implicits_of(state),
             quality=state.quality,
-            veil_offer=() if erasing else tuple(entry.mod_id for entry in state.offer),  # an action that erases the junk erases the placeholder
+            veil_offer=() if erasing else self._offered_mod_ids(state.offer, influences),  # an action that erases the junk erases the placeholder
             enchantment=self.enchantment,
         )
         return item, origins
@@ -930,6 +994,10 @@ class Abstraction:
         no action is taken to erase, because a lock keeps the mods of its side: the item holds every slot,
         and what the action keeps is read back from `origins`, the rest is dropped.
         """
+        if state.offer and not action.reads(self.data).offer:
+            raise NotApplicableError(
+                "the item holds an unveil offer, a choice node (ADR-0026): the only actions there are the picks, and there is no way to decline"
+            )
         erasing = not self._kinds.reads_junk(action) and not self._metamods
         slots = tuple(slot for slot in state.slots if slot.crafted) if erasing else state.slots
         key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer)
@@ -1535,7 +1603,7 @@ class Abstraction:
             return None
         if slot.crafted:
             own = self.data.mods[slot.kind]
-            group = self._canonical_groups()[(own.families, own.generation_type, own.domain)]
+            group = self._canonical_groups()[self._group_key(own)]
             if any(mod.id in self._roll_ids and is_rollable(self._law(mod, influences, lucky, True)) for mod in group):
                 raise OutOfScopeError(
                     f"a Divine Orb rerolls a crafted mod ({own.id}) that a roll limit looks at: the range of the real mod "
@@ -1543,6 +1611,16 @@ class Abstraction:
                 )
             return None
         base = base_kind(slot.kind)
+        if base.startswith(UNVEILED_PREFIX):  # a mod unveiled from the pool: the slot knows its family, not which of the family's mods it is
+            key = base[len(UNVEILED_PREFIX) :]
+            family = () if key.startswith("#") else tuple(key.split("|"))  # a mod without a family is a kind "^#<id>": the group of the family-less ones
+            group = self._canonical_groups().get((family, slot.side.value, UNVEILED_DOMAIN, False), ())
+            if any(mod.id in self._roll_ids and is_rollable(self._law(mod, influences, lucky)) for mod in group):
+                raise OutOfScopeError(
+                    f"a Divine Orb rerolls a mod unveiled from the pool ({base}) that a roll limit looks at: "
+                    "the slot does not say which mod of the family it is, so its new roll cannot be modelled"
+                )
+            return None
         if not base.startswith(MOD_PREFIX):
             return None
         cells = self._law(self.data.mods[base[len(MOD_PREFIX) :]], influences, lucky)

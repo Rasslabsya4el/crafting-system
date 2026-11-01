@@ -162,6 +162,15 @@ influence mod has its own tier, and the family types are those of the pool with 
 (tiers, kinds, labels) per set of influences, built when first needed; the family type numbers are shared, so one
 `"~n"` is one family type in every context and equal pools share one cached distribution.
 
+Veils and the unveil offer (#145, ADR-0026). A veiled placeholder is a slot of the kind of its family (`VeiledPrefix`, `VeiledSuffix`);
+a mod unveiled from the pool is a slot of the kind `^<family>`, never an ordinary mod of the same family (Movement Speed on boots); the
+craftable version of one is a crafted slot kept apart from the other crafted mods of its family while an enabled action reads a
+placeholder family. An item with a signature placeholder or a double veil is `OutOfScopeError` at `compress` when the model tracks the offer.
+A state that holds an offer is a choice node: `kernel` raises `NotApplicableError` for any action that does not read the offer (a pick
+does), so the pilot count, the bound pruning and the solver's actions never offer another there. The offer is kept in the item's order
+(`Pick(k)` takes the k-th), each entry by the canonical id of its kind, and the representative item is given ids that rise as the
+entries do. `Reads.families` of `Unveil` and `Pick` lists the families of the unveiled pool, so the junk that blocks an offer is told apart.
+
 No mechanic is decided here: this module only recombines the results of `actions`, so it reads no
 claim of the rules registry.
 """

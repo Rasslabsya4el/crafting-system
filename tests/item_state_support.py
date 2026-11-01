@@ -268,10 +268,10 @@ def plain_goal(*leaves: Wanted) -> Goal:
 def check_kinds_declare_item_state() -> int:
     """Every registered kind declares no part of the item state, except the one a kind names in `reads_item_state_while_not_planner`.
 
-    No planner kind touches the implicits, the quality or the offer: the planner and the cache see no change in any registered kind that
-    is offered. A kind outside the planner may read one part (an influenced Exalted Orb reads the implicits, because it is refused on
-    an Eldritch implicit, ticket #154) and then declares that part and no other, and changes none. The kind says so itself; no kind is
-    named here. Returns the number of kinds checked.
+    A planner kind touches the implicits, the quality or the offer only when it says so (`"any"`) and the compressed model keeps that
+    part (ticket #145 did it for the offer: the veiled orbs). A kind outside the planner may read one part (an influenced Exalted Orb
+    reads the implicits, because it is refused on an Eldritch implicit, ticket #154) and then declares that part and no other, and
+    changes none. The kind says so itself; no kind is named here. Returns the number of kinds checked.
     """
     checked = 0
     for kind in kinds():
@@ -279,8 +279,8 @@ def check_kinds_declare_item_state() -> int:
         for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
             part = kind.reads_item_state_while_not_planner
-            if part == "any":  # a kind outside the planner that declares the item state it needs (the veiled orbs, #144)
-                assert not kind.planner, kind.name
+            if part == "any":  # a kind that declares the item state it needs (the veiled orbs, #144; planner kinds since #145)
+                assert not kind.planner or kind.opt_in, kind.name  # a planner kind that touches the item state is offered only to a target that names it
             elif part:
                 assert not kind.planner and not adds.item_state, kind.name
                 assert getattr(reads, part) and not any(getattr(reads, other) for other in {"implicits", "quality", "offer"} - {part}), kind.name

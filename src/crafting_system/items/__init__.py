@@ -50,10 +50,12 @@ from .quality import CATALYST_ITEM_CLASSES, MAX_QUALITY, CatalystType, Quality
 from .spawn import effective_weight, generation_factor, is_battle_royale, spawn_weight
 from .strands import MAX_MEMORY_STRANDS, has_memory_strands_line, memory_strands_line, read_memory_strands
 from .tiers import mod_tier, tier_table
+from .veiled import GENERIC_PLACEHOLDERS, is_craftable_version, is_veiled_mod, placeholder_families, veiled_families
 
 __all__ = [
     "CATALYST_ITEM_CLASSES",
     "EXTRA_CRAFTED_SLOT_STAT",
+    "GENERIC_PLACEHOLDERS",
     "MAX_MEMORY_STRANDS",
     "MAX_QUALITY",
     "VEILED_SEED_STAT",
@@ -96,12 +98,16 @@ __all__ = [
     "has_memory_strands_line",
     "is_battle_royale",
     "is_corrupted_implicit",
+    "is_craftable_version",
     "is_presence_variant",
     "is_removed_enchant",
+    "is_veiled_mod",
     "memory_strands_line",
+    "placeholder_families",
     "mod_tier",
     "read_memory_strands",
     "spawn_weight",
     "tier_table",
+    "veiled_families",
     "veiled_placeholder",
 ]

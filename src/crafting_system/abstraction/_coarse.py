@@ -61,7 +61,7 @@ from crafting_system.actions import BLOCKING, Action, ActionError, OutOfScopeErr
 from crafting_system.items import Influence, Item, Rarity, Side
 
 from ._kernel import Abstraction
-from ._kinds import ALIKE, TYPE_PREFIX, base_kind, held_families
+from ._kinds import ALIKE, TYPE_PREFIX, base_kind, held_families, kind_families
 from ._goal import Status
 from ._state import CompressedState, Slot
 
@@ -392,7 +392,7 @@ class Coarsening:
             else:
                 kind = base_kind(slot.kind)
                 if kind != ALIKE and not kind.startswith(TYPE_PREFIX):  # a family type that is not pooled holds no family of a pool
-                    held |= {kind} if kind.startswith("#") else set(kind.split("|"))
+                    held |= kind_families(kind)
         return held
 
     def _pooled_counts(self, block: Block) -> tuple[dict[tuple[Side, str], list[int]], list[Slot]]:

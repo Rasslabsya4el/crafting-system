@@ -122,7 +122,8 @@ class OfferedMod:
 
     The canonical id is the smallest id among the unveiled mods of the same families and side that give the same
     contribution (the rule of a fractured mod's id), so offers that differ only in mods the goal cannot tell apart
-    are one state. An offer holds up to three, sorted by `(mod_id, contribution)`.
+    are one state. An offer holds up to three, in the order the item stores them (mod id order), so that the k-th is the mod `Pick(k)`
+    takes on the state and on the item alike (ticket #145).
     """
 
     mod_id: str
