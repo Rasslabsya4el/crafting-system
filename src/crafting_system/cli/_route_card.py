@@ -27,8 +27,8 @@ of all of them with `#` for the ranges, joined by ` or `, and the note `T2 or be
 contribution, so it is drawn the same way.
 
 Implicits (ADR-0027) are slots of the tone `implicit` in the same format. The implicits the base has and the
-item does not store are drawn as their ranges; a stored one carries its rolled values (its ranges when the
-card is not `rolled`). An Eldritch implicit has the note `grade 3 (Grand)` and the mark of its side (`searing
+item does not store are drawn as their ranges; a stored one always carries its rolled values (the implicit is
+item state, not a tier of a bought mod). An Eldritch implicit has the note `grade 3 (Grand)` and the mark of its side (`searing
 exarch`, `eater of worlds`); a stored base implicit has neither. The catalyst quality is a property pill, a
 veiled placeholder reads `veiled prefix` or `veiled suffix` (its data has no text), and the offer of its
 unveiling is one slot per offered mod, with the tier it has on the base.
@@ -219,13 +219,13 @@ def _implicits(data: GameData, base_id: str, stored: Sequence[ImplicitMod] = ())
     )
 
 
-def _stored_implicit(data: GameData, entry: ImplicitMod, rolled: bool) -> Slot:
-    """A stored implicit: its rolled values (its ranges when not `rolled`); an Eldritch one has its grade and side."""
+def _stored_implicit(data: GameData, entry: ImplicitMod) -> Slot:
+    """A stored implicit: its rolled values, also on a card that is not `rolled`; an Eldritch one has its grade and side."""
     mod = data.mods[entry.mod_id]
     side = eldritch_side(mod)
     note = f"grade {entry.grade} ({GRADE_NAMES[entry.grade]})" if side is not None else ""
     marks = (SIDE_NAMES[side],) if side is not None else ()
-    return Slot(mod_text(mod, entry.values if rolled else None), "implicit", marks, note)
+    return Slot(mod_text(mod, entry.values), "implicit", marks, note)
 
 
 def _note(*parts: str) -> str:
@@ -293,7 +293,7 @@ def card_of_item(
     """
     table = tier_table(data, item.base_id) if tiers else {}
     stored = tuple(  # the base's implicit first, then the Eldritch ones by grade
-        _stored_implicit(data, entry, rolled) for entry in sorted(item.implicits, key=lambda entry: (entry.grade, entry.mod_id))
+        _stored_implicit(data, entry) for entry in sorted(item.implicits, key=lambda entry: (entry.grade, entry.mod_id))
     )
     offer = tuple(
         Slot(mod_text(mod), "mod", _marks(mod), _tier_note(table, [mod.id]))

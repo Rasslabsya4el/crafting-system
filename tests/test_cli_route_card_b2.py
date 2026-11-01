@@ -102,12 +102,12 @@ def test_a_stored_base_implicit_beside_an_eldritch_one_does_not_repeat_the_base_
     assert implicits[1].note == "grade 1 (Lesser)"
 
 
-def test_a_card_that_is_not_rolled_shows_the_range_of_a_stored_implicit_with_its_grade():
+def test_a_card_that_is_not_rolled_still_shows_the_rolled_value_of_a_stored_implicit_with_its_grade():
     item = build(implicits=(ImplicitMod("AvoidShockEldritchImplicit2", 2, (37,)),))
 
     (_, eldritch) = plain_card(item, rolled=False).implicits
 
-    assert eldritch.text == SHOCK and eldritch.note == "grade 2 (Greater)"
+    assert eldritch.text == "37% chance to Avoid being Shocked" and eldritch.note == "grade 2 (Greater)"
 
 
 def test_the_html_of_an_eldritch_implicit_has_the_note_and_the_side_badge_in_the_implicit_block():
