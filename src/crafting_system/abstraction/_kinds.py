@@ -163,6 +163,11 @@ class Kinds:
         self._type_kinds()
         return self._numbers.side_of(base)
 
+    def shared_families(self, kind: str) -> set[str]:
+        """The families a family-type kind ("~n", tags ignored) stands for, or none when it stands for just one."""
+        found = self._members_of(self.side_of(kind), base_kind(kind))
+        return {family for family, _ in found} if len(found) > 1 else set()
+
     def representative(self, side: Side, kind: str, taken: set[str]) -> Mod:
         """A mod to put on a concrete item for a slot of `side` and `kind`, of a family not in `taken`.
 

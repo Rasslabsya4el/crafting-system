@@ -45,7 +45,7 @@ from crafting_system.actions import BLOCKING, Action, ActionError, OutOfScopeErr
 from crafting_system.items import Item, Rarity, Side
 
 from ._kernel import Abstraction
-from ._kinds import ALIKE, held_families
+from ._kinds import ALIKE, base_kind, held_families
 from ._goal import Status
 from ._state import CompressedState, Slot
 
@@ -236,7 +236,7 @@ class Coarsening:
             mod = self._data.mods.get(slot.kind)
             family = mod.families[0] if mod is not None and len(mod.families) == 1 else None
         else:
-            family = slot.kind if slot.kind != ALIKE else None
+            family = base_kind(slot.kind) if slot.kind != ALIKE else None
         pool = self._pools.get((slot.side, family)) if family is not None else None
         return slot if pool is None else Slot(slot.side, pool.kind, slot.contribution, slot.crafted)
 
@@ -271,7 +271,8 @@ class Coarsening:
             if slot.crafted:
                 held |= held_families(self._data.mods[slot.kind])
             elif slot.kind != ALIKE:
-                held |= {slot.kind} if slot.kind.startswith("#") else set(slot.kind.split("|"))
+                kind = base_kind(slot.kind)
+                held |= {kind} if kind.startswith("#") else set(kind.split("|"))
         return held
 
     def _members(self, block: Block, marked: frozenset[str] | None) -> Iterator[CompressedState]:

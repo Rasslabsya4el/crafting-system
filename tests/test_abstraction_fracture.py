@@ -42,6 +42,7 @@ from crafting_system.actions import (
     FracturingOrb,
     HarvestReforge,
     NotApplicableError,
+    OutOfScopeError,
     ScouringOrb,
 )
 
@@ -131,8 +132,30 @@ def test_two_junk_mods_of_one_family_type_that_are_fractured_make_one_state():
     fire = ab.compress(bow(FIRE, COLD, SOCKET, AS_5, fractured=[FIRE]))
     cold = ab.compress(bow(FIRE, COLD, SOCKET, AS_5, fractured=[COLD]))
 
-    assert fire == cold  # told apart by nothing a later action reads
+    assert fire == cold  # one state: a plain draw, Annulment or Scouring cannot tell them apart (a tagged reforge can: it is refused below)
     assert len(kernel) == 3 and kernel[fire] == Fraction(1, 2)
+
+
+@pytest.mark.parametrize("flag", [False, True])
+@pytest.mark.parametrize("tag", ["fire", "cold"])
+def test_a_tagged_reforge_is_refused_when_the_fractured_mod_stands_for_a_family_type(flag, tag):
+    ab = fracturing(metamods=flag)
+    fire = bow(FIRE, COLD, SOCKET, AS_5, fractured=[FIRE])
+    cold = bow(FIRE, COLD, SOCKET, AS_5, fractured=[COLD])
+    reforge = HarvestReforge(tag)
+
+    assert ab.compress(fire) == ab.compress(cold)  # one state for two items ...
+    assert reforge.outcomes(ab.data, fire).chance_all([FIRE]) != reforge.outcomes(ab.data, cold).chance_all([FIRE])  # ... that the reforge tells apart
+    with pytest.raises(OutOfScopeError):
+        ab.kernel(ab.compress(fire), reforge)  # so the kernel, which cannot say which, refuses
+
+
+@pytest.mark.parametrize("flag", [False, True])
+def test_an_untagged_draw_after_the_same_fracture_is_exact(flag):
+    ab = fracturing(metamods=flag)
+    for fractured in (FIRE, COLD):
+        for action in (ChaosOrb(), ExaltedOrb(), AnnulmentOrb(), ScouringOrb()):
+            check_or_refusal(ab, bow(FIRE, COLD, SOCKET, AS_5, fractured=[fractured]), action)
 
 
 def test_the_fracturing_orb_refuses_what_the_game_refuses():
@@ -159,6 +182,14 @@ def test_every_item_a_fracture_can_leave_gives_the_kernel_of_the_brute_force_for
     ab = fracturing()
 
     for after, _ in fracture_one(ab.data, start_of(kind, meta)):
+        state = ab.compress(after)
+        try:
+            ab.kernel(state, action)
+        except OutOfScopeError:  # a tagged reforge refuses a fractured mod that stands for a family type of several families
+            assert isinstance(action, HarvestReforge) and any(entry.mod_id.startswith("~") for entry in state.fractured)
+            continue
+        except Exception:  # noqa: BLE001  (the game's own refusals are checked below)
+            pass
         check_or_refusal(ab, after, action)
 
 

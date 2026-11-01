@@ -30,7 +30,7 @@ The metamods (ticket #68) cost the compressed state no declaration of their own:
 - **`Adds` names only what is added by name** from the start item. For a drawn action it says that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
 - **The catalog looks at the start item's rarity** (essences of level 1 to 4, the orbs of magic items): those kinds are not listed for states a policy reaches later. Today no planner kind needs them.
 - **Prices of essences, fossils and bench crafts** come from the game data's names, not from a claim's value; the claim says so.
-- The contract suite does not compare a fracturing action (Fractured Fossil, Fracturing Orb) with the brute force; `test_abstraction_fossil.py` and `test_abstraction_fracture.py` do. The pilot count (`estimate`) and the family-group level (`Coarsening`) refuse a state that holds a fractured mod as a family type (`Reads.fractures`) and, for `Coarsening`, a state built with `metamods=True`.
+- The contract suite does not compare a fracturing action (Fractured Fossil, Fracturing Orb) with the brute force; `test_abstraction_fossil.py` and `test_abstraction_fracture.py` do. The pilot count (`estimate`) and the family-group level (`Coarsening`) refuse a state that holds a fractured mod as a family type (`Reads.fractures`) and `Coarsening` also refuses a block that holds a lock or an Attack/Caster metamod. The kernel refuses a tagged reforge, a fossil that changes a weight or an essence that forces a mod of the same family type after a fracture that is held as a family type (ADR-0009).
 
 ## Verification
 

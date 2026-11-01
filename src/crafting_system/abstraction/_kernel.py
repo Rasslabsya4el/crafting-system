@@ -540,9 +540,40 @@ class Abstraction:
                 action.outcomes(self.data, bare)
                 raise
             outcomes = action.outcomes(self.data, item)  # a refusal of the action comes first
+            self._check_type_blind(state, outcomes)
             prepared = _Prepared(outcomes, origins)
             self._prepared_by[key] = prepared
         return prepared
+
+    def _check_type_blind(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
+        """Refuse a draw that could tell apart the families behind a fractured mod held as a family type.
+
+        A fractured mod of such a state stands for any family of its type (`_fractured_id`), which is exact
+        only while the action draws from the plain pool: a guaranteed tag (a Harvest reforge), another weight
+        (a fossil) or a forced mod of one of those families (an essence) can tell them apart, and the kernel
+        of the one representative would then be wrong for the others. A fixed result (Annulment, Scouring, a
+        bench craft, the Fracturing Orb) never draws, and a type of one family has nobody to be mistaken for.
+        Raises `OutOfScopeError`.
+        """
+        held = [entry for entry in state.fractured if entry.mod_id.startswith(TYPE_PREFIX)]
+        if not held:
+            return
+        influences = state.flags.influences
+        kinds = self._context(influences).kinds
+        members = set().union(*(kinds.shared_families(entry.mod_id) for entry in held))
+        if not members:
+            return
+        for _, part in outcomes.components:
+            if isinstance(part, Fixed):
+                continue
+            forced = set() if part.forced is None else held_families(self.data.mods[part.forced])
+            plain = part.tag is None and part.pool == build_pool(self.data, part.retained)
+            if forced & members or not plain:
+                raise OutOfScopeError(
+                    "the item holds a fractured mod known only as a family type, and this action draws from a pool "
+                    "that can tell the families of that type apart (a guaranteed tag, other weights, or a forced mod "
+                    "of one of them), so the result would depend on which family was fractured"
+                )
 
     def _mixture_kernel(self, state: CompressedState, prepared: _Prepared) -> dict[CompressedState, Fraction]:
         """The kernel of a result that is a mixture of parts: each part gives its states, weighted by its probability.
