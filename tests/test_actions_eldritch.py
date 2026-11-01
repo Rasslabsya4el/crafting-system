@@ -8,6 +8,7 @@ is in `test_actions_eldritch_real.py`.
 of Exile; the refusals (influenced items, other classes, no dominance).
 """
 
+import dataclasses
 import itertools
 import math
 import random
@@ -51,12 +52,13 @@ from crafting_system.actions import (
     EldritchImplicitCurrency,
     NotApplicableError,
     OrbOfConflict,
+    OutOfScopeError,
     catalog,
     conflict_raise_chance,
     item_dominant_side,
     kinds,
 )
-from crafting_system.actions.eldritch import conflict_is_extrapolated
+from crafting_system.actions.eldritch import conflict_is_extrapolated, implicit_pool
 from crafting_system.items import EldritchSide, Rarity, dominant_side
 
 EXARCH_SIDE, EATER_SIDE = EldritchSide.EXARCH, EldritchSide.EATER
@@ -539,6 +541,45 @@ def test_conflict_moves_each_implicit_to_the_same_family_and_variant_one_grade_a
             {eldritch_id("FireMax", 4, "UniquePresence"), eldritch_id("Flask", 1)},
             {eldritch_id("FireMax", 2, "UniquePresence"), eldritch_id("Flask", 3)},
         )
+
+
+def conflict_results(item):
+    """The Conflict results of `item` as `{set of implicit ids: chance}`."""
+    return {frozenset(entry.mod_id for entry in result.implicits): chance for chance, result in OrbOfConflict().outcomes(DATA, item).results}
+
+
+@pytest.mark.parametrize(
+    ("variant", "grade_held", "family"),
+    [("UniquePresence", 2, "FireMax"), ("PinnaclePresence", 3, "FireMax"), ("UniquePresence", 2, "Aggro")],
+)
+def test_conflict_keeps_a_lowered_presence_variant_on_a_grade_where_no_ember_draws_it(variant, grade_held, family):
+    # the fixture table: Unique-Presence is off at grade 1, Pinnacle-Presence at grades 1 and 2 (weight 0 on boots)
+    lowered_id = eldritch_id(family, grade_held - 1, variant)
+    base = DATA.base_items[BOOTS]
+    assert all(mod.id != lowered_id for mod, _ in implicit_pool(DATA, base, EXARCH_SIDE, grade_held - 1))
+    item = boots(implicits=(exarch(grade_held, family, variant), eater(grade_held + 1)))  # the Eater is one grade higher: d = 1
+    p = HAND_P[1]
+    assert conflict_results(item) == {
+        frozenset({eldritch_id("ChanceToShock", grade_held + 2), lowered_id}): p,
+        frozenset({eldritch_id("ChanceToShock", grade_held), eldritch_id(family, grade_held + 1, variant)}): 1 - p,
+    }
+
+
+def test_a_grade_the_data_does_not_hold_is_out_of_scope_for_conflict():
+    gone = eldritch_id("ChanceToShock", 4)
+    data = dataclasses.replace(DATA, mods={mod_id: mod for mod_id, mod in DATA.mods.items() if mod_id != gone})
+    item = boots(implicits=(exarch(2), eater(3)))  # the Eater is the higher: raised to the grade the data lacks
+    with pytest.raises(OutOfScopeError, match="no grade 4"):
+        OrbOfConflict().outcomes(data, item)
+    assert conflict_results(item)  # the full data has it
+
+
+def test_an_ember_for_a_side_and_class_the_data_has_no_mod_for_is_out_of_scope():
+    # the fixture holds Exarch mods for helmets (FireMax) and no Eater mod for them
+    helmet = build(HELMET)
+    assert EldritchImplicitCurrency(EXARCH_SIDE, 1).outcomes(DATA, helmet).results
+    with pytest.raises(OutOfScopeError, match="no eater implicit of grade 1"):
+        EldritchImplicitCurrency(EATER_SIDE, 1).outcomes(DATA, helmet)
 
 
 def test_conflict_keeps_the_mods_of_the_item_and_only_changes_its_implicits():

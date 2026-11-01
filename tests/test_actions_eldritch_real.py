@@ -161,6 +161,26 @@ def test_the_three_eldritch_orbs_act_on_the_prefixes_of_a_real_boots_item_when_t
     assert [result.mods for _, result in annul.results] == [(rolled(data, resist),)]
 
 
+def test_a_real_chaos_orb_clamps_the_count_to_the_free_slots_of_the_dominant_side(data):
+    # two suffixes stay, so the totals 4, 5 and 6 (8:3:1) put back 2, 3 and 4 prefixes; the side has 3 slots: 2 with 8/12, 3 with 4/12
+    fire = next(mod.id for mod in data.mods.values() if mod.generation_type == "suffix" and mod.families == ("FireResistance",))
+    cold = next(mod.id for mod in data.mods.values() if mod.generation_type == "suffix" and mod.families == ("ColdResistance",))
+    item = Item.build(
+        data,
+        base_id=BOOTS,
+        item_level=84,
+        rarity=Rarity.RARE,
+        mods=(rolled(data, fire), rolled(data, cold)),
+        implicits=(implicit(data, "AvoidShockEldritchImplicit3"),),  # a lone implicit is dominant by itself
+    )
+    sides = EldritchChaosOrb().outcomes(data, item).distribution(lambda mod: mod.generation_type)
+    counts = {}
+    for outcome, chance in sides.items():
+        count = dict(outcome).get("prefix", 0)
+        counts[count] = counts.get(count, Fraction(0)) + chance
+    assert counts == {2: Fraction(2, 3), 3: Fraction(1, 3)}
+
+
 def test_the_eldritch_orbs_need_a_dominant_side_on_a_real_item(data):
     item = Item.build(
         data,
