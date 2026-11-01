@@ -109,9 +109,22 @@ pool, so the states merge exactly. A magic item needs nothing else: the rarity i
 capacity (1 + 1 for magic, 3 + 3 for rare) is in the free slots of the pool signature. A
 Transmutation, an Alteration, an Alchemy and a Scouring erase the junk and add no slot.
 
-Out of scope: a `min_roll` on a mod that an action draws, forces or crafts. Its value is rolled and no
-exact roll distribution is built yet, so such a mod raises `OutOfScopeError`. A concrete item's mod is
-judged by its stored tier and values.
+Roll requirements (#71). A leaf with `min_roll` (a roll limit) is passed by a mod only when its values reach every wanted
+number. A mod an action draws from a pool rolls its values: each stat takes every integer of its range with the same
+chance, the stats independently (with `Outcomes.rolls_lucky`, a Sanctified Fossil, each value is rolled twice and the one
+nearer the stat's `max` kept). `_rolls.py` builds the exact roll law of a mod: the distribution, over what the mod gives every
+leaf, of its values being rolled (cut into cells at the wanted numbers, so two leaves on one mod share the one roll). A mod
+whose law has several outcomes is rollable and its label is the law (`RollLaw`); the engine counts mods per label and
+`_distribution` spreads n mods of one law over its outcomes by the multinomial, so the drawn slots carry the contribution of
+the roll they got. A mod with one outcome keeps the label it always had, so a goal without roll limits is unchanged. When an
+enabled action rerolls values in place (`Reads.rerolls_values`, a Divine Orb: its result is a `Rerolled` part), every family
+with a rollable mod is told apart by mod (the kind `"$" + mod id`) and the kernel of the part gives each rerolled slot of such
+a mod a fresh contribution drawn from its law; the fractured mods and the mods of a locked side (not in `changed`) keep theirs.
+Out of scope, all `OutOfScopeError`: a `min_roll` on a mod that an action forces (an essence), crafts or puts on the item as a
+fixed result (a bench craft); a Divine Orb on a crafted slot that a roll limit looks at (the range of the real mod is not known
+from its canonical id); a draw that fractures one of its mods (a Fractured Fossil) from a pool with a rollable mod; and, as
+refusals of the planner's helpers, `reach_bound` (None), the pilot count (`EstimateRefused`) and `Coarsening` with a Divine
+Orb enabled. A concrete item's mod is judged by its stored tier and values.
 
 Metamods, removals, new fractures and influence (#69). `metamods=True` (forced when an enabled action adds a lock
 or an Attack/Caster metamod by name) lets items hold them: every mod is then kept as a slot told apart by family
