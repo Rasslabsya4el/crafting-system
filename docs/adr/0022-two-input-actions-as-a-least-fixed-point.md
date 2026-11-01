@@ -35,7 +35,9 @@ The prototype met guard 3 in 5 of 5000 random instances (0.1%), where brute forc
 
 ## The interval of ADR-0012 is a family of solves
 
-The wiki gives no formula, so the admissible selection rules are a family `R` of kernels (the boundary rule, the extreme rules, the wiki table). The solver takes no uncertainty in a kernel. For each rule in `R` the adapter builds one model and `solve` runs once (two rules suffice when the rules are ordered by how much they favour rare mods). Then, in `risk`:
+**Reworded by grill B3** ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)): this section first said "two rules suffice when the rules are ordered by how much they favour rare mods", and took the family `R` to be the two endpoint rules and a boundary rule. That fails: the extreme of a route's success chance is often **interior** in the exponent `alpha` of ADR-0012 (132 of 1,200 random cases), so `R` is the whole **grid** of `alpha` (five points, ADR-0033), `k` solves and `k^2` fixed-policy evaluations (25 for the grid, 10 readings with the Awakener's group conflict, ADR-0032). The bracket below holds over the grid. The true optimum over a continuous `alpha` can lie outside it by whatever happens between grid points, so the reported interval is an inner bound until a finer grid says otherwise. The headline route is the optimum at `alpha = 1`; the route with the smallest worst case comes from the same evaluations.
+
+The wiki gives no formula, so the admissible selection rules are a family `R` of kernels (originally the boundary rule, the extreme rules and the wiki table; now the grid of `alpha`). The solver takes no uncertainty in a kernel. For each rule in `R` the adapter builds one model and `solve` runs once. Then, in `risk`:
 
 - every candidate policy `pi_r` is evaluated under every rule `r'` (fixed-policy linear systems, exact);
 - the reported route is the candidate with the smallest `max_r' J`, with interval `[min_r' J; max_r' J]`;
@@ -59,6 +61,6 @@ Consequences for the build:
 
 ## What is not decided here
 
-The compressed state of a donor, the recombinator kernel and its rule family, the imprint and Awakener's Orb actions, the choice of donors to offer (lazy generation, pruning with admissible lower bounds) are mechanics and abstraction work for the B3 grill ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)) and [#90](https://github.com/Rasslabsya4el/crafting-system/issues/90).
+The compressed state of a donor, the recombinator kernel and its rule family, the imprint and Awakener's Orb actions, the choice of donors to offer (lazy generation, pruning with admissible lower bounds) are mechanics and abstraction work for the B3 grill ([#94](https://github.com/Rasslabsya4el/crafting-system/issues/94)) and [#90](https://github.com/Rasslabsya4el/crafting-system/issues/90). The mechanics are now ADR-0032 to ADR-0035; the compressed state of a donor and the lazy choice of donors are prototype tickets of the B3 chart.
 
 Origin: [Solver for two-input actions (B3)](https://github.com/Rasslabsya4el/crafting-system/issues/91); [multi-item and recombinators research](../research/2026-10-30-3-multi-item-recombinators.md); [solver engineering research](../research/2026-10-30-4-solver-engineering.md).
