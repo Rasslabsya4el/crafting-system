@@ -16,7 +16,8 @@ runs the policy on concrete items and reports a simulated mean, p90 and CVaR lab
 
 The plan compares the target's own start item with the start items a vendor recipe can make and keeps the cheapest total of start
 price and expected crafting cost (ADR-0059, `_starts`). The setting `recipe_starts` of `crafting.toml` (default on), or
-`--no-recipe-starts` for one run, turns that off; the plan is then the one `make_plan` gives.
+`--no-recipe-starts` for one run, turns that off; the plan is then the one `make_plan` gives. `--route` turns it off too, because a
+given route is written for the target's own start item. With a `--budget`, each start option gets the whole budget.
 """
 
 import argparse
@@ -99,8 +100,9 @@ def main(
         if stale:
             print(f"Warning: {stale}", file=sys.stderr)
 
+        # a given route is written for the target's own start item, so `--route` plans from that item alone
         plan = plan_with_starts(
-            game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts,
+            game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
             start_price=args.start_price, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands,
         )  # fmt: skip
         if plan.approximation is not None and args.route:

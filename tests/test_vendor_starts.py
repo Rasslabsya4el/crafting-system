@@ -223,6 +223,17 @@ def test_a_roll_the_recipe_does_not_promise_is_refused_and_a_roll_every_roll_mee
     assert candidate.item.mods == (ExplicitMod("ChaosResist5", 2, (26,)),)  # the lowest roll of the range meets the limit of 25
 
 
+def test_a_roll_limit_above_every_roll_of_the_rung_is_refused_for_the_roll_not_the_cap():
+    amulet = "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: ChaosResistance\n    min_tier: 2\n    min_roll: 33\n"
+    price_file = prices(base=None, flask=None, **{"Paua_Amulet_(ilvl_84)": 1.0, "Amethyst_Flask": 2.0})
+
+    found = listing(parse_target(amulet, DATA, source="a.yaml"), price_file, DATA)
+
+    (refusal,) = [each for each in found.refused if each.recipe == "jewellery_chaos_resistance"]
+    assert found.candidates == () and refusal.reason == ROLL_NOT_GUARANTEED
+    assert "above every roll of step 5 (ChaosResist5)" in refusal.detail
+
+
 def test_a_hand_price_wins_over_the_trade_price_of_a_flask(tmp_path):
     write_price_file(tmp_path / "prices.json", prices())
     (tmp_path / "price_overrides.toml").write_text(f'[prices]\n"{QUICKSILVER}" = 7.0\n', encoding="utf-8")
@@ -324,6 +335,22 @@ def test_dear_goods_leave_the_plain_start_the_winner_and_the_recipe_is_listed_as
     text = render_text(build_report(plan, TOY))
     assert "chosen: the target's own start item" in text and "planned: Boots with movement speed (vendor recipe, 5 steps)" in text
     assert "Approximate inputs" not in text  # no recipe start in the answer, no recipe claim listed
+
+
+def test_a_candidate_skipped_for_its_price_could_not_have_won_and_a_dominated_step_costs_more():
+    target = toy_target()
+    skipped_prices = prices(flask=500.0)
+    plain_total = plan_with_starts(TOY, target, skipped_prices).starts.total
+    (dear,) = listing(target, skipped_prices).candidates
+
+    planned_anyway = starts_module._plan_candidate(TOY, target, skipped_prices, dear, None)  # what the skip leaves unplanned
+    looser = toy_target(asking(tier=4))
+    (cheap,) = listing(looser).candidates  # the 3-step start; the 4- and 5-step ones are dominated
+    four = dataclasses.replace(cheap, key="four", steps=4, price=BASE_PRICE + 4 * (FLASK_PRICE + AUGMENTATION_PRICE),
+                               item=Item.build(TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity4", 3, (25,)),)))  # fmt: skip
+
+    assert planned_anyway.total >= plain_total
+    assert starts_module._plan_candidate(TOY, looser, prices(), cheap, None).total <= starts_module._plan_candidate(TOY, looser, prices(), four, None).total
 
 
 def test_goods_dearer_than_the_best_total_are_listed_as_not_planned():
@@ -525,6 +552,16 @@ def test_the_command_compares_the_start_options_by_default(tmp_path, capsys):
     assert code == 0 and document["start_options"]["chosen"] == BOOTS_KEY
     assert document["start"]["price_chaos"] == pytest.approx(FIVE_STEPS)
     assert "chosen: Boots with movement speed" in capsys.readouterr().out
+
+
+def test_a_given_route_is_planned_from_the_plain_start_only(tmp_path):
+    route = tmp_path / "route.yaml"
+    route.write_text("rules:\n  - when: {}\n    do: Chaos Orb\n", encoding="utf-8")
+
+    code, out = run_command(tmp_path, "--route", str(route))
+
+    document = read_json(out)
+    assert code == 0 and "start_options" not in document and document["start"]["price_chaos"] == 0.0
 
 
 def test_the_flag_no_recipe_starts_turns_them_off(tmp_path, capsys):

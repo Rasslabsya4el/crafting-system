@@ -25,6 +25,7 @@ The sources are functions of a `StartContext` that return a `StartList`; a bough
 function.
 """
 
+import dataclasses
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -187,6 +188,8 @@ def _examine(
     refusals: list[_Refusal] = []
     too_low: list[RecipeStep] = []
     straddles: list[RecipeStep] = []
+    above: list[RecipeStep] = []  # meets the target except that its roll limit is above every roll of the rung
+    unlimited = tuple(dataclasses.replace(leaf, min_roll=None) for leaf in leaves)
     cannot_spawn: list[RecipeStep] = []
     for step in steps:
         tier = table.get(step.mod_id)
@@ -213,6 +216,8 @@ def _examine(
                 kept.append(_Kept(step.number, low))
         elif any(leaf.is_met_by(high) for leaf in leaves):
             straddles.append(step)
+        elif any(leaf.is_met_by(low) for leaf in unlimited):
+            above.append(step)
     if kept:
         return _Examined(tuple(kept), tuple(refusals))
     last = steps[-1]
@@ -236,6 +241,14 @@ def _examine(
                 ROLL_NOT_GUARANTEED,
                 f"step {step.number} ({step.mod_id}) rolls inside its range and the target's roll limit lies inside that range, "
                 "so the recipe does not promise it",
+            )
+        )  # fmt: skip
+    elif above:
+        step = above[-1]
+        refusals.append(
+            _Refusal(
+                ROLL_NOT_GUARANTEED,
+                f"the target's roll limit is above every roll of step {step.number} ({step.mod_id}), the last step that has the mod and tier it asks",
             )
         )  # fmt: skip
     elif len(cannot_spawn) == len(steps):
