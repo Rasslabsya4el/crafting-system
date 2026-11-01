@@ -11,7 +11,17 @@ import json
 import pytest
 from abstraction_pool import FIRE_RESIST
 from cli_support import R12, price_file
-from contract_support import CONTRACT_DATA, check_action, check_block_invariance, contract_pairs, fixture_blocks, fixture_items
+from contract_support import (
+    CONTRACT_DATA,
+    INFLUENCE_DATA,
+    check_action,
+    check_block_invariance,
+    contract_pairs,
+    extra_fixture_items,
+    extra_pairs,
+    fixture_blocks,
+    fixture_items,
+)
 from targets_support import DATA
 
 from crafting_system.abstraction import Goal, Wanted
@@ -25,6 +35,8 @@ PAIRS = contract_pairs()
 # so the kernel check of the contract suite cannot run on an item it applies to: `test_actions_blessed.py` runs the other checks.
 NEEDS_A_BASE_IMPLICIT = {"blessed-orb"}
 ITEMS = fixture_items()
+EXTRA_PAIRS = extra_pairs()  # the kinds that need a base of their own, asked about the items of `extra_fixture_items`
+EXTRA_ITEMS = {name: item for name, (_, item) in extra_fixture_items().items()}
 
 
 def _id(pair) -> str:
@@ -36,6 +48,12 @@ def _id(pair) -> str:
 def test_the_action_meets_the_contract(pair):
     _, action, item = pair
     check_action(action, ITEMS[item])
+
+
+@pytest.mark.parametrize("pair", EXTRA_PAIRS, ids=_id)
+def test_the_action_meets_the_contract_on_the_helmet(pair):
+    _, action, item = pair
+    check_action(action, EXTRA_ITEMS[item], INFLUENCE_DATA)  # False where the game refuses it here: the kernel refuses it too
 
 
 ARMOUR_ONLY_KINDS = frozenset(
@@ -53,8 +71,14 @@ def test_every_kind_applies_on_some_fixture_item():
         except ActionError:
             continue
         applied.add(kind)
-    assert {entry.name for entry in kinds()} - NEEDS_A_BASE_IMPLICIT - ARMOUR_ONLY_KINDS <= applied
     assert not ARMOUR_ONLY_KINDS & applied, "an armour-only kind that applies to an amulet is not armour only: drop it from the exemption"
+    for kind, action, item in EXTRA_PAIRS:  # the helmet is armour, so it may use the armour-only kinds
+        try:
+            action.outcomes(INFLUENCE_DATA, EXTRA_ITEMS[item])
+        except ActionError:
+            continue
+        applied.add(kind)
+    assert {entry.name for entry in kinds()} - NEEDS_A_BASE_IMPLICIT - ARMOUR_ONLY_KINDS <= applied
 
 
 def test_a_kind_lists_each_action_once_per_item():

@@ -93,10 +93,22 @@ class Goal:
     `implicits` are the Eldritch implicits wanted besides, each of which must be passed by one side of the item
     (ADR-0027); `CompressedState.implicits` holds what each side gives each of them. A goal built from a target
     does not read them yet: the planner refuses a target with implicits until tickets #152 and #158.
+
+    `asks_corrupted` and `allow_corrupted` carry what the target says about corruption (ADR-0036): it asks for a corrupted implicit
+    (the goal is a corrupted item), or it allows a corrupted item without asking for an implicit. A target with neither is never
+    met by a corrupted item. The corrupted implicit itself is not a requirement leaf: a corrupting action decides whether its outcome
+    holds it, and the state keeps no corrupted-implicit status.
     """
 
     requirements: tuple[Node, ...]
     implicits: tuple[ImplicitWanted, ...] = ()
+    asks_corrupted: bool = False
+    allow_corrupted: bool = False
+
+    @property
+    def takes_corrupted(self) -> bool:
+        """Whether a corrupted item can be the goal: the target asks for a corrupted implicit or allows a corrupted item."""
+        return self.asks_corrupted or self.allow_corrupted
 
     @cached_property
     def leaves(self) -> tuple[Wanted, ...]:
@@ -119,9 +131,14 @@ class Goal:
         """The goal of a target, read by duck typing from `target.requirements`.
 
         A node with the attributes `at_least` and `of` is a k-of-n; any other node has `mod_ids`,
-        `min_tier`, `min_roll` and `not_crafted`.
+        `min_tier`, `min_roll` and `not_crafted`. What the target says about corruption (`asks_corrupted`, `allow_corrupted`) is read
+        the same way, False for a target that has neither.
         """
-        return cls(tuple(_node(node) for node in target.requirements))
+        return cls(
+            tuple(_node(node) for node in target.requirements),
+            asks_corrupted=bool(getattr(target, "asks_corrupted", False)),
+            allow_corrupted=bool(getattr(target, "allow_corrupted", False)),
+        )
 
 
 def _node(node) -> Node:

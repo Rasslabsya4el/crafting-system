@@ -49,6 +49,8 @@ uv run python -m crafting_system.data verify
 
 Run the line that step 2's output ended with (`To move the pin to this export: ...`): it names the commit you analysed, so a newer export that appears in between is not pinned by mistake (`pin <version>` alone asks GitHub again and takes the newest). `pin` takes the files `diff` already downloaded (nothing is downloaded twice), files them under the version's cache folder, checks the five files, and only then rewrites `src/crafting_system/data/PIN.json`; if a step fails the files go back to the commit's folder and a rerun downloads nothing. A commit alone reads its version from the commit message. Nobody edits `PIN.json` or any Python.
 
+The Elevated mods follow the pin: `src/crafting_system/data/elevated.json` links each top-tier influence mod to its Elevated mod by the ids of one export, and a test fails until it is rebuilt for the new one. Rebuild it from Craft of Exile's local copy (`sources/raw/coe/` of the main checkout, git-ignored): `uv run python -m crafting_system.data elevated <folder of poec_data.json>`; the line it prints says how many mods it linked and how many table entries it could not (the `unresolved` list of the file names them and the reason). A mod that Craft of Exile's older table cannot link is unknown to the Orb of Dominance (out of scope), never guessed.
+
 Done when `pin` and `verify` print the five files and `PIN.json` names the new version. The printed hashes come from the first download of the commit, and the commit id names its content, so a later download that disagrees with them is the alarm; nothing else needs checking.
 
 ## 6. Update the claims

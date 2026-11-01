@@ -18,6 +18,9 @@ catalog and under the contract tests, and a planner that asks for `planner_only`
 A kind is `opt_in` when the planner can use it but offers it only when a target names it in `actions:` (the fossil
 sets: 12,696 of them on boots, which a target that is not about fossils must not pay for). `catalog(..., names=None)`
 leaves an opt-in kind out; `names` that include it list it.
+
+A kind is `corrupting` when every action it lists corrupts (`Adds.corrupts`: the Vaal Orb, the Locus of Corruption). A planner
+leaves such a kind unmentioned in its report when the target takes no corrupted item (ADR-0036).
 """
 
 from collections.abc import Callable, Collection, Iterable, Iterator
@@ -40,6 +43,7 @@ class Kind:
     planner: bool = True
     why_not: str = field(default="", compare=False)
     opt_in: bool = False
+    corrupting: bool = False
 
 
 _KINDS: dict[str, Kind] = {}
@@ -54,12 +58,12 @@ def register(entry: Kind) -> Kind:
 
 
 def kind(
-    name: str, *, order: int, planner: bool = True, why_not: str = "", opt_in: bool = False
+    name: str, *, order: int, planner: bool = True, why_not: str = "", opt_in: bool = False, corrupting: bool = False
 ) -> Callable[[Callable[[GameData, Item], Iterable[Action]]], Callable[[GameData, Item], Iterable[Action]]]:
     """Decorator that registers a function `members(data, item)` as the kind `name`."""
 
     def decorate(members):
-        register(Kind(name, members, order, planner, why_not, opt_in))
+        register(Kind(name, members, order, planner, why_not, opt_in, corrupting))
         return members
 
     return decorate

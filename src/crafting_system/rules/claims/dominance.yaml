@@ -1,0 +1,111 @@
+# Mechanic family: dominance (the Orb of Dominance and the Elevated mods).
+# Research ticket #86 (claims INF-13 to INF-20, draft file docs/research/2026-10-31-influence-claims.yaml on the branch
+# research/influence, commit 3964011), the decisions of grill B2 (issue #93, ADR-0030) and ticket #154. The mapping from a
+# top-tier mod to its Elevated version is data (src/crafting_system/data/elevated.json, made from Craft of Exile's table by
+# `python -m crafting_system.data elevated`).
+#
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code alone.
+rules:
+  - id: dominance.gate
+    statement: "The Orb of Dominance works on a magic or rare body armour, boots, gloves or helmet that has at least two influenced mods. The value lists the item classes of the game data (Craft of Exile gates on a rare flag and item level 68 only, without a class list, but holds Elevated data for these four classes alone)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Dominance
+    quote: "It can be used on Magic and Rare Body Armours, Boots, Gloves and Helmets with at least two influence modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: [Body Armour, Boots, Gloves, Helmet]
+
+  - id: dominance.removes_one_upgrades_another
+    statement: "It removes one influenced mod and upgrades another one, whatever their influence types; an item with several influences is treated alike."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Dominance
+    quote: "It randomly upgrades one of these influenced modifiers and removes one other influenced modifier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: dominance.picks_uniform_remove_first
+    statement: "Among the eligible influenced mods (those not on a side locked by Cannot Be Changed) the removed mod is drawn uniformly, then the upgraded mod uniformly among the rest, so a given ordered pair has chance 1/(n(n-1)) and a given mod is upgraded with chance 1/n. The wiki says only \"randomly\" and no sample with counts was found."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "if(nelig.length>=2){var rndpick=poec_rand(0,nelig.length,!0);var rchc=1/nelig.length;var rem=nelig.splice(rndpick,1);"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code gives the odds of the two picks; the wiki says randomly and no count was found (issue 93, grill B2)."
+
+  - id: dominance.upgrade_next_tier_top_becomes_elevated
+    statement: "An upgraded mod becomes the next better tier of the same mod in its own influence's chain (on an item with two influences, mods of the other influence are not in it); a top-tier mod becomes its Elevated version; an Elevated mod stays the same mod and its values are rerolled (this model keeps the lowest values of a new mod, as every action that lists its results does)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Dominance
+    quote: "A tier 3 mod will be replaced with its tier 2 version, for example."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: dominance.elevated_step_has_no_item_level
+    statement: "Becoming an Elevated mod needs no item level."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Dominance
+    quote: "There is no item level requirement for a mod to become an elevated tier."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: dominance.upgrade_ignores_item_level
+    statement: "The step from a lower tier to the next better one does not check the item level either (the next tier may need a level above the item's). Craft of Exile takes the next tier from its list without a level test; the wiki says it only of the Elevated step."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "var utier=poecd.tiers[useaffixes[aug].id][usebase][useaffixes[aug].tindex+1];useaffixes[aug].nvalues=utier.nvalues;"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code shows that the next tier is taken without an item level test (open point O-06 of research ticket 86)."
+
+  - id: dominance.respects_side_locks_ignores_type_blocks
+    statement: "Prefixes/Suffixes Cannot Be Changed protect the locked side from being removed or upgraded; Cannot roll Attack/Caster Modifiers are ignored."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "modifiers that can't be changed (e.g. suffixes on an item with the \"Suffixes can't be changed\" mod) will not be affected."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: dominance.elevated_mods_only_by_dominance
+    statement: "Elevated mods are in no random draw: the export holds 247 of them, every spawn weight 0, each in the same family as its ordinary tiers; only the Orb of Dominance (and an Awakener's Orb moving one) puts one on an item."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Elevated_modifier
+    quote: "These modifiers can only be crafted onto Rare Influenced items using a Orb of Dominance"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: dominance.elevated_mapping_is_coe_table
+    statement: "Which Elevated mod a top-tier mod becomes is read from Craft of Exile's table `poecd.maeven.bmods` (key `<base id>-<mod id>`, 1,661 entries, helmet, gloves, boots and body armour bases only), made into data by the elevated step of the data layer; the export has no link field. A top-tier mod the table does not link in the pinned export (the table is older than the export, so some mods changed) has no admitted Elevated version, and an Orb of Dominance on an item that could upgrade it is out of scope."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "useaffixes[aug].maven=poecd.maeven.bmods[usebase+\"-\"+useaffixes[aug].id]"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "Only Craft of Exile's table links a top-tier mod to its Elevated version; the export has no link field."
+
+  - id: dominance.refused_on_corrupted
+    statement: "A corrupted item takes no Orb of Dominance."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Modifying_corrupted_items
+    quote: "Corrupted items cannot be modified, with the following exceptions:"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: dominance.influenced_item_is_never_fractured
+    statement: "A fractured item cannot be given an influence and an influenced item cannot be fractured, so an influenced item with a fractured mod does not exist in the game. The Orb of Dominance on one is out of scope."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Influenced_item#Mechanics
+    quote: "Fractured items, synthesised items and items with eldritch implicit modifiers are not considered influenced and cannot be given influences under any circumstances."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: dominance.cost
+    statement: "One use of the Orb of Dominance consumes one Orb of Dominance; the value maps its price-file name (the item's name in the game data) to the number of items."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeInfluenceMod: name "Orb of Dominance"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {Orb of Dominance: 1}

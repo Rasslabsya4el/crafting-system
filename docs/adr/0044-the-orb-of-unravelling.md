@@ -38,3 +38,9 @@ An Unravelling changes the tier of a mod **in place**, the limit of ADR-0024 tha
 310 of 310 at 32 strands for the T9 amulet case (the formula gives `p = 1` there, and `p = 1` wherever `s * W_up >= 2 * W_side`); 14 of 15 at 31 strands within the formula's 99%; the wand case 2.03 / 16.89 / 81.08% under A and 4.05 / 20.95 / 75.0% under B.
 
 Origin: [Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103) (round 1 answer 1); [Research #98](https://github.com/Rasslabsya4el/crafting-system/issues/98); ADR-0019, ADR-0024, ADR-0028, [ADR-0033](0033-the-unpredictable-recombinator.md), ADR-0040, ADR-0041, ADR-0042.
+
+## Amendment: what the sheet fit settles ([#274](https://github.com/Rasslabsya4el/crafting-system/issues/274), research [#271](https://github.com/Rasslabsya4el/crafting-system/issues/271) and [#273](https://github.com/Rasslabsya4el/crafting-system/issues/273))
+
+- **The chance `min(1, s * W_up / (2 * W_side))` is exact** on 36,598 mods of amulets, wands, rings, gloves and body armours, with the 0.5 weight of attack mods on wands included and the four Battle Royale duplicates left out; the claim `memory_strands.unravelling_chance_model` is no longer `approximate`. `W_side` is the whole side pool read as if the item had no explicit mod (claim `unravelling_side_weight_is_whole_pool`).
+- **The destination is reading B** (own weight plus the weights of the tiers above, claim `unravelling_destination_tier`, `approximate`): reading A is rejected by 5.8 standard deviations, so the axis `unravel_destination` goes. The destination is not cut by the strands (claim `unravelling_destination_not_cut`).
+- **Fractured and veiled mods are skipped** (claim `unravelling_skips_fractured_and_veiled`, `approximate`; the emulator's code is the only source).

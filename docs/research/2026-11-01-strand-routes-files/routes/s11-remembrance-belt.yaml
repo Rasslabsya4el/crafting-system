@@ -1,0 +1,117 @@
+# Given route for benchmark route S11: R13's alt-regal belt from a base whose strand count a Remembrance rolled.
+#
+# SOURCE: none. This is a TEST ROUTE written for batch B5 (ticket #272, docs/research/2026-11-01-strand-routes.md),
+# next to the two published routes S01 and S02, to cover a Remembrance-rolled base on a Transmutation, Alteration
+# and Regal craft, which no published craft states with a count. Its crafting steps are the Reddit
+# guide R13 (docs/research/2026-10-30-5-reference-routes.md, id R13; examples/routes/r13-life-resist-belt.yaml);
+# only step 0 is new.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the
+# same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml). In every
+# state the FIRST rule whose conditions match is the one that is followed. A goal state is never acted on.
+# A state no rule matches is reported as a gap. The conditions and actions are explained in
+# examples/routes/r12-lightning-amulet.yaml.
+#
+# The route:
+#   0. Roll Orbs of Remembrance on the normal belt until it holds 40 strands or more. (The threshold of 40 is
+#      this file's hand pick, about the mean of one orb, 41.84: the Remembrance count is N(35, 25) kept in
+#      10..100 and rounded, ADR-0043, so 50.7% of orbs give 40 or more and the mean number of orbs is 1.97.
+#      The solver finds its own threshold; the benchmark compares the two.)
+#   1. Spam Orbs of Alteration on the magic belt until it holds tier-1 life and a tier-1 resistance.
+#   2. Regal Orb for the second tier-1 resistance; restart (buy the belt again) if the Regal gives anything else.
+#   3. Craft the damage modifier at the bench.
+# Steps 1 and 2 spend strands (Transmutation, Alteration, Augmentation up to 8 each; Regal up to 16; ADR-0041)
+# and cut the tiers of what they draw. The route does not look at the count after step 0: that is the point of a
+# fixed policy, and the gap to the solver's route is what the benchmark records.
+#
+# The strand words. The loader of the given routes (src/crafting_system/cli/_route.py) does not read strands
+# yet; these are the words that B5-12 (#292) adds to it, written with the names the ADRs give. Every other
+# key and action is the loader's own.
+#   when:  memory_strands_at_least: N   the item holds N strands or more (N from 1 to 100)
+#   when:  memory_strands_below: N      the item holds fewer than N strands (0 strands is below any N)
+#   do:    Orb of Remembrance           ADR-0043; offered for a normal equipment item (kind `remembrance-orb`)
+#   do:    Orb of Unravelling           ADR-0044; offered on an identified item with strands (kind `unravelling-orb`)
+# The query must turn strands on (`memory_strands = true` in crafting.toml, or `--strands`; ADR-0040). A start
+# item that holds strands turns them on by itself.
+
+name: S11, test route, R13 on a Remembrance-rolled belt
+
+rules:
+  # Step 3: life and two tier-1 resistances are on the belt (R13's three rules).
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: FireResistance
+          status: passing
+        - family: ColdResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: FireResistance
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: ColdResistance
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+
+  # Step 2: any other rare belt is a Regal that gave something else: buy the belt again.
+  - when:
+      rarity: rare
+    do: restart
+
+  # Step 2: tier-1 life and a tier-1 resistance on the magic belt: the Regal Orb.
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: FireResistance
+          status: passing
+    do: Regal Orb
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: ColdResistance
+          status: passing
+    do: Regal Orb
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedLife
+          status: passing
+        - family: LightningResistance
+          status: passing
+    do: Regal Orb
+
+  # Step 1: the magic belt lacks them: Alteration again.
+  - when:
+      rarity: magic
+    do: Orb of Alteration
+
+  # Step 0: a normal belt with fewer than 40 strands (0 included): Remembrance again.
+  - when:
+      rarity: normal
+      memory_strands_below: 40
+    do: Orb of Remembrance
+
+  # Step 1: a normal belt with 40 strands or more: make it magic.
+  - when:
+      rarity: normal
+    do: Orb of Transmutation

@@ -73,16 +73,23 @@ def test_an_action_that_declares_nothing_reads_and_adds_everything():
 
 
 B2_KINDS = {"blessed-orb", "catalyst"}  # the Blessed Orb reads and rerolls the implicits, a catalyst the quality (ticket #157)
+B2_READS_ITEM_STATE = {"influenced-exalted-orb": "implicits"}  # B2 kinds that read a part of the item state (no planner kind does)
 
 
-def test_no_kind_of_the_catalog_but_those_of_b2_declares_item_state():
-    # B1 touches none of the three: the planner and the cache see no change in any other registered kind
+def test_no_planner_kind_of_the_catalog_declares_item_state_yet():
+    # B1 touches none of the three: the planner and the cache see no change in any registered kind that is offered.
+    # An influenced Exalted Orb (ticket #154) reads the implicits, because it is refused on an Eldritch implicit; it is no planner kind yet.
+    # The two kinds of ticket #157 declare the implicits and the quality; their own suites pin what they declare.
     for kind in kinds():
         if kind.name in B2_KINDS:
             continue
         for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
-            assert not reads.item_state and not adds.item_state, kind.name
+            if kind.name in B2_READS_ITEM_STATE:
+                assert not kind.planner and not adds.item_state, kind.name
+                assert getattr(reads, B2_READS_ITEM_STATE[kind.name]) and not (reads.quality or reads.offer), kind.name
+            else:
+                assert not reads.item_state and not adds.item_state, kind.name
 
 
 # --- the toys pass the contract suite -------------------------------------------------------------
