@@ -14,6 +14,9 @@ compressed state carry the count (batch B5), the planner still refuses a run wit
 A family can have mods on both sides (jewels): its `PoolFamily` come in a pair of one name (`partners`), and a draw takes the family out on both sides.
 The Attack and Caster metamods on the item filter the pool by tag (`metamods.py`). Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); only the explicit
 mods on the item do.
+
+The pool a draw uses is `build_pool(data, item)`: the mods that could be drawn next, grouped by
+family, with exact `Fraction` weights.
 """
 
 from collections import defaultdict
@@ -29,6 +32,15 @@ from crafting_system.rules import get_rule
 from .cut import Cut, cut_weights
 from .errors import OutOfScopeError
 from .metamods import allowed_by_tags, blocked_tags
+
+__all__ = [
+    "PoolFamily",
+    "PoolMod",
+    "build_pool",
+    "drawable_mod_ids",
+    "partners",
+    "tiers_of",
+]
 
 DOMAIN_MATCH = get_rule("affix_pool.domain_match")
 SIDE_IS_GENERATION_TYPE = get_rule("affix_pool.side_is_generation_type")

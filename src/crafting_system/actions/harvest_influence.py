@@ -22,6 +22,10 @@ from .harvest import check_reforgeable
 from .outcomes import Outcomes
 from .pool import item_tags
 
+__all__ = [
+    "HarvestReforgeInfluence",
+]
+
 INFLUENCE_REFORGE_EXISTS = get_rule("harvest_reforge.influence_reforge_exists")
 INFLUENCE_MOD_IS_INFLUENCE_SPAWN = get_rule("harvest_reforge.influence_mod_is_influence_spawn")
 REFUSED_WHEN_NOT_INFLUENCED = get_rule("harvest_reforge.influence_reforge_refused_when_not_influenced")
