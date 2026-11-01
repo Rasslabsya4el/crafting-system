@@ -153,10 +153,11 @@ class Reads:
     quality: bool = False
     offer: bool = False
     input_mods: bool = False
+    enchantment: bool = False
 
     @property
     def item_state(self) -> bool:
-        """Whether the action reads the implicits, the quality or the offer of the item (ADR-0027)."""
+        """Whether the action reads the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
         return self.implicits or self.quality or self.offer
 
     @classmethod
@@ -199,6 +200,11 @@ class Adds:
       offer (an Unveil, a Pick). The compressed state then stores that part of the item, so the change is seen
       (ADR-0027, ticket #142). The dataclass default is False, which says the action leaves it alone; `Action.adds`
       itself (an action that declares nothing) says True for all three, like it adds mods it does not name.
+    * `enchantment`: the action sets, replaces or removes the enchantment of the item (a Tempering or Tailoring Orb, a
+      Harvest quality enchant; ADR-0050, ticket #238). The dataclass default is False, which says it leaves the enchantment
+      alone; `Action.adds` itself (an action that declares nothing) says True. Like the reading, it is **not** part of
+      `item_state`: the enchantment is a finish step and stays out of the compressed state, so declaring it does not
+      change the number of states, and the action is offered like any other.
     * `corrupts`: the action corrupts the item and adds a corrupted implicit drawn from the corrupted pool of its class (a Vaal Orb,
       a Bloodstained resonator, the Locus of Corruption; ADR-0036). It needs `implicits`, since it puts an implicit on the item.
       A corrupted item takes no further action, so every outcome is a corrupted item that is the goal or a dead end, and the plan
@@ -227,6 +233,7 @@ class Adds:
     implicits: bool = False
     quality: bool = False
     offer: bool = False
+    enchantment: bool = False
     corrupts: bool = False
     keeps_mods: bool = False
 
@@ -238,7 +245,7 @@ class Adds:
 
     @property
     def item_state(self) -> bool:
-        """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027)."""
+        """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
         return self.implicits or self.quality or self.offer
 
     @classmethod
@@ -453,16 +460,16 @@ class Action(ABC):
         """What one use consumes, by price-file name; read from claims. `data` may be None for an action that needs none."""
 
     def reads(self, data: GameData) -> Reads:
-        """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality and the offer."""
-        return Reads(implicits=True, quality=True, offer=True, input_mods=True)
+        """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality, the offer and the enchantment."""
+        return Reads(implicits=True, quality=True, offer=True, input_mods=True, enchantment=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality and the offer.
+        """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality, the offer and the enchantment.
 
         `data` and `item` may be None for an action whose additions depend on neither (an orb); one
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
-        return Adds(implicits=True, quality=True, offer=True)
+        return Adds(implicits=True, quality=True, offer=True, enchantment=True)
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The other items one use consumes besides `item` (a recombinator's donor, ADR-0022); none by default.
