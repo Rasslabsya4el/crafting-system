@@ -20,6 +20,7 @@ import faulthandler
 import json
 import re
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -65,6 +66,18 @@ def peak_mb() -> int:
         return 0
 
 
+def watch_memory() -> None:
+    """Print the resident memory every 20 seconds (a runner that is shut down leaves no other trace of what it held)."""
+    while True:
+        time.sleep(20)
+        try:
+            with open("/proc/self/status", encoding="utf-8") as handle:
+                rss = next(line for line in handle if line.startswith("VmRSS")).split()[1]
+            print(f"  memory: {int(rss) // 1024} MB resident", flush=True)
+        except OSError:
+            return
+
+
 def inputs(route: str):
     """`(data, target, prices, start_price)` of a route: R-routes at the committed prices, S02 as today's loaders read it."""
     data = load_game_data()
@@ -94,7 +107,8 @@ def main() -> None:
     parser.add_argument("--out")
     parser.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="plan: the solver (default auto)")
     arguments = parser.parse_args()
-    faulthandler.dump_traceback_later(900, repeat=True, file=sys.stderr)
+    faulthandler.dump_traceback_later(300, repeat=True, file=sys.stderr)
+    threading.Thread(target=watch_memory, daemon=True).start()
     began = time.perf_counter()
 
     def say(line: str) -> None:
