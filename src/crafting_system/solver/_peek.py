@@ -14,9 +14,11 @@ below is not touched. `solve_peek` runs **policy iteration on the reaction aroun
 1. *Lock-free solve.* The model with every Peek dropped is solved by `solve`. Its policy is proper, which is where the
    iteration starts, and its values `V0` are an upper bound of the answer. The Peeks' option and fallback states are
    added to the starts until the solve covers them all (a state the Lock-free walk never built still needs a value).
-2. *Reaction from the values.* At each Peek state the sorted-tail sweep (`peek_backup`) ranks every (option, result)
-   pair by `c_a + V(o)` (ties by state id, then option order: a strict total order) and the **acceptance set** is the
-   ranked list of the pairs below `F(s)`, the value of giving up.
+2. *Reaction from the values.* At each Peek state the pairs are sorted as the sorted-tail sweep sorts them: every
+   (option, result) pair by `c_a + V(o)` (ties by state id, then option order: a strict total order). The
+   **acceptance set** is the ranked list of the pairs below `F(s)`, the value of giving up. (`peek_backup` is the
+   sweep's value, `E[min(...)]`, in exact integer weights: the planner's Lock line and the tests use it; the
+   iteration does not need the value itself, only the ranking and the exact win chances of step 3.)
 3. *Expansion.* Under a fixed acceptance set the Peek is replaced, in the policy graph only, by ordinary actions
    (`ExpandedModel`): the Lock leads to `m` "apply a" pseudo-states with the exact chance that option `a` holds the
    best accepted pair, and to "give up" with the chance that no pair is accepted; "apply a" pays `c_a` and leads to
@@ -282,6 +284,10 @@ def layered_reaction(state: Hashable, peek: Peek, levels: Mapping[Hashable, int]
     The pairs whose result has a level are ranked by it (best first, then state id and option order); those that
     lower the state's own level are always taken, and the others only when no fallback action is usable, since then
     the player cannot give up. A state with no level has no proper policy and takes nothing.
+
+    Known limit: when the only descending pair has a chance of 1e-40 or so (weights of that size) the start is proper
+    but so stiff that `solve` cannot reach its tolerance and `ConvergenceError` is raised. The planner has no such
+    state (the restart is always there) and no such weights.
     """
     if state not in levels:
         return ()
@@ -429,18 +435,21 @@ def solve_peek[S](
     for rounds in range(1, max_rounds + 1):
         current = solve(ExpandedModel(model, reactions), roots, **options)
         better = {state: choose_reaction(peek, current.values, ids) for state, peek in peeks.items()}
-        if better == reactions or not _progress(values, current.values):
+        if better == reactions or not _progress(values, current.values, max(_STALL, tolerance)):
             return PeekSolution(current.values, current.policy, current.error_bound, reactions, rounds)
         values, reactions = current.values, better
     raise ConvergenceError(f"the reactions did not settle within {max_rounds} rounds", current.error_bound)
 
 
-def _progress(before: Mapping[Hashable, float], after: Mapping[Hashable, float]) -> bool:
-    """Whether the new values are lower than the old ones by more than a tie (a state may turn from infinite to finite)."""
+def _progress(before: Mapping[Hashable, float], after: Mapping[Hashable, float], stall: float) -> bool:
+    """Whether the new values are lower than the old ones by more than `stall` (relative; a state may turn from infinite to finite).
+
+    A change below the solver's own tolerance is noise in a tied choice, not progress.
+    """
     for state, old in before.items():
         if isinstance(state, PeekNode):  # a pseudo-state changes with the reaction, not with the answer
             continue
         new = after.get(state, old)
-        if new < old and (old == math.inf or old - new > _STALL * old):
+        if new < old and (old == math.inf or old - new > stall * old):
             return True
     return False

@@ -18,6 +18,7 @@ from crafting_system.solver import (
     ConvergenceError,
     ExpandedModel,
     Need,
+    Outcome,
     Peek,
     PeekNode,
     TabularModel,
@@ -523,3 +524,68 @@ def test_a_fallback_may_need_an_input_and_an_option_may_not():
     assert solution.values[product.start("s")] == pytest.approx(1 + (1 / 5) * 1 + (4 / 5) * min(1 + 400, 12), rel=1e-9)
     with pytest.raises(ValueError, match="extra inputs"):
         Peek("p", 1, (Action("o", 1, ((GOAL, 1),), (Need("raw", donor_goal),)),))
+
+
+def random_many_peeks(rng):
+    """Base states 0..n-1 and the goal n; one to three of them offer a Peek (up to 4 options, weights up to 10**6)."""
+    size = rng.randint(3, 5)
+
+    def kernel(count):
+        return tuple(
+            (rng.randint(0, size), rng.choice([1, 2, 3, 7, 10, 1000, 10**6])) for _ in range(rng.randint(1, count))
+        )
+
+    plain = {
+        state: [Action(f"{state}.{i}", rng.randint(1, 20) / 4, kernel(3)) for i in range(rng.choice([0, 1, 1, 2]))]
+        for state in range(size)
+    }
+    peeks = {}
+    for state in rng.sample(range(size), rng.randint(1, 3)):
+        options = tuple(
+            Action(f"o{a}", rng.randint(1, 20) / 4, kernel(3))
+            for a in range(rng.randint(1, 4))
+        )
+        if math.prod(len({s for s, _ in option.outcomes}) for option in options) > 24:
+            options = options[:2]
+        fallback = tuple(Action(f"f{i}", rng.randint(1, 20) / 4, kernel(2)) for i in range(rng.choice([0, 1, 1, 2])))
+        peeks[state] = Peek(f"lock {state}", rng.randint(1, 20) / 4, options, fallback)
+    return size, plain, peeks
+
+
+def product_of_peeks(size, plain, peeks):
+    """The explicit product expansion: each Lock leads to a react state per combination of one result per option."""
+    table = {state: list(actions) for state, actions in plain.items()}
+    for state, peek in peeks.items():
+        merged = []
+        for option in peek.options:
+            kernel = {}
+            for result, weight in option.outcomes:
+                kernel[result] = kernel.get(result, 0) + weight
+            merged.append(tuple(kernel.items()))
+        outcomes = []
+        for combo in itertools.product(*merged):
+            node = ("react", state, tuple(result for result, _ in combo))
+            outcomes.append(Outcome(node, math.prod(weight for _, weight in combo)))
+            table[node] = [
+                Action(option.label, option.cost, ((result, 1),)) for option, (result, _) in zip(peek.options, combo)
+            ] + list(peek.fallback)
+        table[state].append(Action(peek.label, peek.cost, tuple(outcomes)))
+    return TabularModel([size], table)
+
+
+@pytest.mark.parametrize("seed", range(400))
+def test_several_peek_states_with_mutual_dependence_equal_the_product_expansion(seed):
+    rng = random.Random(seed)
+    size, plain, peeks = random_many_peeks(rng)
+    model = TabularModel([size], {s: [*acts, *([peeks[s]] if s in peeks else [])] for s, acts in plain.items()})
+
+    found = solve_peek(model, range(size))
+    reference = solve(product_of_peeks(size, plain, peeks), range(size))
+
+    for state in range(size):
+        value, exact = found.values[state], reference.values[state]
+        if exact == math.inf:
+            assert value == math.inf, (seed, state)
+        else:
+            slack = (found.error_bound + reference.error_bound) * exact + 1e-12 * exact
+            assert abs(value - exact) <= slack, (seed, state, value, exact)
