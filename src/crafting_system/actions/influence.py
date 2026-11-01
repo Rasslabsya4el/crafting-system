@@ -52,12 +52,17 @@ EXALT_RESPECTS_METAMODS = get_rule("influence.exalt_respects_metamods")
 EXALT_REFUSED_ON_CORRUPTED = get_rule("influence.exalt_refused_on_corrupted")
 EXALT_REFUSED_WITHOUT_LEGAL_MOD = get_rule("influence.exalt_refused_without_legal_mod")
 EXALT_COST = get_rule("influence.cost")
+EXALT_CONQUEROR_TYPE_BLOCKS = get_rule("influence.exalt_conqueror_respects_type_blocks_since_3_9_2c")
+INFLUENCE_STAYS_ON_THE_ITEM = get_rule("influence.state_is_on_the_item")
+ONE_INFLUENCE_TWO_BY_AWAKENER = get_rule("influence.one_normally_two_by_awakener")
 
 DOMINANCE_GATE = get_rule("dominance.gate")
 DOMINANCE_REMOVES_ONE_UPGRADES_ANOTHER = get_rule("dominance.removes_one_upgrades_another")
 DOMINANCE_PICKS_UNIFORM = get_rule("dominance.picks_uniform_remove_first")
 DOMINANCE_UPGRADE = get_rule("dominance.upgrade_next_tier_top_becomes_elevated")
 DOMINANCE_UPGRADE_IGNORES_ITEM_LEVEL = get_rule("dominance.upgrade_ignores_item_level")
+DOMINANCE_ELEVATED_STEP_NO_ITEM_LEVEL = get_rule("dominance.elevated_step_has_no_item_level")
+DOMINANCE_ELEVATED_ONLY_BY_DOMINANCE = get_rule("dominance.elevated_mods_only_by_dominance")
 DOMINANCE_LOCKS = get_rule("dominance.respects_side_locks_ignores_type_blocks")
 DOMINANCE_ELEVATED_MAPPING = get_rule("dominance.elevated_mapping_is_coe_table")
 DOMINANCE_REFUSED_ON_CORRUPTED = get_rule("dominance.refused_on_corrupted")
@@ -156,7 +161,8 @@ class InfluencedExaltedOrb(Action):
         own = (
             EXALT_ADDS_INFLUENCE_AND_ONE_MOD, EXALT_REFUSED_ON_INFLUENCED, EXALT_REFUSED_ON_FRACTURED, EXALT_REFUSED_ON_ELDRITCH_IMPLICIT,
             EXALT_RARE_WITH_OPEN_SLOT, EXALT_MIN_ITEM_LEVEL, EXALT_DRAWS_FROM_THAT_INFLUENCE, EXALT_CATALYST_IGNORED,
-            EXALT_RESPECTS_METAMODS, EXALT_REFUSED_ON_CORRUPTED, EXALT_REFUSED_WITHOUT_LEGAL_MOD, EXALT_COST,
+            EXALT_RESPECTS_METAMODS, EXALT_CONQUEROR_TYPE_BLOCKS, EXALT_REFUSED_ON_CORRUPTED, EXALT_REFUSED_WITHOUT_LEGAL_MOD, EXALT_COST,
+            INFLUENCE_STAYS_ON_THE_ITEM, ONE_INFLUENCE_TWO_BY_AWAKENER,
         )
         return _claims_of(own, add, pool, outcomes, metamods)
 
@@ -229,8 +235,9 @@ class OrbOfDominance(Action):
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         own = (
             DOMINANCE_GATE, DOMINANCE_REMOVES_ONE_UPGRADES_ANOTHER, DOMINANCE_PICKS_UNIFORM, DOMINANCE_UPGRADE,
-            DOMINANCE_UPGRADE_IGNORES_ITEM_LEVEL, DOMINANCE_LOCKS, DOMINANCE_ELEVATED_MAPPING, DOMINANCE_REFUSED_ON_CORRUPTED,
-            DOMINANCE_NEVER_FRACTURED, DOMINANCE_COST, INFLUENCED_MODS,
+            DOMINANCE_UPGRADE_IGNORES_ITEM_LEVEL, DOMINANCE_ELEVATED_STEP_NO_ITEM_LEVEL, DOMINANCE_ELEVATED_ONLY_BY_DOMINANCE,
+            DOMINANCE_LOCKS, DOMINANCE_ELEVATED_MAPPING, DOMINANCE_REFUSED_ON_CORRUPTED, DOMINANCE_NEVER_FRACTURED, DOMINANCE_COST,
+            INFLUENCED_MODS, INFLUENCE_TAGS, INFLUENCE_STAYS_ON_THE_ITEM, ONE_INFLUENCE_TWO_BY_AWAKENER,
         )
         return _claims_of(own, metamods)
 
@@ -238,17 +245,27 @@ class OrbOfDominance(Action):
         return dict(self.elevated) if self.elevated is not None else load_elevated().for_data(data)
 
     def _upgraded(self, data: GameData, item: Item, entry: ExplicitMod, tiers: Mapping[str, int]) -> ExplicitMod:
-        """`entry` one tier better (a top-tier mod: its Elevated version; an Elevated mod: itself), at the lowest values of the new mod."""
+        """`entry` one tier better (a top-tier mod: its Elevated version; an Elevated mod: itself), at the lowest values of the new mod.
+
+        The tiers of a mod are those of its own influence: on an item with two influences, two mods of one type can both spawn
+        (Elder's and Crusader's maximum Mana), and the next tier of an Elder mod is never the other influence's mod.
+        """
         mod = data.mods[entry.mod_id]
         if is_elevated(mod):
             return ExplicitMod(mod.id, ELEVATED_TIER, _low(mod))
         if mod.id not in tiers:
             raise OutOfScopeError(f"the influenced mod {mod.id} has no tier on this item, so its upgrade is not modelled")
-        better = [
+        held_tags = frozenset(item_tags(data, item))
+
+        def decided_by(other: Mod) -> str | None:
+            return next((spawn.tag for spawn in other.spawn_weights if spawn.tag in held_tags), None)
+
+        chain = [
             other for other in map(data.mods.__getitem__, tiers)
             if (other.type, other.generation_type, other.domain) == (mod.type, mod.generation_type, mod.domain)
-            and other.required_level > mod.required_level
+            and decided_by(other) == decided_by(mod)
         ]
+        better = [other for other in chain if other.required_level > mod.required_level]
         if not better:
             elevated_id = self._elevated_of(data).get(mod.id)
             if elevated_id is None or elevated_id not in data.mods:
@@ -263,7 +280,8 @@ class OrbOfDominance(Action):
             raise OutOfScopeError(
                 f"the next tier of {mod.id} is ambiguous ({', '.join(sorted(other.id for other in next_tier))} share required level {level})"
             )
-        return ExplicitMod(next_tier[0].id, tiers[next_tier[0].id], _low(next_tier[0]))
+        tier = 1 + sum(other.required_level > level for other in chain)
+        return ExplicitMod(next_tier[0].id, tier, _low(next_tier[0]))
 
     def outcomes(self, data: GameData, item: Item) -> Finite:
         """The outcomes of using the orb on `item`: one result per ordered pair (removed, upgraded) of influenced mods, each 1/(n(n-1)).

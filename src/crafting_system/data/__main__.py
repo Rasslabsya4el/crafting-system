@@ -232,8 +232,15 @@ def _elevated(coe_folder: Path, output: Path, pin: RepoePin) -> None:
     document = build_elevated(
         parse_poec_data(raw.decode("utf-8")), mods, repoe_version=pin.version, poec_data_sha256=hashlib.sha256(raw).hexdigest()
     )
-    output.write_text(render_elevated(document), encoding="utf-8", newline="\n")
-    entries = sum(row["entries"] for row in document["unresolved"])
+    if not document["elevated"]:
+        raise DataError(
+            f"no top-tier mod of Craft of Exile's Elevated table could be linked to a mod of the pinned export {pin.version}; "
+            f"{output} was not written (is the folder Craft of Exile's data of a patch near this export?)"
+        )
+    partial = output.with_name(output.name + ".partial")  # a run cut short must not leave a truncated mapping behind
+    partial.write_text(render_elevated(document), encoding="utf-8", newline="\n")
+    os.replace(partial, output)
+    entries =sum(row["entries"] for row in document["unresolved"])
     print(f"{output}: {len(document['elevated'])} top-tier mods linked to an Elevated mod; {len(document['unresolved'])} kinds of table entry ({entries} keys) not linked")
 
 

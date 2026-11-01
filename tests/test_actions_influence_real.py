@@ -136,6 +136,20 @@ def test_a_lower_tier_upgrades_to_the_next_tier_on_a_real_helmet(data):
     }
 
 
+def test_an_elder_mod_of_a_two_influence_helmet_never_upgrades_into_the_other_influences_mod(data):
+    # An Elder and Crusader helmet (an Awakener's Orb item): Elder's and Crusader's maximum Mana share a mod type, and Crusader's
+    # tier 1 (level 80) sits above Elder's top tier (level 75). The next tier of an Elder mod is a mod of the Elder chain only.
+    elder_mana, ignite = "MaximumManaUber2_", "IgniteDurationSupportedUber1"
+    assert data.mods[elder_mana].type == data.mods["MaximumManaInfluence2_"].type  # the premise
+    item = rare(data, HELMET, elder_mana, ignite, influences=frozenset({ELDER, Influence.CRUSADER}))
+
+    outcomes = OrbOfDominance().outcomes(data, item)
+
+    assert len(outcomes.results) == 2 and {chance for chance, _ in outcomes.results} == {Fraction(1, 2)}
+    held = {frozenset(entry.mod_id for entry in result.mods) for _, result in outcomes.results}
+    assert held == {frozenset({"MaximumManaUberMaven"}), frozenset({"IgniteDurationSupportedUber2"})}
+
+
 def test_the_committed_mapping_is_for_the_pinned_export(data):
     elevated = load_elevated()
     assert elevated.repoe_version == PIN.version == data.version

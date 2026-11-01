@@ -34,7 +34,7 @@ rules:
     approximate_reason: "Only Craft of Exile's code gives the odds of the two picks; the wiki says randomly and no count was found (issue 93, grill B2)."
 
   - id: dominance.upgrade_next_tier_top_becomes_elevated
-    statement: "An upgraded mod becomes the next better tier of the same mod; a top-tier mod becomes its Elevated version; an Elevated mod stays the same mod and its values are rerolled (this model keeps the lowest values of a new mod, as every action that lists its results does)."
+    statement: "An upgraded mod becomes the next better tier of the same mod in its own influence's chain (on an item with two influences, mods of the other influence are not in it); a top-tier mod becomes its Elevated version; an Elevated mod stays the same mod and its values are rerolled (this model keeps the lowest values of a new mod, as every action that lists its results does)."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Orb_of_Dominance
     quote: "A tier 3 mod will be replaced with its tier 2 version, for example."

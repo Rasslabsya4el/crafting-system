@@ -92,6 +92,11 @@ COE = {
 }
 
 
+def _with_table(bmods):
+    """The toy Craft of Exile data with another Elevated table."""
+    return {**COE, "maeven": {**COE["maeven"], "bmods": bmods}}
+
+
 @pytest.fixture(scope="module")
 def document():
     return build_elevated(COE, MODS, repoe_version="9.9.9.9", poec_data_sha256="ab" * 32)
@@ -154,6 +159,10 @@ def test_a_malformed_file_or_table_is_refused_with_a_clear_error(tmp_path):
         build_elevated({}, MODS, repoe_version="1", poec_data_sha256="0")
     with pytest.raises(ElevatedError):
         parse_poec_data("not a javascript assignment")
+    with pytest.raises(ElevatedError, match="not '<base id>-<modifier id>'"):
+        build_elevated(_with_table({"52": "1"}), MODS, repoe_version="1", poec_data_sha256="0")
+    with pytest.raises(ElevatedError, match="not there"):
+        build_elevated(_with_table({"52-10": "77"}), MODS, repoe_version="1", poec_data_sha256="0")
 
 
 def test_the_file_is_read_from_a_javascript_assignment():
@@ -163,7 +172,8 @@ def test_the_file_is_read_from_a_javascript_assignment():
 # --- the command ----------------------------------------------------------------------------------------------------------
 
 
-def test_the_elevated_command_writes_the_file_from_a_folder_of_craft_of_exile_and_the_cached_export(tmp_path, monkeypatch, capsys):
+def _elevated_command_setup(tmp_path, monkeypatch, capsys):
+    """The cached fixture export, a folder holding the toy Craft of Exile file, and what the command is run with."""
     from repoe_support import fixture_pin_and_opener
 
     from crafting_system.data.__main__ import main
@@ -176,14 +186,33 @@ def test_the_elevated_command_writes_the_file_from_a_folder_of_craft_of_exile_an
     folder = tmp_path / "coe"
     folder.mkdir()
     (folder / "poec_data.json").write_text("poecd=" + json.dumps(COE) + ";", encoding="utf-8")
+    return main, folder, pin, opener
+
+
+def test_the_elevated_command_writes_the_file_from_a_folder_of_craft_of_exile_and_the_cached_export(
+    tmp_path, monkeypatch, capsys, document
+):
+    main, folder, pin, opener = _elevated_command_setup(tmp_path, monkeypatch, capsys)
+    # the fixture excerpt holds none of the toy's mods, so the toy's own document stands in for what the builder links
+    monkeypatch.setattr("crafting_system.data.__main__.build_elevated", lambda *args, **kwargs: document)
     output = tmp_path / "elevated.json"
 
     code = main(["elevated", str(folder), "--output", str(output)], pin=pin, open_url=opener)
 
-    assert code == 0 and "top-tier mods linked" in capsys.readouterr().out
-    written = json.loads(output.read_text(encoding="utf-8"))
-    assert written["repoe_version"] == pin.version and written["elevated"] == {}  # the fixture excerpt holds no such mods
-    assert len(written["poec_data_sha256"]) == 64 and b"\r" not in output.read_bytes()
+    assert code == 0 and "3 top-tier mods linked" in capsys.readouterr().out
+    assert json.loads(output.read_text(encoding="utf-8")) == json.loads(json.dumps(document)) and b"\r" not in output.read_bytes()
+    assert not (tmp_path / "elevated.json.partial").exists()
+
+
+def test_the_elevated_command_links_nothing_on_an_export_the_table_does_not_fit_and_writes_nothing(tmp_path, monkeypatch, capsys):
+    main, folder, pin, opener = _elevated_command_setup(tmp_path, monkeypatch, capsys)
+    output = tmp_path / "elevated.json"
+    output.write_text("kept", encoding="utf-8")
+
+    code = main(["elevated", str(folder), "--output", str(output)], pin=pin, open_url=opener)
+
+    assert code == 1 and "could be linked" in capsys.readouterr().err
+    assert output.read_text(encoding="utf-8") == "kept"  # the committed mapping is not wiped by a table that fits nothing
 
 
 def test_the_elevated_command_names_a_folder_without_the_file(tmp_path, capsys):

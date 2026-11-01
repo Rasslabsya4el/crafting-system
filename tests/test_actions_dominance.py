@@ -6,6 +6,7 @@ tier. Their Elevated versions are P3Maven, S2Maven and E1Maven (`ELEVATED`). An 
 and upgrades another by one tier: each ordered pair is a result with chance 1/(n(n-1)).
 """
 
+import dataclasses
 from fractions import Fraction
 
 import pytest
@@ -14,6 +15,7 @@ from influence_support import (
     ELDER_S,
     ELDER_S_MAVEN,
     ELEVATED,
+    HUNTER_S,
     INFLUENCE_DATA,
     OLD,
     P1,
@@ -129,6 +131,21 @@ def test_a_top_tier_mod_with_no_known_elevated_version_is_out_of_scope_not_guess
     with pytest.raises(OutOfScopeError, match=P3):
         OrbOfDominance(elevated=((S2, S2_MAVEN),)).outcomes(DATA, item)
     assert OrbOfDominance(elevated=((P3, P3_MAVEN),)).outcomes(DATA, item)
+
+
+def test_the_next_tier_is_one_of_the_mods_own_influence_on_an_item_with_two_influences():
+    # a Hunter suffix of the type of the Shaper suffix chain S1 (68) and S2 (75), at level 70 between them: Craft of Exile takes the
+    # next tier from the chain of the held mod (`poecd.tiers[mod id]`), so S1 becomes S2 and never the Hunter mod
+    hunter_same_type = dataclasses.replace(
+        DATA.mods[HUNTER_S], id="ContractHelmetHunterS2", type=DATA.mods[S1].type, required_level=70
+    )
+    data = dataclasses.replace(DATA, mods={**DATA.mods, hunter_same_type.id: hunter_same_type})
+    item = helmet(roll(P1, 3), roll(S1, 2), influences=frozenset({SHAPER, Influence.HUNTER}), data=data)
+
+    outcomes = OrbOfDominance(elevated=ELEVATED).outcomes(data, item)
+
+    assert results(outcomes) == {frozenset({S2}): Fraction(1, 2), frozenset({P2}): Fraction(1, 2)}
+    assert {entry.tier for _, r in outcomes.results for entry in r.mods} == {1, 2}  # S2 is the top tier of its own chain, P2 the second
 
 
 def test_a_lower_tier_needs_no_elevated_mapping():

@@ -131,7 +131,7 @@ def _weight_on(mod: Mapping[str, Any], tag: str) -> int | None:
 def build_elevated(coe: Mapping[str, Any], mods: Mapping[str, Any], *, repoe_version: str, poec_data_sha256: str) -> dict[str, Any]:
     """The document of `elevated.json` from Craft of Exile's tables `coe` and the export's raw `mods`.
 
-    Raises `ElevatedError` when a table the step reads is missing.
+    Raises `ElevatedError` when a table the step reads is missing or the Elevated table is not of the shape the step reads.
     """
     try:
         modifiers = {entry["id_modifier"]: entry for entry in coe["modifiers"]["seq"]}
@@ -157,15 +157,21 @@ def build_elevated(coe: Mapping[str, Any], mods: Mapping[str, Any], *, repoe_ver
     linked: dict[str, set[str]] = defaultdict(set)
     failures: dict[tuple[str, str, str, str, str], int] = defaultdict(int)
     for key in sorted(table):
-        base, modifier_id = key.split("-")
+        parts = key.split("-")
+        if len(parts) != 2:
+            raise ElevatedError(f"Craft of Exile's Elevated table has the key {key!r}, which is not '<base id>-<modifier id>'")
+        base, modifier_id = parts
         modifier = modifiers.get(modifier_id)
         if modifier is None or modifier["id_mgroup"] not in influence_key or base_group.get(base) not in CLASS_OF_BASE_GROUP:
             failures[("", "", "", key, "the table names a modifier or a base the step does not read")] += 1
             continue
         tag = f"{CLASS_OF_BASE_GROUP[base_group[base]]}_{influence_key[modifier['id_mgroup']]}"
         family, side, text = modifier["modgroup"], modifier["affix"], template(modifier["name_modifier"])
-        entry = entries[table[key]]
-        top = max(tiers.get(modifier_id, {}).get(base) or [{"ilvl": "0", "nvalues": "[]"}], key=lambda tier: int(tier["ilvl"]))
+        try:
+            entry = entries[table[key]]
+        except (KeyError, IndexError, TypeError) as error:
+            raise ElevatedError(f"Craft of Exile's Elevated table key {key!r} points at an entry that is not there: {error}") from error
+        top =max(tiers.get(modifier_id, {}).get(base) or [{"ilvl": "0", "nvalues": "[]"}], key=lambda tier: int(tier["ilvl"]))
         ordinary = _find_ordinary(mods, ordinary_on[tag], family, side, text, int(top["ilvl"]), _signature_of_values(top["nvalues"]))
         if ordinary[0] is None:
             failures[(tag, family, side, text, ordinary[1])] += 1

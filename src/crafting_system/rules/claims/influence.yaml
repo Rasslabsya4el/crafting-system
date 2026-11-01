@@ -21,6 +21,8 @@ rules:
     quote: "Cannot be used on influenced items, synthesised items, fractured items, or items with eldritch implicit modifiers."
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "The wiki's Influenced item page has one broader sentence that reads the other way, and the owner has not checked in game whether an orb of the item's own influence is refused (issue 93, round 2: unknown)."
 
   - id: influence.exalt_refused_on_fractured_item
     statement: "An influenced Exalted Orb is refused on a fractured item. (Synthesised items are not in the item model.)"
