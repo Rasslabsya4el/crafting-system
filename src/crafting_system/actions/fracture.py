@@ -21,6 +21,11 @@ from .errors import NotApplicableError
 from .finite import Finite
 from .mixture import Fractured
 
+__all__ = [
+    "FractureOutcomes",
+    "FracturingOrb",
+]
+
 ACCEPTS_RARE_ONLY = get_rule("fracturing_orb.accepts_rare_only")
 NEEDS_FOUR_MODS = get_rule("fracturing_orb.needs_four_mods")
 REFUSED_ON_INFLUENCED_OR_FRACTURED = get_rule("fracturing_orb.refused_on_influenced_or_fractured")

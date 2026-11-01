@@ -2,7 +2,8 @@
 
 The checks are in `contract_support.py`. A new kind registered in `actions` is found here by the
 catalog: its members on the fixture items are checked, and `test_every_kind_applies_on_some_fixture_item`
-fails when a kind is registered that no fixture item can use (add the item it needs to `fixture_items`).
+fails when a kind is registered that no fixture item can use (register the item it needs in a `tests/contract_fixtures_<family>.py`, and
+declare `applies_only_to` on a kind that works on one item class only: `docs/agents/new-action-family.md`).
 """
 
 import dataclasses
@@ -11,17 +12,29 @@ import json
 import pytest
 from abstraction_pool import FIRE_RESIST
 from cli_support import R12, price_file
-from contract_support import CONTRACT_DATA, check_action, check_block_invariance, contract_pairs, fixture_blocks, fixture_items
+from contract_support import (
+    CONTRACT_DATA,
+    check_action,
+    check_block_invariance,
+    check_every_kind_applies_on_some_fixture_item,
+    contract_pairs,
+    extra_fixture_items,
+    extra_pairs,
+    fixture_blocks,
+    fixture_items,
+)
 from targets_support import DATA
 
 from crafting_system.abstraction import Goal, Wanted
-from crafting_system.actions import ActionError, ExaltedOrb, NotApplicableError, Reads, RegalOrb, catalog, kinds
+from crafting_system.actions import ExaltedOrb, NotApplicableError, Reads, RegalOrb, catalog, kinds
 from crafting_system.cli import PricedOffer, make_plan, parse_route
 from crafting_system.cli._offers import offer_of, offers_for
 from crafting_system.targets import load_target
 
 PAIRS = contract_pairs()
 ITEMS = fixture_items()
+EXTRA_PAIRS = extra_pairs()  # the kinds that need a base of their own, asked about the items of `extra_fixture_items`
+EXTRA = extra_fixture_items()  # name -> kinds, data and item
 
 
 def _id(pair) -> str:
@@ -35,23 +48,17 @@ def test_the_action_meets_the_contract(pair):
     check_action(action, ITEMS[item])
 
 
-ARMOUR_ONLY_KINDS = frozenset(
-    {"eldritch-implicit-currency", "eldritch-chaos-orb", "eldritch-exalted-orb", "eldritch-annulment-orb", "orb-of-conflict"}
-)
-"""The Eldritch currency (ticket #151) works on body armours, boots, gloves and helmets, and the fixture items are amulets. Their
-own suite (`test_actions_eldritch.py`) runs `check_action` on a boots fixture and checks that each kind applies there."""
+@pytest.mark.parametrize("pair", EXTRA_PAIRS, ids=_id)
+def test_the_action_meets_the_contract_on_the_helmet(pair):
+    _, action, item = pair
+    check_action(action, EXTRA[item].item, EXTRA[item].data)  # False where the game refuses it here: the kernel refuses it too
 
 
 def test_every_kind_applies_on_some_fixture_item():
-    applied = set()
-    for kind, action, item in PAIRS:
-        try:
-            action.outcomes(CONTRACT_DATA, ITEMS[item])
-        except ActionError:
-            continue
-        applied.add(kind)
-    assert {entry.name for entry in kinds()} - ARMOUR_ONLY_KINDS <= applied
-    assert not ARMOUR_ONLY_KINDS & applied, "an armour-only kind that applies to an amulet is not armour only: drop it from the exemption"
+    """The kinds that declare `applies_only_to` (the Eldritch currency, ticket #151) are exempt: their own suite
+    (`test_actions_eldritch.py`) runs `check_action` on a boots fixture and checks that each kind applies there."""
+    applied = check_every_kind_applies_on_some_fixture_item()
+    assert applied == {entry.name for entry in kinds() if not entry.applies_only_to} | (applied & {entry.name for entry in kinds()})
 
 
 def test_a_kind_lists_each_action_once_per_item():

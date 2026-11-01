@@ -45,7 +45,7 @@ def hand_tagged_weight(data, base, level, tag) -> Fraction:
     for mod in data.mods.values():
         if mod.domain != base.domain or mod.generation_type not in ("prefix", "suffix") or mod.required_level > level:
             continue
-        spawn = next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)
+        spawn = 0 if "Royale" in mod.id else next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)  # a Battle Royale copy is not rolled (#310)
         if spawn and tag in mod.implicit_tags:
             factor = next((Fraction(w.weight, 100) for w in mod.generation_weights if w.tag in tags), Fraction(1))
             total += spawn * factor

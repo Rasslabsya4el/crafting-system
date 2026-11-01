@@ -198,6 +198,10 @@ def offers_for(
       holds it, a draw of its pool can give it, or another candidate adds it by name. Without such a limit no value
       matters to the goal, so the orb would only cost currency. It is left out; the report names it only when the goal has a
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
+    * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
+      implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
+      other target it is absent from the offers and the report says nothing about it. Which states offer it, for a target that
+      asks, is `solver_actions`' business (`_prune.py`).
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
     kind_names, label_names = _split_names(data, start_item, kinds_named)
@@ -209,6 +213,8 @@ def offers_for(
     left_out_rolls: list[str] = []
     for action in listed:
         adds = action.adds(data, start_item)
+        if adds.corrupts and not goal.takes_corrupted:
+            continue  # an item never arrives corrupted unasked, and the report does not mention what the target could never use
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))
         elif adds.needs_roll_limit and not roll_matters:
@@ -245,7 +251,12 @@ def offers_for(
 
     left_out = ()
     if kinds_named is not None:
-        skipped = tuple(entry.name for entry in kinds(planner_only=True) if entry.name not in kind_names)
+        # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used
+        skipped = tuple(
+            entry.name
+            for entry in kinds(planner_only=True)
+            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted)
+        )
         if skipped:
             left_out += (
                 LeftOut("the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones", skipped),

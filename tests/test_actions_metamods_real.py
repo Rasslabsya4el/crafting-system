@@ -15,7 +15,7 @@ The guides say the two orbs land the wanted prefixes with certainty (100%), and 
 * R04 (Penetrating Arrow Quiver, item level 81; the fractured Essence of Insanity mod, the Rage Strength and
   the additional Arrow, then the metamod): two prefix families are left, Maximum Life (10,000) and Damage with
   Bow Skills (5,000). Orb 1 lands a wanted prefix with chance 1 (Life 2/3, Bow skills 1/3), orb 2 the other with
-  chance 1. Without the metamod an Exalted Orb lands one of the two with chance 200/1249 only (16.0%).
+  chance 1. Without the metamod an Exalted Orb lands one of the two with chance 600/3727 only (16.1%).
 
 One difference with the guide, recorded with its cause: the guide lists "Projectiles Pierce 2 Additional
 Targets" among the suffixes; in the 3.29.3.3 data its Essence of Insanity mod (`AdditionalPierceEssence7`) is a
@@ -84,7 +84,7 @@ def hand_prefix_weights(data, base, level, extra_tags, blocked, held_families):
             continue
         if set(mod.implicit_tags) & blocked or set(mod.families) & held_families:
             continue
-        spawn = next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)
+        spawn = 0 if "Royale" in mod.id else next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)  # a Battle Royale copy is not rolled (#310)
         if spawn == 0:
             continue
         factor = next((Fraction(w.weight, 100) for w in mod.generation_weights if w.tag in tags), Fraction(1))
@@ -151,11 +151,11 @@ def test_r04_two_exalted_orbs_under_cannot_roll_attack_land_both_wanted_prefixes
     assert shown == {"IncreasedLife": Fraction(2, 3), "DamageWithWeaponTypeSkill": Fraction(1, 3)}
 
 
-def test_r04_without_the_metamod_the_first_orb_lands_a_wanted_prefix_with_chance_200_in_1249(data):
+def test_r04_without_the_metamod_the_first_orb_lands_a_wanted_prefix_with_chance_600_in_3727(data):
     first, _, shown = engine_two_orbs(data, r04_quiver(data, metamod=False), R04_WANTED)
 
-    assert first == Fraction(200, 1249)  # 16.0%
-    assert shown["IncreasedLife"] == Fraction(400, 3747) and shown["DamageWithWeaponTypeSkill"] == Fraction(200, 3747)
+    assert first == Fraction(600, 3727)  # 16.1%
+    assert shown["IncreasedLife"] == Fraction(400, 3727) and shown["DamageWithWeaponTypeSkill"] == Fraction(200, 3727)
 
 
 def test_r04_the_essence_of_insanity_mod_is_a_prefix_in_the_data(data):

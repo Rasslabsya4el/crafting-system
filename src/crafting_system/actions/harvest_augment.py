@@ -35,6 +35,12 @@ from .finite import Finite
 from .metamods import locked_sides, on_locked_side
 from .pool import build_pool, tiers_of
 
+__all__ = [
+    "HarvestAddRemove",
+    "HarvestDamageSwap",
+    "HarvestResistanceSwap",
+]
+
 TAGGED_RARE_REFORGE_EXISTS = get_rule("harvest_reforge.tagged_rare_reforge_exists")
 ADD_REMOVE_CRAFTS_EXIST = get_rule("harvest_augment.add_remove_crafts_exist")
 ADD_REMOVE_REFUSED_ON_INFLUENCED_ITEM = get_rule("harvest_augment.refused_on_influenced_item")

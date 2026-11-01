@@ -106,6 +106,14 @@ _Avoid_: group, choice group
 **Start item**:
 The concrete item a query starts from; by default a fresh normal base.
 
+**Vendor recipe**:
+One of five recipes (boots movement speed, weapon flat damage, jewellery chaos resistance, a spell-gem weapon, a minion helmet) that turn a Normal base and cheap goods into a Magic item with one chosen mod. It is a start-item source chosen outside the solver: the planner plans the plain start item and each recipe-made one and keeps the cheapest total (ADR-0059).
+_Avoid_: vendor action, recipe action (it is never an action of a route)
+
+**Recipe step**:
+One recipe of a chain: a flask and an Orb of Augmentation, or the quality gems, and the mod and tier it gives counted from the top of the mod's ladder. A tier-up recipe is a chain of steps, each from the Magic item before it; the table is `Recipe.steps(base_kind)`.
+_Avoid_: stage
+
 ## Crafting
 
 **Primitive**:

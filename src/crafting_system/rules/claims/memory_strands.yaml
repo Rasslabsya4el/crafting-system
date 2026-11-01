@@ -1,0 +1,384 @@
+# Memory Strands (ADR-0040 to ADR-0044): the count, the tier cut, what a craft spends, which crafts cut, the Orb of Remembrance and
+# the Orb of Unravelling. Promoted in ticket #274 from the research drafts of #98 (docs/research/2026-10-31-memory-strands-claims),
+# changed by the sheet fit of #271 and extended by the second pass of #273. Where #271 and #273 differ, #271 wins (a large sample
+# against an implementer's reading). patch_verified is the last patch whose notes or data the mechanic was read on, not the pinned patch.
+rules:
+  # --- The property and the tier cut ---
+  - id: memory_strands.property
+    statement: 'An equipment item carries a Memory Strands count from 1 to 100 (no strands is the count 0). The count survives crafts except for the amount the craft spends. It shows on the item text as "Memory Strands: N".'
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: These are displayed with a value ranging from 1-100 on the item's tooltip.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.rollable_tiers
+    statement: 'For an item with s >= 1 strands, a random mod add or replace draws a mod type''s tier only among its `rollable_tiers(T, s) = floor(100 / (2.5 s + 147.5) * (T - 1)) + 1` highest tiers, T being the number of tiers of that mod type eligible on the base at the item level. The lowest tiers are removed. Computed in exact arithmetic, not floats: `floor(200 (T-1) / (295 + 5 s)) + 1` (8 tiers at 81 strands is exactly 2.0 and gives 3 rollable tiers, at 82 strands 2). Checked against every breakpoint cell of the wiki table and against 1,902 rows of the author''s raw sheet (note, "Check against the raw sheet").'
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: rollable_tiers = floor((100/(2.5 * strands + 147.5)) * (total_tiers - 1)) + 1
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+    value:
+      numerator: 200
+      base_rating: 200
+      strand_rating_per_strand: 5
+      strand_rating_offset: 95
+      foulborn_rating: 150
+
+  - id: memory_strands.cull_counts_eligible_tiers
+    statement: The tier count T of the cut is the number of tiers of the mod type that the item level allows on that base (a tier the item level forbids is not counted and cannot roll anyway); the cut is made per mod type, so each mod type of the pool is cut on its own T.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: which means only T1 and T2 of this modifier can roll if all 8 tiers are eligible from item level.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.zero_is_no_cull
+    statement: An item with 0 strands is not cut at all (every eligible tier rolls); the formula applies from 1 strand (1 strand already leaves 9 of 13 tiers).
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
+    quote: '|0|13|12|11|10|9|8|7|6|5|4|3|2|'
+    patch_verified: 3.29.0
+    date_checked: 2026-10-31
+
+  - id: memory_strands.cut_uses_strands_before_spend
+    statement: The cut of a craft is made from the strands the item had before the craft; the craft then spends its random amount.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: make it more likely to have outcomes of higher modifier tier based on the quantity of Memory Strands originally on the item.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.identification_is_cut
+    statement: Identifying a magic or rare item with a Scroll of Wisdom applies the same cut to its mods (the author tested this little, and believes the rules are the same). A planner item is already identified, so this matters only for a bought unidentified item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: When a magic or rare item is identified using a Scroll of Wisdom, the tiers of modifiers are more likely to be higher tiers proportional to the quantity of Memory Strands on the item.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.weights_of_kept_tiers
+    statement: 'Approximate (one data set, no first-party statement). When a strand cut removes the low tiers of a mod type, each kept tier of that type weighs its old weight times T/K, T the tiers of the type before the cut and K the tiers kept (the wiki''s "refactored weight", reading 2 of ADR-0042); the type''s share of its side grows or shrinks with that factor, the ratios between its kept tiers stay. The other two readings of ADR-0042 are rejected: on 18,264 crafts (886 of the foulborn tab, 9,943 and 7,435 Alteration crafts of the two Alteration tabs) the total log-likelihood of the observed mods is -96,794.0 for reading 2, -96,871.0 for reading 1 (redistribution, the type keeps its total) and -96,968.7 for reading 3 (delete the low tiers, keep the weights; also the reading of Craft of Exile''s code). Differences 77.0 (SE 10.4, bootstrap 95% 57.0 to 97.3) and 174.7 (SE 18.1). Reading 2 is ahead in each tab and in each band of strands. With the factor written (T/K)^g, g = 1.00 with the 95% interval 0.90 to 1.11. For the mod types whose kept tiers carry little of their weight (hybrid life and defence prefixes, flat elemental damage prefixes) 53 draws were seen against 105.6 expected by reading 1, 48.7 by reading 2 and 41.2 by reading 3. Our T equals the sheet''s own total_tiers on all 27,886 mods of the three tabs once four Battle Royale duplicate mods are left out of the pool (affix_pool.royale_duplicates_do_not_spawn). Fitted on strand cuts of Alteration, Alchemy, Chaos, Exalted, Regal, the Foulborn orbs and identification; fossils, Harvest and essences are not in the sheet.'
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: 0,79,Foulborn Orb of Augmentation,Resplendent,1,11,320,0.2380952381,3
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    value:
+      reading: refactored
+      factor: T/K
+    approximate: true
+    approximate_reason: Fitted on one author's sheet; the wiki's Foulborn page states the same rule, the datamined tree text and the emulator's code say otherwise.
+
+  # --- What a craft spends ---
+  - id: memory_strands.spend_ranges_basic
+    statement: Orb of Transmutation, Augmentation and Alteration spend a random whole number of strands from 0 to 8; Regal Orb from 0 to 16. A craft never spends more than the item has.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: Orb of Transmutation , Orb of Augmentation , Orb of Alteration — 0-8; Regal Orb — 0-16
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+    value:
+      transmutation: 8
+      augmentation: 8
+      alteration: 8
+      regal: 16
+
+  - id: memory_strands.spend_ranges_chaos_family
+    statement: Orb of Alchemy, Orb of Binding, Chaos Orb and Orb of Chance spend a random whole number of strands from 0 to 50.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: Orb of Alchemy , Orb of Binding , Chaos Orb — 0-50; Orb of Chance — 0-50
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+    value:
+      alchemy: 50
+      binding: 50
+      chaos: 50
+      chance: 50
+
+  - id: memory_strands.spend_ranges_essence
+    statement: Any essence of any tier spends a random whole number of strands from 0 to 80.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: Any tier Essence — 0-80
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+    value:
+      essence: 80
+
+  - id: memory_strands.spend_ranges_special_orbs
+    statement: Eldritch Chaos Orb and Tainted Chaos Orb spend 0 to 60, Veiled Chaos Orb 0 to 80, Awakener's Orb 0 to 100.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: Eldritch Chaos Orb — 0-60; Veiled Chaos Orb — 0-80; Tainted Chaos Orb — 0-60; Awakener's Orb — 0-100
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+    value:
+      eldritch_chaos: 60
+      tainted_chaos: 60
+      veiled_chaos: 80
+      awakeners: 100
+
+  - id: memory_strands.spend_exalted_by_mod_count
+    statement: 'Approximate. The ceiling of an Exalted Orb''s spend for an item with 4 mods before the craft is at least 33 and for 5 mods before at least 38; the planned ceilings (the wiki''s table by mods before the craft, also the beta emulator''s row 16, 16, 22, 26, 32, 34) are 32 and 34, and both are exceeded. 41 crafts on 4 mods before spent up to 33 (the 95% likelihood interval of the ceiling is 33 to 35) and 43 crafts on 5 mods before up to 38 (38 to 43); the spends are uniform on 0..34 and 0..38 (chi-square p = 0.78 and 0.90). The wiki''s table moved by one mod, so that its row "# of modifiers" counts the item as it is after the orb (an inference, not a measurement), gives by mods before the craft: 0 mods 16, 1 mod 22, 2 mods 26, 3 mods 32, 4 mods 34, 5 mods 38. The rows for 0 to 3 mods before have no data. The Foulborn Exalted row has no craft in the sheet. The wiki''s own table, by the mods the item has after the orb, reads 1 mod 16, 2 mods 22, 3 mods 26, 4 mods 32, 5 mods 34, with a Tainted Exalted Orb on 6 mods 38; the 0 mods cell, which the game does not show, the wiki guesses at 0 to 10. The same table by the mods the item has before the orb is the beta Craft of Exile emulator''s row 16, 16, 22, 26, 32, 34, which the sheet''s two crafts exceed (the sheet wins, research #271 section 2).'
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: 1292,49,Exalted Orb,Hummingbird's,1,6,170,0.3703703704,2
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    value:
+      ceiling_by_mods_before:
+        0: 16
+        1: 22
+        2: 26
+        3: 32
+        4: 34
+        5: 38
+    approximate: true
+    approximate_reason: Two item sizes (4 and 5 mods before) are bounded from below by one craft each; the other rows are the wiki's figures moved by one mod.
+
+  - id: memory_strands.spend_bench_rerolls
+    statement: The three bench options "Reroll the Rarity of a non-Unique item", "Reroll 3 random modifiers on a Rare Item" and "Reroll a random modifier on a Rare Item" spend 0 to 50 strands. Allflame crafting with a listed currency spends strands as that currency does.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: the following crafting options do remove 0-50 memory strands, similar to Orb of Chance or Chaos Orb
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.spend_law_uniform
+    statement: 'Approximate. A craft that spends strands draws a whole number uniformly on 0 to its ceiling and the item loses the smaller of that and its count (the count never goes below 0). No currency in the sheet rejects it. Tests per craft, with the exact chance of every spend and the exact covariance of the bins: Orb of Alteration, 17,377 crafts, chi-square 4.15 on 8 degrees of freedom (p = 0.84); Foulborn Orb of Augmentation 427 crafts, p = 0.25; Chaos Orb 155 crafts, p = 0.60; Orb of Alchemy 132 crafts, p = 0.46; Foulborn Regal Orb 64 crafts, p = 0.19 (its total spend is 2 SD low, p = 0.047 alone); Regal Orb 13 crafts at one count, p = 0.08 (a weak test). The earlier "bins" for Chaos and Alchemy counted the rows of the tab, which lists a multi-mod craft once for each mod it produced (155 Chaos crafts are 615 rows, 132 Alchemy crafts on normal items 580 rows); the 130 and 260 uses behind them were 33 and 55 crafts. No spend is above its ceiling (largest: Alteration 8, Foulborn Augmentation 32, Foulborn Regal 43, Regal 16, Chaos 48, Alchemy 50). Three entries of the Alteration tabs (spends of 11, 40 and 97, two of them ending at 0, among 17,380) are not Alteration spends and are left out.'
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: 96,95,Scintillating,3,11 ... 702,82,Scroll of Wisdom,Paragon's,1,1,252.5,0.2836879433,1
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    value:
+      shape: uniform_integer
+      lowest: 0
+      count_after: max(0, count - draw)
+    approximate: true
+    approximate_reason: No currency rejects it, but Regal (13 crafts at one count) and Foulborn Regal (64 crafts) are weak tests and the sheet holds no craft of the other currencies of ADR-0041.
+
+  - id: memory_strands.identification_spends_none
+    statement: Identifying an item with a Scroll of Wisdom spends no strands (the count after equals the count before in all 11 crafts, 51 rows, on items with 82 strands; for any currency with a ceiling of 1 or more the chance of 11 zeros is at most 2^-11) although it applies the cut to the mods it reveals. The wiki lists no spend for it.
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: 702,82,Scroll of Wisdom,Paragon's,1,1,252.5,0.2836879433,1
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 11 crafts, all on items with 82 strands; no second source.
+
+  # --- Which crafts cut, which spend, which keep the count ---
+  - id: memory_strands.not_spent_by
+    statement: Resonators (fossils), Harvest crafting, beastcrafting, the bench crafts other than the three rerolls, and the Veiled Exalted Orb spend no strands. Fracturing, Orb of Annulment, Scouring, Divine and Vaal are not listed by the wiki either way.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: Memory Strands are not consumed by the use of resonators, Harvest crafting, Beastcrafting, or crafting benches not using currency listed above
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.cut_follows_spend_table
+    statement: 'In the Craft of Exile emulator the tier cut is applied to exactly the methods that have a row in its spend table (transmutation, alteration, augmentation, the three Foulborn orbs, regal, alchemy, chaos, essence, the Eldritch, Veiled and Tainted chaos orbs, every Exalted Orb, the Awakener''s Orb) and to no other. A method without a row (Orb of Scouring, Annulment, Divine, Vaal, fossils, Harvest, beasts, bench crafts) neither cuts nor spends, and nothing but the spend table, Remembrance, Unravelling and an imprint restore changes the count: Scouring and Annulment leave the count as it is. The wiki lists those orbs neither way.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe1.js
+    quote: null!=gameConstants.memoryStrands[e]&&(this._memoryStrands=t)
+    patch_verified: 3.29.3.3
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'Only the emulator''s code says it for Scouring, Annulment, Divine and Vaal; the wiki lists them neither way and no player report was found (in-game list #182, B5 check 1).'
+
+  - id: memory_strands.fossil_harvest_not_cut
+    statement: 'A fossil craft and a Harvest craft neither spend strands nor are they cut by them: players reported in November 2025 (patch 3.27) that they "dont consume or benefit from strands", and in July 2025 a player asked whether strands improve the tiers of crafts that do not consume them (Harvest, fossils) and was told no. The planner already treats them so (ADR-0041); this is the first stated source.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1oqpunf/_/nnm5vvq/
+    quote: They work the same as before. They dont consume or benefit from strands.
+    patch_verified: 3.27.0
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'Player statements from 3.26 and 3.27 and the emulator''s table agree, but the wiki is silent on the cut and no 3.29 test exists (in-game list #182, B5 check 2).'
+
+  - id: memory_strands.annulment_keeps_strands
+    statement: 'An Orb of Annulment spends no strands, and neither does the rarity-reroll bench craft of 3.26 (replaced in 3.27 by a spending one): a commenter on a 3.26 amulet craft says both leave the count and the author, who lists "Annul other Prefixes" at step 7 and plans to spend the remaining strands with an Orb of Unravelling at step 11, confirms the bench half. A 3.26 recipe also annuls an item empty "to save strands" before an influence Exalted Orb, which spends more for each mod on the item.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1mq4l3y/_/n8obyjk/
+    quote: Both that bench craft and the annul don't consume any strands.
+    patch_verified: 3.26.0d
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'One commenter and one recipe from 3.26 with no before and after counts (in-game list #182, B5 check 1).'
+
+  - id: memory_strands.scouring_keeps_strands
+    statement: 'An Orb of Scouring leaves the strands: a 3.29 recipe with a 362-point comment (the Foulborn Exalted thread) transmutes with Allflame, scours the magic item and transmutes again, and tells the reader to take the option whose strands are "at 40, 39, 38", so the count falls only by the transmutation, not by the scour. The emulator agrees: no spend row, nothing resets the count. The author of a 3.26 amulet craft also scours at step 7 and plans to unravel at step 11.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1ved7x1/_/p1ggk55/
+    quote: Then you will scour the item normally. Then put it back in the allflame and transmute it again using sulphur. You will repeat this until you hit your desired affix sacrificing a bit of strand every time.
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'A recipe, not a counted test; the same comment later says "If you run out of strands using transmute and scour", which can be read as the scour spending (in-game list #182, B5 check 1).'
+
+  - id: memory_strands.divine_keeps_strands
+    statement: 'A Divine Orb spends no strands: the author of the 3.26 Mageblood craft of a Heavy Belt, which rolled the belt''s strands with the Orb of Remembrance ("over 69") and kept them through some 230,000 chance-and-scour bench crafts and an imprint restore after each wrong unique, ends with "divine it (this does NOT consume strands)". A Vaal Orb is only hovered over the Lock in that post, never applied, so Vaal stays at the wiki''s "the corrupted item keeps its memory strands".'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1m01psj/
+    quote: When you (finally) hit mb, divine it (this does NOT consume strands), hinekora lock it and you're done
+    patch_verified: 3.26.0d
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'One craft of 3.26, stated in a recipe with no before and after counts (in-game list #182, B5 check 1).'
+
+  - id: memory_strands.recombinator_strands_from_either_base
+    statement: 'A recombination hands over the strand count of one of its two inputs: a 3.26 guide combines a high-level base with a 90+ strand base in the recombinator and says the strands of base B "migrate" onto base A in half of the cases, and the author of a quiver guide of 2026-05 expects "memory strands" on the output. Neither says that the inputs'' strands are or are not spent; "nothing spent" is ADR-0041''s reading of the guide author''s play.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1lrigzv/
+    quote: This gives a 50 / 50 chance that Base B’s strands migrate onto Base A.
+    patch_verified: 3.26.0d
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'One guide from 3.26 states the count; no one has published counts of the output, and the spend is not stated at all (in-game list #182, B5 check 7).'
+
+  - id: memory_strands.recombination_neither_cuts_nor_spends
+    statement: 'A recombination takes no part in the strand cut and spends no strands: the author of the strands post says recombination ''doesn''t interact with strands'' and buys cheap stranded bases to transfer them onto, a play that needs the inputs'' strands to stay. The output takes the count of one of its two inputs (claim memory_strands.recombinator_strands_from_either_base). The emulator has no recombinator. This is an inference from play, not a counted test.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/_/pcd0ppi/
+    quote: doesn't interact with strands
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'One author''s play, no before and after counts and no second source (in-game list #182, B5 check 7).'
+
+  # --- The Orb of Remembrance ---
+  - id: memory_strands.remembrance_action
+    statement: An Orb of Remembrance applies only to a normal-rarity equipment item; it sets the item's strand count to a new random number whatever the count was (it adds strands to an item that has none, and re-rolls an item that has some). Repeated use on one item is an inference from "randomises" and "not necessary to deplete" and from the post's process note (a talisman rolled "to 100 memory strands with orbs of remembrance"), not from this quote.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: Orb of Remembrance adds or randomises the quantity of Memory Strands on a normal rarity item. It is not necessary to deplete all Memory Strands before using this orb.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: Repeated use is an inference from 'randomises' and one author's talisman, and the refusal of jewels rests on the wiki's word 'equipment' (ADR-0043).
+
+  - id: memory_strands.remembrance_distribution
+    statement: 'The strand count after an Orb of Remembrance is a whole number from 10 to 100: a normal draw with mean 35 and standard deviation 25 (u/sirgog''s fit to the author''s 2,255 results), discarded and drawn again when it falls outside the accepted range. The plan accepts 10 <= x < 100.5 and rounds the draw to the nearest whole number; the research also fits an acceptance from 9.5 (mean 41.66), and the bounds and the rounding differ by about 2 log-likelihood units on the sheet. Independent check on the author''s raw sheet: no result below 10, maximum likelihood mean 34 to 35 and sd 25 to 25.5, chi-square 7.2 on 17 degrees of freedom; observed mean 41.56, median 39, quartiles 26 and 55, three results of exactly 100; the count at 10 is lower than its neighbours (20 against about 32), as a continuous cut at exactly 10.0 gives. The rounding of the draw is not known.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/_/pcrqc6i/
+    quote: 'Generate a random number via normal distribution, mean 35, standard deviation 25. (Sample size too small to determine rounding) Step 2: If the number is <10 or >100, discard it and go back to step 1.'
+    patch_verified: 3.29.0
+    date_checked: 2026-10-31
+    value:
+      mean: 35
+      sd: 25
+      accept_from: 10
+      accept_below: 100.5
+      rounding: nearest
+    approximate: true
+    approximate_reason: 'The bounds and the rounding are within 2 log-likelihood units of other choices, and the sample is one author''s (research #271 section 4).'
+
+  - id: memory_strands.remembrance_independent_of_old_count
+    statement: 'Approximate. The strand count after an Orb of Remembrance does not depend on the count before it, if the 2,255 rows of the tab are consecutive orbs on one item (the tab records only the new count, in the order of use, and does not say so; its summary cells are the quote). Each row against the one before: Pearson correlation 0.017 (95% half-width 0.041, permutation p = 0.41), slope 0.017 (SE 0.021), chi-square of independence on 3 by 3 bins 2.0 (4 degrees of freedom, p = 0.73), mean of the next result 40.6 after a result below 25 and 41.9 after one of 50 or more.'
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: mean,41.56097561
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: The tab holds only the new count; the test speaks for consecutive orbs on one item, which the sheet does not state.
+
+  - id: memory_strands.remembrance_classes_observed
+    statement: 'Players use an Orb of Remembrance on armour pieces, a belt and an amulet: a helmet (scoured to white, 73 strands on the first try, 3.26), a Heavy Belt (scoured, rolled again and again "until you have over 69", 3.26), boots (scoured to normal, 3.29, the 362-point recipe of the Foulborn Exalted thread), a body armour (November 2025), an amulet (3.26, "until >70 Strand") and the author''s talisman (3.29). No report of a jewel, ring, weapon or flask was found. The emulator allows every item class but a strongbox, and requires a normal item; the wiki says "normal equipment item".'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1ved7x1/_/p1ggk55/
+    quote: Buy an orb of remembrance. Scour the boots to make it normal and slam the orb. Hopefully you get above 40ish.
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'Reports cover helmet, boots, belt, body armour and amulet only; jewels and the other classes rest on the wiki''s word and the emulator''s looser rule (in-game list #182, B5 check 3).'
+
+  # --- The Orb of Unravelling ---
+  - id: memory_strands.unravelling_effect
+    statement: An Orb of Unravelling spends all the strands of the item (count 0 afterwards) to try to raise the tier of its explicit mods; it may raise none of them.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
+    quote: It is possible to consume all memory strands without upgrading any modifier tier.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_limits
+    statement: An Orb of Unravelling cannot raise an influenced mod to its Elevated form and cannot turn a crafted mod into a regular one.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
+    quote: Orb of Unravelling cannot upgrade influenced modifiers to an Elevated modifier. It also cannot upgrade a crafted modifier into a regular modifier, as of 3.26.0d.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_ignores_metamods
+    statement: 'An Orb of Unravelling ignores the "Prefixes cannot be Changed" and "Suffixes cannot be Changed" metamods: it may raise a protected mod.'
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
+    quote: Orb of Unravelling does not respect the Suffixes cannot be Changed or Prefixes cannot be Changed metamods.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_needs_identified_item
+    statement: An Orb of Unravelling cannot be used on an unidentified item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Unravelling
+    quote: Fixed a bug where Orb of Unravelling could be used on unidentified items.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+
+  - id: memory_strands.unravelling_skips_fractured_and_veiled
+    statement: 'An Orb of Unravelling never raises a fractured mod and never raises a veiled mod: the emulator skips a mod with either flag before it computes the chance. Its other skipped mods are those outside the explicit prefix and suffix types (implicits, crafted mods). The wiki and the post are silent on fractured and veiled mods.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe1.js
+    quote: if(t.fractured)return;if(t.veiled)return;
+    patch_verified: 3.29.3.3
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'Only the emulator''s code says it; the wiki and the post are silent (in-game list #182, B5 check 6).'
+
+  - id: memory_strands.unravelling_chance_model
+    statement: 'Each explicit mod is raised on its own with chance min(1, s * W_up / (2 * W_side)), s the strands before, W_up the sum of the weights of the higher tiers of the mod''s type that the pool allows at the item level, W_side the total weight of the whole pool of its side (prefix or suffix) of the base at that item level, the 0.5 weight of attack mods on wands included, the four Battle Royale duplicates left out. On 36,598 mods (24,698 on amulets, 8,702 on wands, 2,924 on rings, 197 on gloves, 77 on body armours) the fit is exact within error: p = min(1, a x) has a = 1.0011 (SE 0.0005); with p = min(1, a s^b r^c) the exponents are b = 1.000 (SE 0.012) and c = 1.000 (SE 0.012); 40 free bins of x gain 11.4 log-likelihood over the formula for 40 more parameters; observed against predicted rate agree in every bin of x from 0 to 1. All 12,201 mods with x at least 1 were raised, none of the 3,881 with W_up = 0 was, and 58 of 3,507 mods with x between 0.95 and 1 were not (1.65% against 1.66%). The number of mods on the item does not change it. The apparent excess of the author''s own predictions was his wand weights, which lack the 0.5 factor (his sums are 79,166 and 76,842, ours 64,836 and 65,342). The beta emulator''s code states the same formula (research #273). Tested classes only: amulets, wands, rings, gloves, body armours.'
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: 0,44,86,ItemFoundRarityIncreasePrefix,ItemFoundRarityIncreasePrefix1,ItemFoundRarityIncreasePrefix2,12(8-12)% increased Rarity of Items found,17(13-18)% increased Rarity of Items found,Magpie's,Pirate's,4,3,1,Amulets,Turquoise Amulet,0.7449209932,88600,125250,3000,1
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    value:
+      chance: min(1, s * W_up / (2 * W_side))
+      constant: 1
+      divisor: 2
+
+  - id: memory_strands.unravelling_side_weight_is_whole_pool
+    statement: The "total side weight" of the Unravelling chance is the total spawn weight of the item's whole prefix or suffix pool at its item level, read as if the item had no explicit mod (the emulator strips them before it reads the pool), not the pool left after the item's own mods. For an ordinary mod the chance is min(1, s * W_up / (2 * W_side)), the formula of the post. For an essence or influenced mod the emulator uses another form, min(1, s / 25 * W_up / W_group), which the post does not describe.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe1.js
+    quote: Math.min(1,a*g/(2*f))
+    patch_verified: 3.29.3.3
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: A second implementation of the same player fit, not an independent test; the essence and influenced form is untested.
+
+  - id: memory_strands.unravelling_destination_tier
+    statement: 'Approximate. A mod that is raised goes to one of its higher tiers (the tiers above it that the pool allows at the item level); the chance of a tier is proportional to the sum of its own weight and the weights of the tiers above it (reading B of ADR-0044, the author''s later edit). The rank-multiplier reading A of ADR-0044 (tier weight times 1, 2, 3 from the top) is rejected; B is closer than A but not exact. On 23,494 raised mods, of them 4,354 where the candidate weights differ (on equal weights A and B are the same), log-likelihood of B minus A is +14.9 (SE 8.0), and 4,000 replays of the same mods give -31.6 (SD 8.0) when A is true and +32.1 (SD 8.0) when B is true: A is out by 5.8 SD, B by 2.1 SD (one-sided p = 0.015). The best mixture puts weight 0.73 on B (95% 0.49 to 0.98). All of the separation is on wands: wands +14.8 (replays -26.0 SD 7.3 if A, +26.3 SD 7.4 if B), amulets +0.6, rings -0.5; the mod types that favour B are spell added fire damage (+4.5), spell damage on weapon (+4.4) and mana (+2.9), the one that favours A is spell added lightning damage (-2.7, the post''s own wand test). Weights only (the beta emulator''s reading; -323 against A on the mods with unequal weights, -2,218 on all) and uniform are far out. The rank step is not rejected: on equal weights the shares follow 1:2:3:... from the top for every candidate count from 2 to 12 (11 chi-square tests, smallest p = 0.078), and with the weights multiplied by rank^g over all raised mods g = 1.00 is the maximum (0.75: -126, 1.25: -102 log-likelihood).'
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: 0,44,86,ItemFoundRarityIncreasePrefix,ItemFoundRarityIncreasePrefix1,ItemFoundRarityIncreasePrefix2,12(8-12)% increased Rarity of Items found,17(13-18)% increased Rarity of Items found,Magpie's,Pirate's,4,3,1,Amulets,Turquoise Amulet,0.7449209932,88600,125250,3000,1
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    value:
+      reading: cumulative
+      weight: own weight plus the weights of the tiers above
+    approximate: true
+    approximate_reason: B fits 2.1 SD short of its own expectation, the best mixture is 0.73 B, and the evidence is wand mods; no first-party statement.
+
+  - id: memory_strands.unravelling_destination_not_cut
+    statement: 'The tier an Unravelling raises a mod to is not limited by the strand cut: 10,721 of the 23,494 raised mods went to a tier that a cut at the item''s strand count would have removed (a mod of 11 tiers at 15 strands would keep 6 tiers).'
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: 0,44,86,ItemFoundRarityIncreasePrefix,ItemFoundRarityIncreasePrefix1,ItemFoundRarityIncreasePrefix2,12(8-12)% increased Rarity of Items found,17(13-18)% increased Rarity of Items found,Magpie's,Pirate's,4,3,1,Amulets,Turquoise Amulet,0.7449209932,88600,125250,3000,1
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
