@@ -88,6 +88,11 @@ on each side from the count table of the pooled count (`table="guide"` or `"wiki
 chance proportional to `weight ** alpha` (the rule axis `recombinator.alpha`: 0.4 to 1.6, the plan at 1), closing the mod group of each
 pick. Its result is a `Finite` list of items. Not a planner kind until donors are priced (#211, #212) and its state exists (#217).
 
+The veiled orbs (`veiled.py`, ticket #144, ADR-0026): `VeiledChaosOrb()` (a Chaos reroll that guarantees one generic veiled placeholder, a
+`Mixture` of the two sides), `VeiledExaltedOrb()` (removes one mod, then adds a placeholder; a `Finite`), `Unveil()` (draws the offer of the
+placeholder once, a `Finite` with one result per offer) and `Pick(1 to 3)` (the placeholder becomes the k-th mod of the offer). Unveil and
+Pick are free (`resources` is empty). None is a planner kind yet: the placeholder slot and the offer state are ticket #145.
+
 The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
 that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
 68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
@@ -194,6 +199,7 @@ from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool, drawable_mod_ids, partners, tiers_of
 from .recombinator import Recombinator
 from .scour import ScouringOrb, ScourOutcomes
+from .veiled import Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb, offer_distribution, offer_pool
 
 def default_actions() -> tuple[Action, ...]:
     """The two rerolls that need no game data: a Chaos Orb and the Harvest reforge of Lightning."""
@@ -255,6 +261,7 @@ __all__ = [
     "Outcomes",
     "OrbOfConflict",
     "OutOfScopeError",
+    "Pick",
     "PoolFamily",
     "PoolMod",
     "partners",
@@ -268,6 +275,9 @@ __all__ = [
     "TalismanFracture",
     "TalismanFractureOutcomes",
     "TransmutationOrb",
+    "Unveil",
+    "VeiledChaosOrb",
+    "VeiledExaltedOrb",
     "WildBristleMatron",
     "add_one_mod",
     "allowed_by_tags",
@@ -291,6 +301,8 @@ __all__ = [
     "kind",
     "kinds",
     "model_readings",
+    "offer_distribution",
+    "offer_pool",
     "recipe_resources",
     "register",
     "registered",

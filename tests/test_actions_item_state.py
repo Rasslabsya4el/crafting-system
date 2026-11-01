@@ -73,6 +73,7 @@ def test_an_action_that_declares_nothing_reads_and_adds_everything():
 
 
 B2_READS_ITEM_STATE = {"influenced-exalted-orb": "implicits"}  # B2 kinds that read a part of the item state (no planner kind does)
+VEILED_KINDS = frozenset({"veiled-chaos-orb", "veiled-exalted-orb", "unveil", "pick"})  # they declare the offer (#144); no planner kind until #145
 
 
 B3_ITEM_STATE = frozenset({"recombinator"})  # B3 kinds whose output copies the implicits and the quality of the chosen base (ticket #215); no planner kind
@@ -81,10 +82,13 @@ B3_ITEM_STATE = frozenset({"recombinator"})  # B3 kinds whose output copies the 
 def test_no_planner_kind_of_the_catalog_declares_item_state_yet():
     # B1 touches none of the three: the planner and the cache see no change in any registered kind that is offered.
     # An influenced Exalted Orb (ticket #154) reads the implicits, because it is refused on an Eldritch implicit; it is no planner kind yet.
+    # The veiled orbs, the unveil and the pick (#144) declare the offer, and are not planner kinds until the compressed model has the offer state (#145).
     for kind in kinds():
         for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
-            if kind.name in B3_ITEM_STATE:
+            if kind.name in VEILED_KINDS:
+                assert not kind.planner, kind.name
+            elif kind.name in B3_ITEM_STATE:
                 assert not kind.planner, kind.name
                 assert reads.implicits and reads.quality and adds.implicits and adds.quality, kind.name
             elif kind.name in B2_READS_ITEM_STATE:

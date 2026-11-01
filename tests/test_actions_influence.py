@@ -131,14 +131,14 @@ def test_the_hunter_mods_make_up_their_share_of_one_exalted_orb():
     label = lambda mod: "hunter" if "Influence" in mod.id else None  # noqa: E731
 
     assert ExaltedOrb().outcomes(DATA, item_).distribution(label)[frozenset({("hunter", 1)})] == Fraction(hunter_only, whole)
-    assert whole == 15200 - 5000 - 1000
+    assert whole == 14200 - 4000 - 1000
 
 
 def test_the_hunter_mod_can_be_the_target_of_an_exalted_orb():
     item_ = bow(roll(ATTACK_SPEED), roll(SOCKET), influences=HUNTER)
     outcomes = ExaltedOrb().outcomes(DATA, item_)
 
-    # 500 of the 9200 left (15200 less 5000 attack speed and 1000 sockets); only the first Chaos mod is asked for
+    # 500 of the 9200 left (14200 less 4000 attack speed and 1000 sockets); only the first Chaos mod is asked for
     assert outcomes.chance_all([HUNTER_MOD]) == Fraction(500, 9200)
     plain = ExaltedOrb().outcomes(DATA, bow(roll(ATTACK_SPEED), roll(SOCKET)))
     assert plain.chance_all([HUNTER_MOD]) == 0
