@@ -299,6 +299,36 @@ _Avoid_: guess, assumption
 The one game patch and mode that all data and rules are pinned to; now PoE 1 3.29.3.3, ordinary.
 _Avoid_: league, version
 
+## Sockets and quality
+
+**Socket**:
+A gem slot of a weapon or armour, white or red, green or blue. Sockets are white by default since 3.29.0, and a gem of any colour fits any socket (ADR-0046). An item stores one colour per socket and its link groups.
+_Avoid_: slot (that is a mod slot, a prefix or suffix place)
+
+**Link group**:
+A run of sockets linked to each other, stored as sizes in socket order (`(3, 2, 1)`). A target's `links` asks for a group of at least that size, and its colours are counted in such a group (ADR-0046).
+_Avoid_: link chain, linked sockets (that is the whole set)
+
+**Finish**:
+The part of a plan that sets sockets and quality after the mods are done: its own small decision problem, solved apart and added to the value of each goal state (ADR-0045). A target with no sockets has none.
+_Avoid_: socketing, tail
+
+**Class maximum**:
+The most sockets an item's class allows, 6 for body armour, two-handers and bows, 4 for helmets, gloves and boots, 3 for one-handers and shields; the Jeweller's Orb is also bounded by the item-level gate (ADR-0046).
+_Avoid_: socket limit
+
+**Forced socket**:
+The socket a Chromatic Orb makes non-white when every socket rolled white: the first one, so a one-socket item always becomes coloured. Its colour is an approximate input of the colour model, with the repeat exclusion (ADR-0047).
+_Avoid_: guaranteed socket
+
+**Bound flag**:
+The one bit of the compressed state that says an Orb of Binding was used, kept only when the target names sockets, so that the finish starts from the sockets Binding left (ADR-0045, ADR-0048).
+_Avoid_: linked flag
+
+**Weapon and armour quality**:
+The plain percent (to 20% from currency) that Blacksmith's Whetstones and Armourer's Scraps put on a weapon or armour. It raises the Chromatic Orb's non-white chance and is bought before the orbs (ADR-0049); the catalyst quality of jewellery is another kind (ADR-0027).
+_Avoid_: quality (alone: say which kind)
+
 ## Prices
 
 **Price file**:
