@@ -1,4 +1,4 @@
-"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--buy-spec PATH] [--strands] [--verify] [--json PATH]`, and `benchmark`.
+"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--buy-spec PATH] [--strands] [--no-recipe-starts] [--verify] [--json PATH]`, and `benchmark`.
 
 This is the one place of the planner that reads the clock and the environment. It loads the game
 data from the cache, the target, and the price file with its hand overrides, makes the plan, prints
@@ -13,6 +13,10 @@ answered approximately, within a certified 1% of the exact mean, and marked so (
 `--exact` solves it exactly however long it takes. An approximate answer gives no certified p90; its `--verify`
 runs the policy on concrete items and reports a simulated mean, p90 and CVaR labelled "simulated, not certified"
 (ADR-0023, `_lift`); it gives no `--route` and no route page yet.
+
+The plan compares the target's own start item with the start items a vendor recipe can make and keeps the cheapest total of start
+price and expected crafting cost (ADR-0059, `_starts`). The setting `recipe_starts` of `crafting.toml` (default on), or
+`--no-recipe-starts` for one run, turns that off; the plan is then the one `make_plan` gives.
 """
 
 import argparse
@@ -31,11 +35,12 @@ from crafting_system.targets import TargetError, load_target
 from ._benchmark import benchmark_main
 from ._decide import BUDGET_SECONDS
 from ._inputs import load_target_prices, write_json
-from ._plan import PlanError, make_plan
+from ._plan import PlanError
 from ._report import build_report, policy_document, render_text
 from ._route import evaluate_route, load_route
 from ._route_report import render_route_text, route_document
 from ._route_view import write_route_page
+from ._starts import plan_with_starts
 from ._verify import DEFAULT_RUNS, DEFAULT_SEED, verify
 
 COMMAND = "python -m crafting_system.cli"
@@ -76,6 +81,7 @@ def main(
     parser.add_argument("--route", metavar="ROUTE.yaml", help="also evaluate this given route (rules in YAML, see examples/routes/) as a fixed policy and compare it with the policy")
     parser.add_argument("--buy-spec", metavar="PATH", help="a buy spec YAML: the route view's buy step gets a trade-site search link built from it")
     parser.add_argument("--strands", action="store_true", help="consider Memory Strands (the setting memory_strands of crafting.toml); a start item with strands turns it on by itself")
+    parser.add_argument("--no-recipe-starts", action="store_true", help="plan only from the target's own start item; do not compare the start items a vendor recipe can make (the setting recipe_starts of crafting.toml)")
     parser.add_argument("--exact", action="store_true", help="solve exactly however long it takes, never approximately")
     parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
     parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean (an approximate answer: with its certified interval)")
@@ -93,7 +99,10 @@ def main(
         if stale:
             print(f"Warning: {stale}", file=sys.stderr)
 
-        plan = make_plan(game, target, price_file, start_price=args.start_price, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands)
+        plan = plan_with_starts(
+            game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts,
+            start_price=args.start_price, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands,
+        )  # fmt: skip
         if plan.approximation is not None and args.route:
             raise PlanError("--route is not available for an approximate answer yet; run again with --exact")
         report = build_report(plan, game)

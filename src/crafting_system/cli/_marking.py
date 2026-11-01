@@ -144,6 +144,8 @@ def approximate_inputs(
         if plan.is_goal(state) or action is None:
             continue
         ids |= plan.offer_of(action).offer.action.claims(data)  # type: ignore[attr-defined]
+    if plan.starts is not None:
+        ids |= set(plan.starts.claims)  # a recipe-made start item rests on claims no action of the policy cites (ADR-0059)
     if CRAFTED_LIMIT_CLAIM in ids and grants_extra_crafted_slot(data, plan.abstraction.enchantment):
         ids.add(STACKING_CLAIM)
     if not is_jewel(data, plan.target.base_id):
