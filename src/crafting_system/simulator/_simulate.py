@@ -20,8 +20,9 @@ those runs cost to the run that asked, then applies the action to the item in ha
 step has `bind`) and checks each donor with `Input.matches` when it has one. Every attempt makes its inputs afresh, a retry
 included, and a nested run draws from the same stream as the run that asked, so the draws of a run stay in one fixed order. All
 the steps of the tree of runs count against `max_steps`, and the clicks of nested runs count in `mean_steps`. A nested run that
-is stopped or cut ends the run that asked for it the same way (stopped or unfinished), the cost paid until then counted. A block
-still draws from its own seeded stream only, so nested runs keep the report the same for any number of workers.
+is stopped or cut ends the run that asked for it the same way (stopped or unfinished), the cost paid until then counted. Inputs that ask for
+each other with no click between them end at `MAX_NESTING` (100) levels, the run unfinished. A block still draws from its own
+seeded stream only, so nested runs keep the report the same for any number of workers.
 
 With `reading` the simulator samples the actions under that reading of the rule axes (`action.outcomes_under(data, item, reading)`,
 for an action that has it) in every run and every nested run, instead of the plan's value: a reading is one global fact of the
@@ -50,6 +51,7 @@ from ._report import SimulationReport
 from ._step import DonorMismatchError, Policy
 
 DEFAULT_MAX_STEPS = 100_000
+MAX_NESTING = 100  # levels of inputs that ask for inputs; a deeper chain is cut and the run is unfinished
 
 
 def simulate(
@@ -140,12 +142,15 @@ class _Tree:
         self.data, self.rng, self.max_steps, self.reading = data, rng, max_steps, reading
         self.steps = self.nested = 0
 
-    def walk(self, item, policy, is_goal):
+    def walk(self, item, policy, is_goal, paid, depth=0):
         """Run `policy` from `item` until a goal, a stop or the step budget: `(ending, last item, paid)`.
 
-        `ending` is "goal", "stopped" or "unfinished". `paid` is what the steps cost, nested runs included, the start not.
+        `ending` is "goal", "stopped" or "unfinished". `paid` comes in as what is already paid (the start cost) and goes out
+        with the cost of the steps added one by one, nested runs included. A run nested more than `MAX_NESTING` deep is
+        unfinished: inputs that ask for each other without a click between them would otherwise never end.
         """
-        paid = 0.0
+        if depth > MAX_NESTING:
+            return "unfinished", item, paid
         while True:
             if is_goal(item):
                 return "goal", item, paid
@@ -160,8 +165,8 @@ class _Tree:
                 donors = []
                 for need in step.inputs:
                     self.nested += 1
-                    ending, donor, spent = self.walk(need.start, need.policy, need.is_goal)
-                    paid += need.start_cost + spent
+                    ending, donor, spent = self.walk(need.start, need.policy, need.is_goal, need.start_cost, depth + 1)
+                    paid += spent
                     if ending != "goal":
                         return ending, item, paid
                     if need.matches is not None and not need.matches(donor):
@@ -183,8 +188,7 @@ def _block(data, policy, start, is_goal, start_cost, max_steps, reading, seed, r
     stopped = unfinished = steps_taken = nested = 0
     for _ in range(runs):
         tree = _Tree(data, rng, max_steps, reading)
-        ending, _, paid = tree.walk(start, policy, is_goal)
-        total = start_cost + paid
+        ending, _, total = tree.walk(start, policy, is_goal, start_cost)
         if ending == "goal":
             paid_by_successes.append(total)
         elif ending == "stopped":

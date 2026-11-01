@@ -191,6 +191,34 @@ def test_without_the_reading_the_plan_is_sampled_and_misses_an_off_plan_grid_poi
     assert plan.cost.value > value  # the plan's own optimum is the dearer one of the two readings (150.0 against 140.8)
 
 
+def test_the_recombinator_applied_to_the_donor_the_nested_run_made_gives_the_same_value():
+    # the same world with each step bound: the action is built from the donor the run made, not the one it was priced with
+    alpha = Fraction(1)
+    solution, acquisition = solved(alpha)
+    value = solution.values[acquisition.start(EMPTY)]
+    made, bound = [], {}
+
+    def bind(action, donors):
+        made.append(donors)
+        return bound.setdefault(donors[0], Cached(Recombinator(donors[0])))
+
+    actions = {label: Cached(action) for label, action in RECOMBINATORS.items()}
+    policy = nested_policy(
+        solution,
+        actions=lambda state, label: actions[label] if label in actions else FAKE[(label, state)],
+        state_of=lambda item: item,
+        item_of=lambda state: state,
+        reaches=reaches,
+        goal=is_target,
+        bind=bind,
+        matches=lambda want, donor: ids(donor) == ids(want),
+    )
+    report = simulate(DATA, policy, EMPTY, is_target, runs=RUNS, seed=9, reading=reading_at(alpha))
+
+    assert made and {ids(donor) for donors in made for donor in donors} == {ids(HAS_A), ids(HAS_B)}
+    assert report.cost.agrees_with(value, sigmas=5.0), (report.cost, value)
+
+
 def test_the_real_recombinator_gives_the_same_report_for_any_number_of_workers():
     one = play(Fraction(1), runs=2_000, block=200, workers=1)
     two = play(Fraction(1), runs=2_000, block=200, workers=2)

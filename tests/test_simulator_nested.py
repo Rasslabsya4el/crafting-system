@@ -273,3 +273,38 @@ def test_the_report_of_a_policy_without_inputs_is_what_it_was():
 
     assert isinstance(report, SimulationReport) and report.nested_runs == 0
     assert report.successes == 100 and state_of(Q) == "Q"
+
+
+# --- what the checker asked to pin (ticket #222) ---------------------------------------------------------------------------------------
+
+
+def test_a_run_with_no_inputs_adds_its_costs_onto_the_start_cost_one_at_a_time_as_it_always_did():
+    steps = {"E": (0.2, "P"), "P": (0.3, "PQ")}
+    chain = {STATES[state]: Step(ToyAction(((target, 1),)), cost) for state, (cost, target) in steps.items()}
+
+    report = simulate(DATA, chain.get, E, is_pq, runs=2, seed=1, start_cost=0.1)
+
+    assert report.costs == ((0.1 + 0.2) + 0.3,) * 2  # 0.6000000000000001, not 0.1 + (0.2 + 0.3)
+
+
+def test_inputs_that_ask_for_each_other_with_no_click_between_end_unfinished_not_in_a_recursion_error():
+    two_way = ToyAction((("PQ", 1),))
+    policies = {}
+    policies["a"] = lambda item: Step(two_way, 1.0, (Input(E, policies["b"], is_q),)) if item == E else None
+    policies["b"] = lambda item: Step(two_way, 1.0, (Input(E, policies["a"], is_q),)) if item == E else None
+
+    report = simulate(DATA, policies["a"], E, is_pq, runs=3, seed=1)
+
+    assert report.unfinished == 3 and report.successes == report.stopped == 0
+    assert set(report.costs) == {101.0}  # one unit for each of the 101 levels that asked, then the cut
+
+
+def test_the_cost_of_a_step_whose_nested_runs_used_the_last_click_stays_paid():
+    # the donor takes one click (always a Q, 3 chaos); with a budget of 1 the graft cannot be taken after it: 3 + 2 paid
+    certain = ToyAction((("Q", 1),))
+    donor = lambda it: Step(certain, 3.0) if it == E else None  # noqa: E731
+    policy = lambda item: Step(GRAFT, 2.0, (Input(E, donor, is_q),)) if item == E else None  # noqa: E731
+    report = run(policy, runs=10, max_steps=1)
+
+    assert report.unfinished == 10 and set(report.costs) == {5.0}
+    assert report.mean_steps == 1.0

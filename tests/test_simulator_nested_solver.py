@@ -18,7 +18,7 @@ import functools
 import pytest
 from nested_support import STATES, item_of, nested_policy, state_of, toy_actions
 from simulator_support import DATA
-from test_solver_acquire import TINY_CASES, base_model, tiny_spec
+from test_solver_acquire import TINY_CASES, base_model, row, tiny_spec
 
 from crafting_system.simulator import simulate
 from crafting_system.solver import MAIN, Acquisition, solve
@@ -100,3 +100,39 @@ def test_every_start_of_the_toy_is_checked_not_only_the_empty_item():
         )
         report = simulate(DATA, policy, STATES[state], is_pq, runs=RUNS, seed=11)
         assert report.cost.agrees_with(solution.values[acquisition.start(state)], sigmas=5.0), (state, report.cost)
+
+
+def test_a_policy_of_the_solver_that_nests_to_depth_two_is_simulated_to_its_value():
+    # E: graft (2, needs a Q from E, 1/4 PQ) ; a Q is made by refine (1, needs a P from E, 1/2 Q) ; a P by craft P (1, 1/2):
+    # a P costs 2, a Q (1 + 2) * 2 = 6, the main target (2 + 6) * 4 = 32, and the solver's policy asks for a P inside a Q inside the target
+    spec = (
+        {"PQ"},
+        {
+            "E": [
+                row("graft", 2, [("PQ", 1), ("E", 3)], [("E", "Q")]),
+                row("refine", 1, [("Q", 1), ("E", 1)], [("E", "P")]),
+                row("craft P", 1, [("P", 1), ("E", 1)]),
+            ]
+        },
+    )
+    acquisition = Acquisition(base_model(spec))
+    solution = solve(acquisition, [acquisition.start("E")])
+    assert solution.values[acquisition.start("E")] == pytest.approx(32.0)
+    assert solution.policy[("in", MAIN, "E")].extra_inputs == (("in", "Q", "E"),)
+    assert solution.policy[("in", "Q", "E")].extra_inputs == (("in", "P", "E"),)
+
+    table = toy_actions(spec)
+    policy = nested_policy(
+        solution,
+        actions=lambda state, label: table[(state, label)],
+        state_of=state_of,
+        item_of=item_of,
+        reaches=lambda state, want: state == want,
+        goal=is_pq,
+        bind=lambda action, donors: action.bound(donors[0]),
+        matches=lambda want, donor: state_of(donor) == want,
+    )
+    report = simulate(DATA, policy, STATES["E"], is_pq, runs=RUNS, seed=13)
+
+    assert report.successes == RUNS and report.cost.agrees_with(32.0, sigmas=5.0), report.cost
+    assert report.mean_nested_runs == pytest.approx(12.0, abs=0.4)  # per target attempt one Q run holding two P runs
