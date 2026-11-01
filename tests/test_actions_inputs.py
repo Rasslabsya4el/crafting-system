@@ -291,8 +291,11 @@ def test_a_wrong_declaration_is_caught(items):
 
 
 def test_input_free_actions_are_unchanged_bit_for_bit():
-    """No action of the catalog has an input or an axis, one reading is all there is, and the call with a reading is the call without."""
-    for _, action, name in contract_pairs():
+    """No action of the catalog but the Awakener's Orb (#213, the first real two-input action) has an input or an axis, one reading
+    is all there is, and the call with a reading is the call without."""
+    for kind, action, name in contract_pairs():
+        if kind == "awakeners-orb":
+            continue
         item = fixture_items()[name]
         assert action.inputs(CONTRACT_DATA, item) == () and action.rule_axes(CONTRACT_DATA) == ()
         assert model_readings(CONTRACT_DATA, [action]) == (Reading(),)
