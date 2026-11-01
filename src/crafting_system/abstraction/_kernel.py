@@ -15,9 +15,11 @@ from crafting_system.actions import (
     ActionOutcomes,
     Fixed,
     Fractured,
+    Need,
     NotApplicableError,
     Outcomes,
     OutOfScopeError,
+    Reading,
     Rerolled,
     allowed_by_tags,
     build_pool,
@@ -38,6 +40,7 @@ from crafting_system.items import (
     Side,
     eldritch_grade,
     eldritch_side,
+    is_corrupted_implicit,
     spawn_weight,
     tier_table,
 )
@@ -109,6 +112,7 @@ class _Prepared:
     origins: Origins
     signatures: tuple[Hashable, ...] | None = None
     splits: "tuple[_Split, ...] | None" = None  # the split of every part, read once for `kernel` and `kernel_key`
+    item: Item | None = None  # the item the state stands for, as the action was given it
 
 
 @dataclass(frozen=True)
@@ -152,9 +156,20 @@ class Abstraction:
     as a slot (a lock makes a reroll keep the locked side), told apart by family type and by the tags a
     metamod looks at, and `compress` refuses an item that holds one when it is False.
 
+    `reading` (ticket #210) is the value of each rule axis the enabled actions read (`actions.model_readings`): the
+    abstraction is then the ordinary model of that reading, and every kernel is taken at it. None is the plan's reading,
+    and an input-free action has no axis, so for it nothing changes. With `allow_inputs` False (the planner, until
+    the solver is given the donors, ticket #212) an action that consumes other items (`Action.inputs`) on the item of
+    a state is refused with `OutOfScopeError`, so that it is never priced as if its inputs were free.
+
     The tiers of the mods come from the pool of the item's influences (`tiers_of`), so an influence mod has
     its own tier. The kernel of a random action is cached by pool signature: two states whose pools have
     the same multiset of family types share one label distribution.
+
+    `enchantment` is the mod id of the enchantment of the start item, or None. No action adds or removes one, so it is a constant of
+    the problem and not part of the state; the items the kernel rebuilds from a state hold it, so that an action sees what the
+    concrete item shows (the enchantment that lets an item hold two crafted mods, ADR-0053), and `compress` refuses an item whose
+    enchantment is another.
     """
 
     def __init__(
@@ -166,11 +181,19 @@ class Abstraction:
         actions: Iterable = (),
         *,
         metamods: bool = False,
+        enchantment: str | None = None,
+        reading: Reading | None = None,
+        allow_inputs: bool = True,
     ):
         self.data = data
+        self._reading = reading
+        self._allow_inputs = allow_inputs
         self.goal = goal
         self.base_id = base_id
         self.item_level = item_level
+        self.enchantment = enchantment
+        if enchantment is not None:  # a mod id that does not fit the base is the caller's error, raised here and not at the first kernel
+            Item.build(data, base_id=base_id, item_level=item_level, rarity=Rarity.RARE, enchantment=enchantment)
         actions = tuple(actions)
         self._metamods = metamods or any(self._adds_metamod(action) for action in actions)
         self._roll_leaves = tuple(leaf for leaf in goal.leaves if leaf.has_roll_limit)  # a roll limit: a drawn mod rolls its values
@@ -208,6 +231,21 @@ class Abstraction:
         self._unrolled: set[Hashable] = set()  # signatures of fracturing pools that hold no rollable mod
         self._kernels = 0
         self._hits = 0
+
+    @property
+    def reading(self) -> Reading | None:
+        """The reading of the rule axes this abstraction's kernels are taken at (None: the plan's; each reading is one ordinary model, ADR-0033)."""
+        return self._reading
+
+    def inputs(self, state: CompressedState, action: Action) -> tuple[Need, ...]:
+        """The `Need`s of `action` used on the item `state` stands for (`Action.inputs`); empty for an input-free action.
+
+        The kernel of an action with inputs is the result of using it with them (the action finds its donor itself);
+        what the donor is worth is the solver's, and which wanted states the planner builds for it is ticket #211.
+        Raises what `kernel` raises when the action refuses the state's item.
+        """
+        self._check_enabled(action)
+        return action.inputs(self.data, self._prepare(state, action).item)
 
     @property
     def keeps_junk(self) -> bool:
@@ -315,6 +353,11 @@ class Abstraction:
                 f"item on {item.base_id} at level {item.item_level} does not fit an abstraction "
                 f"of {self.base_id} at level {self.item_level}"
             )
+        if item.enchantment != self.enchantment:
+            raise ValueError(
+                f"item with enchantment {item.enchantment!r} does not fit an abstraction built with enchantment {self.enchantment!r}: "
+                "the enchantment is a constant of the problem, pass it as `enchantment`"
+            )
         if not self._metamods:
             held = item.metamods(self.data) & BLOCKING
             if held:
@@ -363,7 +406,21 @@ class Abstraction:
         )
 
     def is_goal(self, state: CompressedState) -> bool:
-        """Whether `state` meets the goal: the status of the leaves, and for each Eldritch implicit wanted one side that passes it."""
+        """Whether `state` meets the goal: the requirements (`meets_requirements`), and the corruption the target says.
+
+        As for `Target.is_met_by` (ADR-0036): a corrupted state is a goal only for a goal that asks for a corrupted implicit or
+        allows a corrupted item, and a state that is not corrupted is never a goal of one that asks (the goal is a corrupted item).
+        The corrupted implicit an action adds is not kept in the state: the action that corrupts decides it, outcome by outcome.
+        """
+        if state.flags.corrupted:
+            if not self.goal.takes_corrupted:
+                return False
+        elif self.goal.asks_corrupted:
+            return False
+        return self.meets_requirements(state)
+
+    def meets_requirements(self, state: CompressedState) -> bool:
+        """Whether `state` meets every requirement but the corruption: the status of the leaves, and for each Eldritch implicit wanted one side that passes it."""
         if not self.goal.is_met(state.status):
             return False
         wanted = len(self.goal.implicits)
@@ -553,7 +610,10 @@ class Abstraction:
         """
         sides = {side: self._no_implicit for side in EldritchSide}
         for entry in implicits:
-            side = eldritch_side(self.data.mods[entry.mod_id])
+            mod = self.data.mods[entry.mod_id]
+            if is_corrupted_implicit(mod):
+                continue  # a corrupted item is final and the state keeps no corrupted implicit: the action that corrupts decides it (ADR-0036)
+            side = eldritch_side(mod)
             if side is None:
                 raise OutOfScopeError(
                     f"the item holds the base implicit {entry.mod_id}: the state holds the two Eldritch sides only"
@@ -818,6 +878,7 @@ class Abstraction:
             implicits=self._implicits_of(state),
             quality=state.quality,
             veil_offer=() if erasing else tuple(entry.mod_id for entry in state.offer),  # an action that erases the junk erases the placeholder
+            enchantment=self.enchantment,
         )
         return item, origins
 
@@ -831,6 +892,16 @@ class Abstraction:
         return tuple(implicits)
 
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
+        """`_prepare`, refusing an action that consumes other items when `allow_inputs` is False (every kernel goes through here)."""
+        prepared = self._prepare(state, action)
+        if not self._allow_inputs and action.inputs(self.data, prepared.item):
+            raise OutOfScopeError(
+                "the action consumes other items, and the planner does not price them yet (ticket #212): "
+                "its kernel would count them as free"
+            )
+        return prepared
+
+    def _prepare(self, state: CompressedState, action: Action) -> _Prepared:
         """The outcomes of `action` on the item `state` stands for (cached), and where that item's mods came from.
 
         An action that reads no junk erases it, so the item holds only the crafted slots; with `metamods`
@@ -852,17 +923,18 @@ class Abstraction:
                     rarity=state.flags.rarity,
                     influences=state.flags.influences,
                     corrupted=state.flags.corrupted,
+                    enchantment=self.enchantment,
                 )
-                action.outcomes(self.data, bare)
+                action.outcomes_under(self.data, bare, self._reading)
                 raise
             try:
-                outcomes = action.outcomes(self.data, item)  # a refusal of the action comes first
+                outcomes = action.outcomes_under(self.data, item, self._reading)  # a refusal of the action comes first
             except NotApplicableError:
                 self._refusal_depends_on_the_family(state, erasing, action, origins)
                 raise
             self._check_type_blind(state, outcomes)
             self._check_fracture_without_partners(state, outcomes)
-            prepared = _Prepared(outcomes, origins)
+            prepared = _Prepared(outcomes, origins, item=item)
             self._prepared_by[key] = prepared
         return prepared
 
@@ -893,7 +965,7 @@ class Abstraction:
             except (ItemError, ValueError):
                 return  # no other family of the type is left to try
             try:
-                action.outcomes(self.data, other)
+                action.outcomes_under(self.data, other, self._reading)
             except NotApplicableError:
                 continue
             raise OutOfScopeError(

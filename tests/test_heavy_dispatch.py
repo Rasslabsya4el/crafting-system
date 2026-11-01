@@ -131,7 +131,15 @@ def test_recorded_busy_snapshot_counts_ci_and_heavy_jobs_and_gives_the_floor():
 
 def test_a_ci_run_whose_jobs_are_not_created_yet_counts_as_all_16():
     fresh = ci_run(1)
-    assert counts(FakeApi([fresh]))[0] == heavy.CI_JOBS_PER_RUN
+    assert counts(FakeApi([fresh]))[0] == heavy.CI_JOBS_PER_RUN == 16
+    fresh["event"] = "workflow_dispatch"  # the integration run: Ubuntu and Windows
+    assert counts(FakeApi([fresh]))[0] == 16
+
+
+def test_a_pull_request_ci_run_whose_jobs_are_not_created_yet_counts_as_the_8_ubuntu_jobs():
+    fresh = ci_run(1)
+    fresh["event"] = "pull_request"  # ticket #321: a PR push runs Ubuntu only
+    assert counts(FakeApi([fresh]))[0] == heavy.CI_JOBS_PER_PR_RUN == 8
 
 
 def test_a_heavy_run_before_its_matrix_exists_counts_as_the_runners_it_asked_for():

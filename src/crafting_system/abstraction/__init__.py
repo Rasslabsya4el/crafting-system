@@ -1,6 +1,6 @@
 """Design D, compression, family types, pool signatures, the cached kernel (ADR-0009). May import only: data, rules, items, actions.
 
-An `Abstraction(data, goal, base_id, item_level, actions, *, metamods=False)` turns a concrete `Item` into a
+An `Abstraction(data, goal, base_id, item_level, actions, *, metamods=False, enchantment=None)` turns a concrete `Item` into a
 `CompressedState` and gives the exact kernel of an action on it. An action is anything that meets the
 contract of `actions` (`Action`: a Chaos Orb, a Harvest reforge, an essence, a resonator, a bench craft,
 a toy defined in a test): the kernel is built from its `outcomes` alone, and what a state keeps is read
@@ -23,7 +23,9 @@ is imported or tested for here.
   `OfferedMod(canonical id, contribution)`. `Abstraction.tracks_implicits`, `tracks_quality` and `tracks_offer` say
   which are kept; they follow the `Reads` and `Adds` declarations of the enabled actions (`implicits`, `quality`,
   `offer`) and, for the implicits, whether the goal asks for one. `is_goal` also needs, for each implicit wanted,
-  a side that passes it.
+  a side that passes it. A corrupted state is a goal only when `Goal.takes_corrupted` (the target asks for a corrupted implicit or
+  allows a corrupted item, ADR-0036) and a state that is not corrupted is no goal of a target that asks; `meets_requirements` is the
+  check without the corruption. The corrupted implicit an action adds is not kept in the state, the action decides it.
   `CompressedState.crafted` says a slot is crafted; `count(side)` counts the slots of a side.
 * `Slot(side, kind, contribution, crafted)`: a mod that is not fractured, by its side, its kind and
   what it gives each leaf. The kind is "" for a family that every enabled action treats alike (a
@@ -56,6 +58,9 @@ is imported or tested for here.
   solve (`first_layers`). An action with no closed form (an addition, Annulment) is walked with its real kernel on
   every state (`Estimate.walked`): `needs_walk(abstraction, actions)` says so beforehand and `ADDING_LIMIT` is the
   smaller state limit for such a walk. `EstimateRefused` is raised when a walked kernel cannot be computed.
+* `Abstraction(..., reading=...)` (ticket #210): the ordinary model of one `Reading` of the rule axes the enabled actions read
+  (`actions.model_readings`); every kernel is taken at it. `Abstraction.inputs(state, action)` gives the `Need`s of an action on
+  the item a state stands for, and `allow_inputs=False` (the planner's) refuses an action that has some (`OutOfScopeError`).
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 
@@ -141,6 +146,10 @@ the family type, `"~3"`, has none, but the type is told from another by the tags
 then erases the junk: the item given to a reroll or a Scouring holds every slot, and what the action keeps (the fractured mods and the mods of a locked side) is read back, the rest is
 dropped. `compress` of an item that holds a lock or an Attack/Caster metamod raises `OutOfScopeError` when
 `metamods` is False. The multimod ("Can have up to 3 Crafted Modifiers") is only a bench limit.
+The start item's enchantment (`enchantment`, a mod id) is a constant of the problem and is not in the state (ADR-0050, ADR-0053): no
+action adds or removes one. The items the kernel rebuilds hold it, so the limit of crafted mods an action reads from the item (one,
+two with the enchantment of the extra crafted slot, three with the multimod, three with both) is the one the pilot count uses
+(`crafted_limit_of`); `compress` refuses an item whose enchantment is another.
 An Orb of Annulment reads the count of the junk and, through the sides, tags and locks, which mods it may remove:
 its parts are fixed results and the removed mod's slot just disappears. A Fracturing Orb is a fixed result too:
 the slot of the fractured mod becomes a fractured mod. When an enabled action declares `Reads.fractures`, a

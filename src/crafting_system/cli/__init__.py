@@ -42,7 +42,7 @@ from ._offers import (
     offers_for,
     price_offers,
 )
-from ._plan import Plan, PlanError, StartPrice, make_plan
+from ._plan import STRANDS_OFF, Plan, PlanError, StartPrice, StrandSetting, make_plan, strand_setting
 from ._report import Report, build_report, policy_document, render_text
 from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
 from ._shares import WeightShare, start_shares, weight_share
@@ -50,6 +50,7 @@ from ._verify import Verification, verify
 
 __all__ = [
     "RESTART",
+    "STRANDS_OFF",
     "BuyStartItem",
     "Divergence",
     "DroppedOffer",
@@ -66,6 +67,7 @@ __all__ = [
     "RouteResult",
     "Rule",
     "StartPrice",
+    "StrandSetting",
     "Verification",
     "WeightShare",
     "When",
@@ -81,6 +83,7 @@ __all__ = [
     "price_offers",
     "render_text",
     "start_shares",
+    "strand_setting",
     "verify",
     "weight_share",
 ]

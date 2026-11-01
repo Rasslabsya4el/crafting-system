@@ -180,3 +180,53 @@ def test_a_rare_start_item_is_offered_none_of_the_orbs_of_magic_items_and_a_norm
 def test_a_kind_that_exists_but_the_planner_cannot_use_yet_is_refused_as_such():
     with pytest.raises(ValueError, match=r"scouring-orb cannot be used by the planner yet; the kinds the planner can use are"):
         offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["scouring-orb"])
+
+
+# --- kinds offered only when named, and single actions named by label (ticket #70) ---------------------------------
+
+DEFAULT_OFF = {"Orb of Annulment", "Fracturing Orb", "Exalted Orb"}
+
+
+def test_exalted_annulment_and_fracturing_are_offered_only_to_a_target_that_names_them():
+    goal = Goal((Wanted(frozenset({LIFE})),))
+    rare = item(roll(LIFE), base_id=BELT)
+
+    assert not DEFAULT_OFF & {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, rare).offers}
+    named = offers_for(PRICED_DATA, goal, BELT, rare, ["exalted-orb", "annulment-orb", "fracturing-orb"])
+    assert {offer.label for offer in named.offers} == DEFAULT_OFF
+
+
+def test_a_normal_start_item_is_offered_the_orbs_that_need_mods_when_the_target_names_them():
+    goal = Goal((Wanted(frozenset({LIFE})),))
+    normal = item(base_id=BELT, rarity=Rarity.NORMAL)
+
+    named = offers_for(PRICED_DATA, goal, BELT, normal, ["exalted-orb", "annulment-orb", "fracturing-orb"])
+
+    assert {offer.label for offer in named.offers} == DEFAULT_OFF
+
+
+def test_a_name_may_be_the_label_of_one_action_and_only_that_action_of_its_kind_is_offered():
+    goal = Goal((Wanted(frozenset({LIFE})),))
+    rare = item(roll(LIFE), base_id=BELT)
+
+    chosen = offers_for(PRICED_DATA, goal, BELT, rare, ["Exalted Orb", "chaos-orb"])
+
+    assert {offer.label for offer in chosen.offers} == {"Exalted Orb", "Chaos Orb"}
+
+
+def test_a_craft_named_by_label_is_offered_though_it_counts_toward_no_requirement():
+    goal = Goal((Wanted(frozenset({DAMAGE_1})),))
+    start = item(base_id=BELT)
+    other = next(craft for craft in bench_crafts(DATA) if craft.mod_id == HYBRID)
+    label = other.label(DATA)
+
+    left_out = offers_for(PRICED_DATA, goal, BELT, start, ["bench-craft"])
+    chosen = offers_for(PRICED_DATA, goal, BELT, start, ["bench-craft", label])
+
+    assert HYBRID not in crafts(left_out) and crafts(left_out) == {DAMAGE_1}
+    assert crafts(chosen) == {DAMAGE_1, HYBRID}
+
+
+def test_a_name_that_is_neither_a_kind_nor_the_label_of_an_action_is_refused():
+    with pytest.raises(ValueError, match="unknown action kind.*Essence of Nothing"):
+        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["Essence of Nothing"])

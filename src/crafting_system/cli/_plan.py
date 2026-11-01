@@ -19,6 +19,7 @@ from fractions import Fraction
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
 from crafting_system.actions import BLOCKING
 from crafting_system.data import GameData
+from crafting_system.items import Item
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
 from crafting_system.risk import RiskReport, evaluate
@@ -32,12 +33,39 @@ from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, Priced
 from ._prune import solver_actions
 
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
+PRUNE_CORRUPTING = True  # corrupting offers of a target that asks are left out of the states that cannot reach its goal (exact, ADR-0036; a test turns it off)
 PRUNE_BOUND = True  # twins and offers proved not needed are left out of the solve (exact; a test turns it off for the reference)
 MIN_OFFERS_TO_PRUNE = 40  # fewer priced offers than this are solved whole
 
 
 class PlanError(ValueError):
     """The target cannot be planned: a price is missing or no policy reaches the goal."""
+
+
+@dataclass(frozen=True)
+class StrandSetting:
+    """Whether a run considers Memory Strands, and why (ADR-0040).
+
+    Strands are off unless the start item has some or the query turns them on (the setting `memory_strands` of
+    `crafting.toml`, or `--strands`); `why` is the reason in plain words and goes into the text report.
+    """
+
+    on: bool
+    why: str
+
+
+STRANDS_OFF = StrandSetting(
+    False, "the setting memory_strands is off and the start item has none; `--strands`, or memory_strands = true under [planner] in crafting.toml, turns them on"
+)
+
+
+def strand_setting(start_item: Item, *, asked: bool = False) -> StrandSetting:
+    """The strand setting of a run: on when the start item has strands (it turns the setting on by itself) or the query `asked`."""
+    if start_item.memory_strands >= 1:
+        return StrandSetting(True, f"the start item has {start_item.memory_strands} Memory Strands")
+    if asked:
+        return StrandSetting(True, "the setting memory_strands is on (`--strands` or crafting.toml)")
+    return STRANDS_OFF
 
 
 @dataclass(frozen=True)
@@ -69,6 +97,7 @@ class Plan:
     approximation: Approximation | None = None  # set when the answer is approximate: `start`, `solution` and `policy` are then of blocks
     note: str = ""  # a plain-English remark on how the query was decided (empty when it simply fit)
     pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
+    strands: StrandSetting = STRANDS_OFF  # whether Memory Strands were considered (ADR-0040); the report says so when not
 
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
@@ -106,7 +135,7 @@ class _Model:
         return self.abstraction.is_goal(state)
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
-        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=self.cache)
+        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING, cache=self.cache)
 
 
 def offer_action(
@@ -184,6 +213,8 @@ def make_plan(
     offers: Iterable[Offer] | None = None,
     budget: float | None = None,
     rates: Rates | None = None,
+    strands: bool = False,
+    solve_it: bool = True,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -199,8 +230,19 @@ def make_plan(
     `budget` (seconds) turns on the decision of ADR-0023: when the forecast of the exact run is longer, the
     answer is approximate within the tolerance if some coarse level reaches it, and `PlanError` says so
     when none exists and the exact run is not offered. `rates` injects the seconds per kernel outcome and per
-    solved edge instead of measuring them. None (the default) always solves exactly.
+    solved edge instead of measuring them. None (the default) always solves exactly. With `solve_it` False nothing is
+    solved: the plan holds the offers, the abstraction and the start, an empty policy and an infinite value, so that a
+    given route can be read and played on concrete items (`_route_sim`) when the graph is too large to solve (R04, R14).
+    `strands` is the setting `memory_strands` of the query (ADR-0040): with it off and no strands on the start item the
+    plan does not consider strands, as before; with either on, `PlanError` says the planner cannot plan with them yet
+    (tickets of batch B5).
     """
+    setting = strand_setting(target.start_item, asked=strands)
+    if setting.on:
+        raise PlanError(
+            f"Memory Strands are on ({setting.why}), which the planner cannot plan yet"
+            " (batch B5, tickets #275 onward); the cut and the spend of strands are not built, so an answer would silently ignore them"
+        )
     price_of_start = resolve_start_price(target, prices, start_price)
     if target.implicits or target.quality is not None:
         raise PlanError(
@@ -234,10 +276,28 @@ def make_plan(
 
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
-    abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod)
+    axes = sorted({axis.name for p in priced for axis in p.offer.action.rule_axes(data)})
+    if axes:
+        raise PlanError(
+            f"an offered action reads the rule axis {', '.join(axes)}, and the planner does not solve a reading "
+            "of it with the interval yet (ticket #220)"
+        )
+    abstraction = Abstraction(
+        data,
+        goal,
+        target.base_id,
+        target.item_level,
+        enabled,
+        metamods=holds_metamod,
+        enchantment=target.start_item.enchantment,
+        allow_inputs=False,
+    )
     start = abstraction.compress(target.start_item)
 
     note = ""
+    if not solve_it:
+        unsolved = Solution({start: float("inf")}, {}, float("inf"))
+        return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out, unsolved, None, 0.0, 0.0)
     if budget is not None:
         forecast = merged = priced
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
