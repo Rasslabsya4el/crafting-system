@@ -172,6 +172,24 @@ def test_non_string_or_empty_value_is_an_error_naming_file_and_key(tmp_path, val
         load_config(env={}, project_root=tmp_path)
 
 
+def test_recombinator_junk_craft_is_off_by_default(tmp_path):
+    assert load_config(env={}, project_root=tmp_path).recombinator_junk_craft is False
+
+
+def test_recombinator_junk_craft_true_is_read_from_the_planner_table(tmp_path):
+    write_toml(tmp_path / "crafting.toml", "[planner]\nrecombinator_junk_craft = true\n")
+
+    assert load_config(env={}, project_root=tmp_path).recombinator_junk_craft is True
+
+
+@pytest.mark.parametrize("value", ["1", '"yes"', '"true"'])
+def test_non_bool_recombinator_junk_craft_is_an_error_naming_file_and_key(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f"[planner]\nrecombinator_junk_craft = {value}\n")
+
+    with pytest.raises(ValueError, match=r"crafting\.toml.*recombinator_junk_craft"):
+        load_config(env={}, project_root=tmp_path)
+
+
 def test_load_config_creates_no_directories(tmp_path):
     write_toml(tmp_path / "crafting.toml", '[paths]\ndata = "d"\n')
     before = sorted(tmp_path.rglob("*"))

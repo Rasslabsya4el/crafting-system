@@ -16,6 +16,7 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any
 
+from .default_prices import default_prices
 from .fallbacks import MIN_COUNT, Context, Gap, Stage, run_stages
 from .http_json import GetJson, SourceError
 from .ninja_history import ninja_history_stage
@@ -56,6 +57,8 @@ def fetch_price_file(
     `old_price_file` stay (tagged with its category by the fetch that wrote it), and the rest finishes.
     `wanted` names that the overviews do not price (or only on a thin line) are walked down `stages`, with
     the 7 days ending on `now`'s UTC date as the window; those still unpriced come back in `missing`.
+    Every file also carries the default prices of Thaumaturgic Dust and Gold (`default_prices`, ADR-0035)
+    unless the overviews priced those names.
 
     A wanted name that `overrides` (the names of the hand prices) or the trade-api prices of
     `old_price_file` for this league already cover is left out of all that: no request is spent on it and
@@ -118,6 +121,8 @@ def fetch_price_file(
     prices[CHAOS_ORB] = PriceEntry(1.0, SOURCE)
     chaos_per_divine = _chaos_per_divine(prices, divine_rate)
     prices.setdefault(DIVINE_ORB, PriceEntry(chaos_per_divine, SOURCE))
+    for name, entry in default_prices().items():
+        prices.setdefault(name, entry)
     thin = sorted(name for name in (*thin_exchange, *thin_stash) if name not in prices)
 
     gaps = [_gap(name, thin_exchange, thin_stash) for name in wanted_names if name not in prices]

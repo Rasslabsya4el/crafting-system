@@ -11,6 +11,8 @@ project root. Empty environment values count as unset. Nothing here creates a di
 The setting `memory_strands` (`[planner]` table of the config file, `true` or `false`, default `false`) turns the Memory Strands
 of the planner on: the Orb of Remembrance, the Foulborn orbs, the Orb of Unravelling and the tier cut of an item with strands.
 A start item with strands turns it on by itself and the command line has `--strands`; neither is read here.
+The setting recombinator_junk_craft (`[planner]` table, default false) offers the recombinator
+variant that crafts a cheap mod on each input first (ADR-0035).
 """
 
 import os
@@ -29,7 +31,7 @@ _PATH_SETTINGS = {
     "output": ("CRAFTING_OUTPUT_DIR", "local/output"),
 }
 
-_PLANNER_SETTINGS = ("memory_strands",)
+_PLANNER_SETTINGS = ("memory_strands", "recombinator_junk_craft")
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,7 @@ class Config:
     cache_dir: Path
     output_dir: Path
     memory_strands: bool = False
+    recombinator_junk_craft: bool = False
 
 
 def find_project_root(start: Path | None = None, *, search_up_to: Path | None = None) -> Path:
@@ -79,6 +82,7 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
         cache_dir=resolved["cache"],
         output_dir=resolved["output"],
         memory_strands=planner.get("memory_strands", False),
+        recombinator_junk_craft=planner.get("recombinator_junk_craft", False),
     )
 
 
