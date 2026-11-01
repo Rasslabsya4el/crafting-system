@@ -11,7 +11,7 @@ Every check is a **debug loop**: our system answers first, the emulator second, 
 
 ## 1. Have the copy
 
-If `.claude/scratch/coe/site/manifest.json` is missing, run from the repo root (main checkout or worktree):
+For a quick local check: if `.claude/scratch/coe/site/manifest.json` is missing, run from the repo root (main checkout or worktree):
 
 ```bash
 python -I tools/coe_emulator/emulator.py fetch
@@ -21,14 +21,19 @@ It needs only a Python with Playwright 1.58 and its Chromium (both on the owner'
 
 ## 2. Ask our system, then the emulator
 
-Write the check in **our** terms: our base id, our mod ids (and which are fractured), the labels of our catalog's actions. The harness builds our `Item`, lists our catalog with each action's verdict, translates the item and each action to the emulator's buttons and runs them on the same item:
+Write the check in **our** terms: our base id, our mod ids (and which are fractured), the labels of our catalog's actions. The harness builds our `Item`, lists our catalog with each action's verdict, translates the item and each action to the emulator's buttons and runs them on the same item. The check format is in `compare.py`'s docstring; `tools/coe_emulator/checks/` holds worked examples (the #197 shield and its neighbours, the first sweep, the Awakener's Orb and the #201 jewels in CoE terms). A label our catalog does not have comes back with the nearest labels.
+
+**Where it runs.** The owner's PC stays light: locally only a quick targeted check, one process under a minute (one or two actions, a few hundred repeats). Anything with thousands of repeats or several items, a sweep included, runs on GitHub through `run.yml`, which fetches the site in the job (nothing is committed): push the check file on your branch, then
 
 ```bash
-CRAFTING_CACHE_DIR="<main checkout>/local/cache" UV_CACHE_DIR=... UV_PYTHON_INSTALL_DIR=... \
-  ../../scratch/uv-venv/Scripts/uv.exe run --with playwright==1.58.0 python tools/coe_emulator/compare.py check.json --out report.json
+gh workflow run run.yml --ref <branch> -f os=windows-latest -f timeout_minutes=30 -f command='P="uv run --no-sync --with playwright==1.58.0"; $P python -m playwright install chromium > $OUT_DIR/install.log 2>&1 && $P python tools/coe_emulator/emulator.py fetch > $OUT_DIR/fetch.json && $P python tools/coe_emulator/compare.py <check.json> --out $OUT_DIR/report.json'
 ```
 
-The check format is in `compare.py`'s docstring; `tools/coe_emulator/checks/` holds worked examples (the #197 shield and its neighbours, the first sweep, the Awakener's Orb and the #201 jewels in CoE terms). Run it in the background: the first sweep (38 actions on five items, 2000 results each) takes about 8 minutes. A label our catalog does not have comes back with the nearest labels.
+Windows, because `ubuntu-latest` is Ubuntu 26.04 and Playwright 1.58 cannot install Chromium there (run 41306487186); the #197 shield ran this way in about 10 minutes (run 41307098189). Watch it with `gh run watch <id> --exit-status` in the background and read `report.json` from the artifact (`gh run download <id>`). `fetch.json` has the hashes of the copy the job used. For a long list, `-f runners=N` (up to 16) runs the command N times with `RUNNER_INDEX` 1..N: split the checks into `checks-1.json` ... `checks-N.json` and name `checks-$RUNNER_INDEX.json` in the command. A quick local check:
+
+```bash
+CRAFTING_CACHE_DIR="<main checkout>/local/cache" UV_CACHE_DIR=... UV_PYTHON_INSTALL_DIR=... ../../scratch/uv-venv/Scripts/uv.exe run --with playwright==1.58.0 python tools/coe_emulator/compare.py check.json --out report.json
+```
 
 Done when every asked action has a row with both verdicts, and every applied draw has its distribution or its per-mod marginals.
 
