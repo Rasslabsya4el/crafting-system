@@ -152,12 +152,12 @@ def test_a_candidate_the_solve_needs_is_offered_in_a_later_round_and_one_that_ca
 def test_the_lower_bound_counts_the_distance_of_a_successor_that_was_not_solved():
     """The donor's action leads to a state the first solve never built; its determinized distance (not infinity, not more) is what makes the graft worth offering."""
     table = {
-        "r": [Action("chaos", 100.0, (("g", 1), ("r", 3))), Action("graft", 1.0, (("mid", 1),), (Need("buy", "donor"),))],
+        "r": [Action("chaos", 1.4, (("g", 1), ("r", 3))), Action("graft", 1.0, (("mid", 1),), (Need("buy", "donor"),))],
         "buy": [Action("buy", 3.0, (("donor", 1),))],
         "mid": [Action("fin", 1.0, (("g", 1),))],
     }
     lazy = solve_lazily(TabularModel({"g"}, table), "r")
-    assert lazy.value == pytest.approx(5.0) and len(lazy.rounds) == 2 and lazy.offered_pairs == 1  # 1 + 3 + 1, against 400 by chaos
+    assert lazy.value == pytest.approx(5.0) and len(lazy.rounds) == 2 and lazy.offered_pairs == 1  # 1 + 3 + 1, against 5.6 by chaos: the bound 5 is close to the value in hand, so a distance counted too high would prune the graft
     assert lazy.solution.policy[lazy.start].label == "graft"
 
 
