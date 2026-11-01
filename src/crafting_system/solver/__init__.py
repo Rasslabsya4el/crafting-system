@@ -9,17 +9,21 @@ from ._certify import ConvergenceError
 from ._minmax import solve_variants
 from ._model import Action, Model, Outcome, TabularModel, VariantAction
 from ._solve import Solution, solve
+from ._tail import NoPolicyError, TailCut, solve_tail_cut
 
 __all__ = [
     "Action",
     "Bounds",
     "ConvergenceError",
     "Model",
+    "NoPolicyError",
     "Outcome",
     "Solution",
     "TabularModel",
+    "TailCut",
     "VariantAction",
     "solve",
     "solve_bounds",
+    "solve_tail_cut",
     "solve_variants",
 ]

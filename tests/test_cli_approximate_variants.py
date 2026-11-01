@@ -126,7 +126,7 @@ def approximate(budget):
 
 def test_the_ladder_of_a_query_with_an_addition_is_by_weight_spread_and_starts_at_1000_then_500():
     assert [level.size for level in SPREAD_LADDER] == [1000, 500]
-    assert all(level.kind == "spread" for level in SPREAD_LADDER) and all(level.kind == "groups" for level in LADDER)
+    assert all(level.kind == "spread" for level in SPREAD_LADDER) and not any(level.kind == "spread" for level in LADDER)
     assert len({level.name for level in (*LADDER, *SPREAD_LADDER)}) == len(LADDER) + len(SPREAD_LADDER)
 
 

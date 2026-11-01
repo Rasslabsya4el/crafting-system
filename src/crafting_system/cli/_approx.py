@@ -2,7 +2,9 @@
 
 `solve_level` solves the optimistic and the pessimistic model of one `Candidate` (`solver.solve_bounds`) and
 returns an `Approximation`: the certified interval of the mean cost, its gap, the pessimistic policy (an ordinary
-policy of the exact problem, on blocks) and what level it came from. `climb` walks the ladder of a `Decision` and
+policy of the exact problem, on blocks) and what level it came from. A tail-cut level (kind "tail") runs
+`solver.solve_tail_cut` over the coarse state it sits on: its policy holds the expanded exact states, and the
+other states it reaches are blocks that follow the coarse policy. `climb` walks the ladder of a `Decision` and
 stops at the first level whose certified gap is at most `TOLERANCE`; when none is, it keeps the narrowest interval
 and says so. Nothing here reads the clock but the `perf_counter` around the solves.
 
@@ -15,12 +17,24 @@ the start item is added by whoever prints them.
 """
 
 import time
+from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 
 from crafting_system.abstraction import CompressedState, integer_weights
 from crafting_system.actions import ActionError
-from crafting_system.solver import Action, Bounds, Outcome, Solution, VariantAction, solve_bounds
+from crafting_system.solver import (
+    Action,
+    Bounds,
+    ConvergenceError,
+    NoPolicyError,
+    Outcome,
+    Solution,
+    TailCut,
+    VariantAction,
+    solve_bounds,
+    solve_tail_cut,
+)
 
 from ._decide import TOLERANCE, Candidate, Decision, exact_offer
 from ._offers import BuyStartItem, PricedOffer
@@ -43,6 +57,7 @@ class Approximation:
     tolerance: float
     coarsening: object  # the `Coarsening` that built the blocks (`_lift` lifts the policy through it for `--verify`)
     message: str = ""
+    expanded: int = 0  # the exact states a tail cut expanded (0 for a coarse level)
 
     @property
     def within_tolerance(self) -> bool:
@@ -65,11 +80,12 @@ class BlockModel:
     def __init__(
         self, coarsening, start: CompressedState, offers: Iterable[PricedOffer], bound: str, shared: dict | None = None
     ) -> None:
+        self.known: dict[CompressedState, list[Action[CompressedState]]] = {}  # the tail-cut levels solve the same blocks again
+        self.shared = {} if shared is None else shared  # block -> the actions of the side not asked for yet (a pair of models shares it)
         self.coarsening = coarsening
         self.start = start
         self.offers = tuple(offers)
         self.bound = bound
-        self.shared = {} if shared is None else shared  # block -> the actions of the side not asked for yet (a pair of models shares it)
         for priced in self.offers:
             if not isinstance(priced.offer.action, BuyStartItem):
                 coarsening.require_invariant(priced.offer.action)  # a refused action is not a model with fewer actions
@@ -79,13 +95,14 @@ class BlockModel:
 
     def actions(self, block: CompressedState) -> list[Action[CompressedState]]:
         """The actions of `block` in this model; both models of a pair are built in one pass, the other kept for its turn."""
-        if self.bound not in self.shared.get(block, ()):
-            self.shared[block] = {bound: self._build(block, bound) for bound in ("lower", "upper")}
-        sides = self.shared[block]
-        found = sides.pop(self.bound)
-        if not sides:
-            del self.shared[block]
-        return found
+        if block not in self.known:
+            if self.bound not in self.shared.get(block, ()):
+                self.shared[block] = {bound: self._build(block, bound) for bound in ("lower", "upper")}
+            sides = self.shared[block]
+            self.known[block] = sides.pop(self.bound)
+            if not sides:
+                del self.shared[block]
+        return self.known[block]
 
     def _build(self, block: CompressedState, bound: str) -> list[Action[CompressedState]]:
         found = []
@@ -111,6 +128,7 @@ def shown_policy(policy, values) -> dict:
     shown = {}
     for state, action in policy.items():
         if isinstance(action, VariantAction):
+
             def worst(outcomes):
                 total = sum(weight for _, weight in outcomes)
                 return sum(weight * values[successor] for successor, weight in outcomes) / total
@@ -120,16 +138,72 @@ def shown_policy(policy, values) -> dict:
     return shown
 
 
-def solve_level(candidate: Candidate, start: CompressedState, offers: Iterable[PricedOffer]) -> Solved:
-    """Solve the two models of the level and certify the interval of the start block."""
+class ExactModel:
+    """The exact compressed states under the offered actions (the tail cut expands them), remembering their actions."""
+
+    def __init__(self, abstraction, start: CompressedState, offers: Iterable[PricedOffer]) -> None:
+        self.abstraction = abstraction
+        self.start = start
+        self.offers = tuple(offers)
+        self.known: dict[CompressedState, list[Action[CompressedState]]] = {}
+
+    def is_goal(self, state: CompressedState) -> bool:
+        return self.abstraction.is_goal(state)
+
+    def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
+        if state not in self.known:
+            found = []
+            for priced in self.offers:
+                if isinstance(priced.offer.action, BuyStartItem):
+                    if state != self.start:
+                        found.append(Action(priced.label, priced.cost, (Outcome(self.start, 1),)))
+                    continue
+                try:
+                    weights = integer_weights(self.abstraction.kernel(state, priced.offer.action))
+                except ActionError:
+                    continue
+                found.append(Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in weights.items())))
+            self.known[state] = found
+        return self.known[state]
+
+
+class Models:
+    """What the levels of one `climb` share: the models of each coarse state and the exact model, so nothing is built twice."""
+
+    def __init__(self, start: CompressedState, offers: Iterable[PricedOffer]) -> None:
+        self.start = start
+        self.offers = tuple(offers)
+        self.blocks: dict[int, tuple[object, BlockModel, BlockModel]] = {}
+        self.exact: ExactModel | None = None
+
+    def of(self, coarsening) -> tuple[BlockModel, BlockModel]:
+        block = coarsening.coarsen(self.start)
+        if id(coarsening) not in self.blocks:
+            shared: dict = {}
+            self.blocks[id(coarsening)] = (
+                coarsening,
+                BlockModel(coarsening, block, self.offers, "lower", shared),
+                BlockModel(coarsening, block, self.offers, "upper", shared),
+            )
+        found = self.blocks[id(coarsening)]
+        return found[1], found[2]
+
+    def exact_model(self, abstraction) -> ExactModel:
+        if self.exact is None:
+            self.exact = ExactModel(abstraction, self.start, self.offers)
+        return self.exact
+
+
+def solve_level(candidate: Candidate, start: CompressedState, offers: Iterable[PricedOffer], models: Models | None = None) -> Solved:
+    """Solve the level and certify the interval of the start: two models on blocks, or the tail cut over them."""
+    models = models or Models(start, offers)
+    if candidate.level.kind == "tail":
+        return solve_tail_level(candidate, start, models)
     coarsening = candidate.coarsening
     block = coarsening.coarsen(start)
-    offers = tuple(offers)
     began = time.perf_counter()
-    shared: dict = {}
-    bounds: Bounds[CompressedState] = solve_bounds(
-        BlockModel(coarsening, block, offers, "lower", shared), BlockModel(coarsening, block, offers, "upper", shared), [block]
-    )
+    lower, upper = models.of(coarsening)
+    bounds: Bounds[CompressedState] = solve_bounds(lower, upper, [block])
     seconds = time.perf_counter() - began
     if block not in bounds.upper:
         raise ValueError("the solver returned no value for the start block")
@@ -141,16 +215,59 @@ def solve_level(candidate: Candidate, start: CompressedState, offers: Iterable[P
     return Solved(approximation, solution, block, seconds)
 
 
+def solve_tail_level(candidate: Candidate, start: CompressedState, models: Models) -> Solved:
+    """The tail cut at the level's `theta` over its coarse state; the exact start is the start of the policy it returns.
+
+    The policy has an action for each expanded exact state and for each block the cut states fall in (the
+    coarse policy), so it can be walked from the start; a cut state is shown as its block.
+    """
+    coarsening, theta = candidate.coarsening, candidate.level.theta
+    began = time.perf_counter()
+    lower, upper = models.of(coarsening)
+    found: TailCut[CompressedState, CompressedState] = solve_tail_cut(
+        models.exact_model(coarsening.abstraction), lower, upper, coarsening.coarsen, start, theta
+    )
+    seconds = time.perf_counter() - began
+    coarse = found.coarse
+    block_start = coarsening.coarsen(start)
+
+    def shown(state: CompressedState) -> CompressedState:
+        return state if state in found.expanded or coarsening.is_goal(state) else coarsening.coarsen(state)
+
+    policy = dict(coarse.policy)
+    if not found.expanded and block_start in coarse.policy:  # nothing expanded: the start item follows the coarse policy of its block
+        policy[start] = coarse.policy[block_start]
+    for state, action in found.bounds.policy.items():
+        merged: defaultdict[CompressedState, int] = defaultdict(int)
+        for outcome in action.outcomes:
+            merged[shown(outcome.state)] += outcome.weight
+        policy[state] = Action(action.label, action.cost, tuple(Outcome(s, w) for s, w in merged.items()))
+    values = {**coarse.upper, **found.bounds.upper}
+    solution = Solution(values, policy, found.bounds.pessimistic_error)
+    low, high = found.bounds.lower[start], found.bounds.upper[start]
+    approximation = Approximation(
+        low, high, found.bounds.gap_at(start), candidate.level.name, len(coarse.lower) + len(found.expanded), TOLERANCE, coarsening,
+        expanded=len(found.expanded),
+    )
+    return Solved(approximation, solution, start, seconds)
+
+
 def climb(decision: Decision, start: CompressedState, offers: Iterable[PricedOffer]) -> Solved:
     """Try the levels of `decision` in order; the first within the tolerance wins, else the narrowest interval, with a message.
 
     Raises `ValueError` when no level has a policy that reaches the goal (every upper bound is infinite).
     """
     offers = tuple(offers)
+    models = Models(start, offers)
     best: Solved | None = None
     spent = 0.0
     for candidate in decision.levels:
-        solved = solve_level(candidate, start, offers)
+        try:
+            solved = solve_level(candidate, start, offers, models)
+        except (NoPolicyError, ConvergenceError):
+            if candidate.level.kind != "tail":
+                raise
+            continue  # a tail cut that has no policy to follow or does not converge leaves the levels before it as they are
         spent += solved.seconds
         if best is None or solved.approximation.gap < best.approximation.gap:
             best = solved
@@ -165,5 +282,6 @@ def climb(decision: Decision, start: CompressedState, offers: Iterable[PricedOff
             approximation.tolerance, approximation.coarsening,
             f"No level reaches {TOLERANCE:.0%}: the narrowest certified interval has a gap of {approximation.gap:.2%} "
             f"(level: {approximation.level}). " + exact_offer(decision.transitions, decision.predicted, decision.estimate is None or decision.estimate.complete),
+            approximation.expanded,
         )  # fmt: skip
     return Solved(approximation, best.solution, best.start, spent)

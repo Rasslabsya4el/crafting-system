@@ -184,6 +184,69 @@ def test_a_gap_over_the_largest_exact_size_says_the_exact_run_is_not_offered(app
     assert "not offered" in found.message and "22,994,524 transitions" in found.message and "--exact" not in found.message
 
 
+def tail(coarse: Candidate, theta: float) -> Candidate:
+    level = Level("tail", None, f"tail cut at theta {theta:g} over {coarse.level.name}", theta)
+    return Candidate(level, None, coarse.coarsening)
+
+
+def test_the_ladder_goes_on_to_the_tail_cut_when_the_coarse_level_misses_the_tolerance(approximate, exact):
+    bad = candidate(approximate, [{COLD, MANA}])
+    start = approximate.abstraction.compress(approximate.target.start_item)
+
+    coarse = climbed(approximate, bad).approximation
+    solved = climbed(approximate, bad, tail(bad, 0.0))
+
+    found = solved.approximation
+    assert coarse.gap > 0.01 and found.level == f"tail cut at theta 0 over {bad.level.name}"
+    assert found.expanded > 0 and found.gap < coarse.gap  # the cut narrows what the coarse level left
+    assert found.lower >= coarse.lower and found.upper <= coarse.upper
+    assert found.lower <= exact.mean_remaining <= found.upper  # still certified
+    assert solved.start == start and solved.start in solved.solution.policy  # the policy starts at the exact start item
+    assert solved.solution.values[start] == found.upper
+    assert found.message.startswith("No level reaches 1%")  # this one is still above it, and says so
+
+
+def test_the_tail_cut_policy_can_be_walked_from_the_start_through_expanded_states_and_blocks(approximate):
+    bad = candidate(approximate, [{COLD, MANA}])
+    start = approximate.abstraction.compress(approximate.target.start_item)
+    solved = climbed(approximate, bad, tail(bad, 0.0))
+    policy = solved.solution.policy
+
+    seen, queue = {start}, [start]
+    while queue:
+        state = queue.pop()
+        if approximate.abstraction.is_goal(state):
+            continue
+        assert state in policy, "every state reached has an action: an expanded one, or the coarse policy of its block"
+        for outcome in policy[state].outcomes:
+            if outcome.state not in seen:
+                seen.add(outcome.state)
+                queue.append(outcome.state)
+
+    assert len(seen) > 1
+
+
+def test_a_tail_cut_that_expands_nothing_is_the_coarse_level(approximate):
+    bad = candidate(approximate, [{COLD, MANA}])
+
+    found = climbed(approximate, bad, tail(bad, float("inf"))).approximation
+
+    solved = climbed(approximate, tail(bad, float("inf")))  # alone: after the coarse level it would only tie, and the tie keeps the coarse one
+    start = approximate.abstraction.compress(approximate.target.start_item)
+
+    assert found.expanded == 0 and found.gap == climbed(approximate, bad).approximation.gap
+    assert solved.start == start and solved.start in solved.solution.policy  # the start item still has an action: its block's
+
+
+def test_a_tail_cut_over_a_coarse_level_with_no_policy_is_skipped_not_an_error(approximate):
+    wide = candidate(approximate, [{COLD, MANA}, {FIRE, "LightningResistance"}])  # the pessimistic model cannot reach the goal
+    good = candidate(approximate, [{MANA, "LightningResistance"}])
+
+    solved = climbed(approximate, tail(wide, 0.0), good)
+
+    assert solved.approximation.level == good.level.name
+
+
 def test_the_ladder_stops_at_the_first_level_within_the_tolerance(approximate):
     bad, good = candidate(approximate, [{COLD, MANA}]), candidate(approximate, [{MANA, "LightningResistance"}])
     never = Candidate(Level("groups", None, "never tried"), None, None)
@@ -249,6 +312,15 @@ def test_golden_text_of_a_gap_too_small_to_print_is_rounded_up_never_to_zero():
     assert marking_lines(found, 0.0, 300.0)[0] == "Answer: approximate (certified within 0.0001% of the exact mean)"
 
 
+def test_golden_text_of_a_tail_cut_says_how_many_exact_states_it_expanded():
+    found = dataclasses.replace(hand(100.0, 100.5, "tail cut at theta 0.01 over family groups of 4", 4400), expanded=105)
+
+    assert marking_lines(found, 0.0, 200.0)[3] == (
+        "  Level: tail cut at theta 0.01 over family groups of 4; 4,400 blocks solved, 105 of them exact states expanded by the tail cut."
+    )
+    assert marking_document(found, 0.0)["expanded"] == 105
+
+
 def test_golden_json_of_the_marking():
     found = hand(1234.5, 1239.1, "family groups of 8", 1582)
 
@@ -259,6 +331,7 @@ def test_golden_json_of_the_marking():
         "gap": 1239.1 / 1234.5 - 1,
         "level": "family groups of 8",
         "blocks": 1582,
+        "expanded": 0,
         "tolerance": 0.01,
         "within_tolerance": True,
         "message": "",

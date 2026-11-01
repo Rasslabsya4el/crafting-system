@@ -17,13 +17,15 @@ the exact run may take. The rule:
 calibration solve on the first layers of the pilot's own graph) unless the caller injects them, and builds the
 candidate levels. Tests inject the rates; no test depends on a machine (ADR-0014).
 
-The ladder is one tuple, `LADDER` (or `SPREAD_LADDER` for a query with an addition, ADR-0023 variants): a new kind
-of level (the tail cut) is a new entry with a builder in `_approx`.
+The ladder is one tuple, `LADDER` (a query with an addition has `SPREAD_LADDER`, the coarse levels by weight spread
+and no tail cut, ADR-0023 variants): the coarse levels (kind "groups") and, after them, the tail cuts (kind "tail",
+ticket #129). A tail cut needs a coarse model for its leaves, so `decide` builds each on the finest coarse level whose
+own forecast fits and gives it that level's forecast; with no coarse level that fits there is no tail cut.
 """
 
 import time
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from crafting_system.abstraction import (
@@ -54,38 +56,45 @@ CALIBRATION_EDGES = 60_000
 class Level:
     """One rung of the ladder.
 
-    `kind` "groups": a coarse state with the irrelevant families in groups of `size` (None: all in one).
-    `kind` "spread": junk kinds pooled by weight, consecutive kinds whose per-family weights differ from the
-    lightest of their pool by at most `size` (ADR-0023, variants).
+    Kind "groups": a coarse state with the irrelevant families in groups of `size` (None: all in one). Kind
+    "spread": junk kinds pooled by weight, consecutive kinds whose per-family weights differ from the lightest of
+    their pool by at most `size` (ADR-0023, variants). Kind "tail": the tail cut at `theta` (`solver.solve_tail_cut`) over the coarse state with groups of `size`, which
+    `decide` fills in with the level it sits on.
     """
 
     kind: str
     size: float | None
     name: str
+    theta: float | None = None
 
 
 LADDER: tuple[Level, ...] = (
     Level("groups", None, "family groups, all irrelevant families in one group"),
     Level("groups", 8, "family groups of 8"),
     Level("groups", 4, "family groups of 4"),
+    Level("tail", None, "tail cut at theta 1e-2", 1e-2),
+    Level("tail", None, "tail cut at theta 1e-3", 1e-3),
+    Level("tail", None, "tail cut at theta 1e-4", 1e-4),
 )
-
-
+COARSE = tuple(level for level in LADDER if level.kind == "groups")
 SPREAD_LADDER: tuple[Level, ...] = (
     Level("spread", 1000, "junk pooled by weight, spread 1000"),
     Level("spread", 500, "junk pooled by weight, spread 500"),
-)  # for a query with an addition (variants): the spreads measured in #130, in weight units of the pool
+)  # for a query with an addition (variants): the spreads measured in #130, in weight units of the pool; no tail cut follows
+
+
+def with_variants(abstraction: Abstraction, actions: Iterable[Action]) -> bool:
+    """Whether an action declares variants (an addition): its query is answered on the spread ladder."""
+    return any(action.reads(abstraction.data).variants for action in actions)
 
 
 def ladder_for(abstraction: Abstraction, actions: Iterable[Action]) -> tuple[Level, ...]:
-    """The levels of a query: by weight spread when an action declares variants (an addition), else by family groups."""
-    if any(action.reads(abstraction.data).variants for action in actions):
-        return SPREAD_LADDER
-    return LADDER
+    """The levels of a query: by weight spread when an action declares variants (an addition), else `LADDER`."""
+    return SPREAD_LADDER if with_variants(abstraction, actions) else LADDER
 
 
 def pool_level(abstraction: Abstraction, level: Level, start: CompressedState) -> Coarsening:
-    """The coarse state of one rung."""
+    """The coarse state of one coarse rung."""
     if level.kind == "spread":
         return Coarsening.pooling_by_spread(abstraction, level.size, start)
     return Coarsening.pooling_irrelevant(abstraction, level.size, start)
@@ -244,8 +253,8 @@ def decide(
     offered = [p for p in priced if not isinstance(p.offer.action, BuyStartItem)]
     actions = [p.offer.action for p in offered]
     try:
-        walk = {"limit": ADDING_LIMIT if needs_walk(abstraction, actions) else DEFAULT_LIMIT}
-        estimate = abstraction.estimate([start], actions, clock=clock, **walk)
+        limit = ADDING_LIMIT if needs_walk(abstraction, actions) else DEFAULT_LIMIT
+        estimate = abstraction.estimate([start], actions, clock=clock, limit=limit)
     except EstimateRefused:
         return choose(None, 0.0, 0.0, budget)
     rates = rates or Rates()
@@ -260,9 +269,17 @@ def decide(
     candidates = []
     if refusal is None and estimate.seconds(r_kernel, r_solve) > budget:
         tried = set()
-        for level in ladder_for(abstraction, actions):
+        spread = with_variants(abstraction, actions)
+        for level in SPREAD_LADDER if spread else COARSE:
             pooling = pool_level(abstraction, level, start)
             if pooling.groups and frozenset(pooling.groups) not in tried:  # a finer rung that cuts nothing new is the same level
                 tried.add(frozenset(pooling.groups))
                 candidates.append(Candidate(level, estimate.coarsened(pooling), pooling))
+        fitting = [found for found in candidates if found.estimate is None or found.estimate.seconds(r_kernel, r_solve) <= budget]
+        if fitting and not spread:  # the tail cut takes its leaves from the finest coarse level that fits, and its forecast
+            base = fitting[-1]
+            for level in LADDER:
+                if level.kind == "tail":
+                    named = replace(level, size=base.level.size, name=f"{level.name} over {base.level.name}")
+                    candidates.append(Candidate(named, base.estimate, base.coarsening))
     return choose(estimate, r_kernel, r_solve, budget, levels=candidates, refusal=refusal)
