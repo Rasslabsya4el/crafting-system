@@ -31,7 +31,7 @@ The fractions are exact and can be thousands of bits long: `str()` of one can hi
 
 import random
 from collections.abc import Callable, Hashable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import cached_property
 
@@ -41,6 +41,7 @@ from crafting_system.items import ExplicitMod, Item, Rarity, Side, tier_table
 from crafting_system.rules import get_rule
 
 from .contract import ActionOutcomes
+from .cut import Cut
 from .draw import (
     Outcome,
     exact_distribution,
@@ -93,7 +94,8 @@ class Outcomes:
     item keeps out of the guaranteed draw of a reforge: the pool of a reforge is not filtered, since
     the metamod filters its first added mod only (D8 of issue #28). With `rolls_lucky` (a Sanctified Fossil in the
     resonator, `fossils.sanctified_values_lucky`) `sample` rolls each value of the drawn mods and of the forced mod
-    twice and keeps the better, the one nearer the stat's `max`; the kept mods keep the values they had. Build one with `Outcomes.reroll`.
+    twice and keeps the better, the one nearer the stat's `max`; the kept mods keep the values they had, except those in `rerolled`, whose values `sample` rolls afresh and whose tiers stay
+    (the influenced mods an Awakener's Orb keeps). Build one with `Outcomes.reroll`.
     """
 
     data: GameData
@@ -104,6 +106,7 @@ class Outcomes:
     forced: str | None = None
     guaranteed_blocked: frozenset[str] = frozenset()
     rolls_lucky: bool = False  # every value of the mods this reroll puts on the item is rolled twice and the better kept (a Sanctified Fossil)
+    rerolled: frozenset[str] = frozenset()  # ids of kept mods in `retained` whose values `sample` rolls afresh (an Awakener's Orb keeps the tier and rerolls the value)
 
     @classmethod
     def reroll(
@@ -117,6 +120,7 @@ class Outcomes:
         factor: ModFactor | None = None,
         extra: Iterable[Mod] = (),
         guaranteed: Callable[[Mod], bool] | None = None,
+        cut: Cut | None = None,
     ) -> "Outcomes":
         """The outcomes of rerolling `item` (already checked to be rerollable), guaranteeing `tag` if given.
 
@@ -126,12 +130,13 @@ class Outcomes:
         pool (the fossils of a resonator; 0 drops the mod) and `extra` are mods that join the pool.
         With `guaranteed`, exactly the mods it accepts are the ones the guaranteed draw picks from,
         whatever their tags in the data (the pool then carries `tag` on those: the influence reforge).
-        Raises `NotApplicableError` when `tag` is given and the pool holds no mod with it that the
+        With a `cut` (`Action.cut_of`, ADR-0040) the pool holds only the highest tiers of each tier table, reweighed; the forced
+        mod is not drawn from a table and is not cut. Raises `NotApplicableError` when `tag` is given and the pool holds no mod with it that the
         retained item has a free family and a free slot for.
         """
         retained = retained_item(data, item, forced)
         blocked = blocked_tags(data, retained) if tag is not None else frozenset()
-        pool = build_pool(data, retained, max_level, factor, extra, tag_filter=tag is None)
+        pool = build_pool(data, retained, max_level, factor, extra, tag_filter=tag is None, cut=cut)
         if guaranteed is not None and tag is not None:
             pool = mark_pool(pool, tag, guaranteed)
         result = cls.over(data, retained, pool, tag, forced, blocked)
@@ -152,26 +157,28 @@ class Outcomes:
         forced: Mod | None,
         guaranteed_blocked: frozenset[str] = frozenset(),
         rolls_lucky: bool = False,
+        rerolled: frozenset[str] = frozenset(),
     ) -> "Outcomes":
         """The outcomes of drawing from a `pool` already built onto `retained` (see `retained_item`).
 
-        With `rolls_lucky` the values of the mods the draw puts on the item are rolled twice, the better kept.
+        With `rolls_lucky` the values of the mods the draw puts on the item are rolled twice, the better kept. The kept
+        mods named in `rerolled` get new values in `sample`.
         """
         return cls(
             data, retained, pool, total_distribution(data, retained), tag, None if forced is None else forced.id, guaranteed_blocked,
-            rolls_lucky,
+            rolls_lucky, rerolled,
         )
 
     @classmethod
-    def fill(cls, data: GameData, retained: Item, totals: Mapping[int, Fraction]) -> "Outcomes":
+    def fill(cls, data: GameData, retained: Item, totals: Mapping[int, Fraction], cut: Cut | None = None) -> "Outcomes":
         """The outcomes of drawing onto `retained`, which keeps every mod it holds, up to a total.
 
         `totals` is the probability of each total number of mods of the finished item (the mods of
         `retained` included), so one add is `{len(retained.mods) + 1: 1}` and a draw never takes a
-        mod away. The pool is built on `retained`, whose rarity decides the capacity. Use `add_one_mod`
-        and `draw_onto` of `add.py`; `add_one_mod` refuses an add that has no legal mod.
+        mod away. The pool is built on `retained`, whose rarity decides the capacity, and cut by `cut` when it is given
+        (`Action.cut_of`). Use `add_one_mod` and `draw_onto` of `add.py`; `add_one_mod` refuses an add that has no legal mod.
         """
-        return cls(data, retained, build_pool(data, retained), totals, None, None)
+        return cls(data, retained, build_pool(data, retained, cut=cut), totals, None, None)
 
     @property
     def components(self) -> tuple[tuple[Fraction, "Outcomes"], ...]:
@@ -252,6 +259,11 @@ class Outcomes:
         )
         rolled = [entry.mod for entry in drawn]
         kept = tuple(entry for entry in self.retained.mods if entry.mod_id != self.forced)
+        if self.rerolled:
+            kept = tuple(
+                replace(entry, values=roll_values(rng, self.data.mods[entry.mod_id])) if entry.mod_id in self.rerolled else entry
+                for entry in kept
+            )
         if self.forced is not None:
             rolled.insert(0, self.data.mods[self.forced])
         new = tuple(

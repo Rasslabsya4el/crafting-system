@@ -27,10 +27,19 @@ Keys (unknown keys are errors, with a close-match hint):
         min_roll: 40        # optional: as for a requirement, the base roll the item stores
         corrupted: true     # optional (ADR-0036): resolve the entry among the corrupted implicit pool of the base at `item_level`
                             # (a Vaal Orb's implicit), and only there; the target then asks for a corrupted item
-    quality:                # optional: the catalyst quality (ADR-0029)
+    quality:                # optional: the catalyst quality of a ring, amulet or belt (ADR-0029), or the plain quality of a
+                            # weapon or armour (ADR-0049), which has no `type`
       type: intrinsic       # abrasive, accelerating, fertile, imbued, intrinsic, noxious, prismatic, tempering,
                             # turbulent, unstable, sinistral or dextral (any case)
-      min_percent: 20       # whole number from 1 to 20
+      min_percent: 20       # whole number from 1 to 20 (weapon or armour: 1 to 30, but above 20 only a start item that holds it
+                            # can meet it, since Whetstones and Scraps stop at 20)
+    sockets:                # optional (ADR-0046): a weapon or armour, not jewellery; a requirement of the finish, not of the mods
+      count: 6              # optional: at least this many sockets, 1 to 6 and at most the class maximum of the base
+      links: 5              # optional: a linked group of at least this many sockets, 2 to 6, at most `count` when that is given
+      colours:              # optional: at least this many sockets of each colour, counted in one linked group of at least `links`
+        R: 1                #   sockets when `links` is given and over the whole item otherwise; the colours add up to at most
+        G: 1                #   `links` (or `count` without `links`); each is a whole number from 1 to 6
+        B: 1
     enchantment:            # optional: the enchantment wanted (ADR-0050); an item holds one, so only `any_of` exists
       any_of:               # non-empty list; the item meets the target when its enchantment is any one of them
         - "8% increased Explicit Life Modifier magnitudes"   # an enchantment by its exact English stat text (a two-line
@@ -51,9 +60,13 @@ Keys (unknown keys are errors, with a close-match hint):
         - mod: AvoidShockEldritchImplicit3
           values: [40]      # one whole number per stat; a bare number is allowed for one stat
           grade: 3          # optional: 0 for a base implicit, 1 to 6 for an Eldritch one; taken from the mod if left out
-      quality:              # optional: catalyst quality of the start item, `type` and `percent` (0 to 20)
-        type: intrinsic
+      quality:              # optional: catalyst quality of the start item, `type` and `percent` (0 to 20); on a weapon or armour
+        type: intrinsic     # the plain quality, `percent` alone (0 to 30, a random drop reaches 30)
         percent: 20
+      sockets:              # optional (ADR-0046): a weapon or armour; at least one of the three keys
+        colours: [R, G, B, W]   # one colour per socket in socket order: W, R, G or B (or white, red, green, blue)
+        count: 4            # the number of sockets; all white when `colours` is left out; must agree with `colours`
+        links: [3, 1]       # link group sizes in socket order, adding up to the sockets; default: no links
       enchantment: ArmourEnchantmentHeistLifeEffect1   # optional: the enchantment the item starts with, a mod id or its exact stat text
       veil_offer: [UnveiledPrefixLife1]   # optional: up to 3 mod ids offered for the one veiled placeholder in `mods`
       memory_strands: 57    # optional (ADR-0040): the Memory Strands count, a whole number from 0 to 100 (default 0); or a pasted item text
@@ -67,6 +80,12 @@ Keys (unknown keys are errors, with a close-match hint):
     tiers_top_at_item_level: true   # optional (ADR-0061): the tiers written are "the top tier at `item_level`", so the level is not lowered
     allow_corrupted: true   # optional (ADR-0036): a corrupted item may be the goal even with no corrupted implicit; without this key
                             # and without a `corrupted: true` implicit, a corrupted item is never a goal
+
+Sockets (ADR-0046): a start item that states no sockets gets one white, unlinked socket when the target names `sockets:` (and none
+otherwise); `Target.start_sockets_assumed` says so. A socket target is refused on jewellery and other classes with no socket
+table, with a count, link size or colour total above the class maximum of the base (naming it), with links above count or colours
+above links, on a corrupted start item and on an item with an Abyssal Socket (a start mod or implicit, or a requirement that can
+give one). `Target.is_met_by` checks the sockets, the planner does not plan them yet.
 
 Exactly one of `family` and `stat` names a requirement's mod. `stat` is compared after normalising both
 sides (a range such as `(10-24)` becomes `#`, `[X|Y]` markup becomes `Y`), so `+# to maximum Life`
@@ -112,8 +131,10 @@ from .model import (
     ImplicitRequirement,
     KOfN,
     Node,
+    PlainQualityRequirement,
     QualityRequirement,
     Requirement,
+    SocketRequirement,
     Target,
 )
 from .parse import parse_target_text
@@ -128,8 +149,10 @@ __all__ = [
     "LevelGroup",
     "NodeLevel",
     "Node",
+    "PlainQualityRequirement",
     "QualityRequirement",
     "Requirement",
+    "SocketRequirement",
     "Target",
     "TargetError",
     "floor_of",

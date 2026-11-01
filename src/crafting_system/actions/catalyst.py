@@ -150,7 +150,7 @@ def scale_value(value: int, percent: int) -> int:
 
 def scaled_values(mod: Mod, values: tuple[int, ...], quality: Quality | None) -> tuple[int, ...]:
     """The values of `mod` as the item shows them under `quality`: scaled when its catalyst boosts the mod, as they are otherwise."""
-    if quality is None or not boosts(mod, quality.type):
+    if quality is None or quality.type is None or not boosts(mod, quality.type):  # a plain quality (type None) scales nothing
         return values
     return tuple(scale_value(value, quality.percent) for value in values)
 

@@ -11,7 +11,7 @@ modelled (out of v1).
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from crafting_system.data import GameData, Mod
+from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.rules import get_rule
 
@@ -20,7 +20,8 @@ from .contract import Action, Adds, Reads
 from .errors import NotApplicableError
 from .harvest import check_reforgeable
 from .outcomes import Outcomes
-from .pool import item_tags
+from .pool import influence_spawn_test
+from .strand_use import FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY, StrandUse
 
 __all__ = [
     "HarvestReforgeInfluence",
@@ -34,24 +35,15 @@ LIFEFORCE_COST = get_rule("harvest_reforge.influence_reforge_lifeforce_cost")
 GUARANTEE = "influence"  # the name of the guarantee inside the pool, not a tag of the data
 
 
-def influence_spawn_test(data: GameData, item: Item):
-    """The test of whether a mod is an influence mod of `item`: its first spawn weight that the item has is an influence tag."""
-    tags = frozenset(item_tags(data, item))
-    influence_tags = tags - frozenset(data.base_items[item.base_id].tags)
-
-    def is_influence_mod(mod: Mod) -> bool:
-        deciding = next((entry.tag for entry in mod.spawn_weights if entry.tag in tags), None)
-        return deciding in influence_tags
-
-    return is_influence_mod
-
-
 @dataclass(frozen=True)
 class HarvestReforgeInfluence(Action):
     """One influence Harvest reforge."""
 
     def label(self, data: GameData | None = None) -> str:
         return "Harvest Reforge Influence"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY)  # ADR-0041: a Harvest craft draws from the ordinary pool and spends nothing
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(LIFEFORCE_COST.value)

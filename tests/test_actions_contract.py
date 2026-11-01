@@ -16,6 +16,7 @@ from contract_support import (
     CONTRACT_DATA,
     check_action,
     check_block_invariance,
+    check_cutting_kinds_differ_from_the_uncut_draw,
     check_every_kind_applies_on_some_fixture_item,
     contract_pairs,
     extra_fixture_items,
@@ -26,7 +27,7 @@ from contract_support import (
 from targets_support import DATA
 
 from crafting_system.abstraction import Goal, Wanted
-from crafting_system.actions import ExaltedOrb, NotApplicableError, Reads, RegalOrb, catalog, kinds
+from crafting_system.actions import ExaltedOrb, NotApplicableError, OutOfScopeError, Reads, RegalOrb, catalog, kinds
 from crafting_system.cli import PricedOffer, make_plan, parse_route
 from crafting_system.cli._offers import offer_of, offers_for
 from crafting_system.targets import load_target
@@ -59,6 +60,41 @@ def test_every_kind_applies_on_some_fixture_item():
     (`test_actions_eldritch.py`) runs `check_action` on a boots fixture and checks that each kind applies there."""
     applied = check_every_kind_applies_on_some_fixture_item()
     assert applied == {entry.name for entry in kinds() if not entry.applies_only_to} | (applied & {entry.name for entry in kinds()})
+
+
+B1_KINDS_THAT_DECLARE_STRAND_USE = {
+    "transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "alchemy-orb", "chaos-orb", "exalted-orb", "annulment-orb",
+    "scouring-orb", "divine-orb", "fracturing-orb", "essence", "corrupted-essence", "fossil-set", "harvest-reforge",
+    "harvest-reforge-influence", "harvest-reforge-likelihood", "bench-craft", "remove-crafted-mods", "harvest-quality-enchant", "tempering",
+    "tailoring",
+}  # ADR-0041's table for the actions of B1 (the later families declare their own rows: B5-11a to B5-11h)
+STRANDED = [name for name, item in ITEMS.items() if item.memory_strands]
+
+
+def test_the_fixture_holds_stranded_items_and_the_suite_asks_every_kind_about_them():
+    assert {"normal_stranded", "magic_stranded", "rare_stranded", "rare_four_stranded"} <= set(STRANDED)
+    asked = {kind for kind, _, item in PAIRS if item in STRANDED}
+    assert asked == {kind for kind, _, _ in PAIRS}
+
+
+def test_exactly_the_kinds_of_the_b1_table_declare_their_strand_use_and_every_other_is_refused_on_a_stranded_item():
+    declared, refused = set(), set()
+    for kind, action, item in PAIRS:
+        if not ITEMS[item].memory_strands:
+            continue
+        use = action.strand_use(CONTRACT_DATA)
+        (declared if use is not None else refused).add(kind)
+        if use is None:
+            with pytest.raises(OutOfScopeError, match="has not declared"):
+                action.outcomes_under(CONTRACT_DATA, ITEMS[item])
+    assert declared == B1_KINDS_THAT_DECLARE_STRAND_USE & {kind for kind, _, _ in PAIRS}
+    assert refused.isdisjoint(declared) and refused  # the veiled, Eldritch, influence, beast and Harvest add/remove kinds wait for their tickets
+
+
+def test_every_cutting_kind_draws_other_mods_than_at_0_strands_on_some_stranded_item():
+    cutting = check_cutting_kinds_differ_from_the_uncut_draw()
+    assert cutting >= {"transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "alchemy-orb", "chaos-orb", "exalted-orb", "essence"}
+    assert cutting.isdisjoint({"fossil-set", "harvest-reforge", "bench-craft", "annulment-orb", "scouring-orb", "divine-orb"})
 
 
 def test_a_kind_lists_each_action_once_per_item():

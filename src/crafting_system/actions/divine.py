@@ -40,6 +40,7 @@ from .draw import Outcome
 from .errors import NotApplicableError
 from .metamods import locked_sides, on_locked_side
 from .rolls import roll_values
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, DIVINE_KEEPS_STRANDS, StrandUse
 
 __all__ = [
     "DivineOrb",
@@ -121,6 +122,9 @@ class DivineOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Divine Orb"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(DIVINE_KEEPS_STRANDS, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: neither cuts nor spends: the count stays
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value)

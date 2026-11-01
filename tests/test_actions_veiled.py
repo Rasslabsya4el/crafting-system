@@ -413,13 +413,13 @@ def test_labels_and_costs():
     ]
     assert VeiledChaosOrb().resources() == {"Veiled Chaos Orb": 1}
     assert VeiledExaltedOrb().resources() == {"Veiled Exalted Orb": 1}
-    assert Unveil().resources() == {} and Pick(1).resources() == {}  # unveiling is free (the solver's epsilon is #145's)
+    assert Unveil().resources() == {} and Pick(1).resources() == {}  # unveiling is free (the planner counts the solver's epsilon: `price_offers`)
 
 
-def test_the_four_kinds_are_listed_for_a_rare_item_only_and_are_not_planner_kinds():
+def test_the_four_kinds_are_listed_for_a_rare_item_only_and_are_opt_in_planner_kinds():
     registered = {entry.name: entry for entry in kinds()}
     names = ("veiled-chaos-orb", "veiled-exalted-orb", "unveil", "pick")
-    assert all(name in registered and not registered[name].planner for name in names)
+    assert all(name in registered and registered[name].planner and registered[name].opt_in for name in names)  # named by a target, never offered by default
     rare = catalog(DATA, amulet(rolled(RESIST_2)), names=names)
     assert [a.label() for a in rare] == ["Veiled Chaos Orb", "Veiled Exalted Orb", "Unveil", "Pick 1", "Pick 2", "Pick 3"]
     assert catalog(DATA, amulet(rolled(LIFE_1), rarity=Rarity.MAGIC), names=names) == ()

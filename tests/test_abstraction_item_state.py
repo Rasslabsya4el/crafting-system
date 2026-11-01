@@ -47,7 +47,7 @@ from crafting_system.abstraction import (
     Status,
     Wanted,
 )
-from crafting_system.actions import ActionError, Adds, AnnulmentOrb, ChaosOrb, OutOfScopeError, Reads
+from crafting_system.actions import ActionError, Adds, AnnulmentOrb, ChaosOrb, NotApplicableError, OutOfScopeError, Reads
 from crafting_system.items import CatalystType, ImplicitMod, Quality
 
 BOOTS_BASE = boots().base_id
@@ -299,14 +299,27 @@ def test_unveil_and_pick_make_the_two_nodes_of_adr_0026():
         found.kernel(start, ToyPick(0))  # no offer yet
 
 
-def test_an_action_that_erases_the_junk_erases_the_placeholder_and_its_offer():
+def test_an_action_that_erases_the_junk_erases_the_placeholder():
     found = ab(actions=[ToyUnveil(), ToyPick(0)])
-    state = found.compress(veiled(roll(RESIST_2), offer=(AILMENTS_1, UNVEILED_LIFE)))
-    assert state.offer
+    state = found.compress(veiled(roll(RESIST_2)))
+    assert any(slot.kind == "VeiledPrefix" for slot in state.slots)
 
     kernel = found.kernel(state, ChaosOrb())
 
-    assert kernel and all(successor.offer == () for successor in kernel)
+    assert kernel and all(successor.offer == () and all(slot.kind != "VeiledPrefix" for slot in successor.slots) for successor in kernel)
+
+
+def test_an_offer_state_is_a_choice_node_only_an_action_that_reads_the_offer_is_taken_there():
+    found = ab(actions=[ToyUnveil(), ToyPick(0), ToyPick(1), AnnulmentOrb()])
+    state = found.compress(veiled(roll(RESIST_2), offer=(AILMENTS_1, UNVEILED_LIFE)))
+    assert state.offer
+
+    for refused in (ChaosOrb(), AnnulmentOrb()):  # nothing but a pick leaves an offer state (ADR-0026)
+        with pytest.raises(NotApplicableError, match="choice node"):
+            found.kernel(state, refused)
+        with pytest.raises(NotApplicableError, match="choice node"):
+            found.kernel_key(state, refused)
+    assert found.kernel(state, ToyPick(1)) and found.kernel(state, ToyPick(0))
 
 
 def test_an_action_that_reads_the_offer_must_read_the_junk():
