@@ -1,4 +1,4 @@
-"""The Orb of Scouring: removes every mod that is not fractured, and the rarity follows what is left."""
+"""The Orb of Scouring: removes every mod that is not fractured or on a locked side, and the rarity follows what is left."""
 
 import random
 from collections.abc import Callable, Hashable, Iterable, Mapping
@@ -12,14 +12,16 @@ from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Fixed, Reads
-from .draw import Outcome, refuse_metamods
+from .draw import Outcome
 from .errors import NotApplicableError
+from .metamods import kept_by_reroll
 
 ACCEPTS_MAGIC_OR_RARE = get_rule("scouring.accepts_magic_or_rare")
 REMOVES_ALL_UNPROTECTED_MODS = get_rule("scouring.removes_all_unprotected_mods")
 FRACTURED_MODS_STAY = get_rule("scouring.fractured_mods_stay")
 RARITY_FOLLOWS_MODS_LEFT = get_rule("scouring.rarity_follows_mods_left")
 KEEPS_INFLUENCE = get_rule("scouring.keeps_influence")
+KEEPS_LOCKED_SIDE = get_rule("metamods.scouring_keeps_locked_side")
 REFUSED_ON_CORRUPTED = get_rule("magic_orbs.refused_on_corrupted")
 COST = get_rule("scouring.cost")
 
@@ -89,17 +91,17 @@ class ScouringOrb(Action):
     def outcomes(self, data: GameData, item: Item) -> ScourOutcomes:
         """The outcome of using the orb on `item`.
 
-        The item keeps its fractured mods and influences and loses every other mod, an ordinary
-        crafted one included; it is normal with none left, magic with one and rare with two or more.
-        Raises `NotApplicableError` for a normal or a corrupted item and `OutOfScopeError` for one
-        with a crafted metamod.
+        The item keeps its fractured mods, the mods of a side that `Prefixes` or `Suffixes Cannot Be
+        Changed` locks, and its influences, and loses every other mod, an ordinary crafted one and the
+        lock itself included (the lock sits on the other side); it is normal with none left, magic with
+        one and rare with two or more. `Cannot roll Attack` and `Caster Modifiers` do not protect a mod.
+        Raises `NotApplicableError` for a normal or a corrupted item.
         """
         if item.rarity is Rarity.NORMAL:
             raise NotApplicableError("an Orb of Scouring works on a magic or rare item only, and this item is normal")
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Orb of Scouring")
-        refuse_metamods(data, item)
-        kept = item.fractured_mods
+        kept = kept_by_reroll(data, item)
         if not kept:
             rarity = Rarity.NORMAL
         elif len(kept) < RARITY_FOLLOWS_MODS_LEFT.value:

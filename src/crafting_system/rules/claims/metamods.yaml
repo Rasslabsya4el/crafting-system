@@ -1,0 +1,85 @@
+# Mechanic family: metamods (what the five bench metamods do to the other actions). Research ticket #11 (claims
+# BEN-xx, the per-action table of the wiki), the decisions D5 and D8 of issue #28 and ticket #68. The bench crafts
+# that add a metamod and the limit of crafted mods are in bench_craft.yaml; Remove Crafted Mods ends a metamod
+# (bench_craft.remove_crafted_mods_removes_all); the Fracturing Orb counts and may pick one (fracturing_orb.*).
+rules:
+  - id: metamods.locks_protect_existing_mods
+    statement: "`Prefixes Cannot Be Changed` and `Suffixes Cannot Be Changed` protect every existing mod of the locked side from a Chaos Orb, an Orb of Alteration, a Harvest reforge, an Orb of Scouring and an Orb of Annulment; they do not stop a new mod from filling an open slot of that side (an Exalted Orb, a Chaos Orb draw). The metamod sits on the other side, so a reroll or a Scouring removes it with that side. Removal counts as a change."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Overview
+    quote: "It will not, however, prevent adding a new modifier, such as through an Exalted Orb or Chaos Orb, as it only applies to existing modifiers."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: metamods.tag_is_implicit_tag
+    statement: "`Cannot roll Attack Modifiers` and `Cannot roll Caster Modifiers` act on the Attack and Caster mod tags, which are the `implicit_tags` of the repoe export (admitted in issue #28: 98.4% agreement with Craft of Exile's own tags). A mod with both tags is blocked by either metamod. No spawn-weight tag encodes it in the export, so the filter reads `implicit_tags`."
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/2935368
+    quote: "The “Cannot roll Attack Mods” and “Cannot roll Caster Mods” meta-crafts now simply use the Attack and Caster tags."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: metamods.adds_respect_tag_filters
+    statement: "With `Cannot roll Attack Modifiers` (`Caster`) on the item, an Orb of Augmentation, a Regal Orb and an Exalted Orb cannot add a mod with the Attack (Caster) tag: it is out of their pool, and the draw goes on over the rest."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Metamods
+    quote: 'the Exalted Orb cannot add modifiers with the "Attack" tag.'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: metamods.reroll_needs_retained_carrier
+    statement: "A reroll (Chaos Orb, Orb of Alteration) is under `Cannot roll Attack` or `Caster Modifiers` only when it leaves that metamod on the item, which happens when the metamod sits on a side locked by the other lock (both are suffixes, so `Suffixes Cannot Be Changed` is a prefix that keeps them) or is fractured. A reroll that removes the metamod draws without the filter. The wiki table says the Chaos Orb honours the two only 'when used with Suffixes Cannot Be Changed'."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "When used with Suffixes Cannot Be Changed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: metamods.harvest_filters_first_added_mod
+    statement: "On a Harvest reforge the Attack and Caster metamods filter the first added mod only; the draws that follow are not filtered (Craft of Exile's implementation). The first added mod is the guaranteed one of a tagged reforge or of the influence reforge, and the first drawn mod of the two likelihood reforges; a reforge whose first mod has no allowed candidate is refused."
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D8 Attack/Caster locks on a Harvest reforge apply to the first added mod only (Harvest O-02, bench O-03)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: metamods.annulment_respects_locks_and_tags
+    statement: "An Orb of Annulment does not remove a mod on a side locked by `Prefixes` or `Suffixes Cannot Be Changed`, nor a mod with the Caster tag under `Cannot roll Caster Modifiers` or with the Attack tag under `Cannot roll Attack Modifiers`. This holds for the Orb of Annulment only, not for other single removals."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Metamods
+    quote: 'it will not remove any modifiers with the "Caster" tag.'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: metamods.annulment_may_remove_other_side_metamod
+    statement: "A lock metamod sits on the side it does not lock, so an Orb of Annulment may remove it: with `Prefixes Cannot Be Changed` (a suffix) on the item the suffixes are candidates, the metamod among them, and the prefixes are not."
+    source_kind: coe
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/28#issuecomment-6531044052
+    quote: "D5 Annulment uniform, the other side's metamod a candidate (basic currency O-04/O-06, bench O-09)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: metamods.scouring_keeps_locked_side
+    statement: "An Orb of Scouring under `Prefixes Cannot Be Changed` removes every suffix, the metamod included, and keeps every prefix; under `Suffixes Cannot Be Changed` it removes every prefix and keeps every suffix. `Cannot roll Attack` and `Caster Modifiers` protect nothing from it."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Orb_of_Scouring
+    quote: "the Orb of Scouring will remove ALL suffix (including Prefixes Cannot Be Changed) and keep ALL prefix of the item"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: metamods.essence_refused
+    statement: "An essence and a Chaotic resonator cannot be used on an item with `Prefixes Cannot Be Changed`, `Suffixes Cannot Be Changed`, `Cannot roll Attack Modifiers` or `Cannot roll Caster Modifiers`; the multimod does not block them. The game refuses and nothing is consumed."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Essence_and_Fossil
+    quote: "When using essence or fossil on an item with metamod (other then the multi-craft mod), the game will warn you"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+
+  - id: metamods.multimod_raises_crafted_limit
+    statement: "An item holding `Can have up to 3 Crafted Modifiers` may hold three crafted mods (`value`), the multimod itself counting as one, so two more crafts fit; without it the limit is bench_craft.one_crafted_mod_by_default."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Version_3.9.0
+    quote: "items with the mod will now be limited to 2 additional crafts"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-30
+    value: 3

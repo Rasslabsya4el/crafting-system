@@ -100,12 +100,19 @@ def test_two_influences_add_both_tags():
 
 
 def test_a_class_with_no_influence_class_key_is_out_of_scope():
-    sword = dataclasses.replace(DATA.base_items[BOW], item_class="Thrusting One Hand Sword")
-    data = dataclasses.replace(DATA, base_items={**DATA.base_items, BOW: sword})
+    odd = dataclasses.replace(DATA.base_items[BOW], item_class="Fishing Rod")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, BOW: odd})
 
-    with pytest.raises(OutOfScopeError, match=r"Thrusting One Hand Sword.*influence class key"):
+    with pytest.raises(OutOfScopeError, match=r"Fishing Rod.*influence class key"):
         item_tags(data, bow(influences=HUNTER))
-    assert item_tags(data, bow()) == sword.tags  # without an influence nothing is asked of the class key
+    assert item_tags(data, bow()) == odd.tags  # without an influence nothing is asked of the class key
+
+
+def test_a_thrusting_one_hand_sword_takes_the_sword_influence_tag():
+    rapier = dataclasses.replace(DATA.base_items[BOW], item_class="Thrusting One Hand Sword")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, BOW: rapier})
+
+    assert item_tags(data, bow(influences=HUNTER)) == (*rapier.tags, "sword_basilisk")
 
 
 @pytest.mark.parametrize("level", [78, 86])

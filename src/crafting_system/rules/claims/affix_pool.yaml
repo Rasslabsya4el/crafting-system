@@ -91,7 +91,7 @@ rules:
     date_checked: 2026-10-30
 
   - id: affix_pool.influence_tags
-    statement: An influenced item has, besides the tags of its base, one tag per influence named "<class key>_<influence key>", and the spawn weights of an influence mod list such tags, so an influence mod joins the pool of an item with its tag and of no other (the weights of the ordinary mods do not change). The value maps each influence to its key (Hunter "basilisk", Redeemer "eyrie", Warlord "adjudicator") and each item class of the game data to its class key; an item class not listed has no admitted class key (Thrusting One Hand Swords, whether they use "sword", is open; jewels and flasks take no influence), so an influenced item of such a class is out of scope. The quote names Shaper; the other five keys and the 23 class keys are read from the data, where every one of the 138 influence tags in the spawn weights of the item-domain mods is one of these class keys with one of these influence keys, none missing or spare (research ticket 6, AFX-15). The tier of an influence mod counts among the mods of its type that can spawn with these tags (mod_tier.scope_is_mod_type); no source states it, it is the same rule on the influenced item.
+    statement: An influenced item has, besides the tags of its base, one tag per influence named "<class key>_<influence key>", and the spawn weights of an influence mod list such tags, so an influence mod joins the pool of an item with its tag and of no other (the weights of the ordinary mods do not change). The value maps each influence to its key (Hunter "basilisk", Redeemer "eyrie", Warlord "adjudicator") and each item class of the game data to its class key (a Thrusting One Hand Sword takes "sword" because its bases carry the base tag "sword" in the export and no influence tag with another sword-like prefix exists, so it can only draw the influence mods listed under "sword_<influence>"; ticket #68, read from the data, no source states it); an item class not listed has no admitted class key (jewels and flasks take no influence), so an influenced item of such a class is out of scope. The quote names Shaper; the other five keys and the 23 class keys are read from the data, where every one of the 138 influence tags in the spawn weights of the item-domain mods is one of these class keys with one of these influence keys, none missing or spare (research ticket 6, AFX-15). The tier of an influence mod counts among the mods of its type that can spawn with these tags (mod_tier.scope_is_mod_type); no source states it, it is the same rule on the influenced item.
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Modifier#Terminology
     quote: 'Refers to Shaper influenced items, which have the "shaper" tag corresponding to the item class.'
@@ -112,6 +112,7 @@ rules:
         One Hand Axe: axe
         One Hand Mace: mace
         One Hand Sword: sword
+        Thrusting One Hand Sword: sword
         Quiver: quiver
         Ring: ring
         Rune Dagger: rune_dagger

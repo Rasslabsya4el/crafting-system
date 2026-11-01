@@ -112,6 +112,6 @@ def test_the_pilot_counts_the_exact_graphs_of_the_adr(ring, exact_32, approximat
     small = plan.abstraction.estimate([plan.start], [offer.action for offer in offers(data, target, touching)])
     large = approximate_141[1].abstraction.estimate([approximate_141[1].abstraction.compress(target.start_item)], actions)
 
-    assert (small.states, large.states) == (76, 13_172)
+    assert (small.states, large.states) == (76, 14_350)  # 13,172 in the ADR, before ticket #68 lifted the multimod's dead end
     assert small.complete and large.complete
     assert large.transitions > 20_000_000

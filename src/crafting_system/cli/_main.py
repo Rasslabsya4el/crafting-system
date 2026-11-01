@@ -10,8 +10,9 @@ is evaluated as a fixed policy at the same prices and printed next to the policy
 
 A query whose exact run is forecast to take longer than `--budget` seconds (about a minute by default) is
 answered approximately, within a certified 1% of the exact mean, and marked so (ADR-0023, `_decide`);
-`--exact` solves it exactly however long it takes. An approximate answer gives no p90, no `--verify`, no
-`--route` and no route page yet.
+`--exact` solves it exactly however long it takes. An approximate answer gives no certified p90; its `--verify`
+runs the policy on concrete items and reports a simulated mean, p90 and CVaR labelled "simulated, not certified"
+(ADR-0023, `_lift`); it gives no `--route` and no route page yet.
 """
 
 import argparse
@@ -76,7 +77,7 @@ def main(
     parser.add_argument("--buy-spec", metavar="PATH", help="a buy spec YAML: the route view's buy step gets a trade-site search link built from it")
     parser.add_argument("--exact", action="store_true", help="solve exactly however long it takes, never approximately")
     parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
-    parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean")
+    parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean (an approximate answer: with its certified interval)")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help=f"simulated crafts for --verify (default {DEFAULT_RUNS})")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help=f"random seed for --verify (default {DEFAULT_SEED})")
     args = parser.parse_args(arguments)
@@ -92,8 +93,8 @@ def main(
             print(f"Warning: {stale}", file=sys.stderr)
 
         plan = make_plan(game, target, price_file, start_price=args.start_price, budget=None if args.exact else args.budget)
-        if plan.approximation is not None and (args.verify or args.route):
-            raise PlanError("--verify and --route are not available for an approximate answer yet; run again with --exact")
+        if plan.approximation is not None and args.route:
+            raise PlanError("--route is not available for an approximate answer yet; run again with --exact")
         report = build_report(plan, game)
         route_path = Path(args.route) if args.route else None
         route = load_route(route_path, plan, game) if route_path is not None else None
