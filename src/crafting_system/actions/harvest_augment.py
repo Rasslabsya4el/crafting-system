@@ -117,7 +117,12 @@ class HarvestAddRemove(Action):
         return dict(ADD_REMOVE_CRAFTS_EXIST.value[self.craft])
 
     def reads(self, data: GameData) -> Reads:
-        return Reads()  # every mod of the item, and none of the implicits, the quality or the offer (ADR-0027)
+        # The new mod is drawn from the pool of the item by weight among the mods with the tag, so a family of the junk matters only
+        # through the weight (and the tag) of its mods that it takes out of that pool: family types, told apart by the tag (#149).
+        # The removal is uniform among the mods, so only their number and sides matter. No implicits, quality or offer (ADR-0027).
+        return Reads(
+            junk=True, families=frozenset(), pool_weight=True, draw_tags=frozenset({TAGGED_RARE_REFORGE_EXISTS.value[self.craft]})
+        )
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(tag=TAGGED_RARE_REFORGE_EXISTS.value[self.craft])
@@ -195,12 +200,13 @@ _SWAP_FAMILIES: dict[tuple[int, str, str, str], tuple[GameData, frozenset[str]]]
 
 
 def _swap_families(data: GameData, source_stats: Rule, source: str, target: str) -> frozenset[str]:
-    """The families of the drawable mods that can be a source or a target of the swap from `source` to `target`.
+    """The families of the mods of an item that can be a source or a target of the swap from `source` to `target`.
 
-    A mod qualifies by a stat of the claim written with either element. Such a mod keeps its tier through the swap and the
-    target's family is refused by a mod of the item that holds it, so the compressed state must tell these families apart by
-    mod (`Reads.by_mod`): the junk of any other family cannot change what a swap does. A mod of several families is never
-    drawable (`pool_candidates`), so it is left out; the answer is cached per game data object.
+    A mod qualifies by a stat of the claim written with either element, and it is a prefix or suffix of the item domain that
+    spawns somewhere (what a pool can hold: the monster, altar, graft and Eldritch mods with such a stat are no source). Such
+    a mod keeps its tier through the swap and the target's family is refused by a mod of the item that holds it, so the
+    compressed state must tell these families apart by mod (`Reads.by_mod`): the junk of any other family cannot change what a
+    swap does. A mod of several families is never drawable (`pool_candidates`), so it is left out; cached per game data object.
     """
     key = (id(data), source_stats.id, source, target)
     hit = _SWAP_FAMILIES.get(key)
@@ -210,7 +216,11 @@ def _swap_families(data: GameData, source_stats: Rule, source: str, target: str)
     found = frozenset(
         mod.families[0]
         for mod in data.mods.values()
-        if len(mod.families) == 1 and not stats.isdisjoint(stat.id for stat in mod.stats)
+        if len(mod.families) == 1
+        and mod.domain == "item"
+        and mod.generation_type in ("prefix", "suffix")
+        and any(weight.weight > 0 for weight in mod.spawn_weights)
+        and not stats.isdisjoint(stat.id for stat in mod.stats)
     )
     _SWAP_FAMILIES[key] = (data, found)
     return found

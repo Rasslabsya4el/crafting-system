@@ -509,7 +509,9 @@ def test_the_declarations():
     assert (adds.named, adds.crafted, adds.draws) == (None, True, True)
 
     swap, adds = WOLF.reads(SMALL), WOLF.adds(SMALL, item_of(COLD))
-    assert swap.junk and swap.families is None and not swap.pool_weight and not swap.block_invariant
+    # the junk counts by the weight its family takes out of the pool at the level of the beast (#149), and nothing else is told apart by name
+    assert swap.junk and swap.families == frozenset() and swap.pool_weight and not swap.block_invariant
+    assert swap.draw_levels == frozenset({WOLF.beast_level}) and not swap.draw_tags and not swap.by_mod
     assert adds.draws and adds.named is None and adds.keeps_crafted
 
 

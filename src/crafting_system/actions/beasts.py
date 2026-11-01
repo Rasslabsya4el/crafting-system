@@ -131,7 +131,8 @@ class TalismanFracture(Action):
         return recipe_resources(self._recipe, self.rare_creature_price)
 
     def reads(self, data: GameData) -> Reads:
-        return Reads()
+        # As the Fracturing Orb: the count per side, and the pool weight a mod takes out of later draws (the family type of the junk).
+        return Reads(junk=True, families=frozenset(), pool_weight=True, fractures=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # It draws nothing, but the fractured copy of a mod is not a mod "named" in advance: `named` stays None.

@@ -187,10 +187,11 @@ class BeastSideSwap(Action):
     def reads(self, data: GameData) -> Reads:
         """The result depends on the count and the families of the junk of both sides and on the lock and tag metamods.
 
-        Every family is told apart (`families=None`, `pool_weight=False`): the pool is cut at the level of the beast,
-        which is not the level the compressed state pools its family types by, so grouping the families by weight would not be exact.
+        The added mod is drawn from the pool at the level of the beast, which is not the level of the item, so the family
+        types of the state carry the weight of each mod at the beast level too (`draw_levels`, #149): two families alike at
+        the item's level but not at the beast's are never one type. The removal is uniform, so only counts matter.
         """
-        return Reads(junk=True, families=None, pool_weight=False)
+        return Reads(junk=True, families=frozenset(), pool_weight=True, draw_levels=frozenset({self.beast_level}))
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # `keeps_crafted` stays True: a crafted mod is one of the mods the removal may take, but it is not erased
