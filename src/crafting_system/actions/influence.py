@@ -16,6 +16,12 @@
 Each answers with an exact list or pool draw and none is a planner kind yet: the compressed state does not tell the influenced mods
 apart where Dominance reads them, nor tier an Elevated mod (ticket #155). A mod an action puts on the item is rolled at its lowest
 values (`Finite`), as for every action that lists its results.
+
+The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
+that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
+68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
+unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
+influence's orb for an item that has it (unverified, approximate). None is a planner kind yet (#155).
 """
 
 from collections.abc import Iterable, Mapping
@@ -39,6 +45,14 @@ from .harvest_influence import influence_spawn_test
 from .metamods import locked_sides, on_locked_side
 from .outcomes import Outcomes
 from .pool import INFLUENCE_TAGS, PoolFamily, build_pool, item_tags, tiers_of
+
+__all__ = [
+    "BeastInfluenceRecipe",
+    "InfluencedExaltedOrb",
+    "OrbOfDominance",
+    "beast_recipe_resources",
+    "influence_pool",
+]
 
 EXALT_ADDS_INFLUENCE_AND_ONE_MOD = get_rule("influence.exalt_adds_influence_and_one_mod")
 EXALT_REFUSED_ON_INFLUENCED = get_rule("influence.exalt_refused_on_influenced_item")
@@ -196,6 +210,7 @@ class InfluencedExaltedOrb(Action):
     "influenced-exalted-orb",
     order=76,
     planner=False,
+    reads_item_state_while_not_planner="implicits",  # refused on an Eldritch implicit
     why_not="no compressed-state kernel for the influence orbs yet (#155)",
 )
 def _influenced_exalted_orbs(data: GameData, item: Item):

@@ -19,6 +19,14 @@ A metamod is a crafted mod that changes what the other actions may do. The item 
 A metamod sits on the side opposite to the one it locks (the lock of prefixes is a suffix), so a
 reroll under one lock removes the metamod and keeps the locked side, and an item that holds both locks
 keeps everything.
+
+The five metamods (`metamods.py`, ticket #68): `Prefixes` / `Suffixes Cannot Be Changed` keep the mods of
+the locked side through a reroll (Chaos, Alteration, Harvest), a Scouring and an Annulment, and the open slots
+still fill; `Cannot roll Attack` / `Caster Modifiers` keep the mods with that tag out of every draw on an item that
+still holds the metamod (a reroll that removes it is not filtered), out of an Annulment's candidates, and, on a
+Harvest reforge, out of the first (guaranteed) mod only; essences and resonators refuse the four; the multimod
+lifts the crafted-mod limit to three, and the enchantment "Can have 1 additional Crafted Modifier" to two (the larger of
+the two with both, ADR-0053; `crafted_limit_of`). No action raises `OutOfScopeError` for a metamod.
 """
 
 from crafting_system.data import GameData, Mod
@@ -26,6 +34,15 @@ from crafting_system.items import ExplicitMod, Item, Metamod, Side, enchant_info
 from crafting_system.rules import get_rule, rule_by_id
 
 from .errors import NotApplicableError
+
+__all__ = [
+    "BLOCKED_TAG",
+    "BLOCKING",
+    "allowed_by_tags",
+    "blocked_tags",
+    "crafted_limit_of",
+    "grants_extra_crafted_slot",
+]
 
 LOCKS_PROTECT_EXISTING_MODS = get_rule("metamods.locks_protect_existing_mods")
 TAG_IS_IMPLICIT_TAG = get_rule("metamods.tag_is_implicit_tag")

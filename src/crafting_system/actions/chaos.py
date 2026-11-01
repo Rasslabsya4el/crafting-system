@@ -1,4 +1,12 @@
-"""The Chaos Orb: rerolls every mod of a rare item, and the number of mods, except the fractured ones."""
+"""The Chaos Orb: rerolls every mod of a rare item, and the number of mods, except the fractured ones.
+
+Random rerolls: `ChaosOrb()`, `HarvestReforge("lightning")` (sixteen tagged crafts, one per tag of the claim
+`harvest_reforge.tagged_rare_reforge_exists`), `HarvestReforgeInfluence()` (an influenced item, one influence mod
+guaranteed), `HarvestReforgeLikelihood(more=True)` (the mods the item holds are 10 times more, or with `more=False`
+10 times less, likely to return; the item keeps at least as many mods) and `ApplyEssence("Shrieking Essence of
+Spite")` (an essence is named as in the game data or by its record id). Each has one method,
+`outcomes(data, item) -> Outcomes`, and `Outcomes` is the whole result.
+"""
 
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -12,6 +20,10 @@ from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
+
+__all__ = [
+    "ChaosOrb",
+]
 
 ACCEPTS_RARE_ONLY = get_rule("chaos_orb.accepts_rare_only")
 REROLLS_ALL_MODS = get_rule("chaos_orb.rerolls_all_mods")
