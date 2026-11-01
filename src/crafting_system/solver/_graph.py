@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from ._model import Action, Model, Outcome, VariantAction
 from ._scc import strongly_connected_components
 
+PREFETCH_BATCH = 4096  # the most pending states offered to a model's `prefetch` at once
 _WEIGHT_LIMIT = 1 << 64  # weights at or above this do not fit the `Q` array and are kept apart
 
 
@@ -161,6 +162,10 @@ class Graph[S]:
 def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
     """Explore from `starts` once, calling `model.actions` once per non-goal state.
 
+    A model may have a `prefetch(states)` method (ticket #250): the states that are next in the queue, offered in batches
+    before `actions` is asked for them, so that it can build their actions together (in a process pool). It changes
+    nothing here: `actions` is still called once per non-goal state, in queue order, and the graph is the same.
+
     Integers first: W is the total weight, L the weight that leaves the state. The effective cost
     is `cost * (W / L)` and the probabilities are `w_j / L`; `1 - p_self` is never computed in floats.
     """
@@ -180,8 +185,13 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
 
     for start in starts:
         intern(start)
+    prefetch = getattr(model, "prefetch", None)
+    offered = 0  # states[:offered] have been offered to `prefetch`
     i = 0
     while i < len(states):  # the list grows while it is walked: a breadth-first queue
+        if prefetch is not None and i >= offered:
+            offered = min(len(states), i + PREFETCH_BATCH)
+            prefetch(states[i:offered])
         state = states[i]
         first.append(len(owner))
         if model.is_goal(state):

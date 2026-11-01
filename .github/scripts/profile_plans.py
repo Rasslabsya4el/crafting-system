@@ -19,6 +19,7 @@ import json
 import os
 import platform
 import pstats
+import signal
 import time
 from pathlib import Path
 
@@ -148,6 +149,7 @@ def main() -> None:
     parser.add_argument("--budget", type=float, default=None)
     parser.add_argument("--workers", type=int, default=None, help="sets CRAFTING_WORKERS (the product reads it; before #250 it is ignored)")
     parser.add_argument("--cprofile", action="store_true")
+    parser.add_argument("--limit", type=float, default=None, help="stop the plan after this many seconds (Linux) and write what the timers saw so far")
     parser.add_argument("--out", required=True)
     arguments = parser.parse_args()
     out = Path(arguments.out)
@@ -170,27 +172,46 @@ def main() -> None:
     began = time.perf_counter()
     if profiler:
         profiler.enable()
-    plan = make_plan(data, target, prices, offers=offers, budget=arguments.budget)
+    plan = None
+    if arguments.limit is not None:
+
+        def stop(*_):
+            raise TimeoutError(f"stopped after {arguments.limit:g} s")
+
+        signal.signal(signal.SIGALRM, stop)
+        signal.setitimer(signal.ITIMER_REAL, arguments.limit)
+    try:
+        plan = make_plan(data, target, prices, offers=offers, budget=arguments.budget)
+    except TimeoutError as stopped:
+        print(stopped, flush=True)
+    finally:
+        if arguments.limit is not None:
+            signal.setitimer(signal.ITIMER_REAL, 0)
     if profiler:
         profiler.disable()
     seconds = time.perf_counter() - began
+    stages = {name: {"seconds": round(spent, 2), "calls": calls} for name, (spent, calls) in sorted(TIMERS.items(), key=lambda kv: -kv[1][0])}
     result = {
         "case": arguments.case,
         "budget": arguments.budget,
         "workers_env": os.environ.get("CRAFTING_WORKERS"),
         "seconds": round(seconds, 2),
-        "solve_seconds": round(plan.solve_seconds, 2),
-        "risk_seconds": round(plan.risk_seconds, 2),
-        "approximate": plan.approximation is not None,
-        "level": plan.approximation.level if plan.approximation else None,
-        "mean_remaining": plan.mean_remaining,
-        "states": len(plan.solution.values),
-        "offers": len(plan.offers),
-        "answer_sha256": answer_hash(plan),
+        "interrupted": plan is None,
+        "stages": stages,
         "made_up_prices": missing,
-        "stages": {name: {"seconds": round(spent, 2), "calls": calls} for name, (spent, calls) in sorted(TIMERS.items(), key=lambda kv: -kv[1][0])},
         "machine": {"system": platform.platform(), "cpus": os.cpu_count(), "python": platform.python_version()},
     }
+    if plan is not None:
+        result.update(
+            solve_seconds=round(plan.solve_seconds, 2),
+            risk_seconds=round(plan.risk_seconds, 2),
+            approximate=plan.approximation is not None,
+            level=plan.approximation.level if plan.approximation else None,
+            mean_remaining=plan.mean_remaining,
+            states=len(plan.solution.values),
+            offers=len(plan.offers),
+            answer_sha256=answer_hash(plan),
+        )
     tag = f"{arguments.case}-w{arguments.workers}" if arguments.workers is not None else arguments.case
     (out / f"{tag}.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
     print(json.dumps(result), flush=True)
