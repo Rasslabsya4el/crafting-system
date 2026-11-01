@@ -2,14 +2,34 @@
 # licence in `third_party/PoEQuery-LICENSE.txt`.
 """The HTTP side of the trade-API pricing: transport, rate limits, request budget and stop rules.
 
-GGG's trade API is undocumented, and the owner starts every run by hand with a few requests. So:
+GGG's trade API is undocumented. The system learns its limits from the `X-Rate-Limit-*` headers and
+regulates itself so that it never reaches them; it never probes a limit by hitting it. So:
 
-- the limits are read from the `X-Rate-Limit-*` headers of every response, never hard-coded;
-- a 401, 403, 429, a Cloudflare challenge or an HTML page instead of JSON stops the run with
+- the limits are read from the `X-Rate-Limit-*` headers of every response, never hard-coded: each
+  window's limit and its current use. The `RateLimiter` keeps a configurable margin below every
+  window (`margin` requests and/or `margin_fraction` of the limit, whichever is larger) and waits
+  before a request that would use the last allowed hit of a window. The only request that cannot be
+  regulated is the first of each policy, which is what teaches the limiter the limits;
+- the state is kept per policy name (`X-Rate-Limit-Policy`), not per kind of request: two kinds the
+  site puts under one policy share their windows;
+- a 429 is honoured, not retried: the client raises `TradeRateLimited` (a `TradeBlocked`) and the
+  limiter makes the NEXT request wait the `Retry-After` time (or `backoff_base` without it), doubled
+  for every 429 in a row and capped. A service that wants to keep going after `TradeRateLimited`
+  simply calls again: the limiter does the waiting. A wait over `max_wait` is `TradeWaitTooLong`
+  (also a `TradeBlocked`), raised before anything is sent;
+- a 401, 403, a Cloudflare challenge or an HTML page instead of JSON stops the run with
   `TradeBlocked`: no retry, no bypass, nothing is changed;
+- the limits it observes are logged (`logging.getLogger("crafting_system.prices.trade_http")`): the
+  first sight of a policy at INFO and any change of its limits at WARNING, with the date of the
+  response, so the limits can be checked over time (and kept in `RateLimiter.observations`); the use
+  of every window at DEBUG; a window seen over its limit, or restricted, at WARNING;
 - a hard `RequestBudget` bounds how many requests one run may send;
 - the session cookie is sent only when the caller passes one. It is kept out of every `repr`,
-  message and exception raised here; the caller reads it from the environment itself.
+  message, exception and log line raised here; the caller reads it from the environment itself.
+
+One limiter serves one sequential caller: it is not thread-safe, by design (two threads would race
+on the windows it is protecting). The waits run from the time the response arrived, which is later
+than the time the server received the request, so they err on the safe side.
 
 The transport, the clock and the sleep are injected; `urllib_transport` is the real transport.
 """
@@ -17,13 +37,19 @@ The transport, the clock and the sleep are injected; `urllib_transport` is the r
 import http.client
 import importlib.metadata
 import json
+import logging
+import math
 import re
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
+
+_log = logging.getLogger(__name__)
 
 TRADE_URL = "https://www.pathofexile.com/api/trade"
 REPO_URL = "https://github.com/Rasslabsya4el/crafting-system"
@@ -42,8 +68,31 @@ class TradeError(Exception):
 class TradeBlocked(TradeError):
     """The site refused: HTTP 401/403/429, a Cloudflare challenge, or HTML instead of JSON.
 
-    Also raised when the site asks for a longer wait than the limiter allows. The run stops.
+    Its subclasses: `TradeRateLimited` (a 429) and `TradeWaitTooLong` (the limiter's wait would
+    exceed its `max_wait`). The run stops.
     """
+
+
+class TradeWaitTooLong(TradeBlocked):
+    """The limiter needs to wait `wait` seconds, more than its `max_wait`; nothing was sent."""
+
+    def __init__(self, wait: float, max_wait: float | None = None) -> None:
+        limit = f"more than the {max_wait:g} s allowed" if max_wait is not None else "too long"
+        super().__init__(f"the site asks for {wait:g} s of waiting, which is {limit}; stopping")
+        self.wait = wait
+
+
+class TradeRateLimited(TradeBlocked):
+    """HTTP 429. `retry_after` is the site's `Retry-After` in seconds (or `None`).
+
+    `backoff` is how long the limiter makes the next request wait. The client does not retry;
+    the caller may simply call again.
+    """
+
+    def __init__(self, message: str, retry_after: float | None, backoff: float) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+        self.backoff = backoff
 
 
 class BudgetExceeded(TradeError):
@@ -224,15 +273,92 @@ def parse_rate_limits(headers: Mapping[str, str]) -> RateReport | None:
     return RateReport(policy, tuple(rules))
 
 
-class RateLimiter:
-    """Waits as the last response of each kind of request said (kinds: "search", "fetch", "data").
+_RETRY_SECONDS = re.compile(r"\d+(?:\.\d+)?", re.ASCII)
 
-    `after(kind, headers)` stores the parsed report with the clock time of the response.
-    `before(kind)` works out the wait from that report, simply and conservatively. For every
-    (rule, state) pair: if `state.restricted > 0` the wait is that many seconds from the response;
-    else if `state.hits >= rule.hits - margin` the wait is `rule.period` seconds from the response.
-    The wait is the maximum over all pairs, minus the time already passed. A wait over `max_wait`
-    raises `TradeBlocked` instead of sleeping. No report yet, or no rate headers, means no wait.
+
+def _http_date(value: str | None) -> datetime | None:
+    """An HTTP-date header value as an aware UTC datetime, or `None` when missing or unreadable."""
+    if value is None:
+        return None
+    try:
+        moment = parsedate_to_datetime(value.strip())
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
+    return moment.replace(tzinfo=UTC) if moment.tzinfo is None else moment.astimezone(UTC)
+
+
+def parse_retry_after(headers: Mapping[str, str]) -> float | None:
+    """The `retry-after` header (lower-cased names) in seconds, or `None`.
+
+    Understood: whole or decimal seconds (>= 0), or an HTTP-date, which is taken relative to the
+    response's own `date` header (never below 0). A missing header, anything else, or an HTTP-date
+    with no readable `date` header is `None`.
+    """
+    value = headers.get("retry-after")
+    if value is None:
+        return None
+    value = value.strip()
+    if _RETRY_SECONDS.fullmatch(value):
+        seconds = float(value)
+        return seconds if math.isfinite(seconds) else None
+    when, sent = _http_date(value), _http_date(headers.get("date"))
+    if when is None or sent is None:
+        return None
+    return max(0.0, (when - sent).total_seconds())
+
+
+@dataclass(frozen=True)
+class LimitObservation:
+    """The limits a policy was seen with: the first sight (`changed` False) or a change (True)."""
+
+    kind: str
+    policy: str
+    date: str | None  # ISO UTC of the response's `date` header, `None` when it had none
+    rules: tuple[tuple[str, tuple[RateRule, ...]], ...]
+    changed: bool
+
+
+def _limits_of(report: RateReport) -> tuple[tuple[str, tuple[RateRule, ...]], ...]:
+    """The limits of a report without the state: what has to be compared over time."""
+    return tuple((name, tuple(rule for rule, _ in pairs)) for name, pairs in report.rules)
+
+
+def _limits_text(limits: tuple[tuple[str, tuple[RateRule, ...]], ...]) -> str:
+    """`Ip=5:10:60,15:60:300; Account=...` : the triples as the header spells them."""
+    return "; ".join(
+        f"{name}=" + ",".join(f"{rule.hits}:{rule.period}:{rule.restricted}" for rule in rules)
+        for name, rules in limits
+    )
+
+
+class RateLimiter:
+    """Waits so that no window of a policy is ever used beyond its limit minus a margin.
+
+    One limiter serves one sequential caller (it is not thread-safe, by design). Kinds of request
+    are "search", "fetch", "data". The site puts each kind under a policy; the state is kept per
+    policy name, so kinds that share a policy share the windows. A kind is mapped to the policy of
+    its latest response; with no policy header ever seen the kind's own name stands in.
+
+    `after(kind, headers, status)` stores the parsed report with the clock time of the response and,
+    on a 429, records the back-off. `before(kind)` works out the wait, simply and conservatively.
+    For every (rule, state) pair of the last report of the policy: if `state.restricted > 0` the
+    wait is that many seconds from the response; else if `state.hits >= allowed_hits(rule)` it is
+    `rule.period` seconds from the response (every hit counted then is out of the window by then).
+    The wait is the maximum over all pairs and the back-off still running, minus the time already
+    passed. A wait over `max_wait` raises `TradeWaitTooLong` instead of sleeping. A kind never
+    seen has no wait: the first request of a policy is the only one that cannot be regulated.
+    The waits run from the arrival of the response, later than the server's receipt of the
+    request, so they err on the safe side.
+
+    Per window the allowed number of hits is
+    `max(1, rule.hits - max(margin, ceil(rule.hits * margin_fraction)))`.
+
+    A 429 sets the back-off: `Retry-After` (or `backoff_base` when it is absent or unreadable),
+    doubled for every 429 in a row (a 2xx resets the count), capped at `backoff_cap` but never
+    below `Retry-After`. The next `before` of that policy waits it out.
+
+    `observations` collects a `LimitObservation` each time a policy is first seen or its limits
+    change; the same facts go to the log (see the module docstring).
     """
 
     def __init__(
@@ -241,37 +367,143 @@ class RateLimiter:
         sleep: Callable[[float], None],
         max_wait: float = 120.0,
         margin: int = 1,
+        margin_fraction: float = 0.0,
+        backoff_base: float = 60.0,
+        backoff_cap: float = 3600.0,
     ) -> None:
         self._clock = clock
         self._sleep = sleep
         self.max_wait = max_wait
         self.margin = margin
-        self._last: dict[str, tuple[RateReport, float]] = {}
+        self.margin_fraction = margin_fraction
+        self.backoff_base = backoff_base
+        self.backoff_cap = backoff_cap
+        self.observations: list[LimitObservation] = []
+        self._policy_of: dict[str, str] = {}  # kind -> policy of its latest response
+        self._last: dict[str, tuple[RateReport, float]] = {}  # key -> (report, response time)
+        self._blocked_until: dict[str, float] = {}
+        self._consecutive: dict[str, int] = {}
+        self._limits_seen: dict[str, tuple[tuple[str, tuple[RateRule, ...]], ...]] = {}
 
-    def after(self, kind: str, headers: Mapping[str, str]) -> None:
+    def allowed_hits(self, rule: RateRule) -> int:
+        """How many hits of the window this limiter lets the state reach: at least 1."""
+        cut = max(self.margin, math.ceil(rule.hits * self.margin_fraction - 1e-9))
+        return max(1, rule.hits - cut)
+
+    def _key(self, kind: str) -> str:
+        return self._policy_of.get(kind, kind)
+
+    def after(self, kind: str, headers: Mapping[str, str], status: int | None = None) -> float | None:
+        """Take in a response. Returns the back-off in seconds after a 429, else `None`.
+
+        The back-off is recorded before the headers are parsed, so a malformed rate header
+        (`TradeError`) still leaves the next request waiting.
+        """
+        policy = headers.get("x-rate-limit-policy")
+        if policy is not None:
+            self._policy_of[kind] = policy
+            self._adopt(kind, policy)
+        key = self._key(kind)
+        backoff = None
+        if status == 429:
+            backoff = self._back_off(kind, key, headers)
+        elif status is not None and 200 <= status < 300:
+            self._consecutive[key] = 0
         report = parse_rate_limits(headers)
         if report is not None:
-            self._last[kind] = (report, self._clock())
+            self._last[key] = (report, self._clock())
+            self._observe(kind, report, headers)
+        return backoff
+
+    def _adopt(self, kind: str, policy: str) -> None:
+        """A back-off kept under the kind's own name (no policy known then) moves to the policy."""
+        if policy == kind:
+            return
+        if kind in self._blocked_until:
+            until = self._blocked_until.pop(kind)
+            self._blocked_until[policy] = max(until, self._blocked_until.get(policy, until))
+        if kind in self._consecutive:
+            count = self._consecutive.pop(kind)
+            self._consecutive[policy] = max(count, self._consecutive.get(policy, count))
+
+    def _back_off(self, kind: str, key: str, headers: Mapping[str, str]) -> float:
+        count = self._consecutive.get(key, 0) + 1
+        self._consecutive[key] = count
+        retry_after = parse_retry_after(headers)
+        base = retry_after if retry_after is not None else self.backoff_base
+        wait = min(base * 2.0 ** min(count - 1, 64), self.backoff_cap)
+        if retry_after is not None:
+            wait = max(wait, retry_after)
+        self._blocked_until[key] = self._clock() + wait
+        shown = "none" if retry_after is None else f"{retry_after:g} s"
+        _log.warning(
+            "rate limit hit (HTTP 429): kind=%s policy=%s retry-after=%s consecutive=%d; "
+            "the next request waits %g s",
+            kind,
+            key,
+            shown,
+            count,
+            wait,
+        )
+        return wait
+
+    def _observe(self, kind: str, report: RateReport, headers: Mapping[str, str]) -> None:
+        limits = _limits_of(report)
+        previous = self._limits_seen.get(report.policy)
+        if previous != limits:
+            moment = _http_date(headers.get("date"))
+            date = None if moment is None else moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+            changed = previous is not None
+            self._limits_seen[report.policy] = limits
+            self.observations.append(LimitObservation(kind, report.policy, date, limits, changed))
+            line = (
+                f"rate limits {'changed' if changed else 'first seen'}: kind={kind} "
+                f"policy={report.policy} date={date or 'unknown'} {_limits_text(limits)}"
+            )
+            if previous is None:
+                _log.info(line)
+            else:
+                _log.warning("%s (was %s)", line, _limits_text(previous))
+        if _log.isEnabledFor(logging.DEBUG):
+            use = "; ".join(
+                f"{name}=" + ",".join(f"{state.hits}/{rule.hits} per {rule.period} s" for rule, state in pairs)
+                for name, pairs in report.rules
+            )
+            _log.debug("rate use: kind=%s policy=%s %s", kind, report.policy, use)
+        for name, pairs in report.rules:
+            for rule, state in pairs:
+                if state.hits > rule.hits or state.restricted > 0:
+                    _log.warning(
+                        "a rate limit was hit: kind=%s policy=%s %s window %d s: %d of %d used, restricted for %d s",
+                        kind,
+                        report.policy,
+                        name,
+                        rule.period,
+                        state.hits,
+                        rule.hits,
+                        state.restricted,
+                    )
 
     def before(self, kind: str) -> None:
-        if kind not in self._last:
-            return
-        report, at = self._last[kind]
-        waits = [0.0]
-        for _, pairs in report.rules:
-            for rule, state in pairs:
-                if state.restricted > 0:
-                    waits.append(float(state.restricted))
-                elif state.hits >= rule.hits - self.margin:
-                    waits.append(float(rule.period))
-        remaining = max(waits) - (self._clock() - at)
+        key = self._key(kind)
+        now = self._clock()
+        remaining = 0.0
+        if key in self._last:
+            report, at = self._last[key]
+            waits = [0.0]
+            for _, pairs in report.rules:
+                for rule, state in pairs:
+                    if state.restricted > 0:
+                        waits.append(float(state.restricted))
+                    elif state.hits >= self.allowed_hits(rule):
+                        waits.append(float(rule.period))
+            remaining = max(waits) - (now - at)
+        if key in self._blocked_until:
+            remaining = max(remaining, self._blocked_until[key] - now)
         if remaining <= 0:
             return
         if remaining > self.max_wait:
-            raise TradeBlocked(
-                f"the site asks for {remaining:g} s of waiting, which is more than the "
-                f"{self.max_wait:g} s allowed; stopping"
-            )
+            raise TradeWaitTooLong(remaining, self.max_wait)
         self._sleep(remaining)
 
 
@@ -314,8 +546,10 @@ class TradeClient:
     """Three calls to the trade API, each returning the parsed JSON object.
 
     Each call spends from the budget, lets the limiter wait if due, sends, feeds the limiter the
-    response headers (error responses too, so a 429's limits are kept) and then applies the stop
-    rules. The cookie, when given, is sent as `Cookie: POESESSID=...` and appears nowhere else.
+    response headers and status (error responses too, so a 429's limits and back-off are kept) and
+    then applies the stop rules. A 429 raises `TradeRateLimited`; the client does not retry, the
+    caller may call again and the limiter makes that request wait. The cookie, when given, is sent
+    as `Cookie: POESESSID=...` and appears nowhere else.
     """
 
     transport: Transport
@@ -352,10 +586,10 @@ class TradeClient:
         self.budget.spend(what)
         self.limiter.before(kind)
         response = self.transport(HttpRequest(method, url, headers, body))
-        self.limiter.after(kind, response.headers)
-        return self._classify(response, what)
+        backoff = self.limiter.after(kind, response.headers, response.status)
+        return self._classify(response, what, backoff)
 
-    def _classify(self, response: HttpResponse, what: str) -> dict:
+    def _classify(self, response: HttpResponse, what: str, backoff: float | None = None) -> dict:
         status = response.status
         if status in (401, 403):
             hint = "" if self.session_cookie is not None else f". {SESSION_HINT}"
@@ -364,10 +598,13 @@ class TradeClient:
                 f"nothing was changed{hint}"
             )
         if status == 429:
-            retry = response.headers.get("retry-after")
-            wait = f"; the site asks to retry after {retry} s" if retry else ""
-            raise TradeBlocked(
-                f"{what}: refused with HTTP 429 (too many requests){wait}; stopping, nothing was changed"
+            retry_after = parse_retry_after(response.headers)
+            asked = f"; the site asks to retry after {retry_after:g} s" if retry_after is not None else ""
+            raise TradeRateLimited(
+                f"{what}: refused with HTTP 429 (too many requests){asked}; stopping, nothing was changed"
+                f"; the next request waits {backoff or 0.0:g} s",
+                retry_after,
+                backoff or 0.0,
             )
         if "cf-mitigated" in response.headers or _looks_like_challenge(response.body):
             raise TradeBlocked(
