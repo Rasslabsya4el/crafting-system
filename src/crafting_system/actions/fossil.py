@@ -17,8 +17,8 @@ Refusals, in this order:
   base tag it does not allow, or one it forbids); the item holds a metamod other than the multimod;
   a Fractured Fossil on an item with a fractured mod or an influence; the forced mod of a Hollow or
   Glyphic Fossil shares a family with a fractured mod.
-* `OutOfScopeError`: a Bloodstained Fossil (its corrupted implicit is corruption, B4); a jewel
-  (an item with the multimod is in scope: the reroll removes it); Hollow and Glyphic in one resonator (no admitted
+* `OutOfScopeError`: a Bloodstained Fossil (its corrupted implicit is corruption, B4); a cluster jewel
+  (its pool depends on its enchantments) and a Fractured Fossil on any jewel; Hollow and Glyphic in one resonator (no admitted
   rule); a Tangled Fossil when the data holds no outcome records; fractured mods that fill the side
   of the forced mod; a Glyphic Fossil whose candidates are all blocked or missing.
 * `ValueError`: raised at construction for no fossil, more than four or the same one twice, and by
@@ -39,7 +39,7 @@ from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Reads
-from .draw import refuse_unmodelled
+from .draw import jewel_class, refuse_unmodelled
 from .metamods import refuse_blocking_metamod
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .fossil_weights import FossilWeights, fossil_weights
@@ -72,6 +72,7 @@ FRACTURED_MOD_UNIFORM = get_rule("fossils.fractured_mod_uniform")
 FRACTURED_MODS_KEPT = get_rule("fossils.fractured_mods_kept")
 DAGGER_STAFF_TAKE_CLASS_MODS = get_rule("essence.dagger_staff_take_class_mods")
 COST = get_rule("fossils.cost")
+JEWELS_TAKE_FOSSILS = get_rule("jewel.fossils_work_on_jewels")
 
 FRACTURED_FOSSIL_NAMES = frozenset({SPECIAL_FOSSILS.value["fractured"]})  # `adds` without game data can only see names
 MIN_FOSSILS = 1
@@ -142,7 +143,9 @@ class ApplyFossils(Action):
         for record in records:
             _check_fossil(record, base.tags, item)
         _check_set(records)
-        refuse_unmodelled(data, item)
+        refuse_unmodelled(data, item, jewels=True)
+        if jewel_class(data, item) is not None and any(_special(record, "fractured") for record in records):
+            raise OutOfScopeError(f"the item is a jewel; the {SPECIAL_FOSSILS.value['fractured']} on a jewel is not modelled (no source on fractured jewels)")
         return _build(data, item, records)
 
     def twin_key(self, data: GameData, item: Item) -> Hashable:
@@ -303,9 +306,10 @@ def usable_fossils(data: GameData, item: Item) -> list[str]:
     """
     try:
         _check_item(data, item)
-        refuse_unmodelled(data, item)
+        refuse_unmodelled(data, item, jewels=True)
     except ActionError:
         return []
+    on_jewel = jewel_class(data, item) is not None
     base = data.base_items.get(item.base_id)
     if base is None:
         raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
@@ -316,6 +320,8 @@ def usable_fossils(data: GameData, item: Item) -> list[str]:
         try:
             _check_fossil(record, base.tags, item)
         except ActionError:
+            continue
+        if on_jewel and _special(record, "fractured"):
             continue
         usable.append(record.name)
     return usable

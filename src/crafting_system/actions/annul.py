@@ -28,6 +28,7 @@ REFUSED_ON_CORRUPTED = get_rule("annulment_orb.refused_on_corrupted")
 RESPECTS_LOCKS_AND_TAGS = get_rule("metamods.annulment_respects_locks_and_tags")
 OTHER_SIDE_METAMOD_IS_A_CANDIDATE = get_rule("metamods.annulment_may_remove_other_side_metamod")
 COST = get_rule("annulment_orb.cost")
+JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
 
 
 @dataclass(frozen=True)

@@ -20,6 +20,7 @@ from crafting_system.actions import (
     OutOfScopeError,
     allowed_by_tags,
     build_pool,
+    partners,
     tiers_of,
 )
 from crafting_system.data import GameData, Mod
@@ -416,6 +417,8 @@ class Abstraction:
             if others:
                 raise ValueError(f"{fossils!r} is a mixture of pools: it has no one set of family types")
             pool = part.pool
+        if partners(pool):
+            raise OutOfScopeError("the family types of a pool with a family that has mods on both sides are not modelled")
         grouped: dict[FamilyType, list[str]] = defaultdict(list)
         for family in pool:
             grouped[self._family_type(family, tag, frozenset())].append(family.family)
@@ -887,6 +890,8 @@ class Abstraction:
             self._hits += 1
             return found
         influences = part.retained.influences
+        if partners(part.pool):
+            raise OutOfScopeError("a fracture on an item whose pool has a family with mods on both sides is not modelled")
         label_of = self._labeller(influences)
         owner: dict[str, FamilyType] = {}
         for family in part.pool:
@@ -989,6 +994,12 @@ class Abstraction:
                 tuple(sorted(part.totals.items())),
                 tuple(
                     sorted(self._family_type(family, part.tag, influences, part.guaranteed_blocked) for family in part.pool)
+                ),
+                tuple(  # the families with mods on both sides: which one-sided types are two sides of one family
+                    sorted(
+                        tuple(sorted(self._family_type(side, part.tag, influences, part.guaranteed_blocked) for side in sides))
+                        for sides in partners(part.pool).values()
+                    )
                 ),
             )
         )

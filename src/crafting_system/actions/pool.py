@@ -7,6 +7,7 @@ it. Weights are exact fractions and never rounded.
 
 The item's tags for the spawn weights are the tags of its base plus one tag per influence
 (`item_tags`), so the mods of an influence join the pool. Items carry no Memory Strands (`NO_MEMORY_STRANDS`), so a draw is never tier-gated.
+A family can have mods on both sides (jewels): its `PoolFamily` come in a pair of one name (`partners`), and a draw takes the family out on both sides.
 The Attack and Caster metamods on the item filter the pool by tag (`metamods.py`). Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); only the explicit
 mods on the item do.
 """
@@ -132,7 +133,9 @@ def pool_candidates(
     (`blocked_tags`); `tag_filter=False` leaves them in (a Harvest reforge filters its first mod only).
 
     Raises `OutOfScopeError` for a candidate that does not have exactly one family (none is
-    drawable in domain `item` in 3.29.3.3) and for a family whose candidates sit on both sides.
+    drawable in domain `item` in 3.29.3.3). A family may have candidates on both sides (five families
+    of the base jewels do, `affix_pool.family_may_span_both_sides`); `group_pool` makes one `PoolFamily`
+    per side of it, and the two keep the family name.
     A result is cached per game data object and key; a call that raises is not cached.
     """
     extra = tuple(extra)
@@ -166,7 +169,6 @@ def _compute_pool_candidates(
     tags = item_tags(data, item)
     blocked = blocked_tags(data, item) if tag_filter else frozenset()
     level_limit = item.item_level if max_level is None else min(item.item_level, max_level)
-    sides: dict[str, Side] = {}
     candidates: list[Candidate] = []
     own = ((mod, mod.domain == base.domain) for mod in data.mods.values())
     joined = ((mod, True) for mod in extra)
@@ -181,12 +183,7 @@ def _compute_pool_candidates(
                 f"mod {mod.id} is a candidate but has {len(mod.families)} families; "
                 "only mods with exactly one family are modelled"
             )
-        family, side = mod.families[0], Side(mod.generation_type)
-        if sides.setdefault(family, side) is not side:
-            raise OutOfScopeError(
-                f"family {family} has candidates on both sides; a family on one side only is modelled"
-            )
-        candidates.append(Candidate(mod, weight, family, side))
+        candidates.append(Candidate(mod, weight, mod.families[0], Side(mod.generation_type)))
     return tuple(candidates)
 
 
@@ -194,17 +191,28 @@ def group_pool(candidates: Iterable[Candidate], factor: ModFactor | None = None)
     """The candidates grouped by family, each weight times `factor(mod)`; a mod whose factor is 0 is dropped.
 
     A family keeps the order of its first candidate. `factor` is the weight factor of the fossils
-    in a resonator (`None`: every factor is 1).
+    in a resonator (`None`: every factor is 1). A family whose candidates sit on both sides is two
+    `PoolFamily` of one name, one per side (`partners`): at most one mod of the family is ever drawn.
     """
-    grouped: dict[str, list[PoolMod]] = {}
-    sides: dict[str, Side] = {}
+    grouped: dict[tuple[str, Side], list[PoolMod]] = {}
     for candidate in candidates:
         weight = candidate.weight if factor is None else candidate.weight * factor(candidate.mod)
         if weight <= 0:
             continue
-        sides[candidate.family] = candidate.side
-        grouped.setdefault(candidate.family, []).append(PoolMod(candidate.mod, weight))
-    return tuple(PoolFamily(name, sides[name], tuple(mods)) for name, mods in grouped.items())
+        grouped.setdefault((candidate.family, candidate.side), []).append(PoolMod(candidate.mod, weight))
+    return tuple(PoolFamily(name, side, tuple(mods)) for (name, side), mods in grouped.items())
+
+
+def partners(pool: Iterable[PoolFamily]) -> dict[str, tuple[PoolFamily, ...]]:
+    """The families of `pool` that have mods on both sides, by name, each as its two sides' `PoolFamily`.
+
+    Two `PoolFamily` of one name are one family: drawing a mod of either takes the family out of the pool
+    on both sides (`affix_draw.family_exclusion`).
+    """
+    by_name: dict[str, list[PoolFamily]] = defaultdict(list)
+    for family in pool:
+        by_name[family.family].append(family)
+    return {name: tuple(parts) for name, parts in by_name.items() if len(parts) > 1}
 
 
 def mark_pool(pool: Iterable[PoolFamily], tag: str, chosen: Callable[[Mod], bool]) -> tuple[PoolFamily, ...]:

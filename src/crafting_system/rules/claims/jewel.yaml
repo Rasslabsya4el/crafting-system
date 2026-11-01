@@ -1,0 +1,84 @@
+# Mechanic family: jewel (crafting the base jewels and the abyss jewels with the ordinary orbs). Ticket #201.
+# The owner (2026-11-01, #201): "jewel crafting is simple: only the ordinary orbs work on them, recombinators do not".
+# Jewel affix limits are in affix_count.rare_jewel_max_per_side and the family exclusion across sides in
+# affix_pool.family_may_span_both_sides.
+#
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on a source that no other source settles.
+rules:
+  - id: jewel.ordinary_orbs_work_on_jewels
+    statement: The ordinary orbs work on jewels as they do on other items, with the jewel capacity (affix_count.rare_jewel_max_per_side) and the mod pool of the jewel base (base jewels, abyss jewels), namely Transmutation, Alteration, Augmentation, Regal, Alchemy, Chaos, Exalted, Annulment, Scouring and Divine. A normal jewel is made by an Orb of Scouring. A magic jewel holds one prefix and one suffix like any magic item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Jewel
+    quote: "jewels can be modified by orbs and are available in the four rarities"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: jewel.reroll_count_is_capped_by_capacity
+    statement: A Chaos Orb or an Orb of Alchemy on a jewel draws a total of 4, 5 or 6 mods at 8:3:1 like on a regular rare item (the value), and the capacity of a rare jewel (2 prefixes and 2 suffixes) closes both sides after 4 mods, so the jewel ends with 4 mods unless the pool runs dry. The wiki gives the range "three to four" for an Orb of Alchemy on a jewel and no ratio, so a 3-mod result is not modelled. Replace the value by the ratio of 3 and 4 once a source gives it.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Orb_of_Alchemy
+    quote: "three to four if used on jewels"
+    approximate: true
+    approximate_reason: "The wiki gives a range of 3 to 4 mods for an Alchemy on a jewel, not the ratio; the 8:3:1 total capped by the 2 and 2 capacity gives 4 mods always."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: {4: 8, 5: 3, 6: 1}
+
+  - id: jewel.base_jewel_mods_have_no_level_or_tier
+    statement: The mods of the base jewels (Crimson, Viridian, Cobalt) have no item level requirement and no tiers, so the item level never gates a draw on them and every mod is tier 1. The data agrees (required level 1, one mod type per mod). The mods of the abyss jewels do depend on the item level.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Jewel
+    quote: "No item level requirement"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: jewel.abyss_mods_depend_on_item_level
+    statement: The mods of the abyss jewels are gated by the item level like the mods of equipment.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Jewel
+    quote: "abyss jewel mods are item level dependent"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: jewel.cluster_pool_depends_on_enchantments
+    statement: The mods a cluster jewel can roll depend on its enchantments, which the item state does not hold, so a draw on a cluster jewel is refused (the item classes of the value are the base domains that are cluster jewels).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Cluster_Jewel
+    quote: "determines what kind of mods the Cluster Jewel can roll"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    value: [affliction_jewel]
+
+  - id: jewel.essence_takes_no_jewel
+    statement: An essence works on no jewel. The essences name a mod for 22 item classes of equipment and none for Jewel or AbyssJewel, so the essence is refused (it gives no mod on the class).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/essences.json
+    quote: "essence mods are keyed by 22 equipment item classes; Jewel and AbyssJewel are not among them"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: jewel.fossils_work_on_jewels
+    statement: A Chaotic resonator with fossils works on a rare jewel (the base and abyss jewels), with the fossil weights on the tags of the jewel mods and the jewel capacity. The Fractured Fossil on a jewel is not modelled.
+    source_kind: coe
+    url: https://www.craftofexile.com/json/data/main/poec_data.json
+    quote: "name_bgroup: Jewels, max_affix: 4, is_fossil: 1, is_ess: 0, is_craftable: 0"
+    approximate: true
+    approximate_reason: "Only Craft of Exile's data says that fossils work on jewels; the wiki does not say."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: jewel.bench_adds_no_mod_to_jewels
+    statement: The bench offers no craft that adds a mod to a jewel. The only options for the item classes Jewel and AbyssJewel are Niko's three (reroll the rarity, two rerolls of the rare mods), none of which has add_explicit_mod, so a bench craft of the crafted-mod kind is refused on a jewel and the multimods are not available.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/crafting_bench_options.json
+    quote: "item_classes lists Jewel and AbyssJewel only for Niko's reroll_rarity and reroll_rare_mods options; none has add_explicit_mod"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: jewel.recombinator_refused
+    statement: A jewel does not go into the recombinator. The Awakener's Orb and an imprint are refused on a jewel as well (owner, in ticket 201); the three actions are in B3.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/94
+    quote: "Jewels do not go into the recombinator."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01

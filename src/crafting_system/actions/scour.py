@@ -24,6 +24,7 @@ KEEPS_INFLUENCE = get_rule("scouring.keeps_influence")
 KEEPS_LOCKED_SIDE = get_rule("metamods.scouring_keeps_locked_side")
 REFUSED_ON_CORRUPTED = get_rule("magic_orbs.refused_on_corrupted")
 COST = get_rule("scouring.cost")
+JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
 
 ONE = Fraction(1)
 

@@ -126,11 +126,11 @@ def test_an_item_with_no_legal_mod_is_refused():
         ExaltedOrb().outcomes(data, amulet(roll(LIFE), roll(FIRE)))
 
 
-def test_a_crafted_metamod_is_in_scope_and_a_jewel_is_out_of_scope():
+def test_a_crafted_metamod_is_in_scope_and_a_cluster_jewel_is_out_of_scope():
     assert ExaltedOrb().outcomes(DATA, amulet(roll(CRAFTED, crafted=True))).retained.metamods(DATA)
-    jewel = dataclasses.replace(DATA.base_items[amulet().base_id], item_class="Jewel")
-    data = dataclasses.replace(DATA, base_items={**DATA.base_items, amulet().base_id: jewel})
-    with pytest.raises(OutOfScopeError, match="jewel"):
+    cluster = dataclasses.replace(DATA.base_items[amulet().base_id], item_class="Jewel", domain="affliction_jewel")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, amulet().base_id: cluster})
+    with pytest.raises(OutOfScopeError, match="cluster jewel"):
         ExaltedOrb().outcomes(data, amulet(roll(LIFE)))
 
 

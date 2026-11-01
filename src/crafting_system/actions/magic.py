@@ -29,10 +29,7 @@ REGAL_KEEPS_MODS_AND_ADDS_ONE = get_rule("magic_orbs.regal_keeps_mods_and_adds_o
 REFUSED_ON_CORRUPTED = get_rule("magic_orbs.refused_on_corrupted")
 COST = get_rule("magic_orbs.cost")
 
-JEWEL_REASON = (
-    "the magic and rare capacities and mod counts are admitted for regular items only, "
-    "so this orb on a jewel is not modelled yet"
-)
+JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
 
 
 def magic_totals() -> dict[int, Fraction]:
@@ -48,7 +45,7 @@ def _refuse(data: GameData, item: Item, wanted: Rarity, name: str) -> None:
         raise NotApplicableError(f"{name} works on a {wanted} item only, and this item is {item.rarity}")
     if item.corrupted:
         raise NotApplicableError(f"the item is corrupted, and a corrupted item takes no {name}")
-    refuse_unmodelled(data, item, JEWEL_REASON)
+    refuse_unmodelled(data, item, jewels=True)
 
 
 @dataclass(frozen=True)
@@ -71,7 +68,7 @@ class TransmutationOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not normal or is corrupted, and
-        `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key.
+        `OutOfScopeError` for a cluster jewel or an influenced item of a class with no influence class key.
         """
         _refuse(data, item, Rarity.NORMAL, "an Orb of Transmutation")
         return draw_onto(data, item.changed(data, rarity=Rarity.MAGIC), magic_totals())
@@ -97,7 +94,7 @@ class AlterationOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic or is corrupted, and
-        `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key.
+        `OutOfScopeError` for a cluster jewel or an influenced item of a class with no influence class key.
         Ordinary crafted mods are removed by the reroll like every mod that is not fractured, and the
         mods of a side that `Prefixes` / `Suffixes Cannot Be Changed` locks stay and count inside the total.
         """
@@ -127,7 +124,7 @@ class AugmentationOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic, is corrupted, is full, or for which
-        no mod is legal, and `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key.
+        no mod is legal, and `OutOfScopeError` for a cluster jewel or an influenced item of a class with no influence class key.
         The Attack and Caster metamods on the item keep the mods with their tag out of the pool.
         """
         _refuse(data, item, Rarity.MAGIC, "an Orb of Augmentation")
@@ -154,7 +151,7 @@ class RegalOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not magic, is corrupted, or for which no mod is
-        legal on the rare item, and `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key.
+        legal on the rare item, and `OutOfScopeError` for a cluster jewel or an influenced item of a class with no influence class key.
         The Attack and Caster metamods on the item keep the mods with their tag out of the pool.
         """
         _refuse(data, item, Rarity.MAGIC, "a Regal Orb")

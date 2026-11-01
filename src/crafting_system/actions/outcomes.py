@@ -123,7 +123,7 @@ class Outcomes:
     ) -> "Outcomes":
         """The outcomes of drawing from a `pool` already built onto `retained` (see `retained_item`)."""
         return cls(
-            data, retained, pool, total_distribution(), tag, None if forced is None else forced.id, guaranteed_blocked
+            data, retained, pool, total_distribution(data, retained), tag, None if forced is None else forced.id, guaranteed_blocked
         )
 
     @classmethod

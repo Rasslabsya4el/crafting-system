@@ -29,6 +29,7 @@ REFORGE_REMOVES_CRAFTED_MODS = get_rule("essence.reforge_removes_crafted_mods")
 REFUSED_ON_CORRUPTED = get_rule("essence.refused_on_corrupted")
 DESOLATION_IS_NOT_A_B1_ACTION = get_rule("essence.desolation_is_not_a_b1_action")
 COST = get_rule("essence.cost")
+JEWELS_TAKE_NO_ESSENCE = get_rule("jewel.essence_takes_no_jewel")
 
 
 @dataclass(frozen=True)
@@ -66,10 +67,9 @@ class ApplyEssence(Action):
 
         Raises `ValueError` for a name that is no essence in `data`, `NotApplicableError` for a
         magic item, a rare item and an essence that works on normal items only, a corrupted item,
-        an item class that takes no essence, an item with a lock or an Attack/Caster metamod (the multimod
+        an item class that takes no essence (a jewel is one), an item with a lock or an Attack/Caster metamod (the multimod
         does not block it), and a forced mod that shares a family with a fractured
-        mod, and `OutOfScopeError` (no admitted rule covers it) for Essence of Desolation, a
-        jewel, an influenced item whose class has no influence class key, one whose fractured mods fill the side of the forced
+        mod, and `OutOfScopeError` (no admitted rule covers it) for Essence of Desolation, an influenced item whose class has no influence class key, one whose fractured mods fill the side of the forced
         mod, and a level 1 to 4 essence that has no cap in the data.
         """
         essence = self._record(data)
@@ -126,7 +126,7 @@ class ApplyEssence(Action):
             raise UnknownBaseError(f"item on {item.base_id}: the base is not in the game data")
         mod_id = _forced_mod_id(essence, base.item_class)
         if mod_id is None:
-            raise NotApplicableError(f"{essence.name} gives no mod on {base.item_class}, so it takes no essence")
+            raise NotApplicableError(f"{essence.name} gives no mod on {base.item_class}, so it takes no essence")  # a jewel too: JEWELS_TAKE_NO_ESSENCE
         return data.mods[mod_id]
 
 

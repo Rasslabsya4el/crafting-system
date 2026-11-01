@@ -17,6 +17,8 @@ ACCEPTS_RARE_ONLY = get_rule("chaos_orb.accepts_rare_only")
 REROLLS_ALL_MODS = get_rule("chaos_orb.rerolls_all_mods")
 REFUSED_ON_CORRUPTED = get_rule("chaos_orb.refused_on_corrupted")
 COST = get_rule("chaos_orb.cost")
+JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
+JEWEL_REROLL_COUNT = get_rule("jewel.reroll_count_is_capped_by_capacity")
 
 
 @dataclass(frozen=True)
@@ -39,7 +41,7 @@ class ChaosOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not rare or is corrupted, and
-        `OutOfScopeError` for a jewel or an influenced item of a class with no influence class key. Ordinary
+        `OutOfScopeError` for a cluster jewel or an influenced item of a class with no influence class key. Ordinary
         crafted mods are removed by the reroll like every mod that is not fractured. The mods of a side that
         `Prefixes` or `Suffixes Cannot Be Changed` locks stay and count inside the total, and an Attack or
         Caster metamod that stays (on a locked side) keeps the mods with its tag out of the draw.
@@ -50,7 +52,7 @@ class ChaosOrb(Action):
             )
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Chaos Orb")
-        refuse_unmodelled(data, item)
+        refuse_unmodelled(data, item, jewels=True)
         return Outcomes.reroll(data, item, tag=None)
 
 

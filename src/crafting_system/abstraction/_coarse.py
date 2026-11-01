@@ -41,7 +41,7 @@ from fractions import Fraction
 from itertools import combinations, product
 from typing import Literal
 
-from crafting_system.actions import BLOCKING, Action, ActionError, OutOfScopeError, build_pool
+from crafting_system.actions import BLOCKING, Action, ActionError, OutOfScopeError, build_pool, partners
 from crafting_system.items import Item, Rarity, Side
 
 from ._kernel import Abstraction
@@ -92,6 +92,8 @@ class Coarsening:
         pool = build_pool(
             self._data, Item.build(self._data, base_id=abstraction.base_id, item_level=abstraction.item_level, rarity=Rarity.RARE)
         )
+        if partners(pool):
+            raise OutOfScopeError("a family with mods on both sides (a jewel) is not modelled in a coarsening")
         self._side_of = {family.family: family.side for family in pool}
         self.told_apart = frozenset(  # a family whose kind is its own name (not "" and not a family type "~n")
             family.family for family in pool if abstraction.kind_of(family.mods[0].mod) == family.family

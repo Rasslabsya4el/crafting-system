@@ -18,6 +18,7 @@ ACCEPTS_RARE_ONLY = get_rule("exalted_orb.accepts_rare_only")
 ADDS_ONE_MOD = get_rule("exalted_orb.adds_one_mod")
 REFUSED_ON_CORRUPTED = get_rule("exalted_orb.refused_on_corrupted")
 COST = get_rule("exalted_orb.cost")
+JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ class ExaltedOrb(Action):
         """The outcomes of using the orb on `item`.
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, is full, or for which
-        no mod is legal, and `OutOfScopeError` for a jewel or an influenced item of a class with no
+        no mod is legal, and `OutOfScopeError` for a cluster jewel or an influenced item of a class with no
         influence class key. An open slot of a locked side still fills; the Attack and Caster metamods
         keep the mods with their tag out of the pool.
         """
@@ -48,7 +49,7 @@ class ExaltedOrb(Action):
             raise NotApplicableError(f"an Exalted Orb works on a rare item only, and this item is {item.rarity}")
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Exalted Orb")
-        refuse_unmodelled(data, item, "the rare capacity is admitted for regular items only, so this orb on a jewel is not modelled yet")
+        refuse_unmodelled(data, item, jewels=True)
         return add_one_mod(data, item, "an Exalted Orb")
 
 
