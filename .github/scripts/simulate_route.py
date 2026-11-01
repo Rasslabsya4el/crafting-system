@@ -9,6 +9,7 @@ rate, mean, p50, p90 and CVaR with their intervals, the runs a gap of the guide 
 
 import argparse
 import json
+import math
 import time
 from pathlib import Path
 
@@ -22,16 +23,14 @@ ROOT = Path(__file__).resolve().parents[2]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 
 
-def estimate(value) -> dict:
-    return {"value": value.value, "low": value.low, "high": value.high}
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("target")
     parser.add_argument("route")
     parser.add_argument("--runs", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--chunk", type=int, default=50, help="runs per simulator call; the summary is printed and written after each")
+    parser.add_argument("--seconds", type=float, default=10_800, help="stop starting new chunks after this many seconds")
     parser.add_argument("--max-steps", type=int, default=200_000)
     parser.add_argument("--skip-refused", action="store_true", help="a rule whose action the game refuses is skipped (for the completed routes)")
     parser.add_argument("--out")
@@ -42,18 +41,48 @@ def main() -> None:
     plan = make_plan(data, target, load_price_file(PRICES), solve_it=False)
     route = load_route(Path(args.route), plan, data)
     began = time.perf_counter()
-    report = simulate_route(data, plan, route, runs=args.runs, seed=args.seed, max_steps=args.max_steps, skip_refused=args.skip_refused)
-    summary = {
-        "route": Path(args.route).name, "runs": report.runs, "seed": args.seed, "seconds": time.perf_counter() - began,
-        "successes": report.successes, "stopped_at_a_gap": report.stopped, "cut_at_step_limit": report.unfinished,
-        "mean_steps": report.mean_steps, "success_rate": estimate(report.success_rate), "mean_cost": estimate(report.cost),
-        "p50": estimate(report.quantile(0.5)), "p90": estimate(report.quantile(0.9)),
-    }
-    print(json.dumps(summary, indent=2), flush=True)
+    costs: list[float] = []
+    successes = stopped = unfinished = 0
+    steps = 0.0
+    chunk = 0
+    while len(costs) < args.runs and time.perf_counter() - began < args.seconds:
+        report = simulate_route(
+            data, plan, route, runs=min(args.chunk, args.runs - len(costs)), seed=args.seed + chunk,
+            max_steps=args.max_steps, skip_refused=args.skip_refused,
+        )  # fmt: skip
+        chunk += 1
+        costs += report.costs
+        successes += report.successes
+        stopped += report.stopped
+        unfinished += report.unfinished
+        steps += report.mean_steps * report.runs
+        summary = summarize(costs, successes, stopped, unfinished, steps, args, time.perf_counter() - began)
+        print(json.dumps(summary), flush=True)
+        write(args, summary)
+
+
+def summarize(costs, successes, stopped, unfinished, steps, args, seconds) -> dict:
+    """Mean with a 95% interval, quantiles and the counts of all the runs finished so far (normal approximation, good for hundreds of runs)."""
+    runs = len(costs)
+    mean = sum(costs) / runs
+    spread = math.sqrt(sum((cost - mean) ** 2 for cost in costs) / (runs - 1)) if runs > 1 else float("nan")
+    half = 1.96 * spread / math.sqrt(runs) if runs > 1 else float("nan")
+    ordered = sorted(costs)
+    return {
+        "route": Path(args.route).name, "runs": runs, "seed": args.seed, "seconds": seconds,
+        "successes": successes, "stopped_at_a_gap": stopped, "cut_at_step_limit": unfinished, "mean_steps": steps / runs,
+        "success_rate": successes / runs, "mean_cost": {"value": mean, "low": mean - half, "high": mean + half},
+        "p50": ordered[int(0.5 * (runs - 1))], "p90": ordered[int(0.9 * (runs - 1))],
+        "note": "costs of every run, finished or not; a run that stopped at a gap or hit the step limit counts what it paid",
+    }  # fmt: skip
+
+
+def write(args, summary: dict) -> None:
     if args.out:
         out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
-        (out / f"{Path(args.route).stem}.sim.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        (out / f"{Path(args.route).stem}.sim.json").write_text(json.dumps(summary, indent=2) + "
+", encoding="utf-8")
 
 
 if __name__ == "__main__":
