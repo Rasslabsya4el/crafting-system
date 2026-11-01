@@ -98,6 +98,17 @@ def item_tags(data: GameData, item: Item) -> tuple[str, ...]:
     return (*base.tags, *(f"{class_key}_{keys[influence.value]}" for influence in sorted(item.influences)))
 
 
+def drawable_mod_ids(data: GameData, item: Item) -> frozenset[str]:
+    """The ids of the mods a draw could give an item of `item`'s base, level and influences once it holds none.
+
+    A planner asks this to see whether a mod of the goal can occur at all (a roll requirement on a mod no
+    draw gives and no action adds is out of reach). The Attack and Caster metamods are not applied, so the answer is
+    the larger one. Raises what `pool_candidates` raises (`UnknownBaseError`, `OutOfScopeError`).
+    """
+    bare = item.changed(data, mods=(), veil_offer=())
+    return frozenset(candidate.mod.id for candidate in pool_candidates(data, bare))
+
+
 def tiers_of(data: GameData, item: Item) -> Mapping[str, int]:
     """The tier of every mod that can spawn on `item`, counted as `items.tier_table` does but with the influence tags too.
 

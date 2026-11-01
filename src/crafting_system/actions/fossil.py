@@ -24,8 +24,9 @@ Refusals, in this order:
 * `ValueError`: raised at construction for no fossil, more than four or the same one twice, and by
   `outcomes` for a name that is no fossil of the data.
 
-The lucky rolls of a Sanctified Fossil change the rolled values only, which belong to the roll
-requirements of the Divine Orb ticket; `sample` rolls every value once.
+A Sanctified Fossil also makes the values lucky (`fossils.sanctified_values_lucky`): every part of the result then has
+`rolls_lucky`, and `sample` rolls each value of the mods the resonator puts on the item twice and keeps the better one
+(the kept mods keep theirs). The weights it changes are `fossils.sanctified_level_factor`, a separate effect.
 """
 
 from collections.abc import Hashable, Mapping
@@ -58,6 +59,7 @@ SPECIAL_FOSSILS = get_rule("fossils.special_fossils")
 BLOODSTAINED_IS_CORRUPTION = get_rule("fossils.bloodstained_is_corruption")
 GILDED_NO_EXPLICIT_EFFECT = get_rule("fossils.gilded_no_explicit_effect")
 FACETED_ADDS_MODS = get_rule("fossils.faceted_adds_mods")
+SANCTIFIED_VALUES_LUCKY = get_rule("fossils.sanctified_values_lucky")
 ADDED_MODS_TAKE_FOSSIL_WEIGHTS = get_rule("fossils.added_mods_take_fossil_weights")
 HOLLOW_FORCES_MOD = get_rule("fossils.hollow_forces_mod")
 GLYPHIC_FORCES_CORRUPTED_ESSENCE_MOD = get_rule("fossils.glyphic_forces_corrupted_essence_mod")
@@ -363,7 +365,7 @@ def _build(data: GameData, item: Item, records: list[Fossil]) -> FossilOutcomes:
                 candidates_for[key] = pool_candidates(data, retained_for[key], None, extra)
             pool = group_pool(candidates_for[key], weights.factor)
             signature = (key, tuple((family.family, tuple((e.mod.id, e.weight) for e in family.mods)) for family in pool))
-            part = Outcomes.over(data, retained_for[key], pool, None, forced)
+            part = Outcomes.over(data, retained_for[key], pool, None, forced, rolls_lucky=sanctified)
             entry = merged.setdefault(signature, [Fraction(0), part])
             entry[0] += pair_chance * forced_chance
     components = tuple((chance, part) for chance, part in merged.values())

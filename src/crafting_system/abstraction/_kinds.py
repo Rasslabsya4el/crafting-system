@@ -15,6 +15,12 @@ at (`"@attack"`, `"@attack+caster"`): an Annulment removes only the mods without
 slots of one family type that differ in them are not alike. The "~n" of a kind stands for the family type
 and never carries the tags itself (they belong to a mod); a family type is told from another one by the
 tags of its mods too, so that a family whose mods differ in them is never mistaken for another family.
+
+An action that rerolls the values of the mods an item holds (`Reads.rerolls_values`, a Divine Orb) makes the
+result depend on which mod each slot stands for, as far as a roll requirement of the goal looks at its values.
+Every ordinary family with a mod whose roll changes what it gives the goal (a rollable mod, `_rolls.py`) is then
+told apart by MOD: all its mods have the kind `"$" + mod id`. The prefix is not "=" (that names a pool of families
+in `_coarse.py`), "~" (a family type), "@" (the tags of a mod) or "#" (a family without a name).
 """
 
 from collections import defaultdict
@@ -27,6 +33,7 @@ from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS
 
 ALIKE = ""  # the kind of a family that every enabled action treats like any other of its side
 TYPE_PREFIX = "~"  # a kind that stands for a family type (pool weight), not for one family
+MOD_PREFIX = "$"  # a kind that stands for one mod (a family with a rollable mod, when an action rerolls values): "$<mod id>"
 TAG_MARK = "@"  # a kind with the protected tags of its mod: "<kind>@attack", "<kind>@attack+caster"
 PROTECTED_TAGS = frozenset(BLOCKED_TAG.values())  # the tags an Attack or Caster metamod keeps out of a draw and an Annulment
 
@@ -101,6 +108,7 @@ class Kinds:
         metamods: bool = False,
         influences: frozenset = frozenset(),
         numbers: TypeNumbers | None = None,
+        rollable: Callable[[], Iterable[Mod]] = lambda: (),
     ):
         self.data = data
         self.profile = profile
@@ -115,9 +123,12 @@ class Kinds:
         self._everything = False
         self.by_weight = metamods
         self.fractures = False  # an enabled action may fracture a mod the item holds
+        self.rerolls = False  # an enabled action rerolls the values of the mods the item holds
+        self._rollable = rollable
         for action in self.actions:
             reads = action.reads(data)
             self.fractures = self.fractures or reads.fractures
+            self.rerolls = self.rerolls or reads.rerolls_values
             if not reads.junk:
                 continue
             self.by_weight = self.by_weight or reads.pool_weight
@@ -126,6 +137,7 @@ class Kinds:
             else:
                 self._distinct.update(reads.families)
         self._listed: set[str] | None = None
+        self._by_mod: set[str] | None = None
         self._by_family: dict[str, list[Mod]] | None = None
         self._types: dict[str, str] | None = None
         self._members: dict[tuple[Side, str], list[tuple[str, tuple[Mod, ...]]]] = {}
@@ -141,7 +153,9 @@ class Kinds:
         With `metamods` it also carries the protected tags of the mod (see the module docstring).
         """
         key = family_key(mod)
-        if self._everything or key in self._distinct or key not in self._listed_families():
+        if key in self._families_by_mod():
+            kind = MOD_PREFIX + mod.id
+        elif self._everything or key in self._distinct or key not in self._listed_families():
             kind = key
         elif self.by_weight:
             types = self._type_kinds()
@@ -182,6 +196,14 @@ class Kinds:
         Raises `ValueError` when the item has no room for one more of that kind.
         """
         base, tags = base_kind(kind), kind_tags(kind)
+        if base.startswith(MOD_PREFIX):
+            mod = self.data.mods[base[len(MOD_PREFIX) :]]
+            if mod.generation_type != side.value:
+                raise ValueError(f"the mod {mod.id} is not a {side.value} mod")
+            if held_families(mod) & taken:
+                raise ValueError(f"two slots of the family of {mod.id}: one item cannot hold both")
+            taken |= held_families(mod)
+            return mod
         if base != ALIKE and not base.startswith(TYPE_PREFIX):
             mod = self._mod_of(base, side, tags)
             if held_families(mod) & taken:
@@ -196,6 +218,12 @@ class Kinds:
                     taken.add(key)
                     return mod
         raise ValueError(f"the state has more {side.value} slots of an ordinary family of that type than the pool has families")
+
+    def _families_by_mod(self) -> set[str]:
+        """The families told apart by mod: those with a rollable mod, when an enabled action rerolls values; none otherwise."""
+        if self._by_mod is None:
+            self._by_mod = {family_key(mod) for mod in self._rollable()} if self.rerolls else set()
+        return self._by_mod
 
     def _listed_families(self) -> set[str]:
         if self._listed is None:
@@ -219,6 +247,7 @@ class Kinds:
                 for family in self._pool()
                 if family.side is side
                 and family.family not in self._distinct
+                and family.family not in self._families_by_mod()
                 and (kinds[family.family, family.side.value] if self.by_weight else ALIKE) == kind
             ]
         return self._members[(side, kind)]
@@ -241,7 +270,7 @@ class Kinds:
                 sides_of[name].append(side)
             types = {}
             for family in pool:
-                if family.family in self._distinct:
+                if family.family in self._distinct or family.family in self._families_by_mod():
                     continue
                 side = family.side.value
                 other = tuple(sorted((o, shapes[family.family, o]) for o in sides_of[family.family] if o != side))

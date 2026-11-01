@@ -28,6 +28,7 @@ from .draw import (
 from .errors import NotApplicableError
 from .metamods import blocked_tags, kept_by_reroll
 from .pool import ModFactor, PoolFamily, build_pool, mark_pool, tiers_of
+from .rolls import roll_values
 
 CHAOS_FRACTURED_MODS_KEPT = get_rule("chaos_orb.fractured_mods_kept")
 HARVEST_FRACTURED_MODS_KEPT = get_rule("harvest_reforge.fractured_mods_kept")
@@ -63,7 +64,9 @@ class Outcomes:
     essence, None otherwise. The forced mod is a kept mod: it is in `retained`, not in the
     distribution. `guaranteed_blocked` are the tags that an Attack or Caster metamod kept on the
     item keeps out of the guaranteed draw of a reforge: the pool of a reforge is not filtered, since
-    the metamod filters its first added mod only (D8 of issue #28). Build one with `Outcomes.reroll`.
+    the metamod filters its first added mod only (D8 of issue #28). With `rolls_lucky` (a Sanctified Fossil in the
+    resonator, `fossils.sanctified_values_lucky`) `sample` rolls each value of the drawn mods and of the forced mod
+    twice and keeps the better, the one nearer the stat's `max`; the kept mods keep the values they had. Build one with `Outcomes.reroll`.
     """
 
     data: GameData
@@ -73,6 +76,7 @@ class Outcomes:
     tag: str | None
     forced: str | None = None
     guaranteed_blocked: frozenset[str] = frozenset()
+    rolls_lucky: bool = False  # every value of the mods this reroll puts on the item is rolled twice and the better kept (a Sanctified Fossil)
 
     @classmethod
     def reroll(
@@ -120,10 +124,15 @@ class Outcomes:
         tag: str | None,
         forced: Mod | None,
         guaranteed_blocked: frozenset[str] = frozenset(),
+        rolls_lucky: bool = False,
     ) -> "Outcomes":
-        """The outcomes of drawing from a `pool` already built onto `retained` (see `retained_item`)."""
+        """The outcomes of drawing from a `pool` already built onto `retained` (see `retained_item`).
+
+        With `rolls_lucky` the values of the mods the draw puts on the item are rolled twice, the better kept.
+        """
         return cls(
-            data, retained, pool, total_distribution(data, retained), tag, None if forced is None else forced.id, guaranteed_blocked
+            data, retained, pool, total_distribution(data, retained), tag, None if forced is None else forced.id, guaranteed_blocked,
+            rolls_lucky,
         )
 
     @classmethod
@@ -222,10 +231,7 @@ class Outcomes:
             ExplicitMod(
                 mod.id,
                 self._tiers[mod.id] if mod.id != self.forced else self._tiers.get(mod.id, 1),
-                tuple(
-                    rng.randint(min(stat.min, stat.max), max(stat.min, stat.max))
-                    for stat in mod.stats
-                ),
+                roll_values(rng, mod, self.rolls_lucky),
             )
             for mod in rolled
         )

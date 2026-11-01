@@ -16,4 +16,16 @@ The search ends at the goal state without quality; the finish cost, the expected
 
 Which lines the quality scales on a fractured or a bench-crafted mod, and that no other currency touches quality, rest on the research claims, which state their limits themselves; a claim that depends on the wiki formula carries `approximate` (ADR-0028).
 
+## Amendment (grill B7): enchantments finish the same way
+
+The enchantment of a weapon or body armour is a second finish step of the same shape ([ADR-0050](0050-enchantments-as-a-finish-step.md)): nothing earlier changes what it costs, so the search ends without it and its expected cost (orbs for the chance of the target's acceptable set, or the Lifeforce of a Harvest quality enchant) is added to the value of a goal state, and a restart pays it again. A target with neither `quality:` nor `enchantment:` has no finish cost. The two steps never meet on one item: catalysts act on rings, amulets and belts, enchantments on weapons and body armour. The plain quality a body armour or weapon needs for a quality enchant is a closing report line; its expected cost is carried by the Harvest side of the enchant's finish comparison, and its scraps follow the gain rule above ([ADR-0052](0052-harvest-quality-enchants-and-the-quality-line.md)).
+
 Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (decisions list, owner round 1 point 7); [Blessed Orb, catalysts and Orb of Chance](https://github.com/Rasslabsya4el/crafting-system/issues/89); ADR-0024, ADR-0027.
+
+## Amendment: the finish generalises to sockets ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
+
+The idea of this ADR, plan the part no mod action changes last and add its cost to the value of a goal state, also covers sockets and the quality of weapons and armour, which no B1 to B3 action changes. Sockets are not a closed-form cost: the finish is a small decision problem of its own (ADR-0045). The quality of a weapon or armour uses this ADR's formula for the gain per currency item (ADR-0049).
+
+## Amendment: a corrupted implicit makes the finish cost per try ([Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95), ADR-0039)
+
+A corrupted item takes no ordinary catalyst, so for a target that has a `quality` and asks for a corrupted implicit the catalysts go on **before** the Vaal Orb, the Locus or the Bloodstained resonator. The finish cost is then charged on each use of the corrupting action, not once on the goal state: every try uses a new item with its own catalysts, so every restart pays it again. The chance that the corrupted implicit's roll passes is averaged over the exact distribution of the realized quality (the last catalyst can pass the target percent). A target without a corrupted implicit keeps the rule above unchanged.

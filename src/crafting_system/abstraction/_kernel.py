@@ -18,6 +18,7 @@ from crafting_system.actions import (
     NotApplicableError,
     Outcomes,
     OutOfScopeError,
+    Rerolled,
     allowed_by_tags,
     build_pool,
     partners,
@@ -27,10 +28,11 @@ from crafting_system.data import GameData, Mod
 from crafting_system.items import ExplicitMod, Influence, Item, ItemError, Rarity, Side, tier_table
 
 from ._goal import Goal, Status
-from ._kinds import TYPE_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
+from ._kinds import MOD_PREFIX, TYPE_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
+from ._rolls import Cells, RollLaw, is_rollable, multinomial, roll_law
 from ._state import CompressedState, Flags, FracturedMod, Slot, best_of, status_of
 
-Label = Hashable  # the contribution to every leaf as ints; with junk slots kept, also the side and the kind
+Label = Hashable  # the contribution to every leaf as ints (a `RollLaw` for a mod whose roll changes it); with junk slots kept, also the side and the kind
 FamilyType = tuple[Side, tuple[tuple[Label, Fraction, bool], ...]]
 ONE = Fraction(1)
 _SLOT_KEY = attrgetter("key")
@@ -104,6 +106,8 @@ class _Context:
         self.tiers = tiers
         self.kinds = kinds
         self.labels: dict[str, Label] = {}
+        self.lucky_labels: dict[str, Label] = {}  # the labels of a draw that rolls every value twice and keeps the better
+        self.laws: dict[tuple[str, bool, bool], Cells] = {}  # (mod id, lucky, crafted) -> the roll law
 
 
 class Abstraction:
@@ -141,6 +145,9 @@ class Abstraction:
         self.item_level = item_level
         actions = tuple(actions)
         self._metamods = metamods or any(self._adds_metamod(action) for action in actions)
+        self._roll_leaves = tuple(leaf for leaf in goal.leaves if leaf.has_roll_limit)  # a roll limit: a drawn mod rolls its values
+        self._has_laws = bool(self._roll_leaves)
+        self._roll_ids = frozenset().union(*(leaf.mod_ids for leaf in self._roll_leaves))
         self._numbers = TypeNumbers()
         self._actions = actions
         self._contexts: dict[frozenset[Influence], _Context] = {}
@@ -155,6 +162,8 @@ class Abstraction:
         self._drawn_slots: dict[tuple, Slot] = {}
         self._drawn_best: dict[tuple, tuple[Status, ...]] = {}
         self._fractures: dict[Hashable, tuple[tuple[Hashable, Fraction], ...]] = {}
+        self._spread: dict[tuple[RollLaw, int], list] = {}
+        self._unrolled: set[Hashable] = set()  # signatures of fracturing pools that hold no rollable mod
         self._kernels = 0
         self._hits = 0
 
@@ -162,6 +171,11 @@ class Abstraction:
     def keeps_junk(self) -> bool:
         """Whether a state stores the ordinary mods that are not fractured (an enabled action reads them)."""
         return self._kinds.tracked
+
+    @property
+    def rerolls_values(self) -> bool:
+        """Whether an enabled action rerolls the values of the mods an item holds (a Divine Orb): rollable mods are then slots by mod id."""
+        return self._kinds.rerolls
 
     @property
     def models_metamods(self) -> bool:
@@ -207,6 +221,7 @@ class Abstraction:
             metamods=self._metamods,
             influences=influences,
             numbers=self._numbers,
+            rollable=lambda: self._rollable_mods(influences),
         )
         context = self._contexts[influences] = _Context(influences, tiers, kinds)
         return context
@@ -278,9 +293,10 @@ class Abstraction:
         """The exact distribution of the next compressed state after `action` on `state`.
 
         Raises what the action raises for the item the state stands for (`NotApplicableError`,
-        `OutOfScopeError`), `OutOfScopeError` for a roll limit on a mod the action draws, forces or
-        crafts, and `ValueError` for a state of another goal and for an action that reads the mods
-        besides the fractured ones and was not enabled.
+        `OutOfScopeError`), `OutOfScopeError` for a roll limit on a forced, crafted or fixed-result new mod
+        and for a Fractured Fossil whose pool holds a mod a roll limit tells apart (a mod the action draws
+        is fine: its roll is spread over its law), and `ValueError` for a state of another goal and for an
+        action that reads the mods besides the fractured ones and was not enabled.
         """
         if len(state.status) != len(self.goal.leaves):
             raise ValueError(
@@ -307,7 +323,8 @@ class Abstraction:
         and `_Split.new_ids`, which only names the new mods (the forced mods of two essences can differ
         in id and give one kernel). A result that FRACTURES also reads the pool of each part (the
         fractured mod is spread over its families; `_add_fractured`) and the forced mod, so for such a
-        part the key adds `part.forced` and the families of the pool with their mod ids and weights.
+        part the key adds `part.forced` and the families of the pool with their mod ids and weights. A
+        `Rerolled` part also reads which of the kept slots are rerolled (`changed`), so the key adds them.
         """
         if len(state.status) != len(self.goal.leaves):
             raise ValueError(
@@ -317,15 +334,16 @@ class Abstraction:
         self._check_enabled(action)
         prepared = self._prepared(state, action)
         outcomes = prepared.outcomes
-        fixed = [isinstance(part, Fixed) for _, part in outcomes.components]
-        if outcomes.fractures and any(fixed) and not all(fixed):
-            raise ValueError("a mixture of fixed results and pool draws cannot fracture a mod: only pool draws (a Fractured Fossil) or fixed results (a Fracturing Orb) do")
+        self._check_parts(outcomes)
         parts: Counter = Counter()
         for (share, part), signature, split in zip(
             outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
         ):
             key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status)
+            if isinstance(part, Rerolled):  # which of the kept slots are rerolled decides the kernel
+                key = (*key, tuple(sorted(self._rerolled_slots(part, prepared.origins)[1], key=_SLOT_KEY)))
             if outcomes.fractures and not isinstance(part, Fixed):
+                self._refuse_rollable_fracture(part, signature)
                 pool = tuple(
                     (family.family, tuple((entry.mod.id, entry.weight) for entry in family.mods))
                     for family in part.pool
@@ -333,6 +351,15 @@ class Abstraction:
                 key = (*key, part.forced, pool)
             parts[key] += 1
         return (outcomes.fractures, frozenset(parts.items()))
+
+    def _check_parts(self, outcomes: ActionOutcomes) -> None:
+        """Refuse the mixtures of parts that no kernel is defined for (a fracture needs all pool draws or all fixed results)."""
+        parts = [part for _, part in outcomes.components]
+        fixed = [isinstance(part, Fixed) for part in parts]
+        if outcomes.fractures and any(fixed) and not all(fixed):
+            raise ValueError("a mixture of fixed results and pool draws cannot fracture a mod: only pool draws (a Fractured Fossil) or fixed results (a Fracturing Orb) do")
+        if outcomes.fractures and any(isinstance(part, Rerolled) for part in parts):
+            raise ValueError("a rerolled result cannot fracture a mod")
 
     def _check_enabled(self, action: Action) -> None:
         if self._kinds.reads_junk(action) and action not in self._kinds.actions:
@@ -348,7 +375,9 @@ class Abstraction:
         has `("fossils", fractures, the parts)`, each part its probability and the signature of its
         pool, with the label of its forced mod when a mod is fractured. An action with a fixed result
         (a bench craft) draws nothing and has no cache: its signature is `("fixed", action)`, which
-        names the action and does not decide its kernel.
+        names the action and does not decide its kernel. A `Rerolled` part (a Divine Orb) is the same:
+        its signature `("rerolled", lucky)` names the kind only, and the kernel also reads which kept slots
+        are rerolled (`kernel_key` carries them).
 
         The forced mod of an essence is not in it: it is a kept mod, so the pool already leaves out its
         family, the kept count and the free slots already count it, and it cannot change the draw.
@@ -358,9 +387,7 @@ class Abstraction:
         outcomes = prepared.outcomes
         if all(isinstance(part, Fixed) for _, part in outcomes.components):
             return ("fixed", action)
-        fixed = [isinstance(part, Fixed) for _, part in outcomes.components]
-        if outcomes.fractures and any(fixed) and not all(fixed):
-            raise ValueError("a mixture of fixed results and pool draws cannot fracture a mod: only pool draws (a Fractured Fossil) or fixed results (a Fracturing Orb) do")
+        self._check_parts(outcomes)
         signatures = self._signatures_of(prepared)
         if len(signatures) == 1 and not outcomes.fractures:
             return signatures[0]
@@ -444,35 +471,66 @@ class Abstraction:
         """Whether `mod`, drawn by an action (its table tier, low rolls), gives leaf number `leaf` the status PASSING."""
         return self._drawn_contribution(mod)[leaf] is Status.PASSING
 
-    def _profile(self, mod: Mod, influences: frozenset[Influence] = frozenset()) -> tuple[int, ...]:
-        """What `mod` gives each leaf as ints: the part of a family type that the goal decides."""
-        return tuple(int(status) for status in self._drawn_contribution(mod, False, influences))
+    def _law(self, mod: Mod, influences: frozenset[Influence], lucky: bool = False, crafted: bool = False) -> Cells:
+        """The roll law of `mod` at its table tier (that of the pool of an item with these influences); see `_rolls.py`."""
+        context = self._context(influences)
+        key = (mod.id, lucky, crafted)
+        law = context.laws.get(key)
+        if law is None:
+            law = context.laws[key] = roll_law(self.goal.leaves, mod, context.tiers.get(mod.id, 1), crafted, lucky)
+        return law
+
+    def _rollable_mods(self, influences: frozenset[Influence]):
+        """The ordinary mods a roll limit can tell apart by their values: those named by a leaf whose law has more than one outcome."""
+        seen: set[str] = set()
+        for mod_id in self._roll_ids:
+            mod = self.data.mods.get(mod_id)
+            if mod is not None and mod.domain != "crafted" and mod_id not in seen:
+                seen.add(mod_id)
+                if is_rollable(self._law(mod, influences)):
+                    yield mod
+
+    def _profile(self, mod: Mod, influences: frozenset[Influence] = frozenset()) -> Hashable:
+        """What `mod` gives each leaf as ints (the part of a family type that the goal decides); a `RollLaw` for a rollable mod.
+
+        The law holds the fair and the lucky outcomes, so that two families that roll alike when fair but not
+        when lucky are never one family type.
+        """
+        if not self._has_laws:
+            return tuple(int(status) for status in self._drawn_contribution(mod, False, influences))
+        cells = self._law(mod, influences)
+        return RollLaw(cells, self._law(mod, influences, True)) if is_rollable(cells) else cells[0][0]
 
     def _guard_roll(self, mod: Mod) -> None:
-        """Raise `OutOfScopeError` when a leaf names `mod` and limits its roll: a rolled value is not modelled yet."""
+        """Raise `OutOfScopeError` when a leaf names `mod` and limits its roll: a forced, crafted or fixed-result mod rolls a value no law is built for."""
         for leaf in self.goal.leaves:
             if mod.id in leaf.mod_ids and leaf.has_roll_limit:
                 raise OutOfScopeError(
-                    f"a roll limit on a drawn, forced or crafted mod is not modelled yet (mod {mod.id})"
+                    f"a roll limit on a forced, crafted or fixed-result new mod is not modelled yet (mod {mod.id})"
                 )
 
-    def _label(self, mod: Mod, influences: frozenset[Influence] = frozenset()) -> Label:
+    def _label(self, mod: Mod, influences: frozenset[Influence] = frozenset(), lucky: bool = False) -> Label:
         """The label of a drawn mod: its contribution to every leaf, as ints; with junk slots kept, also its side and kind.
 
-        Raises `OutOfScopeError` when a leaf names the mod and limits its roll.
+        A mod whose roll changes what it gives the goal (a rollable mod) is labelled by its roll law (a `RollLaw`,
+        with `lucky` the law of values rolled twice, the better kept); `_distribution` spreads it over the rolls.
         """
         context = self._context(influences)
-        label = context.labels.get(mod.id)
+        labels = context.lucky_labels if lucky else context.labels
+        label = labels.get(mod.id)
         if label is None:
-            self._guard_roll(mod)
-            ints = tuple(int(status) for status in self._drawn_contribution(mod, False, influences))
+            if self._has_laws:
+                cells = self._law(mod, influences, lucky)
+                ints = RollLaw(cells) if is_rollable(cells) else cells[0][0]
+            else:
+                ints = tuple(int(status) for status in self._drawn_contribution(mod, False, influences))
             label = (ints, mod.generation_type, context.kinds.of(mod)) if context.kinds.tracked else ints
-            context.labels[mod.id] = label
+            labels[mod.id] = label
         return label
 
-    def _labeller(self, influences: frozenset[Influence]):
+    def _labeller(self, influences: frozenset[Influence], lucky: bool = False):
         """`_label` as a function of the mod alone, for the influences of one item."""
-        return lambda mod: self._label(mod, influences)
+        return lambda mod: self._label(mod, influences, lucky)
 
     def _slot_of(self, entry: ExplicitMod, influences: frozenset[Influence]) -> Slot:
         """The slot of a mod of a concrete item that is not fractured."""
@@ -486,6 +544,15 @@ class Abstraction:
         """The canonical id of a mod of a concrete item (see `_canonical_for`)."""
         return self._canonical_for(self.data.mods[entry.mod_id], self._contribution(entry), entry.crafted, influences)
 
+    def _canonical_groups(self) -> dict[tuple, list[Mod]]:
+        """Every mod of the data by (families, side, domain): the mods a canonical id stands for."""
+        if self._canonical_group is None:
+            groups: dict[tuple, list[Mod]] = defaultdict(list)
+            for mod in self.data.mods.values():
+                groups[(mod.families, mod.generation_type, mod.domain)].append(mod)
+            self._canonical_group = groups
+        return self._canonical_group
+
     def _canonical_for(
         self, own: Mod, contribution: tuple[Status, ...], crafted: bool, influences: frozenset[Influence]
     ) -> str:
@@ -496,12 +563,7 @@ class Abstraction:
         key = (influences, own.id, contribution, crafted)
         found = self._canonical.get(key)
         if found is None:
-            if self._canonical_group is None:
-                groups: dict[tuple, list[Mod]] = defaultdict(list)
-                for mod in self.data.mods.values():
-                    groups[(mod.families, mod.generation_type, mod.domain)].append(mod)
-                self._canonical_group = groups
-            group = self._canonical_group[(own.families, own.generation_type, own.domain)]
+            group = self._canonical_groups()[(own.families, own.generation_type, own.domain)]
             tags = protected_tags(own)
             matching = [
                 mod.id
@@ -704,8 +766,8 @@ class Abstraction:
         if not members:
             return
         for _, part in outcomes.components:
-            if isinstance(part, Fixed):
-                continue
+            if isinstance(part, (Fixed, Rerolled)):
+                continue  # neither draws: a fractured mod keeps its value whatever its family is
             forced = set() if part.forced is None else held_families(self.data.mods[part.forced])
             plain = part.tag is None and part.pool == build_pool(self.data, part.retained)
             if forced & members or not plain:
@@ -718,19 +780,19 @@ class Abstraction:
     def _mixture_kernel(self, state: CompressedState, prepared: _Prepared) -> dict[CompressedState, Fraction]:
         """The kernel of a result that is a mixture of parts: each part gives its states, weighted by its probability.
 
-        A part is a fixed result (the mods that stay, the new ones) or a pool draw (the same, then the
-        new draws seen through the label); with a fracture one finished mod also becomes fractured.
+        A part is a fixed result (the mods that stay, the new ones), a rerolled result (the same mods, the
+        values of some rolled afresh) or a pool draw (the same, then the new draws seen through the label);
+        with a fracture one finished mod also becomes fractured.
         """
         outcomes = prepared.outcomes
-        parts = [part for _, part in outcomes.components]
-        fixed = [isinstance(part, Fixed) for part in parts]
-        if outcomes.fractures and any(fixed) and not all(fixed):
-            raise ValueError("a mixture of fixed results and pool draws cannot fracture a mod: only pool draws (a Fractured Fossil) or fixed results (a Fracturing Orb) do")
+        self._check_parts(outcomes)
         signatures = self._signatures_of(prepared)
         result: dict[CompressedState, Fraction] = defaultdict(Fraction)
         for (share, part), signature, split in zip(outcomes.components, signatures, self._splits_of(prepared)):
             if isinstance(part, Fixed):
                 self._add_fixed(result, share, split)  # a fixed result that fractures a mod holds it fractured already
+            elif isinstance(part, Rerolled):
+                self._add_rerolled(result, share, part, prepared.origins, split)
             elif outcomes.fractures:
                 self._add_fractured(result, share, state, part, signature, split)
             else:
@@ -848,6 +910,7 @@ class Abstraction:
         them with the same chance.
         """
         influences = split.flags.influences
+        self._refuse_rollable_fracture(part, signature)
         families: dict[FamilyType, list] = defaultdict(list)
         for family in part.pool:
             families[self._family_type(family, None, influences)].append(family)
@@ -890,7 +953,11 @@ class Abstraction:
         return self._fractured_id(ExplicitMod(mod.id, tier, _low_values(mod), fractured=True), influences)
 
     def _forced_label(self, part: Outcomes) -> Label | None:
-        return None if part.forced is None else self._label(self.data.mods[part.forced], part.retained.influences)
+        if part.forced is None:
+            return None
+        mod = self.data.mods[part.forced]
+        self._guard_roll(mod)  # the forced mod is a kept mod rolled at its low values: a roll limit on it has no law
+        return self._label(mod, part.retained.influences)
 
     def _fracture_entries(self, part: Outcomes, signature: Hashable) -> tuple[tuple[Hashable, Fraction], ...]:
         """How a Fractured Fossil splits the finished item of one pool, cached by pool signature.
@@ -971,7 +1038,12 @@ class Abstraction:
         return kind, fractured_label, best, rest
 
     def _family_type(
-        self, family, tag: str | None, influences: frozenset[Influence], blocked: frozenset[str] = frozenset()
+        self,
+        family,
+        tag: str | None,
+        influences: frozenset[Influence],
+        blocked: frozenset[str] = frozenset(),
+        lucky: bool = False,
     ) -> FamilyType:
         """The side and the sorted (label, weight, whether the guaranteed draw may pick it) of the mods of a family.
 
@@ -983,7 +1055,7 @@ class Abstraction:
             tuple(
                 sorted(
                     (
-                        self._label(entry.mod, influences),
+                        self._label(entry.mod, influences, lucky),
                         entry.weight,
                         tag is not None and tag in entry.mod.implicit_tags and allowed_by_tags(entry.mod, blocked),
                     )
@@ -996,7 +1068,11 @@ class Abstraction:
         """The signature of every part of the outcomes (one, unless the action is a mixture)."""
         if prepared.signatures is None:
             prepared.signatures = tuple(
-                ("fixed",) if isinstance(part, Fixed) else self._pool_signature(part)
+                ("fixed",)
+                if isinstance(part, Fixed)
+                else ("rerolled", part.lucky)
+                if isinstance(part, Rerolled)
+                else self._pool_signature(part)
                 for _, part in prepared.outcomes.components
             )
         return prepared.signatures
@@ -1013,7 +1089,10 @@ class Abstraction:
                 free[Side.SUFFIX],
                 tuple(sorted(part.totals.items())),
                 tuple(
-                    sorted(self._family_type(family, part.tag, influences, part.guaranteed_blocked) for family in part.pool)
+                    sorted(
+                        self._family_type(family, part.tag, influences, part.guaranteed_blocked, part.rolls_lucky)
+                        for family in part.pool
+                    )
                 ),
                 tuple(  # the families with mods on both sides: which one-sided types are two sides of one family
                     sorted(
@@ -1070,13 +1149,143 @@ class Abstraction:
             self._hits += 1
             return cached
         width = len(self.goal.leaves)
+        tracked = self._kinds.tracked
         merged: dict[Hashable, Fraction] = defaultdict(Fraction)
-        for outcome, chance in part.distribution(self._labeller(part.retained.influences)).items():
-            if self._kinds.tracked:
-                merged[outcome] += chance
-            else:
-                merged[tuple(best_of(width, (label for label, _ in outcome)))] += chance
+        for outcome, chance in part.distribution(self._labeller(part.retained.influences, part.rolls_lucky)).items():
+            for concrete, each in self._concrete(outcome) if self._has_laws else ((outcome, ONE),):
+                weight = chance if each == 1 else chance * each
+                if tracked:
+                    merged[concrete] += weight
+                else:
+                    merged[tuple(best_of(width, (label for label, _ in concrete)))] += weight
         cached = dict(merged)
         self._cache[signature] = cached
         self._kernels += 1
         return cached
+
+    def _concrete(self, outcome) -> tuple[tuple[Hashable, Fraction], ...]:
+        """One outcome of the engine, whose labels may be roll laws, as the outcomes of concrete rolls with their chances.
+
+        n mods that share a law (and, with junk kept, a side and a kind) spread over the outcomes of the law with
+        the multinomial chance; the counts are merged onto the labels of the concrete rolls. An outcome with no
+        law is itself, with chance 1.
+        """
+        tracked = self._kinds.tracked
+        plain: dict[Hashable, int] = {}
+        laws = []
+        for label, count in outcome:
+            core = label[0] if tracked else label
+            if isinstance(core, RollLaw):
+                laws.append((core, label[1:] if tracked else (), count))
+            else:
+                plain[label] = count
+        if not laws:
+            return ((outcome, ONE),)
+        states: list[tuple[dict[Hashable, int], Fraction]] = [(plain, ONE)]
+        for law, rest, count in laws:
+            key = (law, count)
+            spreads = self._spread.get(key)
+            if spreads is None:
+                spreads = self._spread[key] = multinomial(law.cells, count)
+            following = []
+            for counts, chance in states:
+                for spread, each in spreads:
+                    merged = dict(counts)
+                    for ints, taken in spread:
+                        label = (ints, *rest) if tracked else ints
+                        merged[label] = merged.get(label, 0) + taken
+                    following.append((merged, chance * each))
+            states = following
+        return tuple((frozenset(counts.items()), chance) for counts, chance in states)
+
+    def _refuse_rollable_fracture(self, part: Outcomes, signature: Hashable) -> None:
+        """Raise `OutOfScopeError` when the pool of a draw that fractures one of its mods holds a rollable mod.
+
+        The fractured mod is found by marking its family type in the label, and the fracture entries are not
+        spread over the rolls of a law: that is not built, so such a pool is refused (a Fractured Fossil whose
+        pool holds a mod a roll limit tells apart).
+        """
+        if not self._has_laws or signature in self._unrolled:
+            return
+        influences = part.retained.influences
+        for family in part.pool:
+            for entry in family.mods:
+                if is_rollable(self._law(entry.mod, influences)):
+                    raise OutOfScopeError(
+                        f"a roll limit on a mod of the pool of a draw that fractures one of its mods is not modelled yet (mod {entry.mod.id})"
+                    )
+        self._unrolled.add(signature)
+
+    # --- a Divine Orb: the same mods, some values rolled afresh -----------------------------------------
+
+    def _rerolled_slots(self, part: Rerolled, origins: Origins) -> tuple[list[Slot], list[Slot]]:
+        """The slots of the item given to the action that stay as they are, and those whose values it rerolls."""
+        if any(fractured for _, fractured, _ in part.changed):
+            raise ValueError("a rerolled result does not change a fractured mod")
+        unchanged: list[Slot] = []
+        rerolled: list[Slot] = []
+        for entry in part.given.mods:
+            key = (entry.mod_id, entry.fractured, entry.crafted)
+            origin = origins[key]
+            if isinstance(origin, Slot):
+                (rerolled if key in part.changed else unchanged).append(origin)
+        return unchanged, rerolled
+
+    def _slot_law(self, slot: Slot, influences: frozenset[Influence], lucky: bool) -> Cells | None:
+        """The roll law of the mod a slot stands for when a reroll of values changes it; None for a slot a reroll cannot change.
+
+        Only a slot of kind `"$<mod id>"` (a mod of a family whose roll the goal looks at) can change. A crafted
+        slot knows only the canonical id of its mod: it is refused (`OutOfScopeError`) when any mod it may stand for
+        is rollable, because the range of the real mod is not known.
+        """
+        if not self._has_laws:
+            return None
+        if slot.crafted:
+            own = self.data.mods[slot.kind]
+            group = self._canonical_groups()[(own.families, own.generation_type, own.domain)]
+            if any(mod.id in self._roll_ids and is_rollable(self._law(mod, influences, lucky, True)) for mod in group):
+                raise OutOfScopeError(
+                    f"a Divine Orb rerolls a crafted mod ({own.id}) that a roll limit looks at: the range of the real mod "
+                    "is not known from its canonical id, so its new roll cannot be modelled"
+                )
+            return None
+        base = base_kind(slot.kind)
+        if not base.startswith(MOD_PREFIX):
+            return None
+        cells = self._law(self.data.mods[base[len(MOD_PREFIX) :]], influences, lucky)
+        return cells if is_rollable(cells) else None
+
+    def _add_rerolled(
+        self, result: dict[CompressedState, Fraction], share: Fraction, part: Rerolled, origins: Origins, split: _Split
+    ) -> None:
+        """Add the states of a result that rolls the values of some mods afresh.
+
+        The fractured mods and the slots that are not changed stay as they are. Each changed slot of a rollable
+        mod gets a new contribution drawn from the law of its mod, independently of the others, and the status
+        of every leaf is the best over all the mods again. Equal states add up.
+        """
+        if not self._kinds.tracked:
+            raise ValueError("a rerolled result needs the mods of the item as slots: the action must read the junk")
+        influences = split.flags.influences
+        unchanged, rerolled = self._rerolled_slots(part, origins)
+        fixed = list(unchanged)
+        laws: list[tuple[Slot, Cells]] = []
+        for slot in rerolled:
+            cells = self._slot_law(slot, influences, part.lucky)
+            if cells is None:
+                fixed.append(slot)
+            else:
+                laws.append((slot, cells))
+        outcomes: list[tuple[tuple[Slot, ...], Fraction]] = [((), ONE)]
+        for slot, cells in laws:
+            outcomes = [
+                (chosen + (Slot(slot.side, slot.kind, tuple(Status(value) for value in ints)),), before * each)
+                for chosen, before in outcomes
+                for ints, each in cells
+            ]
+        width = len(self.goal.leaves)
+        held = [entry.contribution for entry in split.fractured]
+        for chosen, chance in outcomes:
+            slots = sorted((*fixed, *chosen), key=_SLOT_KEY)
+            status = best_of(width, (*held, *(slot.contribution for slot in slots)))
+            result[CompressedState(split.flags, split.fractured, status, tuple(slots))] += share * chance

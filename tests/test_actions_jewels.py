@@ -33,6 +33,7 @@ from crafting_system.actions import (
     AugmentationOrb,
     BenchCraft,
     ChaosOrb,
+    DivineOrb,
     ExaltedOrb,
     FracturingOrb,
     HarvestReforge,
@@ -74,6 +75,7 @@ ORBS = {
     "exalted": (ExaltedOrb(), Rarity.RARE),
     "annulment": (AnnulmentOrb(), Rarity.RARE),
     "scouring": (ScouringOrb(), Rarity.RARE),
+    "divine": (DivineOrb(), Rarity.RARE),
 }
 MOD_SIDES = {  # the sides of the mods each orb finds on the jewel it is tried on (magic for the magic orbs)
     "alteration": (Side.PREFIX,),
@@ -83,6 +85,7 @@ MOD_SIDES = {  # the sides of the mods each orb finds on the jewel it is tried o
     "exalted": (Side.PREFIX, Side.SUFFIX),
     "annulment": (Side.PREFIX, Side.SUFFIX),
     "scouring": (Side.PREFIX, Side.SUFFIX),
+    "divine": (Side.PREFIX, Side.SUFFIX),
 }
 
 

@@ -1,4 +1,4 @@
-"""Sparse direct solution of V = c + P V for a substochastic P, without subtractions.
+"""Sparse direct solution of V = c + P V for a substochastic P (or a signed leak), without subtractions.
 
 Large stiff components (an expected cost near 1e5 steps, as a belt that restarts from every
 state) defeat sweeps, and dense elimination is cubic. Eliminating states one by one in a
@@ -13,6 +13,16 @@ for every row r with p_rk > 0:
 
 Every number stays positive, so nothing cancels however close to 1 the row sums are. The values
 come back in the reverse order: V_k = (c_k + sum_j p_kj V_j) / d over the states eliminated after k.
+
+Rows with an excess. The algebra only uses "row sum + leak = 1" at every stage (then d = 1 - p_kk,
+and each elimination keeps the identity). A row of an action that takes an input from inside the
+component has coefficients that sum to 1 - (probability to leave) + (kappa of the inputs inside),
+with kappa 1 or more, so the row may sum to more than 1 and its leak is then negative
+(the solver stores leak = outside probability - kappa inside). Nothing in the elimination changes;
+the sums with a negative leak can cancel, and what tests that the policy is subcritical is that
+every pivot `d` and every value come out positive: a zero or negative pivot, or a non-positive
+value, returns None. The caller's answer is always certified by the residuals of its own
+Bellman operator, so a wrong evaluation can only fail to converge, never certify a wrong value.
 """
 
 import heapq
@@ -24,9 +34,10 @@ WORK_LIMIT = 200_000_000  # multiply-adds one elimination may spend before it gi
 def solve_substochastic(
     rows: list[dict[int, float]], leak: list[float], base: list[float], work_limit: int = WORK_LIMIT
 ) -> list[float] | None:
-    """Solve V = base + P V, where `rows[s]` holds the probabilities p_sj of the states j still inside
-    and `leak[s]` the probability to leave; None if a pivot is zero (an improper policy, a state that
-    never leaves) or the work passes `work_limit`. The arguments are consumed.
+    """Solve V = base + P V, where `rows[s]` holds the coefficients p_sj of the states j still inside
+    and `leak[s]` the probability to leave, which is 1 minus the row sum (negative for a row with an
+    excess, see above); None if a pivot is not positive (an improper or supercritical policy, a state
+    that never leaves) or the work passes `work_limit`. The arguments are consumed.
     """
     size = len(rows)
     preds: list[set[int]] = [set() for _ in range(size)]
