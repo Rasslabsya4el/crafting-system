@@ -150,6 +150,8 @@ rules:
   patch_verified: 3.26.0
   date_checked: 2026-10-31
   value: 0.5
+  approximate: true
+  approximate_reason: Measured in 3.25 only; 3.26 reports it no longer holds when a side holds only exclusive mods, and no number says what it is then.
 - id: recombinator.nnn_needs_native_base
   statement: A mod that needs a specific base (influenced, attribute-bound, base-type-bound) counts in the pool but cannot appear if the chosen base is not native to it. A fractured mod counts only if its own base is chosen.
   source_kind: wiki
@@ -165,7 +167,7 @@ rules:
   patch_verified: 3.29.3.3
   date_checked: 2026-10-31
 - id: recombinator.fewer_mods_when_inputs_cannot_roll
-  statement: Since 3.26 the output holds fewer mods on average when the inputs carry many mods that cannot normally roll on the item (veiled, essence); exclusive mods count once per side in the pool.
+  statement: Since 3.26 the output holds fewer mods on average when the inputs carry many mods that cannot normally roll on the item (veiled, essence).
   source_kind: official
   url: https://www.poewiki.net/wiki/Version_3.26.0
   quote: fewer modifiers on the item on average
@@ -317,7 +319,7 @@ rules:
   statement: 'Jewels do not go into the bench: the planner refuses them (idols are not planned either).'
   source_kind: owner
   url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0033-the-unpredictable-recombinator.md
-  quote: 'Jewels are refused (owner, answer 4a: they do not go into the bench)'
+  quote: they do not go into the bench
   patch_verified: 3.29.3.3
   date_checked: 2026-11-01
 - id: recombinator.output_rarity_follows_mods
@@ -343,7 +345,7 @@ rules:
   statement: 'One combine consumes Thaumaturgic Dust and Gold; the value maps the price-file names to the point amounts of ADR-0035 (Dust 25,000 to 250,000, Gold 8,000 to 20,000 in the reports). Ticket #216 replaces it with the rule of recombinator_cost.yaml.'
   source_kind: experiment
   url: https://www.reddit.com/r/pathofexile/comments/1ldc3lz/
-  quote: will easily give costs over 100,000
+  quote: costs over 100,000
   patch_verified: 3.26.0
   date_checked: 2026-11-01
   value:

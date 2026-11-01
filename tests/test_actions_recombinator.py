@@ -3,7 +3,7 @@
 Done when: the contract suite passes at every grid point of the selection exponent (it runs on every kind of the catalog and the kind is
 found on the fixture items; the grid is checked here on explicit donors too); `chance_all` equals exhaustive enumeration of the successive
 draws (`recombinator_oracle.py`) on pools of up to 6 mods per side; the #175 example (a weight-25 mod in 25/1000/1000/400, count row 4)
-gives 3.8% at alpha 1 and 55% at the off-grid alpha 0 under the wiki's row 4 (55.5% under the guide's); the count table sums to 1 per row
+gives 3.8% at alpha 1 and 55% at the off-grid alpha 0 under the wiki's row 4 (54.95% under the guide's once its row is renormalised; 55.5% is the unrenormalised 222/400); the count table sums to 1 per row
 after renormalising. The rest checks the rules one at a time.
 """
 
@@ -42,6 +42,7 @@ PREFIX_WEIGHTS = {"RP25": 25, "RP1000a": 1000, "RP1000b": 1000, "RP400": 400, "R
 SUFFIX_WEIGHTS = {"RS1000": 1000, "RS500": 500, "RS250": 250, "RS800": 800, "RS600": 600, "RS1200": 1200}
 ONLY_A = "RPOnlyA"  # a prefix that spawns on the tag only the first base has
 VEILED = "RPVeiled"  # a veiled placeholder prefix
+TIER2 = "RP25T2"  # a second tier of the family of RP25
 ESSENCE = "RSEssence"  # an essence-only suffix: exclusive
 BASE_A = "Metadata/Items/Amulets/RecombA"
 BASE_JEWEL = "Metadata/Items/Jewels/RecombJewel"
@@ -61,6 +62,8 @@ def _world():
     for mod_id, weight in SUFFIX_WEIGHTS.items():
         add(mod_id, suffix, "amulet", weight)
     add(ONLY_A, prefix, "only_a", 600)
+    add(TIER2, prefix, "amulet", 100)
+    mods[TIER2] = dataclasses.replace(mods[TIER2], families=("RP25",))
     add(VEILED, prefix, "amulet", 0, domain="veiled")
     add(ESSENCE, suffix, "amulet", 0, is_essence_only=True)
     bases = dict(CONTRACT_DATA.base_items)
@@ -158,6 +161,17 @@ def test_the_175_example_matches_the_oracle_exactly():
         assert held(outcomes, "RP25") == chance_of_holding(DATA, item, donor, alpha, WIKI, {"RP25"})
 
 
+def test_a_hand_figure_two_prefixes_one_on_each_magic_input():
+    # pooled prefix count 2: one kept 67%, both 33% (guide); the suffix pool is empty. At alpha 1 the 250 mod is the one kept with
+    # chance 250 / (250 + 1000) when one is kept: P = 33/100 + 67/100 * 1/5
+    item, donor = make(["RP250"], Rarity.MAGIC), make(["RP1000a"], Rarity.MAGIC)
+    outcomes = Recombinator(donor).outcomes(DATA, item)
+    assert held(outcomes, "RP250") == Fraction(33, 100) + Fraction(67, 100) * Fraction(1, 5)
+    assert held(outcomes, "RP1000a") == Fraction(33, 100) + Fraction(67, 100) * Fraction(4, 5)
+    flat = Recombinator(donor).outcomes_under(DATA, item, Reading.of({ALPHA: Fraction(0)}))
+    assert held(flat, "RP250") == Fraction(33, 100) + Fraction(67, 100) * Fraction(1, 2)
+
+
 # --- chance_all equals exhaustive enumeration ----------------------------------------------------------------------------------------
 
 SIX_EACH_A = ["RP25", "RP1000a", "RP400", "RS1000", "RS500", "RS250"]
@@ -167,6 +181,8 @@ SCENARIOS = {
     "six_and_six": (make(SIX_EACH_A), make(SIX_EACH_B)),
     # doubling: the same mods on both inputs, and a family shared between two tiers of different inputs
     "doubled": (make(["RP25", "RP1000a", "RS500", "RS250"]), make(["RP25", "RP400", "RS500", "RS800"])),
+    # two tiers of one mod group on different inputs: either one enters the pool, and picking one closes the other
+    "tiers": (make(["RP25", "RP1000a", "RS500"]), make([TIER2, "RP400", "RS250"])),
     # magic inputs: one prefix and one suffix each
     "magic_pair": (make(["RP25", "RS500"], Rarity.MAGIC), make(["RP1000a", "RS250"], Rarity.MAGIC)),
     # one mod on each input, on opposite sides: 1p, 1s or 1p1s
@@ -306,8 +322,9 @@ def test_any_exponent_is_accepted_not_only_the_grid_and_the_plan_is_alpha_one():
     assert plain == finished(action.outcomes_under(DATA, item, Reading()))
     assert finished(action.outcomes_under(DATA, item, Reading.of({ALPHA: Fraction(0)}))) != plain
     action.outcomes_under(DATA, item, Reading.of({ALPHA: 0.5}))  # a float is a number too
-    with pytest.raises(ValueError):
-        action.outcomes_under(DATA, item, Reading.of({ALPHA: "heavy"}))
+    for bad in ("heavy", float("inf"), float("nan"), 10**9):
+        with pytest.raises(ValueError):
+            action.outcomes_under(DATA, item, Reading.of({ALPHA: bad}))
 
 
 def test_a_higher_exponent_favours_the_heavy_mod_more():

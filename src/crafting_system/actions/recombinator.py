@@ -12,7 +12,7 @@ neither a jewel (`recombinator.jewels_refused`); both are destroyed and a new it
 * **The pools and the count.** The prefixes of both inputs form one pool, the suffixes another, and a mod on both inputs enters its
   pool twice (**doubling**, `recombinator.duplicates_enter_pool`). The number of mods kept on a side depends only on its pooled
   count (`recombinator.count_table`, the guide's figures renormalised to sum to 1; the wiki's rounding of the same table is the
-  second table, `count_table="wiki"`); the sides are independent except that one prefix on one input and one suffix on the other
+  second table, `table="wiki"`); the sides are independent except that one prefix on one input and one suffix on the other
   give 1p, 1s or 1p1s, a third each (`recombinator.pools_per_side`). The output holds at most the base's capacity per side
   (`recombinator.output_capped_by_chosen_base`).
 * **Which mods.** One side is filled first, 1/2 each (`recombinator.side_filled_first_even`); on a side the kept mods are drawn
@@ -26,7 +26,8 @@ neither a jewel (`recombinator.jewels_refused`); both are destroyed and a new it
   but is eligible only if its own input is the base. An exclusive mod (crafted, essence-only, or one its own input could not roll
   naturally: a beast aspect, a Breach or Incursion mod) counts once per side in the pooled count
   (`recombinator.exclusive_counts_once_report_3_27`), is drawn at the weight of `recombinator.exclusive_mod_weight`, and once one is
-  picked the other exclusive mods of both pools are ineligible (`recombinator.one_exclusive_per_item`).
+  picked the other exclusive mods of both pools are ineligible (`recombinator.one_exclusive_per_item`). Several exclusive mods on one
+  side each draw at that weight, though they count once in the pooled count.
 
 Refusals. `NotApplicableError`: an item that is normal or corrupted, a jewel, or two items of different item classes. `OutOfScopeError`:
 a veiled mod on either input (its unveil offer would have to be carried over, which no source describes) and a pooled count above 6 (the
@@ -85,6 +86,7 @@ ALPHA_AXIS = Axis(
 
 TABLES = {"guide": COUNT_TABLE, "wiki": COUNT_TABLE_WIKI}
 MAX_POOLED = 6
+MAX_EXPONENT = 16
 EXCLUSIVE_DOMAINS = frozenset({"crafted", "delve"})
 VEILED_DOMAIN = "veiled"
 WHY_NOT_PLANNER = (
@@ -130,20 +132,24 @@ def _pool_ids(entries: list[_Entry], side: Side) -> list[int]:
 class Recombinator(Action):
     """One use of the recombinator on the item in hand with the donor `donor` (the item the donor must be when it is used).
 
-    `count_table` is `"guide"` (the plan) or `"wiki"` (the sensitivity run).
+    `table` is the count table, `"guide"` (the plan) or `"wiki"` (the sensitivity run).
     """
 
     donor: Item
-    count_table: str = "guide"
+    table: str = "guide"
 
     def __post_init__(self) -> None:
-        if self.count_table not in TABLES:
-            raise ValueError(f"the count table {self.count_table!r} is not one of {sorted(TABLES)}")
+        if self.table not in TABLES:
+            raise ValueError(f"the count table {self.table!r} is not one of {sorted(TABLES)}")
 
     @property
     def variant(self) -> str:
-        mods = ",".join(f"{entry.mod_id}{'!' if entry.fractured else ''}{'*' if entry.crafted else ''}" for entry in self.donor.mods)
-        return f"{self.donor.base_id} {self.donor.item_level} {self.donor.rarity.value} {mods} {self.count_table}"
+        mods = ",".join(
+            f"{entry.mod_id}:{entry.tier}:{'/'.join(map(str, entry.values))}{'!' if entry.fractured else ''}{'*' if entry.crafted else ''}"
+            for entry in self.donor.mods
+        )
+        influences = ",".join(sorted(influence.value for influence in self.donor.influences))
+        return f"{self.donor.base_id} {self.donor.item_level} {self.donor.rarity.value} [{influences}] {mods} {self.table}"
 
     def label(self, data: GameData | None = None) -> str:
         if data is None:
@@ -154,7 +160,7 @@ class Recombinator(Action):
             if mod is None:
                 raise ValueError(f"the donor holds a mod ({entry.mod_id}) that is not in the game data")
             texts.append(" ".join((mod.text or mod.name or mod.id).split()))
-        suffix = " (wiki count table)" if self.count_table == "wiki" else ""
+        suffix = " (wiki count table)" if self.table == "wiki" else ""
         return f"Recombinator with a donor of {', '.join(sorted(texts))}{suffix}"
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
@@ -204,8 +210,10 @@ class Recombinator(Action):
         value = (reading if reading is not None else Reading()).get(ALPHA_AXIS.name, ALPHA_AXIS.plan)
         try:
             alpha = Fraction(value)  # type: ignore[arg-type]
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             raise ValueError(f"{value!r} is not a number: the reading of {ALPHA_AXIS.name} is an exponent") from None
+        if abs(alpha) > MAX_EXPONENT:
+            raise ValueError(f"the exponent {value!r} is far outside the fitted range (at most {MAX_EXPONENT} in size)")
         inputs = (item, self.donor)
         self._check(data, item, "item in hand")
         self._check(data, self.donor, "donor")
@@ -276,7 +284,7 @@ class Recombinator(Action):
     def _counts(self, data: GameData, inputs: tuple[Item, Item], base: Item, pooled: Mapping[Side, int]) -> dict[tuple[int, int], Fraction]:
         """The joint chance of the number of mods kept on the prefix and the suffix side, capped by the base's capacity."""
         room = capacity(data, base.base_id, Rarity.RARE)
-        table = count_table(self.count_table)
+        table = count_table(self.table)
         sides = [{Side(data.mods[entry.mod_id].generation_type) for entry in given.mods} for given in inputs]
         one_each = all(len(given.mods) == 1 for given in inputs) and sides[0] != sides[1]
         if one_each:  # one prefix on one input, one suffix on the other: 1p, 1s or 1p1s, a third each

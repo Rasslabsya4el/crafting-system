@@ -84,7 +84,7 @@ None is a planner kind yet.
 
 The recombinator (`recombinator.py`, ticket #215, ADR-0033), unpredictable mode: `Recombinator(donor)` takes the item in hand and one donor
 `Need` (a magic or rare item of the same class), chooses a base 1/2 each, pools the prefixes and the suffixes of both, takes the number kept
-on each side from the count table of the pooled count (`count_table="guide"` or `"wiki"`) and draws the kept mods one at a time with
+on each side from the count table of the pooled count (`table="guide"` or `"wiki"`) and draws the kept mods one at a time with
 chance proportional to `weight ** alpha` (the rule axis `recombinator.alpha`: 0.4 to 1.6, the plan at 1), closing the mod group of each
 pick. Its result is a `Finite` list of items. Not a planner kind until donors are priced (#211, #212) and its state exists (#217).
 
