@@ -147,8 +147,12 @@ rules:
       the total of the amulet suffix weights at item level 86 in the local copy of Craft of Exile is 125,250, ours was 126,050
       with them and is 125,250 without. Effect when they were in: the movement speed, cast speed and attack speed mod types had
       one tier too many and the pools a total too high (amulet suffixes by 800, wand suffixes by 1,500), which changes the cut
-      of ADR-0040 and the chance of the Orb of Unravelling. No other leftover of another mode was found in the pools: the
-      mods tagged for the Necropolis crafting need a base tag no ordinary base has (ticket #310).
+      of ADR-0040 and the chance of the Orb of Unravelling. The quoted row of the foulborn tab shows the sheet's count for the
+      top attack speed suffix, "of Grandmastery" (IncreasedAttackSpeed4): tier 1 of 4; the pool counts 4 tiers of that mod type
+      on gloves and a quiver without IncreasedAttackSpeed2Royale and counted 5 with it. No other leftover of another mode
+      was found in the pools: of the 2,725 prefixes and suffixes of the item domain with a spawn weight, the only ones
+      whose weighted tags no released base carries (and no influence adds) are the 51 Necropolis crafting mods and the
+      11 mods of the Deepwater sword, so they are in no ordinary pool (ticket #310).
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
     quote: "426,52,Foulborn Orb of Augmentation,of Grandmastery,1,4,252.5,0.2836879433,1"
