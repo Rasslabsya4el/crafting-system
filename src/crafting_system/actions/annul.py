@@ -41,9 +41,10 @@ class AnnulmentOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        # What stays depends on which mods are on the item, so every family of the junk is told apart.
+        # It reads how many mods there are per side and, through the locks and tags of the item, which of
+        # them it may remove: no family by name and no pool weight (a removal draws nothing).
         # `block_invariant` stays False: ADR-0023 calls Annulment "probably" invariant and no test proves it.
-        return Reads()
+        return Reads(junk=True, families=frozenset(), block_invariant=False)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # `keeps_crafted` stays True: a crafted mod is one of the mods it may remove, but it is not erased.
@@ -85,7 +86,7 @@ class AnnulmentOrb(Action):
     "annulment-orb",
     order=81,
     planner=False,
-    why_not="no compressed-state kernel for a removal that keeps the rest of the item yet (#69)",
+    why_not="not in the B1 offer set; which actions a target needs is pruning (#118)",
 )
 def _annulment_orb(data: GameData, item: Item):
     if item.rarity is not Rarity.NORMAL:

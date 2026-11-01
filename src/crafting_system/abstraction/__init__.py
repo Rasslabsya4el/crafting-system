@@ -1,6 +1,6 @@
 """Design D, compression, family types, pool signatures, the cached kernel (ADR-0009). May import only: data, rules, items, actions.
 
-An `Abstraction(data, goal, base_id, item_level, actions)` turns a concrete `Item` into a
+An `Abstraction(data, goal, base_id, item_level, actions, *, metamods=False)` turns a concrete `Item` into a
 `CompressedState` and gives the exact kernel of an action on it. An action is anything that meets the
 contract of `actions` (`Action`: a Chaos Orb, a Harvest reforge, an essence, a resonator, a bench craft,
 a toy defined in a test): the kernel is built from its `outcomes` alone, and what a state keeps is read
@@ -56,8 +56,8 @@ with a mod on the item, and Remove Crafted Mods needs a mod left. With one enabl
 is not fractured is a `Slot`, counted per side and kind. A family type is the families that every
 enabled action treats alike; a family that an enabled craft would clash with is told apart (its kind
 is the family key), as is a family the pool does not list. Crafted mods are always slots, told apart
-by their canonical mod id; a reroll drops them (an ordinary crafted mod is erased like any other),
-and a state with a lock or Attack/Caster metamod is refused for the actions that read it, as `OutOfScopeError`. A new action that
+by their canonical mod id; a reroll drops them (an ordinary crafted mod is erased like any other,
+a lock or an Attack/Caster metamod too: see "Metamods" below). A new action that
 reads the mods says how it tells families apart in its `reads` (`Reads.families`); one that says nothing
 tells every family apart (exact, but the state count can blow up).
 
@@ -102,10 +102,24 @@ Transmutation, an Alteration, an Alchemy and a Scouring erase the junk and add n
 
 Out of scope: a `min_roll` on a mod that an action draws, forces or crafts. Its value is rolled and no
 exact roll distribution is built yet, so such a mod raises `OutOfScopeError`. A concrete item's mod is
-judged by its stored tier and values. The compressed state does not model the metamods that change a draw
-(the two locks and the Attack/Caster pair) yet: a state that holds one is refused with `OutOfScopeError` for every
-action whose `Reads.metamods` is True, which is all but the bench (a bench craft and Remove Crafted Mods see a
-metamod as one more crafted mod). The multimod ("Can have up to 3 Crafted Modifiers") is only a bench limit.
+judged by its stored tier and values.
+
+Metamods, removals, new fractures and influence (#69). `metamods=True` (forced when an enabled action adds a lock
+or an Attack/Caster metamod by name) lets items hold them: every mod is then kept as a slot told apart by family
+type, and its kind also carries the tags an Attack or Caster metamod looks at (`"~3@attack"`; the number of
+the family type, `"~3"`, has none, but the type is told from another by the tags of its mods). No action
+then erases the junk: the item given to a reroll or a Scouring holds every slot, and what the action keeps (the fractured mods and the mods of a locked side) is read back, the rest is
+dropped. `compress` of an item that holds a lock or an Attack/Caster metamod raises `OutOfScopeError` when
+`metamods` is False. The multimod ("Can have up to 3 Crafted Modifiers") is only a bench limit.
+An Orb of Annulment reads the count of the junk and, through the sides, tags and locks, which mods it may remove:
+its parts are fixed results and the removed mod's slot just disappears. A Fracturing Orb is a fixed result too:
+the slot of the fractured mod becomes a fractured mod. When an enabled action declares `Reads.fractures`, a
+fractured mod of a family told apart only by its family type is stored as that type's kind (`FracturedMod.mod_id`
+`"~3"`, not a mod id), which `compress` gives the concrete fractured mod too; the pilot count and the family-group
+level refuse such a state. The tiers come from the pool of the item's influences (`actions.tiers_of`), so an
+influence mod has its own tier, and the family types are those of the pool with the influence tags: one context
+(tiers, kinds, labels) per set of influences, built when first needed; the family type numbers are shared, so one
+`"~n"` is one family type in every context and equal pools share one cached distribution.
 
 No mechanic is decided here: this module only recombines the results of `actions`, so it reads no
 claim of the rules registry.

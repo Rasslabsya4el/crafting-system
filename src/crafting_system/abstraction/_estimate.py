@@ -37,7 +37,7 @@ from crafting_system.items import Metamod, Rarity, Side, capacity
 from crafting_system.rules import get_rule
 
 from ._kernel import Abstraction, integer_weights
-from ._kinds import ALIKE, held_families
+from ._kinds import ALIKE, base_kind, held_families
 from ._state import CompressedState, best_of
 
 ONE_CRAFTED_MOD = get_rule("bench_craft.one_crafted_mod_by_default")
@@ -163,6 +163,8 @@ class _Pilot:
         return frozenset(found)
 
     def _key(self, keeps_crafted: bool, state: CompressedState) -> Hashable:
+        if self.abstraction.models_metamods:  # a lock keeps the junk of its side, so every slot decides the kernel
+            return (None, state.flags, state.fractured, state.slots)
         if keeps_crafted:
             return (True, state.flags, state.fractured, tuple(slot for slot in state.slots if slot.crafted))
         return (False, state.flags, state.fractured, self._metamods(state))
@@ -194,7 +196,11 @@ class _Pilot:
         used = {Side.PREFIX: 0, Side.SUFFIX: 0}
         crafted = 0
         for entry in state.fractured:
-            mod = mods[entry.mod_id]
+            mod = mods.get(entry.mod_id)
+            if mod is None:
+                raise EstimateRefused(
+                    f"the state holds a fractured mod as the family type {entry.mod_id}: the pilot count has no rule for a fracture made mid-route"
+                )
             held |= held_families(mod)
             used[Side(mod.generation_type)] += 1
         for slot in state.slots:
@@ -202,8 +208,9 @@ class _Pilot:
             if slot.crafted:
                 crafted += 1
                 held |= held_families(mods[slot.kind])
-            elif slot.kind != ALIKE and not slot.kind.startswith("~"):
-                held |= {slot.kind} if slot.kind.startswith("#") else set(slot.kind.split("|"))
+            elif base_kind(slot.kind) != ALIKE and not slot.kind.startswith("~"):
+                kind = base_kind(slot.kind)
+                held |= {kind} if kind.startswith("#") else set(kind.split("|"))
         return held, used, crafted
 
     def expand(

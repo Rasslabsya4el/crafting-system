@@ -99,7 +99,7 @@ class WildBristleMatron(Action):
 
     def reads(self, data: GameData) -> Reads:
         """Like a bench craft: the craft is refused when one of the five families is on the item, and a metamod is one more crafted mod."""
-        return Reads(junk=True, families=frozenset(METAMOD_IDS.value), block_invariant=True, metamods=False)
+        return Reads(junk=True, families=frozenset(METAMOD_IDS.value), block_invariant=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # it picks among five mods, but only those five and always as a crafted mod: a draw that names none

@@ -224,11 +224,8 @@ def test_reachable_skips_an_action_that_the_state_refuses():
     assert {state.status for state in ab.reachable([other_gem], [REFORGE, CHAOS])} == {(ABSENT, PASSING)}
 
 
-def test_reachable_skips_an_action_that_is_out_of_scope_for_the_state():
+def test_reachable_skips_an_action_that_the_state_refuses():
     ab = abstraction()
-    crafted = ab.compress(small_item(roll(CRAFTED, crafted=True)))
-
-    assert ab.reachable([crafted], [CHAOS, REFORGE]) == {crafted}
     corrupted = ab.compress(dataclasses.replace(fractured_item(RESIST_2), corrupted=True))
     assert ab.reachable([corrupted], [CHAOS]) == {corrupted}
 
