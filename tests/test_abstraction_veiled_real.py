@@ -13,9 +13,12 @@ out of the model: a state with the lock is the start of the loop).
 * the offer states of R24: how many concrete offers the unveil of its loop state has, how many offer states they make, the states of the loop.
 """
 
+from collections import defaultdict
+from fractions import Fraction
+
 import pytest
 from abstraction_support import real_game_data
-from abstraction_veiled_support import closure, concrete_pushforward
+from abstraction_veiled_support import closure, concrete_pushforward, veiled_chaos_finished
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import ActionError, AnnulmentOrb, BenchCraft, NotApplicableError, Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb
@@ -124,6 +127,22 @@ def test_layer_1_on_real_boots_for_the_unveil_the_picks_the_veiled_exalted_orb_a
             assert dict(ability.kernel(state, action)) == expected, (action.label(), [e.mod_id for e in item.mods], item.veil_offer)
             applied[action] += 1
     assert all(applied.values()), applied
+
+
+def test_layer_1_of_the_veiled_chaos_orb_on_real_boots_against_the_oracle_of_the_metamods(r24):
+    ability = r24.ability
+    starts = {
+        "r24_start": r24.start(),  # the three suffixes locked: the veil is a prefix and at most one more mod is drawn
+        "a_veil_on_the_open_side": r24.boots(*r24.locked(r24.roll(LOCK, crafted=True), r24.veil())),  # the veil and the lock are rerolled away with the open prefixes
+        "a_second_fracture": r24.boots(r24.roll(MANA, fractured=True), r24.roll(SHOCK, fractured=True), r24.roll(SUPPRESSION), r24.roll(COLD), r24.roll(LOCK, crafted=True)),
+    }
+    for name, item in starts.items():
+        expected: dict = defaultdict(Fraction)
+        for result, chance in veiled_chaos_finished(r24.data, item):
+            expected[ability.compress(result)] += chance
+        kernel = ability.kernel(ability.compress(item), VeiledChaosOrb())
+        assert dict(kernel) == dict(expected), name
+        assert len(kernel) > 1 and sum(kernel.values()) == 1
 
 
 def test_the_veiled_chaos_orb_on_the_real_pool_keeps_the_fractured_mana_and_the_locked_suffixes_and_puts_one_veil(r24):

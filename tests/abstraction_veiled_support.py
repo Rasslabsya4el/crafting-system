@@ -112,3 +112,29 @@ def closure(data, starts: Iterable[Item], actions, *, limit: int = 4000) -> list
                     seen[result] = None
                     queue.append(result)
     return list(seen)
+
+
+def veiled_chaos_finished(data, start: Item) -> list[tuple[Item, Fraction]]:
+    """Every finished item of a Veiled Chaos Orb on `start` with its chance, by the oracle of the metamods and not by the code under test.
+
+    The orb is a Chaos Orb that puts one generic placeholder on the item, counted inside the total of 4, 5 or 6 mods: on the only side that has
+    room once the kept mods (the fractured ones and those of a locked side) are counted, else on either side with chance 1/2. The reroll is
+    `abstraction_metamod_oracle.rerolled`, run on the kept mods and the placeholder marked fractured so that it keeps them, and unmarked after.
+    """
+    from abstraction_metamod_oracle import CAP, SIDES, kept_by_reroll, rerolled, side_of
+
+    kept = kept_by_reroll(data, start)
+    room = {side: CAP - sum(side_of(data, entry) == side for entry in kept) for side in SIDES}
+    sides = [side for side in SIDES if room[side] > 0]
+    already_fractured = {entry.mod_id for entry in kept if entry.fractured}
+    found: dict[Item, Fraction] = defaultdict(Fraction)
+    for side in sides:
+        veil_id = {"prefix": PRE, "suffix": SUF}[side]
+        marked = tuple(dataclasses.replace(entry, fractured=True) for entry in (*kept, holder(veil_id, data)))
+        for item, chance in rerolled(data, start.changed(data, mods=marked, veil_offer=())):
+            restored = tuple(
+                dataclasses.replace(entry, fractured=entry.mod_id in already_fractured) if entry.mod_id in {e.mod_id for e in marked} else entry
+                for entry in item.mods
+            )
+            found[item.changed(data, mods=restored)] += chance / len(sides)
+    return list(found.items())
