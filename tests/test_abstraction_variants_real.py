@@ -116,5 +116,7 @@ def test_the_pool_of_an_influenced_start_holds_the_families_of_its_influence_mod
     with_hunter = Coarsening.pooling_by_spread(ab, SPREAD, ab.compress(hunter))
 
     assert with_hunter.influences == frozenset({Influence.HUNTER}) and without.influences == frozenset()
-    assert len(with_hunter.told_apart) > len(without.told_apart)  # the influence families are told apart by name in the state
+    assert with_hunter.weight_of("ChaosDamageHybrid") > 0  # a Hunter family is in the pool of the influenced start
+    with pytest.raises(KeyError):
+        without.weight_of("ChaosDamageHybrid")
     assert sum(len(group) for group in with_hunter.groups) > sum(len(group) for group in without.groups)

@@ -26,6 +26,7 @@ from crafting_system.abstraction import Abstraction, Coarsening
 from crafting_system.actions import AnnulmentOrb, Reads, RegalOrb
 from crafting_system.cli import Offer, PlanError, build_report, make_plan, policy_document, render_text
 from crafting_system.cli import _decide
+from crafting_system.cli import _approx
 from crafting_system.cli._approx import BlockModel, climb, shown_policy, solve_level
 from crafting_system.cli._decide import LADDER, SPREAD_LADDER, Candidate, Decision, Level, Rates, coarse_refusal, decide, ladder_for
 from crafting_system.cli._offers import PricedOffer
@@ -392,6 +393,48 @@ def test_a_decision_with_no_budget_has_no_time_limit_on_its_levels(exact, budget
     ticks = iter(range(0, 10**6, 1000))
 
     solved = climb(dataclasses.replace(decision, budget=None), exact.start, exact.offers, lambda: float(next(ticks)))
+
+    assert solved.approximation.lower <= exact.mean_remaining <= solved.approximation.upper
+
+
+def test_the_ladder_stops_early_with_the_interval_of_the_levels_that_finished_and_says_so(exact, budget, monkeypatch):
+    monkeypatch.setattr(_decide, "LADDER", ())  # no tail cut: two spread rungs
+    decision = dataclasses.replace(decide(exact.abstraction, exact.start, exact.offers, budget, RATES), budget=1.0)
+    assert [found.level.kind for found in decision.levels] == ["spread", "spread"]
+    now, calls = [0.0], [0]
+    real = _approx.solve_level
+
+    def spy(candidate, start, offers, models=None):
+        calls[0] += 1
+        if calls[0] == 2:
+            now[0] = 1e6  # the second rung finds the time spent
+        return real(candidate, start, offers, models)
+
+    monkeypatch.setattr(_approx, "solve_level", spy)
+
+    solved = climb(decision, exact.start, exact.offers, lambda: now[0])
+
+    found = solved.approximation
+    assert found.level == decision.levels[0].level.name and not found.within_tolerance  # the first rung alone is wider than 1%
+    assert "The ladder stopped early: the levels used the 10 s they are allowed" in found.message
+    assert found.lower <= exact.mean_remaining <= found.upper
+
+
+def test_the_exact_states_of_a_tail_cut_are_expanded_under_the_same_time_guard(exact):
+    def guard():
+        raise _approx.LevelTimeout("spent")
+
+    model = _approx.ExactModel(exact.abstraction, exact.start, exact.offers, guard)
+
+    with pytest.raises(_approx.LevelTimeout):
+        model.actions(exact.start)
+
+
+def test_a_budget_of_zero_sets_no_time_limit_on_the_levels(exact, budget):
+    decision = dataclasses.replace(decide(exact.abstraction, exact.start, exact.offers, budget, RATES), budget=0.0)
+    ticks = iter(range(0, 10**6, 1000))
+
+    solved = climb(decision, exact.start, exact.offers, lambda: float(next(ticks)))
 
     assert solved.approximation.lower <= exact.mean_remaining <= solved.approximation.upper
 

@@ -121,7 +121,7 @@ class Coarsening:
         )
         self._side_of = {family.family: family.side for family in pool}
         self._weight = {family.family: family.weight for family in pool}  # the pool weight a family takes out when held
-        self._kind_of = {family.family: abstraction.kind_of(family.mods[0].mod) for family in pool}
+        self._kind_of = {family.family: abstraction.kind_of(family.mods[0].mod, influences) for family in pool}
         of_kind: dict[tuple[Side, str], list[str]] = defaultdict(list)
         for name in sorted(self._kind_of):
             of_kind[(self._side_of[name], self._kind_of[name])].append(name)

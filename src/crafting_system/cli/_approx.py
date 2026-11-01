@@ -160,10 +160,13 @@ def shown_policy(policy, values) -> dict:
 class ExactModel:
     """The exact compressed states under the offered actions (the tail cut expands them), remembering their actions."""
 
-    def __init__(self, abstraction, start: CompressedState, offers: Iterable[PricedOffer]) -> None:
+    def __init__(
+        self, abstraction, start: CompressedState, offers: Iterable[PricedOffer], guard: Callable[[], None] | None = None
+    ) -> None:
         self.abstraction = abstraction
         self.start = start
         self.offers = tuple(offers)
+        self.guard = guard  # as in `BlockModel`: called before each state is expanded
         self.known: dict[CompressedState, list[Action[CompressedState]]] = {}
 
     def is_goal(self, state: CompressedState) -> bool:
@@ -171,6 +174,8 @@ class ExactModel:
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
         if state not in self.known:
+            if self.guard is not None:
+                self.guard()
             found = []
             for priced in self.offers:
                 if isinstance(priced.offer.action, BuyStartItem):
@@ -210,7 +215,7 @@ class Models:
 
     def exact_model(self, abstraction) -> ExactModel:
         if self.exact is None:
-            self.exact = ExactModel(abstraction, self.start, self.offers)
+            self.exact = ExactModel(abstraction, self.start, self.offers, self.guard)
         return self.exact
 
 
@@ -283,7 +288,7 @@ def climb(
     (every upper bound is infinite) or none finished in the time.
     """
     offers = tuple(offers)
-    allowed = None if decision.budget is None else LEVEL_ALLOWANCE * decision.budget
+    allowed = LEVEL_ALLOWANCE * decision.budget if decision.budget else None  # a budget of 0 forces the approximate level and sets no limit
     began = clock()
 
     def guard() -> None:
@@ -292,7 +297,6 @@ def climb(
 
     models = Models(start, offers, guard)
     best: Solved | None = None
-    spent = 0.0
     stopped = ""
     for candidate in decision.levels:
         try:
@@ -304,7 +308,6 @@ def climb(
             if candidate.level.kind != "tail":
                 raise
             continue  # a tail cut that has no policy to follow or does not converge leaves the levels before it as they are
-        spent += solved.seconds
         if best is None or solved.approximation.gap < best.approximation.gap:
             best = solved
         if solved.approximation.within_tolerance:
@@ -322,4 +325,4 @@ def climb(
             f"(level: {approximation.level}). " + (f"The ladder stopped early: {stopped}. " if stopped else "") + exact_offer(decision.transitions, decision.predicted, decision.estimate is None or decision.estimate.complete),
             approximation.expanded,
         )  # fmt: skip
-    return Solved(approximation, best.solution, best.start, spent)
+    return Solved(approximation, best.solution, best.start, clock() - began)

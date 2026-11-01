@@ -302,7 +302,7 @@ def walked_case(seed):
     goal = rng.choice([LIFE_GOAL, CRAFT_GOAL])
     item = rng.choice(START_MODS if rng.random() < 0.5 else MAGIC_STARTS)  # Augmentation and Regal need a magic item
     junk_readers = [*walked, *crafts, *removal]
-    ab = Abstraction(DATA, goal, AMULET, item.item_level, junk_readers)
+    ab = Abstraction(DATA, goal, AMULET, item.item_level, junk_readers, metamods=True)
     return ab, [ab.compress(item)], [*rerolls, *junk_readers]
 
 
