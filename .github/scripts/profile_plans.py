@@ -83,6 +83,31 @@ def install_timers() -> None:
     timed(Abstraction, "prime", "abstraction.prime (distributions in the pool)")
 
 
+def install_job_log() -> None:
+    """Print, from inside each worker, how long every pool job took: `JOB <kind> <seconds>` on stderr (the run's log)."""
+    import functools
+    import sys
+
+    from crafting_system.abstraction import _prime
+    from crafting_system.cli import _bound_prune
+
+    def logged(module, name: str, kind: str) -> None:
+        original = getattr(module, name)
+
+        @functools.wraps(original)
+        def wrapper(*args, **kwargs):
+            began = time.perf_counter()
+            try:
+                return original(*args, **kwargs)
+            finally:
+                print(f"JOB {kind} {time.perf_counter() - began:.2f}", file=sys.stderr, flush=True)
+
+        setattr(module, name, wrapper)
+
+    logged(_prime, "_compute", "prime")
+    logged(_bound_prune, "_raise_job", "bound")
+
+
 def filled_prices(data, target, offers):
     """The fixture's prices plus a made-up price for each resource the offers (and the start item) need and it lacks."""
     from crafting_system.cli._offers import price_offers
@@ -131,6 +156,7 @@ def main() -> None:
     parser.add_argument("--rates", default=None, help="KERNEL,SOLVE seconds per unit to inject (e.g. 4e-5,7e-6)")
     parser.add_argument("--workers", type=int, default=None, help="sets CRAFTING_WORKERS (the product reads it; before #250 it is ignored)")
     parser.add_argument("--cprofile", action="store_true")
+    parser.add_argument("--job-log", action="store_true", help="print how long each pool job takes (JOB kind seconds) from inside the workers")
     parser.add_argument("--limit", type=float, default=None, help="stop the plan after this many seconds (Linux) and write what the timers saw so far")
     parser.add_argument("--out", required=True)
     arguments = parser.parse_args()
@@ -151,6 +177,8 @@ def main() -> None:
     chosen = offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions).offers
     prices, missing = filled_prices(data, target, chosen)
     install_timers()
+    if arguments.job_log:
+        install_job_log()
     profiler = cProfile.Profile() if arguments.cprofile else None
     began = time.perf_counter()
     if profiler:
