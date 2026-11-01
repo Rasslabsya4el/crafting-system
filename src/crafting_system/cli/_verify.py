@@ -29,6 +29,7 @@ SIGMAS = 5.0  # a correct policy fails the check about once in 1.7 million runs
 STEPS_PER_MEAN = 50  # a run is cut after this many times the clicks the computed mean allows
 MIN_STEPS = 100
 ROUNDING = 1e-12  # relative: the rounding that a run with no spread may show against a bound (the simulator's own exact tolerance)
+SIMULATION_BLOCK = 2_000  # runs per random stream: a verify of more runs is cut in blocks that may run in a process pool (#250); of this many or fewer, one stream as before
 CVAR_LEVEL = 0.9  # the level of `risk.evaluate`'s default, so the two CVaRs are the same quantity
 
 
@@ -124,7 +125,7 @@ def verify(data: GameData, plan: Plan, *, runs: int = DEFAULT_RUNS, seed: int = 
     limit = max_steps_for(plan)
     report = simulate(
         data, policy, target.start_item, target.is_met_by,
-        runs=runs, seed=seed, start_cost=plan.start_price.chaos, max_steps=limit,
+        runs=runs, seed=seed, start_cost=plan.start_price.chaos, max_steps=limit, block=SIMULATION_BLOCK,
     )  # fmt: skip
     shift = plan.start_price.chaos
     computed = shift + plan.mean_remaining

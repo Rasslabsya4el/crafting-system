@@ -47,6 +47,11 @@ def worker_count(env: dict[str, str] | None = None) -> int:
         return max(1, os.cpu_count() or 1)
 
 
+def can_inherit() -> bool:
+    """Whether workers can be forked, so that what a caller cannot pickle (a closure) reaches them anyway."""
+    return "fork" in multiprocessing.get_all_start_methods()
+
+
 def context() -> object:
     """What the factory built in this worker process (read by the functions `WorkerPool.map` runs)."""
     return _context
