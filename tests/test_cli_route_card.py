@@ -132,7 +132,7 @@ def test_the_r12_start_amulet_is_a_rare_with_a_fractured_resistance_in_the_suffi
     assert card == ItemCard(
         name="Paua Amulet",
         properties=("Rare", "item level 84"),
-        implicits=(IMPLICIT,),
+        implicits=(Slot(IMPLICIT, "implicit"),),
         enchantments=(),
         prefixes=(EMPTY, EMPTY, EMPTY),
         suffixes=(Slot("+14% to Lightning Resistance", "mod", ("fractured",)), EMPTY, EMPTY),
@@ -191,7 +191,7 @@ def test_the_r12_goal_has_a_wanted_slot_per_requirement_on_its_side_and_the_rest
     assert card == ItemCard(
         name="Paua Amulet",
         properties=("Rare", "item level 84"),
-        implicits=(IMPLICIT,),
+        implicits=(Slot(IMPLICIT, "implicit"),),
         enchantments=(),
         prefixes=(Slot(GEM_TEXT, "wanted", note="T1"), ANY_OR_EMPTY, ANY_OR_EMPTY),
         suffixes=(Slot(RESIST_TEXT, "wanted", note="any tier"), ANY_OR_EMPTY, ANY_OR_EMPTY),
@@ -529,7 +529,7 @@ def test_the_real_r12_start_card_is_the_fractured_resistance_with_its_rolled_val
     card = card_of_item(data, target.start_item)
 
     assert card.name == "Paua Amulet" and card.properties == ("Rare", "item level 84")
-    assert card.implicits == (IMPLICIT,) and card.enchantments == ()
+    assert card.implicits == (Slot(IMPLICIT, "implicit"),) and card.enchantments == ()
     assert card.prefixes == (EMPTY, EMPTY, EMPTY)
     assert card.suffixes == (Slot("+14% to Lightning Resistance", "mod", ("fractured",)), EMPTY, EMPTY)
 

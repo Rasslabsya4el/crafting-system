@@ -98,6 +98,17 @@ def _fixture_data():
         families=(SHAPER_PREFIX,),
         spawn_weights=(Weight("amulet_shaper", 700), Weight("default", 0)),
     )
+    # a cold added-damage prefix, the lightning one with its stat ids and tag renamed, so that the Harvest damage swaps have a target
+    # (ticket #148): one tier of its own type, so it is tier 1, and the swaps find it from the tier-1 lightning damage mod
+    lightning = mods[DAMAGE_1]
+    mods[COLD_DAMAGE] = dataclasses.replace(
+        lightning,
+        id=COLD_DAMAGE,
+        type=COLD_DAMAGE,
+        families=(COLD_DAMAGE,),
+        implicit_tags=tuple("cold" if tag == "lightning" else tag for tag in lightning.implicit_tags),
+        stats=tuple(dataclasses.replace(stat, id=stat.id.replace("lightning", "cold")) for stat in lightning.stats),
+    )
     # crafts that clash with a mod of the pool: every ordinary crafted mod takes the family of a mana mod,
     # so the items that hold that life mod refuse the craft and a kernel that forgets the family is caught
     metamods = {metamod.value for metamod in Metamod}
@@ -128,6 +139,7 @@ def _fixture_data():
 
 
 SHAPER_PREFIX = "ContractShaperPrefix1"
+COLD_DAMAGE = "ContractColdDamage1"
 CONTRACT_DATA = _fixture_data()
 TIERS = tier_table(CONTRACT_DATA, AMULET)
 GOAL = Goal((Wanted(frozenset({GEM})), Wanted(RESISTS), Wanted(frozenset({LIFE_1, LIFE_2}))))
@@ -165,6 +177,9 @@ def fixture_items() -> dict[str, Item]:
         "rare_fractured": _item(Rarity.RARE, _roll(RESIST_1, fractured=True), _roll(MANA_1)),
         "rare_four": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), _roll(DAMAGE_1), _roll(FIRE_GEM)),
         "rare_shaper": _item(Rarity.RARE, _roll(RESIST_2), _roll(LIFE_1), influences=frozenset({Influence.SHAPER})),
+        # a fire resistance and a cold damage, what the Harvest swaps change (fire to cold, cold to lightning); both are the only mod of
+        # their family in the fixture, because the compressed state forgets which tier of a family a junk mod was (#149)
+        "rare_resists": _item(Rarity.RARE, _roll(FIRE_RESIST), _roll(COLD_DAMAGE)),
     }
     crafted = _ordinary_crafted_mod()
     if crafted is not None:

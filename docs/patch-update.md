@@ -73,3 +73,14 @@ A claim whose rule changed in a patch keeps the old version in an optional `hist
 The registry refuses a malformed entry with the file, the claim id and the line (a missing key, an unknown key, a patch that is not quoted, `held_until` not earlier than the claim's `patch_verified`, entries out of order). `history` is for people tracing a changed rule: `Rule.value`, which code and the action contract read, is the current value and nothing else.
 
 `rules stale` compares each `patch_verified` with the version in `PIN.json` as patches (`3.29.3` and `3.29.3.0` are the same patch; `3.9.0` is older than `3.29.0`) and prints the older ones, each with the `url` to re-read; `--pin-file` and `--claims` point it at another pin or claims folder. The ticket that cut this work ([#120](https://github.com/Rasslabsya4el/crafting-system/issues/120)) named the check against the `verified_on` field, which the registry calls `patch_verified`. GitHub's API allows 60 unauthenticated calls an hour per address; set `GITHUB_TOKEN` or `GH_TOKEN` on a machine that runs many sessions.
+
+## An approximate claim
+
+A claim that no other source settles (its only support is Craft of Exile's code, a fit to a sample, a wiki formula nobody checked, or a default the main chat chose) carries two more keys ([ADR-0028](adr/0028-approximate-inputs-named-on-every-answer.md)):
+
+| Key | Meaning |
+|---|---|
+| `approximate` | exactly `true`, or absent; `false` is refused |
+| `approximate_reason` | one line, no newline, why no other source settles it; required with `approximate: true`, refused without it |
+
+Every answer (the text report, the JSON policy, a given route and the route page) lists the approximate claims that the actions of its policy read, found through `Action.claims`; an answer with no such claim says nothing. When a patch update re-reads a claim and a source now settles it, both keys are removed. An approximate input is an uncertainty in the model and is never joined with the certified gap of an approximate answer (ADR-0023).
