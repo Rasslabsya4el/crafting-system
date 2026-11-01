@@ -51,17 +51,14 @@ FOULBORN_EXALTED = "Foulborn Exalted Orb"
 
 # The claims of the Foulborn declarations are looked up by id when a declaration is built and are not module constants: `Action.claims`
 # lists the `Rule` constants a module holds, and a strand claim belongs to `strand_claims` (see `strand_use.py`).
-_CUT_CLAIM_IDS = (
-    "foulborn.effect_tier_cull",
-    "foulborn.on_stranded_item",
-    "foulborn.bonus_is_added_to_the_strand_denominator",
-    "foulborn.zero_strand_cut_matches_eleven_strands",
-    "foulborn.availability",
-)
-
-
 def _cut_claims() -> tuple[Rule, ...]:
-    return tuple(get_rule(claim) for claim in _CUT_CLAIM_IDS)
+    return (
+        get_rule("foulborn.effect_tier_cull"),
+        get_rule("foulborn.on_stranded_item"),
+        get_rule("foulborn.bonus_is_added_to_the_strand_denominator"),
+        get_rule("foulborn.zero_strand_cut_matches_eleven_strands"),
+        get_rule("foulborn.availability"),
+    )
 
 
 def _spend_ranges() -> Rule:
