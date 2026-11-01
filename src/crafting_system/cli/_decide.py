@@ -17,12 +17,14 @@ the exact run may take. The rule:
 calibration solve on the first layers of the pilot's own graph) unless the caller injects them, and builds the
 candidate levels. Tests inject the rates; no test depends on a machine (ADR-0014).
 
-The ladder is one tuple, `LADDER`: a new kind of level (the tail cut) is a new entry with a builder in `_approx`.
+The ladder is one tuple, `LADDER`: the coarse levels (kind "groups") and, after them, the tail cuts (kind "tail",
+ticket #129). A tail cut needs a coarse model for its leaves, so `decide` builds each on the finest coarse level whose
+own forecast fits and gives it that level's forecast; with no coarse level that fits there is no tail cut.
 """
 
 import time
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from crafting_system.abstraction import Abstraction, Coarsening, CompressedState, Estimate, EstimateRefused
@@ -42,18 +44,28 @@ CALIBRATION_EDGES = 60_000
 
 @dataclass(frozen=True)
 class Level:
-    """One rung of the ladder: a coarse state with the irrelevant families in groups of `size` (None: all in one)."""
+    """One rung of the ladder.
+
+    Kind "groups": a coarse state with the irrelevant families in groups of `size` (None: all in one). Kind
+    "tail": the tail cut at `theta` (`solver.solve_tail_cut`) over the coarse state with groups of `size`, which
+    `decide` fills in with the level it sits on.
+    """
 
     kind: str
     size: int | None
     name: str
+    theta: float | None = None
 
 
 LADDER: tuple[Level, ...] = (
     Level("groups", None, "family groups, all irrelevant families in one group"),
     Level("groups", 8, "family groups of 8"),
     Level("groups", 4, "family groups of 4"),
+    Level("tail", None, "tail cut at theta 1e-2", 1e-2),
+    Level("tail", None, "tail cut at theta 1e-3", 1e-3),
+    Level("tail", None, "tail cut at theta 1e-4", 1e-4),
 )
+COARSE = tuple(level for level in LADDER if level.kind == "groups")
 
 
 @dataclass(frozen=True)
@@ -224,9 +236,16 @@ def decide(
     candidates = []
     if refusal is None and estimate.seconds(r_kernel, r_solve) > budget:
         tried = set()
-        for level in LADDER:
+        for level in COARSE:
             pooling = Coarsening.pooling_irrelevant(abstraction, level.size, start)
             if pooling.groups and frozenset(pooling.groups) not in tried:  # a finer rung that cuts nothing new is the same level
                 tried.add(frozenset(pooling.groups))
                 candidates.append(Candidate(level, estimate.coarsened(pooling), pooling))
+        fitting = [found for found in candidates if found.estimate is None or found.estimate.seconds(r_kernel, r_solve) <= budget]
+        if fitting:  # the tail cut takes its leaves from the finest coarse level that fits, and its forecast
+            base = fitting[-1]
+            for level in LADDER:
+                if level.kind == "tail":
+                    named = replace(level, size=base.level.size, name=f"{level.name} over {base.level.name}")
+                    candidates.append(Candidate(named, base.estimate, base.coarsening))
     return choose(estimate, r_kernel, r_solve, budget, levels=candidates, refusal=refusal)
