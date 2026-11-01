@@ -14,6 +14,7 @@ from crafting_system.actions import (
     ActionOutcomes,
     Fixed,
     Fractured,
+    NotApplicableError,
     Outcomes,
     OutOfScopeError,
     allowed_by_tags,
@@ -449,10 +450,13 @@ class Abstraction:
                 return kind
         return self._canonical_id(entry, influences)
 
-    def _item_of(self, state: CompressedState, erasing: bool) -> tuple[Item, Origins]:
+    def _item_of(
+        self, state: CompressedState, erasing: bool, avoid: frozenset[str] = frozenset()
+    ) -> tuple[Item, Origins]:
         """A concrete item the state stands for: its fractured mods, its crafted mods, and (unless
         the action erases them) one representative mod for every other slot, of distinct families.
         With it, where each of its mods came from (a fractured mod or a slot of the state).
+        `avoid` are families the representative of a fractured family type must not be (to try its siblings).
 
         Raises `ItemError` when the state is not an item (a normal item with mods) and `ValueError`
         when it holds more mods of a kind than the base has families.
@@ -492,7 +496,9 @@ class Abstraction:
         if types or not erasing:
             kinds = self._context(influences).kinds
             for entry in types:
-                mod = kinds.representative(kinds.side_of(entry.mod_id), entry.mod_id, taken)
+                blocked = taken | avoid
+                mod = kinds.representative(kinds.side_of(entry.mod_id), entry.mod_id, blocked)
+                taken |= blocked - avoid
                 mods.append(
                     ExplicitMod(mod.id, self._context(influences).tiers.get(mod.id, 1), _low_values(mod), fractured=True)
                 )
@@ -539,11 +545,47 @@ class Abstraction:
                 )
                 action.outcomes(self.data, bare)
                 raise
-            outcomes = action.outcomes(self.data, item)  # a refusal of the action comes first
+            try:
+                outcomes = action.outcomes(self.data, item)  # a refusal of the action comes first
+            except NotApplicableError:
+                self._refusal_depends_on_the_family(state, erasing, action, origins)
+                raise
             self._check_type_blind(state, outcomes)
             prepared = _Prepared(outcomes, origins)
             self._prepared_by[key] = prepared
         return prepared
+
+    def _refusal_depends_on_the_family(
+        self, state: CompressedState, erasing: bool, action: Action, origins: Origins
+    ) -> None:
+        """Raise `OutOfScopeError` when the game's refusal of the representative item is not the game's answer for the state.
+
+        A fractured mod held as a family type stands for any family of the type, and a refusal that comes
+        from its family (an essence forcing a mod of it, a reforge whose tag it lacks) may not hold for the
+        others. Each other family of the type is tried as the fractured mod; if one is accepted the refusal
+        depends on the family. If all of them are refused too, the caller re-raises the refusal.
+        """
+        held = [entry for entry in state.fractured if entry.mod_id.startswith(TYPE_PREFIX)]
+        kinds = self._context(state.flags.influences).kinds
+        if not held or not any(kinds.shared_families(entry.mod_id) for entry in held):
+            return
+        avoid: set[str] = set()
+        while True:
+            for (mod_id, fractured, crafted), origin in origins.items():
+                if fractured and not crafted and isinstance(origin, FracturedMod) and origin.mod_id.startswith(TYPE_PREFIX):
+                    avoid |= held_families(self.data.mods[mod_id])
+            try:
+                other, origins = self._item_of(state, erasing, frozenset(avoid))
+            except (ItemError, ValueError):
+                return  # no other family of the type is left to try
+            try:
+                action.outcomes(self.data, other)
+            except NotApplicableError:
+                continue
+            raise OutOfScopeError(
+                "the item holds a fractured mod known only as a family type, and whether the game refuses this action "
+                "depends on which family of the type was fractured"
+            )
 
     def _check_type_blind(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
         """Refuse a draw that could tell apart the families behind a fractured mod held as a family type.

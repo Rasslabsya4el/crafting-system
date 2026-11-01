@@ -9,6 +9,7 @@ concrete item too; a fractured metamod keeps its lock or its tag filter through 
 that are fractured give one state, and the kernels of two steps composed equal the brute force of the two steps.
 """
 
+import dataclasses
 from fractions import Fraction
 
 import pytest
@@ -23,6 +24,7 @@ from abstraction_removals_support import (
     FIRE_RES,
     FRACTURING,
     HUNTER,
+    BOW_DATA,
     METAMODS,
     SOCKET,
     abstraction,
@@ -35,8 +37,10 @@ from abstraction_removals_support import (
 )
 
 from crafting_system.abstraction import Status
+from crafting_system.data import EssenceMod
 from crafting_system.actions import (
     AnnulmentOrb,
+    ApplyEssence,
     ChaosOrb,
     ExaltedOrb,
     FracturingOrb,
@@ -47,6 +51,7 @@ from crafting_system.actions import (
 )
 
 FRACTURE = FracturingOrb()
+ESSENCE = "Whispering Essence of Hatred"
 FOLLOW_UPS = {
     "annul": AnnulmentOrb(),
     "exalted": ExaltedOrb(),
@@ -156,6 +161,32 @@ def test_an_untagged_draw_after_the_same_fracture_is_exact(flag):
     for fractured in (FIRE, COLD):
         for action in (ChaosOrb(), ExaltedOrb(), AnnulmentOrb(), ScouringOrb()):
             check_or_refusal(ab, bow(FIRE, COLD, SOCKET, AS_5, fractured=[fractured]), action)
+
+
+@pytest.mark.parametrize("forced", [FIRE, COLD])
+def test_an_essence_forcing_a_mod_of_the_family_type_is_refused_not_answered_for_one_family(forced):
+    data = dataclasses.replace(
+        BOW_DATA,
+        essences={
+            key: dataclasses.replace(essence, mods=(EssenceMod("Bow", forced),), level=6) if essence.name == ESSENCE else essence
+            for key, essence in BOW_DATA.essences.items()
+        },
+    )
+    essence = ApplyEssence(ESSENCE)
+    ab = abstraction(actions=(*FRACTURING, essence), metamods=True, data=data)
+    fire = bow(FIRE, COLD, SOCKET, AS_5, fractured=[FIRE])
+    cold = bow(FIRE, COLD, SOCKET, AS_5, fractured=[COLD])
+    taken = [item for item in (fire, cold) if forced not in [entry.mod_id for entry in item.fractured_mods]]
+
+    assert ab.compress(fire) == ab.compress(cold)
+    for item in (fire, cold):  # the game refuses the item that holds the forced family fractured and accepts the other
+        if item in taken:
+            essence.outcomes(data, item)
+        else:
+            with pytest.raises(NotApplicableError):
+                essence.outcomes(data, item)
+    with pytest.raises(OutOfScopeError):  # one state for both: the kernel cannot say which answer is the state's
+        ab.kernel(ab.compress(fire), essence)
 
 
 def test_the_fracturing_orb_refuses_what_the_game_refuses():
