@@ -28,3 +28,7 @@ A Blessed Orb rerolls the value of each implicit that has a range, uniformly ins
 A requirement on a roll (ADR-0008) compares the **base roll**, the integer the item stores. With a catalyst quality the displayed value is the base roll scaled and rounded down (ADR-0029), so a requirement written in displayed values is turned into the smallest base roll that shows it.
 
 Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (decision list of 2026-10-31, owner round 1 on Blessed); [Blessed Orb, catalysts and Orb of Chance](https://github.com/Rasslabsya4el/crafting-system/issues/89); ADR-0009, ADR-0024.
+
+## Amendment: the Memory Strand count ([Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103), 2026-11-01)
+
+`Item` stores one more number, `memory_strands` (0 to 100), and `Reads`/`Adds` declare it the same way: a strand-cut draw and a strand spend read and add it, so the compressed state keeps it only when an enabled action reads it. An action that declares nothing still reads everything; on an item with strands such an action is refused (ADR-0041). Details: ADR-0040.

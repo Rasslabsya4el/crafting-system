@@ -5,7 +5,7 @@ A planner for Path of Exile 1 item crafting: for a target item it finds the craf
 ## Items and modifiers
 
 **Concrete item**:
-One specific item: its base, item level, influence, rarity and every mod with its tier, roll and origin.
+One specific item: its base, item level, influence, rarity, Memory Strand count and every mod with its tier, roll and origin.
 _Avoid_: real item, full item
 
 **Mod**:
@@ -65,6 +65,17 @@ The stronger version of a top-tier influenced mod, reachable only through the Or
 **Pool**:
 The mods an action can add to a given item at a given moment, each with its weight.
 _Avoid_: modpool
+
+**Memory Strands** (the count, `s`):
+A number from 0 to 100 on an item. With one or more, every random mod draw that cuts sees only the highest tiers of each tier table; crafts spend a random part of the count (ADR-0040, ADR-0041).
+_Avoid_: strand level, memory level (that is the trade filter's name)
+
+**Tier cut**:
+The removal of the lowest tiers from the tiers a draw can roll, by the item's strand count and a Foulborn orb's `+75`: `K = floor(100 (T - 1) / D) + 1` of `T` tiers stay. 0 strands without a Foulborn orb is no cut (ADR-0040).
+_Avoid_: tier cull, tier filter
+
+**Cut class**:
+A range of strand counts with the same kept tiers in every tier table (22 of them up to 13 tiers). The pool signature reads it; the state stores the exact count (ADR-0040).
 
 ## Targets
 
@@ -184,6 +195,23 @@ _Avoid_: guide policy, manual policy
 **Batch**:
 One stage of v1's action set (B1 to B4), finished when its benchmark routes pass.
 _Avoid_: phase, milestone
+
+**Spend**:
+The strands a craft uses up: a random whole number from 0 to a ceiling that depends on the action, taken after the cut and never below 0 (ADR-0041).
+_Avoid_: consumption, depletion
+
+**Foulborn orb**:
+A Foulborn Orb of Augmentation, Regal Orb or Exalted Orb: its plain version with the cut denominator raised by 75 and its own spend. Bought at the market price; never made (ADR-0043).
+
+**Orb of Remembrance**:
+Sets the strand count of a normal equipment item to a random number from 10 to 100 (a normal law, mean 35, deviation 25), whatever the count was; it can be used again (ADR-0043).
+
+**Orb of Unravelling**:
+Sets the strand count to 0 and gives each eligible explicit mod a chance, rising with the count, to move to a higher tier of its own table, in place. Its odds are a player's fit, marked approximate (ADR-0044).
+_Avoid_: Orb of Unraveling
+
+**Weight reading**:
+One of the three ways the sources give for what the kept tiers of a mod type weigh after a cut: redistribution (the plan), refactored weight, delete only. A rule axis (ADR-0042).
 
 ## State and solving
 

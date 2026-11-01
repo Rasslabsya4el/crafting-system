@@ -28,7 +28,7 @@ The metamods (ticket #68) cost the compressed state no declaration of their own:
 
 - **Two-input actions** (ADR-0022): `outcomes(data, item)` takes one item; `extra_inputs`, a `Need` and a donor have no place in the contract yet.
 - **Implicits, quality and the unveil offer** were also outside the contract; [ADR-0027](0027-item-state-beyond-explicit-mods.md) (grill B2) lifts that limit by letting `Item` store them and `Reads`/`Adds` declare them.
-- **In-place value changes** (a Divine-like orb, #71): the kernel accepts only `Fixed` or `Outcomes` parts and `_split` matches mods by `(mod_id, fractured, crafted)`, so a changed roll would count as kept.
+- **In-place value changes** (a Divine-like orb, #71; the Orb of Unravelling changes tiers in place the same way, ADR-0044): the kernel accepts only `Fixed` or `Outcomes` parts and `_split` matches mods by `(mod_id, fractured, crafted)`, so a changed roll would count as kept.
 - **`Adds` names only what is added by name** from the start item. For a drawn action it says that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
 - **The catalog looks at the start item's rarity** (essences of level 1 to 4, the orbs of magic items): those kinds are not listed for states a policy reaches later. A normal start item lists Transmutation, Alteration, Augmentation and Regal Orb, which is all R13 needs; a rare start (R10, R11, R05, R12) lists none of them.
 - **Prices of essences, fossils and bench crafts** come from the game data's names, not from a claim's value; the claim says so.
