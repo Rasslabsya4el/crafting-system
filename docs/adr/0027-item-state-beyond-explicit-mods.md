@@ -10,7 +10,7 @@ Until B2 an action read and wrote explicit mods, the influence set and the corru
 
 An item built before B2 has none of the three and behaves as it did.
 
-**Amendment (grill B7):** `Item` stores a fourth thing, the **enchantment**: a mod id (a Tempering or Tailoring pool enchant, a Harvest quality enchant or the extra crafted slot) or none ([ADR-0050](0050-enchantments-as-a-finish-step.md)). `Reads` and `Adds` gain an `enchantment` declaration like the other three, but no action of B1 to B4 reads it, so the compressed state never keeps it; `crafted_limit` reads it from the start item (ADR-0053). An item built before B7 has none. The explicit mods, the influence set and the corrupted flag are unchanged.
+**Amendment (grill B7):** `Item` stores a fourth thing, the **enchantment**: a mod id (a Tempering or Tailoring pool enchant, a Harvest quality enchant or the extra crafted slot) or none ([ADR-0050](0050-enchantments-as-a-finish-step.md)). `Reads` and `Adds` gain an `enchantment` declaration like the other three, but no action of B1 to B4 reads it, so the compressed state never keeps it; the limit of crafted mods reads the start item's enchantment as a problem constant (ADR-0053). An item built before B7 has none. The explicit mods, the influence set and the corrupted flag are unchanged.
 
 ## What actions declare
 

@@ -116,7 +116,7 @@ A cost added to the value of a goal state because nothing earlier changes it: th
 
 **Enchantment**:
 The one extra modifier an item holds besides its implicits and explicit mods; a new one replaces the old. It comes from a Tempering Orb (weapon), a Tailoring Orb (body armour) or a Harvest quality enchant. `Item.enchantment` stores it; it is out of the compressed state and a finish step (ADR-0050).
-_Avoid_: enchant (as a noun for the stored mod, when the orb's result is meant), implicit
+_Avoid_: implicit (an enchantment has its own slot)
 
 **Enchant pool**:
 The enchantments one orb can draw: 136 for the Tempering Orb and 54 for the Tailoring Orb in 3.29, each with a weight taken from the players' Curio sample and marked approximate (ADR-0051).
@@ -136,7 +136,7 @@ _Avoid_: quality (when the enchant is meant)
 The last report line of a plan with a quality enchant: how many Armourer's Scraps or Blacksmith's Whetstones bring the item to 20% quality, and about what they cost. It is outside the search (ADR-0052).
 
 **Extra crafted slot**:
-The enchantment "Can have 1 additional Crafted Modifier": two bench-crafted mods instead of one, no affix slot taken. The planner reaches it only on a bought start item that already has it; `crafted_limit` reads it (ADR-0053).
+The enchantment "Can have 1 additional Crafted Modifier": two bench-crafted mods instead of one, no affix slot taken. The planner reaches it only on a bought start item that already has it; the limit of crafted mods reads it (ADR-0053).
 _Avoid_: second craft slot
 
 **Beast level**:
