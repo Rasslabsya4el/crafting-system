@@ -2,7 +2,7 @@
 
 R08 and R09 are the fossil boots of the reference routes: rare Sorcerer Boots (Energy Shield) and rare Two-Toned Boots
 (Life) of item level 86, Fossils in a resonator until the boots hold the top tier of Energy Shield or Life and a
-Movement Speed, then a Movement Speed from the bench. The prices are `tests/fixtures/prices/routes-allflame-fossils-2026-11-01.json`:
+Movement Speed, then a Movement Speed from the bench. The prices are `tests/fixtures/prices/routes-allflame-2026-10-31.json`:
 the other real routes' prices plus the poe.ninja fossil and resonator lines of 2026-11-01 (no Tangled Fossil line, so
 the sets with a Tangled Fossil are unpriced and left out) and the trade price of the start boots (a normal base of
 item level 86, the mean of the 5 cheapest instant-buyout listings, plus the Orb of Alchemy that makes it rare). These
@@ -22,17 +22,20 @@ from cli_support import read_json
 
 from crafting_system.actions import ApplyFossils, BenchCraft
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, main, make_plan
+from crafting_system.cli._decide import Rates
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-fossils-2026-11-01.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 RUNS = 200
+BUDGET = 60.0  # the plan is made as the command makes it by default: exact when the forecast fits, else approximate
+RATES = Rates(4e-5, 7e-6)  # injected (ADR-0023), so the decision does not depend on the machine
 ROUTES = {
     "r08": ("r08-energy-shield-boots", "R08 start boots", 29.82716, "Dense Fossil"),
     "r09": ("r09-life-boots", "R09 start boots", 5.02716, "Pristine Fossil"),
 }
-SPEED_CRAFTS = 3  # the bench's three Movement Speed crafts at their top tier are the only crafts that count
+SPEED_CRAFTS = 4  # the bench's plain Movement Speed craft and its three hybrids, at their top tier, are the only crafts that count
 
 
 def paths(route: str):
@@ -58,7 +61,7 @@ def plans(data):
 @pytest.fixture(scope="module")
 def plan(data, route, plans):
     if route not in plans:
-        plans[route] = make_plan(data, load_target(paths(route)[0], data), load_price_file(PRICES))
+        plans[route] = make_plan(data, load_target(paths(route)[0], data), load_price_file(PRICES), budget=BUDGET, rates=RATES)
     return plans[route]
 
 
@@ -77,7 +80,7 @@ def test_the_fossil_sets_the_bench_crafts_and_the_restart_are_offered(plan, rout
     crafts = [priced for priced in plan.offers if isinstance(priced.offer.action, BenchCraft)]
 
     assert RESTART in offers
-    assert len(fossil_sets) > 5_000  # 12,700 sets, the ones with a Tangled Fossil unpriced
+    assert len(fossil_sets) == 10_670  # 12,700 sets of the boots, 2,030 with a Tangled Fossil unpriced and dropped
     assert f"Fossils {guide_fossil} + Shuddering Fossil" in offers
     assert len(crafts) == SPEED_CRAFTS
     unpriced = {name for drop in plan.dropped for name in drop.missing}
@@ -85,7 +88,7 @@ def test_the_fossil_sets_the_bench_crafts_and_the_restart_are_offered(plan, rout
 
 
 def test_the_policy_reaches_the_goal_with_exact_odds_and_mean(plan):
-    assert plan.approximation is None
+    assert plan.approximation is None and plan.note == ""  # the forecast fits the budget: the answer is exact
     risk = plan.risk
 
     assert risk.success_probability.value == pytest.approx(1.0)

@@ -17,8 +17,8 @@
 name: R09, PoE Vault guide
 
 rules:
-  # Step 2: the Life is there, the boots have no Movement Speed and a prefix is open: craft it. The
-  # guide does not say which of the three Movement Speed crafts; the one with "Cannot Be Chilled" is used.
+  # Step 2: the Life is there, the boots have no Movement Speed and a prefix is open: craft it: the
+  # plain Movement Speed craft of the bench, as the guide says.
   - when:
       rarity: rare
       requirements:
@@ -27,7 +27,7 @@ rules:
         - family: MovementVelocity
           status: absent
       open_prefixes: 1
-    do: "Bench craft #% increased Movement Speed / 100% chance to Avoid being Chilled"
+    do: Bench craft #% increased Movement Speed
   # Step 1: use the two fossils again (this is also the first use).
   - when:
       rarity: rare

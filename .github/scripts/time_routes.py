@@ -18,7 +18,7 @@ from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[2]
-PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-fossils-2026-11-01.json"
+PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 TARGETS = {"r08": "r08-energy-shield-boots", "r09": "r09-life-boots"}
 
 

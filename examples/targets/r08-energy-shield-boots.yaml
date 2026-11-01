@@ -15,10 +15,11 @@
 #   * "high Energy Shield": the "#% increased Energy Shield" prefix (family DefencesPercent) at its top tier, tier 1,
 #     "(92-100)% increased Energy Shield" (mod LocalIncreasedEnergyShieldPercent7_, needs item level 84), rolled
 #     and not crafted. The flat Energy Shield prefixes and the hybrid ones are not asked for.
-#   * "35% increased Movement Speed or crafted Movement Speed": the rolled tier 1 (35%, mod MovementVelocity6,
-#     needs item level 86), or one of the three bench crafts of Movement Speed at their top tier, (18-20)% with
-#     "Cannot Be Chilled", with "chance to gain Onslaught on Kill" or with "increased Movement Speed if you
-#     haven't been Hit Recently" (the bench offers nothing else for boots).
+#   * "35% increased Movement Speed or crafted Movement Speed": the rolled tier 1 (35%, mod MovementVelocity6, needs
+#     item level 86), or the bench's Movement Speed at its top tier: the plain craft, (20-24)% increased Movement
+#     Speed (mod EinharMasterMovementVelocity3, needs item level 68), or one of the three hybrid crafts, (18-20)% with
+#     "Cannot Be Chilled", with "chance to gain Onslaught on Kill" or with "increased Movement Speed if you haven't
+#     been Hit Recently". The lower tiers of the crafts are not asked for.
 #   * Start: a normal base of item level 86 bought on the trade site (poe.ninja lists no plain boots of that level)
 #     and made rare with an Orb of Alchemy; see `start_item` below for how that is modelled.
 
@@ -34,9 +35,11 @@ influence: []
 # The start: rare boots with no mod. The guide fossils a rare pair of boots and the first fossil erases whatever
 # it holds, so which mods the boots start with does not matter. A bought normal base made rare with an Orb of
 # Alchemy holds 4 to 6 random mods; tracking them (and the Alchemy as an action) multiplies the states, and a
-# plan of it did not finish in 60 minutes on a GitHub runner, so the model starts from the rare boots with no mod
-# and the price of the start item includes the Alchemy. This leaves out only the chance that the Alchemy itself
-# lands the goal, a chance far smaller than one fossil use has.
+# plan of it did not finish in 60 minutes on a GitHub runner (run 41292010467), so the model starts from the rare
+# boots with no mod and the price of the start item includes the Alchemy. The cost of this reading: the Alchemy is
+# a free first draw of the same mods that a fossil use draws, so the mean cost is too high by about one use of the
+# first fossil set (about 1.6 Chaos in the solver's plan, about 38 Chaos in the guide's pair); which plan is
+# cheaper does not change.
 start_item:
   rarity: rare
   mods: []
@@ -62,6 +65,8 @@ requirements:
       - family: MovementVelocity
         min_tier: 1
         not_crafted: true
+      - stat: "#% increased Movement Speed"
+        mod: EinharMasterMovementVelocity3
       - stat: "#% increased Movement Speed\n#% increased Movement Speed if you haven't been Hit Recently"
         mod: JunMaster2MovementVelocityAndMovementVelocityIfNotHitRecently3
       - stat: "#% increased Movement Speed\n#% chance to gain Onslaught for 4 seconds on Kill"

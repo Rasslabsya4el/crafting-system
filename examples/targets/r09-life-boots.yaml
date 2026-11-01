@@ -13,7 +13,7 @@
 #   * "Two-Toned Boots or preferred Life base", item level 86: the Two-Toned Boots with Evasion and Energy Shield.
 #   * "high Life": the top tier of "+# to maximum Life", tier 1, +(115-129) (mod IncreasedLife8, needs item
 #     level 54), rolled and not crafted.
-#   * "Movement Speed": as in R08, the rolled tier 1 (35%) or one of the three bench crafts at their top tier.
+#   * "Movement Speed": as in R08, the rolled tier 1 (35%) or a bench craft of it at its top tier.
 #   * "useful Resistances if rolled" and "acceptable other modifiers": not required. The guide asks for them only
 #     "if rolled", so a resistance is a bonus of the item, not a goal of the plan.
 #   * Start: a normal base of item level 86 bought on the trade site (poe.ninja lists no plain boots of that level)
@@ -29,9 +29,11 @@ influence: []
 # The start: rare boots with no mod. The guide fossils a rare pair of boots and the first fossil erases whatever
 # it holds, so which mods the boots start with does not matter. A bought normal base made rare with an Orb of
 # Alchemy holds 4 to 6 random mods; tracking them (and the Alchemy as an action) multiplies the states, and a
-# plan of it did not finish in 60 minutes on a GitHub runner, so the model starts from the rare boots with no mod
-# and the price of the start item includes the Alchemy. This leaves out only the chance that the Alchemy itself
-# lands the goal, a chance far smaller than one fossil use has.
+# plan of it did not finish in 60 minutes on a GitHub runner (run 41292010467), so the model starts from the rare
+# boots with no mod and the price of the start item includes the Alchemy. The cost of this reading: the Alchemy is
+# a free first draw of the same mods that a fossil use draws, so the mean cost is too high by about one use of the
+# first fossil set (about 1.6 Chaos in the solver's plan, about 35 Chaos in the guide's pair); which plan is
+# cheaper does not change.
 start_item:
   rarity: rare
   mods: []
@@ -54,6 +56,8 @@ requirements:
       - family: MovementVelocity
         min_tier: 1
         not_crafted: true
+      - stat: "#% increased Movement Speed"
+        mod: EinharMasterMovementVelocity3
       - stat: "#% increased Movement Speed\n#% increased Movement Speed if you haven't been Hit Recently"
         mod: JunMaster2MovementVelocityAndMovementVelocityIfNotHitRecently3
       - stat: "#% increased Movement Speed\n#% chance to gain Onslaught for 4 seconds on Kill"
