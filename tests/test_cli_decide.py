@@ -141,6 +141,8 @@ def test_the_exact_run_is_offered_up_to_two_million_transitions_only():
 
 def declared_invariant(action, data) -> bool:
     reads = action.reads(data)
+    if reads.variants:
+        return reads.junk and reads.pool_weight and reads.families is not None
     return reads.block_invariant and not reads.pool_weight and not (reads.junk and reads.families is None)
 
 
@@ -156,12 +158,21 @@ def test_the_cli_refuses_a_coarse_level_for_exactly_the_actions_that_do_not_decl
     assert seen["refused"] > 0 and seen["accepted"] > 0
 
 
+@dataclasses.dataclass(frozen=True)
+class UndeclaredRegal(RegalOrb):
+    """An addition that declares neither block invariance nor variants."""
+
+    def reads(self, data) -> Reads:
+        return Reads.adding()
+
+
 def test_the_reason_names_the_action_and_the_declaration():
     base = abstraction()
 
-    reason = coarse_refusal(base, [CHAOS, RegalOrb()])
+    reason = coarse_refusal(base, [CHAOS, UndeclaredRegal()])
 
     assert reason is not None and "Regal Orb" in reason
+    assert coarse_refusal(base, [CHAOS, RegalOrb()]) is None  # the shipped addition declares variants
 
 
 # --- decide on the committed fixture ---------------------------------------------------------------------------
@@ -237,9 +248,18 @@ def test_decide_puts_each_tail_cut_on_the_finest_coarse_level_that_fits_with_its
     assert not [found for found in never.levels if found.level.kind == "tail"]
 
 
+@dataclasses.dataclass(frozen=True)
+class BrokenRegal(RegalOrb):
+    """A Regal Orb whose outcomes cannot be computed (a `ValueError` that is no refusal): the pilot cannot count it."""
+
+    def outcomes(self, data, item):
+        raise ValueError("this action has no outcomes")
+
+
 def test_decide_runs_exact_when_the_pilot_cannot_count_the_actions(exact):
-    regal = [*priced(), PricedOffer(Offer("Regal Orb", RegalOrb(), {CH: 1}), 1.0, ())]
-    ab = Abstraction(DATA, exact.abstraction.goal, exact.abstraction.base_id, 84, [*(offer.action for offer in OFFERS[1:]), RegalOrb()])
+    broken = BrokenRegal()
+    regal = [*priced(), PricedOffer(Offer("Regal Orb", broken, {CH: 1}), 1.0, ())]
+    ab = Abstraction(DATA, exact.abstraction.goal, exact.abstraction.base_id, 84, [*(offer.action for offer in OFFERS[1:]), broken])
 
     decision = decide(ab, exact.start, regal, 0.0, Rates(1.0, 1.0))
 

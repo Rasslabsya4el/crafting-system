@@ -16,14 +16,20 @@ expanded) but pays a kernel only where one is needed:
   the crafted mods it may: one, or three with the multimod; Remove Crafted Mods needs a crafted mod and a mod left over).
 
 That second logic is written apart from `BenchCraft.outcomes` on purpose: `tests/test_abstraction_estimate.py`
-compares its count with the real expansion on random crafts and starts. An action of any other shape
-(an addition, a fixed result that is not a bench craft) makes
-`estimate` raise `EstimateRefused`, so a caller falls back to building the graph without a forecast.
+compares its count with the real expansion on random crafts and starts;
+* any other action that reads the junk (an addition: Augmentation, Regal, Exalted; Annulment) is **walked**.
+  Its kernel depends on the whole set of held families and kinds, so there is no cheap closed form: the walk
+  calls the real `Abstraction.kernel` for it on every state it expands (an `ActionError` means the action is
+  not legal there) and the transitions are the kernel's size. A walk of these actions pays one real kernel per
+  state and action, so a caller passes the smaller `ADDING_LIMIT` for them (`needs_walk` tells whether to);
+  `Estimate.walked` says that some were among the actions. A walked action whose kernel cannot be computed at
+  all (a `ValueError` that is not an `ActionError`, which a build would meet too) makes `estimate` raise
+  `EstimateRefused`, so a caller falls back to building the graph without a forecast.
 
 The result also keeps the states it reached, so that a coarse level can be forecast without a second
 walk (`Estimate.coarsened`), and a closed prefix of the graph with its true weights, for a calibration
-solve (`Estimate.first_layers`). Time enters only through the injected `clock`, to measure the cost of a
-repeated kernel call per outcome (`kernel_rate`); a test injects a counter.
+solve (`Estimate.first_layers`; the prefix kernel of a walked action is its real kernel). Time enters only through the injected `clock`, to measure the cost of a
+repeated kernel call per outcome (`kernel_rate`; the first walked kernel is measured the same way when no reroll was); a test injects a counter.
 """
 
 import time
@@ -44,10 +50,12 @@ ONE_CRAFTED_MOD = get_rule("bench_craft.one_crafted_mod_by_default")
 MULTIMOD_LIMIT = get_rule("metamods.multimod_raises_crafted_limit")
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 DEFAULT_LIMIT = 400_000
+ADDING_LIMIT = 20_000  # the state limit for a query with walked actions: each state there pays a real kernel call
+VARIANT_FACTOR = 2  # a coarse level with variants has two kernels (the lightest and the heaviest member) per action that declares `Reads.variants`
 
 
 class EstimateRefused(ValueError):
-    """The pilot cannot count this set of actions: one has a shape it has no rule for."""
+    """The pilot cannot count this set of actions: the kernel of one of them cannot be computed."""
 
 
 @dataclass(frozen=True)
@@ -60,7 +68,8 @@ class Estimate:
     more for a coarse level, whose kernels are pushed through the block map). `kernel_rate` is the
     seconds one outcome of a repeated, cached kernel call takes; 0.0 when no kernel was run. `solves` is
     how many models are solved (2 for the two bounds). With `complete` false the walk stopped at its
-    state limit and every count is a lower bound.
+    state limit and every count is a lower bound. `walked` tells that an action was walked (its kernel run
+    for real on every state), which is what makes a walk expensive.
     """
 
     states: int
@@ -69,6 +78,7 @@ class Estimate:
     kernel_rate: float
     complete: bool = True
     solves: int = 1
+    walked: bool = False
     _pilot: "_Pilot | None" = field(default=None, repr=False, compare=False)
 
     def seconds(self, r_kernel: float, r_solve: float) -> float:
@@ -79,7 +89,11 @@ class Estimate:
         """The forecast of a coarse level: its blocks are the images of the states reached here.
 
         The lower model may reach more blocks than the images (a member no route reaches), so this is a
-        forecast, not a bound. None when the walk was cut short or did not keep its states.
+        forecast, not a bound. None when the walk was cut short or did not keep its states. For a walked
+        action the block is read through its first reached state; the transitions are the distinct blocks of
+        the successors times the number of variants, `VARIANT_FACTOR` for an action that declares
+        `Reads.variants` (a forecast, since the real count of variants is not known before the build) and 1
+        for any other.
         """
         if self._pilot is None or not self.complete:
             return None
@@ -104,6 +118,28 @@ class _Craft:
     slot: object  # the Slot its mod makes
 
 
+def _shape(data, action: Action) -> str:
+    """How the pilot treats `action`: "reroll" (erases the junk), "craft" (a bench craft), "removal" (Remove Crafted Mods) or "walked"."""
+    reads = action.reads(data)
+    if not reads.junk:
+        return "reroll"
+    adds = action.adds(data, None)
+    named = adds.named
+    if reads.families is not None and not reads.pool_weight and adds.crafted and not adds.draws and named is not None and len(named) == 1:
+        return "craft"
+    if reads.needs_crafted and not reads.pool_weight and named == frozenset() and not adds.draws:
+        return "removal"
+    return "walked"
+
+
+def needs_walk(abstraction: Abstraction, actions: Iterable[Action]) -> bool:
+    """Whether the pilot walks one of `actions` with real kernels (an addition, Annulment, any other action it has no closed form for).
+
+    A caller asks before the walk, to pick the smaller `ADDING_LIMIT` for such a query.
+    """
+    return any(_shape(abstraction.data, action) == "walked" for action in actions)
+
+
 class _Pilot:
     """The walk itself (see the module docstring)."""
 
@@ -118,6 +154,7 @@ class _Pilot:
         self.rerolls: dict[Action, bool] = {}  # action -> whether it keeps crafted mods
         self.crafts: list[_Craft] = []
         self.removals: list[Action] = []
+        self.walked: dict[Action, int] = {}  # action -> the number of kernels a coarse level needs for it (its variants)
         for action in actions:
             self._classify(action)
         self.limit_crafted = ONE_CRAFTED_MOD.value
@@ -137,22 +174,20 @@ class _Pilot:
             return repr(action)
 
     def _classify(self, action: Action) -> None:
+        self.abstraction._check_enabled(action)  # a caller's bug, raised as `Abstraction.kernel` does
+        shape = _shape(self.data, action)
         reads = action.reads(self.data)
         adds = action.adds(self.data, None)
-        self.abstraction._check_enabled(action)  # a caller's bug, raised as `Abstraction.kernel` does
-        if not reads.junk:
+        if shape == "reroll":
             self.rerolls[action] = adds.keeps_crafted
-            return
-        named = adds.named
-        if reads.families is not None and not reads.pool_weight and adds.crafted and not adds.draws and named is not None and len(named) == 1:
-            (mod_id,) = named
+        elif shape == "craft":
+            (mod_id,) = adds.named
             mod = self.data.mods[mod_id]
             self.crafts.append(_Craft(action, Side(mod.generation_type), frozenset(reads.families), self.abstraction.crafted_slot(mod_id)))
-            return
-        if reads.needs_crafted and not reads.pool_weight and adds.named == frozenset() and not adds.draws:
+        elif shape == "removal":
             self.removals.append(action)
-            return
-        raise EstimateRefused(f"{self._name(action)} has no rule in the pilot count (it is neither a reroll, a bench craft nor Remove Crafted Mods)")
+        else:
+            self.walked[action] = VARIANT_FACTOR if reads.variants else 1
 
     # --- the keys and kernels of rerolls ---------------------------------------------------------------
 
@@ -185,11 +220,31 @@ class _Pilot:
         self._kernels[key] = found
         if found:
             self._successors[id(found)] = tuple(found)
-        if found and self._measured is None:
+        if found:
+            self._measure(state, action, found)
+        return found
+
+    def _measure(self, state: CompressedState, action: Action, found: Mapping[CompressedState, Fraction]) -> None:
+        """The seconds per outcome of a repeated kernel call, taken once on the first kernel that has outcomes."""
+        if self._measured is None:
             began = self.clock()
             self.abstraction.kernel(state, action)  # the second call: its caches are warm, as in a build
             self._measured = (self.clock() - began) / len(found)
-        return found
+
+    def walked_kernel(self, action: Action, state: CompressedState) -> Mapping[CompressedState, Fraction] | None:
+        """The real kernel of a walked action on `state`, run for every state; None when the action refuses there.
+
+        It is not memoised: nothing is known to decide it besides the whole state, and each call returns a new dict.
+        """
+        try:
+            found = self.abstraction.kernel(state, action)
+        except ActionError:
+            return None
+        except ValueError as error:  # a build would meet the same error, so there is nothing to forecast
+            raise EstimateRefused(f"the kernel of {self._name(action)} cannot be computed: {error}") from error
+        if found:
+            self._measure(state, action, found)
+        return found or None
 
     # --- legality of the deterministic actions ----------------------------------------------------------
 
@@ -220,11 +275,15 @@ class _Pilot:
     def expand(
         self, state: CompressedState
     ) -> Iterable[tuple[Action, tuple[CompressedState, ...], Mapping[CompressedState, Fraction] | None]]:
-        """Each action that is legal on `state`, its successors and, for a reroll, its kernel (None for a deterministic action)."""
+        """Each action that is legal on `state`, its successors and, for a reroll or a walked action, its kernel (None for a deterministic action)."""
         for action, keeps in self.rerolls.items():
             found = self.kernel_of(action, keeps, state)
             if found:
                 yield action, self._successors[id(found)], found
+        for action in self.walked:
+            found = self.walked_kernel(action, state)
+            if found:
+                yield action, tuple(found), found
         if not (self.crafts or self.removals):
             return
         flags = state.flags
@@ -252,8 +311,9 @@ class _Pilot:
 
     # --- the walk ---------------------------------------------------------------------------------------
 
-    def run(self, starts: Iterable[CompressedState], limit: int) -> Estimate:
+    def run(self, starts: Iterable[CompressedState], limit: int, seconds: float | None = None) -> Estimate:
         seen = dict.fromkeys(starts)
+        deadline = None if seconds is None else self.clock() + seconds
         queue = deque(seen)
         transitions = 0
         scanned: set[int] = set()
@@ -261,9 +321,9 @@ class _Pilot:
             state = queue.popleft()
             if self.abstraction.is_goal(state):
                 continue
-            for _, successors, kernel in self.expand(state):
+            for action, successors, kernel in self.expand(state):
                 transitions += len(successors)
-                if kernel is not None:
+                if action in self.rerolls:  # only a memoised kernel is the same dict twice; a walked kernel is scanned every time
                     if id(kernel) in scanned:
                         continue  # every state of this kernel is already in `seen`
                     scanned.add(id(kernel))
@@ -271,11 +331,11 @@ class _Pilot:
                     if successor not in seen:
                         seen[successor] = None
                         queue.append(successor)
-            if len(seen) > limit:
+            if len(seen) > limit or (deadline is not None and self.clock() > deadline):
                 self.complete = False
                 break
         self.reached = list(seen)
-        return Estimate(len(seen), transitions, transitions, self._measured or 0.0, self.complete, 1, self)
+        return Estimate(len(seen), transitions, transitions, self._measured or 0.0, self.complete, 1, bool(self.walked), self)
 
     # --- levels and calibration ---------------------------------------------------------------------------
 
@@ -294,12 +354,17 @@ class _Pilot:
                     transitions += 1  # a deterministic action: one pushed edge
                     outcomes += 1
                     continue
+                if action in self.walked:  # no key to share: the block's representative is expanded as it is
+                    factor = self.walked[action]
+                    transitions += len({coarsening.coarsen(successor) for successor in successors}) * factor
+                    outcomes += len(successors) * factor
+                    continue
                 key = (action, self._key(self.rerolls[action], state))
                 if key not in pushed:
                     pushed[key] = len({coarsening.coarsen(successor) for successor in successors})
                     outcomes += len(successors)
                 transitions += pushed[key]
-        return Estimate(len(representatives), transitions, outcomes, kernel_rate, True, 2, None)
+        return Estimate(len(representatives), transitions, outcomes, kernel_rate, True, 2, bool(self.walked), None)
 
     def prefix(self, max_edges: int) -> dict[CompressedState, tuple[tuple[Action, tuple[tuple[CompressedState, int], ...]], ...]]:
         taken: dict[CompressedState, list[tuple[Action, Mapping[CompressedState, Fraction]]]] = {}
@@ -332,12 +397,15 @@ def estimate(
     actions: Iterable[Action],
     *,
     limit: int = DEFAULT_LIMIT,
+    seconds: float | None = None,
     clock: Callable[[], float] = time.perf_counter,
 ) -> Estimate:
     """The pilot count of the graph of `actions` from `starts`; see the module docstring.
 
     `actions` are the actions of the model (every one that reads the junk must be among those the
-    abstraction was built with). The walk stops once `limit` states are reached and says so
-    (`complete` false). Raises `EstimateRefused` for an action of a shape the pilot has no rule for.
+    abstraction was built with). The walk stops once `limit` states are reached, or `seconds` have passed on
+    `clock` (a walked action pays a real kernel call per state, so a caller bounds the pilot's own time), and says so
+    (`complete` false); pass `ADDING_LIMIT` when `needs_walk(abstraction, actions)`. Raises `EstimateRefused`
+    for a walked action whose kernel cannot be computed.
     """
-    return _Pilot(abstraction, actions, clock).run(starts, limit)
+    return _Pilot(abstraction, actions, clock).run(starts, limit, seconds)

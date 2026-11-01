@@ -45,7 +45,7 @@ from abstraction_pool import (
     RESISTS,
 )
 from beasts_support import aspect_mods
-from coarse_support import blocks_of, compare_members, concrete_items
+from coarse_support import blocks_of, compare_members, compare_variants, concrete_items
 from items_support import AMULET, DATA
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
@@ -421,12 +421,13 @@ def fixture_blocks(data=CONTRACT_DATA, goal: Goal = GOAL) -> list[dict]:
 
 
 def check_block_invariance(action: Action, data=CONTRACT_DATA, goal: Goal = GOAL) -> int:
-    """Where the action declares `block_invariant`, the members of a block where it is legal give the same kernel pushed through the blocks.
+    """Where the action declares `block_invariant`, the members of a block where it is legal give the same kernel pushed through the blocks;
+    where it declares `variants`, the backups of the members lie between the smallest and the largest backup of the variant kernels (`compare_variants`).
 
     The blocks and their members come from the brute force over concrete items (`fixture_blocks`), the
     kernels are the exact kernels of the members, and the legality of each is the action's own. The two
     models of the coarse state must offer the action exactly where some member (the lower) or every member
-    (the upper) can take it, and give that kernel. An action that does not declare it must be refused by the
+    (the upper) can take it, and give that kernel. An action that declares neither must be refused by the
     coarse state (`OutOfScopeError`). Returns how many members were compared with another member of their block.
     """
     key = (action, id(data), goal)
@@ -437,7 +438,7 @@ def check_block_invariance(action: Action, data=CONTRACT_DATA, goal: Goal = GOAL
 
 def _compare_members(action: Action, data, goal: Goal) -> int:
     reads = action.reads(data)
-    if not reads.block_invariant:
+    if not reads.block_invariant and not reads.variants:
         ab, [(coarsening, blocks), *_] = _coarse_world(data, goal, None)
         block = next(iter(blocks))
         for bound in ("lower", "upper"):
@@ -445,10 +446,11 @@ def _compare_members(action: Action, data, goal: Goal) -> int:
                 coarsening.kernel(block, action, bound)
             except OutOfScopeError:
                 continue
-            raise AssertionError("an action that does not declare block_invariant is refused by the coarse state")
+            raise AssertionError("an action that declares neither block_invariant nor variants is refused by the coarse state")
         return 0
     try:
         ab, worlds = _coarse_world(data, goal, action if reads.junk else None)
     except OutOfScopeError as refusal:
-        raise AssertionError(f"the action declares block_invariant but the coarse state refuses it: {refusal}") from refusal
-    return sum(compare_members(action, ab, coarsening, blocks) for coarsening, blocks in worlds)
+        raise AssertionError(f"the action declares block_invariant or variants but the coarse state refuses it: {refusal}") from refusal
+    check = compare_variants if reads.variants else compare_members
+    return sum(check(action, ab, coarsening, blocks) for coarsening, blocks in worlds)
