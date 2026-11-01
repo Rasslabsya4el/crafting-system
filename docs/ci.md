@@ -45,7 +45,7 @@ The serial command is unchanged:
 
 ## Heavy runs on GitHub: the runner budget (#249)
 
-Benchmarks, profiling and research sweeps go to GitHub too, not to a developer's PC. `.github/workflows/run.yml`
+**Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite goes to CI and benchmarks, profiling, sweeps, solves and measurements go to a heavy run, because a local multi-process sweep pins his machine at 100%. `.github/workflows/run.yml`
 checks out a branch, puts the pinned game data in place with the same step CI uses (`.github/actions/real-data`),
 runs a bash command from the repository root on 1 to 16 runners and uploads what the command wrote into `$OUT_DIR`
 (plus `output.log`, its console output). The command sees `RUNNER_INDEX` (1..N) and `RUNNER_COUNT`, so N runners can

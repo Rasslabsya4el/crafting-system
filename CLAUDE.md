@@ -33,7 +33,7 @@ Everything this repo needs lives inside this folder: worktrees in `.claude/workt
 
 ## Heavy runs
 
-Benchmarks, probes and sweeps run on GitHub's runners, never on the owner's PC, and **only through the dispatcher**: `python .github/scripts/heavy_dispatch.py run --ref <branch> --runners N --command '...'`, never `gh workflow run run.yml`. The repo has 20 runner jobs at once; the dispatcher waits on the PC until merge CI keeps a buffer (`HEAVY_FLOOR` and `CI_RESERVE`, repository variables), and refuses a timeout over 60 minutes unless `--long` (one indivisible solve): split long sweeps into shorter parts. `python .github/scripts/heavy_dispatch.py status` shows the queue. Details: `docs/ci.md`.
+**Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite, sweeps, solves and measurements go to GitHub (CI, or a heavy run), because a local multi-process sweep pins his machine at 100%. Heavy runs go **only through the dispatcher**: `python .github/scripts/heavy_dispatch.py run --ref <branch> --runners N --command '...'`, never `gh workflow run run.yml`. The repo has 20 runner jobs at once; the dispatcher waits on the PC until merge CI keeps a buffer (`HEAVY_FLOOR` and `CI_RESERVE`, repository variables), and refuses a timeout over 60 minutes unless `--long` (one indivisible solve): split long sweeps into shorter parts. `python .github/scripts/heavy_dispatch.py status` shows the queue. Details: `docs/ci.md`.
 
 ## Talking to the owner
 
