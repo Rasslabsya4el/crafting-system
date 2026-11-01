@@ -294,6 +294,16 @@ class Abstraction:
                         queue.append(successor)
         return frozenset(seen)
 
+    def estimate(self, starts: Iterable[CompressedState], actions: Iterable[Action], **options):
+        """How big the graph of `actions` from `starts` is, without building it (`Estimate`, ADR-0023).
+
+        Equal to what `reachable` and the kernels would give (goals not expanded); see `_estimate.py`. Raises
+        `EstimateRefused` for an action the count has no rule for.
+        """
+        from ._estimate import estimate
+
+        return estimate(self, starts, actions, **options)
+
     def family_types(
         self, tag: str | None = None, fossils: Action | None = None
     ) -> Mapping[FamilyType, tuple[str, ...]]:
