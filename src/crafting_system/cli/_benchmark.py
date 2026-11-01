@@ -147,6 +147,7 @@ BENCHMARKS = (
                 fractured=(PIERCE,), crafted=(NO_ATTACK,),
             ),
         ),
+        heavy="the exact graph needs more memory than a 16 GB runner has (ticket #70)",
     ),
     BenchmarkRoute(
         "R14",
@@ -174,6 +175,7 @@ BENCHMARKS = (
                 (SPEED, MULTIMOD, NO_ATTACK), ADDS, (GEMS, DOT), "100%", crafted=(MULTIMOD, NO_ATTACK),
             ),
         ),
+        heavy="the exact graph has more than 570,000 states and no approximate level exists for a route with metamods (ticket #70)",
     ),
 )
 

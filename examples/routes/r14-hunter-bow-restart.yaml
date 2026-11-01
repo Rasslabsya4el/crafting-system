@@ -1,0 +1,135 @@
+# The route of R14 COMPLETED: r14-hunter-bow.yaml (the guide as written) plus one last rule that the guide does not have.
+#
+# The guide names no way out of some states (the Exalted Orbs added the wrong tiers and the prefixes are full, the
+# Fracturing Orb or an Annulment went somewhere the steps do not cover). r14-hunter-bow.yaml leaves those as gaps, so a run that
+# reaches one never finishes. This file adds a last rule, `restart` (buy the start item again, the guide's own
+# way out of its steps 3 and 4), for every state no earlier rule covers, so that the route has a finite cost to compare
+# with. It is the file's reading, not the guide's. Everything else is the same as r14-hunter-bow.yaml.
+
+# Given route for benchmark route R14: the Toxic Rain Hunter bow with +1 to socketed gems and Chaos Damage over Time.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy,
+# at the same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml).
+# In every state the FIRST rule whose conditions match is the one that is followed. A goal state is never
+# acted on. A state no rule matches is reported as a gap: the guide does not say what to do there, and this
+# file does not invent it. The conditions and actions are explained in examples/routes/r12-lightning-amulet.yaml.
+#
+# The route (Reddit, Peuget guide, docs/research/2026-10-30-5-reference-routes.md, id R14):
+#   1. Orb of Alteration the Hunter bow until it has tier-1 Attack Speed.
+#   2. Regal Orb.
+#   3. Orb of Annulment until only the Attack Speed is left. If the Attack Speed is annulled, back to step 1
+#      (1 in 3 with 3 mods, 1 in 2 with 2).
+#   4. Craft "Can have up to 3 Crafted Modifiers" and "Cannot roll Attack Modifiers".
+#   5. Two Exalted Orbs: the guide says they force +1 socketed gems and Chaos Damage over Time.
+#   6. The two bench crafts, +2 to Level of Socketed Support Gems and Chaos Damage over Time Multiplier,
+#      "as slots permit". The item has no free suffix for the multiplier while both metamods stand (the Attack
+#      Speed and the two metamods are the three suffixes), so, as in the guide of R15, the crafted mods are removed,
+#      the multimod is crafted again, and then the two crafts. That order is the file's reading of "as slots permit".
+#
+# Counting mods: "only the Attack Speed" is 3 free prefixes and 2 free suffixes (the Attack Speed is a suffix).
+# The Attack Speed is the first mod of the route and is never lost but by the Annulment of step 3.
+
+name: R14 completed with restart, Reddit guide
+
+rules:
+  # The bow is normal at the start: the Orb of Transmutation makes it magic (the guide starts at the Alterations).
+  - when:
+      rarity: normal
+    do: Orb of Transmutation
+
+  # Step 1, and step 2 when the tier-1 Attack Speed is there.
+  - when:
+      rarity: magic
+      requirements:
+        - family: IncreasedAttackSpeed
+          status: passing
+    do: Regal Orb
+  - when:
+      rarity: magic
+    do: Orb of Alteration
+
+  # Step 3: the Attack Speed was annulled (or never there): back to step 1.
+  - when:
+      rarity: rare
+      requirements:
+        - family: IncreasedAttackSpeed
+          status: [absent, below]
+    do: restart
+
+  # Step 6: the finish. +1 gems and Chaos Damage over Time are on the bow.
+  - when:
+      rarity: rare
+      crafted_mods: true
+      requirements:
+        - family: IncreaseSocketedGemLevel
+          status: passing
+        - family: WeaponCasterDamagePrefix
+          status: passing
+        - family: IncreaseSpecificSocketedGemLevel
+          status: passing
+        - family: DamageOverTimeMultiplier
+          status: absent
+    do: Bench craft +#% to Chaos Damage over Time Multiplier
+  - when:
+      rarity: rare
+      crafted_mods: true
+      open_suffixes: 1
+      requirements:
+        - family: IncreaseSocketedGemLevel
+          status: passing
+        - family: WeaponCasterDamagePrefix
+          status: passing
+        - family: IncreaseSpecificSocketedGemLevel
+          status: absent
+    do: Bench craft +2 to Level of Socketed Support Gems
+  - when:
+      rarity: rare
+      crafted_mods: true
+      open_suffixes: 0
+      requirements:
+        - family: IncreaseSocketedGemLevel
+          status: passing
+        - family: WeaponCasterDamagePrefix
+          status: passing
+    do: Remove Crafted Mods
+  - when:
+      rarity: rare
+      crafted_mods: false
+      requirements:
+        - family: IncreaseSocketedGemLevel
+          status: passing
+        - family: WeaponCasterDamagePrefix
+          status: passing
+    do: Bench craft Can have up to 3 Crafted Modifiers
+
+  # Step 4: the first metamod is on the bow, the second is the Cannot roll Attack Modifiers.
+  - when:
+      rarity: rare
+      crafted_mods: true
+      open_suffixes: 1
+    do: Bench craft Cannot roll Attack Modifiers
+
+  # Step 5: both metamods are on the bow: Exalted Orbs while a prefix is free. (Prefixes full of the wrong mods
+  # is a gap of the guide: it names no way out.)
+  - when:
+      rarity: rare
+      crafted_mods: true
+      open_prefixes: 1
+    do: Exalted Orb
+
+  # Step 4: only the Attack Speed is left (3 free prefixes, 2 free suffixes): the multimod.
+  - when:
+      rarity: rare
+      crafted_mods: false
+      open_prefixes: 3
+      open_suffixes: 2
+    do: Bench craft Can have up to 3 Crafted Modifiers
+
+  # Step 3: more than the Attack Speed: an Orb of Annulment.
+  - when:
+      rarity: rare
+      crafted_mods: false
+    do: Orb of Annulment
+
+  # Not in the guide: any state no rule above covers: buy the start item again.
+  - do: restart
