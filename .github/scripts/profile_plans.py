@@ -110,7 +110,7 @@ def install_pool_stats() -> None:
         pooled = time.perf_counter() - began
         local = parallel.WorkerPool(_pool._Worker, self._pool._args, workers=1)
         began = time.perf_counter()
-        local.map(_pool._build, tasks)
+        local.map_chunks(_pool._build_chunk, tasks, chunk=_pool.CHUNK)
         here = time.perf_counter() - began
         began = time.perf_counter()
         blob = pickle.dumps(results, protocol=pickle.HIGHEST_PROTOCOL)

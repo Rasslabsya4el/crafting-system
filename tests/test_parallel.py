@@ -79,3 +79,15 @@ def test_a_mapping_proxy_can_be_pickled_for_a_spawned_worker():
     again = pickle.loads(pickle.dumps(MappingProxyType({"a": 1})))
 
     assert dict(again) == {"a": 1}
+
+
+def total_of(chunk: list) -> int:
+    return sum(chunk) + context()["offset"]
+
+
+@pytest.mark.parametrize("workers", [1, 3])
+def test_map_chunks_gives_one_result_per_run_of_pieces_in_order(workers):
+    with WorkerPool(make_base, (100,), workers=workers) as pool:
+        found = pool.map_chunks(total_of, list(range(10)), chunk=4)
+
+    assert found == [0 + 1 + 2 + 3 + 100, 4 + 5 + 6 + 7 + 100, 8 + 9 + 100]

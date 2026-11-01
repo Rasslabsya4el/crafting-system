@@ -66,6 +66,10 @@ def _run_chunk(function: Callable, chunk: Sequence) -> list:
     return [function(piece) for piece in chunk]
 
 
+def _run_whole(function: Callable, chunk: Sequence) -> object:
+    return function(chunk)
+
+
 def _read_only(mapping: dict) -> MappingProxyType:
     return MappingProxyType(mapping)
 
@@ -138,3 +142,23 @@ class WorkerPool:
         for part in executor.map(_run_chunk, [function] * len(chunks), chunks):
             results.extend(part)
         return results
+
+    def map_chunks(self, function: Callable, pieces: Iterable, *, chunk: int) -> list:
+        """`[function(c) for c in chunks]`, where the chunks are consecutive runs of `chunk` pieces (the last may be shorter).
+
+        For a function that can share work, or compact what it sends back, across the pieces of a chunk. The results come
+        back in chunk order; a caller whose answer must not depend on the chunking joins them in a way that does not.
+        """
+        items = list(pieces)
+        chunks = [items[start : start + chunk] for start in range(0, len(items), chunk)]
+        if self.workers < 2 or len(chunks) < 2:
+            global _context
+            if not self._have_local:
+                self._local, self._have_local = self._factory(*self._args), True
+            saved, _context = _context, self._local
+            try:
+                return [function(part) for part in chunks]
+            finally:
+                _context = saved
+        executor = self._start()
+        return list(executor.map(_run_whole, [function] * len(chunks), chunks))

@@ -18,8 +18,11 @@ from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.actions import ActionError
 
+from crafting_system.solver import Action, Outcome
+
 from ._offers import PricedOffer
 
+CHUNK = 16  # states per trip to a worker: their distinct successor states are sent once
 MIN_PENDING = 24  # fewer pairs than this are built here: the round trip would cost more than it saves
 
 
@@ -34,19 +37,54 @@ class _Worker:
         self.start, self.offers = start, tuple(offers)
 
 
-def _build(task: tuple[CompressedState, tuple[int, ...]]) -> list:
-    """The solver action of each offer (by position) at the state; None where the game refuses it there."""
+def _build_chunk(tasks: Sequence[tuple[CompressedState, tuple[int, ...]]]) -> tuple[list, list]:
+    """The solver action of each offer (by position) at each state of a chunk, in a compact form for the trip back.
+
+    Returns `(table, rows)`: `table` holds each distinct state of the chunk once and `rows[t][k]` is None where the game
+    refuses offer k at state t, else `(label, cost, outcome indices, weights, input indices)` with indices into `table`.
+    An action's states are most of its size and repeat from action to action, so sending them once is what makes the
+    pool pay (pickling whole actions cost as much as building them).
+    """
     from ._plan import offer_action  # _plan imports this module
 
-    state, positions = task
     worker: _Worker = parallel.context()  # type: ignore[assignment]
-    built = []
-    for position in positions:
-        try:
-            built.append(offer_action(worker.abstraction, worker.offers[position], state, worker.start))
-        except ActionError:
-            built.append(None)
-    return built
+    table: list[CompressedState] = []
+    index: dict[CompressedState, int] = {}
+
+    def slot(state: CompressedState) -> int:
+        found = index.get(state)
+        if found is None:
+            found = index[state] = len(table)
+            table.append(state)
+        return found
+
+    rows = []
+    for state, positions in tasks:
+        row = []
+        for position in positions:
+            try:
+                action = offer_action(worker.abstraction, worker.offers[position], state, worker.start)
+            except ActionError:
+                row.append(None)
+                continue
+            row.append((
+                action.label, action.cost,
+                tuple(slot(outcome.state) for outcome in action.outcomes), tuple(outcome.weight for outcome in action.outcomes),
+                tuple(slot(needed) for needed in action.extra_inputs),
+            ))  # fmt: skip
+        rows.append(row)
+    return table, rows
+
+
+def _action_from(label, cost, states: Sequence[CompressedState], weights: Sequence[int], inputs: Sequence[CompressedState]) -> Action:
+    """The `Action` that `_build_chunk` took apart, without checking again what the worker's own `Action` already checked."""
+    action = Action.__new__(Action)
+    set_field = object.__setattr__  # the dataclass is frozen
+    set_field(action, "label", label)
+    set_field(action, "cost", cost)
+    set_field(action, "outcomes", tuple(map(Outcome, states, weights)))
+    set_field(action, "extra_inputs", tuple(inputs))
+    return action
 
 
 class StatePool:
@@ -70,7 +108,15 @@ class StatePool:
 
     def build(self, tasks: Sequence[tuple[CompressedState, tuple[int, ...]]]) -> list[list]:
         """For each (state, positions) the list of actions (None for a refusal), in the order given."""
-        return self._pool.map(_build, tasks)
+        built = []
+        for table, rows in self._pool.map_chunks(_build_chunk, tasks, chunk=CHUNK):
+            for row in rows:
+                built.append([
+                    None if entry is None else _action_from(
+                        entry[0], entry[1], [table[i] for i in entry[2]], entry[3], [table[i] for i in entry[4]])
+                    for entry in row
+                ])  # fmt: skip
+        return built
 
     def close(self) -> None:
         self._pool.close()
