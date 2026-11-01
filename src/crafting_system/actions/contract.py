@@ -32,6 +32,22 @@ offers from the catalog (`catalog.py`), `resources` and `adds`; `simulator` call
 None of them imports a concrete action. The defaults of the base class are the safe ones: an action
 that declares nothing reads every mod of the item and adds mods it does not name, which is exact but
 makes the state space large and no filter can drop it.
+
+**One contract (ticket #108).** Every action subclasses `Action` (`contract.py`) and answers five
+questions: `label(data)` (the stable name routes and the CLI use), `outcomes(data, item)` (the exact
+result), `resources(data)` (what one use consumes, by price-file name, read from claims), `reads(data)`
+(what of the item besides its fractured mods the result depends on: `Reads`) and `adds(data, item)`
+(what it puts on the item: `Adds`). The catalog (`catalog.py`) lists the actions of every registered
+kind for an item; a module registers its kinds with the `kind` decorator, so a new method is one file
+and nothing outside `actions` imports a concrete action: `abstraction`, `cli` and `simulator` use the
+contract and the catalog only. See ADR-0024 (extending to new methods and patches).
+
+Two-item actions and rule axes (ticket #210, B3): two more questions, empty by default. `inputs(data, item)` is a tuple of
+`Need(start, want)`, the other items one use consumes (ADR-0022); `rule_axes(data)` is a tuple of `Axis(name, readings, plan)`,
+the rules the action reads that the sources leave open (ADR-0033). An action with axes takes a `Reading` in `outcomes(data,
+item, reading=None)`; `outcomes_under(data, item, reading)` is the call that works for every action, and `model_readings(data,
+actions)` lists the readings of a model, the plan's first. `Reads.input_mods` says that the result depends on the mods of the
+inputs. A new kind with inputs is correct by default and needs no edit outside `actions`.
 """
 
 import itertools
@@ -49,6 +65,19 @@ from crafting_system.items import Item
 from crafting_system.rules import Rule
 
 from .draw import Outcome
+
+__all__ = [
+    "Action",
+    "ActionOutcomes",
+    "Adds",
+    "Axis",
+    "Fixed",
+    "Need",
+    "Reading",
+    "Reads",
+    "Rerolled",
+    "model_readings",
+]
 
 if TYPE_CHECKING:
     from .outcomes import Outcomes
@@ -124,10 +153,11 @@ class Reads:
     quality: bool = False
     offer: bool = False
     input_mods: bool = False
+    enchantment: bool = False
 
     @property
     def item_state(self) -> bool:
-        """Whether the action reads the implicits, the quality or the offer of the item (ADR-0027)."""
+        """Whether the action reads the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
         return self.implicits or self.quality or self.offer
 
     @classmethod
@@ -170,6 +200,11 @@ class Adds:
       offer (an Unveil, a Pick). The compressed state then stores that part of the item, so the change is seen
       (ADR-0027, ticket #142). The dataclass default is False, which says the action leaves it alone; `Action.adds`
       itself (an action that declares nothing) says True for all three, like it adds mods it does not name.
+    * `enchantment`: the action sets, replaces or removes the enchantment of the item (a Tempering or Tailoring Orb, a
+      Harvest quality enchant; ADR-0050, ticket #238). The dataclass default is False, which says it leaves the enchantment
+      alone; `Action.adds` itself (an action that declares nothing) says True. Like the reading, it is **not** part of
+      `item_state`: the enchantment is a finish step and stays out of the compressed state, so declaring it does not
+      change the number of states, and the action is offered like any other.
     * `corrupts`: the action corrupts the item and adds a corrupted implicit drawn from the corrupted pool of its class (a Vaal Orb,
       a Bloodstained resonator, the Locus of Corruption; ADR-0036). It needs `implicits`, since it puts an implicit on the item.
       A corrupted item takes no further action, so every outcome is a corrupted item that is the goal or a dead end, and the plan
@@ -181,6 +216,10 @@ class Adds:
       target, ADR-0037). The outcome cannot meet an explicit requirement the item did not meet, so a planner offers the action for
       such a target only from a state in which every other requirement already passes (an exact pruning, ADR-0031, ADR-0036). A
       resonator that rerolls the explicit mods itself leaves it False and is never pruned this way. The default is False.
+    * `cuts`: the random draws of explicit mods that the action makes see the tier cut of an item with Memory Strands (and of a Foulborn
+      orb): it builds its pool with a `Cut` (`cut.py`, ADR-0040, ADR-0041). It needs `draws`: a fixed result (an essence's guaranteed mod,
+      a bench mod) is never cut. The default is False, which says the action's draws see the ordinary pool whatever the item's count: a
+      fossil, a Harvest craft or a beast never cuts. The declaration is the action's alone; the pool cuts only when it is given a cut.
 
     `Adds` describes what the action puts on the item named in advance; for a drawn mod it says only
     that there is a draw, so pruning by proof (#118) goes through `outcomes` for those.
@@ -198,10 +237,14 @@ class Adds:
     implicits: bool = False
     quality: bool = False
     offer: bool = False
+    enchantment: bool = False
     corrupts: bool = False
     keeps_mods: bool = False
+    cuts: bool = False
 
     def __post_init__(self) -> None:
+        if self.cuts and not self.draws:
+            raise ValueError("`cuts` says the action's random draws see the tier cut: it needs `draws`")
         if self.corrupts and not self.implicits:
             raise ValueError("an action that corrupts adds a corrupted implicit, so it must declare `implicits` too")
         if self.keeps_mods and not self.corrupts:
@@ -209,7 +252,7 @@ class Adds:
 
     @property
     def item_state(self) -> bool:
-        """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027)."""
+        """Whether the action changes the implicits, the quality or the offer of the item (ADR-0027); the enchantment is not one of them (ADR-0050)."""
         return self.implicits or self.quality or self.offer
 
     @classmethod
@@ -424,16 +467,16 @@ class Action(ABC):
         """What one use consumes, by price-file name; read from claims. `data` may be None for an action that needs none."""
 
     def reads(self, data: GameData) -> Reads:
-        """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality and the offer."""
-        return Reads(implicits=True, quality=True, offer=True, input_mods=True)
+        """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality, the offer and the enchantment."""
+        return Reads(implicits=True, quality=True, offer=True, input_mods=True, enchantment=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality and the offer.
+        """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality, the offer and the enchantment.
 
         `data` and `item` may be None for an action whose additions depend on neither (an orb); one
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
-        return Adds(implicits=True, quality=True, offer=True)
+        return Adds(implicits=True, quality=True, offer=True, enchantment=True)
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The other items one use consumes besides `item` (a recombinator's donor, ADR-0022); none by default.

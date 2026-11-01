@@ -6,10 +6,17 @@ holds no capacity filter: which sides still have room changes during a reroll, s
 it. Weights are exact fractions and never rounded.
 
 The item's tags for the spawn weights are the tags of its base plus one tag per influence
-(`item_tags`), so the mods of an influence join the pool. A draw is never tier-gated here yet (`NO_MEMORY_STRANDS`): the cut of an item with strands is the next ticket of batch B5, and until then the planner refuses a run with strands (`make_plan`).
+(`item_tags`), so the mods of an influence join the pool. A draw that cuts (`Adds.cuts`, ADR-0041) passes a `Cut` (`cut.py`, ADR-0040): the pool
+then keeps the highest tiers of each tier table that the strand count and the Foulborn flag allow, and weighs them by the cut's reading
+(ADR-0042). The cut is made on the mods the level gate admits, before the mods the item holds block their families, so it never depends on
+what is on the item. With no cut, or with a cut of 0 strands and no Foulborn orb, the pool is the ordinary one. Until the spend and the
+compressed state carry the count (batch B5), the planner still refuses a run with strands (`make_plan`).
 A family can have mods on both sides (jewels): its `PoolFamily` come in a pair of one name (`partners`), and a draw takes the family out on both sides.
 The Attack and Caster metamods on the item filter the pool by tag (`metamods.py`). Implicit mods of the base never block a candidate (`IMPLICITS_DO_NOT_BLOCK`); only the explicit
 mods on the item do.
+
+The pool a draw uses is `build_pool(data, item)`: the mods that could be drawn next, grouped by
+family, with exact `Fraction` weights.
 """
 
 from collections import defaultdict
@@ -22,15 +29,24 @@ from crafting_system.data import BaseItem, GameData, Mod
 from crafting_system.items import Item, Side, UnknownBaseError, effective_weight, spawn_weight, tier_table
 from crafting_system.rules import get_rule
 
+from .cut import Cut, cut_weights
 from .errors import OutOfScopeError
 from .metamods import allowed_by_tags, blocked_tags
+
+__all__ = [
+    "PoolFamily",
+    "PoolMod",
+    "build_pool",
+    "drawable_mod_ids",
+    "partners",
+    "tiers_of",
+]
 
 DOMAIN_MATCH = get_rule("affix_pool.domain_match")
 SIDE_IS_GENERATION_TYPE = get_rule("affix_pool.side_is_generation_type")
 LEVEL_GATE = get_rule("affix_pool.level_gate")
 FAMILY_EXCLUSION = get_rule("affix_draw.family_exclusion")
 IMPLICITS_DO_NOT_BLOCK = get_rule("affix_pool.implicits_do_not_block")
-NO_MEMORY_STRANDS = get_rule("affix_pool.no_memory_strands")
 INFLUENCE_TAGS = get_rule("affix_pool.influence_tags")
 
 
@@ -69,11 +85,11 @@ class Candidate:
 ModFactor = Callable[[Mod], Fraction]
 
 _ADMITTED_LIMIT = 32
-_ADMITTED: dict[tuple, tuple[GameData, tuple[tuple[Mod, Fraction], ...]]] = {}
+_ADMITTED: dict[tuple, tuple[GameData, tuple[tuple[Mod, Fraction], ...]]] = {}  # the key ends with the live cut or None
 
 
 _POOL_LIMIT = 256
-# (id(data), base, item level, influences, max level, mod ids of the item, mod ids of extra, tag filter) -> (data, candidates).
+# (id(data), base, item level, influences, max level, mod ids of the item, mod ids of extra, tag filter, live cut) -> (data, candidates).
 _POOLS: dict[tuple, tuple[GameData, tuple[Candidate, ...]]] = {}
 
 
@@ -129,31 +145,41 @@ def tiers_of(data: GameData, item: Item) -> Mapping[str, int]:
 
 
 def _admitted(
-    data: GameData, base: BaseItem, tags: tuple[str, ...], level_limit: int, extra: Iterable[Mod]
+    data: GameData, base: BaseItem, tags: tuple[str, ...], level_limit: int, extra: Iterable[Mod], cut: Cut | None = None
 ) -> tuple[tuple[Mod, Fraction], ...]:
     """The mods of the domain with a side, within the level limit and a positive weight on `tags`, with that weight, in data order.
 
     What the item holds (its blocks, its metamods) is not in it, so it is the same for every item of one base, level
     and influence: a state-space walk asks for thousands of pools and would otherwise weigh every mod of the game each time.
     The entry keeps `data` alive, so its `id` cannot be reused while it is cached.
+
+    With a `cut` that can remove a tier, the low tiers of each tier table are dropped and the rest reweighed (`cut_weights`). The
+    tier tables are those of these admitted mods, so the cut counts what the draw can roll, and it is made before the item's
+    blocks. The cut list is held under its own key, so a cut pool costs the cut once. A `cut` that is None, or that keeps every
+    tier (0 strands, no Foulborn orb), gives the uncut list itself.
     """
     joined = tuple(extra)
-    key = (id(data), base.domain, tags, level_limit, tuple(mod.id for mod in joined))
+    live = cut if cut is not None and cut.active else None
+    key = (id(data), base.domain, tags, level_limit, tuple(mod.id for mod in joined), live)
     found = _ADMITTED.get(key)
     if found is not None and found[0] is data:
         return found[1]
-    own = ((mod, mod.domain == base.domain) for mod in data.mods.values())
-    kept = []
-    for mod, in_domain in chain(own, ((mod, True) for mod in joined)):
-        if not in_domain or mod.generation_type not in Side or mod.required_level > level_limit:
-            continue
-        weight = effective_weight(mod, tags)
-        if weight > 0:
-            kept.append((mod, weight))
+    if live is not None:
+        result = cut_weights(_admitted(data, base, tags, level_limit, joined), live)
+    else:
+        own = ((mod, mod.domain == base.domain) for mod in data.mods.values())
+        kept = []
+        for mod, in_domain in chain(own, ((mod, True) for mod in joined)):
+            if not in_domain or mod.generation_type not in Side or mod.required_level > level_limit:
+                continue
+            weight = effective_weight(mod, tags)
+            if weight > 0:
+                kept.append((mod, weight))
+        result = tuple(kept)
     if len(_ADMITTED) >= _ADMITTED_LIMIT:
         _ADMITTED.clear()
-    entry = _ADMITTED[key] = (data, tuple(kept))
-    return entry[1]
+    _ADMITTED[key] = (data, result)
+    return result
 
 
 def pool_candidates(
@@ -163,6 +189,7 @@ def pool_candidates(
     extra: Iterable[Mod] = (),
     *,
     tag_filter: bool = True,
+    cut: Cut | None = None,
 ) -> tuple[Candidate, ...]:
     """Every mod that could be drawn next on `item`, with its weight on the base, in data order.
 
@@ -174,6 +201,11 @@ def pool_candidates(
     The Attack and Caster metamods on `item` keep the mods with that tag out of the pool
     (`blocked_tags`); `tag_filter=False` leaves them in (a Harvest reforge filters its first mod only).
 
+    `cut` is the tier cut of the draw (`Cut`, ADR-0040): the strand count the item has before the craft and the Foulborn flag.
+    The pool then holds only the highest tiers of each tier table, reweighed by the cut's reading (ADR-0042). The caller gives it
+    only for a draw that cuts (`Adds.cuts`); the count on `item` alone never cuts, so a fossil on an item with strands draws from the
+    ordinary pool. None, and a cut of 0 strands without a Foulborn orb, give the ordinary pool.
+
     Raises `OutOfScopeError` for a candidate that does not have exactly one family (none is
     drawable in domain `item` in 3.29.3.3). A family may have candidates on both sides (five families
     of the base jewels do, `affix_pool.family_may_span_both_sides`); `group_pool` makes one `PoolFamily`
@@ -181,6 +213,7 @@ def pool_candidates(
     A result is cached per game data object and key; a call that raises is not cached.
     """
     extra = tuple(extra)
+    live = cut if cut is not None and cut.active else None
     key = (
         id(data),
         item.base_id,
@@ -190,11 +223,12 @@ def pool_candidates(
         tuple(sorted(entry.mod_id for entry in item.mods)),  # the metamods that filter by tag are mods of the item
         tuple(mod.id for mod in extra),
         tag_filter,
+        live,
     )
     hit = _POOLS.get(key)
     if hit is not None and hit[0] is data:
         return hit[1]
-    candidates = _compute_pool_candidates(data, item, max_level, extra, tag_filter)
+    candidates = _compute_pool_candidates(data, item, max_level, extra, tag_filter, live)
     if key not in _POOLS and len(_POOLS) >= _POOL_LIMIT:
         del _POOLS[next(iter(_POOLS))]
     _POOLS[key] = (data, candidates)
@@ -202,7 +236,7 @@ def pool_candidates(
 
 
 def _compute_pool_candidates(
-    data: GameData, item: Item, max_level: int | None, extra: tuple[Mod, ...], tag_filter: bool
+    data: GameData, item: Item, max_level: int | None, extra: tuple[Mod, ...], tag_filter: bool, cut: Cut | None
 ) -> tuple[Candidate, ...]:
     """`pool_candidates` without the cache; `extra` is already a tuple."""
     base = data.base_items.get(item.base_id)
@@ -212,7 +246,7 @@ def _compute_pool_candidates(
     blocked = blocked_tags(data, item) if tag_filter else frozenset()
     level_limit = item.item_level if max_level is None else min(item.item_level, max_level)
     candidates: list[Candidate] = []
-    for mod, weight in _admitted(data, base, tags, level_limit, extra):
+    for mod, weight in _admitted(data, base, tags, level_limit, extra, cut):
         if item.blocks(data, mod) or not allowed_by_tags(mod, blocked):
             continue
         if len(mod.families) != 1:
@@ -280,9 +314,10 @@ def build_pool(
     extra: Iterable[Mod] = (),
     *,
     tag_filter: bool = True,
+    cut: Cut | None = None,
 ) -> tuple[PoolFamily, ...]:
     """The candidates for one more draw on `item`, grouped by family, in data order.
 
-    See `pool_candidates` for `max_level`, `extra` and `tag_filter`, `group_pool` for `factor`.
+    See `pool_candidates` for `max_level`, `extra`, `tag_filter` and `cut`, `group_pool` for `factor`.
     """
-    return group_pool(pool_candidates(data, item, max_level, extra, tag_filter=tag_filter), factor)
+    return group_pool(pool_candidates(data, item, max_level, extra, tag_filter=tag_filter, cut=cut), factor)

@@ -21,7 +21,7 @@ from crafting_system.solver import Action
 from ._offers import RESTART, BuyStartItem, PricedOffer
 
 
-def solver_actions(
+def chosen_offers(
     abstraction: Abstraction,
     offers: Iterable[PricedOffer],
     state: CompressedState,
@@ -29,25 +29,18 @@ def solver_actions(
     *,
     merge_equal: bool = True,
     prune_corrupting: bool = True,
-    cache: dict | None = None,
-) -> list[Action[CompressedState]]:
-    """The solver's actions at `state`: one per priced offer the game allows there, in the order of `offers`.
+) -> list[PricedOffer]:
+    """The offers whose actions the solver sees at `state`, in the order of `offers`: the allowed ones, equal kernels merged.
 
-    `restart` is an action of every state but `start` and is never merged (it has no kernel). An offer
-    the game refuses at `state`, or no admitted rule covers (`ActionError`), is skipped. With
-    `merge_equal`, of the offers whose `Abstraction.kernel_key` is equal at `state` only the cheapest
-    stays (on a tie the earliest in `offers`, the one the solver took before); the key is cheaper than
-    the kernel, so the dearer ones are never built. Without it every allowed offer stays.
-
-    `cache`, when given, holds the built solver action of each `(state, label, cost)`, so that solving
-    again with more offers does not build a kernel twice (the choice among equal kernels is still made
-    on every call; only the action is reused).
+    This is the choice `solver_actions` makes before it builds any kernel (the key is cheaper than the kernel).
+    `restart` is an action of every state but `start` and is never merged (it has no kernel). An offer the game refuses at
+    `state`, or no admitted rule covers (`ActionError`), is skipped. With `merge_equal`, of the offers whose
+    `Abstraction.kernel_key` is equal at `state` only the cheapest stays (on a tie the earliest in `offers`, the one the
+    solver took before); without it every allowed offer stays.
 
     With `prune_corrupting` (the default) the corrupting offers that `corrupting_offer_pruned` names are skipped at `state`;
     without it they stay, which is the reference a test compares the values against.
     """
-    from ._plan import offer_action  # _plan imports this module
-
     allowed: list[tuple[PricedOffer, object]] = []  # (offer, kernel key or None for restart)
     for priced in offers:
         if priced.label == RESTART and state == start:
@@ -66,11 +59,38 @@ def solver_actions(
     for priced, key in allowed:
         if key is not None and (key not in cheapest or priced.cost < cheapest[key].cost):
             cheapest[key] = priced
+    return [priced for priced, key in allowed if key is None or cheapest[key] is priced]
 
+
+def solver_actions(
+    abstraction: Abstraction,
+    offers: Iterable[PricedOffer],
+    state: CompressedState,
+    start: CompressedState,
+    *,
+    merge_equal: bool = True,
+    prune_corrupting: bool = True,
+    cache: dict | None = None,
+    chosen: list[PricedOffer] | None = None,
+) -> list[Action[CompressedState]]:
+    """The solver's actions at `state`: one per priced offer the game allows there, in the order of `offers`.
+
+    `restart` is an action of every state but `start` and is never merged (it has no kernel). An offer
+    the game refuses at `state`, or no admitted rule covers (`ActionError`), is skipped. With
+    `merge_equal`, of the offers whose `Abstraction.kernel_key` is equal at `state` only the cheapest
+    stays (on a tie the earliest in `offers`, the one the solver took before); the key is cheaper than
+    the kernel, so the dearer ones are never built. Without it every allowed offer stays.
+
+    `cache`, when given, holds the built solver action of each `(state, label, cost)`, so that solving
+    again with more offers does not build a kernel twice (the choice among equal kernels is still made
+    on every call; only the action is reused). `chosen` is the result of `chosen_offers` when the caller has it already.
+    """
+    from ._plan import offer_action  # _plan imports this module
+
+    if chosen is None:
+        chosen = chosen_offers(abstraction, offers, state, start, merge_equal=merge_equal, prune_corrupting=prune_corrupting)
     found = []
-    for priced, key in allowed:
-        if key is not None and cheapest[key] is not priced:
-            continue
+    for priced in chosen:
         built = None if cache is None else cache.get((state, priced.label, priced.cost))
         if built is None:
             try:

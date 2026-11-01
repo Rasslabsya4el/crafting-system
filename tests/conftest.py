@@ -1,5 +1,6 @@
 """Shared pytest setup: the network guard of the price tests, and the split of the suite over CI jobs (#165)."""
 
+import os
 import socket
 from collections import defaultdict
 from fnmatch import fnmatch
@@ -7,6 +8,8 @@ from pathlib import Path
 
 import pytest
 import shard_support
+
+os.environ.setdefault("CRAFTING_WORKERS", "1")  # ticket #250: the suite is serial inside a CI slot (4 slots run at once); a test of the pool sets its own size
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 PRICE_TEST_FILES = "test_prices_*.py"
