@@ -65,7 +65,7 @@ Every claim but `foulborn.exalted_spend_by_mod_count` keeps the planner's number
 
 ## Lines for the in-game list ([#182](https://github.com/Rasslabsya4el/crafting-system/issues/182))
 
-Posted as one comment there. Summary:
+Posted as one comment there (see the PR for its link). Summary:
 
 - **Answered by the emulator and the players, both agreeing with the default** (the claims stay `approximate`, so the checks are optional and the main chat may drop them): check 1 (Scouring, Annulment, Divine keep the count; Fracturing and Vaal are the emulator's and the wiki's word), check 2 (fossil and Harvest are not cut), check 6 (Unravelling skips fractured and veiled mods). Check 4 (essence respects the cut) is answered the same way for the emulator (essence has a row) and stays optional for the non-guaranteed mods.
 - **Changes:** check 5 (Foulborn Exalted on 1 to 4 mods): the default is now the emulator's row 46, 46, 52, 56, 60, 62 instead of 29, 40, 47, 58, 62; PoEDB's 28 conflicts; the tooltip settles it.
