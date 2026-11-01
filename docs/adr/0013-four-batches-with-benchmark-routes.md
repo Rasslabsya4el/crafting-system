@@ -34,6 +34,5 @@ The grill fixed what B3 contains; the designs are ADR-0032 to ADR-0035, with ADR
 
 - **In B3**: the Awakener's Orb (ADR-0032); the **unpredictable** recombinator (ADR-0033); imprints from beasts (ADR-0034); the Dust and Gold cost (ADR-0035). The solver for two-input actions is ADR-0022.
 - **Not in B3**: the predictable recombinator, which waits for a route that needs it.
-- **Out of v1**: the Eternal Orb (Standard only); Ducats and the other Allflame crafts; jewels and idols in the recombinator; the exclusive-mod padding of the 3.25 guide (dead since 3.26).
+- **Out of v1**: the Eternal Orb (Standard only); Ducats and the other Allflame crafts; jewels in the recombinator; the exclusive-mod padding of the 3.25 guide (dead since 3.26).
 - **Benchmarks**: R15, R17 to R19 and R25 to R29. R16 has no two-input step (Harvest only) and moves to B2's Harvest end to end ([#150](https://github.com/Rasslabsya4el/crafting-system/issues/150)). R17 starts from a bought Talisman with the wanted implicit. R18's Assassin's Mark text is checked against the 3.29 data. R26 is benchmarked without its exclusive-mod steps. R27 without Ducat padding. R29 without Hinekora's Lock (it waits for B8) and without the Runesmith enchant (historical).
-

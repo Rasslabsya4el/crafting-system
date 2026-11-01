@@ -16,7 +16,7 @@ Rule data `recombinator_cost`, from the reports; the planner does **not** comput
 | Dust per combine | 100,000 | 25,000 to 250,000 |
 | Dust factor with a low-tier non-exclusive craft on each input | 0.5 | 0.11 to 0.5 |
 
-At the defaults one combine costs about 7 Chaos (4 to 12), Gold being 86% to 96% of it. The plan uses the point values; the answer lists the cost rule among its approximate inputs with the intervals, and the policy's expected number of recombinations is in the risk output, so the spread of the cost rule can be read as that number times the interval of one combine. An influenced input raises the cost by 50% in the 3.25 data (one line, no window); it is kept in the data as an unused field until a route needs it.
+At the defaults one combine costs about 7 Chaos (4 to 12), Gold being 86% to 96% of it. The plan uses the point values; the answer lists the cost rule among its approximate inputs with the intervals, and the policy's expected number of recombinations is in the risk output, so the spread of the cost rule can be read as that number times the interval of one combine. An influenced input raised the cost by 50% in the 3.25 data (one line, no window, no word on Dust or Gold alone). R29 has influenced inputs, so the planner multiplies **both** Dust and Gold by 1.5 for a combine with an influenced input (the main chat's default, marked `approximate`, replaced by the owner's readings). One project estimate in the research would put Gold at 40,000 to 80,000; the interval above is the reports'.
 
 ## The junk craft is an option, off by default
 
@@ -24,6 +24,6 @@ The owner noted that the Dust drops a lot when an item carries a crafted mod. Th
 
 ## In-game readings
 
-The owner reads the Dust and Gold of eight item pairs once all in-game checks are collected in one list ([#182](https://github.com/Rasslabsya4el/crafting-system/issues/182), answer 1e). They replace the table above when they come; until then the claims keep the "reports" provenance. The rank-4 bench "25% reduced Recombination Cost" stays unset until read from the game (it may already be inside every report).
+The owner reads the Dust and Gold of eight item pairs once all in-game checks are collected in one list ([#182](https://github.com/Rasslabsya4el/crafting-system/issues/182), answer 4e). They replace the table above when they come; until then the claims keep the "reports" provenance. The rank-4 bench "25% reduced Recombination Cost" stays unset until read from the game (it may already be inside every report).
 
 Origin: [Grill B3](https://github.com/Rasslabsya4el/crafting-system/issues/94) (round 1 answer 2, new point from the owner); [Research #177](https://github.com/Rasslabsya4el/crafting-system/issues/177) and its [note](../research/2026-11-01-recombinator-dust-gold-cost.md); ADR-0007, ADR-0028.
