@@ -41,6 +41,7 @@ A given route (YAML, ADR-0019) gains a rule form `lock`: the options looked at, 
 
 - **R29 with its Lock step restored.** B3's R29 runs without the Lock (ADR-0013, amended by B3) and stays the baseline; B8 compares the guide's given route and the solver's at equal prices and across the exponent grid of ADR-0033. R29's Runesmith step stays out (historical).
 - **A synthetic target with the Lock's price overridden low**, where the plan must take the Lock and the Lock line must show `N` above the override; at the real price the same target must print "not worth it".
+- **A B4 corrupted-implicit target** (a ring that must carry "all Elemental Resistances", ADR-0039's 0.78% per Vaal Orb) with a finished item and the Lock at its real price and at an override: the plan must show the Lock in front of the Vaal Orb when it pays, and the Lock line must say so.
 - The pass rule is ADR-0013's.
 
 Origin: [Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106) (owner's answers 2 and 4; the round draft); ADR-0013, ADR-0019, ADR-0028, ADR-0054 to ADR-0056.

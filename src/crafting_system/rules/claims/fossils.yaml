@@ -77,6 +77,14 @@ rules:
     date_checked: 2026-10-30
     value: 40
 
+  - id: fossils.sanctified_values_lucky
+    statement: A resonator that holds a Sanctified Fossil rolls the numerical value of every stat of the mods it puts on the item (the drawn ones and a forced one) twice and keeps the better, the one nearer the stat's maximum. Mods the reroll keeps (fractured, on a locked side) keep their values.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Sanctified_Fossil#Mechanics
+    quote: "This means that the numerical values are each rolled twice and the better result is taken."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
   - id: fossils.sanctified_multiplies_whole_weight
     statement: The Sanctified level factor multiplies the whole weight of the mod (base weight times the fossil tag factor), it is not one of the summed boosts; a blocked mod stays blocked.
     source_kind: coe
