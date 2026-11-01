@@ -21,7 +21,7 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
-from crafting_system.abstraction import CompressedState, integer_weights
+from crafting_system.abstraction import BlockHoldsMetamod, CompressedState, integer_weights
 from crafting_system.actions import ActionError
 from crafting_system.solver import (
     Action,
@@ -132,6 +132,8 @@ class BlockModel:
             for bound, actions in found.items():
                 try:
                     kernels = self.coarsening.variants(block, priced.offer.action, bound)
+                except BlockHoldsMetamod:
+                    raise  # the exact state offers actions here that blocks cannot: a model without them is no bound
                 except ActionError:
                     continue
                 variants = tuple(tuple(Outcome(s, w) for s, w in integer_weights(kernel).items()) for kernel in kernels)
@@ -304,6 +306,9 @@ def climb(
         except LevelTimeout as timeout:
             stopped = str(timeout)
             break
+        except BlockHoldsMetamod as held:
+            stopped = stopped or f"a block holds a metamod ({held})"
+            continue  # this level cannot bound the route; the next may pool differently
         except (NoPolicyError, ConvergenceError):
             if candidate.level.kind != "tail":
                 raise

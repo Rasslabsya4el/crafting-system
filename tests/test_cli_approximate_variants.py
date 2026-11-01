@@ -439,6 +439,14 @@ def test_a_budget_of_zero_sets_no_time_limit_on_the_levels(exact, budget):
     assert solved.approximation.lower <= exact.mean_remaining <= solved.approximation.upper
 
 
+def test_a_block_that_holds_a_metamod_ends_the_level_instead_of_dropping_the_actions_the_exact_state_has(exact, budget, monkeypatch):
+    monkeypatch.setattr(Coarsening, "_holds_blocking_metamod", lambda self, block: True)
+    decision = decide(exact.abstraction, exact.start, exact.offers, budget, RATES)
+
+    with pytest.raises(ValueError, match="no coarse level finished: a block holds a metamod"):
+        climb(decision, exact.start, exact.offers)
+
+
 # --- 5. the block model ------------------------------------------------------------------------------------------------
 
 

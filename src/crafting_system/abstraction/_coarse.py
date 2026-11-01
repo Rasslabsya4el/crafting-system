@@ -67,6 +67,13 @@ from ._state import CompressedState, Slot
 
 Block = CompressedState
 Bound = Literal["lower", "upper"]
+class BlockHoldsMetamod(OutOfScopeError):
+    """A block holds a lock or an Attack/Caster metamod, which the pools do not model: the exact state has actions there that no model of blocks can offer.
+
+    A caller must not read it as "the action is refused in this block" (the exact model offers it), so it ends the level.
+    """
+
+
 POOLED = "="  # a slot kind that starts with this names a pool of families (no family key, mod id or family type "~n" does)
 
 
@@ -524,7 +531,7 @@ class Coarsening:
             return self._last[2]
         self.require_invariant(action)
         if self._holds_blocking_metamod(block):
-            raise OutOfScopeError(
+            raise BlockHoldsMetamod(
                 "the block holds a lock or an Attack/Caster metamod: a lock keeps the junk of its side through a reroll, "
                 "which the family-group level does not pool yet (#69)"
             )

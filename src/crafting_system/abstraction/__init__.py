@@ -135,7 +135,7 @@ claim of the rules registry.
 """
 
 from ._bound import keeps_shape, reach_bound
-from ._coarse import Block, Coarsening
+from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
 from ._goal import AtLeast, Goal, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
@@ -162,5 +162,6 @@ __all__ = [
     "integer_weights",
     "keeps_shape",
     "reach_bound",
+    "BlockHoldsMetamod",
     "needs_walk",
 ]
