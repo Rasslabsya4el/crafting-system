@@ -451,3 +451,19 @@ def test_the_fuzz_contains_the_cases_the_ticket_asks_for():
 
     for name, count in counts.items():
         assert count >= FEATURES[name][1], f"{name}: {count} of {len(SEEDS)} instances"
+
+
+def test_a_supercritical_branching_component_is_reported_unresolved_not_returned():
+    # A needs two B and B needs an A: both reach the goal by outcome, but the policy costs infinity
+    # (rho > 1). Until #179 declares such a component infinite, `solve` must say it could not decide
+    # (the iterate overflows or never certifies), and never hand back a finite-looking value.
+    table = {
+        "A": [entry("two", 1, [(GOAL, 1)], ["B", "B"])],
+        "B": [entry("one", 1, [(GOAL, 1)], ["A"])],
+    }
+    assert brute_force_inputs(spec_of(table)) == {"A": None, "B": None}
+
+    with pytest.raises(ConvergenceError) as raised:
+        solve(to_model(spec_of(table)), ["A"], max_sweeps=5000)
+
+    assert raised.value.error_bound == math.inf
