@@ -145,10 +145,17 @@ class Kinds:
         self.fractures = False  # an enabled action may fracture a mod the item holds
         self.rerolls = False  # an enabled action rerolls the values of the mods the item holds
         self._rollable = rollable
+        self._declared_by_mod: set[str] = set()  # the families an enabled action looks inside (`Reads.by_mod`)
+        self._tagged: set[str] = set()  # the tags an enabled action restricts a draw to (`Reads.draw_tags`): a family type carries them
+        self._levels: set[int] = set()  # the item levels an enabled action draws at (`Reads.draw_levels`): a family type carries the weights there
         for action in self.actions:
             reads = action.reads(data)
             self.fractures = self.fractures or reads.fractures
             self.rerolls = self.rerolls or reads.rerolls_values
+            self._declared_by_mod.update(reads.by_mod)
+            if reads.junk and reads.pool_weight:
+                self._tagged.update(reads.draw_tags)
+                self._levels.update(reads.draw_levels)
             if not reads.junk:
                 continue
             self.by_weight = self.by_weight or reads.pool_weight
@@ -248,9 +255,10 @@ class Kinds:
         raise ValueError(f"the state has more {side.value} slots of an ordinary family of that type than the pool has families")
 
     def _families_by_mod(self) -> set[str]:
-        """The families told apart by mod: those with a rollable mod, when an enabled action rerolls values; none otherwise."""
+        """The families told apart by mod: those with a rollable mod, when an enabled action rerolls values, and those an enabled action names (`Reads.by_mod`)."""
         if self._by_mod is None:
-            self._by_mod = {family_key(mod) for mod in self._rollable()} if self.rerolls else set()
+            rolled = {family_key(mod) for mod in self._rollable()} if self.rerolls else set()
+            self._by_mod = rolled | self._declared_by_mod
         return self._by_mod
 
     def _listed_families(self) -> set[str]:
@@ -289,10 +297,7 @@ class Kinds:
         """
         if self._types is None:
             pool = self._pool()
-            shapes = {
-                (family.family, family.side.value): tuple(sorted(self._shape(entry) for entry in family.mods))
-                for family in pool
-            }
+            shapes = {key: tuple(sorted(self._shape(mod, weights) for mod, weights in mods.values())) for key, mods in self._weighted_mods().items()}
             sides_of: dict[str, list[str]] = defaultdict(list)
             for name, side in shapes:
                 sides_of[name].append(side)
@@ -307,14 +312,41 @@ class Kinds:
             self._types = {name: kinds[kind] for name, kind in types.items()}
         return self._types
 
-    def _shape(self, entry) -> tuple:
+    def _weighted_mods(self) -> dict[tuple[str, str], dict[str, tuple[Mod, list]]]:
+        """For each `(family, side)` of the pool, its mods with their weight in the pool of the item and (`Reads.draw_levels`) at each other level.
+
+        Without a level it is the mods of the pool with their weights. With one, a mod of a family that only the pool at
+        that level holds counts too, with weight 0 at the item's level, so that the type tells that family from one without it.
+        """
+        rows: dict[tuple[str, str], dict[str, tuple[Mod, list]]] = {}
+        levels = sorted(self._levels)
+        for index, family_pool in enumerate((self._pool(), *(self._pool_at(level) for level in levels))):
+            for family in family_pool:
+                mods = rows.setdefault((family.family, family.side.value), {})
+                for entry in family.mods:
+                    mods.setdefault(entry.mod.id, (entry.mod, [0] * (1 + len(levels))))[1][index] = entry.weight
+        return rows
+
+    def _pool_at(self, level: int):
+        """The pool of an empty rare item of this base at item level `level`, with the influences of these kinds."""
+        empty = Item.build(self.data, base_id=self.base_id, item_level=level, rarity=Rarity.RARE, influences=self.influences)
+        return build_pool(self.data, empty)
+
+    def _shape(self, mod: Mod, weights: list) -> tuple:
         """What a mod of a family adds to its family type: what it gives the goal and its weight, and with `metamods` its protected tags.
 
         The tags are in the type (not only in the kind of a mod), so two families that hold the same mods
         apart from their tags never share a type: the representative of a slot is then any family of its type.
+        With `Reads.draw_tags` it carries the tags an action draws by, and with `Reads.draw_levels` the weight at each of those levels.
         """
-        shape = (self.profile(entry.mod), entry.weight)
-        return (*shape, tuple(sorted(protected_tags(entry.mod)))) if self.metamods else shape
+        shape = (self.profile(mod), weights[0])
+        if self.metamods:
+            shape = (*shape, tuple(sorted(protected_tags(mod))))
+        if self._tagged:
+            shape = (*shape, tuple(sorted(self._tagged & set(mod.implicit_tags))))
+        if len(weights) > 1:
+            shape = (*shape, tuple(weights[1:]))
+        return shape
 
     def _mod_of(self, key: str, side: Side, tags: frozenset[str] = frozenset(), *, unveiled: bool = False) -> Mod:
         """A mod of the family `key` on `side` that a slot can hold, found in the data (with `metamods`, with exactly `tags`).

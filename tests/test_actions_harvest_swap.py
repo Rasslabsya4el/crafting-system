@@ -543,10 +543,10 @@ def _members(name: str, item: Item) -> list:
 
 
 @pytest.mark.parametrize("name", ["harvest-resistance-swap", "harvest-damage-swap"])
-def test_the_swap_kinds_are_not_for_the_planner(name):
+def test_the_swap_kinds_are_opt_in_planner_kinds(name):
     entry = next(entry for entry in kinds() if entry.name == name)
-    assert entry.planner is False and entry.why_not
-    assert name not in {e.name for e in kinds(planner_only=True)}
+    assert entry.planner and entry.opt_in and not entry.why_not
+    assert name in {e.name for e in kinds(planner_only=True)}
 
 
 def test_the_catalog_lists_the_six_swaps_of_each_kind_for_every_item():
@@ -566,4 +566,6 @@ def test_the_catalog_lists_the_six_swaps_of_each_kind_for_every_item():
         assert len(resistance) == len(damages) == 6
     swaps = {a for a in catalog(WORLD, amulet()) if isinstance(a, (HarvestResistanceSwap, HarvestDamageSwap))}
     assert len(swaps) == 12
-    assert not {a for a in catalog(WORLD, amulet(), planner_only=True) if isinstance(a, (HarvestResistanceSwap, HarvestDamageSwap))}
+    assert not {a for a in catalog(WORLD, amulet(), planner_only=True) if isinstance(a, (HarvestResistanceSwap, HarvestDamageSwap))}  # opt-in
+    named = {"harvest-resistance-swap", "harvest-damage-swap"}
+    assert len({a for a in catalog(WORLD, amulet(), planner_only=True, names=named) if isinstance(a, (HarvestResistanceSwap, HarvestDamageSwap))}) == 12

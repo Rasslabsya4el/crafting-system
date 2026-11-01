@@ -143,6 +143,15 @@ class Reads:
     * `rerolls_values`: the action changes the rolled values of mods the item holds, in place (a Divine
       Orb), so the result depends on which mod each slot stands for. The compressed state then tells apart
       the mods that a roll requirement of the goal looks at, by mod id (ticket #71).
+    * `by_mod`: names of families whose junk the compressed state tells apart by MOD, not by family: the result depends on
+      which mod of the family a slot stands for, not only on which family (a Harvest swap keeps the tier of the mod it changes,
+      so it must know the tier; ticket #149). Only families of the drawable pool (one family per mod) can be named. The
+      state is larger for it, so name only the families the action looks inside.
+    * `draw_tags`, `draw_levels`: with `pool_weight`, the draw of the action looks at more than the weight of each mod of the
+      pool of the item: `draw_tags` are mod tags it restricts a draw to (the tag of a Harvest add), `draw_levels` item levels
+      other than the item's at which it draws (the level of a beast). The family types of the state then carry which of those
+      tags each mod has, and the weight each mod has at those levels, so two families that differ there are never alike
+      (ticket #149). Both are empty for an action that draws from the pool of the item as it is, or does not draw.
     * `implicits`, `quality`, `offer`: the result depends on the implicits of the item (an Eldritch Exalted Orb
       reads the dominant side, an Orb of Conflict both grades), on its catalyst quality, or on the unveil offer
       it holds (a Pick); the compressed state then stores that part of the item (ADR-0027, ticket #142). They
@@ -186,6 +195,9 @@ class Reads:
     socket_count: bool = False
     socket_links: bool = False
     socket_colours: bool = False
+    by_mod: frozenset[str] = frozenset()
+    draw_tags: frozenset[str] = frozenset()
+    draw_levels: frozenset[int] = frozenset()
 
     @property
     def item_state(self) -> bool:

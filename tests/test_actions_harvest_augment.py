@@ -595,11 +595,11 @@ def test_the_catalog_lists_none_for_an_influenced_item():
     assert kind_members(amulet(roll(LIFE_1), influences=frozenset({Influence.SHAPER}))) == []
 
 
-def test_the_kind_is_not_a_planner_kind_and_says_why():
+def test_the_kind_is_an_opt_in_planner_kind():
     (entry,) = (entry for entry in kinds() if entry.name == "harvest-add-remove")
-    assert entry.planner is False
-    assert entry.why_not
-    assert entry in kinds() and entry not in kinds(planner_only=True)
+    assert entry.planner and entry.opt_in
+    assert not entry.why_not
+    assert entry in kinds() and entry in kinds(planner_only=True)
 
 
 # --- the Eldritch implicit ---------------------------------------------------------------------------
