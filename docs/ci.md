@@ -162,6 +162,23 @@ and writes `<target>.count.json`. `simulate_route.py` plays a given route on con
 `cli/_route_sim.py`) and writes its success rate, mean, p50 and p90 with intervals; a state no rule covers stops that run,
 and with `--skip-refused` a rule whose action the game refuses is skipped (for the `*-restart.yaml` routes).
 
+### Planning the big routes on the packed solver (#374)
+
+R04, R14 and S02 are solved exactly by `make_plan` since the packed solve (ADR-0063 point 1): the graph is walked into
+arrays, merged into its exact classes, solved by policy iteration and certified. `.github/scripts/packed_routes.py` runs
+them and the cross-check against the object solver on a runner (never on a PC):
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
+    $D --command 'uv run --no-sync python .github/scripts/packed_routes.py plan --route r04 --out $OUT_DIR'
+    $D --long --timeout-minutes 150 --command 'uv run --no-sync python .github/scripts/packed_routes.py plan --route r14 --out $OUT_DIR'
+    $D --command 'uv run --no-sync python .github/scripts/packed_routes.py check --route r05 --out $OUT_DIR'
+
+`plan` writes `<route>.json` (mean cost, certified error bound, states, seconds, risk, peak memory) and prints each phase
+of the walk, merge and solve as it ends; `check` plans the route with `solver="object"` and `solver="packed"` and writes
+their relative difference. The goldens of `tests/test_packed_heavy.py` (R04, R14, S02) are rewritten from such a run with
+`CRAFTING_HEAVY=1 UPDATE_GOLDEN=1 ... pytest tests/test_packed_heavy.py` and are tied to the commit of `main` they were
+taken on.
+
 ## Keeping the shards balanced
 
 After a run, download the artifact `shard-durations` and commit it as `tests/shard_durations.json`. It holds the
