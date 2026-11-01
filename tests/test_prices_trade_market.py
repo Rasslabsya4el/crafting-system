@@ -27,6 +27,7 @@ from crafting_system.prices import (
     store_market,
     write_price_file,
 )
+from crafting_system.prices.trade_http import TradeError
 from crafting_system.prices.trade_market import MIN_USABLE, classify
 from crafting_system.prices.trade_pricing import _row, entry_for
 from crafting_system.prices.trade_query import query_hash
@@ -138,6 +139,14 @@ def test_a_search_with_no_listing_is_none_and_fetches_nothing(trade, spec, game_
 
     assert (market.state, market.listings, market.usable, market.price) == ("none", 0, 0, None)
     assert trade.kinds == ["stats", "search"]
+
+
+@pytest.mark.parametrize("answer", [{"total": 40, "result": []}, {"total": 40}, {"result": ["a"]}, {"total": None}])
+def test_a_malformed_search_answer_is_an_error_and_not_a_none_state(trade, spec, game_mods, tmp_path, answer):
+    trade.search = {"id": "x", **answer}
+
+    with pytest.raises(TradeError):
+        assess(trade, spec, game_mods, tmp_path)
 
 
 def test_enough_listings_on_the_site_but_too_few_usable_is_thin(trade, spec, game_mods, tmp_path):
@@ -286,7 +295,7 @@ def test_an_entry_older_than_seven_days_is_not_offered(age, state):
 
 def test_a_quoted_entry_below_the_rail_or_with_few_usable_is_not_offered_and_says_which():
     nine = offer(file_with(stored_entry(listings=9, used=5)), "Amulet", TODAY)
-    few = offer(file_with(stored_entry(listings=40, used=2)), "Amulet", TODAY)
+    few = offer(file_with(stored_entry(listings=40, used=2, usable=2)), "Amulet", TODAY)
     raised = offer(file_with(stored_entry(listings=15)), "Amulet", TODAY, min_listings=20)
 
     assert (nine.state, nine.offered, nine.listings) == ("thin", False, 9)
@@ -324,6 +333,13 @@ def test_the_usable_count_is_stored_apart_from_the_k_cheapest_used(trade, spec, 
 
     assert (entry.detail["used"], entry.detail["usable"]) == (2, 8)
     assert offer(file_with(replace(entry, detail={**entry.detail, "date": TODAY.isoformat()})), "Amulet", TODAY).offered
+
+
+def test_an_older_entry_made_with_a_small_k_is_still_offered():
+    detail = {"league": "Allflame", "date": TODAY.isoformat(), "listings": 910, "used": 2}
+    legacy = PriceEntry(2.0, TRADE_SOURCE, "n", detail)
+
+    assert offer(file_with(legacy), "Amulet", TODAY).offered
 
 
 def test_an_entry_without_counts_or_dated_in_the_future_is_not_offered():

@@ -91,8 +91,10 @@ def offer(
 
     A price is offered when it is a fresh `trade-api` price whose listing total meets `min_listings` and
     whose usable count meets `MIN_USABLE`. The state is judged on the stored counts with the rail given
-    now, so raising the rail cuts a price that was quoted under a lower one. A price file's league other
-    than the record's own league is not offered (the record is another league's market).
+    now, so raising the rail cuts a price that was quoted under a lower one. A `thin` or `none` record is
+    reported as stored: lowering the rail does not turn it into a price before it is searched again.
+    A record or price of another league than the price file's is `unknown`. `today` is a UTC date, like
+    the dates stored (a date ahead of `today` is `stale`, not fresh).
     """
     entry = price_file.prices.get(name)
     record = price_file.markets.get(name)
@@ -121,7 +123,9 @@ def _offer_from_entry(
 ) -> TradeOffer:
     detail = entry.detail or {}
     listings = detail.get("listings")
-    usable = detail.get("usable", detail.get("used"))  # `used` (at most k) is all an older entry has
+    usable = detail.get("usable")
+    if usable is None and isinstance(detail.get("used"), int):
+        usable = max(detail["used"], MIN_USABLE)  # an older entry: the rule then was 3 usable, `used` is at most k
     counts = {
         "listings": listings if isinstance(listings, int) and not isinstance(listings, bool) else None,
         "usable": usable if isinstance(usable, int) and not isinstance(usable, bool) else None,

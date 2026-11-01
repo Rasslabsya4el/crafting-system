@@ -205,10 +205,12 @@ def _listings(
         return cached["total"], cached["rows"]
     answer = client.search(league, body)
     total, ids, search_id = answer.get("total"), answer.get("result"), answer.get("id")
-    if not total or not isinstance(ids, list) or not ids:
+    if isinstance(total, int) and not isinstance(total, bool) and total == 0:
         return 0, []  # the site said so: no listing (not cached, nothing to fetch)
-    if not isinstance(total, int) or not isinstance(search_id, str):
+    if not isinstance(total, int) or isinstance(total, bool) or not isinstance(search_id, str):
         raise TradeError("the search answer has no usable 'total' or 'id'")
+    if not isinstance(ids, list) or not ids:
+        raise TradeError(f"the search answer says {total} listings but gives no 'result' ids")
     fetched = client.fetch(ids[:FETCH_COUNT], search_id).get("result")
     if not isinstance(fetched, list):
         raise TradeError("the fetch answer has no 'result' list")
