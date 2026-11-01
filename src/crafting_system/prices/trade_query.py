@@ -280,6 +280,12 @@ class BuySpec:
         _check_level("item_level_min", self.item_level_min)
         _check_level("item_level_max", self.item_level_max)
         _check_range("item level", self.item_level_min, self.item_level_max)
+        implicit = next((mod.stat for mod in self.mods if mod.implicit), None)
+        if implicit is not None and not self.corrupted:
+            raise TradeSpecError(
+                f"buy spec {self.name!r}: the mod {implicit!r} is an implicit, which a buy spec names only for a corrupted"
+                " item (a corrupted implicit, ADR-0036); set `corrupted: true`"
+            )
 
 
 def build_query(

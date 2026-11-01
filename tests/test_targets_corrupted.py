@@ -19,6 +19,7 @@ from targets_corrupted_support import (
     parse_error,
 )
 
+from crafting_system.actions import CORRUPTING_KINDS, DEFAULT_CORRUPTING_KINDS, kinds
 from crafting_system.items import ExplicitMod, ImplicitError, ImplicitMod, Item, Rarity
 from crafting_system.targets import ImplicitRequirement, Target
 
@@ -441,3 +442,11 @@ def test_a_target_file_without_the_keys_parses_as_before():
     assert target.start_item.corrupted is False
     assert target.implicits[0].mod_ids == {"RingResistImplicit"}
     assert not target.is_met_by(target.start_item)  # an ordinary target still reads the same
+
+
+def test_the_corrupting_kind_names_are_the_ones_the_catalog_registers():
+    registered = {entry.name for entry in kinds()}
+
+    assert "fossil-set" in registered  # the Bloodstained Fossil is a fossil set; `vaal` and `locus` are registered by C5 and C7
+    assert dict(CORRUPTING_KINDS) == {"vaal": 1, "fossil-set": 1, "locus": 2}
+    assert dict(DEFAULT_CORRUPTING_KINDS) == {"vaal": 1, "locus": 2}  # `fossil-set` is opt-in, so a target that names no kinds has none

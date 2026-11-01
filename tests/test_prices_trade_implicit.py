@@ -40,6 +40,12 @@ def test_an_implicit_buy_mod_cannot_be_fractured():
         BuyMod("x", fractured=True, implicit=True)
 
 
+def test_a_buy_spec_names_an_implicit_only_for_a_corrupted_item():
+    with pytest.raises(TradeSpecError, match="is an implicit, which a buy spec names only for a corrupted item"):
+        BuySpec("Ring", base_type="Prismatic Ring", mods=(BuyMod(ALL_RES, implicit=True),))
+    assert BuySpec("Ring", base_type="Prismatic Ring", corrupted=True, mods=(BuyMod(ALL_RES, implicit=True),)).corrupted
+
+
 def test_a_buy_spec_file_reads_the_implicit_key_and_rejects_a_wrong_value(tmp_path):
     spec = tmp_path / "ring.yaml"
     spec.write_text(
