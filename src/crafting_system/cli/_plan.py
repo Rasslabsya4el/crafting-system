@@ -12,7 +12,7 @@ is always exact, as before.
 """
 
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 
@@ -29,6 +29,7 @@ from ._approx import Approximation, climb
 from ._bound_prune import Pruned, solve_pruned
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
+from ._pool import MIN_PENDING, StatePool, open_pool
 from ._prune import solver_actions
 
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
@@ -95,17 +96,38 @@ class _Model:
     """
 
     def __init__(
-        self, abstraction: Abstraction, start: CompressedState, offers: Iterable[PricedOffer], cache: dict | None = None
+        self,
+        abstraction: Abstraction,
+        start: CompressedState,
+        offers: Iterable[PricedOffer],
+        cache: dict | None = None,
+        pool: StatePool | None = None,
     ) -> None:
         self.abstraction = abstraction
         self.start = start
         self.offers = tuple(offers)
         self.cache = cache  # (state, label, cost) -> solver action, shared by the solves of one plan
+        self.pool = pool  # workers that build the actions of the queued states together (#250); None builds them here
+        self.positions = pool.positions(self.offers) if pool is not None and pool.merge_equal == MERGE_EQUAL else None
+        self.ready: dict[CompressedState, list[Action[CompressedState]]] = {}
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.abstraction.is_goal(state)
 
+    def prefetch(self, states: Sequence[CompressedState]) -> None:
+        """Build the actions of the pending `states` in the pool; `actions` then hands them out (the same lists)."""
+        if self.pool is None or self.positions is None:
+            return
+        pending = [state for state in states if state not in self.ready and not self.abstraction.is_goal(state)]
+        if len(pending) < MIN_PENDING:
+            return
+        for state, built in zip(pending, self.pool.actions_of(pending, self.positions)):
+            self.ready[state] = built
+
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
+        built = self.ready.pop(state, None)
+        if built is not None:
+            return built
         return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=self.cache)
 
 
@@ -250,12 +272,13 @@ def make_plan(
 
     began = time.perf_counter()
     pruned = None
-    if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
-        pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE)
-        solution = pruned.solution
-        left_out = (*left_out, *_pruned_left_out(pruned))
-    else:
-        solution = solve(_Model(abstraction, start, priced), [start])
+    with open_pool(abstraction, start, priced, MERGE_EQUAL) as pool:  # None unless CRAFTING_WORKERS (or the cores) allow more than one
+        if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
+            pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE, pool=pool)
+            solution = pruned.solution
+            left_out = (*left_out, *_pruned_left_out(pruned))
+        else:
+            solution = solve(_Model(abstraction, start, priced, pool=pool), [start])
     solve_seconds = time.perf_counter() - began
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
