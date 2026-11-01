@@ -371,6 +371,42 @@ _Avoid_: estimate (the type is `Estimate`, the act is the pilot count)
 **Ladder**:
 The coarse levels tried in order when the exact run is forecast to be too long: all irrelevant families in one group, then groups of 8, then groups of 4, then the tail cut at `theta` 1e-2, 1e-3 and 1e-4 over the finest of those that fits the time. The first whose certified gap is at most 1% is the answer; if none is, the narrowest interval is shown with the message that it is wider (ADR-0023).
 
+## Foresight
+
+**Hinekora's Lock** (the Lock):
+A currency put on one item that lets it show the exact result of the next currency used on it. It is used up when applied, refused on corrupted, mirrored and unmodifiable items, and priced from the price file (ADR-0054, ADR-0056).
+_Avoid_: lock (alone; the Lock is a currency, a metamod "lock" is a bench craft)
+
+**Foresight** (a foreseeing item):
+The state of an item under a Lock: hovering a currency shows its preview, and any change to the item ends it. The solver never stores it; Lock, look and react are one action (ADR-0054).
+_Avoid_: lock state, preview mode
+
+**Preview**:
+The exact result a currency would give on a foreseeing item. It is fixed for the Lock's life, one per currency item, and independent of the other currencies' previews (owner, from play).
+_Avoid_: estimate, simulation
+
+**Peek**:
+The solver's action kind for the Lock: it pays the Lock's price, throws every option's outcome at once, then takes the best result or gives up. Its value is a sorted-tail sweep (ADR-0054).
+_Avoid_: lookahead, oracle action
+
+**Option** and **fallback**:
+An option of a Peek is a previewable action at the state, one per currency item. The fallback is the best action that is not an option: an unpreviewed action, the restart, or a burn.
+
+**Previewable**:
+What an action kind declares about the Lock: `named` (a source or the owner names it), `by_item_text` (only the Lock's text covers it, marked approximate) or `no`, the default, so it is applied blind (ADR-0055).
+_Avoid_: lockable
+
+**Acceptance set**:
+The reaction of a Peek stored as a list of (option, result state) pairs the player takes, ranked, never as a threshold on a value. Under a fixed set the Peek expands into ordinary actions with pseudo-states (ADR-0054).
+_Avoid_: threshold, decision rule
+
+**Burn** and **relock**:
+A burn is a cheap currency that changes no mod and ends the foresight, used to give a Lock up; a relock puts a new Lock on and throws every preview again. Each relock pays the Lock's price once more (ADR-0056).
+_Avoid_: reset
+
+**Lock line**:
+The line every plan prints about the Lock: whether it was used, and the price N below which one Lock on a step of the plan would already lower its cost (ADR-0057).
+
 ## Evidence
 
 **Admitted rule**:

@@ -64,3 +64,12 @@ The grill fixed what B4 contains; the designs are ADR-0036 to ADR-0039.
 - **Out of v1**: Tainted Oil (anointments are not targets); Merrick's Ducat (Allflame is out of scope).
 - **From B6**: B6 (ADR-0045) hands B4 the Tainted socket orbs, the bench socket crafts on corrupted items and the Vaal and Locus socket outcomes. B4 takes them (ADR-0036, "Sockets"), built after B6's socket state; Tainted Chromatic is out with the other Tainted orbs whose odds are unmeasured. Hinekora's Lock on a corrupting action goes to B8.
 - **Benchmark**: B4 has no R-route; none of R01 to R30 uses corruption. A finder looks for one or two published corruption methods to use as given routes; if there is none, the acceptance numbers of ADR-0039 are the bar for B4.
+
+## Amendment: B8 as grilled ([Grill B8](https://github.com/Rasslabsya4el/crafting-system/issues/106), 2026-11-01)
+
+The grill fixed what B8 contains; the designs are ADR-0054 to ADR-0057.
+
+- **B8 is built**, the last batch, although at the Lock's price (about 270 Divine on 2026-10-31) it rarely enters a plan: the planner takes it only where it saves more than it costs, and every plan prints a line about it (owner, answers 1 and 4).
+- **In B8**: Hinekora's Lock as a `Peek` action (ADR-0054) with the previewable set of ADR-0055, which includes the Vaal Orb that B4 handed over (ADR-0036), and the burn and relock of ADR-0056. The previews of different currencies are independent (owner, from play).
+- **Out of v1 for the Lock**: the Awakener's Orb as a preview option; a foreseeing start item; the beast, drop and card ways to a Lock; the Sacred Orb (no action).
+- **Benchmarks**: R29 gets its Lock step back (ADR-0057). B3's R29 without the Lock stays as the baseline, and a synthetic target with a low Lock price shows the Lock appearing when it pays, and a corrupted-implicit target of B4 shows the Lock in front of the Vaal Orb. The pass rule is unchanged.
