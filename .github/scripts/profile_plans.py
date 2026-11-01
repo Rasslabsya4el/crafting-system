@@ -2,10 +2,11 @@
 
     python .github/scripts/profile_plans.py --case r05 [--budget SECONDS] [--workers N] [--cprofile] --out $OUT_DIR
 
-Cases: r05, r13 (the examples), r04 (the quiver of the reference route), r08 (boots, a rare start, every fossil set) and
-r08a (the same boots started normal, an Orb of Alchemy first). `--budget` goes to `make_plan` (0 forces the approximate
-answer, 60 is the CLI default); without it the plan is exact. Prices are the fixture's, plus a MADE-UP price for every
-resource it lacks, so the times are the planner's and the plans are not meant to be read.
+Cases: the example targets by their short name (r05, r13, r08, r09, r10, r11, r12) and r04 (the quiver of the reference
+route, a copy of the target of #70). `--budget` goes to `make_plan` (0 forces the approximate answer, 60 is the CLI default);
+without it the plan is exact; `--rates` injects the seconds per kernel outcome and per solved edge, as the real-route tests
+do, so that the exact-or-approximate decision does not depend on the machine. Prices are the fixture's, plus a MADE-UP
+price for every resource it lacks (none for the routes the fixture covers).
 
 It wraps the stages of the pipeline in timers (inclusive time of the outermost call, and the number of calls) and
 writes `<case>.json` with them, the answer's hash (so a run with 1 and with N workers can be compared) and the
@@ -26,20 +27,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 CASES = Path(__file__).resolve().parent / "profile_cases"
-EXAMPLES = {"r05": "r05-strength-ring", "r13": "r13-life-resist-belt"}
-R08 = """base: Sorcerer Boots
-item_level: 86
-influence: []
-requirements:
-  - family: DefencesPercent
-    min_tier: 3
-    not_crafted: true
-  - family: MovementVelocity
-    min_tier: 1
-start_item:
-  rarity: {rarity}
-  mods: []
-"""
+EXAMPLES = {
+    "r05": "r05-strength-ring", "r08": "r08-energy-shield-boots", "r09": "r09-life-boots", "r10": "r10-fractured-boots",
+    "r11": "r11-reservation-helmet", "r12": "r12-lightning-amulet", "r13": "r13-life-resist-belt",
+}
 TIMERS: dict[str, list[float]] = {}  # stage -> [seconds, calls]
 
 
@@ -112,25 +103,13 @@ def filled_prices(data, target, offers):
     return load_price_file(path), sorted(missing)
 
 
-def build_case(case: str, data, out: Path):
-    """`(target, offers)` of a case; offers is None where `make_plan` chooses them."""
-    from crafting_system.abstraction import Goal
-    from crafting_system.actions import AlchemyOrb, kinds
-    from crafting_system.cli._offers import offer_of, offers_for
+def build_case(case: str, data):
+    """The target of a case."""
     from crafting_system.targets import load_target
 
-    if case in EXAMPLES:
-        return load_target(ROOT / "examples" / "targets" / f"{EXAMPLES[case]}.yaml", data), None
     if case == "r04":
-        return load_target(CASES / "r04-penetrating-quiver.yaml", data), None
-    path = out / f"{case}.yaml"
-    path.write_text(R08.format(rarity="rare" if case == "r08" else "normal"), encoding="utf-8")
-    target = load_target(path, data)
-    base = offers_for(data, Goal.from_target(target), target.base_id, target.start_item).offers
-    fossil_kind = next(kind for kind in kinds() if kind.name == "fossil-set")
-    fossils = [offer_of(a, a.label(data), data, target.start_item) for a in fossil_kind.members(data, target.start_item)]
-    extra = [offer_of(AlchemyOrb(), AlchemyOrb().label(data), data, target.start_item)] if case == "r08a" else []
-    return target, [*base, *extra, *fossils]
+        return load_target(CASES / "r04-penetrating-quiver.yaml", data)
+    return load_target(ROOT / "examples" / "targets" / f"{EXAMPLES[case]}.yaml", data)
 
 
 def answer_hash(plan) -> str:
@@ -147,8 +126,9 @@ def answer_hash(plan) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--case", required=True, choices=["r05", "r13", "r04", "r08", "r08a"])
+    parser.add_argument("--case", required=True, choices=[*EXAMPLES, "r04"])
     parser.add_argument("--budget", type=float, default=None)
+    parser.add_argument("--rates", default=None, help="KERNEL,SOLVE seconds per unit to inject (e.g. 4e-5,7e-6)")
     parser.add_argument("--workers", type=int, default=None, help="sets CRAFTING_WORKERS (the product reads it; before #250 it is ignored)")
     parser.add_argument("--cprofile", action="store_true")
     parser.add_argument("--limit", type=float, default=None, help="stop the plan after this many seconds (Linux) and write what the timers saw so far")
@@ -166,14 +146,18 @@ def main() -> None:
     from crafting_system.data import load_game_data
 
     data = load_game_data()
-    target, offers = build_case(arguments.case, data, out)
-    chosen = offers if offers is not None else offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions).offers
+    target = build_case(arguments.case, data)
+    offers = None
+    chosen = offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions).offers
     prices, missing = filled_prices(data, target, chosen)
     install_timers()
     profiler = cProfile.Profile() if arguments.cprofile else None
     began = time.perf_counter()
     if profiler:
         profiler.enable()
+    from crafting_system.cli._decide import Rates
+
+    rates = Rates(*(float(x) for x in arguments.rates.split(","))) if arguments.rates else None
     plan = None
     if arguments.limit is not None:
 
@@ -183,7 +167,7 @@ def main() -> None:
         signal.signal(signal.SIGALRM, stop)
         signal.setitimer(signal.ITIMER_REAL, arguments.limit)
     try:
-        plan = make_plan(data, target, prices, offers=offers, budget=arguments.budget)
+        plan = make_plan(data, target, prices, offers=offers, budget=arguments.budget, rates=rates)
     except TimeoutError as stopped:
         print(stopped, flush=True)
     finally:
