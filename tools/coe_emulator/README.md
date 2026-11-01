@@ -5,7 +5,7 @@ A debug tool, not part of the planner and not run by CI. The skill `.claude/skil
 - `emulator.py` fetches the site into `.claude/scratch/coe/site/` (git-ignored: it is third-party code and this repo is public) and runs checks written in Craft of Exile's terms. Needs only Python with Playwright 1.58 and its Chromium.
 - `driver.js` is loaded into the page; it calls the emulator's own functions, the ones its buttons call, and re-implements no rule.
 - `compare.py` is the debug loop: a check in our terms, our verdict and distribution beside the emulator's. Needs the project (`uv run --with playwright==1.58.0`).
-- `checks/` holds worked checks: the #197 shield, the first sweep, the Awakener's Orb in CoE terms.
+- `checks/` holds worked checks: the #197 shield and its neighbours, the first sweep over every action kind, the Awakener's Orb and the #201 jewel questions in CoE terms.
 
 ## How the functions were found
 
@@ -42,4 +42,5 @@ Fetched 2026-11-01 10:26 UTC. `package.js` and `poec_data.json` have the same by
 - Not built yet: implicits (Eldritch included), catalysts, sockets, veiled mods, a corrupted start; checks needing them go to the owner's Chrome.
 - Not in the emulator: Remove Crafted Mods as one button, the Harvest damage swap, the Wild Bristle Matron, talisman fracture (`NOT_IN_EMULATOR` in `compare.py`).
 - After an Awakener's Orb the page throws in `poec_simWokerClose` (it reads back the currency the enabling step just unselected); the craft is done by then, and the driver reports the error as `page_errors_after_craft`.
-- `compare.py` maps a CoE mod to ours by side, level, value ranges and mod group, then by stat text; a crafted mod's level in CoE is the bench's, so crafted mods match without the level.
+- `compare.py` maps a CoE mod to ours by side, level, value ranges and mod group; then without the level (a crafted mod's level in CoE is the bench's); then by level, group and stat text (values in other units: our life regeneration is per minute, CoE's per second). Dummy display stats of the data and the single value of a metamod are ignored.
+- For a draw of several mods our side is a sample of our own model, not exact: a z-score of 4 is the line.

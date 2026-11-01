@@ -17,9 +17,11 @@ the actions with their verdict (`outcomes` or its refusal), each asked action is
 emulator's button (`coe_craft`, None when the emulator has none) and run `repeats` times on the
 same item built in the emulator from the same mods (`coe_mod`: side, required level, value ranges and
 mod group must agree). The report puts per action: our verdict and the code place it comes from,
-the emulator's verdict and counts, and for a draw the chance of each mod on the finished item
-(ours exact, theirs a frequency, with a z-score), plus the whole distribution when it is small.
-A row with |z| > 4, a kept mod the emulator lost, or a verdict that differs is a *candidate*:
+the emulator's verdict and counts, and for a draw either the whole distribution of the finished
+item (exact, when the action adds at most one mod or has fixed results) or, for a draw of several
+mods, the frequency of each mod and of each shape (prefixes, suffixes) in a seeded sample of
+20,000 of our own outcomes, with a z-score.
+A row with |z| > 4, a CoE mod that maps to none of ours, or a verdict that differs is a *candidate*:
 it is a finding only after the code place is confirmed by reading it.
 """
 
@@ -81,6 +83,8 @@ class Coe:
         self.modifiers = {m["id_modifier"]: m for m in self.d["modifiers"]["seq"]}
         self.mtypes = {m["name_mtype"].lower(): m["id_mtype"] for m in self.d["mtypes"]["seq"] if m.get("harvest") == "1"}
         self.fossils = {m["name_fossil"]: m["id_fossil"] for m in self.d["fossils"]["seq"]}
+        self._coe_indexes: dict[str, list[dict]] = {}
+        self._ours: list[dict] | None = None
 
     def bitem(self, base_id: str) -> str:
         name = self.data.base_items[base_id].name
@@ -93,61 +97,76 @@ class Coe:
         return self.d["bitems"]["seq"][self.d["bitems"]["ind"][bitem]]["id_base"]
 
     @staticmethod
-    def _key(side, level, ranges, groups):
-        spans = tuple((r, r) if isinstance(r, int) else tuple(r) for r in ranges)
-        if all(span == (1, 1) for span in spans):
-            spans = ()  # a metamod: CoE gives it no values, the data one stat of 1
-        return (side, int(level), spans, tuple(sorted(groups)))
+    def _spans(ranges) -> tuple:
+        spans = tuple((r, r) if isinstance(r, (int, float)) else tuple(r) for r in ranges)
+        spans = tuple(span for span in spans if span != (0, 0))  # a dummy display stat of the data
+        return () if all(span == (1, 1) for span in spans) else spans  # a metamod: CoE gives it no values
 
-    def coe_mod(self, coe_base: str, mod_id: str) -> tuple[str, int]:
-        """The (aid, tindex) of our mod on a CoE base: same side, level, value ranges and mod group."""
-        mod = self.data.mods[mod_id]
-        want = self._key(mod.generation_type, mod.required_level, [[s.min, s.max] for s in mod.stats], mod.families)
-        loose = want[0], want[2], want[3]
-        found, near = [], []
-        for aid in map(str, self.d["basemods"].get(coe_base, [])):
-            modifier = self.modifiers.get(aid)
-            if not modifier or modifier["affix"] != mod.generation_type:
-                continue
-            if (modifier["id_mgroup"] == "11") != (mod.domain == "crafted"):
-                continue
-            for index, tier in enumerate(self.d["tiers"].get(aid, {}).get(coe_base, [])):
-                key = self._key(modifier["affix"], tier["ilvl"], json.loads(tier["nvalues"]), json.loads(modifier["modgroups"]))
-                if key == want:
-                    found.append((aid, index))
-                elif (key[0], key[2], key[3]) == loose:
-                    near.append((aid, index))
-        found = found or near  # a crafted mod's level in CoE is the bench's, not the mod's
-        if len(set(found)) != 1:
-            raise ValueError(f"{mod_id}: {len(set(found))} Craft of Exile tiers fit on base {coe_base}: {sorted(set(found))[:5]}")
-        return found[0]
+    def _keys(self, crafted: bool, side: str, level, ranges, groups, text: str) -> tuple:
+        """The keys a mod is matched by, strictest first: (level, values, group), (values, group) for a crafted
+        mod's bench level, and (level, group, stat text) for values in other units (life regeneration per minute)."""
+        spans, groups = self._spans(ranges), tuple(sorted(groups))
+        return ((crafted, side, int(level), spans, groups), (crafted, side, spans, groups), (crafted, side, int(level), groups, text))
 
-    def _index(self) -> tuple[dict, dict]:
-        if not hasattr(self, "_exact"):
-            self._exact, self._loose = {}, {}
-            for mod in self.data.mods.values():
-                if mod.generation_type not in ("prefix", "suffix"):
+    def _our_keys(self, mod) -> tuple:
+        return self._keys(mod.domain == "crafted", mod.generation_type, mod.required_level,
+                          [[s.min, s.max] for s in mod.stats], mod.families, mod_text(mod))
+
+    def _coe_keys(self, coe_base: str, aid: str, index: int) -> tuple:
+        modifier = self.modifiers[aid]
+        tier = self.d["tiers"][aid][coe_base][index]
+        return self._keys(modifier["id_mgroup"] == "11", modifier["affix"], tier["ilvl"], json.loads(tier["nvalues"]),
+                          json.loads(modifier["modgroups"]), modifier["name_modifier"])
+
+    def _coe_index(self, coe_base: str) -> list[dict]:
+        if coe_base not in self._coe_indexes:
+            index = [{}, {}, {}]
+            for aid in map(str, self.d["basemods"].get(coe_base, [])):
+                if aid not in self.modifiers or self.modifiers[aid]["affix"] not in ("prefix", "suffix"):
                     continue
-                key = self._key(mod.generation_type, mod.required_level, [[s.min, s.max] for s in mod.stats], mod.families)
-                crafted = mod.domain == "crafted"
-                self._exact.setdefault((crafted, key), []).append(mod.id)
-                self._loose.setdefault((crafted, key[0], key[2], key[3]), []).append(mod.id)
-        return self._exact, self._loose
+                for tindex in range(len(self.d["tiers"].get(aid, {}).get(coe_base, []))):
+                    for level, key in enumerate(self._coe_keys(coe_base, aid, tindex)):
+                        index[level].setdefault(key, []).append((aid, tindex))
+            self._coe_indexes[coe_base] = index
+        return self._coe_indexes[coe_base]
+
+    def _our_index(self) -> list[dict]:
+        if self._ours is None:
+            self._ours = [{}, {}, {}]
+            for mod in self.data.mods.values():
+                if mod.generation_type in ("prefix", "suffix"):
+                    for level, key in enumerate(self._our_keys(mod)):
+                        self._ours[level].setdefault(key, []).append(mod.id)
+        return self._ours
+
+    def coe_mod(self, coe_base: str, mod_id: str, among: set[str] | None = None) -> tuple[str, int]:
+        """The (aid, tindex) of our mod on a CoE base (an aid of `among` when several fit)."""
+        mod = self.data.mods[mod_id]
+        for index, key in zip(self._coe_index(coe_base), self._our_keys(mod)):
+            hits = sorted(set(index.get(key, [])))
+            if among is not None and len(hits) > 1:
+                hits = [hit for hit in hits if hit[0] in among] or hits
+            if len(hits) > 1:
+                hits = [hit for hit in hits if self.modifiers[hit[0]]["name_modifier"] == mod_text(mod)] or hits
+            if len(hits) > 1:
+                hits = [hit for hit in hits if self.modifiers[hit[0]]["id_mgroup"] == "1"] or hits  # not an essence's twin
+            if len(hits) == 1:
+                return hits[0]
+            if hits:
+                raise ValueError(f"{mod_id}: {len(hits)} Craft of Exile tiers fit on base {coe_base}: {hits[:5]}")
+        raise ValueError(f"{mod_id}: no Craft of Exile tier fits on base {coe_base}")
 
     def our_mod(self, coe_base: str, entry: dict, pool=None) -> str:
         """Our mod id of a CoE result mod (preferring `pool`, the ids our item can roll); 'coe:aid:tindex' when none fits."""
         if entry["tindex"] == "e" or entry["aid"] in ("-1", "0"):
             return f"coe:{entry['aid']}:{entry['tindex']}"
-        modifier = self.modifiers[entry["aid"]]
-        tier = self.d["tiers"][entry["aid"]][coe_base][int(entry["tindex"])]
-        want = self._key(modifier["affix"], tier["ilvl"], json.loads(tier["nvalues"]), json.loads(modifier["modgroups"]))
-        exact, loose = self._index()
-        crafted = bool(entry["bench"])
-        for hits in (exact.get((crafted, want), []), loose.get((crafted, want[0], want[2], want[3]), [])):
+        name = self.modifiers[entry["aid"]]["name_modifier"]
+        for index, key in zip(self._our_index(), self._coe_keys(coe_base, entry["aid"], int(entry["tindex"]))):
+            hits = index.get(key, [])
             if pool is not None and len(hits) > 1:
                 hits = [h for h in hits if h in pool] or hits
             if len(hits) > 1:  # one mod group, same tiers (Fire, Cold, Spell damage): the stat text tells them apart
-                hits = [h for h in hits if mod_text(self.data.mods[h]) == modifier["name_modifier"]] or hits
+                hits = [h for h in hits if mod_text(self.data.mods[h]) == name] or hits
             if len(hits) == 1:
                 return hits[0]
             if len(hits) > 1:
@@ -200,7 +219,9 @@ class Coe:
             forced = outcomes.forced if outcomes is not None else None
             if forced is None:
                 return None, "our essence names no forced mod here"
-            aid, tindex = self.coe_mod(self.base_of(self.bitem(item.base_id)), forced)
+            base = self.base_of(self.bitem(item.base_id))
+            essence_aids = {str(json.loads(e["tiers"]).get(base)) for e in self.d["essences"]["seq"]}
+            aid, tindex = self.coe_mod(base, forced, essence_aids)
             return {"action": "essence", "essmod": aid, "ssaction": str(tindex)}, ""
         if name == "BenchCraft":
             aid, tindex = self.coe_mod(self.base_of(self.bitem(item.base_id)), action.mod_id)
@@ -390,7 +411,10 @@ def run_check(data, coe: Coe, emulator: Emulator, spec: dict) -> dict:
         "actions": {k: {"enabled": v["enabled"], "subsets": {s: e["enabled"] for s, e in v["subsets"].items()}} for k, v in legal["actions"].items()},
     }
     for action in chosen:
-        row = compare_action(data, coe, emulator, item, spec, coe_spec, donor_spec, action, spec.get("repeats", 1000))
+        try:
+            row = compare_action(data, coe, emulator, item, spec, coe_spec, donor_spec, action, spec.get("repeats", 1000))
+        except Exception as error:  # one action the harness cannot translate must not end the sweep
+            row = {"action": action.label(data), "ours": "?", "coe": f"harness error: {type(error).__name__}: {error}"}
         report["actions"].append(row)
         print(f"   {spec.get('id')}: {row['action']} done", file=sys.stderr, flush=True)
     return report
@@ -407,15 +431,19 @@ def main() -> None:
     coe = Coe(copy, data)
     specs = json.loads(Path(arguments.checks).read_text(encoding="utf-8"))
     emulator = Emulator(copy)
+    reports = []
     try:
-        reports = [run_check(data, coe, emulator, spec) for spec in (specs if isinstance(specs, list) else [specs])]
+        for spec in specs if isinstance(specs, list) else [specs]:
+            try:
+                reports.append(run_check(data, coe, emulator, spec))
+            except Exception as error:  # an item the harness cannot build must not end the sweep
+                reports.append({"id": spec.get("id"), "error": f"{type(error).__name__}: {error}", "actions": []})
+            if arguments.out:  # written after every check, so a long sweep keeps what it has
+                arguments.out.write_text(json.dumps(reports, indent=1, default=str), encoding="utf-8")
     finally:
         emulator.close()
-    text = json.dumps(reports, indent=1, default=str)
-    if arguments.out:
-        arguments.out.write_text(text, encoding="utf-8")
     for report in reports:
-        print(f"== {report['id']}")
+        print(f"== {report['id']}" + (f" (harness error: {report['error']})" if report.get("error") else ""))
         for row in report["actions"]:
             flags = "; ".join(row.get("candidates", [])) or "-"
             print(f"  {row['action']}: ours {row['ours']} | CoE {row.get('coe')} | {row.get('coe_counts', '')} | candidates: {flags}{' | near: ' + str(row['near']) if row.get('near') else ''}")

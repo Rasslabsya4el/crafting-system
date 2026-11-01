@@ -28,13 +28,13 @@ CRAFTING_CACHE_DIR="<main checkout>/local/cache" UV_CACHE_DIR=... UV_PYTHON_INST
   ../../scratch/uv-venv/Scripts/uv.exe run --with playwright==1.58.0 python tools/coe_emulator/compare.py check.json --out report.json
 ```
 
-The check format is in `compare.py`'s docstring; `tools/coe_emulator/checks/` holds worked examples (the #197 shield, the first sweep, the Awakener's Orb in CoE terms). Run it in the background: a Chaos Orb's marginals take minutes. A label our catalog does not have comes back with the nearest labels.
+The check format is in `compare.py`'s docstring; `tools/coe_emulator/checks/` holds worked examples (the #197 shield and its neighbours, the first sweep, the Awakener's Orb and the #201 jewels in CoE terms). Run it in the background: the first sweep (27 actions on five items, 2000 results each) takes about 8 minutes. A label our catalog does not have comes back with the nearest labels.
 
 Done when every asked action has a row with both verdicts, and every applied draw has its distribution or its per-mod marginals.
 
 ## 3. Turn candidates into findings
 
-The report flags a candidate for: verdicts that differ, an outcome or a mod with |z| > 4, a kept mod the emulator lost, a CoE mod that maps to none of ours (`coe:aid:tindex`). For each one:
+The report flags a candidate for: verdicts that differ, an outcome, a mod or a shape with |z| > 4, a CoE mod that maps to none of ours (`coe:aid:tindex`). Most first candidates are mapping gaps; fix the harness first. For each one:
 
 - **Our side**: open the row's `our_place` (the action's `outcomes`) and follow it to the rule and its claim in `src/crafting_system/rules/claims/`. Name the file and line that produce our answer.
 - **Their side**: find the emulator function that produced theirs: `poec_simApplyCraftGO` dispatches every craft, `poec_updateActionEnabling` decides what is legal, `poec_simRerollItem` / `poec_simRollAffix` / `poec_simRemoveAffix` draw and remove. Quote the few characters that decide it.
