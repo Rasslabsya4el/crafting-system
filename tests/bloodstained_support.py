@@ -111,13 +111,14 @@ def base_implicit() -> ImplicitMod:
 
 
 def starts() -> dict[str, Item]:
-    """Rare boots with no implicit, one Eldritch implicit, both, and (on a base with one) the base implicit and an Eldritch one."""
+    """Rare boots with no implicit, one Eldritch implicit, both, and (on a base with one) the base implicit stored or not and an Eldritch one."""
     mods = (roll("LifeA"), roll("CasterA"))
     return {
         "none": boots(*mods),
         "one": boots(*mods, implicits=(exarch(),)),
         "two": boots(*mods, implicits=(exarch(), eater())),
         "base-and-eldritch": boots(*mods, base=IMPLICIT_BOOTS, implicits=(base_implicit(), eater())),
+        "unstored-base-implicit": boots(*mods, base=IMPLICIT_BOOTS, implicits=(eater(),)),  # the base has one the item does not store
         "fractured": boots(roll("CasterA", fractured=True), roll("LifeA"), implicits=(exarch(),)),
     }
 
@@ -129,20 +130,30 @@ def forbidding(*tags: str):
     return dataclasses.replace(DATA, fossils={**DATA.fossils, record.id: changed})
 
 
+def unstored_of(item: Item) -> list[str]:
+    """The implicits of the item's base that the item does not store: the game's item has them too."""
+    stored = {entry.mod_id for entry in item.implicits}
+    return [mod_id for mod_id in DATA.base_items[item.base_id].implicits if mod_id not in stored]
+
+
 def pool_weights(level: int = LEVEL) -> dict[str, int]:
     """The corrupted pool of boots at `level`, written out: the oracle's own copy of ADR-0037's rule."""
     return {mod_id: weight for mod_id, (weight, required, *_) in POOL.items() if required <= level}
 
 
-def implicit_cases(held: list[str], pool: dict[str, int], replaces_all: bool) -> list[tuple[Fraction, frozenset[str]]]:
+def implicit_cases(
+    held: list[str], pool: dict[str, int], replaces_all: bool, unstored: list[str] = ()
+) -> list[tuple[Fraction, frozenset[str]]]:
     """Every end of the implicit draw by hand: the chance and the ids of the implicits the finished item holds.
 
-    An item with no implicit gains the drawn one; with some, one chosen uniformly is replaced (all, with a Gilded Fossil).
+    The game's item has the `held` implicits it stores and the `unstored` implicits of its base; one of them, chosen uniformly, is
+    replaced (all, with a Gilded Fossil), and an item with none gains the drawn one. An unstored implicit is on no finished item.
     """
-    if replaces_all or not held:
+    candidates = [*held, *unstored]
+    if replaces_all or not candidates:
         kept = [(Fraction(1), [])]
     else:
-        kept = [(Fraction(1, len(held)), [other for other in held if other != gone]) for gone in held]
+        kept = [(Fraction(1, len(candidates)), [other for other in held if other != gone]) for gone in candidates]
     whole = sum(pool.values())
     return [
         (stay * Fraction(weight, whole), frozenset([*left, mod_id]))

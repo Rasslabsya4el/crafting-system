@@ -14,8 +14,8 @@ labels (see there).
 A Bloodstained Fossil (ticket #261, ADR-0038) rerolls the item as the other fossils say and also corrupts it and adds one corrupted
 implicit from the pool of the item's class (`corrupted_pool.py`). `outcomes` is then a `BloodstainedOutcomes` (`bloodstained.py`):
 the reroll of the set without the Bloodstained Fossil, then the implicit draw, two independent numbers, so the chance of a goal is
-the reroll's chance times the draw's. The implicit replaces one implicit of the item chosen uniformly, or every implicit when the set
-holds a Gilded Fossil. The set declares `Adds.corrupts` and `Adds.asked_only`: a planner offers it only to a target that asks for a
+the reroll's chance times the draw's. The implicit replaces one implicit of the item chosen uniformly (those it stores and those of its base it does not), or every
+implicit when the set holds a Gilded Fossil. The set declares `Adds.corrupts` and `Adds.asked_only`: a planner offers it only to a target that asks for a
 corrupted implicit, since for one that merely allows a corrupted item the same set without the Bloodstained Fossil is offered and
 this one would add a price and an implicit nobody wants. It rerolls the explicit mods itself, so it never declares `keeps_mods` and
 is not pruned to the states that pass (ADR-0036). It declares no block invariance: the coarse state holds no implicits. A set

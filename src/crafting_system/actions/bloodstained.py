@@ -8,8 +8,9 @@ the implicit is not affected by the other fossils, and the reroll does not look 
   and never fails to be added (`corruption.bloodstained_never_fails`, owner). Each stat rolls uniformly over the integers of its
   range; no fossil, not even a Sanctified one, makes it lucky.
 * It replaces one implicit of the item chosen uniformly (`corruption.implicit_replaces_existing`, the Vaal Orb's rule), or is just
-  added when the item has none. With a Gilded Fossil in the set it replaces every implicit
-  (`fossils.bloodstained_gilded_replaces_all_implicits`).
+  added when the item has none. The implicits of the item are the ones it stores and the ones of its base that it does not store
+  (`Item` keeps an implicit only when given one, the game's item has the base's own). With a Gilded Fossil in the set it replaces
+  every implicit (`fossils.bloodstained_gilded_replaces_all_implicits`).
 
 `ImplicitDraw` is that second part alone: `cases` lists every way it can end with its exact chance (which implicits are kept, which
 mod is drawn), `chance_all` and `sample` answer for the implicits of the finished item. `BloodstainedOutcomes` is the whole result
@@ -82,14 +83,19 @@ class ImplicitCase:
 class ImplicitDraw:
     """The corrupted implicit a Bloodstained Fossil adds to an item that holds `held` implicits.
 
-    With `replaces_all` (a Gilded Fossil in the set) no implicit of the item stays. Otherwise one of them, chosen uniformly, is
-    replaced and the others stay; an item with none just gains the drawn one. The drawn mod is chosen by weight from `pool`.
+    With `replaces_all` (a Gilded Fossil in the set) no implicit of the item stays. Otherwise one of its implicits, chosen
+    uniformly, is replaced and the others stay; an item with none just gains the drawn one. The drawn mod is chosen by weight
+    from `pool`. An item stores an implicit only when it was given one (`Item`: the base's own implicits are not filled in), but the
+    game's item has them: `unstored` is how many implicits of the base the item does not store, and each is as likely to be the
+    replaced one as a stored one (ADR-0037: "chosen uniformly among the item's implicits, base and Eldritch ones alike"). When one
+    of those goes, every stored implicit stays; the unstored ones are not on the finished item either way.
     """
 
     data: GameData
     pool: CorruptedImplicitPool
     held: tuple[ImplicitMod, ...]
     replaces_all: bool
+    unstored: int = 0
 
     @classmethod
     def for_item(cls, data: GameData, item: Item, replaces_all: bool) -> "ImplicitDraw":
@@ -100,15 +106,21 @@ class ImplicitDraw:
                 f"the corrupted implicit pool of {item.base_id} is empty at item level {item.item_level}, and no admitted rule says "
                 "what a Bloodstained Fossil does when it has no implicit to add"
             )
-        return cls(data, pool, item.implicits, replaces_all)
+        stored = {entry.mod_id for entry in item.implicits}
+        unstored = sum(1 for mod_id in data.base_items[item.base_id].implicits if mod_id not in stored)
+        return cls(data, pool, item.implicits, replaces_all, unstored)
 
     @cached_property
     def kept(self) -> tuple[tuple[Fraction, tuple[ImplicitMod, ...]], ...]:
-        """The implicits of the item that stay with the chance of each: all replaced, none to replace, or one replaced at random."""
-        if self.replaces_all or not self.held:
+        """The stored implicits that stay with the chance of each: all replaced, none to replace, or one replaced at random."""
+        candidates = len(self.held) + self.unstored
+        if self.replaces_all or not candidates:
             return ((Fraction(1), ()),)
-        each = Fraction(1, len(self.held))
-        return tuple((each, self.held[:index] + self.held[index + 1 :]) for index in range(len(self.held)))
+        each = Fraction(1, candidates)
+        patterns = [(each, self.held[:index] + self.held[index + 1 :]) for index in range(len(self.held))]
+        if self.unstored:
+            patterns.append((each * self.unstored, self.held))  # an implicit of the base that the item does not store goes
+        return tuple(patterns)
 
     @cached_property
     def cases(self) -> tuple[ImplicitCase, ...]:

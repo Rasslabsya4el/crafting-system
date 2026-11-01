@@ -113,21 +113,23 @@ def sets_for(name: str) -> list[ApplyFossils]:
     return found
 
 
-def one_set(item, action: ApplyFossils) -> list[str]:
-    lines = [action.label(DATA), repr(sorted(action.resources(DATA).items())), repr(declared(action.reads(DATA), READS_FIELDS)), repr(declared(action.adds(DATA, item), ADDS_FIELDS))]
+def one_set(item, action: ApplyFossils, data=DATA, joint=JOINT, distributions=True, claims=True) -> list[str]:
+    lines = [action.label(data), repr(sorted(action.resources(data).items())), repr(declared(action.reads(data), READS_FIELDS)), repr(declared(action.adds(data, item), ADDS_FIELDS))]
     lines.append(repr(declared(action.adds(None), ADDS_FIELDS)))
-    lines.append(repr(sorted(action.claims(DATA))))
+    if claims:  # the claims of a set move with every rule any module it imports from gains: the toy-world digest pins them, the real one does not
+        lines.append(repr(sorted(action.claims(data))))
     try:
-        lines.append(repr(canon(action.twin_key(DATA, item))))
-        outcomes = action.outcomes(DATA, item)
+        lines.append(repr(canon(action.twin_key(data, item))))
+        outcomes = action.outcomes(data, item)
     except ActionError as refusal:
         lines.append(f"refused {type(refusal).__name__}: {refusal}")
         return lines
     lines.append(repr(outcomes.fractures))
     for share, part in outcomes.components:
         lines.append(part_text(share, part))
-    lines.append(repr(canon(dict(outcomes.distribution(lambda mod: mod.generation_type)))))
-    lines.append(repr([outcomes.chance_all(joint) for joint in JOINT]))
+    if distributions:  # the exact distributions of the real pools take minutes: the real digest reads the components, which hold the pools
+        lines.append(repr(canon(dict(outcomes.distribution(lambda mod: mod.generation_type)))))
+        lines.append(repr([outcomes.chance_all(wanted) for wanted in joint]))
     return lines
 
 
@@ -151,6 +153,31 @@ def digest() -> tuple[str, int]:
                     text.append(kernel_text(item, action))
                 except ActionError as refusal:
                     text.append(f"kernel refused {type(refusal).__name__}")
+    return hashlib.sha256("\n".join(text).encode("utf-8")).hexdigest(), pairs
+
+
+REAL_SETS = [
+    ("Dense", "Shuddering"), ("Pristine", "Shuddering"), ("Scorched",), ("Frigid", "Lucent"), ("Tangled",), ("Tangled", "Dense"),
+    ("Glyphic",), ("Glyphic", "Lucent"), ("Hollow",), ("Hollow", "Pristine"), ("Fractured",), ("Fractured", "Dense"),
+    ("Fractured", "Tangled"), ("Sanctified", "Aberrant"), ("Opulent",), ("Faceted",), ("Faceted", "Deft"), ("Gilded",),
+    ("Gilded", "Dense", "Shuddering"), ("Corroded", "Metallic"), ("Prismatic", "Pristine", "Aetheric"), ("Jagged", "Serrated", "Bound", "Dense"),
+]  # fmt: skip
+REAL_BASES = ("Sorcerer Boots", "Iron Ring")
+
+
+def real_digest(data) -> tuple[str, int]:
+    """The same digest on the real 3.29.3.3 dump: each of `REAL_SETS` (without the Bloodstained Fossil) on an empty rare Sorcerer Boots and Iron Ring of item level 86."""
+    from crafting_system.items import Item, Rarity
+
+    text = []
+    pairs = 0
+    for name in REAL_BASES:
+        base = next(base.id for base in data.base_items.values() if base.name == name)
+        item = Item.build(data, base_id=base, item_level=86, rarity=Rarity.RARE, mods=())
+        for others in REAL_SETS:
+            pairs += 1
+            action = ApplyFossils(tuple(f"{other} Fossil" for other in others))
+            text.append(f"{name} | " + " | ".join(one_set(item, action, data, [], False, False)))
     return hashlib.sha256("\n".join(text).encode("utf-8")).hexdigest(), pairs
 
 

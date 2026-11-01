@@ -49,6 +49,7 @@ from bloodstained_support import (
     plain,
     pool_weights,
     starts,
+    unstored_of,
 )
 from test_actions_fossil import roll
 
@@ -117,7 +118,7 @@ def implicit_of(item, mod_id: str) -> ImplicitMod:
 
 def the_cases(others: tuple[str, ...], start: str):
     item = starts()[start]
-    return implicit_cases([entry.mod_id for entry in item.implicits], pool_weights(item.item_level), "Gilded" in others)
+    return implicit_cases([entry.mod_id for entry in item.implicits], pool_weights(item.item_level), "Gilded" in others, unstored_of(item))
 
 
 @cache
@@ -139,6 +140,9 @@ def enumerated(others: tuple[str, ...], start: str):
 @pytest.mark.parametrize("start", STARTS)
 @pytest.mark.parametrize("others", SETS, ids=lambda others: "+".join(("Bloodstained", *others)))
 def test_the_kernel_equals_the_brute_force_of_the_fossil_times_the_implicit_cases(others, start):
+    """Layer 1. The compressed state keeps no corrupted implicit (ADR-0036), so the drawn mod collapses in it; what the draw leaves of the
+    state is the Eldritch pair that the replacement keeps, which the brute force plays by hand. Which implicit was drawn, and its chance
+    with the explicit goal, is the next test."""
     item = starts()[start]
     action = bloodstained(*others)
     ab = Abstraction(DATA, Goal(EXPLICIT, asks_corrupted=True), item.base_id, item.item_level, [action])
@@ -236,7 +240,7 @@ def test_the_cases_of_the_draw_are_the_hand_cases(start, replaces_all):
     item = starts()[start]
     draw = draw_of(start, replaces_all)
     expected = Counter()
-    for chance, ids in implicit_cases([e.mod_id for e in item.implicits], pool_weights(item.item_level), replaces_all):
+    for chance, ids in implicit_cases([e.mod_id for e in item.implicits], pool_weights(item.item_level), replaces_all, unstored_of(item)):
         expected[ids] += chance
 
     got = Counter()
@@ -272,6 +276,20 @@ def test_the_base_implicit_is_replaced_like_any_other():
     outcomes = bloodstained().outcomes(DATA, starts()["base-and-eldritch"])
     assert outcomes.chance_all([BASE_IMPLICIT]) == Fraction(1, 2)
     assert outcomes.chance_all([BASE_IMPLICIT, "EldritchEaterImplicit2"]) == 0  # one of the two goes
+
+
+def test_a_base_implicit_the_item_does_not_store_is_a_candidate_for_the_replacement_all_the_same():
+    """`Item` stores an implicit only when given one, but the game's boots have the base implicit: the Eldritch one goes with chance 1/2, not 1."""
+    item = starts()["unstored-base-implicit"]
+    assert [entry.mod_id for entry in item.implicits] == ["EldritchEaterImplicit2"] and unstored_of(item) == [BASE_IMPLICIT]
+
+    outcomes = bloodstained().outcomes(DATA, item)
+    assert outcomes.chance_all(["EldritchEaterImplicit2"]) == Fraction(1, 2)
+    assert outcomes.chance_all([BASE_IMPLICIT]) == 0  # not on the finished item: it is not stored, and it is not drawn
+    assert bloodstained("Gilded").outcomes(DATA, item).chance_all(["EldritchEaterImplicit2"]) == 0
+    only = starts()["none"]  # a base with no implicit of its own: nothing to replace
+    assert ImplicitDraw.for_item(DATA, dataclasses.replace(only, base_id=IMPLICIT_BOOTS), False).unstored == 1
+    assert ImplicitDraw.for_item(DATA, only, False).unstored == 0
 
 
 def test_the_pool_is_cut_at_the_item_level():
@@ -393,6 +411,13 @@ def test_a_cluster_jewel_is_out_of_scope():
 def test_hollow_and_glyphic_in_one_resonator_stay_out_of_scope_with_a_bloodstained_fossil():
     with pytest.raises(OutOfScopeError, match="Hollow and Glyphic"):
         bloodstained("Hollow", "Glyphic").outcomes(DATA, starts()["none"])
+
+
+def test_a_refusal_of_the_game_comes_before_a_set_that_is_out_of_scope():
+    """The order of the module text: `NotApplicableError` (no pool on these gloves) before `OutOfScopeError` (Hollow with Glyphic)."""
+    gloves = boots(roll("LifeA"), base=NO_POOL_GLOVES)
+    with pytest.raises(NotApplicableError, match="no corrupted implicit pool"):
+        bloodstained("Hollow", "Glyphic").outcomes(DATA, gloves)
 
 
 def test_a_fractured_fossil_is_still_refused_on_a_fractured_item():

@@ -11,6 +11,7 @@ when it is not there; CI fetches it (ticket #165), so they run there.
   implicit hold none of them.
 """
 
+import dataclasses
 import random
 from collections import Counter
 from fractions import Fraction
@@ -112,8 +113,9 @@ def test_the_kernel_of_a_resonator_with_the_fossil_is_the_one_without_it_made_co
     plain = rerolling.kernel(rerolling.compress(ring), reroll)
 
     assert sum(kernel.values()) == 1
-    assert sorted(kernel.values()) == sorted(plain.values())  # the same masses on the states, every state corrupted
     assert all(state.flags.corrupted for state in kernel)
+    uncorrupted = {dataclasses.replace(state, flags=dataclasses.replace(state.flags, corrupted=False), implicits=()): mass for state, mass in kernel.items()}
+    assert uncorrupted == dict(plain)  # the same states with the same masses, corrupted
 
 
 def test_the_boots_listing_holds_the_bloodstained_sets(data):
