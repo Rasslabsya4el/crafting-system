@@ -1,0 +1,45 @@
+# Draft claims of research ticket #273 (B5 R3), family foulborn. Not yet in src/; the build session that promotes
+# docs/research/2026-10-31-memory-strands-claims/foulborn.yaml takes these two together with it.
+# Check: load_registry(Path("docs/research/2026-11-01-b5-r3-claims")).
+#
+# Each claim changes an ADR default or the provenance an ADR states:
+#   foulborn.exalted_spend_by_mod_count          ADR-0041 and ADR-0043: "the Exalted row times 62/34: 29, 40, 47, 58, 62"
+#                                                 becomes the emulator's row 46, 46, 52, 56, 60, 62.
+#   foulborn.zero_strand_cut_matches_eleven_strands   ADR-0040: "on a 0-strand item D = 175 rests on the wiki alone"
+#                                                 gains the first author's own observation.
+# Craft of Exile quotes are the shortest data or code fragment that shows the number; no Craft of Exile file is kept in the repo.
+rules:
+  - id: foulborn.exalted_spend_by_mod_count
+    statement: >-
+      A Foulborn Exalted Orb spends a random whole number of strands from 0 up to a ceiling that grows with the
+      explicit mods the item has when the orb is applied: 0 or 1 mod 46, 2 mods 52, 3 mods 56, 4 mods 60, 5 mods 62
+      (the 5-mod figure is also the wiki's). The Craft of Exile emulator holds the whole row, indexed by the mod
+      count before the craft, and its plain Exalted row (16, 16, 22, 26, 32, 34) equals the wiki's row for 1 to 5
+      mods, so the two tables belong together. PoEDB lists one figure, 0-28, for the orb, which no mod count of
+      this row gives. Replaces the planner's estimate of 29, 40, 47, 58, 62 (the Exalted row times 62/34).
+    value: [46, 46, 52, 56, 60, 62]
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe1.js
+    quote: "foulborn_exalted:[[0,46],[0,46],[0,52],[0,56],[0,60],[0,62]]"
+    approximate: true
+    approximate_reason: "Only the emulator's table gives 1 to 4 mods; PoEDB's single figure 0-28 disagrees and nobody has tested the orb (in-game list #182)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: foulborn.zero_strand_cut_matches_eleven_strands
+    statement: >-
+      The cut of a Foulborn orb on its own is the cut of about 11 strands: the first author of the strands post
+      saw that the tier restriction of Foulborn currency "exactly matched" that of 10 to 11 strands, and 11
+      strands is the denominator 175 (= 100 + 75) of the formula. With D = 175 the kept tiers for N = 1..13
+      eligible tiers are the wiki's list 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7. The sentence does not say that the
+      item he compared had no strands (it reads as Foulborn alone, since an item with strands would add to them);
+      the reading for a 0-strand item is mine. The crafting AMA's cluster-jewel advice (jewels carry no strands:
+      "cull 1/2 (mid ilvl) or 1/3 (high ilvl)" of three tiers) fits D = 175 at 2 and 3 tiers but also fits the
+      emulator's rating of 100, so it does not separate the two. His sheet has no Foulborn row on a 0-strand item.
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
+    quote: "I noticed that the tier restricting behavior of foulborn currency exactly matched that of 10-11 memory strands, and 11 strands maps to a nice MTR number of 75."
+    approximate: true
+    approximate_reason: "The author shows no cells for the 0-strand case, and the emulator rates Foulborn at 100 with other rounding, so its list differs from the wiki's at 8, 10, 12, 14 and 15 tiers (in-game list #182)."
+    patch_verified: "3.29.0"
+    date_checked: 2026-11-01

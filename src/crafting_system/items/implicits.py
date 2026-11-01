@@ -1,19 +1,29 @@
 """Implicit mods on an item (ADR-0027) and the two Eldritch sides (ADR-0025).
 
-An `ImplicitMod` is a base implicit (grade 0) or an Eldritch implicit (grade 1 to 6) with its rolled
-values. The grade of an Eldritch implicit follows from the mod: the repoe id ends in the digit of its
-grade, in every one of the 4086 mods of the two Eldritch generation types of 3.29.3.3.
+An `ImplicitMod` is a base implicit (grade 0), an Eldritch implicit (grade 1 to 6) or a corrupted implicit (grade
+0, held only by a corrupted item, ADR-0036) with its rolled values. The grade of an Eldritch implicit follows from
+the mod: the repoe id ends in the digit of its grade, in every one of the 4086 mods of the two Eldritch generation
+types of 3.29.3.3.
 """
 
 from dataclasses import dataclass
 from enum import StrEnum
 
-from crafting_system.data import Mod
+from crafting_system.data import BaseItem, Mod
 
 from .errors import ImplicitError
+from .spawn import spawn_weight
 
 SEARING_EXARCH_IMPLICIT = "searing_exarch_implicit"
 EATER_OF_WORLDS_IMPLICIT = "eater_of_worlds_implicit"
+CORRUPTED_IMPLICIT = "corrupted"
+ABYSS_JEWEL_TAG = "abyss_jewel"
+ABYSS_JEWEL_DOMAIN = "abyss_jewel"
+CLUSTER_JEWEL_DOMAIN = "affliction_jewel"
+TIMELESS_JEWEL_NAME = "Timeless Jewel"
+# the domains whose items a corrupting action gives an implicit: equipment, jewellery and quivers, jewels, abyss jewels. Other domains
+# also hold corrupted mods (maps, relics, grafts) that no corrupting action draws for an item of this project.
+CORRUPTED_POOL_DOMAINS = frozenset({"item", "misc", ABYSS_JEWEL_DOMAIN})
 BASE_GRADE = 0
 MIN_ELDRITCH_GRADE = 1
 MAX_ELDRITCH_GRADE = 6
@@ -70,3 +80,29 @@ def is_presence_variant(mod: Mod) -> bool:
     """Whether `mod` is a "While a Unique Enemy / Pinnacle Atlas Boss is in your Presence" variant; its
     text is the same as the base mod's."""
     return any(stat.id in PRESENCE_STATS for stat in mod.stats)
+
+
+def is_corrupted_implicit(mod: Mod) -> bool:
+    """Whether `mod` is of the generation type corrupted: the implicit a corrupting action draws (ADR-0037)."""
+    return mod.generation_type == CORRUPTED_IMPLICIT
+
+
+def corrupted_pool_domain(base: BaseItem) -> str:
+    """The domain of the corrupted mods `base` draws from: its own, except that an abyss jewel counts as its own domain (its mods list
+    only the `default` tag, which every base has)."""
+    return ABYSS_JEWEL_DOMAIN if ABYSS_JEWEL_TAG in base.tags else base.domain
+
+
+def fits_corrupted_implicit(mod: Mod, base: BaseItem) -> bool:
+    """Whether `mod` is a corrupted implicit that `base` can get: of the base's pool domain, with a spawn weight above 0 on the base's
+    tags, and the base is not a Cluster or a Timeless jewel (their pools are not checked, ADR-0037). The item level is not checked here
+    (the pool of `actions` gates it)."""
+    if base.domain == CLUSTER_JEWEL_DOMAIN or base.name == TIMELESS_JEWEL_NAME:
+        return False
+    domain = corrupted_pool_domain(base)
+    return (
+        is_corrupted_implicit(mod)
+        and domain in CORRUPTED_POOL_DOMAINS
+        and mod.domain == domain
+        and spawn_weight(mod, base.tags) > 0
+    )

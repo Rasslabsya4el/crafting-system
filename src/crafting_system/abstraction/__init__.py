@@ -13,9 +13,17 @@ is imported or tested for here.
   imports nothing of `targets`. `Goal.leaves` is the depth-first, file-order list of leaves and the
   order of `CompressedState.status`; `Goal.is_met(statuses)` needs `Status.PASSING` for a leaf.
 * `Status`: ABSENT < BELOW < PASSING, what an item gives one leaf; the best of several mods wins.
-* `CompressedState(flags, fractured, status, slots)`: `Flags` (rarity, corrupted, influences), the
+* `CompressedState(flags, fractured, status, slots, implicits, quality, offer)`: `Flags` (rarity, corrupted, influences), the
   fractured mods as `FracturedMod(canonical id, contribution to each leaf)` sorted, the status of
-  each leaf over the whole item, and the `Slot`s, a sorted multiset of the other mods (below).
+  each leaf over the whole item, and the `Slot`s, a sorted multiset of the other mods (below). The last three
+  are the item state beyond the explicit mods (ADR-0027, ticket #142), empty unless an enabled action reads or
+  changes that part: `implicits` the Eldritch pair, one `ImplicitSide(grade, contribution)` for the Searing Exarch
+  and one for the Eater of Worlds (the contribution is to each `Goal.implicits` leaf, an `ImplicitWanted`);
+  `quality` the catalyst `Quality` as the item stores it; `offer` the mods of the unveil offer, each an
+  `OfferedMod(canonical id, contribution)`. `Abstraction.tracks_implicits`, `tracks_quality` and `tracks_offer` say
+  which are kept; they follow the `Reads` and `Adds` declarations of the enabled actions (`implicits`, `quality`,
+  `offer`) and, for the implicits, whether the goal asks for one. `is_goal` also needs, for each implicit wanted,
+  a side that passes it.
   `CompressedState.crafted` says a slot is crafted; `count(side)` counts the slots of a side.
 * `Slot(side, kind, contribution, crafted)`: a mod that is not fractured, by its side, its kind and
   what it gives each leaf. The kind is "" for a family that every enabled action treats alike (a
@@ -154,9 +162,9 @@ claim of the rules registry.
 from ._bound import keeps_shape, reach_bound
 from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
-from ._goal import AtLeast, Goal, Status, Wanted
+from ._goal import AtLeast, Goal, ImplicitWanted, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
-from ._state import CompressedState, Flags, FracturedMod, Slot
+from ._state import CompressedState, Flags, FracturedMod, ImplicitSide, OfferedMod, Slot
 
 __all__ = [
     "ADDING_LIMIT",
@@ -172,6 +180,9 @@ __all__ = [
     "FamilyType",
     "Flags",
     "FracturedMod",
+    "ImplicitSide",
+    "ImplicitWanted",
+    "OfferedMod",
     "Slot",
     "Goal",
     "Status",
