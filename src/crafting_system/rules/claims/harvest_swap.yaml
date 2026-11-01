@@ -36,7 +36,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: harvest_swap.resistance_source_stats
-    statement: "A modifier qualifies as a source of a resistance swap from the element E when one of its stats is `base_E_damage_resistance_%` (the plain resistance and its hybrids with leech or physical damage taken as the element) or `base_maximum_E_damage_resistance_%` (the maximum resistance); `value` lists the two stat ids with the element written X. The target is the modifier of the target element with the same stat ids (X replaced) on the same side and in the same domain, of the same tier number. The modifiers that grant two elements at once do not qualify."
+    statement: "A modifier qualifies as a source of a resistance swap from the element E when one of its stats is `base_E_damage_resistance_%` (the plain resistance and its hybrids with leech or physical damage taken as the element) or `base_maximum_E_damage_resistance_%` (the maximum resistance); `value` lists the two stat ids with the element written X. The target is the modifier of the target element with the same stat ids (X replaced) on the same side and in the same domain, of the same tier number. The modifiers that grant two elements at once do not qualify, and a hybrid whose other stat has no twin of the target element (an ailment chance, for one) has no target and is not a source."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Modifier#Harvest_Crafting
     quote: "This method works for modifiers beyond the generic ‘+#% to (Element) Resistance’."

@@ -5,7 +5,7 @@
 # registry's `approximate` mark, and an answer then lists the claim among its approximate inputs.
 rules:
   - id: harvest_augment.add_remove_crafts_exist
-    statement: "Eleven Harvest crafts add a new modifier of a tag and remove another random modifier from a non-influenced item. The key of `value` is the craft's name in lower case (the same names and tags as harvest_reforge.tagged_rare_reforge_exists, \"defence\" being the tag `defences`); the value maps the price-file name of each lifeforce item to the number of items one use costs. Each craft also takes one Sacred Crystallised Lifeforce and no Crystallised Rancour."
+    statement: "Eleven Harvest crafts add a new modifier of a tag and remove another random modifier from a non-influenced item. The key of `value` is the craft's name in lower case (the same names and tags as harvest_reforge.tagged_rare_reforge_exists, \"defence\" being the tag `defences`); the value maps the price-file name of each lifeforce item to the number of items one use costs. Each craft also takes one Sacred Crystallised Lifeforce and no Crystallised Rancour. A magic or a rare item takes the craft (the wiki names no rarity and Craft of Exile checks none); a normal item has nothing to remove."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
     quote: "Add a new Fire modifier and remove another random modifier from a non-Influenced item 15000 0 0 1 0"

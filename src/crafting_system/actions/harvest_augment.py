@@ -4,8 +4,9 @@ Add and remove (`harvest_augment`): eleven crafts, one per tag of `harvest_augme
 one new mod with its tag first, then removes another one (`harvest_augment.add_first_then_remove`). The new mod is drawn
 in proportion to its weight among the mods of the item's pool that carry the tag and fit an open side; the removed mod
 is uniform among the mods that are not fractured and not on a locked side, crafted mods and metamods included. An
-influenced item refuses the craft; a fractured mod and an Eldritch implicit do not (the item model stores no implicits,
-so there is nothing to check for the second).
+influenced item refuses the craft; a fractured mod and an Eldritch implicit do not (the implicits stay on the item, and
+they are no explicit mod, so the removal never takes them). A magic item takes the craft as a rare one does: the wiki names no
+rarity and Craft of Exile checks none.
 
 Swaps (`harvest_swap`): six resistance swaps and six damage swaps change one mod of the item into the mod of another
 element with the same tier number and roll its value again. Which mods qualify as sources is a list of stat ids in the
