@@ -33,9 +33,9 @@ rules:
     statement: The offer is up to three draws by weight without replacement; after each pick every mod of the picked mod's family (any family it shares) leaves the pool; the families of the mods on the item (bench crafts included) are out of the pool from the start; fewer than three options when the pool runs dry; PoE 1 has one tier per mod.
     source_kind: coe
     url: https://www.craftofexile.com/packages/package.js
-    quote: 'let unveilModsNumber=3;'
+    quote: 'let unveilModsNumber=3; ... for(var zy=0;zy<varr[k].mgrp.length;zy++){for(var zw=0;zw<chosengrp.length;zw++){if(varr[k].mgrp[zy]==chosengrp[zw]){mconflict=!0}}}'
     approximate: true
-    approximate_reason: "Only Craft of Exile's code gives the draw (without replacement, one mod per family, the families of the item removed); the wiki says only that three options are shown, and no source says whether a second family of a hybrid mod counts (the model counts every family, the research counted the first one only)."
+    approximate_reason: "Only Craft of Exile's code gives the draw (without replacement, one mod per family, the families of the item removed); the wiki says only that three options are shown. The code compares every modgroup of a mod (its data holds 13 hybrid generic mods with 2 or 3 modgroups), so the model counts every family; the research counted the first one only (wand Minion attack and cast speed 0.194 against 0.1996)."
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
 
