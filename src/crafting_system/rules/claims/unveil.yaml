@@ -1,0 +1,68 @@
+# Mechanic family: unveil (unveiling a veiled placeholder: the offer of three mods and the pick). Research ticket #87
+# (note 2026-10-31-veiled-unveiling.md of the branch research/veiled, 0c65ad6) and the grill of batch B2 (issue #93, ADR-0026).
+# Patch 3.29.3.3, checked 2026-10-31. The orbs that put the placeholder on the item are in veiled.yaml.
+#
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code alone, or on a reading no
+# source states outright.
+rules:
+  - id: unveil.three_options_player_picks
+    statement: Unveiling shows three random mods and the player picks one; the picked mod is not a crafted mod.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Veiled_modifier
+    quote: "Unveiling the mod presents three random mods, and allows the player to choose which one the veiled mod becomes."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: unveil.is_free_and_in_place
+    statement: Unveiling costs nothing and needs no NPC; it is a right-click on the veiled item.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3787013
+    quote: "You are no longer required to speak with Jun to Unveil your items. You can now Right-click (or use Circle/B on Controller) on a Veiled item and simply select the Modifier you wish to Unveil."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: unveil.offer_pool_is_the_unveiled_domain_by_side
+    statement: The offer of a veiled mod is drawn from the mods of the unveiled domain whose generation type is the side of the veiled mod (the generic pool holds 150 mods, 78 prefix and 72 suffix, with a weight above 0 on at least one base). The weight of a mod on a base is that of the first spawn_weights entry whose tag the base has; 0 excludes it. Craft of Exile's veiled pool (id_mgroup 10, vex 0) has the same mod count and total weight on 24 bases compared.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: 'JunMasterVeiledMovementVelocityAndOnslaughtOnKill: domain "unveiled", generation_type "prefix", groups ["MovementVelocity"], required_level 60, spawn_weights [{"tag": "boots", "weight": 1500}, {"tag": "default", "weight": 0}]'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: unveil.offer_draw_three_families_no_repeat
+    statement: The offer is up to three draws by weight without replacement; after each pick every mod of the picked mod's family (any family it shares) leaves the pool; the families of the mods on the item (bench crafts included) are out of the pool from the start; fewer than three options when the pool runs dry; PoE 1 has one tier per mod.
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: 'let unveilModsNumber=3;'
+    approximate: true
+    approximate_reason: "Only Craft of Exile's code gives the draw (without replacement, one mod per family, the families of the item removed); the wiki says only that three options are shown."
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: unveil.legacy_mods_have_weight_zero
+    statement: 51 unveiled-domain mods have weight 0 on every base and are never offered, among them Trigger a Socketed Spell on Using a Skill (R07's target), the Damage over Time Multiplier prefixes, the quiver/flask legacy mods and the Avoid Elemental Ailments and Stun body armour mod.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: 'JunMasterVeiledTriggerSocketedSpellOnSkillUse_: domain "unveiled", generation_type "suffix", required_level 60, spawn_weights [{"tag": "weapon", "weight": 0}, {"tag": "default", "weight": 0}]'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: unveil.offer_drawn_once_and_fixed
+    statement: The offer is drawn when the unveil is taken and stays the same when the window is closed and opened again, so an item whose offer is drawn is not unveiled a second time and there is no free second look. Whether a block crafted after the peek redraws the offer is unknown (the per-placeholder veiled_mod_seed of the export may fix it for good); the offer is never redrawn.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93#issuecomment-6546727567
+    quote: "Unveil offer: **the same three mods after closing and reopening** (V-03 settled: the offer is drawn once; no free re-peek; R24's loop pays per veil)."
+    approximate: true
+    approximate_reason: "The owner knows that closing and reopening shows the same offer; whether a block crafted after the peek redraws it is unknown, and the model never redraws."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: unveil.no_offer_filter_no_level_gate
+    statement: The offer is not filtered by Cannot roll Attack/Caster Modifiers and no item level gates it (the unveiled records have required level 60; Craft of Exile reads the item level for a veiled mod and does not use it).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93#issuecomment-6546593917
+    quote: "Mechanics no source settles follow Craft of Exile, marked approximate (evidence rule, #28): ... no offer filter (V-06), no item-level gate (OPEN-04, V-04)."
+    approximate: true
+    approximate_reason: "No source documents whether Cannot roll Attack/Caster Modifiers or the item level touch the offer; the grill follows Craft of Exile, which applies neither."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01

@@ -72,9 +72,10 @@ def test_an_action_that_declares_nothing_reads_and_adds_everything():
     assert (adds.implicits, adds.quality, adds.offer) == (True, True, True)
 
 
-def test_no_kind_of_the_catalog_declares_item_state_yet():
-    # B1 touches none of the three: the planner and the cache see no change in any registered kind
-    for kind in kinds():
+def test_no_planner_kind_of_the_catalog_declares_item_state_yet():
+    # B1 touches none of the three: the planner and the cache see no change in any kind they use. The veiled orbs, the
+    # unveil and the pick (#144) declare the offer, and are not planner kinds until the compressed model has the offer state (#145).
+    for kind in kinds(planner_only=True):
         for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
             reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
             assert not reads.item_state and not adds.item_state, kind.name

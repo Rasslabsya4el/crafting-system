@@ -50,6 +50,7 @@ from abstraction_pool import (
 from beasts_support import aspect_mods
 from coarse_support import blocks_of, compare_members, compare_variants, concrete_items
 from items_support import AMULET, DATA
+from veiled_support import LIFE_1 as VEIL_LIFE, MANA as VEIL_MANA, ARMOUR as VEIL_ARMOUR, PLACEHOLDER_PREFIX, veiled_mods
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal, Wanted
 from crafting_system.actions import (
@@ -131,6 +132,7 @@ def _fixture_data():
             mods[ORDINARY_CRAFT], id=mod_id, type=mod_id, text=f"Test {mod_id}", families=mods[source].families, generation_type=side
         )
         options.append(dataclasses.replace(template, actions=dataclasses.replace(template.actions, add_explicit_mod=mod_id)))
+    mods.update(veiled_mods())  # the veiled placeholders and the unveiled pool of the amulet (ticket #144); nothing draws them
     mods.update(aspect_mods())  # the eight aspect suffixes of the beast crafts (ticket #147): nothing draws them
     mods[HYBRID_JUNK] = dataclasses.replace(
         mods[COLD_RESIST], id=HYBRID_JUNK, families=(*mods[COLD_RESIST].families, *mods[MANA_1].families), spawn_weights=(), generation_weights=()
@@ -190,6 +192,9 @@ def fixture_items() -> dict[str, Item]:
         # their family in the fixture, because the compressed state forgets which tier of a family a junk mod was (#149)
         "rare_resists": _item(Rarity.RARE, _roll(FIRE_RESIST), _roll(COLD_DAMAGE)),
     }
+    placeholder = ExplicitMod(PLACEHOLDER_PREFIX, 1, tuple(min(stat.min, stat.max) for stat in CONTRACT_DATA.mods[PLACEHOLDER_PREFIX].stats))
+    items["rare_veiled"] = _item(Rarity.RARE, placeholder, _roll(RESIST_2))  # a veiled placeholder, for Unveil and the Veiled Chaos Orb (#144)
+    items["rare_offer"] = _item(Rarity.RARE, placeholder, _roll(RESIST_2), veil_offer=(VEIL_ARMOUR, VEIL_LIFE, VEIL_MANA))  # its offer drawn, for Pick
     crafted = _ordinary_crafted_mod()
     if crafted is not None:
         items["rare_crafted"] = _item(Rarity.RARE, _roll(RESIST_2), _roll(crafted, crafted=True))
@@ -343,7 +348,8 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
     junk = {entry.mod_id for entry in given.mods if not entry.fractured and not entry.crafted}
     if not reads.junk:
         for _, part in outcomes.components:
-            kept = {entry.mod_id for entry in part.retained.mods if not entry.fractured and not entry.crafted}
+            forced = getattr(part, "forced", None)  # a forced mod is put on the item, not kept: a Veiled Chaos Orb may put back the placeholder it erased
+            kept = {entry.mod_id for entry in part.retained.mods if not entry.fractured and not entry.crafted and entry.mod_id != forced}
             assert not kept & junk, "an action that reads no junk erases it"
     if adds.named is not None and not adds.draws:
         held = {(entry.mod_id, entry.fractured, entry.crafted) for entry in given.mods}
@@ -407,7 +413,7 @@ def check_kernel_equals_brute_force(action, reads: Reads, item: Item, items, dat
 
 def check_resources_are_priced(action, item: Item, data) -> None:
     resources = action.resources(data)
-    assert resources, "one use consumes something"
+    assert resources or action.adds(data, item).offer, "one use consumes something, unless it only draws or uses up an unveil offer (free: unveil.is_free_and_in_place)"
     assert all(isinstance(name, str) and name and isinstance(count, int) and count > 0 for name, count in resources.items())
     prices = {name: PriceEntry(2.0, "test") for name in resources if name != CHAOS_ORB}
     file = PriceFile("Test", datetime.datetime(2026, 10, 31, tzinfo=datetime.UTC), 300.0, prices)

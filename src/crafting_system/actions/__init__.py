@@ -74,6 +74,11 @@ grants an aspect skill at level 20 or 30, and is offered only when a target name
 level of the beast and not of the item, then removes one mod of the other side uniformly). A beast craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
 None is a planner kind yet.
 
+The veiled orbs (`veiled.py`, ticket #144, ADR-0026): `VeiledChaosOrb()` (a Chaos reroll that guarantees one generic veiled placeholder, a
+`Mixture` of the two sides), `VeiledExaltedOrb()` (removes one mod, then adds a placeholder; a `Finite`), `Unveil()` (draws the offer of the
+placeholder once, a `Finite` with one result per offer) and `Pick(1 to 3)` (the placeholder becomes the k-th mod of the offer). Unveil and
+Pick are free (`resources` is empty). None is a planner kind yet: the placeholder slot and the offer state are ticket #145.
+
 Refusals, raised by `outcomes` in this order (a message names the reason):
 
 * `NotApplicableError`: the game refuses and nothing would be consumed: the item is not rare (an
@@ -156,6 +161,7 @@ from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
 from .pool import PoolFamily, PoolMod, build_pool, drawable_mod_ids, partners, tiers_of
 from .scour import ScouringOrb, ScourOutcomes
+from .veiled import Pick, Unveil, VeiledChaosOrb, VeiledExaltedOrb, offer_distribution, offer_pool
 
 def default_actions() -> tuple[Action, ...]:
     """The two rerolls that need no game data: a Chaos Orb and the Harvest reforge of Lightning."""
@@ -207,6 +213,7 @@ __all__ = [
     "Outcome",
     "Outcomes",
     "OutOfScopeError",
+    "Pick",
     "PoolFamily",
     "PoolMod",
     "partners",
@@ -218,6 +225,9 @@ __all__ = [
     "TalismanFracture",
     "TalismanFractureOutcomes",
     "TransmutationOrb",
+    "Unveil",
+    "VeiledChaosOrb",
+    "VeiledExaltedOrb",
     "WildBristleMatron",
     "add_one_mod",
     "allowed_by_tags",
@@ -233,6 +243,8 @@ __all__ = [
     "guaranteed_candidates",
     "kind",
     "kinds",
+    "offer_distribution",
+    "offer_pool",
     "recipe_resources",
     "register",
     "registered",
