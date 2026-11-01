@@ -69,6 +69,24 @@ def test_every_shard_of_every_system_present_and_green_passes_and_reports_the_to
     assert "`t::test_windows-latest_1_2`" in out  # the slowest tests are listed
 
 
+def test_an_ubuntu_only_run_is_green_when_its_shards_pass_and_red_when_one_is_missing(tmp_path, capsys):
+    """A pull_request run has no Windows shards (ticket #321): `--systems ubuntu-latest` must be enough."""
+    results = tmp_path / "results"
+    for number in (1, 2):
+        write_shard(results, "ubuntu-latest", number)
+    merged = tmp_path / "merged.json"
+    args = [str(results), "--shards", "2", "--systems", "ubuntu-latest", "--merged-durations", str(merged)]
+
+    assert ci_summary.main(args) == 0
+    out = capsys.readouterr().out
+    assert "all shards passed" in out
+    assert "windows" not in out
+
+    (results / "results-ubuntu-latest-2").rename(tmp_path / "gone")
+    assert ci_summary.main(args) == 1
+    assert "ubuntu-latest shard 2/2: no result files" in capsys.readouterr().out
+
+
 def test_a_shard_that_left_no_files_fails_the_run(tmp_path, capsys):
     results = tmp_path / "results"
     full_run(results)
