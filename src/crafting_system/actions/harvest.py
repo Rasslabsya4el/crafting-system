@@ -18,6 +18,10 @@ from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
 
+__all__ = [
+    "HarvestReforge",
+]
+
 TAGGED_RARE_REFORGE_EXISTS = get_rule("harvest_reforge.tagged_rare_reforge_exists")
 REROLLS_LIKE_CHAOS_WITH_GUARANTEED_TAG = get_rule("harvest_reforge.rerolls_like_chaos_with_guaranteed_tag")
 REFUSED_ON_CORRUPTED = get_rule("harvest_reforge.refused_on_corrupted")

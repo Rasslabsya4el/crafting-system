@@ -13,6 +13,11 @@ give a ring the abyss jewel implicits.
 
 Cluster and Timeless jewels are refused (`OutOfScopeError`): their pools are not checked against the data (ADR-0004,
 ADR-0037); a base whose class has no pool at all is refused with `NotApplicableError`.
+
+The corrupted implicit pool of a base at an item level (`corrupted_implicit_pool(data, base_id, item_level)`, `corrupted_pool.py`,
+ADR-0037) is what a Vaal Orb, a Bloodstained resonator and the Locus of Corruption draw their implicit from: the corrupted mods of the
+base's domain with a positive weight on its first matching spawn tag and a required level of at most the item level. Cluster and
+Timeless jewels raise `OutOfScopeError`, a class with no pool `NotApplicableError`.
 """
 
 from collections.abc import Mapping
@@ -31,6 +36,14 @@ from crafting_system.items.implicits import (
 )
 
 from .errors import NotApplicableError, OutOfScopeError
+
+__all__ = [
+    "CORRUPTING_KINDS",
+    "CorruptedImplicit",
+    "CorruptedImplicitPool",
+    "DEFAULT_CORRUPTING_KINDS",
+    "corrupted_implicit_pool",
+]
 
 CORRUPTED = CORRUPTED_IMPLICIT
 POOL_DOMAINS = CORRUPTED_POOL_DOMAINS  # the same set `items` uses to accept a corrupted implicit on an item

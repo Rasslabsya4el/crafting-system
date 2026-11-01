@@ -8,9 +8,25 @@ over a cost grid. Like the solver it is generic: states are any hashable objects
 A policy may list `extra_inputs` (ADR-0022): the run of each input state is paid on every execution
 of the action. Then the mean and variance come from linear systems of the policy tree (`_inputs`),
 not from the solver, and the distribution from a budget DP with each input's pmf convolved in.
+
+Rule axes (ADR-0012 amended, ADR-0022; `_readings`). `solve_readings` takes one ordinary model per reading of the rule axes,
+solves each, evaluates every optimal policy under every reading and returns the plan, its cost interval over the whole
+grid, the route with the smallest worst case, the certified bracket of the robust optimum and the best route without the
+actions left out.
 """
 
 from ._evaluate import evaluate
+from ._readings import Baseline, IntervalReport, Route, has_inputs, solve_readings
 from ._report import Estimate, GridInfo, RiskReport
 
-__all__ = ["Estimate", "GridInfo", "RiskReport", "evaluate"]
+__all__ = [
+    "Baseline",
+    "Estimate",
+    "GridInfo",
+    "IntervalReport",
+    "RiskReport",
+    "Route",
+    "evaluate",
+    "has_inputs",
+    "solve_readings",
+]

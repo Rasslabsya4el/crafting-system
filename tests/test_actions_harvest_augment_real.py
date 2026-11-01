@@ -87,7 +87,7 @@ def hand_addable(data, item: Item, level: int = 86) -> dict[str, int]:
     for mod in data.mods.values():
         if mod.domain != base.domain or mod.generation_type not in ("prefix", "suffix") or mod.required_level > level:
             continue
-        spawn = next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)
+        spawn = 0 if "Royale" in mod.id else next((w.weight for w in mod.spawn_weights if w.tag in tags), 0)  # a Battle Royale copy is not rolled (#310)
         if not spawn or "fire" not in mod.implicit_tags or held_families & set(mod.families):
             continue
         if held_per_side[mod.generation_type] >= 3:  # a rare item holds three prefixes and three suffixes
