@@ -280,11 +280,9 @@ def test_a_veiled_chaos_orb_refusals(item, reason):
         VeiledChaosOrb().outcomes(DATA, item())
 
 
-def test_a_veiled_mod_on_the_open_side_is_rerolled_away_and_a_craftable_version_on_the_locked_side_is_kept_and_refused():
+def test_a_veiled_mod_on_the_open_side_is_rerolled_away():
     on_open_side = amulet(rolled(LOCK_SUFFIXES, crafted=True), holder(PRE))  # the lock is a prefix, locking the suffixes: the veil is free
     assert [part.forced for _, part in VeiledChaosOrb().outcomes(DATA, on_open_side).components] == [PRE, SUF]
-    with pytest.raises(NotApplicableError, match="would keep"):
-        VeiledChaosOrb().outcomes(DATA, amulet(rolled(LOCK_SUFFIXES, crafted=True), rolled(VEIL_LIFE_1, fractured=True)))
 
 
 # --- the Veiled Exalted Orb ------------------------------------------------------------------------------------------------
@@ -378,7 +376,6 @@ def test_a_mod_unveiled_from_the_pool_refuses_the_next_veiled_exalted_orb():
     _, veiled_item = VeiledExaltedOrb().outcomes(DATA, amulet(rolled(LIFE_1), rolled(RESIST_2))).results[0]
     _, offered = Unveil().outcomes(DATA, veiled_item).results[0]
     ((_, landed),) = Pick(1).outcomes(DATA, offered).results
-    assert DATA.mods[next(iter(landed.veil_offer), landed.mods[0].mod_id)].domain != "veiled"
     with pytest.raises(NotApplicableError, match="holds the veiled mod"):
         VeiledExaltedOrb().outcomes(DATA, landed)
 

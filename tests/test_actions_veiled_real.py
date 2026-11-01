@@ -145,6 +145,15 @@ def test_wand_minion_attack_and_cast_speed_is_offered_with_chance_0_1996_which_i
     assert round(float(chance_offered(first_only, lambda m: m == MINION_SPEED)), 3) == 0.194
 
 
+def test_a_cannot_roll_attack_metamod_does_not_filter_the_offer(data):
+    # no offer filter (grill B2): the wand keeps offering attack mods under the metamod, with the very same chances
+    plain = offers(data, with_veil(data, WAND, "suffix"))
+    under = offers(data, with_veil(data, WAND, "suffix", low(data, NO_ATTACK, crafted=True)))
+    assert under == plain
+    attack = {m.id for m in data.mods.values() if m.domain == "unveiled" and "attack" in m.implicit_tags}
+    assert any(mod_id in attack for offer in under for mod_id in offer)
+
+
 def test_the_legacy_trigger_socketed_spell_mod_of_r07_is_never_offered(data):
     shown = offers(data, with_veil(data, WAND, "suffix"))
     assert all("TriggerSocketedSpellOnSkillUse" not in mod_id for offer in shown for mod_id in offer)
