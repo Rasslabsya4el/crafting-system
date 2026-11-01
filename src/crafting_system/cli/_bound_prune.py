@@ -326,7 +326,7 @@ def _run(
                 entry.kind, entry.pbar = REFUSED, ONE
                 return
             adds = action.adds(data, item)
-            if not same_shape or adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
+            if not same_shape or adds.fractures or adds.keeps_crafted or adds.corrupts or action.reads(data).needs_crafted:
                 entry.kind, entry.pbar = TERMINAL, ONE
                 return
             entry.level = 1

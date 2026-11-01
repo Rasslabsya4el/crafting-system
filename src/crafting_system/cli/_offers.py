@@ -13,7 +13,16 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, ActionError, Reads, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import (
+    DEFAULT_CORRUPTING_KINDS,
+    Action,
+    ActionError,
+    Reads,
+    catalog,
+    default_actions,
+    drawable_mod_ids,
+    kinds,
+)
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -187,6 +196,10 @@ def offers_for(
       holds it, a draw of its pool can give it, or another candidate adds it by name. Without such a limit no value
       matters to the goal, so the orb would only cost currency. It is left out; the report names it only when the goal has a
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
+    * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
+      implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
+      other target it is absent from the offers and the report says nothing about it. Which states offer it, for a target that
+      asks, is `solver_actions`' business (`_prune.py`).
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
     if kinds_named is not None:
@@ -209,6 +222,8 @@ def offers_for(
     left_out_rolls: list[str] = []
     for action in listed:
         adds = action.adds(data, start_item)
+        if adds.corrupts and not goal.takes_corrupted:
+            continue  # an item never arrives corrupted unasked, and the report does not mention what the target could never use
         if adds.wanted_only and not (adds.named or frozenset()) & named:
             left_out_unwanted.append(action.label(data))
         elif adds.needs_roll_limit and not roll_matters:
@@ -241,7 +256,11 @@ def offers_for(
 
     left_out = ()
     if kinds_named is not None:
-        skipped = tuple(entry.name for entry in kinds(planner_only=True) if entry.name not in kinds_named)
+        # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used
+        unasked = frozenset() if goal.takes_corrupted else frozenset(DEFAULT_CORRUPTING_KINDS)
+        skipped = tuple(
+            entry.name for entry in kinds(planner_only=True) if entry.name not in kinds_named and entry.name not in unasked
+        )
         if skipped:
             left_out += (
                 LeftOut("the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones", skipped),

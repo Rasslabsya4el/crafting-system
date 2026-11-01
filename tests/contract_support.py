@@ -17,6 +17,10 @@ The checks, each against something written without the code under test:
   `adds.quality` or `adds.offer` leaves the implicits, the quality and the offer as they were, and one that does
   not declare `reads.implicits`, `reads.quality` or `reads.offer` gives the same result on the item without them
   (ticket #142);
+* a corrupting action (ticket #258, ADR-0036) turns every outcome into a corrupted item, puts an implicit on it, and that item is
+  final: no action of the catalog applies to it. An action that does not declare `adds.corrupts` leaves the corruption as it was. One
+  that also declares `adds.keeps_mods` cannot reach the goal of a target that asks for a corrupted implicit from a state that misses
+  another requirement, which is what lets a planner offer it from the other states only;
 * the fracturing actions (a Fractured Fossil) are not compared with the brute force here: their kernel
   has its own tests in `test_abstraction_fossil.py`;
 * the resources are whole counts of named things and price the offer from a fixture price file.
@@ -61,6 +65,7 @@ from crafting_system.actions import (
     OutOfScopeError,
     Reads,
     Rerolled,
+    catalog,
     kinds,
 )
 from crafting_system.data import BaseItem, Weight
@@ -258,6 +263,7 @@ def check_action(action: Action, item: Item, data=CONTRACT_DATA, goal: Goal = GO
     check_sampler_follows_the_chances(outcomes, items, data)
     check_declarations_agree(action, reads, adds, outcomes, items, item)
     check_item_state_declarations(action, reads, adds, items, item, data)
+    check_corruption_declarations(action, reads, adds, items, item, data, goal)
     if not outcomes.fractures and not _rerolls_values(outcomes):
         check_kernel_equals_brute_force(action, reads, item, items, data, goal)
     check_resources_are_priced(action, item, data)
@@ -384,6 +390,37 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
         assert _stripped(finished(other, data), strip) == _stripped(items, strip), (
             f"an action that does not declare reads.{name} gives the same result on the item without its {name}"
         )
+
+
+def check_corruption_declarations(action, reads: Reads, adds: Adds, items, given: Item, data, goal: Goal) -> None:
+    """Corruption (ticket #258, ADR-0036): only an action that declares `adds.corrupts` corrupts, and what it corrupts is final.
+
+    * without `adds.corrupts` every result is corrupted exactly when the item was;
+    * with it every result is corrupted, and no action of the catalog applies to a result (it is the goal or a dead end);
+    * with `adds.keeps_mods` as well, from an item whose state misses a requirement no result is a goal of the same goal made to
+      ask for a corrupted implicit (the exactness of the pruning of `cli._prune`).
+    """
+    if not adds.corrupts:
+        for _, result in items:
+            assert result.corrupted == given.corrupted, "an action that does not declare adds.corrupts leaves the corruption as it was"
+        return
+    assert adds.implicits, "an action that corrupts adds an implicit"
+    for _, result in items:
+        assert result.corrupted, "every result of a corrupting action is a corrupted item"
+        for other in catalog(data, result):
+            try:
+                other.outcomes(data, result)
+            except ActionError:
+                continue
+            raise AssertionError(f"a corrupted item is final, but {other.label(data)} applies to a result of {action.label(data)}")
+    if adds.keeps_mods:
+        asking = dataclasses.replace(goal, asks_corrupted=True)
+        ab = Abstraction(data, asking, given.base_id, given.item_level, [action] if reads.junk or reads.item_state else [])
+        if not ab.meets_requirements(ab.compress(given)):
+            for _, result in items:
+                assert not ab.is_goal(ab.compress(result)), (
+                    "an action that keeps the mods cannot reach the goal from a state that misses a requirement"
+                )
 
 
 def _stripped(listed, strip: dict) -> dict:

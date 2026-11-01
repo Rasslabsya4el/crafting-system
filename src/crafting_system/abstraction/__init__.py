@@ -23,7 +23,9 @@ is imported or tested for here.
   `OfferedMod(canonical id, contribution)`. `Abstraction.tracks_implicits`, `tracks_quality` and `tracks_offer` say
   which are kept; they follow the `Reads` and `Adds` declarations of the enabled actions (`implicits`, `quality`,
   `offer`) and, for the implicits, whether the goal asks for one. `is_goal` also needs, for each implicit wanted,
-  a side that passes it.
+  a side that passes it. A corrupted state is a goal only when `Goal.takes_corrupted` (the target asks for a corrupted implicit or
+  allows a corrupted item, ADR-0036) and a state that is not corrupted is no goal of a target that asks; `meets_requirements` is the
+  check without the corruption. The corrupted implicit an action adds is not kept in the state, the action decides it.
   `CompressedState.crafted` says a slot is crafted; `count(side)` counts the slots of a side.
 * `Slot(side, kind, contribution, crafted)`: a mod that is not fractured, by its side, its kind and
   what it gives each leaf. The kind is "" for a family that every enabled action treats alike (a
