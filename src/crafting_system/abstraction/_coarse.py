@@ -250,6 +250,12 @@ class Coarsening:
                     f"{self._name(action)} declares variants but does not read the pool weight of the junk with named families, "
                     "so the extremes of its pools are not defined (ADR-0023)"
                 )
+            if self.abstraction.models_metamods:
+                raise OutOfScopeError(
+                    f"{self._name(action)} has variants, but the state tells the mods of a family apart by their Attack/Caster tags "
+                    "(the metamods are modelled), which a pool of kinds does not carry: there is no weight-spread level for a route "
+                    "with a lock or a tag metamod (#69, ADR-0023)"
+                )
             return
         if not reads.block_invariant:
             raise OutOfScopeError(

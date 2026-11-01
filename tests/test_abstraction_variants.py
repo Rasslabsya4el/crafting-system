@@ -44,6 +44,7 @@ from crafting_system.actions import (
     BenchCraft,
     ExaltedOrb,
     NotApplicableError,
+    OutOfScopeError,
     RegalOrb,
 )
 from crafting_system.items import Rarity, Side
@@ -271,3 +272,10 @@ def test_a_pool_with_too_few_free_families_is_an_error_not_a_variant():
 
     with pytest.raises(ValueError, match="2 free families of 2 but the block puts 3 slots"):
         pooling.variants(too_many, ExaltedOrb(), "lower")
+
+
+def test_a_route_that_models_the_metamods_has_no_level_for_its_additions():
+    ab = Abstraction(DATA, GOAL, AMULET, LEVEL, (*ADDITIONS, ANNUL), metamods=True)
+
+    with pytest.raises(OutOfScopeError, match="Attack/Caster tags"):
+        Coarsening(ab)
