@@ -27,6 +27,9 @@ base: Thicket Bow
 
 # The guide says item level 78 or more.
 item_level: 78
+# The tiers of this target are the top tiers the item level above allows (the rule at the top of this file), so the planner
+# must not plan a lower item level (ADR-0061, ticket #352).
+tiers_top_at_item_level: true
 
 influence: [hunter]
 

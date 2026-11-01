@@ -29,11 +29,13 @@ import dataclasses
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 
 from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, tier_table
 from crafting_system.items.vendor_recipes import RECIPES, GemInput, Recipe, RecipeStep
 from crafting_system.prices import PriceFile, base_price_name
+from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
 from crafting_system.rules import rule_by_id
 from crafting_system.targets import KOfN, Requirement, Target
 
@@ -58,11 +60,19 @@ ORB_OF_AUGMENTATION = "Orb of Augmentation"
 
 @dataclass(frozen=True)
 class StartContext:
-    """What a start source needs: the game data, the target and the prices (hand overrides on top)."""
+    """What a start source needs: the game data, the target and the prices (hand overrides on top).
+
+    `price_source`, `gap_percent` and `today` are the profile setting of ticket #357: a source that buys an item prices it with
+    `prices.price_source.source_price(prices, name, price_source, today, gap_threshold=gap_percent)` and puts the result on
+    its candidate (`StartCandidate.sourced`). The recipe source prices goods from the file as before and reads none of them.
+    """
 
     data: GameData
     target: Target
     prices: PriceFile
+    price_source: str = DEFAULT_PRICE_SOURCE
+    gap_percent: float = DEFAULT_GAP_PERCENT
+    today: date | None = None
 
 
 @dataclass(frozen=True)

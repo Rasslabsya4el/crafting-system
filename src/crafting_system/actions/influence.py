@@ -22,6 +22,17 @@ that influence (an `Outcomes` over the pool `influence_pool(data, item, influenc
 68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
 unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
 influence's orb for an item that has it (unverified, approximate). None is a planner kind yet (#155).
+
+Memory Strands (ticket #286, ADR-0041 and its amendments; the declarations are `strand_use`, their claims `strand_claims`, and neither is among `claims()`):
+
+* `InfluencedExaltedOrb` declares what the plain Exalted Orb declares: its draw cuts (the pool `influence_pool` is built with `cut=self.cut_of(data, item)`)
+  and it spends a uniform number on 0 to a ceiling that follows the mods on the item before the craft, 16, 22, 26, 32, 34, 38 for 0 to 5
+  (claim `memory_strands.spend_exalted_by_mod_count`; the wiki lists the influenced Exalted Orbs with the Exalted Orb).
+* `OrbOfDominance` declares no cut and no spend (claim `memory_strands.cut_follows_spend_table`, `approximate`). No source speaks of the Orb of
+  Dominance and strands: the evidence is that the wiki's spend list is closed and does not name it, and that the emulator's spend table has no row
+  for it, which is where it cuts. It also draws nothing from a tier table: it removes one influenced mod and moves another to the next tier or to Elevated.
+* `BeastInfluenceRecipe` declares no cut and no spend (claims `memory_strands.not_spent_by`, `memory_strands.cut_follows_spend_table`): the wiki says
+  Beastcrafting does not consume strands. It borrows the pool of the influence's Exalted Orb, but not its cut: the pool is built without one.
 """
 
 from collections.abc import Iterable, Mapping
@@ -39,12 +50,14 @@ from .add import refuse_if_nothing_to_draw
 from .beasts import ANY_RARE_CREATURE, ANY_RARE_CREATURE_PRICE, CHAOS_ORB
 from .catalog import kind
 from .contract import Action, Adds, Reads
+from .cut import Cut
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .harvest_influence import influence_spawn_test
 from .metamods import locked_sides, on_locked_side
 from .outcomes import Outcomes
 from .pool import INFLUENCE_TAGS, PoolFamily, build_pool, item_tags, tiers_of
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY, SPEND_EXALTED, SpendLaw, StrandUse
 
 __all__ = [
     "BeastInfluenceRecipe",
@@ -121,24 +134,31 @@ def influence_tag(data: GameData, item: Item, influence: Influence) -> str:
     return f"{class_key}_{INFLUENCE_TAGS.value['influences'][influence.value]}"
 
 
-def influence_pool(data: GameData, item: Item, influence: Influence) -> tuple[PoolFamily, ...]:
+def influence_pool(data: GameData, item: Item, influence: Influence, cut: Cut | None = None) -> tuple[PoolFamily, ...]:
     """The mods that one more draw on `item` can add from `influence` alone, grouped by family.
 
     `item` has the influence (its tag is among the tags of the spawn weights). A mod belongs to the influence when the first
     entry of its spawn weights that the item has is the influence's tag, the test of `harvest_reforge.influence_mod_is_influence_spawn`;
     it is then drawn at that weight, through the item level gate, the families on the item, and the Attack/Caster metamods.
+
+    `cut` is the tier cut of the draw (ADR-0040; None: no cut). `build_pool` makes it on the mods the level gate admits for the tags of `item`,
+    which include the influence's tag, before the influence test above: a tier table is the mods of one type among those, and the influence
+    keeps its weights from what is left. The strand count of the cut is the one the caller put in the `Cut`: the item's count before the craft.
     """
     tag, tags = influence_tag(data, item, influence), item_tags(data, item)
 
     def decided_by_the_influence(mod: Mod) -> Fraction:
         return ONE if next((entry.tag for entry in mod.spawn_weights if entry.tag in tags), None) == tag else ZERO
 
-    return build_pool(data, item, factor=decided_by_the_influence)
+    return build_pool(data, item, factor=decided_by_the_influence, cut=cut)
 
 
-def _draw_one(data: GameData, retained: Item, influence: Influence, what: str) -> Outcomes:
-    """One more mod of `influence` on `retained`, which keeps every mod it has and holds the influence; refused when none is legal."""
-    pool_ = influence_pool(data, retained, influence)
+def _draw_one(data: GameData, retained: Item, influence: Influence, what: str, cut: Cut | None = None) -> Outcomes:
+    """One more mod of `influence` on `retained`, which keeps every mod it has and holds the influence; refused when none is legal.
+
+    `cut` is the tier cut of the draw (None: the pool is not cut), made by the caller from the item the craft was used on.
+    """
+    pool_ = influence_pool(data, retained, influence, cut)
     refuse_if_nothing_to_draw(data, retained, pool_, what)
     return Outcomes(data, retained, pool_, {len(retained.mods) + 1: ONE}, None)
 
@@ -158,6 +178,12 @@ class InfluencedExaltedOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return f"{WORDS[self.influence]}'s Exalted Orb"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 table, "the Exalted Orb and the influenced Exalted Orbs (ADR-0030)": the draw cuts, and the ceiling follows the explicit mods on
+        # the item before the craft, 16, 22, 26, 32, 34, 38 for 0 to 5; the same declaration as `ExaltedOrb`
+        by_mods = SPEND_EXALTED.value["ceiling_by_mods_before"]
+        return StrandUse.cutting(SpendLaw.by_mods(*(by_mods[count] for count in sorted(by_mods))), SPEND_EXALTED)
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return {EXALT_COST.value[self.influence.value]: 1}
@@ -203,7 +229,10 @@ class InfluencedExaltedOrb(Action):
                 f"{what} needs item level {EXALT_MIN_ITEM_LEVEL.value} (no mod of an influence can roll below it), and this item is level {item.item_level}"
             )
         retained = item.changed(data, influences=frozenset({self.influence}))
-        return _draw_one(data, retained, self.influence, what)
+        # The cut is made on the pool of `retained`, which holds the new influence, so the tier tables it counts are those the pool admits for that
+        # influence at this item level. Its strand count is the one `item` has before the craft (`changed` keeps it, so `Cut.of(retained)` is the same
+        # cut); the spend comes after it.
+        return _draw_one(data, retained, self.influence, what, self.cut_of(data, item))
 
 
 @kind(
@@ -234,6 +263,12 @@ class OrbOfDominance(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Dominance"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 table: no cut, no spend, `approximate`. No source speaks of the Orb of Dominance and strands: the wiki's spend list is closed and
+        # does not name it, and the emulator's table has no row for it (`memory_strands.cut_follows_spend_table`). Nothing is drawn from a tier
+        # table either: it removes one influenced mod and moves another to the next tier or to Elevated.
+        return StrandUse.untouched(CUT_FOLLOWS_SPEND_TABLE)
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(DOMINANCE_COST.value)
@@ -380,6 +415,10 @@ class BeastInfluenceRecipe(Action):
     def label(self, data: GameData | None = None) -> str:
         return f"Beastcraft Add a Mod to a {WORDS[self.influence]} Item"
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 table: beast crafts neither cut nor spend (wiki: strands are not consumed by Beastcrafting; the emulator has no spend row for them)
+        return StrandUse.untouched(NOT_SPENT_BY, CUT_FOLLOWS_SPEND_TABLE)
+
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return beast_recipe_resources(self.influence, self.rare_creature_price)
 
@@ -408,6 +447,8 @@ class BeastInfluenceRecipe(Action):
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no beast craft")
         if self.influence not in item.influences:
             raise NotApplicableError(f"{what} needs an item with {WORDS[self.influence]} influence")
+        # It borrows the pool of the influence's Exalted Orb but NOT its cut: a beast craft is never cut (`strand_use`), so no cut is passed
+        # and the pool is the ordinary one whatever count the item has.
         return _draw_one(data, item, self.influence, what)
 
 

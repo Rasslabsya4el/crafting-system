@@ -61,6 +61,7 @@ from ._chain import Chain
 
 EPS = sys.float_info.epsilon
 BASE_DELTA = 1e-12
+LOST_FLOOR = 1e-15  # a smaller remainder of the starting mass is float noise, not lost mass
 PLAIN_LIMIT = 300  # a chain with at most this many (states that can finish) * kmin runs the plain loop
 SLICE_ENTRIES = 1 << 14  # a block is expanded this many entries at a time: arrays that stay in the CPU cache
 DENSE_CELLS = 1 << 24  # the widest block range merged by a dense bincount (a float per cell)
@@ -103,11 +104,16 @@ def run_budget(
     target: float | None,
     tail_mass: float,
     max_bins: int,
+    initial: Sequence[tuple[int, float]] | None = None,
+    goal_mass: float = 0.0,
 ) -> BudgetRun:
     """Run the DP with `bin_cost[i]` whole bins per step in state i.
 
     `target` is the highest level to certify (a proper policy) or `None` to run until the mass
-    in flight is at most `tail_mass`.
+    in flight is at most `tail_mass`. The run starts from state 0 with mass 1, or, with `initial`, from
+    the given (state, mass) pairs at bin 0 (states that can finish and have an action) with `goal_mass`
+    already absorbed there; what is left of 1 is lost at bin 0 (the start of a chain whose free states
+    were folded away, `_fold`).
     """
     finishing = chain.finishing_states()
     if not finishing or not chain.can_finish[0]:
@@ -115,13 +121,25 @@ def run_budget(
     kmin = min(bin_cost[i] for i in finishing)
     if kmin < 1:
         raise ValueError(f"every state that can finish must cost at least one bin, got {kmin!r}")
+    if initial is not None:
+        initial = tuple(initial)
+        expanded = set(finishing)
+        for state, _ in initial:
+            if state not in expanded:
+                raise ValueError(f"initial state {state!r} cannot finish: it is not a state the DP moves")
     if len(finishing) * kmin <= PLAIN_LIMIT:
-        return _run_plain(chain, bin_cost, target, tail_mass, max_bins)
-    return _Dp(chain, finishing, bin_cost, target, tail_mass, max_bins).run()
+        return _run_plain(chain, bin_cost, target, tail_mass, max_bins, initial, goal_mass)
+    return _Dp(chain, finishing, bin_cost, target, tail_mass, max_bins, initial, goal_mass).run()
 
 
 def _run_plain(
-    chain: Chain, bin_cost: Sequence[int], target: float | None, tail_mass: float, max_bins: int
+    chain: Chain,
+    bin_cost: Sequence[int],
+    target: float | None,
+    tail_mass: float,
+    max_bins: int,
+    initial: Sequence[tuple[int, float]] | None = None,
+    goal_mass: float = 0.0,
 ) -> BudgetRun:
     """The bin by bin DP on dicts: quicker than numpy when a bin holds only a few entries."""
     moves: dict[int, tuple[float, list[tuple[int, float]], float, float]] = {}
@@ -140,9 +158,16 @@ def _run_plain(
 
     pending: dict[int, dict[int, float]] = {0: {0: 1.0}}
     pmf = [0.0]
+    lost_total = 0.0
+    if initial is not None:
+        pending = {0: {}}
+        for state, mass in initial:
+            pending[0][state] = pending[0].get(state, 0.0) + mass
+        pmf = [goal_mass]
+        remainder = 1.0 - goal_mass - fsum(mass for _, mass in initial)
+        lost_total = remainder if remainder > LOST_FLOOR else 0.0
     cdf: list[float] = []
     overflow = 0.0
-    lost_total = 0.0
     running = 0.0
     b = 0
     while True:
@@ -325,6 +350,8 @@ class _Dp:
         target: float | None,
         tail_mass: float,
         max_bins: int,
+        initial: Sequence[tuple[int, float]] | None = None,
+        goal_mass: float = 0.0,
     ) -> None:
         self.shift = max(1, (len(chain.states) - 1).bit_length())  # key = bin << shift | state
         if (max_bins + 1).bit_length() + self.shift > 62:
@@ -335,9 +362,17 @@ class _Dp:
         self.max_bins = max_bins
         self.any_lost = bool(self.moves.lost.any())
         self.pending = _Pending(self.moves.kmin, self.shift)
-        self.pending.add(np.zeros(1, dtype=np.int64), np.ones(1))
         self.pmf = np.zeros(1024)  # absorbed mass per bin
         self.lost = np.zeros(1024)  # mass lost from the sources of each bin
+        if initial is None:
+            self.pending.add(np.zeros(1, dtype=np.int64), np.ones(1))
+        else:
+            self.pending.add(
+                np.asarray([state for state, _ in initial], dtype=np.int64), np.asarray([mass for _, mass in initial], dtype=float)
+            )
+            self.pmf[0] = goal_mass
+            remainder = 1.0 - goal_mass - fsum(mass for _, mass in initial)
+            self.lost[0] = remainder if remainder > LOST_FLOOR else 0.0
         self.pmf_end = 1  # one past the last bin an absorbing move has reached
         self.last = -1  # the last bin with a processed entry
         self.overflow = 0.0  # mass whose move would end above the cap

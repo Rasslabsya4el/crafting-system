@@ -13,6 +13,9 @@ base: Paua Amulet
 
 # The item level of the amulet, a whole number from 1 to 100.
 item_level: 84
+# No tier is written, so each mod is the top tier the item level above allows (the owner's reading of an unstated tier), and the
+# planner must not plan a lower item level (ADR-0061, ticket #352).
+tiers_top_at_item_level: true
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # [] means none.

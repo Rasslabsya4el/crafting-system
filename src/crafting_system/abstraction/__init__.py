@@ -13,16 +13,17 @@ is imported or tested for here.
   imports nothing of `targets`. `Goal.leaves` is the depth-first, file-order list of leaves and the
   order of `CompressedState.status`; `Goal.is_met(statuses)` needs `Status.PASSING` for a leaf.
 * `Status`: ABSENT < BELOW < PASSING, what an item gives one leaf; the best of several mods wins.
-* `CompressedState(flags, fractured, status, slots, implicits, quality, offer)`: `Flags` (rarity, corrupted, influences), the
+* `CompressedState(flags, fractured, status, slots, implicits, quality, offer, imprints)`: `Flags` (rarity, corrupted, influences), the
   fractured mods as `FracturedMod(canonical id, contribution to each leaf)` sorted, the status of
-  each leaf over the whole item, and the `Slot`s, a sorted multiset of the other mods (below). The last three
+  each leaf over the whole item, and the `Slot`s, a sorted multiset of the other mods (below). The last four
   are the item state beyond the explicit mods (ADR-0027, ticket #142), empty unless an enabled action reads or
   changes that part: `implicits` the Eldritch pair, one `ImplicitSide(grade, contribution)` for the Searing Exarch
   and one for the Eater of Worlds (the contribution is to each `Goal.implicits` leaf, an `ImplicitWanted`);
   `quality` the catalyst `Quality` as the item stores it; `offer` the mods of the unveil offer, each an
-  `OfferedMod(canonical id, contribution)`. `Abstraction.tracks_implicits`, `tracks_quality` and `tracks_offer` say
-  which are kept; they follow the `Reads` and `Adds` declarations of the enabled actions (`implicits`, `quality`,
-  `offer`) and, for the implicits, whether the goal asks for one. `is_goal` also needs, for each implicit wanted,
+  `OfferedMod(canonical id, contribution)`; `imprints` (ADR-0060, ticket #219) the set of states an imprint of the item was made at, in the
+  stable order of `CompressedState.order_key`, each holding none of its own. `Abstraction.tracks_implicits`, `tracks_quality`, `tracks_offer` and
+  `tracks_imprints` say which are kept; they follow the `Reads` and `Adds` declarations of the enabled actions (`implicits`, `quality`,
+  `offer`, `imprints`) and, for the implicits, whether the goal asks for one. `is_goal` also needs, for each implicit wanted,
   a side that passes it. A corrupted state is a goal only when `Goal.takes_corrupted` (the target asks for a corrupted implicit or
   allows a corrupted item, ADR-0036) and a state that is not corrupted is no goal of a target that asks; `meets_requirements` is the
   check without the corruption. The corrupted implicit an action adds is not kept in the state, the action decides it.

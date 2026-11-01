@@ -17,6 +17,11 @@ The checks, each against something written without the code under test:
   `adds.quality` or `adds.offer` leaves the implicits, the quality and the offer as they were, and one that does
   not declare `reads.implicits`, `reads.quality` or `reads.offer` gives the same result on the item without them
   (ticket #142);
+* the sockets (ticket #228, ADR-0046), on the fixture items that hold some: an action that does not declare `adds.socket_count`, `adds.socket_links`
+  or `adds.socket_colours` leaves that part as it was; one declared as a socket action (`Adds.socket_action`) changes no mod and no field but the
+  sockets, and every result compresses to the state of the item (the compressed state of the mods holds no sockets, ADR-0045), so its kernel is
+  not compared with the brute force; one that does not declare `reads.socket_links` or `reads.socket_colours` gives the same result on the item
+  with that part taken off (all unlinked, all white);
 * an action that reads rule axes (ticket #210) passes every check above at every reading of its axes
   (`model_readings`), with the kernel of an abstraction made for that reading; its plain `outcomes(data, item)`
   is the plan's reading; and an action with inputs lists `Need`s of valid items, the same on every call;
@@ -92,7 +97,7 @@ from crafting_system.actions import (
 )
 from crafting_system.data import BaseItem, Weight
 from crafting_system.cli._offers import FREE_ACTION_SHARE, offer_of, price_offers
-from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, is_corrupted_implicit, tier_table
+from crafting_system.items import ExplicitMod, Influence, Item, Metamod, Rarity, SocketColour, Sockets, is_corrupted_implicit, tier_table
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
 from crafting_system.rules import rule_by_id
 
@@ -338,7 +343,7 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     except ActionError as refusal:
         if item.memory_strands:
             check_stranded_refusal(action, item, data, type(refusal), reading)
-        else:
+        elif not action.adds(data, item).only_sockets:  # the compressed state holds no sockets, so the kernel of a socket action is not asked
             check_kernel_refuses_too(action, item, data, goal, type(refusal), reading)
         return False
     name = action.label(data)
@@ -352,9 +357,12 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     check_sampler_follows_the_chances(outcomes, items, data)
     check_declarations_agree(action, reads, adds, outcomes, items, item)
     check_item_state_declarations(action, reads, adds, items, item, data, reading)
+    check_socket_declarations(action, reads, adds, items, item, data, reading)
     check_corruption_declarations(action, reads, adds, items, item, data, goal)
     if item.memory_strands:
         check_strand_declarations(action, item, outcomes, items, data, reading)
+    elif adds.only_sockets:
+        check_socket_action_leaves_the_state(action, reads, item, items, data, goal)
     elif not outcomes.fractures and not _rerolls_values(outcomes):
         check_kernel_equals_brute_force(action, reads, item, items, data, goal, reading)
     return True
@@ -429,18 +437,21 @@ def check_cutting_kinds_differ_from_the_uncut_draw(data=CONTRACT_DATA) -> set[st
     """Every kind that declares `cuts` gives, on some stranded fixture item, other mods than it gives at 0 strands; the names that did.
 
     A cut can leave a draw as it was (a pool whose tables are one tier), so this is asked of the kind on all the items, not of each.
+    `data` governs the amulets of the fixture; the stranded extra items (`extra_fixture_items`: a family on a base of its own) bring their own data.
     """
     differing: set[str] = set()
     declared: set[str] = set()
-    for kind, action, name in contract_pairs():
-        item = fixture_items()[name]
-        use = action.strand_use(data)
+    extra = extra_fixture_items()  # a family on a base of its own (an influenced helmet) registers its stranded item there
+    asked = [(kind, action, fixture_items()[name], data) for kind, action, name in contract_pairs()]
+    asked += [(kind, action, extra[name].item, extra[name].data) for kind, action, name in extra_pairs()]
+    for kind, action, item, where in asked:
+        use = action.strand_use(where)
         if not item.memory_strands or use is None or not use.cuts:
             continue
         declared.add(kind)
         try:
-            cut = finished(action.outcomes_under(data, item), data)
-            plain = finished(action.outcomes_under(data, item.changed(data, memory_strands=0)), data)
+            cut = finished(action.outcomes_under(where, item), where)
+            plain = finished(action.outcomes_under(where, item.changed(where, memory_strands=0)), where)
         except ActionError:
             continue
         if _by_mods(cut) != _by_mods(plain):
@@ -551,10 +562,15 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
             assert result.veil_offer == (given.veil_offer if placeholder else ()), (
                 "an action that does not declare adds.offer leaves the offer as it was (it goes with its placeholder)"
             )
+        if not adds.imprints:
+            assert result.imprints in (given.imprints, ()), (
+                "an action that does not declare adds.imprints leaves the imprints as they were, or builds a new item that holds none (ticket #219)"
+            )
     without = {
         "implicits": (reads.implicits, bool(given.implicits), {"implicits": ()}),
         "quality": (reads.quality, given.quality is not None, {"quality": None}),
         "offer": (reads.offer, bool(given.veil_offer), {"veil_offer": ()}),
+        "imprints": (reads.imprints, bool(given.imprints), {"imprints": ()}),
     }
     for name, (declared, held, strip) in without.items():
         if declared or not held:
@@ -567,6 +583,73 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
         assert _stripped(finished(other, data), strip) == _stripped(items, strip), (
             f"an action that does not declare reads.{name} gives the same result on the item without its {name}"
         )
+
+
+SOCKET_PARTS = {
+    "socket_count": lambda sockets: None if sockets is None else sockets.count,
+    "socket_links": lambda sockets: None if sockets is None else sockets.links,
+    "socket_colours": lambda sockets: None if sockets is None else sockets.colours,
+}
+NEUTRAL_SOCKETS = {  # a part taken off the sockets: every socket unlinked, every socket white (the count cannot be taken off)
+    "socket_links": lambda sockets: Sockets(sockets.colours, (1,) * sockets.count),
+    "socket_colours": lambda sockets: Sockets((SocketColour.WHITE,) * sockets.count, sockets.links),
+}
+
+
+def check_socket_declarations(action, reads: Reads, adds: Adds, items, given: Item, data, reading: Reading | None = None) -> None:
+    """The sockets (ticket #228, ADR-0046): an action changes only the part `adds` says, and reads only the part `reads` says.
+
+    * a result differs from the item in the count, the links or the colours only where `adds.socket_count`, `adds.socket_links` or
+      `adds.socket_colours` is declared (an item with no sockets keeps none);
+    * an action declared as a socket action (`Adds.socket_action`) changes no mod: a result equals the item but for its sockets;
+    * an action that does not declare `reads.socket_links` (or `reads.socket_colours`) gives the same result on the item with that part taken
+      off, compared with that part taken off the results too (a part carried over unchanged is not read).
+    """
+    for _, result in items:
+        for name, part in SOCKET_PARTS.items():
+            if not getattr(adds, name):
+                assert part(result.sockets) == part(given.sockets), f"an action that does not declare adds.{name} leaves that part of the sockets as it was"
+        if adds.only_sockets:
+            assert dataclasses.replace(result, sockets=given.sockets) == given, "a socket action changes no mod and nothing but the sockets"
+    if given.sockets is None:
+        return
+    for name, neutral in NEUTRAL_SOCKETS.items():
+        if getattr(reads, name) or neutral(given.sockets) == given.sockets:
+            continue
+        bare = given.changed(data, sockets=neutral(given.sockets))
+        try:
+            other = action.outcomes_under(data, bare, reading)
+        except ActionError:
+            raise AssertionError(f"an action that does not declare reads.{name} refuses the item once that part is taken off, but not with it") from None
+        assert _neutralised(finished(other, data), neutral) == _neutralised(items, neutral), (
+            f"an action that does not declare reads.{name} gives the same result on the item without that part of its sockets"
+        )
+
+
+def _neutralised(listed, neutral) -> dict:
+    """The finished items with the chance of each, the part of the sockets `neutral` takes off, added up by item."""
+    found: dict = defaultdict(Fraction)
+    for chance, result in listed:
+        found[_without(result, neutral)] += chance
+    return dict(found)
+
+
+def _without(item: Item, neutral) -> Item:
+    """`item` with the part of its sockets `neutral` takes off, in the imprints it holds too (an imprint is a copy of the item, ADR-0060: it carries the sockets over)."""
+    imprints = tuple(_without(entry, neutral) for entry in item.imprints)
+    return dataclasses.replace(item, sockets=None if item.sockets is None else neutral(item.sockets), imprints=imprints)
+
+
+def check_socket_action_leaves_the_state(action, reads: Reads, item: Item, items, data, goal: Goal) -> None:
+    """A socket action leaves the compressed state of the mods as it found it: the state holds no sockets (ADR-0045), so its kernel is the identity.
+
+    The kernel itself is not asked (the rebuilt item has no sockets for the action to change); what the brute force would compare is that every
+    finished item compresses to the state of the item.
+    """
+    ab = Abstraction(data, goal, item.base_id, item.item_level, [])
+    state = ab.compress(item)
+    for _, result in items:
+        assert ab.compress(result) == state, "a socket action leaves the compressed state of the mods as it was"
 
 
 def check_corruption_declarations(action, reads: Reads, adds: Adds, items, given: Item, data, goal: Goal) -> None:
@@ -604,7 +687,9 @@ def _stripped(listed, strip: dict) -> dict:
     """The finished items with the chance of each, with the fields of `strip` taken off, added up by item."""
     found: dict = defaultdict(Fraction)
     for chance, result in listed:
-        found[dataclasses.replace(result, **strip)] += chance
+        # an imprint is the item as it was, so a part taken off the item is taken off the imprints it holds too (ticket #219)
+        nested = tuple(dataclasses.replace(held, **strip) for held in result.imprints)
+        found[dataclasses.replace(result, **{**strip, "imprints": strip.get("imprints", nested)})] += chance
     return dict(found)
 
 

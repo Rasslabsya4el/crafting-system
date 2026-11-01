@@ -37,6 +37,11 @@ base: Amethyst Ring
 # The item level of the ring, a whole number from 1 to 100. The guide says "75+".
 item_level: 75
 
+# The tiers below are written as "the top tier the guide's ring of item level 75 allows" (Life tier 1, the resistances tier 2), so
+# the planner must not plan a lower item level than 75 (ADR-0061). Without this line it would derive a floor from the tiers alone,
+# and a ring of a lower level has a smaller pool of other mods than the guide's.
+tiers_top_at_item_level: true
+
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # [] means none.
 influence: []

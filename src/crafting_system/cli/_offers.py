@@ -9,7 +9,7 @@ missing price is dropped and reported (ADR-0007), never guessed.
 
 import random
 from collections import defaultdict
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal
@@ -75,6 +75,17 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes)
 
 
+def isolated_feeder(goal: Goal) -> Callable[[Need], bool]:
+    """The seed of the lazy offer loop (ADR-0062 decision 4): a `Need` whose donor holds only mods the goal names.
+
+    The loop starts by offering the actions whose donors are made of the target's own mods, "isolated feeders" (for a
+    recombinator the single target mods and their pairs). Any seed ends at the same value; this one saves rounds.
+    The test is on concrete items: a mod counts when a leaf of the goal lists it (`Wanted.mod_ids`).
+    """
+    named = frozenset(mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids)
+    return lambda need: all(entry.mod_id in named for entry in need.want.mods)
+
+
 def default_offers() -> tuple[Offer, ...]:
     """The two rerolls that need no game data: a Chaos Orb and the Harvest reforge of Lightning."""
     return tuple(offer_of(action, action.label()) for action in default_actions())
@@ -119,6 +130,12 @@ def price_offers(
         free_cost = FREE_ACTION_SHARE * min(paid) if paid else FREE_ACTION_SHARE
         priced = [replace(entry, cost=free_cost) if not entry.offer.resources else entry for entry in priced]
     return tuple(priced), tuple(dropped)
+
+
+def free_action_cost(priced: Iterable[PricedOffer]) -> float | None:
+    """What `price_offers` charged the actions that consume nothing, or `None` when the offers hold none (ticket #349)."""
+    costs = [entry.cost for entry in priced if not entry.offer.resources]
+    return max(costs) if costs else None
 
 
 # --- what the model offers for one target ------------------------------------------------------------
@@ -270,11 +287,14 @@ def offers_for(
 
     left_out = ()
     if kinds_named is not None:
-        # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used
+        # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used;
+        # a kind that needs Memory Strands is not mentioned either while the start item has none: the catalog does not list one then
+        # (the planner does not pass `strands` yet, #277)
+        absent = _strand_kinds_absent(start_item)
         skipped = tuple(
             entry.name
             for entry in kinds(planner_only=True)
-            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted)
+            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in absent
         )
         if skipped:
             left_out += (
@@ -309,6 +329,13 @@ def offers_for(
     return OfferSet(tuple(offers), left_out)
 
 
+def _strand_kinds_absent(start_item: Item) -> frozenset[str]:
+    """The kinds that exist only in a plan that considers Memory Strands, when `start_item` has none (as `catalog` lists them)."""
+    if start_item.memory_strands >= 1:
+        return frozenset()
+    return frozenset(entry.name for entry in kinds() if entry.needs_strands)
+
+
 def _split_names(data: GameData, start_item: Item, names: Collection[str] | None) -> tuple[frozenset[str] | None, frozenset[str]]:
     """The names of a target's `actions:` as (kinds, labels): a name is a kind of the catalog, else the label of one action.
 
@@ -320,7 +347,8 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     usable = {entry.name for entry in kinds(planner_only=True)}
     exist = {entry.name for entry in kinds()}
     kind_names = {name for name in names if name in exist}
-    unready = sorted(kind_names - usable)
+    absent = _strand_kinds_absent(start_item)  # a kind that needs Memory Strands is no kind of this item's catalog until the planner passes `strands` (#277)
+    unready = sorted((kind_names - usable) | (kind_names & absent))
     labels = {action.label(data) for action in catalog(data, start_item, planner_only=True, names=usable)}
     unknown = sorted(name for name in names if name not in exist and name not in labels)
     problems = []
@@ -329,7 +357,7 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     if unready:
         problems.append(f"action kind(s) {', '.join(unready)} cannot be used by the planner yet")
     if problems:
-        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable))}")
+        raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable - absent))}")
     return frozenset(kind_names), frozenset(name for name in names if name not in exist)
 
 

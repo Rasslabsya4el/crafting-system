@@ -10,7 +10,7 @@ the names in its `__all__` are exported here, so the public names stay importabl
 of a family is the docstring of its own module; read `help(crafting_system.actions.<module>)`:
 
 * `contract`: the contract, the two-item actions and the rule axes; `catalog`: kinds and their declarations (`planner`,
-  `opt_in`, `corrupting`, `applies_only_to`, `reads_item_state_while_not_planner`);
+  `opt_in`, `corrupting`, `needs_strands`, `applies_only_to`, `reads_item_state_while_not_planner`);
 * `errors`: the two refusals; `outcomes`, `finite`, `mixture`, `draw`, `pool`, `add`, `rolls`: what an action returns and how it draws;
 * one module per family of actions: `chaos`, `harvest*`, `essence`, `bench`, `fossil`, `magic`, `alchemy`, `exalted`, `annul`,
   `fracture`, `scour`, `divine`, `metamods`, `beasts`, `beast_mods`, `influence`, `eldritch`, `corrupted_pool`, and the ones added since.

@@ -29,7 +29,10 @@ class SimulationReport:
       including the failed runs, which is what the policy costs the one who follows it.
     * `cost_of_successes`: the same, over the successful runs only; None when fewer than 2 succeeded.
     * `mean_steps`: the mean number of steps taken per run.
-    * `costs`: the total of every run, in run order; `quantile(level)` reads it.
+    * `costs`: the total of every run, in run order; `quantile(level)` reads it. For a policy whose steps consume
+      other items (ADR-0022) a run's total holds the cost of its nested runs, and `mean_steps` counts their clicks.
+    * `nested_runs`: how many nested runs all the runs started (0 for a policy with no inputs);
+      `mean_nested_runs` is that per run, the simulated count of donors that `risk` reports as `input_runs`.
     * `cvar(level)` is the mean of the worst share (1 - level) of `costs`, the upper tail.
 
     Every interval is a normal approximation (Wilson for the rate): good for thousands of runs, not
@@ -46,6 +49,12 @@ class SimulationReport:
     mean_steps: float
     confidence: float
     costs: tuple[float, ...]
+    nested_runs: int = 0
+
+    @property
+    def mean_nested_runs(self) -> float:
+        """The mean number of nested runs started per run."""
+        return self.nested_runs / self.runs
 
     def quantile(self, level: float) -> SampledEstimate:
         """The empirical quantile of `costs` at `level` (strictly between 0 and 1).

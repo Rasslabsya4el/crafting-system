@@ -3,7 +3,7 @@
 import math
 from collections import Counter, defaultdict, deque
 from collections.abc import Hashable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import reduce
 from operator import attrgetter
@@ -15,6 +15,7 @@ from crafting_system.actions import (
     ActionOutcomes,
     Fixed,
     Fractured,
+    ImprintMove,
     Need,
     NotApplicableError,
     Outcomes,
@@ -116,6 +117,7 @@ class _Prepared:
     signatures: tuple[Hashable, ...] | None = None
     splits: "tuple[_Split, ...] | None" = None  # the split of every part, read once for `kernel` and `kernel_key`
     item: Item | None = None  # the item the state stands for, as the action was given it
+    imprints: tuple[CompressedState, ...] = ()  # the imprints of the state it was prepared for (ADR-0060)
 
 
 @dataclass(frozen=True)
@@ -131,6 +133,7 @@ class _Split:
     implicits: tuple[ImplicitSide, ...] = ()  # the Eldritch pair of the retained item (ADR-0027); () when not kept
     quality: Quality | None = None
     offer: tuple[OfferedMod, ...] = ()
+    imprints: tuple[CompressedState, ...] = ()  # the states the retained item was imprinted at (ADR-0060); () when not kept or when no imprint can be used on it
 
 
 class _Context:
@@ -210,6 +213,8 @@ class Abstraction:
         self._tracks_implicits = bool(goal.implicits) or any(r.implicits for r in reads) or any(a.implicits for a in adds)
         self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
+        self._tracks_imprints = any(r.imprints for r in reads) or any(a.imprints for a in adds)
+        self._snapshots: dict[Item, CompressedState] = {}  # the compressed state of an imprint, by the item it holds
         placeholders = placeholder_families(data)  # no ordinary mod has one: an action that reads one refuses by whether the item holds a veiled mod
         self._veiled_aware = self._tracks_offer or any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
         self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
@@ -289,6 +294,11 @@ class Abstraction:
     def tracks_offer(self) -> bool:
         """Whether a state holds the unveil offer: an enabled action reads, draws or uses it."""
         return self._tracks_offer
+
+    @property
+    def tracks_imprints(self) -> bool:
+        """Whether a state holds the imprints of the item: an enabled action makes or uses one (ADR-0060)."""
+        return self._tracks_imprints
 
     @property
     def models_metamods(self) -> bool:
@@ -408,7 +418,7 @@ class Abstraction:
             tuple(fractured),
             status,
             tuple(slots),
-            *self._held_by(item.implicits, item.quality, item.veil_offer, influences),
+            *self._held_by(item, influences),
         )
 
     def _refuse_out_of_scope_veil(self, item: Item) -> None:
@@ -426,18 +436,48 @@ class Abstraction:
             )
 
     def _held_by(
-        self,
-        implicits: tuple[ImplicitMod, ...],
-        quality: Quality | None,
-        offer: tuple[str, ...],
-        influences: frozenset[Influence],
-    ) -> tuple[tuple[ImplicitSide, ...], Quality | None, tuple[OfferedMod, ...]]:
-        """The implicits, the quality and the offer of an item as a state keeps them: each is empty unless an enabled action reads or changes it."""
+        self, item: Item, influences: frozenset[Influence], imprints: tuple[CompressedState, ...] | None = None
+    ) -> tuple[tuple[ImplicitSide, ...], Quality | None, tuple[OfferedMod, ...], tuple[CompressedState, ...]]:
+        """The implicits, the quality, the offer and the imprints of an item as a state keeps them: each is empty unless an enabled action reads or changes it.
+
+        The imprints are compressed from the item's own (`compress`), or, when the caller gives them (`_split`: the imprints of the state
+        the action was used on), carried through if the result still holds imprints (see `_carried`).
+        """
         return (
-            self._implicit_pair(implicits) if self._tracks_implicits else (),
-            quality if self._tracks_quality else None,
-            self._offer_of(offer, influences) if self._tracks_offer else (),
+            self._implicit_pair(item.implicits) if self._tracks_implicits else (),
+            item.quality if self._tracks_quality else None,
+            self._offer_of(item.veil_offer, influences) if self._tracks_offer else (),
+            (self._imprints_of(item) if imprints is None else self._carried(item, imprints)) if self._tracks_imprints else (),
         )
+
+    def _imprints_of(self, item: Item) -> tuple[CompressedState, ...]:
+        """The compressed states of the imprints an item holds, as the set of them in a stable order (ADR-0060).
+
+        An imprint cannot be used on a corrupted item or on one with a fractured mod (ADR-0034), and an imprint made before a
+        Fracturing Orb could never be used, so such an item holds none: the state forgets them. A result that fractures a mod
+        after its retained item (a Fractured Fossil) is cleared where the state is built (`_add_fractured`).
+        """
+        if not item.imprints or item.corrupted or item.fractured_mods:
+            return ()
+        found = set()
+        for snapshot in item.imprints:
+            state = self._snapshots.get(snapshot)
+            if state is None:
+                state = self._snapshots[snapshot] = self.compress(snapshot)
+            found.add(state)
+        return tuple(sorted(found, key=lambda held: held.order_key))
+
+    @staticmethod
+    def _carried(retained: Item, imprints: tuple[CompressedState, ...]) -> tuple[CompressedState, ...]:
+        """The imprints of the state an action was used on, as its result keeps them (ADR-0060).
+
+        The item given to an action holds one placeholder imprint for each the state holds, and an action that returns the item it was
+        given (`Item.changed`) returns them with it, so the state's imprints stay; an action that builds a new item (a recombinator, an
+        Allflame copy) returns none, and so does a result that can have none used on it (corrupted, or holding a fractured mod).
+        """
+        if not retained.imprints or retained.corrupted or retained.fractured_mods:
+            return ()
+        return imprints
 
     def is_goal(self, state: CompressedState) -> bool:
         """Whether `state` meets the goal: the requirements (`meets_requirements`), and the corruption the target says.
@@ -477,7 +517,37 @@ class Abstraction:
                 "it comes from another abstraction"
             )
         self._check_enabled(action)
-        return self._mixture_kernel(state, self._prepared(state, action))
+        prepared = self._prepared(state, action)
+        move = action.imprint_move()
+        if move is not None:
+            return self._imprint_kernel(state, action, move)
+        return self._mixture_kernel(state, prepared)
+
+    def _imprint_kernel(self, state: CompressedState, action: Action, move: ImprintMove) -> dict[CompressedState, Fraction]:
+        """The one state an imprint or a restore leads to (ADR-0060): the game's refusal has been raised by `_prepared`, the move is applied here.
+
+        An imprint adds the state, without its imprints, to the set held (or takes the place of the k-th); a restore makes the k-th
+        the state, holding the others. Both are certain. An imprint of a state already held and a restore onto the state the item is in
+        are refused here (`NotApplicableError`): neither can help, the first changes nothing and the second only uses an imprint up, so
+        the planner never offers them (ADR-0060). `action.outcomes` is not asked for them, and the contract suite takes care not to
+        fix them in an item whose placeholder is equal to the state.
+        """
+        if not self._tracks_imprints:
+            raise ValueError(f"{action!r} moves the imprints of the item, and the state does not keep them: declare `imprints` in its reads and adds")
+        bare = replace(state, imprints=())
+        held = list(state.imprints)
+        if move.restore:
+            target = held[move.index]  # `_prepared` refused an index the item has no imprint for
+            if target == bare:
+                raise NotApplicableError("the item already is in the state of this imprint, and restoring it would only use the imprint up")
+            del held[move.index]
+            return {replace(target, imprints=tuple(held)): Fraction(1)}
+        if bare in held:
+            raise NotApplicableError("the item already is in the state of one of its imprints, and a second imprint of that state never helps")
+        if move.index is not None:
+            del held[move.index]
+        held.append(bare)
+        return {replace(state, imprints=tuple(sorted(held, key=lambda entry: entry.order_key))): Fraction(1)}
 
     def prime(self, requests: Iterable[tuple[CompressedState, Action]], *, workers: int | None = None) -> int:
         """Compute ahead, in a process pool, the label distributions that `kernel` of these (state, action) pairs would compute.
@@ -516,13 +586,16 @@ class Abstraction:
             )
         self._check_enabled(action)
         prepared = self._prepared(state, action)
+        move = action.imprint_move()
+        if move is not None:  # the kernel of an imprint or a restore is one certain state, cheap: the key is the kernel itself
+            return ("imprint", tuple(self._imprint_kernel(state, action, move)))
         outcomes = prepared.outcomes
         self._check_parts(outcomes)
         parts: Counter = Counter()
         for (share, part), signature, split in zip(
             outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
         ):
-            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer)
+            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer, split.imprints)
             if isinstance(part, Rerolled):  # which of the kept slots are rerolled decides the kernel
                 key = (*key, tuple(sorted(self._rerolled_slots(part, prepared.origins)[1], key=_SLOT_KEY)))
             if outcomes.fractures and not isinstance(part, Fixed):
@@ -965,6 +1038,7 @@ class Abstraction:
             quality=state.quality,
             veil_offer=() if erasing else self._offered_mod_ids(state.offer, influences),  # an action that erases the junk erases the placeholder
             enchantment=self.enchantment,
+            imprints=tuple(self._item_of(held, False)[0] for held in state.imprints),  # each imprint is the whole item as it was, whatever the action erases
         )
         return item, origins
 
@@ -1000,7 +1074,7 @@ class Abstraction:
             )
         erasing = not self._kinds.reads_junk(action) and not self._metamods
         slots = tuple(slot for slot in state.slots if slot.crafted) if erasing else state.slots
-        key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer)
+        key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer, state.imprints)
         prepared = self._prepared_by.get(key)
         if prepared is None:
             try:
@@ -1025,7 +1099,7 @@ class Abstraction:
             self._check_type_blind(state, outcomes)
             self._check_fracture_without_partners(state, outcomes)
             self._check_same_item_space(outcomes)
-            prepared = _Prepared(outcomes, origins, item=item)
+            prepared = _Prepared(outcomes, origins, item=item, imprints=state.imprints)
             self._prepared_by[key] = prepared
         return prepared
 
@@ -1152,12 +1226,14 @@ class Abstraction:
         """The split of every part of the outcomes (cached on `prepared`)."""
         if prepared.splits is None:
             prepared.splits = tuple(
-                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes) else frozenset())
+                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes) else frozenset(), prepared.imprints)
                 for _, part in prepared.outcomes.components
             )
         return prepared.splits
 
-    def _split(self, retained: Item, origins: Origins, rerolled: frozenset[str] = frozenset()) -> _Split:
+    def _split(
+        self, retained: Item, origins: Origins, rerolled: frozenset[str] = frozenset(), given: tuple[CompressedState, ...] = ()
+    ) -> _Split:
         """Read a part's retained item back into state terms.
 
         `rerolled` are the ids of kept mods whose values the action rolls afresh (an Awakener's Orb keeps the tier of an
@@ -1206,7 +1282,7 @@ class Abstraction:
                     new.append(Slot(Side(mod.generation_type), self._context(influences).kinds.of(mod), contribution))
         fractured.sort(key=lambda entry: (entry.mod_id, entry.contribution))
         status = best_of(len(self.goal.leaves), contributions)
-        held = self._held_by(retained.implicits, retained.quality, retained.veil_offer, influences)
+        held = self._held_by(retained, influences, given)
         return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids), *held)
 
     def _fractured_slot(self, slot, entry: ExplicitMod, influences: frozenset[Influence]) -> FracturedMod | None:
@@ -1226,7 +1302,7 @@ class Abstraction:
     def _add_fixed(self, result: dict[CompressedState, Fraction], share: Fraction, split: _Split) -> None:
         """Add the one state of a fixed result."""
         slots = sorted((*split.kept, *split.new), key=lambda slot: slot.key)
-        result[CompressedState(split.flags, split.fractured, split.status, tuple(slots), split.implicits, split.quality, split.offer)] += share
+        result[CompressedState(split.flags, split.fractured, split.status, tuple(slots), split.implicits, split.quality, split.offer, split.imprints)] += share
 
     def _add_drawn(
         self, result: dict[CompressedState, Fraction], share: Fraction, part: Outcomes, signature, split: _Split
@@ -1240,7 +1316,7 @@ class Abstraction:
         stays = sorted((*split.kept, *split.new), key=_SLOT_KEY)
         stays_tuple = tuple(stays)
         flags, fractured, stay_status = split.flags, split.fractured, split.status
-        held = (split.implicits, split.quality, split.offer)
+        held = (split.implicits, split.quality, split.offer, split.imprints)
         whole = share == 1
         for best, drawn, chance in self._expanded_distribution(signature, part):
             if not drawn:
@@ -1293,13 +1369,14 @@ class Abstraction:
                 ]
             slots.sort(key=lambda slot: slot.key)
             for mod, each in options:
-                fractured = split.fractured
+                fractured, imprints = split.fractured, split.imprints
                 if mod is not None:
+                    imprints = ()  # the result fractures a mod, and no imprint can be used on a fractured item (ADR-0034)
                     entry = FracturedMod(
                         self._canonical_of_mod(mod, influences), self._drawn_contribution(mod, False, influences)
                     )
                     fractured = tuple(sorted((*fractured, entry), key=lambda e: (e.mod_id, e.contribution)))
-                result[CompressedState(split.flags, fractured, status, tuple(slots), split.implicits, split.quality, split.offer)] += share * each
+                result[CompressedState(split.flags, fractured, status, tuple(slots), split.implicits, split.quality, split.offer, imprints)] += share * each
 
     def _mod_with_label(self, family, label: Label, influences: frozenset[Influence]) -> Mod:
         """A mod of `family` with the label `label`: the mods of one family that share a label share a canonical id."""
@@ -1659,4 +1736,4 @@ class Abstraction:
         for chosen, chance in outcomes:
             slots = sorted((*fixed, *chosen), key=_SLOT_KEY)
             status = best_of(width, (*held, *(slot.contribution for slot in slots)))
-            result[CompressedState(split.flags, split.fractured, status, tuple(slots), split.implicits, split.quality, split.offer)] += share * chance
+            result[CompressedState(split.flags, split.fractured, status, tuple(slots), split.implicits, split.quality, split.offer, split.imprints)] += share * chance

@@ -64,5 +64,9 @@ class MemoryStrandsError(ItemError):
     the `Memory Strands:` line badly (twice, or with something other than a whole number)."""
 
 
+class ImprintError(ItemError):
+    """The imprints of the item are not a tuple of items that hold no imprint themselves (ADR-0060)."""
+
+
 class TierError(ItemError):
     """A mod has no tier on a base because it cannot spawn there: its spawn weight is 0 for the base's tags."""

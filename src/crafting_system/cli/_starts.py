@@ -23,14 +23,16 @@ import itertools
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
+from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
 from crafting_system.targets import Target
 
 from ._offers import Offer
-from ._plan import Plan, PlanError, StartPrice, make_plan, resolve_start_price
+from ._plan import Plan, PlanError, StartPrice, add_risk, make_plan, resolve_start_price
 from ._start_options import StartContext, StartList, StartSource, combine, vendor_recipe_starts
 from ._start_types import (
     SOURCE_PLAIN,
@@ -81,11 +83,11 @@ def _plan_candidate(
     """Plan `target` from `candidate` with the existing planner; a `PlanError` is an outcome, not a crash."""
     try:
         if candidate.key == PLAIN_KEY:
-            plan = make_plan(data, target, prices, start_price=override, **kwargs)
+            plan = make_plan(data, target, prices, start_price=override, with_risk=False, **kwargs)
         else:
             moved = dataclasses.replace(target, start_item=candidate.item, start_price=None)
             price = StartPrice(candidate.price_name, candidate.price, candidate.price_source)
-            plan = make_plan(data, moved, prices, start_price_of=price, **kwargs)
+            plan = make_plan(data, moved, prices, start_price_of=price, with_risk=False, **kwargs)
     except PlanError as error:
         return _Outcome(None, math.inf, math.inf, str(error), False)
     return _Outcome(plan, plan.mean_remaining, plan.start_price.chaos + plan.mean_remaining, None, plan.approximation is not None)
@@ -100,19 +102,24 @@ def plan_with_starts(
     start_price: float | None = None,
     sources: tuple[StartSource, ...] = SOURCES,
     offers: Iterable[Offer] | None = None,
+    price_source: str = DEFAULT_PRICE_SOURCE,
+    price_gap_percent: float = DEFAULT_GAP_PERCENT,
+    today: date | None = None,
     **kwargs: Any,
 ) -> Plan:
     """Plan `target` from every start option and return the plan of the cheapest total, with the comparison in `Plan.starts`.
 
     `recipe_starts` is the user setting: false makes this exactly `make_plan`. `start_price` is the plain start item's price for
     this run (it does not apply to a recipe start, whose price is its goods). `kwargs` go to `make_plan` unchanged (`budget`,
-    `rates`, `strands`). `sources` are the start sources after the plain one. Raises `PlanError` as `make_plan` does when no
+    `rates`, `strands`). `sources` are the start sources after the plain one. `price_source` (`ninja`, `trade`, `both`), `price_gap_percent`
+    and `today` are the profile setting of ticket #357; they go to every source in its `StartContext` and change nothing for the plain
+    start item or for a recipe start, which are priced from the price file as before. Raises `PlanError` as `make_plan` does when no
     start option reaches the goal (the message is the plain start item's).
     """
     offers = tuple(offers) if offers is not None else None  # several plans read them
     if not recipe_starts:
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
-    listing = combine([source(StartContext(data, target, prices)) for source in sources])
+    listing = combine([source(StartContext(data, target, prices, price_source, price_gap_percent, today)) for source in sources])
     if not listing.candidates and not listing.refused:
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
 
@@ -146,6 +153,7 @@ def plan_with_starts(
     chosen = next(candidate for candidate in order if candidate.key == chosen_key)
     plan = outcomes[chosen_key].plan
     assert plan is not None
+    plan = add_risk(plan)  # the risk grid is measured for the start that is kept, not for each one that was compared
     considered = []
     for candidate in order:
         outcome = outcomes.get(candidate.key)

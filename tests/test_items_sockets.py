@@ -223,7 +223,7 @@ def test_an_item_with_sockets_differs_from_one_without():
     assert make(base_id=BODY, sockets=SIX) != make(base_id=BODY, sockets=Sockets.unlinked((R,) * 6))
 
 
-def test_the_pre_b6_fields_keep_their_order_and_sockets_comes_last():
+def test_the_pre_b6_fields_keep_their_order_and_sockets_comes_after_them_then_imprints():
     names = [field.name for field in dataclasses.fields(Item)]
 
     assert names[:11] == [
@@ -239,7 +239,7 @@ def test_the_pre_b6_fields_keep_their_order_and_sockets_comes_last():
         "enchantment",
         "memory_strands",
     ]
-    assert names[-1] == "sockets"
+    assert names[11:] == ["sockets", "imprints"]  # a new field goes last (sockets, ADR-0046; imprints, ADR-0060)
 
 
 def test_a_pickle_round_trip_keeps_an_item_equal():

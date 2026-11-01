@@ -258,13 +258,14 @@ def test_the_declarations_are_those_of_a_named_ordinary_add():
     assert action.adds().named == adds.named
 
 
-def test_the_kind_lists_the_eight_aspects_for_a_rare_item_and_is_not_a_planner_kind():
+def test_the_kind_lists_the_eight_aspects_for_a_rare_item_and_is_an_opt_in_planner_kind():
     assert listed(amulet(LIFE)) == [AspectBeast(*pair) for pair in ALL]  # the order: aspect, then level
     assert listed(amulet()) == listed(amulet(LIFE))
     assert listed(amulet(LIFE, rarity=Rarity.MAGIC)) == [] and listed(amulet(rarity=Rarity.NORMAL)) == []
-    assert AspectBeast("cat", 20) not in catalog(BEAST_DATA, amulet(LIFE), planner_only=True)
+    assert AspectBeast("cat", 20) not in catalog(BEAST_DATA, amulet(LIFE), planner_only=True)  # opt-in: listed only when a target names the kind
+    assert AspectBeast("cat", 20) in catalog(BEAST_DATA, amulet(LIFE), planner_only=True, names={"aspect-beast"})
     registered = {entry.name: entry for entry in kinds()}["aspect-beast"]
-    assert registered.planner is False and registered.order == 84 and "#149" in registered.why_not
+    assert registered.planner and registered.opt_in and registered.order == 84 and not registered.why_not
 
 
 def test_the_kind_lists_only_the_aspects_whose_mod_is_in_the_data():

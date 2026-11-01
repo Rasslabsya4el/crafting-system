@@ -274,6 +274,8 @@ class Target:
     `quality` is the catalyst quality of a ring, amulet or belt or the plain quality of a weapon or armour (ADR-0049).
     `sockets` is the socket requirement (ADR-0046) or None; `start_sockets_assumed` says the start item stated no sockets and
     got the one white, unlinked socket a target with sockets assumes, so that a report can say so.
+    `item_level_floor` and `tiers_top_at_item_level` are the author's word on how far the planner may plan below `item_level`
+    (ADR-0061, `floor.py`): a stated lowest level, and the statement that the tiers written are the top tiers of `item_level`.
     """
 
     base_id: str
@@ -290,6 +292,8 @@ class Target:
     allow_corrupted: bool = False
     sockets: SocketRequirement | None = None
     start_sockets_assumed: bool = False
+    item_level_floor: int | None = None
+    tiers_top_at_item_level: bool = False
 
     @property
     def asks_corrupted(self) -> bool:

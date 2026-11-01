@@ -274,11 +274,25 @@ class Recombinator(Action):
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         """The Dust and the Gold of one combine (the module docstring has the rule), and the bench currencies of the two junk crafts."""
-        dust, gold = _exact(DUST_PER_COMBINE.value["point"]), _exact(GOLD_PER_COMBINE.value["point"])
+        return self._resources(data, "point", "factor_point")
+
+    def resource_bounds(self, data: GameData | None = None) -> tuple[Mapping[str, int], Mapping[str, int]]:
+        """The `(low, high)` of `resources` over the intervals of the cost claims (ticket #221, ADR-0035).
+
+        Dust and Gold at the low and the high end of `recombinator_cost.dust_per_combine_reports_3_26` and
+        `recombinator_cost.gold_per_combine_reports_3_26`; with a junk craft the Dust factor too at the low (0.11) and the high
+        (0.5) end of `recombinator_cost.junk_craft_halves_dust_3_26`. The influenced-input factor and the per-mod Gold of the
+        junk craft have no interval and stay as they are; the bench currencies are exact. The route is the same; only the
+        price of a combine moves.
+        """
+        return self._resources(data, "low", "factor_low"), self._resources(data, "high", "factor_high")
+
+    def _resources(self, data: GameData | None, end: str, factor: str) -> dict[str, int]:
+        dust, gold = _exact(DUST_PER_COMBINE.value[end]), _exact(GOLD_PER_COMBINE.value[end])
         if self.junk_crafts:
             if data is None:
                 raise ValueError("a recombinator with a junk craft is priced from the bench data of its crafts, so it needs the data")
-            dust *= _exact(JUNK_DUST_FACTOR.value["factor_point"])  # the discount is on the Dust only
+            dust *= _exact(JUNK_DUST_FACTOR.value[factor])  # the discount is on the Dust only
             gold += len(self.junk_crafts) * _exact(GOLD_PER_MOD.value["gold_per_mod"])
         if self.donor.influences or self.hand_influenced:
             dust, gold = dust * _exact(INFLUENCED_FACTOR.value["factor"]), gold * _exact(INFLUENCED_FACTOR.value["factor"])
@@ -294,12 +308,15 @@ class Recombinator(Action):
         return Reads(junk=True, families=None, input_mods=True, implicits=True, quality=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
-        """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits, the quality and the enchantment follow the base.
+        """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits, the quality, the enchantment and the sockets follow the base.
 
         The junk variant also says it puts a crafted mod on the result (one of its two crafts can stay); a crafted mod of the inputs
         survives in either case, so `keeps_crafted` stays at its default.
         """
-        return Adds(draws=True, fractures=True, implicits=True, quality=True, enchantment=True, crafted=bool(self.junk_crafts))
+        return Adds(
+            draws=True, fractures=True, implicits=True, quality=True, enchantment=True, crafted=bool(self.junk_crafts),
+            socket_count=True, socket_links=True, socket_colours=True,  # the base is one of the two inputs, and the sockets are its own (ticket #228)
+        )
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The donor: it starts as a bare item of its base and influences and must become `donor`."""
@@ -415,7 +432,8 @@ class Recombinator(Action):
             mods = tuple(entries[index].mod for index in sorted(chosen))
             per_side = [sum(1 for index in chosen if entries[index].side is side) for side in Side]
             rarity = Rarity.NORMAL if not mods else Rarity.RARE if max(per_side) > 1 else Rarity.MAGIC
-            result = base.changed(data, item_level=level, rarity=rarity, mods=mods, corrupted=False, veil_offer=())
+            # the output is a new item: no imprint of the base restores it (imprint.not_for_derived_items, ticket #219)
+            result = base.changed(data, item_level=level, rarity=rarity, mods=mods, corrupted=False, veil_offer=(), imprints=())
             results[result] = results.get(result, Fraction(0)) + chance
         return results
 

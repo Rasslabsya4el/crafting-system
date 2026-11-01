@@ -35,7 +35,8 @@
     "veil_offer": [],
     "enchantment": null,
     "memory_strands": 0,
-    "sockets": null
+    "sockets": null,
+    "imprints": []
   },
   "price_file": null,
   "start_price": null,
@@ -48,5 +49,7 @@
   "enchantment": null,
   "allow_corrupted": false,
   "sockets": null,
-  "start_sockets_assumed": false
+  "start_sockets_assumed": false,
+  "item_level_floor": null,
+  "tiers_top_at_item_level": false
 }

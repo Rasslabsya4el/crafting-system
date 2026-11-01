@@ -1,0 +1,13 @@
+{
+  "unit": "chaos",
+  "league": "Fixture",
+  "fetched_at": "2026-11-01T12:00:00Z",
+  "chaos_per_divine": 300.0,
+  "prices": {
+    "Foulborn Orb of Augmentation": {"chaos": 4.5, "source": "fixture", "note": "market price for the tests of ticket #279"},
+    "Foulborn Regal Orb": {"chaos": 12.0, "source": "fixture"},
+    "Orb of Augmentation": {"chaos": 0.1, "source": "fixture"},
+    "Regal Orb": {"chaos": 0.5, "source": "fixture"},
+    "Exalted Orb": {"chaos": 15.0, "source": "fixture"}
+  }
+}

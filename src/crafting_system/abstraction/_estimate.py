@@ -42,7 +42,7 @@ from crafting_system.actions import Action, ActionError, crafted_limit_of
 from crafting_system.items import Metamod, Rarity, Side, capacity
 
 from ._kernel import Abstraction, integer_weights
-from ._kinds import ALIKE, base_kind, held_families, kind_families
+from ._kinds import ALIKE, MOD_PREFIX, base_kind, held_families, kind_families
 from ._state import CompressedState, best_of
 
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
@@ -271,6 +271,8 @@ class _Pilot:
             if slot.crafted:
                 crafted += 1
                 held |= held_families(mods[slot.kind])
+            elif slot.kind.startswith(MOD_PREFIX):  # a family told apart by mod (a swap, a Divine Orb): the kind names the mod (before its tags), and the mod its families
+                held |= held_families(mods[base_kind(slot.kind)[len(MOD_PREFIX) :]])
             elif base_kind(slot.kind) != ALIKE and not slot.kind.startswith("~"):
                 held |= kind_families(slot.kind)
         return held, used, crafted

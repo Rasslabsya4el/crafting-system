@@ -13,7 +13,7 @@ is always exact, as before.
 
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
@@ -23,16 +23,16 @@ from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
-from crafting_system.risk import RiskReport, evaluate
+from crafting_system.risk import RiskReport, evaluate, is_free_cost
 from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
 from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
-from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, offers_for, price_offers, usable_actions
+from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, free_action_cost, offers_for, price_offers, usable_actions
 from . import _packed
-from ._packed import SOLVERS, packed_result
+from ._packed import SOLVERS, PackedResult, packed_result
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
 
@@ -103,6 +103,7 @@ class Plan:
     pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
     strands: StrandSetting = STRANDS_OFF  # whether Memory Strands were considered (ADR-0040); the report says so when not
     starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
+    packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
 
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
@@ -249,6 +250,7 @@ def make_plan(
     solve_it: bool = True,
     start_price_of: StartPrice | None = None,
     solver: str = "auto",
+    with_risk: bool = True,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -277,6 +279,10 @@ def make_plan(
     object solver solves it as it always did; "object" never packs; "packed" always does, and with 40 offers or more it
     solves the offers left after the twins are merged, without the bound pruning (the cross-check of the two solvers).
     The values are the same to the certificate; only the cost differs.
+
+    With `with_risk` False the policy is solved but its risk (the p50, p90 and CVaR grid, which can take minutes where the solve takes
+    seconds) is left out, `Plan.risk` is None, and `add_risk` fills it in later: the choice among start options compares the
+    means and measures the risk of the one it keeps (ticket #331).
     """
     if solver not in SOLVERS:
         raise ValueError(f"solver must be one of {', '.join(SOLVERS)}, got {solver!r}")
@@ -383,30 +389,59 @@ def make_plan(
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
 
-    began = time.perf_counter()
-    if packed is not None and _packed.PROGRESS is not None:
-        _packed.PROGRESS(f"solved: mean {solution.values[start]!r}; evaluating the risk on the merged chain ({len(packed.risk_policy):,} classes)")
-    if packed is not None:  # the risk of the policy on the merged chain: the same mean, odds and quantiles, a chain that fits
-        moves = sum(len(action.outcomes) for action in packed.risk_policy.values())
-        resolve = moves <= RISK_QUANTILE_TRANSITIONS
-        risk = evaluate_risk(packed.risk_policy, packed.risk_start, packed.risk_is_goal, solution.values[start], resolve_quantiles=resolve)
-        if not resolve:
-            note = (note + " " if note else "") + (
-                f"The p50, p90 and CVaR are not computed: the policy's merged chain has {moves:,} transitions, more than the "
-                f"{RISK_QUANTILE_TRANSITIONS:,} the budget DP of the risk run holds in memory (it ran out of a 16 GB runner on R04). "
-                "The odds, mean and variance are exact."
-            )
-    else:
-        risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start])
-    risk_seconds = time.perf_counter() - began
+    risk, risk_seconds = None, 0.0
+    if with_risk:
+        began = time.perf_counter()
+        if packed is not None:
+            risk, note = packed_risk(packed, solution.values[start], free_action_cost(priced), note)
+        else:
+            risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
+        risk_seconds = time.perf_counter() - began
 
     return Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out,
-        solution, risk, solve_seconds, risk_seconds, None, note, pruned,
+        solution, risk, solve_seconds, risk_seconds, None, note, pruned, packed=packed,
     )
 
 
 RISK_QUANTILE_TRANSITIONS = 2_000_000  # a merged chain with more transitions gets no quantile DP (ticket #374): the DP's entries outgrew 16 GB on R04's 4.7 M
+
+
+def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note: str) -> tuple[RiskReport, str]:
+    """The risk of a packed plan's policy, evaluated on its merged chain (same mean, odds and quantiles), and the plan's note.
+
+    A merged chain of more than `RISK_QUANTILE_TRANSITIONS` transitions gets its exact odds, mean and variance and no quantile grid,
+    and the note says so.
+    """
+    if _packed.PROGRESS is not None:
+        _packed.PROGRESS(f"solved: mean {mean!r}; evaluating the risk on the merged chain ({len(packed.risk_policy):,} classes)")
+    moves = sum(len(action.outcomes) for action in packed.risk_policy.values())
+    resolve = moves <= RISK_QUANTILE_TRANSITIONS
+    risk = evaluate_risk(
+        packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve
+    )
+    if not resolve:
+        note = (note + " " if note else "") + (
+            f"The p50, p90 and CVaR are not computed: the policy's merged chain has {moves:,} transitions, more than the "
+            f"{RISK_QUANTILE_TRANSITIONS:,} the budget DP of the risk run holds in memory (it ran out of a 16 GB runner on R04). "
+            "The odds, mean and variance are exact."
+        )
+    return risk, note
+
+
+def add_risk(plan: Plan) -> Plan:
+    """`plan` with its risk measured, when `make_plan(with_risk=False)` left it out; a plan that has its risk, or an approximate one, is returned as is."""
+    if plan.risk is not None or plan.approximation is not None:
+        return plan
+    began = time.perf_counter()
+    free = free_action_cost(plan.offers)
+    if plan.packed is not None:
+        risk, note = packed_risk(plan.packed, plan.solution.values[plan.start], free, plan.note)
+        return replace(plan, risk=risk, note=note, risk_seconds=time.perf_counter() - began)
+    risk = evaluate_risk(plan.solution.policy, plan.start, plan.abstraction.is_goal, plan.solution.values[plan.start], free_cost=free)
+    return replace(plan, risk=risk, risk_seconds=time.perf_counter() - began)
+
+
 RISK_BINS = 200_000  # the default `max_bins` of `risk.evaluate`
 UNRESOLVED_BINS = 1_000
 COARSE_BINS = 1_000_000  # the most bins of the coarse grid of `risk.evaluate` (ticket #190)
@@ -417,10 +452,15 @@ def evaluate_risk(
     start: CompressedState,
     is_goal: Callable[[CompressedState], bool],
     mean: float,
+    free_cost: float | None = None,
     *,
     resolve_quantiles: bool = True,
 ) -> RiskReport:
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
+
+    `free_cost` is what `price_offers` charged the actions that consume nothing (`free_action_cost`). Those actions are counted apart from
+    the grid (ticket #349, `risk._free`): the step is set by the cheapest action that costs something, so a veil plan's quantiles and
+    CVaR resolve instead of stepping by the epsilon. If the policy holds none, or the grid cannot be built that way, nothing differs.
 
     The ordinary quantile grid cannot step over the cheapest action, so `RISK_BINS` of it cover `RISK_BINS` times
     the cheapest cost. When that is less than half the mean the p90 (and for a repeat-until-success policy the median)
@@ -432,7 +472,12 @@ def evaluate_risk(
     """
     cheapest = min((action.cost for action in policy.values()), default=0.0)
     bins = UNRESOLVED_BINS if 2 * RISK_BINS * cheapest < mean else RISK_BINS
-    return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS, resolve_quantiles=resolve_quantiles)
+    extra = {} if resolve_quantiles else {"resolve_quantiles": False}
+    if free_cost is None or not any(is_free_cost(action.cost, free_cost) for action in policy.values()):
+        return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS, **extra)
+    paid = min((action.cost for action in policy.values() if not is_free_cost(action.cost, free_cost)), default=0.0)
+    apart = UNRESOLVED_BINS if 2 * RISK_BINS * paid < mean else RISK_BINS  # the grid is set by the actions that cost something
+    return evaluate(policy, start, is_goal, max_bins=apart, max_coarse_bins=COARSE_BINS, free_cost=free_cost, free_fallback_bins=bins, **extra)
 
 
 def _pruned_left_out(pruned: Pruned) -> tuple[LeftOut, ...]:

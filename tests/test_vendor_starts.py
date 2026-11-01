@@ -306,7 +306,7 @@ def test_the_report_and_the_json_say_what_the_plan_started_from():
     assert f"Start item (Boots with movement speed (vendor recipe, 5 steps)): {FIVE_STEPS:,.2f} Chaos [vendor recipe:" in text
     assert "Start options (the cheapest total of start price and expected cost to craft wins" in text
     assert "chosen: Boots with movement speed (vendor recipe, 5 steps)" in text
-    assert "hand the vendor: 1 Toy Boots (ilvl 86) = 1.00 [trade-api]; 5 Quicksilver Flask = 10.00 [trade-api]" in text
+    assert "    1 Toy Boots (ilvl 86), a Normal base: 1.00 Chaos [trade-api]" in text and "    5 Quicksilver Flask: 10.00 Chaos [trade-api]" in text  # the bill: the first step (ticket #331)
     assert "planned: the target's own start item" in text
     assert document["start"]["price_chaos"] == pytest.approx(FIVE_STEPS)
     options = document["start_options"]

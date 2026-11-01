@@ -14,6 +14,8 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
 * `plan_with_starts(data, target, prices)`: `make_plan` for a target whose start item may also be made by a vendor recipe: it plans
   each start option (`_start_options`) and keeps the cheapest total of start price and expected cost (ADR-0059, `_starts`); the
   comparison is `Plan.starts`. With the setting `recipe_starts` off it is `make_plan`.
+  A start made at a vendor opens the report with its own first step (`first_step`, `_start_step`, ticket #331): the bill with counts,
+  the recipes with their tiers, the item that comes back and the start price, in the text, the JSON and row 1 of the route page.
 * `build_report(plan, data)`, `render_text(report)`, `policy_document(report)`: the outputs.
 * `verify(data, plan)`: the simulator against the computed mean (a normal-approximate interval); for an approximate
   plan, the lifted policy (`_lift`) against the certified interval, with a simulated p90 and CVaR.
@@ -50,6 +52,7 @@ from ._report import Report, build_report, policy_document, render_text
 from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
 from ._shares import WeightShare, start_shares, weight_share
 from ._start_options import StartContext, StartList, StartSource, vendor_recipe_starts
+from ._start_step import FirstStep, first_step
 from ._start_types import ConsideredStart, ReadingChoice, RefusedStart, StartCandidate, StartChoice
 from ._starts import plan_with_starts
 from ._verify import Verification, verify

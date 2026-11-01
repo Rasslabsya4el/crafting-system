@@ -353,7 +353,7 @@ def test_config_module_imports_no_layer():
     assert relative == []
 
 
-# --- the planner settings (ADR-0040 memory_strands, ADR-0059 recipe_starts) ---------------------------------------------------
+# --- the planner settings (ADR-0040 memory_strands, ADR-0059 recipe_starts, ADR-0060 max_imprints) ---------------------------------------------------
 
 
 def test_recipe_starts_is_on_by_default_and_memory_strands_off(tmp_path):
@@ -378,8 +378,76 @@ def test_recipe_starts_must_be_true_or_false(tmp_path, value):
         load_config(env={}, project_root=tmp_path)
 
 
-def test_an_unknown_planner_key_names_both_known_settings(tmp_path):
+def test_max_imprints_is_one_by_default(tmp_path):
+    config = load_config(env={}, project_root=tmp_path)
+
+    assert config.max_imprints == 1
+
+
+def test_max_imprints_can_be_set_in_the_planner_table(tmp_path):
+    write_toml(tmp_path / "crafting.toml", "[planner]\nmax_imprints = 2\n")
+
+    config = load_config(env={}, project_root=tmp_path)
+
+    assert config.max_imprints == 2
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "1.5", '"2"', "true"])
+def test_max_imprints_must_be_a_whole_number_of_at_least_one(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f"[planner]\nmax_imprints = {value}\n")
+
+    with pytest.raises(ValueError, match="'max_imprints' must be a whole number of at least 1"):
+        load_config(env={}, project_root=tmp_path)
+
+
+def test_an_unknown_planner_key_names_all_known_settings(tmp_path):
     write_toml(tmp_path / "crafting.toml", "[planner]\nrecipe_start = false\n")
 
-    with pytest.raises(ValueError, match="known: memory_strands, recipe_starts"):
+    with pytest.raises(ValueError, match="known: memory_strands, recipe_starts, recombinator_junk_craft, max_imprints"):
+        load_config(env={}, project_root=tmp_path)
+
+
+# --- the price settings (ADR-0061 decision 2, ticket #357) -------------------------------------------------------------------
+
+
+def test_price_source_is_both_and_price_gap_percent_is_20_by_default(tmp_path):
+    config = load_config(env={}, project_root=tmp_path)
+
+    assert config.price_source == "both" and config.price_gap_percent == 20.0
+
+
+def test_price_source_and_price_gap_percent_are_read_from_the_planner_table(tmp_path):
+    write_toml(tmp_path / "crafting.toml", '[planner]\nprice_source = "trade"\nprice_gap_percent = 15\n')
+
+    config = load_config(env={}, project_root=tmp_path)
+
+    assert config.price_source == "trade" and config.price_gap_percent == 15.0
+
+
+def test_price_gap_percent_accepts_a_fraction(tmp_path):
+    write_toml(tmp_path / "crafting.toml", "[planner]\nprice_gap_percent = 12.5\n")
+
+    assert load_config(env={}, project_root=tmp_path).price_gap_percent == 12.5
+
+
+@pytest.mark.parametrize("value", ["ninja", "trade", "both"])
+def test_each_price_source_is_accepted(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f'[planner]\nprice_source = "{value}"\n')
+
+    assert load_config(env={}, project_root=tmp_path).price_source == value
+
+
+@pytest.mark.parametrize("value", ['"poe"', "true"])
+def test_invalid_price_source_is_an_error_naming_file_and_key(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f"[planner]\nprice_source = {value}\n")
+
+    with pytest.raises(ValueError, match=r"crafting\.toml.*price_source"):
+        load_config(env={}, project_root=tmp_path)
+
+
+@pytest.mark.parametrize("value", ["0", "-5", '"20"', "true", "nan", "inf"])
+def test_invalid_price_gap_percent_is_an_error_naming_file_and_key(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f"[planner]\nprice_gap_percent = {value}\n")
+
+    with pytest.raises(ValueError, match=r"crafting\.toml.*price_gap_percent"):
         load_config(env={}, project_root=tmp_path)

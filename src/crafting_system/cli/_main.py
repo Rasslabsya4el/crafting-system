@@ -1,4 +1,4 @@
-"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--buy-spec PATH] [--strands] [--no-recipe-starts] [--verify] [--json PATH]`, and `benchmark`.
+"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--buy-spec PATH] [--strands] [--no-recipe-starts] [--price-source ninja|trade|both] [--verify] [--json PATH]`, and `benchmark`.
 
 This is the one place of the planner that reads the clock and the environment. It loads the game
 data from the cache, the target, and the price file with its hand overrides, makes the plan, prints
@@ -18,6 +18,9 @@ The plan compares the target's own start item with the start items a vendor reci
 price and expected crafting cost (ADR-0059, `_starts`). The setting `recipe_starts` of `crafting.toml` (default on), or
 `--no-recipe-starts` for one run, turns that off; the plan is then the one `make_plan` gives. `--route` turns it off too, because a
 given route is written for the target's own start item. With a `--budget`, each start option gets the whole budget.
+The price source of a bought start item (`ninja`, `trade` or `both`, ticket #357) is the setting `price_source` of `crafting.toml`
+(default `both`, with `price_gap_percent`, default 20) or `--price-source` for one run; it reaches the start sources, and a start
+option the source prices shows both prices side by side with the gap flag. The plain start item and recipe starts do not read it.
 """
 
 import argparse
@@ -27,7 +30,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 from crafting_system.actions import ActionError
-from crafting_system.config import load_config
+from crafting_system.config import PRICE_SOURCES, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, load_buy_spec, stale_warning
 from crafting_system.solver import ConvergenceError
@@ -83,6 +86,7 @@ def main(
     parser.add_argument("--buy-spec", metavar="PATH", help="a buy spec YAML: the route view's buy step gets a trade-site search link built from it")
     parser.add_argument("--strands", action="store_true", help="consider Memory Strands (the setting memory_strands of crafting.toml); a start item with strands turns it on by itself")
     parser.add_argument("--no-recipe-starts", action="store_true", help="plan only from the target's own start item; do not compare the start items a vendor recipe can make (the setting recipe_starts of crafting.toml)")
+    parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (the setting price_source of crafting.toml, default both)")
     parser.add_argument("--exact", action="store_true", help="solve exactly however long it takes, never approximately")
     parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
     parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean (an approximate answer: with its certified interval)")
@@ -96,14 +100,16 @@ def main(
         target_path = Path(args.target)
         target = load_target(target_path, game)
         price_file = prices if prices is not None else load_target_prices(target.price_file, config)
-        stale = stale_warning(price_file, today if today is not None else datetime.now(UTC).date())
+        run_day = today if today is not None else datetime.now(UTC).date()
+        stale = stale_warning(price_file, run_day)
         if stale:
             print(f"Warning: {stale}", file=sys.stderr)
 
         # a given route is written for the target's own start item, so `--route` plans from that item alone
         plan = plan_with_starts(
             game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
-            start_price=args.start_price, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands,
+            start_price=args.start_price, price_source=args.price_source or config.price_source,
+            price_gap_percent=config.price_gap_percent, today=run_day, budget=None if args.exact else args.budget, strands=args.strands or config.memory_strands,
         )  # fmt: skip
         if plan.approximation is not None and args.route:
             raise PlanError("--route is not available for an approximate answer yet; run again with --exact")

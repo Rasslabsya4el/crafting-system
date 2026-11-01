@@ -1,8 +1,9 @@
 """An action that declares `Adds.wanted_only` is offered only for a target that wants a mod it names (ticket #147).
 
 The aspect beasts are the case: one fixed suffix and nothing else, so a target that wants none of the aspects gains
-nothing from their price and their slot. Their kind is not a planner kind yet (#149), so the test registers a planner
-kind of the same actions for the length of each test.
+nothing from their price and their slot. Their kind is an opt-in planner kind (#149), which a target must name; this test registers
+a planner kind of the same actions that is not opt-in, for the length of each test, so it checks the filter alone.
+(`test_cli_beasts_harvest.py` checks it with the real kind named.)
 """
 
 import pytest

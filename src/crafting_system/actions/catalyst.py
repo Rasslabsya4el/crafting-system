@@ -29,6 +29,8 @@ declares `Reads.quality` and `Adds.quality` (ADR-0027).
 
 The kind is not a planner kind: the planner adds the finish cost to a goal state (ADR-0029) and offers a catalyst
 only when everything else of the target is met, which is ticket #158.
+
+Memory Strands (ticket #287, ADR-0041): it neither cuts nor spends; the claim is memory_strands.cut_follows_spend_table (approximate).
 """
 
 from collections.abc import Mapping
@@ -45,6 +47,7 @@ from .catalog import kind
 from .contract import Action, Adds, Reads
 from .errors import NotApplicableError
 from .finite import Finite
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, StrandUse
 
 JEWELLERY_ONLY = get_rule("catalyst.thirteen_items_for_jewellery")
 SINGLE_TYPE = get_rule("catalyst.single_quality_type")
@@ -178,6 +181,10 @@ class ApplyCatalyst(Action):
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return {COST.value[self.catalyst.value]: 1}
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041 table: a catalyst neither cuts nor spends; catalyst only changes quality, and the quality changes no odds (ADR-0029).
+        return StrandUse.untouched(CUT_FOLLOWS_SPEND_TABLE)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         # exactly the claims this file cites: the helpers it imports (`finite`) hold none of their own

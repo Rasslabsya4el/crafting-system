@@ -1,10 +1,11 @@
-"""The concrete item: base, rarity, explicit mods, implicits, quality (catalyst or plain), sockets, the unveil offer, the enchantment, the Memory Strands count, capacity, family conflicts, spawn weights and tiers. May import only: data, rules."""
+"""The concrete item: base, rarity, explicit mods, implicits, quality (catalyst or plain), sockets, the unveil offer, the enchantment, the Memory Strands count, the imprints it holds, capacity, family conflicts, spawn weights and tiers. May import only: data, rules."""
 
 from .errors import (
     CapacityError,
     EnchantmentError,
     FamilyConflictError,
     ImplicitError,
+    ImprintError,
     ItemError,
     MemoryStrandsError,
     ModSlotError,
@@ -97,6 +98,7 @@ __all__ = [
     "ImplicitMod",
     "Influence",
     "Item",
+    "ImprintError",
     "ItemError",
     "MemoryStrandsError",
     "Metamod",

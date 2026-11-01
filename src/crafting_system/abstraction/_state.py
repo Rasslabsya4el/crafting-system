@@ -153,6 +153,11 @@ class CompressedState:
     enabled action reads or changes that part of the item: `implicits` is the Eldritch pair, the Searing Exarch
     side and then the Eater of Worlds side (`()` when not kept), `quality` the catalyst quality as the item
     stores it, `offer` the mods of the unveil offer of the veiled placeholder, which then is one of the `slots`.
+
+    `imprints` (ADR-0060, ticket #219) are the compressed states the item was in when an imprint of it was made, at most the cap, sorted by
+    `order_key` and kept as a set (a second imprint of a state already held never helps, ADR-0060 point 4); each holds no imprint of its own.
+    They are empty unless an enabled action makes or uses an imprint (`Adds.imprints`), and the kernel forgets them when the item is fractured
+    or corrupted (no imprint can be used on it) or is a new item.
     """
 
     flags: Flags
@@ -162,30 +167,52 @@ class CompressedState:
     implicits: tuple[ImplicitSide, ...] = ()
     quality: Quality | None = None
     offer: tuple[OfferedMod, ...] = ()
+    imprints: tuple["CompressedState", ...] = ()
 
     def __hash__(self) -> int:
         try:
             return self._hash  # type: ignore[attr-defined]
         except AttributeError:
-            value = hash((self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer))
+            value = hash((self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer, self.imprints))
             object.__setattr__(self, "_hash", value)
             return value
 
-    __getstate__ = _state_without_hash
+    @property
+    def order_key(self) -> tuple:
+        """A total order on states made of plain values, the same in every process: how the imprints of a state are sorted (`repr` is not stable)."""
+        try:
+            return self._order_key  # type: ignore[attr-defined]
+        except AttributeError:
+            flags = self.flags
+            value = (
+                (flags.rarity.value, flags.corrupted, tuple(sorted(entry.value for entry in flags.influences))),
+                tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.fractured),
+                tuple(int(entry) for entry in self.status),
+                tuple(slot.key for slot in self.slots),
+                tuple((entry.grade, tuple(int(c) for c in entry.contribution)) for entry in self.implicits),
+                () if self.quality is None else (self.quality.type.value, self.quality.percent),
+                tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.offer),
+                tuple(held.order_key for held in self.imprints),
+            )
+            object.__setattr__(self, "_order_key", value)
+            return value
+
+    def __getstate__(self) -> dict:
+        return {name: value for name, value in self.__dict__.items() if name not in ("_hash", "_order_key")}
 
     def __repr__(self) -> str:
-        """The dataclass repr, with the three item-state fields shown only when they hold something: the text of a B1 state is what it was before ticket #142 (goldens key by it)."""
+        """The dataclass repr, with the item-state fields shown only when they hold something: the text of a B1 state is what it was before ticket #142 (goldens key by it)."""
         text = f"flags={self.flags!r}, fractured={self.fractured!r}, status={self.status!r}, slots={self.slots!r}"
-        for name in ("implicits", "quality", "offer"):
+        for name in ("implicits", "quality", "offer", "imprints"):
             value = getattr(self, name)
             if value:
                 text += f", {name}={value!r}"
         return f"CompressedState({text})"
 
     @property
-    def held(self) -> tuple[tuple[ImplicitSide, ...], Quality | None, tuple[OfferedMod, ...]]:
+    def held(self) -> tuple[tuple[ImplicitSide, ...], Quality | None, tuple[OfferedMod, ...], tuple["CompressedState", ...]]:
         """The item state beyond the explicit mods, as one key: what a memo of a kernel must tell states apart by besides the mods."""
-        return (self.implicits, self.quality, self.offer)
+        return (self.implicits, self.quality, self.offer, self.imprints)
 
     @property
     def crafted(self) -> bool:

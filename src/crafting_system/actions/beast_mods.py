@@ -45,8 +45,6 @@ SIDE_SWAP_METAMOD_RULES = get_rule("beastcraft.side_swap_metamod_rules")
 SIDE_SWAP_REFUSED_WITHOUT_REMOVABLE_MOD = get_rule("beastcraft.side_swap_refused_without_removable_mod")
 REFUSED_ON_CORRUPTED = get_rule("bench_craft.refused_on_corrupted")
 
-WHY_NOT_PLANNER = "no compressed-state kernel for the beast crafts yet (#149)"
-
 
 def _low(mod: Mod) -> tuple[int, ...]:
     return tuple(min(stat.min, stat.max) for stat in mod.stats)
@@ -148,7 +146,7 @@ class WildBristleMatron(Action):
         )
 
 
-@kind("wild-bristle-matron", order=86, planner=False, why_not=WHY_NOT_PLANNER)
+@kind("wild-bristle-matron", order=86, opt_in=True)
 def _wild_bristle_matron(data: GameData, item: Item):
     if item.rarity is Rarity.RARE and _allowed_classes(data, item):
         yield WildBristleMatron()
@@ -189,10 +187,11 @@ class BeastSideSwap(Action):
     def reads(self, data: GameData) -> Reads:
         """The result depends on the count and the families of the junk of both sides and on the lock and tag metamods.
 
-        Every family is told apart (`families=None`, `pool_weight=False`): the pool is cut at the level of the beast,
-        which is not the level the compressed state pools its family types by, so grouping the families by weight would not be exact.
+        The added mod is drawn from the pool at the level of the beast, which is not the level of the item, so the family
+        types of the state carry the weight of each mod at the beast level too (`draw_levels`, #149): two families alike at
+        the item's level but not at the beast's are never one type. The removal is uniform, so only counts matter.
         """
-        return Reads(junk=True, families=None, pool_weight=False)
+        return Reads(junk=True, families=frozenset(), pool_weight=True, draw_levels=frozenset({self.beast_level}))
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # `keeps_crafted` stays True: a crafted mod is one of the mods the removal may take, but it is not erased
@@ -244,7 +243,7 @@ class BeastSideSwap(Action):
         return Finite(data, item, tuple(results))
 
 
-@kind("beast-side-swap", order=85, planner=False, why_not=WHY_NOT_PLANNER)
+@kind("beast-side-swap", order=85, opt_in=True)
 def _beast_side_swaps(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:
         yield BeastSideSwap(Side.PREFIX)
