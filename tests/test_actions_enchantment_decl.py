@@ -126,7 +126,8 @@ ENCHANT_KINDS = {"tempering", "tailoring"}  # the two heist orbs of ticket #239:
 
 def test_no_planner_kind_of_the_catalog_declares_the_enchantment_yet():
     # B1 to B4 read and set no enchantment: the planner and the cache see no change in any kind they offer. A kind outside the planner
-    # (the recombinator, whose output takes the enchantment of its base; the two heist orbs) may declare it: nothing offers it yet.
+    # (the recombinator, whose output takes the enchantment of its base; the two heist orbs; the Harvest quality enchants, a finish step of
+    # ADR-0050) may declare it: nothing offers it yet.
     for item in (body(), body(enchantment=ARMOUR_EXTRA_SLOT), body(rarity=Rarity.NORMAL)):
         for kind in kinds(planner_only=True):
             for action in kind.members(DATA, item):
