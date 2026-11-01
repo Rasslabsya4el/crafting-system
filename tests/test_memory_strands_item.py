@@ -124,6 +124,24 @@ def test_a_badly_written_line_is_refused(text, problem):
         read_memory_strands(text)
 
 
+def test_a_line_of_thousands_of_digits_is_refused_as_an_item_error_not_an_int_overflow():
+    with pytest.raises(MemoryStrandsError, match="more than the 100"):
+        read_memory_strands("Memory Strands: " + "9" * 5000)
+    assert read_memory_strands("Memory Strands: 0057") == 57
+    assert read_memory_strands("Memory Strands: 000") == 0
+
+
+def test_the_label_is_found_whatever_its_case():
+    assert read_memory_strands("memory strands: 57") == 57
+    assert read_memory_strands("MEMORY STRANDS: 57") == 57
+
+
+def test_a_yaml_key_with_a_huge_number_in_a_text_is_blamed_on_its_line():
+    message = parse_error(start('memory_strands: "Memory Strands: ' + "9" * 5000 + '"'))
+
+    assert message.startswith("t.yaml:6: start_item.memory_strands: ") and "more than the 100" in message
+
+
 def test_a_line_that_is_not_a_count_is_not_mistaken_for_one():
     assert read_memory_strands("Memory Strands Orb: 5\nSome Memory Strands: 5") == 0
 

@@ -11,7 +11,7 @@ from .errors import MemoryStrandsError
 
 MAX_MEMORY_STRANDS = 100
 STRANDS_LABEL = "Memory Strands"
-_LINE = re.compile(rf"\s*{STRANDS_LABEL}:(.*)")
+_LINE = re.compile(rf"\s*{STRANDS_LABEL}:(.*)", re.IGNORECASE)
 _WHOLE_NUMBER = re.compile(r"\s*[0-9]+\s*")
 
 
@@ -36,7 +36,8 @@ def read_memory_strands(text: str) -> int:
     value = found[0].group(1)
     if not _WHOLE_NUMBER.fullmatch(value):
         raise MemoryStrandsError(f"`{STRANDS_LABEL}:{value}` is not a whole number")
-    count = int(value)
-    if count > MAX_MEMORY_STRANDS:
-        raise MemoryStrandsError(f"{count} memory strands is more than the {MAX_MEMORY_STRANDS} an item can hold")
+    digits = value.strip().lstrip("0")  # a line of thousands of digits must not reach int()
+    if len(digits) > len(str(MAX_MEMORY_STRANDS)) or int(digits or 0) > MAX_MEMORY_STRANDS:
+        raise MemoryStrandsError(f"{value.strip()[:12]} memory strands is more than the {MAX_MEMORY_STRANDS} an item can hold")
+    count = int(digits or 0)
     return count

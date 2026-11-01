@@ -13,6 +13,7 @@ from typing import NoReturn
 from crafting_system.data import BaseItem, GameData
 from crafting_system.items import (
     CATALYST_ITEM_CLASSES,
+    MAX_MEMORY_STRANDS,
     MAX_QUALITY,
     CatalystType,
     ExplicitMod,
@@ -26,7 +27,6 @@ from crafting_system.items import (
     Quality,
     QualityError,
     Rarity,
-    MAX_MEMORY_STRANDS,
     VeilOfferError,
     eldritch_grade,
     eldritch_side,
@@ -870,7 +870,7 @@ class _Reader:
         """The Memory Strands count of the start item: a whole number from 0 to 100, or a pasted item text holding the line `Memory Strands: N`."""
         path = "start_item.memory_strands"
         if isinstance(value, str):
-            if "Memory Strands:" not in value:
+            if "memory strands:" not in value.lower():
                 self.fail(line, path, f'a text must hold the line "Memory Strands: N" of the pasted item, got {describe(value)}')
             try:
                 return read_memory_strands(value)
