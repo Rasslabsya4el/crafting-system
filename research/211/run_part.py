@@ -3,11 +3,12 @@ import json, os, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 CASES = [
-    "r25:n12:raw:lazy", "r25:n12:raw:lazy_support", "r25:n12:raw:lazy_empty", "r25:n12:raw:sizes", "r25:n12:class:lazy", "r25:n12:class:lazy_support",
-    "r25:n12:class:lazy_empty", "r25:n12:class:unres", "r25:n12:class:struct_unres",
-    "r25:n8:raw:lazy", "r25:n8:raw:lazy_support", "r25:n8:raw:lazy_empty", "r25:n8:raw:struct_unres", "r25:n8:class:lazy", "r25:n8:class:unres", "r25:n8:class:struct_unres",
-    "r25:n6:raw:lazy", "r25:n6:raw:lazy_support", "r25:n6:raw:lazy_empty", "r25:n6:raw:unres", "r25:n6:raw:struct_unres", "r25:n6:class:lazy", "r25:n6:class:unres",
-    "r18:c1:lazy", "r18:c1:unres", "r18:c1:unres_full", "r18:c2:lazy", "r18:c2:unres", "r18:c2:unres_full", "r18:c3:lazy", "r18:c3:unres", "r18:c4:lazy",
+    "r25:n12:raw:lazy", "r25:n12:raw:lazy_pw", "r25:n12:raw:lazy_support", "r25:n12:raw:lazy_empty", "r25:n12:raw:sizes",
+    "r25:n12:class:lazy", "r25:n12:class:lazy_pw", "r25:n12:class:lazy_support", "r25:n12:class:lazy_empty", "r25:n12:class:unres", "r25:n12:class:struct_unres",
+    "r25:n8:raw:lazy", "r25:n8:raw:lazy_pw", "r25:n8:raw:lazy_support", "r25:n8:raw:lazy_empty", "r25:n8:raw:struct_unres", "r25:n8:class:lazy", "r25:n8:class:lazy_pw", "r25:n8:class:unres", "r25:n8:class:struct_unres",
+    "r25:n6:raw:lazy", "r25:n6:raw:lazy_pw", "r25:n6:raw:lazy_support", "r25:n6:raw:lazy_empty", "r25:n6:raw:unres", "r25:n6:raw:struct_unres", "r25:n6:class:lazy", "r25:n6:class:lazy_pw", "r25:n6:class:unres",
+    "r18:c1:lazy", "r18:c1:lazy_pw", "r18:c1:unres", "r18:c1:unres_full", "r18:c2:lazy", "r18:c2:lazy_pw", "r18:c2:unres", "r18:c2:unres_full",
+    "r18:c3:lazy", "r18:c3:lazy_pw", "r18:c3:unres", "r18:c4:lazy",
 ]
 GAP = [("gapsearch.py", str(a), str(a + 8)) for a in range(0, 32, 8)]
 

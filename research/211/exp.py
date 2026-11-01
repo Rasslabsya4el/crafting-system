@@ -30,10 +30,12 @@ def r25_case(config, mode, what):
     t0 = time.perf_counter()
     if what.startswith("lazy"):
         bound = "support" if what == "lazy_support" else "expected"
-        seed = (lambda s: []) if what == "lazy_empty" else (lambda s: [("recomb", d) for d in donors if d[1] in ISO])
-        sol, proc, acq, offers, rounds = lazy_solve(w, start, S_, cands, seed, bound=bound, log=lambda *_: None)
+        per_want = what.startswith("lazy_pw")
+        refine = int(what.split("_r")[1].split("_")[0]) if "_r" in what else 0
+        seed = (lambda s: []) if what.endswith("empty") else (lambda s: [("recomb", d) for d in donors if d[1] in ISO])
+        sol, proc, acq, offers, rounds = lazy_solve(w, start, S_, cands, seed, bound=bound, per_want=per_want, refine=refine, log=lambda *_: None)
         out.update(rounds=len(rounds), wants=rounds[-1]["wants"], product_states=len(sol.values),
-                   offers=sum(len(v) for v in offers.values()), offers_possible=len(S_) * len(donors),
+                   offers=rounds[-1]["offers"], offers_possible=len(S_) * len(donors),
                    violations_per_round=[r["violations"] for r in rounds], V=sol.values[acq.start(start)], error_bound=sol.error_bound,
                    wants_used_by_policy=len({a.label[1] for x, a in sol.policy.items() if isinstance(a.label, tuple) and a.label[0] == "recomb"}))
         out["structure"] = report(acq, acq.start(start))
@@ -72,9 +74,9 @@ def r18_case(config, what):
                candidate_actions=sum(len(cands(s)) for s in U))
     universe = sorted(U)
     seed_am = lambda s: [("awk", d) for d in donors_for(w, s) if d[1] == ("AM",)]
-    if what == "lazy":
-        sol, proc, acq, offers, rounds = lazy_solve(w, start, universe, cands, seed_am, log=lambda *_: None)
-        out.update(rounds=len(rounds), wants=rounds[-1]["wants"], product_states=len(sol.values), offers=sum(len(v) for v in offers.values()),
+    if what.startswith("lazy"):
+        sol, proc, acq, offers, rounds = lazy_solve(w, start, universe, cands, seed_am, per_want=what.startswith("lazy_pw"), log=lambda *_: None)
+        out.update(rounds=len(rounds), wants=rounds[-1]["wants"], product_states=len(sol.values), offers=rounds[-1]["offers"],
                    violations_per_round=[r["violations"] for r in rounds], V=sol.values[acq.start(start)], error_bound=sol.error_bound)
         out["structure"] = report(acq, acq.start(start))
     elif what == "unres":

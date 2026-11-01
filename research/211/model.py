@@ -99,3 +99,35 @@ def product_stats(sol):
 def determinized(world, proc, candidates, wants_goal):
     """Shortest path (no randomness, inputs free) to a state that reaches `want`, over every offered and candidate action."""
     raise NotImplementedError
+
+
+class PerWantAcquisition(Acquisition):
+    """Needs offered per product state `(want, state)` instead of per base state: the base model gives only the single-item
+    actions, `offers(want, state)` the two-input ones (`want` is `MAIN` or a want tuple)."""
+
+    def __init__(self, proc: Proc, offers, **kwargs):
+        super().__init__(proc, **kwargs)
+        self._proc, self._offers = proc, offers
+        self._single: dict = {}
+
+    def actions(self, product):
+        _, want, state = product
+        single = self._single.get(state)
+        if single is None:
+            single = tuple(Action(label, cost, scaled(dist)) for label, cost, dist in self._proc.world.base_actions(state))
+            self._single[state] = single
+        out = [Action(a.label, a.cost, tuple((("in", want, o.state), o.weight) for o in a.outcomes)) for a in single]
+        for kind, donor in self._offers(want, state):
+            a = self._proc.two_input(state, kind, donor)
+            if a is not None:
+                out.append(Action(a.label, a.cost, tuple((("in", want, o.state), o.weight) for o in a.outcomes),
+                                  tuple(("in", n.want, n.start) for n in a.extra_inputs)))
+        return tuple(out)
+
+
+def run_per_want(world: World, offers, start, **options):
+    proc = Proc(world, lambda s: [])
+    acq = PerWantAcquisition(proc, offers, reaches=proc.reaches)
+    t0 = time.perf_counter()
+    sol = solve(acq, [acq.start(start)], **options)
+    return sol, proc, acq, time.perf_counter() - t0
