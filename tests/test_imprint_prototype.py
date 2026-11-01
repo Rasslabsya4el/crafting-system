@@ -142,10 +142,14 @@ def test_the_policy_of_shape_a_is_imprint_try_restore():
     assert policy[("bad", frozenset({"base"}))].label == ("restore", "base")
 
 
-def test_the_restore_epsilon_is_certified_to_better_than_a_millionth():
-    layer = WithImprints(loop_model(), price=1, limit=1, imprintable=lambda s: s == "base")
+@pytest.mark.parametrize("restore_cost, bound", [(1e-6, 1e-7), (1e-9, 1e-4), (1e-12, 0.05)])
+def test_the_certificate_loosens_with_a_smaller_restore_cost_but_the_value_stays_right(restore_cost, bound):
+    """The constant term of the cycle is the epsilon, so the bound grows like value / epsilon (ADR-0059): 3.6e-8, 3.6e-5, 0.037."""
+    layer = WithImprints(loop_model(), price=1, limit=1, imprintable=lambda s: s == "base", restore_cost=restore_cost)
+    solution = solve(layer, [layer.start("base")])
 
-    assert solve(layer, [layer.start("base")]).error_bound < 1e-6
+    assert solution.error_bound < bound
+    assert solution.values[layer.start("base")] == pytest.approx(12.0 + 3 * restore_cost, abs=1e-9)
 
 
 # --- 2. R15 and R17 at toy scale ------------------------------------------------------------------------------------------------
@@ -204,11 +208,12 @@ def test_r15_shape_b_needs_a_body_as_long_as_the_run_of_rare_steps(longest, expe
     assert value_of(layer, "start") == pytest.approx(expected)
 
 
-def test_r15_the_catalogue_of_shape_b_grows_with_the_body_while_shape_a_adds_nothing():
-    layer = ImprintAndTry(R15, price=1, imprintable=lambda s: s == "m", bodies=lambda s: all_bodies(R15_LABELS, 3), accept=lambda s, t: True)
+@pytest.mark.parametrize("longest, count", [(1, 1), (2, 10), (3, 71), (4, 440)])
+def test_r15_the_catalogue_of_shape_b_grows_with_the_body_while_shape_a_adds_nothing(longest, count):
+    layer = ImprintAndTry(R15, price=1, imprintable=lambda s: s == "m", bodies=lambda s: all_bodies(R15_LABELS, longest), accept=lambda s, t: True)
     macros = [a for a in layer.actions("m") if a.label[0] == "imprint"]
 
-    assert len(macros) == 71  # five labels, bodies of up to three, those that do something at `m`
+    assert len(macros) == count  # five labels, bodies of up to `longest`, those that do something at `m`
     assert [a.label for a in r15_layer(1).actions(("m", frozenset()))] == ["regal", ("imprint",)]
 
 
@@ -232,12 +237,13 @@ def test_r17_costs_six_per_checkpoint_with_the_imprint_renewed_before_every_slam
     assert value_of(layer, layer.start("c0")) == pytest.approx(6 * stages + 2e-6 * stages, abs=1e-9)  # (1 + 1) / (1/3) each, plus 2 epsilon
 
 
-def test_r17_without_the_imprint_the_slams_cost_hundreds():
-    base = chain(3)
-    layer = chain_layer(3, 0)
+@pytest.mark.parametrize("stages, expected", [(3, 1339.0), (5, 12463.0)])
+def test_r17_without_the_imprint_the_slams_cost_hundreds_or_thousands(stages, expected):
+    base = chain(stages)
+    layer = chain_layer(stages, 0)
 
-    assert value_of(base, "c0") == pytest.approx(1339.0)
-    assert value_of(layer, layer.start("c0")) == pytest.approx(1339.0)
+    assert value_of(base, "c0") == pytest.approx(expected)
+    assert value_of(layer, layer.start("c0")) == pytest.approx(expected)
 
 
 @pytest.mark.parametrize("stages", [2, 3, 4])
@@ -304,28 +310,18 @@ def test_shape_b_is_never_cheaper_than_shape_a(seed):
     assert value_of(layer, 0) >= value_of(a, a.start(0)) - CLOSE
 
 
-def test_a_second_imprint_can_pay_though_rarely():
-    """Found by search over 1,500 random graphs: two held imprints beat one by 0.019 (0.08%); a third never helps."""
-    rng = random.Random(256)
-    n = rng.randint(4, 8)
-    table = {}
-    for s in range(n):
-        actions = []
-        for index in range(rng.randint(1, 3)):
-            outcomes = [(rng.randint(0, n), rng.randint(1, 5)) for _ in range(rng.randint(1, 3))]
-            actions.append((f"{s}.{index}", Fraction(rng.randint(1, 8), 2), outcomes, []))
-        actions.append((f"{s}.buy", Fraction(rng.choice([30, 200])), [(n, 1)], []))
-        table[s] = actions
-    imprintable = {s for s in range(n) if rng.random() < 0.5} or {0}
-    price = Fraction(rng.choice([1, 5, 10, 20]), 20)
-    model = to_model(({n}, table))
+@pytest.mark.parametrize("seed, size, imprintable, gain", [(256, 7, [0, 1, 2, 3, 4, 6], 0.01875), (1049, 8, [0, 3, 4, 5, 6], 0.00177)])
+def test_a_second_imprint_can_pay_though_rarely(seed, size, imprintable, gain):
+    """The two best of 1,500 random graphs (seeds 0 to 1,499, 4 to 8 states, the generator of this file): two held imprints beat one by 0.08% and 0.03%; three never beat two."""
+    base, found, price = random_graph(seed, size=(4, 8))
+    model = to_model(base)
     values = {}
     for limit in (1, 2, 3):
-        layer = WithImprints(model, price=float(price), limit=limit, imprintable=lambda s: s in imprintable)
+        layer = WithImprints(model, price=float(price), limit=limit, imprintable=lambda s: s in found)
         values[limit] = value_of(layer, layer.start(0))
 
-    assert (n, sorted(imprintable), price) == (7, [0, 1, 2, 3, 4, 6], 1)
-    assert values[1] - values[2] == pytest.approx(0.01875, abs=1e-4)
+    assert (max(base[0]), sorted(found), price) == (size, imprintable, 1)
+    assert values[1] - values[2] == pytest.approx(gain, abs=1e-4)
     assert values[2] == pytest.approx(values[3], abs=1e-9)
 
 
@@ -418,6 +414,7 @@ def test_an_imprint_is_offered_only_where_the_beasts_can_make_one():
     assert ("imprint",) in labels(layer, ("magic", frozenset()))
     assert ("imprint",) not in labels(layer, ("rare", frozenset()))  # a rare item that is not a Talisman
     assert ("imprint",) not in labels(layer, ("magic", frozenset({"magic"})))  # a second imprint of the same state never helps
+    assert ("restore", "magic") not in labels(layer, ("magic", frozenset({"magic"})))  # nor does a restore onto the state the item is in
 
 
 def test_a_restore_is_refused_on_a_fractured_item_and_the_imprints_are_gone_after_the_fracture():

@@ -56,7 +56,7 @@ A throwaway copy of the solver (+208 / -17 lines, `_certify.py` and `_scc.py` un
 Consequences for the build:
 
 - The product of acquisition processes has `(G + 1) x S` states for `G` distinct wanted items and costs 1.0 to 1.4 times the input-free solve of the same graph (G = 20, S = 200: 4,200 states, 2.8 s in pure Python).
-- When an action can ask for a wanted item from any state (an imprint, a recombinator), the copies join into one branching component of the whole product, far beyond `direct_solve_limit` (64), so it is solved by sweeps only. The build needs sparse (iterative) policy evaluation for large branching components, or the sweep count grows like `1 / (1 - rho)`.
+- When an action can ask for a wanted item from any state (a recombinator; an imprint was thought to, but ADR-0059 keeps it out of the product), the copies join into one branching component of the whole product, far beyond `direct_solve_limit` (64), so it is solved by sweeps only. The build needs sparse (iterative) policy evaluation for large branching components, or the sweep count grows like `1 / (1 - rho)`.
 - A tiny recombinator case (4 item states, 3 wanted items, 12 product states, 24 actions, about 1 ms) matches brute force; it has no branching component because a recombination into a state that is not `want` is a dead end in that process. Its interval is read across the three rules of the prototype: the bracket `max_r V_r <= W* <= min_candidates max_r J` was tight in all 384 price sets tried (one small family, which shows nothing about whether a gap can happen).
 
 ## What is not decided here
