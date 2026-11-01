@@ -58,7 +58,7 @@ rules:
     date_checked: 2026-11-01
 
   - id: jewel.fossils_work_on_jewels
-    statement: A Chaotic resonator with fossils works on a rare jewel (the base and abyss jewels), with the fossil weights on the tags of the jewel mods and the jewel capacity. The Fractured Fossil on a jewel is not modelled.
+    statement: A Chaotic resonator with fossils works on a rare jewel (the base and abyss jewels), with the fossil weights on the tags of the jewel mods and the jewel capacity. The Fractured Fossil is no exception (jewel.fracturing_orb_works_on_jewels).
     source_kind: coe
     url: https://www.craftofexile.com/json/data/main/poec_data.json
     quote: "name_bgroup: Jewels, max_affix: 4, is_fossil: 1, is_ess: 0, is_craftable: 0"
