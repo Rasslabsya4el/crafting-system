@@ -35,7 +35,7 @@ repeated kernel call per outcome (`kernel_rate`; the first walked kernel is meas
 import time
 from collections import deque
 from collections.abc import Callable, Hashable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
 from crafting_system.actions import Action, ActionError
@@ -203,10 +203,10 @@ class _Pilot:
 
     def _key(self, keeps_crafted: bool, state: CompressedState) -> Hashable:
         if self.abstraction.models_metamods:  # a lock keeps the junk of its side, so every slot decides the kernel
-            return (None, state.flags, state.fractured, state.slots)
+            return (None, state.flags, state.fractured, state.slots, state.held)
         if keeps_crafted:
-            return (True, state.flags, state.fractured, tuple(slot for slot in state.slots if slot.crafted))
-        return (False, state.flags, state.fractured, self._metamods(state))
+            return (True, state.flags, state.fractured, tuple(slot for slot in state.slots if slot.crafted), state.held)
+        return (False, state.flags, state.fractured, self._metamods(state), state.held)
 
     def kernel_of(self, action: Action, keeps_crafted: bool, state: CompressedState) -> Mapping[CompressedState, Fraction] | None:
         """The real kernel of a reroll on `state`, once per key; None when the action refuses there."""
@@ -297,7 +297,7 @@ class _Pilot:
                 if used[craft.side] < room.of(craft.side) and not (craft.families & held):
                     status = tuple(max(a, b) for a, b in zip(state.status, craft.slot.contribution))
                     slots = tuple(sorted((*state.slots, craft.slot), key=lambda slot: slot.key))
-                    yield craft.action, (CompressedState(flags, state.fractured, status, slots),), None
+                    yield craft.action, (replace(state, status=status, slots=slots),), None
         if crafted and self.removals:
             kept = [slot for slot in state.slots if not slot.crafted]
             if state.fractured or kept:
@@ -305,7 +305,7 @@ class _Pilot:
                     len(state.status),
                     [entry.contribution for entry in state.fractured] + [slot.contribution for slot in kept],
                 )
-                after = CompressedState(flags, state.fractured, status, tuple(kept))
+                after = replace(state, status=status, slots=tuple(kept))
                 for action in self.removals:
                     yield action, (after,), None
 

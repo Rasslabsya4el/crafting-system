@@ -31,6 +31,20 @@ A requirement on a roll (ADR-0008) compares the **base roll**, the integer the i
 
 Origin: [Grill B2](https://github.com/Rasslabsya4el/crafting-system/issues/93) (decision list of 2026-10-31, owner round 1 on Blessed); [Blessed Orb, catalysts and Orb of Chance](https://github.com/Rasslabsya4el/crafting-system/issues/89); ADR-0009, ADR-0024.
 
+## Amendment: the declarations and the compressed state ([#142](https://github.com/Rasslabsya4el/crafting-system/issues/142))
+
+**`Reads` and `Adds`** each gain three flags, `implicits`, `quality` and `offer`, False in the dataclass (the action leaves the part alone) and True in what `Action.reads` and `Action.adds` return for an action that declares nothing, as it reads every mod: a new action stays correct by default. `item_state` says whether any of the three is set. An action that reads the offer reads the veiled placeholder, which is a mod, so it also reads the junk (`Abstraction` refuses one that does not).
+
+**`CompressedState` gains `implicits`, `quality` and `offer`**, each empty unless an enabled action reads or changes that part (`Abstraction.tracks_implicits`, `tracks_quality`, `tracks_offer`; the goal asking for an Eldritch implicit also makes the state keep the pair). A state that keeps none of them is the state B1 always had, down to its `repr`, so B1's kernels, offers and goldens do not move.
+
+- `implicits` is the Eldritch pair, the Searing Exarch side and then the Eater of Worlds side, each `ImplicitSide(grade, contribution)`: the grade (0 for none, 1 to 6) and what the implicit gives each Eldritch implicit the goal wants (`Goal.implicits`, `ImplicitWanted`). The family is not kept (ADR-0025): a mod stands for its side and grade by the smallest id that gives the same contribution, at its lowest values. Dominance is derived, never stored. A goal built from a target does not read `Target.implicits` yet.
+- `quality` is the catalyst `Quality` as the item stores it (at most 12 types by 21 percents).
+- `offer` holds the mods of the unveil offer, each `OfferedMod(canonical id, contribution)`, the id being the smallest among the unveiled mods of its families and side that give the goal the same and can spawn on the base. The placeholder is an ordinary slot of the state.
+
+The item rebuild gives an action the implicits, quality and offer a state stands for, and the split reads them back from the retained item of each part. An action that erases the junk erases the placeholder, so it is given no offer. The pilot count and the family-group level key their memos on all three, so states that differ in them are never merged.
+
+Not modelled here, and refused with `OutOfScopeError` naming the ticket that lifts it: a base implicit (grade 0) on an item whose state keeps the pair, and a roll limit on an implicit ([#158](https://github.com/Rasslabsya4el/crafting-system/issues/158)). Dominance-limited actions are [#152](https://github.com/Rasslabsya4el/crafting-system/issues/152); the placeholder, the offer state and the Pick actions are [#145](https://github.com/Rasslabsya4el/crafting-system/issues/145).
+
 ## Amendment: sockets and the quality of weapons and armour ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
 
 `Item` also stores its **sockets** (a colour per socket and the link groups, ADR-0046) and its **quality** has two kinds: the catalyst type and percent of jewellery, or the plain percent of a weapon or armour (ADR-0049); no item class has both. `Reads` and `Adds` gain a sockets declaration in the same way: an action declares whether it reads the count, links or colours and what it sets, and an action that declares nothing still reads everything and sets nothing it did not declare. The quality declaration now covers both kinds.

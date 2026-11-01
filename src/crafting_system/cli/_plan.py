@@ -227,7 +227,7 @@ def make_plan(
         part = (bought, 1, price_of_start.chaos, price_of_start.source)
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,)))
 
-    enabled = [p.offer.action for p in priced if p.offer.action.reads(data).junk]
+    enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
     abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod)
     start = abstraction.compress(target.start_item)
