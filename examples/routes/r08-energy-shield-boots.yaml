@@ -27,7 +27,7 @@ rules:
         - family: MovementVelocity
           status: absent
       open_prefixes: 1
-    do: Bench craft #% increased Movement Speed
+    do: "Bench craft #% increased Movement Speed"
   # Step 1: use the two fossils again (this is also the first use).
   - when:
       rarity: rare
