@@ -6939,38 +6939,6 @@
   },
   {
    "tab": "misc",
-   "line": 6,
-   "cls": "gloves",
-   "side": "prefix",
-   "pool": [],
-   "kept": [],
-   "author_counts": [
-    "",
-    "",
-    "",
-    ""
-   ],
-   "side_mismatch": false,
-   "drop_reason": "empty side"
-  },
-  {
-   "tab": "misc",
-   "line": 6,
-   "cls": "gloves",
-   "side": "suffix",
-   "pool": [],
-   "kept": [],
-   "author_counts": [
-    "",
-    "",
-    "",
-    ""
-   ],
-   "side_mismatch": false,
-   "drop_reason": "empty side"
-  },
-  {
-   "tab": "misc",
    "line": 8,
    "cls": "boots",
    "side": "prefix",

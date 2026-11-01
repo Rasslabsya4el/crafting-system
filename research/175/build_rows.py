@@ -161,6 +161,8 @@ def grid_tab(mods, rows, tab, only_classes):
         kept = cells(14, 20)
         record = {"tab": tab, "line": lineno, "cls": cls, "base_picked": row[13].strip(),
                   "author_counts": row[20:24] if len(row) >= 24 else []}
+        if not pool and not kept:
+            continue  # a label row
         record["pool_cells"] = [c for c, _ in pool]
         record["kept_cells"] = [c for c, _ in kept]
         record["pool"] = [cell_entry(mods, c, s, cls, "central") for c, s in pool]

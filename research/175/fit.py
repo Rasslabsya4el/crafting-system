@@ -34,7 +34,7 @@ def set_prob(entries, kept, alpha):
     return total
 
 
-def pool_entries(side, mode, dup, spell=None, weight_key="weight"):
+def pool_entries(side, mode, dup, spell=None, weight_key="weight", chaos=None):
     """(group, weight) list. `dup`: 'own' keeps each copy's own tier weight, 'max' and 'min' give all copies of a
     group the largest or smallest weight among them (open point 3 of #90)."""
     out = []
@@ -43,7 +43,14 @@ def pool_entries(side, mode, dup, spell=None, weight_key="weight"):
             w = spell
         else:
             w = e["weight_low"] if (mode == "low" and e["kind"] == "natural" and "weight_low" in e) else e.get(weight_key) or e["weight"]
+        if chaos is not None and e["group"] == "ChaosResistance":
+            w = chaos
         out.append([e["group"], float(w)])
+    if dup == "once":  # a group held twice enters the pool once, at its largest weight
+        by = {}
+        for g, w in out:
+            by[g] = max(by.get(g, 0), w)
+        return [(g, w) for g, w in by.items()]
     if dup != "own":
         by = {}
         for g, w in out:
@@ -84,8 +91,8 @@ def p_chi2_1(x):
     return math.erfc(math.sqrt(max(x, 0) / 2))
 
 
-def build(sides, mode="central", dup="own", spell=None):
-    return [(pool_entries(s, mode, dup, spell), sorted({e["group"] for e in s["kept"]})) for s in sides]
+def build(sides, mode="central", dup="own", spell=None, chaos=None):
+    return [(pool_entries(s, mode, dup, spell, chaos=chaos), sorted({e["group"] for e in s["kept"]})) for s in sides]
 
 
 def curves_for(sides, **kw):
@@ -292,6 +299,10 @@ def main(rows_json, out_json, n_boot, n_sim, seed):
             ("typed groups at their smallest weight", {"mode": "low"}, natural),
             ("duplicate tiers: largest weight for all copies", {"dup": "max"}, natural),
             ("duplicate tiers: smallest weight for all copies", {"dup": "min"}, natural),
+            ("duplicate tiers: a group held twice enters the pool once", {"dup": "once"}, natural),
+            ("chaos resistance weight 125 (half)", {"chaos": 125}, natural),
+            ("chaos resistance weight 500", {"chaos": 500}, natural),
+            ("chaos resistance weight 1000 (no contrast with the res mods)", {"chaos": 1000}, natural),
             ("drop ambiguous cell readings", {}, [s for s in natural if not any(e.get("ambiguous") for e in s["pool"])]),
             ("prefix sides only", {}, [s for s in natural if s["side"] == "prefix"]),
             ("suffix sides only", {}, [s for s in natural if s["side"] == "suffix"]),
@@ -339,15 +350,16 @@ def main(rows_json, out_json, n_boot, n_sim, seed):
             ex[label] = {"alpha": a, "p_rare_kept": round(rare_target_example(a), 4)}
     res["rare_target_example"] = ex
     g = out["gloves+misc"]
-    res["chaos_retention_ratio"] = {"definition": "(250/1000)**alpha: how often a weight-250 mod is kept relative to a weight-1000 mod",
-                                    "mle": round(0.25 ** g["mle"], 3), "at_alpha_lo": round(0.25 ** g["lo"], 3),
-                                    "at_alpha_hi": round(0.25 ** g["hi"], 3)}
-    res["pooled_best_spell_weight"] = best_s
-    # twice the log-likelihood drop from the maximum, every 0.25 in alpha, for plotting or reading off intervals
-    def coarse(prof):
-        return {str(a): round(2 * (prof["loglik"] - prof["curve"][GRID.index(a)]), 2) for a in GRID if round(a * 4) == a * 4}
-    res["deviance_curves"] = {"gloves+misc": coarse(profile(nat_curves)),
-                              "discord (s=1500)": coarse(per_s[1500]), "pooled (s=1500)": coarse(pooled_by_s[1500])}
+    keep = {}
+    for label, a in (("mle", g["mle"]), ("lo", g["lo"]), ("hi", g["hi"])):
+        cal = calibration(natural, a)
+        r250 = cal[250]["expected_kept"] / cal[250]["entries"]
+        r1000 = cal[1000]["expected_kept"] / cal[1000]["entries"]
+        keep[label] = {"alpha": a, "keep_rate_250": round(r250, 3), "keep_rate_1000": round(r1000, 3),
+                       "ratio": round(r250 / r1000, 3)}
+    keep["observed"] = {"keep_rate_250": round(cal[250]["observed_kept"] / cal[250]["entries"], 3),
+                        "keep_rate_1000": round(cal[1000]["observed_kept"] / cal[1000]["entries"], 3)}
+    res["keep_rate_by_weight_class"] = {"definition": "expected share of pool entries kept in the informative sides, weight 250 against weight 1000", **keep}
     json.dump(res, open(out_json, "w", encoding="utf-8"), indent=1)
     print(json.dumps({k: res[k] for k in ("counts", "fits", "tests")}, indent=1))
 
