@@ -33,6 +33,7 @@ an offer is a choice node: the compressed state allows no action there but a pic
 from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
+from functools import lru_cache
 
 from crafting_system.data import GameData, Mod, conflicts
 from crafting_system.items import (
@@ -299,7 +300,15 @@ def offer_distribution(pool: tuple[tuple[Mod, int], ...]) -> dict[frozenset[str]
     Every family of a picked mod counts, as `Item.blocks` and the check of an offer on `Item` do: two options that share a
     family (a hybrid mod's second family) are never offered together. The research counted the first family only, which
     gives the wand's Minion attack and cast speed 0.194; with every family it is 0.1996 (`test_actions_veiled_real.py`).
+
+    The planner asks it for every state that holds a placeholder (0.02 to 0.19 s on the largest real pools), and many states
+    leave the same pool, so the answer is kept by pool (a copy is returned).
     """
+    return dict(_offer_distribution(pool))
+
+
+@lru_cache(maxsize=256)
+def _offer_distribution(pool: tuple[tuple[Mod, int], ...]) -> dict[frozenset[str], Fraction]:
     shown: dict[frozenset[str], Fraction] = {}
 
     def draw(left: tuple[tuple[Mod, int], ...], chosen: tuple[str, ...], chance: Fraction) -> None:

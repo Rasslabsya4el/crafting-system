@@ -59,6 +59,10 @@ _Avoid_: unveil roll, options
 **Offer state**:
 A state in which an unveil offer is drawn and not yet picked. Its only actions are Pick(k), one per shown mod.
 
+**Free action**:
+An action that consumes nothing (an unveil, a pick). The planner counts it at a millionth of the cheapest offer that costs something, because the solver needs a positive cost on every action (ADR-0026).
+_Avoid_: zero-cost action
+
 **Unveil block**:
 A bench craft chosen because its family is in the unveil pool: the family leaves the offer.
 _Avoid_: veil block

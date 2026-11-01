@@ -42,8 +42,8 @@ from crafting_system.items import (
     eldritch_side,
     is_corrupted_implicit,
     is_craftable_version,
-    spawn_weight,
     placeholder_families,
+    spawn_weight,
     tier_table,
 )
 from crafting_system.items.model import VEILED_DOMAIN
@@ -715,7 +715,7 @@ class Abstraction:
         """The smallest id among the unveiled mods of the families and side of `mod` that give `contribution` and can spawn on this base.
 
         With `metamods` the mods must also carry the same tags an Attack or Caster metamod looks at, as a canonical id does: the
-        slot a pick makes has them in its kind. The ids it stands for are kept (`_offer_group`).
+        slot a pick makes has them in its kind. The ids it stands for are kept (`_offer_groups`).
         """
         key = (influences, mod.id, contribution)
         found = self._offered_ids.get(key)
