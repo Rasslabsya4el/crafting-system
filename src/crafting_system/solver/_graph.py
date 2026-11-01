@@ -1,5 +1,9 @@
 """Reachable-state generation, exact self-loop elimination and the proper-policy analysis.
 
+An action may also take other states as inputs (ADR-0022): their values are paid on every attempt.
+Inputs are edges of the dependency graph (they order the components) but not of the outcome graph
+(only outcomes can reach the goal).
+
 The graph is stored in flat typed arrays (about 28 bytes per transition stored and about 55 at the
 peak of a solve, against about 250 for lists of lists and the caller's `Action` objects), so that 2 * 10^7 transitions fit in memory.
 """
@@ -68,7 +72,11 @@ class Graph[S]:
     * `cost`: effective cost `cost * (W / L)`; `cost0`: the action's own cost;
     * `weights`: the true integer weight of each transition; an action with a weight of 2^64 or
       more keeps its weights in `big_weights[k]` instead; `self_loop[k] = (position, weight)`
-      is the self-loop that was compiled out and where it stood among the merged outcomes.
+      is the self-loop that was compiled out and where it stood among the merged outcomes;
+    * `inputs`, `kappa`, `copies`: the distinct input states of each action, `copies * W / L` (the
+      retry pays the inputs again, so the factor is that of the cost; it may exceed 1) and the
+      number of copies; action `k` owns `istart[k]:istart[k + 1]` of these three and `need[k]` is
+      the slice of `inputs`. An action that has its own state as an input is dropped.
 
     The caller's `Action` objects are not kept: `original_action` rebuilds the one asked for.
     """
@@ -86,18 +94,25 @@ class Graph[S]:
     weights: array = field(default_factory=lambda: array("Q"))
     big_weights: dict = field(default_factory=dict)
     self_loop: dict = field(default_factory=dict)
+    istart: array = field(default_factory=lambda: array("q", [0]))
+    inputs: array = field(default_factory=lambda: array("i"))
+    kappa: array = field(default_factory=lambda: array("d"))
+    copies: array = field(default_factory=lambda: array("q"))
     succ: _Rows = field(init=False)
+    need: _Rows = field(init=False)
     state_actions: _Ranges = field(init=False)
 
     def __post_init__(self) -> None:
         self.succ = _Rows(self.tstart, self.targets)
+        self.need = _Rows(self.istart, self.inputs)
         self.state_actions = _Ranges(self.first)
 
     def original_action(self, k: int) -> Action[S]:
         """The action `k` as it was offered: true weights, self-loop included.
 
         Equal to the caller's action except that repeated successors are merged into one outcome
-        (at the first position, with the summed weight) and zero-weight outcomes are dropped.
+        (at the first position, with the summed weight), zero-weight outcomes are dropped, and a
+        repeated input comes back grouped at the position of its first occurrence.
         """
         low, high = self.tstart[k], self.tstart[k + 1]
         weights = self.big_weights.get(k)
@@ -108,12 +123,36 @@ class Graph[S]:
         loop = self.self_loop.get(k)
         if loop is not None:
             outcomes.insert(loop[0], Outcome(states[self.owner[k]], loop[1]))
-        return Action(self.label[k], self.cost0[k], tuple(outcomes))
+        low, high = self.istart[k], self.istart[k + 1]
+        needed = tuple(
+            states[y] for y, count in zip(self.inputs[low:high], self.copies[low:high])
+            for _ in range(count)
+        )
+        return Action(self.label[k], self.cost0[k], tuple(outcomes), needed)
 
     def state_offsets(self) -> array:
         """`offsets` for the state-level successor lists: a state's transitions are one run."""
         tstart = self.tstart
         return array("q", (tstart[k] for k in self.first))
+
+    def dependency_graph(self) -> tuple[array, array]:
+        """`(offsets, edges)` of the state graph with the outcome edges and the input edges.
+
+        A state's edges are one contiguous run: for each of its actions, the outcomes, then the
+        inputs. Without inputs this is the outcome graph itself, `(state_offsets(), targets)`.
+        """
+        if not self.inputs:
+            return self.state_offsets(), self.targets
+        tstart, istart, first, targets, inputs = (
+            self.tstart, self.istart, self.first, self.targets, self.inputs,
+        )
+        offsets, edges = array("q", [0]), array("i")
+        for state in range(len(self.states)):
+            for k in range(first[state], first[state + 1]):
+                edges.extend(targets[tstart[k] : tstart[k + 1]])
+                edges.extend(inputs[istart[k] : istart[k + 1]])
+            offsets.append(len(edges))
+        return offsets, edges
 
 
 def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
@@ -127,6 +166,7 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
     states, first, owner, label = graph.states, graph.first, graph.owner, graph.label
     cost, cost0, tstart, targets = graph.cost, graph.cost0, graph.tstart, graph.targets
     probs, weights = graph.probs, graph.weights
+    istart, inputs, kappa, copies_of = graph.istart, graph.inputs, graph.kappa, graph.copies
 
     def intern(state: S) -> int:
         found = index.get(state)
@@ -147,10 +187,6 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
             continue
         graph.goal.append(False)
         for action in tuple(model.actions(state)):
-            if action.extra_inputs:
-                raise NotImplementedError(
-                    "multi-input actions need the branching solver, B3 (ADR-0011)"
-                )
             merged: dict[int, int] = {}
             loop_at = -1
             for successor, weight in action.outcomes:
@@ -173,6 +209,24 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
                 raise ValueError(
                     f"effective cost overflows float64 for action {action.label!r} in state {state!r}"
                 )
+            copies: dict[int, int] = {}
+            if action.extra_inputs:
+                if any(index.get(needed) == i for needed in action.extra_inputs):
+                    continue  # needs a copy of its own state to make one: infinite, never useful
+                for needed in action.extra_inputs:
+                    j = intern(needed)
+                    copies[j] = copies.get(j, 0) + 1
+            kappas = []
+            for count in copies.values():
+                try:
+                    pay = count * total / leave  # the retry pays the inputs again
+                except OverflowError:
+                    pay = math.inf
+                if not math.isfinite(pay):
+                    raise ValueError(
+                        f"input weight overflows float64 for action {action.label!r} in state {state!r}"
+                    )
+                kappas.append(pay)
             k = len(owner)
             owner.append(i)
             label.append(action.label)
@@ -188,30 +242,39 @@ def build_graph[S](model: Model[S], starts: Iterable[S]) -> Graph[S]:
             if loop_weight:
                 graph.self_loop[k] = (loop_at, loop_weight)
             tstart.append(len(targets))
+            inputs.extend(copies)
+            kappa.extend(kappas)
+            copies_of.extend(copies.values())
+            istart.append(len(inputs))
         i += 1
     first.append(len(owner))
     return graph
 
 
-class _Reverse:
+class _Leads:
     """For each member of one cyclic component, the actions of members that lead to it.
 
-    Only these matter while the component is settled: an action owned by a state outside it is
-    not retained yet (components are settled sink-first), so it is never alive. `[s]` is a
-    copy-slice of action ids.
+    `[s]` is a copy-slice of action ids. An action leads to a member by an outcome and, with
+    `with_inputs`, by an input as well (once for each such edge).
     """
 
     __slots__ = ("local", "offsets", "actions")
 
-    def __init__(self, graph: Graph, members: list[int]) -> None:
-        local = {state: position for position, state in enumerate(members)}
+    def __init__(self, graph: Graph, members: list[int], local: dict[int, int], with_inputs: bool):
         targets, tstart, first = graph.targets, graph.tstart, graph.first
+        inputs, istart = graph.inputs, graph.istart
+        with_inputs = with_inputs and len(inputs) > 0
         offsets = [0] * (len(members) + 1)
         for s in members:
             for j in targets[tstart[first[s]] : tstart[first[s + 1]]]:
                 position = local.get(j)
                 if position is not None:
                     offsets[position + 1] += 1
+            if with_inputs:
+                for j in inputs[istart[first[s]] : istart[first[s + 1]]]:
+                    position = local.get(j)
+                    if position is not None:
+                        offsets[position + 1] += 1
         for position in range(len(members)):
             offsets[position + 1] += offsets[position]
         cursor = offsets[:-1]
@@ -223,6 +286,12 @@ class _Reverse:
                     if position is not None:
                         actions[cursor[position]] = k
                         cursor[position] += 1
+                if with_inputs:
+                    for j in inputs[istart[k] : istart[k + 1]]:
+                        position = local.get(j)
+                        if position is not None:
+                            actions[cursor[position]] = k
+                            cursor[position] += 1
         self.local = local
         self.offsets = array("q", offsets)
         self.actions = actions
@@ -232,6 +301,28 @@ class _Reverse:
         return self.actions[self.offsets[position] : self.offsets[position + 1]]
 
 
+class _Reverse(_Leads):
+    """The actions of members that lead to each member of one cyclic component, by any edge.
+
+    Only these matter while the component is settled: an action owned by a state outside it is
+    not retained yet (components are settled sink-first), so it is never alive. The safety peel
+    follows every edge, since an action dies with any of its outcomes or inputs. `.out` is the
+    view of the outcome edges alone, which is what reaching the goal follows; with no inputs in
+    the graph it is this very object.
+    """
+
+    __slots__ = ("_out",)
+
+    def __init__(self, graph: Graph, members: list[int]) -> None:
+        local = {state: position for position, state in enumerate(members)}
+        super().__init__(graph, members, local, True)
+        self._out = _Leads(graph, members, local, False) if len(graph.inputs) else None
+
+    @property
+    def out(self) -> _Leads:
+        return self if self._out is None else self._out
+
+
 def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
     """The states with a proper policy, and the actions that never risk a dead state.
 
@@ -239,18 +330,25 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
     lie in Y and at least one is already reached (least fixpoint inside). Backward reachability
     alone would keep an action that can fall into a dead state, which costs infinity. Returns
     `(alive, in_y)`: `alive[k]` is True for retained actions, `in_y[s]` for finite states, and
-    `alive[k]` holds exactly when the owner of `k` and every successor of `k` are in Y.
+    `alive[k]` holds exactly when the owner of `k`, every successor of `k` and every input of `k`
+    are in Y. An input of a dead state is dead too (death runs along input edges), but only
+    outcomes count for reaching the goal. A finite state with a proper policy can still cost
+    infinity when a policy needs two copies of what it makes (ADR-0022): the value iteration of
+    `solve_cyclic` decides that.
 
     Whether a state is in Y depends only on the states it can reach, so the strongly connected
-    components of the state graph are settled sink-first and a component only meets final answers
-    downstream. A state alone is decided on the spot; a cycle is settled by `_settle_cycle`.
+    components of the dependency graph (outcomes and inputs) are settled sink-first and a
+    component only meets final answers downstream. A state alone is decided on the spot; a cycle
+    is settled by `_Cycle.settle`.
     """
     n_states = len(graph.states)
-    targets, tstart = graph.targets, graph.tstart
+    targets, tstart, need = graph.targets, graph.tstart, graph.need
+    has_inputs = len(graph.inputs) > 0
     alive = [False] * len(graph.owner)
     in_y = [False] * n_states
     cycle = _Cycle(graph, alive, in_y)
-    components = strongly_connected_components(graph.state_offsets(), targets, range(n_states))
+    offsets, edges = graph.dependency_graph()
+    components = strongly_connected_components(offsets, edges, range(n_states))
     for cid, component in enumerate(components):
         if len(component) > 1:  # self-loops are compiled out, so one state alone has no cycle
             cycle.settle(component, cid)
@@ -260,7 +358,9 @@ def proper_states[S](graph: Graph[S]) -> tuple[list[bool], list[bool]]:
             in_y[state] = True
             continue
         for k in graph.state_actions[state]:
-            if all(in_y[j] for j in targets[tstart[k] : tstart[k + 1]]):
+            if all(in_y[j] for j in targets[tstart[k] : tstart[k + 1]]) and (
+                not has_inputs or all(in_y[y] for y in need[k])
+            ):
                 alive[k] = True
                 in_y[state] = True
     return alive, in_y
@@ -272,14 +372,16 @@ _CLIMB = 24  # steps up the forest `_Cycle._rehang` spends per candidate witness
 class _Cycle[S]:
     """Settles one cyclic component: safety peel and reachability, repaired instead of redone.
 
-    Every member starts in Y. An action is alive while its owner and all its successors are in Y;
-    a member with no alive action leaves Y, which kills the actions into it (the peel, a worklist
-    touching each edge once). The remaining members must also reach the outside of the component
-    (final members of Y) through alive actions, or they leave Y too. Each reached member keeps the
-    alive action `witness` and the successor `parent` it leans on, a forest rooted outside the
-    component. When the peel kills a witness, that member and then its children are first tried
-    for another witness found by a short climb (`_rehang`); only what cannot be rehung one by one
-    is searched again, and the rest keeps its proof. The first reachability pass is one sweep.
+    Every member starts in Y. An action is alive while its owner, all its successors and all its
+    inputs are in Y; a member with no alive action leaves Y, which kills the actions into it by
+    an outcome or an input edge (the peel, a worklist touching each edge once). The remaining
+    members must also reach the outside of the component (final members of Y) through alive
+    actions and outcome edges only, or they leave Y too (an input never reaches the goal). Each
+    reached member keeps the alive action `witness` and the successor `parent` it leans on, a
+    forest rooted outside the component. When the peel kills a witness, that member and then its
+    children are first tried for another witness found by a short climb (`_rehang`); only what
+    cannot be rehung one by one is searched again, and the rest keeps its proof. The first
+    reachability pass is one sweep.
 
     The cost is linear when the removals come from the peel or from small subtrees. A cut that
     lands high in a big proof tree, mended again and again by alternatives that sit deeper than
@@ -309,7 +411,10 @@ class _Cycle[S]:
         self.pred = _Reverse(graph, members)
         for s in members:
             for k in graph.state_actions[s]:
-                if all(in_y[j] for j in graph.succ[k]):  # members count as in Y, outside is final
+                # members count as in Y, outside is final
+                if all(in_y[j] for j in graph.succ[k]) and (
+                    not graph.inputs or all(in_y[y] for y in graph.need[k])
+                ):
                     alive[k] = True
                     live[s] += 1
         queue = [s for s in members if live[s] == 0]
@@ -365,10 +470,11 @@ class _Cycle[S]:
         self._spread(frontier)
 
     def _spread(self, frontier: list[int]) -> None:
-        """Reverse reachability from `frontier` over alive actions, to members not yet reached."""
-        owner, alive, witness, parent, pred = (
-            self.graph.owner, self.alive, self.witness, self.parent, self.pred,
+        """Reverse reachability from `frontier` over alive actions and outcome edges only."""
+        owner, alive, witness, parent = (
+            self.graph.owner, self.alive, self.witness, self.parent,
         )
+        pred = self.pred.out
         while frontier:
             j = frontier.pop()
             for k in pred[j]:
@@ -422,6 +528,7 @@ class _Cycle[S]:
             self.stamp,
         )
         owner = graph.owner
+        pred = pred.out  # the forest hangs on outcome edges
         self.round += 1
         token = self.round
         roots = [o for o in cut if in_y[o]]

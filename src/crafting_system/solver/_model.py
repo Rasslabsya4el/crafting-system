@@ -22,7 +22,10 @@ class Action[S]:
     positive. `outcomes` carry integer weights (not bool, not negative, total above zero);
     zero-weight outcomes are ignored, repeated successors are merged by summing weights, and an
     outcome may be the state itself. `extra_inputs` lists the states of other items the action
-    also consumes (multi-input actions, ADR-0011); v1 does not solve those.
+    also consumes (multi-input actions, ADR-0011, ADR-0022): the value of an input state, what it
+    costs to obtain that item, is paid on every attempt, a self-loop retry included. A repeated
+    state means that many copies. An action whose own state is one of its inputs needs a copy of
+    itself to make one and is dropped, like an action that can never leave its state.
     """
 
     label: Hashable
