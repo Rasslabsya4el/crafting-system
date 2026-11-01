@@ -79,7 +79,7 @@ A number from 0 to 100 on an item. With one or more, every random mod draw that 
 _Avoid_: strand level, memory level (that is the trade filter's name)
 
 **Tier cut**:
-The removal of the lowest tiers from the tiers a draw can roll, by the item's strand count and a Foulborn orb's `+75`: `K = floor(100 (T - 1) / D) + 1` of `T` tiers stay. 0 strands without a Foulborn orb is no cut (ADR-0040). The pool takes it as a `Cut` (the count before the craft, the Foulborn flag, the weight reading) and only for a draw whose action declares `cuts`.
+The removal of the lowest tiers from the tiers a draw can roll, by the item's strand count and a Foulborn orb's `+75`: `K = floor(100 (T - 1) / D) + 1` of `T` tiers stay. 0 strands without a Foulborn orb is no cut (ADR-0040). The pool takes it as a `Cut` (the count before the craft, the Foulborn flag, the weight reading) and only for a draw whose action declares `cuts` (its **strand use**).
 _Avoid_: tier cull, tier filter
 
 **Cut class**:
@@ -326,6 +326,10 @@ _Avoid_: phase, milestone
 **Spend**:
 The strands a craft uses up: a random whole number from 0 to a ceiling that depends on the action, taken after the cut and never below 0 (ADR-0041).
 _Avoid_: consumption, depletion
+
+**Strand use**:
+What an action declares about Memory Strands: whether its draws cut tiers, the law of its spend, and the claims behind both (`Action.strand_use`, ADR-0041). An action that declared none is refused on an item with one strand or more.
+_Avoid_: strand declaration (in code; the tickets say it)
 
 **Foulborn orb**:
 A Foulborn Orb of Augmentation, Regal Orb or Exalted Orb: its plain version with the cut denominator raised by 75 and its own spend. Bought at the market price; never made (ADR-0043).

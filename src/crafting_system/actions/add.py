@@ -24,6 +24,7 @@ from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity, Side
 from crafting_system.rules import get_rule
 
+from .cut import Cut
 from .errors import NotApplicableError
 from .outcomes import Outcomes
 from .pool import PoolFamily
@@ -58,22 +59,23 @@ def refuse_if_nothing_to_draw(
         )
 
 
-def draw_onto(data: GameData, retained: Item, totals: Mapping[int, Fraction]) -> Outcomes:
-    """The outcomes of drawing onto `retained` up to `totals`, whatever the pool holds.
+def draw_onto(data: GameData, retained: Item, totals: Mapping[int, Fraction], cut: Cut | None = None) -> Outcomes:
+    """The outcomes of drawing onto `retained` up to `totals`, whatever the pool holds; `cut` is the tier cut of the draw (`Action.cut_of`).
 
     A draw with nothing to draw leaves `retained` as it is, like a Chaos Orb on an item whose slots
     are all fractured: only an add of exactly one mod is refused (`add_one_mod`).
     """
-    return Outcomes.fill(data, retained, totals)
+    return Outcomes.fill(data, retained, totals, cut)
 
 
-def add_one_mod(data: GameData, item: Item, what: str, rarity: Rarity | None = None) -> Outcomes:
+def add_one_mod(data: GameData, item: Item, what: str, rarity: Rarity | None = None, cut: Cut | None = None) -> Outcomes:
     """The outcomes of adding exactly one mod to `item`, which keeps all it has (`rarity` replaces its rarity first).
+    `cut` is the tier cut of the draw (`Action.cut_of`); the refusal when no mod is legal is that of the cut pool.
 
     Raises `NotApplicableError` when the item has no open slot or no mod is legal for an open slot.
     `what` names the action in the message ("a Regal Orb").
     """
     retained = item if rarity is None else item.changed(data, rarity=rarity)
-    result = Outcomes.fill(data, retained, {len(retained.mods) + 1: ONE})
+    result = Outcomes.fill(data, retained, {len(retained.mods) + 1: ONE}, cut)
     refuse_if_nothing_to_draw(data, retained, result.pool, what)
     return result

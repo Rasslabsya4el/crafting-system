@@ -68,6 +68,7 @@ from .fossil_weights import FossilWeights, fossil_weights
 from .mixture import FossilOutcomes
 from .outcomes import Outcomes, retained_item
 from .pool import Candidate, group_pool, pool_candidates
+from .strand_use import FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY, StrandUse
 
 __all__ = [
     "ApplyFossils",
@@ -139,6 +140,9 @@ class ApplyFossils(Action):
     def label(self, data: GameData | None = None) -> str:
         names = self.fossils if data is None else tuple(_record(data, name).name for name in self.fossils)
         return f"Fossils {' + '.join(names)}"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(FOSSIL_HARVEST_NOT_CUT, NOT_SPENT_BY)  # ADR-0041: a resonator draws from the ordinary pool and spends nothing
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         """The resonator and one of each fossil, priced under its name (the record's, when the set names ids)."""

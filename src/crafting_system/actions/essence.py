@@ -13,6 +13,7 @@ from .draw import refuse_unmodelled
 from .errors import NotApplicableError, OutOfScopeError
 from .metamods import refuse_blocking_metamod
 from .outcomes import Outcomes
+from .strand_use import SPEND_ESSENCE, SpendLaw, StrandUse
 
 __all__ = [
     "ApplyEssence",
@@ -50,6 +51,10 @@ class ApplyEssence(Action):
         if data is None:
             raise ValueError("an essence is named as the game data names it, so it needs the data")
         return self._record(data).name
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041: the random mods are cut (the forced mod is fixed and is not), and any essence spends 0 to 80
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_ESSENCE.value["essence"]), SPEND_ESSENCE)
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         if data is None:
@@ -113,7 +118,7 @@ class ApplyEssence(Action):
             max_level = essence.item_level_restriction
             if max_level is None:
                 raise OutOfScopeError(f"{essence.name} has no level cap in the game data")
-        return Outcomes.reroll(data, item, tag=None, forced=forced, max_level=max_level)
+        return Outcomes.reroll(data, item, tag=None, forced=forced, max_level=max_level, cut=self.cut_of(data, item))
 
     def _record(self, data: GameData) -> Essence:
         """The essence record named `self.name`, an essence craft (some record of the file is not one)."""

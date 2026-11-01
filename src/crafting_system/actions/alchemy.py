@@ -12,6 +12,7 @@ from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
+from .strand_use import SPEND_CHAOS_FAMILY, SpendLaw, StrandUse
 
 __all__ = [
     "AlchemyOrb",
@@ -31,6 +32,9 @@ class AlchemyOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Alchemy"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_CHAOS_FAMILY.value["alchemy"]), SPEND_CHAOS_FAMILY)  # ADR-0041: cuts, spends 0 to 50
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value)
@@ -52,7 +56,7 @@ class AlchemyOrb(Action):
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Orb of Alchemy")
         refuse_unmodelled(data, item, jewels=True)
-        return Outcomes.reroll(data, item, tag=None)
+        return Outcomes.reroll(data, item, tag=None, cut=self.cut_of(data, item))
 
 
 @kind("alchemy-orb", order=70, planner=False, why_not="not in the B1 offer set; which actions a target needs is pruning (#118)")
