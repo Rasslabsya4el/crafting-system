@@ -126,6 +126,58 @@ def test_an_offer_state_offers_the_solver_nothing_but_the_picks_and_a_placeholde
     assert {action.label for action in solver_actions(ability, entries, offered, start)} == {"Pick 1", "Pick 2"}
 
 
+TARGET = """
+base: Paua Amulet
+item_level: 84
+influence: []
+requirements:
+  - family: VeilTestSpeed
+    mod: VeilTestSpeed1
+start_item:
+  rarity: rare
+  mods:
+{fractured}
+    - mod: VeiledSuffix
+actions: [veiled-chaos-orb, unveil, pick]
+"""
+
+
+def veil_target(tmp_path):
+    from crafting_system.targets import load_target
+
+    lines = []
+    for mod_id in (LIFE_1, DAMAGE_1, GEM):
+        entry = rolled(mod_id, data=DATA)
+        lines.append(f"    - mod: {mod_id}\n      tier: {entry.tier}\n      values: {list(entry.values)}\n      fractured: true")
+    path = tmp_path / "veil.yaml"
+    path.write_text(TARGET.format(fractured="\n".join(lines)), encoding="utf-8")
+    return load_target(path, DATA)
+
+
+def test_a_target_that_names_the_veiled_kinds_is_planned_end_to_end_and_the_report_reads(tmp_path):
+    from crafting_system.cli import build_report, make_plan, policy_document, render_text
+
+    plan = make_plan(DATA, veil_target(tmp_path), price_file(Veiled_Chaos_Orb=5.0))
+    report = build_report(plan, DATA)
+    text = render_text(report)
+
+    assert plan.mean_remaining == pytest.approx(1.5 + 2.6 * 5.0 * FREE_ACTION_SHARE, rel=1e-12)
+    assert plan.solution.error_bound < 1e-8
+    assert "do: Unveil (free; counted at 5e-06 Chaos" in text  # not "( = 0.00 Chaos each)"
+    assert "unveil offer: 1. " in text and "2. " in text  # "Pick 2" names the second mod of the offer
+    document = policy_document(report)
+    assert {state["action"] for state in document["states"]} >= {"Unveil", "Pick 1", "Pick 2"}
+
+
+def test_a_budget_that_the_exact_run_overshoots_falls_back_to_the_exact_run_for_a_veil_target(tmp_path):
+    from crafting_system.cli import make_plan
+
+    plan = make_plan(DATA, veil_target(tmp_path), price_file(Veiled_Chaos_Orb=5.0), budget=1e-9)
+
+    assert plan.approximation is None and "no approximate level" in plan.note  # the family-group level refuses the veiled actions, and says so
+    assert plan.mean_remaining == pytest.approx(1.5 + 2.6 * 5.0 * FREE_ACTION_SHARE, rel=1e-12)
+
+
 def test_the_mean_and_the_odds_of_the_veil_loop_are_exact_in_the_risk_report():
     ability, start, entries, solution = loop(5.0)
     risk = evaluate_risk(solution.policy, start, ability.is_goal, solution.values[start])
