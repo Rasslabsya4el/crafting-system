@@ -13,8 +13,8 @@ implicit with no range (every stat fixed) is not rerolled and not stored.
 
 Refusals, in this order:
 
-* `NotApplicableError`: the item is corrupted (`blessed_orb.needs_ranged_implicit`), or it has no implicit with a
-  range of values.
+* `NotApplicableError`: the item is corrupted (`blessed_orb.refused_on_corrupted`), or it has no implicit with a
+  range of values (`blessed_orb.needs_ranged_implicit`).
 * `OutOfScopeError`: the item holds an Eldritch implicit. The wiki lets the Orb be used on such an item
   (`blessed_orb.special_implicits_allowed`) but does not say whether both Eldritch implicits are rerolled, and no
   admitted claim does, so by ADR-0004 and ADR-0027 the action is not offered there. It is checked before the
@@ -45,6 +45,7 @@ from .finite import Finite
 from .rolls import roll_values
 
 NEEDS_RANGED_IMPLICIT = get_rule("blessed_orb.needs_ranged_implicit")
+REFUSED_ON_CORRUPTED = get_rule("blessed_orb.refused_on_corrupted")
 REROLLS_VALUES_ONLY = get_rule("blessed_orb.rerolls_implicit_values_only")
 SPECIAL_IMPLICITS_ALLOWED = get_rule("blessed_orb.special_implicits_allowed")
 NEW_VALUE_UNIFORM = get_rule("blessed_orb.new_value_uniform_in_range")
@@ -110,7 +111,7 @@ class BlessedOrb(Action):
         return frozenset(
             rule.id
             for rule in (
-                NEEDS_RANGED_IMPLICIT, REROLLS_VALUES_ONLY, SPECIAL_IMPLICITS_ALLOWED, NEW_VALUE_UNIFORM,
+                NEEDS_RANGED_IMPLICIT, REFUSED_ON_CORRUPTED, REROLLS_VALUES_ONLY, SPECIAL_IMPLICITS_ALLOWED, NEW_VALUE_UNIFORM,
                 PREVIOUS_VALUE_CAN_REPEAT, COST,
             )
         )
@@ -163,5 +164,7 @@ class BlessedOrb(Action):
 )
 def _blessed_orb(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)
-    if base is not None and not item.corrupted and (base.implicits or item.implicits):
+    if base is None or item.corrupted:
+        return
+    if item.implicits or any(mod_id in data.mods and has_range(data.mods[mod_id]) for mod_id in base.implicits):
         yield BlessedOrb()

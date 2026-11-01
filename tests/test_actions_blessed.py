@@ -266,6 +266,7 @@ def test_the_kind_is_registered_for_items_that_can_hold_an_implicit_and_is_no_pl
     assert BlessedOrb() in catalog(DATA, belt(30), names={"blessed-orb"})
     assert BlessedOrb() in catalog(DATA, _item(RING), names={"blessed-orb"})
     assert catalog(DATA, _item(PLAIN_RING), names={"blessed-orb"}) == ()
+    assert catalog(DATA, _item(FIXED_RING), names={"blessed-orb"}) == ()  # a fixed implicit has no range to reroll
     assert catalog(DATA, belt(30, corrupted=True), names={"blessed-orb"}) == ()
     assert BlessedOrb() not in catalog(DATA, belt(30), planner_only=True)
 
@@ -276,6 +277,7 @@ def test_the_orb_names_its_claims_and_marks_the_ones_no_other_source_settles():
         "blessed_orb.previous_value_can_repeat",
         "blessed_orb.new_value_uniform_in_range",
         "blessed_orb.special_implicits_allowed",
+        "blessed_orb.refused_on_corrupted",
         "blessed_orb.cost",
     } <= claims
     assert rule_by_id("blessed_orb.new_value_uniform_in_range").approximate  # only Craft of Exile's code gives the law

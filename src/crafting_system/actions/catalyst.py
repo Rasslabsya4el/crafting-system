@@ -55,13 +55,14 @@ ROUNDING_FLOOR = get_rule("catalyst.rounding_floor")
 MATCH_BY_TAGS = get_rule("catalyst.match_by_implicit_tags")
 BY_SIDE = get_rule("catalyst.sinistral_dextral_by_side")
 GAIN_FORMULA = get_rule("catalyst.gain_formula_and_rounding")
+NO_ODDS_CHANGE = get_rule("catalyst.consumption_stopped_in_3_15")  # why the action moves the quality and nothing else (ADR-0029)
 REFUSED_ON_CORRUPTED = get_rule("catalyst.refused_on_corrupted")
 COST = get_rule("catalyst.cost")
 CLAIMS = frozenset(
     rule.id
     for rule in (
         JEWELLERY_ONLY, SINGLE_TYPE, GAIN_BY_ITEM_LEVEL, CAPPED_AT_20, MAGNITUDE, ROUNDING_FLOOR, MATCH_BY_TAGS, BY_SIDE,
-        GAIN_FORMULA, REFUSED_ON_CORRUPTED, COST,
+        GAIN_FORMULA, NO_ODDS_CHANGE, REFUSED_ON_CORRUPTED, COST,
     )
 )
 ONE = Fraction(1)

@@ -2,7 +2,7 @@
 # The wiki's old-value exclusion is not a claim: the owner settled it the other way (blessed_orb.previous_value_can_repeat).
 rules:
   - id: blessed_orb.needs_ranged_implicit
-    statement: A Blessed Orb needs an item with at least one implicit that has a range of values; items without implicits or with fixed-value implicits are not valid inputs. A corrupted item takes none (as for the ten basic orbs, CUR-21).
+    statement: A Blessed Orb needs an item with at least one implicit that has a range of values; items without implicits or with fixed-value implicits are not valid inputs. Corrupted items are refused separately (blessed_orb.refused_on_corrupted).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
     quote: "It cannot be used on items without implicit modifiers or whose implicit modifiers do not have a range of values."
@@ -51,3 +51,11 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
     value: {Blessed Orb: 1}
+
+  - id: blessed_orb.refused_on_corrupted
+    statement: A Blessed Orb cannot alter the implicits of a corrupted item.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Blessed_Orb#Mechanics
+    quote: "They cannot be used to alter implicit modifiers on corrupted items"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01

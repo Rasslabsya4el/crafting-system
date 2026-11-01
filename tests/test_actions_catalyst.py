@@ -281,6 +281,7 @@ def test_the_catalyst_names_its_claims_and_marks_the_ones_no_other_source_settle
         "catalyst.rounding_floor",
         "catalyst.match_by_implicit_tags",
         "catalyst.cost",
+        "catalyst.consumption_stopped_in_3_15",
     } <= claims
     for rule_id in (
         "catalyst.gain_formula_and_rounding",
