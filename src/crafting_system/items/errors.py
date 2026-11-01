@@ -34,5 +34,19 @@ class FamilyConflictError(ItemError):
     """Two mods of the item share a family, so they exclude each other."""
 
 
+class ImplicitError(ItemError):
+    """An implicit of the item is neither an implicit of its base nor an Eldritch one, has the wrong grade,
+    or the item holds two Eldritch implicits of one side."""
+
+
+class QualityError(ItemError):
+    """The catalyst quality is malformed (type, percent outside 0 to 20) or sits on a base that takes none."""
+
+
+class VeilOfferError(ItemError):
+    """The unveil offer does not fit the item: no single veiled placeholder, too many or repeated mods, or
+    a mod of the wrong domain, side or family."""
+
+
 class TierError(ItemError):
     """A mod has no tier on a base because it cannot spawn there: its spawn weight is 0 for the base's tags."""

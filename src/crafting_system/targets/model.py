@@ -5,12 +5,17 @@ reference to the game data and `Target.is_met_by` needs none. A requirement is c
 explicit mod of the item on its own: a minimum tier and a minimum roll must hold on the same mod.
 The tier is the one stored on the `ExplicitMod` (tier 1 is the best), never derived here, and how a
 mod got onto the item (natural, fractured, crafted) matters only when `not_crafted` is set.
+
+Implicits and quality are checked on their own (ADR-0027): an `ImplicitRequirement` is met by one
+implicit of the item whose mod, Eldritch grade and rolled values all pass; a `QualityRequirement` by
+the item's catalyst quality of the same type and at least the percent. Both compare the base roll
+and the percent the item stores, never a value scaled by the quality (ADR-0029).
 """
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from crafting_system.items import ExplicitMod, Influence, Item
+from crafting_system.items import CatalystType, ExplicitMod, ImplicitMod, Influence, Item
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,10 +90,71 @@ Node = Requirement | KOfN
 
 
 @dataclass(frozen=True, slots=True)
+class ImplicitRequirement:
+    """One implicit mod wanted on the item.
+
+    Exactly one of `family` and `stat` is the selector as the owner wrote it; `mod_ids` is every implicit
+    mod that selector counts (the "in your Presence" variants only when a `mod:` key names one).
+    `min_grade` is the lowest Eldritch grade accepted (1 Lesser to 6 Perfect), None when any grade does;
+    it is set only for Eldritch implicits. `min_roll` has one entry per stat of the mod, None where any
+    value will do. Rolls are the raw numbers of the game data, as stored on the item.
+    """
+
+    family: str | None
+    stat: str | None
+    mod_ids: frozenset[str]
+    min_grade: int | None = None
+    min_roll: tuple[int | None, ...] | None = None
+
+    def __post_init__(self) -> None:
+        if (self.family is None) == (self.stat is None):
+            raise ValueError("an implicit requirement names exactly one of a family and a stat text")
+        if not self.mod_ids:
+            raise ValueError("an implicit requirement needs at least one mod id")
+
+    def is_met_by(self, item: Item) -> bool:
+        """Whether one implicit of `item` is among `mod_ids` and passes the grade and every roll."""
+        return any(self._counts(entry) for entry in item.implicits)
+
+    def _counts(self, entry: ImplicitMod) -> bool:
+        if entry.mod_id not in self.mod_ids:
+            return False
+        if self.min_grade is not None and entry.grade < self.min_grade:
+            return False
+        if self.min_roll is None:
+            return True
+        if len(entry.values) != len(self.min_roll):
+            return False
+        return all(wanted is None or got >= wanted for wanted, got in zip(self.min_roll, entry.values))
+
+
+@dataclass(frozen=True, slots=True)
+class QualityRequirement:
+    """The catalyst quality wanted: this `type` at `min_percent` (1 to 20) or more."""
+
+    type: CatalystType
+    min_percent: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.type, CatalystType):
+            raise ValueError("a quality requirement needs a CatalystType")
+        if type(self.min_percent) is not int or self.min_percent < 1:
+            raise ValueError("a quality requirement needs a whole minimum percent of 1 or more")
+
+    def is_met_by(self, item: Item) -> bool:
+        """Whether `item` has quality of this type and at least the percent."""
+        quality = item.quality
+        return quality is not None and quality.type is self.type and quality.percent >= self.min_percent
+
+
+Condition = Node | ImplicitRequirement | QualityRequirement
+
+
+@dataclass(frozen=True, slots=True)
 class Target:
     """The item the owner wants, and where a query starts from.
 
-    `requirements` are all required at once. `start_item` is a fresh normal item of the base, item
+    `requirements` are all required at once, then `implicits` and `quality` when given. `start_item` is a fresh normal item of the base, item
     level and influences unless the file gave one. `price_file` is the path as resolved against the
     target file's folder; it is not read or checked here. `start_price` is the name the start item
     has in the price file (for example the buy spec's name), or None; it is not looked up here.
@@ -101,11 +167,16 @@ class Target:
     start_item: Item
     price_file: Path | None = None
     start_price: str | None = None
+    implicits: tuple[ImplicitRequirement, ...] = ()
+    quality: QualityRequirement | None = None
 
     def is_met_by(self, item: Item) -> bool:
-        """Whether `item` meets every top-level requirement."""
+        """Whether `item` meets every top-level requirement, every implicit requirement and the quality."""
         return not self.unmet(item)
 
-    def unmet(self, item: Item) -> tuple[Node, ...]:
-        """The top-level requirements `item` does not meet, in file order."""
-        return tuple(node for node in self.requirements if not node.is_met_by(item))
+    def unmet(self, item: Item) -> tuple[Condition, ...]:
+        """What `item` does not meet, in file order: requirements, then implicit requirements, then quality."""
+        wanted: tuple[Condition, ...] = (*self.requirements, *self.implicits)
+        if self.quality is not None:
+            wanted = (*wanted, self.quality)
+        return tuple(condition for condition in wanted if not condition.is_met_by(item))

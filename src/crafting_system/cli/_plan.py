@@ -175,14 +175,20 @@ def make_plan(
     """Solve the target and measure the risk of the policy.
 
     `start_price` is the cost of the start item for this run (it wins over the price file);
-    `offers` default to `offers_for` the target. Raises `PlanError` when no offer has a price or no
-    policy reaches the goal, and what the layers below raise for a bad input.
+    `offers` default to `offers_for` the target. Raises `PlanError` when the target has `implicits` or
+    `quality` (the planner ignores them until B2), when no offer has a price or no policy reaches the
+    goal, and what the layers below raise for a bad input.
 
     Remove Crafted Mods is kept only when a priced bench craft is, or the start item holds a crafted
     mod: otherwise no crafted mod can ever exist and tracking the junk slots for it would only grow
     the state space. A start item with a price is offered again as `restart` from every state.
     """
     price_of_start = resolve_start_price(target, prices, start_price)
+    if target.implicits or target.quality is not None:
+        raise PlanError(
+            "the target asks for implicits or quality, which the planner cannot plan yet"
+            " (batch B2, tickets #142 onward)"
+        )
     goal = Goal.from_target(target)
     left_out: tuple[LeftOut, ...] = ()
     if offers is None:

@@ -76,6 +76,10 @@ _Avoid_: goal item, desired item
 One condition of a target: a mod, named by family or by English stat text, with a minimum tier or a minimum roll, optionally marked "not crafted".
 _Avoid_: constraint, filter
 
+**Implicit requirement**:
+One condition of a target on an implicit, written under `implicits:`: an implicit mod named by family or by English stat text, with a minimum Eldritch grade or a minimum base roll. It is resolved among implicits only, so a suffix of the same text is never chosen (ADR-0027). A condition on the catalyst quality is written under `quality:` (a type and a minimum percent).
+_Avoid_: implicit filter
+
 **k-of-n requirement**:
 A requirement met when at least k of its n listed requirements are met.
 _Avoid_: group, choice group
