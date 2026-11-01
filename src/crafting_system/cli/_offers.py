@@ -182,12 +182,17 @@ def offers_for(
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
     if kinds_named is not None:
-        unknown = sorted(set(kinds_named) - {entry.name for entry in kinds(planner_only=True)})
+        usable = {entry.name for entry in kinds(planner_only=True)}
+        exist = {entry.name for entry in kinds()}
+        unknown = sorted(set(kinds_named) - exist)
+        unready = sorted((set(kinds_named) & exist) - usable)
+        problems = []
         if unknown:
-            raise ValueError(
-                f"unknown action kind(s) {', '.join(unknown)}; the kinds the planner can use are "
-                + ", ".join(entry.name for entry in kinds(planner_only=True))
-            )
+            problems.append(f"unknown action kind(s) {', '.join(unknown)}")
+        if unready:
+            problems.append(f"action kind(s) {', '.join(unready)} cannot be used by the planner yet")
+        if problems:
+            raise ValueError("; ".join(problems) + f"; the kinds the planner can use are {', '.join(sorted(usable))}")
     named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
     candidates = []
     left_out_unwanted: list[str] = []

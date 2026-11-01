@@ -175,3 +175,8 @@ def test_a_rare_start_item_is_offered_none_of_the_orbs_of_magic_items_and_a_norm
 
     assert not MAGIC_ORBS & {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, rare).offers}
     assert MAGIC_ORBS <= {offer.label for offer in offers_for(PRICED_DATA, goal, BELT, normal).offers}
+
+
+def test_a_kind_that_exists_but_the_planner_cannot_use_yet_is_refused_as_such():
+    with pytest.raises(ValueError, match=r"scouring-orb cannot be used by the planner yet; the kinds the planner can use are"):
+        offers_for(PRICED_DATA, Goal((Wanted(frozenset({LIFE})),)), BELT, item(base_id=BELT), ["scouring-orb"])
