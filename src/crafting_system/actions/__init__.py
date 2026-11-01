@@ -60,8 +60,10 @@ lifts the crafted-mod limit to three. No action raises `OutOfScopeError` for a m
 
 The beast crafts (`beasts.py`, ticket #147): `TalismanFracture(1 or 2)` fractures one or two mods of a rare Talisman,
 uniformly, as the Fracturing Orb does (4 or 6 mods needed), and `AspectBeast(aspect, level)` adds the suffix that
-grants an aspect skill at level 20 or 30, and is offered only when a target names it (`Adds.wanted_only`). A beast
-craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
+grants an aspect skill at level 20 or 30, and is offered only when a target names it (`Adds.wanted_only`).
+`beast_mods.py` holds `WildBristleMatron()` (adds one of the five metamods, uniformly among those the item allows) and
+`BeastSideSwap(Side.PREFIX or Side.SUFFIX, beast_level=83)` (Farric Wolf and Lynx: draws a mod on one side, capped by the
+level of the beast and not of the item, then removes one mod of the other side uniformly). A beast craft consumes beasts priced by name and rare beasts of any kind at a setting (`rare_creature_price`, 1 chaos).
 None is a planner kind yet.
 
 Refusals, raised by `outcomes` in this order (a message names the reason):
@@ -109,6 +111,7 @@ family, with exact `Fraction` weights.
 from .add import add_one_mod, draw_onto
 from .alchemy import AlchemyOrb
 from .annul import AnnulmentOrb
+from .beast_mods import BeastSideSwap, WildBristleMatron
 from .beasts import AspectBeast, TalismanFracture, TalismanFractureOutcomes, recipe_resources
 from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, bench_crafts, without_ranges
 from .catalog import Kind, catalog, kind, kinds, register, registered
@@ -147,6 +150,7 @@ __all__ = [
     "ApplyEssence",
     "ApplyFossils",
     "AugmentationOrb",
+    "BeastSideSwap",
     "BenchCraft",
     "BenchOutcomes",
     "ChaosOrb",
@@ -177,6 +181,7 @@ __all__ = [
     "TalismanFracture",
     "TalismanFractureOutcomes",
     "TransmutationOrb",
+    "WildBristleMatron",
     "add_one_mod",
     "bench_crafts",
     "build_pool",
