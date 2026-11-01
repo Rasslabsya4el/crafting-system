@@ -11,6 +11,7 @@ the claims say, and a plan whose smallest worst case is another route names that
 
 import json
 import random
+from dataclasses import replace
 from fractions import Fraction
 
 import pytest
@@ -74,7 +75,7 @@ def test_golden_route_page_of_the_tiny_case(tiny):
     _, _, plan, report = tiny
     page = Page("Tiny recombinator case", (build_section(route_input(plan, report.interval), DATA, anchor="policy"),))
     html = render_page(page)
-    assert "Without recombinators" in html and "Thaumaturgic Dust at 100,000 per Chaos Orb" in html
+    assert "Without recombinators" in html and "Dust and Gold prices" in html and "Thaumaturgic Dust at 100,000 per Chaos Orb" in html
     assert_golden("interval_tiny", html)
 
 
@@ -131,6 +132,15 @@ def test_the_cost_rule_alone_moves_the_mean_by_the_expected_recombinations_times
     assert low.low <= low.value <= low.high and high.low <= high.value <= high.high
 
 
+def test_the_text_says_when_the_cost_rule_alone_could_make_the_plan_dearer_than_the_route_without_recombinators(tiny):
+    answer, _, _, report = tiny
+    assert answer.cost_rule_mean[1].value > answer.baseline.value  # 78.90 against 69.00 in the tiny case
+    text = render_text(report)
+    assert "the cost of a recombination is approximate too: at the high end of its reports the plan costs 78.90 Chaos at alpha = 1, more than this route" in text
+    cheap = replace(answer, cost_rule_mean=(answer.cost_rule_mean[0], answer.plan))
+    assert "approximate too" not in " ".join(cheap.text_lines(300.0))
+
+
 def test_the_dust_and_gold_prices_are_named_with_their_source(tiny):
     answer, _, _, report = tiny
     assert {(p.name, p.source) for p in answer.prices} == {("Thaumaturgic Dust", "default"), ("Gold", "default")}
@@ -155,8 +165,6 @@ def test_a_plan_with_the_smallest_worst_case_elsewhere_names_that_route():
 
 def test_a_gap_in_the_bracket_is_worded_as_a_gap_not_as_an_optimum():
     answer, _ = gamble_answer()
-    from dataclasses import replace
-
     from crafting_system.risk import Estimate
 
     open_gap = replace(answer, lower=Estimate(answer.upper.value - 4.0, 0.0, 0.0), proven_optimal=False)
@@ -189,9 +197,9 @@ def test_the_text_lists_the_same_claims_with_their_spread(tiny):
     _, _, _, report = tiny
     text = render_text(report)
     assert "recombinator.selection_weighted_formula_unknown: Fitted on 40 + 28 observations" in text
-    assert "spread: the plan is made at 1; its cost is read at 0.4, 0.7, 1, 1.3, 1.6" in text
-    assert "spread: the plan uses 100,000; reports range from 25,000 to 250,000 (Thaumaturgic Dust per combine)" in text
-    assert "spread: the plan uses 12,000; reports range from 8,000 to 20,000 (Gold per combine)" in text
+    assert "spread: the planner is run at 1; its cost is read at 0.4, 0.7, 1, 1.3, 1.6" in text
+    assert "spread: the planner uses 100,000; reports range from 25,000 to 250,000 (Thaumaturgic Dust per combine)" in text
+    assert "spread: the planner uses 12,000; reports range from 8,000 to 20,000 (Gold per combine)" in text
 
 
 def test_the_claims_of_the_route_without_recombinators_and_of_the_robust_route_are_listed_too():

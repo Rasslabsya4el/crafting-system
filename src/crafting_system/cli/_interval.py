@@ -39,10 +39,7 @@ AXIS_WORDS = {
     "recombinator.alpha": "the recombinator's mod selection exponent alpha (a mod is kept in proportion to its weight to the power alpha)",
     "awakener.group_conflict": "which mod survives when the Awakener's Orb meets a group conflict",
 }
-FORMAT_NOTE = (
-    "The interval is the plan's cost at each reading of the grid, not a bound: the true value can lie between two grid points "
-    "(ADR-0022)."
-)
+FORMAT_NOTE = "The interval is the plan's cost at each value of the grid, not a bound: the true value can lie between two grid points."
 
 
 def money(chaos: float) -> str:
@@ -158,7 +155,7 @@ class IntervalAnswer:
         out.append(("Bracket", self._bracket_lines()))
         if self.recombinations is not None:
             out.append(("Recombinations", self._combine_lines()))
-            out.append(("Prices", self._price_lines()))
+            out.append(("Dust and Gold prices", self._price_lines()))
         return out
 
     def _baseline_lines(self) -> list[str]:
@@ -167,10 +164,16 @@ class IntervalAnswer:
             return ["no route without recombinators reaches the goal"]
         low = min(row.plan_cost.value for row in self.rows) - self.baseline.value
         high = max(row.plan_cost.value for row in self.rows) - self.baseline.value
-        return [
+        lines = [
             f"{money(self.baseline.value)} Chaos: the best route that uses none",
             f"plan minus this route: {low:+,.2f} to {high:+,.2f} Chaos over the grid (below 0 the plan is cheaper)",
         ]
+        if self.cost_rule_mean is not None and self.cost_rule_mean[1].value > self.baseline.value >= self.plan.value:
+            lines.append(
+                f"the cost of a recombination is approximate too: at the high end of its reports the plan costs "
+                f"{money(self.cost_rule_mean[1].value)} Chaos at {self.plan_reading}, more than this route"
+            )
+        return lines
 
     def _robust_lines(self) -> list[str]:
         if not self.robust_differs:
@@ -210,15 +213,15 @@ class IntervalAnswer:
     @staticmethod
     def _certified(estimate: Estimate) -> str:
         if estimate.high - estimate.low > 1e-6 * max(1.0, abs(estimate.value)):
-            return f" (certified {estimate.low:,.2f} to {estimate.high:,.2f})"
+            return f" (between {estimate.low:,.2f} and {estimate.high:,.2f})"
         return ""
 
     def _price_lines(self) -> list[str]:
         lines = []
         for price in self.prices:
-            if price.name == DUST_NAME:
+            if price.name == DUST_NAME and price.chaos_each <= 1:
                 words = f"{number_text(round(1 / price.chaos_each))} per Chaos Orb"
-            elif price.name == GOLD_NAME:
+            elif price.name == GOLD_NAME and price.chaos_each * 1_000_000 >= 1:
                 words = f"{number_text(price.chaos_each * 1_000_000)} Chaos Orbs per million"
             else:
                 words = f"{price.chaos_each:g} Chaos Orbs each"

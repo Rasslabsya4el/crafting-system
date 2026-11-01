@@ -161,12 +161,12 @@ def claim_interval(rule) -> tuple[Mapping[str, object], str] | None:
     if rule.id in RANGE_CLAIMS:
         keys, unit = RANGE_CLAIMS[rule.id]
         point, low, high = (float(rule.value[key]) for key in keys)
-        words = f"the plan uses {number_text(point)}; reports range from {number_text(low)} to {number_text(high)} ({unit})"
+        words = f"the planner uses {number_text(point)}; reports range from {number_text(low)} to {number_text(high)} ({unit})"
         return {"kind": "range", "point": point, "low": low, "high": high, "unit": unit}, words
     if rule.id in GRID_CLAIMS:
         plan, grid = float(rule.value["plan"]), [float(x) for x in rule.value["grid"]]
         shown = ", ".join(number_text(x) for x in grid)
-        words = f"the plan is made at {number_text(plan)}; its cost is read at {shown}"
+        words = f"the planner is run at {number_text(plan)}; its cost is read at {shown}"
         return {"kind": "grid", "plan": plan, "grid": grid}, words
     if rule.id in TABLE_CLAIMS:
         other = TABLE_CLAIMS[rule.id]
