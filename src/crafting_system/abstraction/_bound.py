@@ -56,7 +56,7 @@ exact engine on random pools.
 from collections.abc import Hashable, Mapping, Sequence
 from fractions import Fraction
 
-from crafting_system.actions import Action, Fixed, OutOfScopeError, PoolFamily, guaranteed_candidates
+from crafting_system.actions import Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, guaranteed_candidates
 from crafting_system.data import Mod
 from crafting_system.items import Side
 
@@ -294,7 +294,7 @@ def reach_bound(
     `leaves` are indexes into `abstraction.goal.leaves`. The bound uses the pool alone and costs
     milliseconds; with `exact=True` the result is the exact chance. Returns None when the action
     cannot be bounded: it reads the junk (it does not erase it), a part of its result is a `Fixed`
-    one, it fractures a mod, or a leaf of `leaves` limits the roll of a mod in its pool.
+    or a `Rerolled` one, it fractures a mod, or a leaf of `leaves` limits the roll of a mod in its pool.
     """
     leaves = tuple(leaves)
     if not leaves:
@@ -308,7 +308,7 @@ def reach_bound(
     try:
         prepared = abstraction._prepared(state, action)
         outcomes = prepared.outcomes
-        if outcomes.fractures or any(isinstance(part, Fixed) for _, part in outcomes.components):
+        if outcomes.fractures or any(isinstance(part, (Fixed, Rerolled)) for _, part in outcomes.components):
             return None
         memo: dict = {}
         total = ZERO

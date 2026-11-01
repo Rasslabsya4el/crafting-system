@@ -9,7 +9,9 @@ mod got onto the item (natural, fractured, crafted) matters only when `not_craft
 Implicits and quality are checked on their own (ADR-0027): an `ImplicitRequirement` is met by one
 implicit of the item whose mod, Eldritch grade and rolled values all pass; a `QualityRequirement` by
 the item's catalyst quality of the same type and at least the percent. Both compare the base roll
-and the percent the item stores, never a value scaled by the quality (ADR-0029).
+and the percent the item stores, never a value scaled by the quality (ADR-0029). An
+`EnchantmentRequirement` is met when the item's one enchantment is among the acceptable ones
+(ADR-0050).
 """
 
 from dataclasses import dataclass
@@ -147,7 +149,27 @@ class QualityRequirement:
         return quality is not None and quality.type is self.type and quality.percent >= self.min_percent
 
 
-Condition = Node | ImplicitRequirement | QualityRequirement
+@dataclass(frozen=True, slots=True)
+class EnchantmentRequirement:
+    """The enchantment wanted: any one of `mod_ids`, the acceptable set the owner's entries stand for.
+
+    `entries` are the entries as written (a mod id, a stat text or a bare tag), in file order. An item holds
+    one enchantment, so there is only "any of"; the planner adds none the target does not name (ADR-0050).
+    """
+
+    entries: tuple[str, ...]
+    mod_ids: frozenset[str]
+
+    def __post_init__(self) -> None:
+        if not self.entries or not self.mod_ids:
+            raise ValueError("an enchantment requirement needs at least one entry and one mod id")
+
+    def is_met_by(self, item: Item) -> bool:
+        """Whether the enchantment of `item` is one of `mod_ids`."""
+        return item.enchantment in self.mod_ids
+
+
+Condition = Node | ImplicitRequirement | QualityRequirement | EnchantmentRequirement
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,6 +181,7 @@ class Target:
     target file's folder; it is not read or checked here. `start_price` is the name the start item
     has in the price file (for example the buy spec's name), or None; it is not looked up here. `actions` names the
     kinds of actions the planner may use (ADR-0024), or None for every kind it can use; the names are not checked here.
+    `enchantment` is the acceptable set for the item's enchantment, or None when the target asks for none.
     """
 
     base_id: str
@@ -171,14 +194,17 @@ class Target:
     implicits: tuple[ImplicitRequirement, ...] = ()
     quality: QualityRequirement | None = None
     actions: tuple[str, ...] | None = None
+    enchantment: EnchantmentRequirement | None = None
 
     def is_met_by(self, item: Item) -> bool:
-        """Whether `item` meets every top-level requirement, every implicit requirement and the quality."""
+        """Whether `item` meets every top-level requirement, every implicit requirement, the quality and the enchantment."""
         return not self.unmet(item)
 
     def unmet(self, item: Item) -> tuple[Condition, ...]:
-        """What `item` does not meet, in file order: requirements, then implicit requirements, then quality."""
+        """What `item` does not meet, in file order: requirements, then implicit requirements, then quality, then enchantment."""
         wanted: tuple[Condition, ...] = (*self.requirements, *self.implicits)
         if self.quality is not None:
             wanted = (*wanted, self.quality)
+        if self.enchantment is not None:
+            wanted = (*wanted, self.enchantment)
         return tuple(condition for condition in wanted if not condition.is_met_by(item))

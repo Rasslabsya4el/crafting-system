@@ -48,5 +48,10 @@ class VeilOfferError(ItemError):
     a mod of the wrong domain, side or family."""
 
 
+class EnchantmentError(ItemError):
+    """The enchantment of the item is not an enchantment mod, was removed from the pool, or does not fit the
+    base (a weapon enchant on body armour, or a base that takes none)."""
+
+
 class TierError(ItemError):
     """A mod has no tier on a base because it cannot spawn there: its spawn weight is 0 for the base's tags."""
