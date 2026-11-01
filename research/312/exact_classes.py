@@ -657,7 +657,7 @@ def main() -> None:
     if args.out:
         out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
-        (out / f"{path.stem}.{args.offers.replace('/', '_').replace(chr(92), '_')}.classes.json").write_text(text + "\n", encoding="utf-8")
+        (out / f"{path.stem}.{args.offers.replace('/', '_').replace(chr(92), '_').replace(':', '_')[:40]}.classes.json").write_text(text + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
