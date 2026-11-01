@@ -630,8 +630,14 @@ def _neutralised(listed, neutral) -> dict:
     """The finished items with the chance of each, the part of the sockets `neutral` takes off, added up by item."""
     found: dict = defaultdict(Fraction)
     for chance, result in listed:
-        found[dataclasses.replace(result, sockets=None if result.sockets is None else neutral(result.sockets))] += chance
+        found[_without(result, neutral)] += chance
     return dict(found)
+
+
+def _without(item: Item, neutral) -> Item:
+    """`item` with the part of its sockets `neutral` takes off, in the imprints it holds too (an imprint is a copy of the item, ADR-0060: it carries the sockets over)."""
+    imprints = tuple(_without(entry, neutral) for entry in item.imprints)
+    return dataclasses.replace(item, sockets=None if item.sockets is None else neutral(item.sockets), imprints=imprints)
 
 
 def check_socket_action_leaves_the_state(action, reads: Reads, item: Item, items, data, goal: Goal) -> None:
