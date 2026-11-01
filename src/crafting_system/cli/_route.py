@@ -85,12 +85,12 @@ class When:
             return False
         if self.no_fractured and state.fractured:
             return False
-        if self.fractured_families:
-            held = {family for entry in state.fractured for family in data.mods[entry.mod_id].families}
+        if self.fractured_families:  # a mod fractured mid-route may be held as its family type ("~3"): it names no family here
+            held = {family for entry in state.fractured if entry.mod_id in data.mods for family in data.mods[entry.mod_id].families}
             if not held.issuperset(self.fractured_families):
                 return False
         for side, room, wanted in self.open_slots:
-            held = sum(data.mods[entry.mod_id].generation_type == side.value for entry in state.fractured)
+            held = sum(entry.mod_id in data.mods and data.mods[entry.mod_id].generation_type == side.value for entry in state.fractured)
             held += sum(slot.side is side for slot in state.slots)
             if room - held < wanted:
                 return False
