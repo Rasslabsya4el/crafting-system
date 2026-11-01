@@ -1,0 +1,24 @@
+# Mechanic family: awakener_orb (the Awakener's Orb: two items of one class, each with one influence;
+# the donor is destroyed and the receiver is reforged as a rare item with both influences).
+# B3 has no Awakener's Orb action yet (ADR-0013); these claims record what the Craft of Exile
+# emulator check of ticket #198 found, for the action to read when it is built.
+# APPROXIMATE (ADR-0028): a claim marked `approximate: true` rests on Craft of Exile's code alone or
+# disagrees with another trusted source; the planner names it on every answer that reads it.
+rules:
+  - id: awakener_orb.keeps_one_influenced_mod_of_each_item
+    statement: "The reforged receiver keeps one influenced mod of the receiver and one of the donor, each picked uniformly among the pairs of influenced mods of different influences and different modifiers, and the rest of the item is rerolled as a rare item. The wiki (oldid 1697721, read 2026-09-20) says the same: one influenced mod from each, a random one when there are several."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "var rndpick=poec_rand(0,nvcombs.length,!0);poec_simWokePick={\"m1\":"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: awakener_orb.group_conflict_keeps_receiver_mod
+    statement: "When the two kept influenced mods share a mod group, the receiver's mod stays and the donor's is dropped (the other slots are rerolled). The Craft of Exile emulator (Wraecrafter Ultra, run headless from its local copy, package.js SHA256 faa6a774...f639) kept the receiver's mod in 1000 of 1000 Awakener's Orbs on two Iron Rings with Curse on Hit mods of the group CurseOnHitLevel, in both role orders (Crusader Conductivity receiving Warlord Flammability, and the reverse); without a group conflict both mods stayed in 300 of 300 (ticket #198)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "useaffixes.push(jQuery.parseJSON(JSON.stringify(woke.m1)));if(!mconflict){useaffixes.push("
+    approximate: true
+    approximate_reason: "The wiki (oldid 1697721) says one of two exclusive mods is discarded at random; only the game settles it (in-game list #182, check 1)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
