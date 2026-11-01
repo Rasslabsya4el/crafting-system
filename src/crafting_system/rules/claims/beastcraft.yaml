@@ -1,0 +1,186 @@
+# Mechanic family: beastcraft (the single-item beast recipes of 3.29: the two side swaps, the Wild Bristle Matron, the aspects
+# and the Talisman fractures). Research ticket #88 (claims HBS-15 to HBS-23, draft file docs/research/2026-10-31-harvest-beasts-claims.yaml
+# on the branch research/harvest-beasts), the decisions of grill B2 (issue #93, ADR-0030) and ticket #147. The Talisman base reroll
+# (Craicic Squid) is out of v1.
+#
+# APPROXIMATE (ADR-0028): a claim whose statement starts with "Approximate:" rests on Craft of Exile's code or on a default the
+# main chat chose where no source speaks. The `approximate` field of the registry is ticket #143; until it lands the statement
+# carries the mark, and the claim is to be flagged then.
+rules:
+  - id: beastcraft.recipe_beasts
+    statement: "The beasts each single-item recipe consumes in 3.29, as a price-file name and a count; `any_rare_creature` counts the rare beasts of any kind (the Blood Altar takes four beasts per recipe, named red beasts first and any rare beast for the rest). `value` maps the recipe to its beasts. The aspect recipes list the beast of their aspect (Saqawal Avian, Farrul Cat, Craiceann Crab, Fenumus Spider); the level 30 version adds The Black Mórrígan and one rare beast fewer."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting#List_of_beast_recipes
+    quote: "Modify Mods on an Item Add a Prefix, Remove a Random Suffix Only works on rare items 1x Farric Wolf Alpha"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      add_prefix_remove_suffix: {Farric Wolf Alpha: 1, any_rare_creature: 3}
+      add_suffix_remove_prefix: {Farric Lynx Alpha: 1, any_rare_creature: 3}
+      add_metamod: {Wild Bristle Matron: 1, any_rare_creature: 3}
+      aspect_avian_20: {"Saqawal, First of the Sky": 1, any_rare_creature: 3}
+      aspect_cat_20: {"Farrul, First of the Plains": 1, any_rare_creature: 3}
+      aspect_crab_20: {"Craiceann, First of the Deep": 1, any_rare_creature: 3}
+      aspect_spider_20: {"Fenumus, First of the Night": 1, any_rare_creature: 3}
+      aspect_avian_30: {"Saqawal, First of the Sky": 1, The Black Mórrígan: 1, any_rare_creature: 2}
+      aspect_cat_30: {"Farrul, First of the Plains": 1, The Black Mórrígan: 1, any_rare_creature: 2}
+      aspect_crab_30: {"Craiceann, First of the Deep": 1, The Black Mórrígan: 1, any_rare_creature: 2}
+      aspect_spider_30: {"Fenumus, First of the Night": 1, The Black Mórrígan: 1, any_rare_creature: 2}
+      fracture_one_talisman: {Farric Frost Hellion Alpha: 1, any_rare_creature: 3}
+      fracture_two_talisman: {Fenumal Plagued Arachnid: 1, The Black Mórrígan: 1, any_rare_creature: 2}
+
+  - id: beastcraft.default_beast_level
+    statement: "The beast level of the side-swap beasts (Farric Wolf Alpha, Farric Lynx Alpha) when nothing names one: 83, a setting. Where a bought beast's level comes from is not documented, and poe.ninja prices a beast by name only."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93#issuecomment-6546593917
+    quote: "Beast level 83 when a target names none; \"any rare creature\" beasts 1 chaos; both settings."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: 83
+
+  - id: beastcraft.any_rare_creature_price
+    statement: "The price of one \"any rare creature\" beast of a recipe, in Chaos Orbs: 1 each, a setting. No price list holds them; the cheapest red beasts there cost 1 chaos."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/93#issuecomment-6546593917
+    quote: "Beast level 83 when a target names none; \"any rare creature\" beasts 1 chaos; both settings."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value: 1
+
+  - id: beastcraft.side_swap_needs_rare_and_open_slot
+    statement: "Both side-swap recipes work on rare items only and need an open slot on the side that is added."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Farric_Wolf_Alpha
+    quote: "The item requires an open prefix."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.side_swap_uses_beast_level
+    statement: "The recipes that add a prefix and remove a suffix, or add a suffix and remove a prefix, decide the modifiers they can add by the level of the beast and ignore the item level of the item; the other recipes use the item level."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting
+    quote: "use the beast's level to determine the modifiers it can add, ignoring the item's actual item level"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.side_swap_added_mod_is_a_draw
+    statement: "Approximate: the added mod of a side swap is drawn from the pool of its side as an Exalted Orb draws, in proportion to weight (families on the item and the Attack and Caster metamods respected), with the level cap of the beast instead of the item level. Craft of Exile's code only."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "craftDetail.add=poec_simRollAffix(null,null,\"suffix\",null,1,!0,!1,!1,!1,!1,!1,null,!1)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.side_swap_removal_uniform
+    statement: "Approximate: the removed modifier of a side swap is uniform among the mods of the opposite side that are not fractured; crafted mods and metamods are in the pool, and the addition is drawn first (it is on the other side, so it cannot be removed). Craft of Exile's code only."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "craftDetail.rem=poec_simRemoveAffix(null,\"prefix\",null,!0,!1,!1,!1,!1,null)"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.side_swap_metamod_rules
+    statement: "For a side swap the lock of the side that loses a mod makes the craft add without removing, the lock of the added side lets its open slots be filled, and Cannot roll Attack and Cannot roll Caster do not protect a modifier from the removal while they filter the added mod."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Metamod#Rules_and_Exceptions
+    quote: "Beastcraft Add Prefix Remove Suffix Respected, but open prefixes may be filled Will add without removing Does not protect attack modifiers Does not protect caster modifiers"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.side_swap_refused_without_removable_mod
+    statement: "Approximate: a side swap on an item whose losing side holds no mod it may remove (no mod there, or every one fractured) and is not locked is refused. Craft of Exile's code only (\"No prefix to remove\"); the wiki states nothing."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "No prefix to remove"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.metamod_one_of_five_if_allowed
+    statement: "Wild Bristle Matron adds one of the five metamods at random, only if it is allowed; with all suffixes full and one open prefix the only allowed one is Suffixes Cannot Be Changed."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Wild_Bristle_Matron
+    quote: "The beastcraft adds one of these modifiers randomly to an item, and only if it is allowed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.metamod_odds_uniform
+    statement: "Approximate: Wild Bristle Matron draws uniformly among the metamods that are allowed on the item. No source gives counts of which metamod it added when several were allowed; this is the default of grill B2 (the evidence rule)."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0030-influence-harvest-and-beast-crafts-in-b2.md
+    quote: "Odds: **uniform among the allowed metamods** (main chat, marked approximate)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.metamod_needs_slot_and_crafted_room
+    statement: "Wild Bristle Matron needs an open slot on the side of the metamod it adds and an item on which a crafted mod could be added without removing another one first: an item holding a crafted mod is refused, except when that mod is Can have up to 3 Crafted Modifiers (then the limit of crafted mods is the multimod's)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting#Harvest_beast_recipes
+    quote: "Requires an empty affix slot, and requires that a crafted mod could normally be added without removing another one first"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.metamod_ids
+    statement: "The five metamods Wild Bristle Matron can add, by the family of their mod, and the side of each. `value` maps the family to the generation type. Suffixes Cannot Be Changed is the only prefix."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "DexMasterItemGenerationCannotChangeSuffixes prefix Suffixed Suffixes Cannot Be Changed"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      ItemGenerationCannotChangePrefixes: suffix
+      ItemGenerationCannotChangeSuffixes: prefix
+      ItemGenerationCannotRollAttackAffixes: suffix
+      ItemGenerationCannotRollCasterAffixes: suffix
+      ItemGenerationCanHaveMultipleCraftedMods: suffix
+
+  - id: beastcraft.aspect_mods
+    statement: "An aspect craft adds one suffix granting the skill: level 20, or level 30 with The Black Mórrígan. The suffixes are never rolled naturally (spawn weight 0), have required level 20 and the family `GrantedSkill`, and belong to the item domain, so the item holds them as ordinary explicit mods, not as crafted ones. `value` maps the repoe-fork mod id to the granted skill level."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/mods.json
+    quote: "GrantsCatAspectCrafted item suffix 20 ['GrantedSkill'] Grants Level 20 Aspect of the Cat Skill [{'tag': 'default', 'weight': 0}]"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+    value:
+      GrantsCatAspectCrafted: 20
+      GrantsBirdAspectCrafted: 20
+      GrantsSpiderAspectCrafted: 20
+      GrantsCrabAspectCrafted: 20
+      GrantsCatAspectCrafted30: 30
+      GrantsBirdAspectCrafted30: 30
+      GrantsSpiderAspectCrafted30: 30
+      GrantsCrabAspectCrafted30: 30
+
+  - id: beastcraft.aspect_needs_open_suffix
+    statement: "Approximate: an aspect craft is refused on an item with no open suffix and on an item that already holds an aspect (the family GrantedSkill). Craft of Exile's code with player reports; no item level gate is applied, and the aspect does not count toward the limit of crafted mods (a player: it will not override a crafted resistance). Aspects are offered only when a target names one (grill B2)."
+    source_kind: coe
+    url: https://www.craftofexile.com/packages/package.js
+    quote: "No space to add aspect"
+    patch_verified: "3.29.0.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.talisman_fracture
+    statement: "A beast recipe fractures one modifier on a rare Talisman with at least 4 modifiers, another fractures two on a rare Talisman with at least 6; both replaced the Split recipes in 3.29.0. Neither works on an influenced or a fractured item."
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3985332
+    quote: "The Beastcrafting option to Split an item into two has been replaced with a new option that Fractures a Modifier on a Rare Talisman with at least 4 Modifiers."
+    patch_verified: "3.29.0"
+    date_checked: 2026-10-31
+    value:
+      one: 4
+      two: 6
+
+  - id: beastcraft.talisman_fracture_refused_on_fractured_or_influenced
+    statement: "The Talisman fracture recipes do not work on an influenced or a fractured item."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Beastcrafting#List_of_beast_recipes
+    quote: "Does not work on Influenced or Fractured items"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: beastcraft.talisman_fracture_uniform
+    statement: "Approximate: the mod a Talisman fracture takes is uniform among all explicit mods (crafted mods and metamods included, all counting toward the minimum), as the Fracturing Orb's pick; the two-fracture recipe takes two distinct mods, every pair equally likely. The Talisman is a base of the amulet class carrying the tag `talisman`. The choice is the main chat's default (D6 of issue #28); no source says it for the beast."
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0030-influence-harvest-and-beast-crafts-in-b2.md
+    quote: "**Which mods are fractured is uniform** (main chat, marked approximate)."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
