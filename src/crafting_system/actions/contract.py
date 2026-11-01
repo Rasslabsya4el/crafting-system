@@ -18,7 +18,7 @@ the base class answers for it unless its file holds several actions):
   module the class is defined in (the `X = get_rule("a.b")` every action file starts with), which is exact
   for a file of one action; an action whose file holds several that read different claims overrides it.
 
-An optional sixth, `twin_key(data, item)`, lets a set of fossils name its twins without a pool (#118).
+An optional seventh, `twin_key(data, item)`, lets a set of fossils name its twins without a pool (#118).
 
 `abstraction` builds its states from `reads` and its kernels from `outcomes` alone; `cli` builds its
 offers from the catalog (`catalog.py`), `resources` and `adds`; `simulator` calls `outcomes(...).sample`.
