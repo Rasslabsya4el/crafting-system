@@ -93,6 +93,7 @@ from crafting_system.abstraction import (
     reach_bound,
 )
 from crafting_system.actions import ActionError
+from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.solver import ConvergenceError, Solution, solve
 
@@ -180,38 +181,14 @@ def goal_set(goal, start: CompressedState, finished_by_crafts: frozenset[str]) -
     return tuple(kept or open_leaves)
 
 
-def solve_pruned(
-    abstraction: Abstraction,
-    start: CompressedState,
-    priced: Sequence[PricedOffer],
-    item: Item,
-    *,
-    rounds: int = 8,
-    min_offers: int = 40,
-) -> Pruned:
-    """Solve the plan of `priced` from `start` on as few offers as the certificate allows; see the module text.
+def merge_twins(
+    data: GameData, item: Item, priced: Sequence[PricedOffer]
+) -> tuple[list[PricedOffer], list[tuple[str, str]]]:
+    """`priced` without the offers that have a cheaper twin (equal non-None `twin_key` on `item`), and the (dropped, kept) labels.
 
-    `item` is the start item (the twin key is read on it). With fewer than `min_offers` offers nothing is
-    left out but the twins (there is nothing to gain). Raises what `solve` raises when even the fallback fails.
+    Exact (see TWINS above). `restart` has no twin. Used by the solve and by the forecast of a plan with a budget, which
+    must not pay for 10,000 fossil sets that fall into a few thousand classes.
     """
-    from ._plan import _Model  # _plan imports this module
-
-    if len(priced) < min_offers:
-        everything = solve(_Model(abstraction, start, priced), [start])
-        return Pruned(everything, tuple(priced), (), (), 1, 0.0, _largest(everything, abstraction), True, f"fewer than {min_offers} offers: nothing to gain")
-    data = abstraction.data
-    phases: list[tuple[str, float]] = []
-    clock = time.perf_counter()
-
-    def mark(name: str) -> None:
-        nonlocal clock
-        now = time.perf_counter()
-        phases.append((name, now - clock))
-        if PROGRESS is not None:
-            PROGRESS(f"{name}: {now - clock:.1f} s")
-        clock = now
-
-    # 1. twins
     first_of: dict[object, int] = {}  # twin key -> position of the cheapest offer so far
     twins: list[tuple[str, str]] = []
     dropped: set[int] = set()
@@ -231,7 +208,72 @@ def solve_pruned(
         else:
             twins.append((offer.label, priced[kept].label))
             dropped.add(position)
-    remaining = [offer for position, offer in enumerate(priced) if position not in dropped]
+    return [offer for position, offer in enumerate(priced) if position not in dropped], twins
+
+
+def solve_pruned(
+    abstraction: Abstraction,
+    start: CompressedState,
+    priced: Sequence[PricedOffer],
+    item: Item,
+    *,
+    rounds: int = 8,
+    min_offers: int = 40,
+) -> Pruned:
+    """Solve the plan of `priced` from `start` on as few offers as the certificate allows; see the module text.
+
+    `item` is the start item (the twin key is read on it). With fewer than `min_offers` offers nothing is
+    left out but the twins (there is nothing to gain). Raises what `solve` raises when even the fallback fails.
+    """
+    found = _run(abstraction, start, priced, item, rounds, min_offers, False)
+    assert isinstance(found, Pruned)
+    return found
+
+
+def starting_offers(
+    abstraction: Abstraction, start: CompressedState, priced: Sequence[PricedOffer], item: Item, *, min_offers: int = 40
+) -> list[PricedOffer]:
+    """The offers `solve_pruned` solves first: the twins merged, then `restart`, the crafts and the best rerolls.
+
+    The size of the exact run is forecast on these (the rounds that follow add a few offers each), so that a plan with a
+    budget does not pay for a pilot over thousands of fossil sets that the certificate then proves not needed.
+    With fewer than `min_offers` offers it is all of them.
+    """
+    found = _run(abstraction, start, priced, item, 0, min_offers, True)
+    assert not isinstance(found, Pruned)
+    return found
+
+
+def _run(
+    abstraction: Abstraction,
+    start: CompressedState,
+    priced: Sequence[PricedOffer],
+    item: Item,
+    rounds: int,
+    min_offers: int,
+    start_set_only: bool,
+) -> "Pruned | list[PricedOffer]":
+    from ._plan import _Model  # _plan imports this module
+
+    if len(priced) < min_offers and start_set_only:
+        return list(priced)
+    if len(priced) < min_offers:
+        everything = solve(_Model(abstraction, start, priced), [start])
+        return Pruned(everything, tuple(priced), (), (), 1, 0.0, _largest(everything, abstraction), True, f"fewer than {min_offers} offers: nothing to gain")
+    data = abstraction.data
+    phases: list[tuple[str, float]] = []
+    clock = time.perf_counter()
+
+    def mark(name: str) -> None:
+        nonlocal clock
+        now = time.perf_counter()
+        phases.append((name, now - clock))
+        if PROGRESS is not None:
+            PROGRESS(f"{name}: {now - clock:.1f} s")
+        clock = now
+
+    # 1. twins
+    remaining, twins = merge_twins(data, item, priced)
     mark("twins")
 
     cache: dict = {}
@@ -309,6 +351,8 @@ def solve_pruned(
     inside.update(entry.index for entry in rerolls[:SMALL_START])
     if not inside:  # nothing to start from: the cheapest offers
         inside.update(entry.index for entry in sorted(entries, key=lambda entry: (entry.cost, entry.index))[:SMALL_START])
+    if start_set_only:
+        return [entry.priced for entry in entries if entry.index in inside]
     spent = 0
     while spent < rounds:
         spent += 1
