@@ -8,7 +8,11 @@ asked, so a goal item is never acted on, the start included), when the policy re
 The policy is asked about the item after the last step first, so it can still stop the run, which
 then counts as stopped. The cost of a run is the total paid until it ends, whatever the ending.
 
-All runs draw from one `random.Random(seed)`, in order, so the same arguments give the same report.
+All runs draw from one `random.Random(seed)`, in order, so the same arguments give the same report. With `block` the
+runs are cut in blocks of that many: block 0 draws from `random.Random(seed)` and block b from `random.Random(f"{seed}/{b}")`,
+and the blocks may run in a process pool (ticket #250, `crafting_system.parallel`); the report is the same for any number of
+workers, because a block's draws depend on its number only and the blocks are joined in order. Without `block`, or with
+`block >= runs`, there is the one stream and nothing is parallel.
 
 A refusal of the action (`NotApplicableError`, `OutOfScopeError`) is not caught: a policy that
 applies an action the game would refuse is a bug in the policy.
@@ -24,6 +28,7 @@ import statistics
 from collections.abc import Callable
 from numbers import Integral, Real
 
+from crafting_system import parallel
 from crafting_system.data import GameData
 from crafting_system.items import Item
 
@@ -45,6 +50,8 @@ def simulate(
     start_cost: float = 0.0,
     max_steps: int = DEFAULT_MAX_STEPS,
     confidence: float = 0.95,
+    block: int | None = None,
+    workers: int | None = None,
 ) -> SimulationReport:
     """Run `policy` from `start` `runs` times and report the success rate and the cost.
 
@@ -55,12 +62,57 @@ def simulate(
     strictly between 0 and 1. Errors raised by the actions or the policy propagate.
     """
     _check_arguments(runs, seed, start_cost, max_steps, confidence)
+    if block is not None and (isinstance(block, bool) or not isinstance(block, Integral) or block < 1):
+        raise ValueError(f"block must be a whole number of 1 or more, got {block!r}")
+    size = runs if block is None else min(block, runs)
+    tasks = [(seed if number == 0 else f"{seed}/{number}", min(size, runs - first)) for number, first in enumerate(range(0, runs, size))]
+    shared = (data, policy, start, is_goal, float(start_cost), max_steps)
+    # the policy is a closure: it is inherited by forked workers, not pickled, so where there is no fork the blocks run here
+    if len(tasks) > 1 and parallel.can_inherit() and (workers is None or workers > 1):
+        with parallel.WorkerPool(_shared, (shared,), workers=workers) as pool:
+            parts = pool.map(_run_block, tasks, chunk=1)
+    else:
+        parts = [_block(*shared, *task) for task in tasks]
+    costs: list[float] = []
+    paid_by_successes: list[float] = []
+    stopped = unfinished = steps_taken = 0
+    for block_costs, block_paid, block_stopped, block_unfinished, block_steps in parts:
+        costs.extend(block_costs)
+        paid_by_successes.extend(block_paid)
+        stopped += block_stopped
+        unfinished += block_unfinished
+        steps_taken += block_steps
+    successes = len(paid_by_successes)
+    return SimulationReport(
+        runs=runs,
+        successes=successes,
+        stopped=stopped,
+        unfinished=unfinished,
+        success_rate=proportion(successes, runs, confidence),
+        cost=mean(costs, confidence),
+        cost_of_successes=mean(paid_by_successes, confidence) if successes >= 2 else None,
+        mean_steps=steps_taken / runs,
+        confidence=confidence,
+        costs=tuple(costs),
+    )
+
+
+def _shared(shared: tuple) -> tuple:
+    return shared
+
+
+def _run_block(task: tuple) -> tuple:
+    return _block(*parallel.context(), *task)
+
+
+def _block(data, policy, start, is_goal, start_cost, max_steps, seed, runs):
+    """`runs` crafts drawn from `random.Random(seed)`: their costs, the costs of the successes and the counts."""
     rng = random.Random(seed)
     costs: list[float] = []
     paid_by_successes: list[float] = []
     stopped = unfinished = steps_taken = 0
     for _ in range(runs):
-        item, total, steps = start, float(start_cost), 0
+        item, total, steps = start, start_cost, 0
         while True:
             if is_goal(item):
                 paid_by_successes.append(total)
@@ -77,19 +129,7 @@ def simulate(
             steps += 1
         costs.append(total)
         steps_taken += steps
-    successes = len(paid_by_successes)
-    return SimulationReport(
-        runs=runs,
-        successes=successes,
-        stopped=stopped,
-        unfinished=unfinished,
-        success_rate=proportion(successes, runs, confidence),
-        cost=mean(costs, confidence),
-        cost_of_successes=mean(paid_by_successes, confidence) if successes >= 2 else None,
-        mean_steps=steps_taken / runs,
-        confidence=confidence,
-        costs=tuple(costs),
-    )
+    return costs, paid_by_successes, stopped, unfinished, steps_taken
 
 
 def _check_arguments(runs: object, seed: object, start_cost: object, max_steps: object, confidence: object) -> None:

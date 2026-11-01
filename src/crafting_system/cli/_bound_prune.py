@@ -83,6 +83,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
+from crafting_system import parallel
 from crafting_system.abstraction import (
     Abstraction,
     AtLeast,
@@ -318,28 +319,28 @@ def _run(
         It becomes refused when the game refuses it on the bare item, and terminal when it fractures, keeps
         the crafted mods, needs one, moves the flags or the fractured mods, or `reach_bound` has no bound.
         """
-        action = entry.priced.offer.action
-        if entry.level == 0:
+        entry.kind, entry.pbar, entry.level = _raised(
+            abstraction, bare, item, chosen, entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level
+        )
+
+    def raise_together(batch: list[tuple[_Entry, int]]) -> None:
+        """`raise_level` for each (entry, level) of the batch, side by side in a process pool when `CRAFTING_WORKERS` allows (#250).
+
+        The bounds of different offers read nothing of each other, so each entry ends in the state its own `raise_level` gives.
+        """
+        if len(batch) >= 2 and parallel.worker_count() >= 2 and parallel.can_inherit():
+            jobs = [(entry.priced.offer.action, entry.kind, entry.level, entry.pbar, level) for entry, level in batch]
             try:
-                same_shape = keeps_shape(abstraction, bare, action)
-            except ActionError:
-                entry.kind, entry.pbar = REFUSED, ONE
+                with parallel.WorkerPool(_hold, (abstraction, bare, item, chosen, jobs), workers=min(parallel.worker_count(), len(jobs))) as pool:
+                    results = pool.map(_raise_job, range(len(jobs)), chunk=1)  # one at a time: the exact bounds differ in cost by orders of magnitude
+            except Exception:  # a worker failed: raise them here, as a serial run does
+                results = None
+            if results is not None:
+                for (entry, _), (kind, pbar, reached) in zip(batch, results):
+                    entry.kind, entry.pbar, entry.level = kind, pbar, reached
                 return
-            adds = action.adds(data, item)
-            if not same_shape or adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
-                entry.kind, entry.pbar = TERMINAL, ONE
-                return
-            entry.level = 1
-            found = reach_bound(abstraction, bare, action, chosen) if chosen else ZERO
-            if found is None:
-                entry.kind, entry.pbar = TERMINAL, ONE
-                return
-            entry.pbar = found
-        if level >= 2 and entry.level < 2 and entry.kind == REROLL:
-            entry.level = 2
-            exact = reach_bound(abstraction, bare, action, chosen, exact=True) if chosen else ZERO
-            if exact is not None and exact < entry.pbar:
-                entry.pbar = exact
+        for entry, level in batch:
+            raise_level(entry, level)
 
     # 3. rho, best first
     rho = best_first_rho(entries, raise_level) if chosen else 0.0
@@ -373,6 +374,14 @@ def _run(
         j_max = max((solution.values[s] for s in non_goal if _finite(solution.values[s])), default=0.0)
         bound = j_max * (1 + max(solution.error_bound, 1e-9)) + 1e-9
         failing: list[tuple[float, _Entry]] = []
+        if not infinite and parallel.worker_count() >= 2 and parallel.can_inherit():  # the loop below raises each offer one level at a time; the offers' raises are independent, so do a level for all of them at once (with one worker the loop is the old one)
+            for level in (1, 2):
+                raise_together([
+                    (entry, level)
+                    for entry in entries
+                    if entry.index not in inside and entry.kind == REROLL and entry.level < level
+                    and _lower(entry, rho) * (1 - SLACK) <= bound
+                ])  # fmt: skip
         for entry in entries:
             if entry.index in inside or entry.kind == REFUSED:
                 continue
@@ -403,6 +412,40 @@ def _run(
         last = spent == rounds - 1
         inside.update(entry.index for _, entry in (failing if last else failing[:PER_ROUND]))
     return fallback(f"the certificate did not close within {rounds} rounds", spent)
+
+
+def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar: Fraction, target: int) -> tuple[str, Fraction, int]:
+    """The `(kind, pbar, level)` of a reroll brought to `target` (see `raise_level`); a function of its arguments alone."""
+    data = abstraction.data
+    if level == 0:
+        try:
+            same_shape = keeps_shape(abstraction, bare, action)
+        except ActionError:
+            return REFUSED, ONE, level
+        adds = action.adds(data, item)
+        if not same_shape or adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
+            return TERMINAL, ONE, level
+        level = 1
+        found = reach_bound(abstraction, bare, action, chosen) if chosen else ZERO
+        if found is None:
+            return TERMINAL, ONE, level
+        pbar = found
+    if target >= 2 and level < 2 and kind == REROLL:
+        level = 2
+        exact = reach_bound(abstraction, bare, action, chosen, exact=True) if chosen else ZERO
+        if exact is not None and exact < pbar:
+            pbar = exact
+    return kind, pbar, level
+
+
+def _hold(abstraction, bare, item, chosen, jobs: list) -> tuple:
+    return abstraction, bare, item, chosen, jobs
+
+
+def _raise_job(index: int) -> tuple[str, Fraction, int]:
+    abstraction, bare, item, chosen, jobs = parallel.context()
+    action, kind, level, pbar, target = jobs[index]
+    return _raised(abstraction, bare, item, chosen, action, kind, level, pbar, target)
 
 
 def best_first_rho(entries: Sequence[_Entry], raise_level: Callable[[_Entry, int], None]) -> float:
