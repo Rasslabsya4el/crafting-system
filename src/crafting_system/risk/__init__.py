@@ -16,6 +16,7 @@ actions left out.
 """
 
 from ._evaluate import evaluate
+from ._free import is_free as is_free_cost
 from ._readings import Baseline, IntervalReport, Route, has_inputs, solve_readings
 from ._report import Estimate, GridInfo, RiskReport
 
@@ -28,5 +29,6 @@ __all__ = [
     "Route",
     "evaluate",
     "has_inputs",
+    "is_free_cost",
     "solve_readings",
 ]
