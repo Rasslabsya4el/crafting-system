@@ -17,6 +17,9 @@ The checks, each against something written without the code under test:
   `adds.quality` or `adds.offer` leaves the implicits, the quality and the offer as they were, and one that does
   not declare `reads.implicits`, `reads.quality` or `reads.offer` gives the same result on the item without them
   (ticket #142);
+* an action that reads rule axes (ticket #210) passes every check above at every reading of its axes
+  (`model_readings`), with the kernel of an abstraction made for that reading; its plain `outcomes(data, item)`
+  is the plan's reading; and an action with inputs lists `Need`s of valid items, the same on every call;
 * the fracturing actions (a Fractured Fossil) are not compared with the brute force here: their kernel
   has its own tests in `test_abstraction_fossil.py`;
 * the resources are whole counts of named things and price the offer from a fixture price file.
@@ -61,10 +64,13 @@ from crafting_system.actions import (
     ActionError,
     Adds,
     Fixed,
+    Need,
     OutOfScopeError,
+    Reading,
     Reads,
     Rerolled,
     kinds,
+    model_readings,
 )
 from crafting_system.data import BaseItem, Weight
 from crafting_system.cli._offers import offer_of, price_offers
@@ -277,10 +283,23 @@ def check_action(action: Action, item: Item, data=CONTRACT_DATA, goal: Goal = GO
 
     Raises `AssertionError` naming the check that failed.
     """
+    readings = model_readings(data, [action])
+    applied = False
+    for reading in readings:
+        applied |= _check_at(action, item, data, goal, reading)
+    if applied:
+        check_axes_and_inputs(action, item, data, readings)
+        check_resources_are_priced(action, item, data)
+        check_block_invariance(action, data, goal)
+    return applied
+
+
+def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) -> bool:
+    """Every check that depends on the result of the action, at one reading of its rule axes (the empty one for an action with none)."""
     try:
-        outcomes = action.outcomes(data, item)
+        outcomes = action.outcomes_under(data, item, reading)
     except ActionError as refusal:
-        check_kernel_refuses_too(action, item, data, goal, type(refusal))
+        check_kernel_refuses_too(action, item, data, goal, type(refusal), reading)
         return False
     name = action.label(data)
     assert isinstance(name, str) and name, "the label is a name"
@@ -292,11 +311,9 @@ def check_action(action: Action, item: Item, data=CONTRACT_DATA, goal: Goal = GO
     check_chances_agree(outcomes, items, data)
     check_sampler_follows_the_chances(outcomes, items, data)
     check_declarations_agree(action, reads, adds, outcomes, items, item)
-    check_item_state_declarations(action, reads, adds, items, item, data)
+    check_item_state_declarations(action, reads, adds, items, item, data, reading)
     if not outcomes.fractures and not _rerolls_values(outcomes):
-        check_kernel_equals_brute_force(action, reads, item, items, data, goal)
-    check_resources_are_priced(action, item, data)
-    check_block_invariance(action, data, goal)
+        check_kernel_equals_brute_force(action, reads, item, items, data, goal, reading)
     return True
 
 
@@ -311,10 +328,10 @@ def _rerolls_values(outcomes) -> bool:
     return any(isinstance(part, Rerolled) for _, part in outcomes.components)
 
 
-def check_kernel_refuses_too(action, item: Item, data, goal: Goal, refusal: type[ActionError]) -> None:
+def check_kernel_refuses_too(action, item: Item, data, goal: Goal, refusal: type[ActionError], reading: Reading | None = None) -> None:
     """Where the action refuses the item, the kernel of the item's state refuses it the same way (the families the action reads are told apart)."""
     reads = action.reads(data)
-    ab = Abstraction(data, goal, item.base_id, item.item_level, [action] if reads.junk or reads.item_state else [])
+    ab = Abstraction(data, goal, item.base_id, item.item_level, [action] if reads.junk or reads.item_state else [], reading=reading)
     try:
         kernel = ab.kernel(ab.compress(item), action)
     except ActionError as raised:
@@ -391,7 +408,7 @@ def check_declarations_agree(action, reads: Reads, adds: Adds, outcomes, items, 
             assert adds.named & crafted or not adds.named, "the named mods are added as crafted mods"
 
 
-def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given: Item, data) -> None:
+def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given: Item, data, reading: Reading | None = None) -> None:
     """The implicits, the quality and the offer: an action changes only what `adds` says, and reads only what `reads` says (ticket #142)."""
     for _, result in items:
         if not adds.implicits:
@@ -413,7 +430,7 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
             continue
         bare = given.changed(data, **strip)
         try:
-            other = action.outcomes(data, bare)
+            other = action.outcomes_under(data, bare, reading)
         except ActionError:
             raise AssertionError(f"an action that does not declare reads.{name} refuses the item once its {name} are taken off, but not with them") from None
         assert _stripped(finished(other, data), strip) == _stripped(items, strip), (
@@ -429,15 +446,38 @@ def _stripped(listed, strip: dict) -> dict:
     return dict(found)
 
 
-def check_kernel_equals_brute_force(action, reads: Reads, item: Item, items, data, goal: Goal) -> None:
+def check_kernel_equals_brute_force(action, reads: Reads, item: Item, items, data, goal: Goal, reading: Reading | None = None) -> None:
     enabled = [action] if reads.junk or reads.item_state else []
-    ab = Abstraction(data, goal, item.base_id, item.item_level, enabled)
+    ab = Abstraction(data, goal, item.base_id, item.item_level, enabled, reading=reading)
     expected: dict = defaultdict(Fraction)
     for chance, result in items:
         expected[ab.compress(result)] += chance
     kernel = ab.kernel(ab.compress(item), action)
     assert dict(kernel) == dict(expected), "the kernel equals the brute force on the compressed finished items"
     assert sum(kernel.values()) == 1
+
+
+def check_axes_and_inputs(action: Action, item: Item, data, readings: tuple[Reading, ...]) -> None:
+    """The two-item declarations (ticket #210): an action's `inputs` are `Need`s of valid items, the same on every call; and one that
+    reads rule axes takes the plan's reading when it is given none, or one that lacks its axes, and has one model per combination of values.
+    """
+    needs = action.inputs(data, item)
+    assert isinstance(needs, tuple) and all(isinstance(need, Need) for need in needs), "inputs are a tuple of Needs"
+    assert needs == action.inputs(data, item), "an action gives the same inputs on every call"
+    for need in needs:
+        need.start.validate(data)
+        need.want.validate(data)
+    axes = action.rule_axes(data)
+    assert isinstance(axes, tuple) and len({axis.name for axis in axes}) == len(axes), "an action lists each axis once"
+    assert len(readings) == math.prod(len(axis.readings) for axis in axes), "one reading for each combination of values of the axes"
+    assert readings[0] == Reading.of({axis.name: axis.plan for axis in axes}), "the plan's reading comes first"
+    if not axes:
+        return
+    plan = _stripped(finished(action.outcomes_under(data, item, readings[0]), data), {})
+    for given in (None, Reading()):
+        plain = action.outcomes(data, item, given)
+        assert _stripped(finished(plain, data), {}) == plan, "an action with axes uses the plan's reading when it is given none"
+    assert _stripped(finished(action.outcomes(data, item), data), {}) == plan, "outcomes(data, item) is the plan's reading"
 
 
 def check_resources_are_priced(action, item: Item, data) -> None:

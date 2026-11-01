@@ -53,6 +53,13 @@ def test_the_action_meets_the_contract_on_the_helmet(pair):
     check_action(action, EXTRA_ITEMS[item], INFLUENCE_DATA)  # False where the game refuses it here: the kernel refuses it too
 
 
+ARMOUR_ONLY_KINDS = frozenset(
+    {"eldritch-implicit-currency", "eldritch-chaos-orb", "eldritch-exalted-orb", "eldritch-annulment-orb", "orb-of-conflict"}
+)
+"""The Eldritch currency (ticket #151) works on body armours, boots, gloves and helmets, and the fixture items are amulets. Their
+own suite (`test_actions_eldritch.py`) runs `check_action` on a boots fixture and checks that each kind applies there."""
+
+
 def test_every_kind_applies_on_some_fixture_item():
     applied = set()
     for kind, action, item in PAIRS:
@@ -61,13 +68,14 @@ def test_every_kind_applies_on_some_fixture_item():
         except ActionError:
             continue
         applied.add(kind)
-    for kind, action, item in EXTRA_PAIRS:
+    assert not ARMOUR_ONLY_KINDS & applied, "an armour-only kind that applies to an amulet is not armour only: drop it from the exemption"
+    for kind, action, item in EXTRA_PAIRS:  # the helmet is armour, so it may use the armour-only kinds
         try:
             action.outcomes(INFLUENCE_DATA, EXTRA_ITEMS[item])
         except ActionError:
             continue
         applied.add(kind)
-    assert {entry.name for entry in kinds()} <= applied
+    assert {entry.name for entry in kinds()} - ARMOUR_ONLY_KINDS <= applied
 
 
 def test_a_kind_lists_each_action_once_per_item():

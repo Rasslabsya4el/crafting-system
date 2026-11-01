@@ -26,6 +26,7 @@ from .enchantments import (
 from .implicits import (
     EldritchSide,
     ImplicitMod,
+    dominant_side,
     eldritch_grade,
     eldritch_side,
     fits_corrupted_implicit,
@@ -80,6 +81,7 @@ __all__ = [
     "ValueRangeError",
     "VeilOfferError",
     "capacity",
+    "dominant_side",
     "effective_weight",
     "enchant_class",
     "enchant_info",
