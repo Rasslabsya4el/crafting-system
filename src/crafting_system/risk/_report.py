@@ -1,7 +1,7 @@
 """What `evaluate` returns."""
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import NamedTuple
 
 
@@ -32,7 +32,11 @@ class GridInfo:
 
 @dataclass(frozen=True, slots=True)
 class RiskReport:
-    """Risk metrics of the total cost C of a fixed policy; see `evaluate` for what each interval certifies."""
+    """Risk metrics of the total cost C of a fixed policy; see `evaluate` for what each interval certifies.
+
+    `input_runs` is for a policy with `extra_inputs` and a finite mean: the expected number of runs
+    started at each input state (how many donors of each kind the policy builds); empty otherwise.
+    """
 
     success_probability: Estimate
     mean: Estimate
@@ -41,6 +45,7 @@ class RiskReport:
     cvar: Estimate
     cvar_level: float
     grid: GridInfo
+    input_runs: Mapping = field(default_factory=dict)
 
     @property
     def p50(self) -> Estimate:
