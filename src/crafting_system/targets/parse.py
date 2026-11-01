@@ -617,6 +617,8 @@ class _Reader:
         self.check_keys(entry, "quality", QUALITY_KEYS)
         if plain_class and "type" not in entry:
             return self.read_plain_quality(entry)
+        if plain_class:  # a `type` on a weapon or armour is the catalyst form, which only jewellery takes: say so before any number
+            self.check_catalyst_base(base_id, line)
         for key in QUALITY_KEYS:
             if key not in entry:
                 self.fail(entry.line, f"quality.{key}", "this key is required but missing")
@@ -671,13 +673,13 @@ class _Reader:
         self.check_keys(entry, "sockets", SOCKET_KEYS)
         if not len(entry):
             self.fail(line, "sockets", "name at least one of `count`, `links` and `colours`; an empty mapping asks for nothing")
-        count = self.read_socket_number(entry, "count", "sockets.count", 1)
-        links = self.read_socket_number(entry, "links", "sockets.links", MIN_LINKS)
-        colours = self.read_socket_colours(entry["colours"], entry.key_lines["colours"]) if "colours" in entry else (0, 0, 0)
         base = self.data.base_items[base_id]
         most = class_maximum(base)
         if most is None:
             self.fail(line, "sockets", self.no_socket_table(base))
+        count = self.read_socket_number(entry, "count", "sockets.count", 1)
+        links = self.read_socket_number(entry, "links", "sockets.links", MIN_LINKS)
+        colours = self.read_socket_colours(entry["colours"], entry.key_lines["colours"]) if "colours" in entry else (0, 0, 0)
         wanted = SocketRequirement(count, links, *colours)
         self.check_socket_fit(entry, wanted)
         sizes = {

@@ -313,6 +313,13 @@ def test_a_socket_target_on_jewellery_is_refused_and_the_message_says_jewellery(
     assert_error(message, 5, "sockets", base, "jewellery", "out of scope", "ADR-0046")
 
 
+@pytest.mark.parametrize("keys", ["{count: 7}", "{count: x}", "{links: 1}", "{colours: 3}"])
+def test_jewellery_is_refused_before_any_number_of_the_sockets_is_judged(keys):
+    message = parse_error(f"sockets: {keys}" + chr(10), base="Heavy Belt")
+
+    assert_error(message, 5, "sockets", "Heavy Belt", "jewellery")
+
+
 def test_a_corrupted_start_item_is_refused_on_the_sockets_key_when_the_target_allows_corruption():
     message = parse_error("allow_corrupted: true\nstart_item:\n  corrupted: true\nsockets: {count: 3}\n")
 
@@ -546,6 +553,13 @@ def test_a_type_on_a_body_armour_errors_with_the_catalyst_message_and_the_hint_t
     message = parse_error("quality: {type: prismatic, min_percent: 20}\n")
 
     assert_error(message, 5, "quality", "Simple Robe is a Body Armour", "catalyst quality can only be put on", "leave `type` out")
+
+
+@pytest.mark.parametrize("written", ["type: prismatic, min_percent: 25", "type: bogus, min_percent: 20", "type: prismatic, min_percent: x"])
+def test_a_type_on_a_body_armour_is_named_before_any_other_problem_of_the_quality(written):
+    message = parse_error(f"quality: {{{written}}}" + chr(10))
+
+    assert_error(message, 5, "quality", "Simple Robe", "leave `type` out")
 
 
 @pytest.mark.parametrize("percent", ["0", "31", "-1"])
