@@ -93,6 +93,19 @@ def lazy_queries(keys, vmin, price, ceiling, bound: str):
     return len(queried), len(useful)
 
 
+def _pool_groups(data, target) -> list:
+    """Item levels 70..100 grouped by the spawnable pool of the target's base (equal pools are one plan)."""
+    from crafting_system.actions import build_pool
+    from crafting_system.items import Item, Rarity
+
+    seen: dict = {}
+    for ilvl in range(70, 101):
+        item = Item.build(data, base_id=target.base_id, item_level=ilvl, rarity=Rarity.RARE)
+        ids = frozenset(e.mod.id for fam in build_pool(data, item) for e in fam.mods)
+        seen.setdefault(ids, []).append(ilvl)
+    return [[group[0], group[-1], len(ids)] for ids, group in seen.items()]
+
+
 def measure(route: str, data, prices) -> dict:
     stem = ROUTES[route]
     target = load_target(ROOT / "examples" / "targets" / f"{stem}.yaml", data)
@@ -106,8 +119,10 @@ def measure(route: str, data, prices) -> dict:
     ceiling = p0 + v0
     is_goal = plan.abstraction.is_goal
     finite = {s: v for s, v in values.items() if v != float("inf")}
+    pools = _pool_groups(data, target)
     out = {
         "route": route,
+        "ilvl_pool_groups": pools,
         "plan_seconds": round(seconds, 1),
         "start_price": p0,
         "v_start": v0,
@@ -132,6 +147,16 @@ def measure(route: str, data, prices) -> dict:
         # constraint count of each key, and how many keys could be cheaper to buy than to craft from the start at all
         out[f"{name}_by_constraints"] = {str(m): sum(1 for k in spread if constraints(k) == m) for m in sorted({constraints(k) for k in spread})}
         out[f"{name}_with_cost_below_plan"] = sum(1 for k in spread if vmin[k] < ceiling)
+        # the value of finishing from a state that already carries 1 or 2 constraints: what a one- or two-mod item would save
+        out[f"{name}_small_keys"] = sorted(
+            (
+                {"key": [list(map(str, part)) if isinstance(part, tuple) else part for part in k], "constraints": constraints(k),
+                 "states": len(spread[k]), "v_min": vmin[k], "v_max": vmax[k]}
+                for k in spread
+                if constraints(k) <= 2
+            ),
+            key=lambda row: (row["constraints"], row["v_min"]),
+        )[:60]
         if len(spread) > MAX_GENERAL_KEYS:
             out[f"{name}_lazy"] = "skipped: too many keys for the quadratic dominance pass"
             continue
