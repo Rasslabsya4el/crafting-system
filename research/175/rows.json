@@ -1,0 +1,9576 @@
+{
+ "mods_patch": "3.29.3.3",
+ "sides": [
+  {
+   "tab": "gloves",
+   "line": 9,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "cold t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    },
+    {
+     "cell": "defflat t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "cold t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    },
+    {
+     "cell": "hybrid flat t3",
+     "col_side": "prefix",
+     "kind": "unmapped",
+     "group": "unmapped:hybridflat",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "mod name not resolvable to a game mod"
+  },
+  {
+   "tab": "gloves",
+   "line": 9,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "flat regen t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "flat regen t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 10,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "cold t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    },
+    {
+     "cell": "defflat t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "hybrid flat t3",
+     "col_side": "prefix",
+     "kind": "unmapped",
+     "group": "unmapped:hybridflat",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "mod name not resolvable to a game mod"
+  },
+  {
+   "tab": "gloves",
+   "line": 10,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "flat regen t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 11,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "mana t11",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 11,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 11000
+    }
+   ],
+   "kept": [],
+   "author_counts": [
+    "1",
+    "0",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "one mod group in the pool: no choice"
+  },
+  {
+   "tab": "gloves",
+   "line": 11,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncrease",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "lifekill t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncrease",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "1",
+    "0",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 12,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "life t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 12,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "dex t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "int t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 6000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "int t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 6000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 13,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "def%h t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def% t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 13,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "life kill t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 500
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life kill t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 500
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 14,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "codl t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 14,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "fire t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "FireResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "atkspd t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAttackSpeed",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 500
+    }
+   ],
+   "kept": [
+    {
+     "cell": "fire t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "FireResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 15,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "t9 mana",
+     "col_side": "prefix",
+     "kind": "unmapped",
+     "group": "unmapped:t9mana",
+     "weight": null
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 15,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "liferegen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegenerationRate",
+     "side": "suffix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "dex t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life regen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegenerationRate",
+     "side": "suffix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "dex t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 16,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "life t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def flat t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def flat t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 16,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "strength t8",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 8,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 8000
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "strength t8",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 8,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 8000
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 17,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "flatphys t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "lifeleech t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "LifeLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "lifeleech t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "LifeLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 17,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "light t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "regen flat t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "light res t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "regen flat t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 18,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "mana t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "armour craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:armourcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "mana t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 18,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "light t8",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 8,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 8000
+    },
+    {
+     "cell": "atkspd t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAttackSpeed",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 19,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "life t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "armour craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:armourcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 19,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "manakill t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ManaGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 500
+    },
+    {
+     "cell": "dex t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "mana kill t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ManaGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 500
+    },
+    {
+     "cell": "dex t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 20,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def%t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 20,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "atkspd t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAttackSpeed",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "recharge t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "atkspd t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAttackSpeed",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 21,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "defflat t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "3",
+    "2",
+    "3",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 21,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "cold t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "regen t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "cold t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "regen t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "3",
+    "2",
+    "3",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 22,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "author_counts": [
+    "3",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 22,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "cold t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "regen t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "cold t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "author_counts": [
+    "3",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 23,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "life t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "armour craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:armourcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "armour craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:armourcraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 23,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "int t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "regen t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "int t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "regen t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 24,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "life t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "armour craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:armourcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 24,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "int t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "regen t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "int t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 7000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 25,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def% t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 25,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "strength t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "atkspd t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAttackSpeed",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "strength t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 26,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "mana t12",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 12,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 12000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "mana t12",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 12,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 12000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 26,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "dex t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "lifekill t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "dex t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 27,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "mana t12",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 12,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 12000
+    },
+    {
+     "cell": "defflat t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "fire t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "FireDamage",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1500
+    },
+    {
+     "cell": "defflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "mana t12",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 12,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 12000
+    },
+    {
+     "cell": "defflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 27,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "str t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "manakill t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ManaGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 500
+    }
+   ],
+   "kept": [
+    {
+     "cell": "str t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 28,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "mana t12",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 12,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 12000
+    },
+    {
+     "cell": "defflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    },
+    {
+     "cell": "defflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 28,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "str t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "manakill t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ManaGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "manakill t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ManaGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 29,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "mana t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "defflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def%h t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "mana t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "cold t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "defflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "cold t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 29,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "cold t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "light t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "light t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 30,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "life t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "mana t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def%h t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def% t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "life t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "mana t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "3",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 30,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "light t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "fire t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "FireResistance",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    }
+   ],
+   "author_counts": [
+    "4",
+    "3",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 31,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% 7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "mana 1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "life 3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "mana 6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "def% 5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "mana t12",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 12,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 12000
+    },
+    {
+     "cell": "def% 5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 31,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "light t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "acc t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "light t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "acc t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 32,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def%h 6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "def% 4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "flatphys t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "mana t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncreasePrefix",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def%h 6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "mana t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncreasePrefix",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 32,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "regen t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "lifegain t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeGainPerTarget",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "regen t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 33,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def%h 6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "mana t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncreasePrefix",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "mana t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "life t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "defflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "mana t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "life t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "def%h 6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 33,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "regen t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "acc t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "acc t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "regen t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 34,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "def%h t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "defflat t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "def%h t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "life craft",
+     "col_side": "prefix",
+     "kind": "crafted",
+     "group": "crafted:lifecraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "4",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 34,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "liferegen t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegenerationRate",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "fire t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "FireResistance",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "liferegen t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegenerationRate",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "fire t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "FireResistance",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 35,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def%h t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "defflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    },
+    {
+     "cell": "fire t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "FireDamage",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 500
+    },
+    {
+     "cell": "physmanaleech t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ManaLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "physmanaleech t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ManaLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def%h t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "defflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 35,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    },
+    {
+     "cell": "regen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 36,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "cold t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "physmanaleech t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ManaLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def%h t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "defflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "defflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 36,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "liferegen t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegenerationRate",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "light craft",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightcraft",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    }
+   ],
+   "author_counts": [
+    "5",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "gloves",
+   "line": 37,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "defflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "flatphys t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "mana t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "flatphys t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "mana t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "3",
+    "2",
+    "2"
+   ],
+   "side_mismatch": true,
+   "drop_reason": "mod sits in the wrong column (data-entry slip)"
+  },
+  {
+   "tab": "gloves",
+   "line": 37,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "strength t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "fireres t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "FireResistance",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "strength t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "3",
+    "2",
+    "2"
+   ],
+   "side_mismatch": true,
+   "drop_reason": "mod sits in the wrong column (data-entry slip)"
+  },
+  {
+   "tab": "gloves",
+   "line": 38,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "flatphys t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "mana t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "life t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "flatphys t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "fire t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "FireDamage",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1500
+    }
+   ],
+   "kept": [
+    {
+     "cell": "flatphys t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "mana t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 38,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "strength t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "regen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "regen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 39,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "flatphys t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "cold t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    },
+    {
+     "cell": "mana t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "flatphys t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "mana t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "mana t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "cold t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    }
+   ],
+   "author_counts": [
+    "6",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 39,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "acc t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "regen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "regen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 40,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "physleech t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "LifeLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "mana t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "cold t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    }
+   ],
+   "kept": [
+    {
+     "cell": "mana t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "physleech t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "LifeLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 40,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "dex t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "regen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "regen t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "dex t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 41,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def%h t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "light t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "LightningDamage",
+     "side": "prefix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "def% t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "mana t12",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 12,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 12000
+    },
+    {
+     "cell": "flatphys t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def%h t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "flatphys t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 41,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "int t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "cold t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "cold t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 42,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def%h t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    },
+    {
+     "cell": "def t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": true,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "flatphys t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "PhysicalDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def%h t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "2",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 42,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "flatregen t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegeneration",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "acc t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 600,
+     "weight_low": 600,
+     "weight_cum": 5600
+    }
+   ],
+   "kept": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "acc t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 600,
+     "weight_low": 600,
+     "weight_cum": 5600
+    }
+   ],
+   "author_counts": [
+    "4",
+    "2",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 43,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "def%h t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    },
+    {
+     "cell": "life t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "def% t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "def%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "def%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "def% t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "2",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 43,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "acc t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 600,
+     "weight_low": 600,
+     "weight_cum": 5600
+    },
+    {
+     "cell": "dex t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "acc t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 600,
+     "weight_low": 600,
+     "weight_cum": 5600
+    },
+    {
+     "cell": "dex t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "2",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 44,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "physleechmana t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ManaLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def% t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "deflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "mana t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "life t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 3,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "physleechmana t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ManaLeech",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "deflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "def% t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 44,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaos t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "acc t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "dex t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "acc t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "dex t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "5",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 46,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "es%h t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "ar/es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ar/esflat t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "ar/es%h t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "es%h t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "4",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 46,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "esrech t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "light t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "manakill t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ManaGainedFromEnemyDeath",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "str t3",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Strength",
+     "side": "suffix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "esrech t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "4",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 47,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "es%h t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "ar/es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ar/esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "ar/es%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "ar/es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ar/esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "ar/es%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 47,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "esrech t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "light t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "light t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 48,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "ar/es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ar/esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "ar/es%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "es% t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "esflat t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    },
+    {
+     "cell": "es%h t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "ar/es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ar/esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "ar/es%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 48,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "light t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "dex t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 4,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "esrech t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "esrech t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "light t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 49,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "ar/es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ar/esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "ar/es%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "es% t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 7,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "esflat t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "es%h t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "ar/es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ar/esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "ar/es%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "4",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 49,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "esrech t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "light t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncrease",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "acc t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 600,
+     "weight_low": 600,
+     "weight_cum": 5600
+    }
+   ],
+   "kept": [
+    {
+     "cell": "esrech t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncrease",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "4",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "gloves",
+   "line": 50,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "ar/es% t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ar/esflat t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "ar/es%h t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 2,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "ev% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "evflat t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "ev%h t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "ev% t3",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 3,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 3000
+    },
+    {
+     "cell": "evflat t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "ev%h t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercentAndStunRecovery",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "gloves",
+   "line": 50,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "esrech t4",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "EnergyShieldRegeneration",
+     "side": "suffix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 4000
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncrease",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "atkspd t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAttackSpeed",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    }
+   ],
+   "kept": [
+    {
+     "cell": "atkspd t7",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAttackSpeed",
+     "side": "suffix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    },
+    {
+     "cell": "rarity t2",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncrease",
+     "side": "suffix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "author_counts": [
+    "6",
+    "3",
+    "3",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "misc",
+   "line": 6,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [],
+   "kept": [],
+   "author_counts": [
+    "",
+    "",
+    "",
+    ""
+   ],
+   "side_mismatch": false,
+   "drop_reason": "empty side"
+  },
+  {
+   "tab": "misc",
+   "line": 6,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [],
+   "kept": [],
+   "author_counts": [
+    "",
+    "",
+    "",
+    ""
+   ],
+   "side_mismatch": false,
+   "drop_reason": "empty side"
+  },
+  {
+   "tab": "misc",
+   "line": 8,
+   "cls": "boots",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Mana t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [],
+   "author_counts": [
+    "1",
+    "0",
+    "1",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "one mod group in the pool: no choice"
+  },
+  {
+   "tab": "misc",
+   "line": 8,
+   "cls": "boots",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "Int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "1",
+    "0",
+    "1",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "one mod group in the pool: no choice"
+  },
+  {
+   "tab": "misc",
+   "line": 9,
+   "cls": "boots",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "ms t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "MovementVelocity",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    },
+    {
+     "cell": "life t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": null,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "1",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "misc",
+   "line": 9,
+   "cls": "boots",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "coldres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "coldres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "1",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "one mod group in the pool: no choice"
+  },
+  {
+   "tab": "misc",
+   "line": 10,
+   "cls": "boots",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "life t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 2000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": null,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "1",
+    "1",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "one mod group in the pool: no choice"
+  },
+  {
+   "tab": "misc",
+   "line": 10,
+   "cls": "boots",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "Int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "coldres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "coldres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "1",
+    "1",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "misc",
+   "line": 11,
+   "cls": "helm",
+   "side": "prefix",
+   "pool": [],
+   "kept": [],
+   "author_counts": [
+    "0",
+    "0",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "empty side"
+  },
+  {
+   "tab": "misc",
+   "line": 11,
+   "cls": "helm",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "Int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "lightres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "lightres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "0",
+    "0",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "misc",
+   "line": 12,
+   "cls": "helm",
+   "side": "prefix",
+   "pool": [],
+   "kept": [],
+   "author_counts": [
+    "0",
+    "0",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "empty side"
+  },
+  {
+   "tab": "misc",
+   "line": 12,
+   "cls": "helm",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "Int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "lightres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "lightres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "0",
+    "0",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "misc",
+   "line": 13,
+   "cls": "helm",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "life t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 9,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 9,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    }
+   ],
+   "author_counts": [
+    "1",
+    "1",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "one mod group in the pool: no choice"
+  },
+  {
+   "tab": "misc",
+   "line": 13,
+   "cls": "helm",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "lightres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LightningResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "Int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "1",
+    "1",
+    "2",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "misc",
+   "line": 14,
+   "cls": "helm",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "life t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 9,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    },
+    {
+     "cell": "life t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "1",
+    "0"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "one mod group in the pool: no choice"
+  },
+  {
+   "tab": "misc",
+   "line": 14,
+   "cls": "helm",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "Int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [],
+   "author_counts": [
+    "2",
+    "1",
+    "1",
+    "0"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "one mod group in the pool: no choice"
+  },
+  {
+   "tab": "misc",
+   "line": 15,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "lightflat t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "LightningDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    },
+    {
+     "cell": "life t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "fireflat t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "FireDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "life t7",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 7,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 7000
+    },
+    {
+     "cell": "lightflat t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "LightningDamage",
+     "side": "prefix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 2500
+    }
+   ],
+   "author_counts": [
+    "3",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "misc",
+   "line": 15,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "chaosres t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChaosResistance",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 250,
+     "weight_low": 250,
+     "weight_cum": 250
+    },
+    {
+     "cell": "lightres(temple)",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightres(temple)",
+     "weight": null
+    },
+    {
+     "cell": "int t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 6000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "int t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 6000
+    }
+   ],
+   "author_counts": [
+    "3",
+    "2",
+    "3",
+    "1"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "misc",
+   "line": 16,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "fireflat t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "FireDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "fireflat t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "FireDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "mana t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedMana",
+     "side": "prefix",
+     "tier": 9,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "4",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "misc",
+   "line": 16,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "supp t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChanceToSuppressSpells",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "lightres(temple)",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightres(temple)",
+     "weight": null
+    },
+    {
+     "cell": "int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "dex t10",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 10,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 10000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "int t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Intelligence",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "dex t10",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 10,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 10000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "2",
+    "4",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "misc",
+   "line": 17,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "rarity t1",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncreasePrefix",
+     "side": "prefix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "eva% t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "eva% t4",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 4,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 4000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "4",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "all weights equal in the pool: no information"
+  },
+  {
+   "tab": "misc",
+   "line": 17,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "rarity t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ItemFoundRarityIncrease",
+     "side": "suffix",
+     "tier": 1,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "lightres(temple)",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightres(temple)",
+     "weight": null
+    },
+    {
+     "cell": "dex t9",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "Dexterity",
+     "side": "suffix",
+     "tier": 9,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    },
+    {
+     "cell": "liferegen t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegenerationRate",
+     "side": "suffix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "lightres(temple)",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:lightres(temple)",
+     "weight": null
+    },
+    {
+     "cell": "liferegen t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "LifeRegenerationRate",
+     "side": "suffix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "2",
+    "1",
+    "4",
+    "2"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "misc",
+   "line": 18,
+   "cls": "gloves",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "flatcold t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "life t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 9,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    },
+    {
+     "cell": "ar% t6",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "DefencesPercent",
+     "side": "prefix",
+     "tier": 6,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "arflat t5",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "BaseLocalDefences",
+     "side": "prefix",
+     "tier": 5,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "flatcold t2",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "ColdDamage",
+     "side": "prefix",
+     "tier": 2,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 500,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "life t9",
+     "col_side": "prefix",
+     "kind": "natural",
+     "group": "IncreasedLife",
+     "side": "prefix",
+     "tier": 9,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 9000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "2",
+    "4",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": null
+  },
+  {
+   "tab": "misc",
+   "line": 18,
+   "cls": "gloves",
+   "side": "suffix",
+   "pool": [
+    {
+     "cell": "coldres t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "supp t1",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ChanceToSuppressSpells",
+     "side": "suffix",
+     "tier": 1,
+     "typed": true,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 500,
+     "weight_cum": 1000
+    },
+    {
+     "cell": "fireres(temple)",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:fireres(temple)",
+     "weight": null
+    },
+    {
+     "cell": "acc t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "kept": [
+    {
+     "cell": "fireres(temple)",
+     "col_side": "suffix",
+     "kind": "crafted",
+     "group": "crafted:fireres(temple)",
+     "weight": null
+    },
+    {
+     "cell": "coldres t6",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "ColdResistance",
+     "side": "suffix",
+     "tier": 6,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 6000
+    },
+    {
+     "cell": "acc t5",
+     "col_side": "suffix",
+     "kind": "natural",
+     "group": "IncreasedAccuracy",
+     "side": "suffix",
+     "tier": 5,
+     "typed": false,
+     "ambiguous": false,
+     "weight": 1000,
+     "weight_low": 1000,
+     "weight_cum": 5000
+    }
+   ],
+   "author_counts": [
+    "4",
+    "2",
+    "4",
+    "3"
+   ],
+   "side_mismatch": false,
+   "drop_reason": "bench-crafted or exclusive mod in the pool (weight unknown, exclusivity rules)"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 3,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 4,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 5,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 6,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 7,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 8,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 9,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 10,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 11,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 12,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 13,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 14,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 15,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 200
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 16,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 200
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 17,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 18,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 200
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 19,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 20,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 21,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 22,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 23,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 24,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 25,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 26,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 200
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 27,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 28,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 29,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 30,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 31,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 32,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 33,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 34,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 35,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 36,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 37,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 38,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 200",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 200,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 39,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Gem",
+     "group": "gem",
+     "kind": "natural",
+     "weight": 250
+    },
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 2,
+   "drop_reason": "everything kept: no information"
+  },
+  {
+   "tab": "discord_wands",
+   "line": 40,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 41,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  },
+  {
+   "tab": "discord_wands",
+   "line": 42,
+   "cls": "wand",
+   "side": "prefix",
+   "pool": [
+    {
+     "cell": "Gem 250",
+     "kind": "natural",
+     "group": "gem",
+     "weight": 250,
+     "tier": null
+    },
+    {
+     "cell": "Spell",
+     "kind": "nuisance",
+     "group": "spell",
+     "weight": null
+    }
+   ],
+   "kept": [
+    {
+     "cell": "Spell",
+     "group": "spell",
+     "kind": "nuisance",
+     "weight": null
+    }
+   ],
+   "n_final_author": 1,
+   "drop_reason": null
+  }
+ ],
+ "other_tabs": [
+  {
+   "tab": "wands",
+   "rows": 6,
+   "rows_with_crafted_or_exclusive_cells": 6,
+   "reason": "crafted spell/cold damage mod in every row (weight unknown)"
+  },
+  {
+   "tab": "practical",
+   "rows": 34,
+   "rows_with_crafted_or_exclusive_cells": 34,
+   "reason": "crafted and exclusive mods (aspect, multimod, Tora, elemental penetration) in every row"
+  },
+  {
+   "tab": "crafted",
+   "rows": 94,
+   "rows_with_crafted_or_exclusive_cells": 94,
+   "reason": "tests of crafted-mod weights: every row holds bench-crafted mods"
+  },
+  {
+   "tab": "ring_crafted",
+   "rows": 114,
+   "rows_with_crafted_or_exclusive_cells": 7,
+   "reason": "header: 'ALL MODS HERE ARE CRAFTED' (crafted against crafted, no natural weight)"
+  },
+  {
+   "tab": "infl_chest",
+   "rows": 17,
+   "rows_with_crafted_or_exclusive_cells": 17,
+   "reason": "breach and influence exclusive mods in every row; the author collects count statistics only"
+  },
+  {
+   "tab": "agg",
+   "rows": 0,
+   "reason": "counts only (final mods per pooled count), no mod names"
+  },
+  {
+   "tab": "highmod",
+   "rows": 0,
+   "reason": "counts only (6 to 10 mods pooled), no mod names"
+  },
+  {
+   "tab": "examples, noncrafted",
+   "rows": 0,
+   "reason": "notes, no pools"
+  },
+  {
+   "tab": "costs (Recomb costs)",
+   "rows": 0,
+   "reason": "the CSV export is empty"
+  }
+ ]
+}
