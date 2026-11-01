@@ -158,7 +158,8 @@ class Target:
     level and influences unless the file gave one. `price_file` is the path as resolved against the
     target file's folder; it is not read or checked here. `start_price` is the name the start item
     has in the price file (for example the buy spec's name), or None; it is not looked up here. `actions` names the
-    kinds of actions the planner may use (ADR-0024), or None for every kind it can use; the names are not checked here.
+    kinds of actions the planner may use, or the labels of single actions (ADR-0024, ticket #70), or None for every kind it
+    offers by default; the names are not checked here.
     """
 
     base_id: str

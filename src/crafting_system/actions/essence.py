@@ -138,6 +138,22 @@ def _forced_mod_id(essence: Essence, item_class: str) -> str | None:
     return mod_id
 
 
+@kind("corrupted-essence", order=31, default=False)
+def _corrupted_essences(data: GameData, item: Item):
+    """The four corrupted essences (Hysteria, Insanity, Horror, Delirium) the item class takes, for a target that names them.
+
+    They work on a normal and on a rare item (claim `essence`, `is_corruption_only` in the record) and have a price like any
+    essence; a target must name them, as a kind or by label, because they are rare and dear and a plan that tried every one
+    on every item would change what the routes already measured are offered (ticket #70, R04's Essence of Insanity).
+    """
+    for record in data.essences.values():
+        if not record.is_corruption_only or record.name == DESOLATION_IS_NOT_A_B1_ACTION.value:
+            continue
+        base = data.base_items.get(item.base_id)
+        if base is not None and _forced_mod_id(record, base.item_class) is not None:
+            yield ApplyEssence(record.name)
+
+
 @kind("essence", order=30)
 def _essences(data: GameData, item: Item):
     """Every essence the item class takes; those of level 1 to 4 work on a normal item only, so only a normal item lists them."""

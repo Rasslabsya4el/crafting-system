@@ -165,12 +165,12 @@ class _Reader:
 
     def read_actions(self, names: object, line: int) -> tuple[str, ...]:
         if not isinstance(names, LineList) or not len(names):
-            self.fail(line, "actions", f"must be a non-empty list of action kinds such as [chaos-orb], got {describe(names)}")
+            self.fail(line, "actions", f"must be a non-empty list of action kinds such as [chaos-orb] (or action labels), got {describe(names)}")
         found: dict[str, int] = {}
         for index, name in enumerate(names):
             path = f"actions[{index}]"
             if not isinstance(name, str) or not name.strip():
-                self.fail(names.item_lines[index], path, f"must be the name of an action kind (non-empty text), got {describe(name)}")
+                self.fail(names.item_lines[index], path, f"must be the name of an action kind or the label of an action (non-empty text), got {describe(name)}")
             if name.strip() in found:
                 self.fail(names.item_lines[index], path, f"{describe(name)} is listed twice (first at actions[{found[name.strip()]}])")
             found[name.strip()] = index

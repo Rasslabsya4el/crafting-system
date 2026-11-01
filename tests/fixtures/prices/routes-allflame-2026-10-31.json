@@ -95,8 +95,18 @@
       "chaos": 372.2,
       "source": "poe.ninja"
     },
+    "Essence of Insanity": {
+      "chaos": 45.54,
+      "note": "poe.ninja essence exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Exalted Orb": {
       "chaos": 2.29,
+      "source": "poe.ninja"
+    },
+    "Fracturing Orb": {
+      "chaos": 260.4,
+      "note": "poe.ninja currency exchange overview, Allflame, 2026-11-01",
       "source": "poe.ninja"
     },
     "Gemcutter's Prism": {
@@ -120,6 +130,11 @@
       "chaos": 0.1001,
       "source": "poe.ninja"
     },
+    "Orb of Annulment": {
+      "chaos": 11.42,
+      "note": "poe.ninja currency exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
     "Orb of Augmentation": {
       "chaos": 0.01604,
       "source": "poe.ninja"
@@ -134,6 +149,11 @@
     },
     "Orb of Transmutation": {
       "chaos": 0.005804,
+      "source": "poe.ninja"
+    },
+    "Penetrating Arrow Quiver (ilvl 81)": {
+      "chaos": 9.0,
+      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: the cheapest normal Penetrating Arrow Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); the overview has no line below item level 82, and the guide says 81 or more",
       "source": "poe.ninja"
     },
     "Primal Crystallised Lifeforce": {
@@ -598,6 +618,69 @@
     "Shrieking Essence of Zeal": {
       "chaos": 1.0,
       "source": "poe.ninja"
+    },
+    "Thicket Bow (ilvl 78, Hunter)": {
+      "chaos": 13.0,
+      "detail": {
+        "date": "2026-11-01",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 164,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "ilvl": {
+                    "min": 78
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "weapon.bow"
+                  },
+                  "rarity": {
+                    "option": "nonunique"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [
+                  {
+                    "disabled": false,
+                    "id": "pseudo.pseudo_has_hunter_influence",
+                    "value": {
+                      "min": 1
+                    }
+                  }
+                ],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Thicket Bow"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "0c8292aec6aca6eec1c1e19559b01b9b10ad8274aadd17b75c65ec95b5c1cd37",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 164 on the site, listed any time",
+      "source": "trade-api"
     },
     "Vaal Orb": {
       "chaos": 0.3489,

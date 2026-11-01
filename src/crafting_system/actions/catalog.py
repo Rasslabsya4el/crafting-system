@@ -13,7 +13,10 @@ item's mods (a full side, a family already on it) is `outcomes`'s, because the c
 for the start item and the policy then visits many states.
 
 A kind is `planner=False` when the planner cannot use it yet (a reason in `why_not`): it stays in the
-catalog and under the contract tests, and a planner that asks for `planner_only` leaves it out.
+catalog and under the contract tests, and a planner that asks for `planner_only` leaves it out. A kind is
+`default=False` when the planner can use it but offers it only to a target that names it (`names`): adding it
+to every query would change what the routes already measured are offered (Exalted Orb, Annulment, Fracturing
+Orb, ticket #70).
 """
 
 from collections.abc import Callable, Collection, Iterable, Iterator
@@ -35,6 +38,7 @@ class Kind:
     order: int
     planner: bool = True
     why_not: str = field(default="", compare=False)
+    default: bool = True
 
 
 _KINDS: dict[str, Kind] = {}
@@ -49,12 +53,12 @@ def register(entry: Kind) -> Kind:
 
 
 def kind(
-    name: str, *, order: int, planner: bool = True, why_not: str = ""
+    name: str, *, order: int, planner: bool = True, why_not: str = "", default: bool = True
 ) -> Callable[[Callable[[GameData, Item], Iterable[Action]]], Callable[[GameData, Item], Iterable[Action]]]:
     """Decorator that registers a function `members(data, item)` as the kind `name`."""
 
     def decorate(members):
-        register(Kind(name, members, order, planner, why_not))
+        register(Kind(name, members, order, planner, why_not, default))
         return members
 
     return decorate
@@ -71,12 +75,14 @@ def catalog(
 ) -> tuple[Action, ...]:
     """Every action of every kind that can apply to `item`, in catalog order.
 
-    With `planner_only` only the kinds the planner can use; with `names` only the kinds of those names.
-    The same action never appears twice.
+    With `planner_only` only the kinds the planner can use, and without `names` only those it offers by
+    default; with `names` only the kinds of those names. The same action never appears twice.
     """
     found: dict[Action, None] = {}
     for entry in kinds(planner_only=planner_only):
         if names is not None and entry.name not in names:
+            continue
+        if names is None and planner_only and not entry.default:
             continue
         for action in entry.members(data, item):
             try:

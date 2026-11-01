@@ -98,9 +98,8 @@ class FracturingOrb(Action):
 @kind(
     "fracturing-orb",
     order=82,
-    planner=False,
-    why_not="not in the B1 offer set; which actions a target needs is pruning (#118)",
+    default=False,
 )
 def _fracturing_orb(data: GameData, item: Item):
-    if item.rarity is Rarity.RARE:
-        yield FracturingOrb()
+    # a normal or magic item becomes rare on the way, so the kind is listed for it too
+    yield FracturingOrb()

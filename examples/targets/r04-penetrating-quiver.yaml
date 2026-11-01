@@ -1,0 +1,74 @@
+# Target for benchmark route R04: the Insanity-fractured additional-arrow Penetrating Arrow Quiver.
+#
+# This file says WHAT you want to end with and WHAT you start from. It does not say how to craft it: the
+# planner finds that. Lines starting with # are comments and are ignored.
+#
+# The route (PoE Vault, "Shrapnel Ballista Hierophant gear", docs/research/2026-10-30-5-reference-routes.md, id R04):
+#   1. Buy a Penetrating Arrow Quiver of item level 81 or more (uncorrupted, unfractured, no influence).
+#   2. Essence of Insanity, to guarantee "Projectiles Pierce 2 additional Targets"; Orb of Annulment until the
+#      quiver has exactly 4 mods (buy a new quiver if the Pierce is annulled); Fracturing Orb on the Pierce
+#      (25%, else buy a new quiver).
+#   3. Deafening Essence of Rage until "Bow Attacks fire an additional Arrow" (the essence itself adds the
+#      Strength); keep one suffix open (Annulment if needed).
+#   4. Craft "Cannot roll Attack Modifiers"; two Exalted Orbs add Maximum Life and Increased Damage with
+#      Bow Skills (the only prefixes left that are not attack mods); remove the craft.
+#
+# How the words of the guide are read (each reading is a choice and can be changed here). The owner's rule
+# for tiers: a mod whose tier the guide does not state is the TOP tier the item level allows; a mod the
+# guide's essence forces is exactly that tier.
+#   * "Projectiles Pierce 2 additional Targets": exactly what the Essence of Insanity adds to a quiver
+#     (mod AdditionalPierceEssence7, a prefix). It has to be fractured, so it stays through the reforges.
+#   * "Tier 1 Strength": the Strength of the Deafening Essence of Rage, "+(51-58) to Strength" (mod
+#     StrengthEssence7_, a suffix); a quiver has no other Strength, so it is the essence's.
+#   * "Bow Attacks fire an additional Arrow": the only tier (AdditionalArrowQuiver1_, a suffix).
+#   * "Maximum Life", "Increased Damage with Bow Skills": the top tier the item level allows, rolled (not crafted).
+#   * "Resistances or Attack Speed" in the last step is a free choice of the owner's, not part of the target.
+#   * The guide's lists of "prefixes" and "suffixes" are not the item's sides: the Pierce is a prefix.
+
+# The base item. The game data has two bases named Penetrating Arrow Quiver; the older one is flagged
+# `trade_market_legacy_item`, so the id of the current one is written (its implicit is the same kind: Pierce).
+base: Metadata/Items/Quivers/QuiverNew5
+
+# The guide says item level 81 or more.
+item_level: 81
+
+influence: []
+
+# The actions the planner may use: the guide's. The kinds are Orb of Annulment, Fracturing Orb, Exalted Orb and
+# the bench; of the essences only the two the guide names (an essence is named by its label, because a quiver
+# takes about fifty and the plan with all of them is far beyond what a graph can hold); of the bench the crafts
+# the target counts, and the metamod "Cannot roll Attack Modifiers" of step 7 (it counts toward no requirement,
+# so it is named). The plan is the cheapest among these; the report lists what was left out.
+actions:
+  - Essence of Insanity
+  - Deafening Essence of Rage
+  - annulment-orb
+  - fracturing-orb
+  - exalted-orb
+  - bench-craft
+  - Bench craft Cannot roll Attack Modifiers
+  - remove-crafted-mods
+
+# Everything below must be present on the finished quiver.
+requirements:
+  # The Pierce of the Essence of Insanity, fractured. The fractured mod counts, and no other mod of the
+  # family can be added next to it.
+  - family: Pierce
+    mod: AdditionalPierceEssence7
+  # The Strength of the Deafening Essence of Rage.
+  - family: Strength
+    mod: StrengthEssence7_
+  # Bow Attacks fire an additional Arrow.
+  - family: AdditionalArrows
+    mod: AdditionalArrowQuiver1_
+  # Maximum Life, the top tier (min_tier: 1), rolled, not crafted.
+  - family: IncreasedLife
+    min_tier: 1
+    not_crafted: true
+  # Increased Damage with Bow Skills, the top tier the item level allows (tier 2 at item level 81).
+  - family: DamageWithWeaponTypeSkill
+    min_tier: 2
+    not_crafted: true
+
+# The quiver is bought plain (normal), uncorrupted; its price name is the base price at item level 81.
+start_price: Penetrating Arrow Quiver (ilvl 81)

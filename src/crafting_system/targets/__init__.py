@@ -47,7 +47,8 @@ Keys (unknown keys are errors, with a close-match hint):
       veil_offer: [UnveiledPrefixLife1]   # optional: up to 3 mod ids offered for the one veiled placeholder in `mods`
     start_price: R12 start amulet   # optional: the name of the start item in the price file (what it costs to get)
     price_file: prices.json # optional path; a relative path counts from the target file's folder
-    actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it can use)
+    actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it offers by
+                            # default); a name may also be the label of one action, e.g. "Essence of Insanity" (#70)
 
 Exactly one of `family` and `stat` names a requirement's mod. `stat` is compared after normalising both
 sides (a range such as `(10-24)` becomes `#`, `[X|Y]` markup becomes `Y`), so `+# to maximum Life`

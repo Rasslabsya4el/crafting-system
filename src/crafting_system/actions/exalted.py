@@ -55,9 +55,8 @@ class ExaltedOrb(Action):
 @kind(
     "exalted-orb",
     order=75,
-    planner=False,
-    why_not="not in the B1 offer set; which actions a target needs is pruning (#118)",
+    default=False,
 )
 def _exalted_orb(data: GameData, item: Item):
-    if item.rarity is Rarity.RARE:
-        yield ExaltedOrb()
+    # a normal or magic item becomes rare on the way (an essence, a Regal Orb), so the kind is listed for it too
+    yield ExaltedOrb()
