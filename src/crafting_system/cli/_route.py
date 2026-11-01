@@ -35,14 +35,14 @@ from crafting_system.abstraction import CompressedState, Status
 from crafting_system.actions import ActionError
 from crafting_system.data import GameData
 from crafting_system.items import Rarity, Side, capacity
-from crafting_system.risk import RiskReport, evaluate
+from crafting_system.risk import RiskReport
 from crafting_system.solver import Action, Outcome
 from crafting_system.targets import KOfN, Requirement, TargetError
 from crafting_system.targets.lines import LineList, LineMap, load_with_lines
 from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
 
-from ._plan import Plan, offer_action
+from ._plan import Plan, evaluate_risk, offer_action
 from ._reach import policy_states
 
 RESTART = "restart"
@@ -464,7 +464,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
             if weight > 0 and successor not in seen:
                 seen.add(successor)
                 order.append(successor)
-    risk = evaluate(policy, plan.start, plan.is_goal)
+    risk = evaluate_risk(policy, plan.start, plan.is_goal, plan.mean_remaining)  # the route costs at least the solver's mean
 
     divergence = None
     for state in policy_states(plan.start, plan.policy, plan.is_goal):

@@ -16,7 +16,7 @@ A kind is `planner=False` when the planner cannot use it yet (a reason in `why_n
 catalog and under the contract tests, and a planner that asks for `planner_only` leaves it out.
 """
 
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Collection, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 
@@ -66,13 +66,18 @@ def kinds(*, planner_only: bool = False) -> tuple[Kind, ...]:
     return tuple(sorted(chosen, key=lambda entry: (entry.order, entry.name)))
 
 
-def catalog(data: GameData, item: Item, *, planner_only: bool = False) -> tuple[Action, ...]:
+def catalog(
+    data: GameData, item: Item, *, planner_only: bool = False, names: Collection[str] | None = None
+) -> tuple[Action, ...]:
     """Every action of every kind that can apply to `item`, in catalog order.
 
-    With `planner_only` only the kinds the planner can use. The same action never appears twice.
+    With `planner_only` only the kinds the planner can use; with `names` only the kinds of those names.
+    The same action never appears twice.
     """
     found: dict[Action, None] = {}
     for entry in kinds(planner_only=planner_only):
+        if names is not None and entry.name not in names:
+            continue
         for action in entry.members(data, item):
             try:
                 hash(action)

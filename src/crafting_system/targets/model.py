@@ -157,7 +157,8 @@ class Target:
     `requirements` are all required at once, then `implicits` and `quality` when given. `start_item` is a fresh normal item of the base, item
     level and influences unless the file gave one. `price_file` is the path as resolved against the
     target file's folder; it is not read or checked here. `start_price` is the name the start item
-    has in the price file (for example the buy spec's name), or None; it is not looked up here.
+    has in the price file (for example the buy spec's name), or None; it is not looked up here. `actions` names the
+    kinds of actions the planner may use (ADR-0024), or None for every kind it can use; the names are not checked here.
     """
 
     base_id: str
@@ -169,6 +170,7 @@ class Target:
     start_price: str | None = None
     implicits: tuple[ImplicitRequirement, ...] = ()
     quality: QualityRequirement | None = None
+    actions: tuple[str, ...] | None = None
 
     def is_met_by(self, item: Item) -> bool:
         """Whether `item` meets every top-level requirement, every implicit requirement and the quality."""
