@@ -19,12 +19,13 @@ The data is the contract suite's fixture data plus the hand-written boots, Eldri
 import dataclasses
 from fractions import Fraction
 
+from abstraction_pool import RESIST_2
 from contract_support import CONTRACT_DATA
 from implicits_support import BOOTS, HAND_MADE, SOME_BOOTS, _eldritch
 from items_support import AMULET
 
 from crafting_system.abstraction import Goal, ImplicitWanted, Wanted
-from crafting_system.actions import Action, Adds, Finite, NotApplicableError, Reads
+from crafting_system.actions import Action, Adds, Finite, NotApplicableError, Reads, kinds
 from crafting_system.data import GameData
 from crafting_system.items import (
     CatalystType,
@@ -262,3 +263,25 @@ def toy_actions() -> list[Action]:
 
 def plain_goal(*leaves: Wanted) -> Goal:
     return Goal(tuple(leaves))
+
+
+def check_kinds_declare_item_state() -> int:
+    """Every registered kind declares no part of the item state, except the one a kind names in `reads_item_state_while_not_planner`.
+
+    No planner kind touches the implicits, the quality or the offer: the planner and the cache see no change in any registered kind that
+    is offered. A kind outside the planner may read one part (an influenced Exalted Orb reads the implicits, because it is refused on
+    an Eldritch implicit, ticket #154) and then declares that part and no other, and changes none. The kind says so itself; no kind is
+    named here. Returns the number of kinds checked.
+    """
+    checked = 0
+    for kind in kinds():
+        checked += 1
+        for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
+            reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
+            part = kind.reads_item_state_while_not_planner
+            if part:
+                assert not kind.planner and not adds.item_state, kind.name
+                assert getattr(reads, part) and not any(getattr(reads, other) for other in {"implicits", "quality", "offer"} - {part}), kind.name
+            else:
+                assert not reads.item_state and not adds.item_state, kind.name
+    return checked

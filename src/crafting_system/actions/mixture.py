@@ -18,6 +18,12 @@ from crafting_system.items import Item
 from .draw import Outcome
 from .outcomes import Outcomes
 
+__all__ = [
+    "FossilOutcomes",
+    "Fractured",
+    "Mixture",
+]
+
 
 @dataclass(frozen=True, slots=True)
 class Fractured:
