@@ -9,6 +9,7 @@ problem (`Abstraction(enchantment=...)`) and the pilot count and the kernel must
 import dataclasses
 import random
 from collections import deque
+from types import SimpleNamespace
 
 import pytest
 from enchant_support import ARMOUR_EXTRA_SLOT, BODY, DATA as ENCHANT_DATA, LIFE, QUALITY_LIFE, WEAPON_EXTRA_SLOT, SWORD
@@ -25,6 +26,7 @@ from crafting_system.actions import (
     grants_extra_crafted_slot,
 )
 from crafting_system.actions.metamods import crafted_limit
+from crafting_system.cli._marking import approximate_inputs
 from crafting_system.items import EnchantmentError, ExplicitMod, Item, ItemError, Metamod, Rarity
 from crafting_system.rules import get_rule
 
@@ -294,3 +296,34 @@ def test_the_abstraction_refuses_an_item_with_another_enchantment_and_an_enchant
         Abstraction(DATA, GOAL, AMULET, 84, [], enchantment=ARMOUR_EXTRA_SLOT)  # an amulet holds no enchantment
     with pytest.raises(EnchantmentError):
         Abstraction(DATA, GOAL, BODY, 84, [], enchantment=WEAPON_EXTRA_SLOT)  # a weapon enchantment on body armour
+
+
+# --- the answer names the unsourced stacking rule when the start item holds the enchantment ---------------------------------
+
+
+def a_plan(enchantment):
+    """A stand-in for a `Plan` with a one-step policy that takes a bench craft: all `approximate_inputs` reads."""
+    craft = BenchCraft(CRAFTS[0])
+    step = SimpleNamespace(outcomes=(("goal", 1),))
+    plan = SimpleNamespace(
+        start="start",
+        is_goal=lambda state: state == "goal",
+        offer_of=lambda action: SimpleNamespace(offer=SimpleNamespace(action=craft)),
+        abstraction=SimpleNamespace(enchantment=enchantment),
+    )
+    return plan, {"start": step}
+
+
+def test_a_plan_from_a_start_item_with_the_enchant_lists_the_stacking_claim_as_approximate():
+    plan, policy = a_plan(ARMOUR_EXTRA_SLOT)
+
+    listed = {entry.claim for entry in approximate_inputs(plan, policy, DATA)}
+
+    assert listed == {"enchantment.crafted_slot_with_multimod_takes_the_larger"}
+
+
+@pytest.mark.parametrize("enchantment", [None, LIFE])
+def test_a_plan_without_the_extra_slot_lists_nothing_for_the_bench(enchantment):
+    plan, policy = a_plan(enchantment)
+
+    assert approximate_inputs(plan, policy, DATA) == ()
