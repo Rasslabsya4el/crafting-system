@@ -43,6 +43,24 @@ rules:
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-30
 
+  - id: harvest_reforge.guaranteed_mod_fits_the_free_slots
+    statement: Under metamod locks the tagged reforge keeps every mod of a locked side, draws new mods only into the slots that are free, and draws its guaranteed tagged modifier from the mods that fit those slots. With both sides locked and one free slot, the outcome is exactly one tagged mod of that slot's side, weighted as for any draw; no rule of its own is needed for the item. The owner's case is a Titanium Spirit Shield (item level 100) holding T1 increased Energy Shield, T1 faster start of Energy Shield Recharge, Can have up to 3 Crafted Modifiers, Prefixes Cannot Be Changed and Suffixes Cannot Be Changed (one free prefix) gets exactly one Fire-tagged prefix from a Fire reforge, the emulator showing T8 10% increased Fire Damage; Cold and Lightning behave the same.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/197
+    quote: "the reforge keeps the locked sides, draws new mods only into free slots, and its \"at least one mod with tag X\" guarantee is drawn from the mods that fit the free slots"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: harvest_reforge.refused_when_no_tagged_mod_fits_a_free_slot
+    statement: A tagged reforge cannot be used when none of the mods with the chosen tag fits a free slot of the item as the reroll leaves it, whether no slot is free at all or the free slots are on a side with no such mod (locks and fractured mods keep their slots). The code refuses it, as it does for a pool with no mod of the tag (harvest_reforge.refused_without_tagged_mod). The wiki sentence speaks of the mod pool, not of slots; what the game and the Craft of Exile emulator do in these two cases (refuse, or reforge without the guarantee) is not settled, and the emulator check (issue 198) is asked.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Modifier#Harvest_Crafting
+    quote: "no valid tags in the mod pool to roll for the selected item, the craft cannot be used"
+    approximate: true
+    approximate_reason: "No source says whether a tagged reforge is refused when the tag has mods only on a full or locked side; the refusal is read from the wiki sentence about the mod pool."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
   - id: harvest_reforge.fractured_mods_kept
     statement: A fractured modifier stays on the item through a tagged reforge, in its slot (its family then blocks the new draws as any family on the item does, affix_draw.family_exclusion).
     source_kind: wiki
