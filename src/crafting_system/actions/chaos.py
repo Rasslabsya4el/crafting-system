@@ -20,6 +20,7 @@ from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
+from .strand_use import SPEND_CHAOS_FAMILY, SpendLaw, StrandUse
 
 __all__ = [
     "ChaosOrb",
@@ -39,6 +40,9 @@ class ChaosOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Chaos Orb"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_CHAOS_FAMILY.value["chaos"]), SPEND_CHAOS_FAMILY)  # ADR-0041: cuts, spends 0 to 50
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value)
@@ -65,7 +69,7 @@ class ChaosOrb(Action):
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Chaos Orb")
         refuse_unmodelled(data, item, jewels=True)
-        return Outcomes.reroll(data, item, tag=None)
+        return Outcomes.reroll(data, item, tag=None, cut=self.cut_of(data, item))
 
 
 @kind("chaos-orb", order=10)

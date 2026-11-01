@@ -1,11 +1,16 @@
 """Price a buy spec from the trade site's listings and store it beside the poe.ninja prices (#39).
 
-The flow of `price_buy_spec`: the stats list (cached for a week) maps the spec's mods to stat ids, the
+The flow of `assess_buy_spec`: the stats list (cached for a week) maps the spec's mods to stat ids, the
 query goes to the site (the answer is cached for a day by the hash of league and body), ten listings
 are fetched, and each is turned into Chaos with the rates of the price file. A listing that cannot be
 turned into Chaos or does not match the spec is dropped and counted, never guessed. The price is the
 mean of the `k` cheapest of what is left (#133: the query asks for instant-buyout listings of any age,
 so the cheapest listings are real prices).
+
+The market rule (#355, `trade_market.py`): the answer is a price only when the site has at least
+`min_listings` listings (default 10) and enough of the fetched ones can be priced; otherwise it is
+`thin`, and a search with no listing is `none`. `price_buy_spec` is the same flow that raises
+`NotEnoughListings` for those two states; the error carries the `TradeMarket` to record.
 
 Nothing here reads a clock: the caller passes `now`. The client's request budget is the only limit on
 requests; a cache hit costs none.
@@ -22,14 +27,22 @@ from pathlib import Path
 from typing import Any
 
 from ..data import Mod
-from .price_file import MAX_AGE_DAYS, PriceEntry, PriceFile, load_price_file, write_price_file
+from .price_file import MAX_AGE_DAYS, MarketRecord, PriceEntry, PriceFile, load_price_file, write_price_file
 from .trade_http import MAX_FETCH_IDS, TradeClient, TradeError
+from .trade_market import (
+    DEFAULT_MIN_LISTINGS,
+    MIN_USABLE,
+    NONE,
+    QUOTED,
+    TRADE_SOURCE,
+    age_in_days,
+    classify,
+)
 from .trade_query import DEFAULT_INDEXED, BuySpec, build_query, query_hash
 from .trade_stats import TradeStats, parse_trade_stats, resolve_buy_mod
 
-TRADE_SOURCE = "trade-api"
 DEFAULT_K = 5
-MIN_LISTINGS = 3
+MIN_LISTINGS = MIN_USABLE  # kept under its old name
 FETCH_COUNT = MAX_FETCH_IDS  # the site's maximum for one fetch call
 QUERY_TTL = timedelta(hours=24)
 STATS_TTL = timedelta(days=7)
@@ -69,7 +82,14 @@ NOT_FRACTURED = "not fractured"
 
 
 class NotEnoughListings(TradeError):
-    """The search found too few listings that can be priced; nothing is stored."""
+    """The search found no market (`thin` or `none`); no price is made.
+
+    `market` is the state to record (`store_market`) when the caller wants it kept.
+    """
+
+    def __init__(self, message: str, market: "TradeMarket | None" = None) -> None:
+        super().__init__(message)
+        self.market = market
 
 
 @dataclass(frozen=True)
@@ -80,6 +100,7 @@ class TradePrice:
     date: date  # UTC date of the run
     listings: int  # the search `total`: how many listings the site has
     used: int  # listings in the mean, at most `k`
+    usable: int  # fetched listings that could be priced (the market rule's count)
     k: int
     fetched: int  # rows fetched
     dropped: Mapping[str, int]  # reason -> count
@@ -91,6 +112,32 @@ class TradePrice:
         """The listing-age window the query was sent with (None = any time)."""
         window = self.query["query"].get("filters", {}).get("trade_filters", {}).get("filters", {})
         return window.get("indexed", {}).get("option")
+
+
+@dataclass(frozen=True)
+class TradeMarket:
+    """The outcome of one trade search under the market rule: `quoted` (with a price), `thin` or `none`."""
+
+    name: str
+    state: str
+    league: str
+    date: date  # UTC date of the run
+    listings: int  # the search `total`
+    usable: int  # fetched listings that could be priced
+    fetched: int
+    dropped: Mapping[str, int]
+    query_hash: str
+    query: Mapping[str, Any]
+    price: TradePrice | None  # set only when quoted
+    reason: str | None  # why it is not quoted
+
+    def record(self) -> MarketRecord:
+        """The `thin` / `none` state as the price file keeps it."""
+        if self.state == QUOTED:
+            raise ValueError(f"{self.name!r} is quoted; store its price, not a market record")
+        return MarketRecord(
+            self.state, self.league, self.date, self.listings, self.usable, self.query_hash, self.query
+        )
 
 
 # --- cache files ---------------------------------------------------------------------------------
@@ -152,16 +199,18 @@ def _row(item: Mapping[str, Any]) -> dict[str, Any]:
 def _listings(
     client: TradeClient, league: str, body: dict, path: Path, now: datetime
 ) -> tuple[int, list[dict[str, Any]]]:
-    """(total, rows) of the query, from the cache or the site (one search, one fetch)."""
+    """(total, rows) of the query, from the cache or the site (one search, one fetch; (0, []) for total 0)."""
     cached = _read_cache(path, now, QUERY_TTL)
     if cached is not None and isinstance(cached.get("rows"), list) and isinstance(cached.get("total"), int):
         return cached["total"], cached["rows"]
     answer = client.search(league, body)
     total, ids, search_id = answer.get("total"), answer.get("result"), answer.get("id")
-    if not total or not isinstance(ids, list) or not ids:
-        raise NotEnoughListings("the trade site has no listings for this query (total 0)")
-    if not isinstance(total, int) or not isinstance(search_id, str):
+    if isinstance(total, int) and not isinstance(total, bool) and total == 0:
+        return 0, []  # the site said so: no listing (not cached, nothing to fetch)
+    if not isinstance(total, int) or isinstance(total, bool) or total < 0 or not isinstance(search_id, str):
         raise TradeError("the search answer has no usable 'total' or 'id'")
+    if not isinstance(ids, list) or not ids:
+        raise TradeError(f"the search answer says {total} listings but gives no 'result' ids")
     fetched = client.fetch(ids[:FETCH_COUNT], search_id).get("result")
     if not isinstance(fetched, list):
         raise TradeError("the fetch answer has no 'result' list")
@@ -199,6 +248,101 @@ def _chaos_of(row: Mapping[str, Any], spec: BuySpec, price_file: PriceFile) -> f
     return amount * rate.chaos
 
 
+def market_of_listings(
+    spec: BuySpec,
+    price_file: PriceFile,
+    total: int,
+    rows: Iterable[Mapping[str, Any]],
+    now: datetime,
+    digest: str,
+    body: Mapping[str, Any],
+    k: int = DEFAULT_K,
+    min_listings: int = DEFAULT_MIN_LISTINGS,
+    hint: str = "",
+) -> TradeMarket:
+    """The market rule applied to one search answer: `total` listings on the site, `rows` fetched.
+
+    Pure: no request, no clock. `total` 0 is `none`; fewer than `min_listings` on the site, or fewer than
+    `MIN_USABLE` rows that can be priced, is `thin`; otherwise `quoted` with the mean of the `k` cheapest.
+    """
+    rows = list(rows)
+    usable: list[float] = []
+    dropped: dict[str, int] = {}
+    for row in rows:
+        result = _chaos_of(row, spec, price_file)
+        if isinstance(result, str):
+            dropped[result] = dropped.get(result, 0) + 1
+        else:
+            usable.append(result)
+    state = classify(total, len(usable), min_listings)
+    stamp = now.astimezone(UTC).date()
+    price = None
+    reason = None
+    if state == QUOTED:
+        cheapest = sorted(usable)[:k]
+        price = TradePrice(
+            name=spec.name,
+            chaos=float(statistics.fmean(cheapest)),
+            league=price_file.league,
+            date=stamp,
+            listings=total,
+            used=len(cheapest),
+            usable=len(usable),
+            k=k,
+            fetched=len(rows),
+            dropped=dropped,
+            query_hash=digest,
+            query=body,
+        )
+    elif state == NONE:
+        reason = f"the trade site has no listings for this query (total 0){hint}"
+    elif total < min_listings:
+        reason = (
+            f"the trade site has only {total} listings for this query; "
+            f"a market needs at least {min_listings}{hint}"
+        )
+    else:
+        why = "; ".join(f"{count} {cause}" for cause, count in sorted(dropped.items())) or "none dropped"
+        reason = (
+            f"only {len(usable)} of {len(rows)} fetched listings ({total} on the site) can be priced; "
+            f"at least {MIN_USABLE} are needed. Dropped: {why}{hint}"
+        )
+    return TradeMarket(
+        spec.name, state, price_file.league, stamp, total, len(usable), len(rows), dropped, digest, body, price, reason
+    )
+
+
+def assess_buy_spec(
+    spec: BuySpec,
+    game_mods: Iterable[Mod],
+    price_file: PriceFile,
+    client: TradeClient,
+    cache_dir: Path,
+    now: datetime,
+    k: int = DEFAULT_K,
+    refresh_stats: bool = False,
+    indexed: str | None = DEFAULT_INDEXED,
+    min_listings: int = DEFAULT_MIN_LISTINGS,
+) -> TradeMarket:
+    """Search the trade site for `spec` and apply the market rule; see `market_of_listings`.
+
+    `price_file` should already carry the overrides (`load_prices`). Raises the `TradeError`s of the client
+    (a search that finds nothing is a `none` market, not an error). `indexed` is the listing-age window of
+    the query (None = any time); it is part of the body, so of the cache key.
+    """
+    if k < 1:
+        raise ValueError(f"k must be at least 1, got {k}")
+    mods = tuple(game_mods)
+    stats = _stats(client, cache_dir, now, refresh_stats)
+    filters = [resolve_buy_mod(mod, mods, stats) for mod in spec.mods]
+    body = build_query(spec, filters, indexed).body()
+    digest = query_hash(price_file.league, body)
+    total, rows = _listings(client, price_file.league, body, cache_dir / "trade" / f"{digest}.json", now)
+    return market_of_listings(
+        spec, price_file, total, rows, now, digest, body, k, min_listings, _window_hint(indexed)
+    )
+
+
 def price_buy_spec(
     spec: BuySpec,
     game_mods: Iterable[Mod],
@@ -209,54 +353,19 @@ def price_buy_spec(
     k: int = DEFAULT_K,
     refresh_stats: bool = False,
     indexed: str | None = DEFAULT_INDEXED,
+    min_listings: int = DEFAULT_MIN_LISTINGS,
 ) -> TradePrice:
     """Mean Chaos price of the `k` cheapest usable listings of `spec`; see the module text.
 
-    `price_file` should already carry the overrides (`load_prices`). Raises `NotEnoughListings` when
-    fewer than `MIN_LISTINGS` listings are usable, and the `TradeError`s of the client. `indexed` is the
-    listing-age window of the query (None = any time); it is part of the body, so of the cache key.
+    Raises `NotEnoughListings` (carrying the `thin` or `none` market) when there is no market, and the
+    `TradeError`s of the client.
     """
-    if k < 1:
-        raise ValueError(f"k must be at least 1, got {k}")
-    mods = tuple(game_mods)
-    stats = _stats(client, cache_dir, now, refresh_stats)
-    filters = [resolve_buy_mod(mod, mods, stats) for mod in spec.mods]
-    body = build_query(spec, filters, indexed).body()
-    digest = query_hash(price_file.league, body)
-    hint = _window_hint(indexed)
-    try:
-        total, rows = _listings(client, price_file.league, body, cache_dir / "trade" / f"{digest}.json", now)
-    except NotEnoughListings as error:
-        raise NotEnoughListings(f"{error}{hint}") from None
-
-    usable: list[float] = []
-    dropped: dict[str, int] = {}
-    for row in rows:
-        result = _chaos_of(row, spec, price_file)
-        if isinstance(result, str):
-            dropped[result] = dropped.get(result, 0) + 1
-        else:
-            usable.append(result)
-    if len(usable) < MIN_LISTINGS:
-        why = "; ".join(f"{count} {reason}" for reason, count in sorted(dropped.items())) or "none dropped"
-        raise NotEnoughListings(
-            f"only {len(usable)} of {len(rows)} fetched listings ({total} on the site) can be priced; "
-            f"at least {MIN_LISTINGS} are needed. Dropped: {why}{hint}"
-        )
-    cheapest = sorted(usable)[:k]
-    return TradePrice(
-        name=spec.name,
-        chaos=float(statistics.fmean(cheapest)),
-        league=price_file.league,
-        date=now.astimezone(UTC).date(),
-        listings=total,
-        used=len(cheapest),
-        k=k,
-        fetched=len(rows),
-        dropped=dropped,
-        query_hash=digest,
-        query=body,
+    market = assess_buy_spec(
+        spec, game_mods, price_file, client, cache_dir, now, k, refresh_stats, indexed, min_listings
     )
+    if market.price is None:
+        raise NotEnoughListings(market.reason or "no market", market)
+    return market.price
 
 
 # --- the price file ------------------------------------------------------------------------------
@@ -282,6 +391,7 @@ def entry_for(price: TradePrice) -> PriceEntry:
         "date": price.date.isoformat(),
         "listings": price.listings,
         "used": price.used,
+        "usable": price.usable,
         "k": price.k,
         "query_hash": price.query_hash,
         "query": price.query,
@@ -302,17 +412,30 @@ def store_trade_price(path: Path, price: TradePrice, entry: PriceEntry) -> None:
     """
     current = load_price_file(path)
     refuse_name_collision(price.name, current.prices.get(price.name))
-    write_price_file(path, replace(current, prices={**current.prices, price.name: entry}))
+    markets = {name: record for name, record in current.markets.items() if name != price.name}
+    write_price_file(path, replace(current, prices={**current.prices, price.name: entry}, markets=markets))
+
+
+def store_market(path: Path, market: TradeMarket) -> None:
+    """Keep the outcome of a search in the price file at `path`: a quote as a price, `thin` / `none` as a record.
+
+    A `thin` or `none` outcome replaces an older trade price of the same name (the site no longer shows a
+    market, so the old quote is not offered) and an older record. A name that is another source's price is
+    refused (`ValueError`) and the file is untouched. Nothing else changes.
+    """
+    if market.price is not None:
+        store_trade_price(path, market.price, entry_for(market.price))
+        return
+    current = load_price_file(path)
+    refuse_name_collision(market.name, current.prices.get(market.name))
+    prices = {name: entry for name, entry in current.prices.items() if name != market.name}
+    markets = {**current.markets, market.name: market.record()}
+    write_price_file(path, replace(current, prices=prices, markets=markets))
 
 
 def trade_price_age_days(entry: PriceEntry, today: date) -> int | None:
     """Whole days from the run that made a trade-api `entry` to `today`; None when it carries no usable date."""
-    stamp = entry.detail.get("date") if entry.detail else None
-    try:
-        ran_on = date.fromisoformat(stamp) if isinstance(stamp, str) else None
-    except ValueError:
-        return None
-    return None if ran_on is None else (today - ran_on).days
+    return age_in_days(entry.detail.get("date") if entry.detail else None, today)
 
 
 def _aged(entry: PriceEntry, today: date, max_age_days: int) -> int | None:
@@ -358,24 +481,34 @@ def current_trade_prices(old: PriceFile | None, league: str, today: date | None 
 
 
 def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile, list[str]]:
-    """`new` plus the trade prices of `old`, so a re-fetch of poe.ninja does not lose them.
+    """`new` plus the trade prices and market records of `old`, so a re-fetch of poe.ninja does not lose them.
 
     A trade price is a price of one league: a different league drops them, with a warning line naming
     them. So is a trade price whose own `detail["league"]` names another league than the new file's.
     A name the new file already has stays as the new file has it. A kept price older than the stale limit
-    (counted to the new file's date) is flagged in the warnings, like a stale price file. Returns (file, warnings).
+    (counted to the new file's date) is flagged in the warnings, like a stale price file. The `thin` and
+    `none` records follow the same league and name rules (a record keeps its own age; it is not warned
+    about). Returns (file, warnings).
     """
     if old is None:
         return new, []
     trade = {name: entry for name, entry in old.prices.items() if entry.source == TRADE_SOURCE}
-    if not trade:
+    if not trade and not old.markets:
         return new, []
     if old.league != new.league:
-        names = ", ".join(sorted(trade))
-        return new, [
-            f"dropped {len(trade)} trade-api price(s) of league {old.league} "
-            f"(the new price file is for {new.league}): {names}"
-        ]
+        warnings = []
+        if trade:
+            names = ", ".join(sorted(trade))
+            warnings.append(
+                f"dropped {len(trade)} trade-api price(s) of league {old.league} "
+                f"(the new price file is for {new.league}): {names}"
+            )
+        if old.markets:
+            warnings.append(
+                f"dropped {len(old.markets)} trade market record(s) of league {old.league} "
+                f"(the new price file is for {new.league}): {', '.join(sorted(old.markets))}"
+            )
+        return new, warnings
     warnings = []
     kept = {}
     for name, entry in trade.items():
@@ -389,5 +522,10 @@ def merge_trade_prices(new: PriceFile, old: PriceFile | None) -> tuple[PriceFile
             warnings.append(f"trade-api price {name!r} dropped: the fetch has a {new.prices[name].source} price of that name")
         else:
             kept[name] = entry
+    markets = {
+        name: record
+        for name, record in old.markets.items()
+        if record.league == new.league and name not in new.prices and name not in kept
+    }
     aged = stale_trade_warnings(replace(new, prices=kept), new.fetched_at.astimezone(UTC).date())
-    return replace(new, prices={**new.prices, **kept}), [*warnings, *aged]
+    return replace(new, prices={**new.prices, **kept}, markets={**new.markets, **markets}), [*warnings, *aged]

@@ -28,6 +28,7 @@ from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .metamods import kept_by_reroll
 from .outcomes import Outcomes
+from .strand_use import SPEND_BASIC, SpendLaw, StrandUse
 
 __all__ = [
     "AlterationOrb",
@@ -75,6 +76,9 @@ class TransmutationOrb(Action):
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Transmutation"
 
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_BASIC.value["transmutation"]), SPEND_BASIC)  # ADR-0041: cuts, spends 0 to the ceiling of the claim
+
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value["transmutation"])
 
@@ -91,7 +95,7 @@ class TransmutationOrb(Action):
         `OutOfScopeError` for a cluster jewel or an influenced item of a class with no influence class key.
         """
         _refuse(data, item, Rarity.NORMAL, "an Orb of Transmutation")
-        return draw_onto(data, item.changed(data, rarity=Rarity.MAGIC), magic_totals())
+        return draw_onto(data, item.changed(data, rarity=Rarity.MAGIC), magic_totals(), self.cut_of(data, item))
 
 
 @dataclass(frozen=True)
@@ -100,6 +104,9 @@ class AlterationOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Alteration"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_BASIC.value["alteration"]), SPEND_BASIC)  # ADR-0041: cuts, spends 0 to the ceiling of the claim
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value["alteration"])
@@ -121,7 +128,7 @@ class AlterationOrb(Action):
         _refuse(data, item, Rarity.MAGIC, "an Orb of Alteration")
         retained = item.changed(data, mods=kept_by_reroll(data, item))
         # a metamod the reroll keeps (it sits on a locked side) filters the draw, as for a Chaos Orb
-        return draw_onto(data, retained, magic_totals())
+        return draw_onto(data, retained, magic_totals(), self.cut_of(data, item))
 
 
 @dataclass(frozen=True)
@@ -130,6 +137,9 @@ class AugmentationOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Augmentation"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_BASIC.value["augmentation"]), SPEND_BASIC)  # ADR-0041: cuts, spends 0 to the ceiling of the claim
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value["augmentation"])
@@ -148,7 +158,7 @@ class AugmentationOrb(Action):
         The Attack and Caster metamods on the item keep the mods with their tag out of the pool.
         """
         _refuse(data, item, Rarity.MAGIC, "an Orb of Augmentation")
-        return add_one_mod(data, item, "an Orb of Augmentation")
+        return add_one_mod(data, item, "an Orb of Augmentation", cut=self.cut_of(data, item))
 
 
 @dataclass(frozen=True)
@@ -157,6 +167,9 @@ class RegalOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Regal Orb"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.cutting(SpendLaw.uniform(SPEND_BASIC.value["regal"]), SPEND_BASIC)  # ADR-0041: cuts, spends 0 to the ceiling of the claim
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value["regal"])
@@ -175,7 +188,7 @@ class RegalOrb(Action):
         The Attack and Caster metamods on the item keep the mods with their tag out of the pool.
         """
         _refuse(data, item, Rarity.MAGIC, "a Regal Orb")
-        return add_one_mod(data, item, "a Regal Orb", rarity=Rarity.RARE)
+        return add_one_mod(data, item, "a Regal Orb", rarity=Rarity.RARE, cut=self.cut_of(data, item))
 
 
 @kind("transmutation-orb", order=71)

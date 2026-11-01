@@ -90,7 +90,7 @@ def no_solve(monkeypatch):
 
     monkeypatch.setattr(_plan, "solve", solve_whole)
     monkeypatch.setattr(_plan, "solve_pruned", solve_pruned_nothing)
-    monkeypatch.setattr(_plan, "evaluate_risk", lambda *_: None)
+    monkeypatch.setattr(_plan, "evaluate_risk", lambda *_, **__: None)
 
 
 @pytest.mark.parametrize("stem", CHECKED)

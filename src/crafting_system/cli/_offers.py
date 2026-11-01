@@ -9,11 +9,11 @@ missing price is dropped and reported (ADR-0007), never guessed.
 
 import random
 from collections import defaultdict
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal
-from crafting_system.actions import Action, ActionError, Axis, Need, Reads, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, ActionError, Axis, Need, Reads, StrandUse, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -75,6 +75,17 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes)
 
 
+def isolated_feeder(goal: Goal) -> Callable[[Need], bool]:
+    """The seed of the lazy offer loop (ADR-0062 decision 4): a `Need` whose donor holds only mods the goal names.
+
+    The loop starts by offering the actions whose donors are made of the target's own mods, "isolated feeders" (for a
+    recombinator the single target mods and their pairs). Any seed ends at the same value; this one saves rounds.
+    The test is on concrete items: a mod counts when a leaf of the goal lists it (`Wanted.mod_ids`).
+    """
+    named = frozenset(mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids)
+    return lambda need: all(entry.mod_id in named for entry in need.want.mods)
+
+
 def default_offers() -> tuple[Offer, ...]:
     """The two rerolls that need no game data: a Chaos Orb and the Harvest reforge of Lightning."""
     return tuple(offer_of(action, action.label()) for action in default_actions())
@@ -121,6 +132,12 @@ def price_offers(
     return tuple(priced), tuple(dropped)
 
 
+def free_action_cost(priced: Iterable[PricedOffer]) -> float | None:
+    """What `price_offers` charged the actions that consume nothing, or `None` when the offers hold none (ticket #349)."""
+    costs = [entry.cost for entry in priced if not entry.offer.resources]
+    return max(costs) if costs else None
+
+
 # --- what the model offers for one target ------------------------------------------------------------
 
 
@@ -159,6 +176,11 @@ class BuyStartItem(Action):
 
     def reads(self, data: GameData) -> Reads:
         return Reads.nothing()
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        # ADR-0041: it replaces the item, so it is no craft: nothing is cut or spent, and the strands of the item that comes back are the
+        # start item's own (what a stranded buy costs is ADR-0043's). It is declared so that the guard does not refuse a restart from a stranded item.
+        return StrandUse.untouched()
 
     def outcomes(self, data: GameData, item: Item) -> "BuyStartItem":  # type: ignore[override]
         return self

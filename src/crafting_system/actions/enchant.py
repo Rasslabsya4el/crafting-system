@@ -55,6 +55,7 @@ from .catalog import kind
 from .contract import Action, Adds, Reads
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, TAILORING_LEAVES_STRANDS, StrandUse
 
 __all__ = [
     "EnchantOutcomes",
@@ -164,6 +165,9 @@ class _EnchantOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return self.LABEL
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(TAILORING_LEAVES_STRANDS, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: an enchantment orb draws no mod and spends nothing
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(self.COST.value)

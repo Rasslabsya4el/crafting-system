@@ -6,14 +6,15 @@ product model over states `('in', want, s)`, where `want` is `MAIN` for the main
 otherwise a wanted base state, and `s` is the base state the item is in now. The product has
 (G+1) x S states for G distinct wanted items over S base states. The solver explores it lazily,
 so only the copies that are reachable get built. A base model with no `Need` gives a product that
-is the base model under the `MAIN` tag, with the same values as without the wrapper.
+is the base model under the `MAIN` tag, with the same values as without the wrapper. A `Peek` of the base model
+(ADR-0054) is lifted the same way, options and fallback alike.
 """
 
 import operator
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
-from ._model import Action, Model, Outcome
+from ._model import Action, Model, Outcome, Peek
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,27 +78,42 @@ class Acquisition[S]:
     def start(self, state: S) -> tuple:
         return ("in", MAIN, state)
 
+    def product(self, want: object, state: S) -> tuple:
+        """The product state of the item wanted as `want` (`MAIN` or a base state) that is now in base state `state`."""
+        return ("in", want, state)
+
     def is_goal(self, product: tuple) -> bool:
         _, want, state = product
         if want is MAIN:
             return self._base.is_goal(state)
         return self._reaches(state, want)
 
-    def actions(self, product: tuple) -> tuple[Action, ...]:
+    def actions(self, product: tuple) -> tuple[Action | Peek, ...]:
         _, want, state = product
         result = []
         for action in self._base.actions(state):
-            outcomes = tuple(Outcome(("in", want, t), w) for t, w in action.outcomes)
-            extra_inputs = []
-            for entry in action.extra_inputs:
-                if not isinstance(entry, Need):
-                    raise TypeError(
-                        f"extra input {entry!r} of an action in base state {state!r} "
-                        f"(wanted {want!r}) is not a Need: a base model whose actions have "
-                        "extra inputs must write every one as Need(start, want)"
+            if isinstance(action, Peek):  # its options never have inputs; the fallback may
+                result.append(
+                    replace(
+                        action,
+                        options=tuple(self._lift(o, want, state) for o in action.options),
+                        fallback=tuple(self._lift(f, want, state) for f in action.fallback),
                     )
-                extra_inputs.append(("in", entry.want, entry.start))
-            result.append(
-                replace(action, outcomes=outcomes, extra_inputs=tuple(extra_inputs))
-            )
+                )
+            else:
+                result.append(self._lift(action, want, state))
         return tuple(result)
+
+    @staticmethod
+    def _lift(action: Action, want: object, state: object) -> Action:
+        outcomes = tuple(Outcome(("in", want, t), w) for t, w in action.outcomes)
+        extra_inputs = []
+        for entry in action.extra_inputs:
+            if not isinstance(entry, Need):
+                raise TypeError(
+                    f"extra input {entry!r} of an action in base state {state!r} "
+                    f"(wanted {want!r}) is not a Need: a base model whose actions have "
+                    "extra inputs must write every one as Need(start, want)"
+                )
+            extra_inputs.append(("in", entry.want, entry.start))
+        return replace(action, outcomes=outcomes, extra_inputs=tuple(extra_inputs))

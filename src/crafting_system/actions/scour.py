@@ -15,6 +15,7 @@ from .contract import Action, Adds, Fixed, Reads
 from .draw import Outcome
 from .errors import NotApplicableError
 from .metamods import kept_by_reroll
+from .strand_use import CUT_FOLLOWS_SPEND_TABLE, SCOURING_KEEPS_STRANDS, StrandUse
 
 __all__ = [
     "ScourOutcomes",
@@ -84,6 +85,9 @@ class ScouringOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Scouring"
+
+    def strand_use(self, data: GameData | None = None) -> StrandUse:
+        return StrandUse.untouched(SCOURING_KEEPS_STRANDS, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: neither cuts nor spends: the count stays
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value)

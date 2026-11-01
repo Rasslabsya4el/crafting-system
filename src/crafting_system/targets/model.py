@@ -8,16 +8,18 @@ mod got onto the item (natural, fractured, crafted) matters only when `not_craft
 
 Implicits and quality are checked on their own (ADR-0027): an `ImplicitRequirement` is met by one
 implicit of the item whose mod, Eldritch grade and rolled values all pass; a `QualityRequirement` by
-the item's catalyst quality of the same type and at least the percent. Both compare the base roll
+the item's catalyst quality of the same type and at least the percent, a `PlainQualityRequirement` by the
+plain quality of a weapon or armour of at least the percent (ADR-0049). Both compare the base roll
 and the percent the item stores, never a value scaled by the quality (ADR-0029). An
 `EnchantmentRequirement` is met when the item's one enchantment is among the acceptable ones
-(ADR-0050).
+(ADR-0050). A `SocketRequirement` (ADR-0046) is met by the item's sockets: a count, a linked group and
+colours counted in such a group; it is a requirement of the finish, not of the mod problem.
 """
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from crafting_system.items import CatalystType, ExplicitMod, ImplicitMod, Influence, Item
+from crafting_system.items import CatalystType, ExplicitMod, ImplicitMod, Influence, Item, PlainQuality, SocketColour
 
 
 @dataclass(frozen=True, slots=True)
@@ -175,7 +177,85 @@ class EnchantmentRequirement:
         return item.enchantment in self.mod_ids
 
 
-Condition = Node | ImplicitRequirement | QualityRequirement | EnchantmentRequirement
+@dataclass(frozen=True, slots=True)
+class PlainQualityRequirement:
+    """The plain quality of a weapon or armour wanted: at least `min_percent` (ADR-0049). It has no type."""
+
+    min_percent: int
+
+    def __post_init__(self) -> None:
+        if type(self.min_percent) is not int or self.min_percent < 1:
+            raise ValueError("a plain quality requirement needs a whole minimum percent of 1 or more")
+
+    @property
+    def type(self) -> None:
+        """No catalyst type: this requirement is for the plain quality of a weapon or armour."""
+        return None
+
+    def is_met_by(self, item: Item) -> bool:
+        """Whether `item` has plain quality of at least the percent."""
+        quality = item.quality
+        return isinstance(quality, PlainQuality) and quality.percent >= self.min_percent
+
+
+@dataclass(frozen=True, slots=True)
+class SocketRequirement:
+    """The sockets wanted (ADR-0046); every field is optional but one is set.
+
+    `count` is at least this many sockets, `links` a linked group of at least this many. `red`, `green` and `blue` are at
+    least this many sockets of that colour, **counted in one linked group of at least `links` sockets** when `links` is given
+    and over the whole item otherwise. With `links` the colours add up to at most `links`, and `links` is at most `count` when
+    that is given; the parser says which key is wrong.
+    """
+
+    count: int | None = None
+    links: int | None = None
+    red: int = 0
+    green: int = 0
+    blue: int = 0
+
+    def __post_init__(self) -> None:
+        for name in ("count", "links"):
+            value = getattr(self, name)
+            if value is not None and (type(value) is not int or value < 1):
+                raise ValueError(f"a socket requirement needs `{name}` as a whole number of 1 or more, got {value!r}")
+        for name in ("red", "green", "blue"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"a socket requirement needs `{name}` as a whole number of 0 or more, got {value!r}")
+        if self.count is None and self.links is None and not self.coloured:
+            raise ValueError("a socket requirement asks for a count, a link size or a colour")
+
+    @property
+    def coloured(self) -> int:
+        """How many sockets of a named colour are wanted in all."""
+        return self.red + self.green + self.blue
+
+    def is_met_by(self, item: Item) -> bool:
+        """Whether the sockets of `item` have the count, a linked group of the size and the colours in such a group."""
+        sockets = item.sockets
+        if sockets is None:
+            return False
+        if self.count is not None and sockets.count < self.count:
+            return False
+        groups = sockets.groups()
+        if self.links is not None:
+            groups = tuple(group for group in groups if len(group) >= self.links)
+            if not groups:
+                return False
+        if not self.coloured:
+            return True
+        if self.links is None:
+            groups = (sockets.colours,)
+        return any(
+            group.count(SocketColour.RED) >= self.red
+            and group.count(SocketColour.GREEN) >= self.green
+            and group.count(SocketColour.BLUE) >= self.blue
+            for group in groups
+        )
+
+
+Condition = Node | ImplicitRequirement | QualityRequirement | PlainQualityRequirement | EnchantmentRequirement | SocketRequirement
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,6 +271,11 @@ class Target:
     `enchantment` is the acceptable set for the item's enchantment, or None when the target asks for none.
     `allow_corrupted` lets the goal be a corrupted item that has no corrupted implicit (ADR-0036); a target that asks for a
     corrupted implicit (`asks_corrupted`) takes a corrupted item too, and any other target is never met by one.
+    `quality` is the catalyst quality of a ring, amulet or belt or the plain quality of a weapon or armour (ADR-0049).
+    `sockets` is the socket requirement (ADR-0046) or None; `start_sockets_assumed` says the start item stated no sockets and
+    got the one white, unlinked socket a target with sockets assumes, so that a report can say so.
+    `item_level_floor` and `tiers_top_at_item_level` are the author's word on how far the planner may plan below `item_level`
+    (ADR-0061, `floor.py`): a stated lowest level, and the statement that the tiers written are the top tiers of `item_level`.
     """
 
     base_id: str
@@ -201,10 +286,14 @@ class Target:
     price_file: Path | None = None
     start_price: str | None = None
     implicits: tuple[ImplicitRequirement, ...] = ()
-    quality: QualityRequirement | None = None
+    quality: QualityRequirement | PlainQualityRequirement | None = None
     actions: tuple[str, ...] | None = None
     enchantment: EnchantmentRequirement | None = None
     allow_corrupted: bool = False
+    sockets: SocketRequirement | None = None
+    start_sockets_assumed: bool = False
+    item_level_floor: int | None = None
+    tiers_top_at_item_level: bool = False
 
     @property
     def asks_corrupted(self) -> bool:
@@ -217,7 +306,7 @@ class Target:
         return self.allow_corrupted or self.asks_corrupted
 
     def is_met_by(self, item: Item) -> bool:
-        """Whether `item` meets every top-level requirement, every implicit requirement, the quality and the enchantment.
+        """Whether `item` meets every top-level requirement, every implicit requirement, the quality, the enchantment and the sockets.
 
         A corrupted item is never a goal unless the target asks for a corrupted implicit or allows a corrupted item
         (`takes_corrupted`), whatever mods it holds (ADR-0036).
@@ -227,10 +316,12 @@ class Target:
         return not self.unmet(item)
 
     def unmet(self, item: Item) -> tuple[Condition, ...]:
-        """What `item` does not meet, in file order: requirements, then implicit requirements, then quality, then enchantment."""
+        """What `item` does not meet, in file order: requirements, then implicit requirements, then quality, enchantment and sockets."""
         wanted: tuple[Condition, ...] = (*self.requirements, *self.implicits)
         if self.quality is not None:
             wanted = (*wanted, self.quality)
         if self.enchantment is not None:
             wanted = (*wanted, self.enchantment)
+        if self.sockets is not None:
+            wanted = (*wanted, self.sockets)
         return tuple(condition for condition in wanted if not condition.is_met_by(item))
