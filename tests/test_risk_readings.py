@@ -331,6 +331,7 @@ class TestReadingsThatDiffer:
         report = solve_readings({"a": fine, "b": dead}, "S")
         assert math.isinf(report.lower.value) and math.isinf(report.upper.value)
         assert report.gap == 0.0
+        assert not report.proven_optimal  # nothing can be built under reading b: no route is "optimal"
         assert report.plan.worst.value == math.inf
 
     def test_labels_that_name_different_actions_are_refused(self):
@@ -353,6 +354,12 @@ class TestArguments:
     def test_an_unknown_plan_reading_is_refused(self):
         with pytest.raises(ValueError, match="plan reading"):
             solve_readings({"a": gamble_model(5)}, "S", plan="b")
+
+    def test_none_can_be_a_reading_and_the_default_plan_is_the_first(self):
+        report = solve_readings({"a": gamble_model(5), None: gamble_model(2)}, "S")
+        assert report.plan.reading == "a"
+        report = solve_readings({"a": gamble_model(5), None: gamble_model(2)}, "S", plan=None)
+        assert report.plan.reading is None
 
     def test_the_plan_comes_first_whatever_the_order_given(self):
         report = solve_readings({"a": gamble_model(5), "b": gamble_model(2), "c": gamble_model(4)}, "S", plan="b")

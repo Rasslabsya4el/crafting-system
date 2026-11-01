@@ -37,6 +37,15 @@ infinite. Actions are matched across readings by their `label`, so labels must b
 same action under every reading.
 
 Without any axis there is one model: the driver solves it once, the plan is that solution, and the interval is a point.
+
+Known limits:
+* A completion round solves every model again (the optima do not change, only the starts grow); a model set whose
+  readings reach many states the others do not pays for the extra rounds. The first round is the only one when the
+  readings share their supports, which holds for the exponent `alpha` of the recombinator (weights change, supports not).
+* Ties go to the plan: another candidate replaces the incumbent only when its worst case is below the incumbent's by more
+  than the certified error of both (`worst.high < worst.low`). A `ConvergenceError` of any reading's solve aborts the report.
+* The comparison route is solved on the plan reading's model: the actions left out are the ones that read an axis, so the
+  rest is the same under every reading.
 """
 
 import math
@@ -49,7 +58,7 @@ from ._moments import interval
 from ._report import Estimate
 
 GAP_TOLERANCE = 1e-9  # relative: a bracket this narrow counts as closed (`IntervalReport.proven_optimal`)
-SAME = 1e-12  # relative: a candidate must be better than the incumbent by more than this to replace it
+FIRST = object()  # `plan` default: the first reading of `models` (None can be a reading, e.g. the empty one)
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,8 +129,8 @@ class IntervalReport[S, R]:
 
     @property
     def proven_optimal(self) -> bool:
-        """The bracket of `W*` is closed (to `GAP_TOLERANCE`): the robust route is optimal over every policy."""
-        return self.gap <= GAP_TOLERANCE * abs(self.upper.value)
+        """The bracket of `W*` is finite and closed (to `GAP_TOLERANCE`): the robust route is optimal over every policy."""
+        return math.isfinite(self.upper.value) and self.gap <= GAP_TOLERANCE * abs(self.upper.value)
 
 
 def has_inputs(action: Action) -> bool:
@@ -236,7 +245,7 @@ def solve_readings[S, R: Hashable](
     models: Mapping[R, Model[S]],
     start: S,
     *,
-    plan: R | None = None,
+    plan: R = FIRST,  # type: ignore[assignment]
     without: Callable[[Action], bool] | None = None,
     tolerance: float = 1e-10,
     direct_solve_limit: int = 64,
@@ -254,7 +263,7 @@ def solve_readings[S, R: Hashable](
     order = list(models)
     if not order:
         raise ValueError("at least one reading (one model) is needed")
-    if plan is None:
+    if plan is FIRST:
         plan = order[0]
     if plan not in models:
         raise ValueError(f"the plan reading {plan!r} is not one of the readings {order!r}")
@@ -304,8 +313,7 @@ def solve_readings[S, R: Hashable](
 
     chosen = plan
     for c in order:
-        new, old = routes[c].worst.value, routes[chosen].worst.value
-        if new < old and not math.isclose(new, old, rel_tol=SAME):
+        if routes[c].worst.high < routes[chosen].worst.low:  # better beyond the certified error, else a tie
             chosen = c
 
     lower = Estimate(
