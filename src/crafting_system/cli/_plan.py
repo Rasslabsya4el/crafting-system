@@ -32,6 +32,7 @@ from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, Priced
 from ._prune import solver_actions
 
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
+PRUNE_CORRUPTING = True  # corrupting offers of a target that asks are left out of the states that cannot reach its goal (exact, ADR-0036; a test turns it off)
 PRUNE_BOUND = True  # twins and offers proved not needed are left out of the solve (exact; a test turns it off for the reference)
 MIN_OFFERS_TO_PRUNE = 40  # fewer priced offers than this are solved whole
 
@@ -106,7 +107,7 @@ class _Model:
         return self.abstraction.is_goal(state)
 
     def actions(self, state: CompressedState) -> list[Action[CompressedState]]:
-        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, cache=self.cache)
+        return solver_actions(self.abstraction, self.offers, state, self.start, merge_equal=MERGE_EQUAL, prune_corrupting=PRUNE_CORRUPTING, cache=self.cache)
 
 
 def offer_action(
