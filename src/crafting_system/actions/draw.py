@@ -30,6 +30,7 @@ from crafting_system.items import Item, Side
 from crafting_system.rules import get_rule
 
 from .errors import OutOfScopeError
+from .metamods import allowed_by_tags
 from .pool import PoolFamily, PoolMod
 
 Outcome = frozenset[tuple[Hashable, int]]
@@ -57,7 +58,8 @@ def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = Non
     A rare jewel is out of scope: the 8:3:1 ratio is the claim for regular items, not for jewels
     (`jewel_reason` says what else is admitted for regular items only, for an action that is not a reroll).
     Ordinary crafted mods are not: a reforge removes them (`chaos_orb.removes_crafted_mods`,
-    `harvest_reforge.removes_crafted_mods`, `essence.reforge_removes_crafted_mods`); a metamod is.
+    `harvest_reforge.removes_crafted_mods`, `essence.reforge_removes_crafted_mods`), and neither is a
+    metamod (`metamods.py` says what it changes).
     """
     base = data.base_items.get(item.base_id)
     if base is not None and base.item_class in RARE_JEWEL_MAX_PER_SIDE.value["item_classes"]:
@@ -65,15 +67,6 @@ def refuse_unmodelled(data: GameData, item: Item, jewel_reason: str | None = Non
             "the 4, 5 or 6 mod ratio is admitted for regular items only, so rerolling a jewel is not modelled yet"
         )
         raise OutOfScopeError(f"the item is a jewel ({base.item_class}); {reason}")
-    refuse_metamods(data, item)
-
-
-def refuse_metamods(data: GameData, item: Item) -> None:
-    """Raise `OutOfScopeError` for an item holding a crafted metamod: what it changes is not modelled yet."""
-    if item.metamods(data):
-        raise OutOfScopeError(
-            "the item has a crafted metamod; what a metamod changes about a reroll is not modelled yet"
-        )
 
 
 def total_distribution() -> Mapping[int, Fraction]:
@@ -84,15 +77,15 @@ def total_distribution() -> Mapping[int, Fraction]:
 
 
 def guaranteed_candidates(
-    pool: Iterable[PoolFamily], free: Mapping[Side, int], tag: str
+    pool: Iterable[PoolFamily], free: Mapping[Side, int], tag: str, blocked: frozenset[str] = frozenset()
 ) -> list[tuple[PoolFamily, PoolMod]]:
-    """The mods that carry `tag` and whose side still has a free slot: what the guaranteed draw picks from."""
+    """The mods that carry `tag` and none of the `blocked` tags, and whose side still has a free slot: what the guaranteed draw picks from."""
     return [
         (family, entry)
         for family in pool
         if free[family.side] > 0
         for entry in family.mods
-        if tag in entry.mod.implicit_tags
+        if tag in entry.mod.implicit_tags and allowed_by_tags(entry.mod, blocked)
     ]
 
 
@@ -103,13 +96,15 @@ def exact_distribution(
     totals: Mapping[int, Fraction],
     kept: int,
     label: Callable[[Mod], Hashable],
+    blocked: frozenset[str] = frozenset(),
 ) -> dict[Outcome, Fraction]:
     """The exact distribution of the new mods, seen through `label`, as `{outcome: probability}`.
 
     An outcome is the set of `(label, how many new mods got it)` pairs, labels with a count of at
     least one only. `free` is the number of free slots per side on the retained item, `tag` the
     guaranteed tag or None, `kept` how many mods the retained item holds. `label` is called once
-    per candidate mod and must be pure.
+    per candidate mod and must be pure. `blocked` are the tags the guaranteed draw may not pick (a
+    Harvest reforge under an Attack or Caster metamod: it filters that first mod only).
     """
     labels: list[Hashable] = []
     label_index: dict[Hashable, int] = {}
@@ -175,7 +170,7 @@ def exact_distribution(
     guaranteed: list[tuple[int, int, Fraction]] = []
     if tag is not None:
         groups: dict[tuple[int, int, Fraction], int] = defaultdict(int)
-        for family, entry in guaranteed_candidates(pool, free, tag):
+        for family, entry in guaranteed_candidates(pool, free, tag, blocked):
             groups[(class_of[family.family], mod_label[entry.mod.id], entry.weight)] += 1
         tagged_total = sum((n * weight for (_, _, weight), n in groups.items()), Fraction(0))
         guaranteed = [(cls, lab, n * weight / tagged_total) for (cls, lab, weight), n in groups.items()]
@@ -209,6 +204,7 @@ def sample_new_mods(
     kept: int,
     rng: random.Random,
     floats: Mapping[str, float],
+    blocked: frozenset[str] = frozenset(),
 ) -> list[PoolMod]:
     """The new mods of one reroll in the order they were drawn: the same process, drawn at random.
 
@@ -226,7 +222,7 @@ def sample_new_mods(
         drawn.append(entry)
 
     if tag is not None:
-        take(guaranteed_candidates(open_families, room, tag))
+        take(guaranteed_candidates(open_families, room, tag, blocked))
     for _ in range(max(0, total - kept - (tag is not None))):
         candidates = [
             (family, entry)

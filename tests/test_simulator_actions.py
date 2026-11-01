@@ -15,6 +15,7 @@ N = 3_000 runs, about 20 to 30 real draws each. The long runs use `Memoized` act
 outcomes are built once per start item); one run uses the plain actions, with N = 500.
 """
 
+import dataclasses
 import functools
 import math
 
@@ -130,10 +131,12 @@ def test_a_chaos_orb_on_a_magic_item_is_refused_and_the_refusal_propagates():
 
 
 def test_an_item_no_rule_covers_raises_out_of_scope_and_it_propagates():
-    metamod = item(roll(RESIST), roll("DexMasterItemGenerationCannotChangeSuffixes", crafted=True), base_id=AMULET, item_level=86)
+    jewel = dataclasses.replace(DATA.base_items[AMULET], item_class="Jewel")
+    data = dataclasses.replace(DATA, base_items={**DATA.base_items, AMULET: jewel})
+    start = item(roll(RESIST), base_id=AMULET, item_level=86)
 
     with pytest.raises(OutOfScopeError):
-        simulate(DATA, lambda item: Step(ChaosOrb(), 1.0), metamod, holds_target, runs=2, seed=1)
+        simulate(data, lambda item: Step(ChaosOrb(), 1.0), start, holds_target, runs=2, seed=1)
 
 
 class CorruptingAction:

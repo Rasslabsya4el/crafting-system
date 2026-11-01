@@ -72,9 +72,12 @@ def test_a_tier_below_1_is_rejected():
         make(mods=(mod("AaaMod", tier=0),))
 
 
-def test_a_mod_cannot_be_both_fractured_and_crafted():
-    with pytest.raises(ItemError, match="AaaMod.*fractured and crafted"):
-        make(mods=(mod("AaaMod", fractured=True, crafted=True),))
+def test_a_mod_can_be_both_fractured_and_crafted():
+    both = mod("AaaMod", fractured=True, crafted=True)
+
+    item = make(mods=(both,))
+
+    assert item.fractured_mods == (both,) and item.crafted_mods == (both,)
 
 
 def test_the_same_mod_twice_is_rejected():

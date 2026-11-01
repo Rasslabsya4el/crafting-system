@@ -752,9 +752,14 @@ def test_an_item_with_a_metamod_is_refused(metamod):
         outcomes_of("Scorched Fossil", item=boots(roll(metamod, crafted=True)))
 
 
-def test_an_item_with_the_multimod_is_not_modelled_rather_than_refused():
-    with pytest.raises(OutOfScopeError, match="metamod"):
-        outcomes_of("Scorched Fossil", item=boots(roll("MetaMulti", crafted=True)))
+def test_an_item_with_the_multimod_is_not_refused_and_the_reroll_removes_it():
+    plain = outcomes_of("Scorched Fossil", item=boots(roll("LifeA")))
+    with_multimod = outcomes_of("Scorched Fossil", item=boots(roll("LifeA"), roll("MetaMulti", crafted=True)))
+
+    assert [(chance, part.retained) for chance, part in with_multimod.components] == [
+        (chance, part.retained) for chance, part in plain.components
+    ]
+    assert "MetaMulti" not in {entry.mod_id for entry in with_multimod.sample(random.Random(2)).mods}
 
 
 def test_a_not_applicable_error_comes_before_an_out_of_scope_one():
