@@ -2,7 +2,13 @@
 
 from dataclasses import dataclass
 
-from ._estimate import SampledEstimate, quantile
+from ._estimate import SampledEstimate, cvar, quantile
+
+
+def _check_level(name: str, level: float) -> None:
+    """Raise ValueError unless `level` is a number strictly between 0 and 1; `name` says which estimator asked."""
+    if isinstance(level, bool) or not isinstance(level, (int, float)) or not 0.0 < level < 1.0:
+        raise ValueError(f"{name} level must be strictly between 0 and 1, got {level!r}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +30,7 @@ class SimulationReport:
     * `cost_of_successes`: the same, over the successful runs only; None when fewer than 2 succeeded.
     * `mean_steps`: the mean number of steps taken per run.
     * `costs`: the total of every run, in run order; `quantile(level)` reads it.
+    * `cvar(level)` is the mean of the worst share (1 - level) of `costs`, the upper tail.
 
     Every interval is a normal approximation (Wilson for the rate): good for thousands of runs, not
     for a handful.
@@ -49,6 +56,14 @@ class SimulationReport:
         sample. `standard_error` is the bracket's half width over z, an approximation. It is the
         quantile of the cost paid by all runs, failed ones included.
         """
-        if isinstance(level, bool) or not isinstance(level, (int, float)) or not 0.0 < level < 1.0:
-            raise ValueError(f"quantile level must be strictly between 0 and 1, got {level!r}")
+        _check_level("quantile", level)
         return quantile(self.costs, level, self.confidence)
+
+    def cvar(self, level: float) -> SampledEstimate:
+        """The conditional value at risk of `costs` at `level` (strictly between 0 and 1).
+
+        It is the mean of the worst `1 - level` share of the runs, so at least `quantile(level)`. The
+        interval is a normal approximation (see `cvar` in `_estimate`).
+        """
+        _check_level("cvar", level)
+        return cvar(self.costs, level, self.confidence)

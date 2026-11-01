@@ -6,6 +6,8 @@ the clicks are geometric. Mean cost = start price + click cost / q, and the p90 
 least number of clicks that is done with chance 0.9 (the costs share one unit, so the budget DP is exact).
 """
 
+import dataclasses
+
 import pytest
 from cli_support import LIFEFORCE, R12, START, geometric_p90_clicks, price_file, read_json
 from cli_support import run as run_command
@@ -13,9 +15,10 @@ from targets_support import DATA
 
 from crafting_system.actions import ChaosOrb, HarvestReforge
 from crafting_system.cli import Offer, PlanError, default_offers, make_plan
+from crafting_system.items import CatalystType
 from crafting_system.prices import write_price_file
 from crafting_system.rules import get_rule
-from crafting_system.targets import load_target
+from crafting_system.targets import ImplicitRequirement, QualityRequirement, load_target
 
 GEM = "GlobalLightningGemLevel1"
 LIFEFORCE_PRICE = 0.01
@@ -156,3 +159,29 @@ def test_a_start_item_that_already_meets_the_target_costs_only_its_price(tmp_pat
     document = read_json(out)
     assert code == 0 and document["states"] == []
     assert document["totals"]["mean_cost"]["value"] == 4.0
+
+
+def test_a_target_with_quality_is_refused_because_the_planner_would_ignore_it(target):
+    asked = dataclasses.replace(target, quality=QualityRequirement(CatalystType.INTRINSIC, 20))
+
+    with pytest.raises(PlanError, match=r"asks for implicits or quality.*cannot plan yet.*#142"):
+        make_plan(DATA, asked, price_file())
+
+
+def test_a_target_with_an_implicit_requirement_is_refused_for_the_same_reason(target):
+    wanted = ImplicitRequirement(None, "#% chance to Avoid being Shocked", frozenset({"AvoidShockEldritchImplicit1"}))
+    asked = dataclasses.replace(target, implicits=(wanted,))
+
+    with pytest.raises(PlanError, match="cannot plan yet"):
+        make_plan(DATA, asked, price_file())
+
+
+def test_the_command_reports_the_refusal_and_exits_with_an_error(tmp_path, capsys):
+    target_file = tmp_path / "asks-for-quality.yaml"
+    asks = "quality:\n  type: intrinsic\n  min_percent: 20\n"
+    target_file.write_text(R12.read_text(encoding="utf-8") + asks, encoding="utf-8")
+
+    code, _ = run(tmp_path, target=target_file)
+
+    assert code == 1
+    assert "cannot plan yet" in capsys.readouterr().err
