@@ -21,6 +21,7 @@ equipment piece bought for its mods, and each one would also widen the query has
     type (base type)                              set           `query.type`
     name (uniques)                                not covered   rare items have no name to buy by
     stats, group type "and"                       set           one group; filters sorted
+    stats, ids in the `implicit` group            set           a buy mod with `implicit: true` (a corrupted implicit, ADR-0036)
     stats, groups "if" / "count" / "not" /        not covered   a buy spec is a plain AND of mods
       "mercenary"
     type_filters.rarity, .category                set
@@ -227,15 +228,21 @@ def query_hash(league: str, body: Mapping[str, Any]) -> str:
 
 @dataclass(frozen=True)
 class BuyMod:
-    """A mod the bought item must have. `stat` is a repoe family id, a mod id or the English stat text."""
+    """A mod the bought item must have. `stat` is a repoe family id, a mod id or the English stat text.
+
+    `implicit` asks for it among the item's implicits (a corrupted implicit, ADR-0036) instead of among its explicit mods.
+    """
 
     stat: str
     minimum: float | None = None
     fractured: bool = False
+    implicit: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.stat, str) or not self.stat.strip():
             raise TradeSpecError(f"a buy mod needs a stat, got {self.stat!r}")
+        if self.implicit and self.fractured:
+            raise TradeSpecError(f"buy mod {self.stat}: an implicit cannot be fractured")
         if self.minimum is not None:
             _check_number(f"buy mod {self.stat}: minimum", self.minimum)
 
@@ -273,6 +280,12 @@ class BuySpec:
         _check_level("item_level_min", self.item_level_min)
         _check_level("item_level_max", self.item_level_max)
         _check_range("item level", self.item_level_min, self.item_level_max)
+        implicit = next((mod.stat for mod in self.mods if mod.implicit), None)
+        if implicit is not None and not self.corrupted:
+            raise TradeSpecError(
+                f"buy spec {self.name!r}: the mod {implicit!r} is an implicit, which a buy spec names only for a corrupted"
+                " item (a corrupted implicit, ADR-0036); set `corrupted: true`"
+            )
 
 
 def build_query(
@@ -315,7 +328,7 @@ _SPEC_KEYS = frozenset(
         "mods",
     }
 )
-_MOD_KEYS = frozenset({"stat", "minimum", "fractured"})
+_MOD_KEYS = frozenset({"stat", "minimum", "fractured", "implicit"})
 
 
 def _field(
@@ -355,6 +368,7 @@ def _parse_mod(record: Any, where: str) -> BuyMod:
         stat=_field(record, "stat", where, "text", _is_str),
         minimum=_field(record, "minimum", where, "a number", _is_number),
         fractured=_field(record, "fractured", where, "true or false", _is_bool, default=False),
+        implicit=_field(record, "implicit", where, "true or false", _is_bool, default=False),
     )
 
 

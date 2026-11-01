@@ -82,8 +82,9 @@ Refusals, raised by `outcomes` in this order (a message names the reason):
   family and a free slot for; for an essence, its item class takes no essence, or its forced mod
   shares a family with a fractured mod, or the item holds a lock or an Attack/Caster metamod (essence and resonator).
 * `OutOfScopeError`: the item is in a state no admitted rule covers yet: an influenced item of a class with no admitted influence class key, a magic
-  item whose Orb of Alteration keeps an Attack or Caster metamod, a jewel base (the 8:3:1 ratio is
-  admitted for regular items only), a pool mod with other than one family; for an essence also
+  item whose Orb of Alteration keeps an Attack or Caster metamod, a cluster jewel (its pool depends on its
+  enchantments), a jewel for the actions that are not modelled on one (Harvest crafts; the ordinary orbs, fossils and the
+  Fracturing Orb work on jewels, `jewel.ordinary_orbs_work_on_jewels`), a base that exists as a unique only, a pool mod with other than one family; for an essence also
   Essence of Desolation (not a B1 action) and fractured mods that fill the side of the forced mod.
   A planner treats the action as unavailable.
 * `HarvestReforge("nothing")` raises `ValueError` at construction: only the admitted crafts exist; an
@@ -130,7 +131,13 @@ from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, b
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
 from .contract import Action, ActionOutcomes, Adds, Fixed, Reads, Rerolled
-from .corrupted_pool import CorruptedImplicit, CorruptedImplicitPool, corrupted_implicit_pool
+from .corrupted_pool import (
+    CORRUPTING_KINDS,
+    DEFAULT_CORRUPTING_KINDS,
+    CorruptedImplicit,
+    CorruptedImplicitPool,
+    corrupted_implicit_pool,
+)
 from .divine import DivineOrb, DivineOutcomes
 from .draw import Outcome, guaranteed_candidates
 from .errors import ActionError, NotApplicableError, OutOfScopeError
@@ -147,7 +154,7 @@ from .magic import AlterationOrb, AugmentationOrb, RegalOrb, TransmutationOrb
 from .metamods import BLOCKED_TAG, BLOCKING, allowed_by_tags, blocked_tags
 from .mixture import FossilOutcomes, Fractured, Mixture
 from .outcomes import Outcomes
-from .pool import PoolFamily, PoolMod, build_pool, drawable_mod_ids, tiers_of
+from .pool import PoolFamily, PoolMod, build_pool, drawable_mod_ids, partners, tiers_of
 from .scour import ScouringOrb, ScourOutcomes
 
 def default_actions() -> tuple[Action, ...]:
@@ -172,10 +179,12 @@ __all__ = [
     "BeastSideSwap",
     "BenchCraft",
     "BenchOutcomes",
+    "CORRUPTING_KINDS",
     "ChaosOrb",
     "CorruptedImplicit",
     "CorruptedImplicitPool",
     "CurrencyCost",
+    "DEFAULT_CORRUPTING_KINDS",
     "DivineOrb",
     "DivineOutcomes",
     "ExaltedOrb",
@@ -200,6 +209,7 @@ __all__ = [
     "OutOfScopeError",
     "PoolFamily",
     "PoolMod",
+    "partners",
     "Reads",
     "RegalOrb",
     "RemoveCraftedMods",

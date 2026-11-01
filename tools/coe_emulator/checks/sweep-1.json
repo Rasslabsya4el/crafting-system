@@ -1,0 +1,105 @@
+[
+ {
+  "id": "S1-rare-shield",
+  "base": "Metadata/Items/Armours/Shields/ShieldInt16",
+  "item_level": 100,
+  "rarity": "rare",
+  "mods": [
+   "LocalIncreasedEnergyShieldPercent8",
+   "FasterStartEnergyShieldRecharge5_"
+  ],
+  "repeats": 2000,
+  "actions": [
+   "Chaos Orb",
+   "Exalted Orb",
+   "Orb of Annulment",
+   "Orb of Scouring",
+   "Fracturing Orb",
+   "Harvest Reforge Fire",
+   "Harvest Reforge Defence",
+   "Harvest Reforge More Likely",
+   "Harvest Reforge Less Likely",
+   "Harvest Add Remove Fire",
+   "Harvest Swap Damage Fire to Cold",
+   "Remove Crafted Mods",
+   "Fossils Scorched Fossil",
+   "Beastcraft Add Prefix Remove Suffix",
+   "Beastcraft Add Suffix Remove Prefix",
+   "Beastcraft Aspect of the Avian (level 20)",
+   "Beastcraft Wild Bristle Matron (add a metamod)",
+   "Orb of Transmutation",
+   "Orb of Alchemy",
+   "Regal Orb",
+   "Deafening Essence of Greed",
+   "Bench craft +# to maximum Energy Shield"
+  ]
+ },
+ {
+  "id": "S2-normal-shield",
+  "base": "Metadata/Items/Armours/Shields/ShieldInt16",
+  "item_level": 100,
+  "rarity": "normal",
+  "mods": [],
+  "repeats": 2000,
+  "actions": [
+   "Orb of Transmutation",
+   "Orb of Alchemy",
+   "Exalted Orb",
+   "Chaos Orb",
+   "Whispering Essence of Greed"
+  ]
+ },
+ {
+  "id": "S3-magic-shield",
+  "base": "Metadata/Items/Armours/Shields/ShieldInt16",
+  "item_level": 100,
+  "rarity": "magic",
+  "mods": [
+   "LocalIncreasedEnergyShieldPercent8"
+  ],
+  "repeats": 2000,
+  "actions": [
+   "Orb of Alteration",
+   "Orb of Augmentation",
+   "Regal Orb",
+   "Orb of Annulment",
+   "Exalted Orb"
+  ]
+ },
+ {
+  "id": "S4-rare-ring-resist",
+  "base": "Metadata/Items/Rings/Ring1",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [
+   "FireResist8",
+   "IncreasedLife7",
+   "ColdResist8",
+   "AddedPhysicalDamage4"
+  ],
+  "repeats": 2000,
+  "actions": [
+   "Harvest Swap Resistance Fire to Cold",
+   "Harvest Swap Resistance Fire to Lightning",
+   "Fracturing Orb",
+   "Orb of Annulment"
+  ]
+ },
+ {
+  "id": "S5-shaper-ring",
+  "base": "Metadata/Items/Rings/Ring1",
+  "item_level": 86,
+  "rarity": "rare",
+  "influences": [
+   "shaper"
+  ],
+  "mods": [
+   "IncreasedLife7"
+  ],
+  "repeats": 2000,
+  "actions": [
+   "Harvest Reforge Influence",
+   "Chaos Orb"
+  ]
+ }
+]

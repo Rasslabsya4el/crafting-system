@@ -43,12 +43,13 @@ REFUSED_ON_CORRUPTED = get_rule("divine_orb.refused_on_corrupted")
 REFUSED_WITHOUT_CHANGEABLE_MOD = get_rule("divine_orb.refused_without_changeable_mod")
 VALUES_UNIFORM_INTEGERS = get_rule("affix_pool.values_uniform_integers")
 COST = get_rule("divine_orb.cost")
+JEWELS_TAKE_THE_ORBS = get_rule("jewel.ordinary_orbs_work_on_jewels")
 CLAIMS = frozenset(
     rule.id
     for rule in (
         ACCEPTS_MAGIC_RARE_UNIQUE, REROLLS_WITHIN_THE_TIER, REROLLS_CRAFTED_MODS, HYBRID_STATS_INDEPENDENT,
         FRACTURED_MODS_STAY, LOCKS_PROTECT_EXISTING_MODS, REFUSED_ON_CORRUPTED, REFUSED_WITHOUT_CHANGEABLE_MOD,
-        VALUES_UNIFORM_INTEGERS, COST,
+        VALUES_UNIFORM_INTEGERS, COST, JEWELS_TAKE_THE_ORBS,
     )
 )
 ONE = Fraction(1)

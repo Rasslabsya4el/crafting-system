@@ -124,3 +124,11 @@ rules:
         Two Hand Sword: 2h_sword
         Wand: wand
         Warstaff: warstaff
+
+  - id: affix_pool.family_may_span_both_sides
+    statement: A family may have mods on both sides. Five families of the base jewels (DamageForm, LifeLeech, ManaLeech, FormCritChance, FormCritMultiplier) and one of the abyss jewels (MinionLifeRegeneration) have mods of both generation types in the data; no item class of equipment has one in 3.29.3.3. Where both sides carry weight (DamageForm on the Cobalt and Viridian pools, MinionLifeRegeneration on the Ghastly Eye pool) the family exclusion holds across sides (affix_draw.family_exclusion), so a draw that takes a mod of the family on one side takes the family out of the pool on the other side as well, and a mod of the family on the item blocks both sides. The other four have no weight on one side.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Jewel
+    quote: "Modifiers from the same group can not spawn together."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01

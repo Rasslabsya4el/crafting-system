@@ -21,15 +21,41 @@ from crafting_system.actions import (
     Rerolled,
     allowed_by_tags,
     build_pool,
+    partners,
     tiers_of,
 )
 from crafting_system.data import GameData, Mod
-from crafting_system.items import ExplicitMod, Influence, Item, ItemError, Rarity, Side, tier_table
+from crafting_system.items import (
+    EldritchSide,
+    ExplicitMod,
+    ImplicitError,
+    ImplicitMod,
+    Influence,
+    Item,
+    ItemError,
+    Quality,
+    Rarity,
+    Side,
+    eldritch_grade,
+    eldritch_side,
+    spawn_weight,
+    tier_table,
+)
 
 from ._goal import Goal, Status
 from ._kinds import MOD_PREFIX, TYPE_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
 from ._rolls import Cells, RollLaw, is_rollable, multinomial, roll_law
-from ._state import CompressedState, Flags, FracturedMod, Slot, best_of, status_of
+from ._state import (
+    CompressedState,
+    Flags,
+    FracturedMod,
+    ImplicitSide,
+    OfferedMod,
+    Slot,
+    best_of,
+    implicit_status_of,
+    status_of,
+)
 
 Label = Hashable  # the contribution to every leaf as ints (a `RollLaw` for a mod whose roll changes it); with junk slots kept, also the side and the kind
 FamilyType = tuple[Side, tuple[tuple[Label, Fraction, bool], ...]]
@@ -95,6 +121,9 @@ class _Split:
     new: tuple[Slot, ...]  # slots of mods the action put on it (stored: crafted ones, and every one when junk is kept)
     status: tuple[Status, ...]  # what the mods that stay give each leaf
     new_ids: tuple[str, ...]  # ids of the new mods, in the order of the retained item
+    implicits: tuple[ImplicitSide, ...] = ()  # the Eldritch pair of the retained item (ADR-0027); () when not kept
+    quality: Quality | None = None
+    offer: tuple[OfferedMod, ...] = ()
 
 
 class _Context:
@@ -147,13 +176,28 @@ class Abstraction:
         self._roll_leaves = tuple(leaf for leaf in goal.leaves if leaf.has_roll_limit)  # a roll limit: a drawn mod rolls its values
         self._has_laws = bool(self._roll_leaves)
         self._roll_ids = frozenset().union(*(leaf.mod_ids for leaf in self._roll_leaves))
+        if any(leaf.has_roll_limit for leaf in goal.implicits):
+            raise OutOfScopeError("a roll limit on an implicit is not modelled yet (ticket #158)")
         self._numbers = TypeNumbers()
         self._actions = actions
+        reads, adds = [action.reads(data) for action in actions], [action.adds(data) for action in actions]
+        self._tracks_implicits = bool(goal.implicits) or any(r.implicits for r in reads) or any(a.implicits for a in adds)
+        self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
+        self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
+        self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
+        self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
+        self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}
+        self._offered_ids: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], str] = {}
         self._contexts: dict[frozenset[Influence], _Context] = {}
         self._kinds = self._new_context(frozenset(), tier_table(data, base_id)).kinds
+        if self._tracks_offer and not self._kinds.tracked:
+            raise ValueError(
+                "an action that reads or draws the unveil offer must read the junk: the veiled placeholder is a mod of the item"
+            )
         self._canonical_group: dict[tuple, list[Mod]] | None = None
         self._canonical: dict[tuple[frozenset[Influence], str, tuple[Status, ...], bool], str] = {}
         self._prepared_by: dict[Hashable, _Prepared] = {}
+        self._has_partners: bool | None = None  # whether the pool of an empty rare item has a family with mods on both sides
         self._cache: dict[Hashable, dict[Hashable, Fraction]] = {}
         self._expanded: dict[Hashable, Expanded] = {}
         self._signatures: dict[Hashable, Hashable] = {}  # one object per equal pool signature, so a lookup by it is an identity hit
@@ -174,6 +218,21 @@ class Abstraction:
     def rerolls_values(self) -> bool:
         """Whether an enabled action rerolls the values of the mods an item holds (a Divine Orb): rollable mods are then slots by mod id."""
         return self._kinds.rerolls
+
+    @property
+    def tracks_implicits(self) -> bool:
+        """Whether a state holds the Eldritch pair: an enabled action reads or changes the implicits, or the goal asks for one."""
+        return self._tracks_implicits
+
+    @property
+    def tracks_quality(self) -> bool:
+        """Whether a state holds the catalyst quality: an enabled action reads or changes it."""
+        return self._tracks_quality
+
+    @property
+    def tracks_offer(self) -> bool:
+        """Whether a state holds the unveil offer: an enabled action reads, draws or uses it."""
+        return self._tracks_offer
 
     @property
     def models_metamods(self) -> bool:
@@ -281,11 +340,36 @@ class Abstraction:
             key=lambda slot: slot.key,
         )
         flags = Flags(item.rarity, item.corrupted, item.influences)
-        return CompressedState(flags, tuple(fractured), status, tuple(slots))
+        return CompressedState(
+            flags,
+            tuple(fractured),
+            status,
+            tuple(slots),
+            *self._held_by(item.implicits, item.quality, item.veil_offer, influences),
+        )
+
+    def _held_by(
+        self,
+        implicits: tuple[ImplicitMod, ...],
+        quality: Quality | None,
+        offer: tuple[str, ...],
+        influences: frozenset[Influence],
+    ) -> tuple[tuple[ImplicitSide, ...], Quality | None, tuple[OfferedMod, ...]]:
+        """The implicits, the quality and the offer of an item as a state keeps them: each is empty unless an enabled action reads or changes it."""
+        return (
+            self._implicit_pair(implicits) if self._tracks_implicits else (),
+            quality if self._tracks_quality else None,
+            self._offer_of(offer, influences) if self._tracks_offer else (),
+        )
 
     def is_goal(self, state: CompressedState) -> bool:
-        """Whether the status of `state` meets the goal."""
-        return self.goal.is_met(state.status)
+        """Whether `state` meets the goal: the status of the leaves, and for each Eldritch implicit wanted one side that passes it."""
+        if not self.goal.is_met(state.status):
+            return False
+        wanted = len(self.goal.implicits)
+        if not wanted:
+            return True
+        return all(any(side.contribution[index] is Status.PASSING for side in state.implicits) for index in range(wanted))
 
     def kernel(self, state: CompressedState, action: Action) -> Mapping[CompressedState, Fraction]:
         """The exact distribution of the next compressed state after `action` on `state`.
@@ -337,7 +421,7 @@ class Abstraction:
         for (share, part), signature, split in zip(
             outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
         ):
-            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status)
+            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer)
             if isinstance(part, Rerolled):  # which of the kept slots are rerolled decides the kernel
                 key = (*key, tuple(sorted(self._rerolled_slots(part, prepared.origins)[1], key=_SLOT_KEY)))
             if outcomes.fractures and not isinstance(part, Fixed):
@@ -360,8 +444,12 @@ class Abstraction:
             raise ValueError("a rerolled result cannot fracture a mod")
 
     def _check_enabled(self, action: Action) -> None:
-        if self._kinds.reads_junk(action) and action not in self._kinds.actions:
+        reads = action.reads(self.data)
+        if not (reads.junk or reads.item_state) or action in self._kinds.actions:
+            return
+        if reads.junk:
             raise ValueError(f"{action!r} reads the mods of the item and is not among the enabled actions")
+        raise ValueError(f"{action!r} reads the implicits, the quality or the offer of the item and is not among the enabled actions")
 
     def signature(self, state: CompressedState, action: Action) -> Hashable:
         """What decides the label distribution: equal signatures share one cached distribution.
@@ -443,6 +531,8 @@ class Abstraction:
             if others:
                 raise ValueError(f"{fossils!r} is a mixture of pools: it has no one set of family types")
             pool = part.pool
+        if partners(pool):
+            raise OutOfScopeError("the family types of a pool with a family that has mods on both sides are not modelled")
         grouped: dict[FamilyType, list[str]] = defaultdict(list)
         for family in pool:
             grouped[self._family_type(family, tag, frozenset())].append(family.family)
@@ -453,6 +543,80 @@ class Abstraction:
             status_of(leaf, entry.mod_id, entry.tier, entry.values, entry.crafted)
             for leaf in self.goal.leaves
         )
+
+    # --- the implicits, the quality and the offer (ADR-0027) ---------------------------------------------
+
+    def _implicit_pair(self, implicits: tuple[ImplicitMod, ...]) -> tuple[ImplicitSide, ...]:
+        """The Eldritch pair of an item's implicits: the Searing Exarch side and the Eater of Worlds side.
+
+        Raises `OutOfScopeError` for an implicit that is not Eldritch: the state holds no base implicit until ticket #158.
+        """
+        sides = {side: self._no_implicit for side in EldritchSide}
+        for entry in implicits:
+            side = eldritch_side(self.data.mods[entry.mod_id])
+            if side is None:
+                raise OutOfScopeError(
+                    f"the item holds the base implicit {entry.mod_id}: the state holds the two Eldritch sides only"
+                    " (rolls of base implicits: ticket #158)"
+                )
+            contribution = tuple(
+                implicit_status_of(leaf, entry.mod_id, entry.grade, entry.values) for leaf in self.goal.implicits
+            )
+            sides[side] = ImplicitSide(entry.grade, contribution)
+        return (sides[EldritchSide.EXARCH], sides[EldritchSide.EATER])
+
+    def _implicit_mod(self, side: EldritchSide, grade: int, contribution: tuple[Status, ...]) -> Mod:
+        """The Eldritch mod that stands for a side of the pair: the smallest id of the side and grade that gives `contribution`."""
+        key = (side, grade, contribution)
+        found = self._implicit_mods.get(key)
+        if found is None:
+            if self._eldritch is None:
+                grouped: dict[tuple[EldritchSide, int], list[Mod]] = defaultdict(list)
+                for mod in self.data.mods.values():
+                    mod_side = eldritch_side(mod)
+                    if mod_side is None:
+                        continue
+                    try:
+                        grouped[(mod_side, eldritch_grade(mod))].append(mod)
+                    except ImplicitError:
+                        continue  # an id without a grade: not a mod an action can put on an item
+                self._eldritch = grouped
+            for mod in sorted(self._eldritch.get((side, grade), ()), key=lambda mod: mod.id):
+                given = tuple(implicit_status_of(leaf, mod.id, grade, _low_values(mod)) for leaf in self.goal.implicits)
+                if given == contribution:
+                    found = mod
+                    break
+            else:
+                raise OutOfScopeError(
+                    f"no Eldritch mod of the {side.value} side and grade {grade} gives {[int(v) for v in contribution]}"
+                    " to the implicits wanted"
+                )
+            self._implicit_mods[key] = found
+        return found
+
+    def _offer_of(self, offer: tuple[str, ...], influences: frozenset[Influence]) -> tuple[OfferedMod, ...]:
+        """The mods of an unveil offer as the state keeps them, sorted: each by the canonical id of its kind and what it gives each leaf."""
+        entries = []
+        for mod_id in offer:
+            mod = self.data.mods[mod_id]
+            contribution = self._drawn_contribution(mod, False, influences)
+            entries.append(OfferedMod(self._offered_id(mod, contribution, influences), contribution))
+        return tuple(sorted(entries, key=lambda entry: (entry.mod_id, entry.contribution)))
+
+    def _offered_id(self, mod: Mod, contribution: tuple[Status, ...], influences: frozenset[Influence]) -> str:
+        """The smallest id among the unveiled mods of the families and side of `mod` that give `contribution` and can spawn on this base."""
+        key = (influences, mod.id, contribution)
+        found = self._offered_ids.get(key)
+        if found is None:
+            tags = self.data.base_items[self.base_id].tags
+            group = self._canonical_groups()[(mod.families, mod.generation_type, mod.domain)]
+            matching = [
+                other.id
+                for other in group
+                if spawn_weight(other, tags) > 0 and self._drawn_contribution(other, False, influences) == contribution
+            ]
+            found = self._offered_ids[key] = min(matching) if matching else mod.id
+        return found
 
     def _drawn_contribution(
         self, mod: Mod, crafted: bool = False, influences: frozenset[Influence] = frozenset()
@@ -651,8 +815,20 @@ class Abstraction:
             influences=flags.influences,
             corrupted=flags.corrupted,
             mods=tuple(mods),
+            implicits=self._implicits_of(state),
+            quality=state.quality,
+            veil_offer=() if erasing else tuple(entry.mod_id for entry in state.offer),  # an action that erases the junk erases the placeholder
         )
         return item, origins
+
+    def _implicits_of(self, state: CompressedState) -> tuple[ImplicitMod, ...]:
+        """The implicits of the item a state stands for: for each Eldritch side that holds one, the mod that stands for it at its lowest values."""
+        implicits = []
+        for side, held in zip(EldritchSide, state.implicits):  # the pair is in the order of EldritchSide: Searing Exarch, then Eater of Worlds
+            if held.grade:
+                mod = self._implicit_mod(side, held.grade, held.contribution)
+                implicits.append(ImplicitMod(mod.id, held.grade, _low_values(mod)))
+        return tuple(implicits)
 
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
         """The outcomes of `action` on the item `state` stands for (cached), and where that item's mods came from.
@@ -663,7 +839,7 @@ class Abstraction:
         """
         erasing = not self._kinds.reads_junk(action) and not self._metamods
         slots = tuple(slot for slot in state.slots if slot.crafted) if erasing else state.slots
-        key = (action, state.flags, state.fractured, slots)
+        key = (action, state.flags, state.fractured, slots, state.implicits, state.quality, () if erasing else state.offer)
         prepared = self._prepared_by.get(key)
         if prepared is None:
             try:
@@ -685,6 +861,7 @@ class Abstraction:
                 self._refusal_depends_on_the_family(state, erasing, action, origins)
                 raise
             self._check_type_blind(state, outcomes)
+            self._check_fracture_without_partners(state, outcomes)
             prepared = _Prepared(outcomes, origins)
             self._prepared_by[key] = prepared
         return prepared
@@ -722,6 +899,24 @@ class Abstraction:
             raise OutOfScopeError(
                 "the item holds a fractured mod known only as a family type, and whether the game refuses this action "
                 "depends on which family of the type was fractured"
+            )
+
+    def _check_fracture_without_partners(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
+        """Refuse a fracture, or a fractured mod known only as a family type, on a pool with a family that has mods on both sides.
+
+        The family types of such a pool carry the other side of the family (`Kinds._type_kinds`), but the spread of a fractured
+        type over the families that have it (`_add_fractured`) has no test with them, so a Cobalt or Viridian Jewel does not
+        get a planned fracture. Raises `OutOfScopeError`.
+        """
+        if not (outcomes.fractures or any(entry.mod_id.startswith(TYPE_PREFIX) for entry in state.fractured)):
+            return
+        if self._has_partners is None:
+            empty = Item.build(self.data, base_id=self.base_id, item_level=self.item_level, rarity=Rarity.RARE)
+            self._has_partners = bool(partners(build_pool(self.data, empty)))
+        if self._has_partners:
+            raise OutOfScopeError(
+                "a fracture on an item whose pool has a family with mods on both sides (a Cobalt or Viridian Jewel) "
+                "is not modelled in the compressed state"
             )
 
     def _check_type_blind(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
@@ -824,7 +1019,8 @@ class Abstraction:
                     new.append(Slot(Side(mod.generation_type), self._context(influences).kinds.of(mod), contribution))
         fractured.sort(key=lambda entry: (entry.mod_id, entry.contribution))
         status = best_of(len(self.goal.leaves), contributions)
-        return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids))
+        held = self._held_by(retained.implicits, retained.quality, retained.veil_offer, influences)
+        return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids), *held)
 
     def _fractured_slot(self, slot, entry: ExplicitMod, influences: frozenset[Influence]) -> FracturedMod | None:
         """The fractured mod that the slot `slot` becomes when the action fractures its mod `entry`; None when it is no slot.
@@ -843,7 +1039,7 @@ class Abstraction:
     def _add_fixed(self, result: dict[CompressedState, Fraction], share: Fraction, split: _Split) -> None:
         """Add the one state of a fixed result."""
         slots = sorted((*split.kept, *split.new), key=lambda slot: slot.key)
-        result[CompressedState(split.flags, split.fractured, split.status, tuple(slots))] += share
+        result[CompressedState(split.flags, split.fractured, split.status, tuple(slots), split.implicits, split.quality, split.offer)] += share
 
     def _add_drawn(
         self, result: dict[CompressedState, Fraction], share: Fraction, part: Outcomes, signature, split: _Split
@@ -857,6 +1053,7 @@ class Abstraction:
         stays = sorted((*split.kept, *split.new), key=_SLOT_KEY)
         stays_tuple = tuple(stays)
         flags, fractured, stay_status = split.flags, split.fractured, split.status
+        held = (split.implicits, split.quality, split.offer)
         whole = share == 1
         for best, drawn, chance in self._expanded_distribution(signature, part):
             if not drawn:
@@ -865,7 +1062,7 @@ class Abstraction:
                 slots = drawn
             else:
                 slots = tuple(sorted(stays + list(drawn), key=_SLOT_KEY))
-            state = CompressedState(flags, fractured, tuple(map(max, stay_status, best)), slots)
+            state = CompressedState(flags, fractured, tuple(map(max, stay_status, best)), slots, *held)
             weight = chance if whole else share * chance
             before = result.get(state)
             result[state] = weight if before is None else before + weight
@@ -915,7 +1112,7 @@ class Abstraction:
                         self._canonical_of_mod(mod, influences), self._drawn_contribution(mod, False, influences)
                     )
                     fractured = tuple(sorted((*fractured, entry), key=lambda e: (e.mod_id, e.contribution)))
-                result[CompressedState(split.flags, fractured, status, tuple(slots))] += share * each
+                result[CompressedState(split.flags, fractured, status, tuple(slots), split.implicits, split.quality, split.offer)] += share * each
 
     def _mod_with_label(self, family, label: Label, influences: frozenset[Influence]) -> Mod:
         """A mod of `family` with the label `label`: the mods of one family that share a label share a canonical id."""
@@ -954,6 +1151,8 @@ class Abstraction:
             self._hits += 1
             return found
         influences = part.retained.influences
+        if partners(part.pool):
+            raise OutOfScopeError("a fracture on an item whose pool has a family with mods on both sides is not modelled")
         label_of = self._labeller(influences)
         owner: dict[str, FamilyType] = {}
         for family in part.pool:
@@ -1067,6 +1266,12 @@ class Abstraction:
                     sorted(
                         self._family_type(family, part.tag, influences, part.guaranteed_blocked, part.rolls_lucky)
                         for family in part.pool
+                    )
+                ),
+                tuple(  # the families with mods on both sides: which one-sided types are two sides of one family
+                    sorted(
+                        tuple(sorted(self._family_type(side, part.tag, influences, part.guaranteed_blocked) for side in sides))
+                        for sides in partners(part.pool).values()
                     )
                 ),
             )
@@ -1257,4 +1462,4 @@ class Abstraction:
         for chosen, chance in outcomes:
             slots = sorted((*fixed, *chosen), key=_SLOT_KEY)
             status = best_of(width, (*held, *(slot.contribution for slot in slots)))
-            result[CompressedState(split.flags, split.fractured, status, tuple(slots))] += share * chance
+            result[CompressedState(split.flags, split.fractured, status, tuple(slots), split.implicits, split.quality, split.offer)] += share * chance

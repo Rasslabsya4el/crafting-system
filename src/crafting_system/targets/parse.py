@@ -33,6 +33,7 @@ from crafting_system.items import (
     veiled_placeholder,
 )
 
+from .corrupted import CorruptedResolver, corruption_problem
 from .enchantment import EnchantmentResolver
 from .errors import TargetError
 from .lines import LineList, LineMap, load_with_lines
@@ -51,9 +52,10 @@ TOP_KEYS = (
     "start_price",
     "price_file",
     "actions",
+    "allow_corrupted",
 )
 REQUIREMENT_KEYS = ("family", "stat", "mod", "min_tier", "min_roll", "not_crafted")
-IMPLICIT_KEYS = ("family", "stat", "mod", "min_grade", "min_roll")
+IMPLICIT_KEYS = ("family", "stat", "mod", "min_grade", "min_roll", "corrupted")
 QUALITY_KEYS = ("type", "min_percent")
 ENCHANTMENT_KEYS = ("any_of",)
 GROUP_KEYS = ("at_least", "of")
@@ -138,6 +140,7 @@ class _Reader:
         self.source = source
         self.base_dir = base_dir
         self.resolver = Resolver(data)
+        self.corrupted = CorruptedResolver(self.resolver)
 
     def fail(self, line: int, path: str, problem: str) -> NoReturn:
         where = f"{path}: " if path else ""
@@ -160,7 +163,7 @@ class _Reader:
         influences = self.read_influences(root)
         requirements = self.read_requirements(root["requirements"], "requirements", root.key_lines["requirements"])
         implicits = (
-            self.read_implicits(root["implicits"], root.key_lines["implicits"], base_id) if "implicits" in root else ()
+            self.read_implicits(root["implicits"], root.key_lines["implicits"], base_id, item_level) if "implicits" in root else ()
         )
         quality = None
         if "quality" in root:
@@ -175,10 +178,44 @@ class _Reader:
         price_file = self.read_price_file(root)
         start_price = self.text(root, "start_price", "start_price") if "start_price" in root else None
         actions = self.read_actions(root["actions"], root.key_lines["actions"]) if "actions" in root else None
+        allow_corrupted = self.read_allow_corrupted(root) if "allow_corrupted" in root else False
+        self.check_corruption(root, base_id, item_level, implicits, allow_corrupted, start_item, start_price, actions)
         return Target(
             base_id, item_level, influences, requirements, start_item, price_file, start_price, implicits, quality,
-            actions, enchantment,
+            actions, enchantment, allow_corrupted,
         )  # fmt: skip
+
+    def read_allow_corrupted(self, root: LineMap) -> bool:
+        value = root["allow_corrupted"]
+        if not isinstance(value, bool):
+            self.fail(root.key_lines["allow_corrupted"], "allow_corrupted", f"must be true or false, got {describe(value)}")
+        return value
+
+    def check_corruption(
+        self,
+        root: LineMap,
+        base_id: str,
+        item_level: int,
+        implicits: tuple[ImplicitRequirement, ...],
+        allow_corrupted: bool,
+        start_item: Item,
+        start_price: str | None,
+        actions: tuple[str, ...] | None,
+    ) -> None:
+        """Refuse a target whose corrupted implicits, corrupted start item or `actions:` make the goal impossible (ADR-0036).
+
+        A target buys its item when it prices the start item (`start_price`) or the start item is corrupted itself.
+        """
+        buys = start_price is not None or start_item.corrupted
+        problem = corruption_problem(
+            self.data, base_id, item_level, implicits, allow_corrupted, start_item, buys, actions
+        )
+        if problem is None:
+            return
+        if problem.index is not None:
+            self.fail(root["implicits"].item_lines[problem.index], f"implicits[{problem.index}]", problem.message)
+        start = root["start_item"]
+        self.fail(start.key_lines["corrupted"], problem.key, problem.message)
 
     def read_actions(self, names: object, line: int) -> tuple[str, ...]:
         if not isinstance(names, LineList) or not len(names):
@@ -391,17 +428,17 @@ class _Reader:
 
     # -- implicits and quality -----------------------------------------------------------------------
 
-    def read_implicits(self, entries: object, line: int, base_id: str) -> tuple[ImplicitRequirement, ...]:
+    def read_implicits(self, entries: object, line: int, base_id: str, item_level: int) -> tuple[ImplicitRequirement, ...]:
         if not isinstance(entries, LineList):
             self.fail(line, "implicits", f"must be a list of implicit requirements, got {describe(entries)}")
         if not entries:
             self.fail(line, "implicits", "must hold at least one implicit requirement")
         return tuple(
-            self.read_implicit(entry, f"implicits[{index}]", entries.item_lines[index], base_id)
+            self.read_implicit(entry, f"implicits[{index}]", entries.item_lines[index], base_id, item_level)
             for index, entry in enumerate(entries)
         )
 
-    def read_implicit(self, entry: object, path: str, line: int, base_id: str) -> ImplicitRequirement:
+    def read_implicit(self, entry: object, path: str, line: int, base_id: str, item_level: int) -> ImplicitRequirement:
         if not isinstance(entry, LineMap):
             self.fail(line, path, f"must be a mapping (`family:` or `stat:`, then `mod`, `min_grade`, `min_roll`), got {describe(entry)}")
         self.check_keys(entry, path, IMPLICIT_KEYS)
@@ -410,23 +447,42 @@ class _Reader:
         if "family" not in entry and "stat" not in entry:
             self.fail(entry.line, path, 'name the implicit with `family: <family id>` or `stat: "<English stat text>"`')
 
+        corrupted = False
+        if "corrupted" in entry:
+            corrupted = entry["corrupted"]
+            if not isinstance(corrupted, bool):
+                self.fail(
+                    entry.key_lines["corrupted"], f"{path}.corrupted", f"must be true or false, got {describe(corrupted)}"
+                )
         family = stat = None
         selector = "family" if "family" in entry else "stat"
         text = self.text(entry, selector, f"{path}.{selector}")
         try:
             if selector == "family":
                 family = text
-                mod_ids = self.resolver.implicit_mods_for_family(text)
-                every_mod = self.resolver.implicit_mods_for_family(text, with_presence=True)
+                if corrupted:  # among the corrupted pool of the base at the target's item level, and only there
+                    mod_ids = every_mod = self.corrupted.for_family(base_id, item_level, text)
+                else:
+                    mod_ids = self.resolver.implicit_mods_for_family(text)
+                    every_mod = self.resolver.implicit_mods_for_family(text, with_presence=True)
             else:
                 stat = text
-                mod_ids = self.resolver.implicit_mods_for_stat(text)
-                every_mod = self.resolver.implicit_mods_for_stat(text, with_presence=True)
+                if corrupted:
+                    mod_ids = every_mod = self.corrupted.for_stat(base_id, item_level, text)
+                else:
+                    mod_ids = self.resolver.implicit_mods_for_stat(text)
+                    every_mod = self.resolver.implicit_mods_for_stat(text, with_presence=True)
         except Unresolved as problem:
             self.fail(entry.key_lines[selector], f"{path}.{selector}", str(problem))
 
         if "mod" in entry:  # one mod of the selector, a presence variant included: exactly that one
             mod_id = self.text(entry, "mod", f"{path}.mod")
+            if corrupted and mod_id not in every_mod:
+                try:
+                    reason = self.corrupted.explain_mod(base_id, item_level, mod_id, selector, text)
+                except Unresolved as problem:
+                    reason = str(problem)
+                self.fail(entry.key_lines["mod"], f"{path}.mod", reason)
             if mod_id not in every_mod:
                 self.fail(
                     entry.key_lines["mod"],
@@ -436,14 +492,15 @@ class _Reader:
                     " Boss in your Presence) must name the variant that way",
                 )
             mod_ids = frozenset({mod_id})
-        self.check_implicit_possible(base_id, mod_ids, entry.key_lines[selector], f"{path}.{selector}")
+        if not corrupted:
+            self.check_implicit_possible(base_id, mod_ids, entry.key_lines[selector], f"{path}.{selector}")
         min_grade = None
         if "min_grade" in entry:
             min_grade = self.read_min_grade(entry, f"{path}.min_grade", mod_ids)
         min_roll = None
         if "min_roll" in entry:
             min_roll = self.read_min_roll(entry, f"{path}.min_roll", mod_ids)
-        return ImplicitRequirement(family, stat, mod_ids, min_grade, min_roll)
+        return ImplicitRequirement(family, stat, mod_ids, min_grade, min_roll, corrupted)
 
     def check_implicit_possible(self, base_id: str, mod_ids: frozenset[str], line: int, path: str) -> None:
         """Refuse an implicit selector none of whose mods can be on the base: it could never be met.

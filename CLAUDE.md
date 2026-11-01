@@ -25,11 +25,15 @@ Each helper prompt names its ticket (`#N`), the files or worktree, and the resul
 
 Model of the main chat: Opus for ideas, grills and decisions; Sonnet 5.5 for a stretch of plain implementation. A session started for one ticket runs on Sonnet 5.5 with effort high.
 
-Landing a ticket: its session opens the PR with `Closes #N`, turns Auto-fix on itself and never merges. The main chat merges the PR itself once CI is green on Ubuntu and Windows, the `checker` has passed it and its tests cover the ticket's "Done when"; then it runs the tests on `main`, adds the ticket to the map's decisions and archives the session. Nobody asks the owner about Auto-fix or merging.
+Landing a ticket: its session opens the PR with `Closes #N`, turns Auto-fix on itself and never merges. The main chat merges the PR itself once CI is green on Ubuntu and Windows, the `checker` has passed it and its tests cover the ticket's "Done when"; then it runs the tests on `main`, adds the ticket to the map's decisions and archives the session. Nobody asks the owner about Auto-fix or merging. A push to `main` starts no CI run: `main` is verified by the integration run, whose tree must equal `main` after landing (`gh workflow run ci.yml --ref main` tests it on demand; `docs/ci.md`).
 
 One task per chat. The state of the work lives in the GitHub issues, so a `/clear` between tasks loses nothing.
 
 Everything this repo needs lives inside this folder: worktrees in `.claude/worktrees/`, scratch files and run output in `.claude/scratch/`.
+
+## Heavy runs
+
+**Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite, sweeps, solves and measurements go to GitHub (CI, or a heavy run), because a local multi-process sweep pins his machine at 100%. Heavy runs go **only through the dispatcher**: `python .github/scripts/heavy_dispatch.py run --ref <branch> --runners N --command '...'`, never `gh workflow run run.yml`. The repo has 20 runner jobs at once; the dispatcher waits on the PC until merge CI keeps a buffer (`HEAVY_FLOOR` and `CI_RESERVE`, repository variables), and refuses a timeout over 60 minutes unless `--long` (one indivisible solve): split long sweeps into shorter parts. `python .github/scripts/heavy_dispatch.py status` shows the queue. Details: `docs/ci.md`.
 
 ## Talking to the owner
 

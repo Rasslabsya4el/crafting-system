@@ -16,7 +16,7 @@ from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .contract import Action, Adds, Reads
-from .draw import Outcome
+from .draw import Outcome, refuse_unmodelled
 from .errors import NotApplicableError
 from .finite import Finite
 from .mixture import Fractured
@@ -26,6 +26,7 @@ NEEDS_FOUR_MODS = get_rule("fracturing_orb.needs_four_mods")
 REFUSED_ON_INFLUENCED_OR_FRACTURED = get_rule("fracturing_orb.refused_on_influenced_or_fractured")
 REFUSED_ON_CORRUPTED = get_rule("fracturing_orb.refused_on_corrupted")
 FRACTURES_ONE_MOD_UNIFORMLY = get_rule("fracturing_orb.fractures_one_mod_uniformly")
+JEWELS_CAN_BE_FRACTURED = get_rule("jewel.fracturing_orb_works_on_jewels")
 COST = get_rule("fracturing_orb.cost")
 
 MIN_MODS = 4
@@ -81,6 +82,7 @@ class FracturingOrb(Action):
             raise NotApplicableError(f"a Fracturing Orb works on a rare item only, and this item is {item.rarity}")
         if item.corrupted:
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no Fracturing Orb")
+        refuse_unmodelled(data, item, jewels=True)  # jewel.fracturing_orb_works_on_jewels
         if item.influences or item.fractured_mods:
             raise NotApplicableError("a Fracturing Orb cannot be used on an influenced item or on one that already has a fractured mod")
         if len(item.mods) < MIN_MODS:
