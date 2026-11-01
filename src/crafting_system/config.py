@@ -1,4 +1,4 @@
-"""Where the data, cache and output directories are (ADR-0014).
+"""Where the data, cache and output directories are (ADR-0014), and the planner setting for Memory Strands (ADR-0040).
 
 Shared infrastructure, outside the eleven modules: it imports none of them.
 
@@ -7,6 +7,10 @@ the built-in default. The config file is `crafting.toml` at the project root, or
 named by `CRAFTING_CONFIG` instead. Relative paths in a config file count from that file's
 directory; relative paths in environment variables and built-in defaults count from the
 project root. Empty environment values count as unset. Nothing here creates a directory.
+
+The setting `memory_strands` (`[planner]` table of the config file, `true` or `false`, default `false`) turns the Memory Strands
+of the planner on: the Orb of Remembrance, the Foulborn orbs, the Orb of Unravelling and the tier cut of an item with strands.
+A start item with strands turns it on by itself and the command line has `--strands`; neither is read here.
 """
 
 import os
@@ -25,12 +29,15 @@ _PATH_SETTINGS = {
     "output": ("CRAFTING_OUTPUT_DIR", "local/output"),
 }
 
+_PLANNER_SETTINGS = ("memory_strands",)
+
 
 @dataclass(frozen=True)
 class Config:
     data_dir: Path
     cache_dir: Path
     output_dir: Path
+    memory_strands: bool = False
 
 
 def find_project_root(start: Path | None = None, *, search_up_to: Path | None = None) -> Path:
@@ -56,7 +63,7 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
     root = Path(os.path.abspath(project_root if project_root is not None else find_project_root()))
 
     config_file, file_base = _config_file(env, root)
-    from_file = _read_paths(config_file) if config_file is not None else {}
+    from_file, planner = _read_document(config_file) if config_file is not None else ({}, {})
 
     resolved = {}
     for key, (env_var, default) in _PATH_SETTINGS.items():
@@ -67,7 +74,12 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
         else:
             raw, base = default, root
         resolved[key] = _absolute(base, raw)
-    return Config(data_dir=resolved["data"], cache_dir=resolved["cache"], output_dir=resolved["output"])
+    return Config(
+        data_dir=resolved["data"],
+        cache_dir=resolved["cache"],
+        output_dir=resolved["output"],
+        memory_strands=planner.get("memory_strands", False),
+    )
 
 
 def _is_blank(value: str | None) -> bool:
@@ -96,7 +108,8 @@ def _config_file(env: Mapping[str, str], root: Path) -> tuple[Path | None, Path]
     return (project_file if project_file.is_file() else None), root
 
 
-def _read_paths(path: Path) -> dict[str, str]:
+def _read_document(path: Path) -> tuple[dict[str, str], dict[str, bool]]:
+    """The `[paths]` and the `[planner]` tables of a config file, each checked."""
     try:
         document = tomllib.loads(path.read_bytes().decode("utf-8-sig"))
     except UnicodeDecodeError as error:
@@ -104,9 +117,9 @@ def _read_paths(path: Path) -> dict[str, str]:
     except tomllib.TOMLDecodeError as error:
         raise ValueError(f"{path}: not valid TOML: {error}") from error
 
-    unknown_tables = sorted(set(document) - {"paths"})
+    unknown_tables = sorted(set(document) - {"paths", "planner"})
     if unknown_tables:
-        raise ValueError(f"{path}: unknown key {unknown_tables[0]!r} (only [paths] is allowed)")
+        raise ValueError(f"{path}: unknown key {unknown_tables[0]!r} (only [paths] and [planner] are allowed)")
     paths = document.get("paths", {})
     if not isinstance(paths, dict):
         raise ValueError(f"{path}: 'paths' must be a table")
@@ -118,4 +131,17 @@ def _read_paths(path: Path) -> dict[str, str]:
             )
         if not isinstance(value, str) or _is_blank(value):
             raise ValueError(f"{path}: [paths] {key!r} must be a non-empty string")
-    return paths
+    return paths, _read_planner(path, document.get("planner", {}))
+
+
+def _read_planner(path: Path, planner: object) -> dict[str, bool]:
+    if not isinstance(planner, dict):
+        raise ValueError(f"{path}: 'planner' must be a table")
+    for key, value in planner.items():
+        if key not in _PLANNER_SETTINGS:
+            raise ValueError(
+                f"{path}: unknown key {key!r} in [planner] (known: {', '.join(_PLANNER_SETTINGS)})"
+            )
+        if type(value) is not bool:
+            raise ValueError(f"{path}: [planner] {key!r} must be true or false")
+    return planner

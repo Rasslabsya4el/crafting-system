@@ -20,6 +20,10 @@ The checks, each against something written without the code under test:
 * an action that reads rule axes (ticket #210) passes every check above at every reading of its axes
   (`model_readings`), with the kernel of an abstraction made for that reading; its plain `outcomes(data, item)`
   is the plan's reading; and an action with inputs lists `Need`s of valid items, the same on every call;
+* a corrupting action (ticket #258, ADR-0036) turns every outcome into a corrupted item, puts an implicit on it, and that item is
+  final: no action of the catalog applies to it. An action that does not declare `adds.corrupts` leaves the corruption as it was. One
+  that also declares `adds.keeps_mods` cannot reach the goal of a target that asks for a corrupted implicit from a state that misses
+  another requirement, which is what lets a planner offer it from the other states only;
 * the fracturing actions (a Fractured Fossil) are not compared with the brute force here: their kernel
   has its own tests in `test_abstraction_fossil.py`;
 * the resources are whole counts of named things and price the offer from a fixture price file.
@@ -52,6 +56,9 @@ from abstraction_pool import (
 )
 from beasts_support import aspect_mods
 from coarse_support import blocks_of, compare_members, compare_variants, concrete_items
+from influence_support import P1, PLAIN, S1, influence_data
+from influence_support import helmet as contract_helmet
+from influence_support import roll as roll_on_helmet
 from items_support import AMULET, DATA
 from veiled_support import LIFE_1 as VEIL_LIFE, MANA as VEIL_MANA, ARMOUR as VEIL_ARMOUR, PLACEHOLDER_PREFIX, veiled_mods
 
@@ -68,6 +75,7 @@ from crafting_system.actions import (
     Reading,
     Reads,
     Rerolled,
+    catalog,
     Unveil,
     VeiledChaosOrb,
     kinds,
@@ -210,6 +218,38 @@ def fixture_items() -> dict[str, Item]:
     return items
 
 
+INFLUENCE_DATA = influence_data(CONTRACT_DATA)  # the contract data with a helmet base and influence mods (ticket #154)
+
+
+def extra_fixture_items() -> dict[str, tuple[tuple[str, ...], Item]]:
+    """Items on the helmet of `INFLUENCE_DATA`, with the names of the kinds that are asked about them (and no other kind).
+
+    The amulet of the fixture is no body armour, boots, gloves or helmet, so the Orb of Dominance (ticket #154) has nothing to do
+    on it; the helmet has no mod of the fixture pool, so the other kinds would draw nothing on it. Each of these items is for the
+    kinds named with it. Both helmets are at item level 84.
+    """
+    return {
+        "helmet_two_shaper": (
+            ("orb-of-dominance",),
+            contract_helmet(roll_on_helmet(P1, 3), roll_on_helmet(S1, 2), influences=frozenset({Influence.SHAPER})),
+        ),
+        "helmet_plain": (("influenced-exalted-orb",), contract_helmet(roll_on_helmet(PLAIN, 1))),
+    }
+
+
+def extra_pairs(per_kind: int = 3) -> list[tuple[str, Action, str]]:
+    """`(kind name, action, item name)` as `contract_pairs`, for `extra_fixture_items`."""
+    found = []
+    for name, (kind_names, item) in extra_fixture_items().items():
+        for entry in kinds():
+            if entry.name not in kind_names:
+                continue
+            members = list(entry.members(INFLUENCE_DATA, item))
+            picked = members if len(members) <= per_kind else [members[0], members[len(members) // 2], members[-1]]
+            found.extend((entry.name, action, name) for action in picked)
+    return found
+
+
 def contract_pairs(per_kind: int = 3) -> list[tuple[str, Action, str]]:
     """`(kind name, action, item name)` for up to `per_kind` members of each registered kind on each fixture item."""
     found = []
@@ -285,6 +325,7 @@ def _check_at(action: Action, item: Item, data, goal: Goal, reading: Reading) ->
     check_sampler_follows_the_chances(outcomes, items, data)
     check_declarations_agree(action, reads, adds, outcomes, items, item)
     check_item_state_declarations(action, reads, adds, items, item, data, reading)
+    check_corruption_declarations(action, reads, adds, items, item, data, goal)
     if not outcomes.fractures and not _rerolls_values(outcomes):
         check_kernel_equals_brute_force(action, reads, item, items, data, goal, reading)
     return True
@@ -410,6 +451,37 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
         assert _stripped(finished(other, data), strip) == _stripped(items, strip), (
             f"an action that does not declare reads.{name} gives the same result on the item without its {name}"
         )
+
+
+def check_corruption_declarations(action, reads: Reads, adds: Adds, items, given: Item, data, goal: Goal) -> None:
+    """Corruption (ticket #258, ADR-0036): only an action that declares `adds.corrupts` corrupts, and what it corrupts is final.
+
+    * without `adds.corrupts` every result is corrupted exactly when the item was;
+    * with it every result is corrupted, and no action of the catalog applies to a result (it is the goal or a dead end);
+    * with `adds.keeps_mods` as well, from an item whose state misses a requirement no result is a goal of the same goal made to
+      ask for a corrupted implicit (the exactness of the pruning of `cli._prune`).
+    """
+    if not adds.corrupts:
+        for _, result in items:
+            assert result.corrupted == given.corrupted, "an action that does not declare adds.corrupts leaves the corruption as it was"
+        return
+    assert adds.implicits, "an action that corrupts adds an implicit"
+    for _, result in items:
+        assert result.corrupted, "every result of a corrupting action is a corrupted item"
+        for other in catalog(data, result):
+            try:
+                other.outcomes(data, result)
+            except ActionError:
+                continue
+            raise AssertionError(f"a corrupted item is final, but {other.label(data)} applies to a result of {action.label(data)}")
+    if adds.keeps_mods:
+        asking = dataclasses.replace(goal, asks_corrupted=True)
+        ab = Abstraction(data, asking, given.base_id, given.item_level, [action] if reads.junk or reads.item_state else [])
+        if not ab.meets_requirements(ab.compress(given)):
+            for _, result in items:
+                assert not ab.is_goal(ab.compress(result)), (
+                    "an action that keeps the mods cannot reach the goal from a state that misses a requirement"
+                )
 
 
 def _stripped(listed, strip: dict) -> dict:
