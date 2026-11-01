@@ -54,5 +54,5 @@ start_item:
   rarity: normal
   memory_strands: 82
 
-# The name of the buy spec examples/buy/s13-start-belt.yaml.
+# The name of the buy spec docs/research/2026-11-01-strand-routes-files/buy/s13-start-belt.yaml.
 start_price: S13 start belt

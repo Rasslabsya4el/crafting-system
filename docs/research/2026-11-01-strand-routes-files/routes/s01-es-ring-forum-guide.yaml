@@ -32,7 +32,7 @@
 # mod, which the metamod "Prefixes Cannot Be Changed" never is. So this route is a complete written policy but cannot be
 # evaluated before the offers change; B5-12 (#292) has to settle it.
 #
-# The strand words are explained at the end of the header of examples/routes/s11-remembrance-belt.yaml and are read by
+# The strand words are explained at the end of the header of docs/research/2026-11-01-strand-routes-files/routes/s11-remembrance-belt.yaml and are read by
 # the loader only after B5-12 (#292); every other key and action is the loader's own.
 #   when:  memory_strands_at_least: N    when:  memory_strands_below: N    do: Orb of Remembrance    do: Orb of Unravelling
 

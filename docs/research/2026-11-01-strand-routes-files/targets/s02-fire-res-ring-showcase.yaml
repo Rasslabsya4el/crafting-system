@@ -14,7 +14,7 @@ base: Helical Ring
 item_level: 84
 influence: []
 
-# The name of the buy spec examples/buy/s02-start-ring.yaml, which is what the normal Helical Ring costs.
+# The name of the buy spec docs/research/2026-11-01-strand-routes-files/buy/s02-start-ring.yaml, which is what the normal Helical Ring costs.
 start_price: S02 start ring
 
 # The kinds of actions the planner may use: the showcase's own, with a Transmutation for its bench craft (the planner

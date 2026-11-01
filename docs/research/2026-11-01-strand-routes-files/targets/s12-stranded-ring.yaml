@@ -78,5 +78,5 @@ start_item:
       values: [14]
       fractured: true
 
-# The name of the buy spec examples/buy/s12-start-ring.yaml, which is what the stranded ring costs.
+# The name of the buy spec docs/research/2026-11-01-strand-routes-files/buy/s12-start-ring.yaml, which is what the stranded ring costs.
 start_price: S12 start ring

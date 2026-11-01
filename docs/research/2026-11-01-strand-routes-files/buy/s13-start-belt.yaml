@@ -1,5 +1,5 @@
 # S13 start item (a TEST ROUTE, docs/research/2026-11-01-strand-routes.md): a white Leather Belt of item
-# level 86 or more with 82 Memory Strands. The target file is examples/targets/s13-unravelling-belt.yaml; its
+# level 86 or more with 82 Memory Strands. The target file is docs/research/2026-11-01-strand-routes-files/targets/s13-unravelling-belt.yaml; its
 # `start_price` is the `name` below. As for S12, the strand key is read by B5-5 (#278) and no price has
 # been fetched.
 name: S13 start belt

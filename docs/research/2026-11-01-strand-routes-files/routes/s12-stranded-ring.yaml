@@ -12,7 +12,7 @@
 # examples/routes/r12-lightning-amulet.yaml.
 #
 # The route:
-#   1. Buy a ring with a fractured All Attributes AND 60 Memory Strands (examples/buy/s12-start-ring.yaml).
+#   1. Buy a ring with a fractured All Attributes AND 60 Memory Strands (docs/research/2026-11-01-strand-routes-files/buy/s12-start-ring.yaml).
 #   2. Use Deafening Essence of Rage until the other modifiers are useful ones, Life or Resistances.
 # An essence spends up to 80 strands and cuts the tiers of its random mods (ADR-0041, `approximate`), so the 60
 # strands are used up within about two essences (a uniform spend of 0 to 80 has mean 40); the Strength it

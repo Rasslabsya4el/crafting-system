@@ -14,7 +14,7 @@
 # examples/routes/r12-lightning-amulet.yaml.
 #
 # The route:
-#   1. Buy a normal Leather Belt with 82 Memory Strands (examples/buy/s13-start-belt.yaml).
+#   1. Buy a normal Leather Belt with 82 Memory Strands (docs/research/2026-11-01-strand-routes-files/buy/s13-start-belt.yaml).
 #   2. Orb of Transmutation, then Orbs of Alteration until the magic belt has life and a resistance of any tier.
 #   3. Regal Orb for a second resistance of any tier; restart if the Regal gives anything else.
 #   4. Orb of Unravelling: it takes the count to 0 and tries each mod below tier 1 on its own

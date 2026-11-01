@@ -30,7 +30,7 @@
 #   Left out (not asked by the target): the Divine at the Vesper ("perfect rolls"), the random slam and the fracture at the
 #   Allflame bench (Allflame crafting is out of v1).
 #
-# The strand words are explained in the header of examples/routes/s11-remembrance-belt.yaml and are read by the loader only
+# The strand words are explained in the header of docs/research/2026-11-01-strand-routes-files/routes/s11-remembrance-belt.yaml and are read by the loader only
 # after B5-12 (#292); every other key and action is the loader's own.
 
 name: S02, 3.29 Reddit showcase (u/DisciplesOfAres), Helical Ring fire and all resistance

@@ -19,7 +19,7 @@ influence: [crusader, warlord]
 # (ticket #118), so a given route that names the fossils cannot be evaluated before it is.
 actions: [remembrance-orb, transmutation-orb, regal-orb, fossil-set, harvest-reforge, bench-craft, unravelling-orb]
 
-# The name of the buy spec examples/buy/s01-start-ring.yaml, which is what the dual-influence ring costs.
+# The name of the buy spec docs/research/2026-11-01-strand-routes-files/buy/s01-start-ring.yaml, which is what the dual-influence ring costs.
 start_price: S01 start ring
 
 requirements:

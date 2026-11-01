@@ -6,7 +6,7 @@ and B5-8, and the loader has no strand condition until B5-12), plans the target 
 currency, and reads the route with `parse_route`, so a `do` that is not an offer of the plan, a status condition that names
 nothing, or a target the planner cannot reach is an error here.
 
-S02, S11 and S13 pass. S12's rule is R05's, which `test_cli_routes_real.py` already plans. S01 cannot be planned before the
+S02, S11 and S13 pass (the files wait in docs/research/2026-11-01-strand-routes-files/ until B5-12, #292, teaches the loaders the strand words; the parse-all tests of examples/ must not meet them). S12's rule is R05's, which `test_cli_routes_real.py` already plans. S01 cannot be planned before the
 fossil set is a planner action (ticket #118): the test says so, so that the day it can be planned this test fails and
 someone reads the route against the plan.
 
@@ -29,6 +29,7 @@ from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.targets import parse_target
 
 ROOT = Path(__file__).resolve().parents[1]
+FILES = ROOT / "docs" / "research" / "2026-11-01-strand-routes-files"
 
 
 class FlatPrices(dict):
@@ -69,19 +70,19 @@ def data():
 @pytest.mark.parametrize("stem", ["s02-fire-res-ring-showcase", "s11-remembrance-belt", "s13-unravelling-belt"])
 def test_the_route_without_its_strand_rules_is_read_against_the_plan_of_its_target(stem, data):
     target = parse_target(
-        without_strand_words((ROOT / "examples" / "targets" / f"{stem}.yaml").read_text(encoding="utf-8")),
+        without_strand_words((FILES / "targets" / f"{stem}.yaml").read_text(encoding="utf-8")),
         data,
         source=stem,
     )
     plan = make_plan(data, target, flat_price_file(), start_price=10.0)
-    route_text = without_strand_words_in_rules((ROOT / "examples" / "routes" / f"{stem}.yaml").read_text(encoding="utf-8"))
+    route_text = without_strand_words_in_rules((FILES / "routes" / f"{stem}.yaml").read_text(encoding="utf-8"))
     assert parse_route(route_text, plan, data, source=stem).rules
 
 
 def test_s01_cannot_be_planned_until_the_fossil_set_is_a_planner_action(data):
     stem = "s01-es-ring-forum-guide"
     target = parse_target(
-        without_strand_words((ROOT / "examples" / "targets" / f"{stem}.yaml").read_text(encoding="utf-8")),
+        without_strand_words((FILES / "targets" / f"{stem}.yaml").read_text(encoding="utf-8")),
         data,
         source=stem,
     )

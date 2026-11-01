@@ -32,6 +32,10 @@ ROOT = Path(__file__).resolve().parents[1]
 ROUTES = ROOT / "examples" / "routes"
 TARGETS = ROOT / "examples" / "targets"
 BUYS = ROOT / "examples" / "buy"
+# The strand files wait outside examples/ until B5-12 (#292): the parse-all tests of examples/ read every file there with
+# today's loaders, which do not know the strand words.
+FILES = ROOT / "docs" / "research" / "2026-11-01-strand-routes-files"
+S_ROUTES, S_TARGETS, S_BUYS = FILES / "routes", FILES / "targets", FILES / "buy"
 
 STRAND_WHEN = ("memory_strands_at_least", "memory_strands_below")
 STRAND_ACTIONS = ("Orb of Remembrance", "Orb of Unravelling")
@@ -106,7 +110,7 @@ def stem(request):
 
 
 def test_each_route_is_read_by_the_loaders_yaml_reader_with_known_keys(stem):
-    route = read(ROUTES / f"{stem}.yaml")
+    route = read(S_ROUTES / f"{stem}.yaml")
     assert set(route) <= set(TOP_KEYS)
     assert isinstance(route["name"], str) and route["rules"]
     for rule in route["rules"]:
@@ -123,12 +127,12 @@ def test_each_action_is_restart_a_strand_action_or_a_known_label(stem):
     allowed = {RESTART, *STRAND_ACTIONS, *KNOWN_LABELS}
     if stem in TEST_ROUTES:
         allowed |= actions_of(read(ROUTES / f"{TEST_ROUTES[stem][0]}.yaml"))
-    unknown = actions_of(read(ROUTES / f"{stem}.yaml")) - allowed
+    unknown = actions_of(read(S_ROUTES / f"{stem}.yaml")) - allowed
     assert not unknown, unknown
 
 
 def test_each_route_names_its_source_or_says_it_is_a_test_route(stem):
-    text = (ROUTES / f"{stem}.yaml").read_text(encoding="utf-8")
+    text = (S_ROUTES / f"{stem}.yaml").read_text(encoding="utf-8")
     assert "docs/research/2026-11-01-strand-routes.md" in text
     if stem in PUBLISHED:
         assert "SOURCE (published, 3.29)" in text and PUBLISHED[stem] in text
@@ -138,21 +142,21 @@ def test_each_route_names_its_source_or_says_it_is_a_test_route(stem):
 
 
 def test_the_status_conditions_name_requirements_of_the_target(stem):
-    families = families_of(read(TARGETS / f"{stem}.yaml"))
-    for rule in read(ROUTES / f"{stem}.yaml")["rules"]:
+    families = families_of(read(S_TARGETS / f"{stem}.yaml"))
+    for rule in read(S_ROUTES / f"{stem}.yaml")["rules"]:
         for entry in rule.get("when", {}).get("requirements", []):
             assert entry["family"] in families
 
 
 def test_the_start_item_has_a_rule(stem):
     """The route starts from a normal item (a normal ring or belt) or from a rare one (S12's ring)."""
-    rules = plain(read(ROUTES / f"{stem}.yaml"))["rules"]
-    start = plain(read(TARGETS / f"{stem}.yaml")).get("start_item", {}).get("rarity", "normal")
+    rules = plain(read(S_ROUTES / f"{stem}.yaml"))["rules"]
+    start = plain(read(S_TARGETS / f"{stem}.yaml")).get("start_item", {}).get("rarity", "normal")
     assert any(rule.get("when", {}).get("rarity", start) == start for rule in rules)
 
 
 def test_s11_is_r13_with_step_zero():
-    s11 = plain(read(ROUTES / "s11-remembrance-belt.yaml"))["rules"]
+    s11 = plain(read(S_ROUTES / "s11-remembrance-belt.yaml"))["rules"]
     r13 = plain(read(ROUTES / "r13-life-resist-belt.yaml"))["rules"]
     assert r13[-1] == {"when": {"rarity": "normal"}, "do": "Orb of Transmutation"}
     assert s11[: len(r13) - 1] == r13[:-1]
@@ -163,12 +167,12 @@ def test_s11_is_r13_with_step_zero():
 
 
 def test_s12_is_r05s_rule():
-    s12 = plain(read(ROUTES / "s12-stranded-ring.yaml"))["rules"]
+    s12 = plain(read(S_ROUTES / "s12-stranded-ring.yaml"))["rules"]
     assert s12 == plain(read(ROUTES / "r05-strength-ring.yaml"))["rules"]
 
 
 def test_s13_unravels_only_with_strands_left_and_ends_in_a_restart():
-    rules = plain(read(ROUTES / "s13-unravelling-belt.yaml"))["rules"]
+    rules = plain(read(S_ROUTES / "s13-unravelling-belt.yaml"))["rules"]
     unravel = [rule for rule in rules if rule["do"] == "Orb of Unravelling"]
     assert len(unravel) == 3
     for rule in unravel:
@@ -180,7 +184,7 @@ def test_s13_unravels_only_with_strands_left_and_ends_in_a_restart():
 
 def test_the_published_routes_unravel_only_with_strands_left_and_remembrance_only_on_a_normal_item():
     for stem in PUBLISHED:
-        words = [rule for rule in plain(read(ROUTES / f"{stem}.yaml"))["rules"] if rule["do"] in STRAND_ACTIONS]
+        words = [rule for rule in plain(read(S_ROUTES / f"{stem}.yaml"))["rules"] if rule["do"] in STRAND_ACTIONS]
         assert words
         for rule in words:
             when = rule["when"]
@@ -192,7 +196,7 @@ def test_the_published_routes_unravel_only_with_strands_left_and_remembrance_onl
 
 def test_each_test_target_asks_what_the_base_target_asks_and_the_start_strands_match_the_buy_spec():
     for stem, (base_stem, strands) in TEST_ROUTES.items():
-        target = plain(read(TARGETS / f"{stem}.yaml"))
+        target = plain(read(S_TARGETS / f"{stem}.yaml"))
         base = plain(read(TARGETS / f"{base_stem}.yaml"))
         for key in ("base", "item_level", "requirements"):
             assert target[key] == base[key], (stem, key)
@@ -203,13 +207,13 @@ def test_each_test_target_asks_what_the_base_target_asks_and_the_start_strands_m
             assert "remembrance-orb" in target["actions"]
             continue
         assert target["start_item"]["memory_strands"] == strands
-        assert plain(read(BUYS / BUY_SPECS[stem]))["memory_strands"] == strands
+        assert plain(read(S_BUYS / BUY_SPECS[stem]))["memory_strands"] == strands
 
 
 def test_each_target_names_the_price_of_its_buy_spec():
     for stem, name in BUY_SPECS.items():
-        target = plain(read(TARGETS / f"{stem}.yaml"))
-        assert plain(read(BUYS / name))["name"] == target["start_price"]
+        target = plain(read(S_TARGETS / f"{stem}.yaml"))
+        assert plain(read(S_BUYS / name))["name"] == target["start_price"]
 
 
 def without_strand_words(text: str) -> str:
@@ -220,12 +224,12 @@ def without_strand_words(text: str) -> str:
 
 def test_each_target_is_read_by_the_target_loader_on_the_real_dump(stem):
     data = real_game_data()
-    text = without_strand_words((TARGETS / f"{stem}.yaml").read_text(encoding="utf-8"))
+    text = without_strand_words((S_TARGETS / f"{stem}.yaml").read_text(encoding="utf-8"))
     assert parse_target(text, data, source=f"{stem}.yaml").requirements
 
 
 def test_each_buy_spec_is_read_by_the_buy_spec_loader(tmp_path):
     for name in BUY_SPECS.values():
         path = tmp_path / name
-        path.write_text(without_strand_words((BUYS / name).read_text(encoding="utf-8")), encoding="utf-8")
+        path.write_text(without_strand_words((S_BUYS / name).read_text(encoding="utf-8")), encoding="utf-8")
         assert load_buy_spec(path).name
