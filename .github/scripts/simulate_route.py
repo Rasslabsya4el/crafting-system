@@ -1,6 +1,6 @@
 """Play a given route on concrete items and report its cost (ticket #70; run by the `Run a command` workflow).
 
-    python .github/scripts/simulate_route.py TARGET.yaml ROUTE.yaml [--runs N] [--seed S] [--out DIR]
+    python .github/scripts/simulate_route.py TARGET.yaml ROUTE.yaml [--runs N] [--seed S] [--skip-refused] [--out DIR]
 
 For a route whose graph is too large to evaluate exactly (R04, R14): a plan with nothing solved (`make_plan(solve_it=False)`),
 the route read against it, then `runs` simulated crafts (`cli._route_sim`). Prints and writes `<route>.sim.json`: success
@@ -33,6 +33,7 @@ def main() -> None:
     parser.add_argument("--runs", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--max-steps", type=int, default=200_000)
+    parser.add_argument("--skip-refused", action="store_true", help="a rule whose action the game refuses is skipped (for the completed routes)")
     parser.add_argument("--out")
     args = parser.parse_args()
 
@@ -41,7 +42,7 @@ def main() -> None:
     plan = make_plan(data, target, load_price_file(PRICES), solve_it=False)
     route = load_route(Path(args.route), plan, data)
     began = time.perf_counter()
-    report = simulate_route(data, plan, route, runs=args.runs, seed=args.seed, max_steps=args.max_steps)
+    report = simulate_route(data, plan, route, runs=args.runs, seed=args.seed, max_steps=args.max_steps, skip_refused=args.skip_refused)
     summary = {
         "route": Path(args.route).name, "runs": report.runs, "seed": args.seed, "seconds": time.perf_counter() - began,
         "successes": report.successes, "stopped_at_a_gap": report.stopped, "cut_at_step_limit": report.unfinished,

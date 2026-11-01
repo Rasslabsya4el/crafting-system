@@ -29,8 +29,12 @@ class _Ready:
         return self._outcomes
 
 
-def route_policy(plan: Plan, route: Route, data: GameData):
-    """The route as a simulator policy: a concrete item to the `Step` of the first matching rule, None at a gap."""
+def route_policy(plan: Plan, route: Route, data: GameData, *, skip_refused: bool = False):
+    """The route as a simulator policy: a concrete item to the `Step` of the first matching rule, None at a gap.
+
+    The game refusing the action of the first matching rule is a gap, as in `evaluate_route`; with `skip_refused` the next
+    matching rule is tried instead (for a route completed with a last `restart` rule, which then also catches the refusals).
+    """
     offers = {priced.label: priced for priced in plan.offers}
     memo: dict[str, Memoized] = {}
 
@@ -42,6 +46,8 @@ def route_policy(plan: Plan, route: Route, data: GameData):
                 try:
                     outcomes = memo.setdefault(priced.label, Memoized(priced.offer.action)).outcomes(data, item)
                 except ActionError:
+                    if skip_refused:
+                        continue
                     return None  # the game refuses the rule's action here: a gap, as in `evaluate_route`
                 return Step(_Ready(outcomes), priced.cost)
         return None  # a gap of the guide: no rule covers this state
@@ -50,11 +56,18 @@ def route_policy(plan: Plan, route: Route, data: GameData):
 
 
 def simulate_route(
-    data: GameData, plan: Plan, route: Route, *, runs: int, seed: int = 1, max_steps: int = DEFAULT_MAX_STEPS
+    data: GameData,
+    plan: Plan,
+    route: Route,
+    *,
+    runs: int,
+    seed: int = 1,
+    max_steps: int = DEFAULT_MAX_STEPS,
+    skip_refused: bool = False,
 ) -> SimulationReport:
     """`runs` crafts of the route from the target's start item, with what the start item cost added to each."""
     target = plan.target
     return simulate(
-        data, route_policy(plan, route, data), target.start_item, target.is_met_by,
+        data, route_policy(plan, route, data, skip_refused=skip_refused), target.start_item, target.is_met_by,
         runs=runs, seed=seed, start_cost=plan.start_price.chaos, max_steps=max_steps,
     )  # fmt: skip
