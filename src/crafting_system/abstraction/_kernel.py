@@ -15,9 +15,11 @@ from crafting_system.actions import (
     ActionOutcomes,
     Fixed,
     Fractured,
+    Need,
     NotApplicableError,
     Outcomes,
     OutOfScopeError,
+    Reading,
     Rerolled,
     allowed_by_tags,
     build_pool,
@@ -109,6 +111,7 @@ class _Prepared:
     origins: Origins
     signatures: tuple[Hashable, ...] | None = None
     splits: "tuple[_Split, ...] | None" = None  # the split of every part, read once for `kernel` and `kernel_key`
+    item: Item | None = None  # the item the state stands for, as the action was given it
 
 
 @dataclass(frozen=True)
@@ -152,6 +155,12 @@ class Abstraction:
     as a slot (a lock makes a reroll keep the locked side), told apart by family type and by the tags a
     metamod looks at, and `compress` refuses an item that holds one when it is False.
 
+    `reading` (ticket #210) is the value of each rule axis the enabled actions read (`actions.model_readings`): the
+    abstraction is then the ordinary model of that reading, and every kernel is taken at it. None is the plan's reading,
+    and an input-free action has no axis, so for it nothing changes. With `allow_inputs` False (the planner, until
+    the solver is given the donors, ticket #212) an action that consumes other items (`Action.inputs`) on the item of
+    a state is refused with `OutOfScopeError`, so that it is never priced as if its inputs were free.
+
     The tiers of the mods come from the pool of the item's influences (`tiers_of`), so an influence mod has
     its own tier. The kernel of a random action is cached by pool signature: two states whose pools have
     the same multiset of family types share one label distribution.
@@ -166,8 +175,12 @@ class Abstraction:
         actions: Iterable = (),
         *,
         metamods: bool = False,
+        reading: Reading | None = None,
+        allow_inputs: bool = True,
     ):
         self.data = data
+        self._reading = reading
+        self._allow_inputs = allow_inputs
         self.goal = goal
         self.base_id = base_id
         self.item_level = item_level
@@ -208,6 +221,21 @@ class Abstraction:
         self._unrolled: set[Hashable] = set()  # signatures of fracturing pools that hold no rollable mod
         self._kernels = 0
         self._hits = 0
+
+    @property
+    def reading(self) -> Reading | None:
+        """The reading of the rule axes this abstraction's kernels are taken at (None: the plan's; each reading is one ordinary model, ADR-0033)."""
+        return self._reading
+
+    def inputs(self, state: CompressedState, action: Action) -> tuple[Need, ...]:
+        """The `Need`s of `action` used on the item `state` stands for (`Action.inputs`); empty for an input-free action.
+
+        The kernel of an action with inputs is the result of using it with them (the action finds its donor itself);
+        what the donor is worth is the solver's, and which wanted states the planner builds for it is ticket #211.
+        Raises what `kernel` raises when the action refuses the state's item.
+        """
+        self._check_enabled(action)
+        return action.inputs(self.data, self._prepared(state, action).item)
 
     @property
     def keeps_junk(self) -> bool:
@@ -853,16 +881,21 @@ class Abstraction:
                     influences=state.flags.influences,
                     corrupted=state.flags.corrupted,
                 )
-                action.outcomes(self.data, bare)
+                action.outcomes_under(self.data, bare, self._reading)
                 raise
             try:
-                outcomes = action.outcomes(self.data, item)  # a refusal of the action comes first
+                outcomes = action.outcomes_under(self.data, item, self._reading)  # a refusal of the action comes first
             except NotApplicableError:
                 self._refusal_depends_on_the_family(state, erasing, action, origins)
                 raise
+            if not self._allow_inputs and action.inputs(self.data, item):
+                raise OutOfScopeError(
+                    "the action consumes other items, and the planner does not price them yet (ticket #212): "
+                    "its kernel would count them as free"
+                )
             self._check_type_blind(state, outcomes)
             self._check_fracture_without_partners(state, outcomes)
-            prepared = _Prepared(outcomes, origins)
+            prepared = _Prepared(outcomes, origins, item=item)
             self._prepared_by[key] = prepared
         return prepared
 
@@ -893,7 +926,7 @@ class Abstraction:
             except (ItemError, ValueError):
                 return  # no other family of the type is left to try
             try:
-                action.outcomes(self.data, other)
+                action.outcomes_under(self.data, other, self._reading)
             except NotApplicableError:
                 continue
             raise OutOfScopeError(
