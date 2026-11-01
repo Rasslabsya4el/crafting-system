@@ -19,6 +19,7 @@ from crafting_system.cli import Offer, PlanError, make_plan
 from crafting_system.cli import _decide
 from crafting_system.cli._decide import (
     EXACT_TRANSITIONS,
+    COARSE,
     LADDER,
     Candidate,
     Rates,
@@ -69,7 +70,7 @@ def test_above_the_budget_the_levels_that_fit_are_offered_in_ladder_order():
     decision = choose(BIG, R_KERNEL, R_SOLVE, 60.0, levels=LEVELS)
 
     assert decision.action == "approximate"
-    assert [found.level for found in decision.levels] == list(LADDER)
+    assert [found.level for found in decision.levels] == list(COARSE)
     assert decision.transitions == 22_994_524
 
 
@@ -213,8 +214,27 @@ def test_decide_forecasts_the_exact_graph_and_picks_the_levels_that_fit(exact):
 
     assert fits.action == "exact" and fits.transitions == forecast.transitions
     assert over.action == "approximate"
-    assert [found.level for found in over.levels] == [LADDER[0]]  # the finer rungs cut the same families again or do not fit
-    assert over.levels[0].estimate.states < forecast.states
+    coarse = [found for found in over.levels if found.level.kind == "groups"]
+    assert [found.level for found in coarse] == [LADDER[0]]  # the finer rungs cut the same families again or do not fit
+    assert coarse[0].estimate.states < forecast.states
+
+
+def test_decide_puts_each_tail_cut_on_the_finest_coarse_level_that_fits_with_its_forecast(exact):
+    ab, start = exact.abstraction, exact.start
+    forecast = ab.estimate([start], [offer.action for offer in OFFERS])
+    first = forecast.coarsened(_decide.Coarsening.pooling_irrelevant(ab, None, start))
+    between = (forecast.seconds(1.0, 1.0) + first.seconds(1.0, 1.0)) / 2
+
+    over = decide(ab, start, priced(), between, Rates(1.0, 1.0))
+    never = decide(ab, start, priced(), first.seconds(1.0, 1.0) / 2, Rates(1.0, 1.0))  # not even the coarsest level fits
+
+    tails = [found for found in over.levels if found.level.kind == "tail"]
+    assert [found.level.theta for found in tails] == [level.theta for level in LADDER if level.kind == "tail"]
+    assert over.levels[: len(over.levels) - len(tails)] == tuple(found for found in over.levels if found.level.kind == "groups")  # after the coarse ones
+    base = next(found for found in over.levels if found.level.kind == "groups")
+    assert all(found.estimate == base.estimate and found.coarsening is base.coarsening for found in tails)
+    assert all(found.level.name.endswith(f" over {base.level.name}") and found.level.size == base.level.size for found in tails)
+    assert not [found for found in never.levels if found.level.kind == "tail"]
 
 
 def test_decide_runs_exact_when_the_pilot_cannot_count_the_actions(exact):

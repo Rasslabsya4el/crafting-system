@@ -237,12 +237,15 @@ _Avoid_: estimate, heuristic answer
 **Certified gap**:
 The upper bound over the lower bound, minus one: at least the true relative error of an approximate answer's mean cost. The owner's tolerance is a certified gap of at most 1%.
 
+**Tail cut**:
+Expanding exact states only where a coarse policy goes: the states it enters with an expected count above `theta` keep all their actions, and every other successor is a leaf worth the optimistic or the pessimistic value of its block. The bounds are never looser than the coarse ones and equal them when nothing is expanded (ADR-0023).
+
 **Pilot count**:
 The forecast of how many states and edges the exact graph has, made before building it from one kernel per reroll and the bench legality by sets of families and free slots; the decision between an exact and an approximate answer reads it with two rates (ADR-0023).
 _Avoid_: estimate (the type is `Estimate`, the act is the pilot count)
 
 **Ladder**:
-The coarse levels tried in order when the exact run is forecast to be too long: all irrelevant families in one group, then groups of 8, then groups of 4. The first whose certified gap is at most 1% is the answer; if none is, the narrowest interval is shown with the message that it is wider (ADR-0023).
+The coarse levels tried in order when the exact run is forecast to be too long: all irrelevant families in one group, then groups of 8, then groups of 4, then the tail cut at `theta` 1e-2, 1e-3 and 1e-4 over the finest of those that fits the time. The first whose certified gap is at most 1% is the answer; if none is, the narrowest interval is shown with the message that it is wider (ADR-0023).
 
 ## Evidence
 
