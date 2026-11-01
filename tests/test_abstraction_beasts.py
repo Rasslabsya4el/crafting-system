@@ -251,7 +251,7 @@ def test_the_family_types_carry_the_weight_at_the_level_of_the_beast():
     ]
     items = closure(data, items_start, swaps, limit=250)
     aware = ability_for(swaps, goal, data, metamods=True)
-    assert all(check_layer_1(aware, data, item, action) is not None for item in items for action in swaps)
+    assert sum(check_layer_1(aware, data, item, action) for item in items for action in swaps) > 50
     wrong = ability_for(blind, goal, data, metamods=True)
     assert sum(disagrees(wrong, data, item, action) for item in items for action in blind) > 0
 
