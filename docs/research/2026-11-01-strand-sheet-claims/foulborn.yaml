@@ -16,4 +16,6 @@ rules:
     quote: "0,79,Foulborn Orb of Augmentation,Resplendent,1,11,320,0.2380952381,3"
     patch_verified: "3.29.0"
     date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "75 is the largest bonus the data allow, with the post's statement; the cut on an item with no strands is open."
     value: {bonus_to_rating: 75, combines_with_strands: sum}

@@ -51,7 +51,7 @@ rules:
       spends and are left out.
     source_kind: experiment
     url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
-    quote: "Starting Strands,Ending Strands,Prefix 1,Prefix 1 Tier,Prefix 1 Total Tiers ... currency,modifier,effective_tier,total_tiers,mtr,mtr_percent,lowest_expected_tier,item_before,item_after"
+    quote: "96,95,Scintillating,3,11 ... 702,82,Scroll of Wisdom,Paragon's,1,1,252.5,0.2836879433,1"
     patch_verified: "3.29.0"
     date_checked: 2026-11-01
     approximate: true
@@ -127,7 +127,7 @@ rules:
       separation is on wands: wands +14.8 (replays -26.0 SD 7.3 if A, +26.3 SD 7.4 if B), amulets +0.6, rings -0.5; the mod
       types that favour B are spell added fire damage (+4.5), spell damage on weapon (+4.4) and mana (+2.9), the one that favours
       A is spell added lightning damage (-2.7, the post's own wand test). Weights only (the beta emulator's reading; -323
-      against A on the mods with unequal weights, -2,218 on all) and uniform are far out. The rank step is exact: on equal
+      against A on the mods with unequal weights, -2,218 on all) and uniform are far out. The rank step is not rejected: on equal
       weights the shares follow 1:2:3:... from the top for every candidate count from 2 to 12 (11 chi-square tests,
       smallest p = 0.078), and with the weights multiplied by rank^g over all raised mods g = 1.00 is the maximum (0.75: -126,
       1.25: -102 log-likelihood).
