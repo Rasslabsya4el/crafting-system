@@ -34,3 +34,7 @@ They are not new in 3.29 (3.27.0). Their prices are market prices only. A second
 - The unknowns of this ADR are `approximate` claims, so every answer that reads them lists them (ADR-0028).
 
 Origin: [Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103) (round 1 answers 2 and 4; the standing rule); [Research #98](https://github.com/Rasslabsya4el/crafting-system/issues/98); ADR-0007, ADR-0008, ADR-0024, ADR-0027, ADR-0028, ADR-0040, ADR-0041.
+
+## Amendment: vendor recipes are modelled ([#329](https://github.com/Rasslabsya4el/crafting-system/issues/329), 2026-11-01)
+
+"Acquisition methods are not modelled" stands for the Genesis Tree and every method whose item is simply pasted. It does **not** hold for **vendor recipes**: a recipe is priced from market goods (a base, flasks, Orbs of Augmentation, gems) and so changes the answer. A recipe-made item is a priced start option; the planner plans each start option and keeps the cheapest, outside the solver ([ADR-0059](0059-vendor-recipes-are-start-item-sources.md)).
