@@ -281,12 +281,13 @@ def evaluate_risk(
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
 
     The quantile grid cannot step over the cheapest action, so `RISK_BINS` of it cover `RISK_BINS` times the
-    cheapest cost. When that is less than the mean there is nothing to resolve (an Alteration spam costing 6,300
-    Chaos in steps of 0.0058, R13, #190): the run is cut to `UNRESOLVED_BINS`, the mean and the odds stay exact
-    and the quantiles and CVaR come back unresolved (infinite) at once instead of after minutes.
+    cheapest cost. When that is less than half the mean the p90 (and for a repeat-until-success policy the median)
+    is out of reach (an Alteration spam costing 6,300 Chaos in steps of 0.0058, R13, #190): the run is cut to
+    `UNRESOLVED_BINS`, the mean and the odds stay exact and the quantiles and CVaR come back unresolved
+    (infinite) at once instead of after minutes. No route of R10, R11, R05 or R12 is near the cut.
     """
     cheapest = min((action.cost for action in policy.values()), default=0.0)
-    bins = UNRESOLVED_BINS if RISK_BINS * cheapest < mean else RISK_BINS
+    bins = UNRESOLVED_BINS if 2 * RISK_BINS * cheapest < mean else RISK_BINS
     return evaluate(policy, start, is_goal, max_bins=bins)
 
 

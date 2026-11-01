@@ -78,6 +78,7 @@ def route_document(report: Report, route: Route, result: RouteResult, data: Game
         "mean_cost": _estimate(risk.mean, shift),
         "p50": _estimate(risk.p50, shift),
         "p90": _estimate(risk.p90, shift),
+        "quantiles_resolved": not (unresolved(risk, risk.p50) or unresolved(risk, risk.p90)),
         "approximate_inputs": approximate_inputs_document(approximate_inputs(plan, result.policy, data)),
         "first_divergence": None
         if divergence is None

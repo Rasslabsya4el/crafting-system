@@ -212,7 +212,7 @@ def interval(estimate: Estimate, divine: float) -> str:
     return text
 
 
-UNRESOLVED = "not resolved on the grid (the cheapest action is far below the cost scale, ticket #190)"
+UNRESOLVED = "not resolved on the grid (the cost scale is far above the cheapest action, ticket #190)"
 
 
 def unresolved(risk, estimate: Estimate) -> bool:
@@ -391,7 +391,7 @@ def _totals(plan: Plan, shift: float, divine: float) -> dict:
         "mean_cost": _estimate(risk.mean, shift),
         "p50": _estimate(risk.p50, shift),
         "p90": _estimate(risk.p90, shift),
-        "quantiles_resolved": not unresolved(risk, risk.p90),
+        "quantiles_resolved": not (unresolved(risk, risk.p50) or unresolved(risk, risk.p90)),
         "cvar_level": risk.cvar_level,
         "cvar": _estimate(risk.cvar, shift),
         "mean_cost_divine": _number((risk.mean.value + shift) / divine),
@@ -488,7 +488,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
                 "low": verification.p90.low,
                 "high": verification.p90.high,
             },
-            "computed_p90": verification.computed_p90,
+            "computed_p90": None if verification.computed_p90 is None else _number(verification.computed_p90),
             "successes": sim.successes,
             "unfinished": sim.unfinished,
             "stopped": sim.stopped,
