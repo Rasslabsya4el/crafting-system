@@ -153,7 +153,7 @@ def test_three_dropped_actions_are_each_printed_on_their_own_line(target):
 
 def test_many_dropped_actions_are_grouped_into_one_line_per_missing_price(target):
     plan = make_plan(DATA, target, price_file())
-    tangled = [DroppedOffer(f"Tangled set {n}", ("Tangled Fossil",)) for n in range(1, 10)]
+    tangled = [DroppedOffer(f"Tangled set {n}", ("Tangled Fossil",)) for n in range(1, 58)]
     hollow = [DroppedOffer(f"Hollow set {n}", ("Hollow Fossil",)) for n in range(1, 4)]
     # interleaved, so the lines must come out grouped by the missing price, not by the order of the list
     dropped = (tangled[0], hollow[0], tangled[1], hollow[1], tangled[2], hollow[2]) + tuple(tangled[3:])
@@ -162,10 +162,10 @@ def test_many_dropped_actions_are_grouped_into_one_line_per_missing_price(target
     lines = [line for line in render_text(report).splitlines() if line.startswith("Dropped for lack of a price")]
 
     assert lines == [
-        "Dropped for lack of a price, 9 actions (no price for Tangled Fossil): Tangled set 1, Tangled set 2, Tangled set 3, ...",
+        "Dropped for lack of a price, 57 actions (no price for Tangled Fossil): Tangled set 1, Tangled set 2, Tangled set 3, ...",
         "Dropped for lack of a price, 3 actions (no price for Hollow Fossil): Hollow set 1, Hollow set 2, Hollow set 3",
     ]
-    assert len(policy_document(report)["dropped_actions"]) == 12
+    assert len(policy_document(report)["dropped_actions"]) == 60
 
 
 def test_a_plan_with_no_priced_action_is_refused(target):

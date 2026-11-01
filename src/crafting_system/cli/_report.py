@@ -38,7 +38,7 @@ GOAL = "goal"
 DEAD_END = "dead end"
 MAX_TREE_DEPTH = 40
 
-MAX_DROPPED_LINES = 8  # more dropped actions than this are told in one line per missing price
+MAX_DROPPED_LINES = 50  # more dropped actions than this are told in one line per missing price
 
 
 @dataclass(frozen=True)
