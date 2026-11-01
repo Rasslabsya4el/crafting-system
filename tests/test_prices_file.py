@@ -423,3 +423,81 @@ def test_two_hand_prices_that_become_one_name_are_refused(tmp_path):
 
     with pytest.raises(ValueError, match="price_overrides.toml.*same price name"):
         load_overrides(path)
+
+
+# --- the poe.ninja rows beside a trade price (#357) -----------------------------------------------
+
+NINJA_NAME = "Stygian Vise (ilvl 85, Hunter/Warlord)"
+
+
+def sample_with_a_ninja_row() -> PriceFile:
+    return sample_file(
+        prices={
+            "Chaos Orb": PriceEntry(1.0, "poe.ninja"),
+            NINJA_NAME: PriceEntry(900.0, "trade-api", "trade median", DETAIL),
+        },
+        ninja={NINJA_NAME: PriceEntry(640.0, "poe.ninja", "daily row", {"league": "Allflame"})},
+    )
+
+
+def test_a_ninja_row_beside_a_trade_price_is_written_and_reads_back_equal(tmp_path):
+    path = tmp_path / "prices.json"
+    original = sample_with_a_ninja_row()
+
+    write_price_file(path, original)
+
+    assert load_price_file(path) == original
+    assert json.loads(path.read_text(encoding="utf-8"))["ninja"][NINJA_NAME] == {
+        "chaos": 640.0,
+        "source": "poe.ninja",
+        "note": "daily row",
+        "detail": {"league": "Allflame"},
+    }
+
+
+def test_a_file_without_ninja_rows_is_written_with_no_ninja_key(tmp_path):
+    path = tmp_path / "prices.json"
+
+    write_price_file(path, sample_file())
+
+    assert "ninja" not in json.loads(path.read_text(encoding="utf-8"))
+    assert load_price_file(path).ninja == {}
+
+
+def test_a_file_without_a_ninja_key_loads_with_no_ninja_rows(tmp_path):
+    path = tmp_path / "prices.json"
+    write_raw(path, raw_document())
+
+    assert load_price_file(path).ninja == {}
+
+
+@pytest.mark.parametrize(
+    ("ninja", "message"),
+    [
+        ([1], "ninja must be an object"),
+        ("text", "ninja must be an object"),
+        (5, "ninja must be an object"),
+        ({"X": 5}, "ninja 'X'"),
+        ({"X": {"source": "poe.ninja"}}, "ninja 'X'"),
+        ({"X": {"chaos": 0, "source": "poe.ninja"}}, "ninja 'X'"),
+        ({"X": {"chaos": "5", "source": "poe.ninja"}}, "ninja 'X'"),
+        ({"X": {"chaos": 5, "source": ""}}, "ninja 'X'"),
+        ({"X": {"chaos": 5, "source": "poe.ninja", "note": 3}}, "ninja 'X'"),
+        ({"X": {"chaos": 5, "source": "poe.ninja", "detail": [1]}}, "ninja 'X'"),
+        (
+            {
+                "Stygian Vise (ilvl 85, Warlord/Hunter)": {"chaos": 5, "source": "poe.ninja"},
+                "Stygian Vise (ilvl 85, Hunter/Warlord)": {"chaos": 6, "source": "poe.ninja"},
+            },
+            "same price name 'Stygian Vise (ilvl 85, Hunter/Warlord)'",
+        ),
+    ],
+)
+def test_a_malformed_ninja_block_raises_value_error_naming_the_file(tmp_path, ninja, message):
+    path = tmp_path / "prices.json"
+    write_raw(path, raw_document(ninja=ninja))
+
+    with pytest.raises(ValueError, match="prices.json") as error:
+        load_price_file(path)
+
+    assert message in str(error.value)

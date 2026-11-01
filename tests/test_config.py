@@ -405,3 +405,49 @@ def test_an_unknown_planner_key_names_all_known_settings(tmp_path):
 
     with pytest.raises(ValueError, match="known: memory_strands, recipe_starts, recombinator_junk_craft, max_imprints"):
         load_config(env={}, project_root=tmp_path)
+
+
+# --- the price settings (ADR-0061 decision 2, ticket #357) -------------------------------------------------------------------
+
+
+def test_price_source_is_both_and_price_gap_percent_is_20_by_default(tmp_path):
+    config = load_config(env={}, project_root=tmp_path)
+
+    assert config.price_source == "both" and config.price_gap_percent == 20.0
+
+
+def test_price_source_and_price_gap_percent_are_read_from_the_planner_table(tmp_path):
+    write_toml(tmp_path / "crafting.toml", '[planner]\nprice_source = "trade"\nprice_gap_percent = 15\n')
+
+    config = load_config(env={}, project_root=tmp_path)
+
+    assert config.price_source == "trade" and config.price_gap_percent == 15.0
+
+
+def test_price_gap_percent_accepts_a_fraction(tmp_path):
+    write_toml(tmp_path / "crafting.toml", "[planner]\nprice_gap_percent = 12.5\n")
+
+    assert load_config(env={}, project_root=tmp_path).price_gap_percent == 12.5
+
+
+@pytest.mark.parametrize("value", ["ninja", "trade", "both"])
+def test_each_price_source_is_accepted(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f'[planner]\nprice_source = "{value}"\n')
+
+    assert load_config(env={}, project_root=tmp_path).price_source == value
+
+
+@pytest.mark.parametrize("value", ['"poe"', "true"])
+def test_invalid_price_source_is_an_error_naming_file_and_key(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f"[planner]\nprice_source = {value}\n")
+
+    with pytest.raises(ValueError, match=r"crafting\.toml.*price_source"):
+        load_config(env={}, project_root=tmp_path)
+
+
+@pytest.mark.parametrize("value", ["0", "-5", '"20"', "true", "nan", "inf"])
+def test_invalid_price_gap_percent_is_an_error_naming_file_and_key(tmp_path, value):
+    write_toml(tmp_path / "crafting.toml", f"[planner]\nprice_gap_percent = {value}\n")
+
+    with pytest.raises(ValueError, match=r"crafting\.toml.*price_gap_percent"):
+        load_config(env={}, project_root=tmp_path)
