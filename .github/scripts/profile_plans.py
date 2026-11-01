@@ -92,6 +92,43 @@ def install_timers() -> None:
     timed(_plan._Model, "prefetch", "model.prefetch (keys here + pool)")
 
 
+POOL_ROWS: list[dict] = []
+
+
+def install_pool_stats() -> None:
+    """Around each `StatePool.build`: its wall time, the same tasks built in this process, and what pickling their result costs."""
+    import pickle
+
+    from crafting_system import parallel
+    from crafting_system.cli import _pool
+
+    real = _pool.StatePool.build
+
+    def measured(self, tasks):
+        began = time.perf_counter()
+        results = real(self, tasks)
+        pooled = time.perf_counter() - began
+        local = parallel.WorkerPool(_pool._Worker, self._pool._args, workers=1)
+        began = time.perf_counter()
+        local.map(_pool._build, tasks)
+        here = time.perf_counter() - began
+        began = time.perf_counter()
+        blob = pickle.dumps(results, protocol=pickle.HIGHEST_PROTOCOL)
+        dumped = time.perf_counter() - began
+        began = time.perf_counter()
+        pickle.loads(blob)
+        loaded = time.perf_counter() - began
+        actions = sum(len(positions) for _, positions in tasks)
+        outcomes = sum(len(a.outcomes) for built in results for a in built if a is not None)
+        row = dict(tasks=len(tasks), actions=actions, outcomes=outcomes, pooled=round(pooled, 2), here=round(here, 2),
+                   dumps=round(dumped, 2), loads=round(loaded, 2), megabytes=round(len(blob) / 1e6, 1))
+        POOL_ROWS.append(row)
+        print("pool", json.dumps(row), flush=True)
+        return results
+
+    _pool.StatePool.build = measured
+
+
 def filled_prices(data, target, offers):
     """The fixture's prices plus a made-up price for each resource the offers (and the start item) need and it lacks."""
     from crafting_system.cli._offers import price_offers
@@ -151,6 +188,7 @@ def main() -> None:
     parser.add_argument("--budget", type=float, default=None)
     parser.add_argument("--workers", type=int, default=None, help="sets CRAFTING_WORKERS (the product reads it; before #250 it is ignored)")
     parser.add_argument("--cprofile", action="store_true")
+    parser.add_argument("--pool-stats", action="store_true", help="measure each pool call against the same work done here, and what pickling it costs")
     parser.add_argument("--limit", type=float, default=None, help="stop the plan after this many seconds (Linux) and write what the timers saw so far")
     parser.add_argument("--out", required=True)
     arguments = parser.parse_args()
@@ -170,6 +208,8 @@ def main() -> None:
     chosen = offers if offers is not None else offers_for(data, Goal.from_target(target), target.base_id, target.start_item, target.actions).offers
     prices, missing = filled_prices(data, target, chosen)
     install_timers()
+    if arguments.pool_stats:
+        install_pool_stats()
     profiler = cProfile.Profile() if arguments.cprofile else None
     began = time.perf_counter()
     if profiler:
@@ -201,6 +241,7 @@ def main() -> None:
         "interrupted": plan is None,
         "stages": stages,
         "made_up_prices": missing,
+        "pool_calls": POOL_ROWS,
         "machine": {"system": platform.platform(), "cpus": os.cpu_count(), "python": platform.python_version()},
     }
     if plan is not None:
