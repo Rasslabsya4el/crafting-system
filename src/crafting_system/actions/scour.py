@@ -16,6 +16,11 @@ from .draw import Outcome
 from .errors import NotApplicableError
 from .metamods import kept_by_reroll
 
+__all__ = [
+    "ScourOutcomes",
+    "ScouringOrb",
+]
+
 ACCEPTS_MAGIC_OR_RARE = get_rule("scouring.accepts_magic_or_rare")
 REMOVES_ALL_UNPROTECTED_MODS = get_rule("scouring.removes_all_unprotected_mods")
 FRACTURED_MODS_STAY = get_rule("scouring.fractured_mods_stay")

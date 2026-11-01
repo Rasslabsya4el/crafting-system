@@ -10,8 +10,10 @@ the Hunter ones on the tag `bow_basilisk` (the Hunter influence on the item clas
 
 * Fire Damage and Cold Damage (prefixes): Added Fire Damage Two Hand 1 (1) and Added Cold Damage Two
   Hand 1 (2) of 1400 each, the two bow mods that the fixture holds besides the eight families.
-* Increased Attack Speed (suffix): Local Increased Attack Speed 1 (1), 2 (11), 2Royale (4), 3 (22) of 1000
-  each, 4 (30) and 5 (37) of 500 each: 5000 from item level 37.
+* Increased Attack Speed (suffix): Local Increased Attack Speed 1 (1), 2 (11) and 3 (22) of 1000 each, 4 (30)
+  and 5 (37) of 500 each: 4000 from item level 37. The fixture also holds Local Increased Attack Speed 2Royale
+  (4), a Battle Royale copy of 1000 that the game does not roll (`affix_pool.royale_duplicates_do_not_spawn`,
+  ticket #310), so it is not counted.
 * Increase Socketed Gem Level (prefix): +1 to Level of Socketed Gems (50), 1000.
 * Increase Specific Socketed Gem Level (prefix): Bow Gem Level 1 (9) and 2 (64), 1000 each.
 * Additional Arrows (suffix): Bow 1 (70), 1000; Bow 2 (86), 100.
@@ -26,7 +28,7 @@ PLAIN = {
     77: {
         "FireDamage": (PREFIX, 1400),
         "ColdDamage": (PREFIX, 1400),
-        "IncreasedAttackSpeed": (SUFFIX, 5000),
+        "IncreasedAttackSpeed": (SUFFIX, 4000),
         "IncreaseSocketedGemLevel": (PREFIX, 1000),
         "IncreaseSpecificSocketedGemLevel": (PREFIX, 2000),
         "AdditionalArrows": (SUFFIX, 1000),

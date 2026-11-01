@@ -39,6 +39,13 @@ Refusals, in this order:
 A Sanctified Fossil also makes the values lucky (`fossils.sanctified_values_lucky`): every part of the result then has
 `rolls_lucky`, and `sample` rolls each value of the mods the resonator puts on the item twice and keeps the better one
 (the kept mods keep theirs). The weights it changes are `fossils.sanctified_level_factor`, a separate effect.
+
+A Chaotic resonator with fossils is `ApplyFossils(("Dense Fossil", "Shuddering Fossil"))`: one
+action per set of one to four different fossils, the resonator size following from their number.
+Its `outcomes(data, item)` is a `FossilOutcomes`, a mixture of `Outcomes` (a Tangled Fossil draws one
+of 420 tag pairs and a Glyphic Fossil one forced mod) with the same `chance_all`, `distribution` and
+`sample`; `fossil_actions(data, item)` lists every set the item could take. See `fossil.py` for its
+refusals.
 """
 
 from collections.abc import Hashable, Mapping
@@ -61,6 +68,12 @@ from .fossil_weights import FossilWeights, fossil_weights
 from .mixture import FossilOutcomes
 from .outcomes import Outcomes, retained_item
 from .pool import Candidate, group_pool, pool_candidates
+
+__all__ = [
+    "ApplyFossils",
+    "fossil_actions",
+    "usable_fossils",
+]
 
 CHAOTIC_RESONATOR_SOCKETS = get_rule("fossils.chaotic_resonator_sockets")
 RESONATOR_REROLLS_LIKE_CHAOS = get_rule("fossils.resonator_rerolls_like_chaos")

@@ -13,6 +13,10 @@ from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
 
+__all__ = [
+    "AlchemyOrb",
+]
+
 ACCEPTS_NORMAL_ONLY = get_rule("alchemy.accepts_normal_only")
 COUNT_LIKE_CHAOS = get_rule("alchemy.count_like_chaos")
 REFUSED_ON_CORRUPTED = get_rule("magic_orbs.refused_on_corrupted")

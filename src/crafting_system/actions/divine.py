@@ -14,6 +14,14 @@ to change (`divine_orb.refused_without_changeable_mod`). A mirrored item is not 
 The result is a `Rerolled` part: the compressed state of `abstraction` reads it from `ActionOutcomes.components`.
 `Reads.rerolls_values` tells `abstraction` to tell apart the mods that a roll requirement of the goal looks at.
 `Adds.needs_roll_limit` tells a planner to offer it only for a target with such a requirement.
+
+The Divine Orb (`DivineOrb()`, `divine.py`, ticket #71) rerolls the values of the mods an item holds, in place, and nothing
+else: every explicit mod that is not fractured and not on a side a lock protects gets a fresh value per stat, uniform over the
+integers of its range, and the tiers stay. Its result is a `DivineOutcomes` whose only component is a `Rerolled` part
+(`contract.py`) with the `(mod id, fractured, crafted)` keys of the changed mods; it reads `Reads.rerolls_values` and declares
+`Adds.needs_roll_limit`, so a planner offers it only for a target with a roll limit. It refuses a normal or a corrupted item and
+an item with no mod to change. A Sanctified Fossil in a resonator sets `Outcomes.rolls_lucky` on every part of its result: each value
+of the mods it puts on the item is rolled twice and the better one kept (`rolls.py`).
 """
 
 import random
@@ -32,6 +40,11 @@ from .draw import Outcome
 from .errors import NotApplicableError
 from .metamods import locked_sides, on_locked_side
 from .rolls import roll_values
+
+__all__ = [
+    "DivineOrb",
+    "DivineOutcomes",
+]
 
 ACCEPTS_MAGIC_RARE_UNIQUE = get_rule("divine_orb.accepts_magic_rare_unique")
 REROLLS_WITHIN_THE_TIER = get_rule("divine_orb.rerolls_values_within_the_tier")
