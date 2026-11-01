@@ -45,6 +45,10 @@ The item rebuild gives an action the implicits, quality and offer a state stands
 
 Not modelled here, and refused with `OutOfScopeError` naming the ticket that lifts it: a base implicit (grade 0) on an item whose state keeps the pair, and a roll limit on an implicit ([#158](https://github.com/Rasslabsya4el/crafting-system/issues/158)). Dominance-limited actions are [#152](https://github.com/Rasslabsya4el/crafting-system/issues/152); the placeholder, the offer state and the Pick actions are [#145](https://github.com/Rasslabsya4el/crafting-system/issues/145).
 
+## Amendment: the Memory Strand count ([Grill B5](https://github.com/Rasslabsya4el/crafting-system/issues/103), 2026-11-01)
+
+`Item` stores one more number, `memory_strands` (0 to 100), and `Reads`/`Adds` declare it the same way: a strand-cut draw and a strand spend read and add it, so the compressed state keeps it only when an enabled action reads it. An action that declares nothing still reads everything; on an item with strands such an action is refused (ADR-0041). Details: ADR-0040.
+
 ## Amendment: sockets and the quality of weapons and armour ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
 
 `Item` also stores its **sockets** (a colour per socket and the link groups, ADR-0046) and its **quality** has two kinds: the catalyst type and percent of jewellery, or the plain percent of a weapon or armour (ADR-0049); no item class has both. `Reads` and `Adds` gain a sockets declaration in the same way: an action declares whether it reads the count, links or colours and what it sets, and an action that declares nothing still reads everything and sets nothing it did not declare. The quality declaration now covers both kinds.

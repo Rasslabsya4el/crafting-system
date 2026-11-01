@@ -1,12 +1,12 @@
 """The concrete item (ADR-0018): a base, an item level, a rarity, a set of explicit mods and, when given,
-implicits, a catalyst quality and an unveil offer (ADR-0027).
+implicits, a catalyst quality, an unveil offer and an enchantment (ADR-0027, ADR-0050).
 
 An `Item` is a value: frozen, hashable, and equal to any other item with the same fields, whatever
 order its mods were given in (mods are stored sorted by id). Building one checks the rules that
 need no game data; `Item.validate` checks the rest against a `GameData`, and `Item.build`,
 `changed`, `add_mod` and `remove_mod` always return an item that passed it. Implicits are stored only
 when given (the base's own implicits are not filled in), and an item built without implicits, quality
-or offer behaves as it did before ADR-0027. A veiled placeholder is an explicit mod of domain `veiled`
+offer or enchantment behaves as it did before ADR-0027. A veiled placeholder is an explicit mod of domain `veiled`
 whose seed changes nothing, so `build` and `changed` make the seed canonical (`Item.canonical`).
 Words follow ADR-0021: a "family" is the exclusion set of a mod.
 
@@ -26,6 +26,7 @@ from crafting_system.rules import get_rule
 
 from .errors import (
     CapacityError,
+    EnchantmentError,
     FamilyConflictError,
     ImplicitError,
     ItemError,
@@ -36,6 +37,7 @@ from .errors import (
     ValueRangeError,
     VeilOfferError,
 )
+from .enchantments import enchant_class, enchant_info, is_removed_enchant
 from .implicits import (
     BASE_GRADE,
     MAX_ELDRITCH_GRADE,
@@ -168,6 +170,7 @@ class Item:
     implicits: tuple[ImplicitMod, ...] = ()
     quality: Quality | None = None
     veil_offer: tuple[str, ...] = ()
+    enchantment: str | None = None
 
     def __post_init__(self) -> None:
         if type(self.item_level) is not int:
@@ -199,6 +202,8 @@ class Item:
         object.__setattr__(self, "implicits", self._checked_implicits())
         object.__setattr__(self, "quality", self._checked_quality())
         object.__setattr__(self, "veil_offer", self._checked_veil_offer())
+        if self.enchantment is not None and (type(self.enchantment) is not str or not self.enchantment):
+            raise self._error(f"enchantment {self.enchantment!r} is not a mod id or None", EnchantmentError)
 
     def _checked_implicits(self) -> tuple[ImplicitMod, ...]:
         kind = ImplicitError
@@ -283,7 +288,8 @@ class Item:
 
     def validate(self, data: GameData) -> None:
         """Raise an `ItemError` subclass for the first problem found, checking in this order: unknown
-        base, unknown mod, wrong slot or domain, wrong values, capacity, family conflict, implicits, quality, veil offer."""
+        base, unknown mod, wrong slot or domain, wrong values, capacity, family conflict, implicits, quality, veil offer,
+        enchantment."""
         base = data.base_items.get(self.base_id)
         if base is None:
             raise self._error("the base is not in the game data", UnknownBaseError)
@@ -300,6 +306,7 @@ class Item:
         self._check_implicits(data, base)
         self._check_quality(base)
         self._check_veil_offer(data)
+        self._check_enchantment(data, base)
 
     def _check_slot(self, entry: ExplicitMod, mod: Mod, base_domain: str) -> None:
         if mod.generation_type not in SIDE_VALUES:
@@ -423,6 +430,34 @@ class Item:
                 if conflicts(first, second):
                     shared = next(family for family in first.families if family in second.families)
                     raise self._error(f"offered mods {first.id} and {second.id} share the family {shared}", kind)
+
+    def _check_enchantment(self, data: GameData, base: BaseItem) -> None:
+        if self.enchantment is None:
+            return
+        kind = EnchantmentError
+        mod = data.mods.get(self.enchantment)
+        if mod is None:
+            raise self._error(f"enchantment {self.enchantment} is not in the game data", UnknownModError)
+        info = enchant_info(mod)
+        if info is None:
+            if is_removed_enchant(mod):
+                raise self._error(f"enchantment {mod.id} was removed from the enchant pool in 3.29.0", kind)
+            raise self._error(
+                f"enchantment {mod.id} is not an enchantment: it is in no Tempering or Tailoring pool"
+                " and is not a Harvest quality enchant",
+                kind,
+            )
+        held = enchant_class(base)
+        if held is None:
+            raise self._error(
+                f"enchantment {mod.id} cannot sit on a base of item class {base.item_class}:"
+                " only weapons and body armour hold an enchantment",
+                kind,
+            )
+        if info.item_class is not held:
+            raise self._error(
+                f"enchantment {mod.id} is a {info.item_class.value} enchantment, but the base is a {held.value}", kind
+            )
 
     def _check_capacity(self, data: GameData) -> None:
         room = self.capacity(data)

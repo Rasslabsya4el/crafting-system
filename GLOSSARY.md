@@ -5,7 +5,7 @@ A planner for Path of Exile 1 item crafting: for a target item it finds the craf
 ## Items and modifiers
 
 **Concrete item**:
-One specific item: its base, item level, influence, rarity and every mod with its tier, roll and origin.
+One specific item: its base, item level, influence, rarity, Memory Strand count and every mod with its tier, roll and origin.
 _Avoid_: real item, full item
 
 **Mod**:
@@ -69,6 +69,17 @@ The stronger version of a top-tier influenced mod, reachable only through the Or
 **Pool**:
 The mods an action can add to a given item at a given moment, each with its weight.
 _Avoid_: modpool
+
+**Memory Strands** (the count, `s`):
+A number from 0 to 100 on an item. With one or more, every random mod draw that cuts sees only the highest tiers of each tier table; crafts spend a random part of the count (ADR-0040, ADR-0041).
+_Avoid_: strand level, memory level (that is the trade filter's name)
+
+**Tier cut**:
+The removal of the lowest tiers from the tiers a draw can roll, by the item's strand count and a Foulborn orb's `+75`: `K = floor(100 (T - 1) / D) + 1` of `T` tiers stay. 0 strands without a Foulborn orb is no cut (ADR-0040).
+_Avoid_: tier cull, tier filter
+
+**Cut class**:
+A range of strand counts with the same kept tiers in every tier table (22 of them up to 13 tiers). The pool signature reads it; the state stores the exact count (ADR-0040).
 
 ## Targets
 
@@ -281,6 +292,23 @@ _Avoid_: guide policy, manual policy
 One stage of v1's action set (B1 to B4), finished when its benchmark routes pass.
 _Avoid_: phase, milestone
 
+**Spend**:
+The strands a craft uses up: a random whole number from 0 to a ceiling that depends on the action, taken after the cut and never below 0 (ADR-0041).
+_Avoid_: consumption, depletion
+
+**Foulborn orb**:
+A Foulborn Orb of Augmentation, Regal Orb or Exalted Orb: its plain version with the cut denominator raised by 75 and its own spend. Bought at the market price; never made (ADR-0043).
+
+**Orb of Remembrance**:
+Sets the strand count of a normal equipment item to a random number from 10 to 100 (a normal law, mean 35, deviation 25), whatever the count was; it can be used again (ADR-0043).
+
+**Orb of Unravelling**:
+Sets the strand count to 0 and gives each eligible explicit mod a chance, rising with the count, to move to a higher tier of its own table, in place. Its odds are a player's fit, marked approximate (ADR-0044).
+_Avoid_: Orb of Unraveling
+
+**Weight reading**:
+One of the three ways the sources give for what the kept tiers of a mod type weigh after a cut: redistribution (the plan), refactored weight, delete only. A rule axis (ADR-0042).
+
 ## State and solving
 
 **Compressed state**:
@@ -342,6 +370,42 @@ _Avoid_: estimate (the type is `Estimate`, the act is the pilot count)
 
 **Ladder**:
 The coarse levels tried in order when the exact run is forecast to be too long: all irrelevant families in one group, then groups of 8, then groups of 4, then the tail cut at `theta` 1e-2, 1e-3 and 1e-4 over the finest of those that fits the time. The first whose certified gap is at most 1% is the answer; if none is, the narrowest interval is shown with the message that it is wider (ADR-0023).
+
+## Foresight
+
+**Hinekora's Lock** (the Lock):
+A currency put on one item that lets it show the exact result of the next currency used on it. It is used up when applied, refused on corrupted, mirrored and unmodifiable items, and priced from the price file (ADR-0054, ADR-0056).
+_Avoid_: lock (alone; the Lock is a currency, a metamod "lock" is a bench craft)
+
+**Foresight** (a foreseeing item):
+The state of an item under a Lock: hovering a currency shows its preview, and any change to the item ends it. The solver never stores it; Lock, look and react are one action (ADR-0054).
+_Avoid_: lock state, preview mode
+
+**Preview**:
+The exact result a currency would give on a foreseeing item. It is fixed for the Lock's life, one per currency item, and independent of the other currencies' previews (owner, from play).
+_Avoid_: estimate, simulation
+
+**Peek**:
+The solver's action kind for the Lock: it pays the Lock's price, throws every option's outcome at once, then takes the best result or gives up. Its value is a sorted-tail sweep (ADR-0054).
+_Avoid_: lookahead, oracle action
+
+**Option** and **fallback**:
+An option of a Peek is a previewable action at the state, one per currency item. The fallback is the best action that is not an option: an unpreviewed action, the restart, or a burn.
+
+**Previewable**:
+What an action kind declares about the Lock: `named` (a source or the owner names it), `by_item_text` (only the Lock's text covers it, marked approximate) or `no`, the default, so it is applied blind (ADR-0055).
+_Avoid_: lockable
+
+**Acceptance set**:
+The reaction of a Peek stored as a list of (option, result state) pairs the player takes, ranked, never as a threshold on a value. Under a fixed set the Peek expands into ordinary actions with pseudo-states (ADR-0054).
+_Avoid_: threshold, decision rule
+
+**Burn** and **relock**:
+A burn is a cheap currency that changes no mod and ends the foresight, used to give a Lock up; a relock puts a new Lock on and throws every preview again. Each relock pays the Lock's price once more (ADR-0056).
+_Avoid_: reset
+
+**Lock line**:
+The line every plan prints about the Lock: whether it was used, and the price N below which one Lock on a step of the plan would already lower its cost (ADR-0057).
 
 ## Evidence
 
