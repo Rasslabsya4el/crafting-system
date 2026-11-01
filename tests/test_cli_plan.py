@@ -14,7 +14,7 @@ from cli_support import run as run_command
 from targets_support import DATA
 
 from crafting_system.actions import ChaosOrb, HarvestReforge
-from crafting_system.cli import Offer, PlanError, default_offers, make_plan
+from crafting_system.cli import DroppedOffer, Offer, PlanError, build_report, default_offers, make_plan, policy_document, render_text
 from crafting_system.items import CatalystType
 from crafting_system.prices import write_price_file
 from crafting_system.rules import get_rule
@@ -138,6 +138,34 @@ def test_an_action_without_a_price_is_dropped_and_listed(tmp_path, capsys):
     assert dropped["Harvest Reforge Lightning"] == [LIFEFORCE]  # the other reforges lack their own lifeforce
     assert document["states"][0]["action"] == "Chaos Orb"
     assert "Dropped for lack of a price: Harvest Reforge Lightning" in capsys.readouterr().out
+
+
+def test_three_dropped_actions_are_each_printed_on_their_own_line(target):
+    plan = make_plan(DATA, target, price_file())
+    dropped = tuple(DroppedOffer(label, (LIFEFORCE,)) for label in ("Alpha", "Beta", "Gamma"))
+
+    text = render_text(build_report(dataclasses.replace(plan, dropped=dropped), DATA))
+
+    for label in ("Alpha", "Beta", "Gamma"):
+        assert f"Dropped for lack of a price: {label} (no price for {LIFEFORCE})" in text
+    assert "actions (no price for" not in text
+
+
+def test_many_dropped_actions_are_grouped_into_one_line_per_missing_price(target):
+    plan = make_plan(DATA, target, price_file())
+    tangled = [DroppedOffer(f"Tangled set {n}", ("Tangled Fossil",)) for n in range(1, 10)]
+    hollow = [DroppedOffer(f"Hollow set {n}", ("Hollow Fossil",)) for n in range(1, 4)]
+    # interleaved, so the lines must come out grouped by the missing price, not by the order of the list
+    dropped = (tangled[0], hollow[0], tangled[1], hollow[1], tangled[2], hollow[2]) + tuple(tangled[3:])
+
+    report = build_report(dataclasses.replace(plan, dropped=dropped), DATA)
+    lines = [line for line in render_text(report).splitlines() if line.startswith("Dropped for lack of a price")]
+
+    assert lines == [
+        "Dropped for lack of a price, 9 actions (no price for Tangled Fossil): Tangled set 1, Tangled set 2, Tangled set 3, ...",
+        "Dropped for lack of a price, 3 actions (no price for Hollow Fossil): Hollow set 1, Hollow set 2, Hollow set 3",
+    ]
+    assert len(policy_document(report)["dropped_actions"]) == 12
 
 
 def test_a_plan_with_no_priced_action_is_refused(target):

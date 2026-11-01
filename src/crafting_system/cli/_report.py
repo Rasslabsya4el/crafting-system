@@ -38,6 +38,8 @@ GOAL = "goal"
 DEAD_END = "dead end"
 MAX_TREE_DEPTH = 40
 
+MAX_DROPPED_LINES = 8  # more dropped actions than this are told in one line per missing price
+
 
 @dataclass(frozen=True)
 class Transition:
@@ -248,8 +250,16 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     )
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
     lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
-    for dropped in plan.dropped:
-        lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")
+    if len(plan.dropped) <= MAX_DROPPED_LINES:
+        for dropped in plan.dropped:
+            lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")
+    else:  # thousands of fossil sets can share one missing price: one line for each missing price
+        by_missing: dict[tuple[str, ...], list[str]] = {}
+        for dropped in plan.dropped:
+            by_missing.setdefault(dropped.missing, []).append(dropped.label)
+        for missing, labels in by_missing.items():
+            shown = ", ".join(labels[:3]) + (", ..." if len(labels) > 3 else "")
+            lines.append(f"Dropped for lack of a price, {len(labels)} actions (no price for {', '.join(missing)}): {shown}")
     for left in plan.left_out:
         lines.append(f"Not offered, {len(left.labels)} actions: {left.reason}")
     lines.append(f"Blocks solved: {plan.approximation.blocks:,}" if plan.approximation else f"States solved: {len(plan.solution.values)}")

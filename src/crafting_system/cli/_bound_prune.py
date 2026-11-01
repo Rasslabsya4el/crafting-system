@@ -93,6 +93,7 @@ from crafting_system.abstraction import (
     reach_bound,
 )
 from crafting_system.actions import ActionError
+from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.solver import ConvergenceError, Solution, solve
 
@@ -180,6 +181,36 @@ def goal_set(goal, start: CompressedState, finished_by_crafts: frozenset[str]) -
     return tuple(kept or open_leaves)
 
 
+def merge_twins(
+    data: GameData, item: Item, priced: Sequence[PricedOffer]
+) -> tuple[list[PricedOffer], list[tuple[str, str]]]:
+    """`priced` without the offers that have a cheaper twin (equal non-None `twin_key` on `item`), and the (dropped, kept) labels.
+
+    Exact (see TWINS above). `restart` has no twin. Used by the solve and by the forecast of a plan with a budget, which
+    must not pay for 10,000 fossil sets that fall into a few thousand classes.
+    """
+    first_of: dict[object, int] = {}  # twin key -> position of the cheapest offer so far
+    twins: list[tuple[str, str]] = []
+    dropped: set[int] = set()
+    for position, offer in enumerate(priced):
+        if isinstance(offer.offer.action, BuyStartItem):
+            continue
+        key = offer.offer.action.twin_key(data, item)
+        if key is None:
+            continue
+        kept = first_of.get(key)
+        if kept is None:
+            first_of[key] = position
+        elif offer.cost < priced[kept].cost:
+            twins.append((priced[kept].label, offer.label))
+            dropped.add(kept)
+            first_of[key] = position
+        else:
+            twins.append((offer.label, priced[kept].label))
+            dropped.add(position)
+    return [offer for position, offer in enumerate(priced) if position not in dropped], twins
+
+
 def solve_pruned(
     abstraction: Abstraction,
     start: CompressedState,
@@ -212,26 +243,7 @@ def solve_pruned(
         clock = now
 
     # 1. twins
-    first_of: dict[object, int] = {}  # twin key -> position of the cheapest offer so far
-    twins: list[tuple[str, str]] = []
-    dropped: set[int] = set()
-    for position, offer in enumerate(priced):
-        if isinstance(offer.offer.action, BuyStartItem):
-            continue
-        key = offer.offer.action.twin_key(data, item)
-        if key is None:
-            continue
-        kept = first_of.get(key)
-        if kept is None:
-            first_of[key] = position
-        elif offer.cost < priced[kept].cost:
-            twins.append((priced[kept].label, offer.label))
-            dropped.add(kept)
-            first_of[key] = position
-        else:
-            twins.append((offer.label, priced[kept].label))
-            dropped.add(position)
-    remaining = [offer for position, offer in enumerate(priced) if position not in dropped]
+    remaining, twins = merge_twins(data, item, priced)
     mark("twins")
 
     cache: dict = {}
