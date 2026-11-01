@@ -271,6 +271,18 @@ def test_the_kind_is_registered_for_items_that_can_hold_an_implicit_and_is_no_pl
     assert BlessedOrb() not in catalog(DATA, belt(30), planner_only=True)
 
 
+def test_the_kind_does_not_list_an_item_the_orb_would_refuse():
+    # a stored fixed implicit has no range to reroll, and an Eldritch implicit is not offered (the same refusals as `outcomes`)
+    stored_fixed = _item(FIXED_RING, implicits=(ImplicitMod(FIXED, 0, (3,)),))
+    assert catalog(DATA, stored_fixed, names={"blessed-orb"}) == ()
+    eldritch = implicit(AVOID_SHOCK_1, 1)
+    assert catalog(DATA, Item.build(DATA, base_id=BOOTS, item_level=84, rarity=Rarity.RARE, implicits=(eldritch,)), names={"blessed-orb"}) == ()
+    with_eldritch = _item(BELT, implicits=(eldritch, ImplicitMod(STRENGTH, 0, (30,))))
+    assert catalog(DATA, with_eldritch, names={"blessed-orb"}) == ()
+    mixed = _item(RING, implicits=(ImplicitMod(FIXED, 0, (3,)), ImplicitMod(TWO_STAT, 0, (1, 5))))
+    assert catalog(DATA, mixed, names={"blessed-orb"}) == (BlessedOrb(),)  # a stored ranged implicit next to a fixed one is listed
+
+
 def test_the_orb_names_its_claims_and_marks_the_ones_no_other_source_settles():
     claims = BlessedOrb().claims(DATA)
     assert {

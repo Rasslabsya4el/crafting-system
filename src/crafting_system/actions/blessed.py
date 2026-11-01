@@ -166,5 +166,8 @@ def _blessed_orb(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)
     if base is None or item.corrupted:
         return
-    if item.implicits or any(mod_id in data.mods and has_range(data.mods[mod_id]) for mod_id in base.implicits):
+    if any(eldritch_side(data.mods[entry.mod_id]) is not None for entry in item.implicits):
+        return  # not offered: no admitted claim says what the Orb does to an Eldritch implicit (`outcomes` refuses it too)
+    stored = (data.mods[entry.mod_id] for entry in item.implicits)
+    if any(has_range(mod) for mod in stored) or any(mod_id in data.mods and has_range(data.mods[mod_id]) for mod_id in base.implicits):
         yield BlessedOrb()

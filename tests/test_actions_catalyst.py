@@ -310,6 +310,7 @@ def test_the_value_is_rounded_down_in_the_stored_unit():
     assert scale_value(12, 20) == 14  # 14.4: R06's "14% increased attributes" needs the maximum roll 12
     assert scale_value(7, 5) == 7 and scale_value(8, 5) == 8 and scale_value(20, 5) == 21
     assert scale_value(5, 0) == 5 and scale_value(0, 20) == 0
+    assert scale_value(13, 20) == 15 and scale_value(9, 20) == 10  # 15.6 and 10.8: down, not to the nearest
 
 
 @pytest.mark.parametrize("percent", range(0, 21))
