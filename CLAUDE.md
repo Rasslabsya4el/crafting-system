@@ -25,7 +25,7 @@ Each helper prompt names its ticket (`#N`), the files or worktree, and the resul
 
 Model of the main chat: Opus for ideas, grills and decisions; Sonnet 5.5 for a stretch of plain implementation. A session started for one ticket runs on Sonnet 5.5 with effort high.
 
-Landing a ticket: its session opens the PR with `Closes #N`, turns Auto-fix on itself and never merges. The main chat merges the PR itself once CI is green on Ubuntu and Windows, the `checker` has passed it and its tests cover the ticket's "Done when"; then it runs the tests on `main`, adds the ticket to the map's decisions and archives the session. Nobody asks the owner about Auto-fix or merging.
+Landing a ticket: its session opens the PR with `Closes #N`, turns Auto-fix on itself and never merges. The main chat merges the PR itself once the integration run (a `workflow_dispatch` of `ci.yml` on an `integ/...` branch holding `main` plus the PRs) is green on Ubuntu and Windows, the `checker` has passed it and its tests cover the ticket's "Done when"; a PR's own CI runs Ubuntu only and is feedback for its session, and a session that needs Windows early dispatches `ci.yml` on its branch; then it runs the tests on `main`, adds the ticket to the map's decisions and archives the session. Nobody asks the owner about Auto-fix or merging. A push to `main` starts no CI run: `main` is verified by the integration run, whose tree must equal `main` after landing (`gh workflow run ci.yml --ref main` tests it on demand; `docs/ci.md`).
 
 One task per chat. The state of the work lives in the GitHub issues, so a `/clear` between tasks loses nothing.
 

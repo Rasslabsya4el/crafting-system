@@ -1,15 +1,15 @@
 name: CI
 
-# The whole suite with the real game data, on Ubuntu and Windows, in 8 shards each (16 jobs, ticket #165); a shard runs
-# 4 pytest processes at once. Tests are split in whole groups (a module, or a module and one route), so a route is solved
-# once. See docs/ci.md.
-# `CI summary` is the one check to wait for: green only when every shard of both systems passed.
+# The whole suite with the real game data in 8 shards per system; a shard runs 4 pytest processes at once. Tests are
+# split in whole groups (a module, or a module and one route), so a route is solved once. See docs/ci.md.
+# A `pull_request` run is Ubuntu only (8 jobs): it is feedback for the PR's own session, and no PR lands on it. Windows
+# runs in the integration run (ticket #321), a `workflow_dispatch` of this file on the integration branch: both
+# systems, 16 jobs (ticket #165). Dispatch it on any branch to get Windows feedback early.
+# `CI summary` is the one check to wait for: green only when every shard of every system that ran passed.
 
 on:
   pull_request:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:  # also the way to test `main` (or any ref) on demand; a push to `main` starts no run (ticket #308)
 
 permissions:
   contents: read
@@ -26,7 +26,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        # a PR push is Ubuntu only; a dispatch is Ubuntu and Windows (keep in step with `--systems` of the summary below)
+        os: ${{ github.event_name == 'pull_request' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest","windows-latest"]') }}
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
@@ -60,7 +61,8 @@ jobs:
           path: results
       - name: Totals, skips, and the shard check
         run: >
-          python3 .github/scripts/ci_summary.py results --shards 8 --systems ubuntu-latest,windows-latest
+          python3 .github/scripts/ci_summary.py results --shards 8
+          --systems "${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'ubuntu-latest,windows-latest' }}"
           --min-tests 1000 --job-result "${{ needs.test.result }}" --merged-durations merged/shard_durations.json
       - name: Keep the measured seconds (commit them as tests/shard_durations.json to rebalance)
         if: always()

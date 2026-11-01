@@ -145,19 +145,30 @@ def _named_text(name: str, game_mods: Iterable[Mod]) -> str | None:
     return None
 
 
+EXPLICIT_GENERATION_TYPES = frozenset({"prefix", "suffix"})
+
+
+def named_mods(mod: BuyMod, game_mods: Iterable[Mod]) -> tuple[Mod, ...]:
+    """The mods a family id or mod id in `mod.stat` may name: an implicit buy mod names the implicit mods only (the corrupted
+    and Eldritch ones and the base's own), any other buy mod any mod, as before."""
+    if not mod.implicit:
+        return tuple(game_mods)
+    return tuple(found for found in game_mods if found.generation_type not in EXPLICIT_GENERATION_TYPES)
+
+
 def resolve_buy_mod(mod: BuyMod, game_mods: Iterable[Mod], stats: TradeStats) -> StatFilter:
     """The trade stat filter for a buy mod.
 
     `mod.stat` is a repoe family id (the text comes from the mods of that family), a mod id (the text
     comes from that one mod, so it can name one member of a family whose mods have different texts),
     or an English stat text such as `+1 to Level of all Lightning Skill Gems`. The group is
-    `fractured` for a fractured mod, `explicit` otherwise; exactly one id in that group must carry
-    the text.
+    `fractured` for a fractured mod, `implicit` for an implicit one (a corrupted implicit: a family id or mod id is then looked
+    up among the implicit mods only), `explicit` otherwise; exactly one id in that group must carry the text.
     """
-    text = _named_text(mod.stat, game_mods)
+    text = _named_text(mod.stat, named_mods(mod, game_mods))
     if text is None:
         text = mod.stat
-    group = "fractured" if mod.fractured else "explicit"
+    group = "fractured" if mod.fractured else "implicit" if mod.implicit else "explicit"
     ids = stats.ids_for(group, text)
     if not ids:
         hint = ""

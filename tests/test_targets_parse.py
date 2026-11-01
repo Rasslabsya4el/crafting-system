@@ -163,6 +163,7 @@ def test_the_start_item_rarity_and_corruption_are_read():
         influence: [hunter]
         requirements:
           - family: LightningResistance
+        allow_corrupted: true
         start_item:
           rarity: Magic
           corrupted: true

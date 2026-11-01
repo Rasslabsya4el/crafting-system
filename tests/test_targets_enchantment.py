@@ -215,7 +215,7 @@ def test_the_start_item_loads_its_enchantment_by_id_or_by_exact_text():
 
 
 def test_the_start_item_enchantment_comes_with_its_other_fields():
-    start = parse(f"start_item:\n  rarity: magic\n  corrupted: true\n  enchantment: {LIFE}\n").start_item
+    start = parse(f"allow_corrupted: true\nstart_item:\n  rarity: magic\n  corrupted: true\n  enchantment: {LIFE}\n").start_item
     assert (start.rarity, start.corrupted, start.enchantment) == (Rarity.MAGIC, True, LIFE)
 
 

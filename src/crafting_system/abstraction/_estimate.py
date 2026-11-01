@@ -13,7 +13,7 @@ expanded) but pays a kernel only where one is needed:
   does not call their kernel at all. It decides their legality itself, from the sets of families and the
   free slots (the rules of the bench: not on a corrupted or normal item, not on an empty one, not when a
   mod of the item shares a family with the craft, not on a full side, not when the item already holds
-  the crafted mods it may: one, or three with the multimod; Remove Crafted Mods needs a crafted mod and a mod left over).
+  the crafted mods it may: one, two with the enchantment of the extra crafted slot, three with the multimod; Remove Crafted Mods needs a crafted mod and a mod left over).
 
 That second logic is written apart from `BenchCraft.outcomes` on purpose: `tests/test_abstraction_estimate.py`
 compares its count with the real expansion on random crafts and starts;
@@ -35,19 +35,16 @@ repeated kernel call per outcome (`kernel_rate`; the first walked kernel is meas
 import time
 from collections import deque
 from collections.abc import Callable, Hashable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
-from crafting_system.actions import Action, ActionError
+from crafting_system.actions import Action, ActionError, crafted_limit_of
 from crafting_system.items import Metamod, Rarity, Side, capacity
-from crafting_system.rules import get_rule
 
 from ._kernel import Abstraction, integer_weights
 from ._kinds import ALIKE, base_kind, held_families
 from ._state import CompressedState, best_of
 
-ONE_CRAFTED_MOD = get_rule("bench_craft.one_crafted_mod_by_default")
-MULTIMOD_LIMIT = get_rule("metamods.multimod_raises_crafted_limit")
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 DEFAULT_LIMIT = 400_000
 ADDING_LIMIT = 20_000  # the state limit for a query with walked actions: each state there pays a real kernel call
@@ -122,9 +119,11 @@ def _shape(data, action: Action) -> str:
     """How the pilot treats `action`: "reroll" (erases the junk), "craft" (a bench craft), "removal" (Remove Crafted Mods) or "walked"."""
     reads = action.reads(data)
     if not reads.junk:
-        return "reroll"
+        return "reroll"  # its real kernel is run once per key, which carries the implicits, the quality and the offer (`state.held`)
     adds = action.adds(data, None)
     named = adds.named
+    if reads.item_state or adds.item_state:
+        return "walked"  # the closed forms of a craft and of a removal change the slots only: an action that touches the implicits, the quality or the offer runs its real kernel
     if reads.families is not None and not reads.pool_weight and adds.crafted and not adds.draws and named is not None and len(named) == 1:
         return "craft"
     if reads.needs_crafted and not reads.pool_weight and named == frozenset() and not adds.draws:
@@ -157,7 +156,10 @@ class _Pilot:
         self.walked: dict[Action, int] = {}  # action -> the number of kernels a coarse level needs for it (its variants)
         for action in actions:
             self._classify(action)
-        self.limit_crafted = ONE_CRAFTED_MOD.value
+        # the limit of crafted mods by what the item holds: the enchantment is a constant of the problem, the multimod is read from the state
+        self.limit_crafted = {
+            multimod: crafted_limit_of(self.data, multimod=multimod, enchantment=abstraction.enchantment) for multimod in (False, True)
+        }
         self._kernels: dict[Hashable, Mapping[CompressedState, Fraction] | None] = {}
         self._successors: dict[int, tuple[CompressedState, ...]] = {}  # id of a memoised kernel -> its states, listed once
         self._slot_metamods: dict[object, frozenset[str]] = {}
@@ -203,10 +205,10 @@ class _Pilot:
 
     def _key(self, keeps_crafted: bool, state: CompressedState) -> Hashable:
         if self.abstraction.models_metamods:  # a lock keeps the junk of its side, so every slot decides the kernel
-            return (None, state.flags, state.fractured, state.slots)
+            return (None, state.flags, state.fractured, state.slots, state.held)
         if keeps_crafted:
-            return (True, state.flags, state.fractured, tuple(slot for slot in state.slots if slot.crafted))
-        return (False, state.flags, state.fractured, self._metamods(state))
+            return (True, state.flags, state.fractured, tuple(slot for slot in state.slots if slot.crafted), state.held)
+        return (False, state.flags, state.fractured, self._metamods(state), state.held)
 
     def kernel_of(self, action: Action, keeps_crafted: bool, state: CompressedState) -> Mapping[CompressedState, Fraction] | None:
         """The real kernel of a reroll on `state`, once per key; None when the action refuses there."""
@@ -294,14 +296,14 @@ class _Pilot:
         if flags.corrupted or flags.rarity is Rarity.NORMAL or not (state.fractured or state.slots):
             return
         held, used, crafted = self._holds(state)
-        limit = MULTIMOD_LIMIT.value if Metamod.MULTIPLE_CRAFTED_MODS.value in self._metamods(state) else self.limit_crafted
-        if self.crafts and crafted < limit:  # the multimod lifts the limit of crafted mods from one to three (ticket #68)
+        limit = self.limit_crafted[Metamod.MULTIPLE_CRAFTED_MODS.value in self._metamods(state)]
+        if self.crafts and crafted < limit:  # the multimod and the extra crafted slot lift the limit of crafted mods (ticket #68, ADR-0053)
             room = capacity(self.data, self.abstraction.base_id, flags.rarity)
             for craft in self.crafts:
                 if used[craft.side] < room.of(craft.side) and not (craft.families & held):
                     status = tuple(max(a, b) for a, b in zip(state.status, craft.slot.contribution))
                     slots = tuple(sorted((*state.slots, craft.slot), key=lambda slot: slot.key))
-                    yield craft.action, (CompressedState(flags, state.fractured, status, slots),), None
+                    yield craft.action, (replace(state, status=status, slots=slots),), None
         if crafted and self.removals:
             kept = [slot for slot in state.slots if not slot.crafted]
             if state.fractured or kept:
@@ -309,7 +311,7 @@ class _Pilot:
                     len(state.status),
                     [entry.contribution for entry in state.fractured] + [slot.contribution for slot in kept],
                 )
-                after = CompressedState(flags, state.fractured, status, tuple(kept))
+                after = replace(state, status=status, slots=tuple(kept))
                 for action in self.removals:
                     yield action, (after,), None
 

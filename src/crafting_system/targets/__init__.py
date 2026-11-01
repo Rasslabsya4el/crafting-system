@@ -25,6 +25,8 @@ Keys (unknown keys are errors, with a close-match hint):
         mod: AvoidShockEldritchImplicit3   # optional: one implicit mod; the only way to name an "in your Presence" variant
         min_grade: 3        # optional: whole number 1 (Lesser) to 6 (Perfect); Eldritch implicits only
         min_roll: 40        # optional: as for a requirement, the base roll the item stores
+        corrupted: true     # optional (ADR-0036): resolve the entry among the corrupted implicit pool of the base at `item_level`
+                            # (a Vaal Orb's implicit), and only there; the target then asks for a corrupted item
     quality:                # optional: the catalyst quality (ADR-0029)
       type: intrinsic       # abrasive, accelerating, fertile, imbued, intrinsic, noxious, prismatic, tempering,
                             # turbulent, unstable, sinistral or dextral (any case)
@@ -57,6 +59,8 @@ Keys (unknown keys are errors, with a close-match hint):
     start_price: R12 start amulet   # optional: the name of the start item in the price file (what it costs to get)
     price_file: prices.json # optional path; a relative path counts from the target file's folder
     actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it can use)
+    allow_corrupted: true   # optional (ADR-0036): a corrupted item may be the goal even with no corrupted implicit; without this key
+                            # and without a `corrupted: true` implicit, a corrupted item is never a goal
 
 Exactly one of `family` and `stat` names a requirement's mod. `stat` is compared after normalising both
 sides (a range such as `(10-24)` becomes `#`, `[X|Y]` markup becomes `Y`), so `+# to maximum Life`
@@ -72,6 +76,12 @@ is set. The members of an `at_least` group are checked independently, so one mod
 them (say a family and a stat text that select the same mod); groups may nest 20 levels deep. Merge keys
 (`<<`), anchors (`&name`) and aliases (`*name`) are not supported.
 Whether a mod can spawn on the base is not checked here; that belongs to `actions`.
+
+Corruption (ADR-0036): a corrupted implicit that the pool cannot give at `item_level`, more corrupted implicits than the corrupting
+kinds of `actions:` give (`vaal` and `fossil-set` one, `locus` two; not checked when the target buys its item, that is when it names
+a `start_price` or its start item is corrupted), two of one mod group (the Locus never draws them), more implicits in all than the item
+holds after the corrupting action, and a corrupted start item under a target that neither asks nor allows are errors when the file
+is read. `Target.is_met_by` is false for a corrupted item unless the target asks for a corrupted implicit or allows one.
 """
 
 from pathlib import Path

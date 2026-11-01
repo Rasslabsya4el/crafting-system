@@ -47,8 +47,9 @@ class Memoized:
         self._cache: dict[tuple, object] = {}
 
     def outcomes(self, data: GameData, item: Item) -> object:
-        if isinstance(self.action, Action) and self.action.reads(data).junk:
-            return self.action.outcomes(data, item)  # it reads the other mods of the item, so the key above is not enough
+        reads = self.action.reads(data) if isinstance(self.action, Action) else None
+        if reads is not None and (reads.junk or reads.item_state):
+            return self.action.outcomes(data, item)  # it reads the other mods, the implicits, the quality or the offer of the item, so the key below is not enough
         key = (
             item.base_id, item.item_level, item.rarity, item.influences, item.corrupted,
             item.fractured_mods, item.crafted_mods,
