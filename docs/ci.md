@@ -1,7 +1,14 @@
 # CI: the whole suite on GitHub (ticket #165)
 
-Every pull request and every push to `main` runs the full test suite, the real-data tests included, on GitHub's
+Every pull request runs the full test suite, the real-data tests included, on GitHub's
 machines: Ubuntu and Windows, 8 shards each, 16 jobs at once. Nothing needs the 35-minute local run any more.
+
+## How `main` is verified
+
+A push to `main` starts no CI run (ticket #308): the run would repeat a result already known. `main` is verified by
+the integration run: the main chat merges only a head, or an integration branch, whose tree it has just tested in CI,
+and checks that `main` equals that tested tree after landing. To test `main` (or any ref) on demand, start the
+workflow by hand: `gh workflow run ci.yml --ref main`.
 
 ## What one run does
 
