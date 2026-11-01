@@ -9,12 +9,13 @@ import dataclasses
 import json
 
 import pytest
+from abstraction_pool import FIRE_RESIST
 from cli_support import R12, price_file
 from contract_support import CONTRACT_DATA, check_action, check_block_invariance, contract_pairs, fixture_blocks, fixture_items
 from targets_support import DATA
 
 from crafting_system.abstraction import Goal, Wanted
-from crafting_system.actions import ActionError, Reads, RegalOrb, catalog, kinds
+from crafting_system.actions import ActionError, ExaltedOrb, NotApplicableError, Reads, RegalOrb, catalog, kinds
 from crafting_system.cli import PricedOffer, make_plan, parse_route
 from crafting_system.cli._offers import offer_of, offers_for
 from crafting_system.targets import load_target
@@ -94,15 +95,31 @@ def test_the_declared_block_invariant_kinds_are_compared_across_the_members_of_b
     compared = {}
     for kind, action, _ in PAIRS:
         compared[kind] = compared.get(kind, 0) + check_block_invariance(action)
-    for kind in ("chaos-orb", "harvest-reforge", "bench-craft", "remove-crafted-mods", "fossil-set"):
+    for kind in ("chaos-orb", "harvest-reforge", "bench-craft", "remove-crafted-mods", "fossil-set", "annulment-orb"):
+        assert compared[kind] > 0, kind
+    # the additions declare variants: the backups of the members are compared with those of the variants
+    for kind in ("augmentation-orb", "regal-orb", "exalted-orb"):
         assert compared[kind] > 0, kind
     # every other kind refuses by default: nothing was declared, nothing compared
-    for kind in ("alchemy-orb", "transmutation-orb", "alteration-orb", "augmentation-orb", "regal-orb", "scouring-orb"):
+    for kind in ("alchemy-orb", "transmutation-orb", "alteration-orb", "scouring-orb"):
         assert compared[kind] == 0, kind
 
 
-def test_block_invariance_is_refused_by_default():
+def test_block_invariance_and_variants_are_refused_by_default():
     assert Reads().block_invariant is False and Reads.nothing().block_invariant is False
+    assert Reads().variants is False and Reads.adding().variants is False and Reads.adding().block_invariant is False
+
+
+@dataclasses.dataclass(frozen=True)
+class UndeclaredAddition(RegalOrb):
+    """An addition that declares neither block invariance nor variants: the coarse state must refuse it."""
+
+    def reads(self, data) -> Reads:
+        return Reads.adding()
+
+
+def test_an_addition_that_declares_neither_block_invariance_nor_variants_is_refused_by_the_coarse_state():
+    assert check_block_invariance(UndeclaredAddition()) == 0
 
 
 @dataclasses.dataclass(frozen=True)
@@ -117,6 +134,21 @@ class WronglyInvariantRegal(RegalOrb):
 class InvariantAndReadsEveryFamily(RegalOrb):
     def reads(self, data) -> Reads:
         return Reads(junk=True, families=None, block_invariant=True)
+
+
+@dataclasses.dataclass(frozen=True)
+class WronglyVariantExalted(ExaltedOrb):
+    """An Exalted Orb that claims variants but refuses an item that holds Fire Resistance: a member that is neither extreme."""
+
+    def outcomes(self, data, item):
+        if any(FIRE_RESIST in mod.mod_id for mod in item.mods):
+            raise NotApplicableError("not on an item with fire resistance")
+        return super().outcomes(data, item)
+
+
+def test_a_wrong_claim_of_variants_is_caught_where_a_member_that_is_not_an_extreme_decides_the_legality():
+    with pytest.raises(AssertionError):
+        check_block_invariance(WronglyVariantExalted())
 
 
 def test_a_wrong_block_invariance_claim_is_caught():
