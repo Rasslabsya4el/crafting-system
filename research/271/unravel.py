@@ -321,32 +321,54 @@ def main() -> None:
     }
     # which reading can the data reject? replay the same mods under each reading (parametric bootstrap on the distinct
     # candidate-weight lists, 4,000 replays) and see how often a replay gives a log-likelihood difference B - A as far
-    # from its own expectation as the observed one
-    unique = defaultdict(lambda: np.zeros(0, dtype=int))
-    for _, weights, j, _, _, _ in dest:
+    # from its own expectation as the observed one; once for all mods and once for each class of item
+    def replay_for(selected):
+        unique = {}
+        for i, weights, j, _, _, _ in selected:
+            if len(set(weights)) > 1:
+                unique.setdefault(tuple(weights), np.zeros(len(weights), dtype=int))[j] += 1
+        keys = list(unique)
+        if not keys:
+            return None
+        pa_k = [np.array(k) * np.arange(1, len(k) + 1) for k in keys]
+        pa_k = [v / v.sum() for v in pa_k]
+        pb_k = [np.cumsum(np.array(k)) for k in keys]
+        pb_k = [v / v.sum() for v in pb_k]
+        delta_k = [np.log(b) - np.log(a) for a, b in zip(pa_k, pb_k)]
+        counts_k = [unique[k] for k in keys]
+        observed = float(sum((c * dk).sum() for c, dk in zip(counts_k, delta_k)))
+        rng = np.random.default_rng(271)
+        out = {"mods_with_unequal_weights": int(sum(c.sum() for c in counts_k)), "distinct_weight_lists": len(keys),
+               "observed_loglik_B_minus_A": observed}
+        for name, probs in (("under_A", pa_k), ("under_B", pb_k)):
+            sims = np.zeros(4000)
+            for rep in range(4000):
+                sims[rep] = sum((rng.multinomial(int(c.sum()), p) * dk).sum() for c, p, dk in zip(counts_k, probs, delta_k))
+            out[name] = {"mean": float(sims.mean()), "sd": float(sims.std()),
+                         "share_of_replays_as_favourable_to_B_as_observed": float((sims >= observed).mean()),
+                         "share_of_replays_as_favourable_to_A_as_observed": float((sims <= observed).mean())}
+        return out
+
+    result["destination_replay"] = replay_for(dest)
+    result["destination_replay_by_class"] = {}
+    for cls in sorted({rows[i]["item_class"] for i, *_ in dest}):
+        got = replay_for([x for x in dest if rows[x[0]]["item_class"] == cls])
+        if got is not None:
+            result["destination_replay_by_class"][cls] = got
+    # which mod types carry the difference between B and A
+    by_group = defaultdict(lambda: [0, 0.0, None])
+    for i, weights, j, _, _, _ in dest:
         if len(set(weights)) > 1:
-            key = tuple(weights)
-            if key not in unique or len(unique[key]) == 0:
-                unique[key] = np.zeros(len(weights), dtype=int)
-            unique[key][j] += 1
-    keys = list(unique)
-    pa_k = [np.array(k) * np.arange(1, len(k) + 1) for k in keys]
-    pa_k = [v / v.sum() for v in pa_k]
-    pb_k = [np.cumsum(np.array(k)) for k in keys]
-    pb_k = [v / v.sum() for v in pb_k]
-    delta_k = [np.log(b) - np.log(a) for a, b in zip(pa_k, pb_k)]
-    counts_k = [unique[k] for k in keys]
-    observed_delta = float(sum((c * dk).sum() for c, dk in zip(counts_k, delta_k)))
-    rng = np.random.default_rng(271)
-    replay = {}
-    for name, probs in (("under_A", pa_k), ("under_B", pb_k)):
-        sims = np.zeros(4000)
-        for rep in range(4000):
-            sims[rep] = sum((rng.multinomial(int(c.sum()), p) * dk).sum() for c, p, dk in zip(counts_k, probs, delta_k))
-        replay[name] = {"mean": float(sims.mean()), "sd": float(sims.std()),
-                        "share_of_replays_as_favourable_to_B_as_observed": float((sims >= observed_delta).mean()),
-                        "share_of_replays_as_favourable_to_A_as_observed": float((sims <= observed_delta).mean())}
-    result["destination_replay"] = {"distinct_weight_lists": len(keys), "observed_loglik_B_minus_A": observed_delta, **replay}
+            w = np.array(weights)
+            pa_i = w * np.arange(1, len(w) + 1)
+            pb_i = np.cumsum(w)
+            entry = by_group[(rows[i]["item_class"], data.mods[rows[i]["mod_before_id"]].type)]
+            entry[0] += 1
+            entry[1] += math.log(pb_i[j] / pb_i.sum()) - math.log(pa_i[j] / pa_i.sum())
+    result["destination_loglik_B_minus_A_by_mod_type"] = [
+        {"item_class": k[0], "mod_type": k[1], "raised_mods": v[0], "loglik_B_minus_A": round(v[1], 2)}
+        for k, v in sorted(by_group.items(), key=lambda kv: -abs(kv[1][1]))[:12]
+    ]
     # per-tier-count check of A: observed destination shares against A for the mods with equal weights
     groups = defaultdict(list)
     for i, weights, j, total_tiers, strands, idx in dest:

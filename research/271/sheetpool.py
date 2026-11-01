@@ -22,6 +22,7 @@ ROYALE_IDS = frozenset({"MovementVelocity2Royale", "IncreasedCastSpeed2Royale", 
                         "IncreasedAttackSpeed2Royale"})
 
 _GAME_POOLS: dict[int, tuple] = {}
+EXCLUDE_ROYALE = True  # set False to see the pool as the pinned export has it
 
 
 def game_pool(data, item):
@@ -29,6 +30,8 @@ def game_pool(data, item):
     from crafting_system.actions.pool import pool_candidates
 
     candidates = pool_candidates(data, item)
+    if not EXCLUDE_ROYALE:
+        return candidates
     found = _GAME_POOLS.get(id(candidates))
     if found is None or found[0] is not candidates:
         found = _GAME_POOLS[id(candidates)] = (candidates, tuple(c for c in candidates if c.mod.id not in ROYALE_IDS))

@@ -26,6 +26,7 @@ sys.path[:0] = [str(Path(__file__).resolve().parents[2] / "src"), str(Path(__fil
 from crafting_system.data.load import load_game_data  # noqa: E402
 from crafting_system.items import Influence, Item, Rarity, tier_table  # noqa: E402
 from itemtext import ModLine, parse_item  # noqa: E402
+import sheetpool  # noqa: E402
 from sheetpool import Mapper, game_pool, read_sheet_csv  # noqa: E402
 
 SINGLE = {"Foulborn Orb of Augmentation", "Foulborn Regal Orb", "Regal Orb", "Exalted Orb"}
@@ -41,11 +42,21 @@ ALTERATION_TABS = {
 
 
 FOULBORN_BONUS = 150  # twice the +75 of a Foulborn orb, in the doubled integers of ADR-0040
+# how a Foulborn orb and the strands combine: "sum" is ADR-0040 (the bonus is added to the denominator); "max_emulator" is
+# the beta emulator of Craft of Exile as read in #273 (a Foulborn orb alone keeps ceil(T/2) tiers, with strands the larger
+# of that and the strand cut); "max_wiki" takes the larger of the strand cut and the Foulborn cut at 0 strands (D = 175)
+KEEP_MODE = "sum"
 
 
 def keep_count(tiers: int, strands: int, foulborn: bool) -> int:
-    """ADR-0040 in integers: K = floor(200 (T-1) / (200 + [s>=1](5s+95) + [F]150)) + 1."""
-    denominator = 200 + (5 * strands + 95 if strands >= 1 else 0) + (FOULBORN_BONUS if foulborn else 0)
+    """ADR-0040 in integers: K = floor(100 (T-1) / D) + 1 with D = 100 + [s>=1](2.5 s + 47.5) + [Foulborn] 75,
+    that is floor(200 (T-1) / (200 + [s>=1](5 s + 95) + [Foulborn] 150)) + 1."""
+    strand_part = 5 * strands + 95 if strands >= 1 else 0
+    if foulborn and KEEP_MODE != "sum":
+        by_strands = 200 * (tiers - 1) // (200 + strand_part) + 1
+        by_orb = tiers - tiers // 2 if KEEP_MODE == "max_emulator" else 200 * (tiers - 1) // (200 + FOULBORN_BONUS) + 1
+        return max(by_strands, by_orb) if strands >= 1 else by_orb
+    denominator = 200 + strand_part + (FOULBORN_BONUS if foulborn else 0)
     return 200 * (tiers - 1) // denominator + 1
 
 
@@ -371,6 +382,8 @@ def calibration(draws, readings=READINGS):
             return next(name for name, top in classes if value <= top + 1e-12)
 
         out = {name: {"observed": 0, **{r: [0.0, 0.0] for r in readings}} for name, _ in classes}
+        detail = defaultdict(lambda: {"observed": 0, **{r: 0.0 for r in readings}})  # the families of the lowest class
+        lowest = classes[0][0]
         n = 0
         for d in draws:
             if len(d.drawn) != 1:
@@ -378,7 +391,10 @@ def calibration(draws, readings=READINGS):
             n += 1
             base_view = view_of(d, 0.0, 0.0)
             ratios = getattr(base_view, attr)
-            out[label(ratios[base_view.info[d.drawn[0]][1]])]["observed"] += 1
+            drawn_family = base_view.info[d.drawn[0]][1]
+            out[label(ratios[drawn_family])]["observed"] += 1
+            if gname == "rho" and label(ratios[drawn_family]) == lowest:
+                detail[drawn_family]["observed"] += 1
             for r, (g, b) in readings.items():
                 view = view_of(d, g, b)
                 probs = first_draw_probabilities(view, d)
@@ -387,6 +403,8 @@ def calibration(draws, readings=READINGS):
                     c = label(ratios[f])
                     per_class[c][0] += p
                     per_class[c][1] += p * (1 - p)
+                    if gname == "rho" and c == lowest:
+                        detail[f][r] += p
                 for c, (e, v) in per_class.items():
                     out[c][r][0] += e
                     out[c][r][1] += v
@@ -394,6 +412,11 @@ def calibration(draws, readings=READINGS):
             for r in readings:
                 out[c][r][1] = math.sqrt(out[c][r][1])
         result[gname] = out
+        if gname == "rho":
+            result["families_of_the_lowest_rho_class"] = {
+                f: {k: (round(v, 2) if isinstance(v, float) else v) for k, v in x.items()}
+                for f, x in sorted(detail.items(), key=lambda kv: -kv[1]["refactored"])
+            }
     return n, result
 
 
@@ -519,6 +542,30 @@ def main() -> None:
     FOULBORN_BONUS = 150
     _VIEWS.clear()
     result["foulborn_bonus_profile"] = {"crafts": len(foul), "loglik_by_bonus_to_the_rating": bonus}
+    # a Foulborn orb on an item with strands: the bonus added to the denominator (ADR-0040) or the larger of two cuts
+    global KEEP_MODE
+    modes = {}
+    for mode in ("sum", "max_wiki", "max_emulator"):
+        KEEP_MODE = mode
+        _VIEWS.clear()
+        entry = {}
+        for name, subset in (("all 491 Foulborn crafts", foul), ("the 42 with 10 strands or fewer", [d for d in foul if d.strands <= 10])):
+            for reading, (g, b) in (("refactored", (1.0, 0.0)), ("delete_only", (0.0, 0.0))):
+                v = loglik_vector(subset, g, b)
+                entry[f"{name}, {reading}"] = {
+                    "impossible_crafts": int(np.isinf(v).sum()),
+                    "loglik": float(v.sum()) if np.isfinite(v).all() else "impossible: " + str(int(np.isinf(v).sum())) + " crafts have probability 0",
+                    "loglik_of_the_possible_crafts": float(v[np.isfinite(v)].sum()),
+                }
+        modes[mode] = entry
+    KEEP_MODE = "sum"
+    _VIEWS.clear()
+    result["foulborn_with_strands_sum_or_larger_cut"] = modes
+    # the pool as the pinned export has it, with the four Battle Royale mods: our T against the sheet's total_tiers
+    sheetpool.EXCLUDE_ROYALE = False
+    unfixed, _ = build_draws(data, mapper, read_sheet_csv(raw / "foul.csv"))
+    result["foulborn_tab_T_equals_sheet_T_without_leaving_out_the_royale_mods"] = list(sheet_tier_agreement(data, unfixed)[:2])
+    sheetpool.EXCLUDE_ROYALE = True
     single = [d for d in all_draws if len(d.drawn) == 1]
     n, table = calibration(single)
     result["calibration_one_added_mod"] = {"crafts": n, "classes": table}

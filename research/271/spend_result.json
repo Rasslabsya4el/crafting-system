@@ -1,7 +1,7 @@
 {
  "by_currency": {
   "Chaos Orb": {
-   "sheet_rows": 615,
+   "sheet_rows_of_these_crafts": 615,
    "crafts": 155,
    "max_spend": 48,
    "min_spend": 0,
@@ -56,6 +56,11 @@
     "df": 4,
     "p": 0.600238913529801
    },
+   "mean_test": {
+    "observed_total": 2485.0,
+    "expected_total": 2672.254901960784,
+    "z": -1.5016186946399113
+   },
    "free_start_histogram": {
     "crafts": 33,
     "bins": [
@@ -104,7 +109,7 @@
    ]
   },
   "Foulborn Orb of Augmentation": {
-   "sheet_rows": 427,
+   "sheet_rows_of_these_crafts": 427,
    "crafts": 427,
    "max_spend": 32,
    "min_spend": 0,
@@ -159,6 +164,11 @@
     "df": 4,
     "p": 0.24960647256799462
    },
+   "mean_test": {
+    "observed_total": 6573.0,
+    "expected_total": 6324.121212121214,
+    "z": 1.3650595341475524
+   },
    "free_start_histogram": {
     "crafts": 306,
     "bins": [
@@ -196,7 +206,7 @@
    }
   },
   "Foulborn Regal Orb": {
-   "sheet_rows": 64,
+   "sheet_rows_of_these_crafts": 64,
    "crafts": 64,
    "max_spend": 43,
    "min_spend": 0,
@@ -251,6 +261,11 @@
     "df": 4,
     "p": 0.1851955368141989
    },
+   "mean_test": {
+    "observed_total": 952.0,
+    "expected_total": 1115.3265306122448,
+    "z": -1.9861832458671547
+   },
    "free_start_histogram": {
     "crafts": 23,
     "bins": [
@@ -288,7 +303,7 @@
    }
   },
   "Orb of Alchemy": {
-   "sheet_rows": 649,
+   "sheet_rows_of_these_crafts": 580,
    "crafts": 132,
    "max_spend": 50,
    "min_spend": 0,
@@ -343,6 +358,11 @@
     "df": 4,
     "p": 0.46284261618330114
    },
+   "mean_test": {
+    "observed_total": 3118.0,
+    "expected_total": 2910.64705882353,
+    "z": 1.4503779033771917
+   },
    "free_start_histogram": {
     "crafts": 55,
     "bins": [
@@ -391,7 +411,7 @@
    ]
   },
   "Orb of Alteration": {
-   "sheet_rows": null,
+   "sheet_rows_of_these_crafts": 17377,
    "crafts": 17377,
    "max_spend": 8,
    "min_spend": 0,
@@ -470,6 +490,11 @@
     "df": 8,
     "p": 0.8436322451586478
    },
+   "mean_test": {
+    "observed_total": 66778.0,
+    "expected_total": 66721.88888888981,
+    "z": 0.17114563804702426
+   },
    "free_start_histogram": {
     "crafts": 15406,
     "bins": [
@@ -507,7 +532,7 @@
    }
   },
   "Regal Orb": {
-   "sheet_rows": 13,
+   "sheet_rows_of_these_crafts": 13,
    "crafts": 13,
    "max_spend": 16,
    "min_spend": 0,
@@ -562,6 +587,11 @@
     "df": 4,
     "p": 0.08283790976435015
    },
+   "mean_test": {
+    "observed_total": 93.0,
+    "expected_total": 104.0,
+    "z": -0.6227523687795276
+   },
    "free_start_histogram": {
     "crafts": 13,
     "bins": [
@@ -599,7 +629,7 @@
    }
   },
   "Scroll of Wisdom": {
-   "sheet_rows": 51,
+   "sheet_rows_of_these_crafts": 51,
    "crafts": 11,
    "max_spend": 0,
    "min_spend": 0,
@@ -629,6 +659,7 @@
    "end": 17
   }
  ],
+ "rows_of_the_alchemy_crafts_left_out": 69,
  "rows_level_histograms_of_the_old_note": {
   "Chaos Orb": {
    "rows_with_50_or_more_strands": 130,
@@ -714,6 +745,19 @@
     "chi2": 1.0915309722897901,
     "df": 3,
     "p": 0.7791189241144268
+   },
+   "ceiling_profile": {
+    "smallest_ceiling_the_data_allow": 33,
+    "interval_95": [
+     33,
+     35
+    ],
+    "loglik_at": {
+     "33": -104.92,
+     "34": -105.67,
+     "38": -108.51,
+     "40": -109.84
+    }
    }
   },
   "5": {
@@ -774,6 +818,17 @@
     "chi2": 0.5927906899064092,
     "df": 3,
     "p": 0.8980807789236205
+   },
+   "ceiling_profile": {
+    "smallest_ceiling_the_data_allow": 38,
+    "interval_95": [
+     38,
+     43
+    ],
+    "loglik_at": {
+     "38": -94.53,
+     "40": -95.25
+    }
    }
   }
  },

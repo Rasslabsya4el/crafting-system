@@ -322,6 +322,7 @@
   "loglik_C_weights_only_minus_A": -323.06883285710137
  },
  "destination_replay": {
+  "mods_with_unequal_weights": 4354,
   "distinct_weight_lists": 85,
   "observed_loglik_B_minus_A": 14.932982412265657,
   "under_A": {
@@ -337,6 +338,133 @@
    "share_of_replays_as_favourable_to_A_as_observed": 0.01525
   }
  },
+ "destination_replay_by_class": {
+  "Amulets": {
+   "mods_with_unequal_weights": 1790,
+   "distinct_weight_lists": 7,
+   "observed_loglik_B_minus_A": 0.6187562323093132,
+   "under_A": {
+    "mean": -3.5390020739385544,
+    "sd": 2.6898444692589414,
+    "share_of_replays_as_favourable_to_B_as_observed": 0.06,
+    "share_of_replays_as_favourable_to_A_as_observed": 0.94
+   },
+   "under_B": {
+    "mean": 3.433540317632202,
+    "sd": 2.6470716801739935,
+    "share_of_replays_as_favourable_to_B_as_observed": 0.85475,
+    "share_of_replays_as_favourable_to_A_as_observed": 0.14525
+   }
+  },
+  "Rings": {
+   "mods_with_unequal_weights": 89,
+   "distinct_weight_lists": 6,
+   "observed_loglik_B_minus_A": -0.45185265809269926,
+   "under_A": {
+    "mean": -2.2126678803721305,
+    "sd": 2.076867935422075,
+    "share_of_replays_as_favourable_to_B_as_observed": 0.198,
+    "share_of_replays_as_favourable_to_A_as_observed": 0.802
+   },
+   "under_B": {
+    "mean": 2.2722814850709097,
+    "sd": 2.1424216888535033,
+    "share_of_replays_as_favourable_to_B_as_observed": 0.901,
+    "share_of_replays_as_favourable_to_A_as_observed": 0.099
+   }
+  },
+  "Wands": {
+   "mods_with_unequal_weights": 2475,
+   "distinct_weight_lists": 72,
+   "observed_loglik_B_minus_A": 14.766078838049046,
+   "under_A": {
+    "mean": -25.962639161279018,
+    "sd": 7.338804677507336,
+    "share_of_replays_as_favourable_to_B_as_observed": 0.0,
+    "share_of_replays_as_favourable_to_A_as_observed": 1.0
+   },
+   "under_B": {
+    "mean": 26.313351360380647,
+    "sd": 7.3634607986835,
+    "share_of_replays_as_favourable_to_B_as_observed": 0.93875,
+    "share_of_replays_as_favourable_to_A_as_observed": 0.06125
+   }
+  }
+ },
+ "destination_loglik_B_minus_A_by_mod_type": [
+  {
+   "item_class": "Wands",
+   "mod_type": "SpellAddedFireDamage",
+   "raised_mods": 329,
+   "loglik_B_minus_A": 4.47
+  },
+  {
+   "item_class": "Wands",
+   "mod_type": "WeaponSpellDamage",
+   "raised_mods": 388,
+   "loglik_B_minus_A": 4.35
+  },
+  {
+   "item_class": "Wands",
+   "mod_type": "IncreasedMana",
+   "raised_mods": 476,
+   "loglik_B_minus_A": 2.91
+  },
+  {
+   "item_class": "Wands",
+   "mod_type": "SpellAddedLightningDamage",
+   "raised_mods": 323,
+   "loglik_B_minus_A": -2.73
+  },
+  {
+   "item_class": "Wands",
+   "mod_type": "WeaponSpellDamageAndMana",
+   "raised_mods": 158,
+   "loglik_B_minus_A": 2.38
+  },
+  {
+   "item_class": "Wands",
+   "mod_type": "FireDamageWeaponPrefix",
+   "raised_mods": 100,
+   "loglik_B_minus_A": 1.46
+  },
+  {
+   "item_class": "Rings",
+   "mod_type": "ColdDamage",
+   "raised_mods": 22,
+   "loglik_B_minus_A": -1.36
+  },
+  {
+   "item_class": "Amulets",
+   "mod_type": "LightningDamage",
+   "raised_mods": 625,
+   "loglik_B_minus_A": 1.28
+  },
+  {
+   "item_class": "Wands",
+   "mod_type": "SpellAddedColdDamage",
+   "raised_mods": 120,
+   "loglik_B_minus_A": 0.98
+  },
+  {
+   "item_class": "Amulets",
+   "mod_type": "LifeLeechPermyriad",
+   "raised_mods": 11,
+   "loglik_B_minus_A": -0.71
+  },
+  {
+   "item_class": "Wands",
+   "mod_type": "ChanceToIgnite",
+   "raised_mods": 46,
+   "loglik_B_minus_A": -0.67
+  },
+  {
+   "item_class": "Rings",
+   "mod_type": "LightningDamage",
+   "raised_mods": 36,
+   "loglik_B_minus_A": 0.65
+  }
+ ],
  "destination_equal_weights_chi_square": {
   "3": {
    "raised_mods": 4108,

@@ -12,6 +12,7 @@ The unit is the craft: the tab lists one row for each mod a multi-mod craft prod
 from __future__ import annotations
 
 import json
+import math
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -38,24 +39,29 @@ def craft_list(raw: Path):
     crafts = []
     seen = set()
     rows = read_sheet_csv(raw / "foul.csv")
+    keys = []
+    for index, row in enumerate(rows):
+        cur = row.get("currency", "")
+        keys.append((cur, row["item_before"], row["item_after"]) if cur in MULTI else (index,))
+    rows_of = Counter(keys[i] for i, row in enumerate(rows) if row.get("currency"))
     for index, row in enumerate(rows):
         cur = row.get("currency", "")
         if not cur:
             continue
-        key = (cur, row["item_before"], row["item_after"]) if cur in MULTI else (index,)
+        key = keys[index]
         if key in seen:
             continue
         seen.add(key)
         before, after = parse_item(row["item_before"]), parse_item(row["item_after"])
         crafts.append({"currency": cur, "s": before.strands, "after": after.strands, "mods_before": len(before.mods),
-                       "mods_after": len(after.mods), "rarity_before": before.rarity})
+                       "mods_after": len(after.mods), "rarity_before": before.rarity, "rows": rows_of[key]})
     for file, label in (("alteration_int_body.csv", "Orb of Alteration"), ("alteration_str_helm.csv", "Orb of Alteration")):
         for row in read_sheet_csv(raw / file):
             if not row.get("Starting Strands", "").strip():
                 continue
             mods = sum(1 for w in ("Prefix", "Suffix") for k in (1, 2, 3) if row.get(f"{w} {k}", "").strip())
             crafts.append({"currency": label, "s": int(float(row["Starting Strands"])), "after": int(float(row["Ending Strands"])),
-                           "mods_before": 0, "mods_after": mods, "rarity_before": "magic", "tab": file})
+                           "mods_before": 0, "mods_after": mods, "rarity_before": "magic", "tab": file, "rows": 1})
     for c in crafts:
         c["spend"] = c["s"] - c["after"]
     return crafts, rows
@@ -97,6 +103,43 @@ def uniform_test(crafts, ceiling: int, k: int):
             "observed": observed.tolist(), "expected": [round(v, 2) for v in expected], "chi2": stat, "df": df, "p": p}
 
 
+def mean_test(crafts, ceiling: int):
+    """z of the total observed spend against its expectation under 'uniform on 0..ceiling, cut at the count'."""
+    values = np.arange(ceiling + 1)
+    observed = expected = variance = 0.0
+    for c in crafts:
+        if c["spend"] > ceiling:
+            continue
+        x = np.minimum(values, c["s"])
+        mean = x.mean()
+        observed += c["spend"]
+        expected += mean
+        variance += (x * x).mean() - mean * mean
+    return {"observed_total": observed, "expected_total": float(expected), "z": float((observed - expected) / math.sqrt(variance))}
+
+
+def ceiling_profile(crafts):
+    """Log-likelihood of the crafts under 'uniform on 0..C, cut at the count' for C from the largest spend up; the
+    smallest C the data allow and the 95% likelihood interval (a drop of 1.92)."""
+    spends = [c["spend"] for c in crafts]
+    low = max(spends)
+
+    def ll(C):
+        total = 0.0
+        for c in crafts:
+            s, x = c["s"], c["spend"]
+            if x > C or (x == s and s > C):
+                return float("-inf")
+            total += -math.log(C + 1) if x < s else math.log((C + 1 - s) / (C + 1))
+        return total
+
+    values = {C: ll(C) for C in range(low, low + 60)}
+    best = max(values.values())
+    inside = [C for C, v in values.items() if best - v <= 1.92]
+    return {"smallest_ceiling_the_data_allow": low, "interval_95": [min(inside), max(inside)],
+            "loglik_at": {str(C): round(values[C], 2) for C in (low, 32, 34, 38, 40) if C in values and C >= low}}
+
+
 def summary(crafts):
     spends = np.array([c["spend"] for c in crafts])
     strands = np.array([c["s"] for c in crafts])
@@ -136,13 +179,15 @@ def main() -> None:
             result["by_currency"][cur] = summary(group)
             continue
         ceiling = CEILING[cur]
-        entry = {"sheet_rows": rows_per.get(cur, None), **summary(group)}
+        entry = {"sheet_rows_of_these_crafts": sum(c["rows"] for c in group) if group and "rows" in group[0] else None, **summary(group)}
         entry["violations_of_ceiling"] = sum(1 for c in group if c["spend"] > ceiling)
         if ceiling > 0:
             k = 9 if ceiling == 8 else 5
             entry["uniform_test"] = uniform_test(group, ceiling, k)
+            entry["mean_test"] = mean_test(group, ceiling)
             entry["free_start_histogram"] = free_histogram(group, ceiling)
         result["by_currency"][cur] = entry
+    result["rows_of_the_alchemy_crafts_left_out"] = sum(c["rows"] for c in by["Orb of Alchemy on a non-normal item (left out)"])
     # the rows-level histogram the note and ADR-0041 used (each mod of a craft counted again)
     pseudo = {}
     for cur in ("Chaos Orb", "Orb of Alchemy"):
@@ -170,6 +215,7 @@ def main() -> None:
                 "spends_above_after_index": sum(1 for c in group if c["spend"] > EXALTED_AFTER_INDEX.get(nb, -1)),
                 "top_five_spends": sorted(c["spend"] for c in group)[-5:]}
         item["uniform_test_after_index"] = uniform_test(group, EXALTED_AFTER_INDEX[nb], 4)
+        item["ceiling_profile"] = ceiling_profile(group)
         ex[str(nb)] = item
     result["exalted_by_mods_before"] = ex
     # does the spend of Chaos and Alchemy depend on the mods of the result? (crafts that cannot be cut short)

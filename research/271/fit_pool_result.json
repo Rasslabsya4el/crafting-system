@@ -385,6 +385,78 @@
    "100.0": "impossible: an observed craft has probability 0"
   }
  },
+ "foulborn_with_strands_sum_or_larger_cut": {
+  "sum": {
+   "all 491 Foulborn crafts, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -1809.5991872887432,
+    "loglik_of_the_possible_crafts": -1809.5991872887432
+   },
+   "all 491 Foulborn crafts, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -1823.9856432891784,
+    "loglik_of_the_possible_crafts": -1823.9856432891784
+   },
+   "the 42 with 10 strands or fewer, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -168.85117897745673,
+    "loglik_of_the_possible_crafts": -168.85117897745673
+   },
+   "the 42 with 10 strands or fewer, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -170.72036699790434,
+    "loglik_of_the_possible_crafts": -170.72036699790434
+   }
+  },
+  "max_wiki": {
+   "all 491 Foulborn crafts, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -2084.929171787776,
+    "loglik_of_the_possible_crafts": -2084.929171787776
+   },
+   "all 491 Foulborn crafts, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -2091.279416048559,
+    "loglik_of_the_possible_crafts": -2091.279416048559
+   },
+   "the 42 with 10 strands or fewer, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -183.17040233117783,
+    "loglik_of_the_possible_crafts": -183.17040233117783
+   },
+   "the 42 with 10 strands or fewer, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -183.47604499455417,
+    "loglik_of_the_possible_crafts": -183.47604499455417
+   }
+  },
+  "max_emulator": {
+   "all 491 Foulborn crafts, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -2064.0339177936357,
+    "loglik_of_the_possible_crafts": -2064.0339177936357
+   },
+   "all 491 Foulborn crafts, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -2068.8301477751097,
+    "loglik_of_the_possible_crafts": -2068.8301477751097
+   },
+   "the 42 with 10 strands or fewer, refactored": {
+    "impossible_crafts": 0,
+    "loglik": -183.17040233117783,
+    "loglik_of_the_possible_crafts": -183.17040233117783
+   },
+   "the 42 with 10 strands or fewer, delete_only": {
+    "impossible_crafts": 0,
+    "loglik": -183.47604499455417,
+    "loglik_of_the_possible_crafts": -183.47604499455417
+   }
+  }
+ },
+ "foulborn_tab_T_equals_sheet_T_without_leaving_out_the_royale_mods": [
+  1803,
+  31
+ ],
  "calibration_one_added_mod": {
   "crafts": 9292,
   "classes": {
@@ -525,6 +597,86 @@
       0.0,
       0.0
      ]
+    }
+   },
+   "families_of_the_lowest_rho_class": {
+    "BaseLocalDefencesAndLife": {
+     "observed": 41,
+     "redistribution": 59.74,
+     "refactored": 35.03,
+     "delete_only": 27.41
+    },
+    "ColdDamage": {
+     "observed": 2,
+     "redistribution": 11.02,
+     "refactored": 3.48,
+     "delete_only": 3.46
+    },
+    "LightningDamage": {
+     "observed": 6,
+     "redistribution": 11.0,
+     "refactored": 3.47,
+     "delete_only": 3.46
+    },
+    "FireDamage": {
+     "observed": 4,
+     "redistribution": 10.98,
+     "refactored": 3.46,
+     "delete_only": 3.44
+    },
+    "IncreaseSpecificSocketedGemLevel": {
+     "observed": 0,
+     "redistribution": 8.91,
+     "refactored": 1.62,
+     "delete_only": 1.96
+    },
+    "PhysicalDamage": {
+     "observed": 0,
+     "redistribution": 0.55,
+     "refactored": 0.47,
+     "delete_only": 0.36
+    },
+    "LocalPhysicalDamagePercent": {
+     "observed": 0,
+     "redistribution": 1.46,
+     "refactored": 0.43,
+     "delete_only": 0.4
+    },
+    "LocalIncreasedPhysicalDamagePercentAndAccuracyRating": {
+     "observed": 0,
+     "redistribution": 1.41,
+     "refactored": 0.41,
+     "delete_only": 0.37
+    },
+    "WeaponCasterDamagePrefix": {
+     "observed": 0,
+     "redistribution": 0.18,
+     "refactored": 0.13,
+     "delete_only": 0.11
+    },
+    "SpellDamageAndMana": {
+     "observed": 0,
+     "redistribution": 0.17,
+     "refactored": 0.12,
+     "delete_only": 0.12
+    },
+    "LifeLeech": {
+     "observed": 0,
+     "redistribution": 0.08,
+     "refactored": 0.04,
+     "delete_only": 0.04
+    },
+    "IncreaseSocketedGemLevel": {
+     "observed": 0,
+     "redistribution": 0.06,
+     "refactored": 0.02,
+     "delete_only": 0.03
+    },
+    "DamageOverTimeMultiplier": {
+     "observed": 0,
+     "redistribution": 0.02,
+     "refactored": 0.01,
+     "delete_only": 0.01
     }
    }
   }
