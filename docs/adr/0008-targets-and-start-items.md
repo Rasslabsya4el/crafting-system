@@ -10,4 +10,4 @@ Origin: [Design grill round 1: foundations](https://github.com/Rasslabsya4el/cra
 
 ## Amendment: sockets in targets and start items ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
 
-A target may carry `sockets: {count, links, colours: {R, G, B}}` and, on a weapon or armour, `quality: {min_percent}` (ADR-0046, ADR-0049). A socket requirement is a requirement of the finish, not of the mod problem: it adds no line to the mod requirements. A start item may state its sockets, links, colours and quality; one that states none has one white, unlinked socket.
+A target may carry `sockets: {count, links, colours: {R, G, B}}` and, on a weapon or armour, `quality: {min_percent}` (ADR-0046, ADR-0049). A socket requirement is a requirement of the finish, not of the mod problem: it adds no line to the mod requirements. A start item may state its sockets, links, colours and quality; when the target names sockets, one that states none has one white, unlinked socket (ADR-0046); otherwise it gets no socket.
