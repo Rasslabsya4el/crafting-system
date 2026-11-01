@@ -20,6 +20,13 @@ the base class answers for it unless its file holds several actions):
 
 An optional seventh, `twin_key(data, item)`, lets a set of fossils name its twins without a pool (#118).
 
+Two more optional questions carry the two-item actions of batch B3 (ADR-0022, the amendment of ADR-0024, ticket #210),
+each with an empty default, so an action that has neither is untouched: `inputs(data, item)` (the `Need`s of the
+action: the other items it consumes, each given by the item it starts as and the item it must become) and
+`rule_axes(data)` (the `Axis`es of the rules the sources leave open that the action reads, each with its readings).
+`outcomes` of an action with axes takes a `Reading` (one value of each axis); `outcomes_under(data, item, reading)` is
+the call that works for every action.
+
 `abstraction` builds its states from `reads` and its kernels from `outcomes` alone; `cli` builds its
 offers from the catalog (`catalog.py`), `resources` and `adds`; `simulator` calls `outcomes(...).sample`.
 None of them imports a concrete action. The defaults of the base class are the safe ones: an action
@@ -27,6 +34,7 @@ that declares nothing reads every mod of the item and adds mods it does not name
 makes the state space large and no filter can drop it.
 """
 
+import itertools
 import random
 import sys
 from abc import ABC, abstractmethod
@@ -96,6 +104,12 @@ class Reads:
       overrides `reads` says what it reads, and `Action.reads` itself (an action that declares nothing) reads all
       three, like it reads every mod. An action that reads the offer reads the veiled placeholder, a mod of the
       item, so it must read the junk too.
+    * `input_mods`: the result depends on the mods of the other items the action consumes (`Action.inputs`: the donor
+      of a recombinator or of an Awakener's Orb), not only on the item in hand. `junk` and the other fields speak of
+      the item in hand; with `input_mods` the declaration says which of the two items' mods are read: `junk` alone is
+      the item in hand, `input_mods` alone the inputs, both is both. The dataclass default is False, as for the other
+      new fields; `Action.reads` (an action that declares nothing) says True, like it reads every mod. An action with no
+      inputs has nothing to read there and the flag means nothing for it.
     """
 
     junk: bool = True
@@ -109,6 +123,7 @@ class Reads:
     implicits: bool = False
     quality: bool = False
     offer: bool = False
+    input_mods: bool = False
 
     @property
     def item_state(self) -> bool:
@@ -198,6 +213,98 @@ class Adds:
         return cls(keeps_crafted=False, **fields)
 
 
+@dataclass(frozen=True)
+class Need:
+    """Another item an action consumes besides the one in hand: it begins as `start` and must become `want` (ADR-0022).
+
+    The value of a `Need` is what it costs to obtain `want` from `start` (a second process over the same actions, which
+    the solver runs), paid on every use of the action, a retry included. The input is destroyed by the use. A repeated
+    `Need` in `Action.inputs` is a second copy. `start` and `want` are concrete items of the same data: `start` is
+    where the donor begins (a bought base, the item in hand), `want` the item the action is then used with. Which
+    items count as one wanted state is decided where the planner builds the donor (ticket #211), not here: the action
+    only says what it consumes.
+    """
+
+    start: Item
+    want: Item
+
+
+@dataclass(frozen=True)
+class Axis:
+    """A rule the sources leave open, with the readings it may take (ADR-0033, the glossary's "rule axis").
+
+    `name` is the axis; two actions that read an axis of one name must list the same readings. `readings` are the
+    values a reading of the axis may take (at least two, all different, hashable), and `plan` is the one the plan
+    uses (the exponent 1, the receiver's mod kept): it must be one of them. Each combination of one value per axis
+    is a `Reading`, and each `Reading` is one ordinary model: the solver never learns what an axis is.
+    """
+
+    name: str
+    readings: tuple[Hashable, ...]
+    plan: Hashable
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("an axis has a name")
+        if len(self.readings) < 2 or len(set(self.readings)) != len(self.readings):
+            raise ValueError(f"the axis {self.name!r} needs at least two different readings, got {self.readings!r}")
+        if self.plan not in self.readings:
+            raise ValueError(f"the plan reading {self.plan!r} of the axis {self.name!r} is not one of {self.readings!r}")
+
+
+@dataclass(frozen=True)
+class Reading:
+    """One value of each axis a model reads: the rule set of one ordinary model (ADR-0033). The empty reading has no axes.
+
+    An action looks at its own axes only (`reading[axis]`, or `reading.get(axis, default)`); an axis the reading does
+    not hold is read at the plan value of the action's `Axis`, which is what `outcomes(data, item)` with no reading does.
+    """
+
+    values: tuple[tuple[str, Hashable], ...] = ()
+
+    @classmethod
+    def of(cls, values: Mapping[str, Hashable] | None = None) -> "Reading":
+        return cls(tuple(sorted((values or {}).items())))
+
+    def __getitem__(self, axis: str) -> Hashable:
+        for name, value in self.values:
+            if name == axis:
+                return value
+        raise KeyError(axis)
+
+    def get(self, axis: str, default: Hashable = None) -> Hashable:
+        try:
+            return self[axis]
+        except KeyError:
+            return default
+
+    def __bool__(self) -> bool:
+        return bool(self.values)
+
+    def __repr__(self) -> str:
+        return "Reading(" + ", ".join(f"{name}={value!r}" for name, value in self.values) + ")"
+
+
+def model_readings(data: GameData, actions: Iterable["Action"]) -> tuple[Reading, ...]:
+    """The readings of the rule set of a model: the product of the axes the `actions` read, the plan reading first.
+
+    5, 2 or 10 readings for the B3 actions (ADR-0033); one empty `Reading` when no action reads an axis, so a model of
+    input-free actions has the single reading it always had. Two actions that name one axis must list the same
+    readings and the same plan value (`ValueError` otherwise). After the plan reading come the others in the product
+    order of the axes by name, each axis in the order of its `readings`.
+    """
+    axes: dict[str, Axis] = {}
+    for action in actions:
+        for axis in action.rule_axes(data):
+            known = axes.setdefault(axis.name, axis)
+            if known != axis:
+                raise ValueError(f"two actions read the axis {axis.name!r} with different readings: {known!r} and {axis!r}")
+    ordered = [axes[name] for name in sorted(axes)]
+    plan = Reading.of({axis.name: axis.plan for axis in ordered})
+    every = (Reading.of(dict(zip((axis.name for axis in ordered), values))) for values in itertools.product(*(axis.readings for axis in ordered)))
+    return (plan, *(reading for reading in every if reading != plan))
+
+
 @runtime_checkable
 class ActionOutcomes(Protocol):
     """What `Action.outcomes` returns: the whole result, in four ways in.
@@ -281,7 +388,12 @@ class Action(ABC):
 
     @abstractmethod
     def outcomes(self, data: GameData, item: Item) -> ActionOutcomes:
-        """The exact result of one use on `item`; raises `NotApplicableError` or `OutOfScopeError`."""
+        """The exact result of one use on `item`; raises `NotApplicableError` or `OutOfScopeError`.
+
+        An action that lists `rule_axes` declares a third parameter, `reading: Reading | None = None`, and uses the
+        value of each of its axes (the plan value when the reading is None or lacks the axis); callers go through
+        `outcomes_under`, which passes it only to such an action.
+        """
 
     @abstractmethod
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
@@ -289,7 +401,7 @@ class Action(ABC):
 
     def reads(self, data: GameData) -> Reads:
         """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality and the offer."""
-        return Reads(implicits=True, quality=True, offer=True)
+        return Reads(implicits=True, quality=True, offer=True, input_mods=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         """What the action puts on `item`; the default is mods it does not name, and a change of the implicits, the quality and the offer.
@@ -298,6 +410,35 @@ class Action(ABC):
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
         return Adds(implicits=True, quality=True, offer=True)
+
+    def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
+        """The other items one use consumes besides `item` (a recombinator's donor, ADR-0022); none by default.
+
+        Each `Need` is paid on every use. The answer may depend on `item` (the donor an action wants follows the item
+        in hand); a planner asks it for the item a state stands for. `item` may be None for an action whose inputs
+        do not depend on it, as for `adds`. An action with inputs finds its donor in `outcomes` by asking the same
+        question, so `outcomes(data, item)` is the result of using it with these inputs.
+        """
+        return ()
+
+    def rule_axes(self, data: GameData) -> tuple[Axis, ...]:
+        """The rules the action reads that the sources leave open, each as an `Axis` with its readings; none by default.
+
+        An action that lists an axis takes the `Reading` in `outcomes(data, item, reading=None)`: with `reading` None, or
+        a reading that does not hold the axis, it uses the plan value of the axis, so the simulator, which calls
+        `outcomes(data, item)`, samples the plan.
+        """
+        return ()
+
+    def outcomes_under(self, data: GameData, item: Item, reading: Reading | None = None) -> ActionOutcomes:
+        """`outcomes` at a reading of the rule set: the call every caller makes, for an action with axes or without.
+
+        An action with no axis is called as it always was, `outcomes(data, item)`, whatever the reading holds, so an
+        input-free action is untouched; one with axes gets the reading it was asked (the empty one when None).
+        """
+        if not self.rule_axes(data):
+            return self.outcomes(data, item)
+        return self.outcomes(data, item, reading if reading is not None else Reading())  # type: ignore[call-arg]
 
     def twin_key(self, data: GameData, item: Item) -> Hashable | None:
         """A cheap key such that two actions of the catalog with equal, non-None keys give equal `outcomes`

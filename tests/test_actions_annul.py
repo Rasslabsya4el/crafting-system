@@ -173,9 +173,11 @@ def test_the_orb_is_named_priced_and_declared():
     assert adds.named == frozenset() and not adds.draws and adds.keeps_crafted
 
 
-def test_the_kind_lists_magic_and_rare_items_and_is_not_a_planner_kind():
+def test_the_kind_lists_every_rarity_and_is_a_planner_kind_offered_only_when_named():
     assert AnnulmentOrb() in catalog(DATA, amulet(roll(LIFE), rarity=Rarity.MAGIC))
     assert AnnulmentOrb() in catalog(DATA, amulet(roll(LIFE)))
-    assert AnnulmentOrb() not in catalog(DATA, amulet(rarity=Rarity.NORMAL))
-    assert AnnulmentOrb() not in catalog(DATA, amulet(roll(LIFE)), planner_only=True)
-    assert {entry.name: entry.planner for entry in kinds()}["annulment-orb"] is False
+    assert AnnulmentOrb() in catalog(DATA, amulet(rarity=Rarity.NORMAL))  # a normal item gets mods on the way (ticket #70)
+    assert AnnulmentOrb() not in catalog(DATA, amulet(roll(LIFE)), planner_only=True)  # not offered by default
+    assert AnnulmentOrb() in catalog(DATA, amulet(roll(LIFE)), planner_only=True, names={"annulment-orb"})
+    registered = {entry.name: entry for entry in kinds()}["annulment-orb"]
+    assert registered.planner is True and registered.opt_in is True

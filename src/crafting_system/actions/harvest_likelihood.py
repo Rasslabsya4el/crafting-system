@@ -1,7 +1,7 @@
 """The two likelihood Harvest reforges: reroll a rare item like a Chaos Orb, with the mods it holds more or less likely to return.
 
-Before the draw the weight of every mod of a family the item holds a mod of is multiplied by 90 (the more
-likely craft) or divided by 90 (the less likely one), `harvest_reforge.likelihood_weight_factor`, and the
+Before the draw the weight of every mod of a family the item holds a mod of is multiplied by 10 (the more
+likely craft) or divided by 10 (the less likely one), `harvest_reforge.likelihood_weight_factor`, and the
 reroll draws as many mods as the item held, at least 4 (`harvest_reforge.likelihood_never_fewer_mods`); there
 is no guaranteed mod. Unlike the other rerolls this one reads the mods it removes: which families the item
 holds decides the pool. The result depends on a family only through the weights of its mods and what they give
