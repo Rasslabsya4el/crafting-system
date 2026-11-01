@@ -18,6 +18,16 @@ catalog and under the contract tests, and a planner that asks for `planner_only`
 A kind is `opt_in` when the planner can use it but offers it only when a target names it in `actions:` (the fossil
 sets: 12,696 of them on boots, which a target that is not about fossils must not pay for). `catalog(..., names=None)`
 leaves an opt-in kind out; `names` that include it list it.
+
+A kind is `corrupting` when every action it lists corrupts (`Adds.corrupts`: the Vaal Orb, the Locus of Corruption). A planner
+leaves such a kind unmentioned in its report when the target takes no corrupted item (ADR-0036).
+
+Two declarations are read by the shared tests, which therefore name no kind (ticket #334). `applies_only_to` names the item class
+that is the only one the kind works on (`"armour"`: body armours, boots, gloves and helmets; the fixture items of the contract suite
+are amulets, so the suite does not require that the kind applies to one, and fails when it does). `reads_item_state_while_not_planner`
+names the one part of the item state (`"implicits"`, `"quality"` or `"offer"`) that a kind outside the planner reads, so the item-state
+suite expects that part to be declared by its actions and the others not; `"any"` says that the kind declares whatever part it needs
+(the veiled orbs, which declare the offer) and only requires that it is no planner kind. Both are empty for an ordinary kind.
 """
 
 from collections.abc import Callable, Collection, Iterable, Iterator
@@ -28,6 +38,15 @@ from crafting_system.data import GameData
 from crafting_system.items import Item
 
 from .contract import Action
+
+__all__ = [
+    "Kind",
+    "catalog",
+    "kind",
+    "kinds",
+    "register",
+    "registered",
+]
 
 
 @dataclass(frozen=True)
@@ -40,6 +59,9 @@ class Kind:
     planner: bool = True
     why_not: str = field(default="", compare=False)
     opt_in: bool = False
+    corrupting: bool = False
+    applies_only_to: str = ""
+    reads_item_state_while_not_planner: str = ""
 
 
 _KINDS: dict[str, Kind] = {}
@@ -54,12 +76,20 @@ def register(entry: Kind) -> Kind:
 
 
 def kind(
-    name: str, *, order: int, planner: bool = True, why_not: str = "", opt_in: bool = False
+    name: str,
+    *,
+    order: int,
+    planner: bool = True,
+    why_not: str = "",
+    opt_in: bool = False,
+    corrupting: bool = False,
+    applies_only_to: str = "",
+    reads_item_state_while_not_planner: str = "",
 ) -> Callable[[Callable[[GameData, Item], Iterable[Action]]], Callable[[GameData, Item], Iterable[Action]]]:
     """Decorator that registers a function `members(data, item)` as the kind `name`."""
 
     def decorate(members):
-        register(Kind(name, members, order, planner, why_not, opt_in))
+        register(Kind(name, members, order, planner, why_not, opt_in, corrupting, applies_only_to, reads_item_state_while_not_planner))
         return members
 
     return decorate

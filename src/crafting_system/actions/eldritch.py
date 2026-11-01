@@ -29,6 +29,12 @@ A raised or lowered implicit is the mod of the same family and variant one grade
 mod the data does not have there is `OutOfScopeError`. A lowered "Unique Enemy" or "Pinnacle Boss" variant may land on a
 grade whose weight is 0 (a variant no Ember draws); the data has the mod and no source says the game refuses it, so
 Conflict keeps it.
+
+The Eldritch currency (`eldritch.py`, ticket #151, ADR-0025): `EldritchImplicitCurrency(side, grade)` (an Ember or an Ichor of grade 1 to
+4: an implicit drawn by the spawn weight of the item class, replacing every implicit but the other side's), `EldritchChaosOrb()`,
+`EldritchExaltedOrb()` and `EldritchAnnulmentOrb()` (they act on the dominant side, derived from the two grades: `item_dominant_side`) and
+`OrbOfConflict()` (raises one implicit by a grade and lowers the other, odds `conflict_raise_chance(difference)`). They work on a body
+armour, boots, gloves or helmet that is not corrupted and not influenced, and none is a planner kind yet.
 """
 
 from collections.abc import Mapping
@@ -59,6 +65,17 @@ from .finite import Finite
 from .metamods import allowed_by_tags, blocked_tags, locked_sides, on_locked_side
 from .outcomes import Outcomes
 from .pool import PoolFamily, build_pool
+
+__all__ = [
+    "EldritchAnnulmentOrb",
+    "EldritchChaosOrb",
+    "EldritchExaltedOrb",
+    "EldritchImplicitCurrency",
+    "OrbOfConflict",
+    "conflict_raise_chance",
+    "implicit_pool",
+    "item_dominant_side",
+]
 
 TARGETS = get_rule("eldritch.ember_ichor_targets")
 RARITY_AND_INFLUENCE = get_rule("eldritch.ember_ichor_rarity_and_influence")
@@ -253,6 +270,7 @@ class EldritchImplicitCurrency(Action):
     "eldritch-implicit-currency",
     order=90,
     planner=False,
+    applies_only_to="armour",
     why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
 )
 def _implicit_currency(data: GameData, item: Item):
@@ -414,6 +432,7 @@ class EldritchAnnulmentOrb(Action):
     "eldritch-chaos-orb",
     order=91,
     planner=False,
+    applies_only_to="armour",
     why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
 )
 def _eldritch_chaos(data: GameData, item: Item):
@@ -425,6 +444,7 @@ def _eldritch_chaos(data: GameData, item: Item):
     "eldritch-exalted-orb",
     order=92,
     planner=False,
+    applies_only_to="armour",
     why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
 )
 def _eldritch_exalted(data: GameData, item: Item):
@@ -436,6 +456,7 @@ def _eldritch_exalted(data: GameData, item: Item):
     "eldritch-annulment-orb",
     order=93,
     planner=False,
+    applies_only_to="armour",
     why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
 )
 def _eldritch_annulment(data: GameData, item: Item):
@@ -541,6 +562,7 @@ class OrbOfConflict(Action):
     "orb-of-conflict",
     order=94,
     planner=False,
+    applies_only_to="armour",
     why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
 )
 def _orb_of_conflict(data: GameData, item: Item):

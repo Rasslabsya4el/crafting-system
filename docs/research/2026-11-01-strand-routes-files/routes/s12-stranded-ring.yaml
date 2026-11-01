@@ -1,0 +1,37 @@
+# Given route for benchmark route S12: R05's budget ring, bought with 60 Memory Strands.
+#
+# SOURCE: none. This is a TEST ROUTE written for batch B5 (ticket #272, docs/research/2026-11-01-strand-routes.md).
+# The crafting steps are R05's (PoE Vault, "Shrapnel Ballista Hierophant gear and flasks",
+# docs/research/2026-10-30-5-reference-routes.md, id R05; examples/routes/r05-strength-ring.yaml); only the
+# start item is new.
+#
+# A given route is a crafting route written down as rules and evaluated exactly, as a fixed policy, at the
+# same prices as the solver's route (python -m crafting_system.cli TARGET.yaml --route ROUTE.yaml). In every
+# state the FIRST rule whose conditions match is the one that is followed. A goal state is never acted on.
+# A state no rule matches is reported as a gap. The conditions and actions are explained in
+# examples/routes/r12-lightning-amulet.yaml.
+#
+# The route:
+#   1. Buy a ring with a fractured All Attributes AND 60 Memory Strands (docs/research/2026-11-01-strand-routes-files/buy/s12-start-ring.yaml).
+#   2. Use Deafening Essence of Rage until the other modifiers are useful ones, Life or Resistances.
+# An essence spends up to 80 strands and cuts the tiers of its random mods (ADR-0041, `approximate`), so the 60
+# strands are used up within about two essences (a uniform spend of 0 to 80 has mean 40); the Strength it
+# guarantees is fixed and not cut. The route keeps the single rule of R05: it does not care about the count, so
+# the cut helps the first draws only. No published number belongs to this route.
+#
+# The strand words. The loader of the given routes (src/crafting_system/cli/_route.py) does not read strands
+# yet; these are the words that B5-12 (#292) adds to it, written with the names the ADRs give. Every other
+# key and action is the loader's own.
+#   when:  memory_strands_at_least: N   the item holds N strands or more (N from 1 to 100)
+#   when:  memory_strands_below: N      the item holds fewer than N strands (0 strands is below any N)
+#   do:    Orb of Remembrance           ADR-0043; offered for a normal equipment item (kind `remembrance-orb`)
+#   do:    Orb of Unravelling           ADR-0044; offered on an identified item with strands (kind `unravelling-orb`)
+# The query must turn strands on (`memory_strands = true` in crafting.toml, or `--strands`; ADR-0040). A start
+# item that holds strands turns them on by itself.
+
+name: S12, test route, R05 on a ring with 60 strands
+
+rules:
+  - when:
+      rarity: rare
+    do: Deafening Essence of Rage

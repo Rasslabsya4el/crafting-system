@@ -11,6 +11,7 @@ from fractions import Fraction
 import pytest
 from contract_support import check_action, check_block_invariance
 from item_state_support import (
+    check_kinds_declare_item_state,
     AILMENTS_1,
     AILMENTS_2,
     AVOID_SHOCK,
@@ -72,12 +73,10 @@ def test_an_action_that_declares_nothing_reads_and_adds_everything():
     assert (adds.implicits, adds.quality, adds.offer) == (True, True, True)
 
 
-def test_no_kind_of_the_catalog_declares_item_state_yet():
-    # B1 touches none of the three: the planner and the cache see no change in any registered kind
-    for kind in kinds():
-        for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
-            reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
-            assert not reads.item_state and not adds.item_state, kind.name
+def test_no_planner_kind_of_the_catalog_declares_item_state_yet():
+    # B1 touches none of the three: the planner and the cache see no change in any registered kind that is offered. A kind outside the
+    # planner that reads a part of it (the influenced Exalted Orb, ticket #154) says so itself: `reads_item_state_while_not_planner`.
+    assert check_kinds_declare_item_state() == len(kinds())
 
 
 # --- the toys pass the contract suite -------------------------------------------------------------

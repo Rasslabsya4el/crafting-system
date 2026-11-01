@@ -38,6 +38,11 @@ from .errors import OutOfScopeError
 from .metamods import allowed_by_tags
 from .pool import PoolFamily, PoolMod
 
+__all__ = [
+    "Outcome",
+    "guaranteed_candidates",
+]
+
 Outcome = frozenset[tuple[Hashable, int]]
 
 RARE_REROLL_RATIO = get_rule("affix_count.rare_reroll_ratio")

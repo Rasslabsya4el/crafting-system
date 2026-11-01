@@ -1,0 +1,84 @@
+# The Foulborn orbs (ADR-0043): the cut, the spend and the availability. Promoted in ticket #274 from the drafts of #98, #271 and #273.
+# patch_verified is the last patch whose notes or data the mechanic was read on, not the pinned patch.
+rules:
+  # --- The tier cut of a Foulborn orb ---
+  - id: foulborn.effect_tier_cull
+    statement: 'A Foulborn Orb of Augmentation, Regal Orb or Exalted Orb acts like its plain version, but the draw only sees the highest `K(N)` tiers of each mod type, N being the number of eligible tiers: K = ceil(N/2) for N <= 6, floor(N/2) + 1 for N > 6 (N = 1..13 gives 1,1,2,2,3,3,4,5,5,6,6,7,7). Source: wiki only, from a private Discord test (Prohibited Library); no public data covers an item with 0 strands (the Reddit sheet has only Foulborn orbs on items with strands). The same numbers come out of the strands formula with denominator 175 (= 100 + 75), checked in exact arithmetic (8 tiers: 100/175 * 7 is exactly 4).'
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Foulborn_currency_item
+    quote: it will only be able to roll the 4 highest eligible tiers and the lowest 3 tiers will be culled from the pool
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: 'The case of an item with 0 strands rests on the wiki''s list from a private test; the emulator rates the orb at 100 and keeps other tiers at 8, 10, 12, 14 and 15 tiers (research #273 and #271 section 5).'
+
+  - id: foulborn.on_stranded_item
+    statement: 'On an item with s >= 1 strands a Foulborn orb cuts as if the item had s + 30 strands: denominator 2.5 (s + 30) + 147.5 in `rollable_tiers`. The cut is made before the orb spends its strands. The author believes it from tests of Foulborn Augmentation and Regal on both sides of several breakpoints; the Foulborn Exalted Orb is not tested by him. 491 Foulborn rows of his raw sheet fit. The sheet fit (claim foulborn.bonus_is_added_to_the_strand_denominator) shows the bonus is added to the denominator, not the larger of two cuts.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
+    quote: I believe using foulborn currency on an item with memory strands does indeed just add 75 to the value in the denominator of the formula, acting as if the item had 30 extra strands.
+    patch_verified: 3.29.0
+    date_checked: 2026-10-31
+    value:
+      extra_strands: 30
+      bonus_to_rating: 75
+
+  - id: foulborn.bonus_is_added_to_the_strand_denominator
+    statement: 'A Foulborn orb on an item with strands adds 75 to the Modifier Tier Rating of the cut: the denominator D of ADR-0040 is 2.5 s + 147.5 + 75, not the larger of the strand cut and a cut of the orb alone. On the 491 Foulborn crafts of the sheet (427 Augmentation, 64 Regal, 1 to 91 strands before) the log-likelihood of the observed mods is -1,809.6 for the sum, -2,084.9 for the larger of the strand cut and the Foulborn cut at rating 75 (D = 175) and -2,064.0 for the beta emulator''s rule (rating 100, the larger of the two cuts); on the 42 crafts with 10 strands or fewer -168.9 against -183.2 (there both larger-of rules give the strand cut alone, so this does not bear on rating 75 against 100). The bonus itself: 75 is the largest value the data allow (a bonus of 76 makes an observed craft impossible) and 72.5 is 13.5 log-likelihood units worse. Not answered: the cut of a Foulborn orb on an item with no strands (the sheet has no such craft).'
+    source_kind: experiment
+    url: https://docs.google.com/spreadsheets/d/1UKTS29e1XghGTQQJBiu7TR3vrancnZxiyN3tBzj30WI/
+    quote: 0,79,Foulborn Orb of Augmentation,Resplendent,1,11,320,0.2380952381,3
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    value:
+      bonus_to_rating: 75
+      combines_with_strands: sum
+    approximate: true
+    approximate_reason: 75 is the largest bonus the data allow, with the post's statement; the cut on an item with no strands is open.
+
+  - id: foulborn.zero_strand_cut_matches_eleven_strands
+    statement: 'The cut of a Foulborn orb on its own is the cut of about 11 strands: the first author of the strands post saw that the tier restriction of Foulborn currency "exactly matched" that of 10 to 11 strands, and 11 strands is the denominator 175 (= 100 + 75) of the formula. With D = 175 the kept tiers for N = 1..13 eligible tiers are the wiki''s list 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7. The sentence does not say that the item he compared had no strands (it reads as Foulborn alone, since an item with strands would add to them); the reading for a 0-strand item is mine. The crafting AMA''s cluster-jewel advice (jewels carry no strands: "cull 1/2 (mid ilvl) or 1/3 (high ilvl)" of three tiers) fits D = 175 at 2 and 3 tiers but also fits the emulator''s rating of 100, so it does not separate the two. His sheet has no Foulborn row on a 0-strand item.'
+    source_kind: experiment
+    url: https://www.reddit.com/r/pathofexile/comments/1wr9445/329_everything_you_need_to_know_about_memory/
+    quote: I noticed that the tier restricting behavior of foulborn currency exactly matched that of 10-11 memory strands, and 11 strands maps to a nice MTR number of 75.
+    patch_verified: 3.29.0
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: 'The author shows no cells for the 0-strand case, and the emulator rates Foulborn at 100 with other rounding, so its list differs from the wiki''s at 8, 10, 12, 14 and 15 tiers (in-game list #182).'
+
+  # --- What a Foulborn orb spends, and where it comes from ---
+  - id: foulborn.spend_ranges
+    statement: Foulborn Augmentation spends up to 32 strands and Foulborn Regal up to 48 (the sheet's largest Foulborn Regal spend is 43 of 64 crafts, so 48 is not reached and not contradicted). The Foulborn Exalted Orb's ceiling grows with the mods on the item (claim foulborn.exalted_spend_by_mod_count); the wiki prints only its figure for 5 modifiers, 62, and PoEDB lists one figure, 28.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Memory_Strands
+    quote: Foulborn Orb of Augmentation — 0-32; Foulborn Regal Orb — 0-48; Foulborn Exalted Orb, 5 modifiers — 0-62
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31
+    value:
+      augmentation: 32
+      regal: 48
+
+  - id: foulborn.exalted_spend_by_mod_count
+    statement: 'A Foulborn Exalted Orb spends a random whole number of strands from 0 up to a ceiling that grows with the explicit mods the item has when the orb is applied: by the mods before the craft 0 mods 46, 1 mod 52, 2 mods 56, 3 mods 60, 4 mods 62, 5 mods 66. The values are the beta Craft of Exile emulator''s row (46, 46, 52, 56, 60, 62, which is its plain Exalted row 16, 16, 22, 26, 32, 34 plus 30 or 28 and equals the wiki''s plain row for 1 to 5 mods after the orb, and the wiki''s 62 at 5 mods); the indexing is the sheet''s, which shows the plain row is one mod out (claim memory_strands.spend_exalted_by_mod_count), so the row is moved by one mod and the last cell, 66, is the plain 38 plus 28 with no source of its own. PoEDB lists one figure, 0-28, for the orb, which no mod count of this row gives. Replaces the planner''s estimate of 29, 40, 47, 58, 62 (the plain Exalted row times 62/34). The sheet has no Foulborn Exalted craft.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe1.js
+    quote: foulborn_exalted:[[0,46],[0,46],[0,52],[0,56],[0,60],[0,62]]
+    patch_verified: 3.29.3.3
+    date_checked: 2026-11-01
+    value:
+    - 46
+    - 52
+    - 56
+    - 60
+    - 62
+    - 66
+    approximate: true
+    approximate_reason: 'Only the emulator''s table gives the row and the sheet''s indexing is an inference; PoEDB''s single figure 0-28 disagrees and nobody has tested the orb (in-game list #182).'
+
+  - id: foulborn.availability
+    statement: The three Foulborn orbs exist since 3.27.0 (drop level 68, 68, 80) and come only from the Genesis Tree, birthed from a Lavish Wombgift.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Foulborn_Orb_of_Augmentation
+    quote: Can be birthed from the Genesis Tree from a Lavish Wombgift.
+    patch_verified: 3.29.1
+    date_checked: 2026-10-31

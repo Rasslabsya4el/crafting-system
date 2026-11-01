@@ -15,3 +15,7 @@ The owner allowed a plan to start from a bought item that carries Memory Strands
 ## Amendment: sockets in targets and start items ([Grill B6](https://github.com/Rasslabsya4el/crafting-system/issues/104), 2026-11-01)
 
 A target may carry `sockets: {count, links, colours: {R, G, B}}` and, on a weapon or armour, `quality: {min_percent}` (ADR-0046, ADR-0049). A socket requirement is a requirement of the finish, not of the mod problem: it adds no line to the mod requirements. A start item may state its sockets, links, colours and quality; when the target names sockets, one that states none has one white, unlinked socket (ADR-0046); otherwise it gets no socket.
+
+## Amendment: start items from vendor recipes ([#329](https://github.com/Rasslabsya4el/crafting-system/issues/329), 2026-11-01)
+
+A start item may also be **made by a vendor recipe** from a Normal base and cheap goods: a Magic item with one chosen mod, priced as the sum of the goods. The planner plans the plain start item and each recipe-made one and keeps the cheapest total. A target asks for no recipe; the choice is made outside the solver ([ADR-0059](0059-vendor-recipes-are-start-item-sources.md), which also amends ADR-0043's "acquisition methods are not modelled" for vendor recipes only).
