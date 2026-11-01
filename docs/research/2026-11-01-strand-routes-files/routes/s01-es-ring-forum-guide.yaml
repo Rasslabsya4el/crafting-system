@@ -28,9 +28,9 @@
 #      already" (nothing left to raise), and the Defence Catalyst (B2 quality, not asked by the target).
 #
 # What today's loader cannot read, apart from the strand words (found by the checker of PR #303, run on the 3.29.3.3 dump):
-# the fossil set is outside the planner's offer set (#118), and a bench craft is offered only when a requirement counts its
-# mod, which the metamod "Prefixes Cannot Be Changed" never is. So this route is a complete written policy but cannot be
-# evaluated before the offers change; B5-12 (#292) has to settle it.
+# a bench craft is offered only when a requirement counts its mod, which the metamod "Prefixes Cannot Be Changed" never is
+# (the fossil set is opt-in since the merge of main and the target names it). So this route is a complete written policy but
+# cannot be evaluated before the offers change; B5-12 (#292) has to settle it, and nobody has sized its plan.
 #
 # The strand words are explained at the end of the header of docs/research/2026-11-01-strand-routes-files/routes/s11-remembrance-belt.yaml and are read by
 # the loader only after B5-12 (#292); every other key and action is the loader's own.
