@@ -225,8 +225,38 @@ def solve_pruned(
     `item` is the start item (the twin key is read on it). With fewer than `min_offers` offers nothing is
     left out but the twins (there is nothing to gain). Raises what `solve` raises when even the fallback fails.
     """
+    found = _run(abstraction, start, priced, item, rounds, min_offers, False)
+    assert isinstance(found, Pruned)
+    return found
+
+
+def starting_offers(
+    abstraction: Abstraction, start: CompressedState, priced: Sequence[PricedOffer], item: Item, *, min_offers: int = 40
+) -> list[PricedOffer]:
+    """The offers `solve_pruned` solves first: the twins merged, then `restart`, the crafts and the best rerolls.
+
+    The size of the exact run is forecast on these (the rounds that follow add a few offers each), so that a plan with a
+    budget does not pay for a pilot over thousands of fossil sets that the certificate then proves not needed.
+    With fewer than `min_offers` offers it is all of them.
+    """
+    found = _run(abstraction, start, priced, item, 0, min_offers, True)
+    assert not isinstance(found, Pruned)
+    return found
+
+
+def _run(
+    abstraction: Abstraction,
+    start: CompressedState,
+    priced: Sequence[PricedOffer],
+    item: Item,
+    rounds: int,
+    min_offers: int,
+    start_set_only: bool,
+) -> "Pruned | list[PricedOffer]":
     from ._plan import _Model  # _plan imports this module
 
+    if len(priced) < min_offers and start_set_only:
+        return list(priced)
     if len(priced) < min_offers:
         everything = solve(_Model(abstraction, start, priced), [start])
         return Pruned(everything, tuple(priced), (), (), 1, 0.0, _largest(everything, abstraction), True, f"fewer than {min_offers} offers: nothing to gain")
@@ -321,6 +351,8 @@ def solve_pruned(
     inside.update(entry.index for entry in rerolls[:SMALL_START])
     if not inside:  # nothing to start from: the cheapest offers
         inside.update(entry.index for entry in sorted(entries, key=lambda entry: (entry.cost, entry.index))[:SMALL_START])
+    if start_set_only:
+        return [entry.priced for entry in entries if entry.index in inside]
     spent = 0
     while spent < rounds:
         spent += 1
