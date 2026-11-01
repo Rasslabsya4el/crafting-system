@@ -277,6 +277,11 @@ def make_plan(
             "the target asks for implicits or quality, which the planner cannot plan yet"
             " (batch B2, tickets #142 onward)"
         )
+    if target.sockets is not None:
+        raise PlanError(
+            "the target asks for sockets, which the planner cannot plan yet"
+            " (batch B6, tickets #228 and #231 onward): the finish of sockets is not built, so an answer would silently ignore them"
+        )
     if target.enchantment is not None:
         raise PlanError(
             "the target asks for an enchantment, which the planner cannot plan yet"

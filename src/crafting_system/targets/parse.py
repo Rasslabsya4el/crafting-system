@@ -14,7 +14,10 @@ from crafting_system.data import BaseItem, GameData
 from crafting_system.items import (
     CATALYST_ITEM_CLASSES,
     MAX_MEMORY_STRANDS,
+    MAX_PLAIN_QUALITY,
     MAX_QUALITY,
+    MAX_SOCKETS,
+    PLAIN_QUALITY_ITEM_CLASSES,
     CatalystType,
     ExplicitMod,
     ImplicitError,
@@ -24,13 +27,20 @@ from crafting_system.items import (
     Item,
     ItemError,
     MemoryStrandsError,
+    PlainQuality,
     Quality,
     QualityError,
     Rarity,
+    SocketColour,
+    SocketError,
+    Sockets,
     VeilOfferError,
+    class_maximum,
     eldritch_grade,
     eldritch_side,
     enchant_class,
+    has_abyssal_socket,
+    is_abyssal_socket_mod,
     has_memory_strands_line,
     read_memory_strands,
     spawn_weight,
@@ -41,7 +51,17 @@ from .corrupted import CorruptedResolver, corruption_problem
 from .enchantment import EnchantmentResolver
 from .errors import TargetError
 from .lines import LineList, LineMap, load_with_lines
-from .model import EnchantmentRequirement, ImplicitRequirement, KOfN, Node, QualityRequirement, Requirement, Target
+from .model import (
+    EnchantmentRequirement,
+    ImplicitRequirement,
+    KOfN,
+    Node,
+    PlainQualityRequirement,
+    QualityRequirement,
+    Requirement,
+    SocketRequirement,
+    Target,
+)
 from .resolve import Resolver, Unresolved, close_matches, quoted
 
 TOP_KEYS = (
@@ -51,6 +71,7 @@ TOP_KEYS = (
     "requirements",
     "implicits",
     "quality",
+    "sockets",
     "enchantment",
     "start_item",
     "start_price",
@@ -61,9 +82,16 @@ TOP_KEYS = (
 REQUIREMENT_KEYS = ("family", "stat", "mod", "min_tier", "min_roll", "not_crafted")
 IMPLICIT_KEYS = ("family", "stat", "mod", "min_grade", "min_roll", "corrupted")
 QUALITY_KEYS = ("type", "min_percent")
+SOCKET_KEYS = ("count", "links", "colours")
+SOCKET_COLOUR_KEYS = ("R", "G", "B")
+START_SOCKET_KEYS = ("count", "colours", "links")
+MIN_LINKS = 2
+BUYABLE_QUALITY = 20
 ENCHANTMENT_KEYS = ("any_of",)
 GROUP_KEYS = ("at_least", "of")
-START_ITEM_KEYS = ("rarity", "corrupted", "mods", "implicits", "quality", "enchantment", "veil_offer", "memory_strands")
+START_ITEM_KEYS = (
+    "rarity", "corrupted", "mods", "implicits", "quality", "sockets", "enchantment", "veil_offer", "memory_strands",
+)  # fmt: skip
 START_MOD_KEYS = ("mod", "tier", "values", "fractured", "crafted")
 START_IMPLICIT_KEYS = ("mod", "values", "grade")
 START_QUALITY_KEYS = ("type", "percent")
@@ -171,12 +199,20 @@ class _Reader:
         )
         quality = None
         if "quality" in root:
-            quality = self.read_quality(root["quality"], root.key_lines["quality"])
-            self.check_catalyst_base(base_id, root.key_lines["quality"])
+            quality = self.read_quality(root["quality"], root.key_lines["quality"], base_id)
+            if isinstance(quality, QualityRequirement):
+                self.check_catalyst_base(base_id, root.key_lines["quality"])
+        sockets = None
+        if "sockets" in root:
+            sockets = self.read_sockets(root["sockets"], root.key_lines["sockets"], base_id)
         enchantment = None
         if "enchantment" in root:
             enchantment = self.read_enchantment(root["enchantment"], root.key_lines["enchantment"], base_id)
-        start_item = self.read_start_item(root, base_id, item_level, influences)
+        stated = "start_item" in root and isinstance(root["start_item"], LineMap) and "sockets" in root["start_item"]
+        assumed = sockets is not None and not stated
+        start_item = self.read_start_item(root, base_id, item_level, influences, assume_socket=assumed)
+        if isinstance(quality, PlainQualityRequirement):
+            self.check_plain_quality_reachable(root["quality"], quality, start_item)
         if enchantment is not None:
             self.check_enchantment_reachable(root["enchantment"], enchantment, base_id, start_item)
         price_file = self.read_price_file(root)
@@ -184,9 +220,11 @@ class _Reader:
         actions = self.read_actions(root["actions"], root.key_lines["actions"]) if "actions" in root else None
         allow_corrupted = self.read_allow_corrupted(root) if "allow_corrupted" in root else False
         self.check_corruption(root, base_id, item_level, implicits, allow_corrupted, start_item, start_price, actions)
+        if sockets is not None:
+            self.check_socket_scope(root, requirements, start_item)
         return Target(
             base_id, item_level, influences, requirements, start_item, price_file, start_price, implicits, quality,
-            actions, enchantment, allow_corrupted,
+            actions, enchantment, allow_corrupted, sockets, assumed,
         )  # fmt: skip
 
     def read_allow_corrupted(self, root: LineMap) -> bool:
@@ -541,7 +579,8 @@ class _Reader:
                 line,
                 "quality",
                 f"{base.name} is a {base.item_class}, and catalyst quality can only be put on"
-                f" {', '.join(sorted(CATALYST_ITEM_CLASSES))}, so it could never be met",
+                f" {', '.join(sorted(CATALYST_ITEM_CLASSES))}, so it could never be met"
+                + ("; a weapon or armour has plain quality: leave `type` out" if base.item_class in PLAIN_QUALITY_ITEM_CLASSES else ""),
             )
 
     def read_min_grade(self, entry: LineMap, path: str, mod_ids: frozenset[str]) -> int:
@@ -570,10 +609,14 @@ class _Reader:
             self.fail(line, path, f"{value} is above the best grade any of these mods has, which is {best}")
         return value
 
-    def read_quality(self, entry: object, line: int) -> QualityRequirement:
+    def read_quality(self, entry: object, line: int, base_id: str) -> QualityRequirement | PlainQualityRequirement:
+        plain_class = self.data.base_items[base_id].item_class in PLAIN_QUALITY_ITEM_CLASSES
         if not isinstance(entry, LineMap):
-            self.fail(line, "quality", f"must be a mapping with `type` and `min_percent`, got {describe(entry)}")
+            keys = "`min_percent` (a weapon or armour has plain quality, no `type`)" if plain_class else "`type` and `min_percent`"
+            self.fail(line, "quality", f"must be a mapping with {keys}, got {describe(entry)}")
         self.check_keys(entry, "quality", QUALITY_KEYS)
+        if plain_class and "type" not in entry:
+            return self.read_plain_quality(entry)
         for key in QUALITY_KEYS:
             if key not in entry:
                 self.fail(entry.line, f"quality.{key}", "this key is required but missing")
@@ -587,12 +630,226 @@ class _Reader:
             )
         return QualityRequirement(catalyst, percent)
 
+    def read_plain_quality(self, entry: LineMap) -> PlainQualityRequirement:
+        """`quality: {min_percent}` of a weapon or armour (ADR-0049): whole 1 to 30; the currencies stop at 20, which is checked against the start item later."""
+        if "min_percent" not in entry:
+            self.fail(entry.line, "quality.min_percent", "this key is required but missing")
+        percent = entry["min_percent"]
+        if not is_whole(percent) or not 1 <= percent <= MAX_PLAIN_QUALITY:
+            self.fail(
+                entry.key_lines["min_percent"],
+                "quality.min_percent",
+                f"must be a whole number from 1 to {MAX_PLAIN_QUALITY}, got {describe(percent)}",
+            )
+        return PlainQualityRequirement(percent)
+
+    def check_plain_quality_reachable(self, entry: LineMap, wanted: PlainQualityRequirement, start_item: Item) -> None:
+        """Refuse a plain quality above what Whetstones and Scraps give unless the start item already holds it: no orb is planned above 20%."""
+        held = start_item.quality.percent if isinstance(start_item.quality, PlainQuality) else 0
+        if wanted.min_percent > BUYABLE_QUALITY and held < wanted.min_percent:
+            self.fail(
+                entry.key_lines["min_percent"],
+                "quality.min_percent",
+                f"{wanted.min_percent}% is more than the {BUYABLE_QUALITY}% that Blacksmith's Whetstones and Armourer's Scraps raise"
+                " quality to, so only a start item that already holds that much can meet it; ask for"
+                f" {BUYABLE_QUALITY} or less, or give `start_item.quality.percent` of {wanted.min_percent} or more",
+            )
+
     def read_catalyst(self, entry: LineMap, path: str) -> CatalystType:
         allowed = [catalyst.value for catalyst in CatalystType]
         value = entry["type"]
         if not isinstance(value, str) or value.strip().lower() not in allowed:
             self.fail(entry.key_lines["type"], path, f"must be one of {quoted(allowed)}, got {describe(value)}")
         return CatalystType(value.strip().lower())
+
+    # -- the sockets -----------------------------------------------------------------------------------
+
+    def read_sockets(self, entry: object, line: int, base_id: str) -> SocketRequirement:
+        """`sockets: {count, links, colours: {R, G, B}}` (ADR-0046): the shape, then the base, then how the keys fit together and the class maximum."""
+        if not isinstance(entry, LineMap):
+            self.fail(line, "sockets", f"must be a mapping with `count`, `links` and `colours`, got {describe(entry)}")
+        self.check_keys(entry, "sockets", SOCKET_KEYS)
+        if not len(entry):
+            self.fail(line, "sockets", "name at least one of `count`, `links` and `colours`; an empty mapping asks for nothing")
+        count = self.read_socket_number(entry, "count", "sockets.count", 1)
+        links = self.read_socket_number(entry, "links", "sockets.links", MIN_LINKS)
+        colours = self.read_socket_colours(entry["colours"], entry.key_lines["colours"]) if "colours" in entry else (0, 0, 0)
+        base = self.data.base_items[base_id]
+        most = class_maximum(base)
+        if most is None:
+            self.fail(line, "sockets", self.no_socket_table(base))
+        wanted = SocketRequirement(count, links, *colours)
+        self.check_socket_fit(entry, wanted)
+        sizes = {
+            "count": (wanted.count, f"{wanted.count} sockets"),
+            "links": (wanted.links, f"a linked group of {wanted.links}"),
+            "colours": (wanted.coloured or None, f"{wanted.coloured} coloured sockets"),
+        }
+        for key, (value, what) in sizes.items():
+            if value is not None and value > most:
+                self.fail(
+                    entry.key_lines[key],
+                    f"sockets.{key}",
+                    f"{what} is more than the class maximum of {most} sockets: {base.name} is of item class {base.item_class},"
+                    f" and none of that class can have more than {most}",
+                )
+        return wanted
+
+    def read_socket_number(self, entry: LineMap, key: str, path: str, low: int) -> int | None:
+        if key not in entry:
+            return None
+        value = entry[key]
+        if not is_whole(value) or not low <= value <= MAX_SOCKETS:
+            meaning = " (a group of one socket is no link)" if low > 1 else ""
+            self.fail(
+                entry.key_lines[key], path, f"must be a whole number from {low} to {MAX_SOCKETS}{meaning}, got {describe(value)}"
+            )
+        return value
+
+    def read_socket_colours(self, entry: object, line: int) -> tuple[int, int, int]:
+        if not isinstance(entry, LineMap):
+            self.fail(line, "sockets.colours", f"must be a mapping with `R`, `G` and `B` counts, got {describe(entry)}")
+        self.check_keys(entry, "sockets.colours", SOCKET_COLOUR_KEYS)
+        if not len(entry):
+            self.fail(line, "sockets.colours", "name at least one of `R`, `G` and `B`; an empty mapping asks for nothing")
+        counts = []
+        for key in SOCKET_COLOUR_KEYS:
+            if key not in entry:
+                counts.append(0)
+                continue
+            value = entry[key]
+            if not is_whole(value) or not 1 <= value <= MAX_SOCKETS:
+                self.fail(
+                    entry.key_lines[key],
+                    f"sockets.colours.{key}",
+                    f"must be a whole number from 1 to {MAX_SOCKETS} (leave the colour out to ask for none), got {describe(value)}",
+                )
+            counts.append(value)
+        return counts[0], counts[1], counts[2]
+
+    def check_socket_fit(self, entry: LineMap, wanted: SocketRequirement) -> None:
+        """Refuse keys that cannot hold together: links above count, colours above links (or above count when no links are given)."""
+        if wanted.count is not None and wanted.links is not None and wanted.links > wanted.count:
+            self.fail(
+                entry.key_lines["links"],
+                "sockets.links",
+                f"a linked group of {wanted.links} does not fit in `count` {wanted.count} sockets; ask for a smaller group"
+                " or more sockets",
+            )
+        shown = f"{wanted.coloured} coloured sockets (R {wanted.red}, G {wanted.green}, B {wanted.blue})"
+        if wanted.links is not None and wanted.coloured > wanted.links:
+            self.fail(
+                entry.key_lines["colours"],
+                "sockets.colours",
+                f"{shown} do not fit in one linked group of {wanted.links} (`links`), where they are counted;"
+                " ask for fewer colours or a bigger group",
+            )
+        if wanted.links is None and wanted.count is not None and wanted.coloured > wanted.count:
+            self.fail(
+                entry.key_lines["colours"],
+                "sockets.colours",
+                f"{shown} are more than the {wanted.count} sockets of `count`; ask for fewer colours or more sockets",
+            )
+
+    @staticmethod
+    def no_socket_table(base: BaseItem) -> str:
+        if base.item_class in CATALYST_ITEM_CLASSES:
+            return (
+                f"{base.name} is of item class {base.item_class}, and the sockets of jewellery are out of scope (the one socket of an Unset Ring"
+                " cannot change), so a socket target on it is refused (ADR-0046)"
+            )
+        return (
+            f"{base.name} is of item class {base.item_class}, which has no socket table; sockets are planned for weapons and armour only"
+            " (ADR-0046)"
+        )
+
+    def check_socket_scope(self, root: LineMap, requirements: tuple[Node, ...], start_item: Item) -> None:
+        """Refuse a socket target on a corrupted start item and on an item with an Abyssal Socket (ADR-0046): both are out of scope."""
+        line = root.key_lines["sockets"]
+        if start_item.corrupted:
+            self.fail(
+                line,
+                "sockets",
+                "the start item is corrupted (`start_item.corrupted`), and a corrupted item takes no socket orb;"
+                " the Tainted orbs and the bench crafts that cost Vaal Orbs are batch B4's (ADR-0046)",
+            )
+        held = tuple(entry.mod_id for entry in (*start_item.mods, *start_item.implicits))
+        if has_abyssal_socket(self.data, start_item.base_id, held):
+            self.fail(
+                line,
+                "sockets",
+                "the start item has an Abyssal Socket (a mod or an implicit of the base), and the sockets of such an item are out of"
+                " scope: nothing says how an Abyssal Socket counts toward the total (ADR-0046)",
+            )
+        for index, node in enumerate(requirements):
+            if self.names_abyssal_socket(node):
+                self.fail(
+                    root["requirements"].item_lines[index],
+                    f"requirements[{index}]",
+                    "this requirement can put an Abyssal Socket on the item, and a target with sockets on such an item is out of"
+                    " scope: nothing says how an Abyssal Socket counts toward the total (ADR-0046)",
+                )
+
+    def names_abyssal_socket(self, node: Node) -> bool:
+        if isinstance(node, KOfN):
+            return any(self.names_abyssal_socket(member) for member in node.of)
+        return any(is_abyssal_socket_mod(self.data.mods[mod_id]) for mod_id in node.mod_ids)
+
+    def read_start_sockets(self, entry: object, line: int) -> Sockets:
+        """The `sockets:` of a start item: `colours` (a list of W, R, G, B, one per socket), `count` and `links` (group sizes in order)."""
+        path = "start_item.sockets"
+        if not isinstance(entry, LineMap):
+            self.fail(line, path, f"must be a mapping with `colours`, `count` and `links`, got {describe(entry)}")
+        self.check_keys(entry, path, START_SOCKET_KEYS)
+        if not len(entry):
+            self.fail(line, path, "name at least one of `count`, `colours` and `links`; an empty mapping states no sockets")
+        colours = self.read_start_colours(entry["colours"], f"{path}.colours", entry.key_lines["colours"]) if "colours" in entry else None
+        count = self.read_socket_number(entry, "count", f"{path}.count", 1)
+        links = self.read_start_links(entry["links"], f"{path}.links", entry.key_lines["links"]) if "links" in entry else None
+        if colours is not None and count is not None and len(colours) != count:
+            self.fail(
+                entry.key_lines["count"], f"{path}.count", f"is {count}, but `colours` lists {len(colours)} sockets; they must agree"
+            )
+        sockets = len(colours) if colours is not None else count if count is not None else sum(links)
+        if sockets > MAX_SOCKETS:
+            self.fail(line, path, f"{sockets} sockets is more than the {MAX_SOCKETS} any item can have")
+        if links is not None and sum(links) != sockets:
+            self.fail(
+                entry.key_lines["links"],
+                f"{path}.links",
+                f"the groups {list(links)} add up to {sum(links)} sockets, but the item has {sockets}"
+                " (one group size per run of linked sockets, in socket order, unlinked sockets as 1)",
+            )
+        shades = colours if colours is not None else (SocketColour.WHITE,) * sockets
+        return Sockets(shades, links if links is not None else (1,) * sockets)
+
+    def read_start_colours(self, entry: object, path: str, line: int) -> tuple[SocketColour, ...]:
+        if not isinstance(entry, LineList) or not len(entry):
+            self.fail(line, path, f"must be a non-empty list of socket colours such as [R, G, B, W], got {describe(entry)}")
+        names = {colour.name.lower(): colour for colour in SocketColour} | {colour.value.lower(): colour for colour in SocketColour}
+        found = []
+        for index, name in enumerate(entry):
+            colour = names.get(name.strip().lower()) if isinstance(name, str) else None
+            if colour is None:
+                self.fail(
+                    entry.item_lines[index],
+                    f"{path}[{index}]",
+                    f"must be one of {quoted([colour.value for colour in SocketColour])} (or red, green, blue, white), got {describe(name)}",
+                )
+            found.append(colour)
+        return tuple(found)
+
+    def read_start_links(self, entry: object, path: str, line: int) -> tuple[int, ...]:
+        if not isinstance(entry, LineList) or not len(entry):
+            self.fail(line, path, f"must be a non-empty list of link group sizes such as [3, 2, 1], got {describe(entry)}")
+        for index, size in enumerate(entry):
+            if not is_whole(size) or not 1 <= size <= MAX_SOCKETS:
+                self.fail(
+                    entry.item_lines[index],
+                    f"{path}[{index}]",
+                    f"must be a whole number from 1 to {MAX_SOCKETS}, got {describe(size)}",
+                )
+        return tuple(entry)
 
     # -- the enchantment -----------------------------------------------------------------------------
 
@@ -669,7 +926,7 @@ class _Reader:
     # -- the start item ----------------------------------------------------------------------------
 
     def read_start_item(
-        self, root: LineMap, base_id: str, item_level: int, influences: frozenset[Influence]
+        self, root: LineMap, base_id: str, item_level: int, influences: frozenset[Influence], *, assume_socket: bool = False
     ) -> Item:
         line = root.key_lines.get("start_item", root.key_lines["base"])
         fields: dict[str, object] = {"rarity": Rarity.NORMAL}
@@ -680,6 +937,7 @@ class _Reader:
         offer: tuple[str, ...] = ()
         offer_lines: list[int] = []
         quality_line = line
+        sockets_line = line
         enchantment_line = line
         if "start_item" in root:
             start = root["start_item"]
@@ -688,8 +946,8 @@ class _Reader:
                 self.fail(
                     line,
                     "start_item",
-                    "must be a mapping with `rarity`, `corrupted`, `mods`, `implicits`, `quality`, `enchantment`, `veil_offer`"
-                    " and `memory_strands`,"
+                    "must be a mapping with `rarity`, `corrupted`, `mods`, `implicits`, `quality`, `sockets`, `enchantment`,"
+                    " `veil_offer` and `memory_strands`,"
                     f" got {describe(start)}",
                 )
             self.check_keys(start, "start_item", START_ITEM_KEYS)
@@ -700,8 +958,12 @@ class _Reader:
                 implicits = self.read_start_implicits(start["implicits"], start.key_lines["implicits"], base_id)
                 implicit_lines = start["implicits"].item_lines
             if "quality" in start:
-                fields["quality"] = self.read_start_quality(start["quality"], start.key_lines["quality"])
+                item_class = self.data.base_items[base_id].item_class
+                fields["quality"] = self.read_start_quality(start["quality"], start.key_lines["quality"], item_class)
                 quality_line = start.key_lines["quality"]
+            if "sockets" in start:
+                fields["sockets"] = self.read_start_sockets(start["sockets"], start.key_lines["sockets"])
+                sockets_line = start.key_lines["sockets"]
             if "enchantment" in start:
                 enchantment_line = start.key_lines["enchantment"]
                 fields["enchantment"] = self.read_start_enchantment(start["enchantment"], enchantment_line, base_id)
@@ -719,6 +981,8 @@ class _Reader:
                         f"must be true or false, got {describe(start['corrupted'])}",
                     )
                 fields["corrupted"] = start["corrupted"]
+        if assume_socket and "sockets" not in fields:
+            fields["sockets"] = Sockets.unlinked((SocketColour.WHITE,))  # a target with sockets assumes one white socket (ADR-0046)
         try:
             return Item.build(
                 self.data,
@@ -734,6 +998,8 @@ class _Reader:
             message = str(problem)
             if isinstance(problem, QualityError):
                 self.fail(quality_line, "start_item.quality", message)
+            if isinstance(problem, SocketError):
+                self.fail(sockets_line, "start_item.sockets", message)
             if isinstance(problem, EnchantmentError):
                 self.fail(enchantment_line, "start_item.enchantment", message)
             if isinstance(problem, VeilOfferError):
@@ -850,10 +1116,14 @@ class _Reader:
         except ImplicitError as problem:
             self.fail(line, path, str(problem))
 
-    def read_start_quality(self, entry: object, line: int) -> Quality:
+    def read_start_quality(self, entry: object, line: int, item_class: str) -> Quality | PlainQuality:
+        plain_class = item_class in PLAIN_QUALITY_ITEM_CLASSES
         if not isinstance(entry, LineMap):
-            self.fail(line, "start_item.quality", f"must be a mapping with `type` and `percent`, got {describe(entry)}")
+            keys = "`percent` (a weapon or armour has plain quality, no `type`)" if plain_class else "`type` and `percent`"
+            self.fail(line, "start_item.quality", f"must be a mapping with {keys}, got {describe(entry)}")
         self.check_keys(entry, "start_item.quality", START_QUALITY_KEYS)
+        if plain_class and "type" not in entry:
+            return self.read_start_plain_quality(entry)
         for key in START_QUALITY_KEYS:
             if key not in entry:
                 self.fail(entry.line, f"start_item.quality.{key}", "this key is required but missing")
@@ -866,6 +1136,19 @@ class _Reader:
                 f"must be a whole number from 0 to {MAX_QUALITY}, got {describe(percent)}",
             )
         return Quality(catalyst, percent)
+
+    def read_start_plain_quality(self, entry: LineMap) -> PlainQuality:
+        """`start_item.quality: {percent}` of a weapon or armour (ADR-0049): whole 0 to 30, a random drop reaching 30."""
+        if "percent" not in entry:
+            self.fail(entry.line, "start_item.quality.percent", "this key is required but missing")
+        percent = entry["percent"]
+        if not is_whole(percent) or not 0 <= percent <= MAX_PLAIN_QUALITY:
+            self.fail(
+                entry.key_lines["percent"],
+                "start_item.quality.percent",
+                f"must be a whole number from 0 to {MAX_PLAIN_QUALITY}, got {describe(percent)}",
+            )
+        return PlainQuality(percent)
 
     def read_start_strands(self, value: object, line: int) -> int:
         """The Memory Strands count of the start item: a whole number from 0 to 100, or a pasted item text holding the line `Memory Strands: N`."""

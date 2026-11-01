@@ -1,4 +1,4 @@
-"""The concrete item: base, rarity, explicit mods, implicits, quality, the unveil offer, the enchantment, the Memory Strands count, capacity, family conflicts, spawn weights and tiers. May import only: data, rules."""
+"""The concrete item: base, rarity, explicit mods, implicits, quality (catalyst or plain), sockets, the unveil offer, the enchantment, the Memory Strands count, capacity, family conflicts, spawn weights and tiers. May import only: data, rules."""
 
 from .errors import (
     CapacityError,
@@ -9,6 +9,7 @@ from .errors import (
     MemoryStrandsError,
     ModSlotError,
     QualityError,
+    SocketError,
     TierError,
     UnknownBaseError,
     UnknownModError,
@@ -46,16 +47,39 @@ from .model import (
     capacity,
     veiled_placeholder,
 )
-from .quality import CATALYST_ITEM_CLASSES, MAX_QUALITY, CatalystType, Quality
+from .quality import (
+    CATALYST_ITEM_CLASSES,
+    MAX_PLAIN_QUALITY,
+    MAX_QUALITY,
+    PLAIN_QUALITY_ITEM_CLASSES,
+    CatalystType,
+    PlainQuality,
+    Quality,
+)
+from .sockets import (
+    ABYSSAL_SOCKET_STAT,
+    MAX_SOCKETS,
+    SOCKET_ITEM_CLASSES,
+    SocketColour,
+    Sockets,
+    class_maximum,
+    has_abyssal_socket,
+    is_abyssal_socket_mod,
+)
 from .spawn import effective_weight, generation_factor, is_battle_royale, spawn_weight
 from .strands import MAX_MEMORY_STRANDS, has_memory_strands_line, memory_strands_line, read_memory_strands
 from .tiers import mod_tier, tier_table
 
 __all__ = [
+    "ABYSSAL_SOCKET_STAT",
     "CATALYST_ITEM_CLASSES",
     "EXTRA_CRAFTED_SLOT_STAT",
     "MAX_MEMORY_STRANDS",
+    "MAX_PLAIN_QUALITY",
     "MAX_QUALITY",
+    "MAX_SOCKETS",
+    "PLAIN_QUALITY_ITEM_CLASSES",
+    "SOCKET_ITEM_CLASSES",
     "VEILED_SEED_STAT",
     "Capacity",
     "CapacityError",
@@ -75,16 +99,21 @@ __all__ = [
     "MemoryStrandsError",
     "Metamod",
     "ModSlotError",
+    "PlainQuality",
     "Quality",
     "QualityError",
     "Rarity",
     "Side",
+    "SocketColour",
+    "SocketError",
+    "Sockets",
     "TierError",
     "UnknownBaseError",
     "UnknownModError",
     "ValueRangeError",
     "VeilOfferError",
     "capacity",
+    "class_maximum",
     "dominant_side",
     "effective_weight",
     "enchant_class",
@@ -93,9 +122,11 @@ __all__ = [
     "eldritch_side",
     "fits_corrupted_implicit",
     "generation_factor",
+    "has_abyssal_socket",
     "has_memory_strands_line",
     "is_battle_royale",
     "is_corrupted_implicit",
+    "is_abyssal_socket_mod",
     "is_presence_variant",
     "is_removed_enchant",
     "memory_strands_line",
