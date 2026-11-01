@@ -93,23 +93,40 @@ def leaves() -> None:
 
 
 def probe() -> None:
+    """Allflame, 2026-11-01: 16 searches (totals only) in three groups; the note also used 3 more searches and 4 fetches
+    of the same kind, listed in section 2.1 (23 requests in all)."""
     sys.path.insert(0, str(ROOT / "src"))
     from crafting_system.prices.trade_http import RateLimiter, RequestBudget, TradeClient, package_version, urllib_transport, user_agent
     from crafting_system.prices.trade_query import BuyMod, BuySpec, build_query
     from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
 
     stats = parse_trade_stats(json.load(gzip.open(ROOT / "tests" / "fixtures" / "trade" / "recorded" / "stats_full.json.gz"))["stats"])
-    client = TradeClient(urllib_transport(), user_agent(package_version()), RateLimiter(time.monotonic, time.sleep), RequestBudget(7), None)
-    life, fire, cold = BuyMod("+# to maximum Life", 115), BuyMod("+#% to Fire Resistance", 42), BuyMod("+#% to Cold Resistance", 42)
-    belt = {"base_type": "Leather Belt", "item_level_min": 86}
+    client = TradeClient(urllib_transport(), user_agent(package_version()), RateLimiter(time.monotonic, time.sleep), RequestBudget(16), None)
+
+    def belt(rarity, mods, level):
+        return BuySpec("probe", rarity=rarity, mods=tuple(mods), base_type="Leather Belt", item_level_min=level)
+
+    # Belt tiers (pinned data): Life tier 1 is +(130-144), tier 2 +(115-129); Fire and Cold Resistance tier 1 +(46-48), tier 2 +(42-45).
+    life2, fire2, cold2 = BuyMod("+# to maximum Life", 115), BuyMod("+#% to Fire Resistance", 42), BuyMod("+#% to Cold Resistance", 42)
+    life1, fire1, cold1 = BuyMod("+# to maximum Life", 130), BuyMod("+#% to Fire Resistance", 46), BuyMod("+#% to Cold Resistance", 46)
+    frac1 = BuyMod("+# to maximum Life", 130, fractured=True)
     probes = [
-        ("belt rare, life", BuySpec("p1", rarity="rare", mods=(life,), **belt)),
-        ("belt rare, life + fire", BuySpec("p2", rarity="rare", mods=(life, fire), **belt)),
-        ("belt rare, life + fire + cold", BuySpec("p3", rarity="rare", mods=(life, fire, cold), **belt)),
-        ("belt magic, life", BuySpec("p4", rarity="magic", mods=(life,), **belt)),
-        ("belt rare, fractured life", BuySpec("p5", rarity="rare", mods=(BuyMod("+# to maximum Life", 115, fractured=True),), **belt)),
-        ("ring rare, fractured all attributes + life", BuySpec("p6", rarity="rare", category="accessory.ring", item_level_min=75, mods=(BuyMod("+# to all Attributes", 13, fractured=True), BuyMod("+# to maximum Life", 100)))),
-        ("belt normal, no mods", BuySpec("p7", rarity="normal", mods=(), **belt)),
+        ("A tier 2 or better, ilvl 86+: rare life", belt("rare", [life2], 86)),
+        ("A rare life + fire", belt("rare", [life2, fire2], 86)),
+        ("A rare life + fire + cold", belt("rare", [life2, fire2, cold2], 86)),
+        ("A magic life", belt("magic", [life2], 86)),
+        ("A rare fractured life", belt("rare", [BuyMod("+# to maximum Life", 115, fractured=True)], 86)),
+        ("A normal, no mods", belt("normal", [], 86)),
+        ("B tier 1, ilvl 86+: rare life", belt("rare", [life1], 86)),
+        ("B rare life + fire", belt("rare", [life1, fire1], 86)),
+        ("B rare life + fire + cold", belt("rare", [life1, fire1, cold1], 86)),
+        ("B magic life", belt("magic", [life1], 86)),
+        ("B rare fractured life", belt("rare", [frac1], 86)),
+        ("C tier 1, ilvl 84+: rare life + fire", belt("rare", [life1, fire1], 84)),
+        ("C rare life + fire + cold", belt("rare", [life1, fire1, cold1], 84)),
+        ("C rare fractured life", belt("rare", [frac1], 84)),
+        ("C normal, no mods", belt("normal", [], 84)),
+        ("ring rare ilvl 75+: fractured all attributes 13+ and life 100+", BuySpec("probe", rarity="rare", category="accessory.ring", item_level_min=75, mods=(BuyMod("+# to all Attributes", 13, fractured=True), BuyMod("+# to maximum Life", 100)))),
     ]
     for label, spec in probes:
         body = build_query(spec, [resolve_buy_mod(m, [], stats) for m in spec.mods]).body()

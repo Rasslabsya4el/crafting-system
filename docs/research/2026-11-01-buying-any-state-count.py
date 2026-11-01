@@ -40,7 +40,7 @@ from crafting_system.targets import load_target
 ROOT = Path(__file__).resolve().parents[2]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 ROUTES = {"r05": "r05-strength-ring", "r08": "r08-energy-shield-boots", "r13": "r13-life-resist-belt"}
-RHOS = (2.0, 4.0, 8.0, 16.0)
+RHOS = (1.0, 1.25, 2.0, 4.0, 8.0, 16.0)
 MAX_GENERAL_KEYS = 6000  # the dominance pass is quadratic
 
 
