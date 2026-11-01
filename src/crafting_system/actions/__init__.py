@@ -121,6 +121,12 @@ have different weights took about 70 s, and a label that gives every mod its own
 The fractions are exact and can be thousands of bits long: `str()` of one can hit Python's
 4300-digit limit, so convert with `float()` or `Fraction.limit_denominator` to display it.
 
+The Eldritch currency (`eldritch.py`, ticket #151, ADR-0025): `EldritchImplicitCurrency(side, grade)` (an Ember or an Ichor of grade 1 to
+4: an implicit drawn by the spawn weight of the item class, replacing every implicit but the other side's), `EldritchChaosOrb()`,
+`EldritchExaltedOrb()` and `EldritchAnnulmentOrb()` (they act on the dominant side, derived from the two grades: `item_dominant_side`) and
+`OrbOfConflict()` (raises one implicit by a grade and lowers the other, odds `conflict_raise_chance(difference)`). They work on a body
+armour, boots, gloves or helmet that is not corrupted and not influenced, and none is a planner kind yet.
+
 The corrupted implicit pool of a base at an item level (`corrupted_implicit_pool(data, base_id, item_level)`, `corrupted_pool.py`,
 ADR-0037) is what a Vaal Orb, a Bloodstained resonator and the Locus of Corruption draw their implicit from: the corrupted mods of the
 base's domain with a positive weight on its first matching spawn tag and a required level of at most the item level. Cluster and
@@ -148,6 +154,16 @@ from .corrupted_pool import (
 )
 from .divine import DivineOrb, DivineOutcomes
 from .draw import Outcome, guaranteed_candidates
+from .eldritch import (
+    EldritchAnnulmentOrb,
+    EldritchChaosOrb,
+    EldritchExaltedOrb,
+    EldritchImplicitCurrency,
+    OrbOfConflict,
+    conflict_raise_chance,
+    implicit_pool,
+    item_dominant_side,
+)
 from .errors import ActionError, NotApplicableError, OutOfScopeError
 from .essence import ApplyEssence
 from .exalted import ExaltedOrb
@@ -196,6 +212,10 @@ __all__ = [
     "DEFAULT_CORRUPTING_KINDS",
     "DivineOrb",
     "DivineOutcomes",
+    "EldritchAnnulmentOrb",
+    "EldritchChaosOrb",
+    "EldritchExaltedOrb",
+    "EldritchImplicitCurrency",
     "ExaltedOrb",
     "Finite",
     "Fixed",
@@ -216,6 +236,7 @@ __all__ = [
     "NotApplicableError",
     "Outcome",
     "Outcomes",
+    "OrbOfConflict",
     "OutOfScopeError",
     "PoolFamily",
     "PoolMod",
@@ -236,6 +257,7 @@ __all__ = [
     "blocked_tags",
     "build_pool",
     "catalog",
+    "conflict_raise_chance",
     "corrupted_implicit_pool",
     "crafted_limit_of",
     "default_actions",
@@ -244,6 +266,8 @@ __all__ = [
     "fossil_actions",
     "grants_extra_crafted_slot",
     "guaranteed_candidates",
+    "implicit_pool",
+    "item_dominant_side",
     "kind",
     "kinds",
     "model_readings",
