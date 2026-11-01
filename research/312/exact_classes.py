@@ -520,6 +520,9 @@ def later(g: Graph, priced, blk, args, result: dict, began: float, out_dir, stem
             plain = {"n": q.expanded, "goal": bytes(q.goal), "act_ptr": q.act_ptr, "act_offer": q.act_offer, "act_cost": q.act_cost, "act_kernel": q.act_kernel, "k_succ": q.k_succ, "k_wt": q.k_wt}
             pickle.dump({"graph": plain, "start": start, "goal_class": goal_class, "restart_cost": restart_cost, "labels": [p.label for p in priced]}, handle)
     result["quotient"] = {"classes": q.expanded, "actions": len(q.act_offer), "kernels": len(q.k_succ), "edges": q.edges}
+    if args.stop_after_quotient:
+        say(f"quotient {result['quotient']}")
+        return
     result["raw_reach"] = {
         "no_change": L.raw_reach(g, 0)["reachable_states"],
         **{f"tau_{tau}": L.raw_reach(g, 0, tau=float(tau))["reachable_states"] for tau in args.taus.split(",") if tau},
@@ -613,6 +616,7 @@ def main() -> None:
     parser.add_argument("--solve-seconds", type=int, default=1200)
     parser.add_argument("--solve-max-classes", type=int, default=150_000)
     parser.add_argument("--reference-plan", action="store_true", help="also run the production exact plan of the target (small routes only)")
+    parser.add_argument("--stop-after-quotient", action="store_true", help="big graphs: keep the quotient file and stop (the rails and the lumping run on the quotient by prune_analysis.py)")
     parser.add_argument("--check-values", action="store_true", help="small graphs only: solve the whole graph and the quotient and compare")
     parser.add_argument("--out")
     args = parser.parse_args()

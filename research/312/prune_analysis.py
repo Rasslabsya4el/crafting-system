@@ -1,16 +1,20 @@
 """Cuts by cost bounds on an exact quotient graph (ticket #312, the owner's correction): what each kind of cut removes.
 
-    python research/312/prune_analysis.py QUOTIENT.pkl [--factors 1.0,1.5,3.0] [--steps 0,1,2,4,8,16,32] [--out FILE.json]
+    python research/312/prune_analysis.py QUOTIENT.pkl [--factors 1.0,1.5,3.0] [--steps 0,1,2,4,8,16,32] [--dr-step 8] [--out FILE.json]
 
 The input is the `*.quotient.pkl` that `exact_classes.py` writes (one state per exact class, kernels as numpy arrays).
-Everything here is about the quotient, which is small, so it runs in seconds to minutes on one core.
+Everything is numpy over the whole quotient (R04's has 90,000 classes and 171 million edges), no solver objects.
 
-BOUNDS. LB_0(s) is the cost of the cheapest path to the goal when every use gets its luckiest outcome (a shortest
-path on the actions' costs): it never exceeds the optimal value V*(s). UB_0(s) is the price of a known route:
-f * V*(start) for the start (the incumbent; f = 1 is a perfect incumbent) and one restart plus that for every
-other state, because from any other state the route "buy the start item again, then follow the incumbent" is
-available. Both are then improved by k Bellman backups (value iteration from below and from above); each backup
-keeps LB <= V* <= UB. k is the effort spent on the bound.
+VALUES. Every action has its self-loop eliminated (`cost / chance to leave`, outcomes renormalised): the model of the
+production solver. V* is found by policy iteration started from a proper policy (the shortest-path tree of LB_0: every
+step has a positive chance to lower the distance to the goal, so the policy is proper) and BiCGSTAB for each policy
+evaluation. It is a research number, not a certificate: the residual of the Bellman equation is reported with it.
+
+BOUNDS. LB_0(s) is the cost of the cheapest path to the goal when every use gets its luckiest outcome (a shortest path on
+the actions' costs per exit): it never exceeds V*(s). UB_0(s) is the price of a known route: f * V*(start) for the start
+(the incumbent; f = 1 is a perfect incumbent) and one restart plus that for every other state, because from any other state
+the route "buy the start item again, then follow the incumbent" is available. Both are then improved by k Bellman backups
+(value iteration from below and from above); each backup keeps LB <= V* <= UB. k is the effort spent on the bound.
 
 EXACT CUT (branch and bound, ADR-0031 at the level of states). An action `a` at state `s` is COMPETITIVE when
 cost(a) + sum_p p * LB(s') <= min_b ( cost(b) + sum_p p * UB(s') ). Any other action is worse than a known one,
@@ -24,19 +28,18 @@ at a state with one competitive action the choice is forced. An outcome of a com
 its swing p * (UB - LB) is at most the allowance of its state: margin / (2 * outcomes of the action) at a state with
 a positive margin, 0 elsewhere (a forced choice has no margin to spend, so nothing is lumped there: the value would
 drift without anything to show for it). Lumped mass goes to the goal and the action is charged p * UB (pessimistic
-model) or p * LB (optimistic model). The two models bracket the exact value, V_opt <= V* <= V_pess, and the choice
-at every state with a positive margin cannot change by the lumping.
+model) or p * LB (optimistic model). The two models bracket the exact value, V_opt <= V* <= V_pess.
 """
 
 import argparse
-import heapq
 import json
-import math
 import pickle
 import time
 from pathlib import Path
 
 import numpy as np
+
+BIG = 1e30
 
 
 def load(path: Path) -> dict:
@@ -44,13 +47,13 @@ def load(path: Path) -> dict:
         return pickle.load(handle)
 
 
-def flatten(g: dict):
-    """Arrays over the action entries: state, cost, kernel; edges: destination and probability (float64)."""
+def flatten(g: dict) -> dict:
+    """Arrays over the action entries (state, cost, edge range) and over the edges (destination, chance to leave-normalised)."""
     n = g["n"]
     ptr = np.array(g["act_ptr"], dtype=np.int64)
     cost = np.array(g["act_cost"], dtype=np.float64)
     kernel = np.array(g["act_kernel"], dtype=np.int64)
-    state = np.repeat(np.arange(n), np.diff(ptr))
+    state = np.repeat(np.arange(n, dtype=np.int32), np.diff(ptr))
     probs = []
     for wt in g["k_wt"]:
         ints = [int(x) for x in wt.tolist()]
@@ -58,50 +61,89 @@ def flatten(g: dict):
         probs.append(np.array([x / total for x in ints]))
     sizes = np.array([len(g["k_succ"][k]) for k in kernel], dtype=np.int64)
     edge_ptr = np.concatenate(([0], np.cumsum(sizes)))
-    dst = np.concatenate([g["k_succ"][k] for k in kernel]).astype(np.int64) if len(kernel) else np.zeros(0, dtype=np.int64)
+    dst = np.concatenate([g["k_succ"][k] for k in kernel]).astype(np.int32) if len(kernel) else np.zeros(0, dtype=np.int32)
     pr = np.concatenate([probs[k] for k in kernel]) if len(kernel) else np.zeros(0)
-    # Self-loops are eliminated (exact: the cost of an action is its price over the chance to leave, the outcomes are
-    # those that leave). Repeating an action thousands of times is then one step, and the bounds converge.
-    sizes_all = np.diff(edge_ptr)
-    edge_state = np.repeat(state, sizes_all)
-    is_self = dst == edge_state
-    stay = np.add.reduceat(pr * is_self, edge_ptr[:-1]) if len(pr) else np.zeros(0)
-    stay[sizes_all == 0] = 0.0
+    act_of_edge = np.repeat(np.arange(len(kernel), dtype=np.int32), sizes)
+    is_self = dst == state[act_of_edge]
+    nonempty = sizes > 0
+    stay = np.zeros(len(kernel))
+    if len(pr):
+        stay[nonempty] = np.add.reduceat(pr * is_self, edge_ptr[:-1][nonempty])
     leaves = 1.0 - stay
     dead = leaves <= 1e-15
-    with np.errstate(divide="ignore", invalid="ignore"):
-        cost_e = np.where(dead, np.inf, cost / np.where(dead, 1.0, leaves))
-        p_e = np.where(is_self | np.repeat(dead, sizes_all), 0.0, pr / np.repeat(np.where(dead, 1.0, leaves), sizes_all))
-    return {"n": n, "ptr": ptr, "cost": cost_e, "cost_raw": cost, "stay": stay, "state": state, "edge_ptr": edge_ptr, "dst": dst, "p": p_e, "goal": np.frombuffer(g["goal"], dtype=np.uint8) == 1}
+    safe = np.where(dead, 1.0, leaves)
+    cost_e = np.where(dead, np.inf, cost / safe)
+    p_e = np.where(is_self | dead[act_of_edge], 0.0, pr / safe[act_of_edge])
+    del pr, is_self
+    goal = np.frombuffer(g["goal"], dtype=np.uint8) == 1
+    return {
+        "n": n, "ptr": ptr, "cost": cost_e, "cost_raw": cost, "stay": stay, "state": state, "edge_ptr": edge_ptr, "sizes": sizes,
+        "dst": dst, "p": p_e, "act_of_edge": act_of_edge, "goal": goal,
+        "nonempty_state": np.flatnonzero((np.diff(ptr) > 0) & ~goal),
+    }
 
 
-def q_values(flat: dict, v: np.ndarray) -> np.ndarray:
+def sums_over_actions(flat: dict, per_edge: np.ndarray) -> np.ndarray:
+    out = np.zeros(len(flat["cost"]))
+    ok = flat["sizes"] > 0
+    if len(per_edge):
+        out[ok] = np.add.reduceat(per_edge, flat["edge_ptr"][:-1][ok])
+    return out
+
+
+def q_values(flat: dict, v: np.ndarray, cost: np.ndarray | None = None, p: np.ndarray | None = None) -> np.ndarray:
     """cost + sum p * v(dst) for every action entry."""
-    contribution = flat["p"] * v[flat["dst"]]
-    sums = np.add.reduceat(contribution, flat["edge_ptr"][:-1]) if len(contribution) else np.zeros(0)
-    sizes = np.diff(flat["edge_ptr"])
-    sums[sizes == 0] = 0.0
-    return flat["cost"] + sums
+    p = flat["p"] if p is None else p
+    cost = flat["cost"] if cost is None else cost
+    return cost + sums_over_actions(flat, p * v[flat["dst"]])
 
 
 def state_min(flat: dict, q: np.ndarray) -> np.ndarray:
-    n = flat["n"]
-    best = np.full(n, np.inf)
-    np.minimum.at(best, flat["state"], q)
+    """Best q per state (0 for a goal state, BIG for a state without a usable action)."""
+    best = np.full(flat["n"], BIG)
+    s = flat["nonempty_state"]
+    if len(s):
+        best[s] = np.minimum.reduceat(q, flat["ptr"][s])
+    best = np.minimum(best, BIG)
     best[flat["goal"]] = 0.0
     return best
 
 
+def state_argmin(flat: dict, q: np.ndarray, best: np.ndarray) -> np.ndarray:
+    """The first action entry reaching the best q of its state (-1 for a state without actions)."""
+    idx = np.where(q <= best[flat["state"]] * (1 + 1e-13) + 1e-13, np.arange(len(q)), len(q))
+    pol = np.full(flat["n"], -1, dtype=np.int64)
+    s = flat["nonempty_state"]
+    if len(s):
+        pol[s] = np.minimum.reduceat(idx, flat["ptr"][s])
+    pol[pol >= len(q)] = -1
+    return pol
+
+
+def expand_ranges(starts: np.ndarray, ends: np.ndarray) -> np.ndarray:
+    """The concatenation of range(a, b) for each pair."""
+    lens = ends - starts
+    total = int(lens.sum())
+    if total == 0:
+        return np.zeros(0, dtype=np.int64)
+    first = np.repeat(starts - np.concatenate(([0], np.cumsum(lens)[:-1])), lens)
+    return first + np.arange(total)
+
+
 def shortest_to_goal(flat: dict) -> np.ndarray:
-    """LB_0: the cheapest path to the goal over the actions' costs, a use that leaves the state counted (Dijkstra backwards)."""
+    """LB_0: the cheapest path to the goal over the actions' per-exit costs (Dijkstra backwards with a heap over vectorised relaxations)."""
+    import heapq
+
     n = flat["n"]
-    incoming: list[list[tuple[int, float]]] = [[] for _ in range(n)]
-    for t in range(len(flat["cost"])):
-        s = int(flat["state"][t])
-        c = float(flat["cost"][t])
-        for d in np.unique(flat["dst"][flat["edge_ptr"][t] : flat["edge_ptr"][t + 1]]).tolist():
-            if d != s:
-                incoming[d].append((s, c))
+    # reverse adjacency per action entry: (source state, cost) -> destinations; built as sorted edge arrays
+    src = flat["state"][flat["act_of_edge"]].astype(np.int32)
+    keep = (flat["dst"] != src) & (flat["p"] > 0)
+    d_dst = flat["dst"][keep]
+    d_src = src[keep]
+    d_cost = flat["cost"][flat["act_of_edge"][keep]]
+    order = np.argsort(d_dst, kind="stable")
+    d_dst, d_src, d_cost = d_dst[order], d_src[order], d_cost[order]
+    start_of = np.searchsorted(d_dst, np.arange(n + 1))
     dist = np.full(n, np.inf)
     heap = []
     for s in np.flatnonzero(flat["goal"]).tolist():
@@ -112,98 +154,144 @@ def shortest_to_goal(flat: dict) -> np.ndarray:
         d, s = heapq.heappop(heap)
         if d > dist[s]:
             continue
-        for u, c in incoming[s]:
-            if d + c < dist[u]:
-                dist[u] = d + c
-                heapq.heappush(heap, (d + c, u))
+        a, b = start_of[s], start_of[s + 1]
+        if a == b:
+            continue
+        us, cs = d_src[a:b], d_cost[a:b]
+        cand = d + cs
+        better = cand < dist[us]
+        if better.any():
+            for u, c in zip(us[better].tolist(), cand[better].tolist()):
+                if c < dist[u]:
+                    dist[u] = c
+                    heapq.heappush(heap, (c, u))
     return dist
 
 
 def reach(flat: dict, start: int, keep: np.ndarray) -> np.ndarray:
-    """States reachable from `start` through the action entries marked in `keep`."""
-    seen = np.zeros(flat["n"], dtype=bool)
+    """States reachable from `start` through the action entries marked in `keep` (level by level, vectorised)."""
+    n = flat["n"]
+    seen = np.zeros(n, dtype=bool)
     seen[start] = True
-    stack = [start]
-    ptr = flat["ptr"]
-    while stack:
-        s = stack.pop()
-        if flat["goal"][s]:
-            continue
-        for t in range(ptr[s], ptr[s + 1]):
-            if not keep[t]:
-                continue
-            for d in flat["dst"][flat["edge_ptr"][t] : flat["edge_ptr"][t + 1]].tolist():
-                if not seen[d]:
-                    seen[d] = True
-                    stack.append(d)
+    frontier = np.array([start], dtype=np.int64)
+    ptr, edge_ptr, dst = flat["ptr"], flat["edge_ptr"], flat["dst"]
+    while len(frontier):
+        frontier = frontier[~flat["goal"][frontier]]
+        ts = expand_ranges(ptr[frontier], ptr[frontier + 1])
+        ts = ts[keep[ts]]
+        es = expand_ranges(edge_ptr[ts], edge_ptr[ts + 1])
+        new = np.unique(dst[es])
+        new = new[~seen[new]]
+        seen[new] = True
+        frontier = new.astype(np.int64)
     return seen
 
 
-def exact_values(g: dict, start: int):
-    from crafting_system.solver import Action, Outcome, TabularModel, solve
-
-    goals = [s for s in range(g["n"]) if g["goal"][s]]
-    table = {}
-    for s in range(g["n"]):
-        if g["goal"][s]:
-            continue
-        acts = []
-        for t in range(g["act_ptr"][s], g["act_ptr"][s + 1]):
-            k = g["act_kernel"][t]
-            acts.append(Action(str(g["act_offer"][t]), g["act_cost"][t], tuple(Outcome(int(a), int(w)) for a, w in zip(g["k_succ"][k].tolist(), g["k_wt"][k].tolist()))))
-        table[s] = acts
-    solution = solve(TabularModel(goals, table), [start])
-    v = np.full(g["n"], np.inf)
-    for s, value in solution.values.items():
-        v[s] = value
-    return v
+# ---- values ---------------------------------------------------------------------------------------------------------
 
 
-def solve_lumped(g: dict, flat: dict, start: int, keep: np.ndarray, allowance: np.ndarray, bound: np.ndarray, mode: str, goal_class: int):
-    """Value of the model where, in every kept action, outcomes of swing <= allowance are lumped (to the goal, charged `bound`)."""
-    from crafting_system.solver import Action, Outcome, TabularModel, solve
+def policy_values(flat: dict, pol: np.ndarray, cost: np.ndarray, p: np.ndarray, v0: np.ndarray, tol: float = 1e-12, max_iter: int = 4000):
+    """Value of the proper policy `pol` (an action entry per non-goal state): solve (I - A) v = c by BiCGSTAB. Returns (v, residual, iterations)."""
+    n = flat["n"]
+    states = np.flatnonzero(~flat["goal"] & (pol >= 0))
+    ts = pol[states]
+    e_idx = expand_ranges(flat["edge_ptr"][ts], flat["edge_ptr"][ts + 1])
+    sizes = flat["sizes"][ts]
+    starts = np.concatenate(([0], np.cumsum(sizes)[:-1]))
+    dst_p = flat["dst"][e_idx]
+    p_p = p[e_idx]
+    c = cost[ts]
+    has = sizes > 0
 
-    sizes_total = 0
-    table = {}
-    goals = [goal_class]
-    reachable = reach(flat, start, keep)
-    for s in np.flatnonzero(reachable).tolist():
-        if flat["goal"][s]:
-            continue
-        acts = []
-        for t in range(flat["ptr"][s], flat["ptr"][s + 1]):
-            if not keep[t]:
-                continue
-            k = g["act_kernel"][t]
-            succ = g["k_succ"][k].tolist()
-            wts = [int(x) for x in g["k_wt"][k].tolist()]
-            total = sum(wts)
-            lump_w = 0
-            extra = 0.0
-            outs = []
-            for d, w in zip(succ, wts):
-                p_eff = (w / total) / max(1e-300, 1.0 - flat["stay"][t])
-                swing_ok = allowance[t] > 0 and d != s and p_eff * (UB_CACHE[d] - LB_CACHE[d]) <= allowance[t] and not flat["goal"][d]
-                if swing_ok:
-                    lump_w += w
-                    extra += (w / total) * bound[d]
-                else:
-                    outs.append(Outcome(int(d), w))
-            if lump_w:
-                outs.append(Outcome(goal_class, lump_w))
-            sizes_total += len(outs)
-            acts.append(Action(f"a{t}", flat["cost_raw"][t] + extra, tuple(outs)))
-        table[s] = acts
-    solution = solve(TabularModel(goals, table), [start])
-    return solution.values[start], int(reachable.sum()), sizes_total
+    def matvec(x: np.ndarray) -> np.ndarray:
+        """(I - A) x on the non-goal states; x is a full-length vector, goal entries are 0."""
+        ax = np.zeros(n)
+        if len(p_p):
+            ax[states[has]] = np.add.reduceat(p_p * x[dst_p], starts[has])
+        out = x - ax
+        out[flat["goal"]] = 0.0
+        return out
+
+    b = np.zeros(n)
+    b[states] = c
+    x = v0.copy()
+    x[flat["goal"]] = 0.0
+    r = b - matvec(x)
+    r0 = r.copy()
+    rho = alpha = omega = 1.0
+    v = np.zeros(n)
+    pv = np.zeros(n)
+    bnorm = max(np.linalg.norm(b), 1e-300)
+    it = 0
+    while it < max_iter and np.linalg.norm(r) > tol * bnorm:
+        it += 1
+        rho_new = float(r0 @ r)
+        if rho_new == 0.0:
+            break
+        beta = (rho_new / rho) * (alpha / omega)
+        pv = r + beta * (pv - omega * v)
+        v = matvec(pv)
+        alpha = rho_new / float(r0 @ v)
+        s = r - alpha * v
+        if np.linalg.norm(s) <= tol * bnorm:
+            x = x + alpha * pv
+            r = s
+            break
+        t = matvec(s)
+        omega = float(t @ s) / float(t @ t)
+        x = x + alpha * pv + omega * s
+        r = s - omega * t
+        rho = rho_new
+    return x, float(np.linalg.norm(r) / bnorm), it
 
 
-UB_CACHE: np.ndarray = np.zeros(0)
-LB_CACHE: np.ndarray = np.zeros(0)
+def solve_values(flat: dict, cost: np.ndarray, p: np.ndarray, active: np.ndarray, start: int, say=print, max_rounds: int = 40):
+    """V* of the model (cost, p) restricted to the `active` action entries: policy iteration from a proper policy.
+
+    Returns (v, info). `info` has the Bellman residual max_s |min_a Q(s,a) - V(s)| / V(start) of the result.
+    """
+    t0 = time.perf_counter()
+    cost_a = np.where(active, cost, np.inf)
+    # a proper start policy: the action whose luckiest outcome lowers the distance to the goal the most
+    lb0 = shortest_to_goal({**flat, "cost": cost_a, "p": p})
+    lb0_cap = np.where(np.isfinite(lb0), lb0, BIG)
+    # the luckiest successor of each action (the minimum of lb0 over the outcomes with a chance)
+    mins = np.full(len(cost), BIG)
+    ok = flat["sizes"] > 0
+    if len(p):
+        masked = np.where(p > 0, lb0_cap[flat["dst"]], BIG)
+        mins[ok] = np.minimum.reduceat(masked, flat["edge_ptr"][:-1][ok])
+    q0 = cost_a + mins
+    best = state_min(flat, q0)
+    live = reach(flat, start, active) & ~flat["goal"]
+    pol = np.where(live, state_argmin(flat, q0, best), -1)
+    v = np.where(np.isfinite(lb0), lb0, 0.0)
+    value = None
+    rounds = 0
+    resid = None
+    for rounds in range(1, max_rounds + 1):
+        value, resid, iterations = policy_values(flat, pol, cost_a, p, v)
+        q = cost_a + sums_over_actions(flat, p * value[flat["dst"]])
+        best = state_min(flat, q)
+        new_pol = state_argmin(flat, q, best)
+        better = live & (q[np.maximum(new_pol, 0)] < q[np.maximum(pol, 0)] - 1e-10 * np.maximum(1.0, np.abs(value)))
+        improved = int(better.sum())
+        say(f"  policy iteration {rounds}: v(start) {value[start]:.6f}, linear residual {resid:.1e} in {iterations} iterations, {improved} states improve")
+        v = value
+        if improved == 0:
+            break
+        pol = np.where(better, new_pol, pol)
+    q = cost_a + sums_over_actions(flat, p * value[flat["dst"]])
+    best = state_min(flat, q)
+    mask = live & (best < BIG)
+    bellman = float(np.max(np.abs(best[mask] - value[mask])) / max(value[start], 1e-300)) if mask.any() else 0.0
+    return value, {"rounds": rounds, "bellman_residual_over_start": bellman, "linear_residual": resid, "seconds": round(time.perf_counter() - t0, 1)}
+
+
+# ---- the analysis ----------------------------------------------------------------------------------------------------
 
 
 def main() -> None:
-    global UB_CACHE, LB_CACHE
     parser = argparse.ArgumentParser()
     parser.add_argument("pickle")
     parser.add_argument("--factors", default="1.0,1.5,3.0")
@@ -212,24 +300,34 @@ def main() -> None:
     parser.add_argument("--out")
     args = parser.parse_args()
     began = time.perf_counter()
+
+    def say(text: str) -> None:
+        print(f"[{time.perf_counter() - began:7.1f}s] {text}", flush=True)
+
     data = load(Path(args.pickle))
     g, start, goal_class, restart_cost = data["graph"], data["start"], data["goal_class"], data["restart_cost"]
     flat = flatten(g)
-    n = g["n"]
+    del data, g
+    n = flat["n"]
+    say(f"flat: {n:,} classes, {len(flat['cost']):,} actions, {len(flat['dst']):,} edges")
     result = {"classes": n, "actions": len(flat["cost"]), "edges": len(flat["dst"])}
-    v_star = exact_values(g, start)
+    all_active = np.ones(len(flat["cost"]), dtype=bool)
+    v_star, info = solve_values(flat, flat["cost"], flat["p"], all_active, start, say)
     result["exact_value_of_start"] = float(v_star[start])
+    result["value_solve"] = info
+    say(f"V*(start) = {v_star[start]:.6f}; {info}")
     q_star = q_values(flat, v_star)
-    optimal = q_star <= v_star[flat["state"]] * (1 + 1e-9) + 1e-12
-    optimal &= ~flat["goal"][flat["state"]]
+    non_goal_action = ~flat["goal"][flat["state"]]
+    optimal = (q_star <= v_star[flat["state"]] * (1 + 1e-9) + 1e-12) & non_goal_action
     floor = reach(flat, start, optimal)
     result["floor"] = {"classes_reachable_by_optimal_actions": int(floor.sum()), "optimal_action_entries": int(optimal.sum())}
-    print(f"[{time.perf_counter() - began:.1f}s] exact {v_star[start]:.4f}; the optimal policy reaches {int(floor.sum())} of {n} classes", flush=True)
+    say(f"the optimal policy reaches {int(floor.sum())} of {n} classes through {int(optimal.sum())} actions")
     lb0 = shortest_to_goal(flat)
     result["lb0_of_start"] = float(lb0[start])
     result["lb0_over_exact_start"] = float(lb0[start] / v_star[start])
     steps = sorted({int(x) for x in args.steps.split(",") if x})
     rows = []
+    sizes = flat["sizes"]
     for f in [float(x) for x in args.factors.split(",") if x]:
         cap = restart_cost + f * v_star[start]
         ub = np.full(n, cap)
@@ -239,56 +337,78 @@ def main() -> None:
         lb[~np.isfinite(lb)] = 0.0
         k = 0
         for target in steps:
+            t_backup = time.perf_counter()
             while k < target:
                 lb = state_min(flat, q_values(flat, lb))
                 ub = np.minimum(ub, state_min(flat, q_values(flat, ub)))  # never above the incumbent bound either
                 k += 1
+            backup_seconds = time.perf_counter() - t_backup
             q_low = q_values(flat, lb)
             q_up = q_values(flat, ub)
             best_up = state_min(flat, q_up)
-            competitive = (q_low <= best_up[flat["state"]] * (1 + 1e-12) + 1e-12) & ~flat["goal"][flat["state"]]
+            competitive = (q_low <= best_up[flat["state"]] * (1 + 1e-12) + 1e-12) & non_goal_action
             seen = reach(flat, start, competitive)
+            reached_actions = competitive & seen[flat["state"]]
             row = {
-                "incumbent_factor": f, "backups": k, "competitive_actions": int(competitive.sum()), "of_actions": int((~flat["goal"][flat["state"]]).sum()),
+                "incumbent_factor": f, "backups": k, "backup_seconds_since_last_row": round(backup_seconds, 1),
+                "competitive_actions": int(competitive.sum()), "of_actions": int(non_goal_action.sum()),
+                "competitive_actions_reached": int(reached_actions.sum()), "edges_of_those": int(sizes[reached_actions].sum()), "of_edges": int(sizes[non_goal_action].sum()),
                 "classes_reachable": int(seen.sum()), "lb_of_start_over_exact": float(lb[start] / v_star[start]), "ub_of_start_over_exact": float(ub[start] / v_star[start]),
             }
             rows.append(row)
-            print(f"[{time.perf_counter() - began:.1f}s] {row}", flush=True)
+            say(str(row))
             if k == args.dr_step:
-                # decision relevance at this effort
-                UB_CACHE, LB_CACHE = ub.copy(), lb.copy()
-                allowance = np.zeros(len(flat["cost"]))
-                relevant = reach(flat, start, competitive)
-                forced = 0
-                settled = 0
-                for s in np.flatnonzero(relevant).tolist():
-                    if flat["goal"][s]:
-                        continue
-                    ts = [t for t in range(flat["ptr"][s], flat["ptr"][s + 1]) if competitive[t]]
-                    if len(ts) <= 1:
-                        forced += 1
-                        continue
-                    order = sorted(ts, key=lambda t: q_up[t])
-                    others = min(q_low[t] for t in order[1:])
-                    margin = others - q_up[order[0]]
-                    if margin > 0:
-                        settled += 1
-                        for t in ts:
-                            allowance[t] = margin / (2 * max(1, int(flat["edge_ptr"][t + 1] - flat["edge_ptr"][t])))
-                dr = {"incumbent_factor": f, "backups": k, "relevant_states": int(relevant.sum()), "states_with_forced_choice": forced, "states_with_positive_margin": settled}
-                try:
-                    pess, reach_p, edges_p = solve_lumped(g, flat, start, competitive, allowance, ub, "pess", goal_class)
-                    opt, reach_o, edges_o = solve_lumped(g, flat, start, competitive, allowance, lb, "opt", goal_class)
-                    dr.update({"value_pessimistic": pess, "value_optimistic": opt, "relative_gap": (pess - opt) / v_star[start], "pess_over_exact": pess / v_star[start] - 1, "opt_over_exact": opt / v_star[start] - 1, "edges_after_lumping": edges_p})
-                except Exception as error:  # noqa: BLE001
-                    dr["error"] = f"{type(error).__name__}: {error}"
-                result.setdefault("decision_relevance", []).append(dr)
-                print(f"[{time.perf_counter() - began:.1f}s] DR {dr}", flush=True)
+                result.setdefault("decision_relevance", []).append(decision_relevance(flat, start, v_star, lb, ub, q_low, q_up, competitive, f, k, say))
     result["branch_and_bound"] = rows
     text = json.dumps(result, indent=1)
     print(text)
     if args.out:
         Path(args.out).write_text(text + "\n", encoding="utf-8")
+
+
+def decision_relevance(flat, start, v_star, lb, ub, q_low, q_up, competitive, f, k, say):
+    """Lump the outcomes whose swing cannot change a settled choice; solve the pessimistic and the optimistic model."""
+    n = flat["n"]
+    seen = reach(flat, start, competitive)
+    best_up = state_min(flat, q_up)
+    state = flat["state"]
+    n_comp = np.zeros(n, dtype=np.int64)
+    np.add.at(n_comp, state, competitive.astype(np.int64))
+    top = state_argmin(flat, np.where(competitive, q_up, np.inf), np.where(n_comp > 0, best_up, BIG))
+    low_masked = np.where(competitive, q_low, np.inf)
+    is_top = np.arange(len(state)) == top[state]
+    low_others = np.where(is_top, np.inf, low_masked)
+    others = np.full(n, np.inf)
+    s = flat["nonempty_state"]
+    if len(s):
+        others[s] = np.minimum.reduceat(low_others, flat["ptr"][s])
+    margin = others - np.where(top >= 0, q_up[np.maximum(top, 0)], np.inf)
+    relevant = seen & ~flat["goal"]
+    forced = relevant & (n_comp <= 1)
+    settled = relevant & (n_comp > 1) & (margin > 0)
+    allowance = np.where(competitive & settled[state], margin[state] / (2.0 * np.maximum(1, flat["sizes"])), 0.0)
+    swing = flat["p"] * (ub[flat["dst"]] - lb[flat["dst"]])
+    a_edge = allowance[flat["act_of_edge"]]
+    not_goal_dst = ~flat["goal"][flat["dst"]]
+    lumpable = (a_edge > 0) & (flat["p"] > 0) & (swing <= a_edge) & not_goal_dst
+    row = {
+        "incumbent_factor": f, "backups": k, "relevant_states": int(relevant.sum()), "states_with_forced_choice": int(forced.sum()),
+        "states_with_positive_margin": int(settled.sum()), "edges_lumped": int((lumpable & competitive[flat["act_of_edge"]]).sum()),
+    }
+    out = {}
+    for name, bound in (("pess", ub), ("opt", lb)):
+        extra = sums_over_actions(flat, np.where(lumpable, flat["p"] * bound[flat["dst"]], 0.0))
+        p2 = np.where(lumpable, 0.0, flat["p"])
+        value, info = solve_values(flat, flat["cost"] + extra, p2, competitive, start, lambda _t: None)
+        out[name] = float(value[start])
+        row[f"value_{name}"] = float(value[start])
+        row[f"residual_{name}"] = info["bellman_residual_over_start"]
+        row[f"edges_kept_{name}"] = int(((~lumpable) & (flat["p"] > 0) & competitive[flat["act_of_edge"]] & seen[state[flat["act_of_edge"]]]).sum())
+    row["relative_gap"] = (out["pess"] - out["opt"]) / v_star[start]
+    row["pess_over_exact"] = out["pess"] / v_star[start] - 1
+    row["opt_over_exact"] = out["opt"] / v_star[start] - 1
+    say("DR " + str(row))
+    return row
 
 
 if __name__ == "__main__":
