@@ -107,8 +107,7 @@ def solve[S](
     if (
         isinstance(value_ceiling, bool)
         or not isinstance(value_ceiling, Real)
-        or math.isnan(value_ceiling)
-        or not value_ceiling > 0
+        or not value_ceiling > 0  # false for NaN too
     ):
         raise ValueError(f"value_ceiling must be a real above zero (math.inf for none), got {value_ceiling!r}")
     graph = build_graph(model, starts)
@@ -193,6 +192,12 @@ def _retained_edges(graph: Graph, alive: list[bool], in_y: list[bool]) -> tuple[
 
 def _describe(graph: Graph, component: list[int]) -> str:
     """The component named for an error: its size and its first three states by `repr`."""
-    names = [text if len(text := repr(graph.states[s])) <= 60 else text[:57] + "..." for s in component[:3]]
+    names = []
+    for s in component[:3]:
+        try:
+            text = repr(graph.states[s])
+        except Exception:  # a state whose repr fails must not hide the ConvergenceError
+            text = f"<state {s}>"
+        names.append(text if len(text) <= 60 else text[:57] + "...")
     more = len(component) - len(names)
     return f"a component of {len(component)} states ({', '.join(names)}{f' and {more} more' if more else ''})"

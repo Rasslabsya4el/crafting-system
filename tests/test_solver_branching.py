@@ -339,7 +339,7 @@ def test_a_ceiling_that_is_not_a_real_above_zero_is_refused(bad):
         solve_table(DEAR, ["U"], value_ceiling=bad)
 
 
-@pytest.mark.parametrize("good", [1e12, 5, math.inf, Fraction(10**20)])
+@pytest.mark.parametrize("good", [1e12, 5, math.inf, Fraction(10**20), 10**400])
 def test_a_ceiling_that_is_a_real_above_zero_is_accepted(good):
     assert solve_table(DEAR, ["Y"], value_ceiling=good).values["Y"] == pytest.approx(1.0)
 
@@ -382,3 +382,22 @@ def test_a_ceiling_restart_does_not_solve_a_finished_component_again(monkeypatch
     assert solution.values["X"] == math.inf
     assert "X" not in solution.policy
     assert solution.policy["Y"].label == "direct"
+
+
+def test_a_state_whose_repr_fails_does_not_hide_the_convergence_error():
+    class Unprintable:
+        def __repr__(self):
+            raise RuntimeError("no repr")
+
+    a, b = Unprintable(), Unprintable()
+    # the same weight-critical pair as in test_solver_two_input.py: rho = 1, so the solver cannot decide
+    table = {
+        a: [entry("pay-b", 1, [(GOAL, 1), (a, 4)], [b])],
+        b: [entry("back", 1, [(GOAL, 4), (a, 1)])],
+    }
+
+    with pytest.raises(ConvergenceError) as raised:
+        solve(to_model(spec_of(table)), [a], max_sweeps=500)
+
+    assert raised.value.error_bound == math.inf
+    assert "a component of 2 states" in str(raised.value)
