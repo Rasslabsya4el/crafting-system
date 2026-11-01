@@ -29,3 +29,12 @@ register_extra_item(
     lambda: contract_helmet(roll_on_helmet(P1, 3), roll_on_helmet(S1, 2), influences=frozenset({Influence.SHAPER})),
 )
 register_extra_item("helmet_plain", ("influenced-exalted-orb",), contract_helmet_data, lambda: contract_helmet(roll_on_helmet(PLAIN, 1)))
+
+# Strands (ticket #286): the influenced Exalted Orb cuts, and on this helmet its Shaper prefix family has three tiers and its suffix family two, so at 100 strands
+# the cut leaves other mods than at 0 (the amulet fixtures have no such table; `check_cutting_kinds_differ_from_the_uncut_draw` asks for one).
+register_extra_item(
+    "helmet_plain_stranded",
+    ("influenced-exalted-orb",),
+    contract_helmet_data,
+    lambda: contract_helmet(roll_on_helmet(PLAIN, 1), memory_strands=100),
+)

@@ -27,8 +27,10 @@ Every declaration cites the claims it rests on (`StrandUse.claims`). They are **
 considers strands adds to its approximate inputs (ADR-0028). This module and `cut` are shared by all actions for that reason
 (`contract.SHARED_BY_ALL`): importing a name from them does not make an action name their claims.
 
-The table of ADR-0041 for the actions of B1 is declared in each action's own module. The later families declare their own rows (the
-tickets B5-11a to B5-11h): until they do, their actions are refused on a stranded item.
+The table of ADR-0041 is declared in each action's own module: the actions of B1 (#276) and the veiled, Eldritch (Chaos, Embers, Ichors,
+Conflict), influenced Exalted, Dominance, beast influence, Blessed, catalyst and Awakener's actions (B5-11a to d and f). The rest declare their own
+rows (B5-11e, g and h: Harvest add/remove and swaps, the recombinator, imprints): until they do, they are refused on a stranded item, as are the
+Eldritch Exalted and Annulment Orbs, which no ticket or row of the table names.
 """
 
 import random
