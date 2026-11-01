@@ -220,8 +220,8 @@ class Api:
                 text = response.read().decode("utf-8", "replace")
         except (urllib.error.URLError, TimeoutError, OSError):
             return None
-        stamps = re.findall(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z)", text, re.MULTILINE)
-        return parse_time(stamps[-1][:19] + "Z") if stamps else None
+        stamps = re.findall(r"^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}[:][0-9]{2}[:][0-9]{2})", text, re.MULTILINE)
+        return parse_time(stamps[-1] + "Z") if stamps else None
 
 
 def snapshot(api: Api, ledger: dict[str, int]) -> list[tuple[dict, list[dict], dict]]:
