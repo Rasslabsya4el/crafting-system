@@ -10,12 +10,13 @@ cleanly without it.
 
 Done when (the ticket): the CLI returns the policy with odds, mean and p90 and `--verify` agrees, and at the same
 prices the solver's mean is no more than the guide's given route's. The odds and the mean are exact; p90 is not resolved
-by the budget grid (the cheapest action, 0.0058 Chaos, is far below the cost scale, ticket #190) and the p90 `--verify`
-simulates is labelled as not certified. Eight simulated crafts cannot reject a wrong mean (the detectable error is about
+by the ordinary budget grid (the cheapest action, 0.0058 Chaos, is far below the cost scale); the coarse grid of
+ticket #190 resolves it with a certified interval, and the p90 `--verify` simulates is labelled as not certified. Eight simulated crafts cannot reject a wrong mean (the detectable error is about
 the mean itself); the PR records the 20-run check.
 """
 
 import datetime
+import math
 from pathlib import Path
 
 import pytest
@@ -95,14 +96,19 @@ def test_the_target_names_the_guides_kinds_so_no_chaos_orb_is_offered(plan):
     assert "Chaos Orb" not in labels and not any("Essence" in label or label.startswith("Harvest") for label in labels)
 
 
-def test_the_policy_reaches_the_goal_with_exact_odds_and_mean_and_the_quantiles_are_unresolved(plan):
+def test_the_policy_reaches_the_goal_with_exact_odds_and_mean_and_certified_quantiles(plan):
     risk = plan.risk
 
     assert risk.success_probability.value == pytest.approx(1.0)
     assert 0.0 < risk.mean.value < float("inf")
     assert plan.mean_remaining == pytest.approx(risk.mean.value, rel=1e-9)
-    # the grid cannot step over the 0.0058 Chaos of the Orb of Transmutation: p90 is not resolved (ticket #190)
-    assert unresolved(risk, risk.p50) and unresolved(risk, risk.p90)
+    # the 0.0058 Chaos of the Orb of Transmutation is far below the cost scale: the coarse grid (ticket #190) resolves p50 and p90
+    assert not unresolved(risk, risk.p50) and not unresolved(risk, risk.p90)
+    assert risk.grid.step > 0.0058 and not risk.grid.exact
+    assert risk.p50.low <= risk.p50.value <= risk.p50.high < risk.p90.low
+    assert 10_000 < risk.p90.low <= risk.p90.high < 20_000
+    assert risk.p90.high - risk.p90.low < 0.05 * risk.p90.value
+    assert math.isfinite(risk.cvar.value) and risk.cvar.value > risk.p90.low  # the mean of the worst tenth is above p90
 
 
 def test_the_solver_is_no_dearer_than_the_guides_given_route(plan, data):
@@ -137,7 +143,7 @@ def test_the_command_returns_the_policy_and_verify_agrees(tmp_path, data, capsys
     totals = document["totals"]
     assert totals["success_probability"]["value"] == pytest.approx(1.0)
     assert totals["mean_cost"]["value"] > BELT_PRICE
-    assert totals["quantiles_resolved"] is False and totals["p90"]["value"] is None
+    assert totals["quantiles_resolved"] is True and 10_000 < totals["p90"]["value"] < 20_000
     simulated = document["verification"]["simulated_p90"]
     assert simulated["value"] > document["verification"]["simulated_mean_cost"]["value"]  # simulated, not certified
     assert document["verification"]["agrees"] is True
@@ -145,4 +151,4 @@ def test_the_command_returns_the_policy_and_verify_agrees(tmp_path, data, capsys
     assert totals["mean_cost"]["value"] <= document["given_route"]["mean_cost"]["value"] * (1 + 1e-9)
     assert document["states"]
     text = capsys.readouterr().out
-    assert "not resolved on the grid" in text and "simulated, not certified" in text
+    assert "not resolved on the grid" not in text and "simulated, not certified" in text
