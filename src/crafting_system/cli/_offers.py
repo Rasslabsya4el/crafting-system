@@ -156,17 +156,19 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
 
     * An action that only adds named crafted mods (a bench craft) is offered ONLY WHEN A MOD IT ADDS
       COUNTS TOWARD ONE OF THE GOAL'S REQUIREMENTS (a leaf names it and does not refuse a crafted mod,
-      `not_crafted`), AND ONLY WHILE EVERY OTHER OFFERED ACTION ERASES THE CRAFTED MODS (declares
+      `not_crafted`). While EVERY OTHER OFFERED ACTION ERASES THE CRAFTED MODS (declares
       `Adds.keeps_crafted` False; the default True keeps every craft in play, so an action that keeps
-      them needs no edit here). Reason: in this slice every other action (Chaos Orb, Harvest reforge, an
+      them needs no edit here) this is exact: every other action (Chaos Orb, Harvest reforge, an
       essence, Remove Crafted Mods) removes the crafted mods, and without the multimod an item holds one crafted
       mod, so a craft that gives the goal nothing only takes a slot and costs currency; it can never
-      lower the mean. Leaving it out is exact, and it keeps the state space small: each craft that
+      lower the mean. Leaving it out keeps the state space small: each craft that
       clashes with a family makes that family its own kind, so all 141 ring crafts would grow R05 from
-      76 to 13,172 states (ticket #60, PR #79). REVISIT when an action that adds or removes one mod
-      without erasing the crafted mod lands (Exalted Orb and Annulment Orb, #67; metamods and the
-      multimod, #68): then a crafted mod can block a family before an Exalted Orb, a craft with no goal
-      contribution can pay off, and this rule no longer holds. The crafts left out are reported.
+      76 to 13,172 states (ticket #60, PR #79). When an offered action keeps the crafted mod (Augmentation
+      and Regal Orb, #66) a craft that counts for nothing could still pay off: it takes a slot or clears a
+      family out of the pool before the next orb. It is left out all the same, because every belt craft in
+      the model is 100 offers and the states grow past what a plan can hold; the plan is then the cheapest
+      among the offered crafts, not a proof against the rest (the report says so). REVISIT with the
+      Exalted Orb and Annulment Orb (#67) and the metamods and the multimod (#68). The crafts left out are reported.
     * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
       offered only when the start item holds one or another offered action adds one.
     """
@@ -179,10 +181,9 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
     chosen: list[Action] = []
     left_out_crafts: list[str] = []
     for action in candidates:
-        if erased_by_all and _only_crafts(data, start_item, action):
-            if not action.adds(data, start_item).named & counting:
-                left_out_crafts.append(action.label(data))
-                continue
+        if _only_crafts(data, start_item, action) and not action.adds(data, start_item).named & counting:
+            left_out_crafts.append(action.label(data))
+            continue
         chosen.append(action)
     chosen = usable_actions(data, start_item, chosen)
 
@@ -199,13 +200,14 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
 
     left_out = ()
     if left_out_crafts:
-        left_out = (
-            LeftOut(
-                "its mod counts toward no requirement, so the craft only takes a slot and costs currency "
-                "(exact while every other action erases crafted mods; see `offers_for`)",
-                tuple(left_out_crafts),
-            ),
+        reason = (
+            "its mod counts toward no requirement, so the craft only takes a slot and costs currency "
+            "(exact while every other action erases crafted mods; see `offers_for`)"
+            if erased_by_all
+            else "its mod counts toward no requirement; an offered action keeps crafted mods, so a craft could still "
+            "pay off by clearing a family from the pool, and the plan is the cheapest among the offered crafts only"
         )
+        left_out = (LeftOut(reason, tuple(left_out_crafts)),)
     return OfferSet(tuple(offers), left_out)
 
 

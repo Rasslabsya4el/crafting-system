@@ -20,6 +20,7 @@ SETS = {
     "C": {"Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Alchemy", "Orb of Scouring"},
     "D": {"Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Alchemy", "Orb of Scouring", "Chaos Orb"},
     "E": None,  # everything with a price except the essences
+    "F": "all",  # everything with a price
 }
 name = sys.argv[1]
 out = Path(sys.argv[2])
@@ -30,7 +31,7 @@ chosen = offers_for(data, Goal.from_target(target), target.base_id, target.start
 keep = SETS[name]
 offers = [
     o for o in chosen
-    if (keep is None and "Essence" not in o.label) or (keep is not None and (o.label in keep or o.label.startswith("Bench craft") or o.label == "Remove Crafted Mods"))
+    if keep == "all" or (keep is None and "Essence" not in o.label) or (isinstance(keep, set) and (o.label in keep or o.label.startswith("Bench craft") or o.label == "Remove Crafted Mods"))
 ]
 began = time.perf_counter()
 plan = make_plan(data, target, prices, offers=offers)
