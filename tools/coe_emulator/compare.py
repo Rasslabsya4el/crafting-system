@@ -338,6 +338,9 @@ def compare_action(data, coe: Coe, emulator: Emulator, item: Item, spec: dict, c
     unmapped = sorted({m for mods in results for m in mods if m.startswith("coe:")})
     if unmapped:
         row["unmapped_coe_mods"] = unmapped[:20]
+        row["candidates"].append(f"CoE mods that map to none of ours: {unmapped[:5]}")
+    if applied["failures"]:
+        row["candidates"].append(f"the emulator refused {sum(applied['failures'].values())} of {repeats} repeats that ours applies")
     exact = finished_distribution(outcomes)
     if exact is not None:
         keys = set(exact) | set(results)
@@ -355,7 +358,7 @@ def compare_action(data, coe: Coe, emulator: Emulator, item: Item, spec: dict, c
     samples = [outcomes.sample(rng) for _ in range(OUR_SAMPLES)]
     ours_seen = Counter(entry.mod_id for sample in samples for entry in sample.mods)
     seen = Counter(m for mods, count in results.items() for m in mods for _ in range(count))
-    chosen = [m for m, _ in seen.most_common(25)] + [m for m, _ in ours_seen.most_common(25)]
+    chosen = [m for m, _ in seen.most_common()] + [m for m, _ in ours_seen.most_common()]  # every mod either side gave
     marginals = []
     for mod_id in dict.fromkeys(m for m in chosen if not m.startswith("coe:")):
         z = two_sample_z(ours_seen[mod_id], OUR_SAMPLES, seen[mod_id], n_ok)
