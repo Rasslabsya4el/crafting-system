@@ -84,6 +84,16 @@ def test_r05_is_not_lowered_because_its_file_says_its_tiers_are_the_top_of_its_l
     assert refusal_at(data, target, 74) is not None and refusal_at(data, target, 75) is None
 
 
+def test_r04_is_not_lowered_because_the_essence_that_gives_its_bow_skill_mod_is_not_offered(data):
+    target = target_of(data, "r04-penetrating-quiver")
+
+    options = item_level_options(data, target)
+
+    bow = next(node for node in options.floor.nodes if node.label.startswith("DamageWithWeaponTypeSkill"))
+    assert target.item_level == 81 and (bow.level, bow.source) == (81, "pool")  # the target names Insanity and Deafening Rage, not Woe
+    assert options.floor.level == 81
+
+
 def test_without_that_line_the_tiers_of_r05_alone_would_let_a_ring_of_item_level_33_do(data):
     text = (EXAMPLES / "r05-strength-ring.yaml").read_text(encoding="utf-8")
     plain = re.sub(r"(?m)^tiers_top_at_item_level:.*\n", "", text)

@@ -9,7 +9,8 @@ down the planner may go and which levels are one plan; it builds no start option
   what a requirement asks for fixes the lowest level of the mods that give it: for each requirement the lowest `required_level` among
   the mods that pass its tier, its roll limit and `not_crafted`, from the sources the planner has: the pool of a random draw, the bench
   (the mod's own required level, the crafted mod counting as tier 1 at its lowest roll) and an essence (its forced mod ignores the item
-  level, `essence.forced_mod_ignores_item_level`). An `actions:` list that leaves a source out takes it out here. `at_least` groups take
+  level, `essence.forced_mod_ignores_item_level`). The bench crafts and essences are those the target offers: the actions of the planner's catalog
+  that its `actions:` names (a kind, or the label of one action; none is every default kind, corrupted essences left out). `at_least` groups take
   the k-th lowest of their members. A requirement the start item already meets asks nothing, but a mod the start item holds needs its
   own level. A requirement no source can give has no level; the target is then met at no level and the floor stays at the file's.
 * **The author can say more.** `item_level_floor: N` raises the floor to N, never lowers it below the derived one. `tiers_top_at_item_level:
@@ -26,7 +27,16 @@ down the planner may go and which levels are one plan; it builds no start option
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 
-from crafting_system.actions import ActionError, bench_crafts, drawable_mod_ids, tiers_of
+from crafting_system.actions import (
+    Action,
+    ActionError,
+    ApplyEssence,
+    BenchCraft,
+    catalog,
+    drawable_mod_ids,
+    kinds,
+    tiers_of,
+)
 from crafting_system.data import GameData, Mod
 from crafting_system.items import ItemError, Side
 from crafting_system.items.model import MAX_ITEM_LEVEL, MIN_ITEM_LEVEL
@@ -130,11 +140,26 @@ def _label(node: Node) -> str:
     return f"{name}{tier}"
 
 
-def _name_enabled(actions: tuple[str, ...] | None, kind: str, label_prefix: str) -> bool:
-    """Whether the target's `actions:` list lets the planner use the kind `kind` (or a single action whose label starts `label_prefix`)."""
-    if actions is None:
-        return True
-    return any(name == kind or name.lower().startswith(label_prefix) for name in actions)
+def _offered(data: GameData, target: Target) -> list[Action]:
+    """The actions the planner could use on the target's start item, as `actions:` names them (the catalog the planner reads).
+
+    No `actions:` is every kind offered by default (corrupted essences are opt-in, so they are not among them). A name is a kind of
+    the catalog, else the label of one action (an essence by its name, a bench craft by its text). A name that is neither is not
+    checked here: the planner refuses the file.
+    """
+    start = target.start_item
+    names = target.actions
+    if names is None:
+        return list(catalog(data, start, planner_only=True))
+    usable = {entry.name for entry in kinds(planner_only=True)}
+    exist = {entry.name for entry in kinds()}
+    found = list(catalog(data, start, planner_only=True, names={name for name in names if name in usable}))
+    labels = {name for name in names if name not in exist}
+    if labels:
+        found.extend(
+            action for action in catalog(data, start, planner_only=True, names=usable) if action not in found and action.label(data) in labels
+        )
+    return found
 
 
 def _within(wish: Requirement, tier: int) -> bool:
@@ -167,18 +192,14 @@ class _Sources:
             for mod_id, tier in tiers_of(data, target.start_item).items()
             if data.mods[mod_id].domain == base.domain and data.mods[mod_id].generation_type in Side
         }
-        self.bench: frozenset[str] = frozenset()
-        if _name_enabled(target.actions, "bench-craft", "bench craft"):
-            self.bench = frozenset(
-                craft.mod_id for craft in bench_crafts(data) if base.item_class in craft.option(data).item_classes
-            )
-        self.essence: frozenset[str] = frozenset()
-        if _name_enabled(target.actions, "essence", "essence") or _name_enabled(target.actions, "corrupted-essence", "essence"):
-            self.essence = frozenset(
-                mod_id
-                for record in data.essences.values()
-                if (mod_id := record.mod_for(base.item_class)) is not None
-            )
+        offered = _offered(data, target)
+        self.bench: frozenset[str] = frozenset(action.mod_id for action in offered if isinstance(action, BenchCraft))
+        self.essence: frozenset[str] = frozenset(
+            mod_id
+            for action in offered
+            if isinstance(action, ApplyEssence)
+            for mod_id in action.adds(data, target.start_item).named or ()
+        )
 
     def lowest(self, wish: Requirement) -> NodeLevel:
         """The lowest level at which `wish` is met, with the mod and the source that give it."""
@@ -292,8 +313,8 @@ def item_level_options(data: GameData, target: Target) -> ItemLevelOptions:
 
 def refusal_at(data: GameData, target: Target, level: int) -> str | None:
     """Why `target` is not planned at item level `level`, or None when it may be (a level above the target's is not asked here)."""
-    if not MIN_ITEM_LEVEL <= level <= MAX_ITEM_LEVEL:
-        return f"item level {level} is outside {MIN_ITEM_LEVEL} to {MAX_ITEM_LEVEL}"
+    if type(level) is not int or not MIN_ITEM_LEVEL <= level <= MAX_ITEM_LEVEL:
+        return f"item level {level!r} is outside {MIN_ITEM_LEVEL} to {MAX_ITEM_LEVEL}"
     floor = floor_of(data, target)
     if level >= floor.level:
         return None
@@ -314,5 +335,5 @@ def target_at_level(data: GameData, target: Target, level: int) -> Target:
         start = target.start_item.changed(data, item_level=level)
     except ItemError as error:
         raise TargetError(f"the start item cannot have item level {level}: {error}") from None
-    return replace(target, item_level=level, start_item=start, item_level_floor=None)
+    return replace(target, item_level=level, start_item=start)
 

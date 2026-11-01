@@ -107,15 +107,52 @@ def test_the_bench_gives_a_mod_at_its_own_level_unless_the_target_wants_it_rolle
     assert rolled.nodes[0].level is None and left_out.nodes[0].level is None
 
 
-def test_an_essence_gives_its_mod_at_every_level_and_a_target_that_leaves_essences_out_loses_it():
-    entry = "family: IncreasedLifeLeechRate"  # the mod needs level 63 as a drawn mod; the essence ignores the item level
+def test_an_essence_gives_its_mod_when_the_target_offers_it_and_no_other_does():
+    entry = "family: ColdDamagePercentage"  # only Whispering Essence of Hatred gives this mod to an amulet
 
-    with_essence = floor(entry)
-    without = floor(entry, tail="actions: [alteration-orb]\n")
+    by_default = floor(entry)
+    by_kind = floor(entry, tail="actions: [essence]\n")
+    by_label = floor(entry, tail="actions: ['Whispering Essence of Hatred']\n")
+    left_out = floor(entry, tail="actions: [alteration-orb]\n")
 
-    assert (with_essence.nodes[0].source, with_essence.nodes[0].level) == ("essence", 1)
-    assert with_essence.level == 1
-    assert without.nodes[0].level is None
+    for found in (by_default, by_kind, by_label):
+        assert (found.nodes[0].source, found.nodes[0].level) == ("essence", 1)
+    assert left_out.nodes[0].level is None
+
+
+def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_only_when_named():
+    hatred, hysteria = "family: ColdDamagePercentage", "family: IncreasedLifeLeechRate"  # the second mod needs level 63 as a drawn mod
+
+    other_essence = floor(hatred, tail="actions: ['Essence of Hysteria']\n")
+    unnamed = floor(hysteria)
+    by_kind = floor(hysteria, tail="actions: [corrupted-essence]\n")
+    by_label = floor(hysteria, tail="actions: ['Essence of Hysteria']\n")
+
+    assert other_essence.nodes[0].level is None  # Hatred is not offered
+    assert unnamed.nodes[0].level is None and unnamed.kind == "at target"  # corrupted essences are opt-in
+    assert (by_kind.nodes[0].source, by_kind.nodes[0].level) == ("essence", 1)  # the essence ignores the item level
+    assert (by_label.nodes[0].source, by_label.nodes[0].level) == ("essence", 1)
+    assert by_label.level == 1
+
+
+def test_naming_one_bench_craft_offers_that_craft_only():
+    entry = "family: IncreasedWeaponElementalDamagePercent"
+
+    by_label = floor(entry, tail="actions: ['Bench craft #% increased Elemental Damage with Attack Skills']\n")
+    other = floor(entry, tail="actions: ['Bench craft Prefixes Cannot Be Changed']\n")
+
+    assert (by_label.nodes[0].source, by_label.nodes[0].level) == ("bench", 30)
+    assert other.nodes[0].level is None
+
+
+def test_an_at_least_group_with_one_unreachable_member_still_has_a_level_when_enough_remain():
+    members = "    of:\n      - family: ChaosDamageHybrid\n      - family: IncreasedLife\n        min_tier: 1\n"
+
+    found = floor_of(DATA, parse(f"requirements:\n  - at_least: 1\n{members}"))
+    both = floor_of(DATA, parse(f"requirements:\n  - at_least: 2\n{members}"))
+
+    assert (found.level, found.kind) == (18, "derived")
+    assert (both.level, both.kind) == (84, "at target")
 
 
 # -- where the floor is not below the file's level -------------------------------------------------------------
@@ -257,3 +294,19 @@ def test_target_at_level_sets_the_level_of_the_target_and_its_start_item_and_ref
     assert target_at_level(DATA, target, 84) is target
     with pytest.raises(TargetError, match="item level 71 is below 72"):
         target_at_level(DATA, target, 71)
+
+
+def test_a_lowered_target_keeps_the_stated_floor_so_it_cannot_be_lowered_again():
+    target = parse(requirements(LIFE_1, tail="item_level_floor: 80\n"))
+
+    lowered = target_at_level(DATA, target, 80)
+
+    assert lowered.item_level_floor == 80
+    assert refusal_at(DATA, lowered, 79) is not None
+
+
+@pytest.mark.parametrize("level", [True, 84.0, "84", 0, 101])
+def test_a_level_that_is_not_a_whole_number_of_1_to_100_is_refused(level):
+    problem = refusal_at(DATA, parse(requirements(LIFE_1)), level)
+
+    assert problem is not None and "outside 1 to 100" in problem
