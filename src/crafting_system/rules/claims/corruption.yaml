@@ -112,12 +112,22 @@ rules:
     date_checked: 2026-10-31
 
   - id: corruption.bench_corrupted_extra_vaal
-    statement: "A bench craft of socket number, socket colour or links on a corrupted item costs, besides its usual currency, the same number of Vaal Orbs. That the three 3.29.0 options for at least two, three or four non-white sockets (5 / 20 / 75 Chromatic Orbs) follow the same rule is my reading, not stated."
+    statement: "A bench craft of socket number, socket colour or links on a corrupted item costs, besides its usual currency, the same number of Vaal Orbs. The three 3.29.0 options for non-white sockets are a separate claim, corruption.bench_non_white_options_extra_vaal."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Corrupted#Mechanics
     quote: "It will cost additional Vaal Orbs equal to the number of currency items the recipe normally requires."
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+
+  - id: corruption.bench_non_white_options_extra_vaal
+    statement: "The three 3.29.0 bench options for at least two, three or four non-white sockets (5 / 20 / 75 Chromatic Orbs) are taken to cost the same extra Vaal Orbs on a corrupted item as the other socket crafts, equal to the number of currency items the recipe normally requires. The wiki states the rule for socket number, colour and links; nothing states it for these three options, so this is a reading of the general rule (research note, section 8)."
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Corrupted#Mechanics
+    quote: "It will cost additional Vaal Orbs equal to the number of currency items the recipe normally requires."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "a reading of the general bench rule; no source states it for the three 3.29.0 non-white options"
 
   - id: corruption.bloodstained_fossil_implicit
     statement: "A resonator with a Bloodstained Fossil corrupts the item and adds a corrupted implicit like the Vaal Orb's implicit outcome; other fossils do not change that implicit."

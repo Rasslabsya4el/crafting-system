@@ -34,6 +34,7 @@ CORRUPTION_IDS = {
     "corruption.locus_no_preview",
     "corruption.corrupted_modifiable_exceptions",
     "corruption.bench_corrupted_extra_vaal",
+    "corruption.bench_non_white_options_extra_vaal",  # split off by ADR-0036 "Sockets": the reading, marked approximate
     "corruption.bloodstained_fossil_implicit",
     "corruption.vaal_incompatible_with_allflame",
     "corruption.jewel_vaal_outcomes",
@@ -57,7 +58,7 @@ TAINTED_IDS = {
     "tainted.source_beyond",
 }
 
-# The three claims of the ticket, then the three more that an ADR calls "marked approximate".
+# The three claims of the ticket, then the four more that an ADR calls "marked approximate".
 TICKET_APPROXIMATE = {
     "corruption.vaal_brick_rare_six_mods",  # ADR-0037
     "corruption.jewel_brick_fills_to_limit",  # ADR-0037
@@ -67,6 +68,7 @@ ADR_APPROXIMATE = {
     "corruption.locus_second_implicit_other_group",  # ADR-0038: the only support is Craft of Exile's code
     "tainted.jeweller_even_split",  # ADR-0036 "Sockets": a community test of unknown size
     "tainted.fusing_even_split",  # ADR-0036 "Sockets": the same
+    "corruption.bench_non_white_options_extra_vaal",  # ADR-0036 "Sockets": the three 3.29.0 options are a reading
 }
 
 
@@ -87,8 +89,8 @@ def test_every_corruption_and_tainted_claim_is_in_the_registry(registry):
     assert family(registry, "tainted") == TAINTED_IDS
 
 
-def test_the_27_draft_claims_and_the_three_additions_are_counted(registry):
-    assert len(family(registry, "corruption")) == 17 + 3
+def test_the_27_draft_claims_the_three_additions_and_the_split_bench_claim_are_counted(registry):
+    assert len(family(registry, "corruption")) == 17 + 3 + 1
     assert len(family(registry, "tainted")) == 10
 
 
@@ -188,6 +190,16 @@ def test_the_locus_split_is_four_equal_outcomes(registry):
 
     assert sum(rule.value.values()) == pytest.approx(1)
     assert set(rule.value.values()) == {0.25}
+
+
+def test_the_stated_bench_rule_is_not_approximate_and_the_reading_is(registry):
+    stated = registry["corruption.bench_corrupted_extra_vaal"]
+    reading = registry["corruption.bench_non_white_options_extra_vaal"]
+
+    assert not stated.approximate
+    assert "reading" not in stated.statement
+    assert stated.url == reading.url and stated.quote == reading.quote
+    assert reading.approximate and "non-white" in reading.approximate_reason
 
 
 def test_the_tainted_even_splits_are_half_and_half(registry):
