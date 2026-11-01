@@ -638,9 +638,12 @@ class Abstraction:
             return
         avoid: set[str] = set()
         while True:
+            before = len(avoid)
             for (mod_id, fractured, crafted), origin in origins.items():
                 if fractured and not crafted and isinstance(origin, FracturedMod) and origin.mod_id.startswith(TYPE_PREFIX):
                     avoid |= held_families(self.data.mods[mod_id])
+            if len(avoid) == before:
+                return  # the representative did not change: every family of the type has been tried
             try:
                 other, origins = self._item_of(state, erasing, frozenset(avoid))
             except (ItemError, ValueError):
