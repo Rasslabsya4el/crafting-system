@@ -21,10 +21,10 @@
 #   * The four orbs of the actions line are the cheapest set that crafts it: Transmutation, Alteration, Augmentation
 #     and the Regal Orb. Fewer kinds keep the state space small, so the benchmark solves in seconds.
 #
-# The prices of the goods come from the price file: the base ("Lion Pelt (ilvl 84)"), the Orb of Augmentation
-# and "Vendor recipe gems (minion, 40% quality)", the cheapest set of Minion gems whose quality adds up to 40%.
-# The trade API does not price that line yet (ticket #360), so the benchmark's fixture holds a hand price for it
-# (`tests/fixtures/prices/vendor-v01-2026-11-01.json`).
+# The prices of the goods come from the price file: the base ("Lion Pelt (ilvl 84)") and "Vendor recipe gems (minion, 40%
+# quality)", the cheapest set of Minion gems whose quality adds up to 40%.
+# The trade API does not price that line yet (ticket #360), so the target names a committed price file that holds a hand price
+# for it, and `benchmark` gives the same answer on every machine.
 
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Lion Pelt
@@ -54,3 +54,7 @@ requirements:
 # of the base and level above). The planner also tries the start items a vendor recipe can make.
 # The name the start item has in the price file, which is what it costs to get.
 start_price: Lion Pelt (ilvl 84)
+
+# The price file of this route (a path from this file's folder): the committed poe.ninja snapshot of the other benchmark routes plus
+# hand prices for the base and the gem line (`tests/fixtures/prices/vendor-v01-2026-11-01.json`).
+price_file: ../../tests/fixtures/prices/vendor-v01-2026-11-01.json

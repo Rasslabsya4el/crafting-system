@@ -19,6 +19,7 @@ CI fetches it. The route is planned once per process; it solves in a few seconds
 """
 
 import json
+import os
 import re
 from fractions import Fraction
 from pathlib import Path
@@ -26,7 +27,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from cli_support import TODAY
-from route_view_support import assert_golden
+from route_view_support import GOLDEN, assert_golden
 
 from crafting_system.cli import (
     StartContext,
@@ -74,6 +75,13 @@ def masked(text: str) -> str:
 
 
 # --- the plan starts from the recipe ------------------------------------------------------------------------------------------
+
+
+def test_the_target_names_the_committed_price_file(data):
+    target = load_target(TARGET, data)
+
+    assert target.price_file is not None and target.price_file.resolve() == PRICES.resolve() and PRICES.is_file()
+    assert target.start_price == "Lion Pelt (ilvl 84)" and target.start_price in load_price_file(PRICES).prices
 
 
 def test_the_plan_starts_from_the_recipe_made_helmet(plan):
@@ -145,11 +153,27 @@ def test_the_text_report_is_the_golden(report):
     assert_golden("v01_minion_helmet", masked(render_text(report, target_name="v01-minion-helmet.yaml")), suffix="txt")
 
 
+def rounded(value, digits: int = 9):
+    """`value` with every float cut to `digits` significant digits: the last digits of a mean differ between CPUs (numpy sums), the golden says the rest."""
+    if isinstance(value, float):
+        return float(f"{value:.{digits}g}")
+    if isinstance(value, dict):
+        return {key: rounded(each, digits) for key, each in value.items()}
+    if isinstance(value, list):
+        return [rounded(each, digits) for each in value]
+    return value
+
+
 def test_the_json_policy_is_the_golden(report):
     document = policy_document(report, None, target_name="v01-minion-helmet.yaml")
     document.pop("timings_seconds")
+    text = json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    path = GOLDEN / "v01_minion_helmet.json"
+    if os.environ.get("UPDATE_GOLDEN"):
+        path.write_text(text, encoding="utf-8", newline="\n")
 
-    assert_golden("v01_minion_helmet", json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n", suffix="json")
+    assert path.exists(), f"no golden file {path}; run with UPDATE_GOLDEN=1 to write it"
+    assert rounded(json.loads(text)) == rounded(json.loads(path.read_text(encoding="utf-8")))  # floats to 9 digits, everything else exact
 
 
 def test_the_route_page_is_the_golden(report, data, tmp_path):
@@ -167,7 +191,8 @@ def test_the_benchmark_list_holds_v01_and_its_entry_records_the_expected_start(d
     bench = next(each for each in benchmark_module.BENCHMARKS if each.id == "V01")
     assert bench.route is None and bench.start.key == KEY and bench.heavy is None
 
-    entry, _ = benchmark_module.run_route(bench, data, ROOT, load_config({}), load_price_file(PRICES), TODAY)
+    entry, loaded = benchmark_module.run_route(bench, data, ROOT, load_config({}), None, TODAY)  # the prices are the ones the target names
+    assert loaded is not None and loaded.league == "Allflame" and loaded.prices[GEMS_LINE].chaos == GEMS_PRICE
 
     assert entry["error"] is None and entry["given_route"] is None and entry["solver_not_dearer"] is None
     start = entry["start"]

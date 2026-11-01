@@ -354,7 +354,8 @@ class _View:
             number = edge.to + 1
             what = self.lost(step, edge)
             if step.action is not None and step.action.label == RESTART:
-                lines.append(self.link(f"the start item bought again ({chance_text(edge.chance)})", number, None))
+                again = "made again at the vendor" if self.first is not None else "bought again"
+                lines.append(self.link(f"the start item {again} ({chance_text(edge.chance)})", number, None))
             elif what:
                 lines.append(self.link(f"{' and '.join(what)} ({chance_text(edge.chance)})", number, None))
             else:

@@ -341,7 +341,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"  mean cost       {interval(_shifted(risk.mean, shift), divine)}")
         lines.append(f"  p50             {_quantile_text(risk, risk.p50, shift, divine)}")
         lines.append(f"  p90             {_quantile_text(risk, risk.p90, shift, divine)}")
-        lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after buying it is")
+        got = "making it at the vendor" if report.first_step is not None else "buying it"
+        lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after {got} is")
         lines.append(f"   {money(plan.mean_remaining)} Chaos by the solver and {money(risk.mean.value)} by the risk run)")
     if report.shares:
         lines.append("")

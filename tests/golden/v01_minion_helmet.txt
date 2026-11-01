@@ -494,7 +494,7 @@ Result
   mean cost       866.40 Chaos (2.33 Divine)
   p50             597.04 Chaos (1.6 Divine), certified 595.87 to 598.22
   p90             1,984.76 Chaos (5.33 Divine), certified 1,980.82 to 1,988.70
-  (the start item, 8.00 Chaos, is included; the cost left to pay after buying it is
+  (the start item, 8.00 Chaos, is included; the cost left to pay after making it at the vendor is
    858.40 Chaos by the solver and 858.40 by the risk run)
 
 Run time: <measured>
