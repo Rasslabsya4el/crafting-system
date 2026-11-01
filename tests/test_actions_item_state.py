@@ -11,6 +11,7 @@ from fractions import Fraction
 import pytest
 from contract_support import check_action, check_block_invariance
 from item_state_support import (
+    check_kinds_declare_item_state,
     AILMENTS_1,
     AILMENTS_2,
     AVOID_SHOCK,
@@ -72,30 +73,10 @@ def test_an_action_that_declares_nothing_reads_and_adds_everything():
     assert (adds.implicits, adds.quality, adds.offer) == (True, True, True)
 
 
-B2_READS_ITEM_STATE = {"influenced-exalted-orb": "implicits"}  # B2 kinds that read a part of the item state (no planner kind does)
-VEILED_KINDS = frozenset({"veiled-chaos-orb", "veiled-exalted-orb", "unveil", "pick"})  # they declare the offer (#144); no planner kind until #145
-
-
-B3_ITEM_STATE = frozenset({"recombinator"})  # B3 kinds whose output copies the implicits and the quality of the chosen base (ticket #215); no planner kind
-
-
 def test_no_planner_kind_of_the_catalog_declares_item_state_yet():
-    # B1 touches none of the three: the planner and the cache see no change in any registered kind that is offered.
-    # An influenced Exalted Orb (ticket #154) reads the implicits, because it is refused on an Eldritch implicit; it is no planner kind yet.
-    # The veiled orbs, the unveil and the pick (#144) declare the offer, and are not planner kinds until the compressed model has the offer state (#145).
-    for kind in kinds():
-        for action in kind.members(ITEM_DATA, amulet(roll(RESIST_2))):
-            reads, adds = action.reads(ITEM_DATA), action.adds(ITEM_DATA, None)
-            if kind.name in VEILED_KINDS:
-                assert not kind.planner, kind.name
-            elif kind.name in B3_ITEM_STATE:
-                assert not kind.planner, kind.name
-                assert reads.implicits and reads.quality and adds.implicits and adds.quality, kind.name
-            elif kind.name in B2_READS_ITEM_STATE:
-                assert not kind.planner and not adds.item_state, kind.name
-                assert getattr(reads, B2_READS_ITEM_STATE[kind.name]) and not (reads.quality or reads.offer), kind.name
-            else:
-                assert not reads.item_state and not adds.item_state, kind.name
+    # B1 touches none of the three: the planner and the cache see no change in any registered kind that is offered. A kind outside the
+    # planner that reads a part of it (the influenced Exalted Orb, ticket #154) says so itself: `reads_item_state_while_not_planner`.
+    assert check_kinds_declare_item_state() == len(kinds())
 
 
 # --- the toys pass the contract suite -------------------------------------------------------------

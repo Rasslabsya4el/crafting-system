@@ -19,6 +19,10 @@ from crafting_system.items import Item
 from .contract import Fixed
 from .draw import Outcome
 
+__all__ = [
+    "Finite",
+]
+
 ONE = Fraction(1)
 
 

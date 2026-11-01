@@ -28,6 +28,11 @@ from .errors import NotApplicableError
 from .outcomes import Outcomes
 from .pool import PoolFamily
 
+__all__ = [
+    "add_one_mod",
+    "draw_onto",
+]
+
 ADD_REFUSED_WHEN_NO_LEGAL_MOD = get_rule("magic_orbs.add_refused_when_no_legal_mod")
 FULL_SIDE_CLOSES = get_rule("affix_pool.full_side_closes")
 

@@ -291,12 +291,14 @@ def test_a_wrong_declaration_is_caught(items):
 
 
 def test_input_free_actions_are_unchanged_bit_for_bit():
-    """No action of the catalog but the recombinator (#215, a two-input action) has an input or an axis, one reading is all there is, and the call with a reading is the call without."""
-    for kind, action, name in contract_pairs():
-        if kind == "recombinator":
-            continue
+    """No action of the catalog that takes no input has an axis, one reading is all there is, and the call with a reading is the call without.
+
+    The two-input actions of the catalog (the Awakener's Orb, the recombinator) are left out: they name their inputs and axes, and their own suites test them."""
+    for _, action, name in contract_pairs():
         item = fixture_items()[name]
-        assert action.inputs(CONTRACT_DATA, item) == () and action.rule_axes(CONTRACT_DATA) == ()
+        if action.inputs(CONTRACT_DATA, item):
+            continue
+        assert action.rule_axes(CONTRACT_DATA) == ()
         assert model_readings(CONTRACT_DATA, [action]) == (Reading(),)
         stray = Reading.of({"toy.pick": Fraction(1, 4)})
         try:
