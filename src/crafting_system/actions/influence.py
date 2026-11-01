@@ -379,7 +379,7 @@ class BeastInfluenceRecipe(Action):
 
 @kind(
     "beast-influence-recipe",
-    order=87,
+    order=88,
     planner=False,
     why_not="no compressed-state kernel for the influence crafts yet (#155)",
 )
