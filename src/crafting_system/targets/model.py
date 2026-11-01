@@ -100,6 +100,9 @@ class ImplicitRequirement:
     `min_grade` is the lowest Eldritch grade accepted (1 Lesser to 6 Perfect), None when any grade does;
     it is set only for Eldritch implicits. `min_roll` has one entry per stat of the mod, None where any
     value will do. Rolls are the raw numbers of the game data, as stored on the item.
+
+    `corrupted` marks a corrupted implicit (ADR-0036): `mod_ids` are then mods of the corrupted pool of the base at the
+    target's item level, and only a corrupted item can hold one. A target with such an entry asks for a corrupted item.
     """
 
     family: str | None
@@ -107,6 +110,7 @@ class ImplicitRequirement:
     mod_ids: frozenset[str]
     min_grade: int | None = None
     min_roll: tuple[int | None, ...] | None = None
+    corrupted: bool = False
 
     def __post_init__(self) -> None:
         if (self.family is None) == (self.stat is None):
@@ -116,6 +120,8 @@ class ImplicitRequirement:
 
     def is_met_by(self, item: Item) -> bool:
         """Whether one implicit of `item` is among `mod_ids` and passes the grade and every roll."""
+        if self.corrupted and not item.corrupted:
+            return False
         return any(self._counts(entry) for entry in item.implicits)
 
     def _counts(self, entry: ImplicitMod) -> bool:
@@ -182,6 +188,8 @@ class Target:
     has in the price file (for example the buy spec's name), or None; it is not looked up here. `actions` names the
     kinds of actions the planner may use (ADR-0024), or None for every kind it can use; the names are not checked here.
     `enchantment` is the acceptable set for the item's enchantment, or None when the target asks for none.
+    `allow_corrupted` lets the goal be a corrupted item that has no corrupted implicit (ADR-0036); a target that asks for a
+    corrupted implicit (`asks_corrupted`) takes a corrupted item too, and any other target is never met by one.
     """
 
     base_id: str
@@ -195,9 +203,26 @@ class Target:
     quality: QualityRequirement | None = None
     actions: tuple[str, ...] | None = None
     enchantment: EnchantmentRequirement | None = None
+    allow_corrupted: bool = False
+
+    @property
+    def asks_corrupted(self) -> bool:
+        """Whether an implicit requirement is for a corrupted implicit: the goal is then a corrupted item."""
+        return any(wish.corrupted for wish in self.implicits)
+
+    @property
+    def takes_corrupted(self) -> bool:
+        """Whether a corrupted item can be the goal: the target asks for a corrupted implicit or allows a corrupted item."""
+        return self.allow_corrupted or self.asks_corrupted
 
     def is_met_by(self, item: Item) -> bool:
-        """Whether `item` meets every top-level requirement, every implicit requirement, the quality and the enchantment."""
+        """Whether `item` meets every top-level requirement, every implicit requirement, the quality and the enchantment.
+
+        A corrupted item is never a goal unless the target asks for a corrupted implicit or allows a corrupted item
+        (`takes_corrupted`), whatever mods it holds (ADR-0036).
+        """
+        if item.corrupted and not self.takes_corrupted:
+            return False
         return not self.unmet(item)
 
     def unmet(self, item: Item) -> tuple[Condition, ...]:

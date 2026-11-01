@@ -130,7 +130,13 @@ from .bench import BenchCraft, BenchOutcomes, CurrencyCost, RemoveCraftedMods, b
 from .catalog import Kind, catalog, kind, kinds, register, registered
 from .chaos import ChaosOrb
 from .contract import Action, ActionOutcomes, Adds, Fixed, Reads, Rerolled
-from .corrupted_pool import CorruptedImplicit, CorruptedImplicitPool, corrupted_implicit_pool
+from .corrupted_pool import (
+    CORRUPTING_KINDS,
+    DEFAULT_CORRUPTING_KINDS,
+    CorruptedImplicit,
+    CorruptedImplicitPool,
+    corrupted_implicit_pool,
+)
 from .divine import DivineOrb, DivineOutcomes
 from .draw import Outcome, guaranteed_candidates
 from .errors import ActionError, NotApplicableError, OutOfScopeError
@@ -172,10 +178,12 @@ __all__ = [
     "BeastSideSwap",
     "BenchCraft",
     "BenchOutcomes",
+    "CORRUPTING_KINDS",
     "ChaosOrb",
     "CorruptedImplicit",
     "CorruptedImplicitPool",
     "CurrencyCost",
+    "DEFAULT_CORRUPTING_KINDS",
     "DivineOrb",
     "DivineOutcomes",
     "ExaltedOrb",
