@@ -1,6 +1,6 @@
 # Corruption is the last step: a corrupted item is final, and the target says when it wants one
 
-A corrupted item takes no ordinary currency and no mod craft; only Tainted currency and the bench socket crafts touch it ([wiki "Corrupted"](https://www.poewiki.net/wiki/Corrupted#Mechanics), claim `corruption.corrupted_modifiable_exceptions`). B4 offers neither, so in B4 **every corrupted item is final**: it is the goal, or a dead end. [Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95) took the rules of [the research](https://github.com/Rasslabsya4el/crafting-system/issues/92) and the owner's answers of 2026-11-01. The Vaal Orb is ADR-0037, the Bloodstained Fossil and the Locus of Corruption are ADR-0038, prices, quality and verification are ADR-0039.
+A corrupted item takes no ordinary currency and no mod craft; only Tainted currency and the bench socket crafts touch it ([wiki "Corrupted"](https://www.poewiki.net/wiki/Corrupted#Mechanics), claim `corruption.corrupted_modifiable_exceptions`). B4 offers neither (the socket exceptions are in "Sockets" below), so in B4 **a corrupted item is final**: it is the goal, or a dead end. [Grill B4](https://github.com/Rasslabsya4el/crafting-system/issues/95) took the rules of [the research](https://github.com/Rasslabsya4el/crafting-system/issues/92) and the owner's answers of 2026-11-01. The Vaal Orb is ADR-0037, the Bloodstained Fossil and the Locus of Corruption are ADR-0038, prices, quality and verification are ADR-0039.
 
 ## What B4 contains
 
