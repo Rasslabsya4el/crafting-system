@@ -141,7 +141,7 @@ def test_a_search_with_no_listing_is_none_and_fetches_nothing(trade, spec, game_
     assert trade.kinds == ["stats", "search"]
 
 
-@pytest.mark.parametrize("answer", [{"total": 40, "result": []}, {"total": 40}, {"result": ["a"]}, {"total": None}])
+@pytest.mark.parametrize("answer", [{"total": 40, "result": []}, {"total": 40}, {"result": ["a"]}, {"total": None}, {"total": -3, "result": ["a"]}])
 def test_a_malformed_search_answer_is_an_error_and_not_a_none_state(trade, spec, game_mods, tmp_path, answer):
     trade.search = {"id": "x", **answer}
 
