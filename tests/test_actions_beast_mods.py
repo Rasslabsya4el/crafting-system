@@ -530,3 +530,16 @@ def test_the_kinds_are_offered_for_a_rare_item_only_and_are_not_planner_kinds():
 
 def test_roll_helper_matches_the_item_model():
     assert roll(ES1, crafted=False).values == item_of(ES1).mods[0].values
+
+
+# --- the item class: a metamod is a crafted mod, and the bench offers it for equipment classes only ---------------
+
+
+def test_the_matron_is_offered_and_works_only_on_an_item_class_the_bench_offers_metamods_for():
+    item = item_of(LIFE1, FIRE)
+    jewel_base = dataclasses.replace(SMALL.base_items[AMULET], item_class="Jewel")
+    jewel_data = dataclasses.replace(SMALL, base_items={**SMALL.base_items, AMULET: jewel_base})
+    assert WildBristleMatron() in catalog(SMALL, item)
+    assert WildBristleMatron() not in catalog(jewel_data, item)
+    with pytest.raises(NotApplicableError, match="no metamod is allowed"):
+        WildBristleMatron().outcomes(jewel_data, item)

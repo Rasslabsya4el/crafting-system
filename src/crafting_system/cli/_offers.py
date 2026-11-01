@@ -168,17 +168,18 @@ def offers_for(data: GameData, goal: Goal, base_id: str, start_item: Item) -> Of
       multimod, #68): then a crafted mod can block a family before an Exalted Orb, a craft with no goal
       contribution can pay off, and this rule no longer holds. The crafts left out are reported.
     * An action that adds named mods only for a target that wants them (`Adds.wanted_only`, an aspect beast, #147) is
-      offered only when a mod it adds counts toward a requirement, whatever the other actions do to crafted mods.
+      offered only when a mod it adds is named by a requirement of the goal, whatever the other actions do to crafted mods.
       It is left out and reported like a craft that counts for nothing.
     * An action that needs a crafted mod to be used on (`Reads.needs_crafted`, Remove Crafted Mods) is
       offered only when the start item holds one or another offered action adds one.
     """
     counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
+    named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
     candidates = []
     left_out_unwanted: list[str] = []
     for action in catalog(data, start_item, planner_only=True):
         adds = action.adds(data, start_item)
-        if adds.wanted_only and not (adds.named or frozenset()) & counting:
+        if adds.wanted_only and not (adds.named or frozenset()) & named:
             left_out_unwanted.append(action.label(data))
         else:
             candidates.append(action)

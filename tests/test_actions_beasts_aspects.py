@@ -276,3 +276,12 @@ def test_the_kind_lists_only_the_aspects_whose_mod_is_in_the_data():
 
     assert {(action.aspect, action.level) for action in found} == set(ALL) - {("cat", 20), ("spider", 30)}
     assert listed(rare(AMULET, (LIFE,), data=DATA), DATA) == []
+
+
+def test_an_aspect_is_refused_and_not_offered_on_a_base_of_another_domain():
+    jewel_base = dataclasses.replace(BEAST_DATA.base_items[AMULET], domain="item_jewel")
+    data = dataclasses.replace(BEAST_DATA, base_items={**BEAST_DATA.base_items, AMULET: jewel_base})
+    item = rare(AMULET, [LIFE], data=BEAST_DATA)
+    assert not [action for action in catalog(data, item) if isinstance(action, AspectBeast)]
+    with pytest.raises(NotApplicableError, match="does not fit the base"):
+        AspectBeast("cat", 20).outcomes(data, item)

@@ -52,6 +52,25 @@ def _refuse_if_corrupted(item: Item, what: str) -> None:
         raise NotApplicableError(f"the item is corrupted, and a corrupted item takes no {what}")
 
 
+def _metamod_classes(data: GameData) -> frozenset[str]:
+    """The item classes the bench offers a metamod for: the five share one list (`bench_craft.option_item_classes`)."""
+    ids = {mod.id for mod in wild_bristle_metamods(data)}
+    return frozenset(
+        item_class
+        for option in data.bench_options
+        if option.actions.add_explicit_mod in ids
+        for item_class in option.item_classes
+    )
+
+
+def _allowed_classes(data: GameData, item: Item) -> tuple[Mod, ...]:
+    """The metamods of the Matron when the bench offers metamods for the item class of `item` (a crafted mod could be added there), else none."""
+    base = data.base_items.get(item.base_id)
+    if base is None or base.item_class not in _metamod_classes(data):
+        return ()
+    return wild_bristle_metamods(data)
+
+
 def wild_bristle_metamods(data: GameData) -> tuple[Mod, ...]:
     """The metamods the Matron can add that `data` holds, one per family of `beastcraft.metamod_ids`, in data order.
 
@@ -90,7 +109,8 @@ class WildBristleMatron(Action):
         """The outcomes of the recipe on `item`: one result per allowed metamod, each with chance 1/n.
 
         A metamod is allowed when the item has an open slot on its side, holds no mod of its family and
-        holds fewer crafted mods than the limit (one, or three with the multimod). The metamod is added as
+        holds fewer crafted mods than the limit (one, or three with the multimod), and the bench offers it for
+        the item class of the base (`beastcraft.metamod_needs_slot_and_crafted_room`). The metamod is added as
         a crafted mod at its lowest values. As for a bench craft, `NotApplicableError` for a corrupted item,
         a full crafted limit, or no allowed metamod; `OutOfScopeError` for a normal item or one with no mod
         (no admitted rule says what the recipe does there). An item that fails `Item.validate` raises its `ItemError`.
@@ -108,7 +128,7 @@ class WildBristleMatron(Action):
             )
         allowed = [
             mod
-            for mod in wild_bristle_metamods(data)
+            for mod in _allowed_classes(data, item)
             if item.free_slots(data, Side(mod.generation_type)) > 0 and not item.blocks(data, mod)
         ]
         if not allowed:
@@ -125,7 +145,7 @@ class WildBristleMatron(Action):
 
 @kind("wild-bristle-matron", order=86, planner=False, why_not=WHY_NOT_PLANNER)
 def _wild_bristle_matron(data: GameData, item: Item):
-    if item.rarity is Rarity.RARE and wild_bristle_metamods(data):
+    if item.rarity is Rarity.RARE and _allowed_classes(data, item):
         yield WildBristleMatron()
 
 

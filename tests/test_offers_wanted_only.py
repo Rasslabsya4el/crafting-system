@@ -51,3 +51,10 @@ def test_only_the_aspect_a_target_names_is_offered(aspects_registered):
     goal = Goal((Wanted(wanted.adds(CONTRACT_DATA).named),))
     offers, _ = aspect_offers(goal)
     assert [offer.action for offer in offers] == [wanted]
+
+
+def test_an_aspect_is_offered_for_a_leaf_that_demands_a_mod_that_is_not_crafted(aspects_registered):
+    wanted = AspectBeast("avian", 20)
+    goal = Goal((Wanted(wanted.adds(CONTRACT_DATA).named, not_crafted=True),))
+    offers, _ = aspect_offers(goal)  # the aspect is no crafted mod, so it satisfies the leaf
+    assert [offer.action for offer in offers] == [wanted]

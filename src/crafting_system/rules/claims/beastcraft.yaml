@@ -112,7 +112,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: beastcraft.metamod_needs_slot_and_crafted_room
-    statement: "Wild Bristle Matron needs an open slot on the side of the metamod it adds and an item on which a crafted mod could be added without removing another one first: an item holding a crafted mod is refused, except when that mod is Can have up to 3 Crafted Modifiers (then the limit of crafted mods is the multimod's)."
+    statement: "Wild Bristle Matron needs an open slot on the side of the metamod it adds and an item on which a crafted mod could be added without removing another one first: an item holding a crafted mod is refused, except when that mod is Can have up to 3 Crafted Modifiers (then the limit of crafted mods is the multimod's). A crafted mod could normally be added only on an item class the bench offers that metamod for (`bench_craft.option_item_classes`), so the Matron adds a metamod only on those classes."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Beastcrafting#Harvest_beast_recipes
     quote: "Requires an empty affix slot, and requires that a crafted mod could normally be added without removing another one first"

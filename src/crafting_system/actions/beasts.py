@@ -28,6 +28,8 @@ RECIPE_BEASTS = get_rule("beastcraft.recipe_beasts")
 DEFAULT_BEAST_LEVEL = get_rule("beastcraft.default_beast_level")
 ANY_RARE_CREATURE_PRICE = get_rule("beastcraft.any_rare_creature_price")
 TALISMAN_FRACTURE = get_rule("beastcraft.talisman_fracture")
+FRACTURE_REFUSED_ON_CORRUPTED = get_rule("fracturing_orb.refused_on_corrupted")
+BENCH_REFUSED_ON_CORRUPTED = get_rule("bench_craft.refused_on_corrupted")  # the aspect craft adds a mod as the bench does
 TALISMAN_FRACTURE_REFUSED = get_rule("beastcraft.talisman_fracture_refused_on_fractured_or_influenced")
 TALISMAN_FRACTURE_UNIFORM = get_rule("beastcraft.talisman_fracture_uniform")
 ASPECT_MODS = get_rule("beastcraft.aspect_mods")
@@ -209,6 +211,9 @@ class AspectBeast(Action):
         an aspect already (the family `GrantedSkill`). There is no item level gate.
         """
         mod = self._mod(data)
+        base = data.base_items.get(item.base_id)
+        if base is None or base.domain != mod.domain:
+            raise NotApplicableError(f"the aspect {self.mod_id} is of domain {mod.domain} and does not fit the base {item.base_id}")
         if item.rarity is not Rarity.RARE:
             raise OutOfScopeError(f"the item is {item.rarity}; no admitted rule says what an aspect craft does to it")
         if item.corrupted:
@@ -232,7 +237,9 @@ class AspectBeast(Action):
 def _aspect_beasts(data: GameData, item: Item):
     if item.rarity is not Rarity.RARE:
         return
+    base = data.base_items.get(item.base_id)
     for aspect in ASPECT_WORDS:
         for level in ASPECT_LEVELS:
-            if aspect_mod_id(aspect, level) in data.mods:
+            mod = data.mods.get(aspect_mod_id(aspect, level))
+            if mod is not None and base is not None and base.domain == mod.domain:  # equipment only: a jewel or a flask takes no aspect mod
                 yield AspectBeast(aspect, level)
