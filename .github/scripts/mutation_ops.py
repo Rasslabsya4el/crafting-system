@@ -12,9 +12,10 @@ logging and print calls, `raise` statements (the error text), f-strings, annotat
 `__repr__`/`__str__` methods, and any statement with a `pragma: no cover` or `no mutate` comment.
 
 Operators (one mutant per place and per replacement):
-  compare   `<`<->`<=`, `>`<->`>=`, `==`<->`!=`, `is`<->`is not`, `in`<->`not in` (each operator of a chain)
+  compare   `<`->`<=` and `>`, `<=`->`<` and `>=`, and the same for `>`, `>=`; `==`<->`!=`, `is`<->`is not`,
+            `in`<->`not in` (each operator of a chain)
   arith     `+`<->`-`, `*`<->`/`, also as `+=`, `-=`, `*=`, `/=` (not where an operand is a string or a literal list)
-  const     an integer constant n becomes n + 1
+  const     an integer constant n becomes n + 1, and n - 1 when n is 1 or more
   bool      `True`<->`False`
   boolop    `and`<->`or`
   not       `not x` becomes `x`
@@ -28,9 +29,10 @@ and its line numbers stay as they are. A mutant whose edited file does not parse
 import ast
 from dataclasses import asdict, dataclass
 
-COMPARE_FLIPS = {
-    ast.Lt: ast.LtE, ast.LtE: ast.Lt, ast.Gt: ast.GtE, ast.GtE: ast.Gt, ast.Eq: ast.NotEq, ast.NotEq: ast.Eq,
-    ast.Is: ast.IsNot, ast.IsNot: ast.Is, ast.In: ast.NotIn, ast.NotIn: ast.In,
+COMPARE_FLIPS = {  # each operator: the operators it becomes (the boundary, then the direction)
+    ast.Lt: (ast.LtE, ast.Gt), ast.LtE: (ast.Lt, ast.GtE), ast.Gt: (ast.GtE, ast.Lt), ast.GtE: (ast.Gt, ast.LtE),
+    ast.Eq: (ast.NotEq,), ast.NotEq: (ast.Eq,), ast.Is: (ast.IsNot,), ast.IsNot: (ast.Is,),
+    ast.In: (ast.NotIn,), ast.NotIn: (ast.In,),
 }  # fmt: skip
 ARITH_SWAPS = {ast.Add: ast.Sub, ast.Sub: ast.Add, ast.Mult: ast.Div, ast.Div: ast.Mult}
 LOG_NAMES = frozenset({"log", "logger", "logging", "warnings", "print", "pprint"})
@@ -234,8 +236,9 @@ class _Collector:
             return
         if isinstance(node, ast.Compare):
             for index, operator in enumerate(node.ops):
-                flip = COMPARE_FLIPS.get(type(operator))
-                if flip is not None and not _compares_text(node):
+                if _compares_text(node):
+                    continue
+                for flip in COMPARE_FLIPS.get(type(operator), ()):
                     ops = list(node.ops)
                     ops[index] = flip()
                     self._add(node, stmt_line, "compare", ast.unparse(ast.Compare(node.left, ops, node.comparators)))
@@ -254,6 +257,8 @@ class _Collector:
                 self._add(node, stmt_line, "bool", repr(not node.value))
             elif type(node.value) is int:
                 self._add(node, stmt_line, "const", str(node.value + 1))
+                if node.value >= 1:
+                    self._add(node, stmt_line, "const", str(node.value - 1))
         for child in ast.iter_child_nodes(node):
             if isinstance(child, ast.expr_context):
                 continue

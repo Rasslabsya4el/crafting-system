@@ -102,7 +102,7 @@ def build_plan(
     """The whole plan as a JSON-ready dict: the numbered mutants, the test sets they use, the counts of the rest."""
     index = select.build_index(root / "tests", root)
     graph = select.build_src_graph(root / "src")
-    speeds = select.file_speeds(json.loads(durations_file.read_text(encoding="utf-8"))) if durations_file and durations_file.exists() else {}
+    costs = select.file_costs(json.loads(durations_file.read_text(encoding="utf-8"))) if durations_file and durations_file.exists() else {}
     has_data = coverage_file is not None and coverage_file.exists()
     files = [(3, f"{SRC}/{TRIAL_FILE}")] if trial else tier_files(root)
 
@@ -117,7 +117,7 @@ def build_plan(
         contexts = (select.read_line_contexts(coverage_file, file) or {}) if has_data else None
         planned, unreached, no_tests = [], 0, 0
         for mutant in ops.find_mutants(source, file):
-            tests, origin, cut = select.tests_for_line(index, graph, module, contexts, mutant.stmt_line, speeds, reach_fallback=trial)
+            tests, origin, cut = select.tests_for_line(index, graph, module, contexts, mutant.stmt_line, costs, reach_fallback=trial)
             if not tests:
                 unreached += 1 if has_data else 0
                 no_tests += 0 if has_data else 1

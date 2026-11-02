@@ -70,7 +70,7 @@ jobs:
         run: |
           mkdir -p out
           args=(--plan plan/plan.json --done done --out out --round "$ROUND" --job "${{ matrix.job }}" --jobs "$JOBS")
-          if [ "$TRIAL" = "true" ]; then args+=(--trial --minutes 6); else args+=(--minutes 320 --deadline "$DEADLINE"); fi
+          if [ "$TRIAL" = "true" ]; then args+=(--trial --minutes 5); else args+=(--minutes 320 --deadline "$DEADLINE"); fi
           uv run --no-sync python .github/scripts/mutation_run.py "${args[@]}"
       - name: Upload the results of this job
         if: always() && steps.gate.outputs.go == 'true'

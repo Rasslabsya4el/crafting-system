@@ -36,15 +36,18 @@ def pick(a, b, items: list[int]) -> int:
 
 EXPECTED = [
     (6, "compare", "a < b", "a <= b"),
+    (6, "compare", "a < b", "a > b"),
     (6, "boolop", "a < b and not items", "a < b or not items"),
     (6, "not", "not items", "items"),
     (7, "arith", "a + b", "a - b"),
     (7, "return", "return a + b", "return 0"),
     (9, "compare", "a == 4", "a != 4"),
     (9, "const", "4", "5"),
+    (9, "const", "4", "3"),
     (11, "bool", "True", "False"),
     (12, "arith", "a * 2", "a / 2"),
     (12, "const", "2", "3"),
+    (12, "const", "2", "1"),
     (12, "return", "return a * 2", "return 0"),
 ]
 
@@ -83,13 +86,16 @@ def test_every_mutated_source_parses_changes_one_place_and_keeps_the_line_count(
 def test_a_node_after_non_ascii_text_is_replaced_at_the_right_column():
     source = 'def f(x):\n    name = "é—ü"; return x < 2\n'
     mutants = [m for m in ops.find_mutants(source) if m.operator == "compare"]
-    assert [ops.apply_mutant(source, m) for m in mutants] == ['def f(x):\n    name = "é—ü"; return x <= 2\n']
+    assert [ops.apply_mutant(source, m) for m in mutants] == [
+        'def f(x):\n    name = "é—ü"; return x <= 2\n',
+        'def f(x):\n    name = "é—ü"; return x > 2\n',
+    ]
 
 
 def test_the_comparison_flips_cover_both_sides_and_each_operator_of_a_chain():
     source = "def f(a, b, c):\n    return a < b <= c\n"
     flips = sorted(m.mutated for m in ops.find_mutants(source) if m.operator == "compare")
-    assert flips == ["a < b < c", "a <= b <= c"]
+    assert flips == ["a < b < c", "a < b >= c", "a <= b <= c", "a > b <= c"]
 
 
 def test_strings_and_literal_lists_are_not_added_or_subtracted_and_ints_in_text_are_left_alone():
@@ -169,18 +175,31 @@ def test_a_line_runs_the_tests_of_its_contexts_and_whole_files_when_it_also_ran_
     assert select.tests_for_line(index, graph, module, None, 1)[1] == "imports"  # no data file at all
 
 
-def test_the_slowest_files_are_cut_first_when_a_set_is_too_big(tmp_path, monkeypatch):
+def test_a_set_over_the_time_budget_keeps_its_fastest_entries(tmp_path, monkeypatch):
     root = make_repo(tmp_path)
     index = select.build_index(root / "tests", root)
     graph = select.build_src_graph(root / "src")
-    monkeypatch.setattr(select, "MAX_TESTS", 1)
-    speeds = {"tests/test_scour.py": 5.0, "tests/test_other.py": 0.1}
-    assert select.tests_for_line(index, graph, "crafting_system.actions.scour", None, 1, speeds) == (["tests/test_other.py"], "imports", 1)
+    monkeypatch.setattr(select, "SET_SECONDS", 10.0)
+    costs = {"tests/test_scour.py": (500.0, 100), "tests/test_other.py": (2.0, 2)}
+    # both files are chosen as whole files: test_other costs 2 s and fits, test_scour costs 500 s and is left out
+    assert select.tests_for_line(index, graph, "crafting_system.actions.scour", None, 1, costs) == (["tests/test_other.py"], "imports", 1)
+    monkeypatch.setattr(select, "SET_SECONDS", 1.0)
+    assert select.tests_for_line(index, graph, "crafting_system.actions.scour", None, 1, costs)[0] == ["tests/test_other.py"]  # one entry at least
 
 
-def test_file_speeds_add_the_groups_of_one_file():
+def test_a_set_is_also_cut_at_the_most_tests(monkeypatch):
+    monkeypatch.setattr(select, "MAX_TESTS", 2)
+    kept, cut = select.cut_to_budget(["tests/a.py::t3", "tests/a.py::t1", "tests/a.py::t2"], {})
+    assert (kept, cut) == (["tests/a.py::t1", "tests/a.py::t2"], 1)
+
+
+def test_file_costs_add_the_groups_of_one_file_and_a_test_costs_its_files_seconds_per_test():
     durations = {"tests/a.py": {"seconds": 6, "tests": 2}, "tests/a.py[x#0]": {"seconds": 4, "tests": 3}, "tests/b.py": {"seconds": 1, "tests": 4}}
-    assert select.file_speeds(durations) == {"tests/a.py": 2.0, "tests/b.py": 0.25}
+    costs = select.file_costs(durations)
+    assert costs == {"tests/a.py": (10.0, 5), "tests/b.py": (1.0, 4)}
+    assert select.entry_seconds("tests/a.py::t", costs) == 2.0
+    assert select.entry_seconds("tests/a.py", costs) == 10.0
+    assert select.entry_seconds("tests/new.py::t", costs) == select.UNKNOWN_SECONDS
 
 
 def test_lines_and_contexts_are_read_from_a_coverage_data_file(tmp_path):
@@ -211,7 +230,8 @@ def test_the_plan_orders_by_tier_and_interleaves_files_inside_a_tier(tmp_path):
     assert first == again
     order = [(m["tier"], Path(m["file"]).name, m["line"]) for m in first["mutants"]]
     assert [number["id"] for number in first["mutants"]] == list(range(len(order)))
-    assert [name for tier, name, _ in order if tier == 3] == ["_a.py", "_b.py", "_a.py", "_a.py", "_b.py", "_a.py"]
+    in_tier_3 = [name for tier, name, _ in order if tier == 3]
+    assert in_tier_3[:3] == ["_a.py", "_b.py", "_a.py"] and in_tier_3.count("_a.py") == 8 and in_tier_3.count("_b.py") == 3
     assert [tier for tier, *_ in order] == sorted(tier for tier, *_ in order)
     assert all(m["set"] in first["sets"] for m in first["mutants"])
     assert set(first["hashes"]) == set(first["files"])
@@ -289,12 +309,12 @@ def test_each_mutant_gets_its_outcome_and_the_file_is_restored(tmp_path):
     source = "def f(x):\n    return x < 2\n"
     target.write_text(source)
     plan = small_plan("m.py", source)
-    assert [m["mutated"] for m in plan["mutants"]] == ["x <= 2", "3"]
-    fake = FakePytest(target, {"x <= 2": 1, "x < 3": None})
+    assert [m["mutated"] for m in plan["mutants"]] == ["x <= 2", "x > 2", "1", "3"]
+    fake = FakePytest(target, {"x <= 2": 1, "x > 2": 0, "x < 1": 1, "x < 3": None})
     out = tmp_path / "out.jsonl"
     status = run.process_slice(plan, plan["mutants"], tmp_path, fake, out, stop_at=10**12, round_number=1, job=1, max_clean=100, max_limit=600)
     results = {r["mutated"]: r["outcome"] for r in map(json.loads, out.read_text().splitlines())}
-    assert results == {"x <= 2": "killed", "3": "timeout"}
+    assert results == {"x <= 2": "killed", "x > 2": "survived", "1": "killed", "3": "timeout"}
     assert target.read_text() == source  # restored
     assert status["done"] == len(plan["mutants"]) and status["not_reached"] == []
     assert fake.calls[0][2] == source  # the first call is the clean run
@@ -342,7 +362,7 @@ def test_a_job_stops_starting_mutants_at_its_stop_time_and_reports_what_it_did_n
     source = "def f(x):\n    return x < 2\n"
     target.write_text(source)
     plan = small_plan("m.py", source)
-    clock = iter([0, 0, 0, 0, 0, 100, 100, 100])
+    clock = iter([0, 0, 100, 100, 100])
     status = run.process_slice(
         plan, plan["mutants"], tmp_path, lambda ids, timeout: run.RunResult(0, 1.0), tmp_path / "o.jsonl", 50, 1, 1, 100, 600, now=lambda: next(clock)
     )

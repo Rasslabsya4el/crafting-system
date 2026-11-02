@@ -16,8 +16,9 @@ Three cases, and what each gives:
     import a module that imports it, and so on up to a few layers. Test helper modules count as imports of their
     importers.
 
-A set is cut at `MAX_TESTS` entries, fastest test files first (`tests/shard_durations.json` gives seconds per test
-file); the plan marks such a mutant as capped, since a survivor of a cut set might be killed by the tests left out.
+A set is cut to about `SET_SECONDS` of estimated time (at most `MAX_TESTS` entries), fastest entries first
+(`tests/shard_durations.json` gives seconds and tests per test file, so a test costs its file's seconds per test).
+The set records how many entries were left out: a survivor of a cut set might be killed by the tests left out.
 """
 
 import ast
@@ -26,6 +27,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 MAX_TESTS = 300
+SET_SECONDS = 120.0  # estimated seconds of one test set; a clean run of that size stays well under the 200 s limit
+UNKNOWN_SECONDS = 1.0
 FALLBACK_LAYERS = 6
 PACKAGE = "crafting_system"
 
@@ -233,15 +236,35 @@ def import_fallback(index: TestIndex, graph: SrcGraph, module: str) -> list[str]
     return []
 
 
-def file_speeds(durations: dict) -> dict[str, float]:
-    """Seconds per test of each test file, from the groups of `tests/shard_durations.json` (`file` or `file[param#i]`)."""
+def file_costs(durations: dict) -> dict[str, tuple[float, int]]:
+    """(seconds, tests) of each test file, from the groups of `tests/shard_durations.json` (`file` or `file[param#i]`)."""
     seconds: dict[str, float] = defaultdict(float)
     count: dict[str, int] = defaultdict(int)
     for group, entry in durations.items():
         name = group.split("[", 1)[0]
         seconds[name] += float(entry["seconds"])
         count[name] += int(entry["tests"])
-    return {name: seconds[name] / count[name] for name in seconds if count[name]}
+    return {name: (seconds[name], count[name]) for name in seconds}
+
+
+def entry_seconds(entry: str, costs: dict[str, tuple[float, int]]) -> float:
+    """Estimated seconds of a node id (its file's seconds per test) or of a whole file."""
+    name = entry.split("::", 1)[0]
+    seconds, tests = costs.get(name, (UNKNOWN_SECONDS, 1))
+    return seconds if entry == name else seconds / max(tests, 1)
+
+
+def cut_to_budget(chosen: list[str], costs: dict[str, tuple[float, int]]) -> tuple[list[str], int]:
+    """The fastest entries first, as many as fit `SET_SECONDS` (at least one) and `MAX_TESTS`; and how many were left out."""
+    ordered = sorted(chosen, key=lambda entry: (entry_seconds(entry, costs), entry))
+    kept: list[str] = []
+    total = 0.0
+    for entry in ordered:
+        total += entry_seconds(entry, costs)
+        if kept and (total > SET_SECONDS or len(kept) >= MAX_TESTS):
+            break
+        kept.append(entry)
+    return kept, len(ordered) - len(kept)
 
 
 def tests_for_line(
@@ -250,16 +273,16 @@ def tests_for_line(
     module: str,
     contexts: dict[int, list[str]] | None,
     line: int,
-    speeds: dict[str, float] | None = None,
+    costs: dict[str, tuple[float, int]] | None = None,
     reach_fallback: bool = False,
 ) -> tuple[list[str], str, int]:
     """(node ids, where they came from, entries cut), for the statement at `line` of `module`.
 
     The source is "coverage", "imports" (files that import the module) or "none" (no known test, nothing to run).
     `contexts` is None when the data file is missing; `reach_fallback` lets a line without a context use the
-    import fallback as well (the trial).
+    import fallback as well (the trial). A set over the time budget is cut to its fastest entries.
     """
-    speeds = speeds or {}
+    costs = costs or {}
     chosen: list[str] = []
     origin = "none"
     if contexts is not None:
@@ -275,9 +298,8 @@ def tests_for_line(
     else:
         chosen = import_fallback(index, graph, module)
         origin = "imports" if chosen else "none"
-    chosen.sort(key=lambda node: (speeds.get(node.split("::", 1)[0], 0.0), node))
-    cut = max(0, len(chosen) - MAX_TESTS)
-    return chosen[:MAX_TESTS], origin, cut
+    kept, cut = cut_to_budget(chosen, costs)
+    return kept, origin, cut
 
 
 def read_line_contexts(data_file: Path, source_file: str) -> dict[int, list[str]] | None:
