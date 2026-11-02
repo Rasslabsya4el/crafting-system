@@ -38,3 +38,23 @@ R04 (177,242 states, 535.9 M transitions), R14 (816,153 states), the strand targ
 ## Not proposed
 
 A rail or a chance threshold with a default; lumping by a fixed chance; a canonical key for R04 and R14.
+
+## Update: ticket 1 built (#374)
+
+Ticket 1 is cut and built; the other tickets are unchanged. What is in the product:
+
+- **The packed solve** (`solver/_packed.py`, `_packed_merge.py`, `_packed_solve.py`, `_packed_model.py`): a graph as flat arrays with one stored kernel per distinct distribution; the exact merge by partition refinement (distributions and signatures compared as exact integer bytes, never hashes); proper states by shortest-path sweeps; policy iteration from the luckiest-path policy, each policy evaluated by a dense solve (up to 1,500 states) or BiCGSTAB; a certificate per state (`certify`). **ADR-0010 is amended**: `solver/` stays standard-library only except the files named `_packed*.py`, which use numpy (`tests/test_solver_independence.py` allows exactly that). The generic `solve_packed_model(model, starts)` returns the same `Solution` as `solve`.
+- **The certificate runs on the unmerged graph**, with the class values copied to the members and the operator without the self-loop compiled out. It is therefore also an independent check of the merge and of the solve: a wrong partition cannot pass it. Per state it uses the cheapest action cost `g(s)`, the cost `k(s)` of the greedy action, the residuals `e(s) = (TV - V)+`, `d(s) = (V - TV)+`, each widened by the float64 rounding of the sum, and gives `max g/(g+d) V <= V* <= min k/(k-e) V`. The bound may exceed the tolerance by the rounding of long sums (S02's kernels have 10^5 terms: 6.9e-8); a solve whose bound is above 1e-6 raises `ConvergenceError`.
+- **The walk** (`cli/_packed.py`) shares one kernel per `Abstraction.kernel_key` (serial; ticket 2 packs and parallelises it). `make_plan(solver="auto")` walks packed first and leaves a graph of at most `EXACT_TRANSITIONS` (2 M, what the object solver has been run on) to the object solver, so small routes are unchanged; `"packed"` always uses this route (with 40 offers or more on the twin-merged offers, without the bound pruning), `"object"` never. The bound pruning of 40 offers or more (`solve_pruned`) still solves by the object solver; routing its rounds is left open.
+- **The policy** of a packed plan is a lazy mapping from the states the policy reaches to their `Action`s, built when asked for. **The risk** is evaluated on the merged chain (lumpability: same mean, odds and quantiles). A merged chain of more than 2 M transitions gets its exact odds, mean and variance and no quantile grid, and the plan's note says so: the budget DP of `risk/` outgrew a 16 GB runner on R04's 4.7 M-transition chain (stack dumps: `_budget._expand`). The moments of a chain that long are solved on packed arrays too (the object solver's sweeps do not converge in an hour on it).
+
+Measured on GitHub runners (ubuntu, 4 vCPU, 16 GB), through `make_plan` on main of 2026-11-02:
+
+| Route | States | Classes | Transitions | Walk | Merge + solve + certificate | Peak memory | Mean cost | Certified bound |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| R04 | 177,242 | 89,778 | 535.9 M | 330 s | 75 s | 5.9 GB | R04_VALUE | R04_BOUND |
+| R14 | 816,153 | 589,930 | R14_EDGES | R14_WALK | R14_SOLVE | R14_MEM | R14_VALUE | R14_BOUND |
+| S02 (1-chaos prices) | 106,002 | 20 | 76.6 G | 840 s | 1 s | 2.4 GB | S02_VALUE | S02_BOUND |
+
+The packed and the object solver agree on R05, R08, R10, R12 and R13 to 2e-15 or better (R13: 8.5e-12), on the same offers (`.github/scripts/packed_routes.py check`).
+

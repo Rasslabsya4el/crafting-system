@@ -165,6 +165,13 @@ class PackedBuilder:
         self._max_successor = max(self._max_successor, int(succ.max()))
         return kernel
 
+    def kernel_edges(self, kernel: int) -> tuple[list[int], tuple[int, ...]]:
+        """The successors and exact weights of a kernel added earlier (to check a shared kernel against a fresh one)."""
+        weights = self._big.get(kernel)
+        if weights is None:
+            weights = tuple(int(w) for w in self._wt[kernel])
+        return self._succ[kernel].tolist(), weights
+
     def action(self, tag: int, cost: float, kernel: int) -> None:
         self._tag.append(tag)
         self._cost.append(cost)

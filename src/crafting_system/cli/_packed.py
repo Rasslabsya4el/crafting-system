@@ -45,6 +45,8 @@ OBJECT_SOLVER_EDGES = EXACT_TRANSITIONS  # at most this many transitions: `solve
 SOLVERS = ("auto", "object", "packed")
 PROGRESS: Callable[[str], None] | None = None  # a measuring script sets it to see each phase as it ends (never set by the library)
 REPORT_EVERY = 30.0  # seconds between the lines of a long walk
+VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh `kernel(state, action)` ...
+VERIFY_EVERY = 4_096  # ... and then one in this many (`kernel_key` promises equal kernels at one state; the walk shares them across states)
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -81,6 +83,7 @@ def walk(
     builder = PackedBuilder()
     shared: dict[object, int] = {}
     restart: int | None = None
+    hits = checked = 0
 
     def intern(state: CompressedState) -> int:
         found = index.get(state)
@@ -102,6 +105,16 @@ def walk(
                     kernel = restart
                 else:
                     found = shared.get(key)
+                    if found is not None:
+                        hits += 1
+                        if hits <= VERIFY_FIRST or hits % VERIFY_EVERY == 0:
+                            checked += 1
+                            fresh = integer_weights(abstraction.kernel(state, action))
+                            if _edges(builder, found, states) != {s: w for s, w in fresh.items()}:
+                                raise ValueError(
+                                    f"two states share the kernel key of {priced.label!r} but not its kernel (checked at {state!r}): "
+                                    "`Abstraction.kernel_key` does not say enough for the packed walk"
+                                )
                     if found is None:
                         try:
                             weights = integer_weights(abstraction.kernel(state, action))
@@ -122,11 +135,18 @@ def walk(
             )
     graph = builder.build()
     seconds = time.perf_counter() - began
+    say(f"{checked} of {hits:,} shared kernels checked against a fresh kernel: all equal")
     say(
         f"walk finished: {graph.n:,} states, {graph.num_actions:,} actions, {graph.num_kernels:,} kernels, "
         f"{graph.edges_counted():,} transitions ({seconds:.0f} s)"
     )
     return Walked(graph, states, index, offers, seconds)
+
+
+def _edges(builder: PackedBuilder, kernel: int, states: list[CompressedState]) -> dict[CompressedState, int]:
+    """A stored kernel as the dict `integer_weights` gives (successor state -> weight)."""
+    succ, weights = builder.kernel_edges(kernel)
+    return {states[i]: w for i, w in zip(succ, weights)}
 
 
 class PackedPolicy(Mapping):

@@ -189,6 +189,18 @@ def test_a_start_item_that_already_meets_the_target_costs_only_its_price(tmp_pat
     assert document["totals"]["mean_cost"]["value"] == 4.0
 
 
+def test_a_start_item_that_already_meets_the_target_is_planned_the_same_by_the_packed_solver(tmp_path):
+    text = R12.read_text(encoding="utf-8").replace(
+        '- stat: "+1 to Level of all Lightning Skill Gems"', "- family: LightningResistance"
+    )
+    target_file = tmp_path / "done.yaml"
+    target_file.write_text(text, encoding="utf-8")
+
+    plan = make_plan(DATA, load_target(target_file, DATA), price_file(), solver="packed")
+
+    assert plan.mean_remaining == 0.0 and len(plan.policy) == 0 and plan.risk is not None
+
+
 def test_a_target_with_quality_is_refused_because_the_planner_would_ignore_it(target):
     asked = dataclasses.replace(target, quality=QualityRequirement(CatalystType.INTRINSIC, 20))
 

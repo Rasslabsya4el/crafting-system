@@ -21,7 +21,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ._packed import PackedGraph, assemble, expand_ranges, kernel_chunks
+from ._certify import ConvergenceError
+from ._packed import BIG_TOTAL, PackedGraph, assemble, expand_ranges, kernel_chunks
 
 _INT64_LIMIT = 1 << 63
 
@@ -47,10 +48,10 @@ def _big_signature(graph: PackedGraph, kernel: int, blk: np.ndarray):
         sums[block] = sums.get(block, 0) + weight
     divisor = math.gcd(*sums.values())
     items = sorted((block, total // divisor) for block, total in sums.items())
-    if all(total < _INT64_LIMIT for _, total in items):
+    if all(total < _INT64_LIMIT for _, total in items) and sum(total for _, total in items) < BIG_TOTAL:
         inter = np.array([x for item in items for x in item], dtype=np.int64)
         return inter.tobytes(), [b for b, _ in items], [t for _, t in items]
-    return b"B" + repr(items).encode(), [b for b, _ in items], tuple(t for _, t in items)
+    return b"B" + repr(items).encode(), [b for b, _ in items], tuple(t for _, t in items)  # a total of 2^62 or more stays exact Python ints
 
 
 def kernel_distributions(graph: PackedGraph, blk: np.ndarray, nblk: int, keep_runs: bool = False):
@@ -158,7 +159,9 @@ def exact_classes(
     blk = np.where(graph.goal, 0, 1).astype(np.int64)
     count = len(np.unique(blk))
     rounds = 0
-    while rounds < max_rounds:
+    while True:
+        if rounds >= max_rounds:
+            raise ConvergenceError(f"the exact merge did not settle in {max_rounds} rounds ({count:,} classes so far)", float("inf"))
         rounds += 1
         new, new_count = _next_blocks(graph, blk, int(blk.max()) + 1 if n else 1, act_state)
         say(f"merge round {rounds}: {new_count:,} classes ({time.perf_counter() - began:.1f} s)")
@@ -198,7 +201,7 @@ def quotient(graph: PackedGraph, classes: Classes) -> tuple[PackedGraph, np.ndar
     tag = graph.act_tag[take]
     order = np.lexsort((take, cost, kernel, owner))  # per class, per distribution: the cheapest first
     owner_o, kernel_o = owner[order], kernel[order]
-    keep = np.concatenate(([True], (owner_o[1:] != owner_o[:-1]) | (kernel_o[1:] != kernel_o[:-1])))
+    keep = np.concatenate(([True], (owner_o[1:] != owner_o[:-1]) | (kernel_o[1:] != kernel_o[:-1])))[: len(order)]
     pick = order[keep]
     act_owner = owner[pick]
     act_ptr = np.concatenate(([0], np.cumsum(np.bincount(act_owner, minlength=ncls)))).astype(np.int64)

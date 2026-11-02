@@ -238,3 +238,40 @@ def test_bicgstab_matches_the_object_solver_on_a_chain_of_3000_states():
     assert set(got.values) == set(expected.values)
     for state, value in expected.values.items():
         assert close(got.values[state], value, 1e-8)
+
+
+def test_a_kernel_with_huge_uncommon_weights_is_solved_the_same_merged_and_not():
+    heavy = 3 << 61  # three weights just under 2^63 with no common factor: their total does not fit 64 bits
+    table = {
+        0: [Action("go", 1.0, (Outcome(1, heavy), Outcome(2, heavy - 1), Outcome(3, heavy - 3)))],
+        1: [Action("a", 2.0, (Outcome(4, 1),))],
+        2: [Action("b", 5.0, (Outcome(4, 1),))],
+        3: [Action("c", 11.0, (Outcome(4, 1),))],
+    }
+    model = TabularModel([4], table)
+    expected = solve(model, [0])
+
+    for merge in (True, False):
+        got = solve_packed_model(model, [0], merge=merge)
+        assert got.values[0] == pytest.approx(expected.values[0], rel=1e-12)
+        assert got.values[0] == pytest.approx(1.0 + (2.0 + 5.0 + 11.0) / 3, rel=1e-9)
+
+
+def test_a_graph_without_any_action_is_solved_and_a_goal_start_costs_nothing():
+    only_goal = solve_packed_model(TabularModel(["g"], {}), ["g"])
+    stuck = solve_packed_model(TabularModel(["g"], {}), ["s"])
+
+    assert only_goal.values == {"g": 0.0} and only_goal.policy == {}
+    assert stuck.values["s"] == INF and stuck.policy == {}
+
+
+def test_a_bound_the_certificate_cannot_show_raises_instead_of_being_returned():
+    from crafting_system.solver import ConvergenceError
+
+    loop = TabularModel(["g"], {"a": [Action("x", 1.0, (Outcome("b", 1),))], "b": [Action("y", 1.0, (Outcome("a", 1), Outcome("g", 1)))]})
+    leaky = TabularModel(["g"], {"a": [Action("x", 1.0, (Outcome("b", 1),))], "b": [Action("y", 1.0, (Outcome("a", 10**15), Outcome("g", 1)))]})
+
+    assert solve_packed_model(loop, ["a"]).values["a"] == pytest.approx(4.0)
+    with pytest.raises(ConvergenceError):
+        solve_packed_model(leaky, ["a"])
+
