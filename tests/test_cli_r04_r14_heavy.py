@@ -24,7 +24,6 @@ import io
 import json
 import os
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -117,9 +116,8 @@ def test_the_solver_is_no_dearer_than_the_guides_route_completed_with_a_restart(
 
 @pytest.fixture(scope="module")
 def bench(data, route_id):
-    began = time.perf_counter()
     previous = _packed.PROGRESS
-    _packed.PROGRESS = lambda text: print(f"[{time.perf_counter() - began:8.1f} s] {text}", file=sys.stderr, flush=True)
+    _packed.PROGRESS = lambda text: print(text, file=sys.stderr, flush=True)  # (the runner's log carries the time of each line)
     try:
         entry, _ = run_route(
             next(b for b in BENCHMARKS if b.id == route_id), data, find_project_root(), load_config({}), load_price_file(PRICES),
