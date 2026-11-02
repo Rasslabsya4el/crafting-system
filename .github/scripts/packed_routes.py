@@ -18,6 +18,7 @@ import argparse
 import datetime
 import faulthandler
 import json
+import os
 import re
 import sys
 import threading
@@ -73,7 +74,7 @@ def watch_memory() -> None:
         time.sleep(5)
         ticks += 1
         try:
-            with open("/proc/self/status", encoding="utf-8") as handle:
+            with open(Path(os.sep, "proc", "self", "status"), encoding="utf-8") as handle:
                 rss = next(line for line in handle if line.startswith("VmRSS")).split()[1]
             if ticks % 4 == 0 or int(rss) // 1024 > 6000:
                 print(f"  memory: {int(rss) // 1024} MB resident", flush=True)
