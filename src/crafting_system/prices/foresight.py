@@ -16,7 +16,7 @@ A Chaos Orb is worth 1 Chaos whether or not the file lists it, and a Divine Orb 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
-from crafting_system.actions import Burn, HinekoraLock
+from crafting_system.actions import Action, HinekoraLock
 
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceFile
 
@@ -34,7 +34,7 @@ __all__ = [
 class PricedBurn:
     """A burn with the price of one use, in Chaos Orbs."""
 
-    burn: Burn
+    burn: Action
     cost: float
 
 
@@ -64,7 +64,7 @@ def lock_price(prices: PriceFile) -> float | None:
     return None if missing else cost
 
 
-def price_burns(burns: Iterable[Burn], data, prices: PriceFile) -> tuple[PricedBurn, ...]:
+def price_burns(burns: Iterable[Action], data, prices: PriceFile) -> tuple[PricedBurn, ...]:
     """The burns whose currency has a price, with their cost, cheapest first (ties by label)."""
     found = []
     for burn in burns:
@@ -74,7 +74,7 @@ def price_burns(burns: Iterable[Burn], data, prices: PriceFile) -> tuple[PricedB
     return tuple(sorted(found, key=lambda entry: (entry.cost, entry.burn.label(data))))
 
 
-def cheapest_burn(burns: Iterable[Burn], data, prices: PriceFile) -> PricedBurn | None:
+def cheapest_burn(burns: Iterable[Action], data, prices: PriceFile) -> PricedBurn | None:
     """The legal burn that costs least at the prices of the file, or None when none is priced."""
     priced = price_burns(burns, data, prices)
     return priced[0] if priced else None
