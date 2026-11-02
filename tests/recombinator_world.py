@@ -8,7 +8,7 @@ crafted prefix of the family of one of the junk prefixes (a named mod in a famil
     prefixes: RTA1 (tier 1) and RTA2 (tier 2) of the family RTA, RTB1 (targets, weight 100 / 400 / 100);
               RJ1, RJ2, RJ3 (weight 500: a class of three families), RK1, RK2 (weight 1000: a class of two);
               RU1a, RU1b, RU2a, RU2b (two families of two tiers, weights 1000 and 250: a class of two families, two places);
-    suffixes: RS1 (wanted), RS2 (weight 600: a class of two), RS3 (1500), RSE (essence-only, weight 0).
+    suffixes: RS1 (wanted), RS2, RS4 (weight 600: a class of two), RS3 (1500), RSE (essence-only, weight 0).
 """
 
 import dataclasses
@@ -26,7 +26,7 @@ TA1, TA2, TB1 = "RTA1", "RTA2", "RTB1"
 J1, J2, J3 = "RJ1", "RJ2", "RJ3"
 K1, K2 = "RK1", "RK2"
 U1A, U1B, U2A, U2B = "RU1a", "RU1b", "RU2a", "RU2b"
-S1, S2, S3, SE = "RS1", "RS2", "RS3", "RSE"
+S1, S2, S3, S4, SE = "RS1", "RS2", "RS3", "RS4", "RSE"
 CRAFT_J3 = "RCraftJ3"  # a crafted prefix of the family of RJ3
 BOOTS_TAGS = ITEM_DATA.base_items[BOOTS].tags
 
@@ -59,6 +59,7 @@ def build_world():
         add(low, prefix, family, 250, 40)
     add(S1, suffix, S1, 600)
     add(S2, suffix, S2, 600)
+    add(S4, suffix, S4, 600)
     add(S3, suffix, S3, 1500)
     add(SE, suffix, SE, 0, is_essence_only=True)
     mods[CRAFT_J3] = dataclasses.replace(crafted, id=CRAFT_J3, type=CRAFT_J3, families=(J3,), generation_type="prefix")

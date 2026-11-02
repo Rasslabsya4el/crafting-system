@@ -2,7 +2,7 @@
 
 import math
 from collections import Counter, defaultdict, deque
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import reduce
@@ -278,6 +278,26 @@ class Abstraction:
         """
         self._check_enabled(action)
         return action.inputs(self.data, self._prepare(state, action).item)
+
+    def donor_key(self, state: CompressedState, action: Action) -> Hashable:
+        """What `action` reads of an input whose compressed state is `state`: the key of the want (ADR-0062 decision 1, ticket #217).
+
+        Two inputs with one key give the action the same kernel on every state, so an acquisition ends at the first state with the wanted key,
+        whatever else that state holds. For an action that declares `Reads.input_classes` (the recombinator) the key is the compressed input
+        without what the action never reads of it: the rarity (the action refuses a normal item, and the result's rarity follows its mods, so
+        magic and rare are one), the unveil offer and the imprints (the result is a new item); the corruption stays (a corrupted input is
+        refused). Any other action reads the whole input, and its key is `state` itself. (One method for every action: an action that reads a
+        projection of its input adds a branch here, as the Awakener's Orb does for the influences, ticket #214.)
+        """
+        self._check_enabled(action)
+        if not self._averages_inputs(action):
+            return state
+        flags = replace(state.flags, rarity=Rarity.NORMAL if state.flags.rarity is Rarity.NORMAL else Rarity.RARE)
+        return replace(state, flags=flags, offer=(), imprints=())
+
+    def reaches_donor(self, action: Action) -> Callable[[CompressedState, CompressedState], bool]:
+        """The want predicate of the acquisition processes for `action`'s inputs: `state` reaches `want` when their `donor_key`s are equal."""
+        return lambda state, want: self.donor_key(state, action) == self.donor_key(want, action)
 
     @property
     def keeps_junk(self) -> bool:
@@ -663,20 +683,6 @@ class Abstraction:
     def _averages_inputs(self, action: Action) -> bool:
         """Whether the kernel of `action` is the average over the names of the item and its inputs in their classes (`Reads.input_classes`, ticket #217)."""
         return self._kinds.classed and action.reads(self.data).input_classes
-
-    def donor_key(self, donor: CompressedState, action: Action) -> Hashable:
-        """What the kernel of `action` reads of its input once the input is the compressed state `donor`: the want of an acquisition (ADR-0062 decision 1).
-
-        Two inputs with equal keys give `action` the same kernel on every state, so the acquisition of a donor ends at the first state
-        with the key it wants. For an action that declares `Reads.input_classes` (the recombinator) the key is the compressed donor
-        without what the action never reads of it: the rarity (it only refuses a normal item; the result's rarity follows its mods), the
-        unveil offer and the imprints (a result is a new item), and the corruption is kept (a corrupted input is refused). For any other
-        action the key is the state itself (exact, and no wider than the donor).
-        """
-        if not self._averages_inputs(action):
-            return donor
-        flags = replace(donor.flags, rarity=Rarity.NORMAL if donor.flags.rarity is Rarity.NORMAL else Rarity.RARE)
-        return replace(donor, flags=flags, offer=(), imprints=())
 
     def _check_parts(self, outcomes: ActionOutcomes) -> None:
         """Refuse the mixtures of parts that no kernel is defined for (a fracture needs all pool draws or all fixed results)."""

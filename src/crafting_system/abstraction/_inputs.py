@@ -133,9 +133,15 @@ def _entries(kinds, state: CompressedState) -> list[Entry]:
     return found
 
 
-def _named_families(ability, state: CompressedState) -> set[str]:
-    """The families the crafted and named mods of a state hold (a name is a crafted mod's canonical id, or a mod the pool of its family lacks)."""
+def _named_families(ability, kinds, state: CompressedState) -> set[str]:
+    """The families the crafted and named mods of a state hold (a name is a crafted mod's canonical id, or a mod the pool of its family lacks).
+
+    A fractured mod that is not a class slot is named too: its id is a real mod's (a fractured crafted mod, a fractured mod no pool lists).
+    """
     found: set[str] = set()
+    for held in state.fractured:
+        if not kinds.is_class(held.mod_id):
+            found |= held_families(ability.data.mods[held.mod_id])
     for slot in state.slots:
         if slot.crafted:
             found |= held_families(ability.data.mods[slot.kind])
@@ -156,7 +162,7 @@ def _types(ability, kinds, state: CompressedState, want: CompressedState) -> lis
                 each = found[side, base] = _Type(side, base, kinds.families_of_type(side, base))
             (each.mine, each.theirs)[index].append(entry)
     for index, held in enumerate((state, want)):
-        named = _named_families(ability, held)
+        named = _named_families(ability, kinds, held)
         for each in found.values():
             each.held[index].update(named & set(each.families))
     for each in found.values():

@@ -27,7 +27,8 @@ An action that declares `Reads.input_classes` (the recombinator, ticket #217) ma
 and its weight in the pool), because the action weighs the very mod a slot holds and not only its family. Two slots of one such kind are
 interchangeable for the action and for the goal; which family of the type each is stays unknown, and the kernel of the action averages over it
 (`_inputs.py`). A mod that is not in the pool of its family (an essence-only mod of a listed family, a tier above the item level) is a kind of its
-own, `"$" + mod id`, and the kernel refuses it when its family is one the types hold.
+own, `"$" + mod id`, and the kernel treats it, like a crafted mod, as a named holder of its family: the class slots of the other input may sit
+in that family or not, with the chance the families of the type give them.
 
 An action that reads which mods are influence mods of the item (`Reads.influenced`, an Orb of Dominance, an Awakener's Orb; ticket #155) makes
 every influence mod of the item's influences a kind of its own, `"$" + mod id` as above: the families of the data hold ordinary and influence

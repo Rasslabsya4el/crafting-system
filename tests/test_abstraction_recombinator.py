@@ -36,6 +36,7 @@ from recombinator_world import (
     S1,
     S2,
     S3,
+    S4,
     SE,
     TA1,
     TA2,
@@ -64,6 +65,15 @@ CASES = {
     "tiers": (item(TA1, J1), item(TA2, J2)),
     # a suffix class of two families on both inputs
     "suffixes": (item(J1, S1, S3), item(K1, S2, S3)),
+    # a suffix class of two families (weight 600) on both inputs, next to a suffix alone in its type
+    "suffix_class": (item(J1, S2, S3), item(K1, S4, S3)),
+    # a crafted mod holding a family of a class on the donor only: the item's junk may sit in that family
+    "crafted_on_the_donor": (item(TA1, J1), item(TB1, CRAFT_J3, K1, flags=CRAFTED)),
+    # a fractured crafted mod (not a class slot) holds a family of a class: the other input's junk may sit in it, the item's may not
+    "fractured_crafted": (
+        item(CRAFT_J3, J1, K1, flags={CRAFT_J3: {"crafted": True, "fractured": True}}),
+        item(J2, K2),
+    ),
     # a fractured target on the item in hand: eligible on its own base only
     "fractured": (item(TA1, J1, flags={TA1: {"fractured": True}}), item(TB1, J2, K1)),
     # a fractured junk mod of a class of three families against a junk mod of the same class
