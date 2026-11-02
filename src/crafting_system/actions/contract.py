@@ -196,6 +196,13 @@ class Reads:
       the item in hand, `input_mods` alone the inputs, both is both. The dataclass default is False, as for the other
       new fields; `Action.reads` (an action that declares nothing) says True, like it reads every mod. An action with no
       inputs has nothing to read there and the flag means nothing for it.
+    * `input_classes`: with `junk` and `input_mods`, the result depends on the mods of the item and of its inputs only through their *classes*
+      (ticket #217, ADR-0062 decision 3, ADR-0033 "As built"): the pool weight of the very mod each holds (its tier, not only its family), what it gives
+      the goal, and which mods the two share. The compressed state then tells a junk mod by its family type and its place in it (`Slot.kind`
+      `"~n%p"`: the weights of the mods of its family, and which one it is), and the kernel of the action with an input is the average, over the
+      names the item and the input could hold in their classes (every family of a type equally likely, no two of one item alike), of the action
+      run on those names. The action must answer `with_inputs`. The dataclass default is False; `Action.reads` (an action that declares nothing)
+      says False, which tells every family apart by its name (exact).
     * `input_influenced`: with `input_mods`, of each input the action reads only its influences, whether it is corrupted and which influence
       mods it holds, by mod id (an Awakener's Orb; ticket #214, ADR-0062 decision 1): the rest of the input is rerolled and never read. The
       want of a `Need` for that action is then the projection of the input's compressed state (`Abstraction.donor_key`), not the whole state, and
@@ -223,6 +230,7 @@ class Reads:
     quality: bool = False
     offer: bool = False
     input_mods: bool = False
+    input_classes: bool = False
     input_influenced: bool = False
     enchantment: bool = False
     imprints: bool = False
@@ -731,6 +739,14 @@ class Action(ABC):
         question, so `outcomes(data, item)` is the result of using it with these inputs.
         """
         return ()
+
+    def with_inputs(self, wants: tuple[Item, ...]) -> "Action":
+        """This action used with the items `wants` as its inputs, in the order of `inputs` (an action that declares `Reads.input_classes` answers it).
+
+        The compressed state averages such an action over the names its inputs could hold, so it needs the same action with other donors. The
+        other settings of the action (a count table, a price) stay as they are.
+        """
+        raise OutOfScopeError(f"{type(self).__name__} cannot be used with other inputs than its own")
 
     def imprint_move(self) -> ImprintMove | None:
         """How the action moves the imprints of the item (`ImprintMove`); None, the default, for an action that does not make or use one.
