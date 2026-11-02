@@ -40,6 +40,7 @@ FORMAT = "crafting-system-policy/1"
 GOAL = "goal"
 DEAD_END = "dead end"
 MAX_TREE_DEPTH = 40
+MAX_TREE_STATES = 1_000  # the text tree stops here (R14's policy has 14,742 groups of states, 22 MB of text); the JSON policy and the route page hold all (ticket #70)
 
 MAX_DROPPED_LINES = 300  # more dropped actions than this are told in one line per missing price
 
@@ -359,16 +360,20 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         for child in later:
             if child in printed:
                 continue
-            if depth >= MAX_TREE_DEPTH:
+            if len(printed) >= MAX_TREE_STATES:
+                lines.append(f"{pad}  ... {child} is not shown (the tree stops after {MAX_TREE_STATES:,} states; the JSON policy holds all of them)")
+            elif depth >= MAX_TREE_DEPTH:
                 lines.append(f"{pad}  ... {child} continues below")
                 pending.append(child)
             else:
                 show(child, depth + 1)
 
-    while pending:
+    while pending and len(printed) < MAX_TREE_STATES:
         root = pending.pop(0)
         if root not in printed:
             show(root, 0)
+    if len(printed) < len(report.states):
+        lines.append(f"  ... {len(report.states) - len(printed):,} more states of the policy are not shown here; the JSON policy holds all {len(report.states):,}")
     if not report.states:
         lines.append("  The start item already meets the target.")
     lines.append("")

@@ -308,6 +308,20 @@ def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(
     assert "Undeclared reroll is not declared block-invariant" in plan.note and "packed solver" in plan.note
 
 
+def test_the_text_tree_stops_after_its_limit_and_says_where_the_rest_is(exact, monkeypatch):
+    from crafting_system.cli import _report, build_report
+    from crafting_system.cli._report import render_text
+
+    report = build_report(exact, DATA)
+    assert len(report.states) > 1
+    monkeypatch.setattr(_report, "MAX_TREE_STATES", 1)
+
+    text = render_text(report)
+
+    assert "more states of the policy are not shown here" in text or "the tree stops after 1 states" in text
+    assert f"S1:" in text and f"S{len(report.states)}:" not in text
+
+
 def test_make_plan_without_a_budget_never_decides(target, exact):
     plan = make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, rates=Rates(1e9, 1e9))
 
