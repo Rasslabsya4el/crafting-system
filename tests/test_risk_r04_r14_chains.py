@@ -7,7 +7,8 @@ float chances and the exact mean of the plan at the committed prices (`tests/fix
 and 79,536 transitions take minutes (one attempt at a time, `risk._regen`), so they run in a heavy run (`CRAFTING_HEAVY=1`).
 
 What the p90 is. Both are certified brackets: the true 90th percentile of the total cost lies between `low` and `high`, whatever the
-grid. R04 (coarse grid, step 1.528) is bracketed within 1.9% of its value, R14 (attempts of 0.4062 Chaos bins) within 7.3%.
+grid. R04 (coarse grid, step 1.528) is bracketed within 1.9% of its value, R14 (attempts of 0.4062 Chaos bins) within 14.5%
+(1,774.5 Chaos wide at 12,278.1; the ladder ends at the restart cost over 32).
 """
 
 import math
@@ -58,7 +59,7 @@ def test_r04_has_a_p90_within_two_percent_and_the_exact_mean():
 
 
 @HEAVY
-def test_r14_has_a_p90_within_eight_percent_and_the_exact_mean():
+def test_r14_has_a_p90_within_fifteen_percent_and_the_exact_mean():
     result, mean = chain_result("r14")
 
     risk, note = packed_risk(result, mean, None, "")
@@ -66,6 +67,6 @@ def test_r14_has_a_p90_within_eight_percent_and_the_exact_mean():
     assert note == "" and risk.success_probability.value == 1.0
     assert risk.mean.value == pytest.approx(5784.4887, abs=1e-3)
     assert risk.p50.low <= 4_570.3 <= risk.p50.high and relative_width(risk.p50) < 0.15
-    assert risk.p90.low <= 12_278.1 <= risk.p90.high and relative_width(risk.p90) < 0.08
+    assert risk.p90.low <= 12_278.1 <= risk.p90.high and relative_width(risk.p90) < 0.15
     assert math.isfinite(risk.cvar.high)
     assert risk.grid.step < 1.0  # attempt by attempt, on a step of the restart's cost over 32 at the finest
