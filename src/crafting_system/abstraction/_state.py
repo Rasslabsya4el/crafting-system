@@ -3,7 +3,7 @@
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
-from crafting_system.items import Influence, Quality, Rarity, Side
+from crafting_system.items import Influence, PlainQuality, Quality, Rarity, Side
 
 from ._goal import ImplicitWanted, Status, Wanted
 
@@ -99,10 +99,11 @@ def implicit_line(mod_id: str) -> str:
 
 @dataclass(frozen=True, repr=False)
 class ImplicitSide:
-    """One Eldritch side (Searing Exarch or Eater of Worlds) of the implicit pair (ADR-0025, ADR-0027).
+    """One Eldritch side (Searing Exarch or Eater of Worlds) of the implicit pair (ADR-0025, ADR-0027), or one implicit of the base.
 
-    `grade` is 0 for no implicit, then 1 Lesser to 6 Perfect. `contribution` is what the implicit gives each
-    implicit leaf of the goal (`Goal.implicits`), as a `Slot` holds it for a mod; all ABSENT for no implicit. The
+    `grade` is 0 for no implicit, then 1 Lesser to 6 Perfect (an implicit of the base has grade 0 and is told from no implicit by its
+    contribution: all ABSENT when the item does not store it, ticket #158). `contribution` is what the implicit gives each
+    implicit leaf of the goal (`Goal.implicits`), roll included, as a `Slot` holds it for a mod; all ABSENT for no implicit. The
     family of the implicit is not kept: a family nobody asks for decides nothing, and one that is asked for shows in
     the contribution. Dominance is not stored; it follows from the two grades.
 
@@ -166,8 +167,9 @@ class CompressedState:
     slots, because every action it knows erases the other mods.
 
     The three fields after them hold the item state beyond the explicit mods (ADR-0027) and are empty unless an
-    enabled action reads or changes that part of the item: `implicits` is the Eldritch pair, the Searing Exarch
-    side and then the Eater of Worlds side (`()` when not kept), `quality` the catalyst quality as the item
+    enabled action reads or changes that part of the item (or, for the implicits and the quality, the goal asks for one): `implicits`
+    is the Eldritch pair, the Searing Exarch side and then the Eater of Worlds side, then one entry for each implicit of the base that
+    a requirement names, by the order of their mod ids (`()` when not kept), `quality` the catalyst or plain quality as the item
     stores it, `offer` the mods of the unveil offer of the veiled placeholder, which then is one of the `slots`.
 
     `imprints` (ADR-0060, ticket #219) are the compressed states the item was in when an imprint of it was made, at most the cap, sorted by
@@ -181,7 +183,7 @@ class CompressedState:
     status: tuple[Status, ...]
     slots: tuple[Slot, ...] = ()
     implicits: tuple[ImplicitSide, ...] = ()
-    quality: Quality | None = None
+    quality: Quality | PlainQuality | None = None
     offer: tuple[OfferedMod, ...] = ()
     imprints: tuple["CompressedState", ...] = ()
 
@@ -206,7 +208,7 @@ class CompressedState:
                 tuple(int(entry) for entry in self.status),
                 tuple(slot.key for slot in self.slots),
                 tuple((entry.grade, tuple(int(c) for c in entry.contribution), entry.line) for entry in self.implicits),
-                () if self.quality is None else (self.quality.type.value, self.quality.percent),
+                () if self.quality is None else (getattr(self.quality.type, "value", ""), self.quality.percent),  # a plain quality has no type
                 tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.offer),
                 tuple(held.order_key for held in self.imprints),
             )
@@ -226,7 +228,7 @@ class CompressedState:
         return f"CompressedState({text})"
 
     @property
-    def held(self) -> tuple[tuple[ImplicitSide, ...], Quality | None, tuple[OfferedMod, ...], tuple["CompressedState", ...]]:
+    def held(self) -> tuple[tuple[ImplicitSide, ...], Quality | PlainQuality | None, tuple[OfferedMod, ...], tuple["CompressedState", ...]]:
         """The item state beyond the explicit mods, as one key: what a memo of a kernel must tell states apart by besides the mods."""
         return (self.implicits, self.quality, self.offer, self.imprints)
 

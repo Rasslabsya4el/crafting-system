@@ -339,6 +339,20 @@ class Adds:
         return self.socket_count or self.socket_links or self.socket_colours
 
     @property
+    def only_quality(self) -> bool:
+        """Whether the action is declared as a quality action: it sets the quality, adds no mod and draws none, and changes no implicit, offer or corruption (a catalyst).
+
+        Quality changes no odds, so a planner offers such an action only at a state that meets every other requirement of the goal
+        (`Abstraction.quality_offer_pruned`, ticket #158). The contract suite checks that no result differs from the item in anything but its quality.
+        """
+        return (
+            self.quality
+            and self.named == frozenset()
+            and not self.draws
+            and not (self.implicits or self.offer or self.corrupts or self.fractures or self.imprints or self.sockets)
+        )
+
+    @property
     def only_sockets(self) -> bool:
         """Whether the action is declared as a socket action (`socket_action`): it changes sockets and adds no mod."""
         return self.sockets and self.named == frozenset() and not self.draws

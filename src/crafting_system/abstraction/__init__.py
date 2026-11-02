@@ -18,16 +18,20 @@ is imported or tested for here.
   each leaf over the whole item, and the `Slot`s, a sorted multiset of the other mods (below). The last four
   are the item state beyond the explicit mods (ADR-0027, ticket #142), empty unless an enabled action reads or
   changes that part: `implicits` the Eldritch pair, one `ImplicitSide(grade, contribution)` for the Searing Exarch
-  and one for the Eater of Worlds (the contribution is to each `Goal.implicits` leaf, an `ImplicitWanted`; with an action that declares
-  `Reads.implicit_lines`, an Orb of Conflict, a side also keeps its `line` when a requirement names a mod of it, ticket #152);
-  `quality` the catalyst `Quality` as the item stores it; `offer` the mods of the unveil offer, each an
+  and one for the Eater of Worlds (the contribution is to each `Goal.implicits` leaf, an `ImplicitWanted`, the roll included; with an action that declares
+  `Reads.implicit_lines`, an Orb of Conflict, a side also keeps its `line` when a requirement names a mod of it, ticket #152), then one
+  `ImplicitSide` for each implicit of the base that a requirement names (ticket #158: a Blessed Orb rolls it afresh and the kernel spreads the
+  state over the law of the roll; an implicit rolled afresh by any fixed result, an Ember's or a Conflict's, is spread the same way);
+  `quality` the catalyst or plain quality as the item stores it; `offer` the mods of the unveil offer, each an
   `OfferedMod(canonical id, contribution)`; `imprints` (ADR-0060, ticket #219) the set of states an imprint of the item was made at, in the
   stable order of `CompressedState.order_key`, each holding none of its own. `Abstraction.tracks_implicits`, `tracks_quality`, `tracks_offer` and
   `tracks_imprints` say which are kept; they follow the `Reads` and `Adds` declarations of the enabled actions (`implicits`, `quality`,
   `offer`, `imprints`) and, for the implicits, whether the goal asks for one. `is_goal` also needs, for each implicit wanted,
   a side that passes it. A corrupted state is a goal only when `Goal.takes_corrupted` (the target asks for a corrupted implicit or
   allows a corrupted item, ADR-0036) and a state that is not corrupted is no goal of a target that asks; `meets_requirements` is the
-  check without the corruption. The corrupted implicit an action adds is not kept in the state, the action decides it.
+  check without the corruption. The quality (`Goal.quality`, a `QualityWanted`) is the last requirement (ADR-0029, ticket #158):
+  `meets_all_but_quality` is every other requirement, and `quality_offer_pruned(state, action)` says that an action which only sets
+  the quality (`Adds.only_quality`, a catalyst) is not an action of a state that fails another requirement. The corrupted implicit an action adds is not kept in the state, the action decides it.
   `CompressedState.crafted` says a slot is crafted; `count(side)` counts the slots of a side.
 * `Slot(side, kind, contribution, crafted)`: a mod that is not fractured, by its side, its kind and
   what it gives each leaf. The kind is "" for a family that every enabled action treats alike (a
@@ -180,7 +184,7 @@ claim of the rules registry.
 from ._bound import keeps_shape, reach_bound
 from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
-from ._goal import AtLeast, Goal, ImplicitWanted, Status, Wanted
+from ._goal import AtLeast, Goal, ImplicitWanted, QualityWanted, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
 from ._state import CompressedState, Flags, FracturedMod, ImplicitSide, OfferedMod, Slot
 
@@ -200,6 +204,7 @@ __all__ = [
     "FracturedMod",
     "ImplicitSide",
     "ImplicitWanted",
+    "QualityWanted",
     "OfferedMod",
     "Slot",
     "Goal",

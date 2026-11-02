@@ -36,6 +36,7 @@ from crafting_system.items import (
     Influence,
     Item,
     ItemError,
+    PlainQuality,
     Quality,
     Rarity,
     Side,
@@ -51,7 +52,7 @@ from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
 
 from ._goal import Goal, Status
 from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
-from ._rolls import Cells, RollLaw, is_rollable, multinomial, roll_law
+from ._rolls import Cells, RollLaw, implicit_roll_law, implicit_values_for, is_rollable, multinomial, roll_law
 from ._state import (
     CompressedState,
     Flags,
@@ -69,6 +70,7 @@ Label = Hashable  # the contribution to every leaf as ints (a `RollLaw` for a mo
 FamilyType = tuple[Side, tuple[tuple[Label, Fraction, bool], ...]]
 ONE = Fraction(1)
 _SLOT_KEY = attrgetter("key")
+_ROLLED_BY_A_DRAW = "a pool draw that rolls an implicit afresh is not modelled: only a fixed result spreads the roll of an implicit over its law"
 Expanded = tuple[tuple[tuple[Status, ...], tuple[Slot, ...], Fraction], ...]  # (best of the new mods, the slots they add, chance)
 
 
@@ -131,10 +133,11 @@ class _Split:
     new: tuple[Slot, ...]  # slots of mods the action put on it (stored: crafted ones, and every one when junk is kept)
     status: tuple[Status, ...]  # what the mods that stay give each leaf
     new_ids: tuple[str, ...]  # ids of the new mods, in the order of the retained item
-    implicits: tuple[ImplicitSide, ...] = ()  # the Eldritch pair of the retained item (ADR-0027); () when not kept
-    quality: Quality | None = None
+    implicits: tuple[ImplicitSide, ...] = ()  # the Eldritch pair of the retained item and the implicits of the base a requirement names (ADR-0027); () when not kept
+    quality: Quality | PlainQuality | None = None
     offer: tuple[OfferedMod, ...] = ()
     imprints: tuple[CompressedState, ...] = ()  # the states the retained item was imprinted at (ADR-0060); () when not kept or when no imprint can be used on it
+    rolled: tuple[tuple[int, Cells], ...] = ()  # (index in `implicits`, roll law) of each implicit the action rolled afresh whose roll a requirement looks at (ticket #158); `implicits` shows them at their lowest values
 
 
 class _Context:
@@ -206,13 +209,12 @@ class Abstraction:
         self._roll_leaves = tuple(leaf for leaf in goal.leaves if leaf.has_roll_limit)  # a roll limit: a drawn mod rolls its values
         self._has_laws = bool(self._roll_leaves)
         self._roll_ids = frozenset().union(*(leaf.mod_ids for leaf in self._roll_leaves))
-        if any(leaf.has_roll_limit for leaf in goal.implicits):
-            raise OutOfScopeError("a roll limit on an implicit is not modelled yet (ticket #158)")
+        self._implicit_roll_leaves = tuple(leaf for leaf in goal.implicits if leaf.has_roll_limit)  # a roll limit on an implicit: an implicit rolled afresh has a law (ticket #158)
         self._numbers = TypeNumbers()
         self._actions = actions
         reads, adds = [action.reads(data) for action in actions], [action.adds(data) for action in actions]
         self._tracks_implicits = bool(goal.implicits) or any(r.implicits for r in reads) or any(a.implicits for a in adds)
-        self._tracks_quality = any(r.quality for r in reads) or any(a.quality for a in adds)
+        self._tracks_quality = goal.quality is not None or any(r.quality for r in reads) or any(a.quality for a in adds)
         self._tracks_offer = any(r.offer for r in reads) or any(a.offer for a in adds)
         self._tracks_imprints = any(r.imprints for r in reads) or any(a.imprints for a in adds)
         self._snapshots: dict[Item, CompressedState] = {}  # the compressed state of an imprint, by the item it holds
@@ -220,6 +222,14 @@ class Abstraction:
         self._veiled_aware = self._tracks_offer or any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
         self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
+        # the implicits of the base a requirement names: the state keeps what each gives the goal after the Eldritch pair; one that nobody names decides nothing
+        named = frozenset().union(*(leaf.mod_ids for leaf in goal.implicits))
+        base = data.base_items.get(base_id)
+        self._base_named = tuple(sorted(mod_id for mod_id in (base.implicits if base is not None else ()) if mod_id in named and mod_id in data.mods))
+        self._implicit_values: dict[tuple[str, int, tuple[Status, ...]], tuple[int, ...]] = {}
+        self._implicit_laws: dict[tuple[str, int], Cells] = {}
+        # whether an enabled action takes a quality action off the states where it cannot help (`quality_offer_pruned`)
+        self._quality_last = not goal.takes_corrupted or (goal.asks_corrupted and not any(a.corrupts and not a.keeps_mods for a in adds))
         # the lines a requirement names, when an enabled action moves an implicit inside its line: the state keeps the line of a side that holds one of them
         self._named_lines = (
             frozenset(implicit_line(mod_id) for leaf in goal.implicits for mod_id in leaf.mod_ids)
@@ -506,13 +516,34 @@ class Abstraction:
         return self.meets_requirements(state)
 
     def meets_requirements(self, state: CompressedState) -> bool:
-        """Whether `state` meets every requirement but the corruption: the status of the leaves, and for each Eldritch implicit wanted one side that passes it."""
+        """Whether `state` meets every requirement but the corruption: the explicit mods, the implicits wanted and the quality wanted (ticket #158)."""
+        return self.meets_all_but_quality(state) and self.quality_is_met(state)
+
+    def meets_all_but_quality(self, state: CompressedState) -> bool:
+        """Whether `state` meets every requirement but the corruption and the quality: the status of the leaves, and for each implicit wanted one implicit of the item that passes it."""
         if not self.goal.is_met(state.status):
             return False
         wanted = len(self.goal.implicits)
         if not wanted:
             return True
         return all(any(side.contribution[index] is Status.PASSING for side in state.implicits) for index in range(wanted))
+
+    def quality_is_met(self, state: CompressedState) -> bool:
+        """Whether the quality of `state` meets the quality wanted (always, when the goal wants none)."""
+        return self.goal.quality is None or self.goal.quality.is_met_by(state.quality)
+
+    def quality_offer_pruned(self, state: CompressedState, action: Action) -> bool:
+        """Whether an action that only sets the quality (a catalyst: `Adds.only_quality`) is not an action of `state` (ticket #158, ADR-0029).
+
+        Quality changes no odds, so it is the last requirement to meet: such an action is offered only at a state that meets every other
+        requirement and not yet the quality. Anywhere else it changes nothing the goal sees now, and the same catalysts put on later cost
+        the same (exact pruning, ADR-0031; the plan is the same, the graph smaller). It is never pruned for a goal that takes a corrupted
+        item while an enabled action corrupts and rerolls the mods itself (a Bloodstained resonator): a corrupted item takes no catalyst,
+        so the catalysts must go on before it, at a state that does not meet the mods yet.
+        """
+        if not self._quality_last or not action.adds(self.data).only_quality:
+            return False
+        return not (self.goal.quality is not None and self.meets_all_but_quality(state) and not self.quality_is_met(state))
 
     def kernel(self, state: CompressedState, action: Action) -> Mapping[CompressedState, Fraction]:
         """The exact distribution of the next compressed state after `action` on `state`.
@@ -607,7 +638,9 @@ class Abstraction:
         for (share, part), signature, split in zip(
             outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
         ):
-            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer, split.imprints)
+            key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer, split.imprints, split.rolled)
+            if split.rolled and not isinstance(part, Fixed):
+                raise OutOfScopeError(_ROLLED_BY_A_DRAW)
             if isinstance(part, Rerolled):  # which of the kept slots are rerolled decides the kernel
                 key = (*key, tuple(sorted(self._rerolled_slots(part, prepared.origins)[1], key=_SLOT_KEY)))
             if outcomes.fractures and not isinstance(part, Fixed):
@@ -733,27 +766,51 @@ class Abstraction:
     # --- the implicits, the quality and the offer (ADR-0027) ---------------------------------------------
 
     def _implicit_pair(self, implicits: tuple[ImplicitMod, ...]) -> tuple[ImplicitSide, ...]:
-        """The Eldritch pair of an item's implicits: the Searing Exarch side and the Eater of Worlds side.
+        """The implicits of an item as a state keeps them: the Searing Exarch side, the Eater of Worlds side, then each implicit of the base a requirement names.
 
-        Raises `OutOfScopeError` for an implicit that is not Eldritch: the state holds no base implicit until ticket #158.
+        An Eldritch implicit is the grade it has and what it gives each implicit wanted, the roll included. An implicit of the base is
+        what it gives them (all ABSENT when the item does not store it); one that no requirement names decides nothing and is not kept
+        (ticket #158). A corrupted implicit is not kept either: a corrupted item is final and the action that corrupts decides it (ADR-0036).
         """
         sides = {side: self._no_implicit for side in EldritchSide}
+        base: dict[str, ImplicitSide] = {}
         for entry in implicits:
             mod = self.data.mods[entry.mod_id]
             if is_corrupted_implicit(mod):
                 continue  # a corrupted item is final and the state keeps no corrupted implicit: the action that corrupts decides it (ADR-0036)
             side = eldritch_side(mod)
             if side is None:
-                raise OutOfScopeError(
-                    f"the item holds the base implicit {entry.mod_id}: the state holds the two Eldritch sides only"
-                    " (rolls of base implicits: ticket #158)"
-                )
-            contribution = tuple(
-                implicit_status_of(leaf, entry.mod_id, entry.grade, entry.values) for leaf in self.goal.implicits
-            )
+                if entry.mod_id in self._base_named:
+                    base[entry.mod_id] = ImplicitSide(0, self._implicit_contribution(entry))
+                continue
             line = implicit_line(entry.mod_id)
-            sides[side] = ImplicitSide(entry.grade, contribution, line if line in self._named_lines else "")
-        return (sides[EldritchSide.EXARCH], sides[EldritchSide.EATER])
+            sides[side] = ImplicitSide(entry.grade, self._implicit_contribution(entry), line if line in self._named_lines else "")
+        return (sides[EldritchSide.EXARCH], sides[EldritchSide.EATER], *(base.get(mod_id, self._no_implicit) for mod_id in self._base_named))
+
+    def _implicit_contribution(self, entry: ImplicitMod) -> tuple[Status, ...]:
+        return tuple(implicit_status_of(leaf, entry.mod_id, entry.grade, entry.values) for leaf in self.goal.implicits)
+
+    def _implicit_index(self, mod_id: str) -> int | None:
+        """The position in `CompressedState.implicits` of the entry for the implicit `mod_id`; None for one the state does not keep."""
+        mod = self.data.mods[mod_id]
+        side = eldritch_side(mod)
+        if side is not None:
+            return 0 if side is EldritchSide.EXARCH else 1
+        return 2 + self._base_named.index(mod_id) if mod_id in self._base_named else None
+
+    def _roll_of(self, mod: Mod, grade: int, contribution: tuple[Status, ...]) -> tuple[int, ...]:
+        """The values an implicit `mod` holds when it gives `contribution`: the lowest the roll allows, so a state that no requirement tells apart by a roll is held at the mod's lowest values.
+
+        Raises `OutOfScopeError` when no roll of the mod gives it (a state this abstraction never makes).
+        """
+        key = (mod.id, grade, contribution)
+        found = self._implicit_values.get(key)
+        if found is None:
+            found = implicit_values_for(self.goal.implicits, mod, grade, contribution)
+            if found is None:
+                raise OutOfScopeError(f"no roll of {mod.id} gives {[int(v) for v in contribution]} to the implicits wanted")
+            self._implicit_values[key] = found
+        return found
 
     def _implicit_mod(self, side: EldritchSide, grade: int, contribution: tuple[Status, ...], line: str = "") -> Mod:
         """The Eldritch mod that stands for a side of the pair: of the `line` when the state keeps one, else the smallest id of the side
@@ -778,8 +835,9 @@ class Abstraction:
                         continue  # an id without a grade: not a mod an action can put on an item
                 self._eldritch = grouped
             for mod in sorted(self._eldritch.get((side, grade), ()), key=lambda mod: mod.id):
-                given = tuple(implicit_status_of(leaf, mod.id, grade, _low_values(mod)) for leaf in self.goal.implicits)
-                if given == contribution and implicit_line(mod.id) not in self._named_lines:
+                if implicit_line(mod.id) not in self._named_lines and (
+                    implicit_values_for(self.goal.implicits, mod, grade, contribution) is not None
+                ):
                     found = mod
                     break
             else:
@@ -1062,12 +1120,15 @@ class Abstraction:
         return item, origins
 
     def _implicits_of(self, state: CompressedState) -> tuple[ImplicitMod, ...]:
-        """The implicits of the item a state stands for: for each Eldritch side that holds one, the mod that stands for it at its lowest values."""
+        """The implicits of the item a state stands for: for each Eldritch side that holds one, the mod that stands for it, and for each implicit of the base that the state says the item stores, that implicit; each at values that give what the state holds."""
         implicits = []
         for side, held in zip(EldritchSide, state.implicits):  # the pair is in the order of EldritchSide: Searing Exarch, then Eater of Worlds
             if held.grade:
                 mod = self._implicit_mod(side, held.grade, held.contribution, held.line)
-                implicits.append(ImplicitMod(mod.id, held.grade, _low_values(mod)))
+                implicits.append(ImplicitMod(mod.id, held.grade, self._roll_of(mod, held.grade, held.contribution)))
+        for mod_id, held in zip(self._base_named, state.implicits[2:]):
+            if any(held.contribution):  # all ABSENT: the item does not store it
+                implicits.append(ImplicitMod(mod_id, 0, self._roll_of(self.data.mods[mod_id], 0, held.contribution)))
         return tuple(implicits)
 
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
@@ -1233,6 +1294,8 @@ class Abstraction:
         for (share, part), signature, split in zip(outcomes.components, signatures, self._splits_of(prepared)):
             if isinstance(part, Fixed):
                 self._add_fixed(result, share, split)  # a fixed result that fractures a mod holds it fractured already
+            elif split.rolled:
+                raise OutOfScopeError(_ROLLED_BY_A_DRAW)
             elif isinstance(part, Rerolled):
                 self._add_rerolled(result, share, part, prepared.origins, split)
             elif outcomes.fractures:
@@ -1245,8 +1308,9 @@ class Abstraction:
         """The split of every part of the outcomes (cached on `prepared`)."""
         if prepared.splits is None:
             given = prepared.item.influences if prepared.item is not None else None
+            prior = prepared.item.implicits if prepared.item is not None else ()
             prepared.splits = tuple(
-                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes | Fixed) else frozenset(), prepared.imprints, given)
+                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes | Fixed) else frozenset(), prepared.imprints, given, prior)
                 for _, part in prepared.outcomes.components
             )
         return prepared.splits
@@ -1258,6 +1322,7 @@ class Abstraction:
         rerolled: frozenset[str] = frozenset(),
         given: tuple[CompressedState, ...] = (),
         before: frozenset[Influence] | None = None,
+        prior: tuple[ImplicitMod, ...] = (),
     ) -> _Split:
         """Read a part's retained item back into state terms.
 
@@ -1274,6 +1339,10 @@ class Abstraction:
         `before` are the influences of the item the action was given. When the result has others and an action tells the influence mods
         apart (`Reads.influenced`), a kept slot is read again in the context of the result: whether a mod is an influence mod is
         decided by the influences of the item that holds it (ticket #155).
+
+        `prior` are the implicits of the item the action was given. An implicit of the result that the item did not hold, or whose id is
+        in `rerolled`, is rolled afresh by the action (an Ember's, a Blessed Orb's): when a requirement looks at its roll the split
+        records its law (`_Split.rolled`) and `implicits` shows it at its lowest values (ticket #158).
         """
         influences = retained.influences
         flags = Flags(retained.rarity, retained.corrupted, influences)
@@ -1314,7 +1383,29 @@ class Abstraction:
         fractured.sort(key=lambda entry: (entry.mod_id, entry.contribution))
         status = best_of(len(self.goal.leaves), contributions)
         held = self._held_by(retained, influences, given)
-        return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids), *held)
+        rolled = self._rolled_implicits(retained, prior, rerolled) if self._implicit_roll_leaves else ()
+        return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids), *held, rolled)
+
+    def _rolled_implicits(self, retained: Item, prior: tuple[ImplicitMod, ...], rerolled: frozenset[str]) -> tuple[tuple[int, Cells], ...]:
+        """The implicits of `retained` that the action rolled afresh and whose roll changes what they give the goal, with their laws.
+
+        New to the item (an Ember's, a Conflict's), or named in `rerolled` (a Blessed Orb's, an Ember that draws the mod it replaces).
+        A law of one outcome changes nothing, and is left out.
+        """
+        held = {entry.mod_id for entry in prior}
+        found = []
+        for entry in retained.implicits:
+            mod = self.data.mods[entry.mod_id]
+            index = None if is_corrupted_implicit(mod) else self._implicit_index(entry.mod_id)
+            if index is None or (entry.mod_id in held and entry.mod_id not in rerolled):
+                continue
+            key = (entry.mod_id, entry.grade)
+            cells = self._implicit_laws.get(key)
+            if cells is None:
+                cells = self._implicit_laws[key] = implicit_roll_law(self.goal.implicits, mod, entry.grade)
+            if is_rollable(cells):
+                found.append((index, cells))
+        return tuple(found)
 
     def _reread(self, slot: Slot, entry: ExplicitMod, influences: frozenset[Influence]) -> Slot:
         """A kept slot of an ordinary mod as the context of `influences` names it (an action gave the item another influence); the slot itself when its kind is the same."""
@@ -1336,9 +1427,20 @@ class Abstraction:
         return FracturedMod(self._canonical_for(own, slot.contribution, False, influences), slot.contribution)
 
     def _add_fixed(self, result: dict[CompressedState, Fraction], share: Fraction, split: _Split) -> None:
-        """Add the one state of a fixed result."""
-        slots = sorted((*split.kept, *split.new), key=lambda slot: slot.key)
-        result[CompressedState(split.flags, split.fractured, split.status, tuple(slots), split.implicits, split.quality, split.offer, split.imprints)] += share
+        """Add the state of a fixed result; the states of it when it rolls an implicit afresh that a requirement looks at, each with the chance of its roll."""
+        slots = tuple(sorted((*split.kept, *split.new), key=lambda slot: slot.key))
+        spread: list[tuple[tuple[ImplicitSide, ...], Fraction]] = [(split.implicits, ONE)]
+        for index, cells in split.rolled:  # the implicits are rolled independently of each other
+            spread = [
+                (
+                    (*implicits[:index], replace(implicits[index], contribution=tuple(Status(value) for value in ints)), *implicits[index + 1 :]),
+                    before * each,
+                )
+                for implicits, before in spread
+                for ints, each in cells
+            ]
+        for implicits, chance in spread:
+            result[CompressedState(split.flags, split.fractured, split.status, slots, implicits, split.quality, split.offer, split.imprints)] += share * chance
 
     def _add_drawn(
         self, result: dict[CompressedState, Fraction], share: Fraction, part: Outcomes, signature, split: _Split

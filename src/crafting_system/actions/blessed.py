@@ -24,9 +24,9 @@ The exact result is a `BlessedOutcomes`: one `Fixed` part of probability 1 (the 
 implicit values stand at their lowest, like the mods a `Finite` adds), `chance_all` and `distribution` as for any
 action that adds no mod, `sample` which rolls the values, and `value_law(mod_id, index)`, the exact law of one rolled
 value, for a requirement on an implicit roll (ticket #158). `Reads.implicits` and `Adds.implicits` are declared, so the
-compressed state keeps the implicits: until #158 it refuses an item that holds a base implicit (`OutOfScopeError`),
-and the kind is not a planner kind. A Blessed Orb on an item with no implicit stored, or one that stores a base implicit,
-is therefore tested here on the outcomes themselves and not through the kernel of `abstraction`.
+compressed state keeps the implicits a requirement names, and the kernel spreads the rerolled ones over `value_law` (ticket #158; layer 1
+in `tests/test_abstraction_implicit_rolls.py`). The kind is no planner kind until the planner takes a target that names an implicit
+(ticket #159), so the contract suite does not ask it about its fixture items.
 
 Memory Strands (ticket #287, ADR-0041): it neither cuts nor spends; the claim is memory_strands.cut_follows_spend_table (approximate).
 """
@@ -168,9 +168,9 @@ class BlessedOrb(Action):
     "blessed-orb",
     order=88,
     planner=False,
-    why_not="a requirement on the roll of an implicit, and the compressed state of a base implicit, are ticket #158",
+    why_not="the planner refuses a target that names an implicit or a quality until ticket #159 opens it (the compressed state holds a base implicit and its roll since ticket #158)",
     # it works on an item that holds a ranged implicit (a ring, an amulet, a belt, a base with one), and none of the contract suite's
-    # fixture amulets does; the kernel of the compressed state refuses a base implicit before #158, so no extra item can carry it either
+    # fixture amulets does
     applies_only_to="an item with a ranged implicit",
     reads_item_state_while_not_planner="any",  # it reads and rerolls the implicits
 )

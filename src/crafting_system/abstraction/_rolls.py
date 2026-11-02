@@ -23,8 +23,8 @@ from fractions import Fraction
 
 from crafting_system.data import Mod
 
-from ._goal import Wanted
-from ._state import status_of
+from ._goal import ImplicitWanted, Wanted
+from ._state import implicit_status_of, status_of
 
 ONE = Fraction(1)
 Cells = tuple[tuple[tuple[int, ...], Fraction], ...]  # (what the mod gives each leaf as ints, its chance), sorted by the ints
@@ -124,6 +124,54 @@ def roll_law(leaves: Sequence[Wanted], mod: Mod, tier: int, crafted: bool = Fals
         ints = tuple(int(status_of(leaf, mod.id, tier, values, crafted)) for leaf in leaves)
         law[ints] = law.get(ints, Fraction(0)) + chance
     return tuple(sorted(law.items()))
+
+
+def _implicit_cells(leaves: Sequence[ImplicitWanted], mod: Mod, grade: int) -> list[tuple[tuple[int, ...], tuple[int, ...], Fraction]]:
+    """The cells of the roll of the implicit `mod` at `grade`: `(lowest values of the cell, what it gives each leaf as ints, its chance)`.
+
+    The cells are cut as for an explicit mod (`roll_law`): by the wanted values of the leaves that name the mod. An implicit rolls like
+    any modifier, each stat uniform over its integers and independent of the others (claim `affix_pool.values_uniform_integers`); a
+    leaf whose `min_roll` has another number of entries than the mod has stats is BELOW at every roll and cuts nothing.
+    """
+    stats = mod.stats
+    thresholds: list[set[int]] = [set() for _ in stats]
+    for leaf in leaves:
+        if mod.id in leaf.mod_ids and leaf.min_roll is not None and len(leaf.min_roll) == len(stats):
+            for position, wanted in enumerate(leaf.min_roll):
+                if wanted is not None:
+                    thresholds[position].add(wanted)
+    per_stat = [_intervals(cuts, stat.min, stat.max, False) for cuts, stat in zip(thresholds, stats)]
+    found = []
+    for cell in itertools.product(*per_stat):
+        values = tuple(start for start, _ in cell)
+        chance = ONE
+        for _, each in cell:
+            chance *= each
+        found.append((values, tuple(int(implicit_status_of(leaf, mod.id, grade, values)) for leaf in leaves), chance))
+    return found
+
+
+def implicit_roll_law(leaves: Sequence[ImplicitWanted], mod: Mod, grade: int) -> Cells:
+    """The exact law of what the implicit `mod` at `grade`, rolled afresh, gives each of `leaves`; sums to 1 (ticket #158).
+
+    Two leaves on one implicit are correlated, because it rolls once; cells that give the same tuple are added up.
+    """
+    law: dict[tuple[int, ...], Fraction] = {}
+    for _, ints, chance in _implicit_cells(leaves, mod, grade):
+        law[ints] = law.get(ints, Fraction(0)) + chance
+    return tuple(sorted(law.items()))
+
+
+def implicit_values_for(leaves: Sequence[ImplicitWanted], mod: Mod, grade: int, contribution: Sequence[int]) -> tuple[int, ...] | None:
+    """Values the implicit `mod` at `grade` can hold that give `leaves` the `contribution`; None when no roll does.
+
+    The lowest values of the first cell that gives it, so a contribution that needs no roll is held at the lowest values of the mod.
+    """
+    wanted = tuple(int(value) for value in contribution)
+    for values, ints, _ in _implicit_cells(leaves, mod, grade):
+        if ints == wanted:
+            return values
+    return None
 
 
 def is_rollable(cells: Cells) -> bool:

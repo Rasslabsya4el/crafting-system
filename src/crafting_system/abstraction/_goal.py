@@ -38,9 +38,9 @@ class Wanted:
 class ImplicitWanted:
     """One Eldritch implicit wanted: a mod from `mod_ids` of at least grade `min_grade` (1 Lesser to 6 Perfect).
 
-    `min_roll` is the limit on its rolled values, as for `Wanted`; the compressed state does not model a roll of an
-    implicit yet (ticket #158), so an `Abstraction` refuses a goal that asks for one. A requirement on a base
-    implicit (grade 0) is not modelled either: the state holds the two Eldritch sides only.
+    `min_roll` is the limit on its rolled values, as for `Wanted`. The mod may be an Eldritch implicit or an implicit of the
+    base (grade 0, `min_grade` None): the compressed state holds what each implicit gives the leaf, the roll included
+    (ticket #158, ADR-0027).
     """
 
     mod_ids: frozenset[str]
@@ -51,6 +51,22 @@ class ImplicitWanted:
     def has_roll_limit(self) -> bool:
         """Whether `min_roll` asks for any value at all."""
         return self.min_roll is not None and any(wanted is not None for wanted in self.min_roll)
+
+
+@dataclass(frozen=True)
+class QualityWanted:
+    """The quality wanted (ADR-0029, ADR-0049): at least `min_percent` of the catalyst `type`, or of the plain quality of a weapon or armour (`type` None).
+
+    It is the final requirement of a goal (ticket #158): catalysts change no odds, so a planner offers the actions that only set
+    the quality when every other requirement already passes (`Abstraction.quality_offer_pruned`).
+    """
+
+    type: object | None
+    min_percent: int
+
+    def is_met_by(self, quality) -> bool:
+        """Whether `quality` (as an item stores it: a catalyst `Quality`, a `PlainQuality` or None) meets the requirement."""
+        return quality is not None and getattr(quality, "type", None) == self.type and quality.percent >= self.min_percent
 
 
 @dataclass(frozen=True)
@@ -90,9 +106,10 @@ def _met(node: Node, statuses: Sequence[Status], start: int) -> tuple[bool, int]
 class Goal:
     """Every requirement must hold; the leaves, depth-first in file order, are the positions of a status tuple.
 
-    `implicits` are the Eldritch implicits wanted besides, each of which must be passed by one side of the item
-    (ADR-0027); `CompressedState.implicits` holds what each side gives each of them. A goal built from a target
-    does not read them yet: the planner refuses a target with implicits until tickets #152 and #158.
+    `implicits` are the implicits wanted besides (Eldritch ones and the base's own), each of which must be passed by one implicit
+    of the item (ADR-0027); `CompressedState.implicits` holds what each implicit gives each of them, the roll included.
+    `quality` is the quality wanted, met last (ADR-0029). A goal built from a target reads both (ticket #158); a corrupted implicit
+    of the target is not one of them (below).
 
     `asks_corrupted` and `allow_corrupted` carry what the target says about corruption (ADR-0036): it asks for a corrupted implicit
     (the goal is a corrupted item), or it allows a corrupted item without asking for an implicit. A target with neither is never
@@ -104,6 +121,7 @@ class Goal:
     implicits: tuple[ImplicitWanted, ...] = ()
     asks_corrupted: bool = False
     allow_corrupted: bool = False
+    quality: QualityWanted | None = None
 
     @property
     def takes_corrupted(self) -> bool:
@@ -132,12 +150,24 @@ class Goal:
 
         A node with the attributes `at_least` and `of` is a k-of-n; any other node has `mod_ids`,
         `min_tier`, `min_roll` and `not_crafted`. What the target says about corruption (`asks_corrupted`, `allow_corrupted`) is read
-        the same way, False for a target that has neither.
+        the same way, False for a target that has neither. The target's `implicits` (`mod_ids`, `min_grade`, `min_roll`; not a corrupted one,
+        which a corrupting action decides, ADR-0036) and `quality` (`type`, `min_percent`) are read the same way, none for a target
+        that has neither (ticket #158).
         """
+        wanted = tuple(
+            ImplicitWanted(
+                frozenset(wish.mod_ids), wish.min_grade, None if wish.min_roll is None else tuple(wish.min_roll)
+            )
+            for wish in getattr(target, "implicits", ())
+            if not getattr(wish, "corrupted", False)
+        )
+        asked = getattr(target, "quality", None)
         return cls(
             tuple(_node(node) for node in target.requirements),
+            wanted,
             asks_corrupted=bool(getattr(target, "asks_corrupted", False)),
             allow_corrupted=bool(getattr(target, "allow_corrupted", False)),
+            quality=None if asked is None else QualityWanted(asked.type, asked.min_percent),
         )
 
 

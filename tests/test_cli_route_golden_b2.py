@@ -90,7 +90,9 @@ def unveil_plan() -> Plan:
         BELT, 84, frozenset(), (Requirement("IncreasedLife", None, frozenset({"IncreasedLife1"})),), UNVEIL_START,
         implicits=(SHOCK_IMPLICIT,), quality=QualityRequirement(CatalystType.PRISMATIC, 15), start_price=START_NAME,
     )  # fmt: skip
-    ab = Abstraction(UNVEIL_DATA, Goal.from_target(target), BELT, 84, (ChaosOrb(),))
+    # The plan is made by hand to show the cards, not to be solved: its policy is one Chaos Orb, which cannot give an implicit or a quality. A goal built
+    # from the target reads them since ticket #158 (and would show the route as never finishing), so the goal here is the target's mods only.
+    ab = Abstraction(UNVEIL_DATA, Goal.from_target(dataclasses.replace(target, implicits=(), quality=None)), BELT, 84, (ChaosOrb(),))
     first = ab.compress(UNVEIL_START)
     priced, _ = price_offers((Offer("Chaos Orb", ChaosOrb(), {CHAOS_ORB: 1}),), PRICES)
     policy = {first: offer_action(ab, priced[0], first)}

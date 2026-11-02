@@ -9,7 +9,9 @@ side), each with a grade 1 Lesser to 6 Perfect. **Dominance** is derived from th
   other side's. The mod is drawn by the spawn weight of the item class among the mods of the side and the grade, so the
   "Unique Enemy" variants join from grade 2 (they weigh half) and the "Pinnacle Boss" variants from grade 3 (a fifth),
   all read from the game data. The same mod may come back (`eldritch.ember_may_return_same_family`, approximate); there is
-  no item-level gate. Its result is a `Finite` list, one item per mod of the pool, each implicit at its lowest values.
+  no item-level gate. Its result is a `Finite` list, one item per mod of the pool, each implicit at its lowest values; the new implicit is rolled afresh
+  (`Finite.rerolled` names the pool, so a redraw of the mod the side held rolls too) and the compressed state spreads a result over the law of
+  the roll when a requirement looks at it (ticket #158).
 * `EldritchChaosOrb()`: on a rare item with a dominant side, removes the modifiers of that side that are not fractured and
   draws new ones onto it. The count is Craft of Exile's (approximate): the total of 4, 5 or 6 (8:3:1) less the mods that
   stay, clamped to the free slots of the side. It ignores the lock metamods and keeps the Attack/Caster ones.
@@ -283,6 +285,8 @@ class EldritchImplicitCurrency(Action):
             tuple(
                 (Fraction(weight, total), item.changed(data, implicits=(*kept, _implicit(mod)))) for mod, weight in pool
             ),
+            # the new implicit is rolled afresh, also when the draw is the mod the side held: a result shows it at its lowest values
+            rerolled=frozenset(mod.id for mod, _ in pool),
         )
 
 
@@ -291,7 +295,7 @@ class EldritchImplicitCurrency(Action):
     order=90,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
+    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _implicit_currency(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences:
@@ -459,7 +463,7 @@ class EldritchAnnulmentOrb(Action):
     order=91,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
+    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _eldritch_chaos(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is Rarity.RARE:
@@ -471,7 +475,7 @@ def _eldritch_chaos(data: GameData, item: Item):
     order=92,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
+    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _eldritch_exalted(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is Rarity.RARE:
@@ -483,7 +487,7 @@ def _eldritch_exalted(data: GameData, item: Item):
     order=93,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
+    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _eldritch_annulment(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is not Rarity.NORMAL:
@@ -595,7 +599,7 @@ class OrbOfConflict(Action):
     order=94,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
+    why_not="the planner refuses a target that names an implicit until ticket #159 opens it (the compressed state holds the pair since ticket #152, with its rolls, and a goal built from a target reads the implicits wanted, since ticket #158)",
 )
 def _orb_of_conflict(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences:
