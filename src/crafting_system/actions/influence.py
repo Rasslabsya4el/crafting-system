@@ -382,7 +382,10 @@ class OrbOfDominance(Action):
                     upgraded[entry.mod_id] if entry is chosen else entry for entry in item.mods if entry is not removed
                 )
                 results.append((share, item.changed(data, mods=mods)))
-        return Finite(data, item, tuple(results))
+        # an Elevated mod that is picked keeps its mod and has its values rolled afresh: the result shows it at its lowest values, and the state
+        # refuses a goal with a roll limit (`Fixed.rerolled`); every Elevated mod that could be picked is named, whichever is
+        rerolled = frozenset(entry.mod_id for entry in eligible if is_elevated(data.mods[entry.mod_id]))
+        return Finite(data, item, tuple(results), rerolled)
 
 
 @kind(

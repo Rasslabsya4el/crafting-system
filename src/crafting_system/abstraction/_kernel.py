@@ -1246,7 +1246,7 @@ class Abstraction:
         if prepared.splits is None:
             given = prepared.item.influences if prepared.item is not None else None
             prepared.splits = tuple(
-                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes) else frozenset(), prepared.imprints, given)
+                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes | Fixed) else frozenset(), prepared.imprints, given)
                 for _, part in prepared.outcomes.components
             )
         return prepared.splits

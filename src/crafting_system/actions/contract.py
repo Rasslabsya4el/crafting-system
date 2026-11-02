@@ -526,10 +526,15 @@ class Fixed:
     A part of `ActionOutcomes.components` for a deterministic action (a bench craft, Remove Crafted
     Mods, an Orb of Scouring). The kernel finds what it kept by looking for the mods of the item the
     action was given; any other mod of `result` is a new one.
+
+    `rerolled` are the ids of mods of `result` that the action keeps but whose values it rolls afresh (an Orb of Dominance on an Elevated mod), which
+    `result` shows at their lowest values: the compressed state keeps the contribution of the old roll, so under a goal with a roll limit the
+    kernel refuses them (as for `Outcomes.rerolled`). Empty for an action that changes no value (ticket #155).
     """
 
     data: GameData
     result: Item
+    rerolled: frozenset[str] = frozenset()
 
     @property
     def retained(self) -> Item:

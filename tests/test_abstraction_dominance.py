@@ -218,6 +218,19 @@ def test_the_elevated_tier_is_the_same_in_the_item_the_orb_makes_and_in_the_stat
     assert {state.status for state in found.kernel(found.compress(start), DOMINANCE)} == {(Status.ABSENT,), (Status.PASSING,)}
 
 
+def test_a_roll_limit_on_an_elevated_mod_is_refused_where_dominance_may_pick_it():
+    """An Elevated mod that is picked has its values rolled afresh, which the state cannot hold: under a roll limit the kernel refuses, as for an Awakener's kept mod."""
+    held = item(rolled(S2_MAVEN, 1), rolled(P1, 3), influences={SHAPER})
+    limited = ability((DOMINANCE,), Goal((Wanted(frozenset({S2_MAVEN}), min_roll=(11,)),)))
+    with pytest.raises(OutOfScopeError, match="roll"):
+        limited.kernel(limited.compress(held), DOMINANCE)
+    no_elevated = item(rolled(S2, 1), rolled(P1, 3), influences={SHAPER})
+    with pytest.raises(OutOfScopeError, match="new mod"):  # the Elevated mod the orb puts on the item is a fixed-result new mod: refused as any
+        limited.kernel(limited.compress(no_elevated), DOMINANCE)
+    plain = ability((DOMINANCE,), Goal((Wanted(frozenset({S2_MAVEN})),)))
+    assert plain.kernel(plain.compress(held), DOMINANCE)
+
+
 # --- what the state holds ------------------------------------------------------------------------------------------------
 
 
