@@ -148,7 +148,7 @@ class ToyConflict(Action):
         return {"Toy Conflict": 1}
 
     def reads(self, data: GameData) -> Reads:
-        return Reads(junk=True, families=frozenset(), implicits=True)
+        return Reads(junk=True, families=frozenset(), implicits=True, implicit_lines=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset(), draws=False, implicits=True)

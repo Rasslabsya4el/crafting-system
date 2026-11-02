@@ -159,6 +159,10 @@ class Reads:
       overrides `reads` says what it reads, and `Action.reads` itself (an action that declares nothing) reads all
       three, like it reads every mod. An action that reads the offer reads the veiled placeholder, a mod of the
       item, so it must read the junk too.
+    * `implicit_lines`: with `implicits`, the action moves an Eldritch implicit to another grade of its own family and variant (an Orb of
+      Conflict), so the result depends on which line the implicit is of, not only on what it gives the goal at its present grade. The
+      compressed state then keeps the line of an implicit (`ImplicitSide.line`) when a requirement names a mod of that line at any grade
+      (ticket #152). False in the dataclass; `Action.reads` (an action that declares nothing) says True.
     * `imprints`: the result depends on the imprints the item holds (a Restore takes one, an Imprint is refused when the cap is reached); the
       compressed state then stores them (ADR-0060, ticket #219). The dataclass default is False, and so is `Action.reads`: an action that
       declares nothing neither reads nor keeps an imprint of its own accord, the kernel carries the imprints through every action that
@@ -187,6 +191,7 @@ class Reads:
     fractures: bool = False
     rerolls_values: bool = False
     implicits: bool = False
+    implicit_lines: bool = False
     quality: bool = False
     offer: bool = False
     input_mods: bool = False
@@ -583,7 +588,7 @@ class Action(ABC):
     def reads(self, data: GameData) -> Reads:
         """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality, the offer, the enchantment and the sockets."""
         return Reads(
-            implicits=True, quality=True, offer=True, input_mods=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True
+            implicits=True, implicit_lines=True, quality=True, offer=True, input_mods=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True
         )
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
