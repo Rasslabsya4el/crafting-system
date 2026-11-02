@@ -287,6 +287,10 @@ The number of prefixes (or suffixes) of both inputs together, doubled mods count
 **Doubling**:
 A mod present on both inputs: it enters the pool twice, so it is picked more often, and picking one closes the other.
 
+**Junk class** (`Slot.kind` `"~n%p"`):
+How the compressed state holds a junk mod of an item that goes into a recombinator: its family type `n` (families whose mods have the same weights and give the goal the same things) and its place `p` in the type (which of those weights this very mod has). Which family of the type the mod belongs to is not kept; the kernel of the recombinator averages over where the names lie, the item and the donor placed independently (ADR-0062 decision 3, ticket #217).
+_Avoid_: weight class (the class also carries the place and what the mod gives the goal)
+
 **Non-native mod**:
 A mod the chosen base cannot roll (an influenced or base-bound mod): it counts in the pool and never appears on the output.
 _Avoid_: NNN (the guide's abbreviation)
