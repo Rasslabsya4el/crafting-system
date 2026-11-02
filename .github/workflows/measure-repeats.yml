@@ -1,7 +1,8 @@
-name: measure-repeats
+name: Measure repeats
 
-# Step of the measurement chain (ticket #399): a stub until the step is built. The chain is measure.yml. The step
-# uploads summary.md (for the main chat) and headline.txt (one Russian line for the diary, #398) as measure-repeats.
+# Step 4 of the measurement chain (ticket #399): the whole suite five times on Ubuntu and Windows, in the CI shard
+# layout with a 40-minute slot limit, then one report: flaky tests, slots over 25 minutes, fresh shard durations.
+# Called by `measure.yml` only. Trial mode: Ubuntu, shard 1 of 8, two repeats, about 15 minutes.
 
 on:
   workflow_call:
@@ -14,20 +15,57 @@ permissions:
   contents: read
 
 jobs:
-  stub:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+  test:
+    name: repeat ${{ matrix.repeat }} (${{ matrix.os }}, shard ${{ matrix.shard }}/8)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        os: ${{ inputs.trial && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest","windows-latest"]') }}
+        shard: ${{ inputs.trial && fromJSON('[1]') || fromJSON('[1,2,3,4,5,6,7,8]') }}
+        repeat: ${{ inputs.trial && fromJSON('[1,2]') || fromJSON('[1,2,3,4,5]') }}
     defaults:
       run:
         shell: bash
     steps:
-      - name: Write the placeholder summary and headline
-        run: |
-          mkdir -p out
-          printf '# repeats\n\nNot built yet.\n' > out/summary.md
-          printf 'шаг ещё не построен\n' > out/headline.txt
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data
+      - name: Run shard ${{ matrix.shard }} of 8 on 4 processes, repeat ${{ matrix.repeat }}
+        run: >
+          uv run --no-sync python .github/scripts/run_shard.py
+          --shard ${{ matrix.shard }}/8 --procs 4 --out out --timeout 40
+          -- -p no:cacheprovider -q --durations=10 --shard-durations tests/shard_durations.json || true
       - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: measure-rep-${{ matrix.repeat }}-${{ matrix.os }}-${{ matrix.shard }}
+          path: out/
+          if-no-files-found: warn
+
+  report:
+    name: repeats report
+    needs: test
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: measure-rep-*
+          path: in
+      - name: Repeats, flaky tests, slow slots, shard durations
+        run: >
+          python3 .github/scripts/measure_repeats_report.py --in in --out out --trial ${{ inputs.trial }}
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
         with:
           name: measure-repeats
           overwrite: true
           path: out/
+          if-no-files-found: warn
