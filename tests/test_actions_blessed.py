@@ -6,9 +6,9 @@ every ranged implicit gets a fresh value per stat, uniform over the integers of 
 `+(25-35) to Strength` (11 values, 1/11 each, the old one included); a made-up ring holds a two-stat implicit
 (`(1-2)` and `(5-7)`, 6 value pairs, 1/6 each) and a fixed one that is never rerolled.
 
-The contract suite cannot run its kernel check on an item that holds a base implicit before ticket #158 (the compressed state
-refuses it), so the checks that do not need the kernel are run one by one here, and the whole `check_action` on the
-refusals.
+The kind is no planner kind, so the contract suite does not ask it about its fixture items; the checks that need no kernel are run one
+by one here, and the whole `check_action` on the refusals. Layer 1 of its kernel (the roll of an implicit spread over its law) is in
+`test_abstraction_implicit_rolls.py` (ticket #158).
 """
 
 import dataclasses
@@ -30,7 +30,7 @@ from contract_support import (
 )
 from implicits_support import BELT, BOOTS, EXTENDED, _mod, implicit, make
 
-from crafting_system.abstraction import Abstraction
+from crafting_system.abstraction import Abstraction, Goal, ImplicitWanted, Status
 from crafting_system.actions import (
     Action,
     BlessedOrb,
@@ -249,12 +249,17 @@ def test_the_refusals_pass_the_whole_contract_suite_the_kernel_refuses_the_same_
     assert check_action(BlessedOrb(), _item(RING, corrupted=True), DATA) is False
 
 
-def test_the_compressed_state_does_not_hold_a_base_implicit_before_ticket_158():
+def test_the_compressed_state_holds_a_base_implicit_only_when_a_requirement_names_it():
+    """Ticket #158: the state refused a base implicit until then; one that no requirement names decides nothing, one that is named is kept with its roll."""
     from contract_support import GOAL
 
     ab = Abstraction(DATA, GOAL, BELT, 84, [BlessedOrb()])
-    with pytest.raises(OutOfScopeError, match="158"):
-        ab.compress(belt(30))
+    assert len(ab.compress(belt(30)).implicits) == 2  # the Eldritch pair only
+    assert ab.compress(belt(30)) == ab.compress(belt(35))
+    wanted = Goal((), (ImplicitWanted(frozenset({STRENGTH}), min_roll=(33,)),))
+    named = Abstraction(DATA, wanted, BELT, 84, [BlessedOrb()])
+    assert [side.contribution for side in named.compress(belt(30)).implicits[2:]] == [(Status.BELOW,)]
+    assert [side.contribution for side in named.compress(belt(33)).implicits[2:]] == [(Status.PASSING,)]
 
 
 # --- the kind and the claims ----------------------------------------------------------------------------

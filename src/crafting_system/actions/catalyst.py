@@ -27,8 +27,10 @@ declares `Reads.quality` and `Adds.quality` (ADR-0027).
   prefixes and a Dextral one suffixes (`catalyst.sinistral_dextral_by_side`, approximate: an implicit is neither).
   A target written in displayed values becomes a base roll with `base_roll_for(displayed, q)`.
 
-The kind is not a planner kind: the planner adds the finish cost to a goal state (ADR-0029) and offers a catalyst
-only when everything else of the target is met, which is ticket #158.
+The kind is not a planner kind yet. The quality is the last requirement of a goal (`abstraction.QualityWanted`, ticket #158): a catalyst is declared
+`Adds.only_quality`, so the planner's offers leave it out at every state that fails another requirement (`Abstraction.quality_offer_pruned`),
+and the solver pays for the catalysts of a goal state as it pays for any action, at the exact gain law above. The planner opens a target that
+names a quality with ticket #159.
 
 Memory Strands (ticket #287, ADR-0041): it neither cuts nor spends; the claim is memory_strands.cut_follows_spend_table (approximate).
 """
@@ -226,7 +228,7 @@ class ApplyCatalyst(Action):
     "catalyst",
     order=90,
     planner=False,
-    why_not="catalysts are a finish cost added to a goal state, offered when everything else of the target is met: ticket #158",
+    why_not="the planner refuses a target that names a quality until ticket #159 opens it (a goal reads the quality and offers a catalyst last since ticket #158)",
     reads_item_state_while_not_planner="any",  # it reads and adds the quality
 )
 def _catalysts(data: GameData, item: Item):

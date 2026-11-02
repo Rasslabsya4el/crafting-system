@@ -184,18 +184,17 @@ def test_a_state_is_rebuilt_into_an_item_with_the_implicits_it_stands_for():
         assert sum(after.values()) == 1 and {state.implicits[1] for state in after} == {landed.implicits[1]}
 
 
-def test_a_base_implicit_is_refused_while_the_pair_is_kept():
+def test_a_base_implicit_that_no_requirement_names_decides_nothing_and_is_not_kept():
     belt = ImplicitMod("StrengthImplicitBelt1", 0, (25,))
     item = dataclasses.replace(boots(), implicits=(belt,))
-    with pytest.raises(OutOfScopeError, match="#158"):
-        boots_ab().compress(item)
+    assert boots_ab().compress(item) == boots_ab().compress(boots())  # ticket #158: it was refused until then
     assert ab(actions=[]).compress(amulet()).implicits == ()  # not kept, not looked at
 
 
-def test_a_roll_limit_on_an_implicit_is_refused_until_ticket_158():
+def test_a_roll_limit_on_an_implicit_is_a_requirement_like_any_other():
     goal = Goal((), (ImplicitWanted(frozenset(AVOID_SHOCK), min_roll=(35,)),))
-    with pytest.raises(OutOfScopeError, match="#158"):
-        ab(goal, [ToyEmber(1)], BOOTS_BASE)
+    found = ab(goal, [ToyEmber(1)], BOOTS_BASE)  # ticket #158: it was refused until then
+    assert found.tracks_implicits
     Goal((), (ImplicitWanted(frozenset(AVOID_SHOCK), min_roll=(None,)),))  # a limit that asks for nothing is not a limit
     ab(Goal((), (ImplicitWanted(frozenset(AVOID_SHOCK), min_roll=(None,)),)), [ToyEmber(1)], BOOTS_BASE)
 

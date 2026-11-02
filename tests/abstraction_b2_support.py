@@ -7,6 +7,7 @@ here reads a kernel. `closure` lists the concrete items that a set of actions re
 state the crafts can lead to, not only over hand-picked ones; `check_layer_1` compares one action on one item and says whether it applied.
 """
 
+import itertools
 from collections import defaultdict, deque
 from collections.abc import Iterable
 from fractions import Fraction
@@ -16,7 +17,7 @@ from contract_support import finished
 
 from crafting_system.abstraction import Abstraction
 from crafting_system.actions import ActionError, Fixed, Rerolled, tiers_of
-from crafting_system.items import ExplicitMod, Item
+from crafting_system.items import ExplicitMod, ImplicitMod, Item, is_corrupted_implicit
 
 
 class _Part:
@@ -48,21 +49,49 @@ def finished_at_tiers(outcomes, data) -> list[tuple[Fraction, Item]]:
     return items
 
 
-def concrete_pushforward(ability: Abstraction, data, item: Item, action) -> dict:
+def rolled(outcomes, data, given: Item) -> list[tuple[Fraction, Item]]:
+    """`finished_at_tiers`, with every implicit that the action rolls afresh listed at every value it can roll (ticket #158).
+
+    An implicit of a result is rolled afresh when `given` did not hold its mod, or when the outcomes name it in `rerolled` (a Blessed Orb's, an
+    Ember's); each stat takes every integer of its range with the same chance, the stats independently. Nothing here reads a kernel or a
+    roll law of `abstraction`: the values are enumerated one by one.
+    """
+    held = {entry.mod_id for entry in given.implicits}
+    rerolled = frozenset().union(*(frozenset(getattr(part, "rerolled", ())) for _, part in outcomes.components))
+    items: list[tuple[Fraction, Item]] = []
+    for chance, result in finished_at_tiers(outcomes, data):
+        fresh = [
+            entry
+            for entry in result.implicits
+            if not is_corrupted_implicit(data.mods[entry.mod_id]) and (entry.mod_id not in held or entry.mod_id in rerolled)
+        ]
+        ranges = [
+            [range(min(stat.min, stat.max), max(stat.min, stat.max) + 1) for stat in data.mods[entry.mod_id].stats] for entry in fresh
+        ]
+        combinations = list(itertools.product(*(list(itertools.product(*each)) for each in ranges)))
+        for combination in combinations:
+            changed = {entry.mod_id: ImplicitMod(entry.mod_id, entry.grade, tuple(values)) for entry, values in zip(fresh, combination)}
+            implicits = tuple(changed.get(entry.mod_id, entry) for entry in result.implicits)
+            items.append((chance / len(combinations), result.changed(data, implicits=implicits)))
+    return items
+
+
+def concrete_pushforward(ability: Abstraction, data, item: Item, action, *, rolls: bool = False) -> dict:
     """The exact kernel of `action` on `item` as its finished items give it: each compressed by `ability`, the chances added up.
 
-    Raises what `action.outcomes` raises when the game refuses the item.
+    With `rolls` the implicits the action rolls afresh are listed at every value (`rolled`). Raises what `action.outcomes` raises when the game refuses the item.
     """
     expected: dict = defaultdict(Fraction)
-    for chance, result in finished_at_tiers(action.outcomes(data, item), data):
+    outcomes = action.outcomes(data, item)
+    for chance, result in rolled(outcomes, data, item) if rolls else finished_at_tiers(outcomes, data):
         expected[ability.compress(result)] += chance
     return dict(expected)
 
 
-def closure(data, starts: Iterable[Item], actions, *, limit: int = 4000) -> list[Item]:
+def closure(data, starts: Iterable[Item], actions, *, limit: int = 4000, rolls: bool = False) -> list[Item]:
     """Every concrete item that `actions` reach from `starts` (the starts included), in the order found; at most `limit`.
 
-    An action that refuses an item (`ActionError`) is skipped there.
+    An action that refuses an item (`ActionError`) is skipped there. With `rolls` the implicits an action rolls afresh are followed at every value.
     """
     seen: dict[Item, None] = dict.fromkeys(starts)
     queue = list(seen)
@@ -70,7 +99,8 @@ def closure(data, starts: Iterable[Item], actions, *, limit: int = 4000) -> list
         item = queue.pop(0)
         for action in actions:
             try:
-                results = finished_at_tiers(action.outcomes(data, item), data)
+                outcomes = action.outcomes(data, item)
+                results = rolled(outcomes, data, item) if rolls else finished_at_tiers(outcomes, data)
             except ActionError:
                 continue
             for _, result in results:
@@ -80,14 +110,15 @@ def closure(data, starts: Iterable[Item], actions, *, limit: int = 4000) -> list
     return list(seen)
 
 
-def check_layer_1(ability: Abstraction, data, item: Item, action) -> bool:
+def check_layer_1(ability: Abstraction, data, item: Item, action, *, rolls: bool = False) -> bool:
     """The kernel of `item`'s state equals the compressed finished items of `action` on `item`; where the game refuses, so does the kernel.
 
     The kernel refuses with the same kind of error the action does. Returns whether the action applied (False: it refused, and the kernel refused too).
+    With `rolls` the oracle lists every value of the implicits the action rolls afresh (`rolled`, ticket #158).
     """
     state = ability.compress(item)
     try:
-        expected = concrete_pushforward(ability, data, item, action)
+        expected = concrete_pushforward(ability, data, item, action, rolls=rolls)
     except ActionError as refusal:
         with pytest.raises(type(refusal)):
             ability.kernel(state, action)

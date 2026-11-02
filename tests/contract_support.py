@@ -562,6 +562,8 @@ def check_item_state_declarations(action, reads: Reads, adds: Adds, items, given
             assert result.veil_offer == (given.veil_offer if placeholder else ()), (
                 "an action that does not declare adds.offer leaves the offer as it was (it goes with its placeholder)"
             )
+        if adds.only_quality:  # a quality action (a catalyst) changes nothing but the quality (ticket #158)
+            assert dataclasses.replace(result, quality=given.quality) == given, "an action declared as a quality action changes no mod, implicit or other part but the quality"
         if not adds.imprints:
             assert result.imprints in (given.imprints, ()), (
                 "an action that does not declare adds.imprints leaves the imprints as they were, or builds a new item that holds none (ticket #219)"

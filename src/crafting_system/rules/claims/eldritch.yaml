@@ -78,7 +78,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: eldritch.implicit_value_range
-    statement: "Each tier of an Eldritch implicit has a fixed integer range for its value (for example Exarch Avoid Shock 33-35 at tier 1, 39-41 at tier 3, 48-50 at tier 6); the rolled value lies in the range of the tier. The exact results hold every implicit at its lowest value; a roll limit on an implicit is not modelled yet (ticket #158)."
+    statement: "Each tier of an Eldritch implicit has a fixed integer range for its value (for example Exarch Avoid Shock 33-35 at tier 1, 39-41 at tier 3, 48-50 at tier 6); the rolled value lies in the range of the tier. The exact results hold every implicit at its lowest value; the compressed state rolls a new implicit afresh, each stat uniform over its range and independent of the others (the roll of any modifier, affix_pool.values_uniform_integers), when a requirement looks at its roll (ticket #158)."
     source_kind: datamined
     url: https://repoe-fork.github.io/mods.json
     quote: "AvoidShockEldritchImplicit3 ... (39-41)% chance to Avoid being Shocked"

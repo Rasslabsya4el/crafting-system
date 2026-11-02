@@ -10,6 +10,10 @@ the explicit mods (`Adds.corrupts` and `Adds.keeps_mods`: a Vaal Orb, the Locus)
 requirement of the goal already passes there (ADR-0036). Its outcome is final and every outcome that can be the goal holds the
 mods the state holds, so from any other state it only adds a dead end, which a restart reaches as cheaply: the optimal values
 are unchanged (ADR-0031). A target that only allows a corrupted item has no such pruning, because the brick can end in the goal.
+
+A third filter is over the quality (ticket #158, ADR-0029): an action that only sets the quality (`Adds.only_quality`, a catalyst) is an
+action of a state only if every other requirement of the goal passes there and the quality does not yet (`Abstraction.quality_offer_pruned`).
+Quality changes no odds, so the same catalysts put on later cost the same, and the optimal values are unchanged.
 """
 
 from collections.abc import Iterable
@@ -29,6 +33,7 @@ def chosen_offers(
     *,
     merge_equal: bool = True,
     prune_corrupting: bool = True,
+    prune_quality: bool = True,
 ) -> list[PricedOffer]:
     """The offers whose actions the solver sees at `state`, in the order of `offers`: the allowed ones, equal kernels merged.
 
@@ -39,13 +44,16 @@ def chosen_offers(
     solver took before); without it every allowed offer stays.
 
     With `prune_corrupting` (the default) the corrupting offers that `corrupting_offer_pruned` names are skipped at `state`;
-    without it they stay, which is the reference a test compares the values against.
+    without it they stay, which is the reference a test compares the values against. `prune_quality` does the same for the quality offers
+    (`Abstraction.quality_offer_pruned`).
     """
     allowed: list[tuple[PricedOffer, object]] = []  # (offer, kernel key or None for restart)
     for priced in offers:
         if priced.label == RESTART and state == start:
             continue
         if prune_corrupting and corrupting_offer_pruned(abstraction, priced, state):
+            continue
+        if prune_quality and not isinstance(priced.offer.action, BuyStartItem) and abstraction.quality_offer_pruned(state, priced.offer.action):
             continue
         if isinstance(priced.offer.action, BuyStartItem) or not merge_equal:
             allowed.append((priced, None))
