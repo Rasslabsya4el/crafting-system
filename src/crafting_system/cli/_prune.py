@@ -47,8 +47,30 @@ def chosen_offers(
     without it they stay, which is the reference a test compares the values against. `prune_quality` does the same for the quality offers
     (`Abstraction.quality_offer_pruned`).
     """
-    allowed: list[tuple[PricedOffer, object]] = []  # (offer, kernel key or None for restart)
-    for priced in offers:
+    return [
+        priced
+        for _, priced, _ in keyed_offers(
+            abstraction, offers, state, start, merge_equal=merge_equal, prune_corrupting=prune_corrupting
+        )
+    ]
+
+
+def keyed_offers(
+    abstraction: Abstraction,
+    offers: Iterable[PricedOffer],
+    state: CompressedState,
+    start: CompressedState,
+    *,
+    merge_equal: bool = True,
+    prune_corrupting: bool = True,
+) -> list[tuple[int, PricedOffer, object]]:
+    """`chosen_offers` with the position of each offer in `offers` and its `Abstraction.kernel_key` at `state`.
+
+    The key is None for `restart` (and for every offer when `merge_equal` is off: no key is built then). The packed walk
+    (`_packed.py`) shares one kernel between all the (state, offer) pairs that have the same key.
+    """
+    allowed: list[tuple[int, PricedOffer, object]] = []  # (position, offer, kernel key or None for restart)
+    for position, priced in enumerate(offers):
         if priced.label == RESTART and state == start:
             continue
         if prune_corrupting and corrupting_offer_pruned(abstraction, priced, state):
@@ -56,18 +78,18 @@ def chosen_offers(
         if prune_quality and not isinstance(priced.offer.action, BuyStartItem) and abstraction.quality_offer_pruned(state, priced.offer.action):
             continue
         if isinstance(priced.offer.action, BuyStartItem) or not merge_equal:
-            allowed.append((priced, None))
+            allowed.append((position, priced, None))
             continue
         try:
-            allowed.append((priced, abstraction.kernel_key(state, priced.offer.action)))
+            allowed.append((position, priced, abstraction.kernel_key(state, priced.offer.action)))
         except ActionError:  # the game refuses it here, or no admitted rule covers it
             continue
 
     cheapest: dict[object, PricedOffer] = {}
-    for priced, key in allowed:
+    for _, priced, key in allowed:
         if key is not None and (key not in cheapest or priced.cost < cheapest[key].cost):
             cheapest[key] = priced
-    return [priced for priced, key in allowed if key is None or cheapest[key] is priced]
+    return [(position, priced, key) for position, priced, key in allowed if key is None or cheapest[key] is priced]
 
 
 def solver_actions(

@@ -39,6 +39,7 @@ class Chain[S]:
     succ: tuple[tuple[tuple[int, float], ...], ...]
     can_finish: tuple[bool, ...]
     inputs: tuple[tuple[int, ...], ...]
+    packed_moments: bool = False  # solve this chain's linear systems on packed arrays, not by the object solver's sweeps (ticket #374)
 
     @property
     def proper(self) -> bool:
@@ -54,7 +55,7 @@ class Chain[S]:
 
 
 def build_chain[S](
-    policy: Mapping[S, Action[S]], start: S, is_goal: Callable[[S], bool]
+    policy: Mapping[S, Action[S]], start: S, is_goal: Callable[[S], bool], packed_moments: bool = False
 ) -> Chain[S]:
     index: dict[S, int] = {start: 0}
     states: list[S] = [start]
@@ -121,7 +122,7 @@ def build_chain[S](
                 can_finish[i] = True
                 queue.append(i)
     return Chain(
-        tuple(states), tuple(goal), tuple(action), tuple(succ), tuple(can_finish), tuple(inputs)
+        tuple(states), tuple(goal), tuple(action), tuple(succ), tuple(can_finish), tuple(inputs), packed_moments
     )
 
 

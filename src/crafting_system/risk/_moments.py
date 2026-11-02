@@ -21,10 +21,11 @@ import math
 import sys
 from collections.abc import Sequence
 
-from ..solver import Action, TabularModel, solve
+from ..solver import Action, TabularModel, solve, solve_packed_model
 from ._chain import Chain
 
 EPS = sys.float_info.epsilon
+PACKED_FROM_EDGES = 2_000_000  # a chain with more transitions, or one built with `packed_moments`, is solved on packed arrays (ticket #374): the object solver's sweeps do not converge in an hour on R04's and R14's
 MIN_COST_ROUNDING = 1e-14  # relative allowance for the float arithmetic building the second cost vector
 
 
@@ -43,7 +44,9 @@ def solve_costs(chain: Chain, costs: Sequence[float]) -> tuple[list[float], floa
         for a in [chain.action[i]]
     }
     goals = [chain.states[i] for i, flag in enumerate(chain.goal) if flag]
-    solution = solve(TabularModel(goals, table), [chain.states[0]])
+    edges = sum(len(actions[0].outcomes) for actions in table.values())
+    solver = solve_packed_model if chain.packed_moments or edges > PACKED_FROM_EDGES else solve
+    solution = solver(TabularModel(goals, table), [chain.states[0]])
     values = [solution.values.get(state, 0.0) for state in chain.states]
     return values, solution.error_bound
 

@@ -78,9 +78,13 @@ def test_the_scan_covers_the_solver_files():
     assert {"__init__.py", "_solve.py", "_graph.py"} <= names
 
 
-def test_the_solver_uses_only_the_standard_library():
+PACKED_ALLOWED = {"numpy"}  # the packed solve (ticket #374, ADR-0063) is the one part of `solver/` that uses numpy
+
+
+def test_the_solver_uses_only_the_standard_library_but_the_packed_files_use_numpy():
     outside = {}
     for path in sorted(SOLVER_DIR.rglob("*.py")):
+        allowed = PACKED_ALLOWED if path.name.startswith("_packed") else set()
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             names = []
             if isinstance(node, ast.Import):
@@ -88,7 +92,7 @@ def test_the_solver_uses_only_the_standard_library():
             elif isinstance(node, ast.ImportFrom) and node.level == 0:
                 names = [(node.module or "").split(".")[0]]
             for name in names:
-                if name not in sys.stdlib_module_names and name != "crafting_system":
+                if name not in sys.stdlib_module_names and name != "crafting_system" and name not in allowed:
                     outside.setdefault(path.name, set()).add(name)
 
     assert outside == {}

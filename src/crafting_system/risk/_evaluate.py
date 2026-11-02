@@ -131,8 +131,10 @@ def evaluate[S](
     max_bins: int = 200_000,
     work_budget: float = WORK_BUDGET,
     max_coarse_bins: int | None = None,
+    resolve_quantiles: bool = True,
     free_cost: float | None = None,
     free_fallback_bins: int | None = None,
+    packed_moments: bool = False,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -142,6 +144,10 @@ def evaluate[S](
     the probability still in flight is at most `tail_mass`; it never runs past `max_bins` bins and
     reports what was left as `grid.unresolved_mass`. `work_budget` caps the DP's work when `resolution`
     is not given (see the module docstring), and `max_coarse_bins` the most bins of the coarse grid (default `max_bins`).
+    With `resolve_quantiles` False a proper policy without inputs gets its exact odds, mean and variance and no budget DP:
+    the quantiles and the CVaR come back unresolved (infinite above, the first cost below), for a chain whose DP does
+    not fit in memory (the planner's packed route, ticket #374). With `packed_moments` the linear systems of the mean and the
+    variance are solved on packed arrays (the same numbers, certified; the object solver's sweeps are too slow on a stiff long chain).
     `free_cost` names the cost of the actions that are free (the planner's epsilon, `_free`): of a proper policy without inputs that holds
     such an action they are counted apart from the grid (see "Free actions" in the module docstring); `free_fallback_bins`, when given,
     is the `max_bins` of the ordinary and coarse grids if that is not possible. Without `free_cost` nothing changes.
@@ -185,7 +191,7 @@ def evaluate[S](
             raise ValueError(f"policy value for {state!r} must be an Action, got {chosen!r}")
 
     no_grid = GridInfo(0.0, True, 0, 0.0, 0.0)
-    chain = build_chain(policy, start, is_goal)
+    chain = build_chain(policy, start, is_goal, packed_moments)
     if chain.goal[0]:
         return RiskReport(
             Estimate(1.0, 1.0, 1.0), ZERO, ZERO, {x: ZERO for x in levels}, ZERO, cvar_level, no_grid
@@ -219,6 +225,8 @@ def evaluate[S](
             spread = SPREAD_SDS * math.sqrt(variance[0])
     if chain.has_inputs and _inputs.branching(chain):
         return _unordered_report(chain, (mean, variance) if proper else None, cvar_level, levels)
+    if proper and not chain.has_inputs and not resolve_quantiles:
+        return _unordered_report(chain, (mean, variance), cvar_level, levels)
     if free:
         apart = _free_report(
             chain, free, mean, variance, levels, cvar_level, tail_mass, max_bins, resolution, work_budget, horizon, spread
@@ -477,7 +485,7 @@ def _unordered_report(chain: Chain, moments, cvar_level: float, levels: Sequence
         cvar,
         cvar_level,
         unresolved,
-        _input_runs(chain),
+        _input_runs(chain) if chain.has_inputs else {},
     )
 
 

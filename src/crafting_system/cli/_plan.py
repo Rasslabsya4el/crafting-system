@@ -31,6 +31,8 @@ from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, free_action_cost, offers_for, price_offers, usable_actions
+from . import _packed
+from ._packed import SOLVERS, PackedResult, packed_result
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
 
@@ -101,6 +103,7 @@ class Plan:
     pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
     strands: StrandSetting = STRANDS_OFF  # whether Memory Strands were considered (ADR-0040); the report says so when not
     starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
+    packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
 
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
@@ -246,6 +249,7 @@ def make_plan(
     strands: bool = False,
     solve_it: bool = True,
     start_price_of: StartPrice | None = None,
+    solver: str = "auto",
     with_risk: bool = True,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
@@ -269,10 +273,19 @@ def make_plan(
     plan does not consider strands, as before; with either on, `PlanError` says the planner cannot plan with them yet
     (tickets of batch B5). `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
     not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the target's `start_price` name.
+
+    `solver` picks the exact solve (ticket #374, ADR-0063): "auto" (the default) walks the graph on packed arrays first and
+    solves it there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02), otherwise the
+    object solver solves it as it always did; "object" never packs; "packed" always does, and with 40 offers or more it
+    solves the offers left after the twins are merged, without the bound pruning (the cross-check of the two solvers).
+    The values are the same to the certificate; only the cost differs.
+
     With `with_risk` False the policy is solved but its risk (the p50, p90 and CVaR grid, which can take minutes where the solve takes
     seconds) is left out, `Plan.risk` is None, and `add_risk` fills it in later: the choice among start options compares the
     means and measures the risk of the one it keeps (ticket #331).
     """
+    if solver not in SOLVERS:
+        raise ValueError(f"solver must be one of {', '.join(SOLVERS)}, got {solver!r}")
     setting = strand_setting(target.start_item, asked=strands)
     if setting.on:
         raise PlanError(
@@ -362,12 +375,16 @@ def make_plan(
 
     began = time.perf_counter()
     pruned = None
-    if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
+    packed = None
+    many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
+    if many and solver != "packed":
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE)
         solution = pruned.solution
         left_out = (*left_out, *_pruned_left_out(pruned))
     else:
-        solution = solve(_Model(abstraction, start, priced), [start])
+        offered = tuple(merge_twins(data, target.start_item, priced)[0]) if many else priced
+        packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
+        solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
     solve_seconds = time.perf_counter() - began
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
         raise PlanError("no policy of the offered actions reaches the goal from the start item")
@@ -375,13 +392,41 @@ def make_plan(
     risk, risk_seconds = None, 0.0
     if with_risk:
         began = time.perf_counter()
-        risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
+        if packed is not None:
+            risk, note = packed_risk(packed, solution.values[start], free_action_cost(priced), note)
+        else:
+            risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
         risk_seconds = time.perf_counter() - began
 
     return Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out,
-        solution, risk, solve_seconds, risk_seconds, None, note, pruned,
+        solution, risk, solve_seconds, risk_seconds, None, note, pruned, packed=packed,
     )
+
+
+RISK_QUANTILE_TRANSITIONS = 2_000_000  # a merged chain with more transitions gets no quantile DP (ticket #374): the DP's entries outgrew 16 GB on R04's 4.7 M
+
+
+def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note: str) -> tuple[RiskReport, str]:
+    """The risk of a packed plan's policy, evaluated on its merged chain (same mean, odds and quantiles), and the plan's note.
+
+    A merged chain of more than `RISK_QUANTILE_TRANSITIONS` transitions gets its exact odds, mean and variance and no quantile grid,
+    and the note says so.
+    """
+    if _packed.PROGRESS is not None:
+        _packed.PROGRESS(f"solved: mean {mean!r}; evaluating the risk on the merged chain ({len(packed.risk_policy):,} classes)")
+    moves = sum(len(action.outcomes) for action in packed.risk_policy.values())
+    resolve = moves <= RISK_QUANTILE_TRANSITIONS
+    risk = evaluate_risk(
+        packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True
+    )
+    if not resolve:
+        note = (note + " " if note else "") + (
+            f"The p50, p90 and CVaR are not computed: the policy's merged chain has {moves:,} transitions, more than the "
+            f"{RISK_QUANTILE_TRANSITIONS:,} the budget DP of the risk run holds in memory (it ran out of a 16 GB runner on R04). "
+            "The odds, mean and variance are exact."
+        )
+    return risk, note
 
 
 def add_risk(plan: Plan) -> Plan:
@@ -389,9 +434,11 @@ def add_risk(plan: Plan) -> Plan:
     if plan.risk is not None or plan.approximation is not None:
         return plan
     began = time.perf_counter()
-    risk = evaluate_risk(
-        plan.solution.policy, plan.start, plan.abstraction.is_goal, plan.solution.values[plan.start], free_cost=free_action_cost(plan.offers)
-    )
+    free = free_action_cost(plan.offers)
+    if plan.packed is not None:
+        risk, note = packed_risk(plan.packed, plan.solution.values[plan.start], free, plan.note)
+        return replace(plan, risk=risk, note=note, risk_seconds=time.perf_counter() - began)
+    risk = evaluate_risk(plan.solution.policy, plan.start, plan.abstraction.is_goal, plan.solution.values[plan.start], free_cost=free)
     return replace(plan, risk=risk, risk_seconds=time.perf_counter() - began)
 
 
@@ -406,6 +453,9 @@ def evaluate_risk(
     is_goal: Callable[[CompressedState], bool],
     mean: float,
     free_cost: float | None = None,
+    *,
+    resolve_quantiles: bool = True,
+    packed_moments: bool = False,
 ) -> RiskReport:
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
 
@@ -423,11 +473,14 @@ def evaluate_risk(
     """
     cheapest = min((action.cost for action in policy.values()), default=0.0)
     bins = UNRESOLVED_BINS if 2 * RISK_BINS * cheapest < mean else RISK_BINS
+    extra: dict = {} if resolve_quantiles else {"resolve_quantiles": False}
+    if packed_moments:
+        extra["packed_moments"] = True
     if free_cost is None or not any(is_free_cost(action.cost, free_cost) for action in policy.values()):
-        return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS)
+        return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS, **extra)
     paid = min((action.cost for action in policy.values() if not is_free_cost(action.cost, free_cost)), default=0.0)
     apart = UNRESOLVED_BINS if 2 * RISK_BINS * paid < mean else RISK_BINS  # the grid is set by the actions that cost something
-    return evaluate(policy, start, is_goal, max_bins=apart, max_coarse_bins=COARSE_BINS, free_cost=free_cost, free_fallback_bins=bins)
+    return evaluate(policy, start, is_goal, max_bins=apart, max_coarse_bins=COARSE_BINS, free_cost=free_cost, free_fallback_bins=bins, **extra)
 
 
 def _pruned_left_out(pruned: Pruned) -> tuple[LeftOut, ...]:
