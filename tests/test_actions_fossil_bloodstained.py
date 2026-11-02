@@ -146,10 +146,6 @@ def test_the_kernel_equals_the_brute_force_of_the_fossil_times_the_implicit_case
     item = starts()[start]
     action = bloodstained(*others)
     ab = Abstraction(DATA, Goal(EXPLICIT, asks_corrupted=True), item.base_id, item.item_level, [action])
-    if start == "base-and-eldritch":  # the state holds the Eldritch pair only: a base implicit has no state until ticket #158
-        with pytest.raises(OutOfScopeError, match="base implicit"):
-            ab.compress(item)
-        return
     if refused(others, start):
         with pytest.raises(NotApplicableError):
             ab.kernel(ab.compress(item), action)
