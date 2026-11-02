@@ -9,6 +9,10 @@ Callers that price an item build the name with `base_price_name`.
 The currencies, Omens and beasts of the socket family (batch B6, ticket #228) are priced under the name the game data gives the item, which
 is also the name the actions of `actions/socket_orbs.py` and the claims `sockets.*_cost` use for what one use consumes. The constants below
 are those names, in one place for the price layer; `tests/test_actions_sockets_claims.py` holds them equal to the claims.
+
+Hinekora's Lock and the burn currencies (batch B8, ticket #295, ADR-0056) are priced under the same kind of name: `HINEKORAS_LOCK` is the Lock the plan buys and
+`BURN_PRICE_NAMES` the currencies that give one up. The fetcher asks for them by default (`FORESIGHT_PRICE_NAMES`, `prices.__main__`); poe.ninja lists the Lock and
+the orbs in its Currency overview and the oils in its Oil overview. `tests/test_prices_foresight.py` holds the names equal to the claims of the actions.
 """
 
 import re
@@ -44,6 +48,12 @@ SOCKET_PRICE_NAMES = (
     CRAICIC_SHIELD_CRAB,
     CRAICIC_SAND_SPITTER,
 )
+# Hinekora's Lock and its burns (ADR-0056): the Lock, the plain Chromatic Orb, the two quality currencies, the Blessed Orb and the oil of a re-anoint.
+HINEKORAS_LOCK = "Hinekora's Lock"
+BLESSED_ORB = "Blessed Orb"
+CLEAR_OIL = "Clear Oil"
+BURN_PRICE_NAMES = (CHROMATIC_ORB, BLACKSMITHS_WHETSTONE, ARMOURERS_SCRAP, BLESSED_ORB, CLEAR_OIL)
+FORESIGHT_PRICE_NAMES = (HINEKORAS_LOCK, *BURN_PRICE_NAMES)
 _BY_LOWER = {name.lower(): name for name in INFLUENCES}
 _NAME = re.compile(r"(?P<name>.+) \(ilvl (?P<level>\d+)(?:, (?P<influences>[A-Za-z/]+))?\)")
 

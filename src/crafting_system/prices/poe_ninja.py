@@ -1,4 +1,4 @@
-"""The poe.ninja exchange overviews: current prices of currency, fossils, resonators and essences (ADR-0007).
+"""The poe.ninja exchange overviews: current prices of currency, fossils, resonators, essences and oils (ADR-0007).
 
 The transport is injected as `get_json(url) -> parsed JSON`; `http_get_json` is the real one (`SourceError`
 is re-exported here for the callers that import both). Nothing here reads the clock. The fetch that
@@ -14,7 +14,7 @@ from .http_json import TIMEOUT_SECONDS, USER_AGENT, GetJson, SourceError, http_g
 from .price_file import is_price
 
 BASE_URL = "https://poe.ninja/poe1/api/economy"
-OVERVIEW_TYPES = ("Currency", "Fossil", "Resonator", "Essence")
+OVERVIEW_TYPES = ("Currency", "Fossil", "Resonator", "Essence", "Oil")  # the oils price a re-anoint, the burn of a ring or an amulet (ticket #295)
 SOURCE = "poe.ninja"
 HISTORY_SOURCE = "poe.ninja-history"
 

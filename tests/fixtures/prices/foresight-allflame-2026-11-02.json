@@ -1,0 +1,46 @@
+{
+  "chaos_per_divine": 399.04,
+  "fetched_at": "2026-11-02T12:00:00Z",
+  "league": "Allflame",
+  "prices": {
+    "Armourer's Scrap": {
+      "chaos": 0.08963,
+      "note": "poe.ninja exchange overview (Currency, Oil), Allflame, read 2026-11-02",
+      "source": "poe.ninja"
+    },
+    "Blacksmith's Whetstone": {
+      "chaos": 0.0372,
+      "note": "poe.ninja exchange overview (Currency, Oil), Allflame, read 2026-11-02",
+      "source": "poe.ninja"
+    },
+    "Blessed Orb": {
+      "chaos": 0.7849,
+      "note": "poe.ninja exchange overview (Currency, Oil), Allflame, read 2026-11-02",
+      "source": "poe.ninja"
+    },
+    "Chaos Orb": {
+      "chaos": 1.0,
+      "source": "poe.ninja"
+    },
+    "Chromatic Orb": {
+      "chaos": 2.71,
+      "note": "poe.ninja exchange overview (Currency, Oil), Allflame, read 2026-11-02",
+      "source": "poe.ninja"
+    },
+    "Clear Oil": {
+      "chaos": 0.2128,
+      "note": "poe.ninja exchange overview (Currency, Oil), Allflame, read 2026-11-02",
+      "source": "poe.ninja"
+    },
+    "Divine Orb": {
+      "chaos": 399.04,
+      "source": "poe.ninja"
+    },
+    "Hinekora's Lock": {
+      "chaos": 115483.0,
+      "note": "poe.ninja exchange overview (Currency, Oil), Allflame, read 2026-11-02",
+      "source": "poe.ninja"
+    }
+  },
+  "unit": "chaos"
+}

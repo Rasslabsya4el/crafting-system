@@ -29,6 +29,10 @@ colours cannot come from the forced rule), so it has no axis.
 independent roll conditioned on at least `minimum` non-white sockets (`sockets.bench_at_least_n_non_white_is_a_conditioned_roll`, `approximate`); they exclude no
 colours, and ask for at least `minimum` sockets. A craft is priced as its orb count times the orb price, by the names of the game data.
 
+**As a burn of Hinekora's Lock** (ticket #295, B8-3, ADR-0056): the plain Chromatic Orb declares `burn` (the Omen does not). It changes no mod and always changes the
+colours, so `burn_outcomes` is its `outcomes` with one white socket assumed when the item states none (`burn.chromatic_socket_assumption`, `approximate`, listed
+by `burn_claims`, not by `claims`); `burn_refusal` is the same refusals without rolling.
+
 **Prices.** The Chromatic Orb and the Omen are priced by the name the game data gives them (`sockets.chromatic_orb_cost`, `sockets.omen_of_trichromatism_cost`;
 `prices.price_names` holds the same names). **Memory Strands** (ADR-0041): none draws mods or spends strands, so each declares `StrandUse.untouched`.
 """
@@ -41,11 +45,11 @@ from fractions import Fraction
 from functools import cache
 
 from crafting_system.data import BenchOption, GameData
-from crafting_system.items import Item, PlainQuality, SocketColour, Sockets
+from crafting_system.items import Item, PlainQuality, SocketColour, Sockets, class_maximum
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Axis, Reading, Reads
+from .contract import Action, Adds, Axis, BurnKeeps, Reading, Reads
 from .errors import NotApplicableError, OutOfScopeError
 from .socket_orbs import SocketOutcomes, _accept, _cost, _offered, _outcomes
 from .strand_use import CUT_FOLLOWS_SPEND_TABLE, NOT_SPENT_BY, StrandUse
@@ -77,6 +81,7 @@ BENCH_CONDITIONED_ROLL = get_rule("sockets.bench_at_least_n_non_white_is_a_condi
 BENCH_ON_CORRUPTED_COSTS_VAAL = get_rule("sockets.bench_on_corrupted_costs_vaal")
 CHROMATIC_ORB_COST = get_rule("sockets.chromatic_orb_cost")
 OMEN_OF_TRICHROMATISM_COST = get_rule("sockets.omen_of_trichromatism_cost")
+BURN_SOCKET_ASSUMPTION = get_rule("burn.chromatic_socket_assumption")
 
 ONE = Fraction(1)
 COLOURS = (SocketColour.RED, SocketColour.GREEN, SocketColour.BLUE)  # strength, dexterity, intelligence
@@ -235,6 +240,41 @@ class ChromaticOrb(Action):
         """The forced socket's colour has a second reading; the Omen's roll never forces one (three colours cannot come from it), so it has none."""
         return () if self.omen else (CHROMATIC_FORCED_COLOUR,)
 
+    def burn(self, data: GameData | None = None) -> bool:
+        """The plain Chromatic Orb is a burn of Hinekora's Lock (ADR-0056): it changes no mod and always changes the colours; the Omen is a dearer use of it."""
+        return not self.omen
+
+    def burn_claims(self, data: GameData | None = None) -> frozenset[str]:
+        """The socket assumption of the burn (`burn.chromatic_socket_assumption`, approximate), listed on any answer that burns with a Chromatic Orb."""
+        return frozenset({BURN_SOCKET_ASSUMPTION.id}) if self.burn(data) else frozenset()
+
+    def _burn_item(self, data: GameData, item: Item) -> Item:
+        """`item` as the burn sees it: one that states no sockets counts as having one white socket, for the burn only (`burn.chromatic_socket_assumption`).
+
+        A real base of a socketed class always has a socket. A corrupted item and a class with no socket table are left as they are, and refused.
+        """
+        base = data.base_items.get(item.base_id)
+        if item.sockets is not None or item.corrupted or base is None or class_maximum(base) is None:
+            return item
+        return item.changed(data, sockets=Sockets.unlinked((SocketColour.WHITE,)))
+
+    def burn_refusal(self, data: GameData, item: Item, keeps: BurnKeeps) -> str | None:
+        """The refusals of the Chromatic Orb on the item with the assumed socket, without rolling it: a corrupted item, a class with no sockets, an
+        Abyssal Socket, and a base that asks for no attribute. The Omen is no burn."""
+        if not self.burn(data):
+            return f"{self.label(data)} is not a burn"
+        try:
+            _accept(data, self._burn_item(data, item), "Chromatic Orb")
+        except (NotApplicableError, OutOfScopeError) as refusal:
+            return str(refusal)
+        if not any(data.base_items[item.base_id].attribute_requirements):
+            return "the base asks for no attribute, and no admitted rule weights the colours of its sockets (ADR-0047)"
+        return None
+
+    def burn_outcomes(self, data: GameData, item: Item, reading: Reading | None = None) -> ColourOutcomes:
+        """The colours the burn leaves: the Chromatic Orb on `item`, with one white socket assumed when the item states none."""
+        return self.outcomes_under(data, self._burn_item(data, item), reading)  # type: ignore[return-value]
+
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         found = {
             CLASS_MAXIMUM, NONWHITE_CHANCE, NATURAL_COLOUR_WEIGHTS, COLOUR_BY_REQUIREMENTS, NEVER_REPEATS, IGNORES_REQUIREMENT_MODS, CHROMATIC_ORB_COST,
@@ -325,7 +365,15 @@ def _minimum_of(option: BenchOption) -> int | None:
     return len(text) if text and set(text) == {"N"} else None
 
 
-@kind("chromatic-orb", order=104, planner=False, why_not=WHY_NOT_PLANNER, applies_only_to="weapon and armour", reads_item_state_while_not_planner="quality")
+@kind(
+    "chromatic-orb",
+    order=104,
+    planner=False,
+    why_not=WHY_NOT_PLANNER,
+    applies_only_to="weapon and armour",
+    reads_item_state_while_not_planner="quality",
+    burns=True,  # the plain orb is a burn (ticket #295)
+)
 def _chromatic_orb(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)
     if base is not None and base.item_class in CLASS_MAXIMUM.value["by_class"]:

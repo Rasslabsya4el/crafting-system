@@ -1,534 +1,1438 @@
 {
  "tests/test_abstraction_amulet.py": {
-  "seconds": 11.711,
+  "seconds": 14.441,
   "tests": 16
  },
- "tests/test_abstraction_b1.py": {
-  "seconds": 0.406,
-  "tests": 34
+ "tests/test_abstraction_assembly.py": {
+  "seconds": 1.252,
+  "tests": 15
  },
- "tests/test_abstraction_b1_real.py": {
-  "seconds": 8.258,
-  "tests": 27
- },
- "tests/test_abstraction_cache.py": {
-  "seconds": 2.115,
-  "tests": 23
- },
- "tests/test_abstraction_coarse.py": {
-  "seconds": 14.711,
-  "tests": 73
- },
- "tests/test_abstraction_coarse_real.py": {
-  "seconds": 180.568,
+ "tests/test_abstraction_assembly.py[both#0]": {
+  "seconds": 6.516,
   "tests": 4
  },
+ "tests/test_abstraction_assembly.py[both#1]": {
+  "seconds": 43.774,
+  "tests": 4
+ },
+ "tests/test_abstraction_assembly.py[both#2]": {
+  "seconds": 1.177,
+  "tests": 4
+ },
+ "tests/test_abstraction_assembly.py[both#3]": {
+  "seconds": 4.787,
+  "tests": 4
+ },
+ "tests/test_abstraction_awakener.py": {
+  "seconds": 20.791,
+  "tests": 11
+ },
+ "tests/test_abstraction_b1.py": {
+  "seconds": 0.897,
+  "tests": 36
+ },
+ "tests/test_abstraction_b1_real.py": {
+  "seconds": 7.002,
+  "tests": 27
+ },
+ "tests/test_abstraction_b2_real.py": {
+  "seconds": 15.149,
+  "tests": 15
+ },
+ "tests/test_abstraction_beasts.py": {
+  "seconds": 9.965,
+  "tests": 18
+ },
+ "tests/test_abstraction_bound.py": {
+  "seconds": 54.453,
+  "tests": 53
+ },
+ "tests/test_abstraction_cache.py": {
+  "seconds": 3.655,
+  "tests": 22
+ },
+ "tests/test_abstraction_cache_exactness.py": {
+  "seconds": 2.891,
+  "tests": 38
+ },
+ "tests/test_abstraction_coarse.py": {
+  "seconds": 24.322,
+  "tests": 75
+ },
+ "tests/test_abstraction_coarse_real.py": {
+  "seconds": 279.812,
+  "tests": 4
+ },
+ "tests/test_abstraction_coarse_tail.py": {
+  "seconds": 15.235,
+  "tests": 10
+ },
+ "tests/test_abstraction_coarse_tail_real.py": {
+  "seconds": 92.35,
+  "tests": 2
+ },
+ "tests/test_abstraction_dominance.py": {
+  "seconds": 2.118,
+  "tests": 15
+ },
+ "tests/test_abstraction_dominance_real.py": {
+  "seconds": 8.425,
+  "tests": 3
+ },
+ "tests/test_abstraction_eldritch.py": {
+  "seconds": 24.204,
+  "tests": 24
+ },
+ "tests/test_abstraction_estimate.py": {
+  "seconds": 36.191,
+  "tests": 182
+ },
  "tests/test_abstraction_fossil.py": {
-  "seconds": 18.08,
+  "seconds": 32.553,
   "tests": 59
  },
  "tests/test_abstraction_fossil_real.py": {
-  "seconds": 13.795,
+  "seconds": 17.939,
   "tests": 12
  },
+ "tests/test_abstraction_fracture.py": {
+  "seconds": 7.393,
+  "tests": 114
+ },
  "tests/test_abstraction_goal.py": {
-  "seconds": 0.007,
+  "seconds": 0.008,
   "tests": 14
  },
+ "tests/test_abstraction_harvest_b2.py": {
+  "seconds": 10.626,
+  "tests": 17
+ },
+ "tests/test_abstraction_harvest_reforges.py": {
+  "seconds": 13.03,
+  "tests": 115
+ },
+ "tests/test_abstraction_implicit_rolls.py": {
+  "seconds": 5.609,
+  "tests": 28
+ },
+ "tests/test_abstraction_influence.py": {
+  "seconds": 4.323,
+  "tests": 106
+ },
+ "tests/test_abstraction_item_state.py": {
+  "seconds": 2.514,
+  "tests": 34
+ },
  "tests/test_abstraction_kernel.py": {
-  "seconds": 3.481,
-  "tests": 136
+  "seconds": 5.386,
+  "tests": 132
  },
  "tests/test_abstraction_magic.py": {
-  "seconds": 1.897,
+  "seconds": 1.179,
   "tests": 91
  },
  "tests/test_abstraction_magic_real.py": {
-  "seconds": 22.207,
+  "seconds": 8.715,
   "tests": 12
  },
+ "tests/test_abstraction_metamod_oracle.py": {
+  "seconds": 8.001,
+  "tests": 101
+ },
+ "tests/test_abstraction_metamods.py": {
+  "seconds": 22.593,
+  "tests": 169
+ },
  "tests/test_abstraction_oracle.py": {
-  "seconds": 2.026,
+  "seconds": 2.54,
   "tests": 56
  },
+ "tests/test_abstraction_quality.py": {
+  "seconds": 0.332,
+  "tests": 13
+ },
  "tests/test_abstraction_real.py": {
-  "seconds": 6.751,
+  "seconds": 7.686,
   "tests": 8
  },
+ "tests/test_abstraction_recombinator.py": {
+  "seconds": 10.231,
+  "tests": 83
+ },
+ "tests/test_abstraction_removals.py": {
+  "seconds": 1.149,
+  "tests": 147
+ },
+ "tests/test_abstraction_removals_real.py": {
+  "seconds": 2.835,
+  "tests": 3
+ },
+ "tests/test_abstraction_removals_real.py[case#0]": {
+  "seconds": 8.189,
+  "tests": 36
+ },
+ "tests/test_abstraction_removals_real.py[case#1]": {
+  "seconds": 12.605,
+  "tests": 36
+ },
+ "tests/test_abstraction_removals_real.py[case#2]": {
+  "seconds": 5.22,
+  "tests": 36
+ },
+ "tests/test_abstraction_removals_real.py[plain_case#0]": {
+  "seconds": 5.694,
+  "tests": 8
+ },
+ "tests/test_abstraction_removals_real.py[plain_case#1]": {
+  "seconds": 8.917,
+  "tests": 8
+ },
+ "tests/test_abstraction_rolls.py": {
+  "seconds": 5.947,
+  "tests": 289
+ },
+ "tests/test_abstraction_rolls_real.py": {
+  "seconds": 15.721,
+  "tests": 6
+ },
  "tests/test_abstraction_smoke.py": {
-  "seconds": 0.211,
+  "seconds": 0.361,
   "tests": 10
  },
  "tests/test_abstraction_state.py": {
-  "seconds": 0.017,
+  "seconds": 0.168,
   "tests": 27
  },
+ "tests/test_abstraction_variants.py": {
+  "seconds": 2.329,
+  "tests": 32
+ },
+ "tests/test_abstraction_variants_real.py": {
+  "seconds": 5.207,
+  "tests": 7
+ },
+ "tests/test_abstraction_veiled.py": {
+  "seconds": 11.188,
+  "tests": 27
+ },
+ "tests/test_abstraction_veiled_real.py": {
+  "seconds": 2.244,
+  "tests": 5
+ },
  "tests/test_actions_annul.py": {
-  "seconds": 0.071,
+  "seconds": 0.124,
   "tests": 23
  },
+ "tests/test_actions_awakener.py": {
+  "seconds": 18.551,
+  "tests": 37
+ },
+ "tests/test_actions_awakener_real.py": {
+  "seconds": 6.091,
+  "tests": 5
+ },
+ "tests/test_actions_awakener_strands.py": {
+  "seconds": 2.995,
+  "tests": 26
+ },
+ "tests/test_actions_beast_mods.py": {
+  "seconds": 0.767,
+  "tests": 52
+ },
+ "tests/test_actions_beast_mods_real.py": {
+  "seconds": 3.675,
+  "tests": 11
+ },
+ "tests/test_actions_beasts_aspects.py": {
+  "seconds": 1.228,
+  "tests": 51
+ },
+ "tests/test_actions_beasts_real.py": {
+  "seconds": 2.992,
+  "tests": 20
+ },
+ "tests/test_actions_beasts_talisman.py": {
+  "seconds": 0.64,
+  "tests": 56
+ },
  "tests/test_actions_bench.py": {
-  "seconds": 0.041,
+  "seconds": 0.036,
   "tests": 40
  },
  "tests/test_actions_bench_real.py": {
-  "seconds": 1.838,
+  "seconds": 2.201,
   "tests": 15
  },
- "tests/test_actions_chance.py": {
-  "seconds": 4.027,
-  "tests": 22
+ "tests/test_actions_blessed.py": {
+  "seconds": 2.413,
+  "tests": 24
  },
- "tests/test_actions_contract.py": {
-  "seconds": 20.105,
-  "tests": 165
- },
- "tests/test_actions_distribution.py": {
-  "seconds": 3.22,
-  "tests": 20
- },
- "tests/test_actions_essence.py": {
-  "seconds": 5.909,
-  "tests": 173
- },
- "tests/test_actions_essence_real.py": {
-  "seconds": 16.897,
-  "tests": 13
- },
- "tests/test_actions_exalted.py": {
-  "seconds": 0.015,
-  "tests": 16
- },
- "tests/test_actions_fossil.py": {
-  "seconds": 77.062,
-  "tests": 76
- },
- "tests/test_actions_fossil_real.py": {
-  "seconds": 9.91,
-  "tests": 6
- },
- "tests/test_actions_fracture.py": {
-  "seconds": 0.094,
-  "tests": 25
- },
- "tests/test_actions_influence.py": {
-  "seconds": 0.256,
-  "tests": 22
- },
- "tests/test_actions_magic.py": {
-  "seconds": 3.269,
-  "tests": 38
- },
- "tests/test_actions_magic_real.py": {
-  "seconds": 4.421,
-  "tests": 17
- },
- "tests/test_actions_magic_refusals.py": {
-  "seconds": 0.038,
-  "tests": 55
- },
- "tests/test_actions_no_concrete_imports.py": {
-  "seconds": 0.57,
-  "tests": 5
- },
- "tests/test_actions_pool.py": {
-  "seconds": 0.013,
-  "tests": 14
- },
- "tests/test_actions_rare_orbs_real.py": {
-  "seconds": 1.914,
-  "tests": 9
- },
- "tests/test_actions_refusals.py": {
-  "seconds": 0.028,
-  "tests": 32
- },
- "tests/test_actions_sampler.py": {
-  "seconds": 8.716,
-  "tests": 17
- },
- "tests/test_actions_scour.py": {
-  "seconds": 0.009,
-  "tests": 11
- },
- "tests/test_actions_toy.py": {
-  "seconds": 0.38,
-  "tests": 10
- },
- "tests/test_ci_summary.py": {
-  "seconds": 0.129,
-  "tests": 8
- },
- "tests/test_cli_benchmark.py": {
-  "seconds": 1.528,
-  "tests": 14
- },
- "tests/test_cli_offers.py": {
-  "seconds": 0.316,
-  "tests": 12
- },
- "tests/test_cli_plan.py": {
-  "seconds": 0.457,
-  "tests": 11
- },
- "tests/test_cli_reach.py": {
+ "tests/test_actions_blessed_catalyst_strands.py": {
   "seconds": 0.006,
-  "tests": 6
+  "tests": 4
  },
- "tests/test_cli_real.py": {
-  "seconds": 22.09,
-  "tests": 7
+ "tests/test_actions_catalyst.py": {
+  "seconds": 7.902,
+  "tests": 152
  },
- "tests/test_cli_route.py": {
-  "seconds": 5.672,
-  "tests": 46
+ "tests/test_actions_chance.py": {
+  "seconds": 4.092,
+  "tests": 22
  },
- "tests/test_cli_route_card.py": {
-  "seconds": 3.725,
-  "tests": 55
- },
- "tests/test_cli_route_flow.py": {
-  "seconds": 0.749,
-  "tests": 34
- },
- "tests/test_cli_route_trade.py": {
-  "seconds": 0.005,
-  "tests": 7
- },
- "tests/test_cli_route_view.py": {
-  "seconds": 2.141,
-  "tests": 71
- },
- "tests/test_cli_routes_real.py[solved#0]": {
-  "seconds": 180.976,
-  "tests": 12
- },
- "tests/test_cli_routes_real.py[solved#1]": {
-  "seconds": 77.336,
-  "tests": 12
- },
- "tests/test_cli_routes_real.py[solved#2]": {
-  "seconds": 385.626,
-  "tests": 12
- },
- "tests/test_cli_verify.py": {
-  "seconds": 81.287,
-  "tests": 9
- },
- "tests/test_config.py": {
-  "seconds": 0.212,
-  "tests": 44
- },
- "tests/test_data_candidate.py": {
-  "seconds": 0.416,
-  "tests": 35
- },
- "tests/test_data_cli.py": {
-  "seconds": 0.293,
-  "tests": 20
- },
- "tests/test_data_diff.py": {
-  "seconds": 0.427,
-  "tests": 26
- },
- "tests/test_data_diff_cli.py": {
-  "seconds": 2.039,
-  "tests": 46
- },
- "tests/test_data_families.py": {
-  "seconds": 0.007,
-  "tests": 11
- },
- "tests/test_data_fetch.py": {
-  "seconds": 0.651,
-  "tests": 121
- },
- "tests/test_data_impact.py": {
-  "seconds": 0.284,
-  "tests": 32
- },
- "tests/test_data_malformed.py": {
-  "seconds": 0.254,
-  "tests": 76
- },
- "tests/test_data_normalize.py": {
-  "seconds": 0.019,
-  "tests": 27
- },
- "tests/test_data_pin.py": {
-  "seconds": 0.653,
-  "tests": 61
- },
- "tests/test_data_resolve.py": {
-  "seconds": 0.418,
-  "tests": 74
- },
- "tests/test_gitignore.py": {
-  "seconds": 0.209,
-  "tests": 8
- },
- "tests/test_items_build.py": {
-  "seconds": 0.015,
-  "tests": 23
- },
- "tests/test_items_capacity.py": {
-  "seconds": 0.009,
-  "tests": 19
- },
- "tests/test_items_families.py": {
-  "seconds": 0.005,
-  "tests": 10
- },
- "tests/test_items_spawn.py": {
-  "seconds": 0.003,
-  "tests": 6
- },
- "tests/test_items_tiers.py": {
-  "seconds": 0.024,
-  "tests": 31
- },
- "tests/test_items_updates.py": {
-  "seconds": 0.011,
-  "tests": 17
- },
- "tests/test_items_validate.py": {
-  "seconds": 0.009,
-  "tests": 18
- },
- "tests/test_layering.py": {
-  "seconds": 0.443,
-  "tests": 41
- },
- "tests/test_no_absolute_paths.py": {
-  "seconds": 1.505,
-  "tests": 153
- },
- "tests/test_no_timing.py": {
-  "seconds": 0.867,
-  "tests": 29
- },
- "tests/test_prices_cli.py": {
-  "seconds": 0.061,
-  "tests": 12
- },
- "tests/test_prices_fallback_cli.py": {
-  "seconds": 1.706,
-  "tests": 10
- },
- "tests/test_prices_fetch_chain.py": {
-  "seconds": 0.044,
-  "tests": 19
- },
- "tests/test_prices_file.py": {
-  "seconds": 0.176,
-  "tests": 73
- },
- "tests/test_prices_leftovers.py": {
-  "seconds": 0.084,
-  "tests": 21
- },
- "tests/test_prices_network_guard.py": {
-  "seconds": 0.413,
-  "tests": 3
- },
- "tests/test_prices_ninja_history.py": {
+ "tests/test_actions_claims.py": {
   "seconds": 0.004,
   "tests": 6
  },
+ "tests/test_actions_contract.py": {
+  "seconds": 527.364,
+  "tests": 2079
+ },
+ "tests/test_actions_corrupted_pool.py": {
+  "seconds": 0.009,
+  "tests": 20
+ },
+ "tests/test_actions_corrupted_pool_real.py": {
+  "seconds": 2.201,
+  "tests": 91
+ },
+ "tests/test_actions_corrupting_toy.py": {
+  "seconds": 0.841,
+  "tests": 31
+ },
+ "tests/test_actions_corruption.py": {
+  "seconds": 14.564,
+  "tests": 57
+ },
+ "tests/test_actions_distribution.py": {
+  "seconds": 2.583,
+  "tests": 20
+ },
+ "tests/test_actions_divine.py": {
+  "seconds": 0.365,
+  "tests": 21
+ },
+ "tests/test_actions_dominance.py": {
+  "seconds": 0.026,
+  "tests": 24
+ },
+ "tests/test_actions_eldritch.py": {
+  "seconds": 4.253,
+  "tests": 125
+ },
+ "tests/test_actions_eldritch_real.py": {
+  "seconds": 4.966,
+  "tests": 18
+ },
+ "tests/test_actions_eldritch_strands.py": {
+  "seconds": 0.014,
+  "tests": 14
+ },
+ "tests/test_actions_enchant.py": {
+  "seconds": 2.715,
+  "tests": 34
+ },
+ "tests/test_actions_enchantment_decl.py": {
+  "seconds": 0.183,
+  "tests": 17
+ },
+ "tests/test_actions_essence.py": {
+  "seconds": 8.021,
+  "tests": 174
+ },
+ "tests/test_actions_essence_real.py": {
+  "seconds": 15.88,
+  "tests": 13
+ },
+ "tests/test_actions_exalted.py": {
+  "seconds": 0.028,
+  "tests": 16
+ },
+ "tests/test_actions_foresight.py": {
+  "seconds": 0.251,
+  "tests": 34
+ },
+ "tests/test_actions_fossil.py": {
+  "seconds": 84.398,
+  "tests": 78
+ },
+ "tests/test_actions_fossil_bloodstained.py": {
+  "seconds": 83.41,
+  "tests": 240
+ },
+ "tests/test_actions_fossil_bloodstained_contract.py": {
+  "seconds": 96.874,
+  "tests": 16
+ },
+ "tests/test_actions_fossil_bloodstained_real.py": {
+  "seconds": 64.882,
+  "tests": 7
+ },
+ "tests/test_actions_fossil_real.py": {
+  "seconds": 8.191,
+  "tests": 6
+ },
+ "tests/test_actions_fossil_unchanged.py": {
+  "seconds": 39.044,
+  "tests": 2
+ },
+ "tests/test_actions_foulborn.py": {
+  "seconds": 7.925,
+  "tests": 45
+ },
+ "tests/test_actions_fracture.py": {
+  "seconds": 0.08,
+  "tests": 26
+ },
+ "tests/test_actions_harvest_augment.py": {
+  "seconds": 0.19,
+  "tests": 76
+ },
+ "tests/test_actions_harvest_augment_real.py": {
+  "seconds": 2.617,
+  "tests": 21
+ },
+ "tests/test_actions_harvest_locked_real.py": {
+  "seconds": 3.628,
+  "tests": 19
+ },
+ "tests/test_actions_harvest_quality.py": {
+  "seconds": 0.044,
+  "tests": 55
+ },
+ "tests/test_actions_harvest_quality_real.py": {
+  "seconds": 2.83,
+  "tests": 3
+ },
+ "tests/test_actions_harvest_reforges.py": {
+  "seconds": 6.255,
+  "tests": 100
+ },
+ "tests/test_actions_harvest_reforges_real.py": {
+  "seconds": 3.284,
+  "tests": 23
+ },
+ "tests/test_actions_harvest_swap.py": {
+  "seconds": 0.372,
+  "tests": 101
+ },
+ "tests/test_actions_imprint.py": {
+  "seconds": 1.031,
+  "tests": 32
+ },
+ "tests/test_actions_influence.py": {
+  "seconds": 0.647,
+  "tests": 23
+ },
+ "tests/test_actions_influence_orbs.py": {
+  "seconds": 0.031,
+  "tests": 26
+ },
+ "tests/test_actions_influence_real.py": {
+  "seconds": 11.723,
+  "tests": 13
+ },
+ "tests/test_actions_influence_strands.py": {
+  "seconds": 0.024,
+  "tests": 22
+ },
+ "tests/test_actions_inputs.py": {
+  "seconds": 280.213,
+  "tests": 27
+ },
+ "tests/test_actions_item_state.py": {
+  "seconds": 1.395,
+  "tests": 38
+ },
+ "tests/test_actions_jewels.py": {
+  "seconds": 12.436,
+  "tests": 98
+ },
+ "tests/test_actions_magic.py": {
+  "seconds": 5.398,
+  "tests": 38
+ },
+ "tests/test_actions_magic_real.py": {
+  "seconds": 2.89,
+  "tests": 17
+ },
+ "tests/test_actions_magic_refusals.py": {
+  "seconds": 0.09,
+  "tests": 60
+ },
+ "tests/test_actions_metamods.py": {
+  "seconds": 54.989,
+  "tests": 62
+ },
+ "tests/test_actions_metamods_real.py": {
+  "seconds": 2.0,
+  "tests": 5
+ },
+ "tests/test_actions_metamods_reforges.py": {
+  "seconds": 1.979,
+  "tests": 78
+ },
+ "tests/test_actions_new_family.py": {
+  "seconds": 2.664,
+  "tests": 9
+ },
+ "tests/test_actions_no_concrete_imports.py": {
+  "seconds": 1.725,
+  "tests": 5
+ },
+ "tests/test_actions_opt_in.py": {
+  "seconds": 0.006,
+  "tests": 5
+ },
+ "tests/test_actions_pool.py": {
+  "seconds": 0.015,
+  "tests": 14
+ },
+ "tests/test_actions_pool_cut.py": {
+  "seconds": 0.859,
+  "tests": 39
+ },
+ "tests/test_actions_pool_cut_real.py": {
+  "seconds": 7.744,
+  "tests": 79
+ },
+ "tests/test_actions_quality_currency.py": {
+  "seconds": 2.152,
+  "tests": 30
+ },
+ "tests/test_actions_rare_orbs_real.py": {
+  "seconds": 2.187,
+  "tests": 9
+ },
+ "tests/test_actions_recombinator.py": {
+  "seconds": 33.55,
+  "tests": 77
+ },
+ "tests/test_actions_recombinator_bounds.py": {
+  "seconds": 0.002,
+  "tests": 4
+ },
+ "tests/test_actions_recombinator_cost.py": {
+  "seconds": 2.436,
+  "tests": 29
+ },
+ "tests/test_actions_refusals.py": {
+  "seconds": 0.023,
+  "tests": 32
+ },
+ "tests/test_actions_sampler.py": {
+  "seconds": 7.712,
+  "tests": 17
+ },
+ "tests/test_actions_sanctified.py": {
+  "seconds": 0.816,
+  "tests": 9
+ },
+ "tests/test_actions_scour.py": {
+  "seconds": 0.007,
+  "tests": 11
+ },
+ "tests/test_actions_sockets.py": {
+  "seconds": 42.276,
+  "tests": 141
+ },
+ "tests/test_actions_sockets_claims.py": {
+  "seconds": 0.007,
+  "tests": 13
+ },
+ "tests/test_actions_sockets_colour.py": {
+  "seconds": 39.433,
+  "tests": 92
+ },
+ "tests/test_actions_sockets_colour_real.py": {
+  "seconds": 3.431,
+  "tests": 6
+ },
+ "tests/test_actions_sockets_real.py": {
+  "seconds": 2.482,
+  "tests": 7
+ },
+ "tests/test_actions_strand_use.py": {
+  "seconds": 0.198,
+  "tests": 38
+ },
+ "tests/test_actions_toy.py": {
+  "seconds": 0.48,
+  "tests": 10
+ },
+ "tests/test_actions_twin_key.py": {
+  "seconds": 47.477,
+  "tests": 14
+ },
+ "tests/test_actions_two_sided_families.py": {
+  "seconds": 1.67,
+  "tests": 54
+ },
+ "tests/test_actions_veiled.py": {
+  "seconds": 10.976,
+  "tests": 64
+ },
+ "tests/test_actions_veiled_real.py": {
+  "seconds": 2.918,
+  "tests": 13
+ },
+ "tests/test_actions_veiled_strands.py": {
+  "seconds": 0.315,
+  "tests": 20
+ },
+ "tests/test_b1_unchanged.py": {
+  "seconds": 13.586,
+  "tests": 7
+ },
+ "tests/test_ci_summary.py": {
+  "seconds": 0.131,
+  "tests": 10
+ },
+ "tests/test_cli_approximate.py": {
+  "seconds": 9.659,
+  "tests": 32
+ },
+ "tests/test_cli_approximate_inputs.py": {
+  "seconds": 0.146,
+  "tests": 16
+ },
+ "tests/test_cli_approximate_real.py": {
+  "seconds": 29.72,
+  "tests": 3
+ },
+ "tests/test_cli_approximate_variants.py": {
+  "seconds": 3.618,
+  "tests": 49
+ },
+ "tests/test_cli_beasts_harvest.py": {
+  "seconds": 0.018,
+  "tests": 4
+ },
+ "tests/test_cli_benchmark.py": {
+  "seconds": 2.082,
+  "tests": 14
+ },
+ "tests/test_cli_decide.py": {
+  "seconds": 1.544,
+  "tests": 21
+ },
+ "tests/test_cli_donors.py": {
+  "seconds": 0.053,
+  "tests": 9
+ },
+ "tests/test_cli_free_actions.py": {
+  "seconds": 0.303,
+  "tests": 16
+ },
+ "tests/test_cli_harvest_reforges.py": {
+  "seconds": 0.628,
+  "tests": 6
+ },
+ "tests/test_cli_interval.py": {
+  "seconds": 0.383,
+  "tests": 17
+ },
+ "tests/test_cli_jewel_real.py": {
+  "seconds": 10.179,
+  "tests": 7
+ },
+ "tests/test_cli_offers.py": {
+  "seconds": 0.81,
+  "tests": 21
+ },
+ "tests/test_cli_offers_divine.py": {
+  "seconds": 0.013,
+  "tests": 7
+ },
+ "tests/test_cli_parallel.py": {
+  "seconds": 4.033,
+  "tests": 5
+ },
+ "tests/test_cli_parallel_real.py": {
+  "seconds": 114.94,
+  "tests": 2
+ },
+ "tests/test_cli_plan.py": {
+  "seconds": 1.227,
+  "tests": 17
+ },
+ "tests/test_cli_r04_r14_real.py": {
+  "seconds": 1.466,
+  "tests": 1
+ },
+ "tests/test_cli_r04_r14_real.py[route_id#0]": {
+  "seconds": 19.409,
+  "tests": 8
+ },
+ "tests/test_cli_r04_r14_real.py[route_id#1]": {
+  "seconds": 13.483,
+  "tests": 8
+ },
+ "tests/test_cli_r08_r09_real.py[route#0]": {
+  "seconds": 275.444,
+  "tests": 6
+ },
+ "tests/test_cli_r08_r09_real.py[route#1]": {
+  "seconds": 258.173,
+  "tests": 6
+ },
+ "tests/test_cli_r13_real.py": {
+  "seconds": 185.623,
+  "tests": 8
+ },
+ "tests/test_cli_reach.py": {
+  "seconds": 0.005,
+  "tests": 6
+ },
+ "tests/test_cli_real.py": {
+  "seconds": 36.805,
+  "tests": 7
+ },
+ "tests/test_cli_risk_cut.py": {
+  "seconds": 0.293,
+  "tests": 4
+ },
+ "tests/test_cli_roll_real.py": {
+  "seconds": 388.835,
+  "tests": 4
+ },
+ "tests/test_cli_route.py": {
+  "seconds": 6.104,
+  "tests": 48
+ },
+ "tests/test_cli_route_card.py": {
+  "seconds": 3.979,
+  "tests": 55
+ },
+ "tests/test_cli_route_card_b2.py": {
+  "seconds": 0.013,
+  "tests": 26
+ },
+ "tests/test_cli_route_flow.py": {
+  "seconds": 0.893,
+  "tests": 34
+ },
+ "tests/test_cli_route_golden_b2.py": {
+  "seconds": 0.026,
+  "tests": 2
+ },
+ "tests/test_cli_route_trade.py": {
+  "seconds": 0.006,
+  "tests": 7
+ },
+ "tests/test_cli_route_view.py": {
+  "seconds": 4.063,
+  "tests": 71
+ },
+ "tests/test_cli_routes_real.py[solved#0]": {
+  "seconds": 82.01,
+  "tests": 12
+ },
+ "tests/test_cli_routes_real.py[solved#1]": {
+  "seconds": 90.21,
+  "tests": 12
+ },
+ "tests/test_cli_routes_real.py[solved#2]": {
+  "seconds": 62.454,
+  "tests": 12
+ },
+ "tests/test_cli_verify.py": {
+  "seconds": 115.806,
+  "tests": 9
+ },
+ "tests/test_cli_verify_approximate.py": {
+  "seconds": 67.59,
+  "tests": 18
+ },
+ "tests/test_coe_emulator_record.py": {
+  "seconds": 2.857,
+  "tests": 6
+ },
+ "tests/test_config.py": {
+  "seconds": 0.164,
+  "tests": 76
+ },
+ "tests/test_corruption_claims.py": {
+  "seconds": 0.766,
+  "tests": 55
+ },
+ "tests/test_crafted_slot.py": {
+  "seconds": 0.167,
+  "tests": 27
+ },
+ "tests/test_data_candidate.py": {
+  "seconds": 0.222,
+  "tests": 35
+ },
+ "tests/test_data_cli.py": {
+  "seconds": 0.189,
+  "tests": 20
+ },
+ "tests/test_data_diff.py": {
+  "seconds": 0.63,
+  "tests": 26
+ },
+ "tests/test_data_diff_cli.py": {
+  "seconds": 2.688,
+  "tests": 46
+ },
+ "tests/test_data_elevated.py": {
+  "seconds": 0.035,
+  "tests": 11
+ },
+ "tests/test_data_families.py": {
+  "seconds": 0.004,
+  "tests": 11
+ },
+ "tests/test_data_fetch.py": {
+  "seconds": 0.445,
+  "tests": 121
+ },
+ "tests/test_data_impact.py": {
+  "seconds": 0.922,
+  "tests": 32
+ },
+ "tests/test_data_malformed.py": {
+  "seconds": 0.171,
+  "tests": 76
+ },
+ "tests/test_data_normalize.py": {
+  "seconds": 0.028,
+  "tests": 28
+ },
+ "tests/test_data_pin.py": {
+  "seconds": 1.026,
+  "tests": 61
+ },
+ "tests/test_data_resolve.py": {
+  "seconds": 0.272,
+  "tests": 74
+ },
+ "tests/test_donor_lazy_r25.py": {
+  "seconds": 17.739,
+  "tests": 5
+ },
+ "tests/test_donor_wants_reference.py": {
+  "seconds": 19.437,
+  "tests": 211
+ },
+ "tests/test_enchantment_claims.py": {
+  "seconds": 27.537,
+  "tests": 46
+ },
+ "tests/test_enchantment_real.py": {
+  "seconds": 3.015,
+  "tests": 7
+ },
+ "tests/test_gitignore.py": {
+  "seconds": 0.306,
+  "tests": 8
+ },
+ "tests/test_heavy_dispatch.py": {
+  "seconds": 0.083,
+  "tests": 41
+ },
+ "tests/test_imprint_prototype.py": {
+  "seconds": 1.297,
+  "tests": 92
+ },
+ "tests/test_items_build.py": {
+  "seconds": 0.009,
+  "tests": 23
+ },
+ "tests/test_items_capacity.py": {
+  "seconds": 0.01,
+  "tests": 19
+ },
+ "tests/test_items_enchantment.py": {
+  "seconds": 0.019,
+  "tests": 22
+ },
+ "tests/test_items_families.py": {
+  "seconds": 0.004,
+  "tests": 10
+ },
+ "tests/test_items_implicits.py": {
+  "seconds": 0.028,
+  "tests": 47
+ },
+ "tests/test_items_quality_offer.py": {
+  "seconds": 0.045,
+  "tests": 65
+ },
+ "tests/test_items_royale.py": {
+  "seconds": 3.697,
+  "tests": 28
+ },
+ "tests/test_items_sockets.py": {
+  "seconds": 2.18,
+  "tests": 97
+ },
+ "tests/test_items_sockets_pob.py": {
+  "seconds": 3.071,
+  "tests": 5
+ },
+ "tests/test_items_spawn.py": {
+  "seconds": 0.005,
+  "tests": 6
+ },
+ "tests/test_items_tiers.py": {
+  "seconds": 0.026,
+  "tests": 31
+ },
+ "tests/test_items_updates.py": {
+  "seconds": 0.007,
+  "tests": 17
+ },
+ "tests/test_items_validate.py": {
+  "seconds": 0.01,
+  "tests": 18
+ },
+ "tests/test_layering.py": {
+  "seconds": 1.512,
+  "tests": 41
+ },
+ "tests/test_measure_variants.py": {
+  "seconds": 0.844,
+  "tests": 13
+ },
+ "tests/test_memory_strands_claims.py": {
+  "seconds": 0.028,
+  "tests": 44
+ },
+ "tests/test_memory_strands_item.py": {
+  "seconds": 0.575,
+  "tests": 175
+ },
+ "tests/test_no_absolute_paths.py": {
+  "seconds": 6.686,
+  "tests": 153
+ },
+ "tests/test_no_timing.py": {
+  "seconds": 2.441,
+  "tests": 29
+ },
+ "tests/test_offers_wanted_only.py": {
+  "seconds": 0.007,
+  "tests": 4
+ },
+ "tests/test_packed_heavy.py": {
+  "seconds": 0.001,
+  "tests": 1
+ },
+ "tests/test_packed_heavy.py[planned#0]": {
+  "seconds": 0.001,
+  "tests": 3
+ },
+ "tests/test_packed_heavy.py[planned#1]": {
+  "seconds": 0.001,
+  "tests": 3
+ },
+ "tests/test_packed_heavy.py[planned#2]": {
+  "seconds": 0.001,
+  "tests": 3
+ },
+ "tests/test_packed_plan_real.py": {
+  "seconds": 76.417,
+  "tests": 4
+ },
+ "tests/test_packed_plan_real.py[both#0]": {
+  "seconds": 26.175,
+  "tests": 4
+ },
+ "tests/test_packed_plan_real.py[both#1]": {
+  "seconds": 14.361,
+  "tests": 4
+ },
+ "tests/test_packed_plan_real.py[both#2]": {
+  "seconds": 37.915,
+  "tests": 4
+ },
+ "tests/test_packed_plan_real.py[both#3]": {
+  "seconds": 136.308,
+  "tests": 4
+ },
+ "tests/test_parallel.py": {
+  "seconds": 1.902,
+  "tests": 19
+ },
+ "tests/test_price_source.py": {
+  "seconds": 0.048,
+  "tests": 82
+ },
+ "tests/test_prices_cli.py": {
+  "seconds": 0.064,
+  "tests": 12
+ },
+ "tests/test_prices_default_prices.py": {
+  "seconds": 0.013,
+  "tests": 4
+ },
+ "tests/test_prices_fallback_cli.py": {
+  "seconds": 0.099,
+  "tests": 10
+ },
+ "tests/test_prices_fetch_chain.py": {
+  "seconds": 0.036,
+  "tests": 19
+ },
+ "tests/test_prices_file.py": {
+  "seconds": 0.166,
+  "tests": 87
+ },
+ "tests/test_prices_leftovers.py": {
+  "seconds": 0.106,
+  "tests": 21
+ },
+ "tests/test_prices_network_guard.py": {
+  "seconds": 0.422,
+  "tests": 3
+ },
+ "tests/test_prices_ninja_history.py": {
+  "seconds": 0.003,
+  "tests": 6
+ },
  "tests/test_prices_ninja_items.py": {
-  "seconds": 0.082,
+  "seconds": 0.093,
   "tests": 60
  },
  "tests/test_prices_poe_ninja.py": {
-  "seconds": 0.214,
+  "seconds": 0.192,
   "tests": 78
  },
  "tests/test_prices_poe_watch.py": {
-  "seconds": 0.105,
+  "seconds": 0.127,
   "tests": 43
  },
  "tests/test_prices_previous_league.py": {
-  "seconds": 0.065,
+  "seconds": 0.075,
   "tests": 37
  },
+ "tests/test_prices_start_items.py": {
+  "seconds": 0.011,
+  "tests": 13
+ },
  "tests/test_prices_trade_cli.py": {
-  "seconds": 0.706,
-  "tests": 42
+  "seconds": 0.858,
+  "tests": 44
  },
  "tests/test_prices_trade_http.py": {
-  "seconds": 5.606,
+  "seconds": 5.52,
   "tests": 74
  },
+ "tests/test_prices_trade_implicit.py": {
+  "seconds": 0.009,
+  "tests": 8
+ },
  "tests/test_prices_trade_indexed.py": {
-  "seconds": 0.172,
+  "seconds": 0.236,
   "tests": 29
  },
+ "tests/test_prices_trade_market.py": {
+  "seconds": 0.151,
+  "tests": 36
+ },
  "tests/test_prices_trade_pricing.py": {
-  "seconds": 0.242,
+  "seconds": 0.233,
   "tests": 34
  },
  "tests/test_prices_trade_query.py": {
-  "seconds": 0.09,
+  "seconds": 0.082,
+  "tests": 67
+ },
+ "tests/test_prices_trade_ratelimit.py": {
+  "seconds": 0.189,
   "tests": 67
  },
  "tests/test_prices_trade_stats.py": {
-  "seconds": 0.028,
+  "seconds": 0.05,
   "tests": 51
  },
  "tests/test_proto_coe_comparison.py": {
-  "seconds": 21.662,
-  "tests": 30
+  "seconds": 38.037,
+  "tests": 29
  },
  "tests/test_proto_known_answers_cost.py": {
-  "seconds": 0.037,
+  "seconds": 0.031,
   "tests": 36
  },
  "tests/test_proto_known_answers_draw.py": {
-  "seconds": 0.032,
+  "seconds": 0.015,
   "tests": 30
  },
+ "tests/test_prune_bound.py": {
+  "seconds": 551.369,
+  "tests": 33
+ },
+ "tests/test_prune_bound.py[route_plan#0]": {
+  "seconds": 2.537,
+  "tests": 2
+ },
+ "tests/test_prune_bound.py[route_plan#1]": {
+  "seconds": 25.053,
+  "tests": 2
+ },
+ "tests/test_prune_bound.py[route_plan#2]": {
+  "seconds": 50.294,
+  "tests": 2
+ },
+ "tests/test_prune_equal.py": {
+  "seconds": 113.312,
+  "tests": 11
+ },
+ "tests/test_prune_equal.py[world#0]": {
+  "seconds": 1.789,
+  "tests": 3
+ },
+ "tests/test_prune_equal.py[world#1]": {
+  "seconds": 2.103,
+  "tests": 3
+ },
+ "tests/test_prune_equal.py[world#2]": {
+  "seconds": 0.21,
+  "tests": 3
+ },
+ "tests/test_prune_forecast.py": {
+  "seconds": 20.858,
+  "tests": 11
+ },
  "tests/test_risk_arguments.py": {
-  "seconds": 0.017,
+  "seconds": 0.021,
   "tests": 39
  },
  "tests/test_risk_chains.py": {
-  "seconds": 0.107,
+  "seconds": 0.123,
   "tests": 3
  },
+ "tests/test_risk_coarse.py": {
+  "seconds": 0.05,
+  "tests": 14
+ },
+ "tests/test_risk_dense.py": {
+  "seconds": 18.306,
+  "tests": 421
+ },
  "tests/test_risk_failures.py": {
-  "seconds": 0.013,
-  "tests": 19
+  "seconds": 0.009,
+  "tests": 18
  },
  "tests/test_risk_fast_budget.py": {
-  "seconds": 11.178,
+  "seconds": 14.394,
   "tests": 821
  },
  "tests/test_risk_fast_fuzz.py": {
-  "seconds": 11.783,
+  "seconds": 22.782,
   "tests": 641
  },
  "tests/test_risk_fast_work_budget.py": {
-  "seconds": 3.404,
+  "seconds": 5.105,
   "tests": 11
  },
+ "tests/test_risk_fold.py": {
+  "seconds": 0.752,
+  "tests": 88
+ },
+ "tests/test_risk_free_actions.py": {
+  "seconds": 1.099,
+  "tests": 32
+ },
+ "tests/test_risk_free_real.py": {
+  "seconds": 5.513,
+  "tests": 4
+ },
  "tests/test_risk_geometric.py": {
-  "seconds": 0.356,
+  "seconds": 0.514,
   "tests": 27
  },
  "tests/test_risk_grid.py": {
-  "seconds": 0.193,
+  "seconds": 0.175,
   "tests": 60
  },
  "tests/test_risk_independence.py": {
-  "seconds": 0.048,
+  "seconds": 0.125,
   "tests": 14
  },
+ "tests/test_risk_inputs.py": {
+  "seconds": 5.495,
+  "tests": 17
+ },
+ "tests/test_risk_inputs_budget.py": {
+  "seconds": 4.673,
+  "tests": 26
+ },
+ "tests/test_risk_inputs_moments.py": {
+  "seconds": 0.013,
+  "tests": 12
+ },
+ "tests/test_risk_parallel.py": {
+  "seconds": 0.065,
+  "tests": 3
+ },
+ "tests/test_risk_readings.py": {
+  "seconds": 1.785,
+  "tests": 140
+ },
  "tests/test_risk_simulation.py": {
-  "seconds": 8.639,
+  "seconds": 6.496,
   "tests": 20
  },
+ "tests/test_risk_unchanged_349.py": {
+  "seconds": 0.279,
+  "tests": 1
+ },
+ "tests/test_risk_visits.py": {
+  "seconds": 0.448,
+  "tests": 9
+ },
  "tests/test_rule_references.py": {
-  "seconds": 0.756,
+  "seconds": 1.743,
   "tests": 55
  },
  "tests/test_rules_history.py": {
-  "seconds": 0.658,
+  "seconds": 1.663,
   "tests": 36
  },
  "tests/test_rules_registry.py": {
-  "seconds": 0.864,
-  "tests": 94
+  "seconds": 5.518,
+  "tests": 108
  },
  "tests/test_run_shard.py": {
-  "seconds": 3.848,
+  "seconds": 3.327,
   "tests": 4
  },
  "tests/test_shard.py": {
-  "seconds": 4.82,
+  "seconds": 5.578,
   "tests": 21
  },
  "tests/test_simulator_actions.py": {
-  "seconds": 41.781,
+  "seconds": 32.922,
   "tests": 7
  },
  "tests/test_simulator_arguments.py": {
-  "seconds": 0.025,
+  "seconds": 0.024,
   "tests": 38
  },
+ "tests/test_simulator_blocks.py": {
+  "seconds": 0.249,
+  "tests": 10
+ },
  "tests/test_simulator_closed_form.py": {
-  "seconds": 8.861,
+  "seconds": 7.129,
   "tests": 13
  },
  "tests/test_simulator_estimates.py": {
-  "seconds": 0.015,
-  "tests": 36
+  "seconds": 0.051,
+  "tests": 61
  },
  "tests/test_simulator_independence.py": {
-  "seconds": 0.368,
+  "seconds": 0.809,
   "tests": 31
  },
  "tests/test_simulator_kernel.py": {
-  "seconds": 105.195,
+  "seconds": 132.735,
   "tests": 17
  },
+ "tests/test_simulator_nested.py": {
+  "seconds": 10.197,
+  "tests": 27
+ },
+ "tests/test_simulator_nested_recombinator.py": {
+  "seconds": 9.168,
+  "tests": 15
+ },
+ "tests/test_simulator_nested_solver.py": {
+  "seconds": 19.817,
+  "tests": 12
+ },
  "tests/test_simulator_real_data.py": {
-  "seconds": 21.419,
+  "seconds": 40.281,
   "tests": 3
  },
  "tests/test_simulator_runs.py": {
-  "seconds": 0.824,
+  "seconds": 1.106,
   "tests": 17
  },
+ "tests/test_socket_finish_reference.py": {
+  "seconds": 1.052,
+  "tests": 5
+ },
+ "tests/test_solver_acquire.py": {
+  "seconds": 2.601,
+  "tests": 209
+ },
  "tests/test_solver_bounds.py": {
-  "seconds": 4.756,
+  "seconds": 6.335,
   "tests": 503
+ },
+ "tests/test_solver_branching.py": {
+  "seconds": 2.639,
+  "tests": 36
  },
  "tests/test_solver_compact.py": {
   "seconds": 0.005,
   "tests": 10
  },
  "tests/test_solver_dead_ends.py": {
-  "seconds": 3.069,
+  "seconds": 3.11,
   "tests": 14
  },
  "tests/test_solver_independence.py": {
-  "seconds": 0.05,
+  "seconds": 0.229,
   "tests": 13
  },
+ "tests/test_solver_input_lp.py": {
+  "seconds": 0.213,
+  "tests": 121
+ },
  "tests/test_solver_inputs_and_limits.py": {
-  "seconds": 0.582,
+  "seconds": 1.173,
   "tests": 27
  },
+ "tests/test_solver_lazy.py": {
+  "seconds": 8.882,
+  "tests": 171
+ },
+ "tests/test_solver_mass_closed.py": {
+  "seconds": 0.736,
+  "tests": 18
+ },
+ "tests/test_solver_minmax.py": {
+  "seconds": 0.96,
+  "tests": 217
+ },
  "tests/test_solver_oracles.py": {
-  "seconds": 4.484,
+  "seconds": 3.915,
   "tests": 1854
+ },
+ "tests/test_solver_packed.py": {
+  "seconds": 17.986,
+  "tests": 242
+ },
+ "tests/test_solver_peek.py": {
+  "seconds": 1.246,
+  "tests": 734
+ },
+ "tests/test_solver_peek_oracles.py": {
+  "seconds": 47.309,
+  "tests": 10154
  },
  "tests/test_solver_repeat_until_success.py": {
   "seconds": 0.004,
   "tests": 5
  },
  "tests/test_solver_rounding_and_arguments.py": {
-  "seconds": 1.913,
+  "seconds": 2.47,
   "tests": 484
  },
+ "tests/test_solver_sparse.py": {
+  "seconds": 2.167,
+  "tests": 21
+ },
  "tests/test_solver_structure.py": {
-  "seconds": 0.028,
+  "seconds": 0.036,
+  "tests": 27
+ },
+ "tests/test_solver_tail.py": {
+  "seconds": 16.203,
+  "tests": 386
+ },
+ "tests/test_solver_two_input.py": {
+  "seconds": 4.734,
+  "tests": 335
+ },
+ "tests/test_solver_two_input_fuzz.py": {
+  "seconds": 61.505,
+  "tests": 51
+ },
+ "tests/test_speed_caches.py": {
+  "seconds": 0.009,
+  "tests": 11
+ },
+ "tests/test_start_price_report.py": {
+  "seconds": 0.728,
+  "tests": 8
+ },
+ "tests/test_strand_routes.py": {
+  "seconds": 10.433,
+  "tests": 37
+ },
+ "tests/test_strand_routes_load.py": {
+  "seconds": 3.216,
+  "tests": 3
+ },
+ "tests/test_strands_cut.py": {
+  "seconds": 0.076,
   "tests": 28
  },
+ "tests/test_targets_b2_real.py": {
+  "seconds": 2.263,
+  "tests": 5
+ },
+ "tests/test_targets_corrupted.py": {
+  "seconds": 0.094,
+  "tests": 50
+ },
+ "tests/test_targets_corrupted_real.py": {
+  "seconds": 5.95,
+  "tests": 10
+ },
+ "tests/test_targets_enchantment.py": {
+  "seconds": 0.103,
+  "tests": 29
+ },
  "tests/test_targets_errors.py": {
-  "seconds": 1.544,
+  "seconds": 1.387,
   "tests": 136
  },
  "tests/test_targets_files.py": {
-  "seconds": 4.21,
+  "seconds": 2.853,
   "tests": 33
  },
+ "tests/test_targets_floor.py": {
+  "seconds": 0.122,
+  "tests": 35
+ },
+ "tests/test_targets_floor_real.py": {
+  "seconds": 8.707,
+  "tests": 36
+ },
  "tests/test_targets_goal.py": {
-  "seconds": 0.044,
+  "seconds": 0.069,
   "tests": 26
  },
+ "tests/test_targets_implicits.py": {
+  "seconds": 0.098,
+  "tests": 105
+ },
  "tests/test_targets_parse.py": {
-  "seconds": 0.018,
-  "tests": 16
+  "seconds": 0.015,
+  "tests": 18
+ },
+ "tests/test_targets_sockets.py": {
+  "seconds": 0.186,
+  "tests": 201
+ },
+ "tests/test_targets_start_item_b2.py": {
+  "seconds": 0.106,
+  "tests": 52
+ },
+ "tests/test_vendor_benchmark_real.py": {
+  "seconds": 13.954,
+  "tests": 11
+ },
+ "tests/test_vendor_recipes.py": {
+  "seconds": 6.4,
+  "tests": 50
+ },
+ "tests/test_vendor_report.py": {
+  "seconds": 6.707,
+  "tests": 12
+ },
+ "tests/test_vendor_starts.py": {
+  "seconds": 25.984,
+  "tests": 38
+ },
+ "tests/test_vendor_starts_real.py": {
+  "seconds": 25.55,
+  "tests": 13
  }
 }
