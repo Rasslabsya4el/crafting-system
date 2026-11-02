@@ -38,6 +38,7 @@ __all__ = [
     "PoolMod",
     "build_pool",
     "drawable_mod_ids",
+    "influence_spawn_test",
     "partners",
     "tiers_of",
 ]

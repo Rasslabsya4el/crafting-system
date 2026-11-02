@@ -34,7 +34,8 @@ The Eldritch currency (`eldritch.py`, ticket #151, ADR-0025): `EldritchImplicitC
 4: an implicit drawn by the spawn weight of the item class, replacing every implicit but the other side's), `EldritchChaosOrb()`,
 `EldritchExaltedOrb()` and `EldritchAnnulmentOrb()` (they act on the dominant side, derived from the two grades: `item_dominant_side`) and
 `OrbOfConflict()` (raises one implicit by a grade and lowers the other, odds `conflict_raise_chance(difference)`). They work on a body
-armour, boots, gloves or helmet that is not corrupted and not influenced, and none is a planner kind yet.
+armour, boots, gloves or helmet that is not corrupted and not influenced, and none is a planner kind yet (the compressed state holds the pair
+and their kernels are exact, ticket #152).
 
 Memory Strands (ADR-0041, ticket #285, B5-11b; `strand_use.py`). Three of the five declare what they do with strands, and two stay
 undeclared. `EldritchChaosOrb` cuts and spends: its draw sees the tier cut of the count before the craft, and it uses up a uniform
@@ -290,7 +291,7 @@ class EldritchImplicitCurrency(Action):
     order=90,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
+    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
 )
 def _implicit_currency(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences:
@@ -458,7 +459,7 @@ class EldritchAnnulmentOrb(Action):
     order=91,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
+    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
 )
 def _eldritch_chaos(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is Rarity.RARE:
@@ -470,7 +471,7 @@ def _eldritch_chaos(data: GameData, item: Item):
     order=92,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
+    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
 )
 def _eldritch_exalted(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is Rarity.RARE:
@@ -482,7 +483,7 @@ def _eldritch_exalted(data: GameData, item: Item):
     order=93,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
+    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
 )
 def _eldritch_annulment(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences and item.rarity is not Rarity.NORMAL:
@@ -537,7 +538,8 @@ class OrbOfConflict(Action):
         return {self.label(): 1}
 
     def reads(self, data: GameData) -> Reads:
-        return Reads(junk=True, families=frozenset(), implicits=True)
+        # It raises one implicit and lowers the other inside their own families, so the state keeps a line a requirement names (#152).
+        return Reads(junk=True, families=frozenset(), implicits=True, implicit_lines=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=frozenset(), draws=False, implicits=True)
@@ -593,7 +595,7 @@ class OrbOfConflict(Action):
     order=94,
     planner=False,
     applies_only_to="armour",
-    why_not="a target cannot name an Eldritch implicit yet, and the dominance-limited kernels are ticket #152",
+    why_not="a target cannot name an Eldritch implicit yet (the compressed state holds the pair since ticket #152; a goal built from a target reads none until tickets #158 and #153)",
 )
 def _orb_of_conflict(data: GameData, item: Item):
     if eligible_class(data, item) and not item.corrupted and not item.influences:

@@ -60,6 +60,7 @@ from ._state import (
     OfferedMod,
     Slot,
     best_of,
+    implicit_line,
     implicit_status_of,
     status_of,
 )
@@ -219,8 +220,14 @@ class Abstraction:
         self._veiled_aware = self._tracks_offer or any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
         self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
+        # the lines a requirement names, when an enabled action moves an implicit inside its line: the state keeps the line of a side that holds one of them
+        self._named_lines = (
+            frozenset(implicit_line(mod_id) for leaf in goal.implicits for mod_id in leaf.mod_ids)
+            if any(r.implicit_lines for r in reads)
+            else frozenset()
+        )
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
-        self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}
+        self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...], str], Mod] = {}
         self._offered_ids: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], str] = {}
         self._offer_groups: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], tuple[str, ...]] = {}  # (influences, canonical id, contribution) -> the ids it stands for, sorted
         self._contexts: dict[frozenset[Influence], _Context] = {}
@@ -263,6 +270,11 @@ class Abstraction:
     def keeps_junk(self) -> bool:
         """Whether a state stores the ordinary mods that are not fractured (an enabled action reads them)."""
         return self._kinds.tracked
+
+    @property
+    def tells_influenced(self) -> bool:
+        """Whether a state tells the influence mods of the item's influences apart by mod: an enabled action reads which mods are influenced (`Reads.influenced`, ticket #155)."""
+        return self._kinds.influenced
 
     @property
     def rerolls_values(self) -> bool:
@@ -739,14 +751,21 @@ class Abstraction:
             contribution = tuple(
                 implicit_status_of(leaf, entry.mod_id, entry.grade, entry.values) for leaf in self.goal.implicits
             )
-            sides[side] = ImplicitSide(entry.grade, contribution)
+            line = implicit_line(entry.mod_id)
+            sides[side] = ImplicitSide(entry.grade, contribution, line if line in self._named_lines else "")
         return (sides[EldritchSide.EXARCH], sides[EldritchSide.EATER])
 
-    def _implicit_mod(self, side: EldritchSide, grade: int, contribution: tuple[Status, ...]) -> Mod:
-        """The Eldritch mod that stands for a side of the pair: the smallest id of the side and grade that gives `contribution`."""
-        key = (side, grade, contribution)
+    def _implicit_mod(self, side: EldritchSide, grade: int, contribution: tuple[Status, ...], line: str = "") -> Mod:
+        """The Eldritch mod that stands for a side of the pair: of the `line` when the state keeps one, else the smallest id of the side
+        and grade that gives `contribution` (and, when lines are kept, is of a line nobody names, so that a move inside its line gives nothing either)."""
+        key = (side, grade, contribution, line)
         found = self._implicit_mods.get(key)
-        if found is None:
+        if found is None and line:
+            found = self.data.mods.get(f"{line}{grade}")
+            if found is None or eldritch_side(found) is not side:
+                raise OutOfScopeError(f"the game data holds no {side.value} implicit {line}{grade}")
+            self._implicit_mods[key] = found
+        elif found is None:
             if self._eldritch is None:
                 grouped: dict[tuple[EldritchSide, int], list[Mod]] = defaultdict(list)
                 for mod in self.data.mods.values():
@@ -760,7 +779,7 @@ class Abstraction:
                 self._eldritch = grouped
             for mod in sorted(self._eldritch.get((side, grade), ()), key=lambda mod: mod.id):
                 given = tuple(implicit_status_of(leaf, mod.id, grade, _low_values(mod)) for leaf in self.goal.implicits)
-                if given == contribution:
+                if given == contribution and implicit_line(mod.id) not in self._named_lines:
                     found = mod
                     break
             else:
@@ -1047,7 +1066,7 @@ class Abstraction:
         implicits = []
         for side, held in zip(EldritchSide, state.implicits):  # the pair is in the order of EldritchSide: Searing Exarch, then Eater of Worlds
             if held.grade:
-                mod = self._implicit_mod(side, held.grade, held.contribution)
+                mod = self._implicit_mod(side, held.grade, held.contribution, held.line)
                 implicits.append(ImplicitMod(mod.id, held.grade, _low_values(mod)))
         return tuple(implicits)
 
@@ -1225,14 +1244,20 @@ class Abstraction:
     def _splits_of(self, prepared: _Prepared) -> tuple[_Split, ...]:
         """The split of every part of the outcomes (cached on `prepared`)."""
         if prepared.splits is None:
+            given = prepared.item.influences if prepared.item is not None else None
             prepared.splits = tuple(
-                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes) else frozenset(), prepared.imprints)
+                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes | Fixed) else frozenset(), prepared.imprints, given)
                 for _, part in prepared.outcomes.components
             )
         return prepared.splits
 
     def _split(
-        self, retained: Item, origins: Origins, rerolled: frozenset[str] = frozenset(), given: tuple[CompressedState, ...] = ()
+        self,
+        retained: Item,
+        origins: Origins,
+        rerolled: frozenset[str] = frozenset(),
+        given: tuple[CompressedState, ...] = (),
+        before: frozenset[Influence] | None = None,
     ) -> _Split:
         """Read a part's retained item back into state terms.
 
@@ -1245,6 +1270,10 @@ class Abstraction:
         Orb); any other mod is new: its contribution is that of its table tier at low rolls, and it is a
         slot when it is crafted or when junk is kept. Raises `OutOfScopeError` for a new mod a leaf limits
         the roll of.
+
+        `before` are the influences of the item the action was given. When the result has others and an action tells the influence mods
+        apart (`Reads.influenced`), a kept slot is read again in the context of the result: whether a mod is an influence mod is
+        decided by the influences of the item that holds it (ticket #155).
         """
         influences = retained.influences
         flags = Flags(retained.rarity, retained.corrupted, influences)
@@ -1266,6 +1295,8 @@ class Abstraction:
                         f"the goal has a roll limit and the action keeps mod {entry.mod_id} but rolls its value afresh: "
                         "the kept slot would keep the contribution of its old roll"
                     )
+                if before is not None and before != influences and self._kinds.influenced and not origin.crafted:
+                    origin = self._reread(origin, entry, influences)
                 kept.append(origin)
                 contributions.append(origin.contribution)
             else:
@@ -1284,6 +1315,11 @@ class Abstraction:
         status = best_of(len(self.goal.leaves), contributions)
         held = self._held_by(retained, influences, given)
         return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids), *held)
+
+    def _reread(self, slot: Slot, entry: ExplicitMod, influences: frozenset[Influence]) -> Slot:
+        """A kept slot of an ordinary mod as the context of `influences` names it (an action gave the item another influence); the slot itself when its kind is the same."""
+        kind = self._context(influences).kinds.of(self.data.mods[entry.mod_id])
+        return slot if kind == slot.kind else Slot(slot.side, kind, slot.contribution)
 
     def _fractured_slot(self, slot, entry: ExplicitMod, influences: frozenset[Influence]) -> FracturedMod | None:
         """The fractured mod that the slot `slot` becomes when the action fractures its mod `entry`; None when it is no slot.

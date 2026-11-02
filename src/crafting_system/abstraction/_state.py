@@ -92,7 +92,12 @@ class Slot:
     __getstate__ = _state_without_hash
 
 
-@dataclass(frozen=True)
+def implicit_line(mod_id: str) -> str:
+    """The line of an Eldritch implicit: its id without the grade digit it ends in (`eldritch_grade`), so the same family and variant at every grade."""
+    return mod_id[:-1]
+
+
+@dataclass(frozen=True, repr=False)
 class ImplicitSide:
     """One Eldritch side (Searing Exarch or Eater of Worlds) of the implicit pair (ADR-0025, ADR-0027).
 
@@ -100,18 +105,29 @@ class ImplicitSide:
     implicit leaf of the goal (`Goal.implicits`), as a `Slot` holds it for a mod; all ABSENT for no implicit. The
     family of the implicit is not kept: a family nobody asks for decides nothing, and one that is asked for shows in
     the contribution. Dominance is not stored; it follows from the two grades.
+
+    `line` is the exception (ticket #152): an action that moves an implicit to another grade of its own family and variant (an Orb of
+    Conflict, `Reads.implicit_lines`) makes the state keep the `implicit_line` of the implicit when a requirement names a mod of that line,
+    at any grade, because a requirement for a Grand mod gives nothing at Greater and everything at Grand. It is "" otherwise, for an
+    implicit of a line nobody names, and in every state of a model without such an action.
     """
 
     grade: int
     contribution: tuple[Status, ...]
+    line: str = ""
 
     def __hash__(self) -> int:
         try:
             return self._hash  # type: ignore[attr-defined]
         except AttributeError:
-            value = hash((self.grade, self.contribution))
+            value = hash((self.grade, self.contribution, self.line))
             object.__setattr__(self, "_hash", value)
             return value
+
+    def __repr__(self) -> str:
+        """The dataclass repr, with the line shown only when there is one: the text of a state without lines is what it was before ticket #152."""
+        text = f"grade={self.grade!r}, contribution={self.contribution!r}"
+        return f"ImplicitSide({text}, line={self.line!r})" if self.line else f"ImplicitSide({text})"
 
     __getstate__ = _state_without_hash
 
@@ -189,7 +205,7 @@ class CompressedState:
                 tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.fractured),
                 tuple(int(entry) for entry in self.status),
                 tuple(slot.key for slot in self.slots),
-                tuple((entry.grade, tuple(int(c) for c in entry.contribution)) for entry in self.implicits),
+                tuple((entry.grade, tuple(int(c) for c in entry.contribution), entry.line) for entry in self.implicits),
                 () if self.quality is None else (self.quality.type.value, self.quality.percent),
                 tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.offer),
                 tuple(held.order_key for held in self.imprints),

@@ -147,6 +147,14 @@ class Reads:
       which mod of the family a slot stands for, not only on which family (a Harvest swap keeps the tier of the mod it changes,
       so it must know the tier; ticket #149). Only families of the drawable pool (one family per mod) can be named. The
       state is larger for it, so name only the families the action looks inside.
+    * `influenced`: with `junk`, the result depends on which of the mods the item holds are influence mods of the item (the first spawn
+      weight of the mod that the item has is the tag of one of its influences, `pool.influence_spawn_test`) and on which mod each is,
+      because the action upgrades one (an Orb of Dominance reads the tier and the Elevated version of the mod) or keeps one by its
+      influence (an Awakener's Orb). The compressed state then tells each influence mod of the item's influences apart by MOD, as the kind
+      `$<mod id>`, and keeps the ordinary mods of its families as they were (a family often holds ordinary and influence mods both, so
+      `by_mod` by family cannot say it); an Elevated mod is one of them (spawn weight 0 on the influence tag). Nothing changes for an item
+      with no influence, and an action that only puts influence mods on the item (an influenced Exalted Orb, a beast recipe) need not
+      declare it: the state tells apart what a reader in the same model needs (ticket #155).
     * `draw_tags`, `draw_levels`: with `pool_weight`, the draw of the action looks at more than the weight of each mod of the
       pool of the item: `draw_tags` are mod tags it restricts a draw to (the tag of a Harvest add), `draw_levels` item levels
       other than the item's at which it draws (the level of a beast). The family types of the state then carry which of those
@@ -159,6 +167,10 @@ class Reads:
       overrides `reads` says what it reads, and `Action.reads` itself (an action that declares nothing) reads all
       three, like it reads every mod. An action that reads the offer reads the veiled placeholder, a mod of the
       item, so it must read the junk too.
+    * `implicit_lines`: with `implicits`, the action moves an Eldritch implicit to another grade of its own family and variant (an Orb of
+      Conflict), so the result depends on which line the implicit is of, not only on what it gives the goal at its present grade. The
+      compressed state then keeps the line of an implicit (`ImplicitSide.line`) when a requirement names a mod of that line at any grade
+      (ticket #152). False in the dataclass; `Action.reads` (an action that declares nothing) says True.
     * `imprints`: the result depends on the imprints the item holds (a Restore takes one, an Imprint is refused when the cap is reached); the
       compressed state then stores them (ADR-0060, ticket #219). The dataclass default is False, and so is `Action.reads`: an action that
       declares nothing neither reads nor keeps an imprint of its own accord, the kernel carries the imprints through every action that
@@ -187,6 +199,7 @@ class Reads:
     fractures: bool = False
     rerolls_values: bool = False
     implicits: bool = False
+    implicit_lines: bool = False
     quality: bool = False
     offer: bool = False
     input_mods: bool = False
@@ -195,6 +208,7 @@ class Reads:
     socket_count: bool = False
     socket_links: bool = False
     socket_colours: bool = False
+    influenced: bool = False
     by_mod: frozenset[str] = frozenset()
     draw_tags: frozenset[str] = frozenset()
     draw_levels: frozenset[int] = frozenset()
@@ -512,10 +526,15 @@ class Fixed:
     A part of `ActionOutcomes.components` for a deterministic action (a bench craft, Remove Crafted
     Mods, an Orb of Scouring). The kernel finds what it kept by looking for the mods of the item the
     action was given; any other mod of `result` is a new one.
+
+    `rerolled` are the ids of mods of `result` that the action keeps but whose values it rolls afresh (an Orb of Dominance on an Elevated mod), which
+    `result` shows at their lowest values: the compressed state keeps the contribution of the old roll, so under a goal with a roll limit the
+    kernel refuses them (as for `Outcomes.rerolled`). Empty for an action that changes no value (ticket #155).
     """
 
     data: GameData
     result: Item
+    rerolled: frozenset[str] = frozenset()
 
     @property
     def retained(self) -> Item:
@@ -583,7 +602,7 @@ class Action(ABC):
     def reads(self, data: GameData) -> Reads:
         """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality, the offer, the enchantment and the sockets."""
         return Reads(
-            implicits=True, quality=True, offer=True, input_mods=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True
+            implicits=True, implicit_lines=True, quality=True, offer=True, input_mods=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True
         )
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:

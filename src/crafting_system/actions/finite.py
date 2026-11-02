@@ -36,6 +36,7 @@ class Finite:
     data: GameData
     given: Item
     results: tuple[tuple[Fraction, Item], ...]
+    rerolled: frozenset[str] = frozenset()  # ids of mods a result keeps but whose values the action rolls afresh; a result shows them at their lowest values (`Fixed.rerolled`)
 
     def __post_init__(self) -> None:
         if not self.results or any(chance <= 0 for chance, _ in self.results) or sum(c for c, _ in self.results) != 1:
@@ -43,7 +44,7 @@ class Finite:
 
     @cached_property
     def components(self) -> tuple[tuple[Fraction, Fixed], ...]:
-        return tuple((chance, Fixed(self.data, item)) for chance, item in self.results)
+        return tuple((chance, Fixed(self.data, item, self.rerolled)) for chance, item in self.results)
 
     @property
     def fractures(self) -> bool:
