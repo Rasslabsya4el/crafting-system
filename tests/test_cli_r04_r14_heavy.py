@@ -10,7 +10,8 @@ these tests run in a heavy run, not in a CI shard or on a PC:
         --command 'CRAFTING_ROUTES=R04 CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider tests/test_cli_r04_r14_heavy.py -k "not benchmark"'
 
 (`CRAFTING_ROUTES` is `R04`, `R14` or both, and `-k "not benchmark"` the CLI tests or `-k benchmark` the benchmark ones: four runners, each
-plans its route once; `-s` shows the `--progress` lines on stderr.) Without `CRAFTING_HEAVY` they skip, and without the cached dump
+plans its route once; `-s` shows the `--progress` lines on stderr.) R14's CLI tests take longer than an hour (the plan about 32 minutes,
+then `--verify`): give that one runner `--long --timeout-minutes 120`. Without `CRAFTING_HEAVY` they skip, and without the cached dump
 (`<cache dir>/repoe-fork/3.29.3.3/`) the data fixture skips.
 
 The CLI runs WITHOUT `--exact`: the default budget of 60 seconds finds no approximate level (a route with an Attack/Caster metamod has none)

@@ -234,7 +234,7 @@ BENCHMARKS = (
                 (SPEED, MULTIMOD, NO_ATTACK, GEMS), ADDS, (DOT,), "100%", crafted=(MULTIMOD, NO_ATTACK),
             ),
         ),
-        heavy="the exact graph has 816,153 states: the packed solver takes about 25 minutes and 8 GB, and no approximate level exists for a route with metamods (ticket #70)",
+        heavy="the exact graph has 816,153 states: the packed solver takes about 32 minutes and 9 GB, and no approximate level exists for a route with metamods (ticket #70)",
         completed="examples/routes/r14-hunter-bow-restart.yaml",
     ),
     # No guide writes a route for a recipe-made start item, so V01 has no given route: its answer is the start the plan chooses (ticket #331).
