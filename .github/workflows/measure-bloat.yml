@@ -1,7 +1,10 @@
-name: measure-bloat
+name: Measure bloat
 
-# Step of the measurement chain (ticket #399): a stub until the step is built. The chain is measure.yml. The step
-# uploads summary.md (for the main chat) and headline.txt (one Russian line for the diary, #398) as measure-bloat.
+# The bloat step of the measurement chain (ticket #399, see measure.yml and docs/ci.md): one benchmark route per job. Each job
+# builds the plan of its route the way `benchmark --heavy` does, then projects away one part of the compressed state at a time and
+# counts the states left and the groups of merged states whose optimal value or first action differs
+# (.github/scripts/state_bloat.py). The summary job puts every route in one table in the artifact `measure-bloat`.
+# `trial` runs R10 only. A reusable workflow: it has no run of its own. R04 and R14 need about 9 GB of a 16 GB runner.
 
 on:
   workflow_call:
@@ -14,20 +17,53 @@ permissions:
   contents: read
 
 jobs:
-  stub:
+  route:
+    name: route ${{ matrix.route }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        route: ${{ inputs.trial && fromJSON('["R10"]') || fromJSON('["R12","R10","R11","R05","R13","R08","R09","R04","R14"]') }}
     defaults:
       run:
         shell: bash
     steps:
-      - name: Write the placeholder summary and headline
-        run: |
-          mkdir -p out
-          printf '# bloat\n\nNot built yet.\n' > out/summary.md
-          printf 'шаг ещё не построен\n' > out/headline.txt
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data
+      - name: Measure route ${{ matrix.route }}
+        run: uv run --no-sync python .github/scripts/state_bloat.py run --route ${{ matrix.route }} --out out
       - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: measure-bloat-${{ matrix.route }}
+          overwrite: true
+          path: out/
+          if-no-files-found: warn
+
+  summary:
+    name: bloat summary
+    needs: route
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data  # the summary needs no game data; this gives uv and the package the script imports
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: measure-bloat-*
+          path: in
+      - name: Tables and headline
+        run: uv run --no-sync python .github/scripts/state_bloat.py summary --dir in --out out
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
         with:
           name: measure-bloat
           overwrite: true
           path: out/
+          if-no-files-found: warn
