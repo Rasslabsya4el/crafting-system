@@ -134,6 +134,7 @@ def evaluate[S](
     resolve_quantiles: bool = True,
     free_cost: float | None = None,
     free_fallback_bins: int | None = None,
+    packed_moments: bool = False,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -145,7 +146,8 @@ def evaluate[S](
     is not given (see the module docstring), and `max_coarse_bins` the most bins of the coarse grid (default `max_bins`).
     With `resolve_quantiles` False a proper policy without inputs gets its exact odds, mean and variance and no budget DP:
     the quantiles and the CVaR come back unresolved (infinite above, the first cost below), for a chain whose DP does
-    not fit in memory (the planner's packed route, ticket #374).
+    not fit in memory (the planner's packed route, ticket #374). With `packed_moments` the linear systems of the mean and the
+    variance are solved on packed arrays (the same numbers, certified; the object solver's sweeps are too slow on a stiff long chain).
     `free_cost` names the cost of the actions that are free (the planner's epsilon, `_free`): of a proper policy without inputs that holds
     such an action they are counted apart from the grid (see "Free actions" in the module docstring); `free_fallback_bins`, when given,
     is the `max_bins` of the ordinary and coarse grids if that is not possible. Without `free_cost` nothing changes.
@@ -189,7 +191,7 @@ def evaluate[S](
             raise ValueError(f"policy value for {state!r} must be an Action, got {chosen!r}")
 
     no_grid = GridInfo(0.0, True, 0, 0.0, 0.0)
-    chain = build_chain(policy, start, is_goal)
+    chain = build_chain(policy, start, is_goal, packed_moments)
     if chain.goal[0]:
         return RiskReport(
             Estimate(1.0, 1.0, 1.0), ZERO, ZERO, {x: ZERO for x in levels}, ZERO, cvar_level, no_grid

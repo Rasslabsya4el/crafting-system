@@ -418,7 +418,7 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note
     moves = sum(len(action.outcomes) for action in packed.risk_policy.values())
     resolve = moves <= RISK_QUANTILE_TRANSITIONS
     risk = evaluate_risk(
-        packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve
+        packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True
     )
     if not resolve:
         note = (note + " " if note else "") + (
@@ -455,6 +455,7 @@ def evaluate_risk(
     free_cost: float | None = None,
     *,
     resolve_quantiles: bool = True,
+    packed_moments: bool = False,
 ) -> RiskReport:
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
 
@@ -472,7 +473,9 @@ def evaluate_risk(
     """
     cheapest = min((action.cost for action in policy.values()), default=0.0)
     bins = UNRESOLVED_BINS if 2 * RISK_BINS * cheapest < mean else RISK_BINS
-    extra = {} if resolve_quantiles else {"resolve_quantiles": False}
+    extra: dict = {} if resolve_quantiles else {"resolve_quantiles": False}
+    if packed_moments:
+        extra["packed_moments"] = True
     if free_cost is None or not any(is_free_cost(action.cost, free_cost) for action in policy.values()):
         return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS, **extra)
     paid = min((action.cost for action in policy.values() if not is_free_cost(action.cost, free_cost)), default=0.0)
