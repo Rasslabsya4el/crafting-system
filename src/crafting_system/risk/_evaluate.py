@@ -118,7 +118,7 @@ CELLS_PER_ENTRY = 30.0  # the nested DP's work counts convolution cells, each ab
 SPREAD_SDS = 6.0  # the arrival cost of a state spreads over about this many standard deviations of the total cost
 FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean of the lower coarse chain (it needs a positive cost; the charge is taken off again)
 FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
-REGEN_PARTS = (4, 8, 16, 32, 64)  # the step of the attempt-wise run is the restart's cost over one of these, the coarsest first
+REGEN_PARTS = (4, 8, 16, 32, 64, 128)  # the step of the attempt-wise run is the restart's cost over one of these, the coarsest first
 REGEN_WIDTH = 0.03  # a step is kept when every quantile is bracketed within this share of its value
 REGEN_SECONDS = 300.0  # the next finer step is not tried when the last one took long enough that it would run past this
 REGEN_SLOWER = 3.0  # (a step half as wide costs two to four times the work)
@@ -437,12 +437,15 @@ def _regen_report(
     target = max([*levels, cvar_level])
     best: RiskReport | None = None
     last = 0.0
-    for parts in REGEN_PARTS:
+    unit = exact_unit([chain.action[i].cost for i in chain.finishing_states()])
+    horizon = mean[0] + math.sqrt(variance[0] * target / (1.0 - target))
+    steps = [(unit, 0)] if unit is not None and horizon / unit <= max_bins else []  # every cost a whole multiple of the unit: the exact distribution
+    steps += [(base / parts, parts) for parts in REGEN_PARTS]
+    for step, parts in steps:
         if best is not None and last * REGEN_SLOWER > REGEN_SECONDS:  # a finer step costs about this many times the last: not worth the wait
             break
-        step = base / parts
         low_bins, high_bins = _bin_costs(chain, step)
-        _regen.trace(f"attempt by attempt: step {step:.4g} (the restart's cost over {parts})")
+        _regen.trace(f"attempt by attempt: step {step:.4g} ({'the unit of every cost' if parts == 0 else f'the restart cost over {parts}'})")
         began = time.perf_counter()
         found = _regen.regenerative_runs(chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins)
         last = time.perf_counter() - began

@@ -23,6 +23,7 @@ from collections import deque
 
 import numpy as np
 
+from .. import parallel
 from ._budget import BudgetRun, run_budget
 from ._chain import Chain
 from ._fold import fold_free
@@ -135,24 +136,43 @@ def regenerative_runs(
 
     Each run's `cdf` is the cumulative distribution of the total in bins up to `target` (or `max_bins`). `unresolved` is the mass beyond.
     """
+    distinct = [low_bins] if low_bins == high_bins else [low_bins, high_bins]
+    jobs = [(attempt_pmf, (chain, bins), {"success": success, "max_bins": attempt_bins}) for bins in distinct for success in (True, False)]
+    found = run_jobs(jobs)  # the attempt runs share nothing: side by side when workers can be forked
+    if any(each is None for each in found):
+        return None
     runs: list[BudgetRun] = []
-    done: dict[tuple[int, ...], BudgetRun] = {}
-    for bins in (low_bins, high_bins):
-        key = tuple(bins)
-        if key in done:
-            runs.append(done[key])
-            continue
-        found_g = attempt_pmf(chain, bins, success=True, max_bins=attempt_bins)
-        found_f = attempt_pmf(chain, bins, success=False, max_bins=attempt_bins)
-        if found_g is None or found_f is None:
-            return None
-        (g, cut_g), (f, cut_f) = found_g, found_f
+    for k in range(len(distinct)):
+        (g, _), (f, _) = found[2 * k], found[2 * k + 1]
         chance = float(g.sum())
         missing = max(0.0, 1.0 - chance - float(f.sum()))
         if chance <= 0.0 or missing / chance > MAX_MISSING or float(f[0]) >= 1.0:
             return None
         cdf = renewal_cdf(g, f, target, max_bins, allowance)
-        run = BudgetRun(cdf, max(0.0, 1.0 - cdf[-1]))
-        done[key] = run
-        runs.append(run)
-    return runs[0], runs[1]
+        runs.append(BudgetRun(cdf, max(0.0, 1.0 - cdf[-1])))
+    return runs[0], runs[-1]
+
+
+def _held(jobs: dict) -> dict:
+    return jobs
+
+
+def _call(name: str):
+    function, args, kwargs = parallel.context()[name]
+    return function(*args, **kwargs)
+
+
+def run_jobs(jobs: list[tuple]) -> list:
+    """The results of `(function, args, kwargs)` jobs, in order: side by side in a pool when `CRAFTING_WORKERS` allows and workers can be forked.
+
+    A job is a function of its arguments alone, so the list is the same either way (as `_evaluate._both`); a worker that fails sends the jobs
+    back to a serial run here.
+    """
+    if len(jobs) > 1 and parallel.worker_count() >= 2 and parallel.can_inherit():
+        names = [str(i) for i in range(len(jobs))]
+        try:
+            with parallel.WorkerPool(_held, (dict(zip(names, jobs)),), workers=min(len(jobs), parallel.worker_count())) as pool:
+                return pool.map(_call, names, chunk=1)
+        except Exception:  # a worker failed or was killed: run them here
+            pass
+    return [function(*args, **kwargs) for function, args, kwargs in jobs]
