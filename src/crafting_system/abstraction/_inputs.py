@@ -32,7 +32,7 @@ from collections import defaultdict
 from collections.abc import Iterator
 from fractions import Fraction
 
-from crafting_system.actions import Action, OutOfScopeError, build_pool, partners
+from crafting_system.actions import Action, NotApplicableError, OutOfScopeError, build_pool, partners
 from crafting_system.items import Item, Rarity, Side
 
 from ._kinds import MOD_PREFIX, base_kind, held_families
@@ -242,7 +242,12 @@ def _kernel_of(ability, state, want, action, types: list[_Type], specs: list[Spe
                     placed[index][entry[:2]] = next(fresh)
     mine_item, origins = ability._item_of(state, False, placement=placed[0])
     theirs_item, _ = ability._item_of(want, False, placement=placed[1])
-    outcomes = action.with_inputs((theirs_item,)).outcomes_under(ability.data, mine_item, ability._reading)
+    try:
+        outcomes = action.with_inputs((theirs_item,)).outcomes_under(ability.data, mine_item, ability._reading)
+    except NotApplicableError as refusal:  # the game's refusal of the representative has been raised by `_prepare`: this is another placement's
+        raise OutOfScopeError(
+            f"the game refuses {action.label(ability.data)} for some placements of the names and not for others ({refusal}): the average over them is not defined"
+        ) from refusal
     ability._check_type_blind(state, outcomes)
     ability._check_fracture_without_partners(state, outcomes)
     ability._check_same_item_space(outcomes)

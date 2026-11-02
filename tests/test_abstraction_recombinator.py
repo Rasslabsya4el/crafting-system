@@ -46,12 +46,13 @@ from recombinator_world import (
     U2B,
     WORLD,
     item,
+    r25_world,
 )
 
 from crafting_system.abstraction import Abstraction, Goal, ImplicitWanted, QualityWanted, Wanted
-from crafting_system.actions import OutOfScopeError, Reading, Reads, Recombinator
+from crafting_system.actions import NotApplicableError, OutOfScopeError, Reading, Reads, Recombinator
 from crafting_system.actions.recombinator import ALPHA_AXIS
-from crafting_system.items import Influence, PlainQuality, Rarity
+from crafting_system.items import ExplicitMod, Influence, Item, PlainQuality, Rarity
 
 CRAFTED = {CRAFT_J3: {"crafted": True}}
 CASES = {
@@ -206,6 +207,33 @@ def test_a_donor_of_another_item_level_that_leaves_the_result_in_this_one_has_no
         ab.kernel(ab.compress(given), action)
 
 
+def test_a_refusal_that_depends_on_where_the_names_lie_is_refused_as_out_of_scope():
+    """The game refusing the action for some placements of the names and not for others has no average: the junk-craft variant (a bench craft
+    refuses a family the item holds) would be such. A toy that refuses an item and a donor that share no family shows it."""
+
+    @dataclasses.dataclass(frozen=True)
+    class NeedsOverlap(Recombinator):
+        def outcomes(self, data, item, reading=None):
+            mine = {family for each in item.mods for family in data.mods[each.mod_id].families}
+            if not mine & {family for each in self.donor.mods for family in data.mods[each.mod_id].families}:
+                raise NotApplicableError("the two inputs share no family")
+            return super().outcomes(data, item, reading)
+
+    given, donor = item(J1, rarity=Rarity.MAGIC), item(J1, rarity=Rarity.MAGIC)  # the action's own donor and the representative of the item share RJ1
+    action = NeedsOverlap(donor)
+    ab = Abstraction(WORLD, GOAL, BOOTS, LEVEL, [action])
+    with pytest.raises(OutOfScopeError, match="some placements of the names"):
+        ab.kernel(ab.compress(given), action)
+
+
+def test_the_kernel_key_of_the_averaged_action_is_its_kernel():
+    given = item(TA1, J1, K1)
+    one, other, magic = Recombinator(item(TB1, J2, K2)), Recombinator(item(TB1, J3, K1)), Recombinator(item(J3, S2, rarity=Rarity.MAGIC))
+    ab = Abstraction(WORLD, GOAL, BOOTS, LEVEL, [one])
+    state = ab.compress(given)
+    assert ab.kernel_key(state, one) == ab.kernel_key(state, other) != ab.kernel_key(state, magic)
+
+
 def test_a_planner_that_prices_no_inputs_still_refuses_the_action():
     given, donor = item(TA1, J1), item(TB1, J2)
     action = Recombinator(donor)
@@ -222,6 +250,29 @@ class NamedRecombinator(Recombinator):
 
     def reads(self, data):
         return Reads(junk=True, families=None, input_mods=True, implicits=True, quality=True)
+
+
+def test_the_r25_sized_world_has_the_item_states_of_the_adr_and_the_guides_first_step():
+    """ADR-0062 counts 299 item states by name and 63 by class for three targets and nine junk prefixes in three weight classes (the empty item
+    included): 298 and 62 of one mod or more, here. The first step of the guide's route, A + B, keeps both with the table's 33%."""
+    data, goal, targets, junk = r25_world()
+    prefixes = (*targets, *junk)
+
+    def make(chosen):
+        mods = tuple(ExplicitMod(mod_id, 1, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats)) for mod_id in chosen)
+        return Item.build(data, base_id=BOOTS, item_level=LEVEL, rarity=Rarity.MAGIC if len(chosen) == 1 else Rarity.RARE, mods=mods)
+
+    items = [make(chosen) for size in range(1, 4) for chosen in itertools.combinations(prefixes, size)]
+    by_class = Abstraction(data, goal, BOOTS, LEVEL, [Recombinator(items[0])])
+    by_name = Abstraction(data, goal, BOOTS, LEVEL, [NamedRecombinator(items[0])])
+    assert len(items) == 298
+    assert len({by_class.compress(each) for each in items}) == 62
+    assert len({by_name.compress(each) for each in items}) == 298
+    first, second = make((targets[0],)), make((targets[1],))
+    action = Recombinator(second)
+    kernel = by_class.kernel(by_class.compress(first), action)
+    assert kernel[by_class.compress(make(targets[:2]))] == Fraction(33, 100)
+    assert sum(kernel.values()) == 1
 
 
 def test_the_classes_merge_the_items_the_names_keep_apart_and_keep_the_tiers_the_names_lose():
