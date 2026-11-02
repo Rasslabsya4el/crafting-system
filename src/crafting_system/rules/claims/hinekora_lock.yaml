@@ -1,0 +1,224 @@
+# Mechanic family: hinekora_lock (Hinekora's Lock, inventory row M-80, batch B8). Research ticket #101, build ticket #294.
+# The 14 draft claims of section 10 of docs/research/2026-10-31-hinekora-lock.md, two of them reworded (chaos_orb_previewed and
+# divine_tailoring_sacred_previewed said "only if the owner admits Q2"; the owner's answers of Grill B8 settled it), then the owner's four
+# (2026-11-01), the six previews that only the Lock's item text covers (approximate: no source names these currencies) and the Lock's cost.
+# Which action kind declares which claim: ADR-0055 (the table of currencies) and Action.preview_claims.
+rules:
+  - id: hinekora_lock.foresees_next_currency
+    statement: A Hinekora's Lock puts an item into a foreseeing state in which the result of the next currency item used on it can be previewed; any modification of the item removes the state.
+    source_kind: datamined
+    url: https://poedb.tw/us/Hinekoras_Lock
+    quote: "Allows an item to foresee the result of the next Currency item used on it"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.looking_changes_nothing
+    statement: Hovering a currency over a foreseeing item shows its preview and changes nothing, so any number of currencies can be looked at on one Lock.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Mechanics
+    quote: "Not applying the currency will not change the item in any way, including leaving the foreseeing state intact"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.preview_fixed_per_currency_type
+    statement: All currency items of one type show the same preview each time it is viewed, so the result of a currency on a foreseeing item is decided before it is used and cannot change by looking again.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Mechanics
+    quote: "All currency items of the same type (e.g., any given Chaos Orb) will show the same preview each time it is viewed."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.applied_result_is_the_preview
+    statement: Using a previewed currency makes the item exactly what the preview showed (mods and rolls), and removes the foreseeing state.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Mechanics
+    quote: "Applying the currency will modify the item in accordance with the preview, as well as remove the foreseeing state"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.one_applied_currency_voids_other_previews
+    statement: After a currency is applied, the previews of every other currency looked at before are obsolete, even when the currency changes a different aspect of the item (sockets, quality, enchantments). One Lock buys one applied currency.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Mechanics
+    quote: "makes the previews of all other currencies checked beforehand obsolete"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.neutral_currency_removes_foresight
+    statement: Changing the item's quality, socket number or colours, links or implicit modifiers, or anointing it, removes the foreseeing state; this is the way to discard a Lock whose previews are unwanted.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Strategies
+    quote: "using currencies which change an item's quality, socket number or colours, links, or implicit modifiers removes the foreseeing state"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.unpreviewed_crafts_remove_foresight
+    statement: The Crafting Bench, Horticrafting Station (Harvest crafts), Recombinator, beastcrafting (including Imprint), non-currency Betrayal benches and the Corruption Altar of the Locus of Corruption are not previewed; doing any of them (or anointing) removes the foreseeing state.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Mechanics
+    quote: "modifying the item with any of these methods (including creating an Imprint of the item), or anointing it, will remove the foreseeing state"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.altar_of_corruption_not_foreseen
+    statement: Since 3.23.0 the Lock no longer foresees the result of corrupting an item at the Altar of Corruption.
+    source_kind: official
+    url: https://www.poewiki.net/wiki/Version_3.23.0
+    quote: "Hinekora's Lock can no longer foresee the result of corrupting an item at the Altar of Corruption."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.awakener_preview_depends_on_donor
+    statement: The Awakener's Orb is previewed and its preview depends on the donor item used (wiki only, no reference).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Mechanics
+    quote: "Awakener's Orb is an exception because its outcome will change based on the donor item used."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.refused_on
+    statement: A Hinekora's Lock cannot be used on gems or on corrupted, mirrored or unmodifiable items.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Mechanics
+    quote: "Hinekora's Lock cannot be used on gems or any items that are corrupted, mirrored or unmodifiable."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.stack_of_ten
+    statement: The Lock is a stackable currency with a stack size of 10; its price comes from the dated price file, not from this registry.
+    source_kind: datamined
+    url: https://poedb.tw/us/Hinekoras_Lock
+    quote: "Stack Size: 1 / 10"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.tradeable_on_currency_exchange
+    statement: The Lock can be bought on the Currency Exchange (gold fee 6,250 per item), so a market price exists for it.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Currency_exchange_market#Gold_costs
+    quote: "Hinekora's lock	6,250"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.chaos_orb_previewed
+    statement: A Lock previews the Chaos Orb (the wiki's own example of a currency whose preview is the same each time it is viewed). It is a named preview (ADR-0055), so the Chaos Orb is an option of a Lock without a mark of uncertainty; the other currencies have claims of their own.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Mechanics
+    quote: "All currency items of the same type (e.g., any given Chaos Orb) will show the same preview each time it is viewed."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: hinekora_lock.divine_tailoring_sacred_previewed
+    statement: A Lock previews the Divine Orb, the Tailoring Orb and the Sacred Orb (the wiki's example of one lock previewing several currencies). In v1 the Divine Orb is an option of a Lock; the Tailoring Orb is not (B7 prices the enchant orbs through a finish cost and never offers them as search steps, ADR-0050), and there is no Sacred Orb action (base defence rolls are out of v1), so both err low (ADR-0055).
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Strategies
+    quote: "preview the outcomes of a Divine Orb, Tailoring Orb, and Sacred Orb using the same lock"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  # --- the owner's answers of Grill B8 (issue #106, 2026-11-01) ---
+
+  - id: hinekora_lock.preview_independent_across_currencies
+    statement: Under one Lock the preview of each currency item is randomised separately and one currency's outcome tells nothing about another's; a new Lock, a relock after a burn included, throws every preview again. This is an admitted rule, not an approximate input.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/106#issuecomment-6556328616
+    quote: "Previews are independent (owner, from play): every currency's outcome is randomised separately under each Lock, and one outcome tells nothing about the others."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: hinekora_lock.exalted_annulment_regal_previewed
+    statement: A Lock previews the Exalted Orb, the Orb of Annulment and the Regal Orb. The research had these three by item text only; the owner's play settles them, so they are named previews and not approximate (ADR-0055).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/106#issuecomment-6556328616
+    quote: "The Lock does preview Exalted, Annulment and Regal."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: hinekora_lock.no_second_lock_on_a_foreseeing_item
+    statement: A second Hinekora's Lock cannot be put on an item that is already under a Lock. The solver never stores the foreseeing flag, so the Lock is offered only where the flag is off and the rule holds by construction (ADR-0054, ADR-0055).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/106#issuecomment-6556328616
+    quote: "A second Lock on an item already under a Lock: no."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: hinekora_lock.lock_is_used_up
+    statement: The Lock is used up when it is applied, as a currency is; a relock after a burn pays a second Lock (ADR-0056).
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/issues/106#issuecomment-6556328616
+    quote: "The Lock is used up: yes."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  # --- previews that only the Lock's own item text covers (ADR-0055): approximate, listed on every answer that takes a Lock step ---
+
+  - id: hinekora_lock.transmutation_orb_previewed
+    statement: A Lock previews the Orb of Transmutation, as "the next Currency item used on it". No source names this currency, so the preview is an option of a Lock by the Lock's item text alone.
+    source_kind: datamined
+    url: https://poedb.tw/us/Hinekoras_Lock
+    quote: "Allows an item to foresee the result of the next Currency item used on it"
+    approximate: true
+    approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: hinekora_lock.alteration_orb_previewed
+    statement: A Lock previews the Orb of Alteration, as "the next Currency item used on it". No source names this currency, so the preview is an option of a Lock by the Lock's item text alone.
+    source_kind: datamined
+    url: https://poedb.tw/us/Hinekoras_Lock
+    quote: "Allows an item to foresee the result of the next Currency item used on it"
+    approximate: true
+    approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: hinekora_lock.augmentation_orb_previewed
+    statement: A Lock previews the Orb of Augmentation, as "the next Currency item used on it". No source names this currency, so the preview is an option of a Lock by the Lock's item text alone.
+    source_kind: datamined
+    url: https://poedb.tw/us/Hinekoras_Lock
+    quote: "Allows an item to foresee the result of the next Currency item used on it"
+    approximate: true
+    approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: hinekora_lock.alchemy_orb_previewed
+    statement: A Lock previews the Orb of Alchemy, as "the next Currency item used on it". No source names this currency, so the preview is an option of a Lock by the Lock's item text alone.
+    source_kind: datamined
+    url: https://poedb.tw/us/Hinekoras_Lock
+    quote: "Allows an item to foresee the result of the next Currency item used on it"
+    approximate: true
+    approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: hinekora_lock.scouring_orb_previewed
+    statement: A Lock previews the Orb of Scouring, as "the next Currency item used on it". No source names this currency, so the preview is an option of a Lock by the Lock's item text alone.
+    source_kind: datamined
+    url: https://poedb.tw/us/Hinekoras_Lock
+    quote: "Allows an item to foresee the result of the next Currency item used on it"
+    approximate: true
+    approximate_reason: "Only the Lock's own item text covers this currency; no source names it, and the owner's play covered Exalted, Annulment and Regal only."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  - id: hinekora_lock.vaal_orb_previewed
+    statement: A Lock previews the Vaal Orb, as "the next Currency item used on it" (Maxroll, 2023-09-12, 'always lock your Headhunter/Mageblood before corruption'; the 3.23.0 note removed only the Altar of Corruption, and the scan of every note to 3.29.3b found no later change). No source names this currency, so the preview is an option of a Lock by the Lock's item text alone.
+    source_kind: datamined
+    url: https://poedb.tw/us/Hinekoras_Lock
+    quote: "Allows an item to foresee the result of the next Currency item used on it"
+    approximate: true
+    approximate_reason: "Only the Lock's item text covers the Vaal Orb; Maxroll named it in 3.22 (2023-09-12), the 3.23.0 note removed only the Altar of Corruption and no later note changes it, but 3.29 itself is not stated."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-01
+
+  # --- the price ---
+
+  - id: hinekora_lock.cost
+    statement: One use of a Hinekora's Lock consumes one Hinekora's Lock item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyHinekorasLock: name "Hinekora''s Lock"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-02
+    value: {"Hinekora's Lock": 1}

@@ -8,7 +8,7 @@ from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, Previewable, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
@@ -32,6 +32,15 @@ class AlchemyOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Alchemy"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.BY_ITEM_TEXT  # ADR-0055: only the Lock's item text covers it; the claim is approximate
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Orb of Alchemy"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.alchemy_orb_previewed"})
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.cutting(SpendLaw.uniform(SPEND_CHAOS_FAMILY.value["alchemy"]), SPEND_CHAOS_FAMILY)  # ADR-0041: cuts, spends 0 to 50

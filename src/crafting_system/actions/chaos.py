@@ -16,7 +16,7 @@ from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, Previewable, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
@@ -40,6 +40,15 @@ class ChaosOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Chaos Orb"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.NAMED  # ADR-0055: wiki or owner names the preview
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Chaos Orb"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.chaos_orb_previewed"})
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.cutting(SpendLaw.uniform(SPEND_CHAOS_FAMILY.value["chaos"]), SPEND_CHAOS_FAMILY)  # ADR-0041: cuts, spends 0 to 50

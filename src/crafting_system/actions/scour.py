@@ -11,7 +11,7 @@ from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Fixed, Reads
+from .contract import Action, Adds, Fixed, Previewable, Reads
 from .draw import Outcome
 from .errors import NotApplicableError
 from .metamods import kept_by_reroll
@@ -85,6 +85,15 @@ class ScouringOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Scouring"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.BY_ITEM_TEXT  # ADR-0055: only the Lock's item text covers it; the claim is approximate
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Orb of Scouring"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.scouring_orb_previewed"})
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.untouched(SCOURING_KEEPS_STRANDS, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: neither cuts nor spends: the count stays

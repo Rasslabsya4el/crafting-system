@@ -53,7 +53,7 @@ from crafting_system.rules import get_rule
 
 from .bloodstained import ImplicitDraw
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, Previewable, Reads
 from .corrupted_pool import corrupted_implicit_pool
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
@@ -128,6 +128,15 @@ class VaalOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Vaal Orb"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.BY_ITEM_TEXT  # ADR-0055: only the Lock's item text covers it; the claim is approximate
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Vaal Orb"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.vaal_orb_previewed"})
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return dict(COST.value)

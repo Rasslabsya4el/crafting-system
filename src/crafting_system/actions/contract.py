@@ -60,6 +60,14 @@ Sockets (ticket #228, ADR-0046): `Reads` and `Adds` say which part of the socket
 (the contract suite checks it on every fixture item that has sockets), and a socket action (`Adds.socket_action`: it adds no mod) changes no
 mod. Like the enchantment, the sockets are a finish step (ADR-0045) and **not** part of `item_state`: the compressed state of the mods does not
 hold them, so declaring them changes no state count and no offer.
+
+Foresight (ticket #294, B8, ADR-0055, ADR-0056, the amendment of ADR-0024): three optional declarations, each with a safe default, say how an
+action meets Hinekora's Lock. `previewable(data)` answers a `Previewable` (`no`, the default: the action is applied blind under a Lock;
+`named`: a source names its preview; `by_item_text`: only the Lock's own text covers it, so its claim is `approximate`), `currency_item(data)`
+the price-file name of the currency item it is (all items of one type show one preview, so a state has one option per currency item; None by
+default) and `burn(data)` whether it is a currency that changes no mod and may give a Lock up (False by default). `preview_claims(data)` lists
+the claims behind a preview, apart from `claims` (as `strand_claims` is), so an answer with no Lock step never lists them. The Lock itself is
+`HinekoraLock` (`hinekora_lock.py`); the offer of the options is the planner's (B8-4).
 """
 
 import functools
@@ -69,6 +77,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 from fractions import Fraction
 from functools import cache
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
@@ -90,6 +99,7 @@ __all__ = [
     "Fixed",
     "ImprintMove",
     "Need",
+    "Previewable",
     "Reading",
     "Reads",
     "Rerolled",
@@ -577,6 +587,14 @@ class Rerolled:
         return self.given
 
 
+class Previewable(StrEnum):
+    """How an action is an option of a Hinekora's Lock (ADR-0055)."""
+
+    NO = "no"  # applied blind: still available on a locked item, but its preview is not an option (the default: a new action stays blind)
+    NAMED = "named"  # a source names it: the wiki, or the owner from play
+    BY_ITEM_TEXT = "by_item_text"  # only the Lock's own text covers it ("the next Currency item"); its claim is `approximate`
+
+
 class Action(ABC):
     """Base of every action; subclass it as a frozen dataclass and fill in the five questions.
 
@@ -626,6 +644,27 @@ class Action(ABC):
         that needs them (an essence: its forced mod follows the item class) then answers `Adds()`.
         """
         return Adds(implicits=True, quality=True, offer=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True)
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        """Whether a Hinekora's Lock previews this action (ADR-0055); `Previewable.NO`, blind, by default.
+
+        An action that declares `named` or `by_item_text` also declares `currency_item` and `preview_claims`.
+        """
+        return Previewable.NO
+
+    def currency_item(self, data: GameData | None = None) -> str | None:
+        """The price-file name of the currency item the action is, for a previewable action (ADR-0055): all currency items of one type show the
+        same preview, so a state has one option per item. None, the default, for an action that is not previewable."""
+        return None
+
+    def burn(self, data: GameData | None = None) -> bool:
+        """Whether the action is a burn (ADR-0056): a currency that changes no mod and may give a Lock up. False by default."""
+        return False
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        """The ids of the claims behind `previewable`, kept apart from `claims` like `strand_claims`: an answer that takes no Lock step lists
+        none of them (ADR-0057). Empty, the default, for an action that is not previewable."""
+        return frozenset()
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The other items one use consumes besides `item` (a recombinator's donor, ADR-0022); none by default.

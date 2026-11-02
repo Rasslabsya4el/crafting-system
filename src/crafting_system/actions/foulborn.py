@@ -31,6 +31,7 @@ from crafting_system.items import Item, Rarity
 from crafting_system.rules import Rule, get_rule
 
 from .catalog import kind
+from .contract import Previewable
 from .cut import Cut
 from .exalted import ExaltedOrb
 from .magic import AugmentationOrb, RegalOrb
@@ -75,6 +76,16 @@ class _Foulborn:
     def cut_of(self, data: GameData | None, item: Item) -> Cut | None:
         """The cut of the count the item has before the craft, with the Foulborn bonus: it applies even at 0 strands."""
         return Cut.of(item, foulborn=True)
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        """Blind under a Lock (ADR-0055): the Foulborn orbs are other currency items than the plain orbs they extend, and no source previews them."""
+        return Previewable.NO
+
+    def currency_item(self, data: GameData | None = None) -> str | None:
+        return None
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset()
 
 
 @dataclass(frozen=True)
