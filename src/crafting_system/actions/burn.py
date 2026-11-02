@@ -107,7 +107,6 @@ class ReAnoint(Action):
     order=107,
     planner=False,
     why_not="a burn only (ticket #295, ADR-0056): as a plain action it changes nothing the state keeps and gives a target nothing; the Peek of a Lock takes it as a fallback",
-    applies_only_to="ring and amulet",
     burns=True,
 )
 def _re_anoint(data: GameData, item: Item):
