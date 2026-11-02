@@ -176,6 +176,14 @@ def normalize_mods(raw: Any) -> Mapping[str, Mod]:
     return MappingProxyType(mods)
 
 
+def _attribute_requirements(record: Mapping, where: str) -> tuple[int, int, int]:
+    """The strength, dexterity and intelligence a base item asks for; a record with no `requirements` object asks for none."""
+    if not isinstance(record.get("requirements"), dict):
+        return (0, 0, 0)
+    found = record["requirements"]
+    return tuple(_opt_int(found, key, where, "requirements.") or 0 for key in ("strength", "dexterity", "intelligence"))  # type: ignore[return-value]
+
+
 def normalize_base_items(raw: Any) -> Mapping[str, BaseItem]:
     bases = {}
     for base_id, where, record in _records(raw, BASE_ITEMS_FILE, "base item"):
@@ -188,6 +196,7 @@ def normalize_base_items(raw: Any) -> Mapping[str, BaseItem]:
             tags=_str_tuple(record, "tags", where),
             implicits=_str_tuple(record, "implicits", where),
             release_state=_str(record, "release_state", where),
+            attribute_requirements=_attribute_requirements(record, where),
         )
     return MappingProxyType(bases)
 

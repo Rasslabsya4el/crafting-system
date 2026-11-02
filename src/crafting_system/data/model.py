@@ -63,6 +63,7 @@ class BaseItem:
     tags: tuple[str, ...]
     implicits: tuple[str, ...]
     release_state: str
+    attribute_requirements: tuple[int, int, int] = (0, 0, 0)  # the strength, dexterity and intelligence the base asks for: the colour weights of a Chromatic Orb (ADR-0047)
 
 
 @dataclass(frozen=True, slots=True)
