@@ -139,6 +139,18 @@ def test_the_decision_finds_no_approximate_level_and_the_planner_goes_on_to_the_
     assert "Attack/Caster tags" in note and "packed solver" in note and "the answer is exact" in note
 
 
+def test_no_vendor_recipe_makes_a_quiver_or_a_bow_so_the_default_run_plans_the_target_once(data, prices, route_id):
+    """The CLI compares the start options (ADR-0059); with none but the plain item it is one plan, not several 10-minute walks."""
+    from crafting_system.cli._start_options import StartContext, combine
+    from crafting_system.cli._starts import SOURCES
+
+    target = load_target(ROOT / ROUTES[route_id][0], data)
+
+    listing = combine([source(StartContext(data, target, prices)) for source in SOURCES])
+
+    assert not listing.candidates
+
+
 def test_a_budget_run_with_the_object_solver_asked_for_still_refuses_with_the_reason(data, prices, route_id):
     target = load_target(ROOT / ROUTES[route_id][0], data)
 
