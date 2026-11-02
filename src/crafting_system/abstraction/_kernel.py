@@ -60,6 +60,7 @@ from ._state import (
     OfferedMod,
     Slot,
     best_of,
+    implicit_line,
     implicit_status_of,
     status_of,
 )
@@ -219,8 +220,14 @@ class Abstraction:
         self._veiled_aware = self._tracks_offer or any(r.junk and (r.families is None or bool(r.families & placeholders)) for r in reads)
         self._sets_enchantment = any(a.enchantment for a in adds)  # the state never holds the enchantment (ADR-0050); this only lets `compress` see a result
         self._no_implicit = ImplicitSide(0, (Status.ABSENT,) * len(goal.implicits))
+        # the lines a requirement names, when an enabled action moves an implicit inside its line: the state keeps the line of a side that holds one of them
+        self._named_lines = (
+            frozenset(implicit_line(mod_id) for leaf in goal.implicits for mod_id in leaf.mod_ids)
+            if any(r.implicit_lines for r in reads)
+            else frozenset()
+        )
         self._eldritch: dict[tuple[EldritchSide, int], list[Mod]] | None = None
-        self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...]], Mod] = {}
+        self._implicit_mods: dict[tuple[EldritchSide, int, tuple[Status, ...], str], Mod] = {}
         self._offered_ids: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], str] = {}
         self._offer_groups: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], tuple[str, ...]] = {}  # (influences, canonical id, contribution) -> the ids it stands for, sorted
         self._contexts: dict[frozenset[Influence], _Context] = {}
@@ -739,14 +746,21 @@ class Abstraction:
             contribution = tuple(
                 implicit_status_of(leaf, entry.mod_id, entry.grade, entry.values) for leaf in self.goal.implicits
             )
-            sides[side] = ImplicitSide(entry.grade, contribution)
+            line = implicit_line(entry.mod_id)
+            sides[side] = ImplicitSide(entry.grade, contribution, line if line in self._named_lines else "")
         return (sides[EldritchSide.EXARCH], sides[EldritchSide.EATER])
 
-    def _implicit_mod(self, side: EldritchSide, grade: int, contribution: tuple[Status, ...]) -> Mod:
-        """The Eldritch mod that stands for a side of the pair: the smallest id of the side and grade that gives `contribution`."""
-        key = (side, grade, contribution)
+    def _implicit_mod(self, side: EldritchSide, grade: int, contribution: tuple[Status, ...], line: str = "") -> Mod:
+        """The Eldritch mod that stands for a side of the pair: of the `line` when the state keeps one, else the smallest id of the side
+        and grade that gives `contribution` (and, when lines are kept, is of a line nobody names, so that a move inside its line gives nothing either)."""
+        key = (side, grade, contribution, line)
         found = self._implicit_mods.get(key)
-        if found is None:
+        if found is None and line:
+            found = self.data.mods.get(f"{line}{grade}")
+            if found is None or eldritch_side(found) is not side:
+                raise OutOfScopeError(f"the game data holds no {side.value} implicit {line}{grade}")
+            self._implicit_mods[key] = found
+        elif found is None:
             if self._eldritch is None:
                 grouped: dict[tuple[EldritchSide, int], list[Mod]] = defaultdict(list)
                 for mod in self.data.mods.values():
@@ -760,7 +774,7 @@ class Abstraction:
                 self._eldritch = grouped
             for mod in sorted(self._eldritch.get((side, grade), ()), key=lambda mod: mod.id):
                 given = tuple(implicit_status_of(leaf, mod.id, grade, _low_values(mod)) for leaf in self.goal.implicits)
-                if given == contribution:
+                if given == contribution and implicit_line(mod.id) not in self._named_lines:
                     found = mod
                     break
             else:
@@ -1047,7 +1061,7 @@ class Abstraction:
         implicits = []
         for side, held in zip(EldritchSide, state.implicits):  # the pair is in the order of EldritchSide: Searing Exarch, then Eater of Worlds
             if held.grade:
-                mod = self._implicit_mod(side, held.grade, held.contribution)
+                mod = self._implicit_mod(side, held.grade, held.contribution, held.line)
                 implicits.append(ImplicitMod(mod.id, held.grade, _low_values(mod)))
         return tuple(implicits)
 

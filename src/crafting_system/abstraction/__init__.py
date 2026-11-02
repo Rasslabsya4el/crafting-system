@@ -18,7 +18,8 @@ is imported or tested for here.
   each leaf over the whole item, and the `Slot`s, a sorted multiset of the other mods (below). The last four
   are the item state beyond the explicit mods (ADR-0027, ticket #142), empty unless an enabled action reads or
   changes that part: `implicits` the Eldritch pair, one `ImplicitSide(grade, contribution)` for the Searing Exarch
-  and one for the Eater of Worlds (the contribution is to each `Goal.implicits` leaf, an `ImplicitWanted`);
+  and one for the Eater of Worlds (the contribution is to each `Goal.implicits` leaf, an `ImplicitWanted`; with an action that declares
+  `Reads.implicit_lines`, an Orb of Conflict, a side also keeps its `line` when a requirement names a mod of it, ticket #152);
   `quality` the catalyst `Quality` as the item stores it; `offer` the mods of the unveil offer, each an
   `OfferedMod(canonical id, contribution)`; `imprints` (ADR-0060, ticket #219) the set of states an imprint of the item was made at, in the
   stable order of `CompressedState.order_key`, each holding none of its own. `Abstraction.tracks_implicits`, `tracks_quality`, `tracks_offer` and

@@ -172,10 +172,12 @@ def test_a_state_is_rebuilt_into_an_item_with_the_implicits_it_stands_for():
 
     kernel = found.kernel(start, ToyConflict())
 
-    # the Exarch side raised to grade 3 (AvoidShock3, the mod wanted) and the Eater side lowered to 1; or the reverse
+    # the Exarch side raised to grade 3 (AvoidShock3, the mod wanted) and the Eater side lowered to 1; or the reverse. The toy declares
+    # `Reads.implicit_lines`, so a side of the line the goal names keeps it (ticket #152), the Eater side's line nobody names does not.
+    line = "AvoidShockEldritchImplicit"
     assert dict(kernel) == {
-        dataclasses.replace(start, implicits=(ImplicitSide(3, (PASSING,)), ImplicitSide(1, (ABSENT,)))): Fraction(1, 2),
-        dataclasses.replace(start, implicits=(ImplicitSide(1, (ABSENT,)), ImplicitSide(3, (ABSENT,)))): Fraction(1, 2),
+        dataclasses.replace(start, implicits=(ImplicitSide(3, (PASSING,), line), ImplicitSide(1, (ABSENT,)))): Fraction(1, 2),
+        dataclasses.replace(start, implicits=(ImplicitSide(1, (ABSENT,), line), ImplicitSide(3, (ABSENT,)))): Fraction(1, 2),
     }
     for landed in kernel:  # the states that come out are rebuilt into items again: an Ember keeps the Eater side they hold
         after = found.kernel(landed, ToyEmber(1))
