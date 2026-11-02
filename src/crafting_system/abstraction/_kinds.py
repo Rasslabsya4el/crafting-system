@@ -39,8 +39,7 @@ is always the generic placeholder the orbs put on an item.
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable
 
-from crafting_system.actions import BLOCKED_TAG, Action, build_pool
-from crafting_system.actions.pool import influence_spawn_test
+from crafting_system.actions import BLOCKED_TAG, Action, build_pool, influence_spawn_test
 from crafting_system.data import GameData, Mod
 from crafting_system.items import GENERIC_PLACEHOLDERS, Item, Rarity, Side
 from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS, UNVEILED_DOMAIN, VEILED_DOMAIN
