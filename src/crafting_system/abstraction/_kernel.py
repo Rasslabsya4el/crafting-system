@@ -70,6 +70,7 @@ Label = Hashable  # the contribution to every leaf as ints (a `RollLaw` for a mo
 FamilyType = tuple[Side, tuple[tuple[Label, Fraction, bool], ...]]
 ONE = Fraction(1)
 _SLOT_KEY = attrgetter("key")
+_ROLLED_BY_A_DRAW = "a pool draw that rolls an implicit afresh is not modelled: only a fixed result spreads the roll of an implicit over its law"
 Expanded = tuple[tuple[tuple[Status, ...], tuple[Slot, ...], Fraction], ...]  # (best of the new mods, the slots they add, chance)
 
 
@@ -638,6 +639,8 @@ class Abstraction:
             outcomes.components, self._signatures_of(prepared), self._splits_of(prepared)
         ):
             key = (share, signature, split.flags, split.fractured, split.kept, split.new, split.status, split.implicits, split.quality, split.offer, split.imprints, split.rolled)
+            if split.rolled and not isinstance(part, Fixed):
+                raise OutOfScopeError(_ROLLED_BY_A_DRAW)
             if isinstance(part, Rerolled):  # which of the kept slots are rerolled decides the kernel
                 key = (*key, tuple(sorted(self._rerolled_slots(part, prepared.origins)[1], key=_SLOT_KEY)))
             if outcomes.fractures and not isinstance(part, Fixed):
@@ -1292,7 +1295,7 @@ class Abstraction:
             if isinstance(part, Fixed):
                 self._add_fixed(result, share, split)  # a fixed result that fractures a mod holds it fractured already
             elif split.rolled:
-                raise OutOfScopeError("a pool draw that rolls an implicit afresh is not modelled: only a fixed result spreads the roll of an implicit over its law")
+                raise OutOfScopeError(_ROLLED_BY_A_DRAW)
             elif isinstance(part, Rerolled):
                 self._add_rerolled(result, share, part, prepared.origins, split)
             elif outcomes.fractures:

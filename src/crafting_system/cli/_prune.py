@@ -115,8 +115,8 @@ def corrupting_offer_pruned(abstraction: Abstraction, priced: PricedOffer, state
     """Whether the offer is a corrupting one that the target that asks for a corrupted implicit never needs at `state` (ADR-0036).
 
     True for an action that corrupts and keeps the explicit mods when the goal asks for a corrupted implicit and `state` does not
-    meet every other requirement (`Abstraction.meets_requirements`: the explicit mods and the Eldritch implicits wanted; the quality
-    is paid on each try and is not in the state, ADR-0039). A corrupted state refuses every action anyway.
+    meet every other requirement (`Abstraction.meets_requirements`: the explicit mods, the implicits and the quality wanted: a corrupted item
+    takes no catalyst, so the quality is on the item before it is corrupted, ADR-0039, ticket #158). A corrupted state refuses every action anyway.
     """
     if not abstraction.goal.asks_corrupted or isinstance(priced.offer.action, BuyStartItem):
         return False
