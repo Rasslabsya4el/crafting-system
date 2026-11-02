@@ -698,6 +698,11 @@ def _stripped(listed, strip: dict) -> dict:
 def check_kernel_equals_brute_force(action, reads: Reads, item: Item, items, data, goal: Goal, reading: Reading | None = None) -> None:
     enabled = [action] if reads.junk or reads.item_state else []
     ab = Abstraction(data, goal, item.base_id, item.item_level, enabled, reading=reading)
+    if reads.input_classes:  # the state tells the mods of the item and its input by class: the kernel is the action averaged over the items of the classes (#217)
+        from recombinator_state_support import check_input_classes_kernel
+
+        check_input_classes_kernel(ab, data, item, action, reading)
+        return
     expected: dict = defaultdict(Fraction)
     for chance, result in items:
         expected[ab.compress(result)] += chance

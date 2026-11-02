@@ -34,8 +34,10 @@ a veiled mod on either input (its unveil offer would have to be carried over, wh
 count table has no row).
 
 The catalog lists the kind for an item in hand with two donors (a copy of the item, and a donor of other mods the base can roll); it
-is not a planner kind until the solver prices donors (#211, #212), the interval driver exists (#220) and the state of the
-recombinator is built (#217).
+is not a planner kind until the planner entry takes donors (the end-to-end tickets of B3 wire the lazy offer loop, #212, and the interval
+driver, #220 and #221, to it). Its compressed state is built (ticket #217): `reads` declares `input_classes`, so the state tells a junk mod by
+its family type and its place in it, and the kernel is the action averaged over the names the item and the donor could hold in their classes
+(`abstraction/_inputs.py`, ADR-0062 decision 3, "As built (#217)"). `with_inputs` gives the kernel the same action with another donor.
 
 The cost of one use (ADR-0035, ticket #216). No source gives a formula, so the cost is a constant per combine, from player reports, all
 marked `approximate` (ADR-0028) so the answer names them with their intervals: `recombinator_cost.dust_per_combine_reports_3_26` (point
@@ -65,14 +67,14 @@ names against the prices crate), so the price file decides what a combine costs 
   `recombinator_cost.junk_craft_halves_dust_3_26`.
 * **The setting.** The variant is offered only when the setting is on: `junk_craft_offered()` is a context manager that turns it on for
   the catalog kind (`junk_craft_enabled()` reads it; a context variable, off by default). The config setting
-  `recombinator_junk_craft` turns it on once the kind is a planner kind (#217); until then nothing calls it but tests.
+  `recombinator_junk_craft` turns it on once the kind is a planner kind (the end-to-end tickets); until then nothing calls it but tests.
 """
 
 import contextvars
 import math
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import cache
 from itertools import product
@@ -134,8 +136,8 @@ GOLD_NAME = "Gold"
 METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 _JUNK_CRAFT: contextvars.ContextVar[bool] = contextvars.ContextVar("recombinator_junk_craft", default=False)
 WHY_NOT_PLANNER = (
-    "the solver takes no donors yet (#211, #212), the interval over its rule axis does not exist (#220) "
-    "and the recombinator has no compressed state (#217)"
+    "the planner entry takes no donors yet: it refuses an action with inputs until the report and the risk run read policies with inputs "
+    "(ADR-0062 'As built'; the compressed state is built, #217, and so are the lazy offer loop, #212, and the interval driver, #220, #221)"
 )
 
 
@@ -304,8 +306,21 @@ class Recombinator(Action):
         return found
 
     def reads(self, data: GameData) -> Reads:
-        """Every mod of both inputs (the pool), and the implicits and the quality of the base."""
-        return Reads(junk=True, families=None, input_mods=True, implicits=True, quality=True)
+        """Every mod of both inputs (the pool) by its class, and the implicits and the quality of the base.
+
+        The result weighs the very mod each input holds (`input_classes`: the state tells a junk mod by its family type and its place in
+        it, the kernel averages over the families of a type, ticket #217) and a fractured mod is a class slot too (`fractures`: the state
+        keeps a fractured mod of a family type as its kind, which carries the place).
+        """
+        return Reads(
+            junk=True, families=frozenset(), input_mods=True, input_classes=True, fractures=True, implicits=True, quality=True
+        )
+
+    def with_inputs(self, wants: tuple[Item, ...]) -> "Recombinator":
+        """The same recombinator (count table, price) with the donor `wants[0]`; the kernel runs it on the names an item and a donor could hold."""
+        if len(wants) != 1:
+            raise ValueError("a recombinator has one input, its donor")
+        return replace(self, donor=wants[0])
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         """Mods of the donor and of the item; a fractured mod of the base stays fractured; the implicits, the quality, the enchantment and the sockets follow the base.

@@ -22,6 +22,14 @@ Every ordinary family with a mod whose roll changes what it gives the goal (a ro
 told apart by MOD: all its mods have the kind `"$" + mod id`. The prefix is not "=" (that names a pool of families
 in `_coarse.py`), "~" (a family type), "@" (the tags of a mod) or "#" (a family without a name).
 
+An action that declares `Reads.input_classes` (the recombinator, ticket #217) makes the kinds of the family types finer: a junk mod has the kind
+`"~n%p"`, its family type `n` and its place `p` in it (the position, in the sorted shapes of the family, of the mod's own shape: what it gives the goal
+and its weight in the pool), because the action weighs the very mod a slot holds and not only its family. Two slots of one such kind are
+interchangeable for the action and for the goal; which family of the type each is stays unknown, and the kernel of the action averages over it
+(`_inputs.py`). A mod that is not in the pool of its family (an essence-only mod of a listed family, a tier above the item level) is a kind of its
+own, `"$" + mod id`, and the kernel treats it, like a crafted mod, as a named holder of its family: the class slots of the other input may sit
+in that family or not, with the chance the families of the type give them.
+
 An action that reads which mods are influence mods of the item (`Reads.influenced`, an Orb of Dominance, an Awakener's Orb; ticket #155) makes
 every influence mod of the item's influences a kind of its own, `"$" + mod id` as above: the families of the data hold ordinary and influence
 mods together (Percentage Strength has 22 ordinary mods and 9 Shaper, Elder and other ones), so only the mod says which it is, and an Elevated mod
@@ -48,6 +56,7 @@ ALIKE = ""  # the kind of a family that every enabled action treats like any oth
 TYPE_PREFIX = "~"  # a kind that stands for a family type (pool weight), not for one family
 MOD_PREFIX = "$"  # a kind that stands for one mod (a family with a rollable mod, when an action rerolls values): "$<mod id>"
 TAG_MARK = "@"  # a kind with the protected tags of its mod: "<kind>@attack", "<kind>@attack+caster"
+POSITION_MARK = "%"  # a family-type kind with the place of its mod in the type, when an action declares `Reads.input_classes`: "~3%1"
 UNVEILED_PREFIX = "^"  # a kind that stands for a mod unveiled from the pool: "^<family key>", never an ordinary mod of that family
 GENERIC_PLACEHOLDER_IDS = frozenset(GENERIC_PLACEHOLDERS.values())
 PROTECTED_TAGS = frozenset(BLOCKED_TAG.values())  # the tags an Attack or Caster metamod keeps out of a draw and an Annulment
@@ -59,8 +68,17 @@ def family_key(mod: Mod) -> str:
 
 
 def base_kind(kind: str) -> str:
-    """`kind` without the tags of its mod: "~3@attack" -> "~3"."""
-    return kind.partition(TAG_MARK)[0]
+    """`kind` without the tags of its mod and the place of its mod in its family type: "~3@attack" -> "~3", "~3%1" -> "~3"."""
+    base = kind.partition(TAG_MARK)[0]
+    return base.partition(POSITION_MARK)[0] if base.startswith(TYPE_PREFIX) else base
+
+
+def kind_position(kind: str) -> int | None:
+    """The place of the mod in its family type that a kind carries ("~3%1@attack" -> 1); None for a kind without one."""
+    base = kind.partition(TAG_MARK)[0]
+    if not base.startswith(TYPE_PREFIX) or POSITION_MARK not in base:
+        return None
+    return int(base.partition(POSITION_MARK)[2])
 
 
 def kind_tags(kind: str) -> frozenset[str]:
@@ -155,6 +173,7 @@ class Kinds:
         self._influence_test: Callable[[Mod], bool] | None = None
         self._rollable = rollable
         self._declared_by_mod: set[str] = set()  # the families an enabled action looks inside (`Reads.by_mod`)
+        self.classed = False  # an enabled action declares `Reads.input_classes`: a junk mod is a family type and its place in it
         self._tagged: set[str] = set()  # the tags an enabled action restricts a draw to (`Reads.draw_tags`): a family type carries them
         self._levels: set[int] = set()  # the item levels an enabled action draws at (`Reads.draw_levels`): a family type carries the weights there
         for action in self.actions:
@@ -162,13 +181,14 @@ class Kinds:
             self.fractures = self.fractures or reads.fractures
             self.rerolls = self.rerolls or reads.rerolls_values
             self.influenced = self.influenced or (reads.influenced and reads.junk)
+            self.classed = self.classed or (reads.input_classes and reads.junk)
             self._declared_by_mod.update(reads.by_mod)
             if reads.junk and reads.pool_weight:
                 self._tagged.update(reads.draw_tags)
                 self._levels.update(reads.draw_levels)
             if not reads.junk:
                 continue
-            self.by_weight = self.by_weight or reads.pool_weight
+            self.by_weight = self.by_weight or reads.pool_weight or reads.input_classes
             if reads.families is None:
                 self._everything = True
             else:
@@ -177,6 +197,7 @@ class Kinds:
         self._by_mod: set[str] | None = None
         self._by_family: dict[str, list[Mod]] | None = None
         self._types: dict[str, str] | None = None
+        self._places: dict[str, int] = {}  # mod id -> its place in its family type (with `classed`)
         self._members: dict[tuple[Side, str], list[tuple[str, tuple[Mod, ...]]]] = {}
         self._pooled = None
 
@@ -214,6 +235,9 @@ class Kinds:
             kind = types.get((key, mod.generation_type))
             if kind is None:  # a mod on a side where its family has no weight: the family's own type (the one side it has)
                 kind = next((found for (name, _), found in types.items() if name == key), key)
+            if self.classed and kind.startswith(TYPE_PREFIX):
+                place = self._places.get(mod.id)
+                kind = f"{kind}{POSITION_MARK}{place}" if place is not None else MOD_PREFIX + mod.id  # a mod the pool of its family lacks stands for itself
         else:
             kind = ALIKE
         if self.metamods:
@@ -240,14 +264,24 @@ class Kinds:
         found = self._members_of(self.side_of(kind), base_kind(kind))
         return {family for family, _ in found} if len(found) > 1 else set()
 
-    def representative(self, side: Side, kind: str, taken: set[str]) -> Mod:
+    def is_class(self, kind: str) -> bool:
+        """Whether `kind` is a family type with the place of its mod (`Reads.input_classes`): a slot of it stands for a family of the type, which one is unknown."""
+        return kind_position(kind) is not None
+
+    def families_of_type(self, side: Side, kind: str) -> list[str]:
+        """The families of the family type `kind` on `side`, in pool order (the places of a class kind exist in each of them)."""
+        return [family for family, _ in self._members_of(side, base_kind(kind))]
+
+    def representative(self, side: Side, kind: str, taken: set[str], family: str | None = None) -> Mod:
         """A mod to put on a concrete item for a slot of `side` and `kind`, of a family not in `taken`.
 
         The families of the chosen mod are added to `taken` (single families, as `held_families`).
-        With `metamods`, the mod has exactly the protected tags the kind carries.
+        With `metamods`, the mod has exactly the protected tags the kind carries. With `family`, the family of a family type that the
+        mod must be of (the kernel of a class kind places each slot in a family of its own choosing); the kind's place picks the mod.
         Raises `ValueError` when the item has no room for one more of that kind.
         """
         base, tags = base_kind(kind), kind_tags(kind)
+        place = kind_position(kind)
         if base.startswith(MOD_PREFIX):
             mod = self.data.mods[base[len(MOD_PREFIX) :]]
             if mod.generation_type != side.value:
@@ -269,11 +303,13 @@ class Kinds:
             taken |= held_families(mod)
             return mod
         for key, mods in self._members_of(side, base):
-            if key in taken:
+            if key in taken or (family is not None and key != family):
                 continue
             for mod in mods:
                 if self.is_influenced(mod):
                     continue  # the state names every influence mod it holds (`$<mod id>`), so an ordinary slot never stands for one
+                if place is not None and self._places.get(mod.id) != place:
+                    continue
                 if not self.metamods or protected_tags(mod) == tags:
                     taken.add(key)
                     return mod
@@ -335,6 +371,14 @@ class Kinds:
                 types[family.family, side] = (side, shapes[family.family, side], other)
             kinds = self._numbers.kinds_of(types.values())
             self._types = {name: kinds[kind] for name, kind in types.items()}
+            if self.classed:
+                for (name, side), mods in self._weighted_mods().items():
+                    if (name, side) not in types:
+                        continue
+                    ordered = types[name, side][1]
+                    for mod, weights in mods.values():
+                        if weights[0] > 0:  # a mod of the pool (a mod of another level only has weight 0 here)
+                            self._places[mod.id] = ordered.index(self._shape(mod, weights))
         return self._types
 
     def _weighted_mods(self) -> dict[tuple[str, str], dict[str, tuple[Mod, list]]]:

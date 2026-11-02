@@ -51,6 +51,7 @@ from crafting_system.items import (
 from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
 
 from ._goal import Goal, Status
+from ._inputs import input_kernel
 from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
 from ._rolls import Cells, RollLaw, implicit_roll_law, implicit_values_for, is_rollable, multinomial, roll_law
 from ._state import (
@@ -121,6 +122,7 @@ class _Prepared:
     splits: "tuple[_Split, ...] | None" = None  # the split of every part, read once for `kernel` and `kernel_key`
     item: Item | None = None  # the item the state stands for, as the action was given it
     imprints: tuple[CompressedState, ...] = ()  # the imprints of the state it was prepared for (ADR-0060)
+    donors: tuple[Item, ...] = ()  # the inputs the outcomes were made with, when the kernel averages over them (`_inputs.py`): a result copies their implicits
 
 
 @dataclass(frozen=True)
@@ -251,6 +253,7 @@ class Abstraction:
         self._prepared_by: dict[Hashable, _Prepared] = {}
         self._has_partners: bool | None = None  # whether the pool of an empty rare item has a family with mods on both sides
         self._cache: dict[Hashable, dict[Hashable, Fraction]] = {}
+        self._input_kernels: dict[Hashable, dict[CompressedState, Fraction]] = {}  # the kernels averaged over the names of an input (`_inputs.py`)
         self._expanded: dict[Hashable, Expanded] = {}
         self._signatures: dict[Hashable, Hashable] = {}  # one object per equal pool signature, so a lookup by it is an identity hit
         self._drawn_slots: dict[tuple, Slot] = {}
@@ -277,28 +280,36 @@ class Abstraction:
         return action.inputs(self.data, self._prepare(state, action).item)
 
     def donor_key(self, state: CompressedState, action: Action) -> Hashable:
-        """What `action` reads of an input whose compressed state is `state`: the key of the want (ADR-0062 decision 1, ticket #214).
+        """What `action` reads of an input whose compressed state is `state`: the key of the want (ADR-0062 decision 1, tickets #214 and #217).
 
-        Two inputs with one key give the action the same kernel, so an acquisition ends at the first state with the wanted key, whatever else
-        that state holds. An action that declares `Reads.input_influenced` (an Awakener's Orb) reads the input's influences, whether it is
-        corrupted and which influence mods it holds, each by mod id: the key is those three, and the ordinary mods, the values and the goal's
-        statuses of the input are dropped. Any other action reads the whole input, and its key is `state` itself.
-        Raises `ValueError` when the action reads the influence mods and no enabled action tells them apart (`Reads.influenced`).
+        Two inputs with one key give the action the same kernel on every state, so an acquisition ends at the first state with the wanted key,
+        whatever else that state holds. One method for every action, a branch for each that reads a projection of its input:
+
+        * `Reads.input_influenced` (an Awakener's Orb) reads the input's influences, whether it is corrupted and which influence mods it holds,
+          each by mod id: the key is those three, and the ordinary mods, the values and the goal's statuses of the input are dropped.
+          Raises `ValueError` when no enabled action tells the influence mods apart (`Reads.influenced`).
+        * `Reads.input_classes` (a recombinator) reads the input's junk by class: the key is the compressed input without what the action never
+          reads of it, the rarity (the action refuses a normal item, and the result's rarity follows its mods, so magic and rare are one), the
+          unveil offer and the imprints (the result is a new item); the corruption stays (a corrupted input is refused).
+        * Any other action reads the whole input, and its key is `state` itself.
         """
         self._check_enabled(action)
         reads = action.reads(self.data)
-        if not (reads.input_mods and reads.input_influenced):
-            return state
-        if not self._kinds.influenced:
-            raise ValueError("the key of an input that is read by its influence mods needs a state that tells them apart (an enabled action declaring `Reads.influenced`)")
-        influences = state.flags.influences
-        kinds = self._context(influences).kinds if influences else self._kinds
-        named = sorted(
-            slot.kind
-            for slot in state.slots
-            if base_kind(slot.kind).startswith(MOD_PREFIX) and kinds.is_influenced(self.data.mods[base_kind(slot.kind)[len(MOD_PREFIX) :]])
-        )
-        return (influences, state.flags.corrupted, tuple(named))
+        if reads.input_mods and reads.input_influenced:
+            if not self._kinds.influenced:
+                raise ValueError("the key of an input that is read by its influence mods needs a state that tells them apart (an enabled action declaring `Reads.influenced`)")
+            influences = state.flags.influences
+            kinds = self._context(influences).kinds if influences else self._kinds
+            named = sorted(
+                slot.kind
+                for slot in state.slots
+                if base_kind(slot.kind).startswith(MOD_PREFIX) and kinds.is_influenced(self.data.mods[base_kind(slot.kind)[len(MOD_PREFIX) :]])
+            )
+            return (influences, state.flags.corrupted, tuple(named))
+        if self._averages_inputs(action):
+            flags = replace(state.flags, rarity=Rarity.NORMAL if state.flags.rarity is Rarity.NORMAL else Rarity.RARE)
+            return replace(state, flags=flags, offer=(), imprints=())
+        return state
 
     def reaches_donor(self, action: Action) -> Callable[[CompressedState, CompressedState], bool]:
         """The want predicate of the acquisition processes for `action`'s inputs: `state` reaches `want` when their `donor_key`s are equal."""
@@ -592,6 +603,8 @@ class Abstraction:
         move = action.imprint_move()
         if move is not None:
             return self._imprint_kernel(state, action, move)
+        if self._averages_inputs(action):
+            return input_kernel(self, state, action, prepared)
         return self._mixture_kernel(state, prepared)
 
     def _imprint_kernel(self, state: CompressedState, action: Action, move: ImprintMove) -> dict[CompressedState, Fraction]:
@@ -660,6 +673,8 @@ class Abstraction:
         move = action.imprint_move()
         if move is not None:  # the kernel of an imprint or a restore is one certain state, cheap: the key is the kernel itself
             return ("imprint", tuple(self._imprint_kernel(state, action, move)))
+        if self._averages_inputs(action):  # the kernel is the average over the names of the inputs: its own key is the kernel
+            return ("input classes", frozenset(input_kernel(self, state, action, prepared).items()))
         outcomes = prepared.outcomes
         self._check_parts(outcomes)
         parts: Counter = Counter()
@@ -681,6 +696,10 @@ class Abstraction:
             parts[key] += 1
         return (outcomes.fractures, frozenset(parts.items()))
 
+    def _averages_inputs(self, action: Action) -> bool:
+        """Whether the kernel of `action` is the average over the names of the item and its inputs in their classes (`Reads.input_classes`, ticket #217)."""
+        return self._kinds.classed and action.reads(self.data).input_classes
+
     def _check_parts(self, outcomes: ActionOutcomes) -> None:
         """Refuse the mixtures of parts that no kernel is defined for (a fracture needs all pool draws or all fixed results)."""
         parts = [part for _, part in outcomes.components]
@@ -694,6 +713,8 @@ class Abstraction:
         reads = action.reads(self.data)
         if not (reads.junk or reads.item_state) or action in self._kinds.actions:
             return
+        if reads.input_classes and any(reads == other.reads(self.data) for other in self._kinds.actions):
+            return  # the states are made from the reads alone: a recombinator with another donor reads what an enabled one does, and the planner finds its donors as it goes (ADR-0062)
         if reads.junk:
             raise ValueError(f"{action!r} reads the mods of the item and is not among the enabled actions")
         raise ValueError(f"{action!r} reads the implicits, the quality or the offer of the item and is not among the enabled actions")
@@ -1073,12 +1094,17 @@ class Abstraction:
         return self._canonical_id(entry, influences)
 
     def _item_of(
-        self, state: CompressedState, erasing: bool, avoid: frozenset[str] = frozenset()
+        self,
+        state: CompressedState,
+        erasing: bool,
+        avoid: frozenset[str] = frozenset(),
+        placement: Mapping[tuple[str, int], str] | None = None,
     ) -> tuple[Item, Origins]:
         """A concrete item the state stands for: its fractured mods, its crafted mods, and (unless
         the action erases them) one representative mod for every other slot, of distinct families.
         With it, where each of its mods came from (a fractured mod or a slot of the state).
-        `avoid` are families the representative of a fractured family type must not be (to try its siblings).
+        `avoid` are families the representative of a fractured family type must not be (to try its siblings). `placement` names the family a class
+        kind stands for (`Kinds.representative(family=)`): `("slot", i)` for the i-th slot of the state, `("fractured", i)` for the i-th fractured mod.
 
         Raises `ItemError` when the state is not an item (a normal item with mods) and `ValueError`
         when it holds more mods of a kind than the base has families.
@@ -1088,9 +1114,9 @@ class Abstraction:
         origins: Origins = {}
         mods = []
         types = []  # fractured mods that the state holds as a family type: a concrete mod is found for each below
-        for entry in state.fractured:
+        for position, entry in enumerate(state.fractured):
             if entry.mod_id.startswith(TYPE_PREFIX):
-                types.append(entry)
+                types.append((position, entry))
                 continue
             crafted = self.data.mods[entry.mod_id].domain == "crafted"  # a Fracturing Orb may fracture a crafted mod
             mods.append(
@@ -1117,18 +1143,18 @@ class Abstraction:
                 origins[(mod.id, False, True)] = slot
         if types or not erasing:
             kinds = self._context(influences).kinds
-            for entry in types:
+            for position, entry in types:
                 blocked = taken | avoid
-                mod = kinds.representative(kinds.side_of(entry.mod_id), entry.mod_id, blocked)
+                mod = kinds.representative(kinds.side_of(entry.mod_id), entry.mod_id, blocked, (placement or {}).get(("fractured", position)))
                 taken |= blocked - avoid
                 mods.append(
                     ExplicitMod(mod.id, self._context(influences).tiers.get(mod.id, 1), _low_values(mod), fractured=True)
                 )
                 origins[(mod.id, True, False)] = entry
             if not erasing:
-                for slot in state.slots:
+                for position, slot in enumerate(state.slots):
                     if not slot.crafted:
-                        mod = kinds.representative(slot.side, slot.kind, taken)
+                        mod = kinds.representative(slot.side, slot.kind, taken, (placement or {}).get(("slot", position)))
                         mods.append(ExplicitMod(mod.id, self._context(influences).tiers.get(mod.id, 1), _low_values(mod)))
                         origins[(mod.id, False, False)] = slot
         item = Item.build(
@@ -1337,6 +1363,7 @@ class Abstraction:
         if prepared.splits is None:
             given = prepared.item.influences if prepared.item is not None else None
             prior = prepared.item.implicits if prepared.item is not None else ()
+            prior = (*prior, *(entry for donor in prepared.donors for entry in donor.implicits))  # an implicit copied from an input is not rolled afresh
             prepared.splits = tuple(
                 self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes | Fixed) else frozenset(), prepared.imprints, given, prior)
                 for _, part in prepared.outcomes.components
