@@ -691,8 +691,8 @@ class Abstraction:
         reads = action.reads(self.data)
         if not (reads.junk or reads.item_state) or action in self._kinds.actions:
             return
-        if any(reads == other.reads(self.data) for other in self._kinds.actions):
-            return  # the states are made from the reads alone: an action that reads what an enabled one reads (a recombinator with another donor) has what it needs
+        if reads.input_classes and any(reads == other.reads(self.data) for other in self._kinds.actions):
+            return  # the states are made from the reads alone: a recombinator with another donor reads what an enabled one does, and the planner finds its donors as it goes (ADR-0062)
         if reads.junk:
             raise ValueError(f"{action!r} reads the mods of the item and is not among the enabled actions")
         raise ValueError(f"{action!r} reads the implicits, the quality or the offer of the item and is not among the enabled actions")
