@@ -44,6 +44,7 @@ from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
 
 from ._offers import free_action_cost
+from ._packed import PackedPolicy
 from ._plan import Plan, evaluate_risk, offer_action
 from ._reach import policy_states
 
@@ -465,6 +466,10 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     action, built as the solver builds its own (same kernel, same integer weights). A state with no
     action (no rule matches, or the game refuses the action) is a gap and has no policy entry.
     """
+    if isinstance(plan.policy, PackedPolicy):  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
+        from ._route_packed import evaluate_route_packed
+
+        return evaluate_route_packed(plan, route, data)
     began = time.perf_counter()
     choices: dict[CompressedState, Action[CompressedState] | str] = {}
     policy: dict[CompressedState, Action[CompressedState]] = {}

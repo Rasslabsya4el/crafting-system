@@ -98,7 +98,7 @@ from ..solver import Action
 from . import _free, _inputs, _moments
 from ._budget import BudgetRun, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
-from ._coarse import beyond_ordinary_grid, choose_step, expected_visits
+from ._coarse import beyond_ordinary_grid, choose_step, expected_visits, may_exceed_ordinary_grid
 from ._dense import fits_dense, run_dense
 from ._fold import fold_free
 from ._moments import interval, real_costs
@@ -135,6 +135,7 @@ def evaluate[S](
     free_cost: float | None = None,
     free_fallback_bins: int | None = None,
     packed_moments: bool = False,
+    coarse_first: bool = False,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -148,6 +149,10 @@ def evaluate[S](
     the quantiles and the CVaR come back unresolved (infinite above, the first cost below), for a chain whose DP does
     not fit in memory (the planner's packed route, ticket #374). With `packed_moments` the linear systems of the mean and the
     variance are solved on packed arrays (the same numbers, certified; the object solver's sweeps are too slow on a stiff long chain).
+    With `coarse_first` the coarse grid is tried not only when the ordinary one certainly cannot reach the highest level asked
+    but whenever a one-sided Chebyshev bound does not show that it does (`_coarse.may_exceed_ordinary_grid`): the ordinary grid of a chain
+    whose cheapest action is far below its typical one would otherwise run all its bins and report the levels unresolved (R04, ticket #70);
+    the ordinary grid is still used when no coarse step has a small enough gap.
     `free_cost` names the cost of the actions that are free (the planner's epsilon, `_free`): of a proper policy without inputs that holds
     such an action they are counted apart from the grid (see "Free actions" in the module docstring); `free_fallback_bins`, when given,
     is the `max_bins` of the ordinary and coarse grids if that is not possible. Without `free_cost` nothing changes.
@@ -237,9 +242,13 @@ def evaluate[S](
             _check_resolution(resolution, c_min)
     if free_found and free_fallback_bins is not None:  # the free grid was not built (or not possible): the caller's cut for the ordinary one
         max_bins = min(max_bins, free_fallback_bins)
+    level_asked = max([*levels, cvar_level])
     if (
         resolution is None and proper and not chain.has_inputs
-        and beyond_ordinary_grid(mean[0], variance[0], max([*levels, cvar_level]), c_min, max_bins)
+        and (
+            beyond_ordinary_grid(mean[0], variance[0], level_asked, c_min, max_bins)
+            or (coarse_first and may_exceed_ordinary_grid(mean[0], variance[0], level_asked, c_min, max_bins))
+        )
     ):
         coarse = _coarse_report(
             chain, mean, variance, levels, cvar_level, tail_mass, max_bins if max_coarse_bins is None else max_coarse_bins

@@ -11,6 +11,7 @@ its `solution` is the pessimistic one on blocks and it has no `risk` (ADR-0023).
 is always exact, as before.
 """
 
+import math
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -362,7 +363,11 @@ def make_plan(
         decision = decide(abstraction, start, forecast, budget, rates)
         note = decision.message
         if decision.action == "refused":
-            raise PlanError(decision.message)
+            if solver == "object" or (PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE):
+                raise PlanError(decision.message)
+            # no coarse level exists and the graph is beyond the object solver: the packed solver holds it (ticket #70, ADR-0063), so the
+            # answer is exact and takes the walk's minutes instead of being refused
+            note = _packed_note(decision)
         if decision.action == "approximate":
             try:
                 solved = climb(decision, start, merged)
@@ -404,6 +409,15 @@ def make_plan(
     )
 
 
+def _packed_note(decision: Decision) -> str:
+    """The plan's note for a query the decision refused and the packed solver answers exactly: why there is no approximation and what ran."""
+    size = "" if decision.transitions is None else f" (forecast: at least {decision.transitions:,} transitions)"
+    return (
+        f"No approximate level exists ({decision.why}), so the answer is exact: the graph{size} is larger than the object solver "
+        "has been run on and is solved on the packed solver, which takes minutes and several GB of memory."
+    )
+
+
 RISK_QUANTILE_TRANSITIONS = 2_000_000  # a merged chain with more transitions gets no quantile DP (ticket #374): the DP's entries outgrew 16 GB on R04's 4.7 M
 
 
@@ -420,6 +434,13 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note
     risk = evaluate_risk(
         packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True
     )
+    if resolve and risk.success_probability.value >= 1.0 and any(math.isinf(e.high) for e in (risk.p50, risk.p90, risk.cvar)):
+        # the ordinary grid did not reach a level asked: try the coarse grid, which the usual rule leaves to a chain that certainly needs it (R04, #70)
+        again = evaluate_risk(
+            packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, packed_moments=True, coarse_first=True
+        )
+        if not any(math.isinf(e.high) for e in (again.p50, again.p90, again.cvar)):
+            risk = again
     if not resolve:
         note = (note + " " if note else "") + (
             f"The p50, p90 and CVaR are not computed: the policy's merged chain has {moves:,} transitions, more than the "
@@ -456,6 +477,7 @@ def evaluate_risk(
     *,
     resolve_quantiles: bool = True,
     packed_moments: bool = False,
+    coarse_first: bool = False,
 ) -> RiskReport:
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
 
@@ -476,6 +498,8 @@ def evaluate_risk(
     extra: dict = {} if resolve_quantiles else {"resolve_quantiles": False}
     if packed_moments:
         extra["packed_moments"] = True
+    if coarse_first:
+        extra["coarse_first"] = True
     if free_cost is None or not any(is_free_cost(action.cost, free_cost) for action in policy.values()):
         return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS, **extra)
     paid = min((action.cost for action in policy.values() if not is_free_cost(action.cost, free_cost)), default=0.0)
