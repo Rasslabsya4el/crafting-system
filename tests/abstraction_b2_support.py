@@ -82,16 +82,16 @@ def concrete_pushforward(ability: Abstraction, data, item: Item, action, *, roll
     With `rolls` the implicits the action rolls afresh are listed at every value (`rolled`). Raises what `action.outcomes` raises when the game refuses the item.
     """
     expected: dict = defaultdict(Fraction)
-    outcomes = action.outcomes(data, item)
+    outcomes = action.outcomes_under(data, item, ability.reading)  # at the reading the abstraction's kernels are taken at (ticket #214)
     for chance, result in rolled(outcomes, data, item) if rolls else finished_at_tiers(outcomes, data):
         expected[ability.compress(result)] += chance
     return dict(expected)
 
 
-def closure(data, starts: Iterable[Item], actions, *, limit: int = 4000, rolls: bool = False) -> list[Item]:
+def closure(data, starts: Iterable[Item], actions, *, limit: int = 4000, rolls: bool = False, reading=None) -> list[Item]:
     """Every concrete item that `actions` reach from `starts` (the starts included), in the order found; at most `limit`.
 
-    An action that refuses an item (`ActionError`) is skipped there. With `rolls` the implicits an action rolls afresh are followed at every value.
+    An action that refuses an item (`ActionError`) is skipped there. With `rolls` the implicits an action rolls afresh are followed at every value, and with a `reading` the actions with rule axes are taken at it.
     """
     seen: dict[Item, None] = dict.fromkeys(starts)
     queue = list(seen)
@@ -99,7 +99,7 @@ def closure(data, starts: Iterable[Item], actions, *, limit: int = 4000, rolls: 
         item = queue.pop(0)
         for action in actions:
             try:
-                outcomes = action.outcomes(data, item)
+                outcomes = action.outcomes_under(data, item, reading)
                 results = rolled(outcomes, data, item) if rolls else finished_at_tiers(outcomes, data)
             except ActionError:
                 continue

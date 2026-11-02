@@ -280,20 +280,36 @@ class Abstraction:
         return action.inputs(self.data, self._prepare(state, action).item)
 
     def donor_key(self, state: CompressedState, action: Action) -> Hashable:
-        """What `action` reads of an input whose compressed state is `state`: the key of the want (ADR-0062 decision 1, ticket #217).
+        """What `action` reads of an input whose compressed state is `state`: the key of the want (ADR-0062 decision 1, tickets #214 and #217).
 
         Two inputs with one key give the action the same kernel on every state, so an acquisition ends at the first state with the wanted key,
-        whatever else that state holds. For an action that declares `Reads.input_classes` (the recombinator) the key is the compressed input
-        without what the action never reads of it: the rarity (the action refuses a normal item, and the result's rarity follows its mods, so
-        magic and rare are one), the unveil offer and the imprints (the result is a new item); the corruption stays (a corrupted input is
-        refused). Any other action reads the whole input, and its key is `state` itself. (One method for every action: an action that reads a
-        projection of its input adds a branch here, as the Awakener's Orb does for the influences, ticket #214.)
+        whatever else that state holds. One method for every action, a branch for each that reads a projection of its input:
+
+        * `Reads.input_influenced` (an Awakener's Orb) reads the input's influences, whether it is corrupted and which influence mods it holds,
+          each by mod id: the key is those three, and the ordinary mods, the values and the goal's statuses of the input are dropped.
+          Raises `ValueError` when no enabled action tells the influence mods apart (`Reads.influenced`).
+        * `Reads.input_classes` (a recombinator) reads the input's junk by class: the key is the compressed input without what the action never
+          reads of it, the rarity (the action refuses a normal item, and the result's rarity follows its mods, so magic and rare are one), the
+          unveil offer and the imprints (the result is a new item); the corruption stays (a corrupted input is refused).
+        * Any other action reads the whole input, and its key is `state` itself.
         """
         self._check_enabled(action)
-        if not self._averages_inputs(action):
-            return state
-        flags = replace(state.flags, rarity=Rarity.NORMAL if state.flags.rarity is Rarity.NORMAL else Rarity.RARE)
-        return replace(state, flags=flags, offer=(), imprints=())
+        reads = action.reads(self.data)
+        if reads.input_mods and reads.input_influenced:
+            if not self._kinds.influenced:
+                raise ValueError("the key of an input that is read by its influence mods needs a state that tells them apart (an enabled action declaring `Reads.influenced`)")
+            influences = state.flags.influences
+            kinds = self._context(influences).kinds if influences else self._kinds
+            named = sorted(
+                slot.kind
+                for slot in state.slots
+                if base_kind(slot.kind).startswith(MOD_PREFIX) and kinds.is_influenced(self.data.mods[base_kind(slot.kind)[len(MOD_PREFIX) :]])
+            )
+            return (influences, state.flags.corrupted, tuple(named))
+        if self._averages_inputs(action):
+            flags = replace(state.flags, rarity=Rarity.NORMAL if state.flags.rarity is Rarity.NORMAL else Rarity.RARE)
+            return replace(state, flags=flags, offer=(), imprints=())
+        return state
 
     def reaches_donor(self, action: Action) -> Callable[[CompressedState, CompressedState], bool]:
         """The want predicate of the acquisition processes for `action`'s inputs: `state` reaches `want` when their `donor_key`s are equal."""

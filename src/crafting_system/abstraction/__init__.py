@@ -67,11 +67,13 @@ is imported or tested for here.
 * `Abstraction(..., reading=...)` (ticket #210): the ordinary model of one `Reading` of the rule axes the enabled actions read
   (`actions.model_readings`); every kernel is taken at it. `Abstraction.inputs(state, action)` gives the `Need`s of an action on
   the item a state stands for, and `allow_inputs=False` (the planner's) refuses an action that has some (`OutOfScopeError`).
+  `Abstraction.donor_key(state, action)` is what the action reads of an input in that state (ADR-0062, ticket #214: the influences, the corruption and the influence mods of the
+  donor for an action that declares `Reads.input_influenced`; ticket #217: the compressed donor without its rarity, offer and imprints for one that declares
+  `Reads.input_classes`; the whole state otherwise) and `reaches_donor(action)` the want predicate built from it.
 * Two-input actions that read the mods of both inputs by class (`Reads.input_classes`, the recombinator, ticket #217, ADR-0062): a junk mod is the
   kind `"~n%p"`, its family type and its place in it (the weights of the family's mods, and which one this is), and
   `kernel(state, action)` is the action run on the concrete items the item's state and the donor's state stand for, averaged over where the
-  names lie (`_inputs.py`; the two inputs placed independently, uniformly, no two slots of one input in a family). `donor_key(donor, action)`
-  is the want of a donor: the compressed donor without what the action never reads (the rarity, the offer, the imprints). The implicits and
+  names lie (`_inputs.py`; the two inputs placed independently, uniformly, no two slots of one input in a family). The implicits and
   the quality of the chosen base are in the states and copied by the action.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
