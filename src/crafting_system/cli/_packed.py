@@ -9,8 +9,10 @@ futures), solves the merged graph by policy iteration and certifies the values o
 What comes back is what `make_plan` needs from a solve: a `Solution` of the concrete states (the value of every walked
 state; the policy as a lazy mapping that builds a state's `Action` when it is asked for, so the 100,000 states of S02,
 with kernels of tens of thousands of outcomes each, are never all held as objects), and the risk of the policy, which is
-evaluated on the merged chain (same mean, odds and quantiles by lumpability) because the merged chain is the one that
-fits: 20 classes for S02, 12,000 for R04.
+evaluated on the policy's chain lumped exactly (`solver._packed_lump`: same mean, odds and whole cost distribution) because that
+is the chain that fits: 11,767 classes with 17 million transitions for R04 lump to 552 blocks with 2,746 transitions, R14's 65,148
+to 14,743 blocks. The same lumped chain, on one shown item state per block, is what the report prints for a big policy
+(`Plan.view_policy`), while `--verify` and the route evaluation run the whole policy.
 
 `make_plan(solver="auto")` walks packed first and keeps the object solver for graphs of at most `EXACT_TRANSITIONS`
 transitions (what it has been run on, ADR-0023), unchanged; `solver="packed"` always uses this route and `"object"`
@@ -32,7 +34,6 @@ from crafting_system.solver import (
     Outcome,
     PackedBuilder,
     PackedGraph,
-    PackedSolution,
     Solution,
     lump_policy,
     policy_reach,
@@ -221,28 +222,6 @@ class PackedPolicy(Mapping):
             priced = walked.offers[int(walked.graph.act_tag[self._action[i]])]
             built = self._built[i] = offer_action(self._abstraction, priced, state, self._start)
         return built
-
-
-def class_policy(solved: PackedSolution, offers: Sequence[PricedOffer]) -> dict[int, Action[int]]:
-    """The policy on the merged chain: for every class the optimal policy reaches from the start class, its action.
-
-    States are class numbers, outcomes are weights over classes; `risk.evaluate` takes it as any policy (the mean, the
-    odds and the quantiles of the policy are the same on the classes as on their members).
-    """
-    reduced = solved.quotient
-    chosen = solved.class_action
-    reached = policy_reach(reduced, chosen, int(solved.cls[0]))
-    policy: dict[int, Action[int]] = {}
-    for c in reached.tolist():
-        a = int(chosen[c])
-        if a < 0:
-            continue
-        kernel = int(reduced.act_kernel[a])
-        low, high = int(reduced.k_ptr[kernel]), int(reduced.k_ptr[kernel + 1])
-        weights = reduced.kernel_weights(kernel)
-        outcomes = tuple(Outcome(int(s), int(w)) for s, w in zip(reduced.k_succ[low:high].tolist(), weights))
-        policy[c] = Action(offers[int(reduced.act_tag[a])].label, float(reduced.act_cost[a]), outcomes)
-    return policy
 
 
 @dataclass(frozen=True, slots=True, eq=False)

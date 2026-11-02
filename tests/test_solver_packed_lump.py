@@ -14,7 +14,7 @@ from crafting_system.risk import evaluate
 from crafting_system.solver import Action, Outcome, TabularModel, lump_policy, pack_model, policy_reach, solve_packed
 from crafting_system.solver import _packed_lump as lump_module
 
-from test_solver_packed import BIG, random_model
+from test_solver_packed import random_model
 
 
 def whole_and_lumped(model: TabularModel, start=0):

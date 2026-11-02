@@ -11,7 +11,6 @@ its `solution` is the pessimistic one on blocks and it has no `risk` (ADR-0023).
 is always exact, as before.
 """
 
-import math
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
