@@ -50,7 +50,7 @@ def chosen_offers(
     return [
         priced
         for _, priced, _ in keyed_offers(
-            abstraction, offers, state, start, merge_equal=merge_equal, prune_corrupting=prune_corrupting
+            abstraction, offers, state, start, merge_equal=merge_equal, prune_corrupting=prune_corrupting, prune_quality=prune_quality
         )
     ]
 
@@ -63,6 +63,7 @@ def keyed_offers(
     *,
     merge_equal: bool = True,
     prune_corrupting: bool = True,
+    prune_quality: bool = True,
 ) -> list[tuple[int, PricedOffer, object]]:
     """`chosen_offers` with the position of each offer in `offers` and its `Abstraction.kernel_key` at `state`.
 
