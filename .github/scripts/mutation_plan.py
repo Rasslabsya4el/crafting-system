@@ -145,6 +145,16 @@ def build_plan(
     }  # fmt: skip
 
 
+def sample_plan(plan: dict, count: int) -> dict:
+    """A plan of `count` evenly spaced mutants of `plan`, renumbered (a quick look at the whole scope, for a check run)."""
+    step = max(1, len(plan["mutants"]) // count)
+    kept = [dict(mutant) for mutant in plan["mutants"][::step][:count]]
+    for number, mutant in enumerate(kept):
+        mutant["id"] = number
+    used = {mutant["set"] for mutant in kept}
+    return {**plan, "mutants": kept, "sets": {name: entry for name, entry in plan["sets"].items() if name in used}}
+
+
 def git_head(root: Path) -> str:
     try:
         return subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=True).stdout.strip()
@@ -158,10 +168,13 @@ def main() -> int:
     parser.add_argument("--coverage", type=Path, help="the combined .coverage data file of step 3 (may be missing)")
     parser.add_argument("--durations", type=Path, default=Path("tests/shard_durations.json"))
     parser.add_argument("--trial", action="store_true", help=f"{TRIAL_MUTANTS} mutants of {TRIAL_FILE}")
+    parser.add_argument("--sample", type=int, help="keep only this many evenly spaced mutants (a check run, not the week)")
     parser.add_argument("--out", type=Path, required=True, help="folder for plan.json")
     args = parser.parse_args()
     root = args.root.resolve()
     plan = build_plan(root, args.coverage, root / args.durations if not args.durations.is_absolute() else args.durations, args.trial, git_head(root))
+    if args.sample:
+        plan = sample_plan(plan, args.sample)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
     unreached = sum(info["unreached"] for info in plan["files"].values())

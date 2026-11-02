@@ -228,6 +228,14 @@ def test_the_trial_plan_is_at_most_20_mutants_of_one_file(tmp_path):
     assert {m["file"] for m in trial["mutants"]} == {"src/crafting_system/solver/_sparse.py"}
 
 
+def test_a_sample_keeps_evenly_spaced_mutants_renumbered_with_their_sets():
+    plan = {"mutants": [{"id": n, "set": "a" if n < 5 else "b"} for n in range(10)], "sets": {"a": 1, "b": 2, "c": 3}, "x": 7}
+    sample = plan_module.sample_plan(plan, 3)
+    assert [(m["id"], m["set"]) for m in sample["mutants"]] == [(0, "a"), (1, "a"), (2, "b")]  # old numbers 0, 3, 6
+    assert sample["sets"] == {"a": 1, "b": 2} and sample["x"] == 7
+    assert [m["id"] for m in plan["mutants"]] == list(range(10))  # the plan itself is not changed
+
+
 # --- the slices -----------------------------------------------------------------------------------------------------
 
 
