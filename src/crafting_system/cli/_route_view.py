@@ -147,7 +147,7 @@ class RouteInput:
 
 def route_input(plan: Plan, interval: IntervalAnswer | None = None) -> RouteInput:
     """The planner's own policy, with the interval of the plan when the answer read a rule axis."""
-    return RouteInput(PLANNER_LABEL, plan, plan.policy, plan.risk, interval=interval)
+    return RouteInput(PLANNER_LABEL, plan, plan.view_policy, plan.risk, interval=interval)
 
 
 def given_route_input(plan: Plan, route: Route, result: RouteResult) -> RouteInput:

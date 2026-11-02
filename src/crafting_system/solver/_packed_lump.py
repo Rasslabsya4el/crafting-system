@@ -146,6 +146,14 @@ def lump_policy(graph: PackedGraph, action: np.ndarray, start: int, *, max_round
     rows = _Rows(graph, used)
     kernel_slot = np.full(graph.num_kernels, -1, dtype=np.int64)
     kernel_slot[used] = np.arange(len(used))
+    if not taking.any():  # nothing to do anywhere (the start already is a goal): one goal block
+        goal = graph.goal[reached]
+        block_of_class = np.full(graph.n, -1, dtype=np.int64)
+        block_of_class[reached] = 0
+        return LumpedChain(
+            block_of_class, 0, goal[:1], np.zeros(1), np.full(1, -1, dtype=np.int64), reached[:1],
+            (np.zeros(0, dtype=np.int64),), (np.zeros(0, dtype=np.int64),), 0,
+        )  # fmt: skip
     cost = np.where(taking, graph.act_cost[np.maximum(acts, 0)], 0.0)
     kind = np.where(graph.goal[reached], 1, np.where(taking, 0, 2))  # 1 goal, 2 dead end
     _, first = np.unique(np.stack([kind.astype(np.float64), cost], axis=1), axis=0, return_inverse=True)

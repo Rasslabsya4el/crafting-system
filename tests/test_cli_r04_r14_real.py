@@ -18,6 +18,8 @@ from abstraction_support import real_game_data
 from crafting_system.cli import PlanError, When, load_route, make_plan
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.cli._benchmark_outcomes import PublishedOutcome, published_outcomes
+from crafting_system.cli._decide import decide
+from crafting_system.cli._plan import _packed_note
 from crafting_system.cli._route_sim import simulate_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
@@ -127,11 +129,20 @@ def test_benchmark_checks_the_odds_and_leaves_the_heavy_route_unsolved(data, pri
     assert len(entry["published_odds"]) == len(bench.outcomes)
 
 
-def test_the_default_run_is_refused_with_the_reason(data, prices, route_id):
+def test_the_decision_finds_no_approximate_level_and_the_planner_goes_on_to_the_packed_solver(unsolved, route_id):
+    """Ticket #70: what was a refusal ("no approximate level available") is now an exact answer of the packed solver, with the reason in the note."""
+    decision = decide(unsolved.abstraction, unsolved.start, unsolved.offers, 60.0)
+
+    assert decision.action == "refused" and "Attack/Caster tags" in decision.why
+    note = _packed_note(decision)
+    assert "Attack/Caster tags" in note and "packed solver" in note and "the answer is exact" in note
+
+
+def test_a_budget_run_with_the_object_solver_asked_for_still_refuses_with_the_reason(data, prices, route_id):
     target = load_target(ROOT / ROUTES[route_id][0], data)
 
     with pytest.raises(PlanError, match=r"no approximate level available.*Attack/Caster tags"):
-        make_plan(data, target, prices, budget=60.0)
+        make_plan(data, target, prices, budget=60.0, solver="object")
 
 
 def test_a_route_can_be_played_on_concrete_items(unsolved, data, route_id):

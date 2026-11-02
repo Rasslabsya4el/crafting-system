@@ -254,6 +254,7 @@ class PackedResult:
     risk_start: int
     risk_is_goal: Callable[[int], bool]
     info: dict
+    view: Mapping[CompressedState, Action[CompressedState]] | None = None  # the lumped chain on one concrete state per block (what a big policy is shown by)
 
 
 def solve_walked(
@@ -282,7 +283,27 @@ def solve_walked(
     info.update(lumped_blocks=lumped.count, lumped_transitions=lumped.transitions, lump_rounds=lumped.rounds, lump_seconds=round(time.perf_counter() - mark, 1))
     say(f"policy chain lumped: {lumped.count:,} blocks, {lumped.transitions:,} transitions ({info['lump_seconds']} s)")
     goal = lumped.goal
-    return PackedResult(solution, lumped_policy(lumped, solved.quotient, walked.offers), lumped.start, lambda b: bool(goal[b]), info)
+    view = lumped_view(lumped, solved.quotient, solved.cls, walked)
+    return PackedResult(solution, lumped_policy(lumped, solved.quotient, walked.offers), lumped.start, lambda b: bool(goal[b]), info, view)
+
+
+def lumped_view(lumped: LumpedChain, reduced: PackedGraph, cls: np.ndarray, walked: Walked) -> dict[CompressedState, Action[CompressedState]]:
+    """The lumped chain on concrete states: each block is shown by one of its members (the first state of its representative class).
+
+    The result is a policy over those states (`Action` with the offer's label and cost, outcomes into the other blocks' shown states
+    with the summed integer weights), so the report, the JSON and the route view read it as any policy. The shown state of a block stands for
+    all the item states that pay alike and lead to the same blocks with the same chances; its expected remaining cost is theirs.
+    """
+    first = np.unique(cls, return_index=True)[1]
+    shown = [walked.states[int(first[int(lumped.rep[b])])] for b in range(lumped.count)]
+    view: dict[CompressedState, Action[CompressedState]] = {}
+    for b in range(lumped.count):
+        a = int(lumped.action[b])
+        if a < 0 or lumped.goal[b]:
+            continue
+        outcomes = tuple(Outcome(shown[int(t)], int(w)) for t, w in zip(lumped.succ[b].tolist(), lumped.weight[b].tolist()))
+        view[shown[b]] = Action(walked.offers[int(reduced.act_tag[a])].label, float(lumped.cost[b]), outcomes)
+    return view
 
 
 def lumped_policy(lumped: LumpedChain, reduced: PackedGraph, offers: Sequence[PricedOffer]) -> dict[int, Action[int]]:

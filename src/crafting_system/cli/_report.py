@@ -149,7 +149,7 @@ def _fractured_mod_shown(plan: Plan, data: GameData, canonical_id: str):
 def number_states(plan: Plan) -> dict[CompressedState, str]:
     """`S1`, `S2`, ... for the non-goal states the policy can reach, in breadth-first order from the start."""
     ids: dict[CompressedState, str] = {}
-    for state in policy_states(plan.start, plan.policy, plan.is_goal):
+    for state in policy_states(plan.start, plan.view_policy, plan.is_goal):
         if not plan.is_goal(state):
             ids[state] = f"S{len(ids) + 1}"
     return ids
@@ -157,13 +157,13 @@ def number_states(plan: Plan) -> dict[CompressedState, str]:
 
 def build_report(plan: Plan, data: GameData) -> Report:
     """Number the reachable states and collect what each one does."""
-    order = policy_states(plan.start, plan.policy, plan.is_goal)
+    order = policy_states(plan.start, plan.view_policy, plan.is_goal)
     ids = number_states(plan)
-    reach = reach_probabilities(plan.start, plan.policy, plan.is_goal)
+    reach = reach_probabilities(plan.start, plan.view_policy, plan.is_goal)
 
     states = []
     for state in order:
-        action = plan.policy.get(state)
+        action = plan.view_policy.get(state)
         if plan.is_goal(state) or action is None:
             continue
         priced = plan.offer_of(action)
@@ -191,7 +191,7 @@ def build_report(plan: Plan, data: GameData) -> Report:
     shares = start_shares(data, plan.target.start_item, offers, _goal_leaf_nodes(plan))
     return Report(
         plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
-        approximate_inputs(plan, plan.policy, data),
+        approximate_inputs(plan, plan.view_policy, data),
         None if plan.starts is None else first_step(plan.starts.chosen, data, plan.target),
     )  # fmt: skip
 

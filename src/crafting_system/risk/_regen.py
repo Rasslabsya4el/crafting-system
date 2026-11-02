@@ -1,0 +1,149 @@
+"""Quantiles of a chain that starts over: one attempt at a time (ticket #70).
+
+A craft that is bought again when it goes wrong (`restart`, ADR-0011) returns to its first state over and over. The
+cost of the whole craft is then a sum of independent attempts: each attempt runs from the start until it reaches a goal (it
+ends there) or comes back to the start (it failed and a new one begins). With g(x) the chance an attempt ends in a goal after
+paying x bins and f(x) the chance it comes back to the start after x bins, the total T(x) = P(the craft ends at bin x) obeys the
+renewal equation
+
+    T(x) = g(x) + sum over y >= 1 of f(y) T(x - y)        (divided by 1 - f(0) when an attempt may fail for free).
+
+The budget DP then runs on ONE attempt, whose cost is a small part of the whole (R14: a few thousand Chaos against a mean of
+5,784 and a p90 of about 11,000), and the sum over attempts is a convolution recursion, not a state space. The attempt chain is
+the policy's chain with every edge into the start sent to a sink, run twice: once with the goals as the absorbing states (g)
+and once with the sink (f).
+
+Bins are as in `_evaluate`: a step D, the lower chain pays floor(cost / D) bins, the upper one ceil(cost / D), the quantiles of the
+two bracket the true one. A cost below D is free on the lower chain and is folded away (`_fold`). The attempt DPs run until the
+mass still in flight is below `ATTEMPT_TAIL`, and the answer is refused (None) when the attempts that are cut (the missing mass
+over the chance of success) could move a quantile by more than the rounding allowance.
+"""
+
+from collections import deque
+
+import numpy as np
+
+from ._budget import BudgetRun, run_budget
+from ._chain import Chain
+from ._fold import fold_free
+
+ATTEMPT_TAIL = 1e-13  # the mass of an attempt that may stay in flight when its DP stops (below it the float sums of the lost mass no longer settle)
+MAX_MISSING = 1e-10  # the cut attempts' mass over the chance of success must not exceed this
+
+
+def regeneration_edges(chain: Chain) -> list[int]:
+    """The states that can finish and move to the start (state 0) with some chance: where an attempt may end by coming back."""
+    return [i for i in chain.finishing_states() if any(j == 0 for j, _ in chain.succ[i])]
+
+
+def _reaches(succ: tuple[tuple[tuple[int, float], ...], ...], targets: list[int]) -> list[bool]:
+    """Which states have a path to one of `targets` (reverse breadth first search)."""
+    reverse: list[list[int]] = [[] for _ in succ]
+    for i, edges in enumerate(succ):
+        for j, _ in edges:
+            reverse[j].append(i)
+    reached = [False] * len(succ)
+    queue = deque(targets)
+    for t in targets:
+        reached[t] = True
+    while queue:
+        j = queue.popleft()
+        for i in reverse[j]:
+            if not reached[i]:
+                reached[i] = True
+                queue.append(i)
+    return reached
+
+
+def attempt_chain(chain: Chain, *, success: bool) -> Chain:
+    """One attempt of `chain`: edges into the start go to a new sink state; its goal states are the chain's (`success`) or the sink alone.
+
+    In the other variant the goals and the states that cannot reach the absorbing state are plain stuck states (their mass is lost).
+    """
+    n = len(chain.states)
+    succ = tuple(tuple((n if j == 0 else j, p) for j, p in edges) for edges in chain.succ) + ((),)
+    if success:
+        goal = (*chain.goal, False)
+        targets = [i for i, flag in enumerate(goal) if flag]
+    else:
+        goal = (*([False] * n), True)
+        targets = [n]
+    can_finish = tuple(_reaches(succ, targets))
+    # a goal state of the other variant is a state that absorbs nothing here: it keeps no action and cannot finish
+    action = (*chain.action, None)
+    if not success:
+        action = tuple(None if chain.goal[i] else a for i, a in enumerate(chain.action)) + (None,)
+        can_finish = tuple(flag and not (i < n and chain.goal[i]) for i, flag in enumerate(can_finish))
+    return Chain(
+        (*chain.states, None), goal, action, succ, can_finish, (*chain.inputs, ()), chain.packed_moments,
+    )  # fmt: skip
+
+
+def attempt_pmf(chain: Chain, bins: list[int], *, success: bool, max_bins: int) -> tuple[np.ndarray, float] | None:
+    """`(pmf over bins, mass that is neither in it nor lost)` of one attempt ending in a goal (`success`) or back at the start, or None.
+
+    None when a free component is too large to fold (`_fold`).
+    """
+    attempt = attempt_chain(chain, success=success)
+    extended = [*bins, 0]
+    if not attempt.can_finish[0]:
+        return np.zeros(1), 0.0
+    folded = fold_free(attempt, extended)
+    if folded is None:
+        return None
+    run = run_budget(
+        folded.chain, extended, target=None, tail_mass=ATTEMPT_TAIL, max_bins=max_bins, initial=folded.initial, goal_mass=folded.goal_mass
+    )
+    cdf = np.asarray(run.cdf)
+    return np.diff(cdf, prepend=0.0), run.unresolved
+
+
+def renewal_cdf(g: np.ndarray, f: np.ndarray, target: float, max_bins: int, allowance) -> list[float]:
+    """The cumulative distribution of the total, bin by bin, until it reaches `target` plus the rounding allowance or `max_bins`."""
+    gl, fl = len(g), len(f)
+    f_reversed = f[::-1].copy()
+    stay = 1.0 - float(f[0])
+    total = np.zeros(max_bins + 1)
+    cdf: list[float] = []
+    running = 0.0
+    for x in range(max_bins + 1):
+        m = min(x, fl - 1)
+        value = float(g[x]) if x < gl else 0.0
+        if m >= 1:
+            value += float(np.dot(f_reversed[fl - 1 - m : fl - 1], total[x - m : x]))
+        total[x] = value / stay
+        running += total[x]
+        cdf.append(running)
+        if running >= target + allowance(x):
+            break
+    return cdf
+
+
+def regenerative_runs(
+    chain: Chain, low_bins: list[int], high_bins: list[int], target: float, max_bins: int, allowance, attempt_bins: int
+) -> tuple[BudgetRun, BudgetRun] | None:
+    """The lower and the upper chain's `BudgetRun` of the whole craft, from its attempts; None when they cannot be made.
+
+    Each run's `cdf` is the cumulative distribution of the total in bins up to `target` (or `max_bins`). `unresolved` is the mass beyond.
+    """
+    runs: list[BudgetRun] = []
+    done: dict[tuple[int, ...], BudgetRun] = {}
+    for bins in (low_bins, high_bins):
+        key = tuple(bins)
+        if key in done:
+            runs.append(done[key])
+            continue
+        found_g = attempt_pmf(chain, bins, success=True, max_bins=attempt_bins)
+        found_f = attempt_pmf(chain, bins, success=False, max_bins=attempt_bins)
+        if found_g is None or found_f is None:
+            return None
+        (g, cut_g), (f, cut_f) = found_g, found_f
+        chance = float(g.sum())
+        missing = max(0.0, 1.0 - chance - float(f.sum()))
+        if chance <= 0.0 or missing / chance > MAX_MISSING or float(f[0]) >= 1.0:
+            return None
+        cdf = renewal_cdf(g, f, target, max_bins, allowance)
+        run = BudgetRun(cdf, max(0.0, 1.0 - cdf[-1]))
+        done[key] = run
+        runs.append(run)
+    return runs[0], runs[1]

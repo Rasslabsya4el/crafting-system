@@ -95,8 +95,8 @@ from numbers import Integral, Real
 
 from .. import parallel
 from ..solver import Action
-from . import _free, _inputs, _moments
-from ._budget import BudgetRun, run_budget, tail_mean
+from . import _free, _inputs, _moments, _regen
+from ._budget import BudgetRun, rounding_allowance, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
 from ._coarse import beyond_ordinary_grid, choose_step, expected_visits, may_exceed_ordinary_grid
 from ._dense import fits_dense, run_dense
@@ -117,6 +117,9 @@ CELLS_PER_ENTRY = 30.0  # the nested DP's work counts convolution cells, each ab
 SPREAD_SDS = 6.0  # the arrival cost of a state spreads over about this many standard deviations of the total cost
 FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean of the lower coarse chain (it needs a positive cost; the charge is taken off again)
 FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
+REGEN_PARTS = (4, 8, 16, 32, 64)  # the step of the attempt-wise run is the restart's cost over one of these, the coarsest first
+REGEN_WIDTH = 0.03  # a step is kept when every quantile is bracketed within this share of its value
+REGEN_EPSILON = 1e-3  # the cost of a paying state in the solve that counts the visits of the free states
 
 
 def evaluate[S](
@@ -136,6 +139,7 @@ def evaluate[S](
     free_fallback_bins: int | None = None,
     packed_moments: bool = False,
     coarse_first: bool = False,
+    regenerative: bool = False,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -153,6 +157,8 @@ def evaluate[S](
     but whenever a one-sided Chebyshev bound does not show that it does (`_coarse.may_exceed_ordinary_grid`): the ordinary grid of a chain
     whose cheapest action is far below its typical one would otherwise run all its bins and report the levels unresolved (R04, ticket #70);
     the ordinary grid is still used when no coarse step has a small enough gap.
+    With `regenerative` a chain that comes back to its start (a `restart`) and that the coarse grid did not take (too many states) is
+    run one attempt at a time and the attempts are summed by the renewal equation (`_regen`), on a step that is a part of the restart's cost.
     `free_cost` names the cost of the actions that are free (the planner's epsilon, `_free`): of a proper policy without inputs that holds
     such an action they are counted apart from the grid (see "Free actions" in the module docstring); `free_fallback_bins`, when given,
     is the `max_bins` of the ordinary and coarse grids if that is not possible. Without `free_cost` nothing changes.
@@ -255,6 +261,15 @@ def evaluate[S](
         )
         if coarse is not None:
             return coarse
+    if (
+        regenerative and resolution is None and proper and not chain.has_inputs
+        and may_exceed_ordinary_grid(mean[0], variance[0], level_asked, c_min, max_bins)
+    ):
+        again = _regen_report(
+            chain, mean, variance, levels, cvar_level, tail_mass, max_bins if max_coarse_bins is None else max_coarse_bins
+        )
+        if again is not None:
+            return again
     step = resolution
     if step is None:
         step = _choose_step(costs, c_min, max_bins, horizon, _affordable(chain, spread, work_budget))
@@ -396,6 +411,62 @@ def _coarse_report(
     return RiskReport(
         Estimate(1.0, 1.0, 1.0), Estimate(*mean), Estimate(*variance), quantiles, Estimate(*cvar), cvar_level, grid
     )
+
+
+def _regen_report(
+    chain: Chain,
+    mean: tuple[float, float, float],
+    variance: tuple[float, float, float],
+    levels: Sequence[float],
+    cvar_level: float,
+    tail_mass: float,
+    max_bins: int,
+) -> RiskReport | None:
+    """The report from one attempt at a time (`_regen`), on the coarsest step of `REGEN_PARTS` of the restart's cost that brackets every level
+    within `REGEN_WIDTH` (relative), else the finest that brackets them at all; `None` when the chain does not start over or no step works."""
+    into = _regen.regeneration_edges(chain)
+    if not into:
+        return None
+    counts: dict[float, int] = {}
+    for i in into:
+        counts[chain.action[i].cost] = counts.get(chain.action[i].cost, 0) + 1
+    base = max(counts, key=lambda cost: counts[cost])
+    target = max([*levels, cvar_level])
+    best: RiskReport | None = None
+    for parts in REGEN_PARTS:
+        step = base / parts
+        low_bins, high_bins = _bin_costs(chain, step)
+        found = _regen.regenerative_runs(chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins)
+        if found is None:
+            continue
+        low_run, high_run = found
+        mean_low, mean_high = _regen_means(chain, step, low_bins, high_bins)
+        cvar = _cvar(step, cvar_level, low_run, high_run, mean_low, mean_high, mean[0])
+        quantiles = {x: _quantile(x, step, low_run, high_run, None) for x in levels}
+        grid = GridInfo(step, False, max(r.bins for r in found), max(r.unresolved for r in found), max(r.delta for r in found))
+        report = RiskReport(Estimate(1.0, 1.0, 1.0), Estimate(*mean), Estimate(*variance), quantiles, Estimate(*cvar), cvar_level, grid)
+        if not all(math.isfinite(e.high) for e in (*quantiles.values(), Estimate(*cvar))):
+            continue
+        best = report
+        if all((e.high - e.low) <= REGEN_WIDTH * max(e.value, 1e-300) for e in (*quantiles.values(), Estimate(*cvar))):
+            break
+    return best
+
+
+def _regen_means(chain: Chain, step: float, low_bins: Sequence[int], high_bins: Sequence[int]) -> tuple[float, float]:
+    """Mean of the lower and the upper chain, as `_coarse_means`, with the visits of the free states found by two more solves, not a dense one."""
+    free = {i for i in chain.finishing_states() if low_bins[i] == 0}
+    low_mean, low_error = _solve_costs(chain, [max(float(k), FREE_BINS) * step for k in low_bins])
+    high_mean, high_error = _solve_costs(chain, [float(k) * step for k in high_bins])
+    owed = 0.0
+    if free:
+        weigh = [1.0 if i in free else REGEN_EPSILON for i in range(len(chain.states))]
+        plain = [REGEN_EPSILON] * len(chain.states)
+        with_free, _ = _solve_costs(chain, weigh)
+        without, _ = _solve_costs(chain, plain)
+        owed = FREE_BINS * step * (with_free[0] - without[0]) / (1.0 - REGEN_EPSILON) * (1.0 + FREE_SLACK)
+    low = interval(low_mean[0], low_error)[0] - owed
+    return max(low, 0.0), interval(high_mean[0], high_error)[1]
 
 
 def _coarse_means(chain: Chain, step: float, low_bins: Sequence[int], high_bins: Sequence[int]) -> tuple[float, float]:

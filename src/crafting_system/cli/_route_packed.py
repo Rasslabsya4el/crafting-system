@@ -4,18 +4,16 @@
 essence rerolls have about 1,500 successors in each of 177,000 states, which an object chain cannot hold. A packed plan already
 holds the walked graph (one stored kernel per distinct distribution), so the route is read there instead: at each state the first
 rule that matches names an offer, the graph's action with that offer's tag is the route's action, and the route's policy is the graph
-restricted to those actions. The restricted graph is solved by the packed solver (a policy with one action per state is a policy
-evaluation, merged exactly and certified) and the risk is evaluated on its merged chain, as for the plan's own policy.
+restricted to those actions. The restricted graph is merged exactly, its chain lumped and the risk evaluated on the lumped chain, as for
+the plan's own policy (`_packed.solve_walked`).
 
 The walk offers a state only the cheapest of the offers with the same kernel there (`_prune.keyed_offers`), so the route's offer may
 be missing from the state's actions; then the kept action with the same `kernel_key` is its twin: the route uses that kernel at its own
 price. The route has no action at a state when the game refuses its offer there, when the offer was pruned, or when no rule matches:
-that is a gap. A route with a gap never finishes with certainty: its mean is infinite and its success chance is found by iterating
-the chain (a lower bound; the upper bound is 1 until the iteration settles).
+that is a gap, a dead end of the chain (the odds are then below 1 and the mean infinite, as in the object evaluation).
 """
 
 import dataclasses
-import math
 import time
 
 import numpy as np
@@ -23,16 +21,13 @@ import numpy as np
 from crafting_system.abstraction import CompressedState
 from crafting_system.actions import ActionError
 from crafting_system.data import GameData
-from crafting_system.risk import Estimate, GridInfo, RiskReport
-from crafting_system.solver import PackedGraph
-from crafting_system.solver._packed import expand_ranges, kernel_sums
+from crafting_system.solver import PackedGraph, lump_policy
+from crafting_system.solver._packed import expand_ranges
+from crafting_system.solver._packed_merge import exact_classes, quotient
 
 from ._offers import BuyStartItem, free_action_cost
-from ._packed import PackedPolicy, Walked, solve_walked
+from ._packed import PackedResult, Walked, lumped_policy, lumped_view
 from ._plan import Plan, packed_risk
-
-SUCCESS_ITERATIONS = 5_000  # sweeps of the success chance of a route with a gap
-SUCCESS_SETTLED = 1e-13  # the largest change in a sweep that counts as settled
 
 
 class _Reading:
@@ -129,44 +124,31 @@ def restricted(graph: PackedGraph, chosen: np.ndarray, cost: np.ndarray) -> Pack
     return dataclasses.replace(graph, act_ptr=ptr, act_tag=graph.act_tag[keep], act_cost=cost[has], act_kernel=graph.act_kernel[keep])
 
 
-def success_chance(graph: PackedGraph, chosen: np.ndarray) -> Estimate:
-    """The chance the route's chain from state 0 ends in a goal: iterated from below, so `low` is certain and `high` is 1 until it settles."""
-    n = graph.n
-    taken = chosen >= 0
-    kernel_of = np.where(taken, graph.act_kernel[np.maximum(chosen, 0)], 0)
-    x = graph.goal.astype(np.float64)
-    for _ in range(SUCCESS_ITERATIONS):
-        sums = kernel_sums(graph, x)
-        new = np.where(graph.goal, 1.0, np.where(taken, sums[kernel_of], 0.0))
-        change = float(np.max(np.abs(new - x))) if n else 0.0
-        x = new
-        if change < SUCCESS_SETTLED:
-            return Estimate(float(x[0]), float(x[0]), float(x[0]))
-    return Estimate(float(x[0]), float(x[0]), 1.0)
-
-
 def evaluate_route_packed(plan: Plan, route, data: GameData):
-    """The `RouteResult` of `route` on the packed plan `plan`; see the module docstring."""
+    """The `RouteResult` of `route` on the packed plan `plan`; see the module docstring.
+
+    The route's chain (the graph restricted to the route's actions) is merged exactly, lumped (`solver._packed_lump`) and evaluated by
+    `risk.evaluate` on the lumped chain, so the odds (below 1 when a gap is reachable), mean, variance, quantiles and CVaR are those
+    of the object evaluation; `policy` is the lumped chain on one shown state per block (what the report and the route view read).
+    """
     from ._route import Divergence, Gap, RouteResult  # _route imports this module's caller
 
     began = time.perf_counter()
     walked = plan.policy.walked
-    graph = walked.graph
     chosen, labels, cost, gaps = route_actions(plan, route, data)
     found_gaps = tuple(Gap(walked.states[i], reason) for i, reason in gaps)
-    if gaps:
-        never = Estimate(math.inf, math.inf, math.inf)
-        risk = RiskReport(
-            success_chance(graph, chosen), never, never, {0.5: never, 0.9: never}, never, 0.9, GridInfo(0.0, True, 0, 0.0, 0.0)
-        )
-        policy = PackedPolicy(plan.abstraction, plan.start, walked, chosen)
-    else:
-        solved = solve_walked(
-            plan.abstraction, plan.start, Walked(restricted(graph, chosen, cost), walked.states, walked.index, walked.offers, 0.0)
-        )
-        policy = solved.solution.policy
-        risk, _ = packed_risk(solved, solved.solution.values[plan.start], free_action_cost(plan.offers), "")
-    return RouteResult(policy, risk, found_gaps, _divergence(plan, route, data, labels, Divergence), time.perf_counter() - began)
+    chain = restricted(walked.graph, chosen, cost)
+    classes = exact_classes(chain)
+    reduced, _ = quotient(chain, classes)
+    class_action = np.where(np.diff(reduced.act_ptr) > 0, reduced.act_ptr[:-1], -1)
+    lumped = lump_policy(reduced, class_action, int(classes.cls[0]))
+    if lumped is None:
+        raise ValueError("the route's chain holds a kernel with weights beyond 62 bits, which the packed route evaluation does not take")
+    goal = lumped.goal
+    result = PackedResult(plan.solution, lumped_policy(lumped, reduced, walked.offers), lumped.start, lambda b: bool(goal[b]), {})
+    risk, _ = packed_risk(result, plan.mean_remaining, free_action_cost(plan.offers), "")  # the route costs at least the solver's mean
+    view = lumped_view(lumped, reduced, classes.cls, walked)
+    return RouteResult(view, risk, found_gaps, _divergence(plan, route, data, labels, Divergence), time.perf_counter() - began)
 
 
 def _divergence(plan: Plan, route, data: GameData, labels: dict[int, str], make):
