@@ -1,0 +1,33 @@
+name: measure-repeats
+
+# Step of the measurement chain (ticket #399): a stub until the step is built. The chain is measure.yml. The step
+# uploads summary.md (for the main chat) and headline.txt (one Russian line for the diary, #398) as measure-repeats.
+
+on:
+  workflow_call:
+    inputs:
+      trial:
+        type: boolean
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  stub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Write the placeholder summary and headline
+        run: |
+          mkdir -p out
+          printf '# repeats\n\nNot built yet.\n' > out/summary.md
+          printf 'шаг ещё не построен\n' > out/headline.txt
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: measure-repeats
+          overwrite: true
+          path: out/

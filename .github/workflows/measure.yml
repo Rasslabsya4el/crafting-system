@@ -1,0 +1,206 @@
+name: Measurement chain
+
+# The measurement week (ticket #399): five steps run one after another, each a reusable workflow measure-<step>.yml,
+# and after each one a diary comment goes to issue #398 (Russian, plain). A failed step never stops the chain: every
+# job needs the previous one with `if: !cancelled()`. Start it with a push to a `measure/...` branch (trial when the
+# branch name contains `trial`) or a dispatch of this file with the `trial` input. See docs/ci.md.
+
+on:
+  push:
+    branches: ['measure/**']
+  workflow_dispatch:
+    inputs:
+      trial:
+        description: 'A short trial of every step (about an hour in all)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  mode:
+    runs-on: ubuntu-latest
+    outputs:
+      trial: ${{ steps.flag.outputs.trial }}
+    steps:
+      - id: flag
+        run: echo "trial=${{ inputs.trial == true || contains(github.ref_name, 'trial') }}" >> "$GITHUB_OUTPUT"
+
+  note-start:
+    needs: mode
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          python3 .github/scripts/measure_diary.py --issue 398 --done none --result success --art art
+          --trial ${{ needs.mode.outputs.trial }}
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  bloat:
+    needs: [mode, note-start]
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/measure-bloat.yml
+    with:
+      trial: ${{ needs.mode.outputs.trial == 'true' }}
+
+  note-bloat:
+    needs: [mode, bloat]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-bloat
+          path: art/bloat
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          python3 .github/scripts/measure_diary.py --issue 398 --done bloat --result ${{ needs.bloat.result }} --art art
+          --trial ${{ needs.mode.outputs.trial }}
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  routes:
+    needs: [mode, note-bloat]
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/measure-routes.yml
+    with:
+      trial: ${{ needs.mode.outputs.trial == 'true' }}
+
+  note-routes:
+    needs: [mode, routes]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-routes
+          path: art/routes
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          python3 .github/scripts/measure_diary.py --issue 398 --done routes --result ${{ needs.routes.result }} --art art
+          --trial ${{ needs.mode.outputs.trial }}
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  coverage:
+    needs: [mode, note-routes]
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/measure-coverage.yml
+    with:
+      trial: ${{ needs.mode.outputs.trial == 'true' }}
+
+  note-coverage:
+    needs: [mode, coverage]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-coverage
+          path: art/coverage
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          python3 .github/scripts/measure_diary.py --issue 398 --done coverage --result ${{ needs.coverage.result }} --art art
+          --trial ${{ needs.mode.outputs.trial }}
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  repeats:
+    needs: [mode, note-coverage]
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/measure-repeats.yml
+    with:
+      trial: ${{ needs.mode.outputs.trial == 'true' }}
+
+  note-repeats:
+    needs: [mode, repeats]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-repeats
+          path: art/repeats
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          python3 .github/scripts/measure_diary.py --issue 398 --done repeats --result ${{ needs.repeats.result }} --art art
+          --trial ${{ needs.mode.outputs.trial }}
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  mutation:
+    needs: [mode, note-repeats]
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/measure-mutation.yml
+    with:
+      trial: ${{ needs.mode.outputs.trial == 'true' }}
+
+  note-mutation:
+    needs: [mode, mutation]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-mutation
+          path: art/mutation
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          python3 .github/scripts/measure_diary.py --issue 398 --done mutation --result ${{ needs.mutation.result }} --art art
+          --trial ${{ needs.mode.outputs.trial }}
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  report:
+    # the step results come from their own jobs, so the report lists them all; note-mutation is last, so the
+    # end comment comes after every step comment
+    needs: [mode, note-mutation, bloat, routes, coverage, repeats, mutation]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          pattern: measure-*
+          path: art
+      - name: Write report.md
+        run: >-
+          python3 .github/scripts/measure_summary.py --art art --out report
+          --results '{"bloat": "${{ needs.bloat.result }}", "routes": "${{ needs.routes.result }}", "coverage": "${{ needs.coverage.result }}", "repeats": "${{ needs.repeats.result }}", "mutation": "${{ needs.mutation.result }}"}'
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: measure-report
+          overwrite: true
+          path: report/
+      - if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          python3 .github/scripts/measure_diary.py --issue 398 --done report --result success --art art
+          --trial ${{ needs.mode.outputs.trial }}
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          --results '{"bloat": "${{ needs.bloat.result }}", "routes": "${{ needs.routes.result }}", "coverage": "${{ needs.coverage.result }}", "repeats": "${{ needs.repeats.result }}", "mutation": "${{ needs.mutation.result }}"}'
