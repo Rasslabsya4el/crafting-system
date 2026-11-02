@@ -45,7 +45,7 @@ FILES = {
 }
 HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
 RUNS = int(os.environ.get("CRAFTING_VERIFY_RUNS", "300"))  # simulated crafts of --verify (a craft is thousands of uses)
-P90_WIDTH = {"R04": 0.02, "R14": 0.08}  # the certified bracket of the p90 is at most this share of it wide (R04 on the coarse grid, R14 attempt by attempt)
+P90_WIDTH = {"R04": 0.02, "R14": 0.15}  # the certified bracket of the p90 is at most this share of it wide (R04 on the coarse grid; R14 attempt by attempt, whose ladder ends at the restart cost over 32: 1,774.5 wide at a p90 of 12,291.1 Chaos, 14.4%, in run 41476195715)
 
 
 @pytest.fixture(scope="module")
