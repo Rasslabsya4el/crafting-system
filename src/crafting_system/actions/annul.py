@@ -14,7 +14,7 @@ from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, Previewable, Reads
 from .errors import NotApplicableError
 from .finite import Finite
 from .metamods import allowed_by_tags, blocked_tags, locked_sides, on_locked_side
@@ -42,6 +42,15 @@ class AnnulmentOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Annulment"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.NAMED  # ADR-0055: wiki or owner names the preview
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Orb of Annulment"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.exalted_annulment_regal_previewed"})
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.untouched(ANNULMENT_KEEPS_STRANDS, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: neither cuts nor spends: the count stays

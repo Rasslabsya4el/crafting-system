@@ -17,7 +17,7 @@ from crafting_system.rules import get_rule
 
 from .add import add_one_mod
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, Previewable, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .outcomes import Outcomes
@@ -40,6 +40,15 @@ class ExaltedOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Exalted Orb"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.NAMED  # ADR-0055: wiki or owner names the preview
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Exalted Orb"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.exalted_annulment_regal_previewed"})
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         # ADR-0041 and its amendment: cuts; the ceiling follows the explicit mods on the item before the craft, 16, 22, 26, 32, 34, 38 for 0 to 5
