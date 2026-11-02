@@ -67,6 +67,8 @@ is imported or tested for here.
 * `Abstraction(..., reading=...)` (ticket #210): the ordinary model of one `Reading` of the rule axes the enabled actions read
   (`actions.model_readings`); every kernel is taken at it. `Abstraction.inputs(state, action)` gives the `Need`s of an action on
   the item a state stands for, and `allow_inputs=False` (the planner's) refuses an action that has some (`OutOfScopeError`).
+  `Abstraction.donor_key(state, action)` is what the action reads of an input in that state (ADR-0062, ticket #214: the influences, the corruption and the influence mods of the
+  donor for an action that declares `Reads.input_influenced`, the whole state otherwise) and `reaches_donor(action)` the want predicate built from it.
 * `integer_weights(kernel)`: the kernel as integers with a common denominator, gcd-reduced; the
   form the solver takes.
 

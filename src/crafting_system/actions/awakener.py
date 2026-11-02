@@ -148,8 +148,11 @@ class AwakenersOrb(Action):
         return dict(COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        """It keeps the receiver's influenced mods (the junk, every family) and the donor's mod; the rest of the junk goes."""
-        return Reads(junk=True, families=None, input_mods=True, influenced=True)
+        """It keeps the receiver's influenced mods (the junk, every family) and the donor's mod; the rest of the junk goes.
+
+        Of the donor it reads its influence and its influence mods by mod id, and whether it is corrupted (`input_influenced`).
+        """
+        return Reads(junk=True, families=None, input_mods=True, input_influenced=True, influenced=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         """The donor's mod and a draw; every crafted mod goes. Implicits, quality and the offer stay as they were."""

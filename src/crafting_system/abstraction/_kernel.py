@@ -2,7 +2,7 @@
 
 import math
 from collections import Counter, defaultdict, deque
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import reduce
@@ -275,6 +275,34 @@ class Abstraction:
         """
         self._check_enabled(action)
         return action.inputs(self.data, self._prepare(state, action).item)
+
+    def donor_key(self, state: CompressedState, action: Action) -> Hashable:
+        """What `action` reads of an input whose compressed state is `state`: the key of the want (ADR-0062 decision 1, ticket #214).
+
+        Two inputs with one key give the action the same kernel, so an acquisition ends at the first state with the wanted key, whatever else
+        that state holds. An action that declares `Reads.input_influenced` (an Awakener's Orb) reads the input's influences, whether it is
+        corrupted and which influence mods it holds, each by mod id: the key is those three, and the ordinary mods, the values and the goal's
+        statuses of the input are dropped. Any other action reads the whole input, and its key is `state` itself.
+        Raises `ValueError` when the action reads the influence mods and no enabled action tells them apart (`Reads.influenced`).
+        """
+        self._check_enabled(action)
+        reads = action.reads(self.data)
+        if not (reads.input_mods and reads.input_influenced):
+            return state
+        if not self._kinds.influenced:
+            raise ValueError("the key of an input that is read by its influence mods needs a state that tells them apart (an enabled action declaring `Reads.influenced`)")
+        influences = state.flags.influences
+        kinds = self._context(influences).kinds if influences else self._kinds
+        named = sorted(
+            slot.kind
+            for slot in state.slots
+            if base_kind(slot.kind).startswith(MOD_PREFIX) and kinds.is_influenced(self.data.mods[base_kind(slot.kind)[len(MOD_PREFIX) :]])
+        )
+        return (influences, state.flags.corrupted, tuple(named))
+
+    def reaches_donor(self, action: Action) -> Callable[[CompressedState, CompressedState], bool]:
+        """The want predicate of the acquisition processes for `action`'s inputs: `state` reaches `want` when their `donor_key`s are equal."""
+        return lambda state, want: self.donor_key(state, action) == self.donor_key(want, action)
 
     @property
     def keeps_junk(self) -> bool:
