@@ -417,7 +417,7 @@ def headline_of(documents: Mapping[str, dict]) -> str:
     best = min(merging, key=lambda c: (parts[c]["changing_groups"], parts[c]["states"], COLUMNS.index(c)))
     return (
         f"{head}; ни одну часть нельзя убрать без смены решений; ближе всего без {RUSSIAN[best]}: "
-        f"останется {russian_number(parts[best]['states'])}, решения меняются в {russian_number(parts[best]['changing_groups'])} группах"
+        f"останется {russian_number(parts[best]['states'])}, групп со сменой решений: {russian_number(parts[best]['changing_groups'])}"
     )
 
 

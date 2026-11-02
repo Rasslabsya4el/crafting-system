@@ -258,7 +258,7 @@ def test_the_headline_says_so_when_every_part_changes_a_decision_and_when_nothin
     line = bloat.headline_of(documents)
 
     assert line.startswith("R04: 177 242 состояний; ни одну часть нельзя убрать")
-    assert "решения меняются в 4 группах" in line
+    assert line.endswith("групп со сменой решений: 4")
     assert bloat.headline_of({}) == "bloat: ни один маршрут не измерен"
     flat = {"R12": document("R12", 3, None)}
     assert bloat.headline_of(flat) == "R12: 3 состояний; ни одна часть не склеивает состояния, убирать нечего"
