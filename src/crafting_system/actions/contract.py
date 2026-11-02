@@ -191,6 +191,11 @@ class Reads:
       the item in hand, `input_mods` alone the inputs, both is both. The dataclass default is False, as for the other
       new fields; `Action.reads` (an action that declares nothing) says True, like it reads every mod. An action with no
       inputs has nothing to read there and the flag means nothing for it.
+    * `input_influenced`: with `input_mods`, of each input the action reads only its influences, whether it is corrupted and which influence
+      mods it holds, by mod id (an Awakener's Orb; ticket #214, ADR-0062 decision 1): the rest of the input is rerolled and never read. The
+      want of a `Need` for that action is then the projection of the input's compressed state (`Abstraction.donor_key`), not the whole state, and
+      the abstraction must tell the influence mods apart (some enabled action declares `influenced`). The dataclass default is False, and so is
+      `Action.reads`: an action that declares nothing reads the whole input.
     * `socket_count`, `socket_links`, `socket_colours`: the result (its chances, whether the game refuses the item, or another part of
       the sockets) depends on the number of sockets, on the link groups or on the colours of the item (ticket #228, ADR-0046). Carrying
       a part over to the same place unchanged is not reading it: a Jeweller's Orb keeps the colours of the sockets that stay and does
@@ -213,6 +218,7 @@ class Reads:
     quality: bool = False
     offer: bool = False
     input_mods: bool = False
+    input_influenced: bool = False
     enchantment: bool = False
     imprints: bool = False
     socket_count: bool = False
