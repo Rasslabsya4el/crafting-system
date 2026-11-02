@@ -50,6 +50,16 @@ def test_verify_says_the_interval_is_a_normal_approximation(tmp_path, capsys):
     assert abs(mean["value"] - simulated["computed_mean_cost"]) <= 5 * mean["standard_error"]
 
 
+def test_progress_prints_the_phases_with_their_seconds_to_stderr_and_nothing_to_stdout(tmp_path, capsys):
+    code, _ = run_command(tmp_path, "--verify", "--runs", str(RUNS), "--progress", prices=price_file())
+
+    seen = capsys.readouterr()
+    assert code == 0
+    for phase in ("plan made: mean ", "report built: ", "verified by "):
+        assert phase in seen.err
+    assert " s" in seen.err.splitlines()[0] and "plan made" not in seen.out
+
+
 def test_a_wrong_computed_mean_does_not_agree(plan):
     wrong = Solution(
         values={state: value * 1.3 for state, value in plan.solution.values.items()},

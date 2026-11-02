@@ -162,6 +162,20 @@ and writes `<target>.count.json`. `simulate_route.py` plays a given route on con
 `cli/_route_sim.py`) and writes its success rate, mean, p50 and p90 with intervals; a state no rule covers stops that run,
 and with `--skip-refused` a rule whose action the game refuses is skipped (for the `*-restart.yaml` routes).
 
+### R04 and R14 end to end (#70)
+
+Since the packed solver the two routes are planned by the CLI itself: with the default budget the decision finds no approximate level
+(a route with an Attack/Caster metamod has none) and `make_plan` goes on to the packed solver, noting why in the plan. The tests
+that run the CLI (`--verify`, the completed given route) and `benchmark --heavy` on them are `tests/test_cli_r04_r14_heavy.py`; one
+runner each, since each plans its route once (R04 about 10 minutes, R14 about 25):
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 4 --timeout-minutes 60'
+    $D --command 'case $RUNNER_INDEX in 1) R=R04; K="not benchmark";; 2) R=R04; K=benchmark;; 3) R=R14; K="not benchmark";; 4) R=R14; K=benchmark;; esac; CRAFTING_ROUTES=$R CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider --durations=0 -s tests/test_cli_r04_r14_heavy.py -k "$K"'
+
+`chain_dump.py` plans a route and writes its lumped policy chain (`<route>.chain.npz`, with `--risk` also the risk the product code
+gives), the data to work on the risk without the walk; `cli_stages.py` times the stages after the plan (report, text, JSON, route
+page, `--verify`).
+
 ### Planning the big routes on the packed solver (#374)
 
 R04, R14 and S02 are solved exactly by `make_plan` since the packed solve (ADR-0063 point 1): the graph is walked into

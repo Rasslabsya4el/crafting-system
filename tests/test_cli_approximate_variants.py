@@ -213,7 +213,7 @@ def test_a_query_over_the_budget_with_an_undeclared_action_is_refused_when_the_e
     assert decision.action == "refused" and "no approximate level available (Regal Orb is not declared block-invariant" in decision.message
 
     with pytest.raises(PlanError, match=r"no approximate level available \(Regal Orb is not declared block-invariant"):
-        make_plan(DATA, exact.target, PRICES, offers=offers, start_price=0.0, budget=0.0, rates=RATES)
+        make_plan(DATA, exact.target, PRICES, offers=offers, start_price=0.0, budget=0.0, rates=RATES, solver="object")  # (the packed solver answers it, ticket #70)
 
 
 # --- 3. decide on a query with additions -------------------------------------------------------------------------------

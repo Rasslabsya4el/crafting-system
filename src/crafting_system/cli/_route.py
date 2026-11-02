@@ -4,6 +4,8 @@ A guide states no cost, so the cost of its route is found by writing the route a
 evaluating it with `risk.evaluate` at the same prices as the solver's policy (ADR-0013). The file:
 
     name: R12, PoE Vault guide        # optional
+    skip_refused: true                # optional (default false): a rule whose action the game refuses at a state is passed over
+                                      # to the next rule that matches, instead of leaving a gap (for a route completed by a last `restart`)
     rules:                            # required, non-empty; in every state the FIRST rule that matches is followed
       - when:                         # optional; no `when` matches every state
           rarity: rare                # normal, magic or rare, or a list of them
@@ -44,11 +46,12 @@ from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
 
 from ._offers import free_action_cost
+from ._packed import PackedPolicy
 from ._plan import Plan, evaluate_risk, offer_action
 from ._reach import policy_states
 
 RESTART = "restart"
-TOP_KEYS = ("name", "rules")
+TOP_KEYS = ("name", "skip_refused", "rules")
 RULE_KEYS = ("when", "do")
 WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "requirements")
 REQUIREMENT_KEYS = ("stat", "family", "status")
@@ -119,9 +122,12 @@ class Rule:
 
 @dataclass(frozen=True)
 class Route:
+    """`skip_refused`: a rule whose action the game refuses at a state is passed over to the next rule that matches (the route's own key)."""
+
     name: str | None
     source: str
     rules: tuple[Rule, ...]
+    skip_refused: bool = False
 
 
 @dataclass(frozen=True)
@@ -217,6 +223,7 @@ class _Reader:
         if "rules" not in root:
             self.fail(root.line, "rules", "this key is required but missing")
         name = self.text(root, "name", "name") if "name" in root else None
+        skip_refused = self.flag(root, "skip_refused", "skip_refused") if "skip_refused" in root else False
         entries = root["rules"]
         line = root.key_lines["rules"]
         if not isinstance(entries, LineList):
@@ -226,7 +233,7 @@ class _Reader:
         rules = tuple(
             self.read_rule(entry, f"rules[{index}]", entries.item_lines[index]) for index, entry in enumerate(entries)
         )
-        return Route(name, self.source, rules)
+        return Route(name, self.source, rules, skip_refused)
 
     def read_rule(self, entry: object, path: str, line: int) -> Rule:
         if not isinstance(entry, LineMap):
@@ -445,6 +452,7 @@ class _Reader:
 
 def _decide(plan: Plan, route: Route, data: GameData, state: CompressedState) -> Action[CompressedState] | str:
     """The action the route takes in `state`, or the reason it takes none."""
+    refusal = "no rule matches this state"
     for rule in route.rules:
         if not rule.when.matches(state, data):
             continue
@@ -454,8 +462,10 @@ def _decide(plan: Plan, route: Route, data: GameData, state: CompressedState) ->
         try:
             return offer_action(plan.abstraction, priced, state)
         except ActionError as problem:  # the game refuses it here, or no admitted rule covers it
-            return f"{rule.do} cannot be used here (rule at line {rule.line}): {problem}"
-    return "no rule matches this state"
+            refusal = f"{rule.do} cannot be used here (rule at line {rule.line}): {problem}"
+            if not route.skip_refused:
+                return refusal
+    return refusal
 
 
 def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
@@ -465,6 +475,10 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     action, built as the solver builds its own (same kernel, same integer weights). A state with no
     action (no rule matches, or the game refuses the action) is a gap and has no policy entry.
     """
+    if isinstance(plan.policy, PackedPolicy):  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
+        from ._route_packed import evaluate_route_packed
+
+        return evaluate_route_packed(plan, route, data)
     began = time.perf_counter()
     choices: dict[CompressedState, Action[CompressedState] | str] = {}
     policy: dict[CompressedState, Action[CompressedState]] = {}

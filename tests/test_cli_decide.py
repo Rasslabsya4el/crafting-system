@@ -16,7 +16,7 @@ from contract_support import contract_pairs, fixture_items, CONTRACT_DATA
 from crafting_system.abstraction import Abstraction, Estimate, Goal
 from crafting_system.actions import Adds, ChaosOrb, RegalOrb, Reads
 from crafting_system.cli import Offer, PlanError, make_plan
-from crafting_system.cli import _decide
+from crafting_system.cli import _decide, _packed
 from crafting_system.cli._decide import (
     EXACT_TRANSITIONS,
     COARSE,
@@ -286,12 +286,40 @@ def test_decide_refuses_the_ladder_for_an_offered_action_that_is_not_declared_bl
     assert "Undeclared reroll is not declared block-invariant" in decision.message
 
 
-def test_make_plan_stops_with_the_refusal_when_the_exact_run_is_beyond_the_largest_size_run(target, monkeypatch):
+def test_make_plan_stops_with_the_refusal_when_the_exact_run_is_beyond_the_largest_size_run_and_the_object_solver_is_asked_for(target, monkeypatch):
     offers = [Offer("Undeclared reroll", UndeclaredReroll(), {CH: 1}), *OFFERS[1:]]
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
 
     with pytest.raises(PlanError, match=r"no approximate level available \(Undeclared reroll is not declared block-invariant"):
-        make_plan(DATA, target, PRICES, offers=offers, start_price=0.0, budget=0.0, rates=Rates(1.0, 1.0))
+        make_plan(DATA, target, PRICES, offers=offers, start_price=0.0, budget=0.0, rates=Rates(1.0, 1.0), solver="object")
+
+
+def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(target, monkeypatch):
+    """Ticket #70: no coarse level and a graph beyond the object solver is no longer a refusal, the packed solver answers it exactly."""
+    offers = [Offer("Undeclared reroll", UndeclaredReroll(), {CH: 1}), *OFFERS[1:]]
+    exact = make_plan(DATA, target, PRICES, offers=offers, start_price=0.0)
+    monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
+    monkeypatch.setattr(_packed, "OBJECT_SOLVER_EDGES", 100)
+
+    plan = make_plan(DATA, target, PRICES, offers=offers, start_price=0.0, budget=0.0, rates=Rates(1.0, 1.0))
+
+    assert plan.approximation is None and plan.packed is not None
+    assert plan.mean_remaining == pytest.approx(exact.mean_remaining, rel=1e-9)
+    assert "Undeclared reroll is not declared block-invariant" in plan.note and "packed solver" in plan.note
+
+
+def test_the_text_tree_stops_after_its_limit_and_says_where_the_rest_is(exact, monkeypatch):
+    from crafting_system.cli import _report, build_report
+    from crafting_system.cli._report import render_text
+
+    report = build_report(exact, DATA)
+    assert len(report.states) > 1
+    monkeypatch.setattr(_report, "MAX_TREE_STATES", 1)
+
+    text = render_text(report)
+
+    assert "more states of the policy are not shown here" in text or "the tree stops after 1 states" in text
+    assert f"S1:" in text and f"S{len(report.states)}:" not in text
 
 
 def test_make_plan_without_a_budget_never_decides(target, exact):

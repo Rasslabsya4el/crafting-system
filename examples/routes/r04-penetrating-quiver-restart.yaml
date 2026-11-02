@@ -31,6 +31,7 @@
 # below write as the three ways to split 2 free slots over the two sides (the quiver has 3 prefixes, 3 suffixes).
 
 name: R04 completed with restart, PoE Vault guide
+skip_refused: true  # a rule whose action the game refuses at a state falls through to the next that matches (the last one restarts)
 
 rules:
   # Step 2: the bought quiver is normal; the Essence of Insanity makes it a rare with 4 mods.

@@ -4,7 +4,7 @@
 # Annulment went somewhere the steps do not cover). r14-hunter-bow.yaml leaves those as gaps, so a run that reaches one never
 # finishes. This file adds a last rule, `restart` (buy the start item again, the guide's own way out of its steps 3 and
 # 4), for every state no earlier rule covers, so that the route has a finite cost to compare with. It is the file's
-# reading, not the guide's. Everything else is the same as r14-hunter-bow.yaml. The simulation plays it with a rule skipped when the
+# reading, not the guide's. Everything else is the same as r14-hunter-bow.yaml. `skip_refused: true` below (and the simulation) pass over a rule when the
 # game refuses its action, so a refused Exalted Orb falls through to the `restart` as well.
 
 # Given route for benchmark route R14: the Toxic Rain Hunter bow with +1 to socketed gems and Chaos Damage over Time.
@@ -31,6 +31,7 @@
 # The Attack Speed is the first mod of the route and is never lost but by the Annulment of step 3.
 
 name: R14 completed with restart, Reddit guide
+skip_refused: true  # a rule whose action the game refuses at a state falls through to the next that matches (the last one restarts)
 
 rules:
   # The bow is normal at the start: the Orb of Transmutation makes it magic (the guide starts at the Alterations).

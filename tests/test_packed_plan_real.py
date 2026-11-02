@@ -144,3 +144,24 @@ def test_a_merged_chain_too_long_for_the_quantile_dp_keeps_exact_moments_and_say
     assert cut.risk.variance.value == pytest.approx(reference.risk.variance.value, rel=1e-12)
     assert math.isinf(cut.risk.p90.value) and math.isinf(cut.risk.cvar.value)
     assert "p50, p90 and CVaR are not computed" in cut.note and reference.note == ""
+
+
+def test_a_given_route_read_on_the_packed_graph_equals_the_object_evaluation(both, data):
+    """Ticket #70: `evaluate_route` on a packed plan reads the route in the walked graph; same mean, quantiles, gaps and first divergence."""
+    from crafting_system.cli import evaluate_route, load_route
+
+    route_id, reference, packed = both
+    route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
+
+    by_object = evaluate_route(reference, load_route(route_path, reference, data), data)
+    by_graph = evaluate_route(packed, load_route(route_path, packed, data), data)
+
+    assert by_graph.risk.success_probability.value == pytest.approx(by_object.risk.success_probability.value, abs=1e-9)
+    assert len(by_graph.gaps) == len(by_object.gaps)
+    if not by_object.gaps:
+        assert by_graph.risk.mean.value == pytest.approx(by_object.risk.mean.value, rel=1e-6)
+        assert by_graph.risk.p90.value == pytest.approx(by_object.risk.p90.value, rel=1e-6)
+    assert (by_graph.divergence is None) == (by_object.divergence is None)
+    if by_object.divergence is not None:
+        assert by_graph.divergence.route_action == by_object.divergence.route_action
+        assert by_graph.divergence.solver_action == by_object.divergence.solver_action

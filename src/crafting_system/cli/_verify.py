@@ -13,14 +13,18 @@ interval. Its p90 and CVaR are simulated numbers and are never certified.
 """
 
 import math
+from collections.abc import Iterator
 from dataclasses import dataclass
 
+from crafting_system.abstraction import CompressedState
 from crafting_system.actions import Action
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.simulator import SampledEstimate, SimulationReport, Step, simulate
 
 from ._lift import lift
+from ._offers import PricedOffer
+from ._packed import PackedPolicy
 from ._plan import Plan
 
 DEFAULT_RUNS = 10_000
@@ -102,6 +106,15 @@ class Verification:
         return self.bounds is not None
 
 
+def chosen_offers(plan: Plan) -> Iterator[tuple[CompressedState, PricedOffer]]:
+    """Every state of the plan's policy with the priced offer it takes (a packed policy gives it without building the action's outcomes)."""
+    if isinstance(plan.policy, PackedPolicy):
+        yield from plan.policy.offers()
+    else:
+        for state, action in plan.policy.items():
+            yield state, plan.offer_of(action)
+
+
 def max_steps_for(plan: Plan) -> int:
     """A cut-off for one run: far above what the computed mean needs, far below the simulator's default.
 
@@ -109,17 +122,14 @@ def max_steps_for(plan: Plan) -> int:
     `STEPS_PER_MEAN` times that is far in the tail of any sane policy; a policy whose odds are
     badly wrong then ends as `unfinished` instead of running 100,000 clicks per run.
     """
-    cheapest = min(plan.offer_of(action).cost for action in plan.policy.values())
+    cheapest = min(priced.cost for _, priced in chosen_offers(plan))
     bound = math.ceil(STEPS_PER_MEAN * max(plan.mean_remaining, cheapest) / cheapest)
     return max(MIN_STEPS, bound)
 
 
 def verify(data: GameData, plan: Plan, *, runs: int = DEFAULT_RUNS, seed: int = DEFAULT_SEED) -> Verification:
     """Simulate `runs` crafts of the plan's policy from the target's start item."""
-    steps = {
-        state: Step(_memoized(plan.offer_of(action).offer.action), plan.offer_of(action).cost)
-        for state, action in plan.policy.items()
-    }
+    steps = {state: Step(_memoized(priced.offer.action), priced.cost) for state, priced in chosen_offers(plan)}
     target = plan.target
     policy = lift(plan, steps)
 

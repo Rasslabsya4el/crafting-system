@@ -93,8 +93,9 @@ class BenchmarkRoute:
     route: str | None
     odds: tuple[PublishedOdds, ...]
     outcomes: tuple[PublishedOutcome, ...] = ()
-    heavy: str | None = None  # why the planner needs hours here: `benchmark` then checks the published odds only, unless asked with --heavy
+    heavy: str | None = None  # why the planner needs minutes of a big machine here: `benchmark` then checks the published odds only, unless asked with --heavy
     start: ExpectedStart | None = None
+    completed: str | None = None  # the given route with a last rule that restarts, so that its mean is finite (the guide's own route has gaps): evaluated beside it
 
 
 GEM = "+1 to Level of all Lightning Skill Gems"
@@ -194,7 +195,8 @@ BENCHMARKS = (
                 fractured=(PIERCE,), crafted=(NO_ATTACK,),
             ),
         ),
-        heavy="the exact graph needs more memory than a 16 GB runner has (ticket #70)",
+        heavy="the exact graph has 177,242 states and 536 million transitions: the packed solver takes about 10 minutes and 6 GB (ticket #70)",
+        completed="examples/routes/r04-penetrating-quiver-restart.yaml",
     ),
     BenchmarkRoute(
         "R14",
@@ -232,7 +234,8 @@ BENCHMARKS = (
                 (SPEED, MULTIMOD, NO_ATTACK, GEMS), ADDS, (DOT,), "100%", crafted=(MULTIMOD, NO_ATTACK),
             ),
         ),
-        heavy="the exact graph has at least 787,000 states, more than a 16 GB runner holds, and no approximate level exists for a route with metamods (ticket #70)",
+        heavy="the exact graph has 816,153 states: the packed solver takes about 32 minutes and 9 GB, and no approximate level exists for a route with metamods (ticket #70)",
+        completed="examples/routes/r14-hunter-bow-restart.yaml",
     ),
     # No guide writes a route for a recipe-made start item, so V01 has no given route: its answer is the start the plan chooses (ticket #331).
     BenchmarkRoute(
@@ -358,6 +361,8 @@ def run_route(
         "published_odds": [],
         "start": None,
         "solver_not_dearer": None,
+        "completed_route": None,
+        "solver_not_dearer_than_completed": None,
         "timings_seconds": None,
     }
     timings: dict[str, float | None] = {"solver": None, "risk_evaluate": None, "route_evaluate": None}
@@ -392,6 +397,11 @@ def run_route(
             entry["given_route"] = _given_route(plan, result, data, shift)
             timings["route_evaluate"] = result.seconds
             entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
+            if bench.completed is not None:
+                again = evaluate_route(plan, load_route(root / bench.completed, plan, data), data)
+                entry["completed_route"] = _given_route(plan, again, data, shift)
+                timings["completed_route_evaluate"] = again.seconds
+                entry["solver_not_dearer_than_completed"] = _not_dearer(entry["solver"]["mean"], entry["completed_route"]["mean"])
     except _Skipped:
         pass
     except ROUTE_ERRORS as error:
@@ -607,11 +617,16 @@ def render_summary(document: dict) -> str:
                     f"  first divergence {divergence['state']}: policy does {divergence['solver_action']}, "
                     f"route does {divergence['route_action']}"
                 )
+        if entry["completed_route"] is not None:
+            completed = entry["completed_route"]
+            lines.append("  given route, completed with a restart  " + _summary_line(completed) + f", {completed['gaps']} gap(s)")
         for odds in entry["published_odds"]:
             verdict = "matches" if odds["matches"] else "DIFFERS"
             lines.append(f"  published odds {odds['published']} ({odds['on']}): computed {odds['computed']}, {verdict}")
         if entry["solver_not_dearer"] is not None:
             lines.append("  solver not dearer than the guide: " + ("yes" if entry["solver_not_dearer"] else "NO"))
+        if entry["solver_not_dearer_than_completed"] is not None:
+            lines.append("  solver not dearer than the completed route: " + ("yes" if entry["solver_not_dearer_than_completed"] else "NO"))
         if entry["error"] is not None:
             lines.append(f"  error: {entry['error']}")
         if entry["missing_price"] is not None:

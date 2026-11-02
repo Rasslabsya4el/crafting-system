@@ -23,7 +23,7 @@ from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
-from crafting_system.risk import RiskReport, evaluate, is_free_cost
+from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
 from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
@@ -36,6 +36,7 @@ from ._packed import SOLVERS, PackedResult, packed_result
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
 
+VIEW_FROM_STATES = 1_000  # a packed plan whose policy visits more item states than this is shown by its lumped chain (ticket #70)
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
 PRUNE_CORRUPTING = True  # corrupting offers of a target that asks are left out of the states that cannot reach its goal (exact, ADR-0036; a test turns it off)
 PRUNE_BOUND = True  # twins and offers proved not needed are left out of the solve (exact; a test turns it off for the reference)
@@ -108,6 +109,20 @@ class Plan:
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
         return self.solution.policy
+
+    @property
+    def view_policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
+        """The policy the report shows: `policy` itself, or for a packed plan whose policy visits more than `VIEW_FROM_STATES` item
+        states, its lumped chain on one shown state per block (item states that pay alike and lead on alike are one; the numbers
+        are exact). The simulator (`--verify`) always runs the whole `policy`."""
+        if self.packed is not None and self.packed.view is not None and len(self.policy) > VIEW_FROM_STATES:
+            return self.packed.view
+        return self.policy
+
+    @property
+    def lumped(self) -> bool:
+        """Whether `view_policy` is the lumped chain, not the policy itself."""
+        return self.view_policy is not self.policy
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.abstraction.is_goal(state)
@@ -362,7 +377,11 @@ def make_plan(
         decision = decide(abstraction, start, forecast, budget, rates)
         note = decision.message
         if decision.action == "refused":
-            raise PlanError(decision.message)
+            if solver == "object" or (PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE):
+                raise PlanError(decision.message)
+            # no coarse level exists and the graph is beyond the object solver: the packed solver holds it (ticket #70, ADR-0063), so the
+            # answer is exact and takes the walk's minutes instead of being refused
+            note = _packed_note(decision)
         if decision.action == "approximate":
             try:
                 solved = climb(decision, start, merged)
@@ -397,10 +416,25 @@ def make_plan(
         else:
             risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
         risk_seconds = time.perf_counter() - began
+    if packed is not None and packed.view is not None and len(solution.policy) > VIEW_FROM_STATES:
+        shown = len(packed.view) + 1
+        note = (note + " " if note else "") + (
+            f"The policy visits {len(solution.policy):,} item states; the tree below shows {shown:,} groups of them: item states that pay alike and lead on to "
+            "the same groups with the same chances are one group, shown by one of its members. The odds, costs and percentiles are exact for the groups."
+        )
 
     return Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out,
         solution, risk, solve_seconds, risk_seconds, None, note, pruned, packed=packed,
+    )
+
+
+def _packed_note(decision: Decision) -> str:
+    """The plan's note for a query the decision refused and the packed solver answers exactly: why there is no approximation and what ran."""
+    size = "" if decision.transitions is None else f" (forecast: at least {decision.transitions:,} transitions)"
+    return (
+        f"No approximate level exists ({decision.why}), so the answer is exact: the graph{size} is larger than the object solver "
+        "has been run on and is solved on the packed solver, which takes minutes and several GB of memory."
     )
 
 
@@ -417,9 +451,19 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note
         _packed.PROGRESS(f"solved: mean {mean!r}; evaluating the risk on the merged chain ({len(packed.risk_policy):,} classes)")
     moves = sum(len(action.outcomes) for action in packed.risk_policy.values())
     resolve = moves <= RISK_QUANTILE_TRANSITIONS
-    risk = evaluate_risk(
-        packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True
-    )
+    # A chain whose levels the ordinary grid is not certain to reach is run on the coarse grid (R04) or, when that is too big, one attempt at a
+    # time (R14), instead of running the ordinary grid to its end first and finding them unresolved (ticket #70); `evaluate` falls back
+    # to the ordinary grid when neither works.
+    _regen.TRACE = _packed.PROGRESS
+    try:
+        risk = evaluate_risk(
+            packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True,
+            coarse_first=resolve, regenerative=resolve,
+        )  # fmt: skip
+    finally:
+        _regen.TRACE = None
+    if _packed.PROGRESS is not None:
+        _packed.PROGRESS(f"risk: p50 {risk.p50!r}, p90 {risk.p90!r}")
     if not resolve:
         note = (note + " " if note else "") + (
             f"The p50, p90 and CVaR are not computed: the policy's merged chain has {moves:,} transitions, more than the "
@@ -456,6 +500,8 @@ def evaluate_risk(
     *,
     resolve_quantiles: bool = True,
     packed_moments: bool = False,
+    coarse_first: bool = False,
+    regenerative: bool = False,
 ) -> RiskReport:
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
 
@@ -476,6 +522,10 @@ def evaluate_risk(
     extra: dict = {} if resolve_quantiles else {"resolve_quantiles": False}
     if packed_moments:
         extra["packed_moments"] = True
+    if coarse_first:
+        extra["coarse_first"] = True
+    if regenerative:
+        extra["regenerative"] = True
     if free_cost is None or not any(is_free_cost(action.cost, free_cost) for action in policy.values()):
         return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS, **extra)
     paid = min((action.cost for action in policy.values() if not is_free_cost(action.cost, free_cost)), default=0.0)
