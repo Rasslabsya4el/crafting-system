@@ -61,7 +61,7 @@ def read_exit_codes(folder):
     return codes
 
 
-def build_report(cov, root, exits):
+def build_report(cov, root, exits, expect=None):
     """The three texts of the report: (summary.md, uncovered-functions.txt, headline.txt)."""
     total = cov["totals"]["percent_covered"]
     uncovered = []  # (path, line, qualname), grouped by file
@@ -75,12 +75,15 @@ def build_report(cov, root, exits):
 
     codes = read_exit_codes(exits)
     nonzero = {slot: code for slot, code in codes.items() if code != 0}
+    lost = [slot for slot in range(1, expect + 1) if slot not in codes] if expect else []
     if not codes:
         exit_lines = ["no exit files found"]
     elif not nonzero:
         exit_lines = ["all slots passed"]
     else:
         exit_lines = ["Non-zero pytest exit codes:"] + [f"- {slot}: {code}" for slot, code in nonzero.items()]
+    if lost:  # a slot that timed out or was lost left no data: its lines count as never run
+        exit_lines.append(f"Slots with no data (timed out or lost), so the coverage is undercounted: {', '.join(map(str, lost))}")
 
     lines = [
         "# coverage",
@@ -100,7 +103,9 @@ def build_report(cov, root, exits):
     functions = "".join(f"{path}:{line} {qualname}\n" for path, line, qualname in uncovered)
     headline = (
         f"Покрытие кода тестами: {total:.1f}%; функций, в которые не заходит ни один тест: "
-        f"{len(uncovered)} (в {files_with_uncovered} файлах).\n"
+        f"{len(uncovered)} (в {files_with_uncovered} файлах)"
+        + (f"; без данных групп тестов: {len(lost)}, покрытие занижено" if lost else "")
+        + ".\n"
     )
     return summary, functions, headline
 
@@ -110,11 +115,12 @@ def main(argv=None):
     parser.add_argument("--json", required=True, type=Path, help="coverage.json of the combined run")
     parser.add_argument("--root", required=True, type=Path, help="the repository root the paths are relative to")
     parser.add_argument("--exits", required=True, type=Path, help="folder with the exit-<slot>.txt files")
+    parser.add_argument("--expect", type=int, help="how many slots ran (exit-1.txt .. exit-N.txt); the missing ones are listed")
     parser.add_argument("--out", required=True, type=Path, help="folder to write the three files to")
     args = parser.parse_args(argv)
 
     cov = json.loads(args.json.read_text(encoding="utf-8"))
-    summary, functions, headline = build_report(cov, args.root, args.exits)
+    summary, functions, headline = build_report(cov, args.root, args.exits, args.expect)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "summary.md").write_text(summary, encoding="utf-8")
     (args.out / "uncovered-functions.txt").write_text(functions, encoding="utf-8")

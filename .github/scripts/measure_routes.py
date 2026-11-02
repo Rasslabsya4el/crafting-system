@@ -66,7 +66,8 @@ def run_route_file(route_id: str, out: Path) -> int:
     game = load_game_data(cache_dir=config.cache_dir)
     root = find_project_root()
     began = time.monotonic()
-    prices = load_price_file(root / PRICES)  # a CI checkout has no price file of its own
+    # a CI checkout has no price file of its own; a route with its own start (V01) reads the price file its target names
+    prices = load_price_file(root / PRICES) if bench.start is None else None
     entry, _ = run_route(bench, game, root, config, prices, None, heavy=True)
     seconds = time.monotonic() - began
     path = out / f"route-{route_id}.json"

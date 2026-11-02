@@ -27,6 +27,8 @@ spec.loader.exec_module(bloat)
 ABSENT, PASSING = Status.ABSENT, Status.PASSING
 JUNK_ONE = Slot(Side.PREFIX, "~1", (ABSENT,))
 JUNK_TWO = Slot(Side.PREFIX, "~2", (ABSENT,))
+NAMED_A = Slot(Side.PREFIX, "FamilyA", (ABSENT,))  # a junk mod kept by its family key: a name, which the junk projection drops
+NAMED_B = Slot(Side.PREFIX, "FamilyB", (ABSENT,))
 WANTED = Slot(Side.SUFFIX, "FamilyWanted", (PASSING,))
 
 
@@ -85,8 +87,11 @@ def test_a_projection_is_hashable_and_a_set_of_them_counts_the_distinct_states(p
 def test_the_junk_projection_drops_the_name_of_a_junk_mod_only():
     project = bloat.projector(bloat.JUNK)
 
-    assert project(state(slots=(JUNK_ONE, WANTED))) == project(state(slots=(JUNK_TWO, WANTED)))
-    assert state(slots=(JUNK_ONE, WANTED)) != state(slots=(JUNK_TWO, WANTED))
+    named_one, named_two = NAMED_A, NAMED_B
+    assert project(state(slots=(named_one, WANTED))) == project(state(slots=(named_two, WANTED)))
+    assert state(slots=(named_one, WANTED)) != state(slots=(named_two, WANTED))
+    # a numbered family type is a class of pool weights, so odds: it is no name and stays
+    assert project(state(slots=(JUNK_ONE, WANTED))) != project(state(slots=(JUNK_TWO, WANTED)))
     # a mod that gives the goal something keeps its name; so do a crafted mod, the side and a repeat
     named = Slot(Side.SUFFIX, "FamilyOther", (PASSING,))
     assert project(state(slots=(WANTED,))) != project(state(slots=(named,)))
@@ -97,13 +102,13 @@ def test_the_junk_projection_drops_the_name_of_a_junk_mod_only():
     # the tag of a mod is a class and stays; the slots are a multiset again after the names go
     attack, caster = Slot(Side.PREFIX, "~3@attack", (ABSENT,)), Slot(Side.PREFIX, "~3@caster", (ABSENT,))
     assert project(state(slots=(attack,))) != project(state(slots=(caster,)))
-    assert project(state(slots=(Slot(Side.PREFIX, "A", (ABSENT,)), JUNK_ONE))) == project(state(slots=(JUNK_TWO, Slot(Side.PREFIX, "B", (ABSENT,)))))
+    assert project(state(slots=(Slot(Side.PREFIX, "A", (ABSENT,)), JUNK_ONE))) == project(state(slots=(JUNK_ONE, Slot(Side.PREFIX, "B", (ABSENT,)))))
 
 
 def test_the_junk_projection_reads_the_states_held_in_imprints_too():
     project = bloat.projector(bloat.JUNK)
 
-    assert project(state(imprints=(state(slots=(JUNK_ONE,)),))) == project(state(imprints=(state(slots=(JUNK_TWO,)),)))
+    assert project(state(imprints=(state(slots=(NAMED_A,)),))) == project(state(imprints=(state(slots=(NAMED_B,)),)))
 
 
 def test_a_new_field_of_the_state_makes_the_projection_fail_loudly():
@@ -159,7 +164,7 @@ def test_a_projection_that_merges_nothing_changes_nothing():
 
 
 def test_measure_all_projects_every_column_of_real_states():
-    states = [state(), state(quality=PlainQuality(20)), state(slots=(JUNK_TWO, WANTED))]
+    states = [state(slots=(NAMED_A, WANTED)), state(slots=(NAMED_A, WANTED), quality=PlainQuality(20)), state(slots=(NAMED_B, WANTED))]
 
     found = bloat.measure_all(states, [4.0, 4.0, 4.0], ["go", "go", "go"])
 

@@ -119,3 +119,17 @@ def test_main_writes_the_summary_headline_and_uncovered_list(tmp_path):
 
     uncovered = (out / "uncovered-functions.txt").read_text(encoding="utf-8").splitlines()
     assert uncovered == ["src/mod.py:3 unused"]
+
+
+def test_a_slot_that_left_no_data_is_listed_and_named_in_the_headline(tmp_path):
+    (tmp_path / "pkg.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+    cov = {"totals": {"percent_covered": 50.0}, "files": {"pkg.py": {"executed_lines": [1], "summary": {"num_statements": 2, "missing_lines": 1, "percent_covered": 50.0}}}}
+    exits = tmp_path / "exits"
+    exits.mkdir()
+    for slot in (1, 3):
+        (exits / f"exit-{slot}.txt").write_text("0", encoding="utf-8")
+
+    summary, _, headline = measure_coverage_report.build_report(cov, tmp_path, exits, expect=3)
+
+    assert "Slots with no data (timed out or lost), so the coverage is undercounted: 2" in summary
+    assert "без данных групп тестов: 1, покрытие занижено" in headline

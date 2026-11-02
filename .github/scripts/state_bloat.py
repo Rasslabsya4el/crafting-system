@@ -19,8 +19,9 @@ mods inside `slots`), projects that part away and counts what is left:
 A part that merges many states into groups that change no decision is a candidate to leave out of the state. Every walked state counts,
 also those the optimal policy never reaches; `policy_states` and `policy_blocks` are the part of the graph the policy uses.
 
-The junk projection: a mod that is not crafted and gives no leaf of the goal anything (all contributions ABSENT) loses its `kind` (the
-numbered family type `~n` or a family key), keeping its side, its contribution and the Attack/Caster tag after an `@`; slots are then
+The junk projection: a mod that is not crafted and gives no leaf of the goal anything (all contributions ABSENT) loses its family key (its
+name); a class kind (`""` or the numbered family type `~n`, which carries the pool weights) stays, and so do its side, its contribution
+and the Attack/Caster tag after an `@`; slots are then
 a multiset again (sorted). `slots` replaces the whole tuple by a constant.
 
 Never run on a PC for a real route: R04 and R14 hold hundreds of thousands of states. Run by `.github/workflows/measure-bloat.yml`.
@@ -96,8 +97,12 @@ def _values(state: CompressedState) -> list:
 
 
 def _junk_kind(kind: str) -> str:
-    """The kind of a junk mod without its name: the Attack/Caster tag after the `@` is kept, the rest is dropped."""
-    return "@" + kind.partition("@")[2] if "@" in kind else ""
+    """The kind of a junk mod without its name: a class (`""`, a numbered family type `~n`, which carries pool weights and so odds) stays,
+    a family key (a name) becomes `#`; the Attack/Caster tag after the `@` is kept either way."""
+    base, at, tag = kind.partition("@")
+    if base == "" or base.startswith("~"):
+        return kind
+    return "#" + at + tag
 
 
 def _slots_without_junk_names(state: CompressedState) -> tuple:
@@ -359,6 +364,7 @@ def bloat_route(
     document["policy_states"], document["policy_blocks"] = lump_chain(policy, start, is_goal)
     say(f"{len(states):,} states; the policy reaches {document['policy_states']:,}, lumped into {document['policy_blocks']:,} blocks")
     del policy
+    keep(document)  # the counts so far survive an out-of-memory kill during the projections
     document["parts"] = measure_all(states, values, actions)
     document["seconds"], document["peak_mb"] = round(time.perf_counter() - began, 1), peak_mb()
     say("projections done")

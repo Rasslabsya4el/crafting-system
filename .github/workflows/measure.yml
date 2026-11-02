@@ -15,6 +15,10 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: measure  # one chain at a time: a second push to measure/** waits instead of running beside it
+  cancel-in-progress: false
+
 permissions:
   contents: read
   issues: write
