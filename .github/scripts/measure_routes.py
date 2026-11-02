@@ -19,6 +19,7 @@ import time
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
+PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"  # from the project root; the prices the bloat step and the heavy route tests use
 BENCHMARK_ORDER = ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01"]
 COLUMNS = [
     "route",
@@ -54,6 +55,7 @@ def run_route_file(route_id: str, out: Path) -> int:
     from crafting_system.cli._inputs import write_json
     from crafting_system.config import find_project_root, load_config
     from crafting_system.data import load_game_data
+    from crafting_system.prices import load_price_file
 
     bench = next((item for item in BENCHMARKS if item.id == route_id), None)
     if bench is None:
@@ -64,7 +66,8 @@ def run_route_file(route_id: str, out: Path) -> int:
     game = load_game_data(cache_dir=config.cache_dir)
     root = find_project_root()
     began = time.monotonic()
-    entry, _ = run_route(bench, game, root, config, None, None, heavy=True)
+    prices = load_price_file(root / PRICES)  # a CI checkout has no price file of its own
+    entry, _ = run_route(bench, game, root, config, prices, None, heavy=True)
     seconds = time.monotonic() - began
     path = out / f"route-{route_id}.json"
     write_json(path, {"route": route_id, "seconds": seconds, "peak_mb": _peak_mb(), "entry": entry})

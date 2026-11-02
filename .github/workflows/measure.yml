@@ -184,8 +184,28 @@ jobs:
       - uses: actions/download-artifact@v8.0.2
         continue-on-error: true
         with:
-          pattern: measure-*
-          path: art
+          name: measure-bloat
+          path: art/measure-bloat
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-routes
+          path: art/measure-routes
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-coverage
+          path: art/measure-coverage
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-repeats
+          path: art/measure-repeats
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true
+        with:
+          name: measure-mutation
+          path: art/measure-mutation
       - name: Write report.md
         run: >-
           python3 .github/scripts/measure_summary.py --art art --out report
