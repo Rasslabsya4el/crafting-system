@@ -421,6 +421,44 @@ rules:
     approximate: true
     approximate_reason: "No source but the owner's answer; the research found the recipes unverified, and the narrower reading of the Sand Spitter (link only the sockets present) is on the owner's in-game list #182 (ADR-0048)."
 
+  # --- the price names of the colour and quality kinds (ticket #229, B6 S3) ---
+
+  - id: sockets.chromatic_orb_cost
+    statement: "One Chromatic Orb consumes one Chromatic Orb item; the value maps its price-file name (the item's name in the game data) to the number of items. With the Omen of Trichromatism the use consumes the Omen as well (sockets.omen_of_trichromatism_cost). A bench colour craft is priced as its orb count times this price (sockets.bench_colour_cost)."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRerollSocketColours: name "Chromatic Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-02
+    value: {Chromatic Orb: 1}
+
+  - id: sockets.omen_of_trichromatism_cost
+    statement: "One use of the Omen of Trichromatism consumes one Omen of Trichromatism (priced beside the Chromatic Orb it is used with); the value maps its price-file name to the number of items."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/AncestralOmenOnChromaticAddWhiteSockets: name "Omen of Trichromatism"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-02
+    value: {Omen of Trichromatism: 1}
+
+  - id: sockets.blacksmiths_whetstone_cost
+    statement: "One Blacksmith's Whetstone consumes one Blacksmith's Whetstone item (it raises the quality of a weapon, sockets.quality_currency_gain_by_item_level); the value maps its price-file name to the number of items."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyWeaponQuality: name "Blacksmith''s Whetstone"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-02
+    value: {Blacksmith's Whetstone: 1}
+
+  - id: sockets.armourers_scrap_cost
+    statement: "One Armourer's Scrap consumes one Armourer's Scrap item (it raises the quality of an armour, a shield included, sockets.quality_currency_gain_by_item_level); the value maps its price-file name to the number of items."
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyArmourQuality: name "Armourer''s Scrap"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-02
+    value: {Armourer's Scrap: 1}
+
   # --- the price names (data names of the game's items; prices/price_names.py holds the same names for the price layer) ---
 
   - id: sockets.jewellers_orb_cost
