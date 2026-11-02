@@ -68,6 +68,10 @@ the price-file name of the currency item it is (all items of one type show one p
 default) and `burn(data)` whether it is a currency that changes no mod and may give a Lock up (False by default). `preview_claims(data)` lists
 the claims behind a preview, apart from `claims` (as `strand_claims` is), so an answer with no Lock step never lists them. The Lock itself is
 `HinekoraLock` (`hinekora_lock.py`); the offer of the options is the planner's (B8-4).
+
+Burns (ticket #295, B8-3, ADR-0056): `burn_refusal(data, item, keeps)` answers why an action that declares `burn` is no burn of an item at a state that
+keeps `keeps` (`BurnKeeps`: the quality, the implicits, the enchantment), `burn_outcomes` its result as a burn and `burn_claims` the claims behind the use
+as a burn. `burn.py` turns the legal ones into `Burn` actions, which are not in the catalog, so a burn is never a plain offer.
 """
 
 import functools
@@ -88,7 +92,7 @@ from crafting_system.rules import Rule
 
 from .cut import Cut
 from .draw import Outcome
-from .errors import OutOfScopeError
+from .errors import NotApplicableError, OutOfScopeError
 from .strand_use import Spent, StrandUse
 
 __all__ = [
@@ -96,6 +100,7 @@ __all__ = [
     "ActionOutcomes",
     "Adds",
     "Axis",
+    "BurnKeeps",
     "Fixed",
     "ImprintMove",
     "Need",
@@ -595,6 +600,26 @@ class Previewable(StrEnum):
     BY_ITEM_TEXT = "by_item_text"  # only the Lock's own text covers it ("the next Currency item"); its claim is `approximate`
 
 
+@dataclass(frozen=True)
+class BurnKeeps:
+    """What the compressed state of a query keeps, as far as a burn can touch it (ticket #295, ADR-0056); everything False by default.
+
+    A burn changes no mod, so whether it is legal at a state depends on the few parts of the item that the state does keep:
+
+    * `quality`: the state holds the quality (a target names it, ticket #158). A quality burn is legal only then: it runs out at the maximum
+      quality, and a state that does not hold the quality could not see it run out, so the loop would be free.
+    * `implicits`: a requirement reads the implicits (ticket #158). A Blessed Orb rerolls them, so it is no burn there.
+    * `enchantment`: the target requires the enchantment of the item (ADR-0050). A re-anoint replaces it, so it is no burn there.
+
+    The sockets are not here: a Chromatic Orb is a burn at every state of a socketed class, a move where a target names sockets and a loop
+    otherwise, which the planner's kernel shows and the legality does not need.
+    """
+
+    quality: bool = False
+    implicits: bool = False
+    enchantment: bool = False
+
+
 class Action(ABC):
     """Base of every action; subclass it as a frozen dataclass and fill in the five questions.
 
@@ -660,6 +685,31 @@ class Action(ABC):
     def burn(self, data: GameData | None = None) -> bool:
         """Whether the action is a burn (ADR-0056): a currency that changes no mod and may give a Lock up. False by default."""
         return False
+
+    def burn_refusal(self, data: GameData, item: Item, keeps: BurnKeeps) -> str | None:
+        """Why the action is no burn of `item` at a state that keeps `keeps`, or None when it is a legal burn (ticket #295, ADR-0056).
+
+        An action that is not a burn (`burn` False) says so. The default is that the action works on the item (`burn_outcomes` does not
+        refuse it); an action with a rule of its own about the state (a quality currency, a Blessed Orb, a re-anoint) overrides it and
+        calls `super().burn_refusal` for the rest.
+        """
+        if not self.burn(data):
+            return f"{self.label(data)} is not a burn"
+        try:
+            self.burn_outcomes(data, item)
+        except (NotApplicableError, OutOfScopeError) as refusal:
+            return str(refusal)
+        return None
+
+    def burn_outcomes(self, data: GameData, item: Item, reading: "Reading | None" = None) -> ActionOutcomes:
+        """The result of the action used as a burn on `item`; the same as `outcomes_under` unless the burn assumes something about the item
+        (a Chromatic Orb counts an item that states no sockets as having one, `burn_claims`)."""
+        return self.outcomes_under(data, item, reading)
+
+    def burn_claims(self, data: GameData | None = None) -> frozenset[str]:
+        """The ids of the claims behind the use as a burn, kept apart from `claims` like `preview_claims`: a plan that burns lists them, one that
+        does not never does (ADR-0057). Empty, the default, for an action whose burn assumes nothing."""
+        return frozenset()
 
     def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
         """The ids of the claims behind `previewable`, kept apart from `claims` like `strand_claims`: an answer that takes no Lock step lists

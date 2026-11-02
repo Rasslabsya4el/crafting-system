@@ -30,3 +30,7 @@ Recorded on 2026-10-30 at 21:40-21:50 UTC, one real read-only GET per endpoint, 
 | `details_hollow_fossil_standard.json` | same, `league=Standard` | `chaos` pair only, newest 10 rows, every `volumePrimaryValue` is 0 |
 
 Item line ids are the same in every league (id 34026 is Stygian Vise 85 Hunter in Allflame, Mirage and Standard).
+
+## Hinekora's Lock, its burns and the oils (#295)
+
+Recorded on 2026-11-02 with one real read-only GET per endpoint, league `Allflame`, then trimmed to the lines named. Host and header as above. The Currency overview kept five more lines (Hinekora's Lock, Chromatic Orb, Blessed Orb, Blacksmith's Whetstone, Armourer's Scrap) appended to `overview_currency.json` as poe.ninja sent them (`image` and `sparkline` dropped); the `core.rates` of that file stay those of 2026-10-30. `overview_oil.json` is `GET .../exchange/current/overview?league=Allflame&type=Oil`, trimmed to Clear Oil, Golden Oil and Tainted Oil. `tests/fixtures/prices/foresight-allflame-2026-11-02.json` is a price file made from the same read (Divine Orb at 1 / 0.002506 Chaos).

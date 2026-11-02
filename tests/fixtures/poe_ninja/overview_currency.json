@@ -104,6 +104,41 @@
    "volumePrimaryValue": 270353,
    "maxVolumeCurrency": "divine",
    "maxVolumeRate": 2145
+  },
+  {
+   "id": "blessed",
+   "primaryValue": 0.7849,
+   "volumePrimaryValue": 118.0,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 1.27
+  },
+  {
+   "id": "scrap",
+   "primaryValue": 0.08963,
+   "volumePrimaryValue": 20.17,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 11.16
+  },
+  {
+   "id": "chrome",
+   "primaryValue": 2.71,
+   "volumePrimaryValue": 3985,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.3692
+  },
+  {
+   "id": "hinekoras-lock",
+   "primaryValue": 115483,
+   "volumePrimaryValue": 712144,
+   "maxVolumeCurrency": "divine",
+   "maxVolumeRate": 0.003455
+  },
+  {
+   "id": "whetstone",
+   "primaryValue": 0.0372,
+   "volumePrimaryValue": 15.33,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 26.88
   }
  ],
  "items": [
@@ -178,6 +213,36 @@
    "name": "Vivid Crystallised Lifeforce",
    "category": "Currency",
    "detailsId": "vivid-crystallised-lifeforce"
+  },
+  {
+   "id": "blessed",
+   "name": "Blessed Orb",
+   "category": "Currency",
+   "detailsId": "blessed-orb"
+  },
+  {
+   "id": "scrap",
+   "name": "Armourer's Scrap",
+   "category": "Currency",
+   "detailsId": "armourers-scrap"
+  },
+  {
+   "id": "chrome",
+   "name": "Chromatic Orb",
+   "category": "Currency",
+   "detailsId": "chromatic-orb"
+  },
+  {
+   "id": "hinekoras-lock",
+   "name": "Hinekora's Lock",
+   "category": "Currency",
+   "detailsId": "hinekoras-lock"
+  },
+  {
+   "id": "whetstone",
+   "name": "Blacksmith's Whetstone",
+   "category": "Currency",
+   "detailsId": "blacksmiths-whetstone"
   }
  ]
 }

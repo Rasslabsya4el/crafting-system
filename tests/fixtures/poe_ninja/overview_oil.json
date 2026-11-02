@@ -1,0 +1,66 @@
+{
+ "core": {
+  "items": [
+   {
+    "id": "chaos",
+    "name": "Chaos Orb",
+    "category": "Currency",
+    "detailsId": "chaos-orb"
+   },
+   {
+    "id": "divine",
+    "name": "Divine Orb",
+    "category": "Currency",
+    "detailsId": "divine-orb"
+   }
+  ],
+  "rates": {
+   "divine": 0.00278
+  },
+  "primary": "chaos",
+  "secondary": "divine"
+ },
+ "items": [
+  {
+   "id": "clear-oil",
+   "name": "Clear Oil",
+   "category": "Oils",
+   "detailsId": "clear-oil"
+  },
+  {
+   "id": "golden-oil",
+   "name": "Golden Oil",
+   "category": "Oils",
+   "detailsId": "golden-oil"
+  },
+  {
+   "id": "tainted-oil",
+   "name": "Tainted Oil",
+   "category": "Oils",
+   "detailsId": "tainted-oil"
+  }
+ ],
+ "lines": [
+  {
+   "id": "clear-oil",
+   "primaryValue": 0.2128,
+   "volumePrimaryValue": 1.67,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 4.7
+  },
+  {
+   "id": "golden-oil",
+   "primaryValue": 312.9,
+   "volumePrimaryValue": 2659,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.003196
+  },
+  {
+   "id": "tainted-oil",
+   "primaryValue": 639,
+   "volumePrimaryValue": 1384,
+   "maxVolumeCurrency": "chaos",
+   "maxVolumeRate": 0.001565
+  }
+ ]
+}

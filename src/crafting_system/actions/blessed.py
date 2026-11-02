@@ -29,6 +29,10 @@ in `tests/test_abstraction_implicit_rolls.py`). The kind is no planner kind unti
 (ticket #159), so the contract suite does not ask it about its fixture items.
 
 Memory Strands (ticket #287, ADR-0041): it neither cuts nor spends; the claim is memory_strands.cut_follows_spend_table (approximate).
+
+As a burn of Hinekora's Lock (ticket #295, B8-3, ADR-0056): it declares `burn`. It changes no mod, so on an item with a ranged implicit (a belt) it gives a
+Lock up when no requirement reads the implicits (`BurnKeeps.implicits`); it is refused with an Eldritch implicit, whose reroll no claim states (the use is
+refused there too, `OutOfScopeError`), and wherever a requirement reads the implicits, because the reroll then changes the state.
 """
 
 import random
@@ -41,7 +45,7 @@ from crafting_system.items.implicits import BASE_GRADE
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, BurnKeeps, Reads
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .rolls import roll_values
@@ -124,6 +128,18 @@ class BlessedOrb(Action):
             )
         )
 
+    def burn(self, data: GameData | None = None) -> bool:
+        """A Blessed Orb is a burn of Hinekora's Lock (ADR-0056): it changes no mod. It is legal on an item with a ranged implicit, a belt for instance,
+        when no requirement reads the implicits, and never on an item with an Eldritch implicit (`burn_refusal`)."""
+        return True
+
+    def burn_refusal(self, data: GameData, item: Item, keeps: BurnKeeps) -> str | None:
+        """Refused when a requirement reads the implicits (the Orb then changes the state, which is a real reroll and no burn), with an Eldritch implicit
+        (no admitted claim says what the Orb does to it, ADR-0027) and where the use itself is refused (corrupted, no ranged implicit)."""
+        if keeps.implicits:
+            return "a requirement reads the implicits, and a Blessed Orb rerolls them: it changes the state, so it is no burn (ADR-0056)"
+        return super().burn_refusal(data, item, keeps)
+
     def reads(self, data: GameData) -> Reads:
         # It reads which implicits the item holds (an Eldritch one refuses it) and nothing of the explicit mods, which stay
         # as they are: the junk is kept as counts, no family is told apart.
@@ -173,6 +189,7 @@ class BlessedOrb(Action):
     # fixture amulets does
     applies_only_to="an item with a ranged implicit",
     reads_item_state_while_not_planner="any",  # it reads and rerolls the implicits
+    burns=True,  # a burn where no requirement reads the implicits (ticket #295)
 )
 def _blessed_orb(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)

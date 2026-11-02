@@ -39,6 +39,7 @@ from crafting_system.rules import SourceKind, load_registry, rule_by_id
 NAMED = {"chaos-orb", "exalted-orb", "annulment-orb", "regal-orb", "divine-orb"}
 BY_ITEM_TEXT = {"transmutation-orb", "alteration-orb", "augmentation-orb", "alchemy-orb", "scouring-orb", "vaal"}
 IN_THE_TABLE_ONLY_BY_ITS_ERRING_LOW = {"tailoring"}
+BURN_KINDS = {"chromatic-orb", "quality-currency", "blessed-orb", "re-anoint"}  # ADR-0056: the candidates of the burn
 TABLE = NAMED | BY_ITEM_TEXT | IN_THE_TABLE_ONLY_BY_ITS_ERRING_LOW
 
 REGISTRY = load_registry()
@@ -216,10 +217,13 @@ def test_the_preview_claims_are_not_among_the_claims_of_the_action():
         assert not action.preview_claims(data) & action.claims(data), kind
 
 
-def test_no_existing_kind_declares_a_burn_yet_and_the_other_declarations_are_blind_by_default():
+def test_only_the_kinds_of_adr_0056_declare_a_burn_and_each_carries_the_flag_and_the_others_are_blind_by_default():
+    """Ticket #295 (B8-3) gave a `burn` to the plain Chromatic Orb, the quality currencies, the Blessed Orb and the re-anoint; no other kind declares one."""
+    assert {entry.name for entry in kinds() if entry.burns} == BURN_KINDS
     for kind, members in declared_actions().items():
         for action, data in members:
-            assert action.burn(data) is False, f"{kind}: burns are B8-3's"
+            if action.burn(data):
+                assert kind in BURN_KINDS, f"{kind}: declares a burn outside ADR-0056"
             if action.previewable(data) is Previewable.NO:
                 assert action.currency_item(data) is None and action.preview_claims(data) == frozenset(), kind
 
