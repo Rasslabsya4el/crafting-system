@@ -4,7 +4,8 @@
     python .github/scripts/state_bloat.py summary --dir DIR  --out DIR2     writes DIR2/summary.md and DIR2/headline.txt
 
 `run` builds the plan of one benchmark route the way `cli._benchmark.run_route(..., heavy=True)` does (same target, offers, prices,
-start and options: it calls the same functions, only the risk run is left out), keeps the states the planner walked with the optimal
+start and options: it calls the same functions, only the risk run is left out; the prices are the committed file of the benchmark routes,
+`PRICES`, because a CI checkout has no price file of its own), keeps the states the planner walked with the optimal
 value and the first action of the optimal policy at each, and then, for each part of `CompressedState` (and for the names of the junk
 mods inside `slots`), projects that part away and counts what is left:
 
@@ -40,7 +41,7 @@ import numpy as np
 from crafting_system.abstraction import CompressedState
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import GameData, load_game_data
-from crafting_system.prices import PriceFile
+from crafting_system.prices import PriceFile, load_price_file
 from crafting_system.cli import _packed
 from crafting_system.cli._benchmark import (
     BENCHMARKS,
@@ -62,6 +63,7 @@ COLUMNS = (*PARTS, JUNK)
 ORDER = ("R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14")
 VALUE_TOLERANCE = 1e-9  # values in a group differ when their relative difference is above this
 FORMAT = "crafting-system-state-bloat/1"
+PRICES = "tests/fixtures/prices/routes-allflame-2026-10-31.json"  # from the project root; the prices of the packed-solver measurements (ADR-0063)
 
 RUSSIAN = {
     "flags": "флагов предмета",
@@ -508,8 +510,10 @@ def run_command(arguments: argparse.Namespace) -> int:
     config = load_config(None)
     data = load_game_data(cache_dir=config.cache_dir)
     out = Path(arguments.out) / f"route-{bench.id}.json"
+    root = find_project_root()
+    prices = load_price_file(Path(arguments.prices) if arguments.prices else root / PRICES)
     document = bloat_route(
-        bench, data, find_project_root(), config, solver=arguments.solver, say=say, keep=lambda partial: write_json(out, _clean(partial))
+        bench, data, root, config, prices, solver=arguments.solver, say=say, keep=lambda partial: write_json(out, _clean(partial))
     )
     write_json(out, _clean(document))
     say(f"written {out}")
@@ -542,6 +546,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     run = commands.add_parser("run", help="measure one benchmark route")
     run.add_argument("--route", required=True, help="a benchmark route id (R12, R10, ...)")
     run.add_argument("--out", required=True, help="the folder for route-ID.json")
+    run.add_argument("--prices", help=f"a price file (default {PRICES}, the committed prices of the benchmark routes: a CI checkout has no price file of its own)")
     run.add_argument("--solver", default="auto", choices=_packed.SOLVERS, help="the solver of the plan (default auto, as the benchmark)")
     run.set_defaults(handler=run_command)
     summary = commands.add_parser("summary", help="the tables of the routes measured")
