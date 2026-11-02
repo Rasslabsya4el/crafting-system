@@ -19,6 +19,7 @@ mass still in flight is below `ATTEMPT_TAIL`, and the answer is refused (None) w
 over the chance of success) could move a quantile by more than the rounding allowance.
 """
 
+import gc
 from collections import deque
 
 import numpy as np
@@ -170,9 +171,13 @@ def run_jobs(jobs: list[tuple]) -> list:
     """
     if len(jobs) > 1 and parallel.worker_count() >= 2 and parallel.can_inherit():
         names = [str(i) for i in range(len(jobs))]
+        gc.collect()
+        gc.freeze()  # the forked workers must not touch the parent's objects (a collection writes to every one of them: a plan holds gigabytes)
         try:
             with parallel.WorkerPool(_held, (dict(zip(names, jobs)),), workers=min(len(jobs), parallel.worker_count())) as pool:
                 return pool.map(_call, names, chunk=1)
         except Exception:  # a worker failed or was killed: run them here
             pass
+        finally:
+            gc.unfreeze()
     return [function(*args, **kwargs) for function, args, kwargs in jobs]
