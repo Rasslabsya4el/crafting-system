@@ -147,6 +147,14 @@ class Reads:
       which mod of the family a slot stands for, not only on which family (a Harvest swap keeps the tier of the mod it changes,
       so it must know the tier; ticket #149). Only families of the drawable pool (one family per mod) can be named. The
       state is larger for it, so name only the families the action looks inside.
+    * `influenced`: with `junk`, the result depends on which of the mods the item holds are influence mods of the item (the first spawn
+      weight of the mod that the item has is the tag of one of its influences, `pool.influence_spawn_test`) and on which mod each is,
+      because the action upgrades one (an Orb of Dominance reads the tier and the Elevated version of the mod) or keeps one by its
+      influence (an Awakener's Orb). The compressed state then tells each influence mod of the item's influences apart by MOD, as the kind
+      `$<mod id>`, and keeps the ordinary mods of its families as they were (a family often holds ordinary and influence mods both, so
+      `by_mod` by family cannot say it); an Elevated mod is one of them (spawn weight 0 on the influence tag). Nothing changes for an item
+      with no influence, and an action that only puts influence mods on the item (an influenced Exalted Orb, a beast recipe) need not
+      declare it: the state tells apart what a reader in the same model needs (ticket #155).
     * `draw_tags`, `draw_levels`: with `pool_weight`, the draw of the action looks at more than the weight of each mod of the
       pool of the item: `draw_tags` are mod tags it restricts a draw to (the tag of a Harvest add), `draw_levels` item levels
       other than the item's at which it draws (the level of a beast). The family types of the state then carry which of those
@@ -200,6 +208,7 @@ class Reads:
     socket_count: bool = False
     socket_links: bool = False
     socket_colours: bool = False
+    influenced: bool = False
     by_mod: frozenset[str] = frozenset()
     draw_tags: frozenset[str] = frozenset()
     draw_levels: frozenset[int] = frozenset()

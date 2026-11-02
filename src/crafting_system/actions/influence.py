@@ -13,15 +13,23 @@
 * `BeastInfluenceRecipe(influence)`: the six beast recipes "Add a Mod to a <influence> Item". No source says which mod they add; the
   model borrows the pool of the influence's Exalted Orb (the item already has the influence), and the claim is marked approximate.
 
-Each answers with an exact list or pool draw and none is a planner kind yet: the compressed state does not tell the influenced mods
-apart where Dominance reads them, nor tier an Elevated mod (ticket #155). A mod an action puts on the item is rolled at its lowest
-values (`Finite`), as for every action that lists its results.
+Each answers with an exact list or pool draw and none is a planner kind yet. The compressed state tells the influenced mods apart where
+Dominance reads them and keeps the Elevated tier since ticket #155 (below); what is left before a plan can offer them is a goal built from
+a target. A mod an action puts on the item is rolled at its lowest values (`Finite`), as for every action that lists its results.
 
 The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
 that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
 68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
 unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
-influence's orb for an item that has it (unverified, approximate). None is a planner kind yet (#155).
+influence's orb for an item that has it (unverified, approximate). None is a planner kind yet.
+
+The compressed state (ticket #155, ADR-0030 amendment). `OrbOfDominance` declares `Reads.influenced` (an Awakener's Orb does too): the state then tells
+each influence mod of the item's influences apart by MOD (the kind `$<mod id>`), because the families of the data hold ordinary and influence mods
+together and the result depends on which mod it is (its next tier, its Elevated version, whether it is one at all); the other mods stay as the
+actions that read them ask (by side for Dominance alone). An Elevated mod is an influence mod (weight 0 on the influence tag) and its tier in the
+state is `ELEVATED_TIER`, the best one, the same in the item the orb makes and in the state that rebuilds it: it comes from no tier table. The
+influenced Exalted Orb and the beast recipe only put influence mods on the item and declare nothing new; layer 1 passes for them, for the orb
+and for the Awakener's Orb on every item they reach together (`tests/test_abstraction_dominance.py`).
 
 Memory Strands (ticket #286, ADR-0041 and its amendments; the declarations are `strand_use`, their claims `strand_claims`, and neither is among `claims()`):
 
@@ -240,7 +248,7 @@ class InfluencedExaltedOrb(Action):
     order=76,
     planner=False,
     reads_item_state_while_not_planner="implicits",  # refused on an Eldritch implicit
-    why_not="no compressed-state kernel for the influence orbs yet (#155)",
+    why_not="a goal built from a target does not name an influenced mod yet (the compressed state holds the orb's result since ticket #155)",
 )
 def _influenced_exalted_orbs(data: GameData, item: Item):
     if item.rarity is Rarity.RARE and not item.influences:
@@ -274,9 +282,10 @@ class OrbOfDominance(Action):
         return dict(DOMINANCE_COST.value)
 
     def reads(self, data: GameData) -> Reads:
-        # Which mods are influenced, and their tiers, decide the result: every family of the junk is told apart. The side locks
-        # are crafted mods of the item, which a state always holds.
-        return Reads(junk=True, families=None, pool_weight=False)
+        # Which mods are influenced, and which mod each is (its tier, its Elevated version), decide the result; nothing else of the junk does, it only
+        # counts by side. The state tells the influence mods apart by mod (`influenced`). The side locks are crafted mods of the item, which a state
+        # always holds.
+        return Reads(junk=True, families=frozenset(), pool_weight=False, influenced=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # It removes one mod and puts the next tier of another on the item: a mod it does not name in advance.
@@ -380,7 +389,7 @@ class OrbOfDominance(Action):
     "orb-of-dominance",
     order=77,
     planner=False,
-    why_not="the compressed state does not tell the influenced mods apart where Dominance reads them, nor tier an Elevated mod (#155)",
+    why_not="a goal built from a target does not name an influenced or an Elevated mod yet (the compressed state tells them apart since ticket #155)",
 )
 def _orb_of_dominance(data: GameData, item: Item):
     if item.rarity is not Rarity.NORMAL and item.influences and data.base_items[item.base_id].item_class in DOMINANCE_GATE.value:
@@ -456,7 +465,7 @@ class BeastInfluenceRecipe(Action):
     "beast-influence-recipe",
     order=88,
     planner=False,
-    why_not="no compressed-state kernel for the influence crafts yet (#155)",
+    why_not="a goal built from a target does not name an influenced mod yet (the compressed state holds the recipe's result since ticket #155)",
 )
 def _beast_influence_recipes(data: GameData, item: Item):
     if item.rarity is Rarity.RARE:

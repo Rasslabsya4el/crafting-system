@@ -272,6 +272,11 @@ class Abstraction:
         return self._kinds.tracked
 
     @property
+    def tells_influenced(self) -> bool:
+        """Whether a state tells the influence mods of the item's influences apart by mod: an enabled action reads which mods are influenced (`Reads.influenced`, ticket #155)."""
+        return self._kinds.influenced
+
+    @property
     def rerolls_values(self) -> bool:
         """Whether an enabled action rerolls the values of the mods an item holds (a Divine Orb): rollable mods are then slots by mod id."""
         return self._kinds.rerolls
@@ -1239,14 +1244,20 @@ class Abstraction:
     def _splits_of(self, prepared: _Prepared) -> tuple[_Split, ...]:
         """The split of every part of the outcomes (cached on `prepared`)."""
         if prepared.splits is None:
+            given = prepared.item.influences if prepared.item is not None else None
             prepared.splits = tuple(
-                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes) else frozenset(), prepared.imprints)
+                self._split(part.retained, prepared.origins, part.rerolled if isinstance(part, Outcomes) else frozenset(), prepared.imprints, given)
                 for _, part in prepared.outcomes.components
             )
         return prepared.splits
 
     def _split(
-        self, retained: Item, origins: Origins, rerolled: frozenset[str] = frozenset(), given: tuple[CompressedState, ...] = ()
+        self,
+        retained: Item,
+        origins: Origins,
+        rerolled: frozenset[str] = frozenset(),
+        given: tuple[CompressedState, ...] = (),
+        before: frozenset[Influence] | None = None,
     ) -> _Split:
         """Read a part's retained item back into state terms.
 
@@ -1259,6 +1270,10 @@ class Abstraction:
         Orb); any other mod is new: its contribution is that of its table tier at low rolls, and it is a
         slot when it is crafted or when junk is kept. Raises `OutOfScopeError` for a new mod a leaf limits
         the roll of.
+
+        `before` are the influences of the item the action was given. When the result has others and an action tells the influence mods
+        apart (`Reads.influenced`), a kept slot is read again in the context of the result: whether a mod is an influence mod is
+        decided by the influences of the item that holds it (ticket #155).
         """
         influences = retained.influences
         flags = Flags(retained.rarity, retained.corrupted, influences)
@@ -1280,6 +1295,8 @@ class Abstraction:
                         f"the goal has a roll limit and the action keeps mod {entry.mod_id} but rolls its value afresh: "
                         "the kept slot would keep the contribution of its old roll"
                     )
+                if before is not None and before != influences and self._kinds.influenced and not origin.crafted:
+                    origin = self._reread(origin, entry, influences)
                 kept.append(origin)
                 contributions.append(origin.contribution)
             else:
@@ -1298,6 +1315,11 @@ class Abstraction:
         status = best_of(len(self.goal.leaves), contributions)
         held = self._held_by(retained, influences, given)
         return _Split(flags, tuple(fractured), tuple(kept), tuple(new), status, tuple(new_ids), *held)
+
+    def _reread(self, slot: Slot, entry: ExplicitMod, influences: frozenset[Influence]) -> Slot:
+        """A kept slot of an ordinary mod as the context of `influences` names it (an action gave the item another influence); the slot itself when its kind is the same."""
+        kind = self._context(influences).kinds.of(self.data.mods[entry.mod_id])
+        return slot if kind == slot.kind else Slot(slot.side, kind, slot.contribution)
 
     def _fractured_slot(self, slot, entry: ExplicitMod, influences: frozenset[Influence]) -> FracturedMod | None:
         """The fractured mod that the slot `slot` becomes when the action fractures its mod `entry`; None when it is no slot.

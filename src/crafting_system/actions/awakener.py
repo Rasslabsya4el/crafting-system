@@ -22,6 +22,9 @@ is below item level 68, holds no influenced mod, or no pair of different mods ca
 class key, a jewel, or a donor mod that is no influence mod of the donor's influence on this base. The game's refusal of a
 mirrored or synthesised item is not modelled: an `Item` has neither flag.
 
+The compressed state tells the receiver's influence mods apart by mod (`Reads.influenced`, ticket #155): which of them the orb keeps, and whether
+it clashes with the donor's, depends on the mod and not on the family alone (a family often holds ordinary and influence mods both).
+
 Limit: a kept mod's value is rerolled, but the compressed state keeps the contribution of its old roll, so under a goal with a roll
 limit the kernel raises `OutOfScopeError` (`abstraction._kernel._split`). The donor's own mod is a new mod to the kernel, so a
 roll limit on it is refused there as for any forced mod.
@@ -146,7 +149,7 @@ class AwakenersOrb(Action):
 
     def reads(self, data: GameData) -> Reads:
         """It keeps the receiver's influenced mods (the junk, every family) and the donor's mod; the rest of the junk goes."""
-        return Reads(junk=True, families=None, input_mods=True)
+        return Reads(junk=True, families=None, input_mods=True, influenced=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         """The donor's mod and a draw; every crafted mod goes. Implicits, quality and the offer stay as they were."""
