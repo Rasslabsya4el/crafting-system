@@ -432,7 +432,7 @@ def test_the_claims_are_the_orb_s_and_not_the_resonator_s():
         "corruption.implicit_replaces_existing",
         "corruption.implicit_pool_by_item_class",
         "corruption.jewel_vaal_outcomes",
-        "corruption.vaal_cost",
+        "vaal_orb.cost",
         "eldritch.vaal_replaces_one_implicit",
         "corruption.vaal_brick_rare_six_mods",  # approximate
     } <= claims

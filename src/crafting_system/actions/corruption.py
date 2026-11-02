@@ -77,7 +77,7 @@ JEWEL_POOL = get_rule("corruption.jewel_implicit_pool")
 JEWEL_BRICK = get_rule("corruption.jewel_brick_fills_to_limit")
 VALUES_UNIFORM = get_rule("affix_pool.values_uniform_integers")
 CORRUPTED_IS_FINAL = get_rule("corruption.corrupted_modifiable_exceptions")
-COST = get_rule("corruption.vaal_cost")
+COST = get_rule("vaal_orb.cost")
 
 # the three jewel bases that have a corruption-exclusive unique; any other base gives no effect for that outcome (`corruption.jewel_vaal_outcomes`)
 UNIQUE_JEWEL_BASES = frozenset({"Cobalt Jewel", "Crimson Jewel", "Viridian Jewel"})
