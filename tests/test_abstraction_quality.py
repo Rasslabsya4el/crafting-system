@@ -8,7 +8,7 @@ yet (`Abstraction.quality_offer_pruned`; `cli._prune.chosen_offers` applies it).
 * the goal: the quality is a requirement of its own, of the type asked, met at the percent asked or more; the plain quality has no type;
 * **catalysts are not offered while another requirement fails and are offered once only the quality fails** (the offer, by the prune of the
   planner and by the abstraction), also for an implicit that is missing, and never when the quality is met or the goal wants none;
-* layer 1 (ADR-0019) for the catalysts and for a reroll beside them, against the finished items of the action, over starts that hold a quality of
+* layer 1 (ADR-0019) for the catalysts, against the finished items of the action, over starts that hold a quality of
   the type, of another type, 20% and none;
 * the pruning is exact: the solver's value of the same small economy is the same with and without it, and from a state that meets everything but the
   quality it is the price of the expected number of catalysts (`expected_catalysts_for`);
@@ -172,8 +172,8 @@ def test_a_goal_that_takes_a_corrupted_item_keeps_the_catalysts_while_an_action_
 # --- layer 1 -----------------------------------------------------------------------------------------------------------------
 
 
-def test_layer_1_for_the_catalysts_and_a_reroll_beside_them():
-    found = ability(actions=[CATALYST, ApplyCatalyst(TEMPERING), ChaosOrb()])
+def test_layer_1_for_the_catalysts():
+    found = ability(actions=[CATALYST, ApplyCatalyst(TEMPERING)])
     starts = [
         amulet(roll(RESIST_2)),
         amulet(roll(LIFE_1), quality=intrinsic(5)),
@@ -181,7 +181,7 @@ def test_layer_1_for_the_catalysts_and_a_reroll_beside_them():
         amulet(roll(RESIST_2), quality=intrinsic(20)),  # a catalyst is refused at 20% of its type
         amulet(roll(RESIST_2), quality=Quality(TEMPERING, 10)),  # another type is replaced
     ]
-    actions = [CATALYST, ApplyCatalyst(TEMPERING), ChaosOrb()]
+    actions = [CATALYST, ApplyCatalyst(TEMPERING)]
     applied = {action: 0 for action in actions}
     for item in closure(ITEM_DATA, starts, actions, limit=60):
         for action in actions:
@@ -231,13 +231,13 @@ def test_the_prune_changes_no_value_and_the_catalysts_cost_the_expected_number_o
     found = ability(actions=[CATALYST, ChaosOrb()])
     held = amulet(roll(RESIST_2))
     start = found.compress(amulet())
-    pruned = solve(Economy(found, pruned=True), [start])
-    unpruned = solve(Economy(found, pruned=False), [start])
+    ready = found.compress(held)
+    pruned = solve(Economy(found, pruned=True), [start, ready])
+    unpruned = solve(Economy(found, pruned=False), [start, ready])
     chance = sum(chance for state, chance in found.kernel(start, ChaosOrb()).items() if found.meets_all_but_quality(state))
     assert 0 < chance < 1
     expected = float(expected_catalysts_for(held, INTRINSIC, 20))
     assert 13.3 < expected < 13.4  # 13.35 at item level 84 (ADR-0029)
-    ready = found.compress(held)
     assert pruned.values[ready] == pytest.approx(3.0 * expected, rel=1e-9)  # a state that needs the quality only: the price of the expected catalysts
     assert pruned.values[start] == pytest.approx(1.0 / float(chance) + 3.0 * expected, rel=1e-9)  # rerolls until the mod is there, then the catalysts
     assert unpruned.values[start] == pytest.approx(pruned.values[start], rel=1e-9)
