@@ -22,6 +22,13 @@ Every ordinary family with a mod whose roll changes what it gives the goal (a ro
 told apart by MOD: all its mods have the kind `"$" + mod id`. The prefix is not "=" (that names a pool of families
 in `_coarse.py`), "~" (a family type), "@" (the tags of a mod) or "#" (a family without a name).
 
+An action that reads which mods are influence mods of the item (`Reads.influenced`, an Orb of Dominance, an Awakener's Orb; ticket #155) makes
+every influence mod of the item's influences a kind of its own, `"$" + mod id` as above: the families of the data hold ordinary and influence
+mods together (Percentage Strength has 22 ordinary mods and 9 Shaper, Elder and other ones), so only the mod says which it is, and an Elevated mod
+(spawn weight 0 on the influence tag, `data/elevated.json`) is one of them. The ordinary mods keep the kinds they would have had, and the representative of
+such a kind is never an influence mod (`representative`), so the item the kernel builds holds no influence mod the state does not name. An item with
+no influence has no influence mod and its states are what they were.
+
 A veiled mod is never an ordinary one (ticket #145, ADR-0026). A mod unveiled from the pool (domain `unveiled`) has the kind
 `"^" + family key`, whatever the enabled actions tell apart: it can share a family with an ordinary mod (Movement Speed on boots), and
 the Veiled Exalted Orb and the Veiled Chaos Orb refuse an item that holds a veiled mod, so the state must know which of the two a
@@ -32,7 +39,7 @@ is always the generic placeholder the orbs put on an item.
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable
 
-from crafting_system.actions import BLOCKED_TAG, Action, build_pool
+from crafting_system.actions import BLOCKED_TAG, Action, build_pool, influence_spawn_test
 from crafting_system.data import GameData, Mod
 from crafting_system.items import GENERIC_PLACEHOLDERS, Item, Rarity, Side
 from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS, UNVEILED_DOMAIN, VEILED_DOMAIN
@@ -144,6 +151,8 @@ class Kinds:
         self.by_weight = metamods
         self.fractures = False  # an enabled action may fracture a mod the item holds
         self.rerolls = False  # an enabled action rerolls the values of the mods the item holds
+        self.influenced = False  # an enabled action reads which mods the item holds are influence mods (`Reads.influenced`)
+        self._influence_test: Callable[[Mod], bool] | None = None
         self._rollable = rollable
         self._declared_by_mod: set[str] = set()  # the families an enabled action looks inside (`Reads.by_mod`)
         self._tagged: set[str] = set()  # the tags an enabled action restricts a draw to (`Reads.draw_tags`): a family type carries them
@@ -152,6 +161,7 @@ class Kinds:
             reads = action.reads(data)
             self.fractures = self.fractures or reads.fractures
             self.rerolls = self.rerolls or reads.rerolls_values
+            self.influenced = self.influenced or (reads.influenced and reads.junk)
             self._declared_by_mod.update(reads.by_mod)
             if reads.junk and reads.pool_weight:
                 self._tagged.update(reads.draw_tags)
@@ -174,6 +184,19 @@ class Kinds:
         """Whether `action` can see the mods that a Chaos Orb would erase (their number or their families)."""
         return action.reads(self.data).junk
 
+    def is_influenced(self, mod: Mod) -> bool:
+        """Whether `mod` is an influence mod of these kinds' influences that an enabled action tells apart (`Reads.influenced`); never for an item with no influence.
+
+        The test is the one the actions read (`pool.influence_spawn_test`): the first spawn weight of the mod that the item has is the tag of an influence of
+        the item, whatever its weight (an Elevated mod has weight 0). Raises what `item_tags` raises for an influenced item of a class with no influence key.
+        """
+        if not (self.influenced and self.influences):
+            return False
+        if self._influence_test is None:
+            probe = Item.build(self.data, base_id=self.base_id, item_level=self.item_level, rarity=Rarity.RARE, influences=self.influences)
+            self._influence_test = influence_spawn_test(self.data, probe)
+        return self._influence_test(mod)
+
     def of(self, mod: Mod) -> str:
         """The kind of an ordinary (not crafted) mod: its family key, its family type's kind, or `ALIKE`.
 
@@ -182,7 +205,7 @@ class Kinds:
         key = family_key(mod)
         if mod.domain == UNVEILED_DOMAIN:
             kind = UNVEILED_PREFIX + key  # a veiled mod, told apart from the ordinary mods of its family whatever an action reads
-        elif key in self._families_by_mod():
+        elif self.is_influenced(mod) or key in self._families_by_mod():
             kind = MOD_PREFIX + mod.id
         elif self._everything or key in self._distinct or key not in self._listed_families():
             kind = key
@@ -249,6 +272,8 @@ class Kinds:
             if key in taken:
                 continue
             for mod in mods:
+                if self.is_influenced(mod):
+                    continue  # the state names every influence mod it holds (`$<mod id>`), so an ordinary slot never stands for one
                 if not self.metamods or protected_tags(mod) == tags:
                     taken.add(key)
                     return mod
@@ -367,6 +392,7 @@ class Kinds:
             if mod.generation_type == side.value
             and mod.domain in domains
             and (not self.metamods or protected_tags(mod) == tags)
+            and not self.is_influenced(mod)
         ]
         if not found:
             raise ValueError(f"no {side.value} mod of the family {key} fits a base like {self.base_id}")
