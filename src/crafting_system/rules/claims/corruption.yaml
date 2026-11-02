@@ -190,3 +190,12 @@ rules:
     approximate: true
     approximate_reason: "sources disagree: wiki, Craft of Exile and one sheet 25% to 26.5%; other counts 8.8%"
     value: {share: 0.25, interval_low: 0.088, interval_high: 0.265}
+
+  - id: corruption.vaal_cost
+    statement: One use of a Vaal Orb consumes one Vaal Orb item; the value maps its price-file name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyCorrupt: name "Vaal Orb"'
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-02
+    value: {Vaal Orb: 1}
