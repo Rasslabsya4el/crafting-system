@@ -76,7 +76,8 @@ jobs:
           uv run --no-sync coverage combine --rcfile .github/measure-coverage.rc --data-file out/.coverage in/
           uv run --no-sync coverage json --rcfile .github/measure-coverage.rc --data-file out/.coverage -o out/coverage.json
           uv run --no-sync python .github/scripts/measure_coverage_report.py --json out/coverage.json --root . --exits in --out out
-      - name: Upload the combined data file
+      - name: Upload the combined data file (the mutation step reads its per-test contexts)
+        if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
           name: measure-coverage-data

@@ -47,10 +47,10 @@ def test_table_has_the_nine_routes_in_order_with_missing_ones_marked():
     assert table.startswith("# routes\n")
     rows = _rows(table)
     assert [row[0] for row in rows] == measure_routes.BENCHMARK_ORDER
-    assert len(rows) == 9
+    assert len(rows) == 10
     missing = ["R12"] + ["—"] * 8 + ["missing"]
     assert rows[measure_routes.BENCHMARK_ORDER.index("R12")] == missing
-    assert [row[0] for row in rows if row[-1] == "missing"] == ["R12", "R11", "R13", "R08", "R09", "R04", "R14"]
+    assert [row[0] for row in rows if row[-1] == "missing"] == ["R12", "R11", "R13", "R08", "R09", "R04", "R14", "V01"]
 
 
 def test_full_row_shows_rounded_numbers_and_percent():
@@ -82,11 +82,11 @@ def test_failed_row_has_dashes_for_no_solver_and_the_error_text():
 def test_headline_counts_only_the_solved_routes():
     _, headline = measure_routes.build_summary([FULL, FAILED])
 
-    assert headline == "Маршрутов посчитано: 1 из 9; самый долгий R10 — 1.5 мин; решатель не дороже гайда на 1 из 1."
+    assert headline == "Маршрутов посчитано: 1 из 10; самый долгий R10 — 1.5 мин; решатель не дороже гайда на 1 из 1."
     assert "\n" not in headline and len(headline) <= 200
 
 
 def test_headline_with_no_records():
     _, headline = measure_routes.build_summary([])
 
-    assert headline == "Маршрутов посчитано: 0 из 9; самый долгий —; решатель не дороже гайда на 0 из 0."
+    assert headline == "Маршрутов посчитано: 0 из 10; самый долгий —; решатель не дороже гайда на 0 из 0."

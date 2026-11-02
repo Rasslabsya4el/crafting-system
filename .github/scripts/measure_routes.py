@@ -19,7 +19,7 @@ import time
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
-BENCHMARK_ORDER = ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14"]
+BENCHMARK_ORDER = ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01"]
 COLUMNS = [
     "route",
     "seconds",
