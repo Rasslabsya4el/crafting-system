@@ -455,6 +455,8 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note
     risk = evaluate_risk(
         packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True
     )
+    if _packed.PROGRESS is not None:
+        _packed.PROGRESS(f"risk on the ordinary grid: p50 {risk.p50.value!r}, p90 {risk.p90.value!r}")
     if resolve and risk.success_probability.value >= 1.0 and any(math.isinf(e.high) for e in (risk.p50, risk.p90, risk.cvar)):
         # the ordinary grid did not reach a level asked: try the coarse grid, which the usual rule leaves to a chain that certainly needs it
         # (R04), and for a chain too big for it, one attempt at a time (R14); ticket #70
@@ -462,6 +464,8 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note
             packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, packed_moments=True,
             coarse_first=True, regenerative=True,
         )  # fmt: skip
+        if _packed.PROGRESS is not None:
+            _packed.PROGRESS(f"risk again with the coarse grid or attempt by attempt: p50 {again.p50!r}, p90 {again.p90!r}")
         if not any(math.isinf(e.high) for e in (again.p50, again.p90, again.cvar)):
             risk = again
     if not resolve:

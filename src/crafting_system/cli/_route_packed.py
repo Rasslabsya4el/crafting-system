@@ -26,7 +26,8 @@ from crafting_system.solver._packed import expand_ranges
 from crafting_system.solver._packed_merge import exact_classes, quotient
 
 from ._offers import BuyStartItem, free_action_cost
-from ._packed import PackedResult, Walked, lumped_policy, lumped_view
+from . import _packed
+from ._packed import PackedResult, lumped_policy, lumped_view
 from ._plan import Plan, packed_risk
 
 
@@ -135,18 +136,23 @@ def evaluate_route_packed(plan: Plan, route, data: GameData):
 
     began = time.perf_counter()
     walked = plan.policy.walked
+    say = _packed.PROGRESS or (lambda _text: None)
     chosen, labels, cost, gaps = route_actions(plan, route, data)
     found_gaps = tuple(Gap(walked.states[i], reason) for i, reason in gaps)
+    say(f"route read on the walked graph: {int((chosen >= 0).sum()):,} states act, {len(gaps):,} gaps ({time.perf_counter() - began:.1f} s)")
     chain = restricted(walked.graph, chosen, cost)
     classes = exact_classes(chain)
     reduced, _ = quotient(chain, classes)
+    say(f"route chain merged into {classes.count:,} classes ({time.perf_counter() - began:.1f} s)")
     class_action = np.where(np.diff(reduced.act_ptr) > 0, reduced.act_ptr[:-1], -1)
     lumped = lump_policy(reduced, class_action, int(classes.cls[0]))
     if lumped is None:
         raise ValueError("the route's chain holds a kernel with weights beyond 62 bits, which the packed route evaluation does not take")
+    say(f"route chain lumped into {lumped.count:,} blocks, {lumped.transitions:,} transitions ({time.perf_counter() - began:.1f} s)")
     goal = lumped.goal
     result = PackedResult(plan.solution, lumped_policy(lumped, reduced, walked.offers), lumped.start, lambda b: bool(goal[b]), {})
     risk, _ = packed_risk(result, plan.mean_remaining, free_action_cost(plan.offers), "")  # the route costs at least the solver's mean
+    say(f"route risk evaluated ({time.perf_counter() - began:.1f} s)")
     view = lumped_view(lumped, reduced, classes.cls, walked)
     return RouteResult(view, risk, found_gaps, _divergence(plan, route, data, labels, Divergence), time.perf_counter() - began)
 

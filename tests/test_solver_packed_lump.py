@@ -12,6 +12,7 @@ import pytest
 
 from crafting_system.risk import evaluate
 from crafting_system.solver import Action, Outcome, TabularModel, lump_policy, pack_model, policy_reach, solve_packed
+from crafting_system.solver import _packed_lump as lump_module
 
 from test_solver_packed import BIG, random_model
 
@@ -109,6 +110,20 @@ def test_the_lumped_chain_of_a_random_optimal_policy_has_the_numbers_of_the_whol
     assert lumped.count <= len(policy) + 1
     whole = evaluate(policy, 0, lambda s: bool(graph.goal[s]))
     same_risk(evaluate(blocks, int(lumped.start), lambda b: bool(lumped.goal[b])), whole)
+
+
+@pytest.mark.parametrize("seed", range(30))
+def test_reading_the_kernels_in_small_chunks_gives_the_same_blocks(seed, monkeypatch):
+    model = random_model(seed)
+    _, graph, _, whole = whole_and_lumped(model)
+    if whole is None:
+        return
+    monkeypatch.setattr(lump_module, "CHUNK_EDGES", 3)
+
+    _, _, _, chunked = whole_and_lumped(model)
+
+    assert chunked.count == whole.count and chunked.transitions == whole.transitions
+    assert chunked.deviation <= 1e-12 and (chunked.block == whole.block).all()
 
 
 def test_a_policy_with_a_big_weight_kernel_is_not_lumped():

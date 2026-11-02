@@ -25,6 +25,7 @@ option the source prices shows both prices side by side with the gap flag. The p
 
 import argparse
 import sys
+import time
 from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -36,6 +37,7 @@ from crafting_system.prices import PriceFile, PriceFileNotFound, load_buy_spec, 
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import TargetError, load_target
 
+from . import _packed
 from ._benchmark import benchmark_main
 from ._decide import BUDGET_SECONDS
 from ._inputs import load_target_prices, write_json
@@ -48,6 +50,16 @@ from ._starts import plan_with_starts
 from ._verify import DEFAULT_RUNS, DEFAULT_SEED, verify
 
 COMMAND = "python -m crafting_system.cli"
+
+
+def _peak_megabytes() -> int:
+    """The most memory this process has held, in MB (0 where the system does not say)."""
+    try:
+        import resource
+
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss // 1024
+    except ImportError:
+        return 0
 
 
 def _seconds(text: str) -> float:
@@ -89,10 +101,12 @@ def main(
     parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (the setting price_source of crafting.toml, default both)")
     parser.add_argument("--exact", action="store_true", help="solve exactly however long it takes, never approximately")
     parser.add_argument("--budget", type=_seconds, default=BUDGET_SECONDS, metavar="SECONDS", help=f"the time the exact run may take before the answer is approximate (default {BUDGET_SECONDS:g})")
+    parser.add_argument("--progress", action="store_true", help="print the phases of a long plan (the walk, the merge, the solve, the risk, the report) with their seconds to stderr")
     parser.add_argument("--verify", action="store_true", help="also run the policy on concrete items and compare with the computed mean (an approximate answer: with its certified interval)")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS, help=f"simulated crafts for --verify (default {DEFAULT_RUNS})")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help=f"random seed for --verify (default {DEFAULT_SEED})")
     args = parser.parse_args(arguments)
+    previous_progress = _packed.PROGRESS
 
     try:
         config = load_config(env)
@@ -105,6 +119,15 @@ def main(
         if stale:
             print(f"Warning: {stale}", file=sys.stderr)
 
+        began = time.perf_counter()
+
+        def stage(text: str) -> None:
+            if args.progress:
+                memory = _peak_megabytes()
+                print(f"[{time.perf_counter() - began:8.1f} s{f', {memory:,} MB' if memory else ''}] {text}", file=sys.stderr, flush=True)
+
+        if args.progress:
+            _packed.PROGRESS = stage
         # a given route is written for the target's own start item, so `--route` plans from that item alone
         plan = plan_with_starts(
             game, target, price_file, recipe_starts=config.recipe_starts and not args.no_recipe_starts and not args.route,
@@ -113,14 +136,21 @@ def main(
         )  # fmt: skip
         if plan.approximation is not None and args.route:
             raise PlanError("--route is not available for an approximate answer yet; run again with --exact")
+        stage(f"plan made: mean {plan.mean_remaining:,.4f} Chaos, {len(plan.solution.values):,} states solved")
         report = build_report(plan, game)
+        stage(f"report built: {len(report.states):,} states")
         route_path = Path(args.route) if args.route else None
         route = load_route(route_path, plan, game) if route_path is not None else None
         given = evaluate_route(plan, route, game) if route is not None else None
+        if given is not None:
+            stage(f"given route evaluated: {len(given.gaps):,} gaps, mean {given.risk.mean.value:,.4f}")
         check = verify(game, plan, runs=args.runs, seed=args.seed) if args.verify else None
+        if check is not None:
+            stage(f"verified by {check.runs:,} simulated crafts: {'agrees' if check.agrees else 'DOES NOT AGREE'}")
 
         name = target_path.name
         print(render_text(report, check, target_name=name), end="")
+        stage("text written")
         document = policy_document(report, check, target_name=name)
         if route_path is not None and route is not None and given is not None:
             print()
@@ -141,6 +171,8 @@ def main(
     except (TargetError, DataError, PriceFileNotFound, PlanError, ActionError, ConvergenceError, ValueError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
+    finally:
+        _packed.PROGRESS = previous_progress
     if check is not None and not check.agrees:
         return 2
     return 0

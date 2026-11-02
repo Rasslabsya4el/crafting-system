@@ -22,13 +22,15 @@ import datetime
 import io
 import json
 import os
+import sys
+import time
 from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
 from cli_support import read_json
 
-from crafting_system.cli import main
+from crafting_system.cli import _packed, main
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
@@ -63,7 +65,7 @@ def cli(tmp_path_factory, data, route_id):
     printed = io.StringIO()
     with contextlib.redirect_stdout(printed):
         code = main(
-            [str(ROOT / "examples" / "targets" / f"{stem}.yaml"), "--json", str(out), "--verify", "--runs", str(RUNS),
+            [str(ROOT / "examples" / "targets" / f"{stem}.yaml"), "--json", str(out), "--verify", "--runs", str(RUNS), "--progress",
              "--route", str(ROOT / "examples" / "routes" / f"{stem}-restart.yaml")],
             data=data, prices=load_price_file(PRICES), env={}, today=datetime.date(2026, 11, 1),
         )  # fmt: skip
@@ -114,10 +116,16 @@ def test_the_solver_is_no_dearer_than_the_guides_route_completed_with_a_restart(
 
 @pytest.fixture(scope="module")
 def bench(data, route_id):
-    entry, _ = run_route(
-        next(b for b in BENCHMARKS if b.id == route_id), data, find_project_root(), load_config({}), load_price_file(PRICES),
-        datetime.date(2026, 11, 1), heavy=True,
-    )  # fmt: skip
+    began = time.perf_counter()
+    previous = _packed.PROGRESS
+    _packed.PROGRESS = lambda text: print(f"[{time.perf_counter() - began:8.1f} s] {text}", file=sys.stderr, flush=True)
+    try:
+        entry, _ = run_route(
+            next(b for b in BENCHMARKS if b.id == route_id), data, find_project_root(), load_config({}), load_price_file(PRICES),
+            datetime.date(2026, 11, 1), heavy=True,
+        )  # fmt: skip
+    finally:
+        _packed.PROGRESS = previous
     return entry
 
 
