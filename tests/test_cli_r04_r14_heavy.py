@@ -44,7 +44,7 @@ FILES = {
 }
 HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
 RUNS = int(os.environ.get("CRAFTING_VERIFY_RUNS", "300"))  # simulated crafts of --verify (a craft is thousands of uses)
-P90_WIDTH = 0.05  # the certified bracket of the p90 is at most this share of it wide
+P90_WIDTH = {"R04": 0.02, "R14": 0.08}  # the certified bracket of the p90 is at most this share of it wide (R04 on the coarse grid, R14 attempt by attempt)
 
 
 @pytest.fixture(scope="module")
@@ -91,7 +91,7 @@ def test_the_command_returns_the_policy_with_odds_mean_and_a_certified_p90(cli, 
     assert totals["mean_cost"]["value"] == pytest.approx(GOLDEN[route_id]["mean_remaining"] + start_price, rel=1e-9)
     assert totals["quantiles_resolved"] is True
     p90 = totals["p90"]
-    assert p90["low"] <= p90["value"] <= p90["high"] and p90["high"] - p90["low"] <= P90_WIDTH * p90["value"]
+    assert p90["low"] <= p90["value"] <= p90["high"] and p90["high"] - p90["low"] <= P90_WIDTH[route_id] * p90["value"]
     assert totals["mean_cost"]["value"] < p90["value"] < 4 * totals["mean_cost"]["value"]
     assert totals["p50"]["value"] < totals["mean_cost"]["value"] < p90["value"]
     assert document["states"] and "not resolved on the grid" not in text
