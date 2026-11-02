@@ -108,6 +108,9 @@ def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
     """
     parts = [state.flags.rarity.value]
     for entry in state.fractured:
+        if entry.mod_id not in data.mods:  # held as its family type ("~n@attack"): the state does not say which mod it is
+            parts.append("fractured mod of a family no requirement cares about")
+            continue
         mod = _fractured_mod_shown(plan, data, entry.mod_id)
         parts.append(f"fractured {_without_ranges(mod.text or mod.name)}")
     for label, status in zip(plan.leaf_labels, state.status):

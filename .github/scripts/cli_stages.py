@@ -19,7 +19,8 @@ from packed_routes import inputs, peak_mb  # noqa: E402
 from crafting_system.cli import _packed, _plan, make_plan  # noqa: E402
 from crafting_system.cli._plan import add_risk  # noqa: E402
 from crafting_system.cli._report import build_report, policy_document, render_text  # noqa: E402
-from crafting_system.cli._route import evaluate_route, load_route  # noqa: E402
+from crafting_system.cli._route import evaluate_route, load_route
+from crafting_system.cli._route_report import render_route_text, route_document  # noqa: E402
 from crafting_system.cli._route_view import write_route_page  # noqa: E402
 from crafting_system.cli._verify import verify  # noqa: E402
 
@@ -31,11 +32,12 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--route", required=True, choices=tuple(ROUTES))
     parser.add_argument("--out", required=True)
-    parser.add_argument("--stage", default="report,text,json,page,verify")
+    parser.add_argument("--stage", default="report,text,json,page,verify,route")
     parser.add_argument("--runs", type=int, default=200)
     arguments = parser.parse_args()
     began = time.perf_counter()
     stages = arguments.stage.split(",")
+    stages += [f"{name}_{kind}" for name in ("route", "route_as_written") for kind in ("text", "json", "page")]
     result: dict = {"route": arguments.route}
 
     def say(line: str) -> None:
@@ -46,9 +48,8 @@ def main() -> None:
     out = Path(arguments.out)
     out.mkdir(parents=True, exist_ok=True)
     plan = make_plan(data, target, prices, start_price=start_price, budget=None, with_risk=False)
-    _plan.RISK_QUANTILE_TRANSITIONS = 0  # no quantile DP here: the stages after it are what is measured
     plan = add_risk(plan)
-    say(f"planned: mean {plan.mean_remaining!r}, {len(plan.policy):,} policy states, risk {plan.risk.mean.value!r}")
+    say(f"planned: mean {plan.mean_remaining!r}, {len(plan.policy):,} policy states, shown as {len(plan.view_policy):,}, risk {plan.risk.mean.value!r}, p90 {plan.risk.p90!r}")
 
     def stage(name: str, function):
         if name not in stages:
@@ -85,9 +86,14 @@ def main() -> None:
         result["verify"].update(agrees=check.agrees, reason=check.reason, simulated_mean=check.report.cost.value, computed_mean=check.computed_mean)
         say(f"verify: {result['verify']}")
     if "route" in stages:
-        path = ROOT / "examples" / "routes" / f"{ROUTES[arguments.route]}-restart.yaml"
-        route = load_route(path, plan, data)
-        stage("route", lambda: evaluate_route(plan, route, data))
+        for name, suffix in (("route", "-restart"), ("route_as_written", "")):
+            path = ROOT / "examples" / "routes" / f"{ROUTES[arguments.route]}{suffix}.yaml"
+            route = load_route(path, plan, data)
+            given = stage(name, lambda: evaluate_route(plan, route, data))
+            if given is not None and report is not None:
+                stage(f"{name}_text", lambda: render_route_text(report, route, given, data, file_name=path.name))
+                stage(f"{name}_json", lambda: json.dumps(route_document(report, route, given, data, file_name=path.name)))
+                stage(f"{name}_page", lambda: write_route_page(out / f"{name}.html", report, data, route=route, given=given, target_name="route"))
     (out / f"{arguments.route}.stages.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
 
 
