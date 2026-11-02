@@ -3,9 +3,10 @@
 R04 is the Insanity-fractured additional-arrow Penetrating Arrow Quiver, R14 the Toxic Rain Hunter bow. What the ticket
 asked for and what was measured (see the pull request): the targets, the start items at their prices, the actions the
 guides use, the guides' routes, and the published odds all exist and are checked here. The planner's policy for either
-route was NOT produced: R04's exact graph holds 177,242 states and 535,910,746 transitions (a 16 GB runner is out of
-memory in about twelve minutes), R14's holds at least 787,000 states, and neither has an approximate level, because both
-model an Attack/Caster metamod (ADR-0023, #69). The CLI says so, which `test_the_default_run_is_refused...` pins.
+route is solved by the packed solver (ticket #374; R04's exact graph holds 177,242 states and 535,910,746 transitions, R14's
+816,153 states) and neither has an approximate level, because both model an Attack/Caster metamod (ADR-0023, #69): the
+default budget run goes on to the packed solver instead of refusing, which `test_the_decision_finds_no_approximate_level...`
+pins. The policies themselves (CLI, `--verify`, `benchmark`) are in `test_cli_r04_r14_heavy.py`, a heavy run.
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; CI fetches it) and skip cleanly without it.
 """
 

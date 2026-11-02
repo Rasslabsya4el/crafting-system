@@ -10,7 +10,9 @@ Never run on a PC: the walk of R04 and R14 takes 8 to 25 minutes and several GB.
 """
 
 import argparse
+import cProfile
 import json
+import pstats
 import sys
 import time
 from pathlib import Path
@@ -83,7 +85,11 @@ def main() -> None:
     say(f"dumped {info['classes']:,} classes, {info['transitions']:,} transitions")
     (out / f"{arguments.route}.dump.json").write_text(json.dumps(info, indent=1), encoding="utf-8")
     if arguments.risk:
+        profiler = cProfile.Profile()
+        profiler.enable()
         risky = add_risk(plan)
+        profiler.disable()
+        pstats.Stats(profiler).sort_stats("cumulative").print_stats(30)
         row = risk_row(risky) or {}
         row.update(risk_seconds=risky.risk_seconds, note=risky.note, peak_mb=peak_mb())
         if risky.risk is not None:
