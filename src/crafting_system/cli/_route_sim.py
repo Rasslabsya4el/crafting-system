@@ -46,7 +46,7 @@ def route_policy(plan: Plan, route: Route, data: GameData, *, skip_refused: bool
                 try:
                     outcomes = memo.setdefault(priced.label, Memoized(priced.offer.action)).outcomes(data, item)
                 except ActionError:
-                    if skip_refused:
+                    if skip_refused or route.skip_refused:
                         continue
                     return None  # the game refuses the rule's action here: a gap, as in `evaluate_route`
                 return Step(_Ready(outcomes), priced.cost)

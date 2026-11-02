@@ -43,9 +43,24 @@ class _Reading:
         self.tags = {priced.label: position for position, priced in enumerate(self.walked.offers)}
         self.priced = {priced.label: priced for priced in plan.offers}
 
-    def rule(self, state: CompressedState):
-        """The first rule of the route that matches `state`, or None."""
-        return next((rule for rule in self.route.rules if rule.when.matches(state, self.data)), None)
+    def choose(self, i: int) -> tuple[str, int] | str:
+        """What the route does at state `i`: `(offer label, graph action)` of the first matching rule whose action the walk has there, else the reason it does nothing.
+
+        A rule whose action is missing (the game refuses it, or the walk left it out) ends the search, a gap, unless the route
+        says `skip_refused`: then the next matching rule is tried.
+        """
+        reason = "no rule matches this state"
+        state = self.walked.states[i]
+        for rule in self.route.rules:
+            if not rule.when.matches(state, self.data):
+                continue
+            action = self.action(i, rule.do)
+            if action is not None:
+                return rule.do, action
+            reason = f"{rule.do} cannot be used here (rule at line {rule.line}): the game refuses it, or the planner's walk left it out"
+            if not self.route.skip_refused:
+                break
+        return reason
 
     def action(self, i: int, label: str) -> int | None:
         """The index of the graph's action that stands for offer `label` at state `i`: its own, else its twin's; None when there is none."""
@@ -95,17 +110,14 @@ def route_actions(plan: Plan, route, data: GameData):
         for i in frontier:
             if graph.goal[i]:
                 continue
-            rule = reading.rule(reading.walked.states[i])
-            if rule is None:
-                gaps.append((i, "no rule matches this state"))
+            found = reading.choose(i)
+            if isinstance(found, str):
+                gaps.append((i, found))
                 continue
-            action = reading.action(i, rule.do)
-            if action is None:
-                gaps.append((i, f"{rule.do} cannot be used here (rule at line {rule.line}): the game refuses it, or the planner's walk left it out"))
-                continue
+            label, action = found
             chosen[i] = action
-            labels[i] = rule.do
-            cost[i] = reading.priced[rule.do].cost
+            labels[i] = label
+            cost[i] = reading.priced[label].cost
             kernels.add(int(graph.act_kernel[action]))
         if not kernels:
             break
@@ -170,9 +182,9 @@ def _divergence(plan: Plan, route, data: GameData, labels: dict[int, str], make)
             ours = reading.walked.offers[int(graph.act_tag[mine[i]])].label
             theirs = labels.get(i)
             if theirs is None:
-                rule = reading.rule(reading.walked.states[i])
-                if rule is not None and reading.action(i, rule.do) is not None:
-                    theirs = rule.do  # the route does not reach this state; it would act here (a gap is not a divergence)
+                found = reading.choose(i)
+                if not isinstance(found, str):
+                    theirs = found[0]  # the route does not reach this state; it would act here (a gap is not a divergence)
             if theirs is not None and theirs != ours:
                 return make(reading.walked.states[i], ours, theirs)
         if not len(frontier):
