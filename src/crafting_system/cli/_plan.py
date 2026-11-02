@@ -24,7 +24,7 @@ from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_names import canonical_price_name
-from crafting_system.risk import RiskReport, evaluate, is_free_cost
+from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
 from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.targets import KOfN, Requirement, Target
 
@@ -460,10 +460,14 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note
     if resolve and risk.success_probability.value >= 1.0 and any(math.isinf(e.high) for e in (risk.p50, risk.p90, risk.cvar)):
         # the ordinary grid did not reach a level asked: try the coarse grid, which the usual rule leaves to a chain that certainly needs it
         # (R04), and for a chain too big for it, one attempt at a time (R14); ticket #70
-        again = evaluate_risk(
-            packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, packed_moments=True,
-            coarse_first=True, regenerative=True,
-        )  # fmt: skip
+        _regen.TRACE = _packed.PROGRESS
+        try:
+            again = evaluate_risk(
+                packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, packed_moments=True,
+                coarse_first=True, regenerative=True,
+            )  # fmt: skip
+        finally:
+            _regen.TRACE = None
         if _packed.PROGRESS is not None:
             _packed.PROGRESS(f"risk again with the coarse grid or attempt by attempt: p50 {again.p50!r}, p90 {again.p90!r}")
         if not any(math.isinf(e.high) for e in (again.p50, again.p90, again.cvar)):

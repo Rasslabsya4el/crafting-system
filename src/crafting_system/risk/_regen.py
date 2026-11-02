@@ -27,6 +27,14 @@ from ._budget import BudgetRun, run_budget
 from ._chain import Chain
 from ._fold import fold_free
 
+TRACE = None  # a caller that wants to see each step of a long run sets this to a function of one line of text (never set by the library)
+
+
+def trace(text: str) -> None:
+    if TRACE is not None:
+        TRACE(text)
+
+
 ATTEMPT_TAIL = 1e-13  # the mass of an attempt that may stay in flight when its DP stops (below it the float sums of the lost mass no longer settle)
 MAX_MISSING = 1e-10  # the cut attempts' mass over the chance of success must not exceed this
 
@@ -95,6 +103,7 @@ def attempt_pmf(chain: Chain, bins: list[int], *, success: bool, max_bins: int) 
         folded.chain, extended, target=None, tail_mass=ATTEMPT_TAIL, max_bins=max_bins, initial=folded.initial, goal_mass=folded.goal_mass
     )
     cdf = np.asarray(run.cdf)
+    trace(f"attempt run ({'goal' if success else 'back to the start'}): {len(cdf):,} bins, in flight at the end {run.unresolved:.3g}")
     return np.diff(cdf, prepend=0.0), run.unresolved
 
 

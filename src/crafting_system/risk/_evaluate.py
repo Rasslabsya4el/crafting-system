@@ -90,6 +90,7 @@ grid.
 """
 
 import math
+import time
 from collections.abc import Callable, Mapping, Sequence
 from numbers import Integral, Real
 
@@ -119,6 +120,8 @@ FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean o
 FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
 REGEN_PARTS = (4, 8, 16, 32, 64)  # the step of the attempt-wise run is the restart's cost over one of these, the coarsest first
 REGEN_WIDTH = 0.03  # a step is kept when every quantile is bracketed within this share of its value
+REGEN_SECONDS = 300.0  # the next finer step is not tried when the last one took long enough that it would run past this
+REGEN_SLOWER = 3.0  # (a step half as wide costs two to four times the work)
 REGEN_EPSILON = 1e-3  # the cost of a paying state in the solve that counts the visits of the free states
 
 
@@ -433,10 +436,16 @@ def _regen_report(
     base = max(counts, key=lambda cost: counts[cost])
     target = max([*levels, cvar_level])
     best: RiskReport | None = None
+    last = 0.0
     for parts in REGEN_PARTS:
+        if best is not None and last * REGEN_SLOWER > REGEN_SECONDS:  # a finer step costs about this many times the last: not worth the wait
+            break
         step = base / parts
         low_bins, high_bins = _bin_costs(chain, step)
+        _regen.trace(f"attempt by attempt: step {step:.4g} (the restart's cost over {parts})")
+        began = time.perf_counter()
         found = _regen.regenerative_runs(chain, low_bins, high_bins, target, max_bins, rounding_allowance, max_bins)
+        last = time.perf_counter() - began
         if found is None:
             continue
         low_run, high_run = found
@@ -445,6 +454,7 @@ def _regen_report(
         quantiles = {x: _quantile(x, step, low_run, high_run, None) for x in levels}
         grid = GridInfo(step, False, max(r.bins for r in found), max(r.unresolved for r in found), max(r.delta for r in found))
         report = RiskReport(Estimate(1.0, 1.0, 1.0), Estimate(*mean), Estimate(*variance), quantiles, Estimate(*cvar), cvar_level, grid)
+        _regen.trace(f"attempt by attempt on step {step:.4g}: p50 {quantiles[levels[0]]}, p90 {quantiles[levels[-1]]}, cvar {Estimate(*cvar)}")
         if not all(math.isfinite(e.high) for e in (*quantiles.values(), Estimate(*cvar))):
             continue
         best = report
