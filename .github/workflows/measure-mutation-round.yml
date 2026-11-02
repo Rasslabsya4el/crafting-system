@@ -1,0 +1,82 @@
+name: Measure mutation round
+
+# One round of the mutation step (ticket #399, step 5): up to 16 jobs (trial: one), each a slice of the plan. A
+# reusable workflow that `measure-mutation.yml` calls once per round, one round after the other. A job takes the
+# next pending mutants (those no earlier round has recorded), runs them until `min(deadline, 320 minutes of its
+# own)`, and uploads `measure-mut-<round>-<job>` with a JSON line per mutant. A round that starts after the deadline
+# exits at once. See .github/scripts/mutation_run.py.
+
+on:
+  workflow_call:
+    inputs:
+      round:
+        type: number
+        required: true
+      trial:
+        type: boolean
+        required: true
+      deadline:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  slice:
+    name: round ${{ inputs.round }} job ${{ matrix.job }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350  # 320 minutes of mutants, one running mutant (at most 10 minutes), and the setup
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      max-parallel: 16  # the repo has 20 runner jobs at once; 4 stay free for CI
+      matrix:
+        job: ${{ inputs.trial && fromJSON('[1]') || fromJSON('[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]') }}
+    env:
+      DEADLINE: ${{ inputs.deadline }}
+      TRIAL: ${{ inputs.trial }}
+      ROUND: ${{ inputs.round }}
+      JOBS: ${{ inputs.trial && 1 || 16 }}
+    steps:
+      - name: Is there time left before the deadline
+        id: gate
+        run: |
+          if [ "$TRIAL" != "true" ] && [ "$(date -u +%s)" -ge "$(date -u -d "$DEADLINE" +%s)" ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "The deadline $DEADLINE has passed: nothing to do in round $ROUND."
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.gate.outputs.go == 'true'
+        uses: actions/checkout@v7.0.1
+      - if: steps.gate.outputs.go == 'true'
+        uses: ./.github/actions/real-data
+      - if: steps.gate.outputs.go == 'true'
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: measure-mutplan
+          path: plan
+      - if: steps.gate.outputs.go == 'true'
+        uses: actions/download-artifact@v8.0.2
+        continue-on-error: true  # the first round has no earlier results
+        with:
+          pattern: measure-mut-*
+          path: done
+      - name: Run slice ${{ matrix.job }} of ${{ inputs.trial && 1 || 16 }}
+        if: steps.gate.outputs.go == 'true'
+        run: |
+          mkdir -p out
+          args=(--plan plan/plan.json --done done --out out --round "$ROUND" --job "${{ matrix.job }}" --jobs "$JOBS")
+          if [ "$TRIAL" = "true" ]; then args+=(--trial --minutes 6); else args+=(--minutes 320 --deadline "$DEADLINE"); fi
+          uv run --no-sync python .github/scripts/mutation_run.py "${args[@]}"
+      - name: Upload the results of this job
+        if: always() && steps.gate.outputs.go == 'true'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: measure-mut-${{ inputs.round }}-${{ matrix.job }}
+          overwrite: true
+          path: out/
+          if-no-files-found: warn
