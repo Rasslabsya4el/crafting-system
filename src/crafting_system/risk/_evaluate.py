@@ -120,7 +120,7 @@ FREE_BINS = 0.1  # bins charged to a free state when the solver takes the mean o
 FREE_SLACK = 1e-6  # relative allowance on the visits of the free states that give that charge back
 REGEN_PARTS = (4, 8, 16, 32, 64, 128)  # the step of the attempt-wise run is the restart's cost over one of these, the coarsest first
 REGEN_WIDTH = 0.03  # a step is kept when every quantile is bracketed within this share of its value
-REGEN_SECONDS = 300.0  # the next finer step is not tried when the last one took long enough that it would run past this
+REGEN_SECONDS = 600.0  # the next finer step is not tried when the last one took long enough that it would run past this
 REGEN_SLOWER = 3.0  # (a step half as wide costs two to four times the work)
 REGEN_EPSILON = 1e-3  # the cost of a paying state in the solve that counts the visits of the free states
 

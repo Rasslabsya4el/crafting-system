@@ -277,9 +277,6 @@ def solve_walked(
     info = {**solved.info, "walk_seconds": round(walked.seconds, 1), "transitions": walked.graph.edges_counted()}
     mark = time.perf_counter()
     lumped = lump_policy(solved.quotient, solved.class_action, int(solved.cls[0]))
-    if lumped is None:  # a kernel with weights beyond 62 bits: the chain of the classes is kept whole
-        reduced_goal = solved.quotient.goal
-        return PackedResult(solution, class_policy(solved, walked.offers), int(solved.cls[0]), lambda c: bool(reduced_goal[c]), info)
     info.update(lumped_blocks=lumped.count, lumped_transitions=lumped.transitions, lump_rounds=lumped.rounds, lump_seconds=round(time.perf_counter() - mark, 1))
     say(f"policy chain lumped: {lumped.count:,} blocks, {lumped.transitions:,} transitions ({info['lump_seconds']} s)")
     goal = lumped.goal
@@ -301,7 +298,7 @@ def lumped_view(lumped: LumpedChain, reduced: PackedGraph, cls: np.ndarray, walk
         a = int(lumped.action[b])
         if a < 0 or lumped.goal[b]:
             continue
-        outcomes = tuple(Outcome(shown[int(t)], int(w)) for t, w in zip(lumped.succ[b].tolist(), lumped.weight[b].tolist()))
+        outcomes = tuple(Outcome(shown[int(t)], int(w)) for t, w in zip(lumped.succ[b].tolist(), lumped.weight[b]))
         view[shown[b]] = Action(walked.offers[int(reduced.act_tag[a])].label, float(lumped.cost[b]), outcomes)
     return view
 
@@ -317,7 +314,7 @@ def lumped_policy(lumped: LumpedChain, reduced: PackedGraph, offers: Sequence[Pr
         a = int(lumped.action[b])
         if a < 0 or lumped.goal[b]:
             continue
-        outcomes = tuple(Outcome(int(s), int(w)) for s, w in zip(lumped.succ[b].tolist(), lumped.weight[b].tolist()))
+        outcomes = tuple(Outcome(int(s), int(w)) for s, w in zip(lumped.succ[b].tolist(), lumped.weight[b]))
         policy[b] = Action(offers[int(reduced.act_tag[a])].label, float(lumped.cost[b]), outcomes)
     return policy
 

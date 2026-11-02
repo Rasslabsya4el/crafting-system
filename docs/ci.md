@@ -170,7 +170,7 @@ that run the CLI (`--verify`, the completed given route) and `benchmark --heavy`
 runner each, since each plans its route once (R04 about 10 minutes, R14 about 25):
 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 4 --timeout-minutes 60'
-    $D --command 'case $RUNNER_INDEX in 1) K="R04 and not benchmark";; 2) K="R04 and benchmark";; 3) K="R14 and not benchmark";; 4) K="R14 and benchmark";; esac; CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider --durations=0 -s tests/test_cli_r04_r14_heavy.py -k "$K"'
+    $D --command 'case $RUNNER_INDEX in 1) R=R04; K="not benchmark";; 2) R=R04; K=benchmark;; 3) R=R14; K="not benchmark";; 4) R=R14; K=benchmark;; esac; CRAFTING_ROUTES=$R CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider --durations=0 -s tests/test_cli_r04_r14_heavy.py -k "$K"'
 
 `chain_dump.py` plans a route and writes its lumped policy chain (`<route>.chain.npz`, with `--risk` also the risk the product code
 gives), the data to work on the risk without the walk; `cli_stages.py` times the stages after the plan (report, text, JSON, route

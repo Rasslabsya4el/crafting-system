@@ -7,10 +7,11 @@ The graphs are R04's 177,242 states and 536 million transitions and R14's 816,15
 these tests run in a heavy run, not in a CI shard or on a PC:
 
     python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 4 --timeout-minutes 60 \
-        --command 'CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider tests/test_cli_r04_r14_heavy.py -k "<route>-<kind>"'
+        --command 'CRAFTING_ROUTES=R04 CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider tests/test_cli_r04_r14_heavy.py -k "not benchmark"'
 
-(`<route>` is R04 or R14 and `<kind>` `cli` or `benchmark`: four runners, each plans its route once.) Without `CRAFTING_HEAVY` they skip, and
-without the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`) the data fixture skips.
+(`CRAFTING_ROUTES` is `R04`, `R14` or both, and `-k "not benchmark"` the CLI tests or `-k benchmark` the benchmark ones: four runners, each
+plans its route once; `-s` shows the `--progress` lines on stderr.) Without `CRAFTING_HEAVY` they skip, and without the cached dump
+(`<cache dir>/repoe-fork/3.29.3.3/`) the data fixture skips.
 
 The CLI runs WITHOUT `--exact`: the default budget of 60 seconds finds no approximate level (a route with an Attack/Caster metamod has none)
 and the planner goes on to the packed solver (`make_plan`, ticket #70). The given route is the guide's with a last rule that restarts, so
@@ -52,7 +53,7 @@ def data():
     return real_game_data()
 
 
-@pytest.fixture(scope="module", params=["R04", "R14"])
+@pytest.fixture(scope="module", params=os.environ.get("CRAFTING_ROUTES", "R04,R14").split(","))
 def route_id(request):
     return request.param
 

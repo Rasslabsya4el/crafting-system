@@ -2,7 +2,7 @@
 
 Generic models only (no game data). The lumped chain must give the very numbers of the whole chain (odds, mean, variance, the
 quantiles), merge rows that are the same distribution under different integer weights, and keep apart rows that differ by one
-weight. A kernel with weights beyond 62 bits is not lumped (None).
+weight. A kernel with weights beyond 62 bits is lumped by its exact chances.
 """
 
 import math
@@ -33,13 +33,11 @@ def whole_and_lumped(model: TabularModel, start=0):
         outcomes = tuple(Outcome(int(s), int(w)) for s, w in zip(graph.k_succ[lo:hi].tolist(), graph.kernel_weights(kernel)))
         policy[i] = Action("a", float(graph.act_cost[a]), outcomes)
     lumped = lump_policy(graph, action, 0)
-    if lumped is None:
-        return policy, graph, None, None
     blocks = {}
     for b in range(lumped.count):
         if lumped.goal[b] or lumped.action[b] < 0:
             continue
-        blocks[b] = Action("a", float(lumped.cost[b]), tuple(Outcome(int(s), int(w)) for s, w in zip(lumped.succ[b].tolist(), lumped.weight[b].tolist())))
+        blocks[b] = Action("a", float(lumped.cost[b]), tuple(Outcome(int(s), int(w)) for s, w in zip(lumped.succ[b].tolist(), lumped.weight[b])))
     return policy, graph, blocks, lumped
 
 
@@ -103,10 +101,6 @@ def test_states_that_pay_differently_stay_apart():
 def test_the_lumped_chain_of_a_random_optimal_policy_has_the_numbers_of_the_whole_chain(seed):
     model = random_model(seed)
     policy, graph, blocks, lumped = whole_and_lumped(model)
-    if lumped is None:  # a big-weight kernel on the policy: not lumped
-        assert any(int(k) in graph.k_big for k in range(graph.num_kernels))
-        return
-
     assert lumped.count <= len(policy) + 1
     whole = evaluate(policy, 0, lambda s: bool(graph.goal[s]))
     same_risk(evaluate(blocks, int(lumped.start), lambda b: bool(lumped.goal[b])), whole)
@@ -116,8 +110,6 @@ def test_the_lumped_chain_of_a_random_optimal_policy_has_the_numbers_of_the_whol
 def test_reading_the_kernels_in_small_chunks_gives_the_same_blocks(seed, monkeypatch):
     model = random_model(seed)
     _, graph, _, whole = whole_and_lumped(model)
-    if whole is None:
-        return
     monkeypatch.setattr(lump_module, "CHUNK_EDGES", 3)
 
     _, _, _, chunked = whole_and_lumped(model)
@@ -126,13 +118,22 @@ def test_reading_the_kernels_in_small_chunks_gives_the_same_blocks(seed, monkeyp
     assert chunked.deviation <= 1e-12 and (chunked.block == whole.block).all()
 
 
-def test_a_policy_with_a_big_weight_kernel_is_not_lumped():
-    goal = 2
-    table = {0: [Action("roll", 1.0, (Outcome(1, BIG), Outcome(goal, BIG)))], 1: [Action("back", 1.0, (Outcome(0, 1),))]}
-    packed = pack_model(TabularModel([goal], table), [0])
-    solved = solve_packed(packed.graph)
+def test_kernels_with_weights_beyond_62_bits_lump_by_their_exact_chances():
+    """Look-alike twins whose weights are huge, in different multiples, are one block; a twin that differs by one weight in 10**21 is not."""
+    goal = 5
+    huge = 10**21
+    table = {
+        0: [Action("roll", 1.0, tuple(Outcome(i, huge * i) for i in (1, 2, 3, 4)))],
+        1: [Action("try", 3.0, (Outcome(goal, huge), Outcome(0, huge)))],
+        2: [Action("try", 3.0, (Outcome(goal, 2 * huge), Outcome(0, 2 * huge)))],  # the same chances at twice the weights
+        3: [Action("try", 3.0, (Outcome(goal, 3 * huge), Outcome(0, 3 * huge)))],
+        4: [Action("try", 3.0, (Outcome(goal, huge + 1), Outcome(0, huge)))],  # one part in 10**21 apart: another row
+    }
+    policy, graph, blocks, lumped = whole_and_lumped(TabularModel([goal], table))
 
-    assert lump_policy(packed.graph, solved.action, 0) is None
+    assert lumped.count == 4  # the start, the three twins, the odd one, the goal
+    assert any(int(k) in graph.k_big for k in range(graph.num_kernels))
+    same_risk(evaluate(blocks, int(lumped.start), lambda b: bool(lumped.goal[b])), evaluate(policy, 0, lambda s: bool(graph.goal[s])))
 
 
 def test_a_dead_end_is_its_own_block_and_not_a_goal():

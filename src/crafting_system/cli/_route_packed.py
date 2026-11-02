@@ -146,8 +146,6 @@ def evaluate_route_packed(plan: Plan, route, data: GameData):
     say(f"route chain merged into {classes.count:,} classes ({time.perf_counter() - began:.1f} s)")
     class_action = np.where(np.diff(reduced.act_ptr) > 0, reduced.act_ptr[:-1], -1)
     lumped = lump_policy(reduced, class_action, int(classes.cls[0]))
-    if lumped is None:
-        raise ValueError("the route's chain holds a kernel with weights beyond 62 bits, which the packed route evaluation does not take")
     say(f"route chain lumped into {lumped.count:,} blocks, {lumped.transitions:,} transitions ({time.perf_counter() - began:.1f} s)")
     goal = lumped.goal
     result = PackedResult(plan.solution, lumped_policy(lumped, reduced, walked.offers), lumped.start, lambda b: bool(goal[b]), {})
