@@ -3,6 +3,7 @@
 from .default_prices import DUST, GOLD, default_prices
 from .fallbacks import Context, Gap, StageResult, stamped_entry
 from .fetch import FetchResult, fetch_price_file
+from .foresight import PricedBurn, cheapest_burn, lock_missing, lock_price, price_burns, resource_cost
 from .http_json import SourceError, http_get_json
 from .price_file import (
     CHAOS_ORB,
@@ -21,7 +22,7 @@ from .price_file import (
     to_divine,
     write_price_file,
 )
-from .price_names import INFLUENCES, BaseKey, base_price_name, canonical_influences, parse_base_price_name
+from .price_names import BURN_PRICE_NAMES, FORESIGHT_PRICE_NAMES, HINEKORAS_LOCK, INFLUENCES, BaseKey, base_price_name, canonical_influences, parse_base_price_name
 from .trade_http import (
     BudgetExceeded,
     RateLimiter,
@@ -68,7 +69,16 @@ __all__ = [
     "Gap",
     "StageResult",
     "stamped_entry",
+    "BURN_PRICE_NAMES",
+    "FORESIGHT_PRICE_NAMES",
+    "HINEKORAS_LOCK",
     "INFLUENCES",
+    "PricedBurn",
+    "cheapest_burn",
+    "lock_missing",
+    "lock_price",
+    "price_burns",
+    "resource_cost",
     "BaseKey",
     "base_price_name",
     "canonical_influences",

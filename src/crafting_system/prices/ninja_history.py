@@ -2,7 +2,7 @@
 
 Two shapes, both fetched by the numbers the current overviews give:
 
-- exchange items (currency, fossils, resonators, essences): `exchange/current/details?...&id=<detailsId>`
+- exchange items (currency, fossils, resonators, essences, oils): `exchange/current/details?...&id=<detailsId>`
   answers `pairs[]`; the pair with id `chaos` has `history[{timestamp, rate, volumePrimaryValue}]`.
 - stash items (bases, beasts): `stash/current/item/history?...&type=<BaseType|Beast>&id=<line id>`
   answers `[{count, value, daysAgo}]`. `daysAgo` 0 is the league's last day: today for a running

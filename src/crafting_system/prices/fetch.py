@@ -4,7 +4,7 @@ The transport is injected as `get_json(url) -> parsed JSON`; `http_get_json` is 
 injected too (`now`): nothing here reads it. The fetcher never touches the hand-written overrides file; it
 only builds a `PriceFile` for the caller to write.
 
-Priced from the current overviews: currency, fossils, resonators and essences (exchange), then beasts and
+Priced from the current overviews: currency, fossils, resonators, essences and oils (exchange), then beasts and
 bases (stash). A stash line seen fewer than `MIN_COUNT` times, or an exchange line traded on zero volume, is
 too thin to price: it is listed in `FetchResult.thin`. A `wanted` name left without a price becomes a `Gap`
 and goes down the stages (`DEFAULT_STAGES`: poe.ninja history, poe.watch, the previous league). The history
@@ -51,7 +51,7 @@ def fetch_price_file(
 ) -> FetchResult:
     """Build a price file for `league` (default: the first league poe.ninja lists).
 
-    The leagues call and every exchange category (Currency, Fossil, Resonator, Essence) must answer with at
+    The leagues call and every exchange category (Currency, Fossil, Resonator, Essence, Oil) must answer with at
     least one usable line, else a `SourceError` is raised and no file is made. A failed stash category
     (Beast, BaseType) does not abort: it warns, its old poe.ninja prices of the same league in
     `old_price_file` stay (tagged with its category by the fetch that wrote it), and the rest finishes.

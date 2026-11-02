@@ -1,0 +1,32 @@
+# Mechanic family: burn (the cheap currency that gives a Hinekora's Lock up, batch B8, build ticket #295, ADR-0056).
+# Which action declares which claim: `Action.burn`, the re-anoint of `actions/burn.py` and `Burn.claims`. What ends the foresight is
+# hinekora_lock.neutral_currency_removes_foresight; the cost of the other burn currencies is the cost claim of each currency.
+rules:
+  - id: burn.reanoint_is_the_least_destructive_burn
+    statement: Anointing a ring or an amulet again removes the foreseeing state and is the least destructive way to use up a preview on those two classes; it is the burn of a ring or an amulet.
+    source_kind: wiki
+    url: https://www.poewiki.net/wiki/Hinekora%27s_Lock#Strategies
+    quote: "Re-anointing an item is the least destructive method to use up a preview on rings or amulets."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-10-31
+
+  - id: burn.reanoint_cost
+    statement: One re-anoint of a ring or an amulet consumes three oils, the cheapest being Clear Oil; the value maps the oil's price-file name to the number of oils.
+    source_kind: wiki
+    url: https://poedb.tw/us/Anoint
+    quote: "Indiscriminate Revenge, Oils: Clear, Clear, Clear"
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-02
+    approximate: true
+    approximate_reason: "PoEDB lists three oils for an amulet; no admitted source gives the count for a ring, so three is used for both, which can only overstate a ring's burn. Clear Oil is taken as the cheapest oil because it is the first of the oil tiers."
+    value: {Clear Oil: 3}
+
+  - id: burn.chromatic_socket_assumption
+    statement: A start item that states no sockets counts as having one white socket for the burn of a Chromatic Orb only, because a real base of a socketed class always has at least one; the assumption is listed on any answer that burns with a Chromatic Orb.
+    source_kind: owner
+    url: https://github.com/Rasslabsya4el/crafting-system/blob/main/docs/adr/0056-burn-and-relock-and-the-locks-price.md
+    quote: "A start item that states no sockets counts as having one for the burn."
+    patch_verified: "3.29.3.3"
+    date_checked: 2026-11-02
+    approximate: true
+    approximate_reason: "A modelling choice of the design (ADR-0056), not a measured rule: an item that states no sockets may really have none to colour, and the burn's price would then be unneeded."

@@ -16,6 +16,9 @@ is 20% (the wiki; `catalyst.quality_capped_at_20`, `approximate`): the quality i
 **Refusals**, all `NotApplicableError` and spending nothing: a corrupted item, an item class that holds no plain quality, a Whetstone on an armour or a Scrap on
 a weapon, and an item at 20% quality or more. **Prices**: `sockets.blacksmiths_whetstone_cost` and `sockets.armourers_scrap_cost` name the items the price file knows.
 **Memory Strands** (ADR-0041): the currency neither cuts nor spends, as a catalyst.
+
+**As a burn of Hinekora's Lock** (ticket #295, B8-3, ADR-0056): it changes no mod, so it declares `burn`. It is legal only where the compressed state keeps the
+quality (a target names it, ticket #158) and not at 20% or more, where the use is refused: the burn then runs out, and burn and relock is a finite chain.
 """
 
 from collections.abc import Mapping
@@ -28,7 +31,7 @@ from crafting_system.rules import get_rule
 
 from .catalog import kind
 from .catalyst import expected_catalysts, gain_law
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, BurnKeeps, Reads
 from .errors import NotApplicableError
 from .finite import Finite
 from .strand_use import CUT_FOLLOWS_SPEND_TABLE, StrandUse
@@ -90,6 +93,19 @@ class ApplyQualityCurrency(Action):
     def claims(self, data: GameData | None = None) -> frozenset[str]:
         return frozenset(rule.id for rule in (GAIN_BY_ITEM_LEVEL, GAIN_FORMULA, CAPPED_AT_20, COSTS[self.currency]))
 
+    def burn(self, data: GameData | None = None) -> bool:
+        """A quality currency is a burn of Hinekora's Lock (ADR-0056): it changes no mod. It is legal only where the state keeps the quality (`burn_refusal`)."""
+        return True
+
+    def burn_refusal(self, data: GameData, item: Item, keeps: BurnKeeps) -> str | None:
+        """A quality burn is legal only where the compressed state keeps the quality, and not at the maximum quality (the use refuses 20% or more).
+
+        Where the state does not keep the quality it could not see the burn run out, and burn and relock would be a free loop (ADR-0056).
+        """
+        if not keeps.quality:
+            return f"the state does not keep the quality, so a {self.currency} burn could not run out at {MAX_CURRENCY_QUALITY}% (ADR-0056)"
+        return super().burn_refusal(data, item, keeps)
+
     def reads(self, data: GameData) -> Reads:
         """The quality (it grows from it and 20% refuses) and nothing of the mods, which stay: the junk is kept as counts."""
         return Reads(junk=True, families=frozenset(), quality=True)
@@ -127,6 +143,7 @@ class ApplyQualityCurrency(Action):
     why_not="a step of the socket finish (ADR-0049), bought before the orbs; the finish is attached to the goal states by ticket #231 (B6 S5)",
     applies_only_to="weapon and armour",
     reads_item_state_while_not_planner="quality",  # it reads and adds the quality
+    burns=True,  # a quality burn (ticket #295)
 )
 def _quality_currency(data: GameData, item: Item):
     base = data.base_items.get(item.base_id)

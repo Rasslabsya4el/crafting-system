@@ -18,7 +18,7 @@ from ..data import DataError, load_game_data
 from .fallbacks import MIN_COUNT
 from .fetch import fetch_price_file
 from .http_json import GetJson, SourceError, http_get_json, paced
-from .price_names import canonical_price_name
+from .price_names import FORESIGHT_PRICE_NAMES, canonical_price_name
 from .price_file import (
     OVERRIDE_SOURCE,
     PriceFile,
@@ -114,7 +114,7 @@ def main(
         config = load_config(env)
         if args.command == "trade":
             return _trade(args, config, env, now, transport, sleep, monotonic)
-        wanted = _read_wanted(args.wanted_file)
+        wanted = [*_read_wanted(args.wanted_file), *FORESIGHT_PRICE_NAMES]  # the Lock and its burns are always wanted (ADR-0056)
         price_path = default_price_file_path(config)
         overrides_path = default_overrides_path(config)
         if args.command == "fetch":

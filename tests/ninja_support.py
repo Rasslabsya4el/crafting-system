@@ -10,7 +10,7 @@ import pytest
 from crafting_system.prices.poe_ninja import BASE_URL, SourceError
 
 NINJA_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "poe_ninja"
-OVERVIEW_TYPES = ("Currency", "Fossil", "Resonator", "Essence")
+OVERVIEW_TYPES = ("Currency", "Fossil", "Resonator", "Essence", "Oil")
 STASH_TYPES = ("Beast", "BaseType")
 
 
