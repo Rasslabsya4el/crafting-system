@@ -60,6 +60,14 @@ Sockets (ticket #228, ADR-0046): `Reads` and `Adds` say which part of the socket
 (the contract suite checks it on every fixture item that has sockets), and a socket action (`Adds.socket_action`: it adds no mod) changes no
 mod. Like the enchantment, the sockets are a finish step (ADR-0045) and **not** part of `item_state`: the compressed state of the mods does not
 hold them, so declaring them changes no state count and no offer.
+
+Foresight (ticket #294, B8, ADR-0055, ADR-0056, the amendment of ADR-0024): three optional declarations, each with a safe default, say how an
+action meets Hinekora's Lock. `previewable(data)` answers a `Previewable` (`no`, the default: the action is applied blind under a Lock;
+`named`: a source names its preview; `by_item_text`: only the Lock's own text covers it, so its claim is `approximate`), `currency_item(data)`
+the price-file name of the currency item it is (all items of one type show one preview, so a state has one option per currency item; None by
+default) and `burn(data)` whether it is a currency that changes no mod and may give a Lock up (False by default). `preview_claims(data)` lists
+the claims behind a preview, apart from `claims` (as `strand_claims` is), so an answer with no Lock step never lists them. The Lock itself is
+`HinekoraLock` (`hinekora_lock.py`); the offer of the options is the planner's (B8-4).
 """
 
 import functools
@@ -69,6 +77,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 from fractions import Fraction
 from functools import cache
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
@@ -90,6 +99,7 @@ __all__ = [
     "Fixed",
     "ImprintMove",
     "Need",
+    "Previewable",
     "Reading",
     "Reads",
     "Rerolled",
@@ -181,6 +191,18 @@ class Reads:
       the item in hand, `input_mods` alone the inputs, both is both. The dataclass default is False, as for the other
       new fields; `Action.reads` (an action that declares nothing) says True, like it reads every mod. An action with no
       inputs has nothing to read there and the flag means nothing for it.
+    * `input_classes`: with `junk` and `input_mods`, the result depends on the mods of the item and of its inputs only through their *classes*
+      (ticket #217, ADR-0062 decision 3, ADR-0033 "As built"): the pool weight of the very mod each holds (its tier, not only its family), what it gives
+      the goal, and which mods the two share. The compressed state then tells a junk mod by its family type and its place in it (`Slot.kind`
+      `"~n%p"`: the weights of the mods of its family, and which one it is), and the kernel of the action with an input is the average, over the
+      names the item and the input could hold in their classes (every family of a type equally likely, no two of one item alike), of the action
+      run on those names. The action must answer `with_inputs`. The dataclass default is False; `Action.reads` (an action that declares nothing)
+      says False, which tells every family apart by its name (exact).
+    * `input_influenced`: with `input_mods`, of each input the action reads only its influences, whether it is corrupted and which influence
+      mods it holds, by mod id (an Awakener's Orb; ticket #214, ADR-0062 decision 1): the rest of the input is rerolled and never read. The
+      want of a `Need` for that action is then the projection of the input's compressed state (`Abstraction.donor_key`), not the whole state, and
+      the abstraction must tell the influence mods apart (some enabled action declares `influenced`). The dataclass default is False, and so is
+      `Action.reads`: an action that declares nothing reads the whole input.
     * `socket_count`, `socket_links`, `socket_colours`: the result (its chances, whether the game refuses the item, or another part of
       the sockets) depends on the number of sockets, on the link groups or on the colours of the item (ticket #228, ADR-0046). Carrying
       a part over to the same place unchanged is not reading it: a Jeweller's Orb keeps the colours of the sockets that stay and does
@@ -203,6 +225,8 @@ class Reads:
     quality: bool = False
     offer: bool = False
     input_mods: bool = False
+    input_classes: bool = False
+    input_influenced: bool = False
     enchantment: bool = False
     imprints: bool = False
     socket_count: bool = False
@@ -577,6 +601,14 @@ class Rerolled:
         return self.given
 
 
+class Previewable(StrEnum):
+    """How an action is an option of a Hinekora's Lock (ADR-0055)."""
+
+    NO = "no"  # applied blind: still available on a locked item, but its preview is not an option (the default: a new action stays blind)
+    NAMED = "named"  # a source names it: the wiki, or the owner from play
+    BY_ITEM_TEXT = "by_item_text"  # only the Lock's own text covers it ("the next Currency item"); its claim is `approximate`
+
+
 class Action(ABC):
     """Base of every action; subclass it as a frozen dataclass and fill in the five questions.
 
@@ -627,6 +659,27 @@ class Action(ABC):
         """
         return Adds(implicits=True, quality=True, offer=True, enchantment=True, socket_count=True, socket_links=True, socket_colours=True)
 
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        """Whether a Hinekora's Lock previews this action (ADR-0055); `Previewable.NO`, blind, by default.
+
+        An action that declares `named` or `by_item_text` also declares `currency_item` and `preview_claims`.
+        """
+        return Previewable.NO
+
+    def currency_item(self, data: GameData | None = None) -> str | None:
+        """The price-file name of the currency item the action is, for a previewable action (ADR-0055): all currency items of one type show the
+        same preview, so a state has one option per item. None, the default, for an action that is not previewable."""
+        return None
+
+    def burn(self, data: GameData | None = None) -> bool:
+        """Whether the action is a burn (ADR-0056): a currency that changes no mod and may give a Lock up. False by default."""
+        return False
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        """The ids of the claims behind `previewable`, kept apart from `claims` like `strand_claims`: an answer that takes no Lock step lists
+        none of them (ADR-0057). Empty, the default, for an action that is not previewable."""
+        return frozenset()
+
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
         """The other items one use consumes besides `item` (a recombinator's donor, ADR-0022); none by default.
 
@@ -636,6 +689,14 @@ class Action(ABC):
         question, so `outcomes(data, item)` is the result of using it with these inputs.
         """
         return ()
+
+    def with_inputs(self, wants: tuple[Item, ...]) -> "Action":
+        """This action used with the items `wants` as its inputs, in the order of `inputs` (an action that declares `Reads.input_classes` answers it).
+
+        The compressed state averages such an action over the names its inputs could hold, so it needs the same action with other donors. The
+        other settings of the action (a count table, a price) stay as they are.
+        """
+        raise OutOfScopeError(f"{type(self).__name__} cannot be used with other inputs than its own")
 
     def imprint_move(self) -> ImprintMove | None:
         """How the action moves the imprints of the item (`ImprintMove`); None, the default, for an action that does not make or use one.

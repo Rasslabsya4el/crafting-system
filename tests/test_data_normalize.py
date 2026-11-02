@@ -5,6 +5,7 @@ import dataclasses
 import pytest
 from repoe_support import fixture_game_data, no_network, raw_fixtures  # noqa: F401
 
+from crafting_system.data.normalize import normalize_base_items
 from crafting_system.data.model import (
     BaseItem,
     BenchActions,
@@ -167,7 +168,17 @@ def test_body_armour_base_keeps_its_ordered_tags():
         tags=("int_armour", "body_armour", "armour", "default"),
         implicits=(),
         release_state="released",
+        attribute_requirements=(0, 0, 17),
     )
+
+
+def test_a_base_keeps_the_attributes_it_asks_for_as_strength_dexterity_intelligence():
+    """Ticket #229: the Chromatic Orb weights a socket's colour by them (ADR-0047); a record with no `requirements` object asks for none."""
+    sword = DATA.base_items["Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword1"]
+    assert sword.attribute_requirements == (8, 8, 0)
+    record = dict(raw_fixtures()["base_items.json"]["Metadata/Items/Armours/BodyArmours/BodyInt1"])
+    del record["requirements"]
+    assert normalize_base_items({"X": record})["X"].attribute_requirements == (0, 0, 0)
 
 
 def test_weapon_base_lists_its_implicit_mod_and_that_mod_exists():

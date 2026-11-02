@@ -35,7 +35,7 @@ from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Reads, Rerolled
+from .contract import Action, Adds, Previewable, Reads, Rerolled
 from .draw import Outcome
 from .errors import NotApplicableError
 from .metamods import locked_sides, on_locked_side
@@ -122,6 +122,15 @@ class DivineOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Divine Orb"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.NAMED  # ADR-0055: wiki or owner names the preview
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Divine Orb"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.divine_tailoring_sacred_previewed"})
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.untouched(DIVINE_KEEPS_STRANDS, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: neither cuts nor spends: the count stays

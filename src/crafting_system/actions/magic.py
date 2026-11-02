@@ -23,7 +23,7 @@ from crafting_system.rules import get_rule
 
 from .add import add_one_mod, draw_onto
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, Previewable, Reads
 from .draw import refuse_unmodelled
 from .errors import NotApplicableError
 from .metamods import kept_by_reroll
@@ -76,6 +76,15 @@ class TransmutationOrb(Action):
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Transmutation"
 
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.BY_ITEM_TEXT  # ADR-0055: only the Lock's item text covers it; the claim is approximate
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Orb of Transmutation"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.transmutation_orb_previewed"})
+
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.cutting(SpendLaw.uniform(SPEND_BASIC.value["transmutation"]), SPEND_BASIC)  # ADR-0041: cuts, spends 0 to the ceiling of the claim
 
@@ -104,6 +113,15 @@ class AlterationOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Alteration"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.BY_ITEM_TEXT  # ADR-0055: only the Lock's item text covers it; the claim is approximate
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Orb of Alteration"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.alteration_orb_previewed"})
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.cutting(SpendLaw.uniform(SPEND_BASIC.value["alteration"]), SPEND_BASIC)  # ADR-0041: cuts, spends 0 to the ceiling of the claim
@@ -138,6 +156,15 @@ class AugmentationOrb(Action):
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Augmentation"
 
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.BY_ITEM_TEXT  # ADR-0055: only the Lock's item text covers it; the claim is approximate
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Orb of Augmentation"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.augmentation_orb_previewed"})
+
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.cutting(SpendLaw.uniform(SPEND_BASIC.value["augmentation"]), SPEND_BASIC)  # ADR-0041: cuts, spends 0 to the ceiling of the claim
 
@@ -167,6 +194,15 @@ class RegalOrb(Action):
 
     def label(self, data: GameData | None = None) -> str:
         return "Regal Orb"
+
+    def previewable(self, data: GameData | None = None) -> Previewable:
+        return Previewable.NAMED  # ADR-0055: wiki or owner names the preview
+
+    def currency_item(self, data: GameData | None = None) -> str:
+        return "Regal Orb"
+
+    def preview_claims(self, data: GameData | None = None) -> frozenset[str]:
+        return frozenset({"hinekora_lock.exalted_annulment_regal_previewed"})
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.cutting(SpendLaw.uniform(SPEND_BASIC.value["regal"]), SPEND_BASIC)  # ADR-0041: cuts, spends 0 to the ceiling of the claim
