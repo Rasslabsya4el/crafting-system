@@ -77,8 +77,19 @@ def slice_of(mutants: list[dict], done: set[int], job: int, jobs: int) -> list[d
     return pending[job - 1 :: jobs]
 
 
+MEMORY_LIMIT = 10 * 1024**3  # bytes of address space a mutant's pytest may take: a mutant that allocates without end fails with a MemoryError
+# (counted as killed) instead of taking the 16 GB runner down with the whole job's results (run 41490953015 lost five jobs that way)
+
+
+def _limit_memory() -> None:
+    import resource
+
+    resource.setrlimit(resource.RLIMIT_AS, (MEMORY_LIMIT, MEMORY_LIMIT))
+
+
 def make_runner(root: Path) -> Runner:
-    """Run pytest on node ids in a child process of the repo, killing the whole process group after `timeout`."""
+    """Run pytest on node ids in a child process of the repo, killing the whole process group after `timeout`; on POSIX the
+    child's address space is capped at `MEMORY_LIMIT`."""
 
     def run(node_ids: list[str], timeout: float) -> RunResult:
         with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as handle:
@@ -87,7 +98,7 @@ def make_runner(root: Path) -> Runner:
         process = subprocess.Popen(
             [sys.executable, "-m", "pytest", *PYTEST_ARGS, f"@{handle.name}"],
             cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
-            start_new_session=os.name == "posix",
+            start_new_session=os.name == "posix", preexec_fn=_limit_memory if os.name == "posix" else None,
         )  # fmt: skip
         try:
             output, _ = process.communicate(timeout=timeout)
