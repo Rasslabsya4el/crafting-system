@@ -341,6 +341,29 @@ def test_a_missing_route_file_is_named(plan, tmp_path):
         load_route(tmp_path / "no-such-route.yaml", plan, DATA)
 
 
+def test_skip_refused_passes_a_rule_the_game_refuses_over_to_the_next_that_matches(plan, monkeypatch):
+    """Ticket #70: a route completed by a last `restart` says `skip_refused: true`, so a refused Exalted Orb falls through to the restart."""
+    from crafting_system.actions import ActionError
+    from crafting_system.cli import _route
+
+    def refuse(abstraction, priced, state, start=None):
+        raise ActionError("the game refuses it here")
+
+    monkeypatch.setattr(_route, "offer_action", refuse)
+    rules = f"rules:\n  - do: {REFORGE}\n  - do: restart\n"
+
+    strict = evaluate_route(plan, read(rules, plan), DATA)
+    skipping = evaluate_route(plan, read("skip_refused: true\n" + rules, plan), DATA)
+
+    assert read("skip_refused: true\n" + rules, plan).skip_refused is True and read(rules, plan).skip_refused is False
+    assert [gap.state for gap in strict.gaps] == [plan.start] and "cannot be used here" in strict.gaps[0].reason
+    assert skipping.gaps == () and skipping.policy[plan.start].label == "restart"
+
+
+def test_skip_refused_must_be_true_or_false(plan):
+    assert "must be true or false" in error_of("skip_refused: sometimes\nrules:\n  - do: restart\n", plan)
+
+
 def test_an_unknown_top_key_has_a_hint(plan):
     message = error_of("name: x\nrulez:\n  - do: Chaos Orb\n", plan)
 

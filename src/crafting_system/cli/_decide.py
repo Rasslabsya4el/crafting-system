@@ -135,6 +135,7 @@ class Decision:
     transitions: int | None = None
     estimate: Estimate | None = None
     budget: float | None = None  # the seconds the query was decided against; `climb` bounds the time of the levels with it
+    why: str = ""  # a refusal: why no coarse level exists (`make_plan` solves such a query exactly on the packed solver, ticket #70)
 
 
 def minutes(seconds: float) -> str:
@@ -198,7 +199,7 @@ def choose(
         message = f"no approximate level available ({why}); the exact run is predicted at about {minutes(predicted)} and is run as it is"
         return Decision("exact", message=message, predicted=predicted, transitions=size, estimate=estimate)
     message = f"no approximate level available ({why}). " + exact_offer(size, predicted, estimate.complete)
-    return Decision("refused", message=message, predicted=predicted, transitions=size, estimate=estimate)
+    return Decision("refused", message=message, predicted=predicted, transitions=size, estimate=estimate, why=why)
 
 
 # --- the glue: pilot, rates, candidates --------------------------------------------------------------------

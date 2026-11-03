@@ -40,6 +40,7 @@ FORMAT = "crafting-system-policy/1"
 GOAL = "goal"
 DEAD_END = "dead end"
 MAX_TREE_DEPTH = 40
+MAX_TREE_STATES = 1_000  # the text tree stops here (R14's policy has 14,742 groups of states, 22 MB of text); the JSON policy and the route page hold all (ticket #70)
 
 MAX_DROPPED_LINES = 300  # more dropped actions than this are told in one line per missing price
 
@@ -108,6 +109,9 @@ def describe_state(plan: Plan, data: GameData, state: CompressedState) -> str:
     """
     parts = [state.flags.rarity.value]
     for entry in state.fractured:
+        if entry.mod_id not in data.mods:  # held as its family type ("~n@attack"): the state does not say which mod it is
+            parts.append("fractured mod of a family no requirement cares about")
+            continue
         mod = _fractured_mod_shown(plan, data, entry.mod_id)
         parts.append(f"fractured {_without_ranges(mod.text or mod.name)}")
     for label, status in zip(plan.leaf_labels, state.status):
@@ -149,7 +153,7 @@ def _fractured_mod_shown(plan: Plan, data: GameData, canonical_id: str):
 def number_states(plan: Plan) -> dict[CompressedState, str]:
     """`S1`, `S2`, ... for the non-goal states the policy can reach, in breadth-first order from the start."""
     ids: dict[CompressedState, str] = {}
-    for state in policy_states(plan.start, plan.policy, plan.is_goal):
+    for state in policy_states(plan.start, plan.view_policy, plan.is_goal):
         if not plan.is_goal(state):
             ids[state] = f"S{len(ids) + 1}"
     return ids
@@ -157,13 +161,13 @@ def number_states(plan: Plan) -> dict[CompressedState, str]:
 
 def build_report(plan: Plan, data: GameData) -> Report:
     """Number the reachable states and collect what each one does."""
-    order = policy_states(plan.start, plan.policy, plan.is_goal)
+    order = policy_states(plan.start, plan.view_policy, plan.is_goal)
     ids = number_states(plan)
-    reach = reach_probabilities(plan.start, plan.policy, plan.is_goal)
+    reach = reach_probabilities(plan.start, plan.view_policy, plan.is_goal)
 
     states = []
     for state in order:
-        action = plan.policy.get(state)
+        action = plan.view_policy.get(state)
         if plan.is_goal(state) or action is None:
             continue
         priced = plan.offer_of(action)
@@ -191,7 +195,7 @@ def build_report(plan: Plan, data: GameData) -> Report:
     shares = start_shares(data, plan.target.start_item, offers, _goal_leaf_nodes(plan))
     return Report(
         plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
-        approximate_inputs(plan, plan.policy, data),
+        approximate_inputs(plan, plan.view_policy, data),
         None if plan.starts is None else first_step(plan.starts.chosen, data, plan.target),
     )  # fmt: skip
 
@@ -356,16 +360,20 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         for child in later:
             if child in printed:
                 continue
-            if depth >= MAX_TREE_DEPTH:
+            if len(printed) >= MAX_TREE_STATES:
+                lines.append(f"{pad}  ... {child} is not shown (the tree stops after {MAX_TREE_STATES:,} states; the JSON policy holds all of them)")
+            elif depth >= MAX_TREE_DEPTH:
                 lines.append(f"{pad}  ... {child} continues below")
                 pending.append(child)
             else:
                 show(child, depth + 1)
 
-    while pending:
+    while pending and len(printed) < MAX_TREE_STATES:
         root = pending.pop(0)
         if root not in printed:
             show(root, 0)
+    if len(printed) < len(report.states):
+        lines.append(f"  ... {len(report.states) - len(printed):,} more states of the policy are not shown here; the JSON policy holds all {len(report.states):,}")
     if not report.states:
         lines.append("  The start item already meets the target.")
     lines.append("")

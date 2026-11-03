@@ -12,6 +12,7 @@ from ._lazy import LazySolution, Round, solve_lazily
 from ._minmax import solve_variants
 from ._model import Action, Model, Outcome, Peek, TabularModel, VariantAction
 from ._packed import PackedBuilder, PackedGraph, PackedModel, pack_model
+from ._packed_lump import LumpedChain, lump_policy
 from ._packed_model import solve_packed_model
 from ._packed_solve import PackedSolution, certify, policy_reach, solve_packed
 from ._peek import ExpandedModel, PeekNode, PeekSolution, Reaction, peek_backup, solve_peek
@@ -25,6 +26,7 @@ __all__ = [
     "ConvergenceError",
     "ExpandedModel",
     "LazySolution",
+    "LumpedChain",
     "MAIN",
     "Model",
     "Need",
@@ -44,6 +46,7 @@ __all__ = [
     "TailCut",
     "VariantAction",
     "certify",
+    "lump_policy",
     "pack_model",
     "peek_backup",
     "policy_reach",

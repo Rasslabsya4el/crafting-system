@@ -9,8 +9,10 @@ futures), solves the merged graph by policy iteration and certifies the values o
 What comes back is what `make_plan` needs from a solve: a `Solution` of the concrete states (the value of every walked
 state; the policy as a lazy mapping that builds a state's `Action` when it is asked for, so the 100,000 states of S02,
 with kernels of tens of thousands of outcomes each, are never all held as objects), and the risk of the policy, which is
-evaluated on the merged chain (same mean, odds and quantiles by lumpability) because the merged chain is the one that
-fits: 20 classes for S02, 12,000 for R04.
+evaluated on the policy's chain lumped exactly (`solver._packed_lump`: same mean, odds and whole cost distribution) because that
+is the chain that fits: 11,767 classes with 17 million transitions for R04 lump to 552 blocks with 2,746 transitions, R14's 65,148
+to 14,743 blocks. The same lumped chain, on one shown item state per block, is what the report prints for a big policy
+(`Plan.view_policy`), while `--verify` and the route evaluation run the whole policy.
 
 `make_plan(solver="auto")` walks packed first and keeps the object solver for graphs of at most `EXACT_TRANSITIONS`
 transitions (what it has been run on, ADR-0023), unchanged; `solver="packed"` always uses this route and `"object"`
@@ -28,11 +30,12 @@ from crafting_system.abstraction import Abstraction, CompressedState, integer_we
 from crafting_system.actions import ActionError
 from crafting_system.solver import (
     Action,
+    LumpedChain,
     Outcome,
     PackedBuilder,
     PackedGraph,
-    PackedSolution,
     Solution,
+    lump_policy,
     policy_reach,
     solve_packed,
 )
@@ -184,6 +187,29 @@ class PackedPolicy(Mapping):
         i = self._walked.index.get(state)  # type: ignore[arg-type]
         return i is not None and bool(self._member[i])
 
+    @property
+    def walked(self) -> Walked:
+        return self._walked
+
+    @property
+    def action_array(self) -> np.ndarray:
+        """The index (in the walked graph) of the action taken at every state, -1 where the policy takes none."""
+        return self._action
+
+    def offer(self, state: CompressedState) -> PricedOffer:
+        """The priced offer the policy takes in `state`, without building its `Action` (and its thousand outcomes)."""
+        i = self._walked.index.get(state)
+        if i is None or not self._member[i]:
+            raise KeyError(state)
+        return self._walked.offers[int(self._walked.graph.act_tag[self._action[i]])]
+
+    def offers(self) -> Iterator[tuple[CompressedState, PricedOffer]]:
+        """Every state of the policy with its priced offer, in the order of iteration."""
+        walked = self._walked
+        tags = walked.graph.act_tag[self._action[self._keys]]
+        for i, tag in zip(self._keys.tolist(), tags.tolist()):
+            yield walked.states[i], walked.offers[tag]
+
     def __getitem__(self, state: CompressedState) -> Action[CompressedState]:
         from ._plan import offer_action  # _plan imports this module
 
@@ -198,28 +224,6 @@ class PackedPolicy(Mapping):
         return built
 
 
-def class_policy(solved: PackedSolution, offers: Sequence[PricedOffer]) -> dict[int, Action[int]]:
-    """The policy on the merged chain: for every class the optimal policy reaches from the start class, its action.
-
-    States are class numbers, outcomes are weights over classes; `risk.evaluate` takes it as any policy (the mean, the
-    odds and the quantiles of the policy are the same on the classes as on their members).
-    """
-    reduced = solved.quotient
-    chosen = solved.class_action
-    reached = policy_reach(reduced, chosen, int(solved.cls[0]))
-    policy: dict[int, Action[int]] = {}
-    for c in reached.tolist():
-        a = int(chosen[c])
-        if a < 0:
-            continue
-        kernel = int(reduced.act_kernel[a])
-        low, high = int(reduced.k_ptr[kernel]), int(reduced.k_ptr[kernel + 1])
-        weights = reduced.kernel_weights(kernel)
-        outcomes = tuple(Outcome(int(s), int(w)) for s, w in zip(reduced.k_succ[low:high].tolist(), weights))
-        policy[c] = Action(offers[int(reduced.act_tag[a])].label, float(reduced.act_cost[a]), outcomes)
-    return policy
-
-
 @dataclass(frozen=True, slots=True, eq=False)
 class PackedResult:
     """What a packed solve of a plan gives `make_plan`: the solution, and what the risk is evaluated on."""
@@ -229,6 +233,7 @@ class PackedResult:
     risk_start: int
     risk_is_goal: Callable[[int], bool]
     info: dict
+    view: Mapping[CompressedState, Action[CompressedState]] | None = None  # the lumped chain on one concrete state per block (what a big policy is shown by)
 
 
 def solve_walked(
@@ -248,9 +253,49 @@ def solve_walked(
         policy=PackedPolicy(abstraction, start, walked, solved.action),
         error_bound=solved.error_bound,
     )
-    reduced_goal = solved.quotient.goal
     info = {**solved.info, "walk_seconds": round(walked.seconds, 1), "transitions": walked.graph.edges_counted()}
-    return PackedResult(solution, class_policy(solved, walked.offers), int(solved.cls[0]), lambda c: bool(reduced_goal[c]), info)
+    mark = time.perf_counter()
+    lumped = lump_policy(solved.quotient, solved.class_action, int(solved.cls[0]))
+    info.update(lumped_blocks=lumped.count, lumped_transitions=lumped.transitions, lump_rounds=lumped.rounds, lump_seconds=round(time.perf_counter() - mark, 1))
+    say(f"policy chain lumped: {lumped.count:,} blocks, {lumped.transitions:,} transitions ({info['lump_seconds']} s)")
+    goal = lumped.goal
+    view = lumped_view(lumped, solved.quotient, solved.cls, walked)
+    return PackedResult(solution, lumped_policy(lumped, solved.quotient, walked.offers), lumped.start, lambda b: bool(goal[b]), info, view)
+
+
+def lumped_view(lumped: LumpedChain, reduced: PackedGraph, cls: np.ndarray, walked: Walked) -> dict[CompressedState, Action[CompressedState]]:
+    """The lumped chain on concrete states: each block is shown by one of its members (the first state of its representative class).
+
+    The result is a policy over those states (`Action` with the offer's label and cost, outcomes into the other blocks' shown states
+    with the summed integer weights), so the report, the JSON and the route view read it as any policy. The shown state of a block stands for
+    all the item states that pay alike and lead to the same blocks with the same chances; its expected remaining cost is theirs.
+    """
+    first = np.unique(cls, return_index=True)[1]
+    shown = [walked.states[int(first[int(lumped.rep[b])])] for b in range(lumped.count)]
+    view: dict[CompressedState, Action[CompressedState]] = {}
+    for b in range(lumped.count):
+        a = int(lumped.action[b])
+        if a < 0 or lumped.goal[b]:
+            continue
+        outcomes = tuple(Outcome(shown[int(t)], int(w)) for t, w in zip(lumped.succ[b].tolist(), lumped.weight[b]))
+        view[shown[b]] = Action(walked.offers[int(reduced.act_tag[a])].label, float(lumped.cost[b]), outcomes)
+    return view
+
+
+def lumped_policy(lumped: LumpedChain, reduced: PackedGraph, offers: Sequence[PricedOffer]) -> dict[int, Action[int]]:
+    """The policy on the lumped chain: for every block that is not a goal, the action of its representative (states are block numbers).
+
+    The block pays what its members pay and moves to the other blocks with the summed integer weights; the mean, the odds and the
+    whole cost distribution from the start block are those of the policy on the concrete states (`solver._packed_lump`).
+    """
+    policy: dict[int, Action[int]] = {}
+    for b in range(lumped.count):
+        a = int(lumped.action[b])
+        if a < 0 or lumped.goal[b]:
+            continue
+        outcomes = tuple(Outcome(int(s), int(w)) for s, w in zip(lumped.succ[b].tolist(), lumped.weight[b]))
+        policy[b] = Action(offers[int(reduced.act_tag[a])].label, float(lumped.cost[b]), outcomes)
+    return policy
 
 
 def packed_result(

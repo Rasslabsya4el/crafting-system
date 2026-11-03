@@ -60,7 +60,7 @@ from ._marking import approximate_inputs
 from ._plan import Plan
 from ._report import Report
 from ._route import RESTART, Route, RouteResult
-from ._route_card import ANY_OR_EMPTY, EMPTY, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
+from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
 from ._route_flow import Edge, Step, build_flow
 from ._route_html import render_page
 from ._route_trade import BuyStep, buy_step
@@ -147,7 +147,7 @@ class RouteInput:
 
 def route_input(plan: Plan, interval: IntervalAnswer | None = None) -> RouteInput:
     """The planner's own policy, with the interval of the plan when the answer read a rule axis."""
-    return RouteInput(PLANNER_LABEL, plan, plan.policy, plan.risk, interval=interval)
+    return RouteInput(PLANNER_LABEL, plan, plan.view_policy, plan.risk, interval=interval)
 
 
 def given_route_input(plan: Plan, route: Route, result: RouteResult) -> RouteInput:
@@ -259,6 +259,8 @@ class _View:
         return {slot.kind for slot in state.slots if slot.crafted}
 
     def _mod(self, mod_id: str) -> str:
+        if mod_id not in self.data.mods:  # a fractured mod held as its family type ("~n"), ticket #70
+            return FAMILY_TYPE_TEXT
         return mod_text(self.data.mods[mod_id])
 
     def gains(self, step: Step, edges: list[Edge]) -> list[str]:

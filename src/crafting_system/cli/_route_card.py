@@ -76,6 +76,7 @@ from crafting_system.targets import ImplicitRequirement, KOfN, Target
 Tone = Literal["wanted", "mod", "crafted", "any", "empty", "implicit"]
 
 SIDES = (Side.PREFIX, Side.SUFFIX)
+FAMILY_TYPE_TEXT = "a mod of a family no requirement cares about"  # a fractured mod the state holds as its family type ("~n"), not as a mod (ticket #70)
 CRAFTED_DOMAIN = "crafted"
 VEILED_DOMAIN = "veiled"
 GRADE_NAMES = {1: "Lesser", 2: "Greater", 3: "Grand", 4: "Exceptional", 5: "Exquisite", 6: "Perfect"}
@@ -434,6 +435,8 @@ class _StateReader:
         return self._fractured[key]
 
     def _fractured_row(self, mod_id: str, contribution: tuple[Status, ...]) -> tuple[Side, Slot]:
+        if mod_id not in self.data.mods:  # held as its family type: the state knows its side, not which mod it is
+            return self.ab._kinds.side_of(mod_id), Slot(FAMILY_TYPE_TEXT, "mod", ("fractured",))
         mod = self.data.mods[mod_id]
         stands_for = [
             other.id

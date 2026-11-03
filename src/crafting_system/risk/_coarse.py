@@ -112,6 +112,19 @@ def quantile_lower_bound(mean: float, variance: float, level: float) -> float:
     return mean * (1.0 - math.sqrt(ratio)) * (1.0 - 1e-9) if ratio < 1.0 else 0.0
 
 
+def quantile_upper_bound(mean: float, variance: float, level: float) -> float:
+    """A certified upper bound on the `level` quantile of a cost that is never negative (one-sided Chebyshev, Cantelli)."""
+    return mean + math.sqrt(variance * level / (1.0 - level))
+
+
+def may_exceed_ordinary_grid(mean: float, variance: float, level: float, c_min: float, max_bins: int) -> bool:
+    """Whether the `level` quantile is not certain to lie inside the `max_bins` bins that a step of at most `c_min` covers.
+
+    The ordinary grid may well reach it (the bound is loose); `beyond_ordinary_grid` is the test of when it certainly cannot.
+    """
+    return quantile_upper_bound(mean, variance, level) > max_bins * c_min
+
+
 def beyond_ordinary_grid(mean: float, variance: float, level: float, c_min: float, max_bins: int) -> bool:
     """Whether the `level` quantile certainly lies past the `max_bins` bins that a step of at most `c_min` covers."""
     return quantile_lower_bound(mean, variance, level) > max_bins * c_min * (1.0 + UNIT_TOLERANCE)

@@ -3,9 +3,10 @@
 R04 is the Insanity-fractured additional-arrow Penetrating Arrow Quiver, R14 the Toxic Rain Hunter bow. What the ticket
 asked for and what was measured (see the pull request): the targets, the start items at their prices, the actions the
 guides use, the guides' routes, and the published odds all exist and are checked here. The planner's policy for either
-route was NOT produced: R04's exact graph holds 177,242 states and 535,910,746 transitions (a 16 GB runner is out of
-memory in about twelve minutes), R14's holds at least 787,000 states, and neither has an approximate level, because both
-model an Attack/Caster metamod (ADR-0023, #69). The CLI says so, which `test_the_default_run_is_refused...` pins.
+route is solved by the packed solver (ticket #374; R04's exact graph holds 177,242 states and 535,910,746 transitions, R14's
+816,153 states) and neither has an approximate level, because both model an Attack/Caster metamod (ADR-0023, #69): the
+default budget run goes on to the packed solver instead of refusing, which `test_the_decision_finds_no_approximate_level...`
+pins. The policies themselves (CLI, `--verify`, `benchmark`) are in `test_cli_r04_r14_heavy.py`, a heavy run.
 These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`; CI fetches it) and skip cleanly without it.
 """
 
@@ -18,6 +19,8 @@ from abstraction_support import real_game_data
 from crafting_system.cli import PlanError, When, load_route, make_plan
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.cli._benchmark_outcomes import PublishedOutcome, published_outcomes
+from crafting_system.cli._decide import decide
+from crafting_system.cli._plan import _packed_note
 from crafting_system.cli._route_sim import simulate_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
@@ -127,11 +130,32 @@ def test_benchmark_checks_the_odds_and_leaves_the_heavy_route_unsolved(data, pri
     assert len(entry["published_odds"]) == len(bench.outcomes)
 
 
-def test_the_default_run_is_refused_with_the_reason(data, prices, route_id):
+def test_the_decision_finds_no_approximate_level_and_the_planner_goes_on_to_the_packed_solver(unsolved, route_id):
+    """Ticket #70: what was a refusal ("no approximate level available") is now an exact answer of the packed solver, with the reason in the note."""
+    decision = decide(unsolved.abstraction, unsolved.start, unsolved.offers, 60.0)
+
+    assert decision.action == "refused" and "Attack/Caster tags" in decision.why
+    note = _packed_note(decision)
+    assert "Attack/Caster tags" in note and "packed solver" in note and "the answer is exact" in note
+
+
+def test_no_vendor_recipe_makes_a_quiver_or_a_bow_so_the_default_run_plans_the_target_once(data, prices, route_id):
+    """The CLI compares the start options (ADR-0059); with none but the plain item it is one plan, not several 10-minute walks."""
+    from crafting_system.cli._start_options import StartContext, combine
+    from crafting_system.cli._starts import SOURCES
+
+    target = load_target(ROOT / ROUTES[route_id][0], data)
+
+    listing = combine([source(StartContext(data, target, prices)) for source in SOURCES])
+
+    assert not listing.candidates
+
+
+def test_a_budget_run_with_the_object_solver_asked_for_still_refuses_with_the_reason(data, prices, route_id):
     target = load_target(ROOT / ROUTES[route_id][0], data)
 
     with pytest.raises(PlanError, match=r"no approximate level available.*Attack/Caster tags"):
-        make_plan(data, target, prices, budget=60.0)
+        make_plan(data, target, prices, budget=60.0, solver="object")
 
 
 def test_a_route_can_be_played_on_concrete_items(unsolved, data, route_id):
