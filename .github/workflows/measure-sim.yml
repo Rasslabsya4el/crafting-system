@@ -62,7 +62,7 @@ jobs:
       fail-fast: false
       max-parallel: 8  # the mutation step of the main chain holds 16 runners this week
       matrix:
-        route: ${{ needs.mode.outputs.trial == 'true' && fromJSON('["R10"]') || fromJSON('["R12","R10","R11","R05","R13","R08","R09","R04","R14","V01"]') }}
+        route: ${{ needs.mode.outputs.trial == 'true' && fromJSON('["R10"]') || fromJSON('["R14","R04","R12","R10","R11","R05","R13","R08","R09","V01"]') }}
         part: ${{ needs.mode.outputs.trial == 'true' && fromJSON('[1,2]') || fromJSON('[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]') }}
     defaults:
       run:

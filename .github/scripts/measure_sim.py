@@ -9,7 +9,7 @@
 * `solver`: the solver's policy played on concrete items with random dice (`verify`, the function behind `--verify`); `exact_mean`
   is its computed mean with the start price, as `--verify` compares it;
 * `guide`, `guide_completed`: the given route the benchmark has as written, and its completed route if it has one, played through
-  `simulate_route`; `exact_mean` is the exact given mean `run_route` computes, taken from part 1 only (other parts write null).
+  `simulate_route`; `exact_mean` is the exact given mean as `run_route` computes it (on the same plan), from part 1 only (other parts write null).
 
 Each kind holds the sums of its runs (`n`, `successes`, `stopped`, `unfinished`, `sum` and `sumsq` of the run totals), not the list.
 A kind that raises writes `"error"` instead and the rest go on; the run exits 1 when any kind failed.
@@ -21,10 +21,12 @@ Only `run` imports the crafting package, so `summary` needs nothing but the stan
 """
 
 import argparse
+import dataclasses
 import importlib.util
 import math
 import os
 import sys
+import types
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
@@ -242,18 +244,21 @@ def _exact_of(totals: Mapping | None) -> tuple[float | None, bool]:
     if totals is None:
         return None, False
     mean = totals.get("mean")
-    return _finite(mean), mean is None
+    return _finite(mean), mean is None or (isinstance(mean, float) and math.isinf(mean))  # null in an entry read back, inf in one in hand
 
 
 def _message(error: BaseException) -> str:
     return str(error) or type(error).__name__
 
 
+_NO_RISK = types.SimpleNamespace(p90=types.SimpleNamespace(value=math.nan))  # see `run_part`: verify reads only `risk.p90.value`
+
+
 def run_part(route_id: str, part: int, parts: int, out: Path, runs_scale: float = 1.0) -> int:
     """Play one part of one benchmark route and write `out/sim-ID-K.json`; 2 for a bad argument, 1 when a kind failed."""
-    from crafting_system.cli._benchmark import BENCHMARKS, run_route
+    from crafting_system.cli._benchmark import BENCHMARKS, _given_route
     from crafting_system.cli._inputs import write_json
-    from crafting_system.cli._route import load_route
+    from crafting_system.cli._route import evaluate_route, load_route
     from crafting_system.cli._route_sim import simulate_route
     from crafting_system.cli._verify import verify
     from crafting_system.config import find_project_root, load_config
@@ -292,28 +297,31 @@ def run_part(route_id: str, part: int, parts: int, out: Path, runs_scale: float 
     except Exception as error:
         plan_error = _message(error)
 
-    try:
-        if plan is None:
-            raise RuntimeError(plan_error)
-        check = verify(game, plan, runs=runs, seed=seed)
-        infinite = math.isinf(check.computed_mean)
-        record("solver", {"exact_mean": _finite(check.computed_mean), "exact_infinite": infinite, **_sums(check.report)})
-    except Exception as error:
-        record("solver", {"exact_mean": None, "exact_infinite": False, "error": _message(error)})
-
     # the guide as written (bench.route; V01 has none) and the completed route (bench.completed; most routes have none)
     guides = [(kind, path) for kind, path in (("guide", bench.route), ("guide_completed", bench.completed)) if path is not None]
     exact: dict[str, tuple[float | None, bool]] = {kind: (None, False) for kind, _ in guides}
     exact_note = None
-    if part == 1 and guides:  # the exact given means come from the benchmark's own computation, once
-        try:
-            entry, _ = run_route(bench, game, root, config, prices, None, heavy=True)
-            exact["guide"] = _exact_of(entry.get("given_route"))
-            if "guide_completed" in exact:
-                exact["guide_completed"] = _exact_of(entry.get("completed_route"))
-            exact_note = entry.get("error")
-        except Exception as error:
-            exact_note = _message(error)
+    if part == 1 and guides and plan is not None:
+        # the exact given means, first and on this very plan, as `run_route` computes them (`evaluate_route`, `_given_route`
+        # with the start price added): like for like with the simulation below, and no second plan in memory
+        for kind, route_path in guides:
+            try:
+                result = evaluate_route(plan, load_route(root / route_path, plan, game), game)
+                exact[kind] = _exact_of(_given_route(plan, result, game, plan.start_price.chaos))
+            except Exception as error:
+                exact_note = _message(error)
+
+    try:
+        if plan is None:
+            raise RuntimeError(plan_error)
+        # `verify` reports the computed p90 next to the mean; the plan was made without the risk run (its grid on R04 and R14
+        # takes a runner's memory), so it gets a stand-in whose p90 is NaN: only the mean is compared here
+        checked = plan if plan.risk is not None else dataclasses.replace(plan, risk=_NO_RISK)
+        check = verify(game, checked, runs=runs, seed=seed)
+        infinite = math.isinf(check.computed_mean)
+        record("solver", {"exact_mean": _finite(check.computed_mean), "exact_infinite": infinite, **_sums(check.report)})
+    except Exception as error:
+        record("solver", {"exact_mean": None, "exact_infinite": False, "error": _message(error)})
 
     for kind, route_path in guides:
         mean, infinite = exact[kind]
