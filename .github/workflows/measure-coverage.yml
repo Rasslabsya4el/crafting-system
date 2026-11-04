@@ -1,0 +1,96 @@
+name: Measure coverage
+
+# Step 3 of the measurement chain (ticket #399): the whole suite under coverage, one job per slot of 32 (`--shard N/32`;
+# trial: one job, `--shard 64/64`, a light slot), then one combine job that writes the report. A reusable workflow: `measure.yml`
+# calls it. The data file holds one context per test (`dynamic_context = test_function`) for the mutation step.
+# A failing test does not stop the data: each slot writes its pytest exit code to `cov/exit-<slot>.txt`.
+
+on:
+  workflow_call:
+    inputs:
+      trial:
+        type: boolean
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  slot:
+    name: coverage slot ${{ matrix.slot }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      max-parallel: 16  # the repo has 20 runner jobs at once; 4 stay free for CI
+      matrix:
+        slot: ${{ inputs.trial && fromJSON('[1]') || fromJSON('[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32]') }}
+    env:
+      SHARD: ${{ inputs.trial && '64/64' || format('{0}/32', matrix.slot) }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data
+      - name: Install coverage
+        run: uv pip install "coverage==7.6.10"
+      - name: Run slot ${{ matrix.slot }} under coverage
+        run: |
+          code=0
+          uv run --no-sync coverage run --rcfile .github/measure-coverage.rc -m pytest -p no:cacheprovider -q --shard "$SHARD" --shard-durations tests/shard_durations.json || code=$?
+          mkdir -p cov
+          echo "$code" > "cov/exit-${{ matrix.slot }}.txt"
+          shopt -s nullglob
+          for file in .coverage.*; do mv "$file" cov/; done
+      - name: Upload the slot's data and exit code
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: measure-cov-slot-${{ matrix.slot }}
+          path: cov/
+          include-hidden-files: true  # the data files start with a dot
+
+  combine:
+    name: combine coverage
+    needs: slot
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data
+      - name: Install coverage
+        run: uv pip install "coverage==7.6.10"
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: measure-cov-slot-*
+          path: in
+          merge-multiple: true
+      - name: Combine the slots, export json, and write the report
+        run: |
+          mkdir -p out
+          uv run --no-sync coverage combine --rcfile .github/measure-coverage.rc --data-file out/.coverage in/
+          uv run --no-sync coverage json --rcfile .github/measure-coverage.rc --data-file out/.coverage -o out/coverage.json
+          uv run --no-sync python .github/scripts/measure_coverage_report.py --json out/coverage.json --root . --exits in --expect ${{ inputs.trial && 1 || 32 }} --out out
+      - name: Upload the combined data file (the mutation step reads its per-test contexts)
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: measure-coverage-data
+          path: out/.coverage
+          include-hidden-files: true
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: measure-coverage
+          overwrite: true
+          path: |
+            out/summary.md
+            out/headline.txt
+            out/uncovered-functions.txt
+            out/coverage.json

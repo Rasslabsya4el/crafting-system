@@ -200,3 +200,14 @@ seconds and the number of tests of each group (a module, or a module and one rou
 a test id can carry a path and `test_no_absolute_paths` forbids those in the repo. Do it when tests were added or
 got slower; a stale file only makes the shards less even, never wrong: a group that grew costs the median test for
 each new test, and a new group costs its tests at the median.
+
+## The measurement chain (ticket #399)
+
+- **Start it:** push a branch named `measure/trial` (about an hour: a short slice of every step) or `measure/full` (the
+  week-long run). A branch name with `trial` in it is a trial; so is a dispatch of `measure.yml` with `trial` ticked.
+  Once `measure.yml` is on `main`, `gh workflow run measure.yml --ref main` starts it too.
+- **Where it reports:** issue #398, in Russian, one comment after each step (`.github/scripts/measure_diary.py`): the
+  result, the headline, the next step and its expected end. The last comment links to the artifact `measure-report`.
+- **The report:** `report.md` (`.github/scripts/measure_summary.py`) holds every step's `summary.md` under its heading.
+- **A failed step does not stop the chain:** its note says so, and the next step starts.
+- **Runners:** every matrix of the chain keeps `max-parallel: 16`, so 4 of the repository's 20 runner jobs stay free for CI.

@@ -1,0 +1,6 @@
+[run]
+source = src/crafting_system
+branch = true
+parallel = true
+relative_files = true
+dynamic_context = test_function

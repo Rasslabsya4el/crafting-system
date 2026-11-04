@@ -1,0 +1,119 @@
+name: Measure sim
+
+# The simulation check of the measurement chain (ticket #399, piece G): the planner's computed mean cost against a large
+# simulation, for the solver's policy and for the given route (guide, and the completed route where the benchmark has one)
+# of every benchmark route. Part K of P plays `runs_for(route)` runs with the seed 1000 + K; the summary pools the parts into
+# one artifact `measure-sim` and one diary comment on issue #398. Start it with a push to a `measure-sim/...` branch (trial
+# when the branch name contains `trial`) or a dispatch with the `trial` input. See docs/ci.md.
+
+on:
+  push:
+    branches: ['measure-sim/**']
+  workflow_dispatch:
+    inputs:
+      trial:
+        description: 'A short trial of the check (about 15 minutes)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: measure-sim
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  mode:
+    runs-on: ubuntu-latest
+    outputs:
+      trial: ${{ steps.flag.outputs.trial }}
+    steps:
+      - id: flag
+        run: echo "trial=${{ inputs.trial == true || contains(github.ref_name, 'trial') }}" >> "$GITHUB_OUTPUT"
+
+  note-start:
+    needs: mode
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRIAL: ${{ needs.mode.outputs.trial }}
+        run: |
+          if [ "$TRIAL" = "true" ]; then
+            kind="пробный прогон"
+            eta="15 минут"
+          else
+            kind="полный прогон"
+            eta="8–10 часов"
+          fi
+          gh issue comment 398 --body "Запущена проверка симуляцией (${kind}): план решателя и маршрут гайда на каждом эталонном маршруте играются тысячи раз и сравниваются с расчётом. Конец ожидается через ${eta}. Запуск: ${RUN_URL}" || true
+
+  part:
+    needs: [mode, note-start]
+    if: ${{ !cancelled() }}
+    name: ${{ matrix.route }} part ${{ matrix.part }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 8  # the mutation step of the main chain holds 16 runners this week
+      matrix:
+        route: ${{ needs.mode.outputs.trial == 'true' && fromJSON('["R10"]') || fromJSON('["R14","R04","R12","R10","R11","R05","R13","R08","R09","V01"]') }}
+        part: ${{ needs.mode.outputs.trial == 'true' && fromJSON('[1,2]') || fromJSON('[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]') }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data
+      - name: Play part ${{ matrix.part }} of ${{ matrix.route }}
+        run: >-
+          uv run --no-sync python .github/scripts/measure_sim.py run --route ${{ matrix.route }} --part ${{ matrix.part }}
+          --parts ${{ needs.mode.outputs.trial == 'true' && 2 || 16 }} --out out
+          ${{ needs.mode.outputs.trial == 'true' && '--runs-scale 0.02' || '' }}
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: measure-sim-${{ matrix.route }}-${{ matrix.part }}
+          path: out/
+          if-no-files-found: warn
+
+  summary:
+    name: simulation summary
+    needs: [mode, part]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data  # the summary needs no game data; this gives uv
+      - uses: actions/download-artifact@v8.0.2
+        continue-on-error: true  # a route with no part files still gets a summary, with dashes
+        with:
+          pattern: measure-sim-*
+          path: in
+          merge-multiple: true
+      - name: Table and headline
+        run: uv run --no-sync python .github/scripts/measure_sim.py summary --dir in --out out
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: measure-sim
+          overwrite: true
+          path: out/
+      - name: Diary comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -f out/headline.txt ]; then HEADLINE=$(head -n 1 out/headline.txt); else HEADLINE="сводка не записана"; fi
+          HEADLINE="${HEADLINE%.}"  # the headline ends with a full stop; the sentence below adds its own
+          gh issue comment 398 --body "Проверка симуляцией закончена. Главное: ${HEADLINE}. Сводка: артефакт measure-sim, ${RUN_URL}" || true

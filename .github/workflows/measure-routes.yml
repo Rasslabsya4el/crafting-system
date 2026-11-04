@@ -1,0 +1,65 @@
+name: Measure routes
+
+# The routes step of the measurement chain (ticket #399, see measure.yml and docs/ci.md): one benchmark route per job,
+# solved the way `benchmark --heavy` solves it (time, peak memory, the solver's and the given route's totals), then one
+# summary table in the artifact `measure-routes`. `trial` runs R10 only. A reusable workflow: it has no run of its own.
+
+on:
+  workflow_call:
+    inputs:
+      trial:
+        type: boolean
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  route:
+    name: route ${{ matrix.route }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        route: ${{ inputs.trial && fromJSON('["R10"]') || fromJSON('["R12","R10","R11","R05","R13","R08","R09","R04","R14","V01"]') }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data
+      - name: Solve route ${{ matrix.route }}
+        run: uv run --no-sync python .github/scripts/measure_routes.py run --route ${{ matrix.route }} --out out
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: measure-routes-${{ matrix.route }}
+          path: out/
+          if-no-files-found: warn
+
+  summary:
+    name: routes summary
+    needs: route
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/real-data  # the summary needs no game data; this gives uv
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: measure-routes-*
+          path: in
+      - name: Table and headline
+        run: uv run --no-sync python .github/scripts/measure_routes.py summary --dir in --out out
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: measure-routes
+          overwrite: true
+          path: out/
