@@ -114,5 +114,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          HEADLINE=$(cat out/headline.txt 2>/dev/null || echo "сводка не записана")
+          if [ -f out/headline.txt ]; then HEADLINE=$(head -n 1 out/headline.txt); else HEADLINE="сводка не записана"; fi
+          HEADLINE="${HEADLINE%.}"  # the headline ends with a full stop; the sentence below adds its own
           gh issue comment 398 --body "Проверка симуляцией закончена. Главное: ${HEADLINE}. Сводка: артефакт measure-sim, ${RUN_URL}" || true
