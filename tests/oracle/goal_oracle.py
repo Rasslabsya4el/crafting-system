@@ -6,7 +6,8 @@ and `--verify` agreed (audit #396, class 6). This module has no part of the plan
 
 What it reads, and only this:
   * the target's YAML text (the keys `base`, `item_level`, `influence`, `requirements` with `family`, `stat`,
-    `mod`, `min_tier`, `min_roll`, `not_crafted`, `at_least` / `of`);
+    `mod`, `min_tier`, `min_roll`, `not_crafted`, `at_least` / `of`; `implicits` with `family`, `stat`, `mod`, `min_grade`,
+    `min_roll`, `corrupted`; `quality` with `type`, `min_percent`);
   * the raw repoe-fork export, from `<CRAFTING_CACHE_DIR>/repoe-fork/<version>/` (`mods.json`,
     `base_items.json`, `crafting_bench_options.json`);
   * the owner's rules (`docs/owner-rules.md`), written below as code.
@@ -38,9 +39,30 @@ The natural ladder of a family on a base, worked out from the raw mods in `indep
   * The top tier the item level allows is the lowest tier number among the ladder's mods whose required
     level is at most the item level.
 
-Not judged yet (OR-29, ticket-filed): implicit requirements, quality, sockets, enchantment, corruption and the
-start item's own text. `OracleTarget.unjudged` lists the keys of a target that it does not judge, and the
-comparison says so; it never answers for them.
+The other requirement kinds (ticket #416, read from the export and the owner's rules, not from the planner)
+  * Influence is NOT judged (decided on #416 and #444). The target's `influence:` list is the influences on the base the
+    route starts from (`src/crafting_system/targets/__init__.py`: "absent means a fresh normal item of the base, level and
+    influence"; R08 line 34), a start input. Nothing in `docs/owner-rules.md` or an ADR makes it a condition on the finished
+    item, so the oracle uses it only to find the mods that can spawn (the item's tags). Whether a target's influence must be
+    bought or may be added mid-route is a start-item question of rebuild step 4.
+  * Implicits (`implicits:`). An implicit mod is one of the mods an item of the base can hold as an implicit: the base's own
+    (`base_items.json` `implicits`) and the Eldritch implicits (generation types `searing_exarch_implicit` and
+    `eater_of_worlds_implicit`) whose spawn weight on the base's tags is above zero. The selector (`family`, `stat`) counts a
+    mod by its groups or its text, as for an explicit mod; the "Unique Enemy / Pinnacle Boss in your Presence" variants of a
+    mod (they carry a `local_influence_mod_requires_*_presence` stat: a conditional effect, not the plain one) are counted
+    only by `mod:` naming one (OR-2). `mod:` is exactly that mod. The Eldritch grade (1 Lesser to 6 Perfect) is the digit
+    that ends the mod's id: the value ranges of one family rise with it (AvoidShockEldritchImplicit1 33-35 ... 6 48-50);
+    a base implicit has grade 0. `min_roll` is a roll with no grade (OR-4); `min_grade` is the lowest grade. An implicit
+    counts when the item lists it; a base implicit the item does not list is absent (an open point, issue #449).
+  * Quality (`quality:`). A catalyst quality (`type` given) is met by quality of that catalyst type, at least `min_percent`;
+    quality with no `type` is plain quality (a weapon's or armour's), at least `min_percent`. The catalyst types are the
+    `* Catalyst` currencies of the export whose description says "Adds quality that enhances" (so the Tainted Catalyst,
+    which "applies a random quality type", is none), and the item classes that take one are the ones that description
+    names ("on a ring, amulet or belt").
+
+Not judged yet (OR-29, issue #416): sockets, enchantment, corruption (`allow_corrupted`, a `corrupted: true` implicit) and
+the start item's own text. `OracleTarget.unjudged` lists the keys of a target that it does not judge, and the comparison
+says so; it never answers for them.
 """
 
 import re
@@ -53,11 +75,11 @@ from independent import ladder as shared
 
 SIDES = shared.SIDES
 CRAFTED_DOMAIN = "crafted"
+ELDRITCH_GENERATION_TYPES = ("searing_exarch_implicit", "eater_of_worlds_implicit")
+CATALYST_DESCRIPTION = "Adds quality that enhances"
 
-# Top-level target keys the oracle does not judge (OR-29), with what each one asks for.
+# Top-level target keys the oracle does not judge (OR-29, issue #416), with what each one asks for.
 UNJUDGED_KEYS = {
-    "implicits": "implicit requirements (an implicit mod, Eldritch grade, corrupted implicit)",
-    "quality": "quality (catalyst or plain)",
     "sockets": "sockets (count, links, colours)",
     "enchantment": "enchantment",
     "allow_corrupted": "corruption (a corrupted item as the goal)",
@@ -212,6 +234,63 @@ class Export:
                 found[group_key] = ladder
         return found
 
+    # -- implicits ----------------------------------------------------------------------------------------------
+
+    def implicit_candidates(self, base_id: str) -> list[str]:
+        """The mods an item of this base can hold as an implicit: its own implicits, and the Eldritch implicits that spawn on its tags."""
+        base = self.base_items[base_id]
+        found = [mod_id for mod_id in base.get("implicits", []) if mod_id in self.mods]
+        tags = self.tags(base_id)
+        for mod_id, mod in self.mods.items():
+            if (
+                mod["generation_type"] in ELDRITCH_GENERATION_TYPES
+                and mod["domain"] == base["domain"]
+                and not shared.is_royale(mod_id)
+                and self.spawn_weight(mod, tags) > 0
+                and mod_id not in found
+            ):
+                found.append(mod_id)
+        return found
+
+    def is_presence_variant(self, mod_id: str) -> bool:
+        """Whether the mod is a "Unique Enemy / Pinnacle Boss in your Presence" variant: a conditional effect, by its stat ids."""
+        stats = self.mods[mod_id]["stats"]
+        return any(stat["id"].startswith("local_influence_mod_requires_") and stat["id"].endswith("_presence") for stat in stats)
+
+    def implicit_grade(self, mod_id: str) -> int:
+        """The Eldritch grade 1 (Lesser) to 6 (Perfect) of an Eldritch implicit: the digit that ends its id. 0 for any other mod."""
+        if self.mods[mod_id]["generation_type"] not in ELDRITCH_GENERATION_TYPES:
+            return 0
+        last = mod_id[-1:]
+        if not last.isdigit() or not 1 <= int(last) <= 6:
+            raise ValueError(f"Eldritch implicit {mod_id} does not end in a grade digit from 1 to 6")
+        return int(last)
+
+    def selects_implicit(self, mod_id: str, req: "OImplicitReq") -> bool:
+        """Whether the implicit's selector counts the mod. A Presence variant is counted only when `mod:` names it (OR-2)."""
+        if req.mod is not None:
+            return mod_id == req.mod and self.selects(mod_id, req.family, req.stat)
+        return self.selects(mod_id, req.family, req.stat) and not self.is_presence_variant(mod_id)
+
+    # -- quality ------------------------------------------------------------------------------------------------
+
+    def catalyst_types(self) -> dict[str, frozenset[str]]:
+        """Catalyst type (lower case) -> the item classes that take it, from the `* Catalyst` currencies that add quality.
+
+        The type is the first word of the currency's name; the classes are the ones its description names after "on a ", as in
+        "on a ring, amulet or belt". The Tainted Catalyst applies a random type, so it is not one.
+        """
+        found: dict[str, frozenset[str]] = {}
+        for base in self.base_items.values():
+            description = (base.get("properties") or {}).get("description") or ""
+            name = base.get("name", "")
+            if base.get("item_class") != "StackableCurrency" or not name.endswith(" Catalyst") or not description.startswith(CATALYST_DESCRIPTION):
+                continue
+            _, _, tail = description.partition(" on a ")
+            words = re.split(r",\s*|\s+or\s+", tail.splitlines()[0].strip())
+            found[name.split(" ")[0].lower()] = frozenset(word.strip() for word in words if word.strip())
+        return found
+
 
 # --- the target ----------------------------------------------------------------------------------------------------
 
@@ -271,24 +350,77 @@ def leaves(node: ONode):
 
 
 @dataclass(frozen=True)
+class OImplicitReq:
+    """One wanted implicit, as the YAML wrote it. `path` is `implicits[i]`."""
+
+    path: str
+    family: str | None = None
+    stat: str | None = None
+    mod: str | None = None
+    min_grade: int | None = None
+    min_roll: tuple[int | None, ...] | None = None
+    corrupted: bool = False
+
+
+@dataclass(frozen=True)
+class OQualityReq:
+    """The quality wanted: a catalyst `type` (lower case), or None for plain quality, and the lowest percent."""
+
+    type: str | None
+    min_percent: int
+    path: str = "quality"
+
+
+def _read_implicit(entry: dict, path: str) -> OImplicitReq:
+    if not isinstance(entry, dict):
+        raise ValueError(f"{path}: an implicit requirement must be a mapping")
+    roll = entry.get("min_roll")
+    if roll is not None:
+        roll = tuple(roll) if isinstance(roll, list) else (roll,)
+    return OImplicitReq(
+        path=path,
+        family=entry.get("family"),
+        stat=entry.get("stat"),
+        mod=entry.get("mod"),
+        min_grade=entry.get("min_grade"),
+        min_roll=roll,
+        corrupted=bool(entry.get("corrupted", False)),
+    )
+
+
+def _read_quality(entry: dict) -> OQualityReq:
+    if not isinstance(entry, dict):
+        raise ValueError("quality: must be a mapping")
+    kind = entry.get("type")
+    return OQualityReq(type=str(kind).strip().lower() if kind is not None else None, min_percent=int(entry["min_percent"]))
+
+
+@dataclass(frozen=True)
 class OracleTarget:
-    """What the oracle needs of a target: the base, the item level, the influences and the requirement tree."""
+    """What the oracle needs of a target: the base, the item level, the influences, the requirement tree, the implicits and the quality."""
 
     base: str
     item_level: int
     influences: frozenset[str]
     requirements: tuple[ONode, ...]
     unjudged: tuple[str, ...] = field(default=())
+    implicits: tuple[OImplicitReq, ...] = ()
+    quality: OQualityReq | None = None
 
     @classmethod
     def from_text(cls, text: str) -> "OracleTarget":
         document = yaml.safe_load(text)
+        implicits = tuple(_read_implicit(entry, f"implicits[{i}]") for i, entry in enumerate(document.get("implicits") or ()))
+        # a `corrupted: true` implicit asks for a corrupted item: corruption is not judged (OR-29, #416), so the entry is listed, not answered
+        corrupted = tuple(f"{req.path}.corrupted" for req in implicits if req.corrupted)
         return cls(
             base=document["base"],
             item_level=int(document["item_level"]),
             influences=frozenset(document.get("influence") or ()),
             requirements=tuple(_read_node(entry, f"requirements[{i}]") for i, entry in enumerate(document["requirements"])),
-            unjudged=tuple(key for key in UNJUDGED_KEYS if key in document),
+            unjudged=tuple(key for key in UNJUDGED_KEYS if key in document) + corrupted,
+            implicits=implicits,
+            quality=_read_quality(document["quality"]) if document.get("quality") is not None else None,
         )
 
 
@@ -305,8 +437,26 @@ class OMod:
 
 
 @dataclass(frozen=True)
+class OImplicit:
+    """An implicit the item lists: its mod id and its rolled values. The grade is read from the mod's id, not stored."""
+
+    mod_id: str
+    values: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class OQuality:
+    """The quality an item holds: a catalyst type (lower case) or None for plain quality, and the percent."""
+
+    type: str | None
+    percent: int
+
+
+@dataclass(frozen=True)
 class OItem:
     mods: tuple[OMod, ...]
+    implicits: tuple[OImplicit, ...] = ()
+    quality: OQuality | None = None
 
 
 # --- the judge ------------------------------------------------------------------------------------------------------
@@ -392,8 +542,41 @@ class Oracle:
         return any(self.counts(node, mod) for mod in item.mods)
 
     def requirements_met(self, item: OItem) -> bool:
-        """Whether the item meets every top-level requirement (the only part of a target the oracle judges)."""
+        """Whether the item meets every top-level explicit requirement (`requirements:` only; the other kinds have their own method)."""
         return all(self.node_met(node, item) for node in self.target.requirements)
+
+    # -- implicits, quality (#416) -------------------------------------------------------------------------------
+
+    def implicit_counts(self, req: OImplicitReq, entry: OImplicit) -> bool:
+        """Whether this one implicit of the item satisfies the implicit requirement."""
+        if req.corrupted:
+            raise NotImplementedError(f"{req.path}: a corrupted implicit is not judged yet (OR-29, issue #416)")
+        export = self.export
+        if entry.mod_id not in export.implicit_candidates(self.base_id) or not export.selects_implicit(entry.mod_id, req):
+            return False
+        if req.min_grade is not None and export.implicit_grade(entry.mod_id) < req.min_grade:
+            return False
+        if req.min_roll is not None:  # OR-4: a roll with no grade asked
+            if len(entry.values) != len(req.min_roll):
+                return False
+            if any(wanted is not None and got < wanted for wanted, got in zip(req.min_roll, entry.values)):
+                return False
+        return True
+
+    def implicit_met(self, req: OImplicitReq, item: OItem) -> bool:
+        return any(self.implicit_counts(req, entry) for entry in item.implicits)
+
+    def quality_met(self, req: OQualityReq, held: OQuality | None) -> bool:
+        """Whether the quality an item holds is of the wanted catalyst type (None: plain quality) and at least the wanted percent."""
+        return held is not None and held.type == req.type and held.percent >= req.min_percent
+
+    def target_met(self, item: OItem) -> bool:
+        """Whether the item is the target's goal: the explicit requirements, the implicits and the quality (not the influences)."""
+        return (
+            self.requirements_met(item)
+            and all(self.implicit_met(req, item) for req in self.target.implicits)
+            and (self.target.quality is None or self.quality_met(self.target.quality, item.quality))
+        )
 
 
 # --- probes -----------------------------------------------------------------------------------------------------------
@@ -516,3 +699,76 @@ def _leaf_probes(export: Export, oracle: Oracle, req: OReq, base_id: str, influe
             add(ProbeSpec(req.path, f"bench {mod_id} low", "bench", mod_id, _low(mod)))
             add(ProbeSpec(req.path, f"bench {mod_id} high", "bench", mod_id, _high(mod)))
     return out
+
+
+# --- probes of the other kinds (#416) ---------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ImplicitProbe:
+    """An implicit to put on a probe item: the mod and its values. `path` is the requirement it is for, `implicits[i]`."""
+
+    path: str
+    label: str
+    mod_id: str
+    values: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class QualityProbe:
+    """A quality to put on a probe item: a catalyst type (lower case), or None for plain quality, and the percent."""
+
+    path: str
+    label: str
+    type: str | None
+    percent: int
+
+
+def implicit_probes(export: Export, target: OracleTarget) -> list[ImplicitProbe]:
+    """The probes of every implicit requirement: each implicit mod the selector counts, or would count but for the Presence rule, at
+    its lowest and highest roll, and a roll one below and at each `min_roll`. A corrupted entry has none (not judged)."""
+    base_id = Oracle(export, target).base_id
+    out: list[ImplicitProbe] = []
+    seen: set[tuple] = set()
+
+    def add(probe: ImplicitProbe) -> None:
+        key = (probe.path, probe.mod_id, probe.values)
+        if key not in seen:
+            seen.add(key)
+            out.append(probe)
+
+    for req in target.implicits:
+        if req.corrupted:
+            continue
+        for mod_id in export.implicit_candidates(base_id):
+            if not export.selects(mod_id, req.family, req.stat) and mod_id != req.mod:
+                continue
+            ranges = [(min(stat["min"], stat["max"]), max(stat["min"], stat["max"])) for stat in export.mods[mod_id]["stats"]]
+            add(ImplicitProbe(req.path, f"implicit {mod_id} low", mod_id, tuple(low for low, _ in ranges)))
+            add(ImplicitProbe(req.path, f"implicit {mod_id} high", mod_id, tuple(high for _, high in ranges)))
+            for index, wanted in enumerate(req.min_roll or ()):
+                if wanted is None:
+                    continue
+                for value, name in ((wanted, "at"), (wanted - 1, "below")):
+                    if ranges[index][0] <= value <= ranges[index][1]:
+                        values = tuple(value if i == index else high for i, (_, high) in enumerate(ranges))
+                        add(ImplicitProbe(req.path, f"implicit {mod_id} roll {name} min_roll[{index}]={wanted}", mod_id, values))
+    return out
+
+
+def quality_probes(export: Export, target: OracleTarget) -> list[QualityProbe]:
+    """The probes of the quality requirement: every catalyst type the base's class takes (or plain quality, when no `type` is asked)
+    at 1%, one below and at `min_percent`."""
+    req = target.quality
+    if req is None:
+        return []
+    item_class = export.item_class(Oracle(export, target).base_id).lower()
+    percents = sorted({percent for percent in (1, req.min_percent - 1, req.min_percent) if percent >= 1})
+    if req.type is None:
+        return [QualityProbe(req.path, f"quality plain {percent}%", None, percent) for percent in percents]
+    return [
+        QualityProbe(req.path, f"quality {kind} {percent}%", kind, percent)
+        for kind, classes in sorted(export.catalyst_types().items())
+        if item_class in classes
+        for percent in percents
+    ]

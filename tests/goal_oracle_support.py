@@ -9,10 +9,15 @@ and never writes a tier by hand:
   * essence: `retained_item(data, item, forced=mod)`, the planner's own path for an essence's forced mod;
   * bench: `BenchCraft(mod id).outcomes(data, item).sample(rng)`, the planner's bench action, with an rng that rolls the
     lowest or the highest value;
-  * the target's own start item, as the target parser built it.
+  * the target's own start item, as the target parser built it;
+  * an implicit (ticket #416): `Item.build(..., implicits=(ImplicitMod(mod id, grade, values),))` with the grade the planner gives
+    it (`eldritch_grade` of an Eldritch mod, 0 for an implicit of the base), the way the target parser builds a start implicit;
+  * a quality (#416): `Item.build(..., quality=Quality(CatalystType(type), percent))`, or `PlainQuality(percent)`;
+An influence is not probed: it is a start input of the target, not a condition on the finished item (decided on #444).
 
 Then the planner's verdict is `Target.unmet(item)` (the goal check) for the node, and the oracle's is `Oracle.node_met` on
-the same mods, given only as ids and values.
+the same mods, given only as ids and values; for an implicit or the quality it is the same `unmet` against `Oracle.implicit_met` /
+`quality_met`.
 """
 
 import random
@@ -25,7 +30,17 @@ from crafting_system.actions import BenchCraft
 from crafting_system.actions.errors import ActionError, NotApplicableError, OutOfScopeError
 from crafting_system.actions.outcomes import retained_item
 from crafting_system.actions.pool import tiers_of
-from crafting_system.items import ExplicitMod, Item, ItemError, Rarity
+from crafting_system.items import (
+    CatalystType,
+    ExplicitMod,
+    ImplicitMod,
+    Item,
+    ItemError,
+    PlainQuality,
+    Quality,
+    Rarity,
+    eldritch_grade,
+)
 from crafting_system.targets import load_target
 
 REPO = Path(__file__).resolve().parents[1]
@@ -76,10 +91,12 @@ class Result:
     disagreements: list[Disagreement] = None
     skipped: list[str] = None
     unjudged: tuple[str, ...] = ()
+    met_paths: set[str] = None  # the implicit and quality requirements (#416) that some probe met on both sides
 
     def __post_init__(self) -> None:
         self.disagreements = [] if self.disagreements is None else self.disagreements
         self.skipped = [] if self.skipped is None else self.skipped
+        self.met_paths = set() if self.met_paths is None else self.met_paths
 
 
 KNOWN_FILE = REPO / "tests" / "fixtures" / "goal_oracle_known.txt"
@@ -160,8 +177,30 @@ def combine(data, first: Item, second: Item) -> Item:
 
 
 def oracle_item(item: Item) -> g.OItem:
-    """The item as the oracle sees it: mod ids, values and the fractured flag; no tier, no crafted flag."""
-    return g.OItem(tuple(g.OMod(m.mod_id, m.values, m.fractured) for m in item.mods))
+    """The item as the oracle sees it: mod ids, values and the fractured flag; no tier, no crafted flag, no implicit grade."""
+    quality = None if item.quality is None else g.OQuality(None if item.quality.type is None else item.quality.type.value, item.quality.percent)
+    return g.OItem(
+        tuple(g.OMod(m.mod_id, m.values, m.fractured) for m in item.mods),
+        tuple(g.OImplicit(entry.mod_id, entry.values) for entry in item.implicits),
+        quality,
+    )
+
+
+def base_item(data, target) -> Item:
+    return Item.build(data, base_id=target.base_id, item_level=target.item_level, rarity=Rarity.RARE, influences=target.influences)
+
+
+def implicit_item(data, target, probe: g.ImplicitProbe) -> Item:
+    """A rare item of the target's base holding one implicit; the grade is the planner's (`eldritch_grade`, 0 for the base's own)."""
+    mod = data.mods[probe.mod_id]
+    grade = 0 if probe.mod_id in data.base_items[target.base_id].implicits else (eldritch_grade(mod) or 0)
+    return base_item(data, target).changed(data, implicits=(ImplicitMod(probe.mod_id, grade, probe.values),))
+
+
+def quality_item(data, target, probe: g.QualityProbe) -> Item:
+    """A rare item of the target's base holding catalyst quality of a type, or plain quality; `ValueError` for a type the planner lacks."""
+    held = PlainQuality(probe.percent) if probe.type is None else Quality(CatalystType(probe.type), probe.percent)
+    return base_item(data, target).changed(data, quality=held)
 
 
 def compare_target(data, export: g.Export, stem: str) -> Result:
@@ -220,4 +259,43 @@ def compare_target(data, export: g.Export, stem: str) -> Result:
                     judge(index, f"{probe.path} | {probe.label} + {other_path} | {anchor.label}", item)
         if target.start_item.mods:
             judge(index, "start item", target.start_item)
+    compare_other_kinds(data, export, stem, target, spec, oracle, result)
     return result
+
+
+def compare_other_kinds(data, export: g.Export, stem: str, target, spec: g.OracleTarget, oracle: g.Oracle, result: Result) -> None:
+    """The implicits and the quality of the target (#416): the probes of the oracle against the planner's goal check."""
+
+    def record(path: str, label: str, planner: bool, verdict: bool) -> None:
+        result.probes += 1
+        result.met += planner and verdict
+        if planner and verdict:
+            result.met_paths.add(path)
+        if planner != verdict:
+            result.disagreements.append(Disagreement(stem, path, label, planner, verdict))
+
+    def build(path: str, label: str, make):
+        try:
+            return make()
+        except (ActionError, ItemError, ValueError) as problem:
+            result.skipped.append(f"{path} {label}: the planner cannot make it ({type(problem).__name__})")
+            return None
+
+    def judge_condition(path: str, label: str, item: Item, condition, verdict) -> None:
+        record(path, label, not any(unmet is condition for unmet in target.unmet(item)), verdict(oracle_item(item)))
+
+    for index, req in enumerate(spec.implicits):
+        if req.corrupted:  # not judged (OR-29): the target's `unjudged` says so
+            continue
+        condition = target.implicits[index]
+        for probe in g.implicit_probes(export, spec):
+            if probe.path == req.path and (item := build(probe.path, probe.label, lambda: implicit_item(data, target, probe))) is not None:
+                judge_condition(req.path, f"{probe.path} | {probe.label}", item, condition, lambda o: oracle.implicit_met(req, o))
+        judge_condition(req.path, "start item", target.start_item, condition, lambda o: oracle.implicit_met(req, o))
+
+    if spec.quality is not None:
+        condition = target.quality
+        for probe in g.quality_probes(export, spec):
+            if (item := build(probe.path, probe.label, lambda: quality_item(data, target, probe))) is not None:
+                judge_condition(probe.path, f"{probe.path} | {probe.label}", item, condition, lambda o: oracle.quality_met(spec.quality, o.quality))
+        judge_condition(spec.quality.path, "start item", target.start_item, condition, lambda o: oracle.quality_met(spec.quality, o.quality))

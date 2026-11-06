@@ -2,6 +2,7 @@
 # <target> :: <top-level requirement> :: <probe>, a tab, the direction. Their classes, issues and rules are in
 # tests/test_goal_oracle_comparison.py (KNOWN). The comparison test fails on any difference, in either direction.
 # When a rebuild fixes a class, delete its lines and its KNOWN entry.
+# Ticket #416: the implicit and quality probes found no disagreement; influence is a start input of a target, not probed (#444).
 r05-strength-ring :: requirements[2] :: requirements[2].of[0] | bench EinharMasterIncreasedLife2 high	planner=met oracle=not-met
 r05-strength-ring :: requirements[2] :: requirements[2].of[0] | bench EinharMasterIncreasedLife2 low	planner=met oracle=not-met
 r05-strength-ring :: requirements[2] :: requirements[2].of[0] | bench EinharMasterIncreasedLife3 high	planner=met oracle=not-met

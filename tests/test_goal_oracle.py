@@ -39,6 +39,36 @@ def mod(mod_id, group, side, level, low, high, *, domain="item", spawn=(("ring",
     }
 
 
+PRESENCE_STAT = "local_influence_mod_requires_unique_monster_presence"
+
+
+def implicit(mod_id, group, generation_type, stats, text, *, domain="item", spawn=(("default", 0),)):
+    """An implicit mod of the tiny export: `stats` is a list of (stat id, low, high)."""
+    return {
+        "domain": domain,
+        "generation_type": generation_type,
+        "groups": [group],
+        "type": group,
+        "required_level": 1,
+        "spawn_weights": [{"tag": tag, "weight": weight} for tag, weight in spawn],
+        "stats": [{"id": stat, "min": low, "max": high} for stat, low, high in stats],
+        "text": text,
+        "is_essence_only": False,
+    }
+
+
+def eldritch(mod_id, low, high, *, presence=False, side="searing_exarch_implicit", boots=700):
+    stats = [("base_shock", low, high)] + ([(PRESENCE_STAT, 1, 1)] if presence else [])
+    return implicit(mod_id, "ShockAvoid", side, stats, f"({low}-{high})% chance to Avoid being Shocked", spawn=(("boots", boots), ("default", 0)))
+
+
+def catalyst(name, description):
+    return {"name": name, "item_class": "StackableCurrency", "tags": ["currency"], "domain": "undefined", "properties": {"description": description}}
+
+
+BOOTS = "Metadata/Items/Armours/Boots/TestBoots"
+
+
 def tiny_export() -> g.Export:
     mods = {
         "Life1": mod("Life1", "Life", "prefix", 1, 10, 19),
@@ -54,9 +84,28 @@ def tiny_export() -> g.Export:
         "Gem1": mod("Gem1", "Gem", "suffix", 1, 1, 1, stat="gem_level", text="+1 to Level of all Test Gems"),
         "Gem2": mod("Gem2", "Gem", "suffix", 50, 2, 2, stat="gem_level", text="+2 to Level of all Test Gems"),
         "LifeRoyale": mod("LifeRoyale", "Life", "prefix", 90, 60, 69),  # a Battle Royale copy: never natural
+        # implicits (#416): the ring's own, an Eldritch family of three grades on boots, and its Unique-Presence variant of grade 2
+        "RingImplicit1": implicit("RingImplicit1", "RingResist", "unique", [("base_res", 5, 10)], "+(5-10)% to all Elemental Resistances", spawn=()),
+        "ShockEldritchImplicit1": eldritch("ShockEldritchImplicit1", 33, 35),
+        "ShockEldritchImplicit2": eldritch("ShockEldritchImplicit2", 36, 38),
+        "ShockEldritchImplicit3": eldritch("ShockEldritchImplicit3", 39, 41),
+        "ShockEldritchImplicitUniquePresence2": eldritch("ShockEldritchImplicitUniquePresence2", 45, 47, presence=True),
+        "ShockEldritchImplicitRoyale3": eldritch("ShockEldritchImplicitRoyale3", 39, 41),  # a Battle Royale copy: never a candidate
+        "ShockCorruption": implicit("ShockCorruption", "ShockCorrupt", "corrupted", [("base_shock", 10, 20)], "(10-20)% chance to Avoid being Shocked"),
+        "EaterWeight0": eldritch("EaterWeight0", 10, 12, side="eater_of_worlds_implicit", boots=0),  # weight 0 on boots: not a candidate
     }
     bases = {
-        RING: {"name": "Test Ring", "tags": ["ring", "default"], "item_class": "Ring", "domain": "item", "release_state": "released"},
+        RING: {
+            "name": "Test Ring", "tags": ["ring", "default"], "item_class": "Ring", "domain": "item", "release_state": "released",
+            "implicits": ["RingImplicit1"],
+        },
+        BOOTS: {
+            "name": "Test Boots", "tags": ["boots", "default"], "item_class": "Boots", "domain": "item", "release_state": "released",
+            "implicits": [],
+        },
+        "Metadata/Items/Currency/Intrinsic": catalyst("Intrinsic Catalyst", "Adds quality that enhances Attribute modifiers on a ring, amulet or belt\nReplaces other quality types"),
+        "Metadata/Items/Currency/Abrasive": catalyst("Abrasive Catalyst", "Adds quality that enhances Attack modifiers on a ring, amulet or belt\nReplaces other quality types"),
+        "Metadata/Items/Currency/Tainted": catalyst("Tainted Catalyst", "Applies a random quality type and amount of quality to a Corrupted ring, amulet or belt"),
     }
     bench = [
         {"actions": {"add_explicit_mod": "LifeCraftLow"}, "item_classes": ["Ring", "Amulet"]},
@@ -280,15 +329,170 @@ def test_the_probes_of_a_requirement():
     assert any(p.kind == "essence" and p.mod_id == "LifeEssence" and p.role == "named" for p in named)
 
 
+# --- implicits, quality and influence (#416) -------------------------------------------------------------------------------
+#
+# The tiny export has the ring's own implicit RingImplicit1 (+(5-10)%, family RingResist), and for the boots an Eldritch family
+# ShockEldritchImplicit1..3 (33-35, 36-38, 39-41; grade = the digit), its Unique-Presence variant of grade 2 (45-47 and a Presence stat),
+# a Battle Royale copy, a corrupted mod and a mod of weight 0 on boots. Intrinsic and Abrasive Catalysts add quality on a ring, amulet
+# or belt; the Tainted Catalyst "applies a random quality type".
+
+SHOCK_TEXT = '  - stat: "#% chance to Avoid being Shocked"\n'
+
+
+def boots_target(implicits: str = "", extra: str = "", influence: str = "[]") -> g.OracleTarget:
+    block = f"implicits:\n{implicits}" if implicits else ""
+    return g.OracleTarget.from_text(f"base: Test Boots\nitem_level: 70\ninfluence: {influence}\n{extra}{block}requirements:\n  - family: Life\n")
+
+
+def implicit_ok(spec: g.OracleTarget, mod_id: str, values: tuple[int, ...], index: int = 0) -> bool:
+    return g.Oracle(tiny_export(), spec).implicit_counts(spec.implicits[index], g.OImplicit(mod_id, values))
+
+
+def test_the_implicit_candidates_of_a_base_are_its_own_and_the_eldritch_mods_that_spawn_on_its_tags():
+    export = tiny_export()
+    assert export.implicit_candidates(RING) == ["RingImplicit1"]
+    # boots: no own implicit; the three grades and the Presence variant spawn on `boots`; the Royale copy, the corrupted mod and the weight-0 mod do not
+    assert export.implicit_candidates(BOOTS) == [
+        "ShockEldritchImplicit1", "ShockEldritchImplicit2", "ShockEldritchImplicit3", "ShockEldritchImplicitUniquePresence2",
+    ]  # fmt: skip
+
+
+def test_an_implicit_selector_counts_a_mod_by_family_or_text_and_only_a_mod_of_the_base():
+    ring = target(LIFE, extra="implicits:\n  - family: RingResist\n")
+    assert implicit_ok(ring, "RingImplicit1", (7,))
+    assert not implicit_ok(ring, "ShockEldritchImplicit1", (34,))  # an Eldritch mod does not spawn on a ring's tags
+    by_text = boots_target(SHOCK_TEXT)
+    for grade, roll in ((1, 34), (2, 37), (3, 40)):
+        assert implicit_ok(by_text, f"ShockEldritchImplicit{grade}", (roll,))
+    by_family = boots_target("  - family: ShockAvoid\n")
+    assert implicit_ok(by_family, "ShockEldritchImplicit2", (37,))
+    # not a mod of this base: a Battle Royale copy, a corrupted mod with the same text, a mod of weight 0 on boots
+    for other in ("ShockEldritchImplicitRoyale3", "ShockCorruption", "EaterWeight0"):
+        assert not implicit_ok(by_text, other, (11,))
+    assert not implicit_ok(by_text, "RingImplicit1", (7,))
+
+
+def test_or2_a_presence_variant_is_counted_only_when_mod_names_it():
+    plain = boots_target(SHOCK_TEXT)
+    variant = ("ShockEldritchImplicitUniquePresence2", (46, 1))
+    assert tiny_export().is_presence_variant(variant[0]) and not tiny_export().is_presence_variant("ShockEldritchImplicit2")
+    assert not implicit_ok(plain, *variant)
+    assert not implicit_ok(boots_target("  - family: ShockAvoid\n"), *variant)
+    named = boots_target(SHOCK_TEXT + f"    mod: {variant[0]}\n")
+    assert implicit_ok(named, *variant)
+    assert not implicit_ok(named, "ShockEldritchImplicit2", (37,))  # `mod:` is exactly that mod, no other grade of the family
+
+
+def test_or4_an_implicit_min_roll_is_a_roll_with_no_grade_and_min_grade_is_the_lowest_grade():
+    roll = boots_target(SHOCK_TEXT + "    min_roll: 40\n")
+    assert implicit_ok(roll, "ShockEldritchImplicit3", (40,)) and implicit_ok(roll, "ShockEldritchImplicit3", (41,))
+    assert not implicit_ok(roll, "ShockEldritchImplicit3", (39,))  # one below the roll
+    assert not implicit_ok(roll, "ShockEldritchImplicit2", (38,))  # no grade can make up for the roll
+    assert not implicit_ok(roll, "ShockEldritchImplicit3", ())  # one value per stat
+    grade = boots_target(SHOCK_TEXT + "    min_grade: 3\n")
+    assert implicit_ok(grade, "ShockEldritchImplicit3", (39,))
+    assert not implicit_ok(grade, "ShockEldritchImplicit2", (38,))
+    both = boots_target(SHOCK_TEXT + "    min_grade: 2\n    min_roll: 37\n")
+    assert implicit_ok(both, "ShockEldritchImplicit2", (37,)) and not implicit_ok(both, "ShockEldritchImplicit2", (36,))
+    ring = target(LIFE, extra="implicits:\n  - family: RingResist\n    min_grade: 1\n")
+    assert not implicit_ok(ring, "RingImplicit1", (10,))  # an implicit of the base has grade 0
+    listed = target(LIFE, extra="implicits:\n  - family: RingResist\n    min_roll: [8]\n")
+    assert implicit_ok(listed, "RingImplicit1", (8,)) and not implicit_ok(listed, "RingImplicit1", (7,))
+
+
+def test_an_implicit_counts_only_when_the_item_lists_it_and_every_entry_is_asked():
+    spec = target(LIFE, extra="implicits:\n  - family: RingResist\n  - family: ShockAvoid\n")
+    oracle = g.Oracle(tiny_export(), spec)
+    assert not oracle.implicit_met(spec.implicits[0], g.OItem(()))  # a base implicit the item does not list is absent
+    both = g.OItem((), (g.OImplicit("RingImplicit1", (6,)),))
+    assert oracle.implicit_met(spec.implicits[0], both) and not oracle.implicit_met(spec.implicits[1], both)
+
+
+def test_the_grade_is_the_digit_that_ends_an_eldritch_id():
+    export = tiny_export()
+    assert [export.implicit_grade(f"ShockEldritchImplicit{n}") for n in (1, 2, 3)] == [1, 2, 3] and export.implicit_grade("RingImplicit1") == 0
+    export.mods["ShockEldritchImplicitX"] = eldritch("ShockEldritchImplicitX", 1, 2)
+    with pytest.raises(ValueError, match="grade digit"):
+        export.implicit_grade("ShockEldritchImplicitX")
+
+
+def test_the_catalyst_types_are_the_currencies_that_add_quality_and_the_classes_they_name():
+    assert tiny_export().catalyst_types() == {"intrinsic": {"ring", "amulet", "belt"}, "abrasive": {"ring", "amulet", "belt"}}  # no Tainted
+
+
+def test_quality_of_the_wanted_catalyst_type_and_at_least_the_percent():
+    spec = target(LIFE, extra="quality: {type: Intrinsic, min_percent: 20}\n")
+    oracle, wanted = g.Oracle(tiny_export(), spec), spec.quality
+    assert wanted == g.OQualityReq("intrinsic", 20)  # the type is read as lower case
+    assert oracle.quality_met(wanted, g.OQuality("intrinsic", 20)) and oracle.quality_met(wanted, g.OQuality("intrinsic", 25))
+    assert not oracle.quality_met(wanted, g.OQuality("intrinsic", 19))
+    assert not oracle.quality_met(wanted, g.OQuality("abrasive", 20))  # another catalyst
+    assert not oracle.quality_met(wanted, g.OQuality(None, 20))  # plain quality is another kind
+    assert not oracle.quality_met(wanted, None)
+    plain = target(LIFE, extra="quality: {min_percent: 20}\n")
+    assert plain.quality == g.OQualityReq(None, 20)
+    assert g.Oracle(tiny_export(), plain).quality_met(plain.quality, g.OQuality(None, 20))
+    assert not g.Oracle(tiny_export(), plain).quality_met(plain.quality, g.OQuality("intrinsic", 20))
+
+
+def test_the_whole_target_needs_the_explicit_mods_the_implicits_and_the_quality_and_does_not_judge_influence():
+    """`influence:` is a start input (decided on #416 and #444): it finds the mods that can spawn, and the item carries no influence to judge."""
+    spec = g.OracleTarget.from_text(
+        "base: Test Ring\nitem_level: 70\ninfluence: [hunter]\nrequirements:\n  - family: Life\n"
+        "implicits:\n  - family: RingResist\n    min_roll: 8\nquality: {type: intrinsic, min_percent: 20}\n"
+    )
+    oracle = g.Oracle(tiny_export(), spec)
+    good = g.OItem((g.OMod("Life3", (39,)),), (g.OImplicit("RingImplicit1", (9,)),), g.OQuality("intrinsic", 20))
+    assert oracle.target_met(good)  # nothing about the Hunter influence is asked of the finished item
+    assert not hasattr(oracle, "influence_met") and not hasattr(good, "influences")
+    assert not oracle.target_met(g.OItem((g.OMod("Life2", (29,)),), good.implicits, good.quality))  # a mod below the top tier
+    assert not oracle.target_met(g.OItem(good.mods, (g.OImplicit("RingImplicit1", (7,)),), good.quality))
+    assert not oracle.target_met(g.OItem(good.mods, good.implicits, g.OQuality("intrinsic", 19)))
+    assert not oracle.target_met(g.OItem(good.mods, good.implicits, None))
+
+
+def test_the_probes_of_an_implicit():
+    spec = boots_target(SHOCK_TEXT + "    min_roll: 40\n")
+    probes = {(p.mod_id, p.values): p.label for p in g.implicit_probes(tiny_export(), spec)}
+    for grade, low, high in ((1, 33, 35), (2, 36, 38), (3, 39, 41)):
+        assert (f"ShockEldritchImplicit{grade}", (low,)) in probes and (f"ShockEldritchImplicit{grade}", (high,)) in probes
+    # the Presence variant is probed (the oracle says it does not count), the mods that are not the base's are not
+    assert ("ShockEldritchImplicitUniquePresence2", (45, 1)) in probes
+    assert not any(mod_id in {"ShockEldritchImplicitRoyale3", "ShockCorruption", "EaterWeight0", "RingImplicit1"} for mod_id, _ in probes)
+    # a roll one below and at the min_roll, on the grade whose range holds it
+    assert ("ShockEldritchImplicit3", (39,)) in probes and ("ShockEldritchImplicit3", (40,)) in probes
+    assert not any(label.endswith("min_roll[0]=40") for (mod_id, _), label in probes.items() if mod_id == "ShockEldritchImplicit2")
+    assert g.implicit_probes(tiny_export(), boots_target()) == []
+
+
+def test_the_probes_of_the_quality():
+    ring = target(LIFE, extra="quality: {type: intrinsic, min_percent: 20}\n")
+    probes = {(p.type, p.percent) for p in g.quality_probes(tiny_export(), ring)}
+    assert probes == {(kind, percent) for kind in ("intrinsic", "abrasive") for percent in (1, 19, 20)}  # every catalyst type, one below and at the percent
+    boots_plain = boots_target(extra="quality: {min_percent: 20}\n")
+    assert {(p.type, p.percent) for p in g.quality_probes(tiny_export(), boots_plain)} == {(None, 1), (None, 19), (None, 20)}
+    boots_catalyst = boots_target(extra="quality: {type: intrinsic, min_percent: 20}\n")
+    assert g.quality_probes(tiny_export(), boots_catalyst) == []  # boots take no catalyst: nothing could be built, and the leaf shows as unmet
+    assert g.quality_probes(tiny_export(), target(LIFE)) == []
+
+
+
 # --- what the oracle does not judge ---------------------------------------------------------------------------------------
 
 
 def test_the_keys_the_oracle_does_not_judge_are_listed():
     plain = target(LIFE)
     assert plain.unjudged == ()
-    more = target(LIFE, extra="implicits: []\nquality: {type: intrinsic, min_percent: 20}\nsockets: {count: 6}\nenchantment: {any_of: []}\nallow_corrupted: true\n")
-    assert set(more.unjudged) == {"implicits", "quality", "sockets", "enchantment", "allow_corrupted"}
+    more = target(LIFE, extra="sockets: {count: 6}\nenchantment: {any_of: []}\nallow_corrupted: true\n")
+    assert set(more.unjudged) == {"sockets", "enchantment", "allow_corrupted"}
     assert set(more.unjudged) == set(g.UNJUDGED_KEYS)
+    # implicits and quality are judged now (#416), so their keys are not listed; a corrupted implicit is listed, by its path
+    judged = target(LIFE, extra="implicits:\n  - family: RingResist\nquality: {type: intrinsic, min_percent: 20}\n")
+    assert judged.unjudged == () and len(judged.implicits) == 1 and judged.quality == g.OQualityReq("intrinsic", 20)
+    corrupted = target(LIFE, extra="implicits:\n  - family: RingResist\n  - family: ShockCorrupt\n    corrupted: true\n")
+    assert corrupted.unjudged == ("implicits[1].corrupted",)
+    with pytest.raises(NotImplementedError, match="corrupted implicit is not judged"):
+        g.Oracle(tiny_export(), corrupted).implicit_counts(corrupted.implicits[1], g.OImplicit("ShockCorruption", (15,)))
 
 
 # --- reading and normalising ----------------------------------------------------------------------------------------------
