@@ -136,6 +136,8 @@ def tier_lines(
             outcomes = ab._prepare(state, action).outcomes
         except ActionError:
             continue
+        finally:
+            ab._prepared_by.clear()  # a policy of thousands of states must not keep a pool for each (the walk clears it after each state too)
         signature = _signature(outcomes)
         if signature is None:
             chance = _added(outcomes, ids)
