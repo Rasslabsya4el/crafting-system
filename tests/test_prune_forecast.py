@@ -57,7 +57,7 @@ def world(real):
     """The reduced boots world: a start item with a fractured mod, 120 fossil sets and the Chaos Orb, two top-tier mods wanted."""
     data = world_data(real, FAMILIES)
     item = Item.build(data, base_id=BASE, item_level=LEVEL, rarity=Rarity.RARE, mods=(rolled(data, FRACTURED, fractured=True),))
-    target = Target(BASE, LEVEL, frozenset(), goals(data)["two-top-tier"], item)
+    target = Target(BASE, LEVEL, frozenset(), goals(data)["two-top-tier"], item, start=StartKind.GIVEN)
     offers = offers_of(data, item, fossil_sets(data, item)[:120])
     prices = made_up_prices(data, "Orb of Alteration", "Orb of Scouring")
     abstraction = Abstraction(data, Goal.from_target(target), BASE, LEVEL)

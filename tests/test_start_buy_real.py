@@ -50,8 +50,8 @@ WINDOWS = {  # (item level, highest item level with the same pool)
 }
 # The entries priced for another item than the one the target computes (a price file entry keeps the body it was priced with).
 OTHER_ITEM = {
-    "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06, anonymous; the query itself is #514): the bought start item has no price, so none is written",
-    "r06-strength-heavy-belt": "#483 the exact item has 0 listings (searched on 2026-11-06, anonymous; a normal item cannot carry an influence, #515): the bought start item has no price, so none is written",
+    "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06; the query itself is #514): the bought start item has no price, so none is written",
+    "r06-strength-heavy-belt": "#483 the exact item has 0 listings (searched on 2026-11-06; a normal item cannot carry an influence, #515): the bought start item has no price, so none is written",
     "r05-strength-ring": "#483 the exact item has 0 listings: the stored price is for any ring of item level 75 or more",
     "r10-fractured-boots": "#483 the exact item has 9 listings (rail 10): the stored price is for item level 84 or more",
     "r10-fractured-boots-70-life": "#483 the exact item has 9 listings (rail 10): the stored price is for item level 84 or more",
@@ -211,11 +211,12 @@ def test_every_example_target_says_in_its_own_text_how_its_start_item_is_had(ste
     assert "buys_start_item" not in text
 
 
-def test_a_given_start_item_names_its_reason_in_a_comment_that_quotes_the_guide():
+def test_a_given_start_item_names_its_reason_in_a_comment_and_does_not_call_it_a_guide_quote():
     text = (TARGETS / "j01-cobalt-life-attack-speed.yaml").read_text(encoding="utf-8")
 
     comment = text[text.index("# How the start item is had") : text.index("start: given")]
     assert "you already have the item" in comment and "what you hold after you scour a rare jewel" in comment
+    assert "No guide exists" in comment and "own reading, not a quotation" in comment  # #201 holds no such sentence
 
 
 @pytest.mark.parametrize(("stem", "guide_words"), [("r03-avoid-shock-boots", "Get suppression fracture boot"), ("r06-strength-heavy-belt", "Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt")])

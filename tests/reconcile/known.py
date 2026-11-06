@@ -11,8 +11,8 @@ Every entry names the issue that holds the work (OR-29: a finding is an issue, n
 in a start price (R08, R09), OR-7 where a stand-in stands for a trade price.
 
     #484  rebuild 3b: the stored and written tier of a start mod goes (the R12 start amulet)
-    #417  the buy spec and the target describe different start items (left: the price entries of R08 and R09 are of a normal base plus a
-          typed Alchemy, OR-16; the spec is computed from the target since #474, so the buy rows are gone)
+    #417  (closed) the buy spec and the target described different start items; the spec is computed from the target since #474
+    #494  point 2: the price entries of R08 and R09 are of a normal base plus a typed Alchemy, OR-16 (what was left of #417)
     #418  the start price is keyed by base name, not base id (the key says the base since #474; rows moved to #483 and #486)
     #425  R04's price is for item level 85 against 81; V01's hand price records no level
     #426  R04, R13, V01 start prices are poe.ninja or hand stand-ins
@@ -62,8 +62,8 @@ KNOWN: dict[tuple[str, str], Known] = _known(
         ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
         ("r05-strength-ring", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any ring; the exact item has no market (0 listings)", "Amethyst Ring", "any accessory.ring"),
         ("r05-strength-ring", "price.pool"): ("#483", "OR-3", "the price entry accepts the Unset Ring and the Bone Ring; the exact item has no market", "Amethyst Ring", f"{_RING}Ring15 (+3 -0); {_RING}Ring16 (+23 -0)"),
-        ("r08-energy-shield-boots", "price.rarity"): ("#417", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2)", "rare", "normal"),
-        ("r09-life-boots", "price.rarity"): ("#417", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2)", "rare", "normal"),
+        ("r08-energy-shield-boots", "price.rarity"): ("#494", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2, was #417)", "rare", "normal"),
+        ("r09-life-boots", "price.rarity"): ("#494", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2, was #417)", "rare", "normal"),
         ("r09-life-boots", "price.base"): ("#483", "OR-3", "the price entry is by a name that three bases share: it was taken for any of them, the computed query now asks for BootsAtlas1's implicit", f"{_ATLAS}BootsAtlas1", f"{_ATLAS}BootsAtlas1, {_ATLAS}BootsAtlas2, {_ATLAS}BootsAtlas3"),
         ("r09-life-boots", "price.pool"): ("#483", "OR-3", "the price entry accepts BootsAtlas2 and BootsAtlas3 (taken for any of the three)", "Two-Toned Boots", f"{_ATLAS}BootsAtlas2 (+45 -62); {_ATLAS}BootsAtlas3 (+45 -45)"),
         ("r12-lightning-amulet", "start_mod.LightningResist2.tier"): ("#484", "OR-3", "written tier 3, the data says tier 7 of 8", "3", "7"),

@@ -1,5 +1,5 @@
 {
-  "_about": "Searches of the bought start items of R03 and R06 (#505), anonymous, no session, through the trade limiter (crafting_system.prices.trade_http), league Allflame, 2026-11-06. 3 search requests, no fetch (a search with fewer listings than the rail of 10 prices nothing). Every answer was 0 listings, so no price is written (OR-6, #483).",
+  "_about": "Searches of the bought start items of R03 and R06 (#505), sent by the project's trade client (crafting_system.prices.trade_http, its rate limiter) to league Allflame on 2026-11-06 with no session cookie passed. 3 search requests, no fetch (a search with fewer listings than the rail of 10 prices nothing). Every answer was 0 listings, so no price is written (OR-6, #483). The response headers were not kept, unlike the older fixtures here (headers_*.json).",
   "r06-strength-heavy-belt": {
     "key": "Heavy Belt, normal, item level 75, Hunter influence",
     "date": "2026-11-06",
