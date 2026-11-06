@@ -227,7 +227,7 @@ is the **view** `tests/golden_diff.py` makes of them, and the same view is used 
   continuation starting with `~`, so no line of the view is long.
 - **A failing golden test** prints that view as a unified diff (`-` is the golden file, `+` what the test produced), at most 120
   lines. Every comparison with a golden file goes through `golden_diff.check` (bytes) or `golden_diff.check_objects` (parsed values):
-  `assert_golden` and `assert_golden_json`, the V01 JSON, the risk and B1 fingerprints, `plans_118.json`, `reachability.md`. The scalar
+  `assert_golden` and `assert_golden_json`, the V01 JSON, the risk and B1 fingerprints, `plans_118.json` (its `start`, `mean_remaining` and `policy` fields; its `states` count is a plain bound, `<=` or `==`), `reachability.md`. The scalar
   numbers of `packed_values.json` are compared by `check_objects(..., rel=1e-9)` in the heavy tests (the tolerance `approx` had), and
   they fail with the same title and diff. When the bytes differ but the view is equal, the message says the readable view is equal and
   the bytes differ (case, entity, encoding, key order or whitespace), and shows the first differing characters.
@@ -245,9 +245,9 @@ real game data is taken from where it is made, since a PC without the cache cann
 `UPDATE_GOLDEN=1` is set, and `tests/test_cli_routes_real.py` makes them on a runner or machine that has the real game data in its
 cache (`CRAFTING_CACHE_DIR`). Regenerate them through a heavy run that copies the three files into `$OUT_DIR`, with this command (`BRANCH` is the branch to run):
 
-    python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest tests/test_cli_routes_real.py -k route_view_page_is_the_golden_file -q; cp tests/golden/real_r05.html tests/golden/real_r10.html tests/golden/real_r11.html "$OUT_DIR"/'
+    python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest tests/test_cli_routes_real.py -k route_view_page_is_the_golden_file -q && cp tests/golden/real_r05.html tests/golden/real_r10.html tests/golden/real_r11.html "$OUT_DIR"/'
 
-Then commit them after reading the diff. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
+`gh run download <run id>` puts the pages in `run-ubuntu-latest-1/`, and you copy them over `tests/golden/real_r05.html`, `real_r10.html` and `real_r11.html`, read the diff, then commit. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
 
 ## Keeping the shards balanced
 
