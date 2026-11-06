@@ -23,7 +23,7 @@ from crafting_system.items import Influence, Item, Rarity, natural_tiers
 
 REPO = Path(__file__).resolve().parents[1]
 TARGETS_DIR = REPO / "examples" / "targets"
-BUY_DIR = REPO / "examples" / "buy"
+BUY_DIR = REPO / "tests" / "reconcile" / "derived_specs"  # the buy specs the planner computes from the targets (#474)
 
 
 def _yaml_files(folder):
@@ -76,7 +76,7 @@ def planner_tiers(data, base_id, influences):
 
 def test_the_independent_ladder_and_the_planner_tiers_are_the_same_on_every_benchmark_base(planner, raw):
     subjects = benchmark_subjects(raw.bases)
-    assert len({base_id for base_id, _ in subjects}) > 100  # the category-only buy specs accept 16 rings and 88 amulets
+    assert len({base_id for base_id, _ in subjects}) >= 11  # the bases of the 14 targets and of their computed buy specs
     assert sum(1 for _, influences in subjects if influences) == 2  # the Hunter belt and the Hunter bow
     compared, differences = 0, []
     for base_id, influences in subjects:
@@ -91,5 +91,5 @@ def test_the_independent_ladder_and_the_planner_tiers_are_the_same_on_every_benc
             wrong = {m for m in ours.keys() & independent.keys() if ours[m] != independent[m]}
             differences.append((base_id, sorted(influences), sorted(ours.keys() - independent.keys())[:3], sorted(independent.keys() - ours.keys())[:3], sorted(wrong)[:3]))
 
-    assert compared > 20_000  # not vacuous: 28,061 mod tiers on 116 bases
+    assert compared > 1_000  # not vacuous
     assert differences == []
