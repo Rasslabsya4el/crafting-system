@@ -15,7 +15,6 @@ published odds (13% and 20%, `tests/test_cli_r04_r14_real.py`) on the guide's tw
 """
 
 import os
-import time
 from pathlib import Path
 
 import pytest
@@ -56,10 +55,7 @@ def plan(data, route_id):
 
 @pytest.fixture(scope="module")
 def section(plan, data):
-    began = time.perf_counter()
-    built = build_section(route_input(plan), data)
-    print(f"\npage: {len(built.rows)} rows in {time.perf_counter() - began:.1f} s")
-    return built
+    return build_section(route_input(plan), data)  # how long it takes is measured by `.github/scripts/page_size.py`, not by a test
 
 
 @HEAVY
@@ -91,11 +87,9 @@ def test_no_step_prints_two_lines_that_read_alike(section):
 
 @HEAVY
 def test_the_visits_of_the_item_states_are_solved_and_add_up_to_the_mean_cost_of_the_plan(plan):
-    began = time.perf_counter()
     flow = flow_of(chain_of_packed_policy(plan.policy))
-    print(f"\nflow: {len(flow.steps)} steps in {time.perf_counter() - began:.1f} s")
 
-    assert flow.measured  # solved to a residual of 1e-9; otherwise the page says so on the goal card and on each step it applies to
+    assert flow.measured  # solved to a residual of 1e-9; otherwise a `Limit` says so (`flow_limits`) and each step it applies to
     total = sum(step.uses * step.cost for step in flow.steps if step.uses is not None)
     assert total == pytest.approx(plan.mean_remaining, rel=1e-6)  # the same mean the solver certified, from the sparse solve of the visits
 

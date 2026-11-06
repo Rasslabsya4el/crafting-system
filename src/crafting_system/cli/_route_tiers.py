@@ -122,7 +122,7 @@ def tier_lines(
 ) -> list[TierLine]:
     """The tier line of every wanted family that `action` can add at some of `states`, mixed by `weights`; none when it adds none.
 
-    Raises nothing for a state the action refuses (`ActionError`): it contributes no chance.
+    The policy takes `action` at each of `states`, so the game does not refuse it there.
     """
     families = wanted_families(ab)
     if not families:
@@ -137,10 +137,8 @@ def tier_lines(
     for state, weight in zip(states, weights, strict=True):
         if weight <= 0.0:
             continue
-        try:
+        try:  # the policy takes this action at this state, so the game does not refuse it here: a refusal would be a defect, not a state to skip
             outcomes = ab._prepare(state, action).outcomes
-        except ValueError:  # ActionError (the action is refused here) and the other refusals of an item: no chance from this state
-            continue
         finally:
             ab._prepared_by.clear()  # a policy of thousands of states must not keep a pool for each (the walk clears it after each state too)
         signature = _signature(outcomes)
