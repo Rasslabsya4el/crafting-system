@@ -28,6 +28,10 @@ stale (ADR-0061 decision 2, ticket #357).
 
 The setting `price_gap_percent` (same table, a number above zero, default 20) is the gap between the trade price and the poe.ninja
 price above which the answer flags it; 20 means 20%.
+
+The setting `review_ratio` (table `[benchmark]`, a number above 0 and at most 1, default 0.5, ticket #554) is the review line of `benchmark`:
+a route whose planner mean is below this share of the guide's mean prints a "needs a human" row. It is a prompt for a person to look,
+never a cut of the search or a verdict (OR-12).
 """
 
 import math
@@ -64,6 +68,7 @@ class Config:
     max_imprints: int = 1
     price_source: str = "both"
     price_gap_percent: float = 20.0
+    benchmark_review_ratio: float = 0.5
 
 
 def find_project_root(start: Path | None = None, *, search_up_to: Path | None = None) -> Path:
@@ -89,7 +94,7 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
     root = Path(os.path.abspath(project_root if project_root is not None else find_project_root()))
 
     config_file, file_base = _config_file(env, root)
-    from_file, planner = _read_document(config_file) if config_file is not None else ({}, {})
+    from_file, planner, benchmark = _read_document(config_file) if config_file is not None else ({}, {}, {})
 
     resolved = {}
     for key, (env_var, default) in _PATH_SETTINGS.items():
@@ -110,6 +115,7 @@ def load_config(env: Mapping[str, str] | None = None, project_root: Path | None 
         recombinator_junk_craft=planner.get("recombinator_junk_craft", False),
         price_source=planner.get("price_source", "both"),
         price_gap_percent=float(planner.get("price_gap_percent", 20.0)),
+        benchmark_review_ratio=float(benchmark.get("review_ratio", 0.5)),
     )
 
 
@@ -139,8 +145,8 @@ def _config_file(env: Mapping[str, str], root: Path) -> tuple[Path | None, Path]
     return (project_file if project_file.is_file() else None), root
 
 
-def _read_document(path: Path) -> tuple[dict[str, object], dict[str, object]]:
-    """The `[paths]` and the `[planner]` tables of a config file, each checked."""
+def _read_document(path: Path) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
+    """The `[paths]`, `[planner]` and `[benchmark]` tables of a config file, each checked."""
     try:
         document = tomllib.loads(path.read_bytes().decode("utf-8-sig"))
     except UnicodeDecodeError as error:
@@ -148,9 +154,9 @@ def _read_document(path: Path) -> tuple[dict[str, object], dict[str, object]]:
     except tomllib.TOMLDecodeError as error:
         raise ValueError(f"{path}: not valid TOML: {error}") from error
 
-    unknown_tables = sorted(set(document) - {"paths", "planner"})
+    unknown_tables = sorted(set(document) - {"paths", "planner", "benchmark"})
     if unknown_tables:
-        raise ValueError(f"{path}: unknown key {unknown_tables[0]!r} (only [paths] and [planner] are allowed)")
+        raise ValueError(f"{path}: unknown key {unknown_tables[0]!r} (only [paths], [planner] and [benchmark] are allowed)")
     paths = document.get("paths", {})
     if not isinstance(paths, dict):
         raise ValueError(f"{path}: 'paths' must be a table")
@@ -162,7 +168,18 @@ def _read_document(path: Path) -> tuple[dict[str, object], dict[str, object]]:
             )
         if not isinstance(value, str) or _is_blank(value):
             raise ValueError(f"{path}: [paths] {key!r} must be a non-empty string")
-    return paths, _read_planner(path, document.get("planner", {}))
+    return paths, _read_planner(path, document.get("planner", {})), _read_benchmark(path, document.get("benchmark", {}))
+
+
+def _read_benchmark(path: Path, table: object) -> dict[str, object]:
+    if not isinstance(table, dict):
+        raise ValueError(f"{path}: 'benchmark' must be a table")
+    for key, value in table.items():
+        if key != "review_ratio":
+            raise ValueError(f"{path}: unknown key {key!r} in [benchmark] (known: review_ratio)")
+        if not (_is_percent(value) and value <= 1):
+            raise ValueError(f"{path}: [benchmark] {key!r}: must be a number above 0 and at most 1 (0.5 means a planner at half the guide's cost)")
+    return table
 
 
 def _read_planner(path: Path, planner: object) -> dict[str, object]:

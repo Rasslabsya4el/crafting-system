@@ -66,6 +66,7 @@ VISITS_TOLERANCE = 1e-12  # the relative residual BiCGSTAB aims at
 ACCEPT_RESIDUAL = 1e-9  # the largest relative residual of the visits that is shown; above it the flow is not `measured`
 BICGSTAB_ITERATIONS = 4000
 BICGSTAB_RESTARTS = 3
+EXACT_RETURNS = 25  # above `ENTRY_STATES` states the chance that a state is visited needs a solve of its own: this many states (the most visited first) get one, the rest a bound (`reach_of`)
 _GOAL = -1  # the target "a goal state" while steps are numbered from 0
 
 
@@ -472,6 +473,101 @@ def _sparse_visits(chain, src, finishing, position, nt, row, column, p):
         scaled = np.linalg.solve(matrix, b)
         return scaled
     return x if residual <= ACCEPT_RESIDUAL else None
+
+
+@dataclass(frozen=True)
+class Reach:
+    """The chance a run ever visits one state of a chain (ticket #554).
+
+    `chance` is None when it is not measured: the visits could not be solved, the start cannot finish, or the state is one from
+    which no run can finish (a route that stops there). `exact` is False when `chance` is an upper bound, never a guess: the
+    state's return chance needed a solve of its own that was not made (see `EXACT_RETURNS`).
+    """
+
+    chance: float | None
+    exact: bool = True
+
+
+def reach_of(chain: Chain, wanted: Sequence[int]) -> list[Reach]:
+    """The chance a run ever visits each of the states `wanted` (indexes into `chain.states`), from the start: N[start, s] / N[s, s].
+
+    The expected visits are the same solve the steps of the page use (`_visits`). With at most `ENTRY_STATES` states that can
+    finish, N is inverted and the answer is exact for every state. Above that the visits v(s) are known for every state and the
+    chance is v(s) times the chance that a run which leaves s never comes back, which is one sparse solve per state with s made
+    absorbing; it is made for the `EXACT_RETURNS` most visited states of `wanted`, and the others get the upper bound
+    v(s) (1 - the chance of a self-loop of s), marked not `exact`. The start is visited with chance 1.
+    """
+    m = chain.m
+    unknown = Reach(None, False)
+    if m == 0:
+        return [unknown for _ in wanted]
+    src = np.repeat(np.arange(m), np.diff(chain.ptr))
+    dst = chain.dst
+    finishing = _can_finish(m, src, dst, dst >= m, dst < m)
+    visits, solved, inverse, position = _visits(chain, src, finishing)
+    found: dict[int, Reach] = {}
+    sparse: list[int] = []
+    for i in dict.fromkeys(wanted):
+        if i == 0:
+            found[i] = Reach(1.0)
+        elif not solved or not finishing[0] or not finishing[i]:
+            found[i] = unknown
+        elif inverse is not None:
+            a, b = position[0], position[i]
+            found[i] = Reach(min(1.0, max(0.0, float(inverse[a, b] / inverse[b, b]))))
+        else:
+            sparse.append(i)
+    if sparse:
+        found.update(_sparse_reach(chain, src, finishing, position, visits, sparse))
+    return [found[i] for i in wanted]
+
+
+def _sparse_reach(chain: Chain, src: np.ndarray, finishing: np.ndarray, position: np.ndarray, visits: np.ndarray, states: list[int]) -> dict[int, Reach]:
+    """`reach_of` above `ENTRY_STATES` states: v(s) times the chance that a run leaving s never returns."""
+    m, dst = chain.m, chain.dst
+    nt = int(finishing.sum())
+    inside = finishing[src] & (dst < m)
+    inside[inside] = finishing[dst[inside]]
+    row, column, p = position[src[inside]], position[dst[inside]], chain.prob[inside]
+    nonself = dst != src
+    leave = np.bincount(src[nonself], weights=chain.prob[nonself], minlength=m)[finishing]  # a sum of positive terms
+    stay = np.bincount(src[~nonself], weights=chain.prob[~nonself], minlength=m)  # the chance of a self-loop
+    ordered = sorted(states, key=lambda i: -visits[i])
+    found: dict[int, Reach] = {}
+    for rank, i in enumerate(ordered):
+        bound = min(1.0, float(visits[i] * (1.0 - stay[i])))
+        returned = _escape(row, column, p, leave, nt, int(position[i])) if rank < EXACT_RETURNS else None
+        found[i] = Reach(min(1.0, max(0.0, float(visits[i] * returned))), True) if returned is not None else Reach(bound, False)
+    return found
+
+
+def _escape(row, column, p, leave, nt: int, s: int) -> float | None:
+    """The chance that a run which is in state `s` (a position among the finishing states) never comes back to it; None when the solve did not reach its residual.
+
+    h(t) is the chance of ever reaching s from t, with s absorbing: h(t) - sum over u (not t, not s) of p(t, u) / leave(t) h(u) =
+    p(t, s) / leave(t), each self-loop divided out as in `_sparse_visits`. The chance of escaping is sum over u of p(s, u) (1 - h(u))
+    for the edges of s that leave it (a goal or a state that cannot finish counts as h = 0), a sum of positive terms.
+    """
+    keep = (row != column) & (row != s)  # the edges of s itself are not part of the system
+    into = keep & (column == s)
+    inner = keep & (column != s)
+    r, c, w = row[inner], column[inner], p[inner] / leave[row[inner]]
+    b = np.bincount(row[into], weights=p[into] / leave[row[into]], minlength=nt)
+
+    def matvec(x: np.ndarray) -> np.ndarray:
+        return x - np.bincount(r, weights=w * x[c], minlength=nt)
+
+    h, residual, _ = _bicgstab(matvec, b, np.zeros(nt), VISITS_TOLERANCE, BICGSTAB_ITERATIONS)
+    for _ in range(BICGSTAB_RESTARTS):
+        if residual <= 10 * VISITS_TOLERANCE:
+            break
+        h, residual, _ = _bicgstab(matvec, b, h, VISITS_TOLERANCE, BICGSTAB_ITERATIONS)
+    if not residual <= ACCEPT_RESIDUAL:
+        return None
+    out = (row == s) & (column != s)
+    back = float(np.sum(p[out] * h[column[out]]))
+    leaving = float(leave[s])  # the chance to leave s, to every state, goal or not
+    return max(0.0, leaving - back)
 
 
 def _entered(chain, step, nsteps, src, finishing, visits, inverse, position) -> list[float | None]:

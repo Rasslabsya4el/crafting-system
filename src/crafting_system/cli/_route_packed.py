@@ -166,13 +166,21 @@ def evaluate_route_packed(plan: Plan, route, data: GameData):
     say(f"route risk evaluated ({time.perf_counter() - began:.1f} s)")
     view = lumped_view(lumped, reduced, classes.cls, walked)
     item_chain = chain_of_route(walked, chosen, labels, cost, gaps)  # what the route page reads: item states, not the shown member of a block
+    divergences = _divergences(plan, route, data, labels, Divergence)
     return RouteResult(
-        view, risk, found_gaps, _divergence(plan, route, data, labels, Divergence), time.perf_counter() - began, item_chain
+        view,
+        risk,
+        found_gaps,
+        divergences[0] if divergences else None,
+        time.perf_counter() - began,
+        item_chain,
+        tuple(divergences),
     )
 
 
-def _divergence(plan: Plan, route, data: GameData, labels: dict[int, str], make):
-    """The first state of the solver's main line (breadth first, the lower state number first) where the route takes another action."""
+def _divergences(plan: Plan, route, data: GameData, labels: dict[int, str], make) -> list:
+    """Every state of the solver's main line (breadth first, the lower state number first) where the route takes another action, in that order."""
+    found = []
     reading = _Reading(plan, route, data)
     graph = reading.graph
     mine = plan.policy.action_array
@@ -190,11 +198,11 @@ def _divergence(plan: Plan, route, data: GameData, labels: dict[int, str], make)
                 if not isinstance(found, str):
                     theirs = found[0]  # the route does not reach this state; it would act here (a gap is not a divergence)
             if theirs is not None and theirs != ours:
-                return make(reading.walked.states[i], ours, theirs)
+                found.append(make(reading.walked.states[i], ours, theirs))
         if not len(frontier):
             break
         kernels = np.unique(graph.act_kernel[mine[frontier]])
         successors = np.unique(graph.k_succ[expand_ranges(graph.k_ptr[kernels], ksize[kernels])])
         frontier = successors[~seen[successors]].astype(np.int64)
         seen[frontier] = True
-    return None
+    return found
