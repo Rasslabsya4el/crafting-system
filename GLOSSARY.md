@@ -107,6 +107,14 @@ _Avoid_: corruption flag
 A requirement met when at least k of its n listed requirements are met.
 _Avoid_: group, choice group
 
+**Unstated tier**:
+A requirement that names a mod and no tier because the guide states none. It means the top tier of the mod's ladder that the target's item level allows, rolled on the item, not made at the bench (`docs/owner-rules.md`, OR-1; ADR-0008, amendment). A tier the guide does state is that tier, and so is a number or a soft wish in the guide's words (guide wording, below).
+_Avoid_: default tier, any tier
+
+**Guide wording**:
+What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft wish ("you are happy with"). The target takes it as written; the top tier of an unstated tier applies only where the guide says nothing about the tier (`docs/owner-rules.md`, OR-4).
+_Avoid_: the owner's reading (it is the guide's words that win)
+
 **Start item**:
 The concrete item a query starts from; by default a fresh normal base.
 
@@ -231,6 +239,10 @@ A technique players name, such as essence spam or fracture-then-reforge. Here it
 **Acquisition cost**:
 The expected cost of obtaining an item in a given state, by crafting it or buying it, whichever is cheaper.
 
+**Instant-buyout price**:
+The price of a bought item taken from the trade site as the mean of the cheapest few listings (five by default) whose status is "Instant Buyout", of any listing age. Never "Instant Buyout and In Person", and never a poe.ninja row presented as one (`docs/owner-rules.md`, OR-7 and OR-8; ADR-0061).
+_Avoid_: trade price (when the listing filter matters), market price
+
 **Input**:
 Another item an action consumes besides the one in hand (the donor of a recombinator, the imprint, the second item of an Awakener's Orb). An action with inputs is a two-input action. Its cost on every attempt is the action's own cost plus the acquisition cost of each input, because a retry consumes fresh inputs.
 _Avoid_: ingredient, second item (when the solver's `extra_inputs` is meant)
@@ -330,6 +342,10 @@ _Avoid_: plan, strategy
 **Route**:
 A policy read as a person follows it: the main line of actions and where to go on a miss.
 _Avoid_: chain, path
+
+**Player step**:
+One thing the player does in the game, shown once on a route page. It stands for a set of compressed states only when the policy takes the same action in all of them; look-alike states that need different actions branch (`docs/owner-rules.md`, OR-18).
+_Avoid_: row (a row can be one state of the planner), card
 
 **Benchmark route**:
 A published crafting route (R01–R30 in the reference routes research) whose cost and odds a batch must match or beat. Its guide's cost is its **Given route** evaluated at the same prices.
