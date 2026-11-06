@@ -539,7 +539,7 @@ def test_a_target_is_met_when_requirements_implicits_and_quality_all_are():
     from crafting_system.items import ExplicitMod
 
     done = make(
-        ExplicitMod("IncreasedLife3", 9, (life.stats[0].min,)),
+        ExplicitMod("IncreasedLife3", (life.stats[0].min,)),
         implicits=(exarch(3, 40),),
         quality=Quality(CatalystType.INTRINSIC, 20),
     )

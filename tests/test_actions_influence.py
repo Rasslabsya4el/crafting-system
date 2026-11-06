@@ -175,7 +175,6 @@ def test_the_sampler_draws_the_hunter_mod_with_its_chance_and_its_tier():
         for entry in drawn.mods:
             if entry.mod_id == HUNTER_MOD:
                 hits += 1
-                assert entry.tier == 5
     chance = 500 / 9200
     assert abs(hits / runs - chance) < 5 * (chance * (1 - chance) / runs) ** 0.5
 

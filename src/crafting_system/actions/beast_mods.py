@@ -19,14 +19,13 @@ from crafting_system.items import ExplicitMod, Item, Rarity, Side
 from crafting_system.items.model import MAX_ITEM_LEVEL, MIN_ITEM_LEVEL
 from crafting_system.rules import get_rule
 
-from .bench import CRAFTED_TIER
 from .beasts import ANY_RARE_CREATURE_PRICE, DEFAULT_BEAST_LEVEL, recipe_resources
 from .catalog import kind
 from .contract import Action, Adds, Reads
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
 from .metamods import crafted_limit, locked_sides
-from .pool import build_pool, tiers_of
+from .pool import build_pool
 
 __all__ = [
     "BeastSideSwap",
@@ -142,7 +141,7 @@ class WildBristleMatron(Action):
         return Finite(
             data,
             item,
-            tuple((share, item.add_mod(data, ExplicitMod(mod.id, CRAFTED_TIER, _low(mod), crafted=True))) for mod in allowed),
+            tuple((share, item.add_mod(data, ExplicitMod(mod.id, _low(mod), crafted=True))) for mod in allowed),
         )
 
 
@@ -204,7 +203,7 @@ class BeastSideSwap(Action):
         a family on the item and the Attack and Caster metamods respected) in proportion to weight; then one
         mod of the other side, among those the item held before the add that are not fractured, is removed
         uniformly (crafted mods and metamods included). If the other side is locked by a metamod nothing is
-        removed. The added mod is a new mod at its lowest values and table tier.
+        removed. The added mod is a new mod at its lowest values.
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, has no open slot on `add_side`,
         has an unlocked other side without a removable mod, or for which no mod is legal to add.
@@ -233,11 +232,10 @@ class BeastSideSwap(Action):
             raise NotApplicableError(
                 f"the beast cannot add a {self.add_side.value}: no mod of its pool is legal on the item at beast level {self.beast_level}"
             )
-        tiers = tiers_of(data, item)
         after_removal = [item if gone is None else item.remove_mod(data, gone.mod_id) for gone in removable]
         results = []
         for entry in drawn:
-            added = ExplicitMod(entry.mod.id, tiers.get(entry.mod.id, 1), _low(entry.mod))
+            added = ExplicitMod(entry.mod.id, _low(entry.mod))
             for retained in after_removal:
                 results.append((entry.weight / total / len(after_removal), retained.add_mod(data, added)))
         return Finite(data, item, tuple(results))

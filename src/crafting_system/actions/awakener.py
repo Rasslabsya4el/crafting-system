@@ -4,7 +4,7 @@ The item in hand is the **receiver**; the **donor** is an input (a `Need`, ADR-0
 holds the influenced mod the route wants carried over and is destroyed. The result is a rare receiver with both influences. Of
 the receiver's influenced mods one is kept, and the donor's mod; if the receiver holds several, the pair is drawn **uniformly
 among the valid pairs** (receiver mod, donor mod), valid meaning two different mods (`awakener.pair_choice_uniform`; the pairs
-of Craft of Exile are the same, because the two influences differ). A kept mod keeps its tier and its value is rolled afresh
+of Craft of Exile are the same, because the two influences differ). A kept mod stays and its value is rolled afresh
 (`Outcomes.rerolled`). Every other mod goes, the crafted ones and the metamods too (`awakener.ignores_metamods`), and the rest
 is rerolled as a Chaos Orb rerolls a rare: a total of 4, 5 or 6 mods (8:3:1) **minus the kept mods that remain**, which count
 inside the total (`awakener.kept_mods_count_in_total`, approximate), drawn by the shared draw from the pool of the item with
@@ -35,7 +35,7 @@ The catalog lists the kind only for a receiver with one influence; it is not a p
 Memory Strands (ADR-0041, ticket #289, B5-11f). The orb cuts and spends: the draw of the rerolled mods takes `self.cut_of(data, item)` and
 the count after the craft is `max(0, s - x)` for `x` uniform on 0 to 100, the wiki's "Awakener's Orb - 0-100"
 (`memory_strands.spend_ranges_special_orbs`; the cut follows the emulator's spend table, which has an Awakener's Orb row,
-`memory_strands.cut_follows_spend_table`). The two kept mods keep their tier, so they are not cut; the donor is destroyed, so its count
+`memory_strands.cut_follows_spend_table`). The two kept mods stay, so they are not cut; the donor is destroyed, so its count
 is gone and is not modelled. Both readings of the group conflict cut and spend alike. The strand claims are `strand_claims`, not `claims`.
 """
 
@@ -53,7 +53,7 @@ from .draw import refuse_unmodelled
 from .errors import NotApplicableError, OutOfScopeError
 from .mixture import Mixture
 from .outcomes import Outcomes
-from .pool import build_pool, influence_spawn_test, tiers_of
+from .pool import build_pool, influence_spawn_test
 from .strand_use import CUT_FOLLOWS_SPEND_TABLE, SPEND_SPECIAL_ORBS, SpendLaw, StrandUse
 
 TWO_ITEMS_SAME_CLASS = get_rule("awakener.two_items_same_class")
@@ -162,7 +162,7 @@ class AwakenersOrb(Action):
         return (GROUP_CONFLICT_AXIS,)
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
-        # ADR-0041, #289: the rerolled mods are cut (the two kept mods keep their tier) and it spends 0 to 100; the donor's count is gone
+        # ADR-0041, #289: the rerolled mods are cut (the two kept mods stay) and it spends 0 to 100; the donor's count is gone
         return StrandUse.cutting(SpendLaw.uniform(SPEND_SPECIAL_ORBS.value["awakeners"]), SPEND_SPECIAL_ORBS, CUT_FOLLOWS_SPEND_TABLE)
 
     def inputs(self, data: GameData, item: Item | None = None) -> tuple[Need, ...]:
@@ -175,7 +175,7 @@ class AwakenersOrb(Action):
         return (Need(start, want),)
 
     def _donor(self, data: GameData) -> tuple[Item, Item, ExplicitMod]:
-        """The donor as bought, as wanted, and its mod as it is kept (its tier on the donor, low values: `sample` rolls it)."""
+        """The donor as bought, as wanted, and its mod as it is kept (low values: `sample` rolls it)."""
         key = (id(data), self.donor_base, self.donor_level, self.donor_influence, self.donor_mod)
         hit = _DONORS.get(key)
         if hit is not None and hit[0] is data:
@@ -188,7 +188,7 @@ class AwakenersOrb(Action):
                 f"{self.donor_mod} is not an influence mod of {self.donor_influence.value} that a donor on {self.donor_base} "
                 f"of item level {self.donor_level} can hold"
             )
-        entry = ExplicitMod(mod.id, tiers_of(data, start).get(mod.id, 1), _low_values(data, mod.id))
+        entry = ExplicitMod(mod.id, _low_values(data, mod.id))
         want = Item.build(
             data, base_id=self.donor_base, item_level=self.donor_level, rarity=Rarity.RARE, mods=(entry,), influences=influences
         )

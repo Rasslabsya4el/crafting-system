@@ -29,12 +29,14 @@ from .enchantments import (
 from .implicits import (
     EldritchSide,
     ImplicitMod,
+    base_implicits,
     dominant_side,
     eldritch_grade,
     eldritch_side,
     fits_corrupted_implicit,
     is_corrupted_implicit,
     is_presence_variant,
+    with_base_implicits,
 )
 from .model import (
     VEILED_SEED_STAT,
@@ -119,6 +121,7 @@ __all__ = [
     "VeilOfferError",
     "capacity",
     "class_maximum",
+    "base_implicits",
     "dominant_side",
     "effective_weight",
     "enchant_class",
@@ -134,6 +137,7 @@ __all__ = [
     "is_corrupted_implicit",
     "is_craftable_version",
     "is_presence_variant",
+    "with_base_implicits",
     "is_removed_enchant",
     "is_veiled_mod",
     "memory_strands_line",

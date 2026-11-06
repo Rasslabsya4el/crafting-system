@@ -39,7 +39,7 @@ def receiver(strands: int):
 
 
 def kept(part) -> tuple[tuple[str, int], ...]:
-    return tuple(sorted((entry.mod_id, entry.tier) for entry in part.retained.mods))
+    return tuple(sorted(entry.mod_id for entry in part.retained.mods))
 
 
 # --- the declaration and its claims -----------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ def test_the_rerolled_mods_are_drawn_from_the_cut_pool_and_the_kept_mods_are_tho
 
     assert [share for share, _ in stranded.components] == [share for share, _ in plain.components]
     for (_, cut_part), (_, plain_part) in zip(stranded.components, plain.components, strict=True):
-        assert kept(cut_part) == kept(plain_part)  # the kept mods keep their tier: they are not cut
+        assert kept(cut_part) == kept(plain_part)  # the kept mods stay: they are not cut
         assert cut_part.pool == build_pool(DATA, cut_part.retained, cut=Cut(strands))
         assert plain_part.pool == build_pool(DATA, plain_part.retained)
         assert cut_part.pool != plain_part.pool  # the cut bites on this fixture's tier tables

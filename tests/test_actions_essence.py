@@ -301,7 +301,7 @@ def test_a_forced_mod_in_a_family_of_a_fractured_mod_is_refused_by_the_game():
     low = tuple(min(stat.min, stat.max) for stat in clash.stats)
     item = Item.build(
         data, base_id=AMULET, item_level=86, rarity=Rarity.RARE,
-        mods=(ExplicitMod("ClashMod", 1, low, fractured=True),),
+        mods=(ExplicitMod("ClashMod", low, fractured=True),),
     )  # fmt: skip
 
     with pytest.raises(NotApplicableError, match="already has a mod of this type.*ClashMod"):

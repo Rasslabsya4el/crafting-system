@@ -25,7 +25,6 @@ from crafting_system.actions import (
     allowed_by_tags,
     build_pool,
     partners,
-    tiers_of,
 )
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
@@ -40,13 +39,13 @@ from crafting_system.items import (
     Quality,
     Rarity,
     Side,
+    base_implicits,
     eldritch_grade,
     eldritch_side,
     is_corrupted_implicit,
     is_craftable_version,
     placeholder_families,
     spawn_weight,
-    tier_table,
 )
 from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
 
@@ -144,11 +143,11 @@ class _Split:
 
 
 class _Context:
-    """What depends on the influences of an item: the tier of every mod, the kinds, the labels of drawn mods."""
+    """What depends on the influences of an item: the kinds, the labels of drawn mods. It holds no tier (ticket #484): a requirement reads
+    the natural tier from the game data (`Wanted.tier_ok`), and a state never stores one."""
 
-    def __init__(self, influences: frozenset[Influence], tiers: Mapping[str, int], kinds: Kinds):
+    def __init__(self, influences: frozenset[Influence], kinds: Kinds):
         self.influences = influences
-        self.tiers = tiers
         self.kinds = kinds
         self.labels: dict[str, Label] = {}
         self.lucky_labels: dict[str, Label] = {}  # the labels of a draw that rolls every value twice and keeps the better
@@ -175,8 +174,7 @@ class Abstraction:
     the solver is given the donors, ticket #212) an action that consumes other items (`Action.inputs`) on the item of
     a state is refused with `OutOfScopeError`, so that it is never priced as if its inputs were free.
 
-    The tiers of the mods come from the pool of the item's influences (`tiers_of`), so an influence mod has
-    its own tier. The kernel of a random action is cached by pool signature: two states whose pools have
+    The kinds of the mods are those of the pool of the item's influences, so an influence family is a family type. The kernel of a random action is cached by pool signature: two states whose pools have
     the same multiset of family types share one label distribution.
 
     `enchantment` is the mod id of the enchantment of the start item, or None. No action adds or removes one, so it is a constant of
@@ -247,7 +245,7 @@ class Abstraction:
         self._offered_ids: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], str] = {}
         self._offer_groups: dict[tuple[frozenset[Influence], str, tuple[Status, ...]], tuple[str, ...]] = {}  # (influences, canonical id, contribution) -> the ids it stands for, sorted
         self._contexts: dict[frozenset[Influence], _Context] = {}
-        self._kinds = self._new_context(frozenset(), tier_table(data, base_id)).kinds
+        self._kinds = self._new_context(frozenset()).kinds
         if self._tracks_offer and not self._kinds.tracked:
             raise ValueError(
                 "an action that reads or draws the unveil offer must read the junk: the veiled placeholder is a mod of the item"
@@ -386,7 +384,7 @@ class Abstraction:
 
     def crafted_slot(self, mod_id: str) -> Slot:
         """The slot a crafted mod of this id makes (its canonical id, its contribution, low rolls)."""
-        return self._slot_of(ExplicitMod(mod_id, 1, _low_values(self.data.mods[mod_id]), crafted=True), frozenset())
+        return self._slot_of(ExplicitMod(mod_id, _low_values(self.data.mods[mod_id]), crafted=True), frozenset())
 
     # --- what depends on the influences ----------------------------------------------------------------
 
@@ -399,7 +397,7 @@ class Abstraction:
             return bool(adds.crafted and families and blocking & set(families))
         return any(blocking & set(self.data.mods[mod_id].families) for mod_id in adds.named if mod_id in self.data.mods)
 
-    def _new_context(self, influences: frozenset[Influence], tiers: Mapping[str, int]) -> _Context:
+    def _new_context(self, influences: frozenset[Influence]) -> _Context:
         kinds = Kinds(
             self.data,
             self.base_id,
@@ -411,28 +409,19 @@ class Abstraction:
             numbers=self._numbers,
             rollable=lambda: self._rollable_mods(influences),
         )
-        context = self._contexts[influences] = _Context(influences, tiers, kinds)
+        context = self._contexts[influences] = _Context(influences, kinds)
         return context
 
     def _context(self, influences: frozenset[Influence]) -> _Context:
-        """The tiers, kinds and labels for items with these influences, built when first asked for.
+        """The kinds and labels for items with these influences, built when first asked for.
 
-        The tiers are those of the pool of an item with the influences (`tiers_of`), so an influence mod
-        has its own tier; the kinds are built on that pool, so an influence family is a family type. An
-        item class with no influence class key has no such pool: its tiers are the base's (every action
-        that draws raises `OutOfScopeError` on it, one that draws nothing does not look at them).
+        The kinds are built on the pool of an item with the influences, so an influence family is a family type. No tier is
+        kept (ticket #484): the old fall-back from the pool's tiers to the base's tier table decided nothing the kinds and labels read.
         """
         found = self._contexts.get(influences)
         if found is None:
             self._kinds.number_types()  # the types of the plain pool keep the numbers they would have without influences
-            probe = Item.build(
-                self.data, base_id=self.base_id, item_level=self.item_level, rarity=Rarity.RARE, influences=influences
-            )
-            try:
-                tiers = tiers_of(self.data, probe)
-            except OutOfScopeError:
-                tiers = tier_table(self.data, self.base_id)
-            found = self._new_context(influences, tiers)
+            found = self._new_context(influences)
         return found
 
     def compress(self, item: Item) -> CompressedState:
@@ -819,7 +808,7 @@ class Abstraction:
         """The implicits of an item as a state keeps them: the Searing Exarch side, the Eater of Worlds side, then each implicit of the base a requirement names.
 
         An Eldritch implicit is the grade it has and what it gives each implicit wanted, the roll included. An implicit of the base is
-        what it gives them (all ABSENT when the item does not store it); one that no requirement names decides nothing and is not kept
+        what it gives them (all ABSENT when the item does not hold it: a replacer took its place, #484); one that no requirement names decides nothing and is not kept
         (ticket #158). A corrupted implicit is not kept either: a corrupted item is final and the action that corrupts decides it (ADR-0036).
         """
         sides = {side: self._no_implicit for side in EldritchSide}
@@ -1124,7 +1113,6 @@ class Abstraction:
             mods.append(
                 ExplicitMod(
                     entry.mod_id,
-                    self._context(influences).tiers.get(entry.mod_id, 1),
                     _low_values(self.data.mods[entry.mod_id]),
                     fractured=True,
                     crafted=crafted,
@@ -1141,7 +1129,7 @@ class Abstraction:
             if slot.crafted:
                 mod = self.data.mods[slot.kind]
                 taken |= held_families(mod)
-                mods.append(ExplicitMod(mod.id, self._context(influences).tiers.get(mod.id, 1), _low_values(mod), crafted=True))
+                mods.append(ExplicitMod(mod.id, _low_values(mod), crafted=True))
                 origins[(mod.id, False, True)] = slot
         if types or not erasing:
             kinds = self._context(influences).kinds
@@ -1150,14 +1138,14 @@ class Abstraction:
                 mod = kinds.representative(kinds.side_of(entry.mod_id), entry.mod_id, blocked, (placement or {}).get(("fractured", position)))
                 taken |= blocked - avoid
                 mods.append(
-                    ExplicitMod(mod.id, self._context(influences).tiers.get(mod.id, 1), _low_values(mod), fractured=True)
+                    ExplicitMod(mod.id, _low_values(mod), fractured=True)
                 )
                 origins[(mod.id, True, False)] = entry
             if not erasing:
                 for position, slot in enumerate(state.slots):
                     if not slot.crafted:
                         mod = kinds.representative(slot.side, slot.kind, taken, (placement or {}).get(("slot", position)))
-                        mods.append(ExplicitMod(mod.id, self._context(influences).tiers.get(mod.id, 1), _low_values(mod)))
+                        mods.append(ExplicitMod(mod.id, _low_values(mod)))
                         origins[(mod.id, False, False)] = slot
         item = Item.build(
             self.data,
@@ -1176,15 +1164,25 @@ class Abstraction:
         return item, origins
 
     def _implicits_of(self, state: CompressedState) -> tuple[ImplicitMod, ...]:
-        """The implicits of the item a state stands for: for each Eldritch side that holds one, the mod that stands for it, and for each implicit of the base that the state says the item stores, that implicit; each at values that give what the state holds."""
+        """The implicits of the item a state stands for (ticket #484: an item carries every implicit of its base until a replacer takes its place).
+
+        For each Eldritch side that holds one, the mod that stands for it; for each implicit of the base that a requirement names, that implicit
+        when the state says the item holds it; and for each implicit of the base that no requirement names, that implicit at the low end of its
+        range unless an Eldritch implicit or the corruption took its place (a corrupted item is final and the state keeps no corrupted implicit,
+        ADR-0036). Each at values that give what the state holds.
+        """
         implicits = []
+        replaced = state.flags.corrupted
         for side, held in zip(EldritchSide, state.implicits):  # the pair is in the order of EldritchSide: Searing Exarch, then Eater of Worlds
             if held.grade:
-                mod = self._implicit_mod(side, held.grade, held.contribution, held.line)
+                replaced = True
+                mod = self._implicit_mod(side, held.grade, held.contribution)
                 implicits.append(ImplicitMod(mod.id, held.grade, self._roll_of(mod, held.grade, held.contribution)))
         for mod_id, held in zip(self._base_named, state.implicits[2:]):
             if any(held.contribution):  # all ABSENT: the item does not store it
                 implicits.append(ImplicitMod(mod_id, 0, self._roll_of(self.data.mods[mod_id], 0, held.contribution)))
+        if not replaced:  # nothing took the place of the base's implicits
+            implicits.extend(entry for entry in base_implicits(self.data, self.data.base_items[self.base_id]) if entry.mod_id not in self._base_named)
         return tuple(implicits)
 
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
@@ -1581,9 +1579,8 @@ class Abstraction:
         raise ValueError(f"the family {family.family} has no mod labelled {label!r}")
 
     def _canonical_of_mod(self, mod: Mod, influences: frozenset[Influence]) -> str:
-        """The id of `mod` as a fractured mod, at its table tier and low rolls (see `_fractured_id`)."""
-        tier = self._context(influences).tiers.get(mod.id, 1)
-        return self._fractured_id(ExplicitMod(mod.id, tier, _low_values(mod), fractured=True), influences)
+        """The id of `mod` as a fractured mod, at low rolls (see `_fractured_id`)."""
+        return self._fractured_id(ExplicitMod(mod.id, _low_values(mod), fractured=True), influences)
 
     def _forced_label(self, part: Outcomes) -> Label | None:
         if part.forced is None:

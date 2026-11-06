@@ -123,7 +123,7 @@ def test_the_real_ring_with_the_corrupted_all_resistances_is_a_goal_only_for_a_t
         item_level=84,
         rarity=Rarity.RARE,
         corrupted=True,
-        mods=(ExplicitMod("ColdResist1", 1, (8,)),),
+        mods=(ExplicitMod("ColdResist1", (8,)),),
         implicits=(ImplicitMod(RESIST, 0, (15,)),),
     )
     plain = parse(data, "")

@@ -194,7 +194,7 @@ def test_the_explicit_mods_are_kept_and_the_goal_is_met_when_the_roll_passes(sto
 def ExplicitModOf(mod_id: str):
     from crafting_system.items import ExplicitMod
 
-    return ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in DATA.mods[mod_id].stats))
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in DATA.mods[mod_id].stats))
 
 
 # --- layer 1: against every value the roll can take ------------------------------------------------------------------------

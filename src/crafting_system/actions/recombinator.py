@@ -7,7 +7,7 @@ neither a jewel (`recombinator.jewels_refused`); both are destroyed and a new it
   it its base type, influences, enchantment, quality and implicits (`recombinator.properties_from_chosen_base`); its item level is
   `min(floor((A + B) / 2 + 2), max(A, B))` (`recombinator.item_level_formula`) and its rarity follows its mods (normal with none,
   magic with at most one per side, rare otherwise; `recombinator.output_rarity_follows_mods`, approximate). Memory Strands are not
-  modelled (`recombinator.memory_strands_stay_with_base`). A picked mod keeps its tier and its roll from its input: no source says
+  modelled (`recombinator.memory_strands_stay_with_base`). A picked mod keeps its roll from its input: no source says
   they are rerolled (Craft of Exile's stale recombinator rerolls them).
 * **The pools and the count.** The prefixes of both inputs form one pool, the suffixes another, and a mod on both inputs enters its
   pool twice (**doubling**, `recombinator.duplicates_enter_pool`). The number of mods kept on a side depends only on its pooled
@@ -89,7 +89,7 @@ from .contract import Action, Adds, Axis, Need, Reading, Reads
 from .draw import jewel_class
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
-from .pool import drawable_mod_ids, item_tags, tiers_of
+from .pool import drawable_mod_ids, item_tags
 
 __all__ = ["Recombinator", "junk_craft_enabled", "junk_craft_for", "junk_craft_offered"]
 
@@ -250,7 +250,7 @@ class Recombinator(Action):
     @property
     def variant(self) -> str:
         mods = ",".join(
-            f"{entry.mod_id}:{entry.tier}:{'/'.join(map(str, entry.values))}{'!' if entry.fractured else ''}{'*' if entry.crafted else ''}"
+            f"{entry.mod_id}:{'/'.join(map(str, entry.values))}{'!' if entry.fractured else ''}{'*' if entry.crafted else ''}"
             for entry in self.donor.mods
         )
         influences = ",".join(sorted(influence.value for influence in self.donor.influences))
@@ -514,7 +514,6 @@ def _complement(data: GameData, item: Item) -> Item | None:
     """A donor of other mods the item's base can roll: up to two prefixes and two suffixes of distinct families, none the item holds."""
     held = {family for entry in item.mods for family in data.mods[entry.mod_id].families}
     held |= {entry.mod_id for entry in item.mods}
-    tiers = tiers_of(data, item)
     picked: list[ExplicitMod] = []
     taken: set[str] = set(held)
     per_side = {side: 0 for side in Side}
@@ -525,7 +524,7 @@ def _complement(data: GameData, item: Item) -> Item | None:
             continue
         per_side[side] += 1
         taken |= set(mod.families)
-        picked.append(ExplicitMod(mod_id, tiers.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in mod.stats)))
+        picked.append(ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats)))
     if not picked:
         return None
     rarity = Rarity.RARE if max(per_side.values()) > 1 else Rarity.MAGIC

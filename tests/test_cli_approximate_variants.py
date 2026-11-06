@@ -54,7 +54,6 @@ start_item:
   rarity: {rarity}
   mods:
     - mod: {MANA_1}
-      tier: 1
       values: {[min(stat.min, stat.max) for stat in DATA.mods[MANA_1].stats]}
 start: given
 """

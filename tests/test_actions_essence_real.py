@@ -49,7 +49,7 @@ def rare(data, base_id, item_level, fractured_id):
     low = tuple(min(stat.min, stat.max) for stat in mod.stats)
     return Item.build(
         data, base_id=base_id, item_level=item_level, rarity=Rarity.RARE,
-        mods=(ExplicitMod(fractured_id, 1, low, fractured=True),),
+        mods=(ExplicitMod(fractured_id, low, fractured=True),),
     )  # fmt: skip
 
 

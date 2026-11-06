@@ -47,13 +47,13 @@ def data():
 
 def low(data, mod_id: str, **flags) -> ExplicitMod:
     mod = data.mods[mod_id]
-    return ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def tiered(data, base_id: str, mod_id: str, **flags) -> ExplicitMod:
     mod = data.mods[mod_id]
     tier = tier_table(data, base_id).get(mod_id, 1)
-    return ExplicitMod(mod_id, tier, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def with_veil(data, base_id: str, side: str, *mods: ExplicitMod, level: int = 84) -> Item:

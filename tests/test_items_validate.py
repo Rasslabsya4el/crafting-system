@@ -30,7 +30,7 @@ def test_an_unknown_base_is_rejected():
 
 def test_an_unknown_mod_id_is_rejected():
     with pytest.raises(UnknownModError, match=r"BodyInt1.*NoSuchMod.*not in the game data"):
-        item(ExplicitMod("NoSuchMod", 1, (1,)))
+        item(ExplicitMod("NoSuchMod", (1,)))
 
 
 def test_a_mod_that_is_neither_prefix_nor_suffix_is_rejected():
@@ -70,7 +70,7 @@ def test_the_crafted_flag_on_a_natural_mod_is_rejected():
 
 
 def test_the_wrong_number_of_values_is_rejected():
-    two_stats = ExplicitMod("LocalAddedFireDamageTwoHand1", 1, (3,))
+    two_stats = ExplicitMod("LocalAddedFireDamageTwoHand1", (3,))
 
     with pytest.raises(ValueRangeError, match=r"LocalAddedFireDamageTwoHand1.*1 rolled value.*2 stat"):
         item(two_stats)
@@ -78,13 +78,13 @@ def test_the_wrong_number_of_values_is_rejected():
 
 @pytest.mark.parametrize("value", [6, 11])
 def test_the_edge_values_of_a_range_are_accepted(value):
-    assert item(ExplicitMod("ColdResist1", 1, (value,))).mods[0].values == (value,)
+    assert item(ExplicitMod("ColdResist1", (value,))).mods[0].values == (value,)
 
 
 @pytest.mark.parametrize("value", [5, 12])
 def test_a_value_outside_its_range_is_rejected(value):
     with pytest.raises(ValueRangeError, match=rf"ColdResist1.*value {value}.*6 to 11"):
-        item(ExplicitMod("ColdResist1", 1, (value,)))
+        item(ExplicitMod("ColdResist1", (value,)))
 
 
 def test_a_range_given_high_to_low_still_works():
@@ -94,14 +94,14 @@ def test_a_range_given_high_to_low_still_works():
     data = dataclasses.replace(DATA, mods={**DATA.mods, "ColdResist1": flipped})
 
     built = Item.build(
-        data, base_id=BODY, item_level=84, rarity=Rarity.RARE, mods=(ExplicitMod("ColdResist1", 1, (8,)),)
+        data, base_id=BODY, item_level=84, rarity=Rarity.RARE, mods=(ExplicitMod("ColdResist1", (8,)),)
     )
 
     assert built.mods[0].values == (8,)
 
 
 def test_the_first_failing_check_is_the_one_raised():
-    bad = (ExplicitMod("NoSuchMod", 1, (1,)), ExplicitMod("ColdResist1", 1, (99,)))
+    bad = (ExplicitMod("NoSuchMod", (1,)), ExplicitMod("ColdResist1", (99,)))
 
     with pytest.raises(UnknownModError):
         item(*bad)

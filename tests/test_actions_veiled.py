@@ -54,7 +54,7 @@ def holder(mod_id: str) -> ExplicitMod:
 def rolled(mod_id: str, **flags) -> ExplicitMod:
     """Any mod of `DATA` at its lowest values (and its tier on the amulet, 1 for a mod with none)."""
     mod = DATA.mods[mod_id]
-    return ExplicitMod(mod_id, TIERS.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def amulet(*mods: ExplicitMod, rarity: Rarity = Rarity.RARE, **fields) -> Item:
@@ -161,7 +161,6 @@ def test_a_pick_replaces_the_placeholder_with_the_mod_of_that_place_in_id_order(
         assert ids(result) == {mod_id, RESIST_2}
         (picked,) = (entry for entry in result.mods if entry.mod_id == mod_id)
         assert picked.values == tuple(min(stat.min, stat.max) for stat in DATA.mods[mod_id].stats) and not picked.crafted and not picked.fractured
-        assert picked.tier == TIERS.get(mod_id, 1)
 
 
 def test_a_pick_needs_an_offer_and_a_mod_at_that_place():
@@ -196,7 +195,7 @@ def test_a_pick_works_on_a_corrupted_item_and_keeps_the_other_mods_as_they_are()
 
 def test_a_fractured_placeholder_stays_fractured_when_it_is_picked():
     # a fractured veil (a drop of the Syndicate maps, V-05) is unveiled and picked like any other: the chosen mod is fractured too
-    start = amulet(ExplicitMod(PRE, 1, holder(PRE).values, fractured=True), rolled(RESIST_2))
+    start = amulet(ExplicitMod(PRE, holder(PRE).values, fractured=True), rolled(RESIST_2))
     offered = [result for _, result in Unveil().outcomes(DATA, start).results]
     assert offered and all(result.mods == start.mods for result in offered)
     for result in offered:
@@ -281,7 +280,7 @@ def test_a_drawn_offer_goes_with_the_placeholder_it_belonged_to():
         (lambda: amulet(rolled(LIFE_1), rarity=Rarity.MAGIC), "rare item only"),
         (lambda: amulet(rolled(LIFE_1), corrupted=True), "corrupted"),
         (lambda: amulet(rolled(LOCK_SUFFIXES, crafted=True), holder(SUF)), "would keep the veiled mod"),  # a veil on the locked side
-        (lambda: amulet(ExplicitMod(PRE, 1, holder(PRE).values, fractured=True)), "would keep the veiled mod"),
+        (lambda: amulet(ExplicitMod(PRE, holder(PRE).values, fractured=True)), "would keep the veiled mod"),
         (lambda: amulet(rolled(LOCK_SUFFIXES, crafted=True), rolled(VEIL_LIFE_1, fractured=True)), "would keep the veiled mod"),  # a mod unveiled from the pool, fractured
         (lambda: amulet(rolled(RESIST_2, fractured=True), rolled(COLD_RESIST, fractured=True), rolled(MANA_1, fractured=True), rolled(LIFE_1, fractured=True), rolled(DAMAGE_1, fractured=True), rolled(GEM, fractured=True)), "no room"),
     ],

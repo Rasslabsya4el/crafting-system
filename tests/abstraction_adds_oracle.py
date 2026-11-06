@@ -33,7 +33,7 @@ SIDES = ("prefix", "suffix")
 def _drawn(data: GameData, tiers: Mapping[str, int], mod_id: str) -> ExplicitMod:
     """A drawn mod at its table tier with every value at the low end of its range."""
     stats = data.mods[mod_id].stats
-    return ExplicitMod(mod_id, tiers.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in stats))
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in stats))
 
 
 def drawn_items(

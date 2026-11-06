@@ -29,7 +29,7 @@ def real():
 
 
 def ring(real, *mod_ids: str, influence: Influence) -> Item:
-    mods = tuple(ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in real.mods[mod_id].stats)) for mod_id in mod_ids)
+    mods = tuple(ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in real.mods[mod_id].stats)) for mod_id in mod_ids)
     return Item.build(real, base_id=RING, item_level=LEVEL, rarity=Rarity.RARE, mods=mods, influences=frozenset({influence}))
 
 

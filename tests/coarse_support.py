@@ -106,7 +106,7 @@ PRICES = {  # Chaos Orbs
 def roll(mod_id: str, *, fractured: bool = False, crafted: bool = False) -> ExplicitMod:
     mod = DATA.mods[mod_id]
     values = tuple(min(stat.min, stat.max) for stat in mod.stats)
-    return ExplicitMod(mod_id, TIERS.get(mod_id, 1), values, fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, values, fractured=fractured, crafted=crafted)
 
 
 def item(*mods: ExplicitMod, rarity: Rarity = Rarity.RARE) -> Item:
@@ -182,7 +182,7 @@ def concrete_items(
 
     def rolled(mod_id: str, **flags) -> ExplicitMod:
         values = tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats)
-        return ExplicitMod(mod_id, tiers.get(mod_id, 1), values, **flags)
+        return ExplicitMod(mod_id, values, **flags)
 
     ordinary = [rolled(mod_id) for mod_id in mod_ids]
     crafted_mods = [None, *(rolled(mod_id, crafted=True) for mod_id in crafted)]

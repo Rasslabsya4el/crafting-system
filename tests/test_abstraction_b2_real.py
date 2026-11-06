@@ -76,7 +76,7 @@ class Kit:
 
     def roll(self, mod_id: str, tier: int | None = None, **flags) -> ExplicitMod:
         mod = self.data.mods[mod_id]
-        return ExplicitMod(mod_id, tier or self.tiers.get(mod_id, 1), tuple(min(s.min, s.max) for s in mod.stats), **flags)
+        return ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in mod.stats), **flags)
 
     def of(self, *entries, **fields) -> Item:
         """A rare item of the base; an entry is a mod id, a `(family, tier)` pair, or a ready `ExplicitMod`."""

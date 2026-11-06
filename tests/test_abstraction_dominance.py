@@ -210,13 +210,13 @@ def test_a_top_tier_mod_becomes_its_elevated_version_and_that_no_longer_meets_a_
     assert {tuple(slot.kind for slot in state.slots) for state in again} == {(f"${MIX_S2_MAVEN}",), (f"${S2}",)}
 
 
-def test_the_elevated_tier_is_the_same_in_the_item_the_orb_makes_and_in_the_state_that_rebuilds_it():
+def test_the_elevated_mod_is_the_same_in_the_item_the_orb_makes_and_in_the_state_that_rebuilds_it():
     found = ability((DOMINANCE,), Goal((Wanted(frozenset({P3_MAVEN})),)))  # the Elevated mod named, no tier asked
     start = item(rolled(P3, 1), rolled(S1, 2), influences={SHAPER})
     for chance, result in DOMINANCE.outcomes(DATA, start).results:
         state = found.compress(result)
         rebuilt, _ = found._item_of(state, False)
-        assert {m.mod_id: m.tier for m in rebuilt.mods} == {m.mod_id: m.tier for m in result.mods}
+        assert {m.mod_id for m in rebuilt.mods} == {m.mod_id for m in result.mods}
         assert found.compress(rebuilt) == state
     assert found.kernel(found.compress(start), DOMINANCE)  # a state that holds the Elevated mod exists
     assert {state.status for state in found.kernel(found.compress(start), DOMINANCE)} == {(Status.ABSENT,), (Status.PASSING,)}

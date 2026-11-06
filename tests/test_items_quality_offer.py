@@ -3,7 +3,7 @@
 import dataclasses
 
 import pytest
-from implicits_support import BELT, BOOTS, EXTENDED, make, on_body, placeholder
+from implicits_support import BELT, BOOTS, EXTENDED, implicit, make, on_body, placeholder
 from items_support import BODY, DATA, roll
 from repoe_support import no_network  # noqa: F401
 
@@ -120,7 +120,7 @@ def test_changed_keeps_and_sets_the_quality():
     assert built.changed(EXTENDED, quality=None).quality is None
     assert built.changed(EXTENDED, quality=Quality(CatalystType.NOXIOUS, 3)).quality.type is CatalystType.NOXIOUS
     with pytest.raises(QualityError):
-        built.changed(EXTENDED, base_id=BOOTS)
+        built.changed(EXTENDED, base_id=BOOTS, implicits=())
 
 
 # the veiled placeholder and its seed
@@ -129,7 +129,7 @@ def test_changed_keeps_and_sets_the_quality():
 def test_a_veiled_placeholder_builds_with_tier_1_and_the_minimum_seed():
     built = make(veiled_placeholder(EXTENDED, "VeiledPrefix"))
 
-    assert built.mods == (ExplicitMod("VeiledPrefix", 1, (1, 1)),)
+    assert built.mods == (ExplicitMod("VeiledPrefix", (1, 1)),)
     assert VEILED_SEED_STAT == "veiled_mod_seed"
 
 
@@ -182,7 +182,7 @@ def test_canonical_leaves_unknown_mods_and_other_domains_alone():
         base_id=BELT,
         item_level=84,
         rarity=Rarity.RARE,
-        mods=(ExplicitMod("NoSuchMod", 1, (777,)), roll("ColdResist1")),
+        mods=(ExplicitMod("NoSuchMod", (777,)), roll("ColdResist1")),
     )
 
     assert odd.canonical(EXTENDED) is odd
@@ -191,7 +191,7 @@ def test_canonical_leaves_unknown_mods_and_other_domains_alone():
 
 
 def test_canonical_leaves_a_wrong_count_of_values_for_validate():
-    wrong = ExplicitMod("VeiledPrefix", 1, (1,))
+    wrong = ExplicitMod("VeiledPrefix", (1,))
 
     with pytest.raises(ValueRangeError, match="VeiledPrefix has 1 rolled value.*2 stat"):
         make(wrong)
@@ -303,7 +303,7 @@ def test_the_offer_vanishes_with_its_placeholder_on_boots():
 
 def test_the_offer_stays_when_other_mods_change_and_the_placeholder_stays():
     built = make(placeholder(), base_id=BOOTS, veil_offer=OFFER)
-    life = ExplicitMod("IncreasedLife1", 1, (10,))
+    life = ExplicitMod("IncreasedLife1", (10,))
 
     assert built.add_mod(EXTENDED, life).veil_offer == OFFER
     assert built.add_mod(EXTENDED, life).remove_mod(EXTENDED, "IncreasedLife1").veil_offer == OFFER
@@ -347,7 +347,7 @@ def test_an_item_without_the_new_fields_equals_the_same_item_and_hashes_the_same
 
     assert first == second
     assert hash(first) == hash(second)
-    assert first.implicits == () and first.quality is None and first.veil_offer == ()
+    assert first.implicits == (implicit("StrengthImplicitBelt1"),) and first.quality is None and first.veil_offer == ()  # the belt's own implicit (#484)
 
 
 def test_an_item_with_a_new_field_differs_from_one_without():
@@ -366,7 +366,7 @@ def test_the_new_errors_are_item_errors():
 def test_a_scouring_orb_on_an_item_with_an_offer_no_longer_crashes():
     from crafting_system.actions import ScouringOrb
 
-    built = make(placeholder(), ExplicitMod("IncreasedLife1", 1, (10,)), base_id=BOOTS, veil_offer=OFFER)
+    built = make(placeholder(), ExplicitMod("IncreasedLife1", (10,)), base_id=BOOTS, veil_offer=OFFER)
 
     results = ScouringOrb().outcomes(EXTENDED, built)
 

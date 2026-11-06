@@ -52,7 +52,7 @@ def mapping(data):
 def gloves(data, *entries, influences=()) -> Item:
     """Gloves that hold the mods `entries` (ids), each at the tier it has among the mods of these influences."""
     tiers = tiers_of(data, Item.build(data, base_id=GLOVES, item_level=LEVEL, rarity=Rarity.RARE, influences=frozenset(influences)))
-    mods = tuple(ExplicitMod(mod_id, tiers[mod_id], tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats)) for mod_id in entries)
+    mods = tuple(ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats)) for mod_id in entries)
     return Item.build(data, base_id=GLOVES, item_level=LEVEL, rarity=Rarity.RARE, mods=mods, influences=frozenset(influences))
 
 

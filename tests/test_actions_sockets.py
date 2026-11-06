@@ -491,7 +491,7 @@ def test_the_jewellers_orb_refusals():
     with pytest.raises(OutOfScopeError, match="states no sockets"):
         jeweller(socketed(None))
     abyss = abyss_data()
-    with_abyss = Item.build(abyss, base_id=BODY, item_level=84, rarity=Rarity.RARE, mods=(ExplicitMod(ABYSS_MOD, 1, (1,)),), sockets=white(2))
+    with_abyss = Item.build(abyss, base_id=BODY, item_level=84, rarity=Rarity.RARE, mods=(ExplicitMod(ABYSS_MOD, (1,)),), sockets=white(2))
     for action in (JewellersOrb(), JewellersOrb(omen=True), OrbOfFusing(), BenchSocketCount(5), BenchSocketLinks(2)):
         with pytest.raises(OutOfScopeError, match="Abyssal"):
             action.outcomes(bench_data_with_abyss(), with_abyss)

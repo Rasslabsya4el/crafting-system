@@ -73,7 +73,7 @@ class R24:
 
     def roll(self, mod_id: str, **flags) -> ExplicitMod:
         mod = self.data.mods[mod_id]
-        return ExplicitMod(mod_id, self.tiers.get(mod_id, 1), tuple(min(s.min, s.max) for s in mod.stats), **flags)
+        return ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in mod.stats), **flags)
 
     def boots(self, *mods: ExplicitMod, **fields) -> Item:
         return Item.build(self.data, base_id=BOOTS, item_level=LEVEL, rarity=Rarity.RARE, mods=mods, **fields)

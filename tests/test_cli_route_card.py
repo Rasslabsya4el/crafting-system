@@ -123,7 +123,7 @@ def test_a_mod_without_text_is_shown_by_its_name():
 
 
 def r12_start():
-    return item(ExplicitMod("LightningResist2", 3, (14,), fractured=True), base_id=AMULET)
+    return item(ExplicitMod("LightningResist2", (14,), fractured=True), base_id=AMULET)
 
 
 def test_the_r12_start_amulet_is_a_rare_with_a_fractured_resistance_in_the_suffixes():
@@ -163,7 +163,7 @@ def test_rows_run_fractured_first_then_the_mods_then_the_crafted_ones_and_each_s
         roll("StrMasterItemGenerationCannotChangePrefixes", crafted=True),
         roll("FireResist1"),
         roll("IncreasedLife3"),
-        ExplicitMod("ColdResist1", 1, (7,), fractured=True),
+        ExplicitMod("ColdResist1", (7,), fractured=True),
     )
 
     card = card_of_item(DATA, item(*mods, base_id=AMULET))
@@ -446,7 +446,7 @@ def test_a_family_told_apart_is_a_mod_of_that_family_not_junk():
 def test_a_slot_below_its_tier_in_a_tracked_state_is_the_wanted_text_with_a_note():
     ab = Abstraction(DATA, Goal((Wanted(frozenset({LIFE, "IncreasedLife2", LIFE_3}), min_tier=1),)), BELT, BELT_LEVEL, CRAFTS)
 
-    card = card_of_states(ab, [ab.compress(belt(ExplicitMod(LIFE, 3, (10,))))])
+    card = card_of_states(ab, [ab.compress(belt(ExplicitMod(LIFE, (10,))))])
 
     assert card.prefixes == (Slot("+# to maximum Life", "wanted", note="tier too low"), EMPTY, EMPTY)
 

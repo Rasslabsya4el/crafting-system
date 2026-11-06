@@ -29,7 +29,7 @@ def data():
 
 
 def rare(data, base_id, *mod_ids, level=100, **fields):
-    mods = tuple(ExplicitMod(i, 1, tuple(min(s.min, s.max) for s in data.mods[i].stats)) for i in mod_ids)
+    mods = tuple(ExplicitMod(i, tuple(min(s.min, s.max) for s in data.mods[i].stats)) for i in mod_ids)
     return Item.build(data, base_id=base_id, item_level=level, rarity=Rarity.RARE, mods=mods, **fields)
 
 

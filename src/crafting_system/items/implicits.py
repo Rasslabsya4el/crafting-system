@@ -9,7 +9,7 @@ types of 3.29.3.3.
 from dataclasses import dataclass
 from enum import StrEnum
 
-from crafting_system.data import BaseItem, Mod
+from crafting_system.data import BaseItem, GameData, Mod
 
 from .errors import ImplicitError
 from .spawn import spawn_weight
@@ -70,6 +70,32 @@ class ImplicitMod:
     mod_id: str
     grade: int
     values: tuple[int, ...]
+
+
+def base_implicits(data: GameData, base: BaseItem) -> tuple[ImplicitMod, ...]:
+    """The implicits of `base` as a fresh item carries them: each at grade 0 and at the low end of its range (ticket #484, #449).
+
+    An item carries every implicit of its base until a replacer puts another in its place. The low end is what a bought item is
+    taken to hold: it was priced with no filter on that roll, so a plan must not count on more. A base implicit the game data
+    does not hold is left out.
+    """
+    return tuple(
+        ImplicitMod(mod_id, BASE_GRADE, tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats))
+        for mod_id in base.implicits
+        if mod_id in data.mods
+    )
+
+
+def with_base_implicits(data: GameData, base: BaseItem, listed: tuple[ImplicitMod, ...]) -> tuple[ImplicitMod, ...]:
+    """`listed` plus every implicit of the base it does not list, at the low end, unless a replacer is listed.
+
+    An implicit that is not one of the base's (an Eldritch or a corrupted one) is a replacer: it is in the place of the base's
+    own (`Ember`, `Vaal Orb`, ADR-0027 amendment #484), so a list that holds one says the whole of what the item holds.
+    """
+    if any(entry.mod_id not in base.implicits for entry in listed):
+        return listed
+    held = {entry.mod_id for entry in listed}
+    return (*listed, *(entry for entry in base_implicits(data, base) if entry.mod_id not in held))
 
 
 def eldritch_side(mod: Mod) -> EldritchSide | None:

@@ -61,7 +61,7 @@ def shield(data):
     for mod_id in OLD_MODS:
         mod = data.mods[mod_id]
         low = tuple(min(stat.min, stat.max) for stat in mod.stats)
-        mods.append(ExplicitMod(mod_id, table.get(mod_id, 1), low, crafted=mod.domain == "crafted"))
+        mods.append(ExplicitMod(mod_id, low, crafted=mod.domain == "crafted"))
     return Item.build(data, base_id=SHIELD, item_level=100, rarity=Rarity.RARE, mods=tuple(mods))
 
 

@@ -126,7 +126,7 @@ def test_a_target_that_asks_30_percent_movement_speed_lists_the_five_step_boots_
     assert candidate.key == BOOTS_KEY and candidate.source == SOURCE_VENDOR_RECIPE
     assert candidate.recipe == "boots_movement_speed" and candidate.steps == 5
     assert candidate.item == Item.build(
-        TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity5", 2, (30,)),)
+        TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity5", (30,)),)
     )
     assert candidate.goods == (
         (BOOTS_NAME, 1, BASE_PRICE, "trade-api"),
@@ -145,7 +145,7 @@ def test_only_the_step_counts_that_reach_an_accepted_tier_are_options_and_a_dear
     (candidate,) = found.candidates
     assert candidate.key == "vendor:boots_movement_speed:3" and candidate.steps == 3
     assert candidate.price == pytest.approx(BASE_PRICE + 3 * (FLASK_PRICE + AUGMENTATION_PRICE))
-    assert candidate.item.mods == (ExplicitMod("MovementVelocity3", 4, (20,)),)
+    assert candidate.item.mods == (ExplicitMod("MovementVelocity3", (20,)),)
     assert [(each.reason, each.steps) for each in found.refused] == [(DOMINATED, 4), (DOMINATED, 5)]
     assert "3-step start" in found.refused[0].detail and "costs more" in found.refused[0].detail
 
@@ -228,7 +228,7 @@ def test_a_roll_the_recipe_does_not_promise_is_refused_and_a_roll_every_roll_mee
     assert refusal.reason == ROLL_NOT_GUARANTEED and "ChaosResist5" in refusal.detail
     (candidate,) = promised.candidates
     assert candidate.key == "vendor:jewellery_chaos_resistance:5"
-    assert candidate.item.mods == (ExplicitMod("ChaosResist5", 2, (26,)),)  # the lowest roll of the range meets the limit of 25
+    assert candidate.item.mods == (ExplicitMod("ChaosResist5", (26,)),)  # the lowest roll of the range meets the limit of 25
 
 
 def test_a_roll_limit_above_every_roll_of_the_rung_is_refused_for_the_roll_not_the_cap():
@@ -355,7 +355,7 @@ def test_a_candidate_skipped_for_its_price_could_not_have_won_and_a_dominated_st
     looser = toy_target(asking(tier=4))
     (cheap,) = listing(looser).candidates  # the 3-step start; the 4- and 5-step ones are dominated
     four = dataclasses.replace(cheap, key="four", steps=4, price=BASE_PRICE + 4 * (FLASK_PRICE + AUGMENTATION_PRICE),
-                               item=Item.build(TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity4", 3, (25,)),)))  # fmt: skip
+                               item=Item.build(TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity4", (25,)),)))  # fmt: skip
 
     assert planned_anyway.total >= plain_total
     assert starts_module._plan_candidate(TOY, looser, prices(), cheap, None).total <= starts_module._plan_candidate(TOY, looser, prices(), four, None).total
@@ -454,7 +454,7 @@ def test_a_recipe_start_can_win_when_the_plain_start_has_no_price():
 
 def bought_boots(price: float) -> StartCandidate:
     """What a bought-item source (research #337) would offer: the same 30% boots, priced by a trade query."""
-    item = Item.build(TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity5", 2, (30,)),))
+    item = Item.build(TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity5", (30,)),))
     return StartCandidate("bought:speed-boots", "bought", "bought 30% boots", item, price, "bought 30% boots", f"a trade query, {price:,.2f} Chaos")
 
 
@@ -492,7 +492,7 @@ def test_the_elemental_cap_lists_the_ninth_step_at_the_coe_reading_only_and_refu
     assert candidate.key == "vendor:weapon_fire:9" and (candidate.axis, candidate.reading_values) == ("elemental_cap", ("coe",))
     assert candidate.price == pytest.approx(BASE_PRICE + 9 * (FLASK_PRICE + AUGMENTATION_PRICE))
     assert candidate.goods[1] == (RUBY, 9, 9 * FLASK_PRICE, "fixture")
-    assert candidate.item.mods == (ExplicitMod("LocalAddedFireDamage9", 2, (90, 180)),)  # a two-stat mod, made at the lowest roll
+    assert candidate.item.mods == (ExplicitMod("LocalAddedFireDamage9", (90, 180)),)  # a two-stat mod, made at the lowest roll
     assert ELEMENTAL_CLAIM in candidate.claims
     (capped,) = [each for each in found.refused if each.reason == CAP_BELOW_ASKED]
     assert (capped.recipe, capped.axis, capped.reading_values) == ("weapon_fire", "elemental_cap", ("wiki",))

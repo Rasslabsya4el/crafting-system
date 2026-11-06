@@ -74,7 +74,7 @@ def test_a_divine_orb_on_a_tier_5_life_mod_passes_75_in_two_cases_of_three(data)
     leaf = Wanted(frozenset(LIFE_TIERS), min_roll=(75,))
     ab = Abstraction(data, Goal((leaf,)), AMULET, LEVEL, [ToyDivine(), ToyDivine(lucky=True)])
     tier = tier_table(data, AMULET)[LIFE_5]
-    item = Item.build(data, base_id=AMULET, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(LIFE_5, tier, (70,)),))
+    item = Item.build(data, base_id=AMULET, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(LIFE_5, (70,)),))
     state = ab.compress(item)
     assert state.status == (BELOW,)
 

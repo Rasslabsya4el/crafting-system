@@ -932,7 +932,6 @@ start_item:
   rarity: rare
   mods:
     - mod: IncreasedLife1
-      tier: 3
       values: [12]
   quality:
     percent: 12

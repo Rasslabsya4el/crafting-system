@@ -71,7 +71,7 @@ def rolled(mod_id: str, *, data=DATA, tiers: Mapping[str, int] | None = None, **
     """Any mod of the data at its lowest values (and its tier on the amulet, 1 for a mod with none)."""
     mod = data.mods[mod_id]
     table = TIERS if tiers is None else tiers
-    return ExplicitMod(mod_id, table.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def holder(mod_id: str, data=DATA) -> ExplicitMod:

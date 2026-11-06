@@ -134,7 +134,7 @@ def test_the_exact_result_holds_the_implicit_at_its_lowest_value_and_a_sample_va
 
 
 def test_only_the_implicit_values_change_the_explicit_mods_and_the_rest_stay():
-    given = _item(RING, ExplicitMod(LIFE, 1, (DATA.mods[LIFE].stats[0].min,)), implicits=(ImplicitMod(TWO_STAT, 0, (2, 7)),))
+    given = _item(RING, ExplicitMod(LIFE, (DATA.mods[LIFE].stats[0].min,)), implicits=(ImplicitMod(TWO_STAT, 0, (2, 7)),))
     outcomes = BlessedOrb().outcomes(DATA, given)
     sampled = outcomes.sample(random.Random(5))
     assert sampled.mods == given.mods and sampled.rarity == given.rarity and sampled.influences == given.influences
@@ -163,7 +163,7 @@ def test_a_fixed_implicit_the_item_stores_is_kept_as_it_is_next_to_a_rerolled_on
 
 def test_any_rarity_takes_it():
     for rarity in (Rarity.NORMAL, Rarity.MAGIC, Rarity.RARE):
-        mods = (ExplicitMod(LIFE, 1, (DATA.mods[LIFE].stats[0].min,)),) if rarity is not Rarity.NORMAL else ()
+        mods = (ExplicitMod(LIFE, (DATA.mods[LIFE].stats[0].min,)),) if rarity is not Rarity.NORMAL else ()
         assert BlessedOrb().outcomes(DATA, _item(RING, *mods, rarity=rarity))
 
 
@@ -208,7 +208,7 @@ def test_the_declarations_name_the_implicits_and_a_roll_limit():
 HAPPY = {
     "belt": lambda: belt(30),
     "belt_without_stored_implicit": lambda: belt(None),
-    "ring": lambda: _item(RING, ExplicitMod(LIFE, 1, (DATA.mods[LIFE].stats[0].min,))),
+    "ring": lambda: _item(RING, ExplicitMod(LIFE, (DATA.mods[LIFE].stats[0].min,))),
     "ring_stored": lambda: _item(RING, implicits=(ImplicitMod(FIXED, 0, (3,)), ImplicitMod(TWO_STAT, 0, (2, 6)))),
 }
 

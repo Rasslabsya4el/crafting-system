@@ -159,7 +159,7 @@ def low(mod_id: str, data=DATA) -> tuple[int, ...]:
 
 
 def roll(mod_id: str, *, fractured: bool = False, crafted: bool = False) -> ExplicitMod:
-    return ExplicitMod(mod_id, 1, low(mod_id), fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, low(mod_id), fractured=fractured, crafted=crafted)
 
 
 def implicit(mod_id: str) -> ImplicitMod:

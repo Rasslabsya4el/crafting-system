@@ -41,7 +41,7 @@ def finished_at_tiers(outcomes, data) -> list[tuple[Fraction, Item]]:
         tiers = tiers_of(data, part.retained)
         for outcome, chance in part.distribution(lambda mod: mod.id).items():
             added = tuple(
-                ExplicitMod(mod_id, tiers.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats))
+                ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats))
                 for mod_id, count in sorted(outcome)
                 for _ in range(count)
             )

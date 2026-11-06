@@ -249,7 +249,7 @@ DATA = build_world()
 
 
 def roll(mod_id, **flags):
-    return ExplicitMod(mod_id, 1, (5,), **flags)
+    return ExplicitMod(mod_id, (5,), **flags)
 
 
 def boots(*mods, rarity=Rarity.RARE, base=BOOTS, **fields):

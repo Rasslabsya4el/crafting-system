@@ -53,7 +53,6 @@ from crafting_system.items import (
     Side,
     is_veiled_mod,
     spawn_weight,
-    tier_table,
     veiled_families,
     veiled_placeholder,
 )
@@ -441,7 +440,7 @@ class Pick(Action):
         if any(conflicts(chosen, data.mods[entry.mod_id]) for entry in rest):
             raise NotApplicableError(f"the chosen mod {chosen.id} shares a family with a mod of the item")
         low = tuple(min(stat.min, stat.max) for stat in chosen.stats)
-        picked = ExplicitMod(chosen.id, tier_table(data, item.base_id).get(chosen.id, 1), low, fractured=held.fractured)  # a fractured veil stays fractured
+        picked = ExplicitMod(chosen.id, low, fractured=held.fractured)  # a fractured veil stays fractured
         return Finite(data, item, ((ONE, item.changed(data, mods=(*rest, picked))),))  # no placeholder left, so the offer goes
 
 

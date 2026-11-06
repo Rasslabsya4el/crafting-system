@@ -72,7 +72,7 @@ def implicit(mod_id: str, data: GameData = ITEM_DATA) -> ImplicitMod:
 
 
 def roll(mod_id: str, data: GameData = ITEM_DATA) -> ExplicitMod:
-    return ExplicitMod(mod_id, AMULET_TIERS.get(mod_id, 1), low(data, mod_id))
+    return ExplicitMod(mod_id, low(data, mod_id))
 
 
 def boots(*implicits: str, mods: tuple[ExplicitMod, ...] = (), rarity: Rarity = Rarity.RARE) -> Item:
@@ -87,7 +87,7 @@ def amulet(*mods: ExplicitMod, rarity: Rarity = Rarity.RARE, **fields) -> Item:
 
 def veiled(*mods: ExplicitMod, offer: tuple[str, ...] = ()) -> Item:
     """An amulet with the veiled placeholder, the given mods, and an unveil offer."""
-    placeholder = ExplicitMod(PLACEHOLDER, 1, low(ITEM_DATA, PLACEHOLDER))
+    placeholder = ExplicitMod(PLACEHOLDER, low(ITEM_DATA, PLACEHOLDER))
     return amulet(placeholder, *mods, veil_offer=offer)
 
 
@@ -253,7 +253,7 @@ class ToyPick(Action):
         rest = tuple(entry for entry in item.mods if data.mods[entry.mod_id].domain != "veiled")
         if any(set(mod.families) & set(data.mods[entry.mod_id].families) for entry in rest):
             raise NotApplicableError("the picked mod clashes with a mod of the item")
-        result = item.changed(data, mods=(*rest, ExplicitMod(chosen, tier, low(data, chosen))))
+        result = item.changed(data, mods=(*rest, ExplicitMod(chosen, low(data, chosen))))
         return Finite(data, item, ((Fraction(1), result),))
 
 

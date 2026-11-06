@@ -187,7 +187,7 @@ def test_an_item_with_no_mod_is_out_of_scope_for_a_craft():
 def test_an_item_that_fails_validation_raises_its_item_error():
     from crafting_system.items import ExplicitMod, UnknownBaseError, UnknownModError
 
-    unknown_mod = Item(base_id=BELT, item_level=86, rarity=Rarity.RARE, mods=(ExplicitMod("Nope", 1, (1,)),))
+    unknown_mod = Item(base_id=BELT, item_level=86, rarity=Rarity.RARE, mods=(ExplicitMod("Nope", (1,)),))
     with pytest.raises(UnknownModError):
         BenchCraft(DAMAGE_1).outcomes(DATA, unknown_mod)
     with pytest.raises(UnknownModError):

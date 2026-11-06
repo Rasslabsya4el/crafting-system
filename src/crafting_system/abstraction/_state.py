@@ -102,7 +102,7 @@ class ImplicitSide:
     """One Eldritch side (Searing Exarch or Eater of Worlds) of the implicit pair (ADR-0025, ADR-0027), or one implicit of the base.
 
     `grade` is 0 for no implicit, then 1 Lesser to 6 Perfect (an implicit of the base has grade 0 and is told from no implicit by its
-    contribution: all ABSENT when the item does not store it, ticket #158). `contribution` is what the implicit gives each
+    contribution: all ABSENT once a replacer took the implicit's place, ticket #484; an item carries every implicit of its base until then). `contribution` is what the implicit gives each
     implicit leaf of the goal (`Goal.implicits`), roll included, as a `Slot` holds it for a mod; all ABSENT for no implicit. The
     family of the implicit is not kept: a family nobody asks for decides nothing, and one that is asked for shows in
     the contribution. Dominance is not stored; it follows from the two grades.

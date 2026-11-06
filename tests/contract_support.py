@@ -194,7 +194,7 @@ SIGMAS = 5.0
 def _roll(mod_id: str, *, fractured: bool = False, crafted: bool = False) -> ExplicitMod:
     mod = CONTRACT_DATA.mods[mod_id]
     values = tuple(min(stat.min, stat.max) for stat in mod.stats)
-    return ExplicitMod(mod_id, TIERS.get(mod_id, 1), values, fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, values, fractured=fractured, crafted=crafted)
 
 
 def _item(rarity: Rarity, *mods: ExplicitMod, **fields) -> Item:
@@ -314,7 +314,7 @@ def finished(outcomes, data=CONTRACT_DATA) -> list[tuple[Fraction, Item]]:
 def _roll_in(data, mod_id: str) -> ExplicitMod:
     mod = data.mods[mod_id]
     values = tuple(min(stat.min, stat.max) for stat in mod.stats)
-    return ExplicitMod(mod_id, tier_table(data, AMULET).get(mod_id, 1), values)  # only amulets are drawn onto in the brute force below
+    return ExplicitMod(mod_id, values)  # only amulets are drawn onto in the brute force below
 
 
 # --- the checks ----------------------------------------------------------------------------------

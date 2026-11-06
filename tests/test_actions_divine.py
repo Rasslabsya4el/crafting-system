@@ -34,7 +34,7 @@ SIGMAS = 5.0
 
 
 def life(value: int = 10, **flags) -> ExplicitMod:
-    return ExplicitMod(LIFE, 3, (value,), **flags)
+    return ExplicitMod(LIFE, (value,), **flags)
 
 
 def values_of(result, mod_id: str) -> tuple[int, ...]:
@@ -154,15 +154,15 @@ def test_a_sample_keeps_the_mods_their_tiers_their_order_and_their_flags():
 
     for drawn in samples(item_, 50):
         drawn.validate(DATA)
-        assert [(e.mod_id, e.tier, e.fractured, e.crafted) for e in drawn.mods] == [
-            (e.mod_id, e.tier, e.fractured, e.crafted) for e in item_.mods
+        assert [(e.mod_id, e.fractured, e.crafted) for e in drawn.mods] == [
+            (e.mod_id, e.fractured, e.crafted) for e in item_.mods
         ]
         assert drawn.rarity is item_.rarity and drawn.item_level == item_.item_level
 
 
 def test_a_fractured_mod_and_a_mod_on_a_locked_side_keep_their_values():
     item_ = amulet(
-        life(17), ExplicitMod(RESIST, 8, (9,)), ExplicitMod(MANA, 2, (33,), fractured=True), roll(LOCKS_SUFFIXES, crafted=True)
+        life(17), ExplicitMod(RESIST, (9,)), ExplicitMod(MANA, (33,), fractured=True), roll(LOCKS_SUFFIXES, crafted=True)
     )
 
     for drawn in samples(item_, 60):
@@ -181,7 +181,7 @@ def test_a_changed_value_stays_in_its_range_and_is_uniform_over_it():
 
 def test_the_stats_of_one_mod_roll_independently():
     data = _hybrid_data()
-    item_ = Item.build(data, base_id=AMULET, item_level=86, rarity=Rarity.RARE, mods=(ExplicitMod(LIFE, 3, (10, 1)),))
+    item_ = Item.build(data, base_id=AMULET, item_level=86, rarity=Rarity.RARE, mods=(ExplicitMod(LIFE, (10, 1)),))
     outcomes = DivineOrb().outcomes(data, item_)
     rng, count = random.Random(5), 6000
     pairs = Counter(outcomes.sample(rng).mods[0].values for _ in range(count))

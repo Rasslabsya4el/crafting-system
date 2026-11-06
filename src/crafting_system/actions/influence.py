@@ -26,8 +26,8 @@ influence's orb for an item that has it (unverified, approximate). None is a pla
 The compressed state (ticket #155, ADR-0030 amendment). `OrbOfDominance` declares `Reads.influenced` (an Awakener's Orb does too): the state then tells
 each influence mod of the item's influences apart by MOD (the kind `$<mod id>`), because the families of the data hold ordinary and influence mods
 together and the result depends on which mod it is (its next tier, its Elevated version, whether it is one at all); the other mods stay as the
-actions that read them ask (by side for Dominance alone). An Elevated mod is an influence mod (weight 0 on the influence tag) and its tier in the
-state is `ELEVATED_TIER`, the best one, the same in the item the orb makes and in the state that rebuilds it: it comes from no tier table. The
+actions that read them ask (by side for Dominance alone). An Elevated mod is an influence mod (weight 0 on the influence tag) and has no natural tier (the item stores none, #484): the judgement of a requirement
+reads the data, and an Elevated mod is in no tier table. The
 influenced Exalted Orb and the beast recipe only put influence mods on the item and declare nothing new; layer 1 passes for them, for the orb
 and for the Awakener's Orb on every item they reach together (`tests/test_abstraction_dominance.py`).
 
@@ -111,7 +111,6 @@ BEAST_ADDS_A_MOD_OF_THAT_INFLUENCE = get_rule("influence_beast.adds_a_mod_of_tha
 BEAST_REFUSED_ON_CORRUPTED = get_rule("influence_beast.refused_on_corrupted")
 
 ONE, ZERO = Fraction(1), Fraction(0)
-ELEVATED_TIER = 1  # an Elevated mod has no tier in the data (it never spawns); `Item` needs one, from 1
 MIN_INFLUENCED_MODS = 2  # the Orb of Dominance removes one influenced mod and upgrades another
 WORDS = {influence: influence.value.capitalize() for influence in Influence}  # Shaper, Elder, ... as the orbs and recipes read
 
@@ -308,11 +307,11 @@ class OrbOfDominance(Action):
 
         The next tier is a mod of the held mod's own influence: on an item with two influences, two mods of one type can both
         spawn (Elder's and Crusader's maximum Mana), and the next tier of an Elder mod is never the other influence's mod. The
-        tier number stored is that of `tiers_of`, as for every other action.
+        tier is the data's (`tiers_of`); the item stores none.
         """
         mod = data.mods[entry.mod_id]
         if is_elevated(mod):
-            return ExplicitMod(mod.id, ELEVATED_TIER, _low(mod))
+            return ExplicitMod(mod.id, _low(mod))
         if mod.id not in tiers:
             raise OutOfScopeError(f"the influenced mod {mod.id} has no tier on this item, so its upgrade is not modelled")
         held_tags = frozenset(item_tags(data, item))
@@ -333,15 +332,15 @@ class OrbOfDominance(Action):
                     f"{mod.id} is a top-tier mod and no Elevated version of it is known for data version {data.version} "
                     "(dominance.elevated_mapping_is_coe_table; `python -m crafting_system.data elevated` lists what it could not link)"
                 )
-            return ExplicitMod(elevated_id, ELEVATED_TIER, _low(data.mods[elevated_id]))
+            return ExplicitMod(elevated_id, _low(data.mods[elevated_id]))
         level = min(other.required_level for other in better)
         next_tier = [other for other in better if other.required_level == level]
         if len(next_tier) != 1:
             raise OutOfScopeError(
                 f"the next tier of {mod.id} is ambiguous ({', '.join(sorted(other.id for other in next_tier))} share required level {level})"
             )
-        # the chain only picks the mod; its tier number is the one every other action gives it (`tiers_of`)
-        return ExplicitMod(next_tier[0].id, tiers[next_tier[0].id], _low(next_tier[0]))
+        # the chain only picks the mod; its tier is the data's, the item stores none
+        return ExplicitMod(next_tier[0].id, _low(next_tier[0]))
 
     def outcomes(self, data: GameData, item: Item) -> Finite:
         """The outcomes of using the orb on `item`: one result per ordered pair (removed, upgraded) of influenced mods, each 1/(n(n-1)).

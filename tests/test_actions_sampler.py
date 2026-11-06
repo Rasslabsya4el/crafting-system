@@ -85,7 +85,7 @@ def test_every_sampled_item_is_valid_and_keeps_the_fractured_mod(action, item):
         for entry in drawn.mods:
             if entry in item.fractured_mods:
                 continue
-            assert entry.tier == tiers[entry.mod_id]
+            assert entry.mod_id in tiers  # a drawn mod is one of the pool, whose tier is the data's
             assert not entry.fractured and not entry.crafted
             for value, stat in zip(entry.values, DATA.mods[entry.mod_id].stats, strict=True):
                 assert min(stat.min, stat.max) <= value <= max(stat.min, stat.max)

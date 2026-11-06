@@ -72,7 +72,7 @@ def implicit(data, mod_id):
 
 
 def rolled(data, mod_id, **flags):
-    return ExplicitMod(mod_id, 1, low(data, mod_id), **flags)
+    return ExplicitMod(mod_id, low(data, mod_id), **flags)
 
 
 @pytest.mark.parametrize(("side", "item_class"), list(T1))

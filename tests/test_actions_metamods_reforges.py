@@ -44,7 +44,7 @@ def low(mod_id: str):
 
 
 def mod(mod_id: str, *, fractured=False, crafted=False) -> ExplicitMod:
-    return ExplicitMod(mod_id, 1, low(mod_id), fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, low(mod_id), fractured=fractured, crafted=crafted)
 
 
 def meta(mod_id: str) -> ExplicitMod:

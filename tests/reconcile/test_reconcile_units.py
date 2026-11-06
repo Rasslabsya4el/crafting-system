@@ -92,7 +92,7 @@ TARGET = {
     "item_level": 80,
     "influence": [],
     "requirements": [{"family": "ResA"}],
-    "start_item": {"rarity": "rare", "mods": [{"mod": "ResA2", "tier": 2, "values": [14], "fractured": True}]},
+    "start_item": {"rarity": "rare", "mods": [{"mod": "ResA2", "values": [14], "fractured": True}]},
     "start": "bought",
     "start_price": "T start ring",
 }
@@ -298,7 +298,7 @@ def test_a_target_without_start_item_starts_normal_and_one_with_mods_and_no_rari
     )
 
     assert (bare.rarity, unnamed.rarity, empty.rarity, written.rarity) == ("normal", "rare", "normal", "magic")
-    assert unnamed.start_mods[0].tier is None and unnamed.start_mods[0].values == ()
+    assert unnamed.start_mods[0].values == ()
 
 
 def test_a_target_without_a_base_or_item_level_is_a_format_error(tmp_path):
@@ -479,7 +479,7 @@ def test_files_that_agree_have_every_slot_empty(tmp_path):
         [
             "target.base", "start_price.written", "buy_spec.exists",
             "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
-            "start_mod.ResA2.tier", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
+            "start_mod.ResA2.ladder", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
             "buy_mod.+#% to Resist.in_target",
             "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
         ]
@@ -493,12 +493,12 @@ def test_the_slots_come_from_the_two_yaml_files_alone(tmp_path):
     assert slots(target, spec) == [
         "target.base", "start_price.written", "buy_spec.exists",
         "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
-        "start_mod.ResA2.tier", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
+        "start_mod.ResA2.ladder", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
         "buy_mod.+#% to Resist.in_target",
         "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
     ]  # fmt: skip
     assert slots(target, None) == [
-        "target.base", "start_price.written", "buy_spec.exists", "start_mod.ResA2.tier", "start_mod.ResA2.values",
+        "target.base", "start_price.written", "buy_spec.exists", "start_mod.ResA2.ladder", "start_mod.ResA2.values",
         "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
     ]  # fmt: skip
 
@@ -606,16 +606,8 @@ def test_an_item_class_with_no_known_trade_category_is_a_disagreement_not_a_pass
     assert "?Odd Class" in "".join(_bad(result)["buy.category"])
 
 
-def test_a_hand_written_tier_that_the_ladder_does_not_give_is_a_disagreement(tmp_path):
-    result = _bad(_run(tmp_path, target=lambda d: d["start_item"]["mods"][0].update(tier=3)))
-
-    assert list(result) == ["start_mod.ResA2.tier"]
-    assert "tier = 3" in result["start_mod.ResA2.tier"][0] and "tier 2 of 3" in result["start_mod.ResA2.tier"][0]
-
-
-def test_a_start_mod_with_no_written_tier_or_values_has_nothing_to_reconcile(tmp_path):
+def test_a_start_mod_with_no_written_values_has_nothing_to_reconcile(tmp_path):
     def change(document):
-        del document["start_item"]["mods"][0]["tier"]
         del document["start_item"]["mods"][0]["values"]
 
     assert _bad(_run(tmp_path, target=change)) == {}
@@ -638,28 +630,28 @@ def test_a_start_mod_that_is_not_in_the_game_data_fails_both_data_slots_and_the_
     result = _bad(_run(tmp_path, target=lambda d: d["start_item"]["mods"][0].update(mod="Ghost")))
 
     assert set(result) == {
-        "start_mod.Ghost.tier", "start_mod.Ghost.values", "start_mod.Ghost.buy_mod", "buy_mod.+#% to Resist.in_target",
+        "start_mod.Ghost.ladder", "start_mod.Ghost.values", "start_mod.Ghost.buy_mod", "buy_mod.+#% to Resist.in_target",
     }  # fmt: skip
 
 
-def test_a_start_mod_that_cannot_spawn_on_the_base_is_a_tier_disagreement(tmp_path):
+def test_a_start_mod_that_cannot_spawn_on_the_base_is_a_ladder_disagreement(tmp_path):
     result = _bad(_run(tmp_path, target=lambda d: d["start_item"]["mods"][0].update(mod="ResAAmuletOnly", values=[31])))
 
-    assert "cannot spawn on" in result["start_mod.ResAAmuletOnly.tier"][0]
+    assert "cannot spawn on" in result["start_mod.ResAAmuletOnly.ladder"][0]
 
 
-def test_a_tier_that_differs_between_bases_of_one_name_is_a_disagreement(tmp_path):
+def test_a_tier_that_differs_between_bases_of_one_name_is_a_ladder_disagreement(tmp_path):
     mods = {**EXPORT.mods, "Boot1": _mod("Boot", 1, 1, 2, [("boots", 1)]), "Boot2": _mod("Boot", 9, 3, 4, [("extra", 1)])}
     bases = {**EXPORT.bases, TWIN_B: _base("Twin Boots", "Boots", ["boots", "extra", "default"])}  # Boot2 spawns on this one only
     export = Export(mods=mods, bases=bases)
 
     def target(document):
         document["base"] = "Twin Boots"
-        document["start_item"]["mods"] = [{"mod": "Boot1", "tier": 2, "values": [1], "fractured": True}]
+        document["start_item"]["mods"] = [{"mod": "Boot1", "values": [1], "fractured": True}]
 
     result = _bad(_run(tmp_path, target=target, export=export))
 
-    assert any("differs between the bases" in line for line in result["start_mod.Boot1.tier"])
+    assert any("differs between the bases" in line for line in result["start_mod.Boot1.ladder"])
 
 
 @pytest.mark.parametrize(
@@ -685,10 +677,10 @@ def test_the_minimum_may_be_anywhere_from_just_above_the_lower_tier_to_the_start
 
 def test_the_top_tier_has_no_floor_and_the_lowest_tier_needs_no_lower_bound(tmp_path):
     def top(document):
-        document["start_item"]["mods"][0].update(mod="ResA3", tier=1, values=[20])
+        document["start_item"]["mods"][0].update(mod="ResA3", values=[20])
 
     def bottom(document):
-        document["start_item"]["mods"][0].update(mod="ResA1", tier=3, values=[7])
+        document["start_item"]["mods"][0].update(mod="ResA1", values=[7])
 
     spec_top = lambda d: d["mods"][0].update(minimum=18)
     spec_bottom = lambda d: d["mods"][0].update(minimum=1)
@@ -714,7 +706,7 @@ def test_a_spec_mod_with_several_stats_is_refused_not_passed(tmp_path):
     export = Export(mods=mods, bases=EXPORT.bases)
 
     def target(document):
-        document["start_item"]["mods"] = [{"mod": "Hybrid", "tier": 1, "values": [1, 3], "fractured": True}]
+        document["start_item"]["mods"] = [{"mod": "Hybrid", "values": [1, 3], "fractured": True}]
 
     with pytest.raises(FileFormatError, match="2 stats"):
         _run(tmp_path, target=target, spec=lambda d: d["mods"][0].update(stat="+# to A"), export=export)
@@ -722,7 +714,7 @@ def test_a_spec_mod_with_several_stats_is_refused_not_passed(tmp_path):
 
 def test_a_one_line_stat_matches_data_text_with_a_fixed_number(tmp_path):
     def target(document):
-        document["start_item"]["mods"] = [{"mod": "Speed1", "tier": 1, "values": [30], "fractured": True}]
+        document["start_item"]["mods"] = [{"mod": "Speed1", "values": [30], "fractured": True}]
 
     result = _run(tmp_path, target=target, spec=lambda d: d["mods"][0].update(stat="#% increased Movement Speed", minimum=30))
 

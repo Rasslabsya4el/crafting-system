@@ -46,7 +46,7 @@ def roll(mod_id: str, *, fractured: bool = False, crafted: bool = False) -> Expl
     """The mod at its tier in `SMALL` (1 for a mod that cannot spawn) with every stat at the low end."""
     mod = SMALL.mods[mod_id]
     values = tuple(min(stat.min, stat.max) for stat in mod.stats)
-    return ExplicitMod(mod_id, TIERS.get(mod_id, 1), values, fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, values, fractured=fractured, crafted=crafted)
 
 
 def small_item(*mods: ExplicitMod, level: int = LEVEL, rarity: Rarity = Rarity.RARE, **fields) -> Item:

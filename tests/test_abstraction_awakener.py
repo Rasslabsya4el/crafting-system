@@ -101,7 +101,7 @@ def ring(*mods: str, influences=(), rarity=Rarity.RARE, **fields) -> Item:
     bare = Item.build(DATA, base_id=RING, item_level=LEVEL, rarity=rarity, influences=frozenset(influences))
     tiers = tiers_of(DATA, bare)
     entries = tuple(
-        ExplicitMod(mod_id, tiers.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in DATA.mods[mod_id].stats)) for mod_id in mods
+        ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in DATA.mods[mod_id].stats)) for mod_id in mods
     )
     return bare.changed(DATA, mods=entries, **fields)
 

@@ -48,6 +48,7 @@ from crafting_system.items import (
     read_memory_strands,
     spawn_weight,
     veiled_placeholder,
+    with_base_implicits,
 )
 
 from .corrupted import CorruptedResolver, corruption_problem
@@ -97,7 +98,7 @@ GROUP_KEYS = ("at_least", "of")
 START_ITEM_KEYS = (
     "rarity", "corrupted", "mods", "implicits", "quality", "sockets", "enchantment", "veil_offer", "memory_strands",
 )  # fmt: skip
-START_MOD_KEYS = ("mod", "tier", "values", "fractured", "crafted")
+START_MOD_KEYS = ("mod", "values", "fractured", "crafted")
 START_IMPLICIT_KEYS = ("mod", "values", "grade")
 START_QUALITY_KEYS = ("type", "percent")
 VEILED_DOMAIN = "veiled"
@@ -1076,6 +1077,9 @@ class _Reader:
                 fields["corrupted"] = start["corrupted"]
         if assume_socket and "sockets" not in fields:
             fields["sockets"] = Sockets.unlinked((SocketColour.WHITE,))  # a target with sockets assumes one white socket (ADR-0046)
+        base = self.data.base_items.get(base_id)
+        # an item carries every implicit of its base, at the low end, unless the file lists one that takes its place (#484, #449)
+        held = implicits if base is None else with_base_implicits(self.data, base, implicits)
         try:
             return Item.build(
                 self.data,
@@ -1083,7 +1087,7 @@ class _Reader:
                 item_level=item_level,
                 mods=mods,
                 influences=influences,
-                implicits=implicits,
+                implicits=held,
                 veil_offer=offer,
                 **fields,
             )
@@ -1132,31 +1136,24 @@ class _Reader:
 
     def read_start_mod(self, entry: object, path: str, line: int) -> ExplicitMod:
         if not isinstance(entry, LineMap):
-            self.fail(line, path, f"must be a mapping with `mod`, `tier` and `values`, got {describe(entry)}")
+            self.fail(line, path, f"must be a mapping with `mod` and `values`, got {describe(entry)}")
         self.check_keys(entry, path, START_MOD_KEYS)
-        veiled = self.is_veiled(entry.get("mod"))  # a veiled placeholder needs neither tier nor values
-        for key in ("mod",) if veiled else ("mod", "tier", "values"):
+        veiled = self.is_veiled(entry.get("mod"))  # a veiled placeholder needs no values
+        for key in ("mod",) if veiled else ("mod", "values"):
             if key not in entry:
                 self.fail(entry.line, f"{path}.{key}", "this key is required but missing")
         mod_id = self.known_mod_id(entry, f"{path}.mod")
-        if veiled:
-            placeholder = veiled_placeholder(self.data, mod_id)
-            tier = entry["tier"] if "tier" in entry else placeholder.tier
-        else:
-            tier = entry["tier"]
-        if not is_whole(tier) or tier < 1:
-            self.fail(entry.key_lines["tier"], f"{path}.tier", f"must be a whole number of 1 or more, got {describe(tier)}")
         if "values" in entry:
             values = self.read_values(entry["values"], f"{path}.values", entry.key_lines["values"])
         else:
-            values = placeholder.values
+            values = veiled_placeholder(self.data, mod_id).values
         flags = {}
         for key in ("fractured", "crafted"):
             if key in entry:
                 if not isinstance(entry[key], bool):
                     self.fail(entry.key_lines[key], f"{path}.{key}", f"must be true or false, got {describe(entry[key])}")
                 flags[key] = entry[key]
-        return ExplicitMod(mod_id, tier, values, **flags)
+        return ExplicitMod(mod_id, values, **flags)
 
     def is_veiled(self, mod_id: object) -> bool:
         """Whether `mod_id` is written as the id of a veiled placeholder."""

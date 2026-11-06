@@ -49,7 +49,7 @@ def r05():
     ab = Abstraction(data, Goal((life, Wanted(frozenset({FORCED})))), BASE, LEVEL, [RemoveCraftedMods(), *crafts])
     low = tuple(min(stat.min, stat.max) for stat in data.mods[FRACTURED].stats)
     start = Item.build(
-        data, base_id=BASE, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(FRACTURED, 1, low, fractured=True),)
+        data, base_id=BASE, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(FRACTURED, low, fractured=True),)
     )
     return ab, ab.compress(start), [ESSENCE, RemoveCraftedMods(), *crafts]
 

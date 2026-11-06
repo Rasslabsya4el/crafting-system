@@ -34,7 +34,7 @@ def corrupted_ring(*, implicits=(), mods=()):
         base_id=RING,
         item_level=84,
         rarity=Rarity.RARE,
-        mods=(ExplicitMod("ColdResist1", 1, (10,)), *mods),
+        mods=(ExplicitMod("ColdResist1", (10,)), *mods),
         implicits=implicits,
         corrupted=True,
     )

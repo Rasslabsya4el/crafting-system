@@ -15,7 +15,8 @@ Slots (the rule behind all of them is OR-3, "the target, the buy spec and the pr
 - `buy.base`, `buy.category`, `buy.item_level`, `buy.rarity`, `buy.influence`: the target's start item
   against the buy spec whose `name` is the target's `start_price`.
 - `buy.pool`: every base the spec accepts has the same mod pool as the target's base.
-- `start_mod.<mod>.tier`, `.values`: a start mod's hand-written tier and values against the game data.
+- `start_mod.<mod>.ladder`, `.values`: a start mod can spawn on every base the target names and has one tier on them (the tier is the
+  game data's since #484: a target file writes none), and its hand-written values against the game data.
 - `start_mod.<mod>.buy_mod`, `.buy_minimum`: a start mod against the buy spec's mod of the same text,
   and the spec's minimum against the tier (the tier the price was taken for).
 - `buy_mod.<stat>.in_target`: a buy spec mod the target's start item does not have.
@@ -87,7 +88,7 @@ def slots(target: Target, spec: BuySpec | None) -> list[str]:
     if spec is not None:
         names += ["buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool"]
     for mod in target.start_mods:
-        names += [f"start_mod.{mod.mod}.tier", f"start_mod.{mod.mod}.values"]
+        names += [f"start_mod.{mod.mod}.ladder", f"start_mod.{mod.mod}.values"]
         if spec is not None:
             names += [f"start_mod.{mod.mod}.buy_mod", f"start_mod.{mod.mod}.buy_minimum"]
     if spec is not None:
@@ -215,27 +216,23 @@ def reconcile(
     own_texts = set()
     for mod in target.start_mods:
         record = export.mods.get(mod.mod)
-        tier_slot, values_slot = f"start_mod.{mod.mod}.tier", f"start_mod.{mod.mod}.values"
+        ladder_slot, values_slot = f"start_mod.{mod.mod}.ladder", f"start_mod.{mod.mod}.values"
         written = f"{where_target}: start_item mod {mod.mod}"
         derived_tier = None
         if record is None:
-            add(tier_slot, written, "game data: no mod has this id", str(mod.tier), "no mod")
+            add(ladder_slot, written, "game data: no mod has this id", mod.mod, "no mod")
             add(values_slot, written, "game data: no mod has this id", str(list(mod.values)), "no mod")
         else:
             own_texts.add(normalise_stat_text(record["text"]))
             tiers = _tiers_of(export, base_ids, mod.mod, target.influence)
             for base_id, tier in tiers.items():
                 if tier is None:
-                    add(tier_slot, written, f"game data: {mod.mod} cannot spawn on {base_id}", str(mod.tier), f"cannot spawn on {base_id}")
+                    add(ladder_slot, written, f"game data: {mod.mod} cannot spawn on {base_id}", mod.mod, f"cannot spawn on {base_id}")
             known = {tier for tier in tiers.values() if tier is not None}
             if len(known) > 1:
-                add(tier_slot, written, f"game data: the tier differs between the bases named {target.base!r}: {tiers}", str(mod.tier), f"differs: {sorted(known)}")
+                add(ladder_slot, written, f"game data: the tier differs between the bases named {target.base!r}: {tiers}", mod.mod, f"differs: {sorted(known)}")
             elif known:
                 derived_tier = next(iter(known))
-                if mod.tier is not None and mod.tier != derived_tier:
-                    first = next(i for i, t in tiers.items() if t is not None)
-                    size = len(_ladder_on(export, first, mod.mod, target.influence))
-                    add(tier_slot, f"{written}: tier = {mod.tier}", f"game data: tier {derived_tier} of {size} on {first} (by required level)", mod.tier, derived_tier)
             ranges = stat_ranges(record)
             if mod.values:
                 if len(mod.values) != len(ranges):
@@ -260,7 +257,7 @@ def reconcile(
         if len(ranges) != 1:
             raise FileFormatError(f"{mod.mod} has {len(ranges)} stats; the buy spec minimum check reads one-stat mods only")
         if derived_tier is None:
-            continue  # the tier slot already says why
+            continue  # the ladder slot already says why
         first = next(i for i, t in _tiers_of(export, base_ids, mod.mod, target.influence).items() if t is not None)
         lower = [
             stat_ranges(export.mods[other])[0][1]

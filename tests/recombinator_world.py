@@ -99,7 +99,7 @@ GRID = (Fraction(2, 5), Fraction(7, 10), Fraction(1), Fraction(13, 10), Fraction
 
 def roll(mod_id: str, **flags) -> ExplicitMod:
     mod = WORLD.mods[mod_id]
-    return ExplicitMod(mod_id, TIERS.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def item(*mod_ids: str, rarity: Rarity = Rarity.RARE, flags: dict | None = None, **fields) -> Item:

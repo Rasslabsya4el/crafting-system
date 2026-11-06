@@ -46,7 +46,7 @@ META_DATA = dataclasses.replace(TAGGED_DATA, mods={**TAGGED_DATA.mods, **{mod_id
 
 def lowest(mod_id: str, *, data=META_DATA, tier: int = 1, fractured: bool = False, crafted: bool = False) -> ExplicitMod:
     """`mod_id` at the low end of every range, at the tier given (1 for a mod that cannot spawn, a metamod)."""
-    return ExplicitMod(mod_id, tier, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats), fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats), fractured=fractured, crafted=crafted)
 
 
 def amulet(*mods: ExplicitMod, data=META_DATA, rarity: Rarity = Rarity.RARE, level: int = LEVEL, **fields) -> Item:

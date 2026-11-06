@@ -84,7 +84,7 @@ def test_the_metamod_is_added_as_a_crafted_mod_at_its_lowest_values_and_the_rest
 
     assert chance == 1
     added = next(entry for entry in result.mods if entry.mod_id == SCBC)
-    assert (added.crafted, added.fractured, added.tier) == (True, False, 1)
+    assert (added.crafted, added.fractured) == (True, False)
     assert added.values == tuple(min(stat.min, stat.max) for stat in SMALL.mods[SCBC].stats)
     assert [e for e in result.mods if e.mod_id != SCBC] == list(item.mods)
     assert (result.base_id, result.item_level, result.rarity) == (item.base_id, item.item_level, item.rarity)

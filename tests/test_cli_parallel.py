@@ -30,7 +30,6 @@ start_item:
   rarity: rare
   mods:
     - mod: {MANA_1}
-      tier: 1
       values: {[min(stat.min, stat.max) for stat in DATA.mods[MANA_1].stats]}
 start: given   # the player holds the amulet (OR-6): nothing is bought, so there is no price and no restart
 """

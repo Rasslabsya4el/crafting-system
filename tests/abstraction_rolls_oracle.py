@@ -79,7 +79,7 @@ TIERS = tier_table(TINY, AMULET)
 
 def rolled(mod_id: str, *values: int, fractured: bool = False, crafted: bool = False) -> ExplicitMod:
     """The mod of `TINY` at its table tier (1 for a mod that cannot spawn) with these values."""
-    return ExplicitMod(mod_id, TIERS.get(mod_id, 1), values, fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, values, fractured=fractured, crafted=crafted)
 
 
 def tiny_item(*mods: ExplicitMod, rarity: Rarity = Rarity.RARE, **fields) -> Item:

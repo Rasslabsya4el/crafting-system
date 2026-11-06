@@ -100,7 +100,7 @@ def jewel(data, rarity, *mod_ids, base_id=COBALT, level=84):
     return Item.build(
         data, base_id=base_id, item_level=level, rarity=rarity,
         mods=tuple(
-            ExplicitMod(mod_id, tiers[mod_id], tuple(min(s.min, s.max) for s in data.mods[mod_id].stats))
+            ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats))
             for mod_id in mod_ids
         ),
     )  # fmt: skip

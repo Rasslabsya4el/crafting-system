@@ -49,7 +49,7 @@ class PublishedOutcome:
 def rolled(data: GameData, mod_id: str, *, fractured: bool = False, crafted: bool = False) -> ExplicitMod:
     """The mod `mod_id` with every stat at the low end of its range."""
     mod = data.mods[mod_id]
-    return ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in mod.stats), fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), fractured=fractured, crafted=crafted)
 
 
 def item_of(data: GameData, target: Target, odds: PublishedOutcome) -> Item:

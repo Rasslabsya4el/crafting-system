@@ -36,7 +36,7 @@ from fractions import Fraction
 from functools import cached_property
 
 from crafting_system.data import GameData, Mod, conflicts
-from crafting_system.items import ExplicitMod, Item, Rarity, Side, tier_table
+from crafting_system.items import ExplicitMod, Item, Rarity, Side
 
 from crafting_system.rules import get_rule
 
@@ -51,7 +51,7 @@ from .draw import (
 )
 from .errors import NotApplicableError
 from .metamods import blocked_tags, kept_by_reroll
-from .pool import ModFactor, PoolFamily, build_pool, mark_pool, tiers_of
+from .pool import ModFactor, PoolFamily, build_pool, mark_pool
 from .rolls import roll_values
 
 __all__ = [
@@ -74,9 +74,8 @@ def retained_item(data: GameData, item: Item, forced: Mod | None = None) -> Item
     """
     kept = kept_by_reroll(data, item)
     if forced is not None:
-        tier = tier_table(data, item.base_id).get(forced.id, 1)  # an essence-only mod has no tier: 1
         low = tuple(min(stat.min, stat.max) for stat in forced.stats)
-        kept = (*kept, ExplicitMod(forced.id, tier, low))
+        kept = (*kept, ExplicitMod(forced.id, low))
     return item.changed(data, rarity=Rarity.RARE, mods=kept)
 
 
@@ -94,7 +93,7 @@ class Outcomes:
     item keeps out of the guaranteed draw of a reforge: the pool of a reforge is not filtered, since
     the metamod filters its first added mod only (D8 of issue #28). With `rolls_lucky` (a Sanctified Fossil in the
     resonator, `fossils.sanctified_values_lucky`) `sample` rolls each value of the drawn mods and of the forced mod
-    twice and keeps the better, the one nearer the stat's `max`; the kept mods keep the values they had, except those in `rerolled`, whose values `sample` rolls afresh and whose tiers stay
+    twice and keeps the better, the one nearer the stat's `max`; the kept mods keep the values they had, except those in `rerolled`, whose values `sample` rolls afresh
     (the influenced mods an Awakener's Orb keeps). Build one with `Outcomes.reroll`.
     """
 
@@ -242,15 +241,11 @@ class Outcomes:
         )
 
     @cached_property
-    def _tiers(self) -> Mapping[str, int]:
-        return tiers_of(self.data, self.retained)
-
-    @cached_property
     def _float_weights(self) -> Mapping[str, float]:
         return {entry.mod.id: float(entry.weight) for family in self.pool for entry in family.mods}
 
     def sample(self, rng: random.Random) -> Item:
-        """One finished item: the same process, drawn with `rng`, with values rolled and tiers set."""
+        """One finished item: the same process, drawn with `rng`, with values rolled."""
         totals = list(self.totals)
         total = rng.choices(totals, weights=[float(self.totals[t]) for t in totals])[0]
         drawn = sample_new_mods(
@@ -269,7 +264,6 @@ class Outcomes:
         new = tuple(
             ExplicitMod(
                 mod.id,
-                self._tiers[mod.id] if mod.id != self.forced else self._tiers.get(mod.id, 1),
                 roll_values(rng, mod, self.rolls_lucky),
             )
             for mod in rolled

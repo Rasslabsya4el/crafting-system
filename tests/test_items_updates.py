@@ -97,7 +97,7 @@ def test_add_mod_validates_the_result():
     with pytest.raises(FamilyConflictError):
         item(roll("LightningResist1")).add_mod(DATA, roll("LightningResist2"))
     with pytest.raises(UnknownModError):
-        item().add_mod(DATA, ExplicitMod("NoSuchMod", 1, (1,)))
+        item().add_mod(DATA, ExplicitMod("NoSuchMod", (1,)))
 
 
 def test_remove_mod_returns_a_new_item_and_allows_a_fractured_mod():

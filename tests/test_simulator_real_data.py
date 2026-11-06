@@ -46,7 +46,7 @@ def start(data):
     mod = data.mods[RESIST]
     fractured = ExplicitMod(
         RESIST,
-        tier_table(data, AMULET)[RESIST],
+        
         tuple(min(stat.min, stat.max) for stat in mod.stats),
         fractured=True,
     )

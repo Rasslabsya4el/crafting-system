@@ -137,7 +137,7 @@ LOWEST = {
 def mod(mod_id: str, *, fractured: bool = False, crafted: bool = False) -> ExplicitMod:
     """The mod at its hand-typed tier and lowest values; a metamod and a crafted mod are tier 1."""
     values = LOWEST.get(mod_id) or tuple(min(s.min, s.max) for s in WORLD.mods[mod_id].stats)
-    return ExplicitMod(mod_id, TIER.get(mod_id, 1), values, fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, values, fractured=fractured, crafted=crafted)
 
 
 def meta(mod_id: str) -> ExplicitMod:
@@ -150,11 +150,11 @@ def amulet(*mods: ExplicitMod, level: int = 84, rarity: Rarity = Rarity.RARE, **
 
 def held(item: Item) -> list[tuple]:
     """The mods of `item` as comparable tuples, sorted."""
-    return sorted((e.mod_id, e.tier, e.values, e.fractured, e.crafted) for e in item.mods)
+    return sorted((e.mod_id, e.values, e.fractured, e.crafted) for e in item.mods)
 
 
 def line(*mods: ExplicitMod) -> list[tuple]:
-    return sorted((e.mod_id, e.tier, e.values, e.fractured, e.crafted) for e in mods)
+    return sorted((e.mod_id, e.values, e.fractured, e.crafted) for e in mods)
 
 
 def swapped(action, item: Item) -> dict[tuple, Fraction]:
@@ -502,7 +502,7 @@ def test_a_thousand_samples_validate_reroll_the_value_inside_the_tier_and_keep_t
         drawn = outcomes.sample(rng)
         drawn.validate(WORLD)
         cold = next(e for e in drawn.mods if e.mod_id == COLD_RESIST)
-        assert cold.tier == 1 and not cold.fractured and not cold.crafted
+        assert not cold.fractured and not cold.crafted
         assert next(e for e in drawn.mods if e.mod_id == LIFE_1) == mod(LIFE_1)
         assert len(drawn.mods) == 2
         values[cold.values] += 1
@@ -520,7 +520,7 @@ def test_the_exact_result_keeps_the_lowest_values_and_the_sample_of_a_damage_swa
         drawn = damage("fire", "cold").outcomes(WORLD, item).sample(rng)
         drawn.validate(WORLD)
         low, high = drawn.mods[0].values
-        assert low == 1 and 14 <= high <= 15 and drawn.mods[0].tier == 1  # the stat 1 to 1 and the stat 14 to 15
+        assert low == 1 and 14 <= high <= 15 # the stat 1 to 1 and the stat 14 to 15
         seen.add(high)
     assert seen == {14, 15}
 

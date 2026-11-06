@@ -89,12 +89,10 @@ def test_every_known_disagreement_names_a_slot_an_issue_and_a_rule():
         assert known.why and known.value_a and known.value_b, key
 
 
-def test_the_r12_start_mod_tier_is_a_known_strict_xfail():
-    known = KNOWN[("r12-lightning-amulet", "start_mod.LightningResist2.tier")]
-
-    assert known.issue == "#484"
-    assert known.rule == "OR-3"
-    assert known.values == ("3", "7")
+def test_no_known_disagreement_is_about_a_written_tier():
+    """Ticket #484: a start mod writes no tier, so there is no slot that compares one; the R12 row is gone."""
+    assert not [key for key in KNOWN if key[1].endswith(".tier")]
+    assert ("r12-lightning-amulet", "start_mod.LightningResist2.ladder") not in KNOWN
 
 
 def test_a_bought_target_with_no_price_key_or_no_buy_spec_fails_unless_it_is_a_known_disagreement(results):
