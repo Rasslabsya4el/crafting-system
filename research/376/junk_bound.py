@@ -71,6 +71,7 @@ def extract(g, abstraction, began) -> dict[str, np.ndarray]:
     cols = {name: np.empty(n, dtype=np.int64) for name in FEATURES}
     ids = {name: {} for name in FEATURES}
     raw_weight = np.zeros(n, dtype=np.int64)
+    side_weight = np.zeros((n, 2), dtype=np.int64)  # held junk weight on the prefix side and on the suffix side
     for r in range(n):
         st = g.states[r]
         ordinary = [s for s in st.slots if not s.crafted]
@@ -92,6 +93,8 @@ def extract(g, abstraction, began) -> dict[str, np.ndarray]:
             "all": st,
         }
         raw_weight[r] = sum(weights.get(base_kind(s.kind), 0) for s in ordinary)
+        for s in ordinary:
+            side_weight[r, 0 if s.side.value == "prefix" else 1] += weights.get(base_kind(s.kind), 0)
         values["junk_weight"] = int(raw_weight[r])
         for name in FEATURES:
             table = ids[name]
@@ -99,6 +102,8 @@ def extract(g, abstraction, began) -> dict[str, np.ndarray]:
         if r % 200_000 == 199_999:
             say(began, f"features of {r + 1:,} states")
     cols["_raw_weight"] = raw_weight
+    cols["_side_weight"] = side_weight
+    cols["_junk_types"] = {"numbered_types": len(weights), "weights": sorted(weights.values())}
     return cols
 
 
@@ -125,6 +130,12 @@ KEYS = {
     "+crafted+kinds+contrib": ["goal", "status", "rarity", "sides", "fractured", "crafted", "junk_kinds", "contrib"],
     "+crafted+prefix-kinds": ["goal", "status", "rarity", "sides", "fractured", "crafted", "junk_kinds_prefix"],
     "+crafted+suffix-kinds": ["goal", "status", "rarity", "sides", "fractured", "crafted", "junk_kinds_suffix"],
+    # which features of the cheap key matter: each left out in turn
+    "crafted-only": ["goal", "crafted"],
+    "status+crafted": ["goal", "status", "crafted"],
+    "+crafted -rarity": ["goal", "status", "sides", "fractured", "crafted"],
+    "+crafted -sides": ["goal", "status", "rarity", "fractured", "crafted"],
+    "+crafted -fractured": ["goal", "status", "rarity", "sides", "crafted"],
     "slots": ["goal", "status", "rarity", "fractured", "slots"],
     "identity": ["all"],
 }
@@ -264,6 +275,27 @@ def action_arrays(g) -> dict:
     }
 
 
+def extreme_members(cmap: np.ndarray, side_weight: np.ndarray) -> np.ndarray:
+    """The members of each abstract state that hold the least or the most junk weight (per side, and in total): ties are all kept.
+
+    ADR-0023 (variants) says the best and the worst backup of an adding action over the members of a block are reached at the
+    members that put the junk on the lightest or the heaviest families; this keeps those members only, to see whether the bound of
+    the abstract state survives when only they are offered.
+    """
+    n = len(cmap)
+    keep = np.zeros(n, dtype=bool)
+    order = np.argsort(cmap, kind="stable")
+    cs = cmap[order]
+    starts = np.flatnonzero(np.concatenate(([True], cs[1:] != cs[:-1])))
+    gid = np.repeat(np.arange(len(starts)), np.diff(np.concatenate((starts, [n]))))
+    for vec in (side_weight[:, 0], side_weight[:, 1], side_weight.sum(axis=1)):
+        v = vec[order]
+        high = np.maximum.reduceat(v, starts)
+        low = np.minimum.reduceat(v, starts)
+        keep[order[(v == high[gid]) | (v == low[gid])]] = True
+    return keep
+
+
 # ---- what a bound cuts, on the exact quotient ---------------------------------------------------------------------------
 
 
@@ -311,6 +343,7 @@ def main() -> None:
     parser.add_argument("--merge", default="auto", choices=("auto", "yes", "no"), help="exact classes before the exact solve (auto: when the walk holds over 50 M edges)")
     parser.add_argument("--keys", default="all")
     parser.add_argument("--cut-keys", default="", help="keys whose cuts are measured: names, or all")
+    parser.add_argument("--extremes", default="+crafted,+crafted+tags", help="keys for which the bound is also built from the extreme members only")
     parser.add_argument("--cut-top", type=int, default=0, help="also the N keys with the best ratio")
     parser.add_argument("--seconds", type=float, default=3300)
     parser.add_argument("--max-rss-mb", type=float, default=13_000)
@@ -356,6 +389,8 @@ def main() -> None:
     pk = pack_kernels(g)
     acts = action_arrays(g)
     names = list(KEYS) if args.keys == "all" else [k for k in args.keys.split(",") if k]
+    extremes_keys = {k for k in args.extremes.split(",") if k}
+    result["junk_types"] = cols["_junk_types"]
     class_lb: dict[str, np.ndarray] = {}
     for name in names:
         t0 = time.perf_counter()
@@ -367,6 +402,14 @@ def main() -> None:
             lb = np.zeros(result["classes"])
             np.maximum.at(lb, cls, np.minimum(value[cmap], BIG))
             class_lb[name] = lb
+        if value is not None and name in extremes_keys:
+            keep = extreme_members(cmap, cols["_side_weight"])
+            mask = keep[acts["state"]]
+            sub = {"state": acts["state"][mask], "cost": acts["cost"][mask], "kernel": acts["kernel"][mask], "goal_states": acts["goal_states"]}
+            value2, info2 = optimistic_value(g, pk, sub, cmap, C, began, args.max_flat_edges)
+            if value2 is not None:
+                row["extremes"] = {"members_kept": int(keep.sum()), "of_members": int(len(keep)), "actions_kept": int(mask.sum()), "of_actions": int(len(mask)),
+                                   "start_value": float(value2[cmap[0]]), "abstract_actions": info2["abstract_actions"], "abstract_edges": info2["abstract_edges"]}
         result["bounds"][name] = row
         say(began, f"key {name}: {C:,} abstract states; {json.dumps({k: v for k, v in row.items() if k not in ('features', 'solve')})} ({time.perf_counter() - t0:.0f}s)")
     if args.out:
@@ -393,6 +436,8 @@ def main() -> None:
         if lb is None:
             continue
         row["ratio"] = row["start_value"] / exact
+        if "extremes" in row:
+            row["extremes"]["ratio"] = row["extremes"]["start_value"] / exact
         finite = np.isfinite(v_star) & (v_star < BIG / 10) & non_goal
         row["violations"] = int(((lb > v_star * (1 + 1e-7) + 1e-9) & finite).sum())
         row["worst_excess"] = float(np.max(np.where(finite, lb / np.maximum(v_star, 1e-300) - 1, -1)))
