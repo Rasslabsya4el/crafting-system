@@ -1,6 +1,6 @@
 # Rebuild 4 inventory: the facts written by hand in more than one place
 
-Date: 2026-11-06. Read-only inventory of `main` at `4982989`, written as the fact base for audit rebuild step 4, "One description per fact" (`docs/research/2026-11-02-codebase-audit.md`, class 2 and "Rebuild proposal, per root", item 4). It makes no decision and changes no code. Rules cited as `OR-n` are those of `docs/owner-rules.md`. The ones that frame it: OR-3 (the target, the buy spec and the price agree, the test of every table in section 1), OR-6 (a start item is given or bought), OR-7 and OR-8 (the trade price and its marked fallback, section 2), OR-16 (the Alchemy of R08 and R09), OR-26 (roots, not patches) and OR-29 (section 5 is the list of points to file).
+Date: 2026-11-06. Read-only inventory of `main` at `4982989` (`main` is now `9948e14`; since then only ten test files changed, the goal oracle and the packed and solver light tests, and one citation moved: `tests/test_goal_oracle_comparison.py:77` is now `:80`), written as the fact base for audit rebuild step 4, "One description per fact" (`docs/research/2026-11-02-codebase-audit.md`, class 2 and "Rebuild proposal, per root", item 4). It makes no decision and changes no code. Rules cited as `OR-n` are those of `docs/owner-rules.md`. The ones that frame it: OR-3 (the target, the buy spec and the price agree, the test of every table in section 1), OR-6 (a start item is given or bought), OR-7 and OR-8 (the trade price and its marked fallback, section 2), OR-9 (the system refreshes prices itself, section 5 point 14), OR-16 (the Alchemy of R08 and R09), OR-26 (roots, not patches) and OR-29 (section 5 is the list of points to file).
 
 ## What was read
 
@@ -28,7 +28,7 @@ Notation. `routes.json` is `tests/fixtures/prices/routes-allflame-2026-10-31.jso
 | Derivations of one fact from another that already exist in code | 17 (section 3) |
 | Places where a price source is chosen or recorded | 22 (section 2.1) |
 | Places where a price source is lost on its way to the answer | 9 (section 2.3) |
-| Places that no open issue lists | 13 (section 5) |
+| Places that no open issue listed (all filed: #470 to #473, #478) | 14 (section 5) |
 | Buying-block tickets read | 6 |
 | Options for the single source | 5, A to E (section 6) |
 
@@ -42,11 +42,14 @@ Notation. `routes.json` is `tests/fixtures/prices/routes-allflame-2026-10-31.jso
 |---|---|---|
 | Target | 14 in `examples/targets/` | `base`, `item_level`, `influence`, `start_item` (`rarity`, `mods` with `mod`, `tier`, `values`, `fractured`), `quality`, `sockets` (goals), `start_price`, `price_file`, `tiers_top_at_item_level`, `item_level_floor` |
 | Buy spec | 8 in `examples/buy/`, 1 copy for tests in `tests/fixtures/trade/r12_buy_spec.yaml`, 4 more in `docs/research/2026-11-01-strand-routes-files/buy/` | `name`, `base_type`, `category`, `rarity`, `item_level_min` and `_max`, `influence`, `corrupted`, `mods` (`stat`, `minimum`, `fractured`) |
-| Price entry | 2 committed files, `routes.json` (108 entries) and `vendor.json` (113 entries, 108 of them equal copies) | key, `chaos`, `source`, `note`, `detail` (`league`, `date`, `listings`, `used`, `usable`, `k`, `query`, `query_hash`) |
+| Price entry | 2 committed files with start keys, `routes.json` (108 entries) and `vendor.json` (113 entries, 108 of them equal copies); a third, `tests/fixtures/prices/foresight-allflame-2026-11-02.json`, holds 8 `poe.ninja` entries (Hinekora's Lock, the burn currencies, Chaos and Divine) and no start key, and only `tests/test_prices_foresight.py` reads it | key, `chaos`, `source`, `note`, `detail` (`league`, `date`, `listings`, `used`, `usable`, `k`, `query`, `query_hash`) |
 | Recorded search | `tests/fixtures/trade/recorded/start_items/search_body_{r05,r10,r11,r12}.json` | the body that was sent for four of the start items |
 | Test constant | 19 test files name a start price key, 7 a buy spec, 28 a target file, 17 a price fixture (45 files in all, `tests/reconcile/` not counted) | the same names and numbers again |
+| Guide route | 11 files in `examples/routes/`; 5 of them carry a `do: restart` rule (`r04-penetrating-quiver.yaml:133`, `r04-penetrating-quiver-restart.yaml:143,146`, `r13-life-resist-belt.yaml:61`, `r14-hunter-bow.yaml:49`, `r14-hunter-bow-restart.yaml:59,137`), which buys the start item again at the start price (read at `cli/_route.py:253,460`) | the start item in header prose: `r04-penetrating-quiver.yaml:10` and `r04-penetrating-quiver-restart.yaml:19` ("Buy a quiver of item level 81 or more"), `r05-strength-ring.yaml:12` ("Buy a ring with a fractured All Attributes"), `r08-energy-shield-boots.yaml:15` and `r09-life-boots.yaml:15` ("a rare pair of boots, as the target does"), `r10-fractured-boots.yaml:12`, `r11-reservation-helmet.yaml:12`, `r12-lightning-amulet.yaml:10`, `r13-life-resist-belt.yaml:17` ("a magic belt; the target starts from a normal one") |
 | Page | `tests/golden/`: 8 pages carry a price key as the title of the buy step | `Buy R05 start ring` and its kin |
 | Prose | target and spec headers, `README.md:34,38`, `docs/adr/0008-targets-and-start-items.md:7`, `src/crafting_system/targets/__init__.py:74-75`, `GLOSSARY.md:118`, `ExpectedStart.why` of V01 (`src/crafting_system/cli/_benchmark.py:247-253`) | what the file says in words, with numbers |
+
+How the test counts were made (files under `tests/`, `tests/reconcile/` left out, `grep -rlE ... --include=*.py`): a start price key is any of `R05 start ring|R08 start boots|R09 start boots|R10 start boots|R11 start helmet|R12 start amulet|Penetrating Arrow Quiver \(ilvl|Leather Belt \(ilvl 86\)|Thicket Bow \(ilvl 78|Lion Pelt \(ilvl 84\)` (19 files); a buy spec is `examples/buy|BUY_SPECS|BUY /|BUY_DIR|start-(boots|ring|helmet|amulet|quiver|bow)\.yaml|"examples" / "buy"` (7 files); a target file is `(r0[3-9]|r1[0-4]|v01|j01)-[a-z0-9-]+\.yaml|examples/targets|EXAMPLES / |TARGETS / ` (28 files); a price fixture is `routes-allflame-2026-10-31|vendor-v01-2026-11-01` (17 files).
 
 No code path joins these. The only link between a target, its spec and its price is the string equality `target.start_price == spec.name == key of the price entry`. It is checked in three places: `tests/reconcile/files.py:148-155` (`buy_spec_of`), `src/crafting_system/cli/_benchmark.py:472-481` (`_buy_spec_named`, used only to print a hint when a price is missing), and `tests/test_targets_files.py:219-242` and `tests/test_strand_routes.py:214-217` (R10, R11, R05 and the strand routes only).
 
@@ -70,6 +73,7 @@ For each target: where each fact is written (with its value), and the reconcile 
 - Spec `B:r04-start-quiver.yaml:8-13`: `base_type` Penetrating Arrow Quiver, category `armour.quiver`, rarity normal, `item_level_min` 81. Its header `:4-7` says the committed price is not this search's.
 - Entry `routes.json:244` (`vendor.json:254`): `poe.ninja`, 9.0 Chaos, a hand-typed note "item level 85, 43 observations"; no `detail`, so no query.
 - Known: `price.base` (#418: the name is also `Quiver12`), `price.item_level` (#425: the line is 85, the key says 81), `price.source` (#426: a stand-in).
+- Guide route: `examples/routes/r04-penetrating-quiver.yaml:10` and `r04-penetrating-quiver-restart.yaml:19` restate "Buy a quiver of item level 81 or more"; both end in `do: restart` (`:133`; `:143,146`), which buys the start item again at the price above.
 
 **R05** `T:r05-strength-ring.yaml` (19 checks, 4 known)
 - base `:35` Amethyst Ring (comment `:34` "every plain ring has the same pool of mods", which #428 refutes); item level `:38` 75; `tiers_top_at_item_level` `:43`; influence `:47` `[]`.
@@ -77,6 +81,7 @@ For each target: where each fact is written (with its value), and the reconcile 
 - Spec `B:r05-start-ring.yaml:6-16`: no `base_type`, category `accessory.ring`, rare, `item_level_min` 75, mod `+# to all Attributes` minimum 13 fractured.
 - Entry `routes.json:283`: `trade-api`, 2.6 Chaos, 2026-10-31, 602 listings; stored query: category `accessory.ring`, rare, `ilvl.min` 75, `fractured_item`, stat `fractured.stat_1379411836` at least 13. Same body in `search_body_r05.json`.
 - Known: `buy.base` (#417), `buy.pool` (#428, Unset Ring and Bone Ring roll other mods), `price.base` (#418), `price.pool` (#428).
+- Guide route `examples/routes/r05-strength-ring.yaml:12` restates "Buy a ring with a fractured All Attributes" (no level, no base).
 
 **R06** `T:r06-strength-heavy-belt.yaml` (3 checks, 2 known)
 - base `:40` Heavy Belt; item level `:43` 75; `tiers_top_at_item_level` `:46`; influence `:50` `[hunter]`; no `start_item`.
@@ -89,6 +94,7 @@ For each target: where each fact is written (with its value), and the reconcile 
 - Spec `B:r08-start-boots.yaml:9-14`: `base_type` Sorcerer Boots, category `armour.boots`, rarity normal, `item_level_min` 86.
 - Entry `routes.json:348`: `trade-api`, 29.82716 Chaos = 29.8 (the trade price of the normal base) + 0.02716 (the file's own `Orb of Alchemy` entry, `routes.json:215`, typed into the sum); date 2026-11-01; stored query: `type` Sorcerer Boots, category `armour.boots`, rarity normal, `ilvl.min` 86, no stat filter.
 - Known: `buy.rarity` (#417, OR-16: target rare, spec normal; the Alchemy is hidden in the price).
+- Guide route `examples/routes/r08-energy-shield-boots.yaml:15`: "a rare pair of boots, as the target does (see `start_item` in the target)".
 
 **R09** `T:r09-life-boots.yaml` (14 checks, 4 known)
 - base `:25` `Metadata/Items/Armours/Boots/BootsAtlas1` (by id; the comment `:22-24` says three bases are named Two-Toned Boots); item level `:26` 86; `tiers_top_at_item_level` `:29`; influence `:30` `[]`.
@@ -96,6 +102,7 @@ For each target: where each fact is written (with its value), and the reconcile 
 - Spec `B:r09-start-boots.yaml:9-14`: `base_type` Two-Toned Boots, `armour.boots`, normal, `item_level_min` 86.
 - Entry `routes.json:403`: `trade-api`, 5.02716 Chaos = 5.0 + 0.02716 (Alchemy); stored query `type` Two-Toned Boots, normal, `ilvl.min` 86.
 - Known: `buy.rarity` (#417), `buy.pool` (#428: BootsAtlas2 and 3 have other pools), `price.base` (#418), `price.pool` (#428).
+- Guide route `examples/routes/r09-life-boots.yaml:15`: the same sentence as R08's.
 
 **R10** `T:r10-fractured-boots.yaml` and `T:r10-fractured-boots-70-life.yaml` (19 checks each, 0 known)
 - base `:31` / `:32` Sorcerer Boots; item level `:35` / `:36` 84; `tiers_top_at_item_level` `:38` / `:39`; influence `:42` / `:43` `[]`.
@@ -103,6 +110,7 @@ For each target: where each fact is written (with its value), and the reconcile 
 - Spec `B:r10-start-boots.yaml:7-18`: `base_type` Sorcerer Boots, `armour.boots`, rare, `item_level_min` 84, mod `#% increased Movement Speed` minimum 30 fractured.
 - Entry `routes.json:458`: `trade-api`, 17.0 Chaos, 2026-10-31, 156 listings; stored query `type` Sorcerer Boots, rare, `ilvl.min` 84, stat `fractured.stat_2250533757` at least 30. Same body in `search_body_r10.json`.
 - All places agree (R10 and R11 are the two bought start items that agree everywhere).
+- Guide route `examples/routes/r10-fractured-boots.yaml:12` restates "Buy boots with a fractured Movement Speed" (no level, no minimum).
 
 **R11** `T:r11-reservation-helmet.yaml` (19 checks, 0 known)
 - base `:32` Lion Pelt; item level `:36` 84; `tiers_top_at_item_level` `:39`; influence `:43` `[]`.
@@ -110,6 +118,7 @@ For each target: where each fact is written (with its value), and the reconcile 
 - Spec `B:r11-start-helmet.yaml:7-18`: `base_type` Lion Pelt, `armour.helmet`, rare, `item_level_min` 84, mod `+#% to Chaos Resistance` minimum 31 fractured (header `:14` restates "31 is the lowest roll of tier 1").
 - Entry `routes.json:524`: `trade-api`, 20.0 Chaos, 2026-10-31, 42 listings; stored query `type` Lion Pelt, rare, `ilvl.min` 84, stat `fractured.stat_2923486259` at least 31. Same body in `search_body_r11.json`.
 - All places agree.
+- Guide route `examples/routes/r11-reservation-helmet.yaml:12` restates "Buy a helmet with a fractured Chaos Resistance" (no level, no tier).
 
 **R12** `T:r12-lightning-amulet.yaml` (19 checks, 6 known)
 - base `:12` Paua Amulet; item level `:15` 84; `tiers_top_at_item_level` `:18`; influence `:22` `[]`.
@@ -117,12 +126,14 @@ For each target: where each fact is written (with its value), and the reconcile 
 - Spec `B:r12-start-amulet.yaml:4-11`: no `base_type`, category `accessory.amulet`, rare, `item_level_min` 75 (header `:2-3`: the level the gem prefix needs), mod `+#% to Lightning Resistance` fractured, no minimum. A second spec of the same item is `tests/fixtures/trade/r12_buy_spec.yaml:4-11` (names the family `LightningResistance`, same level 75).
 - Entry `routes.json:590`: `trade-api`, 1.0 Chaos, 2026-10-31, 909 listings; stored query category `accessory.amulet`, rare, `ilvl.min` 75, stat `fractured.stat_1671376347` with no minimum. Same body in `search_body_r12.json`.
 - Known: `buy.base`, `buy.item_level` (#417); `start_mod.LightningResist2.tier`, `.buy_minimum` (#403); `price.base`, `price.item_level` (#418).
+- Guide route `examples/routes/r12-lightning-amulet.yaml:10`: "Start from an amulet with Lightning Resistance fractured".
 
 **R13** `T:r13-life-resist-belt.yaml` (8 checks, 2 known)
 - base `:13` Leather Belt (one base, `Belt3`; `BeltRoyale1` is a Battle Royale copy, `tests/reconcile/test_reconcile_real.py:131-133`); item level `:16` 86; no `tiers_top_at_item_level`; no influence line; no `start_item` (`:18`).
 - Key `:22` `Leather Belt (ilvl 86)`; `actions` `:29`. No spec.
 - Entry `routes.json:195` (`vendor.json:200`): `poe.ninja`, 10.0 Chaos, note "item level 86, 41 observations" typed by hand; no `detail`.
 - Known: `buy_spec.exists` (#427), `price.source` (#426).
+- Guide route `examples/routes/r13-life-resist-belt.yaml:17`: the guide starts from a magic belt, the target from a normal one; `do: restart` at `:61`.
 
 **R14** `T:r14-hunter-bow.yaml` (14 checks, 1 known)
 - base `:26` Thicket Bow; item level `:29` 78; `tiers_top_at_item_level` `:32`; influence `:34` `[hunter]`; no `start_item`.
@@ -130,6 +141,7 @@ For each target: where each fact is written (with its value), and the reconcile 
 - Spec `B:r14-start-bow.yaml:5-11`: `base_type` Thicket Bow, `weapon.bow`, rarity `nonunique`, `item_level_min` 78, `influence` `[hunter]`.
 - Entry `routes.json:872`: `trade-api`, 13.0 Chaos, 2026-11-01, 164 listings; stored query `type` Thicket Bow, `weapon.bow`, `nonunique`, `ilvl.min` 78, stat `pseudo.pseudo_has_hunter_influence` at least 1.
 - Known: `buy.rarity` (#417: target normal, spec any non-unique). The influence appears in the target, the spec, the stored query and the key, and no slot compares the last two.
+- Guide route `examples/routes/r14-hunter-bow.yaml:49` and `r14-hunter-bow-restart.yaml:59,137`: `do: restart`.
 
 **V01** `T:v01-minion-helmet.yaml` (8 checks, 3 known)
 - base `:30` Lion Pelt; item level `:34` 84; `tiers_top_at_item_level` `:37`; influence `:41` `[]`; no `start_item` (comment `:56-57`).
@@ -153,7 +165,7 @@ Counts of "written" are places in the repository that state the fact by hand (a 
 #### F2. Item level
 
 - **Written (target 14, spec 8, price entry 10, recorded search 4, spec fixture 1).** Target `item_level:` (14) plus the author's flags about how far it may be lowered: `tiers_top_at_item_level: true` in 11 targets (not J01, R08, R13), `item_level_floor` in none. Spec `item_level_min:` (8; `item_level_max` in none). Price entry: query `ilvl.min` (7 trade entries) and the label `(ilvl N)` in the key (R04, R13, R14, V01); R04's and R13's notes also state the level of the poe.ninja line (85 and 86) in words.
-- **Read.** `parse.py:302` `read_item_level` into `Item.build` (`parse.py:1009`) and `Abstraction(..., target.item_level, ...)` (`cli/_plan.py:358`); `targets/floor.py:247-340` (`floor_of`, `level_groups`, `target_at_level`; no code outside `floor.py` and its re-export calls them, so the floor of ADR-0061 is built and not wired); `_start_options.py:218,280`; `_route_card.py:358,365`. The spec's level is read by `build_query` (`prices/trade_query.py:307-308`) and by the page's Accepts line (`_route_trade.py:76-81`). The key's label is read as text by `resolve_start_price`, not parsed.
+- **Read.** `parse.py:302` `read_item_level` into `Item.build` (`parse.py:1009`) and `Abstraction(..., target.item_level, ...)` (`cli/_plan.py:358`); `targets/floor.py:247-340` (`floor_of`, `level_groups`, `target_at_level`; no code outside `floor.py` and its re-export calls them, so the floor of ADR-0061 is built and not wired); `_start_options.py:218,280`; `_route_card.py:358,365`. The spec's level is read by `build_query` (`prices/trade_query.py:307-308`) and by the page's Accepts line (`_route_trade.py:76-81`). The key's label is read as text by `resolve_start_price`, not parsed; `prices/poe_watch.py:71` compares `base.item_level`, parsed from a wanted key, with a poe.watch row.
 - **Wins.** The target for the plan; the price entry for the cost. The level an entry was taken for is a free label in the key, so R04's key says 81 on a poe.ninja line of 85, R12's key and spec say 75 against a planned 84, and V01's hand price records no level at all.
 - **Pinned by.** Slots `buy.item_level` (9), `price.item_level` (11, reading the level from the query, else the note, else the key label: `tests/reconcile/files.py:204-224`); `tests/test_targets_floor_real.py:49-84,100,154-180` (floors of R13 and R08 at 84, R05 pinned at 75, the 11 pinned targets); `tests/test_cli_r04_r14_real.py:46`.
 - **Known disagreements.** `buy.item_level` R12 (#417); `price.item_level` R12 (#418), R04 and V01 (#425): 4.
@@ -183,7 +195,7 @@ Counts of "written" are places in the repository that state the fact by hand (a 
 - **Written (target 6, spec 4, price entry 4, recorded search 4, repeats in requirements 5).** Target `start_item.mods` in R03, R05, R10 (two files), R11, R12: `mod`, `tier`, `values`, `fractured`. Spec `mods` in R05, R10, R11, R12: `stat` (English text), `minimum`, `fractured`. Entry: the stat filter with its minimum, in the stored query. The requirements repeat the same mod: R03 `:71-72` (`mod:`), R10 (two files, `mod: MovementVelocity5`), R05, R11 (`min_tier: 1` on the family), R12 (family). Spec headers restate the tier in words (R11 `:14`).
 - **Read.** `parse.py:1062-1088` `read_start_mod` stores `tier` and `values` as written (`Item` only checks tier at least 1, `items/model.py:213-214`). The written tier and values reach the search through `abstraction/_kernel.py:809-812` (`_contribution`, `status_of(..., entry.tier, entry.values, ...)`) and `targets/model.py:55` (`mod.tier > self.min_tier`). The page reads the tier from the data instead (`cli/_route_card.py:303`, `tier_table`). `targets/floor.py:251-254` reads the mods' required levels. The spec's mods go through `trade_stats.py:159` `resolve_buy_mod` into stat ids.
 - **Wins.** The plan uses the written tier and values; the page prints the data's tier; the price uses the spec's minimum (R12's has none, so the price is the cheapest fractured Lightning Resistance of any tier while the plan holds a tier-3 roll of 14).
-- **Pinned by.** Slots `start_mod.<mod>.tier`, `.values` (6 each), `.buy_mod`, `.buy_minimum` (5 each), `buy_mod.<stat>.in_target` (5): 27 checks. `tests/test_targets_files.py:35` pins the wrong R12 tier 3; `:268,285` (R10 tier equals the data's 2), `:330,346` (R11), `:373` (R05); `tests/test_goal_oracle_comparison.py:77`; `tests/test_prices_start_items.py:73-82` (R11 searched at the tier-1 minimum 31).
+- **Pinned by.** Slots `start_mod.<mod>.tier`, `.values` (6 each), `.buy_mod`, `.buy_minimum` (5 each), `buy_mod.<stat>.in_target` (5): 27 checks. `tests/test_targets_files.py:35` pins the wrong R12 tier 3; `:268,285` (R10 tier equals the data's 2), `:330,346` (R11), `:373` (R05); `tests/test_goal_oracle_comparison.py:80`; `tests/test_prices_start_items.py:73-82` (R11 searched at the tier-1 minimum 31).
 - **Known disagreements.** `start_mod.LightningResist2.tier` 3 against 7 and `.buy_minimum` (#403): 2.
 - **Issue.** #403. Audit TARGETS-5, INPUTS-9, PLANNING-11, ROUTES-10.
 
@@ -199,7 +211,7 @@ Counts of "written" are places in the repository that state the fact by hand (a 
 #### F8. The buy spec
 
 - **Written (8 files for 7 routes; 5 more copies elsewhere).** `examples/buy/` (R10's is shared by two targets). Copies of the same idea: `tests/fixtures/trade/r12_buy_spec.yaml`, four specs in `docs/research/2026-11-01-strand-routes-files/buy/`. R13 and V01 have a price and no spec; J01, R03, R06 have neither.
-- **Read.** Not by the planner. `prices trade --spec` (`prices/__main__.py:90,196`) prices it; the route page builds its Accepts lines and trade link from a spec the person passes with `--buy-spec` (`cli/_main.py:98,165-169`), a path with no tie to the target's `start_price`; `cli/_benchmark.py:472-481` prints its path in a missing-price hint.
+- **Read.** Not by the planner. `prices trade --spec` (`prices/__main__.py:90,196`) prices it; the route page builds its Accepts lines and trade link from a spec the person passes with `--buy-spec` (`cli/_main.py:98,165-169`), a path with no tie to the target's `start_price`; `cli/_benchmark.py:472-481` prints its path in a missing-price hint. The command that reads a spec is a hand-run one, and `cli/_plan.py:248-251` and `cli/_benchmark.py:492` tell the user to run it, which OR-9 says the system does itself (#478).
 - **Wins.** Nothing is compared at run time; the name decides which price the planner looks up.
 - **Pinned by.** Slot `buy_spec.exists` (14); `tests/test_targets_files.py:16-22,219-242,277-285,340-346`, `tests/test_prices_trade_market.py:41-46,80-100`, `tests/test_prices_start_items.py`, `tests/test_cli_routes_real.py:50,155`, `tests/test_strand_routes.py:214-217`, `tests/test_cli_benchmark.py:133-157` (pins `buy_spec` is `None` for the belt).
 - **Known disagreements.** `buy_spec.exists` J01, R03, R06, R13, V01 (#427): 5; the 6 #417 rows and 4 #428 rows above.
@@ -216,7 +228,7 @@ Counts of "written" are places in the repository that state the fact by hand (a 
 
 - **Written (target 11, spec 8, price entries 10 keys, tests 19 files, goldens 8, prose 4+).** Target `start_price:` (11). Spec `name:` (8; canonicalised by `BuySpec.__post_init__`, `trade_query.py:268`). Entry keys: 10 distinct, in two schemes. Six are route-tagged names that no base row can have (`R05 start ring`, `R08 start boots`, `R09 start boots`, `R10 start boots`, `R11 start helmet`, `R12 start amulet`); four are base-price names of the form `<base name> (ilvl N[, Influence])` (R04, R13, R14, V01), which is also what `base_price_name` writes (`prices/price_names.py:81-85`) and what the poe.ninja fetch stores (`prices/ninja_items.py:66`).
 - **Read.** `cli/_plan.py:245-252` `resolve_start_price`; `cli/_benchmark.py:460`; `_goods` of the recipe source (`cli/_start_options.py:280-294`); the report and page (`_report.py:308`, `_route_view.py:399-400,473` use it as a title: "Buy R05 start ring", "Restart: buy R12 start amulet again"); `prices/__main__.py:200-202` (`trade` refuses a name held by another source).
-- **Wins.** The target's string chooses the entry; `--start-price` beats the file (`_plan.py:239-242`) and `price_overrides.toml` beats the entry (`prices/price_file.py:325-339`). A key that matches no entry is the one mismatch the code reports: `PlanError "no price for the start item"` (`_plan.py:247-251`).
+- **Wins.** A caller that hands `make_plan` a ready `StartPrice` as `start_price_of` (`cli/_plan.py:266,310`) skips the key lookup altogether: `plan_with_starts` does it for every non-plain start candidate (`cli/_starts.py:88-90`), so neither the key nor `--start-price` applies to them. Otherwise the target's string chooses the entry; `--start-price` beats the file (`_plan.py:239-242`) and `price_overrides.toml` beats the entry (`prices/price_file.py:325-339`). A key that matches no entry is the one mismatch the code reports: `PlanError "no price for the start item"` (`_plan.py:247-251`).
 - **Pinned by.** Slots `start_price.written` (14), `price.entry` (11); the name link tests above; `tests/test_cli_r04_r14_real.py:46`, `tests/test_cli_r08_r09_real.py:35`, `tests/test_cli_r13_real.py:37`, `tests/test_vendor_benchmark_real.py:55,85`; goldens `real_r05`, `real_r10`, `real_r11`, `restart`, `gap`, `given_route_differs`, `r12_fixture`, `r12_fixture_given_route`.
 - **Known disagreements.** `start_price.written` J01, R03, R06 (#427); `price.base` (the key is a name, the target a base id) R04, R05, R09, R12 (#418).
 - **Issue.** #418, #427, #429.
@@ -224,8 +236,8 @@ Counts of "written" are places in the repository that state the fact by hand (a 
 #### F11. The price entry and its source
 
 - **Written (10 start entries; 7 `trade-api`, 2 `poe.ninja`, 1 `hand`).** In two committed files (section 2.4) and, outside the repository, in `<data dir>/prices.json` (the fetcher) and `<data dir>/price_overrides.toml` (by hand). `--start-price` is a third, per run.
-- **Read.** `resolve_start_price` copies only `chaos` and `source` (`_plan.py:252`); `make_plan` turns it into the `restart` offer when above 0 (`_plan.py:340-344`); the report prints the source (`_report.py:309,525`); the page prints the money and the title only.
-- **Wins.** `--start-price`, then the override file, then the entry of the file that was loaded.
+- **Read.** `resolve_start_price` copies only `chaos` and `source` (`_plan.py:252`); `make_plan` turns it into the `restart` offer when above 0 (`_plan.py:340-344`); the report prints the source (`_report.py:309,525`); the page prints the money and the title only. The resolved `Plan.start_price` is read again by: `cli/_route.py:253` (a given route's `restart` is refused when it is 0) and `:460` (the `restart` action is built from it); `cli/_interval.py:345` (the shift added to every total); `cli/_verify.py:139-156` (the simulation's `start_cost` and the computed total); `cli/_report.py:293,505`, `cli/_route_report.py:31,71`, `cli/_route_sim.py:72`, `cli/_benchmark.py:387,445,640`; for a candidate, `cli/_start_report.py:36` prints its `price_name`.
+- **Wins.** `start_price_of` (a ready `StartPrice`; non-plain candidates, `cli/_starts.py:89`; printed by `cli/_start_report.py:36`), then `--start-price`, then the override file, then the entry of the file that was loaded.
 - **Pinned by.** Slots `price.entry`, `price.base`, `price.item_level`, `price.source`, `price.pool` (11 targets, 55 checks, 12 known); `tests/test_prices_start_items.py` (4 entries against their recordings); `tests/test_prices_trade_market.py:80-100`; the price tests listed under F10.
 - **Known disagreements.** `price.source` R04, R13, V01 (#426); the `price.*` rows of F1 and F2: 12 in all.
 - **Issue.** #426, #425, #418, #428, #429, #406; #356 and #357 comments for the refresher.
@@ -258,7 +270,7 @@ Counts of "written" are places in the repository that state the fact by hand (a 
 | 18 | `config.py:50,52,65` and `cli/_main.py:101,134` | the setting `price_source` (`ninja`, `trade`, `both`) and `--price-source` |
 | 19 | `cli/_start_options.py:62-75` (`StartContext`) and `cli/_starts.py:104-122` | the setting is carried to every start source; the one source there reads none of it |
 | 20 | `cli/_start_types.py:61` (`StartCandidate.sourced`) | the field that would hold a `SourcedPrice`; no code sets it |
-| 21 | `prices/trade_pricing.py:402-415,483-531` | `refuse_name_collision` and `merge_trade_prices`: a trade price is refused or dropped when another source holds the name |
+| 21 | `prices/trade_pricing.py:402-405,408-415,483-531` | `refuse_name_collision`, `store_trade_price` and `merge_trade_prices`: a trade price is refused or dropped when another source holds the name |
 | 22 | `tests/reconcile/checks.py:54` | `TRADE_SOURCE = "trade-api"`, the oracle's own copy of the constant |
 
 Sources in the committed files: `routes.json` has 91 `poe.ninja`, 7 `trade-api`, 7 `poe.ninja-previous-league` (Mirage, 2026-06-13), 3 `poe.watch`; `vendor.json` adds 5 `hand`.
@@ -271,6 +283,9 @@ price file entry (source, note, detail)                   prices/price_file.py:2
   -> resolve_start_price: StartPrice(name, chaos, source)         cli/_plan.py:245-252   (note and detail dropped)
   -> make_plan: the restart offer, part (name, 1, chaos, source)  cli/_plan.py:340-344
   -> Plan.start_price                                             cli/_plan.py:94
+       (or start_price_of, a ready StartPrice, which skips the lines above   cli/_plan.py:266,310; built at cli/_starts.py:88-90)
+  -> read again: given-route restart refused at 0 / restart action     cli/_route.py:253,460
+  -> read again: the shift added to every total                       cli/_interval.py:345, cli/_verify.py:139-156
   -> text report "Start item (name): X Chaos [source]"            cli/_report.py:309
   -> JSON "start": {price_name, price_chaos, price_source}        cli/_report.py:520-526
   -> route page: the money and the title only                     cli/_route_view.py:388,473
@@ -288,7 +303,7 @@ The path that was built for OR-7 and does not run: `source_price` (`prices/price
 4. `cli/_route_view.py:388,473,555`: the page shows the money, the key as title and one line "league ..., fetched ..." for all prices (audit INPUTS-3, ROUTES-8, #406).
 5. `cli/_route_view.py:446-461`: the vendor row prints each good with its price and no source.
 6. `prices/fetch.py:106-111`: the observation count of a poe.ninja base row is checked against `MIN_COUNT` (5) and dropped; the fixtures carry it as typed words in a note (R04 43, R13 41).
-7. `prices/trade_pricing.py:521-522`: `merge_trade_prices` drops a trade price when the fresh poe.ninja fetch has an entry of the same name (the case #357 left for the refresher to resolve); `store_trade_price` refuses the reverse (`:402-408`). R14's key is both a trade price and the name of a poe.ninja base row.
+7. `prices/trade_pricing.py:521-522`: `merge_trade_prices` drops a trade price when the fresh poe.ninja fetch has an entry of the same name (the case #357 left for the refresher to resolve); `store_trade_price` (`:408-415`) refuses the reverse through `refuse_name_collision` (`:402-405`). R14's key is both a trade price and the name of a poe.ninja base row.
 8. `committed R08 and R09 entries`: `source: trade-api` on a number that is a trade price plus the file's `Orb of Alchemy` price, typed into the sum (29.82716, 5.02716): the source says trade and the number is not one (audit INPUTS-5, #417).
 9. `prices/price_source.py:154-210` read against the committed entries: `hand`, `poe.ninja-previous-league`, `poe.watch` and `default` are neither a poe.ninja row (`NINJA_SOURCES`, `:39`), nor a trade price, nor an override. If the planner called `source_price`, V01's plain start `Lion Pelt (ilvl 84)` (`hand`) would be "no price" under every setting, and R13 and R04 (`poe.ninja`) would be used as marked fallbacks although neither has a trade price to fall back from, and R04's row is a different item level.
 
@@ -296,11 +311,12 @@ The path that was built for OR-7 and does not run: `source_price` (`prices/price
 
 Order of precedence in code, first wins:
 
-1. `--start-price` (`cli/_plan.py:239-242`).
-2. `price_overrides.toml` beside the file that was loaded (`prices/price_file.py:325-339`, `cli/_inputs.py:11-14`).
-3. The entry in the file that was loaded: `target.price_file` when the target names one, else `<data dir>/prices.json` (`cli/_inputs.py:13`; `crafting.toml` sets the data dir to `local/data`, not committed).
+1. `start_price_of`: a ready `StartPrice` handed to `make_plan` (`cli/_plan.py:266,310`). It skips `resolve_start_price`, so it beats `--start-price`, the override file and the file. `plan_with_starts` passes it for every non-plain start candidate (`cli/_starts.py:88-90`, price built at `:89`, printed by `cli/_start_report.py:36`); the candidate's own goods were priced from the file with the overrides on top (`cli/_start_options.py:276-295`).
+2. `--start-price` (`cli/_plan.py:239-242`); it applies to the plain start item only.
+3. `price_overrides.toml` beside the file that was loaded (`prices/price_file.py:325-339`, `cli/_inputs.py:11-14`).
+4. The entry in the file that was loaded: `target.price_file` when the target names one (read at `cli/_main.py:116` and `cli/_benchmark.py:377`, `:463`), else `<data dir>/prices.json` (`cli/_inputs.py:13`; `crafting.toml` sets the data dir to `local/data`, not committed).
 
-Only V01 names a file (`T:v01-minion-helmet.yaml:63`). Nothing in `src/` reads a committed fixture. The committed files are chosen by the callers:
+Only V01 names a file (`T:v01-minion-helmet.yaml:63`). Nothing in `src/` reads a committed fixture. The third committed file, `foresight-allflame-2026-11-02.json` (8 `poe.ninja` entries, no start key), is read only by `tests/test_prices_foresight.py`. The committed files are chosen by the callers:
 
 | File | Chosen by |
 |---|---|
@@ -333,7 +349,7 @@ Direction is "derives X from Y". "Called by" is every caller found by search.
 | D11 | a target for a candidate | the target and the candidate's item | `cli/_starts.py:88` (`dataclasses.replace(target, start_item=..., start_price=None)`) | `_plan_candidate` |
 | D12 | the recipe starts and their price | target, recipes, file | `cli/_start_options.py:310-362` `vendor_recipe_starts` | `plan_with_starts` through `SOURCES` (`_starts.py:48`) |
 | D13 | the trade query | a buy spec, the resolved stat filters | `prices/trade_query.py:291-315` `build_query` | `prices/trade_pricing.py` (price time), `cli/_route_trade.py:49` (page time) |
-| D14 | a trade stat id | a mod's stat text, family id or mod id, the site's stat list | `prices/trade_stats.py:132-185` `resolve_buy_mod`, `named_mods` | the two callers of D13 |
+| D14 | a trade stat id | a mod's stat text, family id or mod id, the site's stat list | `prices/trade_stats.py:159-185` `resolve_buy_mod` (with `named_mods`, `:151`) | the two callers of D13 |
 | D15 | the page's Accepts lines and trade link | a buy spec | `cli/_route_trade.py:36-90` | `cli/_route_view.py:697` |
 | D16 | the page's "Accepts" when no spec is given | the target's start item | `cli/_route_view.py:419-428` `start_accepts` | `buy_row` |
 | D17 | the tier of a mod on a base | the game data | `items/tiers.py:31-70` `tier_table`, `mod_tier` | the abstraction (`_kernel.py:246,430`), the actions, `_route_card.py:303`, `_start_options.py:195`, `floor.py:190`; never to check or fill a start mod's `tier:` |
@@ -396,7 +412,7 @@ Blockers as of today: #351 is unblocked (#357 closed); #354 is unblocked (#352 c
 
 ## 5. Places that no open issue lists
 
-For the main chat to file (OR-29). Each has its file and line.
+Filed (OR-29): each point is in exactly one issue, linked at its end. Each has its file and line.
 
 1. **The entry's own rarity, influence, corrupted flag and mods are compared with nothing.** The `price.*` slots cover base, level, source and pool only (`tests/reconcile/checks.py:93-94`). R14's entry encodes the influence in a pseudo stat and its key; R08's and R09's encode rarity normal; R05's, R10's, R11's and R12's encode the fractured mod. (F3, F6, F7.) Filed: #470.
 2. **The stored query is never compared with the query the spec builds.** No test calls `build_query` on a real `examples/buy` spec and compares the body with `detail.query` or `search_body_*.json`; the page link is rebuilt at render time (`cli/_route_trade.py:36-51`) and is golden for R05, R10, R11 only (`tests/test_cli_routes_real.py:50,155`). Specs of R04, R08, R09, R12, R14 have no link check. (F9.) Filed: #470.
@@ -411,6 +427,7 @@ For the main chat to file (OR-29). Each has its file and line.
 11. **A price written in prose.** `ExpectedStart.why` of V01 states 8, 866 and 1,349 Chaos (`cli/_benchmark.py:247-253`); nothing checks them against the fixture they cite. Filed: #473.
 12. **`item class -> trade category` exists only in tests.** `tests/independent/ladder.py:94-105`; `src` takes `category:` from the hand-written spec. Any spec derived from a target (#354) needs it in `src`. Filed: #471.
 13. **A shared base name cannot be told apart by the poe.ninja line.** The line has name, level and variant (`prices/ninja_items.py:59-66`), no base id; the fix proposed in #418 and #417 ("derive the key from the base id") has no counterpart on the poe.ninja side for R09's three Two-Toned Boots or R04's two quivers. Whether the trade site tells same-name bases apart (a discriminator in its item list) was not checked: no request was made. Filed: #471.
+14. **The user is told to run the price commands by hand (OR-9).** `cli/_plan.py:248-251` and `cli/_benchmark.py:463-468,483-493` send the user to `python -m crafting_system.prices trade --spec ...`; `prices/price_file.py:30,161-163,358-361` quote the `fetch` command; `prices/__main__.py:77-91,196` is a hand-run command; `README.md:32,34` and `examples/targets/r12-lightning-amulet.yaml:56-58` describe it. OR-9: the system refreshes prices itself. Filed: #478.
 
 ---
 
@@ -436,7 +453,7 @@ Common to every option, and listed once: `src/` files that mention `start_price`
 ### Option C. Make "given or bought" explicit and the price required; leave the spec and the key as they are
 
 - Derives: nothing new. A target says whether its start item is given or bought (OR-6); a bought one must name a price; the coupling "no price means free and no restart" goes (the places P1 to P14 listed in #453, point 2).
-- Blast radius. Targets: 3 files (J01, R03, R06). `src/`: about 9 files (`targets/parse.py`, `model.py`, `corrupted.py`; `cli/_plan.py`, `_starts.py`, `_benchmark.py`, `_route.py`, `_route_view.py`, `_report.py`). Tests: about 8 files (`test_targets_parse.py`, `test_risk_free_actions.py`, `test_prune_bound.py`, `test_cli_benchmark.py`, `test_cli_plan.py`, `test_targets_corrupted.py`, plus the reconcile rows). Fixtures and specs: unchanged.
+- Blast radius. Targets: 3 files (J01, R03, R06). `src/`: 14 files: `targets/parse.py`, `model.py`, `corrupted.py`; `cli/_plan.py`, `_starts.py`, `_benchmark.py`, `_route.py` (the restart refused at 0, `:253`, and built at `:460`), `_route_view.py`, `_report.py`, `_interval.py` (`:345`), `_verify.py` (`:139-156`), `_offers.py` (P12 the free-action cost, P14 the Chaos and Divine special cases); `risk/_free.py` and `risk/_evaluate.py` (the recognition of a free action by its value). Tests: about 8 files (`test_targets_parse.py`, `test_risk_free_actions.py`, `test_prune_bound.py`, `test_cli_benchmark.py`, `test_cli_plan.py`, `test_targets_corrupted.py`, plus the reconcile rows). Fixtures and specs: unchanged.
 - Closes: #427 (the 8 rows); none of the base, level or price-key rows.
 
 ### Option D. The price entry describes the item it was taken for; the planner checks it against the target
