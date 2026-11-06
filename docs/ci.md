@@ -245,7 +245,7 @@ real game data is taken from where it is made, since a PC without the cache cann
 `UPDATE_GOLDEN=1` is set, and `tests/test_cli_routes_real.py` makes them on a runner or machine that has the real game data in its
 cache (`CRAFTING_CACHE_DIR`). Regenerate them through a heavy run that copies the three files into `$OUT_DIR`, with this command (`BRANCH` is the branch to run):
 
-    python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest tests/test_cli_routes_real.py -q; cp tests/golden/real_r05.html tests/golden/real_r10.html tests/golden/real_r11.html "$OUT_DIR"/'
+    python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest tests/test_cli_routes_real.py -k route_view_page_is_the_golden_file -q; cp tests/golden/real_r05.html tests/golden/real_r10.html tests/golden/real_r11.html "$OUT_DIR"/'
 
 Then commit them after reading the diff. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
 
