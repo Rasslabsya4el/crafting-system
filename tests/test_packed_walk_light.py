@@ -14,6 +14,8 @@ module does not compute:
 
 import math
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 from abstraction_pool import MANA_1
@@ -236,10 +238,10 @@ def test_the_check_after_the_first_few_looks_at_every_so_manyth_hit_only(monkeyp
 
 
 class Clock:
-    """A clock that starts at 0 and moves `step` seconds each time it is read."""
+    """A clock that starts at `origin` and moves `step` seconds each time it is read."""
 
-    def __init__(self, step):
-        self.step, self.now = step, -step
+    def __init__(self, step, origin=0.0):
+        self.step, self.now = step, origin - step
 
     def perf_counter(self):
         self.now += self.step
@@ -247,7 +249,7 @@ class Clock:
 
 
 def test_a_long_walk_says_where_it_is_every_so_many_seconds_and_how_long_it_took(monkeypatch):
-    monkeypatch.setattr(_packed, "time", Clock(10.0))  # started at 0; each finished state reads the clock: 10, 20, 30, ...
+    monkeypatch.setattr(_packed, "time", Clock(10.0, origin=1000.0))  # started at 1000; each finished state reads the clock: +10, +20, ...
 
     ab, _, walked, lines = fresh_walk()
 
@@ -256,7 +258,7 @@ def test_a_long_walk_says_where_it_is_every_so_many_seconds_and_how_long_it_took
     assert len(reports) == n // 3  # every third state: the clock is 30 s past the last report (equal to the interval counts)
     assert reports[0].endswith("(30 s)") and reports[1].endswith("(60 s)")
     assert reports[0].startswith("walk: ") and " done, " in reports[0] and "3 done" in reports[0]
-    assert walked.seconds == 10.0 * (n + 1)  # the start, one read per state, and the end
+    assert walked.seconds == 10.0 * (n + 1)  # the start, one read per state, and the end: not the sum of the first and the last
     assert lines[-1].endswith(f"({10 * (n + 1)} s)")
 
 
@@ -485,6 +487,52 @@ def test_the_lumped_policy_gives_every_live_block_an_action_with_the_offers_labe
         assert taken.label in labels and taken.cost > 0
         assert all(isinstance(o.state, int) and o.weight > 0 for o in taken.outcomes)
         assert len({o.state for o in taken.outcomes}) == len(taken.outcomes)  # one outcome per target block
+
+
+def test_the_time_to_lump_is_the_clock_between_two_reads_in_tenths_of_a_second(world, monkeypatch):
+    ab, start, walked, _ = world
+    monkeypatch.setattr(_packed, "time", Clock(12.34, origin=1000.0))
+
+    result = _packed.solve_walked(ab, start, walked)
+
+    assert result.info["lump_seconds"] == 12.3  # one read apart: 12.34 to a tenth
+
+
+class FakeLumped:
+    """Three blocks: 0 takes action 1 to the goal block 1 or the dead block 2 (no action, not a goal); 1 is the goal."""
+
+    count = 3
+    action = np.array([1, -1, -1])
+    goal = np.array([False, True, False])
+    succ = [np.array([1, 2]), np.array([], dtype=np.int64), np.array([], dtype=np.int64)]
+    weight = [np.array([3, 1]), np.array([], dtype=np.int64), np.array([], dtype=np.int64)]
+    cost = np.array([2.5, 0.0, 0.0])
+    rep = np.array([0, 1, 2])
+
+
+def test_the_lumped_policy_leaves_out_the_goal_blocks_and_the_blocks_with_no_action():
+    reduced = SimpleNamespace(act_tag=np.array([0, 1]))
+    offers = [SimpleNamespace(label="first"), SimpleNamespace(label="second")]
+
+    policy = _packed.lumped_policy(FakeLumped, reduced, offers)
+
+    assert list(policy) == [0]
+    assert policy[0].label == "second" and policy[0].cost == 2.5
+    assert [(o.state, o.weight) for o in policy[0].outcomes] == [(1, 3), (2, 1)]
+
+
+def test_the_lumped_view_leaves_out_the_goal_blocks_and_the_blocks_with_no_action_and_shows_each_block_by_its_first_state():
+    reduced = SimpleNamespace(act_tag=np.array([0, 1]))
+    walked = SimpleNamespace(states=["s0", "s1", "s2", "s3"], offers=[SimpleNamespace(label="first"), SimpleNamespace(label="second")])
+    cls = np.array([2, 0, 1, 0])  # the classes of the four states; the blocks' representatives are classes 0, 1, 2
+
+    view = _packed.lumped_view(FakeLumped, reduced, cls, walked)
+
+    # class c is first met at state: 0 -> s1, 1 -> s2, 2 -> s0; block b is shown by the first state of class rep[b] = b
+    assert list(view) == ["s1"]
+    taken = view["s1"]
+    assert taken.label == "second" and taken.cost == 2.5
+    assert [(o.state, o.weight) for o in taken.outcomes] == [("s2", 3), ("s0", 1)]
 
 
 def test_solve_walked_says_how_far_it_has_come(world, solved):

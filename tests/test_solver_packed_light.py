@@ -286,6 +286,18 @@ def test_bicgstab_scales_the_stopping_test_by_the_size_of_the_right_hand_side():
     assert steps <= 3 and x == pytest.approx(X3 * 1e6, rel=1e-10)
 
 
+def test_bicgstab_stops_at_the_first_step_whose_residual_is_below_the_tolerance_times_the_size_of_the_right_hand_side():
+    # the relative residual after 1, 2 and 3 steps is 0.066, 0.034 and 2e-16 (see the test above): a tolerance of 0.1 is met after the first
+    # step, 0.05 after the second, and 1e-3 only after the third; scaling b by a million changes nothing
+    for scale in (1.0, 1e6):
+        b = (A3 @ X3) * scale
+        for tol, steps in ((0.1, 1), (0.05, 2), (1e-3, 3)):
+            x, relative, taken = ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), tol, 100)
+
+            assert taken == steps, (scale, tol)
+            assert relative <= tol and relative == pytest.approx(residual_of(A3, b, x), rel=1e-6, abs=1e-14)
+
+
 def test_bicgstab_started_at_the_answer_takes_no_step():
     b = A3 @ X3
 
@@ -388,6 +400,31 @@ def test_the_dense_fallback_is_not_used_for_a_policy_longer_than_its_limit(monke
     assert not values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-6)
 
 
+def test_the_dense_fallback_covers_a_policy_of_exactly_its_limit(monkeypatch):
+    work, leave = prepared(LINE)
+    info = {}
+    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
+    monkeypatch.setattr(ps, "DENSE_FALLBACK", 5)  # five states in the policy: at the limit
+
+    values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
+
+    assert info["linear_dense"] == 1 and values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)
+
+
+def test_the_dense_fallback_is_used_when_the_residual_is_just_above_its_threshold_and_not_when_at_or_below_it(monkeypatch):
+    work, leave = prepared(LINE)
+    policy = np.array([0, 1, 2, 3, 4, -1])
+    monkeypatch.setattr(ps, "BICGSTAB_ITERATIONS", 1)
+    seen = {}
+    info = {}
+    evaluate_policy(work, leave, policy, np.zeros(6), 4, 1e-13, info)
+    assert info["linear_dense"] == 1  # one step leaves a residual far above 1e-10
+    monkeypatch.setattr(ps, "DENSE_FALLBACK_RESIDUAL", 10.0)  # a residual below this is good enough
+    info = {}
+    evaluate_policy(work, leave, policy, np.zeros(6), 4, 1e-13, info)
+    assert "linear_dense" not in info
+
+
 def test_no_restart_is_made_when_the_first_run_reached_its_residual(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
@@ -426,17 +463,21 @@ def test_an_improper_policy_is_refused_with_its_singular_system():
         evaluate_policy(work, np.ones(3), np.array([0, 1, -1]), np.zeros(3), 100, 1e-13, {})
 
 
-def test_a_stiff_system_gets_its_iterative_refinement():
-    # a chain of 40 states each leaving with chance 1/1e7: the values are 1e7 * (40 - i), which one solve of the
-    # nearly singular matrix gives to a few digits fewer than the refinement does
-    n = 40
-    graph = build(*[(False, [(1.0, [(i + 1, 1), (i, 10_000_000)])]) for i in range(n)], (True, []))
+def test_a_stiff_system_gets_its_iterative_refinement(monkeypatch):
+    # 40 states in a row, each leaving with chance 1 / (1 + 1e9): the values are (1 + 1e9) (40 - i). One LU solve of this matrix loses
+    # nine digits; the first refinement brings the residual under 4 eps and the second finds nothing left to do
+    n, leaving = 40, 10**9
+    graph = build(*[(False, [(1.0, [(i + 1, 1), (i, leaving)])]) for i in range(n)], (True, []))
     work, leave = prepared(graph)
+    solves = []
+    real = np.linalg.solve
+    monkeypatch.setattr(np.linalg, "solve", lambda a, b: solves.append(1) or real(a, b))
 
     values = evaluate_policy(work, leave, np.concatenate((np.arange(n), [-1])), np.zeros(n + 1), 100, 1e-13, {})
 
-    expected = np.array([1.00000010e7 * (n - i) for i in range(n)])  # cost 1 / leaving 1/(1+1e7) per state
-    assert values[:n] == pytest.approx(expected, rel=1e-13)
+    expected = np.array([(1 + leaving) * (n - i) for i in range(n)], dtype=float)
+    assert values[:n] == pytest.approx(expected, rel=1e-14)
+    assert len(solves) == 3  # the solve and two refinements: the second refinement still saw a residual above the allowance
 
 
 # --- solve_graph and solve_packed ---------------------------------------------------------------------------------------
@@ -491,6 +532,23 @@ def test_a_better_action_found_by_the_evaluation_is_taken_in_the_next_round():
     assert core.action.tolist() == [1, -1, 2]
     assert info["rounds"] == 2
     assert any(line.startswith("policy iteration 1: 1 states improve") for line in lines)
+
+
+def test_a_state_whose_start_action_is_not_the_first_of_the_graph_is_improved_too():
+    # states 0 (start), 1 (a choice between a cheap action that falls into the dear state 2 99 times in 100, and a sure one), 2, 3 = goal;
+    # the start policy takes the cheap action of state 1 (index 1 in the graph, not 0); V2 = 100, V1 = 3, V0 = 1 + 3
+    graph = build(
+        (False, [(1.0, [(1, 1)])]),
+        (False, [(1.0, [(3, 1), (2, 99)]), (3.0, [(3, 1)])]),
+        (False, [(100.0, [(3, 1)])]),
+        (True, []),
+    )
+    info = {}
+
+    core = solve_graph(graph, info=info)
+
+    assert core.value.tolist() == pytest.approx([4.0, 3.0, 100.0, 0.0], rel=1e-14)
+    assert core.action.tolist() == [0, 2, 3, -1] and info["rounds"] == 2
 
 
 def test_the_rounds_are_limited_by_max_rounds_and_the_refinement_evaluates_the_policy_the_last_round_chose():
@@ -587,6 +645,14 @@ def test_solve_packed_merges_states_that_are_interchangeable_and_lifts_the_polic
     assert solved.info["classes"] == 3 and solved.info["merge_rounds"] >= 1
     unmerged = solve_packed(graph, merge=False)
     assert unmerged.classes == 4 and unmerged.value.tolist() == pytest.approx(solved.value.tolist(), rel=1e-14)
+
+
+def test_a_dead_state_whose_action_comes_first_in_the_graph_still_has_no_action():
+    graph = build((False, [(1.0, [(0, 1)])]), (False, [(2.0, [(2, 1)])]), (True, []))
+
+    solved = solve_packed(graph)
+
+    assert solved.value.tolist() == [INF, 2.0, 0.0] and solved.action.tolist() == [-1, 1, -1]
 
 
 def test_solve_packed_gives_dead_states_infinite_values_and_no_action():
