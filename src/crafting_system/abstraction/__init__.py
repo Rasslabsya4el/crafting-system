@@ -60,6 +60,13 @@ is imported or tested for here.
   there is one. An action that declares neither raises `OutOfScopeError`. `Coarsening.pooling_irrelevant(abstraction,
   size)` and `Coarsening.pooling_by_spread(abstraction, spread)` build the groups (the second pools consecutive kinds
   by per-family weight, for the additions).
+* `Pattern(abstraction)` and `build_pattern_model(abstraction, start, offers)` (`_pattern.py`, ticket #497, research #376): the optimistic model of the
+  key `(flags, fractured mods, status, item state, crafted slots, ordinary mods per side, with the metamods modelled their protected tags)`, built
+  from the abstraction alone, with no walk of the concrete graph. `Pattern.key(state)` is the key; `Pattern.members(key, mode)` makes the concrete
+  states of a key that an action stands for (`Pattern.mode_of`: one member for an erasing reroll, one per class for the Annulment and the bench, the
+  lightest and the heaviest junk of each class for an addition, every member for the Fracturing Orb and for anything undeclared), and the model
+  offers, in a key, the kernel of each such member seen through the key. Its value at a key is at most the exact cost of every state with that key
+  (the module docstring has the argument for each action class). `cli/_pattern_bound.py` solves it.
 * `Abstraction.estimate(starts, actions)` (`_estimate.py`, ADR-0023): the pilot count. The states and transitions of the
   exact graph, found with one kernel per (reroll, key) and the bench legality by sets of families and free slots; an
   `Estimate` also forecasts a coarse level (`coarsened`) and gives a closed prefix of the graph for a calibration
@@ -197,6 +204,7 @@ from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, n
 from ._gaps import PRUNED_CORRUPTING, PRUNED_QUALITY, Gap, ModelGaps, Prunings
 from ._goal import AtLeast, Goal, ImplicitWanted, QualityWanted, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
+from ._pattern import Pattern, PatternKey, PatternModel, PatternOffer, PatternStats, build_pattern_model
 from ._state import CompressedState, Flags, FracturedMod, ImplicitSide, OfferedMod, Slot, status_of
 
 __all__ = [
@@ -222,6 +230,11 @@ __all__ = [
     "Prunings",
     "QualityWanted",
     "OfferedMod",
+    "Pattern",
+    "PatternKey",
+    "PatternModel",
+    "PatternOffer",
+    "PatternStats",
     "Slot",
     "Goal",
     "Status",
@@ -231,5 +244,6 @@ __all__ = [
     "reach_bound",
     "status_of",
     "BlockHoldsMetamod",
+    "build_pattern_model",
     "needs_walk",
 ]

@@ -444,6 +444,13 @@ The coarse state in which a block offers every action that is legal in at least 
 **Pessimistic model**:
 The coarse state in which a block offers only the actions legal in every member and pays what the worst member pays; its policy is an ordinary policy of the exact problem and its value is an upper bound on that policy's cost.
 
+**Pattern key**:
+The key of a state that the crafted-pattern bound tells states apart by: the flags, the fractured mods, the status of the wanted mods, the item state beyond the mods, the crafted slots, the number of ordinary mods per side, and with the metamods modelled their protected tags per side (`abstraction/_pattern.py`, ticket #497). Two states with one key are **members** of it. The junk's kinds are not in it (measured to matter by 0.1% to 1.9%, research #376).
+
+**Pattern bound**:
+The value of the optimistic model of the pattern key: a lower bound on the exact cost of every state that has the key (99.5% of the exact cost on R04, 98.1% on R14, 99.99% with the tags, 100% on S02). Built from the abstraction alone, with no walk, by offering in each key the kernels of the members an action class stands for (one member, the lightest and the heaviest junk of each class, or every member; the argument for each is in the module). It is the `LB` of the certificate `[LB, U]` (#499) and the bound of the envelope search (#377).
+_Avoid_: pattern database (the research name), heuristic
+
 **Approximate answer**:
 A policy with the interval between the optimistic and the pessimistic value, marked as approximate; given when the exact state would not fit in about a minute.
 _Avoid_: estimate, heuristic answer

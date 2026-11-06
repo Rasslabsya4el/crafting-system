@@ -57,6 +57,13 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_estimate.py", "_Pilot.kernel_of", ("NotApplicableError", "OutOfScopeError"), EITHER, "the forecast only counts the graph; the build writes the gap"),
     ("abstraction/_estimate.py", "_Pilot.walked_kernel", ("NotApplicableError", "OutOfScopeError"), EITHER, "the forecast only counts the graph; the build writes the gap"),
     ("abstraction/_inputs.py", "_kernel_of", ("NotApplicableError",), GAME, "the game's refusal of the representative is another placement's: a gap in the model's average"),
+    ("abstraction/_pattern.py", "_Universe._seed_named", ("NotApplicableError",), GAME, "the game refuses the offered action on the empty probe item: it adds no mod by name there, nothing is seeded"),
+    ("abstraction/_pattern.py", "Pattern._ok", ("OutOfScopeError",), GAP, "a model gap while building the item of a member is raised: whether the member is an item is not known, so none is left out"),
+    ("abstraction/_pattern.py", "_explore", ("NotApplicableError",), GAME, "the game refuses the action at this member (its kernel key): it is not an action of the member, counted in `refused_pairs`"),
+    ("abstraction/_pattern.py", "_explore", ("OutOfScopeError",), GAP, "a model gap at a member (its kernel key): left out of the key only where `_gap_everywhere` says no member can take it, else the build refuses"),
+    ("abstraction/_pattern.py", "_explore", ("NotApplicableError",), GAME, "the game refuses the action at this member (its kernel): it is not an action of the member, counted in `refused_pairs`"),
+    ("abstraction/_pattern.py", "_explore", ("OutOfScopeError",), GAP, "a model gap at a member (its kernel): left out of the key only where `_gap_everywhere` says no member can take it, else the build refuses"),
+    ("abstraction/_pattern.py", "_gap_everywhere", ("NotApplicableError", "OutOfScopeError"), EITHER, "asks whether any member of the key can take the action: a member refused by the game or by a gap cannot, whichever family"),
     ("abstraction/_kernel.py", "Abstraction._context", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base"),
     ("abstraction/_kernel.py", "Abstraction.reachable", ("NotApplicableError", "OutOfScopeError"), EITHER, "a helper for tests, no caller in src: the states reachable by what can be applied"),
     ("abstraction/_kernel.py", "Abstraction._prepare", ("NotApplicableError",), GAME, "a game refusal may depend on the family of a fractured mod; a model gap is not asked that"),
@@ -97,6 +104,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
 # packages that walk, solve and plan. Listed so they are not forgotten; `NOT_A_REFUSAL` says no action is called inside, or that the error is not a refusal.
 NOT_A_REFUSAL = "not a refusal"
 OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
+    ("abstraction/_pattern.py", "Pattern._ok", ("ValueError", "ItemError"), NOT_A_REFUSAL, "`_item_of` of a state that no item has (two slots of a family, more slots than families): the member is not an item; no action is called"),
     ("abstraction/_prime.py", "prime", ("ValueError",), EITHER, "a request `kernel` would refuse is left to `kernel`, which raises it in its own order"),
     ("abstraction/_coarse.py", "Coarsening._name", ("ValueError",), NOT_A_REFUSAL, "`Action.label` of an unknown id: the repr is shown instead"),
     ("abstraction/_estimate.py", "_Pilot._name", ("ValueError",), NOT_A_REFUSAL, "`Action.label` of an unknown id: the repr is shown instead"),
