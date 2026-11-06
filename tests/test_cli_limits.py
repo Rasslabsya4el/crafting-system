@@ -164,14 +164,14 @@ def test_g20_a_quantile_the_grid_cannot_reach_is_a_limit_and_a_reached_one_is_no
 
 def test_p1_a_start_item_the_target_gives_no_price_is_counted_as_free(tmp_path):
     text = R12.read_text(encoding="utf-8")
-    assert "start_price:" in text
+    assert "buys_start_item: true" in text
     path = tmp_path / "free.yaml"
-    path.write_text(re.sub(r"(?m)^start_price:.*\n", "", text), encoding="utf-8")
+    path.write_text(re.sub(r"(?m)^buys_start_item:.*\n", "", text), encoding="utf-8")
 
     free = make_plan(DATA, load_target(path, DATA), price_file())
 
     (counted,) = [limit for limit in free.limits if limit.what == "The start item is counted as free"]
-    assert counted.why == "the target names no start price" and "does not include getting the start item" in counted.guarantee
+    assert counted.why == "the target does not say it buys its start item" and "does not include getting the start item" in counted.guarantee
 
 
 def test_p3_a_free_start_item_has_no_restart_and_the_plan_says_so():

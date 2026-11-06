@@ -360,7 +360,7 @@ def make_plan(
     if removed:
         limits += (crafted_mods_limit(tuple(p.label for p in priced if p.offer.action not in kept)),)
     priced = tuple(p for p in priced if p.offer.action in kept)
-    named = start_price_of is not None or start_price is not None or target.start_price is not None
+    named = start_price_of is not None or start_price is not None or target.buys_start_item
     limits += start_limits(price_of_start, named)
     if price_of_start.chaos > 0:
         bought = price_of_start.name or "start item"
@@ -472,7 +472,7 @@ def start_limits(price: StartPrice, named: bool) -> tuple[Limit, ...]:
             Limit(
                 _limits.START,
                 "The start item is counted as free",
-                "the target names no start price",
+                "the target does not say it buys its start item",
                 "The cost of the answer does not include getting the start item.",
             ),
         )
