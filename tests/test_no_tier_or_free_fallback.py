@@ -21,7 +21,7 @@ from crafting_system.items import ExplicitMod
 
 SRC = Path(__file__).resolve().parent.parent / "src" / "crafting_system"
 
-PRICE_WORDS = ("start_price", "price_of_start")
+PRICE_WORDS = ("start_price", "price_of_start", "start.chaos", "start_chaos")
 
 
 def _text(node: ast.AST) -> str:
@@ -38,14 +38,44 @@ def _mod_key(node: ast.AST) -> bool:
     return text.endswith(".id") or "mod_id" in text or text.endswith("mod")
 
 
+def _is_none(node: ast.AST) -> bool:
+    return isinstance(node, ast.Constant) and node.value is None
+
+
+def _is_none_check(node: ast.AST) -> bool:
+    """`x is None`, `x == None` or `not x`."""
+    if isinstance(node, ast.UnaryOp):
+        return isinstance(node.op, ast.Not)
+    return isinstance(node, ast.Compare) and len(node.ops) == 1 and isinstance(node.ops[0], ast.Is | ast.Eq) and _is_none(node.comparators[0])
+
+
+def _assigns_tier_1(node: ast.AST) -> bool:
+    """`tier = 1` or `tier: int = 1`."""
+    if isinstance(node, ast.Assign):
+        targets, value = node.targets, node.value
+    elif isinstance(node, ast.AnnAssign):
+        targets, value = [node.target], node.value
+    else:
+        return False
+    return _is_number(value, 1) and any("tier" in _text(target).lower() for target in targets)
+
+
 def tier_fallbacks(source: str) -> list[str]:
     """One line per place that turns "no tier" into a tier number."""
     found = []
     for node in ast.walk(ast.parse(source)):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "get" and len(node.args) == 2:
-            owner, key, default = node.func.value, node.args[0], node.args[1]
-            if _is_number(default, 1) and ("tier" in _text(owner).lower() or _mod_key(key)):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in ("get", "setdefault") and node.args:
+            owner, key = node.func.value, node.args[0]
+            default = node.args[1] if len(node.args) == 2 else next((keyword.value for keyword in node.keywords if keyword.arg == "default"), None)
+            if default is not None and _is_number(default, 1) and ("tier" in _text(owner).lower() or _mod_key(key)):
                 found.append(f"line {node.lineno}: {_text(node)} gives tier 1 to a mod that has none")
+        elif isinstance(node, ast.Call) and _text(node.func) == "getattr" and len(node.args) == 3:
+            name, default = node.args[1], node.args[2]
+            if isinstance(name, ast.Constant) and isinstance(name.value, str) and "tier" in name.value.lower() and _is_number(default, 1):
+                found.append(f"line {node.lineno}: {_text(node)} reads a missing tier as 1")
+        elif isinstance(node, ast.If) and _is_none_check(node.test) and "tier" in _text(node.test).lower():
+            if any(_assigns_tier_1(inner) for stmt in node.body for inner in ast.walk(stmt)):
+                found.append(f"line {node.lineno}: {_text(node.test)} sets a missing tier to 1")
         elif isinstance(node, ast.IfExp) and _is_number(node.orelse, 1) and "tier" in (_text(node.test) + _text(node.body)).lower():
             found.append(f"line {node.lineno}: {_text(node)} reads a missing tier as 1")
         elif isinstance(node, ast.BoolOp) and isinstance(node.op, ast.Or) and _is_number(node.values[-1], 1):
@@ -68,6 +98,10 @@ def free_prices(source: str) -> list[str]:
         elif isinstance(node, ast.BoolOp) and isinstance(node.op, ast.Or) and _is_number(node.values[-1], 0):
             if any(word in _text(value).lower() for value in node.values[:-1] for word in ("price", "cost", "chaos")):
                 found.append(f"line {node.lineno}: {_text(node)} makes a missing price 0")
+        elif isinstance(node, ast.Dict):
+            pairs = zip(node.keys, node.values)
+            if any(isinstance(key, ast.Constant) and isinstance(key.value, str) and "start_price" in key.value and _is_number(value, 0) for key, value in pairs):
+                found.append(f"line {node.lineno}: {_text(node)} writes a start price of 0")
         elif isinstance(node, ast.Call) and _text(node.func).split(".")[-1] == "StartPrice":
             given = any(keyword.arg == "given" and _text(keyword.value) == "True" for keyword in node.keywords)
             chaos = node.args[1] if len(node.args) > 1 else next((keyword.value for keyword in node.keywords if keyword.arg == "chaos"), None)
@@ -86,6 +120,11 @@ def free_prices(source: str) -> list[str]:
         "x = mod_tier(data, base, mod_id) or 1",
         "ExplicitMod(mod_id, values, tier=1)",
         "x = tiers.get(mod_id, 1)",
+        "if tier is None:\n    tier = 1",
+        "if not mod_tier:\n    mod_tier = 1",
+        "x = getattr(m, 'tier', 1)",
+        "x = tiers.get(mod.id, default=1)",
+        "x = tiers.setdefault(mod.id, 1)",
     ],
 )
 def test_the_tier_detector_fires_on_a_fallback(source):
@@ -101,6 +140,9 @@ def test_the_tier_detector_fires_on_a_fallback(source):
         "x = planner.get('max_imprints', 1)",
         "x = tier if tier is not None else 'any'",
         "ExplicitMod(mod_id, values, fractured=True)",
+        "if tier is None:\n    tier = 'any'",
+        "x = getattr(m, 'tier', None)",
+        "x = cache.setdefault(key, [])",
     ],
 )
 def test_the_tier_detector_lets_the_honest_forms_through(source):
@@ -117,6 +159,9 @@ def test_the_tier_detector_lets_the_honest_forms_through(source):
         "x = entry.chaos or 0.0",
         "x = StartPrice('x', 0.0, 'file')",
         "x = StartPrice(name, chaos=0, source='file')",
+        "if plan.start.chaos > 0: pass",
+        "x = start_chaos == 0",
+        "x = {'start_price': 0}",
     ],
 )
 def test_the_price_detector_fires_on_a_zero_that_means_free(source):
@@ -131,6 +176,7 @@ def test_the_price_detector_fires_on_a_zero_that_means_free(source):
         "x = StartPrice(None, 0.0, GIVEN, given=True)",
         "x = row.mean_remaining or 0.0",
         "if self.chaos > 0: pass",
+        "x = {'start_price': 4.0}",
     ],
 )
 def test_the_price_detector_lets_the_honest_forms_through(source):
