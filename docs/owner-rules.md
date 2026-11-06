@@ -134,7 +134,7 @@ Every cut of the search states what the answer still guarantees.
 
 Pruning works on the route as a whole, not only inside one step.
 
-- **Example.** R14 walks 816,153 item states. Its optimal policy has 87,251 item states, which are 65,147 classes and 14,742 blocks; the guide route has 946 item states, which are 19 blocks. R04 walks 177,242 item states. Its optimal policy has 18,696 item states, which are 11,767 classes and 551 blocks; the guide route has 22 blocks (its item states are not measured). Units: an item state is a `CompressedState`; a class is the exact merge of states with the same future; a block is the exact lumping of the policy chain (`docs/research/2026-11-06-rebuild-6-inventory.md`, section 0).
+- **Example.** R14 walks 816,153 item states. Its optimal policy has 87,251 item states, which merge into 65,147 classes, or into 14,742 blocks; the guide route has 946 item states, which merge into 19 blocks. R04 walks 177,242 item states. Its optimal policy has 18,696 item states, which merge into 11,767 classes, or into 551 blocks; the guide route has 22 blocks (its item states are not measured). Units: an item state is a `CompressedState`; a class is the exact merge of states with the same future; a block is the exact lumping of the policy chain (`docs/research/2026-11-06-rebuild-6-inventory.md`, section 0).
 - **Counter-example.** R14's page of 87,272 steps (151 MB), 65,433 of them the same Restart card. A page like that must not exist.
 - **Source.** Owner decisions on #396, point 3, 2026-11-02; measurement results on #396, 2026-11-04 (route-level pruning comes before a "minimal state").
 
@@ -192,7 +192,7 @@ When all mechanics of a case are known, the page shows one exact chance; states 
 
 When a step can add a mod of a family the target wants, the page shows the chance of each tier of that family (T1, T2, ... and "none"), with the target's tier marked, not only whether the requirement is met.
 
-- **Example.** R04's two Exalted Orbs after "Cannot roll Attack Modifiers": Maximum Life lands at some tier every time, and at tier 1 2 times in 15; the step shows the share of every tier of Life and of Bow Skills damage.
+- **Example.** R04's first Exalted Orb after "Cannot roll Attack Modifiers" adds Maximum Life or Increased Damage with Bow Skills every time (100%), and a top-tier mod of whichever lands 2 times in 15; the step shows the share of every tier of both families.
 - **Counter-example.** The R04 benchmark's check of the published odds (`tests/test_cli_r04_r14_real.py:104-111`) gives the first Exalted Orb only two numbers, 100% at any tier and 13% at the top tier, with nothing for the tiers in between.
 - **Source.** Owner in the main chat, 2026-11-06: the system should say "T1 this chance, T2 this chance, and so on".
 
