@@ -9,13 +9,17 @@ The expected numbers are counted by hand from the fixture: the 80 amulets that `
 that blocks the others), so a request over all of them is six pools, not eighty.
 """
 
+import dataclasses
+
 import pytest
-from abstraction_pool import COLD_RESIST, LIFE_1, MANA_1, RESIST_1
-from coarse_support import CHAOS, DATA, REMOVE, abstraction, concrete_items
+from abstraction_pool import COLD_RESIST, LEVEL, LIFE_1, MANA_1, RESIST_1
+from coarse_support import CHAOS, DATA, ENABLED, GOAL, REMOVE, abstraction, concrete_items, item, roll
+from items_support import AMULET
 
 from crafting_system import parallel
-from crafting_system.abstraction import _prime
-from crafting_system.actions import ScouringOrb
+from crafting_system.abstraction import Abstraction, _prime
+from crafting_system.actions import ApplyFossils, ScouringOrb
+from crafting_system.data.model import Fossil
 
 MODS = [MANA_1, LIFE_1, RESIST_1, COLD_RESIST, "FireResist1"]
 POOLS = 6  # distinct Chaos Orb pools among the 80 items of `MODS` (counted by hand, see the module text)
@@ -25,12 +29,15 @@ def states_of(ab):
     return [ab.compress(entry) for entry in concrete_items(DATA, MODS, largest=3)]
 
 
-def one_per_pool(ab, states):
-    """The first state of each distinct Chaos Orb pool signature, in the order met (the abstraction's own signature, not `prime`'s)."""
-    found = {}
-    for state in states:
-        found.setdefault(tuple(ab._signatures_of(ab._prepared(state, CHAOS))), state)
-    return list(found.values())
+def one_per_pool(ab, states=None):
+    """One state for each of the six Chaos Orb pools, picked by hand (`states` is not looked at; the argument is kept for the callers).
+
+    A Chaos Orb rerolls every mod that is not fractured, so the pool it draws from is decided by the fractured mod alone: no mod is
+    fractured (one pool: the whole item is redrawn, whatever it holds), or exactly one of the five mods is, and that mod and its family stay
+    (five pools, because the five mods are of five different families: Mana Leech, Life, and the Lightning, Cold and Fire resistances).
+    That is 1 + 5 = 6, and no signature function of the abstraction is used to say so.
+    """
+    return [ab.compress(item(roll(MANA_1))), *(ab.compress(item(roll(mod, fractured=True))) for mod in MODS)]
 
 
 class PoolSpy(parallel.WorkerPool):
@@ -72,8 +79,17 @@ def pool(monkeypatch):
 
 
 def test_the_fixture_has_the_six_pools_the_other_tests_count_by():
-    ab = abstraction()
-    assert len(one_per_pool(ab, states_of(ab))) == POOLS
+    # counted by the pools the kernel calls fill, not by `prime`'s own signature: the eighty items fill six, and the six chosen by hand
+    # fill the same six (one each: a seventh or a repeat would show in the size of the cache)
+    everything, by_hand = abstraction(), abstraction()
+    for state in states_of(everything):
+        everything.kernel(state, CHAOS)
+    for state in one_per_pool(by_hand):
+        by_hand.kernel(state, CHAOS)
+
+    assert len(everything._cache) == POOLS and len(by_hand._cache) == POOLS
+    assert set(everything._cache) == set(by_hand._cache)
+    assert len(states_of(by_hand)) == 80  # 25 items with no fractured mod, 11 for each of the five that is fractured: 25 + 55
 
 
 def test_prime_computes_each_uncached_pool_once_and_says_how_many(pool):
@@ -169,3 +185,68 @@ def test_a_worker_that_fails_stores_nothing_and_primes_nothing(pool, monkeypatch
 
     assert _prime.prime(ab, [(state, CHAOS) for state in states_of(ab)], workers=4) == 0
     assert not ab._cache and ab._kernels == 0
+
+
+# --- a draw that fractures one mod: the Fractured Fossil (ticket #435) ------------------------------------------------------
+
+# The fixture has no Fractured Fossil, so one is added here: a record with the name the rules give it ("Fractured Fossil") and no tag weights,
+# so that a resonator with it alone draws from the plain pool of the amulet. `Scorched Fossil` (fixture record: fire mods ten times as likely,
+# cold mods impossible) changes the pool; the set of the two is therefore a second pool.
+FRACTURED = Fossil("Metadata/Items/Currency/CurrencyDelveCraftingFractured", "Fractured Fossil", (), (), (), (), (), (), False, False, False, False, 0)
+FOSSIL_DATA = dataclasses.replace(DATA, fossils={**DATA.fossils, FRACTURED.id: FRACTURED})
+PLAIN_FRACTURE = ApplyFossils(("Fractured Fossil",))
+SCORCHED_FRACTURE = ApplyFossils(("Fractured Fossil", "Scorched Fossil"))
+
+
+def fossil_abstraction():
+    return Abstraction(FOSSIL_DATA, GOAL, AMULET, LEVEL, ENABLED)
+
+
+def fossil_requests(ab):
+    """Six requests over two pools: every state is erased by the resonator (only a fractured mod stays, and these items have none), so the
+    pool depends on the fossils alone, two sets, two pools; the three items are an empty rare amulet and two holding one mod."""
+    states = [ab.compress(item()), ab.compress(item(roll(MANA_1))), ab.compress(item(roll(LIFE_1), roll(RESIST_1)))]
+    return [(state, action) for state in states for action in (PLAIN_FRACTURE, SCORCHED_FRACTURE)]
+
+
+def test_a_draw_that_fractures_a_mod_is_computed_once_for_each_pool_and_stored_where_the_kernel_looks(pool):
+    ab = fossil_abstraction()
+
+    made = _prime.prime(ab, fossil_requests(ab), workers=4)
+
+    assert made == 2  # two pools, six requests
+    assert len(ab._fractures) == 2 and not ab._cache  # the fracture entries, not the plain distributions
+    assert ab._kernels == 2
+    assert pool.made == [2] and pool.mapped == [(2, 1)]
+
+
+def test_a_second_prime_finds_the_fracture_entries_stored_and_starts_no_pool(pool):
+    ab = fossil_abstraction()
+    requests = fossil_requests(ab)
+    _prime.prime(ab, requests, workers=4)
+    pool.made.clear()
+
+    assert _prime.prime(ab, requests, workers=4) == 0
+    assert pool.made == [] and len(ab._fractures) == 2 and ab._kernels == 2
+
+
+def test_what_prime_stored_for_a_fracturing_draw_is_what_a_serial_run_computes_and_the_kernel_adds_nothing(pool):
+    primed, plain = fossil_abstraction(), fossil_abstraction()
+    requests = fossil_requests(primed)
+    _prime.prime(primed, requests, workers=4)
+
+    for state, action in requests:
+        assert primed.kernel(state, action) == plain.kernel(state, action)
+    assert len(primed._fractures) == 2  # the kernels found everything ready
+    assert primed._fractures == plain._fractures
+
+
+def test_one_fracturing_pool_alone_is_left_to_the_kernel_and_joins_a_plain_pool_to_make_two(pool):
+    ab = fossil_abstraction()
+    empty = ab.compress(item())
+
+    assert _prime.prime(ab, [(empty, PLAIN_FRACTURE)], workers=4) == 0  # one pool: nothing to share out
+    assert pool.made == [] and not ab._fractures
+
+    assert _prime.prime(ab, [(empty, PLAIN_FRACTURE), (empty, CHAOS)], workers=4) == 2  # a fracturing pool and a plain one
+    assert len(ab._fractures) == 1 and len(ab._cache) == 1 and ab._kernels == 2

@@ -16,6 +16,7 @@ No expected number here is read off the code under test.
 
 import math
 import sys
+from fractions import Fraction
 
 import numpy as np
 import pytest
@@ -286,18 +287,77 @@ def test_bicgstab_scales_the_stopping_test_by_the_size_of_the_right_hand_side():
     assert steps <= 3 and x == pytest.approx(X3 * 1e6, rel=1e-10)
 
 
-def test_bicgstab_stops_at_the_first_step_whose_residual_is_below_the_tolerance_times_the_size_of_the_right_hand_side():
-    # the relative residual after 1, 2 and 3 steps is 0.066, 0.034 and 2e-16 (see the test above): a tolerance of 0.1 is met after the first
-    # step, 0.05 after the second, and 1e-3 only after the third; scaling b by a million changes nothing
+def reference_residuals(matrix, b, steps=4):
+    """The relative residuals BiCGSTAB (van der Vorst's recurrence) has after each half step and each whole step, in exact `Fraction`s.
+
+    Written from the textbook and not from the module: `[(iteration, relative residual), ...]` in the order the module can stop at them
+    (after the first half of step k it has the residual of `s`, after the whole step that of `r`); the list ends where `s` or `r` is zero.
+    """
+    exact = [[Fraction(float(entry)) for entry in row] for row in matrix]
+
+    def times(vector):
+        return [sum(a * x for a, x in zip(row, vector)) for row in exact]
+
+    def dot(u, v):
+        return sum(p * q for p, q in zip(u, v))
+
+    def size(vector):
+        return math.sqrt(float(dot(vector, vector)))
+
+    r = [Fraction(float(entry)) for entry in b]
+    bnorm = size(r)
+    rhat, v, p = list(r), [Fraction(0)] * len(r), [Fraction(0)] * len(r)
+    rho = alpha = omega = Fraction(1)
+    found = []
+    for step in range(1, steps + 1):
+        rho_new = dot(rhat, r)
+        beta = (rho_new / rho) * (alpha / omega)
+        p = [ri + beta * (pi - omega * vi) for ri, pi, vi in zip(r, p, v)]
+        v = times(p)
+        alpha = rho_new / dot(rhat, v)
+        s = [ri - alpha * vi for ri, vi in zip(r, v)]
+        found.append((step, size(s) / bnorm))
+        if not any(s):
+            break
+        t = times(s)
+        omega = dot(t, s) / dot(t, t)
+        r = [si - omega * ti for si, ti in zip(s, t)]
+        rho = rho_new
+        found.append((step, size(r) / bnorm))
+        if not any(r):
+            break
+    return found
+
+
+def test_the_reference_residuals_are_the_ones_worked_out_by_hand_for_the_three_by_three_system():
+    # A3 x = b with x = (1, -2, 3): b = (2, -4, 17), |b| = sqrt(309) = 17.58. The half step of the first iteration leaves |s| / |b| = 0.280, the
+    # whole step 0.0660, the second half step 0.0682, the second whole step 0.0340, and the third half step solves the system (3 unknowns)
+    b = A3 @ X3
+    assert b.tolist() == [2.0, -4.0, 17.0]
+    found = reference_residuals(A3, b)
+
+    assert [step for step, _ in found] == [1, 1, 2, 2, 3]
+    assert [round(value, 3) for _, value in found[:4]] == [0.280, 0.066, 0.068, 0.034] and found[4][1] == 0.0
+
+
+def test_bicgstab_stops_at_the_first_half_or_whole_step_whose_residual_is_below_the_tolerance_times_the_size_of_the_right_hand_side():
+    # the stopping steps and the residuals they leave are those of the reference above (not read off the module); a tolerance just above
+    # and just below each of them is tried, and 0.3, which only the first half step (x + alpha p) meets before the whole step is made
+    # scaling b by a million changes nothing
+    reference = reference_residuals(A3, A3 @ X3)
+    tolerances = [0.3] + [factor * value for _, value in reference if value > 1e-12 for factor in (0.99, 1.01)]  # (not 0: a float residual is never 0)
+    seen_steps = set()
     for scale in (1.0, 1e6):
         b = (A3 @ X3) * scale
-        for tol, steps in ((0.3, 1), (0.1, 1), (0.05, 2), (1e-3, 3)):
+        for tol in tolerances:
+            expected_steps, expected_residual = next((step, value) for step, value in reference if value <= tol)
             x, relative, taken = ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), tol, 100)
 
-            assert taken == steps, (scale, tol)
+            assert taken == expected_steps, (scale, tol)
+            assert relative == pytest.approx(expected_residual, rel=1e-6, abs=1e-14), (scale, tol)
             assert relative <= tol and relative == pytest.approx(residual_of(A3, b, x), rel=1e-6, abs=1e-14)
-        # a tolerance of 0.3 is met by the half step (x + alpha p, residual 0.28) before the second half of the step is made (0.066)
-        assert ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), 0.3, 100)[1] > 0.2
+            seen_steps.add(taken)
+    assert seen_steps == {1, 2, 3}  # the tolerances reach every number of steps: the test is not one-sided
 
 
 def test_bicgstab_started_at_the_answer_takes_no_step():
@@ -465,17 +525,35 @@ def test_an_improper_policy_is_refused_with_its_singular_system():
         evaluate_policy(work, np.ones(3), np.array([0, 1, -1]), np.zeros(3), 100, 1e-13, {})
 
 
-def test_a_stiff_system_gets_its_iterative_refinement():
-    # 300 states in a row, each leaving with chance 1 / (1 + 1e14): the values are (1 + 1e14) (300 - i). One LU solve of this matrix is
-    # a few parts in 1e15 off (7e-15 on the machine this was written on); the refinement brings it to the rounding of the sum
+def test_a_stiff_system_is_solved_to_the_exact_values():
+    # 300 states in a row, each leaving with chance 1 / (1 + 1e14): the values are (1 + 1e14) (300 - i), exact whole numbers (state i
+    # costs 1 and moves on with weight 1 against 1e14 for staying, so V_i = (1 + 1e14) + V_{i+1}). The error of one LU solve of this matrix
+    # depends on the BLAS in use (about 7e-15 where the first version of this test was written), and a refinement can only be told from no
+    # refinement by a bound tighter than that; so the bound here is loose on purpose, 1e-13 of each value (some 15 times the one-solve error
+    # seen), and the refinement itself is tested on a solver whose error is set by the test, in the next test
     n, leaving = 300, 10**14
     graph = build(*[(False, [(1.0, [(i + 1, 1), (i, leaving)])]) for i in range(n)], (True, []))
     work, leave = prepared(graph)
 
     values = evaluate_policy(work, leave, np.concatenate((np.arange(n), [-1])), np.zeros(n + 1), 1000, 1e-13, {})
 
-    expected = np.array([(1 + leaving) * (n - i) for i in range(n)], dtype=float)
-    assert values[:n] == pytest.approx(expected, rel=2e-15)  # a correction of the wrong sign would leave twice the error of the solve
+    for i in range(n):
+        exact = Fraction((1 + leaving) * (n - i))
+        assert abs(Fraction(float(values[i])) - exact) <= Fraction(1, 10**13) * exact, i
+
+
+def test_the_dense_solve_is_refined_twice_and_each_correction_is_added_with_its_sign(monkeypatch):
+    # A solver that returns (1 + d) times the true solution, d = 1e-3, whatever the BLAS: one solve leaves the error d, a correction
+    # solved by the same (1 + d) solver makes it d^2 = 1e-6 and a second one d^3 = 1e-9. The values (10, 8, 6, 4, 2 of LINE) must be
+    # within 1e-8 of the exact ones: no refinement (1e-3), one (1e-6) or a correction of the wrong sign (2e-3, 2e-6 ...) fail
+    work, leave = prepared(LINE)
+    real, delta = np.linalg.solve, 1e-3
+    monkeypatch.setattr(np.linalg, "solve", lambda a, b: (1.0 + delta) * real(a, b))
+
+    values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 100, 1e-13, {})
+
+    assert values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-8, abs=1e-12)
+    assert abs(values[0] - 10.0) > 1e-10  # (and the stub did act: the refinement is not exact either, d^3 is left)
 
 
 # --- solve_graph and solve_packed ---------------------------------------------------------------------------------------
@@ -611,7 +689,8 @@ def test_an_accepted_bound_of_zero_is_refused_whatever_the_values():
     with pytest.raises(ConvergenceError) as refused:
         solve_graph(GEO, accept_bound=0.0)
 
-    assert refused.value.args[1] > 0 if len(refused.value.args) > 1 else True
+    # the error carries the certified bound: GEO's value 4 is exact, so it is the rounding width 10 eps of `test_certify_of_an_exact_value...`
+    assert refused.value.error_bound == pytest.approx(10 * EPS, rel=1e-6)
 
 
 def test_solve_packed_reports_the_counts_of_the_graph_and_of_the_merge():
@@ -672,6 +751,139 @@ def test_solve_packed_refuses_a_bound_above_the_one_accepted_and_names_the_merge
         solve_packed(GEO, accept_bound=0.0)
 
 
+# --- the thresholds of the policy evaluation and of the solve, with `_bicgstab` and `certify` replaced -----------------------------------
+#
+# A threshold that a comparison of final values cannot see (the values are the same whichever side of it a residual falls) is tested on the
+# calls it makes: `_bicgstab` is replaced by a function that returns the true values of LINE with the residual the test says, and `certify`
+# by one that returns the bound the test says.
+
+LINE_POLICY = np.array([0, 1, 2, 3, 4, -1])
+LINE_VALUES = np.array([10.0, 8.0, 6.0, 4.0, 2.0])
+
+
+def stub_bicgstab(monkeypatch, residual):
+    """`_bicgstab` that returns the values of LINE (a fresh array each time), the residual given and one iteration; the calls are noted."""
+    calls = []
+
+    def fake(matvec, rhs, start, tol, limit):
+        calls.append((start.copy(), tol, limit))
+        return LINE_VALUES.copy() * (1.0 + len(calls)), residual, 1  # (a different array each call, so that a restart is seen to start from the last)
+
+    monkeypatch.setattr(ps, "_bicgstab", fake)
+    return calls
+
+
+@pytest.mark.parametrize(
+    "residual,runs",
+    [
+        (9.5e-13, 1),  # below 10 tol: reached, no restart
+        (10 * 1e-13, 1),  # exactly 10 tol (the same expression as in the module): reached
+        (10.5e-13, 1 + ps.BICGSTAB_RESTARTS),  # a little above: not reached, every restart is made
+        (1e-10, 1 + ps.BICGSTAB_RESTARTS),
+        (0.5, 1 + ps.BICGSTAB_RESTARTS),
+    ],
+)
+def test_a_run_that_leaves_a_residual_up_to_ten_times_the_tolerance_is_not_started_again(monkeypatch, residual, runs):
+    work, leave = prepared(LINE)
+    calls = stub_bicgstab(monkeypatch, residual)
+    info = {}
+
+    evaluate_policy(work, leave, LINE_POLICY, np.zeros(6), 4, 1e-13, info)
+
+    assert len(calls) == runs
+    assert info["linear_iterations"] == runs  # one iteration for each run, summed
+    assert all(tol == 1e-13 and limit == ps.BICGSTAB_ITERATIONS for _, tol, limit in calls)
+    assert calls[0][0].tolist() == [0.0] * 5  # the first run starts from the values given
+    for before, (start, _, _) in zip(range(1, len(calls)), calls[1:]):  # each restart starts from the iterate of the run before it
+        assert start.tolist() == (LINE_VALUES * (1.0 + before)).tolist()
+
+
+@pytest.mark.parametrize(
+    "residual,dense",
+    [(0.5 * ps.DENSE_FALLBACK_RESIDUAL, False), (ps.DENSE_FALLBACK_RESIDUAL, False), (ps.DENSE_FALLBACK_RESIDUAL * (1 + 1e-9), True), (1e-3, True)],
+)
+def test_the_dense_fallback_is_made_for_a_residual_above_its_threshold_and_not_at_it(monkeypatch, residual, dense):
+    work, leave = prepared(LINE)
+    stub_bicgstab(monkeypatch, residual)
+    info = {}
+
+    values = evaluate_policy(work, leave, LINE_POLICY, np.zeros(6), 4, 1e-13, info)
+
+    assert ("linear_dense" in info) is dense and info["linear_residual"] == residual
+    if dense:
+        assert values.tolist() == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)  # the dense solve replaced the stub's values
+    else:
+        assert values[:5].tolist() == (LINE_VALUES * (1.0 + 1 + ps.BICGSTAB_RESTARTS)).tolist()  # the stub's last iterate, kept
+
+
+def stub_certify(monkeypatch, quotient_bound, whole_bound):
+    """`certify` that is settled and gives `quotient_bound` when called by `solve_graph` (with a `work`), `whole_bound` for the whole graph."""
+
+    def fake(graph, value, solved, work=None):
+        return Certificate(quotient_bound if work is not None else whole_bound, 1.0, 1.0, 0.0, True)
+
+    monkeypatch.setattr(ps, "certify", fake)
+
+
+ACCEPTED = 0.5  # a power of two, so that "just above" is one step of the float above it
+
+
+@pytest.mark.parametrize(
+    "bound,accepted",
+    [(0.25, True), (ACCEPTED, True), (math.nextafter(ACCEPTED, 1.0), False), (1.0, False), (INF, False), (math.nan, False)],
+)
+def test_solve_graph_accepts_a_bound_up_to_the_one_accepted_and_refuses_the_next_float(monkeypatch, bound, accepted):
+    stub_certify(monkeypatch, bound, 0.0)
+
+    if accepted:
+        assert solve_graph(GEO, accept_bound=ACCEPTED).certificate.bound == bound
+    else:
+        with pytest.raises(ConvergenceError, match="certifies only a relative bound") as refused:
+            solve_graph(GEO, accept_bound=ACCEPTED)
+        assert refused.value.error_bound == bound or (math.isnan(bound) and math.isnan(refused.value.error_bound))
+
+
+@pytest.mark.parametrize(
+    "bound,accepted",
+    [(0.25, True), (ACCEPTED, True), (math.nextafter(ACCEPTED, 1.0), False), (1.0, False), (INF, False), (math.nan, False)],
+)
+def test_solve_packed_accepts_a_bound_of_the_whole_graph_up_to_the_one_accepted_and_refuses_the_next_float(monkeypatch, bound, accepted):
+    stub_certify(monkeypatch, 0.0, bound)  # the quotient's certificate is perfect: only the check on the whole graph can refuse
+
+    if accepted:
+        assert solve_packed(GEO, accept_bound=ACCEPTED).error_bound == bound
+    else:
+        with pytest.raises(ConvergenceError, match="do not satisfy the Bellman equation of the whole graph") as refused:
+            solve_packed(GEO, accept_bound=ACCEPTED)
+        assert refused.value.error_bound == bound or (math.isnan(bound) and math.isnan(refused.value.error_bound))
+
+
+# The rounding allowance of the step that improves a policy: an action takes the place of the current one only when its Q is lower by more
+# than (terms + 2) eps of the current Q, `terms` being the most outcomes of an action of the state plus one. State 0 has the action X (cost 1/2,
+# the goal or state 2, half and half), which the start policy takes (cheapest luckiest path), and the action Y (cost y, the goal). The values
+# are set by the test: state 2 is worth 1, so X has Q = 1/2 + 1/2 * 1 = 1 and Y has Q = y. X has two outcomes, so terms = 3 and the
+# allowance is 5 eps of 1: Y replaces X only for y < 1 - 5 eps (all these numbers are exact in float, 1 - k eps / 2 being a float below 1).
+# A gap of 4 or 4.5 eps is under the allowance of 5 (a smaller allowance, from the fewest outcomes of the state, 4 eps, or from a smaller
+# constant, would let it through), 5 is exactly at it (the rule is strict), 5.5 and 6 are over it (a larger one, 6 eps, would refuse them).
+
+
+@pytest.mark.parametrize("gap,improves", [(1, False), (4, False), (4.5, False), (5, False), (5.5, True), (6, True), (7, True), (40, True)])
+def test_an_action_replaces_the_current_one_only_when_better_by_more_than_the_rounding_of_its_sum(monkeypatch, gap, improves):
+    cost_y = 1.0 - gap * EPS
+    graph = build(
+        (False, [(0.5, [(1, 1), (2, 1)]), (cost_y, [(1, 1)])]),
+        (True, []),
+        (False, [(1.0, [(1, 1)])]),
+    )
+    monkeypatch.setattr(ps, "evaluate_policy", lambda work, leave, policy, start, dense_limit, tol, info: np.array([1.0, 0.0, 1.0]))
+    info = {}
+
+    core = solve_graph(graph, info=info)
+
+    assert core.action.tolist() == [1 if improves else 0, -1, 2]  # (action numbers: X 0, Y 1, the action of state 2 is the third, 2)
+    assert info["rounds"] == (2 if improves else 1)
+
+
 def test_solve_packed_says_how_far_it_has_come():
     lines = []
 
@@ -719,11 +931,62 @@ def test_the_messages_of_progress_carry_the_clock_in_tenths_of_a_second(monkeypa
 # --- lift_policy and policy_reach ----------------------------------------------------------------------------------------
 
 
-def test_lift_policy_gives_a_state_with_one_action_that_action():
+def test_a_state_with_one_action_takes_it_through_solve_packed():
     graph = build((False, [(1.0, [(1, 1)])]), (True, []))
     solved = solve_packed(graph)
 
     assert solved.action.tolist() == [0, -1]
+
+
+def lift_world():
+    """States 0 and 1 are one class (0) and state 2 the goal (class 1).
+
+    State 0 has a0 (cost 3, kernel P), a1 and a2 (cost 2, kernels Q and Q2, two copies of one distribution) and state 1 has a3 (cost 7,
+    kernel R). `kernel_map` sends P to the class distribution 0 and Q, Q2 and R to the class distribution 1. The quotient has the one live class
+    with its two distributions, so its action 0 is the class distribution 0 and its action 1 the class distribution 1.
+    """
+    builder = PackedBuilder()
+    p = builder.kernel([2], [1])
+    q = builder.kernel([2, 0], [1, 1])
+    q2 = builder.kernel([2, 0], [1, 1])
+    builder.action(0, 3.0, p)
+    builder.action(1, 2.0, q)
+    builder.action(2, 2.0, q2)
+    builder.close_state(False)
+    r = builder.kernel([2, 1], [1, 1])
+    builder.action(3, 7.0, r)
+    builder.close_state(False)
+    builder.close_state(True)
+    reduced = PackedBuilder()
+    reduced.action(0, 3.0, reduced.kernel([1], [1]))
+    reduced.action(1, 2.0, reduced.kernel([1, 0], [1, 1]))
+    reduced.close_state(False)
+    reduced.close_state(True)
+    return builder.build(), reduced.build(), np.array([0, 1, 1, 1], dtype=np.int32), np.array([0, 0, 1])
+
+
+def test_lift_policy_gives_each_state_its_cheapest_action_in_the_distribution_chosen_for_its_class_the_first_on_a_tie():
+    graph, reduced, kernel_map, cls = lift_world()
+
+    lifted = lift_policy(graph, reduced, kernel_map, cls, np.array([1, -1]))  # the class takes its action 1: the class distribution 1
+
+    # state 0: a1 and a2 are in the distribution and cost 2 each: the first, a1; a0 (distribution 0) is not taken. State 1: a3, its only action
+    # (the dear one: 7 is no reason to leave the distribution of the class). The goal: no action
+    assert lifted.tolist() == [1, 3, -1]
+
+
+def test_lift_policy_takes_the_other_distribution_when_the_class_does_and_gives_no_action_to_a_state_that_has_none_in_it():
+    graph, reduced, kernel_map, cls = lift_world()
+
+    lifted = lift_policy(graph, reduced, kernel_map, cls, np.array([0, -1]))  # the class distribution 0: only a0 of state 0 is in it
+
+    assert lifted.tolist() == [0, -1, -1]  # state 1 has no action in the distribution: it is left without one, not given another
+
+
+def test_lift_policy_gives_no_action_to_the_states_of_a_class_that_takes_none():
+    graph, reduced, kernel_map, cls = lift_world()
+
+    assert lift_policy(graph, reduced, kernel_map, cls, np.array([-1, -1])).tolist() == [-1, -1, -1]
 
 
 def test_lift_policy_of_a_graph_without_actions_is_minus_one_everywhere():

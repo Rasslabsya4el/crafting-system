@@ -623,7 +623,7 @@ def test_with_no_restart_craft_or_reroll_the_set_starts_from_the_cheapest_offers
     found = run(offers)
 
     assert harness.asked_sets[0] == {"q", "s"}  # the two cheapest, the earlier first on a tie
-    assert labels(found.used) == {"q", "s"} or found.fell_back
+    assert labels(found.used) == {"q", "s"} and not found.fell_back
 
 
 def test_few_offers_are_all_kept_and_solved_once(monkeypatch):
@@ -659,7 +659,7 @@ def test_twins_are_merged_before_anything_and_reported(monkeypatch):
     found = run([*offers, twin, twin2])
 
     assert found.twins == (("dup", "dup2"),) and "dup" not in labels(found.used)
-    assert "dup" not in found.bounded and "dup2" in found.bounded or "dup2" in labels(found.used)
+    assert "dup" not in found.bounded and "dup2" in found.bounded and "dup2" not in labels(found.used)  # the cheaper twin is bounded, not used
 
 
 # --- the clock and the progress lines -----------------------------------------------------------------------------------
