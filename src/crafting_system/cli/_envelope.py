@@ -31,6 +31,11 @@ and its mean is pinned by `LB = UB`, with no state of the optimal policy unexpan
 rest of the expanded graph is waste of earlier rounds, not a part of the proof.) Until then `L(root)` is the lower bound `LB` of the certificate
 `[LB, U]` (ticket #499; the seam is `SearchResult.lower` and `SearchResult.upper`).
 
+**A guard for the bound.** A consistent bound only rises round after round. `SearchStats.largest_fall` is the largest relative fall of `L(root)` that a
+round caused; `envelope_result` refuses (`BoundError`) when it is above `FALL_LIMIT` (the solver's own rounding is far below it), because a bound that
+falls is not a lower bound of anything a cut may rest on. The guard sees only a fall; a bound too high but still consistent is not seen (the tests plant
+one and the comparison with the dense optimum is what catches it).
+
 **Convergence.** Each round expands at least one tip or realizes at least one offer (a greedy fake action at an expanded node always realizes the
 first offer it stands for, even on a tie), and both are finite: the search ends, in at most as many rounds as the graph has (state, offer) pairs.
 In practice a round expands the whole frontier of the greedy policy, so the rounds are about the depth of the optimal policy. Within a round the
@@ -61,6 +66,7 @@ from crafting_system.solver._packed_solve import solve_graph
 FLOOR = 1e-200  # a fake action of bound 0 is carried at this cost: the certificate divides by the cheapest cost of a state (a rise of 1e-200 moves no cut)
 FAKE = -1  # the tag of a fake action (a tip's bound, or the least bound of the offers not realized yet)
 SLACK = 1e-9  # the lower bound of an offer is taken this much lower in relative terms (rounding of the model's sums; only ever costs a tie)
+FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the bound is not consistent (`SearchStats.largest_fall`)
 VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh kernel ...
 VERIFY_EVERY = 4_096  # ... and then one in this many (a `kernel_key` promises equal kernels at one state; the search shares them across states)
 
@@ -118,6 +124,7 @@ class SearchStats:
     candidates: int = 0  # (state, offer) pairs that could have been (what a full expansion of the expanded states would build)
     kernels: int = 0
     lower_history: list[float] = field(default_factory=list)  # `L(root)` after each round
+    largest_fall: float = 0.0  # the largest relative fall of `L(root)` from one round to the next: 0 for a consistent bound (it only rises)
     first_upper: float | None = None  # the value of the incumbent's policy (or the restart policy), when one was asked for
     solve_seconds: float = 0.0
     build_seconds: float = 0.0
@@ -197,6 +204,7 @@ class Search[S]:
         self.values: np.ndarray | None = None  # the solved lower graph (node n_solved is the goal node)
         self.n_solved = 0
         self.restart_kernel: int | None = None
+        self._last_root: float | None = None
         self.intern(problem.start)
 
     # ---- nodes and kernels --------------------------------------------------------------------------------------
@@ -444,8 +452,11 @@ class Search[S]:
             self.n_solved = len(self.states)
             self.stats.rounds += 1
             lower = float(core.value[0]) * (1.0 - core.certificate.bound)
-            self.stats.lower_history.append(lower)
             root = float(core.value[0])
+            if self._last_root is not None and math.isfinite(root) and self._last_root > 0:
+                self.stats.largest_fall = max(self.stats.largest_fall, (self._last_root - root) / self._last_root)
+            self._last_root = root
+            self.stats.lower_history.append(lower)
             if not math.isfinite(root):
                 raise NoPolicy("no policy of the offers reaches the goal from the start")
             reach = policy_reach(graph, core.action, 0)
@@ -483,4 +494,4 @@ class NoPolicy(ValueError):
     """The search found no policy that reaches the goal (or none before a net stopped it, with no restart to complete it)."""
 
 
-__all__ = ["FAKE", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "resident_mb"]
+__all__ = ["FAKE", "FALL_LIMIT", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "resident_mb"]

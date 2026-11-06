@@ -126,3 +126,15 @@ def test_a_target_the_bound_cannot_be_built_for_is_a_plan_error(monkeypatch):
     monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", refuse)
     with pytest.raises(PlanError, match="the envelope search cannot answer this target: a goal with a roll limit"):
         make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope", with_risk=False)
+
+
+def test_a_bound_that_falls_is_a_plan_error_not_a_silent_answer(monkeypatch):
+    from crafting_system.cli import _plan
+    from crafting_system.cli._envelope_plan import BoundError
+
+    def refuse(*_args, **_kwargs):
+        raise BoundError("the lower bound fell by 3.00% from one round of the search to the next")
+
+    monkeypatch.setattr(_plan, "envelope_result", refuse)
+    with pytest.raises(PlanError, match="the envelope search cannot answer this target: the lower bound fell"):
+        make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope", with_risk=False)

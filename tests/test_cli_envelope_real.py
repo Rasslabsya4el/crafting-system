@@ -19,7 +19,7 @@ import pytest
 from abstraction_support import real_game_data
 
 from crafting_system.cli import make_plan
-from crafting_system.cli._envelope_plan import envelope_result
+from crafting_system.cli._envelope_plan import BoundError, envelope_result
 from crafting_system.cli._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
@@ -87,6 +87,9 @@ def test_a_bound_raised_above_the_exact_cost_at_some_keys_is_caught(data):
     sound = envelope_result(abstraction, start, priced, bound=bound)
     assert sound.solution.values[start] == pytest.approx(exact, rel=TOLERANCE)
     factor = 1.0 + 9.0 * (np.arange(len(bound.value)) % 4 == 1)
-    planted = envelope_result(abstraction, start, priced, bound=dataclasses.replace(bound, value=bound.value * factor))
+    wrong = dataclasses.replace(bound, value=bound.value * factor)
+    with pytest.raises(BoundError, match="fell"):  # the guard sees this bound fall as the search looks further ...
+        envelope_result(abstraction, start, priced, bound=wrong)
+    planted = envelope_result(abstraction, start, priced, bound=wrong, guard=False)  # ... and with the guard off the comparison with the full walk is what catches it
     assert abs(planted.solution.values[start] - exact) > 1e-3 * exact, "the planted bound did not change the answer: the comparison cannot fail"
     assert planted.info["envelope"].lower > exact  # and the bound it reports is above the exact cost, which no sound bound is

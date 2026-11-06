@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from envelope_support import ExplicitProblem, dense_optimum, q_value, random_graph
 
-from crafting_system.cli._envelope import Net, NoPolicy, Search, resident_mb
+from crafting_system.cli._envelope import FALL_LIMIT, Net, NoPolicy, Search, resident_mb
 from crafting_system.solver import policy_reach, solve_packed
 
 SEEDS = range(12)
@@ -63,6 +63,7 @@ def test_the_search_returns_the_exact_optimum(seed, alpha):
     check_exact(graph, value, result)
     history = result.stats.lower_history
     assert all(a <= b * (1 + 1e-9) + 1e-12 for a, b in zip(history, history[1:])), history  # a consistent bound only rises
+    assert result.stats.largest_fall <= 1e-9
     assert history[-1] <= value[0] * (1 + 1e-9)
 
 
@@ -110,6 +111,11 @@ def test_a_lower_bound_above_the_exact_value_is_caught():
         except AssertionError:
             wrong += 1
     assert wrong >= 3, wrong  # the cut believes a state costs more than it does, and ends on a dearer plan or a lower bound above the optimum
+
+
+def test_a_planted_bound_shows_as_a_fall_of_the_lower_bound_in_most_runs():
+    falls = [run(seed, 1.0, planted=1.5)[3].stats.largest_fall for seed in SEEDS]
+    assert sum(fall > FALL_LIMIT for fall in falls) >= 6, falls  # what `envelope_result` refuses on; the dense comparison above is what catches the rest
 
 
 def test_a_lower_bound_a_little_above_the_exact_value_is_caught_too():

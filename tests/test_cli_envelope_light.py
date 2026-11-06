@@ -22,7 +22,7 @@ from test_packed_walk_light import START_ITEM, make_offers
 
 from crafting_system.cli import _packed
 from crafting_system.cli._envelope import Net, NoPolicy
-from crafting_system.cli._envelope_plan import envelope_limits, envelope_result
+from crafting_system.cli._envelope_plan import BoundError, envelope_limits, envelope_result
 from crafting_system.cli._limits import SOLVE, limit_document, limit_text
 from crafting_system.cli._pattern_bound import pattern_lower_bound
 
@@ -108,10 +108,26 @@ def test_a_bound_planted_above_the_exact_cost_is_caught(world):
     for top in (20.0, 100.0):
         for _ in range(10):
             raised = (top - 1.0) * rng.random(len(bound.value)) * (rng.random(len(bound.value)) < 0.5)
-            _, result = fresh(world, bound=dataclasses.replace(bound, value=bound.value * (1.0 + raised)))
+            _, result = fresh(world, bound=dataclasses.replace(bound, value=bound.value * (1.0 + raised)), guard=False)
             wrong = abs(result.solution.values[start] - exact) > TOLERANCE * exact
             caught += wrong or result.info["envelope"].lower > exact * (1 + 1e-9)
     assert caught >= 10, f"only {caught} of 20 planted bounds changed the answer or the bound: the comparison cannot fail often enough"
+
+
+def test_a_bound_that_falls_as_the_search_looks_further_is_refused(world):
+    """A planted bound that is not consistent shows as a fall of the lower bound from one round to the next; the search refuses to answer on it."""
+    _, _, _, _, bound = world
+    rng = np.random.default_rng(377)
+    refused = 0
+    for _ in range(10):
+        raised = 19.0 * rng.random(len(bound.value)) * (rng.random(len(bound.value)) < 0.5)
+        try:
+            fresh(world, bound=dataclasses.replace(bound, value=bound.value * (1.0 + raised)))
+        except BoundError as error:
+            assert "fell" in str(error)
+            refused += 1
+    assert refused >= 5, refused
+    fresh(world)  # the sound bound is not refused
 
 
 def test_an_incumbent_gives_an_upper_bound_before_the_first_round(world):

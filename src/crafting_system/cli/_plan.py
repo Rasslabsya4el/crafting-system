@@ -35,7 +35,7 @@ from ._limits import Limit, approximate_limits, claim, kind_title, model_gap_lim
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, offers_for, price_offers, split_usable
 from . import _packed
 from ._envelope import Net, NoPolicy
-from ._envelope_plan import EnvelopeInfo, envelope_limits, envelope_result
+from ._envelope_plan import BoundError, EnvelopeInfo, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._prune import chosen_offers, solver_actions
 from ._reach import reach_limit
@@ -479,7 +479,7 @@ def make_plan(
         if solver == "envelope":
             try:
                 packed = envelope_result(abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=net)
-            except (OutOfScopeError, NoPolicy) as error:
+            except (OutOfScopeError, NoPolicy, BoundError) as error:
                 raise PlanError(f"the envelope search cannot answer this target: {error}") from error
             limits += envelope_limits(packed.info["envelope"])
         else:

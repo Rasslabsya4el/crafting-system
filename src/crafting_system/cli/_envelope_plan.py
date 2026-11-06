@@ -29,7 +29,7 @@ from crafting_system.abstraction._pattern import Pattern
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 
 from . import _limits
-from ._envelope import Net, NoPolicy, Refused, Search
+from ._envelope import FALL_LIMIT, Net, NoPolicy, Refused, Search
 from ._limits import Limit, claim
 from ._offers import RESTART, BuyStartItem, PricedOffer
 from ._packed import PackedResult, Walked, solve_walked
@@ -37,6 +37,10 @@ from ._pattern_bound import PatternBound, pattern_lower_bound
 from ._prune import corrupting_offer_pruned
 
 RESTART_KEY = ("restart",)
+
+
+class BoundError(ValueError):
+    """The bound the search was given is not a consistent lower bound (its value fell as the search looked further): the search refuses to answer on it."""
 
 
 class CraftingProblem:
@@ -192,11 +196,14 @@ def envelope_result(
     bound: PatternBound | None = None,
     tolerance: float = 1e-10,
     progress: Callable[[str], None] | None = None,
+    guard: bool = True,
 ) -> PackedResult:
     """Search the graph of `offers` from `start` by the envelope search and solve what it expanded; `info["envelope"]` is an `EnvelopeInfo`.
 
     Raises `OutOfScopeError` when the bound cannot be built for this abstraction (a goal with a roll limit, an action that rerolls values, an unveil
-    offer, imprints: #507) and `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given.
+    offer, imprints: #507), `NoPolicy` when no policy reaches the goal, or the net stopped the search before one closed and the start is given, and
+    `BoundError` when the bound fell as the search looked further (`guard=False` turns that refusal off, for the tests that plant a wrong bound and
+    check that the comparison with the full walk catches what the guard does not).
     """
     from . import _packed
 
@@ -211,6 +218,11 @@ def envelope_result(
     positions = None if incumbent is None else (lambda state: [where[label] for label in incumbent(state) if label in where])
     search = Search(problem, net=net, incumbent=positions, progress=say, tolerance=tolerance)
     result = search.run()
+    if guard and result.stats.largest_fall > FALL_LIMIT:
+        raise BoundError(
+            f"the lower bound fell by {result.stats.largest_fall:.2%} from one round of the search to the next, which a consistent bound never does: "
+            "it cannot be trusted for a cut (a declared block invariance may be wrong, #509)"
+        )
     walked = Walked(result.graph, result.states, result.index, tuple(offers), time.perf_counter() - built)
     packed = solve_walked(abstraction, start, walked, tolerance=tolerance, progress=say)
     mean = float(packed.solution.values[start])
@@ -250,4 +262,4 @@ def envelope_limits(info: EnvelopeInfo) -> tuple[Limit, ...]:
     )
 
 
-__all__ = ["CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "envelope_limits", "envelope_result", "route_incumbent"]
+__all__ = ["BoundError", "CraftingProblem", "EnvelopeInfo", "NoPolicy", "Net", "envelope_limits", "envelope_result", "route_incumbent"]
