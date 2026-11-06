@@ -288,7 +288,7 @@ def approximate_plan(monkeypatch, error=None):
     prices = dataclasses.replace(APPROX_PRICES, prices={name: PriceEntry(2.0, "test") for name in names})
     keys = json.dumps(["chaos-orb", "remove-crafted-mods", *(craft.label(COARSE) for craft in CRAFTS)])
     target = parse_target(APPROX_TARGET + f"actions: {keys}\n", COARSE, source="t.yaml")
-    exact = make_plan(COARSE, target, prices, start_price=0.0)
+    exact = make_plan(COARSE, target, prices)
     forecast = exact.abstraction.estimate([exact.start], [priced.offer.action for priced in exact.offers])
     pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
     budget = (forecast.seconds(1.0, 1.0) + forecast.coarsened(pooling).seconds(1.0, 1.0)) / 2
@@ -302,7 +302,7 @@ def approximate_plan(monkeypatch, error=None):
             return real(self, state, action)
 
         monkeypatch.setattr(Abstraction, "kernel", planted)
-    return make_plan(COARSE, target, prices, start_price=0.0, budget=budget, rates=APPROX_RATES), REMOVE.label(COARSE)
+    return make_plan(COARSE, target, prices, budget=budget, rates=APPROX_RATES), REMOVE.label(COARSE)
 
 
 def test_a_model_gap_in_a_block_is_a_limit_of_an_approximate_answer_that_claims_only_the_gap(monkeypatch):
