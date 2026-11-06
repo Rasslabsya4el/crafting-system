@@ -115,6 +115,7 @@ def main() -> None:
     parser.add_argument("--incumbent", action="store_true")
     parser.add_argument("--net-seconds", type=float, help="stop the envelope search after this many seconds (the plan then states [LB, U])")
     parser.add_argument("--out")
+    parser.add_argument("--profile", action="store_true", help="print the 40 most expensive functions (cumulative) after the run")
     arguments = parser.parse_args()
     faulthandler.dump_traceback_later(600, repeat=True, file=sys.stderr)
     threading.Thread(target=P.watch_memory, daemon=True).start()
@@ -127,12 +128,23 @@ def main() -> None:
     out = Path(arguments.out) if arguments.out else None
     phases = ("envelope", "full") if arguments.phase == "both" else (arguments.phase,)
     results = {}
+    profiler = None
+    if arguments.profile:
+        import cProfile
+
+        profiler = cProfile.Profile()
+        profiler.enable()
     for phase in phases:
         results[phase] = run_phase(phase, arguments.route, say, arguments.incumbent, arguments.net_seconds)
         if out is not None:
             out.mkdir(parents=True, exist_ok=True)
             (out / f"{arguments.route}.{phase}.json").write_text(json.dumps(results[phase]), encoding="utf-8")
         print("ROW " + json.dumps(results[phase]["row"]), flush=True)
+    if profiler is not None:
+        import pstats
+
+        profiler.disable()
+        pstats.Stats(profiler).sort_stats("cumulative").print_stats(40)
     if len(results) == 2:
         report = compare(results["envelope"], results["full"])
         print("COMPARE " + json.dumps(report), flush=True)
