@@ -136,7 +136,8 @@ def main() -> None:
             else:
                 state_value[r] = bound.value[found]
         say(began, f"keys looked up; missing {keys_missing} states, {len(missing_keys)} keys")
-        per_variant[name] = (union, keys_missing, len(missing_keys), state_value)
+        examples = [repr(k)[:1500] for k in sorted(missing_keys, key=repr)[:5]]
+        per_variant[name] = (union, keys_missing, len(missing_keys), state_value, examples)
     del pk, acts, cols, g
     gc.collect()
     flat = P.flatten(qd)
@@ -149,7 +150,7 @@ def main() -> None:
     result["member_union"] = {}
     result["check"] = {}
     for name, tags, bound in bounds:
-        union, keys_missing, keys_missing_distinct, state_value = per_variant[name]
+        union, keys_missing, keys_missing_distinct, state_value, examples = per_variant[name]
         finite = np.isfinite(per_state) & (per_state < J.BIG / 10) & ~np.isnan(state_value)
         over = (state_value > per_state * (1 + 1e-7) + 1e-9) & finite
         result["member_union"][name] = union
@@ -159,7 +160,7 @@ def main() -> None:
             "start_over_exact": bound.start_value / exact, "lower_over_exact": bound.lower / exact,
             "member_union_over_exact": (union["start_value"] / exact) if union["start_value"] is not None else None,
             "start_over_member_union": (bound.start_value / union["start_value"]) if union["start_value"] else None,
-            "kernels_evaluated": bound.stats.kernels, "keys": bound.stats.keys,
+            "kernels_evaluated": bound.stats.kernels, "keys": bound.stats.keys, "missing_examples": examples,
         }
         say(began, f"check {name}: {json.dumps(result['check'][name])}")
     result["peak_rss_mb"] = round(E.rss_mb())
