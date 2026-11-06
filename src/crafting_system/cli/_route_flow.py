@@ -1,37 +1,38 @@
-"""The steps of a policy: the states it can reach, grouped as the route view shows them.
+"""The steps of a policy: one step per player action, with the exact mixture of the chances of its states.
 
-A step stands for a set of compressed states only when the policy takes the same action in all of
-them and they have the same chances into the same steps: look-alike states that need different
-actions, or that lead on differently, branch. The steps are the coarsest such grouping (a
-bisimulation), found by partition refinement: start from the blocks "same action label and cost" (or
-"no action, same reason"), then split a block until its states agree on the exact chance (a
-`Fraction` of integer weights, summed per target) into every block, a goal counting as one target.
+A step is the set of states on which the policy takes the same action, found by its label and nothing else
+(OR-18): states with different actions branch, and neither a different chance nor a detail the search does not
+track splits one action into several steps. States with no action (a dead end of a policy, a gap of a given
+route) are steps too, one per reason. Steps are numbered in the order their first state is met breadth-first.
 
-Because the grouping is a bisimulation, every state of a step has the same chance into each target,
-so the steps form a small Markov chain of their own. Its fundamental matrix N = (I - Q)^-1 over the
-steps that have an action and can reach a goal gives, from the start, the expected uses of a step's
-action (`N[start][step]`), the chance a run ever enters it (`N[start][step] / N[step][step]`) and,
-from every step, the expected cost still to pay (`N` times the costs per use). A step with no action is
-entered with the chance of stepping into it from the others.
+The chances of a step (OR-20). The states of one step need not have the same chance for an outcome, so the step
+shows the mixture of them: for an outcome, the sum over the step's states of (expected visits of the state x
+its exact chance, a `Fraction` of integer weights) divided by the expected visits of the step. The weights are the
+expected visits from the start under the policy itself: row `start` of N = (I - Q)^-1, where Q holds the chances
+among the states that have an action and can reach a goal. They are found by one dense linear solve over those
+states (float64, `numpy.linalg.solve`, cost O(n^3) in the number of states, with no limit on n); the chances
+they weigh stay exact fractions until the weighted sum. From the same N come the uses of a step (the sum of the
+visits of its states, so `sum(uses x cost)` is the mean cost of the policy) and, for a step with an action, the
+chance a run ever enters it. A step with no action is entered with the chance of stepping into it from the
+visited states. A state from which no run can ever reach a goal (it loops forever, or every way out ends in a
+state with no action) has no visits: a step whose states are all of that kind has `uses = inf` and the plain
+mean of its states as its chances; in a step that also has states that can finish, only those are counted.
 
-An edge to another step is a `forward` edge when it moves toward the goal and a `miss` when it does
-not: when the item it lands in is no dearer to finish than the use is expected to leave it (the
-expected cost still to pay at the step, less the cost of the use). A step number (the order of
-discovery) says nothing about that. An edge to a step with no action is a miss (the run stops there),
-and so is every edge of a restart (`is_restart`), which goes back to the start.
+Two things are stated, not hidden (ADR OR-12, OR-13), and both leave the chances and uses exact:
 
-The inverse is `numpy.linalg.inv`, O(n^3) in the number of steps (not of states) and fast in C.
-The grouping needs about one pass per step along a chain of look-alike states, each pass over all states with
-exact fractions; past `REFINE_WORK` (passes times states) it stops and every state is a step of its own, which
-is a valid grouping too, so a long line of states sharing one action never slows the command.
-Above `MAX_STEPS` steps the chain is not solved: `Flow.measured` is False, `uses` and `reached` are
-None (the first step is reached for sure), and an edge is `forward` when the target is nearer to a
-goal, counted in edges, than the step is. The same happens when the matrix cannot be inverted (a chance
-per use so small that it is lost in the float).
+* `Flow.measured` is False when the matrix cannot be solved in floats (a chance per use so small that it is lost in
+  the float): the uses and visits are then not known, and the chances of a step with several states are the plain
+  mean of them.
+* `Flow.entered` is False when the policy has more than `ENTRY_STATES` states that can finish: the chance a run
+  enters a step needs one more solve per step, and it is left out (`Step.reached` is None for every step but the
+  first, which is reached for sure). Uses, costs and chances do not depend on it.
+  TODO(#459): carry both as a `Limit` with its guarantee, once that record exists.
 
-A step from which no run can ever reach a goal (it loops forever, or every way out ends in a step with
-no action) has `uses = inf`; its `reached` is 1.0 for the first step and None for the others (the
-chance of entering it is not computed). Pure, no I/O, deterministic.
+An edge groups the outcomes that lead to the same place: a goal, or the next step. `kind`: "goal", "failure"
+(the item lost a wanted mod, the action is a restart, or the item lands in a step that restarts or that has no
+action: it is thrown away or the route stops), "again" (the same step, nothing lost), "forward" (any other step).
+Nothing is decided by what the item still costs to finish (PRES-6). Whether a use loses a wanted mod is told by
+the caller (`failed`), which keeps this module free of the compressed state. Pure, no I/O, deterministic.
 """
 
 import math
@@ -47,36 +48,41 @@ from crafting_system.solver import Action
 
 from ._reach import policy_states
 
-MAX_STEPS = 1500  # above this many steps the chain of steps is not solved (see the module docstring)
-REFINE_WORK = 250_000  # passes times states the grouping may take before every state is its own step
+ENTRY_STATES = 1000  # the chance of entering a step is solved once per step when the policy has at most this many states that can finish
 _GOAL = -1  # the target "a goal state" while blocks are numbered from 0
 
 
 @dataclass(frozen=True)
 class Edge[S]:
-    """Where the outcomes of a step's action lead.
+    """Where some outcomes of a step's action lead.
 
-    `kind`: "forward" to a step that is cheaper to finish from, "miss" to one that is not (or that has
-    no action), "again" to the same step, "goal" the target reached (`to` is then None). `chance` is
-    the chance per use of the action, the same in all states of the step; `states` are the states the
-    outcomes land in (goal states for "goal").
+    `kind`: "goal" the target reached (`to` is then None), "failure" a wanted mod lost, a restart, or a landing
+    in a step that restarts or has no action, "again" the same step with nothing lost, "forward" any other step.
+    `chance` is the chance per use of the action, mixed over the step's states by their expected visits; `states` are
+    the states the outcomes land in (goal states for "goal"); `pairs` are the `(state, landing state)` pairs
+    behind the edge, in the step's breadth-first order; `lost` is everything `failed` said some of them loses (the wanted
+    mods, sorted), empty when no use of the edge loses any.
     """
 
-    kind: Literal["forward", "miss", "again", "goal"]
+    kind: Literal["forward", "failure", "again", "goal"]
     to: int | None
     chance: float
     states: tuple[S, ...]
+    pairs: tuple[tuple[S, S], ...] = ()
+    lost: tuple = ()
 
 
 @dataclass(frozen=True)
 class Step[S]:
     """One step of the route.
 
-    `states`: the compressed states it stands for, in breadth-first order. `action`: the one action
-    the policy takes in all of them, None when there is none here (a dead end of a policy, a gap of a
-    given route) and then `reason` says why (from the `reasons` of `build_flow`). `edges`: one per
-    distinct target (step or goal), the goal first, then by step number; empty without an action.
-    `uses`: the expected number of uses of the action in one run from the start (None without an
+    `states`: the compressed states it stands for, in breadth-first order. `weights`: the expected visits of each
+    of them from the start, the weights of the mixture (all 1.0 when the flow is not `measured`, or when none
+    of the states can finish). `action`: the action of the step's first state, the label every state shares; None
+    when there is no action here and then `reason` says why (from the `reasons` of `build_flow`). `cost`: the
+    cost per use, the mean over the states by their weights (the same number for every state of one offer).
+    `edges`: one per distinct (target, whether a wanted mod is lost) pair, the goal first, then by step number; empty without an
+    action. `uses`: the expected number of uses of the action in one run from the start (None without an
     action, or when the flow is not `measured`). `reached`: the chance a run ever enters the step.
     """
 
@@ -87,19 +93,22 @@ class Step[S]:
     edges: tuple[Edge[S], ...]
     uses: float | None
     reached: float | None
+    weights: tuple[float, ...] = ()
+    cost: float = 0.0
 
 
 @dataclass(frozen=True)
 class Flow[S]:
     """The steps (numbered from 1, the start's step first) and the step of every reachable non-goal state.
 
-    `measured`: whether `uses` and `reached` were computed (False above `MAX_STEPS` steps, or when the chain
-    cannot be solved in floats).
+    `measured`: whether the expected visits were computed (False when the chain cannot be solved in floats).
+    `entered`: whether `Step.reached` was computed (False above `ENTRY_STATES` states, see the module text).
     """
 
     steps: tuple[Step[S], ...]
     step_of: Mapping[S, int]
     measured: bool = True
+    entered: bool = True
 
 
 def build_flow[S: Hashable](
@@ -108,12 +117,14 @@ def build_flow[S: Hashable](
     is_goal: Callable[[S], bool],
     reasons: Mapping[S, str] | None = None,
     is_restart: Callable[[Action[S]], bool] | None = None,
+    failed: Callable[[S, S], tuple] | None = None,
 ) -> Flow[S]:
     """The steps of `policy` from `start`; `reasons` says why a reachable non-goal state has no entry in `policy`.
 
-    A start that is a goal gives an empty flow. Steps are numbered in the order their first state is
-    met breadth-first from `start`. `is_restart` says which actions go back to the start: all their
-    edges to other steps are misses.
+    A start that is a goal gives an empty flow. `is_restart` says which actions go back to the start: all their
+    edges are failures. `failed(state, landing)` says what a use that takes `state` to `landing` loses of the
+    wanted mods: a tuple of sortable items (the leaves of the target it stops meeting), empty for nothing. Outcomes that
+    lead to the same step are one edge, except that those which lose a wanted mod are apart from those which do not.
     """
     if is_goal(start):
         return Flow((), {})
@@ -132,175 +143,190 @@ def build_flow[S: Hashable](
         else:
             outs[state] = []
 
-    block = _refine(states, policy, reasons, outs, is_goal)
-    count = max(block.values()) + 1
-
+    numbers: dict[Hashable, int] = {}
+    block = {
+        state: numbers.setdefault(
+            ("action", policy[state].label) if state in policy else ("none", reasons.get(state)), len(numbers)
+        )
+        for state in states
+    }
+    count = len(numbers)
     members: list[list[S]] = [[] for _ in range(count)]
     for state in states:
         members[block[state]].append(state)
-
-    def target(successor: S) -> int:
-        return _GOAL if is_goal(successor) else block[successor]
-
-    edge_chance: list[dict[int, Fraction]] = []  # per block, from its first state
-    edge_states: list[dict[int, list[S]]] = []
-    for index in range(count):
-        chances = {}
-        landing: dict[int, list[S]] = {}
-        for k, state in enumerate(members[index]):
-            for successor, chance in outs[state]:
-                where = target(successor)
-                if k == 0:
-                    chances[where] = chances.get(where, Fraction(0)) + chance
-                if successor not in landing.setdefault(where, []):
-                    landing[where].append(successor)
-        edge_chance.append(chances)
-        edge_states.append(landing)
-
     has_action = [members[i][0] in policy for i in range(count)]
-    costs = [policy[members[i][0]].cost if has_action[i] else 0.0 for i in range(count)]
-    uses, reached, rank, limit, measured = _visits(count, has_action, costs, edge_chance)
     restarting = [has_action[i] and is_restart is not None and is_restart(policy[members[i][0]]) for i in range(count)]
+
+    visits, position, solved, inverse = _visits(start, states, policy, outs, is_goal)
+    reached = _entered(start, members, outs, position, visits, inverse)
+    entered = inverse is not None or start not in position
 
     steps = []
     for index in range(count):
-        first = members[index][0]
+        group = members[index]
+        weights = [visits.get(state, 0.0) for state in group] if solved else [0.0] * len(group)
+        mixing = weights if math.fsum(weights) > 0.0 else [1.0] * len(group)  # nobody can finish here, or unmeasured: the plain mean
+        total = math.fsum(mixing)
+        shares: dict[tuple[int, bool], list[float]] = {}
+        pairs: dict[tuple[int, bool], list[tuple[S, S]]] = {}
+        gone: dict[tuple[int, bool], set] = {}
+        for state, weight in zip(group, mixing, strict=True):
+            for successor, chance in outs[state]:
+                where = _GOAL if is_goal(successor) else block[successor]
+                lost = failed(state, successor) if where != _GOAL and not restarting[index] and failed is not None else ()  # a restart is one failure whatever it throws away
+                key = (where, bool(lost))
+                shares.setdefault(key, []).append(weight * float(chance))
+                pairs.setdefault(key, []).append((state, successor))
+                gone.setdefault(key, set()).update(lost)
         edges = []
-        for where in sorted(edge_chance[index], key=lambda t: (t != _GOAL, t)):
+        for where, lost in sorted(shares, key=lambda key: (key[0] != _GOAL, key[0], key[1])):
             if where == _GOAL:
-                edges.append(Edge("goal", None, float(edge_chance[index][where]), tuple(edge_states[index][where])))
-                continue
-            if where == index:
+                kind = "goal"
+            elif restarting[index] or lost or not has_action[where] or restarting[where]:
+                kind = "failure"
+            elif where == index:
                 kind = "again"
-            elif not restarting[index] and has_action[where] and rank[where] <= limit[index]:
-                kind = "forward"
             else:
-                kind = "miss"
-            edges.append(Edge(kind, where + 1, float(edge_chance[index][where]), tuple(edge_states[index][where])))
+                kind = "forward"
+            landing = tuple(dict.fromkeys(successor for _, successor in pairs[(where, lost)]))
+            edges.append(
+                Edge(
+                    kind,
+                    None if where == _GOAL else where + 1,
+                    math.fsum(shares[(where, lost)]) / total,
+                    landing,
+                    tuple(dict.fromkeys(pairs[(where, lost)])),
+                    tuple(sorted(gone[(where, lost)])),
+                )
+            )
+        if has_action[index]:
+            finishing = [visits[state] for state in group if state in visits]
+            uses = math.inf if not any(state in position for state in group) else (math.fsum(finishing) if solved else None)
+            cost = math.fsum(w * policy[state].cost for state, w in zip(group, mixing, strict=True)) / total
+        else:
+            uses, cost = None, 0.0
         steps.append(
             Step(
                 number=index + 1,
-                states=tuple(members[index]),
-                action=policy.get(first),
-                reason=None if first in policy else reasons.get(first),
-                edges=tuple(edges),
-                uses=uses[index],
+                states=tuple(group),
+                action=policy.get(group[0]),
+                reason=None if group[0] in policy else reasons.get(group[0]),
+                edges=tuple(edges) if has_action[index] else (),
+                uses=uses,
                 reached=reached[index],
+                weights=tuple(mixing),
+                cost=cost,
             )
         )
-    return Flow(tuple(steps), {state: block[state] + 1 for state in states}, measured)
+    return Flow(tuple(steps), {state: block[state] + 1 for state in states}, solved, entered)
 
 
-def _refine[S: Hashable](
+def _can_finish[S: Hashable](
+    states: list[S], policy: Mapping[S, Action[S]], outs: Mapping[S, list[tuple[S, Fraction]]], is_goal: Callable[[S], bool]
+) -> set[S]:
+    """The states with an action from which some run reaches a goal through states that have an action."""
+    entering: dict[S, list[S]] = {}
+    finishing: set[S] = set()
+    queue: deque[S] = deque()
+    for state in states:
+        if state not in policy:
+            continue
+        for successor, _ in outs[state]:
+            if is_goal(successor):
+                if state not in finishing:
+                    finishing.add(state)
+                    queue.append(state)
+            else:
+                entering.setdefault(successor, []).append(state)
+    while queue:
+        target = queue.popleft()
+        for state in entering.get(target, ()):
+            if state not in finishing:
+                finishing.add(state)
+                queue.append(state)
+    return finishing
+
+
+def _visits[S: Hashable](
+    start: S,
     states: list[S],
     policy: Mapping[S, Action[S]],
-    reasons: Mapping[S, str],
     outs: Mapping[S, list[tuple[S, Fraction]]],
     is_goal: Callable[[S], bool],
-) -> dict[S, int]:
-    """State -> block number (from 0, by first appearance in `states`): the coarsest stable partition."""
+) -> tuple[dict[S, float], dict[S, int], bool, np.ndarray | None]:
+    """The expected visits from `start` of each state that can finish, their numbering, whether they were solved, and N.
 
-    def number(keys: list[Hashable]) -> dict[S, int]:
-        ids: dict[Hashable, int] = {}
-        return {state: ids.setdefault(key, len(ids)) for state, key in zip(states, keys)}
-
-    block = number(
-        [
-            ("action", policy[s].label, policy[s].cost) if s in policy else ("none", reasons.get(s))
-            for s in states
-        ]
-    )
-    count = len(set(block.values()))
-    work = 0
-    while True:
-        work += len(states)
-        if work > REFINE_WORK:  # too many passes: the finest grouping (each state alone) is stable as it stands
-            return {state: index for index, state in enumerate(states)}
-        keys: list[Hashable] = []
-        for state in states:
-            into: dict[int, Fraction] = {}
-            for successor, chance in outs[state]:
-                where = _GOAL if is_goal(successor) else block[successor]
-                into[where] = into.get(where, Fraction(0)) + chance
-            keys.append((block[state], tuple(sorted(into.items()))))
-        refined = number(keys)
-        refined_count = len(set(refined.values()))
-        if refined_count == count:  # a refinement that splits nothing is the fixpoint
-            return block
-        block, count = refined, refined_count
-
-
-def _visits(
-    count: int, has_action: list[bool], costs: list[float], edge_chance: list[dict[int, Fraction]]
-) -> tuple[list[float | None], list[float | None], list[float], list[float], bool]:
-    """Expected uses and the chance of ever entering, per step, what tells `forward` from `miss`, and whether they were solved.
-
-    The third list ranks the steps: the expected cost still to pay, or, above `MAX_STEPS` steps, the fewest
-    edges to a goal; infinite for a step that cannot reach a goal. The fourth is, per step, the highest rank
-    a target may have for the edge to be forward: the rank the use is expected to leave (the cost still to pay
-    less the cost of the use, or one edge less), minus infinity for a step that cannot finish.
+    The visits are row `start` of N = (I - Q)^-1 over the states with an action that can reach a goal. N itself
+    (the whole inverse) is returned when there are at most `ENTRY_STATES` such states, else the row is found by one
+    solve of (I - Q)^T v = e_start. The numbering is empty when the start is not one of them (it has no action, or
+    cannot finish): then nothing else is a run's business.
     """
-    # Steps that can finish: an edge to a goal, or to a step that can. A step with no action cannot.
-    entering: list[list[int]] = [[] for _ in range(count)]  # per step: the steps with an edge into it
-    can_finish = [False] * count
-    distance = [math.inf] * count  # fewest edges to a goal
-    queue: deque[int] = deque()
-    for i in range(count):
-        if has_action[i] and _GOAL in edge_chance[i]:
-            can_finish[i] = True
-            distance[i] = 1.0
-            queue.append(i)
-        for t in edge_chance[i]:
-            if t != _GOAL:
-                entering[t].append(i)
-    while queue:
-        t = queue.popleft()
-        for i in entering[t]:
-            if has_action[i] and not can_finish[i]:
-                can_finish[i] = True
-                distance[i] = distance[t] + 1.0
-                queue.append(i)
-
-    transient = [i for i in range(count) if has_action[i] and can_finish[i]]
-    position = {i: k for k, i in enumerate(transient)}
-    size = len(transient)
-    uses: list[float | None] = [None] * count
-    reached: list[float | None] = [None] * count
-    for i in range(count):
-        if has_action[i] and not can_finish[i]:
-            uses[i] = math.inf
-    reached[0] = 1.0
-    nearer = [d - 1.0 if math.isfinite(d) else -math.inf for d in distance]  # the limit when the steps are told apart by distance
-    if count > MAX_STEPS:
-        return uses, reached, distance, nearer, False
-    if 0 not in position:  # the first step is a dead end, or a trap: nothing else of the flow is a run's business
-        return uses, reached, distance, nearer, True
-
-    matrix = np.eye(size)
-    for i in transient:
-        r = position[i]
-        for t, chance in edge_chance[i].items():
-            c = position.get(t)
-            if t != _GOAL and c is not None:
-                matrix[r, c] -= float(chance)
+    finishing = _can_finish(states, policy, outs, is_goal)
+    transient = [s for s in states if s in finishing]
+    position = {s: k for k, s in enumerate(transient)}
+    if start not in position:
+        return {}, {}, True, None
+    matrix = np.eye(len(transient))
+    for state in transient:
+        for successor, chance in outs[state]:
+            if successor in position:
+                matrix[position[state], position[successor]] -= float(chance)
     try:
-        inverse = np.linalg.inv(matrix)
-    except np.linalg.LinAlgError:  # a chance per use so small that 1 - q is 1 in floats: nothing to say about uses
-        return uses, reached, distance, nearer, False
-    row = inverse[position[0]]
-    to_pay = inverse @ np.array([costs[i] for i in transient])
-    rank = [math.inf] * count
-    limit = [-math.inf] * count
-    for i in transient:
-        k = position[i]
-        uses[i] = float(row[k])
-        reached[i] = min(1.0, max(0.0, float(row[k] / inverse[k, k])))
-        rank[i] = float(to_pay[k])
-        left = rank[i] - costs[i]
-        limit[i] = left + 1e-9 * max(1.0, abs(left))
-    for a in range(count):
-        if has_action[a] or a == 0:
-            continue
-        stepped = sum(float(row[position[i]]) * float(edge_chance[i][a]) for i in transient if a in edge_chance[i])
-        reached[a] = min(1.0, max(0.0, stepped))
-    return uses, reached, rank, limit, True
+        with np.errstate(all="ignore"):
+            if len(transient) <= ENTRY_STATES:
+                inverse = np.linalg.inv(matrix)
+                row = inverse[position[start]]
+            else:
+                inverse = None
+                base = np.zeros(len(transient))
+                base[position[start]] = 1.0
+                row = np.linalg.solve(matrix.T, base)
+    except np.linalg.LinAlgError:  # a chance per use so small that 1 - q is 1 in floats: nothing to say about visits
+        return {}, position, False, None
+    if not np.all(np.isfinite(row)) or np.any(row < -1e-9):
+        return {}, position, False, None
+    return {state: max(0.0, float(row[position[state]])) for state in transient}, position, True, inverse
+
+
+def _entered[S: Hashable](
+    start: S,
+    members: list[list[S]],
+    outs: Mapping[S, list[tuple[S, Fraction]]],
+    position: Mapping[S, int],
+    visits: Mapping[S, float],
+    inverse: np.ndarray | None,
+) -> list[float | None]:
+    """The chance a run ever enters each step: 1 for the first, None for the others when `inverse` (N) is not there.
+
+    For a step A of states that can finish, the first state of A a run meets is a with chance H(a), and the visits
+    of N split by it: N[start, b] = sum over a in A of H(a) N[a, b], so H = N[start, A] N[A, A]^-1 and the chance is
+    its sum. A step of states that cannot finish (a dead end, a gap) is entered from the states that can: its
+    chance is the expected number of such steps into it, since a run never comes back from it. A step that has
+    both kinds of state is left unmeasured (None).
+    """
+    count = len(members)
+    result: list[float | None] = [None] * count
+    result[0] = 1.0
+    if inverse is None or start not in position:
+        return result
+    row = inverse[position[start]]
+    for index in range(1, count):
+        group = members[index]
+        inside = [position[state] for state in group if state in position]
+        if start in group:
+            result[index] = 1.0
+        elif inside and len(inside) == len(group):
+            try:
+                with np.errstate(all="ignore"):
+                    first = np.linalg.solve(inverse[np.ix_(inside, inside)].T, row[inside])
+            except np.linalg.LinAlgError:
+                continue
+            value = float(first.sum())
+            result[index] = min(1.0, max(0.0, value)) if math.isfinite(value) else None
+        elif not inside:
+            aim = set(group)
+            value = math.fsum(
+                visits[state] * float(chance) for state in visits for successor, chance in outs[state] if successor in aim
+            )
+            result[index] = min(1.0, max(0.0, value))
+    return result

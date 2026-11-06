@@ -201,15 +201,17 @@ def test_r12_is_a_buy_and_one_step_that_loops_until_the_gem(r12_plan):
     assert [row.title for row in section.rows] == [f"Buy {START_KEY}", "Harvest Reforge Lightning"]
     assert labels_of(buy) == ["Accepts", "Cost per use"]
     assert lines_of(buy, "Cost per use") == ["4 c"]
-    assert labels_of(reforge) == ["Goal", "Accepts", "Chance per use", "Cost per use", "Uses on average", "Step cost", "On failure"]
+    assert labels_of(reforge) == ["Goal", "Accepts", "Chance per use", "Tier chances", "Cost per use", "Uses on average", "Step cost"]
     assert lines_of(reforge, "Goal") == [f"{GEM_TEXT} · T1"]
-    (chance,) = lines_of(reforge, "Chance per use")
-    assert float(chance.strip("≈%")) / 100 == pytest.approx(q, rel=0.06)
+    target, again = lines_of(reforge, "Chance per use")  # nothing is lost on a miss, so no "On failure": the miss is the step again
+    assert target.startswith("the target: ") and float(target.split(": ")[1].strip("≈%")) / 100 == pytest.approx(q, rel=0.06)
+    assert again.startswith("nothing gained, this step again: ")
     assert lines_of(reforge, "Cost per use") == ["50 × Primal Crystallised Lifeforce 0.5 c"]
     (uses,) = lines_of(reforge, "Uses on average")
     assert float(uses.strip("≈ ")) == pytest.approx(1 / q, rel=0.01)  # a geometric run
-    (failure,) = lines_of(reforge, "On failure")
-    assert failure.startswith("nothing gained (") and failure.endswith("): this step again")
+    (tier,) = lines_of(reforge, "Tier chances")  # the gem is one mod: its one tier is the chance of the target (OR-31)
+    assert tier.startswith(f"{GEM_TEXT}: T1 ")
+    assert float(tier.split("T1 ")[1].split("%")[0].strip("≈")) / 100 == pytest.approx(q, rel=0.06)
     assert reforge.final and not buy.final
 
 
@@ -364,14 +366,34 @@ def test_a_policy_taking_one_action_in_look_alike_states_is_one_row_and_two_acti
     assert [row.title for row in two.rows] == [f"Buy {START_NAME}", "Essence of Hysteria", "Chaos Orb"]
 
 
-def test_a_miss_into_a_later_numbered_row_reads_under_on_failure_with_its_chance_not_as_a_chance_per_use():
+@pytest.mark.parametrize("name", ["essence", "branch", "remove_crafted_then_chaos"])
+def test_the_goal_chances_times_the_uses_of_the_rows_add_up_to_one_finish_per_run(name):
+    inp = INPUTS[name]()
+    flow = build_flow(inp.plan.start, inp.policy, inp.plan.is_goal)
+
+    # a run reaches the goal once; this holds only if each row's chances are the mixture weighted by its states' visits
+    finishes = sum(edge.chance * step.uses for step in flow.steps for edge in step.edges if edge.kind == "goal")
+
+    assert finishes == pytest.approx(1.0)
+
+
+def test_a_use_that_loses_nothing_wanted_reads_under_chance_per_use_whatever_the_next_step_costs_and_on_failure_is_only_a_loss():
     section = build_section(INPUTS["branch"](), DATA)  # the essence gives life 84% of the time, else the item goes on to the Chaos Orb step
 
     essence = section.rows[1]
-    assert lines_of(essence, "Chance per use") == ["≈84%"]
-    failure = [field for field in essence.fields if field.label == "On failure"][0]
-    assert failure.tone == "warn"
-    assert [(line.text, line.href, line.anchor) for line in failure.lines] == [("the item of step 3 (≈16%)", "#s3", "")]
+    target, onward = [line for field in essence.fields if field.label == "Chance per use" for line in field.lines]
+    assert (target.text, onward.text, onward.href) == ("the target: ≈84%", "the item of step 3: ≈16%", "#s3")
+    assert "On failure" not in labels_of(essence)  # the 16% lose no wanted mod (PRES-6: the cost to finish from there decides nothing)
+
+
+def test_a_use_that_lowers_a_leaf_of_the_target_reads_under_on_failure_in_the_words_of_the_leaf():
+    regeneration = Requirement("LifeRegeneration", None, frozenset({"LifeRegeneration1"}))  # the start belt holds it: a Chaos Orb can take it away
+    section = build_section(hand_input(START, (COLD_REQ, LIFE, regeneration), chaos_for_life), DATA)
+
+    chaos = section.rows[1]
+    (failure,) = [field for field in chaos.fields if field.label == "On failure"]
+    assert failure.tone == "warn" and any("Regenerate" in line.text and " lost" in line.text for line in failure.lines)  # the wanted mod the Chaos Orb took
+    assert not any("lost" in line.text for field in chaos.fields if field.label == "Chance per use" for line in field.lines)
 
 
 def test_a_craft_step_with_several_outcomes_says_what_it_accepts_and_a_sure_one_does_not():
@@ -490,8 +512,14 @@ def test_two_given_rows_that_repeat_one_planner_row_are_not_the_same_route():
     assert len(merge_sections(policy, given_route, "the guide")) == 2
 
 
-def test_above_the_cap_the_rows_have_no_uses_or_step_costs_and_the_goal_card_says_so(monkeypatch):
-    monkeypatch.setattr(_route_flow, "MAX_STEPS", 1)
+def test_when_the_chain_cannot_be_solved_in_floats_the_rows_have_no_uses_or_step_costs_and_the_goal_card_says_so(monkeypatch):
+    solved = _route_flow._visits
+
+    def unsolvable(*arguments):  # the one place the numbers can still stop: a chance per use lost in the float
+        _, position, _, _ = solved(*arguments)
+        return {}, position, False, None
+
+    monkeypatch.setattr(_route_flow, "_visits", unsolvable)
 
     section = build_section(INPUTS["branch"](), DATA)
 
@@ -499,6 +527,30 @@ def test_above_the_cap_the_rows_have_no_uses_or_step_costs_and_the_goal_card_say
     assert lines_of(section.rows[1], "Cost per use") == ["1 × Essence of Hysteria 3 c"]
     note = [field for field in section.goal.fields if field.label == "Note"][0]
     assert note.lines[0].text.startswith("how often a step is used and what it costs are left out")
+    assert "plain mean" in note.lines[0].text
+
+
+def test_a_policy_with_more_states_than_the_entry_limit_says_so_and_keeps_every_other_number(monkeypatch):
+    monkeypatch.setattr(_route_flow, "ENTRY_STATES", 1)
+
+    section = build_section(INPUTS["branch"](), DATA)
+
+    note = [field for field in section.goal.fields if field.label == "Note"][0]
+    assert note.lines[0].text.startswith("how often a run enters a step is left out") and "exact" in note.lines[0].text
+    chaos = section.rows[2]
+    assert "Uses on average" in labels_of(chaos) and "reached" not in lines_of(chaos, "Uses on average")[0]
+    assert lines_of(section.rows[1], "Chance per use")[0] == "the target: ≈84%"  # the mixture does not depend on it
+
+
+def test_a_step_with_several_branches_draws_the_card_of_each_whose_items_differ_from_the_card_after_it():
+    section = build_section(INPUTS["branch"](), DATA)
+
+    essence = section.rows[1]
+    assert [branch.caption for branch in essence.branches] == ["the target (≈84%)", "the item of step 3 (≈16%)"]
+    assert all(branch.card != essence.after for branch in essence.branches)
+    html = render_page(Page("x", (section,)))
+    assert html.count("the target (≈84%)") == 1 and html.count("the item of step 3 (≈16%)") == 1
+    assert not build_section(INPUTS["bench"](), DATA).rows[1].branches  # one outcome: one card
 
 
 @pytest.mark.parametrize("name", INPUTS)

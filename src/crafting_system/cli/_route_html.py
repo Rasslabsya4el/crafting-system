@@ -135,10 +135,13 @@ def _section(section, heading: bool) -> str:
     )
     for row in section.rows:
         out.append('<div class="ar">↓</div>')
+        items = _item(row.after, target=row.final)
+        if row.branches:  # the card after the step, then the card of each branch whose items differ from it, each under its own caption
+            items = "<div>" + items + "".join(f'<div class="sd">{escape(branch.caption)}</div>{_item(branch.card)}' for branch in row.branches) + "</div>"
         out.append(
             f'<div class="rw"><div class="cd" id="{escape(row.anchor, quote=True)}">'
             f"<h3>{row.number}. {escape(row.title)}</h3>" + _fields(row.fields) + "</div>"
-            + _item(row.after, target=row.final)
+            + items
             + "</div>"
         )
     out.append("</section>")

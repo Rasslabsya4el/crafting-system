@@ -7,20 +7,24 @@ state after it); `write_route_page(...)` builds the sections, renders them with 
 and writes the file. The model is plain frozen dataclasses so tests read it directly.
 
 Rows. Row 1 is always the start: a buy of the start item (its trade search link when a buy spec is
-given). The other rows are the steps of `_route_flow.build_flow` over the policy: a step stands for
-compressed states only when the policy takes the same action in all of them and they lead on with the
-same chances, so look-alike states that need different actions are different rows. Row number = flow
+given). The other rows are the steps of `_route_flow.build_flow` over the policy: one row per player action
+(OR-18), the states on which the policy takes the same action, whatever their chances. Row number = flow
 step number + 1. A step's card has these fields in this order, one that does not apply left out: Goal,
-Accepts, Trade, Chance per use, Cost per use, Uses on average, Step cost, On failure. Chances only,
-never how a mechanic works. A step with no action (the dead end of a policy, the gap of a given route)
+Accepts, Trade, Chance per use, Tier chances, Cost per use, Uses on average, Step cost, On failure. Chances
+only, never how a mechanic works. A step with no action (the dead end of a policy, the gap of a given route)
 is a row titled "No action" that says why.
 
-Chance per use lists the outcomes that move toward the goal; an outcome that does not (a worse item, in a later
-step or an earlier one, a step with no action, a restart) is under On failure with its chance (`_route_flow`
-tells the two apart by what the item still costs to finish, never by the step number). Accepts, on a craft with
-several outcomes, says how many mods the accepted results may have (when every mod is tracked) and that the rest
-is any. A step that cannot reach the target says "never finishes from here" in place of its uses. An essence
-of level 5 or more has a last field, Note: it reforges a rare and keeps only the fractured mod, so no Scouring.
+The chances of a row are the exact mixture of those of its states (OR-20): the sum over the states of (expected
+visits x chance) over the expected visits of the row (`_route_flow`). Chance per use lists the outcomes that do not lose
+a wanted mod, one line per place they lead to: the target, the same step again ("nothing gained"), another step.
+On failure lists the outcomes that lose a wanted mod (a leaf of the target that was met and no longer is), restart the item, or land
+in a step that restarts or has no action (PRES-6: never decided by what the item still costs to finish). A branch whose
+landing items differ from the card after the step has its own item card under it. Tier chances (OR-31): when the step
+can add a mod of a family the target wants, one line per family with the chance of each tier and of none (`_route_tiers`),
+mixed the same way. Accepts, on a craft with several outcomes, says how many mods the accepted results may have (when
+every mod is tracked) and that the rest is any. A step that cannot reach the target says "never finishes from here" in
+place of its uses. An essence of level 5 or more has a last field, Note: it reforges a rare and keeps only the fractured
+mod, so no Scouring.
 
 Every mod line has one format, the game's text with its ranges and the tier (`+(100-114) to maximum Life · T1`,
 see `_route_card`). The bought start item shows its known mods that way and the rest of a rare as `any mod or
@@ -28,7 +32,7 @@ empty`. A given route that does what the planner's policy does is not drawn agai
 card says so in a line; one that differs is drawn with its differing steps only, linking the shared ones.
 
 Words about the item come from the compressed states of the step's outcomes: a requirement leaf that
-becomes met, a mod fractured, crafted mods added or removed. When no such difference tells two outcomes
+becomes met or is lost, a mod fractured, crafted mods added or removed. When no such difference tells two outcomes
 apart the line names the row the outcome leads to instead ("the item of step 4").
 
 Numbers: money is `≈ 12 c` (3 significant digits, thousands commas, `≈` only when rounded), chances
@@ -54,7 +58,6 @@ from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 
-from . import _route_flow
 from ._interval import IntervalAnswer
 from ._limits import SHOWN_LABELS, grouped, limit_text, more_labels
 from ._marking import approximate_inputs
@@ -62,8 +65,9 @@ from ._plan import GIVEN_SOURCE, Plan
 from ._report import Report
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
-from ._route_flow import Edge, Step, build_flow
+from ._route_flow import ENTRY_STATES, Edge, Step, build_flow
 from ._route_html import render_page
+from ._route_tiers import TierLine, tier_lines
 from ._route_trade import BuyStep, buy_step
 from ._start_step import ROLE_GEMS, FirstStep, first_step
 
@@ -96,11 +100,20 @@ class Field:
 
 
 @dataclass(frozen=True)
+class Branch:
+    """The item card of one branch of a step, under the card after the step: `caption` says which (its line and chance)."""
+
+    caption: str
+    card: ItemCard
+
+
+@dataclass(frozen=True)
 class StepRow:
     """One row: the step card (title, fields) and the item card after the step.
 
     `final` marks a row whose step can end in the target; `cost` is the step cost in Chaos (None when
-    the step has none: no action, or it never finishes).
+    the step has none: no action, or it never finishes). `branches` are the cards of the branches whose landing items differ
+    from `after` (only on a step with several branches).
     """
 
     number: int
@@ -110,6 +123,7 @@ class StepRow:
     anchor: str
     final: bool = False
     cost: float | None = None
+    branches: tuple[Branch, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -224,7 +238,12 @@ class _View:
         self.ab = self.plan.abstraction
         self.reader = _StateReader(self.ab)
         self.flow = build_flow(
-            self.plan.start, inp.policy, self.ab.is_goal, inp.reasons, is_restart=lambda action: action.label == RESTART
+            self.plan.start,
+            inp.policy,
+            self.ab.is_goal,
+            inp.reasons,
+            is_restart=lambda action: action.label == RESTART,
+            failed=self._lost_leaves,
         )
         # a start item made at a vendor (ADR-0059): row 1 is the recipe, not a buy
         starts = getattr(self.plan, "starts", None)  # a stand-in plan of a test has none
@@ -305,17 +324,19 @@ class _View:
             found.append("a rare item")
         return list(dict.fromkeys(found))
 
-    def lost(self, step: Step, edge: Edge) -> list[str]:
-        """What the states of a failure edge no longer have: a leaf every state of the step met, crafted mods."""
-        found = []
-        for i in range(len(self.plan.leaf_labels)):
-            if all(state.status[i] is Status.PASSING for state in step.states) and not any(
-                state.status[i] is Status.PASSING for state in edge.states
-            ):
-                found.append(f"{self.leaf_text(i)} lost")
-        if any(self._crafted(state) for state in step.states) and all(not self._crafted(state) for state in edge.states):
-            found.append("crafted mods removed")
-        return found
+    @staticmethod
+    def _lost_leaves(before: CompressedState, after: CompressedState) -> tuple[int, ...]:
+        """The leaves of the target a use that takes `before` to `after` stops meeting: the wanted mods it loses (a leaf that was PASSING)."""
+        return tuple(
+            i for i, (now, then) in enumerate(zip(before.status, after.status)) if now is Status.PASSING and then is not Status.PASSING
+        )
+
+    def lost(self, edge: Edge) -> list[str]:
+        """What a failure edge costs the item, in words: the wanted mod its uses lose, or the list of those they may lose."""
+        texts = [self.leaf_text(i) for i in edge.lost]
+        if len(texts) <= 1:
+            return [f"{text} lost" for text in texts]
+        return [f"one of these lost: {'; '.join(texts)}"]
 
     def appeared(self, step: Step, edge: Edge) -> list[str]:
         """What every state of a forward edge has that no state of the step has (a leaf met, a mod fractured or crafted)."""
@@ -335,40 +356,50 @@ class _View:
 
     # -- the fields of a step ----------------------------------------------------------------------------------
 
-    def chance_lines(self, step: Step, action: Action, forward: list[Edge], below: int) -> list[Line]:
+    def edge_phrase(self, step: Step, edge: Edge) -> tuple[str, bool]:
+        """What happens on the item at an edge, in words and without its chance; `True` when the words only name the row it leads to.
+
+        A goal edge is "the target", an edge to the same step is "nothing gained", a failure is the wanted mods a use loses, or
+        the restart / the dead end it lands in; any other edge says what every landing item has that the step's items lack.
+        """
+        if edge.kind == "goal" or edge.to is None:
+            return "the target", False
+        if edge.kind == "again":
+            return "nothing gained, this step again", False
+        if edge.kind == "failure":
+            if step.action is not None and step.action.label == RESTART:
+                return f"the start item {'made again at the vendor' if self.first is not None else 'bought again'}", False
+            if lost := self.lost(edge):
+                return " and ".join(lost), False
+            there = self.flow.steps[edge.to - 1].action  # `edge.to` is a step number (from 1)
+            if there is None:
+                return "the route has no step for this item", True
+            if there.label == RESTART:
+                return "the item is restarted", True
+        elif appeared := self.appeared(step, edge):
+            return " and ".join(appeared), False
+        return f"the item of step {edge.to + 1}", True
+
+    def chance_lines(self, step: Step, action: Action, shown: list[Edge], below: int) -> list[Line]:
+        """One line per place the outcomes that lose no wanted mod lead to, with the exact mixture of their chances."""
         random = sum(1 for outcome in action.outcomes if outcome.weight > 0) > 1
-        if len(forward) == 1 and not random:
+        if len(shown) == 1 and not random:
             return []
-        if len(forward) == 1:
-            return [Line(chance_text(forward[0].chance))]
+        if len(shown) == 1:
+            return [Line(chance_text(shown[0].chance))]
         lines = []
-        for edge in forward:
-            if edge.kind == "goal" or edge.to is None:
-                lines.append(Line(f"the target: {chance_text(edge.chance)}"))
-                continue
-            number = edge.to + 1
-            what = self.appeared(step, edge)
-            if what:
-                lines.append(self.link(f"{' and '.join(what)}: {chance_text(edge.chance)}", number, below))
-            else:
-                lines.append(self.link(f"the item of step {number}: {chance_text(edge.chance)}", number, below, always=True))
+        for edge in shown:
+            what, names_row = self.edge_phrase(step, edge)
+            text = f"{what}: {chance_text(edge.chance)}"
+            lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1, below, always=names_row))
         return lines
 
     def failure_lines(self, step: Step, failing: list[Edge], below: int) -> list[Line]:
+        """One line per place a use that loses a wanted mod, or restarts the item, leads to."""
         lines = []
         for edge in failing:
-            if edge.kind == "again" or edge.to is None:
-                lines.append(Line(f"nothing gained ({chance_text(edge.chance)}): this step again"))
-                continue
-            number = edge.to + 1
-            what = self.lost(step, edge)
-            if step.action is not None and step.action.label == RESTART:
-                again = "made again at the vendor" if self.first is not None else "bought again"
-                lines.append(self.link(f"the start item {again} ({chance_text(edge.chance)})", number, None))
-            elif what:
-                lines.append(self.link(f"{' and '.join(what)} ({chance_text(edge.chance)})", number, None))
-            else:
-                lines.append(self.link(f"the item of step {number} ({chance_text(edge.chance)})", number, None, always=True))
+            what, names_row = self.edge_phrase(step, edge)
+            lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1, None, always=names_row))
         return lines
 
     def accepts(self, action: Action, forward: list[Edge], after: ItemCard) -> list[str]:
@@ -387,6 +418,36 @@ class _View:
         if any(slot.tone == "any" for slot in (*after.prefixes, *after.suffixes)):
             lines.append("other mods: any")
         return lines
+
+    def tier_field(self, step: Step, action: Action) -> Field | None:
+        """OR-31: one line per wanted family the step can add, with the chance of each tier, mixed over the step's states."""
+        if action.label == RESTART:
+            return None
+        lines = tier_lines(self.ab, self.plan.offer_of(action).offer.action, step.states, step.weights)
+        return Field("Tier chances", tuple(Line(self.tier_text(line)) for line in lines)) if lines else None
+
+    @staticmethod
+    def tier_text(line: TierLine) -> str:
+        """`+# to maximum Life: T1 6.7% (target) · T2 6.7% · none 33%`; when every tier is the target's, no tier is marked."""
+        every = all(share.wanted for share in line.tiers)
+        parts = [
+            f"T{share.tier} {'0%' if share.chance == 0.0 else chance_text(share.chance)}{' (target)' if share.wanted and not every else ''}"
+            for share in line.tiers
+        ]
+        parts.append(f"none {'0%' if line.none == 0.0 else chance_text(line.none)}")
+        return f"{line.text}: {' · '.join(parts)}" + (" · every tier is the target" if every else "")
+
+    def branches(self, step: Step, after: ItemCard) -> tuple[Branch, ...]:
+        """The card of each branch whose landing items differ from `after`; only a step with several branches draws them."""
+        edges = [edge for edge in step.edges if edge.kind != "again"]
+        if len(edges) < 2 or step.action is None or step.action.label == RESTART:
+            return ()
+        found = []
+        for edge in edges:
+            card = card_of_states(self.ab, list(edge.states), self.reader)
+            if card != after:
+                found.append(Branch(f"{self.edge_phrase(step, edge)[0]} ({chance_text(edge.chance)})", card))
+        return tuple(found)
 
     def cost_lines(self, action: Action) -> list[str]:
         if action.label == RESTART:
@@ -489,28 +550,30 @@ class _View:
         if action is None:
             fields = _fields(_plain("Why", step.reason or "no action is available here"))
             return StepRow(number, "No action", fields, card_of_states(self.ab, step.states, self.reader), self.anchor(number))
-        forward = [edge for edge in step.edges if edge.kind in ("forward", "goal")]
-        failing = [edge for edge in step.edges if edge.kind in ("again", "miss")]
+        moving = [edge for edge in step.edges if edge.kind in ("forward", "goal")]
+        shown = [edge for edge in step.edges if edge.kind != "failure"]
+        failing = [edge for edge in step.edges if edge.kind == "failure"]
         restart = action.label == RESTART
-        goal = self.gains(step, forward)
-        if not goal and any(edge.kind == "goal" for edge in forward):
+        goal = self.gains(step, moving)
+        if not goal and any(edge.kind == "goal" for edge in moving):
             goal = ["the target"]
         never = step.uses is not None and math.isinf(step.uses)
-        step_cost = None if step.uses is None or never else step.uses * action.cost
+        step_cost = None if step.uses is None or never else step.uses * step.cost
         uses = [NEVER_FINISHES] if never else [] if step.uses is None else [count(step.uses)]
         if uses and not never and step.reached is not None and step.reached < 0.9995:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"
-        chances = self.chance_lines(step, action, forward, number + 1)
+        chances = self.chance_lines(step, action, shown, number + 1)
         if restart:
             after = self.start_card()
         else:
-            landing = [state for edge in (forward or step.edges) for state in edge.states]
+            landing = [state for edge in (moving or step.edges) for state in edge.states]
             after = card_of_states(self.ab, list(dict.fromkeys(landing)), self.reader)
         fields = _fields(
             _plain("Goal", *goal),
-            _plain("Accepts", *self.accepts(action, forward, after)),
+            _plain("Accepts", *self.accepts(action, moving, after)),
             self.trade_field() if restart else None,
             Field("Chance per use", tuple(chances)) if chances else None,
+            self.tier_field(step, action),
             _plain("Cost per use", *self.cost_lines(action)),
             _plain("Uses on average", *uses),
             _plain("Step cost", money(step_cost)) if step_cost is not None else None,
@@ -518,7 +581,7 @@ class _View:
             _plain("Note", note) if (note := self.essence_note(action, step) if not restart else None) else None,
         )
         final = any(edge.kind == "goal" for edge in step.edges)
-        return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost)
+        return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost, self.branches(step, after))
 
     def start_field(self) -> Field | None:
         """When the start item is made at a vendor: the start options with their totals, so the choice can be read off the page."""
@@ -546,7 +609,18 @@ class _View:
             "not resolved on the grid (#190)" if risk.success_probability.value >= 1.0 else "no finish in 9 runs of 10"
         )
         success = risk.success_probability.value
-        note = "how often a step is used and what it costs are left out: the policy is too large to solve here"
+        # TODO(#459): carry these two notes as a `Limit` with its guarantee, once that record exists.
+        notes = []
+        if not self.flow.measured:
+            notes.append(
+                "how often a step is used and what it costs are left out, and a step that joins several states shows the plain mean "
+                "of their chances: the chances per use are too small to solve in floating point"
+            )
+        elif not self.flow.entered:
+            notes.append(
+                f"how often a run enters a step is left out: the policy has more than {ENTRY_STATES:,} states that can finish "
+                "(uses, costs and chances are exact)"
+            )
         interval = self.inp.interval
         if interval is None:
             approximate = [f"{item.claim}: {item.reason}" for item in approximate_inputs(plan, self.inp.policy, self.data)]
@@ -565,7 +639,7 @@ class _View:
             *rule,
             _plain("Approximate inputs", *approximate, tone="warn"),
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
-            None if self.flow.measured else _plain("Note", note),
+            _plain("Note", *notes) if notes else None,
         )
         leaves_out = tuple(Field(title, tuple(Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit)) for limit in group)) for title, group in grouped(plan.limits))
         return GoalCard(fields, card_of_target(self.data, plan.target), leaves_out)
@@ -606,7 +680,7 @@ def _trade_stats(cache_dir: Path | None) -> TradeStats | None:
 
 def _row_key(row: StepRow) -> tuple:
     """What a row says, without where it links: two rows with the same key can be the same step."""
-    return (row.title, tuple((f.label, tuple(line.text for line in f.lines)) for f in row.fields), row.after)
+    return (row.title, tuple((f.label, tuple(line.text for line in f.lines)) for f in row.fields), row.after, row.branches)
 
 
 def _targets(row: StepRow, prefix: str) -> list[int | None]:
