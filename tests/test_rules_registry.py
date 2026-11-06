@@ -455,6 +455,106 @@ def test_a_bad_approximate_mark_is_rejected_naming_the_claim(tmp_path, changes, 
     assert words in message
 
 
+# --- the registry reads the statement for the approximate marker (#458, OR-23) ---------------
+
+MARKED_REASON = "No source but the author's own sheet."
+MARKER = re.compile(r"\b(approximate|unverified)\b", re.IGNORECASE)
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "APPROXIMATE (ADR-0028): no source but Craft of Exile's code.",
+        "UNVERIFIED by me: one report of a ring.",
+        "unverified single report of a ring.",
+        "A swap respects locked sides. APPROXIMATE (ADR-0028) for the crafted ones: they are not a source.",
+        "The drop is rare, and it is Unverified whether it holds in 3.29.",
+        "This is not approximate in the table, but the crafted case is APPROXIMATE.",
+    ],
+)
+def test_a_statement_with_the_marker_and_no_field_is_rejected(tmp_path, statement):
+    with pytest.raises(RegistryError) as raised:
+        load_entry(tmp_path, statement=statement)
+
+    message = str(raised.value)
+    assert "fam.yaml" in message
+    assert "fam.thing" in message
+    assert "approximate: true" in message
+
+
+def test_a_statement_with_the_marker_in_the_middle_is_rejected(tmp_path):
+    statement = "A swap respects locked sides. APPROXIMATE (ADR-0028) for the crafted ones."
+
+    with pytest.raises(RegistryError, match=r"fam\.thing"):
+        load_entry(tmp_path, statement=statement)
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "The preview is not approximate: the game item text states it.",
+        "A Lock previews the Orb. This is NOT APPROXIMATE, the owner's play settles it.",
+        "This is an admitted rule, not an approximate input.",
+        "The count is approximately 40 and the table is exact.",
+    ],
+)
+def test_a_statement_that_denies_or_only_resembles_the_marker_is_allowed(tmp_path, statement):
+    rule = load_entry(tmp_path, statement=statement)["fam.thing"]
+
+    assert rule.approximate is False
+
+
+@pytest.mark.parametrize(
+    "statement",
+    ["APPROXIMATE (ADR-0028): no source.", "Odds are fine. UNVERIFIED for 3.29."],
+)
+def test_a_statement_with_the_marker_loads_when_the_claim_carries_the_field(tmp_path, statement):
+    rule = load_entry(
+        tmp_path, statement=statement, approximate=True, approximate_reason=MARKED_REASON
+    )["fam.thing"]
+
+    assert rule.approximate is True
+
+
+A_ROWS = (
+    "awakener.survivor_player_report_2020",
+    "harvest_augment.removal_uniform_among_removable",
+    "harvest_augment.addition_weighted_by_tier_weight",
+    "harvest_swap.damage_source_stats",
+    "harvest_swap.uniform_among_sources",
+    "harvest_swap.respects_side_locks",
+    "harvest_swap.fractured_and_crafted_mods_not_swapped",
+    "imprint.consumed_on_restore",
+    "imprint.several_per_item",
+    "imprint.allflame_copy_not_restorable",
+    "recombinator.weighted_report_3_27",
+    "recombinator_cost.influence_plus_50_percent_3_25",
+    "recombinator_cost.junk_craft_before_after_report_3_26",
+    "recombinator_cost.dust_rule_average_tier_report",
+    "recombinator_cost.idol_cost_cut_3_27",
+)  # rows A1 to A15 of section 3.5 of the rebuild inventory
+
+
+def test_the_fifteen_claims_of_the_inventory_carry_the_field_and_a_reason():
+    registry = load_registry()
+
+    assert len(A_ROWS) == 15
+    for rule_id in A_ROWS:
+        assert registry[rule_id].approximate is True, rule_id
+        assert registry[rule_id].approximate_reason.strip(), rule_id
+
+
+def test_the_two_hinekora_claims_that_say_not_approximate_stay_unmarked():
+    registry = load_registry()
+
+    for rule_id in (
+        "hinekora_lock.preview_independent_across_currencies",
+        "hinekora_lock.exalted_annulment_regal_previewed",
+    ):
+        assert re.search(r"not (an )?approximate", registry[rule_id].statement.lower())
+        assert registry[rule_id].approximate is False
+
+
 # --- lookup by id -----------------------------------------------------------------------------
 
 

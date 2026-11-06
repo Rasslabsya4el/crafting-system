@@ -73,6 +73,8 @@ rules:
   value: 0.5
   patch_verified: 3.25.0
   date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: "One line in the 3.25 guide author's sheet, with no window and no word on Dust or Gold alone; nothing else confirms it."
 - id: recombinator_cost.influenced_input_multiplies_both
   statement: A combine with an influenced input costs 1.5 times the Dust and 1.5 times the Gold. The 3.25 line says only that influence raises the cost by 50% (recombinator_cost.influence_plus_50_percent_3_25), with no window and no word on Dust or Gold alone; R29 has influenced inputs, so the planner applies the factor to both until the owner's in-game readings replace it.
   source_kind: owner
@@ -107,6 +109,8 @@ rules:
     after: 30000
   patch_verified: 3.26.0
   date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: "A single Reddit report (3.26) with item levels, mods and tiers not stated; no controlled test of the crafted-mod discount."
 - id: recombinator_cost.dust_rule_average_tier_report
   statement: 'UNVERIFIED player assertion (u/Mangalorien, 2025-09-12, 3.26, nobody contradicted it, nobody posted numbers for it): the Dust cost is calculated from item level and the average tier of all the mods on each item; a low-tier bench craft lowers it, and two T1 prefix magic items can be tested before and after a junk suffix.'
   source_kind: experiment
@@ -114,6 +118,8 @@ rules:
   quote: item level and average tier of all the mods on each item
   patch_verified: 3.26.0
   date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: "One player assertion (3.26) with no numbers behind it; the Dust formula is not published (research issue #177)."
 - id: recombinator_cost.dust_per_combine_reports_3_26
   statement: 'UNVERIFIED (Butsicles, 2025-06-17: two T1 mods on magic items "easily" cost over 100,000 Dust; the planner interval of 25,000 to 250,000 without a junk craft summarises the reports in section 3 of the research note, from at least nine authors, 2025-03 to 2026-03).'
   source_kind: experiment
@@ -147,6 +153,8 @@ rules:
   quote: (researcher's wording of the patch note) lowered Idol recombination Dust by 75% and Gold by 50%
   patch_verified: 3.27.0g
   date_checked: 2026-11-01
+  approximate: true
+  approximate_reason: "Read second-hand from the official forum by the GPT researcher and not opened by me; the patch note's own text was not checked and equipment is not mentioned."
 - id: recombinator_cost.bench_rank_discount
   statement: A Kingsmarch bench upgrade (rank 4 in the Maxroll table of November 2024) lists "25% reduced Recombination Cost". Which of Gold and Dust it applies to, and whether it is inside the reported numbers, is not known.
   source_kind: wiki

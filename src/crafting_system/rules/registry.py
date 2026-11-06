@@ -258,11 +258,32 @@ def _check_id(value: object, family: str) -> str | None:
     return None
 
 
+_APPROXIMATE_MARKER = re.compile(r"\b(approximate|unverified)\b", re.IGNORECASE)
+_APPROXIMATE_DENIAL = re.compile(r"\bnot\s+(?:an?\s+)?approximate\b", re.IGNORECASE)
+
+
+def _statement_marker(statement: object) -> str | None:
+    """The word APPROXIMATE or UNVERIFIED a statement uses anywhere, in any case, or None.
+
+    "not approximate" (and "not an approximate ...") denies the word and is cut out first.
+    """
+    if not isinstance(statement, str):
+        return None
+    match = _APPROXIMATE_MARKER.search(_APPROXIMATE_DENIAL.sub("", statement))
+    return match.group(0) if match else None
+
+
 def _check_approximate(entry: dict) -> str | None:
     """The problem with the `approximate` / `approximate_reason` pair of a claim, or None."""
     if "approximate" not in entry:
         if "approximate_reason" in entry:
             return "approximate_reason is allowed only with approximate: true"
+        marker = _statement_marker(entry.get("statement"))
+        if marker is not None:
+            return (
+                f"the statement says {marker!r} but the claim has no approximate: true and"
+                " approximate_reason (OR-23); add both, or reword the statement"
+            )
         return None
     if entry["approximate"] is not True:
         return f"approximate must be true when present (leave it out for a claim that is not approximate), got {entry['approximate']!r}"

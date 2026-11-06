@@ -264,6 +264,8 @@ rules:
   quote: results in (bad base with spell block) 10 times in a row
   patch_verified: 3.27.0
   date_checked: 2026-10-31
+  approximate: true
+  approximate_reason: "One anecdote from a thread the moderators removed as misinformation; it contradicts the 50/50 base rule and is more likely bad luck than a rule change."
 - id: recombinator.weights_as_proportional_shares
   statement: In 3.26 the guide's author computes recombination odds with spawn weights as proportional shares ("if we assume the weights are not modified in any way") and says the odds for low-weight mods fall below the equal-chance figure.
   source_kind: owner
