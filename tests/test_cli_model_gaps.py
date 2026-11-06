@@ -64,7 +64,6 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("abstraction/_pattern.py", "_explore", ("NotApplicableError",), GAME, "the game refuses the action at this member (its kernel): it is not an action of the member, counted in `refused_pairs`"),
     ("abstraction/_pattern.py", "_explore", ("OutOfScopeError",), GAP, "a model gap at a member (its kernel): left out of the key only where `_gap_everywhere` says no member can take it, else the build refuses"),
     ("abstraction/_pattern.py", "_gap_everywhere", ("NotApplicableError", "OutOfScopeError"), EITHER, "asks whether any member of the key can take the action: a member refused by the game or by a gap cannot, whichever family"),
-    ("abstraction/_kernel.py", "Abstraction._context", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base"),
     ("abstraction/_kernel.py", "Abstraction.reachable", ("NotApplicableError", "OutOfScopeError"), EITHER, "a helper for tests, no caller in src: the states reachable by what can be applied"),
     ("abstraction/_kernel.py", "Abstraction._prepare", ("NotApplicableError",), GAME, "a game refusal may depend on the family of a fractured mod; a model gap is not asked that"),
     ("abstraction/_kernel.py", "Abstraction._refusal_depends_on_the_family", ("NotApplicableError",), GAME, "the other families of the fractured type are refused too"),
@@ -97,7 +96,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_route_packed.py", "_Reading.action", ("NotApplicableError", "OutOfScopeError"), EITHER, "that offer is not a twin here"),
     ("cli/_route_sim.py", "route_policy.policy", ("NotApplicableError", "OutOfScopeError"), EITHER, "the rule's action cannot be used on this item: a gap of the route"),
     ("targets/corrupted.py", "CorruptedResolver._pools", ("NotApplicableError", "OutOfScopeError"), EITHER, "the target cannot ask for `corrupted: true` here, and the error says why"),
-    ("targets/parse.py", "_Ladder.tiers", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base, as `Abstraction._context` reads them"),
+    ("targets/parse.py", "_Ladder.tiers", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base"),
     ("targets/floor.py", "_change_points", ("NotApplicableError", "OutOfScopeError"), EITHER, "no pool to read, so every level counts and nothing is left out"),
 ]
 # Clauses that catch the refusals through their parent `ValueError` (both families are ValueErrors) or through a tuple constant (`ROUTE_ERRORS`), in the
