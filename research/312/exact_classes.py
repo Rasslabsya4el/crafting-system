@@ -91,6 +91,8 @@ def build_model(target_path: Path, offers_mode: str, with_restart: bool = True, 
         text = re.sub(r"(?m)^\s*memory_strands:.*\n", "", text)
         text = re.sub(r"(?m)^\s*start_price:.*\n", "", text)  # the loaders no longer read this key; the run's own 10 chaos is the restart price (below)
         text = re.sub(r"\b(?:remembrance-orb|unravelling-orb)\b,? ?", "", text)
+        if not re.search(r"(?m)^start:", text):  # the loaders now ask for it: the start item is bought, its restart price is the run's own 10 chaos (below)
+            text += "\nstart: bought\n"
         target = parse_target(text, data, source=target_path.stem)
         prices = flat_prices()
     else:
