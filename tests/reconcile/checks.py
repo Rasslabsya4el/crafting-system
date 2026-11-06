@@ -23,15 +23,22 @@ Slots (the rule behind all of them is OR-3, "the target, the buy spec and the pr
 - `price.entry`, `price.base`, `price.item_level`, `price.source`, `price.pool`: the start-price entry
   against the target's base by base id (several bases share a name), item level (as the entry records
   it), the kind of price (a trade search, not a stand-in) and the mod pool of the bases it prices.
+- `price.rarity`, `price.influence`, `price.corrupted`, `price.mods`: the rest of what the entry's own search asked for, read from the
+  stored query (#470). The rarity, the influences (the `pseudo_has_<name>_influence` stats) and the corruption filter against the target's
+  start item; the mods (each stat id read as the trade site's text through the recorded stat list, with its group `fractured`, `implicit`
+  or `explicit` and its minimum) and the `fractured_item` filter against the buy spec's mods, which the other slots hold equal to the
+  target's. An entry with no stored search (a poe.ninja or hand line) has nothing to read here: `price.source` is its row.
 """
 
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from .export import REPO_ROOT, Export
 from .files import (
     BuyMod,
     BuySpec,
+    INFLUENCE_STAT,
     FileFormatError,
     PriceEntry,
     Target,
@@ -39,9 +46,13 @@ from .files import (
     price_files_of,
     priced_base_name,
     priced_category,
+    priced_corrupted,
+    priced_fractured_flag,
     priced_item_level,
     priced_rarity,
+    priced_stats,
     read_price_entry,
+    read_trade_stat_texts,
 )
 from .ladder import (
     TRADE_CATEGORY,
@@ -94,7 +105,10 @@ def slots(target: Target, spec: BuySpec | None) -> list[str]:
     if spec is not None:
         names += [f"buy_mod.{normalise_stat_text(mod.stat)}.in_target" for mod in spec.mods if not mod.own]
     if target.start_price is not None:
-        names += ["price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool"]
+        names += [
+            "price.entry", "price.base", "price.item_level", "price.rarity", "price.influence", "price.corrupted", "price.mods",
+            "price.source", "price.pool",
+        ]  # fmt: skip
     return names
 
 
@@ -156,10 +170,48 @@ def _with_own_implicits(export: Export, accepted: list[str], spec: BuySpec) -> l
     return [base_id for base_id in accepted if wanted <= reads(base_id)]
 
 
+@lru_cache(maxsize=1)
+def _recorded_stat_texts() -> dict[str, str]:
+    return read_trade_stat_texts()
+
+
+def _wanted_mods(spec: BuySpec) -> list[str]:
+    """The mods the spec searches, each as `<group> <text> at least <minimum>` (the group is where the trade site lists the stat)."""
+    return sorted(_mod_line(_group_of(mod), normalise_stat_text(mod.stat), mod.minimum) for mod in spec.mods)
+
+
+def _group_of(mod: BuyMod) -> str:
+    return "implicit" if mod.own or mod.implicit else "fractured" if mod.fractured else "explicit"
+
+
+def _mod_line(group: str, text: str, minimum: float | None) -> str:
+    return f"{group} {text} at least {minimum:g}" if minimum is not None else f"{group} {text} (no minimum)"
+
+
+def _priced_mods(entry: PriceEntry, texts: dict[str, str]) -> tuple[list[str], list[str]]:
+    """(the mods of the entry's search as `_mod_line` words, the influences it asks for): an influence is a pseudo stat, not a mod."""
+    mods, influences = [], []
+    for stat_id, minimum in priced_stats(entry):
+        influence = INFLUENCE_STAT.match(stat_id)
+        if influence:
+            influences.append(influence.group(1))
+            continue
+        group = stat_id.split(".")[0]
+        if stat_id not in texts:
+            mods.append(f"{stat_id} (not in the recorded stat list)" + (f" at least {minimum:g}" if minimum is not None else ""))
+            continue
+        mods.append(_mod_line(group, normalise_stat_text(texts[stat_id]), minimum))
+    return sorted(mods), sorted(influences)
+
+
 def reconcile(
-    target: Target, spec: BuySpec | None, export: Export, entries: list[PriceEntry]
+    target: Target, spec: BuySpec | None, export: Export, entries: list[PriceEntry], stat_texts: dict[str, str] | None = None
 ) -> dict[str, list[Disagreement]]:
-    """Every slot of the target with the disagreements found there (empty list: the places agree)."""
+    """Every slot of the target with the disagreements found there (empty list: the places agree).
+
+    `stat_texts` is the trade site's stat list as {stat id: text}; by default the recorded one (`stats_full.json.gz`).
+    """
+    texts = _recorded_stat_texts() if stat_texts is None else stat_texts
     out: dict[str, list[Disagreement]] = {name: [] for name in slots(target, spec)}
     where_target = short(target.path)
     where_spec = short(spec.path) if spec else ""
@@ -310,14 +362,44 @@ def reconcile(
             rarity = priced_rarity(entry)
             if rarity is not None and rarity != target.rarity:
                 add("price.rarity", f"{where_target}: start item rarity = {target.rarity}", f"{where_entry}: the search asked for rarity {rarity}", target.rarity, rarity)
+            if entry.query:  # a stand-in has no stored search: nothing here to read (its row is price.source)
+                priced_mods, priced_influences = _priced_mods(entry, texts)
+                if sorted(target.influence) != [name.lower() for name in priced_influences]:
+                    add(
+                        "price.influence", f"{where_target}: influence = {sorted(target.influence)}", f"{where_entry}: the search asked for influence {priced_influences}",
+                        ",".join(sorted(target.influence)) or "none", ",".join(priced_influences) or "none",
+                    )  # fmt: skip
+                corrupted = priced_corrupted(entry)
+                if corrupted != str(target.corrupted).lower():
+                    shown = {"true": "corrupted", "false": "not corrupted"}.get(corrupted, corrupted)
+                    add(
+                        "price.corrupted", f"{where_target}: start item corrupted = {target.corrupted}", f"{where_entry}: the search asked for corrupted = {corrupted}",
+                        "corrupted" if target.corrupted else "not corrupted", shown,
+                    )  # fmt: skip
+                if spec is not None:
+                    wanted = _wanted_mods(spec)
+                    if wanted != priced_mods:
+                        add(
+                            "price.mods", f"{where_spec}: mods {wanted}", f"{where_entry}: the search asked for mods {priced_mods}",
+                            "; ".join(wanted) or "no mod", "; ".join(priced_mods) or "no mod",
+                        )  # fmt: skip
+                    fractured_wanted = any(mod.fractured for mod in spec.mods)
+                    if priced_fractured_flag(entry) != fractured_wanted:
+                        words = {True: "fractured_item: true", False: "fractured_item: not asked"}
+                        add(
+                            "price.mods", f"{where_spec}: a fractured mod is {'' if fractured_wanted else 'not '}wanted", f"{where_entry}: the search {'did' if priced_fractured_flag(entry) else 'did not'} ask for a fractured item",
+                            words[fractured_wanted], words[not fractured_wanted],
+                        )  # fmt: skip
             if entry.source != TRADE_SOURCE:
                 add("price.source", f"{where_target}: start item bought on the trade site", f"{where_entry}: source {entry.source!r}, a stand-in for a trade price", "trade-api", str(entry.source))
     return out
 
 
-def reconcile_files(target: Target, specs: list[BuySpec], export: Export, prices_dir: Path | None = None) -> dict[str, list[Disagreement]]:
+def reconcile_files(
+    target: Target, specs: list[BuySpec], export: Export, prices_dir: Path | None = None, stat_texts: dict[str, str] | None = None
+) -> dict[str, list[Disagreement]]:
     """`reconcile` with the buy spec and the committed price entries found from the target's own keys."""
     spec = buy_spec_of(target, specs)
     files = price_files_of(target) if prices_dir is None else price_files_of(target, prices_dir)
     entries = [entry for path in files if (entry := read_price_entry(path, target.start_price))]
-    return reconcile(target, spec, export, entries)
+    return reconcile(target, spec, export, entries, stat_texts)

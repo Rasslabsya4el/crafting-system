@@ -7,13 +7,16 @@ Formats (learned from `src/crafting_system/targets/` and `.../prices/`, not impo
   rare when it lists mods, else normal. A target file no longer names its price (#474): `start_price` is the price key of the
   start item, taken from the hand-written table `expected_keys.txt` by the target's file stem (`read_expected_keys`). A bought
   start item has a row in it, a given one has none (J01).
-- buy spec: `name`, `base_type`, `category`, `rarity`, `item_level_min`, `influence`, `mods` (`stat`, `minimum`,
-  `fractured`). The planner computes it from the target; `derived_specs/<target>.yaml` is that result written down
+- buy spec: `name`, `base_type`, `category`, `rarity`, `item_level_min`, `influence`, `corrupted`, `mods` (`stat`, `minimum`,
+  `fractured`, `implicit`, `own`). The planner computes it from the target; `derived_specs/<target>.yaml` is that result written down
   (`tests/test_start_buy_real.py` holds the folder equal to it), so the reconciliation can read it without importing the
   planner and checks it against the target, the game data and the price entry.
-- price file: `prices` by name; an entry made from a trade search holds its query in `detail.query`.
+- price file: `prices` by name; an entry made from a trade search holds its query in `detail.query`. The query names a mod by the
+  trade site's stat id (`fractured.stat_1379411836`); the recorded stat list (`STATS_FILE`, read here as plain JSON) gives the
+  text of each id, so the entry's mods, influences and corruption can be read as words and compared (#470).
 """
 
+import gzip
 import json
 import re
 from dataclasses import dataclass, field, replace
@@ -27,6 +30,7 @@ TARGETS_DIR = REPO_ROOT / "examples" / "targets"
 BUY_DIR = REPO_ROOT / "tests" / "reconcile" / "derived_specs"
 KEYS_FILE = REPO_ROOT / "tests" / "reconcile" / "expected_keys.txt"
 PRICES_DIR = REPO_ROOT / "tests" / "fixtures" / "prices"
+STATS_FILE = REPO_ROOT / "tests" / "fixtures" / "trade" / "recorded" / "stats_full.json.gz"  # the trade site's stat list, 2026-10-31
 
 
 class FileFormatError(Exception):
@@ -48,6 +52,7 @@ class Target:
     item_level: int
     influence: frozenset
     rarity: str  # the rarity of the start item
+    corrupted: bool
     start_mods: tuple[StartMod, ...]
     start_price: str | None
     price_file: Path | None
@@ -60,6 +65,7 @@ class BuyMod:
     minimum: float | None
     fractured: bool
     own: bool = False  # the base's own implicit: it tells bases of one name apart, it is not a bought mod
+    implicit: bool = False  # searched as an implicit (an own implicit always is)
 
 
 @dataclass(frozen=True)
@@ -72,6 +78,7 @@ class BuySpec:
     item_level_min: int | None
     influence: frozenset
     mods: tuple[BuyMod, ...]
+    corrupted: bool = False
 
 
 @dataclass(frozen=True)
@@ -99,7 +106,9 @@ def read_target(path: Path) -> Target:
     start = document.get("start_item")
     mods = ()
     rarity = "normal"
+    corrupted = False
     if isinstance(start, dict):
+        corrupted = bool(start.get("corrupted", False))
         mods = tuple(
             StartMod(
                 mod=entry["mod"],
@@ -117,6 +126,7 @@ def read_target(path: Path) -> Target:
         item_level=document["item_level"],
         influence=frozenset(document.get("influence") or ()),
         rarity=rarity,
+        corrupted=corrupted,
         start_mods=mods,
         start_price=document.get("start_price"),
         price_file=(path.parent / price_file).resolve() if price_file else None,
@@ -137,9 +147,16 @@ def read_buy_spec(path: Path) -> BuySpec:
         item_level_min=document.get("item_level_min"),
         influence=frozenset(document.get("influence") or ()),
         mods=tuple(
-            BuyMod(stat=entry["stat"], minimum=entry.get("minimum"), fractured=bool(entry.get("fractured", False)), own=bool(entry.get("own", False)))
+            BuyMod(
+                stat=entry["stat"],
+                minimum=entry.get("minimum"),
+                fractured=bool(entry.get("fractured", False)),
+                own=bool(entry.get("own", False)),
+                implicit=bool(entry.get("implicit", False)),
+            )
             for entry in (document.get("mods") or ())
         ),
+        corrupted=bool(document.get("corrupted", False)),
     )
 
 
@@ -255,3 +272,37 @@ def priced_item_level(entry: PriceEntry) -> tuple[int | None, str]:
             return int(found.group(1)), "note"
     match = re.search(r"\bitem level (\d+)", entry.key)
     return (int(match.group(1)), "label") if match else (None, "")
+
+
+def read_trade_stat_texts(path: Path = STATS_FILE) -> dict[str, str]:
+    """The text of each trade stat id (`fractured.stat_1379411836` -> `+# to all Attributes`), from the recorded stat list."""
+    document = json.loads(gzip.decompress(path.read_bytes()))
+    return {entry["id"]: entry["text"] for group in document["stats"]["result"] for entry in group["entries"]}
+
+
+def _query_filters(entry: PriceEntry, section: str) -> dict:
+    return ((entry.query.get("filters") or {}).get(section) or {}).get("filters") or {}
+
+
+def priced_corrupted(entry: PriceEntry) -> str | None:
+    """What the entry's search asked for about corruption: "true", "false", or "any" (a query with no such filter); None with no query."""
+    if not entry.query:
+        return None
+    return (_query_filters(entry, "misc_filters").get("corrupted") or {}).get("option") or "any"
+
+
+def priced_fractured_flag(entry: PriceEntry) -> bool:
+    """Whether the entry's search asked for a fractured item (the `fractured_item` filter)."""
+    return (_query_filters(entry, "misc_filters").get("fractured_item") or {}).get("option") == "true"
+
+
+def priced_stats(entry: PriceEntry) -> list[tuple[str, float | None]]:
+    """The stat filters of the entry's search as (trade stat id, minimum or None), the influence pseudo stats included."""
+    found = []
+    for group in entry.query.get("stats") or ():
+        for each in group.get("filters") or ():
+            found.append((each["id"], (each.get("value") or {}).get("min")))
+    return found
+
+
+INFLUENCE_STAT = re.compile(r"^pseudo\.pseudo_has_(\w+)_influence$")

@@ -22,6 +22,9 @@ r03-avoid-shock-boots::price.entry
 r03-avoid-shock-boots::price.base
 r03-avoid-shock-boots::price.item_level
 r03-avoid-shock-boots::price.rarity
+r03-avoid-shock-boots::price.influence
+r03-avoid-shock-boots::price.corrupted
+r03-avoid-shock-boots::price.mods
 r03-avoid-shock-boots::price.source
 r03-avoid-shock-boots::price.pool
 r04-penetrating-quiver::target.base
@@ -37,6 +40,9 @@ r04-penetrating-quiver::price.entry
 r04-penetrating-quiver::price.base
 r04-penetrating-quiver::price.item_level
 r04-penetrating-quiver::price.rarity
+r04-penetrating-quiver::price.influence
+r04-penetrating-quiver::price.corrupted
+r04-penetrating-quiver::price.mods
 r04-penetrating-quiver::price.source
 r04-penetrating-quiver::price.pool
 r05-strength-ring::target.base
@@ -57,6 +63,9 @@ r05-strength-ring::price.entry
 r05-strength-ring::price.base
 r05-strength-ring::price.item_level
 r05-strength-ring::price.rarity
+r05-strength-ring::price.influence
+r05-strength-ring::price.corrupted
+r05-strength-ring::price.mods
 r05-strength-ring::price.source
 r05-strength-ring::price.pool
 r06-strength-heavy-belt::target.base
@@ -72,6 +81,9 @@ r06-strength-heavy-belt::price.entry
 r06-strength-heavy-belt::price.base
 r06-strength-heavy-belt::price.item_level
 r06-strength-heavy-belt::price.rarity
+r06-strength-heavy-belt::price.influence
+r06-strength-heavy-belt::price.corrupted
+r06-strength-heavy-belt::price.mods
 r06-strength-heavy-belt::price.source
 r06-strength-heavy-belt::price.pool
 r08-energy-shield-boots::target.base
@@ -87,6 +99,9 @@ r08-energy-shield-boots::price.entry
 r08-energy-shield-boots::price.base
 r08-energy-shield-boots::price.item_level
 r08-energy-shield-boots::price.rarity
+r08-energy-shield-boots::price.influence
+r08-energy-shield-boots::price.corrupted
+r08-energy-shield-boots::price.mods
 r08-energy-shield-boots::price.source
 r08-energy-shield-boots::price.pool
 r09-life-boots::target.base
@@ -102,6 +117,9 @@ r09-life-boots::price.entry
 r09-life-boots::price.base
 r09-life-boots::price.item_level
 r09-life-boots::price.rarity
+r09-life-boots::price.influence
+r09-life-boots::price.corrupted
+r09-life-boots::price.mods
 r09-life-boots::price.source
 r09-life-boots::price.pool
 r10-fractured-boots-70-life::target.base
@@ -122,6 +140,9 @@ r10-fractured-boots-70-life::price.entry
 r10-fractured-boots-70-life::price.base
 r10-fractured-boots-70-life::price.item_level
 r10-fractured-boots-70-life::price.rarity
+r10-fractured-boots-70-life::price.influence
+r10-fractured-boots-70-life::price.corrupted
+r10-fractured-boots-70-life::price.mods
 r10-fractured-boots-70-life::price.source
 r10-fractured-boots-70-life::price.pool
 r10-fractured-boots::target.base
@@ -142,6 +163,9 @@ r10-fractured-boots::price.entry
 r10-fractured-boots::price.base
 r10-fractured-boots::price.item_level
 r10-fractured-boots::price.rarity
+r10-fractured-boots::price.influence
+r10-fractured-boots::price.corrupted
+r10-fractured-boots::price.mods
 r10-fractured-boots::price.source
 r10-fractured-boots::price.pool
 r11-reservation-helmet::target.base
@@ -162,6 +186,9 @@ r11-reservation-helmet::price.entry
 r11-reservation-helmet::price.base
 r11-reservation-helmet::price.item_level
 r11-reservation-helmet::price.rarity
+r11-reservation-helmet::price.influence
+r11-reservation-helmet::price.corrupted
+r11-reservation-helmet::price.mods
 r11-reservation-helmet::price.source
 r11-reservation-helmet::price.pool
 r12-lightning-amulet::target.base
@@ -182,6 +209,9 @@ r12-lightning-amulet::price.entry
 r12-lightning-amulet::price.base
 r12-lightning-amulet::price.item_level
 r12-lightning-amulet::price.rarity
+r12-lightning-amulet::price.influence
+r12-lightning-amulet::price.corrupted
+r12-lightning-amulet::price.mods
 r12-lightning-amulet::price.source
 r12-lightning-amulet::price.pool
 r13-life-resist-belt::target.base
@@ -197,6 +227,9 @@ r13-life-resist-belt::price.entry
 r13-life-resist-belt::price.base
 r13-life-resist-belt::price.item_level
 r13-life-resist-belt::price.rarity
+r13-life-resist-belt::price.influence
+r13-life-resist-belt::price.corrupted
+r13-life-resist-belt::price.mods
 r13-life-resist-belt::price.source
 r13-life-resist-belt::price.pool
 r14-hunter-bow::target.base
@@ -212,6 +245,9 @@ r14-hunter-bow::price.entry
 r14-hunter-bow::price.base
 r14-hunter-bow::price.item_level
 r14-hunter-bow::price.rarity
+r14-hunter-bow::price.influence
+r14-hunter-bow::price.corrupted
+r14-hunter-bow::price.mods
 r14-hunter-bow::price.source
 r14-hunter-bow::price.pool
 v01-minion-helmet::target.base
@@ -227,5 +263,8 @@ v01-minion-helmet::price.entry
 v01-minion-helmet::price.base
 v01-minion-helmet::price.item_level
 v01-minion-helmet::price.rarity
+v01-minion-helmet::price.influence
+v01-minion-helmet::price.corrupted
+v01-minion-helmet::price.mods
 v01-minion-helmet::price.source
 v01-minion-helmet::price.pool
