@@ -76,7 +76,7 @@ def test_the_command_on_the_real_r12_amulet(tmp_path, data, capsys):
     q = float(HarvestReforge(LIGHTNING).outcomes(data, load_target(R12, data).start_item).chance_all([GEM]))
     click = 50 * LIFEFORCE_PRICE
 
-    code, out = run_command(tmp_path, data=data, prices=price_file(lifeforce=LIFEFORCE_PRICE))
+    code, out = run_command(tmp_path, data=data, prices=price_file(lifeforce=LIFEFORCE_PRICE, data=data))
 
     document = read_json(out)
     assert code == 0
@@ -95,7 +95,7 @@ def test_the_command_on_the_real_r12_amulet(tmp_path, data, capsys):
 
 
 def test_verify_agrees_with_the_computed_mean_on_the_real_amulet(data):
-    plan = make_plan(data, load_target(R12, data), price_file(lifeforce=LIFEFORCE_PRICE))
+    plan = make_plan(data, load_target(R12, data), price_file(lifeforce=LIFEFORCE_PRICE, data=data))
 
     check = verify(data, plan, runs=RUNS, seed=11)
 
@@ -106,7 +106,7 @@ def test_verify_agrees_with_the_computed_mean_on_the_real_amulet(data):
 
 
 def test_without_a_lifeforce_price_the_reforge_is_dropped_and_the_chaos_orb_policy_is_returned(tmp_path, data, capsys):
-    code, out = run_command(tmp_path, data=data, prices=price_file(lifeforce=None))
+    code, out = run_command(tmp_path, data=data, prices=price_file(lifeforce=None, data=data))
 
     document = read_json(out)
     assert code == 0
