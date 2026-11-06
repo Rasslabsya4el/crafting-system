@@ -358,6 +358,11 @@ class Pattern:
 
     def members(self, key: PatternKey, mode: Mode) -> list[CompressedState]:
         """The concrete states of `key` that stand for all of its members for an action of the policy `mode`; each is an item."""
+        if not self.ab._context(key.flags.influences).kinds.tracked:
+            # no enabled action reads the junk, so a state keeps none of it: its status is a fact about mods that are not stored, and the one
+            # state the key stands for is the key itself (no ordinary slot to choose, nothing to check the status against)
+            only = CompressedState(key.flags, key.fractured, key.status, key.crafted, *key.held)
+            return [only] if self._ok(only) else []
         universe = self.universe(key.flags.influences)
         blocked = self.blocked_tags(key)
         base = best_of(self.width, [slot.contribution for slot in key.crafted] + [entry.contribution for entry in key.fractured])

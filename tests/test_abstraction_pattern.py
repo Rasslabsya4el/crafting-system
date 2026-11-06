@@ -336,3 +336,23 @@ def test_what_an_offered_action_adds_by_name_is_in_the_universe_before_any_kerne
     for state in held[:20]:
         assert state in all_members(seeded, seeded.key(state))
     assert any(state not in all_members(bare, bare.key(state)) for state in held)
+
+
+def test_a_route_that_keeps_no_junk_has_one_member_for_each_key(world):
+    """With no enabled action that reads the junk a state stores none of it, its status is a fact about mods that are not stored, and the bound is still a lower bound."""
+    data, _, _ = world
+    ab = Abstraction(data, GOAL, BOW, LEVEL, ())
+    start = ab.compress(build(data, BOW, STARTS[0]))
+    assert not start.slots
+    offers = [PatternOffer("chaos", ChaosOrb(), 1.0), PatternOffer("reforge", HarvestReforge("fire"), 3.0), PatternOffer("restart", None, 2.0)]
+    exact = exact_values(ab, start, offers)
+    model = build_pattern_model(ab, start, offers)
+    solved = solve_packed(pack_pattern_model(model, offers))
+    pattern = Pattern(ab, None, [offer.action for offer in offers if offer.action is not None])
+    assert len(exact) > 3
+    for state, value in exact.items():
+        key = pattern.key(state)
+        assert key in model.index
+        assert [state] == pattern.members(key, Mode.ALL), "a key of a route that keeps no junk stands for the state alone"
+        assert float(solved.value[model.index[key]]) <= value * (1 + 1e-9) + 1e-9
+    assert float(solved.value[0]) == pytest.approx(exact[start], rel=1e-9)
