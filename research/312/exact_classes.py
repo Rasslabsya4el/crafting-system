@@ -89,6 +89,7 @@ def build_model(target_path: Path, offers_mode: str, with_restart: bool = True, 
     if strand_stripped:  # S02, S11, S13 as today's loaders read them: no strand lines, no strand kinds, flat prices, start item 10 chaos
         text = target_path.read_text(encoding="utf-8")
         text = re.sub(r"(?m)^\s*memory_strands:.*\n", "", text)
+        text = re.sub(r"(?m)^\s*start_price:.*\n", "", text)  # the loaders no longer read this key; the run's own 10 chaos is the restart price (below)
         text = re.sub(r"\b(?:remembrance-orb|unravelling-orb)\b,? ?", "", text)
         target = parse_target(text, data, source=target_path.stem)
         prices = flat_prices()

@@ -6,10 +6,10 @@ Code: `src/crafting_system/abstraction/_pattern.py` (the key, its members, the m
 
 ## Short answer
 
-1. **The bound is built without the walk and reproduces the member-union bound of #376 to 1e-12.** On every route walked for the comparison (R04, S02, R05, R13) the value of the start from `build_pattern_model` equals the value of the member-union experiment built from the walked graph for the same key, to a relative 3e-13 or better, with the same number of abstract states (R04 13,060 with the tags and 7,791 without, R14 1,969 and 850, S02 91, R13 517; R05 455). Start value over the exact cost: **R04 99.62% (tags) and 99.48% (no tags), R14 99.99% (tags) and 98.10% (no tags), S02 99.9998%** (the research's 100.00%: the unreachable members cost 0.0002%), R05 and R13 100.00%. The ticket's tolerance was 0.1%.
+1. **The bound is built without the walk and reproduces the member-union bound of #376 to 1e-12.** On every route walked for the comparison (R04, S02, R05, R13) the value of the start from `build_pattern_model` equals the value of the member-union experiment built from the walked graph for the same key, to a relative 3e-13 or better, with the same number of abstract states (R04 13,060 with the tags and 7,791 without, R14 1,969 and 850, S02 91, R13 517; R05 455). Start value over the exact cost: **R04 99.62% (tags) and 99.48% (no tags), R14 99.99% (tags) and 98.10% (no tags), S02 99.9998%** (the research's 100.00%, rounded: its own member union is the same number), R05 and R13 100.00%. The ticket's tolerance was 0.1%.
 2. **It is never above the exact cost, at any walked state.** 0 violations of the exact value (the largest excess is negative on R04 and S02) and 0 walked states whose key the model never reached, on R04 (177,242 states), S02 (106,002), R05 (1,185), R13 (4,066) and R14 (816,153, see the table): the members that the model makes include every state the walk meets.
 3. **It evaluates a small part of the walk's kernels.** R14: 10,615 kernels (tags) or 10,752 (no tags) against the walk's 1,578,415, and against the 307,163 and 206,626 that the member-union experiment needed for the extreme members: 0.7%. R04: 79,278 against 350,923 (every kernel of the walk, since every member of a key is an extreme there). S02: 35 against 186 (114 for the extremes). Time and memory: R14 17-21 s and 260-290 MB, R04 172-258 s and 660-760 MB, S02 157 s and 2.4 GB (the Harvest reforge kernels, as in the walk), R05 34 s, R13 1 s; the walks take 2,221 s, 361 s, 640 s. The solve of the model takes 0.1 to 1.1 s.
-4. **What is not proved.** The Fracturing Orb, an erasing reroll under a lock, and any action not declared one of the classes below are offered at every member of the key (sound by construction, not shown to need fewer); a goal with a roll limit, an action that rerolls values, an unveil offer and imprints are refused. The classes whose members are reduced have an argument (the module docstring) and a test against every member (below). Filed: ISSUES_LIST.
+4. **What is not proved.** The Fracturing Orb, an erasing reroll under a lock, and any action not declared one of the classes below are offered at every member of the key (sound by construction, not shown to need fewer); a goal with a roll limit, an action that rerolls values, an unveil offer and imprints are refused. The classes whose members are reduced have an argument (the module docstring) and a test against every member (below). Filed: #507, #508, #509, #510.
 
 ## What is built
 
@@ -37,12 +37,45 @@ If two classes make a corner impossible together (one family type shared by two 
 - **Every action class against brute force** (`tests/test_abstraction_pattern.py`, a fixture Thicket Bow with five attack-tagged prefix families of four weights, three suffix families, the lock, the Attack and the Caster metamods; the Exalted Orb, the Annulment, the Fracturing Orb, a Chaos Orb and Remove Crafted Mods; keys of states a seeded random walk met, with the tags in the key and without): every walked state is a member of its key (the brute force is complete); for random values of the successor keys, the least backup over the offered members is at most the backup of every member of the key, and the action is offered whenever a member can take it. The comparison can fail: the lightest member alone fails it for the Exalted Orb, and one member fails it for a Chaos Orb under a lock (that is why those two classes are not `ANY`/`ONE`). The extremes are fewer than every member on the keys with a choice of junk.
 - **Never above the exact cost, at every state** (`tests/test_abstraction_pattern.py`, the fixture's exact graph; `tests/test_abstraction_pattern_real.py`, R13 with and without the tags and R05, against the research walker's graph): the value at the key of every walked state is at most the state's exact value, and no walked state has a key the model never reached. `research/497/pattern_bound.py --check` makes the same comparison on R04, R14 and S02 in a heavy run (below).
 
-CHECK_PLACEHOLDER
+## What was measured
+
+All on GitHub runners (ubuntu-latest, 4 vCPU, 16 GB), through `heavy_dispatch.py`, on this branch rebased on `main` of 2026-11-06 (`75b99f3`), one price set (`tests/fixtures/prices/routes-allflame-2026-10-31.json`; S02 at 1-chaos prices with the strand words removed, as in #376). "Exact" is the walk and the exact solve of #376's script (R04 and S02 on the exact classes, R05 and R13 and R14 unmerged), "member union" is #376's experiment run in the same process on the same walk, for the same key.
+
+RUNS_TABLE
+
+- **The start value is the member-union value.** `start / member union` is 1 to 3e-13 on R04 (both keys), S02 and R05, 4e-11 on R13 (the exact solve's own tolerance); the number of abstract states is the research's on every route and key. The bound over the exact cost is the research's: 99.62% and 99.48% on R04, 99.99% and 98.10% on R14, 100.00% on R05 and R13, and 99.9998% on S02, where the 0.0002% is what the members that no walk reaches cost.
+- **No violation, no missing key.** At every walked state the bound at its key is at most its exact value (`violations` 0; the largest excess over the exact value is negative on R04 and S02, zero on R13, 3e-12 on R05, which is the solver's tolerance), and every walked state has a key in the model (`keys missing` 0). The second is the check that the members the model makes cover the states of the walk: if a class of action offered too few members, a key the walk reaches would be missing or a bound would exceed an exact value.
+- **Kernels.** The kernels evaluated are the distinct `Abstraction.kernel_key`s of the (member, action) pairs asked for, as the walker counts them. R14 needs 10,615 of the walk's 1,578,415 (the member-union experiment kept 307,163 for `+crafted+tags` and 206,626 for `+crafted`: the extreme members of the research kept ties and every junk assignment of a relevant multiset, the model keeps the two ends of each class), R04 79,278 of 350,923, S02 35 of 186 (114 for the extremes), R13 564 of 4,125 (3,090). R05 is the one route where the model evaluates **more** kernels than the walk, 1,319 against 711: its junk is told apart by named families, the members include states no route reaches, and the walk is only 1,185 states, so nothing is saved there and the bound is the exact cost.
+- **Time and memory.** R14 builds in 17-21 s and 260-290 MB (walk and exact: 2,221 s and 8-9 GB in #376), R04 in 172-258 s and 660-760 MB (361 s and 1.5 GB), S02 in 157 s and 2.4 GB (all of it the 35 Harvest reforge kernels: the same cost per kernel as the walk's, 640 s for 186), R05 in 34 s and 250 MB, R13 in 1 s. The packed solve of the model takes 0.1 to 1.1 s. R04 and R05 run the exploration twice because a kernel produces a slot the pool does not list (#510); the other routes once.
+- **What the unreachable members cost.** The ticket's open question: a key's members that no walk reaches are in the model (it makes members from the key, not from the walk), and the bound could be weaker for them. Measured: nothing on R04, R05, R13 and R14 (the value is the member union's to 1e-12), 0.0002% on S02 (33,878.6103 against 33,878.6728; the member union is 33,878.6103 too, so these 0.0002% are the reachable members' key, not the unreachable ones).
+
 
 ## Limits
 
-LIMITS_PLACEHOLDER
+- **The walk is still the reference.** The checks need the walked graph; the bound itself does not. A route whose walk is out of reach has the same bound with no check.
+- **Roll limits, rerolled values, an unveil offer and imprints** are refused (`OutOfScopeError`): #507.
+- **The Fracturing Orb and a reroll under a lock use every member.** None of the three big routes has a lock; the fixture bow does, and one member is not enough there (`test_one_member_is_not_enough_for_a_reroll_under_a_lock`): #508.
+- **Declared invariance is trusted.** An action that declares `block_invariant` or `variants` wrongly makes the bound wrong; the contract suite does not yet compare the members of a key for it: #509.
+- **One price set**, one data pin (3.29.3.3), the values move with `main`. The exact values are #376's solves of the same graphs; the packed solver's figures for R04, R14 and S02 are 69,257.5365, 5,784.4887 and 33,878.6728.
+- **R14 and the tolerance of the key.** The ticket asked for 98.10% on R14; with the tags in the key (the default when the metamods are modelled) the bound is 99.99%. Both are built (`tags=False` is the 98.10%).
+- **Not wired.** Nothing in the planner calls `pattern_lower_bound` yet: the envelope search (#377) and the certificate `[LB, U]` (#499) are the callers.
+
+## Settings and numerical limits
+
+- Measurement settings, not planner defaults (ADR-0063 point 5, OR-12): `--seconds`, `--max-rss-mb`, `--max-states` of the walker; the tolerances of the checks (1e-7 relative plus 1e-9 absolute for a violation; the tests use 1e-9); the number of random value functions of the brute-force tests (12 to 40); nothing in `src/` reads them. `max_keys` of `build_pattern_model` is a safety net the caller may ask for (it raises and says so), never a default; the measurements set none.
+- The model is solved on the packed solver (`solve_packed`, tolerance 1e-10); `PatternBound.lower` is the start value times `1 - error_bound`, the solver's certified relative error (1e-8 to 1e-10 here), so it is the number to use as `LB`.
+- The member policy is chosen by the action's declaration and the key (a lock, the pool weight, the draw tags and levels); there is no count or weight threshold in it. The weights compared for the extremes are exact `Fraction`s, ties broken by the kind's name.
+
+## Runs (all through `heavy_dispatch.py`, branch `claude/497-walk-free-bound`)
+
+RUN_IDS
+
 
 ## Open points, filed (OR-29)
 
-ISSUES_PLACEHOLDER
+- [#507](https://github.com/Rasslabsya4el/crafting-system/issues/507): a goal with a roll limit, an action that rerolls values, an unveil offer or imprints has no members.
+- [#508](https://github.com/Rasslabsya4el/crafting-system/issues/508): the Fracturing Orb and a reroll under a lock are offered at every member; prove a smaller set or measure it on a route with a lock.
+- [#509](https://github.com/Rasslabsya4el/crafting-system/issues/509): declared block invariance and equal legality across members are trusted; check them in the contract suite.
+- [#510](https://github.com/Rasslabsya4el/crafting-system/issues/510): the build runs twice when a kernel produces a slot the pool did not list (R04, R05).
+- Already filed and unchanged: #377 (the envelope search on this bound), #499 (the certificate `[LB, U]`).
+
