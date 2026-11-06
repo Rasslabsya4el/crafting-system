@@ -227,17 +227,24 @@ is the **view** `tests/golden_diff.py` makes of them, and the same view is used 
   continuation starting with `~`, so no line of the view is long.
 - **A failing golden test** prints that view as a unified diff (`-` is the golden file, `+` what the test produced), at most 120
   lines. Every comparison with a golden file goes through `golden_diff.check` (bytes) or `golden_diff.check_objects` (parsed values):
-  `assert_golden` and `assert_golden_json`, the V01 JSON, the risk and B1 fingerprints, `plans_118.json`, `reachability.md`. A golden file
-  of scalar numbers (`packed_values.json`, compared with `approx` by the heavy tests) fails with pytest's own message, two short numbers.
-  When the bytes differ but the view is equal, the message says only whitespace or invisible bytes differ and shows where.
+  `assert_golden` and `assert_golden_json`, the V01 JSON, the risk and B1 fingerprints, `plans_118.json`, `reachability.md`. The scalar
+  numbers of `packed_values.json` are compared by `check_objects(..., rel=1e-9)` in the heavy tests (the tolerance `approx` had), and
+  they fail with the same title and diff. When the bytes differ but the view is equal, the message says the readable view is equal and
+  the bytes differ (case, entity, encoding, key order or whitespace), and shows the first differing characters.
 - **A pull request** that changes a golden file gets the same diff for every such file in the job summary of the `Golden changes against
   main` step (`.github/scripts/golden_changes.py`; it runs once, on Ubuntu, in shard 1 of a PR's CI, and is information, not a gate). By
   hand: `python3 .github/scripts/golden_changes.py --base origin/main` from the branch, no game data needed; `--lines N` cuts each file's diff.
+  A file that differs from main only in line endings gets one line saying so, not an empty diff. The file sections of the report
+  stay under 900,000 bytes (UTF-8), below the 1 MiB a job summary may hold; a file that would pass it is left out with a note.
 
 To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
 in the PR, and commit the file. Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the
-real game data (`reachability.md`, the `real_*` pages) is taken from the PR's CI as described above, since a PC without the cache cannot
-make it. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
+real game data is taken from where it is made, since a PC without the cache cannot make it. `reachability.md` is the artifact
+`reachability` of the PR's CI run (uploaded by the "Reachability report" step above). The `real_*` pages (`tests/golden/real_r05.html`,
+`real_r10.html`, `real_r11.html`) are not CI artifacts: `assert_golden` in `tests/route_view_support.py` rewrites each one when
+`UPDATE_GOLDEN=1` is set, and `tests/test_cli_routes_real.py` makes them on a runner or machine that has the real game data in its
+cache (`CRAFTING_CACHE_DIR`). Regenerate them through a heavy run (`heavy_dispatch.py`) that copies the three files into `$OUT_DIR`,
+then commit them after reading the diff. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
 
 ## Keeping the shards balanced
 

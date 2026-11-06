@@ -27,6 +27,7 @@ import os
 import sys
 from pathlib import Path
 
+import golden_diff
 import pytest
 from abstraction_support import real_game_data
 from cli_support import read_json
@@ -78,7 +79,10 @@ def test_the_default_budget_run_reaches_the_packed_solver_and_says_so(cli, route
     _, document, _ = cli
 
     assert "packed solver" in document["note"] and "No approximate level exists" in document["note"]
-    assert document["states_solved"] == GOLDEN[route_id]["states"]
+    golden_diff.check_objects(
+        {"states": GOLDEN[route_id]["states"]}, {"states": document["states_solved"]},
+        f"{route_id}: the states solved differ from tests/golden/packed_values.json",
+    )  # fmt: skip
 
 
 @HEAVY
@@ -89,7 +93,10 @@ def test_the_command_returns_the_policy_with_odds_mean_and_a_certified_p90(cli, 
 
     assert code == 0
     assert totals["success_probability"]["value"] == pytest.approx(1.0)
-    assert totals["mean_cost"]["value"] == pytest.approx(GOLDEN[route_id]["mean_remaining"] + start_price, rel=1e-9)
+    golden_diff.check_objects(
+        {"mean_cost": GOLDEN[route_id]["mean_remaining"] + start_price}, {"mean_cost": totals["mean_cost"]["value"]},
+        f"{route_id}: the mean cost differs from tests/golden/packed_values.json", rel=1e-9,
+    )  # fmt: skip
     assert totals["quantiles_resolved"] is True
     p90 = totals["p90"]
     assert p90["low"] <= p90["value"] <= p90["high"] and p90["high"] - p90["low"] <= P90_WIDTH[route_id] * p90["value"]
@@ -132,7 +139,10 @@ def bench(data, route_id):
 @HEAVY
 def test_benchmark_solves_the_route_and_compares_it_with_the_guides_route_as_written_and_completed(bench, route_id):
     assert bench["error"] is None
-    assert bench["solver"]["mean"] == pytest.approx(GOLDEN[route_id]["mean_remaining"] + FILES[route_id][1], rel=1e-9)
+    golden_diff.check_objects(
+        {"mean": GOLDEN[route_id]["mean_remaining"] + FILES[route_id][1]}, {"mean": bench["solver"]["mean"]},
+        f"{route_id}: the benchmark's solver mean differs from tests/golden/packed_values.json", rel=1e-9,
+    )  # fmt: skip
     assert bench["solver"]["p90"] is not None
     assert bench["given_route"]["gaps"] > 0 and bench["given_route"]["mean"] is None  # the guide's own steps leave gaps: it never finishes with certainty
     assert bench["solver_not_dearer"] is True

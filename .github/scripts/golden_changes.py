@@ -51,7 +51,12 @@ def changed_files(base: str, head: str, directory: str, root: Path = ROOT) -> li
 
 
 def read_at(ref: str, path: str, root: Path = ROOT) -> str:
-    return git("show", f"{ref}:{path}", root=root).decode("utf-8", errors="replace").replace("\r\n", "\n")
+    """The file as committed, line endings kept: the diff compares the readable view, and only `section` needs to see the bytes."""
+    return git("show", f"{ref}:{path}", root=root).decode("utf-8", errors="replace")
+
+
+def utf8_size(text: str) -> int:
+    return len(text.encode("utf-8"))
 
 
 def section(status: str, path: str, before: str, after: str, lines: int) -> str:
@@ -67,7 +72,10 @@ def section(status: str, path: str, before: str, after: str, lines: int) -> str:
         body = [f"-{line}" for line in shown[:lines]]
         note = f"file removed, {len(shown)} readable lines" + (f", the first {lines} shown" if len(shown) > lines else "")
     else:
-        text = golden_diff.readable_diff(before, after, kind, f"main: {path}", f"this branch: {path}", limit=lines)
+        old, new = before.replace("\r\n", "\n"), after.replace("\r\n", "\n")
+        text = golden_diff.readable_diff(old, new, kind, f"main: {path}", f"this branch: {path}", limit=lines)
+        if not text and before != after:  # the bytes differ in line endings only: say so, there is no diff to show
+            return head + "The two files differ only in line endings (CRLF or LF); the readable view is equal, so there is no diff to show.\n\n"
         body, note = text.splitlines(), ""
     block = f"{FENCE}diff\n" + "\n".join(body) + f"\n{FENCE}\n"
     return head + (f"{note}\n\n" if note else "") + block + "\n"
@@ -82,16 +90,16 @@ def report(base: str, head: str, directory: str, lines: int, root: Path = ROOT) 
         return title + f"No file under `{directory}` changed.\n"
     out = [title, f"{len(files)} file(s) under `{directory}` changed. Each diff is the readable view: HTML as visible text and structure, one block per line; "
            "JSON pretty-printed with sorted keys; text line by line. `-` is main, `+` is this branch.\n\n"]
-    size = sum(len(piece) for piece in out)
+    size = sum(utf8_size(piece) for piece in out)  # bytes, as GitHub counts a job summary
     for status, path in files:
         before = "" if status == "added" else read_at(start, path, root)
         after = "" if status == "deleted" else read_at(head, path, root)
         piece = section(status, path, before, after, lines)
-        if size + len(piece) > SUMMARY_LIMIT:
+        if size + utf8_size(piece) > SUMMARY_LIMIT:
             out.append(f"### `{path}`: {status}\n\n(left out: the report would pass the size a job summary may hold; run this script on the branch to read it)\n\n")
             continue
         out.append(piece)
-        size += len(piece)
+        size += utf8_size(piece)
     return "".join(out)
 
 

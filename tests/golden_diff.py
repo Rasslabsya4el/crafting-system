@@ -285,7 +285,7 @@ def readable_diff(
     old, new = readable_lines(before, kind), readable_lines(after, kind)
     body = list(difflib.unified_diff(old, new, before_label, after_label, lineterm="", n=context))
     if not body:
-        return _bytes_differ(before, after, kind)
+        return _bytes_differ(before, after)
     removed = sum(1 for line in body if line.startswith("-") and not line.startswith("---"))
     added = sum(1 for line in body if line.startswith("+") and not line.startswith("+++"))
     if limit is not None and len(body) > limit:
@@ -293,10 +293,10 @@ def readable_diff(
     return "\n".join([*body, f"({removed} readable lines removed, {added} added)"])
 
 
-def _bytes_differ(before: str, after: str, kind: str) -> str:
+def _bytes_differ(before: str, after: str) -> str:
     offset = next((i for i, (a, b) in enumerate(zip(before, after, strict=False)) if a != b), min(len(before), len(after)))
     return (
-        f"The readable {kind} lines are equal; only whitespace or invisible bytes differ. First difference at character {offset}:\n"
+        f"The readable view is equal; the bytes differ (case, entity, encoding, key order or whitespace). First difference at character {offset}:\n"
         f"  before: {before[max(0, offset - 30) : offset + 30]!r}\n"
         f"  after:  {after[max(0, offset - 30) : offset + 30]!r}"
     )
@@ -312,8 +312,24 @@ def check(expected: str, actual: str, kind: str, title: str, limit: int | None =
         raise AssertionError(f"{title}\n{readable_diff(expected, actual, kind, limit=limit)}")
 
 
-def check_objects(expected: object, actual: object, title: str, limit: int | None = TEST_DIFF_LINES) -> None:
-    """Return when `expected == actual`; else raise an `AssertionError` with `title` and the diff of the two as sorted-key JSON."""
+def check_objects(expected: object, actual: object, title: str, limit: int | None = TEST_DIFF_LINES, rel: float | None = None) -> None:
+    """Return when `expected == actual`; else raise an `AssertionError` with `title` and the diff of the two as sorted-key JSON.
+
+    With `rel`, each float of `expected` may differ from `actual` by that share of it (the tolerance of `pytest.approx`, with its
+    absolute floor of 1e-12); ints, strings and the rest stay exact.
+    """
     __tracebackhide__ = True
-    if expected != actual:
+    if not _same(expected, actual, rel):
         raise AssertionError(f"{title}\n{readable_diff(json_text(expected), json_text(actual), 'json', limit=limit)}")
+
+
+def _same(expected: object, actual: object, rel: float | None) -> bool:
+    if rel is None:
+        return expected == actual
+    if isinstance(expected, dict):
+        return isinstance(actual, dict) and expected.keys() == actual.keys() and all(_same(expected[key], actual[key], rel) for key in expected)
+    if isinstance(expected, (list, tuple)):
+        return isinstance(actual, (list, tuple)) and len(expected) == len(actual) and all(_same(e, a, rel) for e, a in zip(expected, actual))
+    if isinstance(expected, float) and isinstance(actual, (int, float)) and not isinstance(actual, bool):
+        return abs(actual - expected) <= max(rel * abs(expected), 1e-12)
+    return expected == actual
