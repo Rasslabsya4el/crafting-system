@@ -51,10 +51,12 @@ so. A time, memory or state net (`Net`) ends the search between rounds; the answ
 """
 
 import math
+import os
 import sys
 import time
 from collections.abc import Callable, Hashable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 
 import numpy as np
@@ -156,7 +158,7 @@ class SearchResult[S]:
 def resident_mb() -> float | None:
     """The resident memory of this process in MB, or None where it cannot be read."""
     try:
-        with open("/proc/self/status", encoding="utf-8") as handle:
+        with open(Path(os.sep, "proc", "self", "status"), encoding="utf-8") as handle:
             for line in handle:
                 if line.startswith("VmRSS"):
                     return int(line.split()[1]) / 1024
