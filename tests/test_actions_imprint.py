@@ -223,7 +223,7 @@ def test_the_beasts_are_priced_from_the_price_file_and_a_restore_is_free():
     assert costs["Restore imprint 1"] == pytest.approx(FREE_ACTION_SHARE * 7.0)  # a free action costs a share of the cheapest offer that costs something
 
 
-def test_the_eleven_claims_are_in_the_registry_with_the_unverified_ones_stamped():
+def test_the_eleven_claims_are_in_the_registry_with_the_unverified_ones_stamped_and_marked_approximate():
     ids = [
         "imprint.eternal_orb_creates",
         "imprint.eternal_orb_not_dropped",
@@ -241,7 +241,12 @@ def test_the_eleven_claims_are_in_the_registry_with_the_unverified_ones_stamped(
     assert dict(rules["imprint.beast_recipes"].value) == {"magic": MAGIC_BEAST, "rare_talisman": TALISMAN_BEAST}
     stamped = {rule_id for rule_id, rule in rules.items() if rule.statement.startswith("UNVERIFIED")}
     assert stamped == {"imprint.consumed_on_restore", "imprint.several_per_item", "imprint.allflame_copy_not_restorable"}
-    assert not any(rule.approximate for rule in rules.values())  # the owner decided used up and several (grill B3): not marked approximate
+    # the owner's working choice in grill B3 (#94, answer 4b) is not verified for 3.29 (OR-23, OR-25): the three are marked approximate, and only they
+    assert {rule_id for rule_id, rule in rules.items() if rule.approximate} == stamped
+    for rule_id in stamped:
+        assert rules[rule_id].approximate_reason, rule_id
+    for rule_id in ("imprint.consumed_on_restore", "imprint.several_per_item"):
+        assert "grill B3" in rules[rule_id].approximate_reason, rule_id
     assert Imprint(CROAKER).claims() <= set(ids) and Restore(0).claims() == {
         "imprint.restores_state", "imprint.refused_on_fractured", "imprint.refused_on_corrupted_mirrored", "imprint.not_for_derived_items",
         "imprint.consumed_on_restore", "awakener.imprint_restores_receiver_only",

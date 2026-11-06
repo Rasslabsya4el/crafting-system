@@ -111,6 +111,8 @@ rules:
     quote: "function poec_simCatToRWeight(weight,apcat,mod){return weight}"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "No source but Craft of Exile's code (package.js); the uniform removal is read from it and settled by the main chat in grill B2, not verified in the game for 3.29."
 
   - id: harvest_augment.addition_weighted_by_tier_weight
     statement: "APPROXIMATE (ADR-0028): no source but Craft of Exile's code. The added modifier is drawn from the modifiers carrying the craft's tag that the item can roll (item level, family exclusion, generation weights, the Attack and Caster metamods) on a side with an open slot, in proportion to their weights, as the guaranteed draw of a tagged reforge (decision D7 of issue #28; O-01 of the note). The new modifier is rolled at the tier of the pool."
@@ -119,3 +121,5 @@ rules:
     quote: "craftDetail.add=poec_simRollAffix(null,crafts.ssaction,null,null,1,!0,!1,!1,!1,!1,!1,null,!1)"
     patch_verified: "3.29.0.3"
     date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "No source but Craft of Exile's code (package.js); the weighted draw is read from it and settled by the main chat (D7 of #28), not verified in the game for 3.29."

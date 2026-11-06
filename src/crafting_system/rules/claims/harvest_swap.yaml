@@ -51,6 +51,8 @@ rules:
     quote: "Change a modifier that grants Cold Damage into a similar-tier modifier that grants Fire Damage"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "No source lists which modifiers a damage swap accepts and Craft of Exile has no damage swap, so the stat set is the main chat's choice."
     value: ["X_damage_+%", "local_minimum_added_X_damage", "spell_minimum_added_X_damage", "attack_minimum_added_X_damage"]
 
   - id: harvest_swap.damage_swap_excludes_crit_multiplier
@@ -76,6 +78,8 @@ rules:
     quote: "if(success.fromind.length>1){var rnum=poec_rand(0,success.fromind.length,!0);swappick=success.fromind[rnum]}else{swappick=success.fromind[0]}"
     patch_verified: "3.29.0.3"
     date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "No source but Craft of Exile's code (package.js); the uniform choice among sources is read from it, not verified in the game for 3.29."
 
   - id: harvest_swap.refused_without_source
     statement: "A swap is refused, and nothing is consumed, when no modifier of the item qualifies as a source."
@@ -92,6 +96,8 @@ rules:
     quote: "Change Element of Resistance Respected Respected"
     patch_verified: "3.29.3.3"
     date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "The wiki table gives the side-lock rule for the resistance swap only; for the damage swap it is taken by analogy, not verified."
 
   - id: harvest_swap.fractured_and_crafted_mods_not_swapped
     statement: "A fractured modifier is not a source (it cannot be changed). APPROXIMATE (ADR-0028) for the crafted ones: an ordinary crafted (bench) modifier is not a source either, because it has no tier to keep; the main chat's choice, no source says."
@@ -100,6 +106,8 @@ rules:
     quote: "permanently locked to the item, being unable to be rerolled or removed"
     patch_verified: "3.29.3.3"
     date_checked: 2026-11-01
+    approximate: true
+    approximate_reason: "That a fractured modifier is no source is documented; that an ordinary crafted (bench) modifier is no source either is the main chat's choice, no source says."
 
   - id: harvest_swap.refused_on_corrupted
     statement: "A corrupted item takes no swap."

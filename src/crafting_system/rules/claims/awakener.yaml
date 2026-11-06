@@ -132,6 +132,8 @@ rules:
     quote: "I only received the frostbite on hit."
     patch_verified: "3.9.2"
     date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "One 2020 Reddit report relayed by the GPT researcher and not opened by me, from before the 3.10 rule, and it does not say which item was the receiver."
 
   - id: awakener.cost
     statement: One use of an Awakener's Orb consumes one Awakener's Orb item; the value maps its price-file name (the item's name in the game data) to the number of items. The orb is drop-restricted, so its price comes from the market.

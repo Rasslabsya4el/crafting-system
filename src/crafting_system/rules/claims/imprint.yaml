@@ -1,7 +1,7 @@
 # Mechanic family: imprint (M-45): the two beast recipes that make an imprint of a magic item or of a rare Talisman, what an imprint restores,
 # when it is refused, and that it is used up and may be held several to an item (ADR-0034, ADR-0060). The eleven claims are the draft claims of
 # the research note of ticket #90 (the three that carry the stamp UNVERIFIED rest on 2014 forum answers relayed by the GPT researcher and on the
-# owner's decision, grill B3), built by ticket #219. The claim `imprint.beast_recipes` holds, as its value, the beast each recipe consumes by
+# owner's decision, grill B3, so they carry approximate: true, #458), built by ticket #219. The claim `imprint.beast_recipes` holds, as its value, the beast each recipe consumes by
 # price-file name.
 rules:
   - id: imprint.eternal_orb_creates
@@ -76,6 +76,8 @@ rules:
     quote: "losing the imprint"
     patch_verified: "1.1.0"  # the registry wants a patch; the source is a 2014 forum answer and the game version is a guess
     date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "Unverified for 3.29: the owner's working choice in grill B3 (#94, answer 4b): \"An imprint is **used up** when it restores, and **several imprints** of one item can be kept.\" The only source is one 2014 forum answer relayed by the GPT researcher, not rechecked for 3.29."
 
   - id: imprint.several_per_item
     statement: "UNVERIFIED by me (relayed by the GPT researcher): an item may carry several imprints of different states, each used once; they share one name. 2014 player answers (not rechecked for 3.29), two sources."
@@ -84,6 +86,8 @@ rules:
     quote: "You can have as many imprints as your wealth allows you to."
     patch_verified: "1.1.0"  # the registry wants a patch; the source is a 2014 forum answer and the game version is a guess
     date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "Unverified for 3.29: the owner's working choice in grill B3 (#94, answer 4b): \"An imprint is **used up** when it restores, and **several imprints** of one item can be kept.\" The only sources are two 2014 forum answers relayed by the GPT researcher, not rechecked for 3.29."
 
   - id: imprint.allflame_copy_not_restorable
     statement: "UNVERIFIED by me (relayed by the GPT researcher): an item made by Allflame crafting in 3.29 cannot be returned to a previous state by an imprint; consistent with the wiki rule that items made from the original cannot use its imprint. Reported 2026-07-30 for 3.29."
@@ -92,3 +96,5 @@ rules:
     quote: "cannot be returned to a previous state via Imprinting"
     patch_verified: "3.29.0"
     date_checked: 2026-10-31
+    approximate: true
+    approximate_reason: "Unverified: one 2026-07-30 forum report relayed by the GPT researcher and not opened by me; the owner's grill B3 answer (#94) does not cover this rule."
