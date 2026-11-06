@@ -30,7 +30,8 @@ from dataclasses import dataclass, replace
 from crafting_system.abstraction import Status, status_of
 from crafting_system.actions import (
     Action,
-    ActionError,
+    NotApplicableError,
+    OutOfScopeError,
     catalog,
     drawable_mod_ids,
     kinds,
@@ -267,7 +268,7 @@ def _change_points(data: GameData, target: Target) -> list[int] | None:
     """The item levels at which the pool of a random draw gains a mod, or None when the pool cannot be built (then every level counts)."""
     try:
         ids = drawable_mod_ids(data, target.start_item.changed(data, item_level=MAX_ITEM_LEVEL))
-    except ActionError:
+    except (NotApplicableError, OutOfScopeError):  # either: no pool to read, so every level counts (nothing is left out)
         return None
     return sorted({data.mods[mod_id].required_level for mod_id in ids})
 

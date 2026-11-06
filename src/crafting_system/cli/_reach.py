@@ -12,6 +12,8 @@ from collections.abc import Callable, Hashable, Mapping
 
 from crafting_system.solver import Action
 
+from ._limits import STATE_LINE, Limit
+
 MAX_TRANSIENT = 400
 
 
@@ -32,6 +34,19 @@ def policy_states[S: Hashable](
                 seen.add(successor)
                 order.append(successor)
     return order
+
+
+def reach_limit[S: Hashable](start: S, policy: Mapping[S, Action[S]], is_goal: Callable[[S], bool]) -> Limit | None:
+    """The limit of a policy whose "reached with chance" is not computed: more than `MAX_TRANSIENT` transient states (C15, V8). None when it is."""
+    transient = sum(1 for state in policy_states(start, policy, is_goal) if not is_goal(state) and state in policy)
+    if transient <= MAX_TRANSIENT:
+        return None
+    return Limit(
+        STATE_LINE,
+        "The chance of reaching each state is not shown",
+        f"the policy has {transient:,} states that can be left and come back to, and the calculation takes at most {MAX_TRANSIENT:,}",
+        "The plan, its cost and its odds are as stated; only that chance is missing.",
+    )
 
 
 def reach_probabilities[S: Hashable](

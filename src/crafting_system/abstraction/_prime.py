@@ -15,7 +15,7 @@ pickling anything that goes out; only the distributions come back. Where there i
 from collections.abc import Iterable
 
 from crafting_system import parallel
-from crafting_system.actions import Action, ActionError, Fixed, Rerolled
+from crafting_system.actions import Action, Fixed, Rerolled
 
 MIN_JOBS = 2  # fewer uncached pools than this are computed by the kernel call itself
 
@@ -58,7 +58,7 @@ def prime(abstraction, requests: Iterable[tuple[object, Action]], *, workers: in
                         jobs.setdefault(("fracture", key), (part, signature))
                 elif signature not in abstraction._cache:
                     jobs.setdefault(("draw", signature), (part, signature))
-        except (ActionError, ValueError):
+        except ValueError:  # a refusal of either family (both are ValueErrors) or a bad request: left to `kernel`, which raises it in its own order
             continue
     if len(jobs) < MIN_JOBS:
         return 0

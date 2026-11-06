@@ -11,8 +11,8 @@ from operator import attrgetter
 from crafting_system.actions import (
     BLOCKING,
     Action,
-    ActionError,
     ActionOutcomes,
+    ConsumesInputsError,
     Fixed,
     Fractured,
     ImprintMove,
@@ -50,6 +50,7 @@ from crafting_system.items import (
 )
 from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
 
+from ._gaps import ModelGaps, Prunings
 from ._goal import Goal, Status
 from ._inputs import input_kernel
 from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
@@ -198,6 +199,8 @@ class Abstraction:
         allow_inputs: bool = True,
     ):
         self.data = data
+        self.gaps = ModelGaps()  # the actions the model had no rule for, written by whoever walks this abstraction (ticket #506)
+        self.prunings = Prunings()  # the offers left out of the states that cannot use them (K13)
         self._reading = reading
         self._allow_inputs = allow_inputs
         goal = goal.resolved(data, base_id, item_level)  # a leaf built by hand with a `min_tier` reads it from the data (#457)
@@ -755,7 +758,7 @@ class Abstraction:
     def reachable(self, starts: Iterable[CompressedState], actions: Iterable[Action]) -> frozenset[CompressedState]:
         """Every state reachable from `starts` by any of `actions`, the starts included.
 
-        An action that refuses a state (`ActionError`) is skipped there.
+        An action that the game refuses at a state, or that the model has no rule for there, is skipped there.
         """
         actions = tuple(actions)
         seen = set(starts)
@@ -765,7 +768,7 @@ class Abstraction:
             for action in actions:
                 try:
                     successors = self.kernel(state, action)
-                except ActionError:
+                except (NotApplicableError, OutOfScopeError):  # the states reachable by the actions that can be applied; a test helper (no caller in `src`)
                     continue
                 for successor in successors:
                     if successor not in seen:
@@ -1188,7 +1191,7 @@ class Abstraction:
         """`_prepare`, refusing an action that consumes other items when `allow_inputs` is False (every kernel goes through here)."""
         prepared = self._prepare(state, action)
         if not self._allow_inputs and action.inputs(self.data, prepared.item):
-            raise OutOfScopeError(
+            raise ConsumesInputsError(
                 "the action consumes other items, and the planner does not price them yet (ticket #212): "
                 "its kernel would count them as free"
             )

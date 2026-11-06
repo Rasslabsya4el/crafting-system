@@ -19,7 +19,7 @@ import time
 import numpy as np
 
 from crafting_system.abstraction import CompressedState
-from crafting_system.actions import ActionError
+from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
 from crafting_system.solver import PackedGraph, lump_policy
 from crafting_system.solver._packed import expand_ranges
@@ -75,7 +75,7 @@ class _Reading:
         abstraction, state = self.plan.abstraction, self.walked.states[i]
         try:
             key = abstraction.kernel_key(state, offer)
-        except ActionError:
+        except (NotApplicableError, OutOfScopeError):  # either: the route has no action here (a gap of the route, and the line says the game refuses it or the walk left it out)
             return None
         for a in range(low, high):
             other = self.walked.offers[int(graph.act_tag[a])].offer.action
@@ -84,7 +84,7 @@ class _Reading:
             try:
                 if abstraction.kernel_key(state, other) == key:
                     return a
-            except ActionError:
+            except (NotApplicableError, OutOfScopeError):  # either: that offer is not a twin here
                 continue
         return None
 

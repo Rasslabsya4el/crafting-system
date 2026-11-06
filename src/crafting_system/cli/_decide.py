@@ -136,6 +136,7 @@ class Decision:
     estimate: Estimate | None = None
     budget: float | None = None  # the seconds the query was decided against; `climb` bounds the time of the levels with it
     why: str = ""  # a refusal: why no coarse level exists (`make_plan` solves such a query exactly on the packed solver, ticket #70)
+    rate_why: str = ""  # the solver's speed could not be measured and `SOLVE_RATE_FALLBACK` stood in for it: why (M2); the choice between exact and approximate used the guess
 
 
 def minutes(seconds: float) -> str:
@@ -176,11 +177,13 @@ def choose(
 ) -> Decision:
     """Exact when the forecast fits `budget` seconds, otherwise the levels that fit, otherwise exact or a refusal.
 
-    `refusal` is the reason no coarse level exists (an action that is not block-invariant); `levels` are the
-    candidates in ladder order, each with its own forecast. No clock is read: the rates are arguments.
+    `refusal` is the reason no coarse level exists (an action that is not block-invariant), or, with no `estimate`, the reason the pilot could
+    not count (`EstimateRefused`, M1: its text goes into the message); `levels` are the candidates in ladder order, each with its own forecast.
+    No clock is read: the rates are arguments.
     """
     if estimate is None:
-        return Decision("exact", message="the size of the exact graph could not be forecast, so it is built as it is")
+        cause = f" ({refusal})" if refusal else ""
+        return Decision("exact", message=f"the size of the exact graph could not be forecast{cause}, so it is built as it is")
     predicted = estimate.seconds(r_kernel, r_solve)
     size = estimate.transitions
     if predicted <= budget and estimate.complete:
@@ -224,6 +227,17 @@ def calibrate_solve_rate(
     clock: Callable[[], float] = time.perf_counter,
 ) -> float:
     """Seconds per edge of `solve`, measured on the first layers of the pilot's own graph (a closed prefix, true weights)."""
+    return measure_solve_rate(abstraction, start, estimate, costs, clock)[0]
+
+
+def measure_solve_rate(
+    abstraction: Abstraction,
+    start: CompressedState,
+    estimate: Estimate,
+    costs: dict[Action, float],
+    clock: Callable[[], float] = time.perf_counter,
+) -> tuple[float, str]:
+    """`calibrate_solve_rate` and, when it had to stand in `SOLVE_RATE_FALLBACK`, why (empty when the rate was measured)."""
     layers = estimate.first_layers(CALIBRATION_EDGES)
     table = {
         state: [
@@ -234,15 +248,15 @@ def calibrate_solve_rate(
     }
     edges = sum(len(action.outcomes) for offered in table.values() for action in offered)
     if edges < 100:
-        return SOLVE_RATE_FALLBACK
+        return SOLVE_RATE_FALLBACK, f"the pilot graph has {edges:,} transitions, too few to time the solver on"
     seen = set(table) | {s for offered in table.values() for action in offered for s, _ in action.outcomes}
     model = TabularModel([state for state in seen if abstraction.is_goal(state)], table)
     began = clock()
     try:
         solve(model, [start])
-    except (ConvergenceError, ValueError):
-        return SOLVE_RATE_FALLBACK
-    return (clock() - began) / edges
+    except (ConvergenceError, ValueError) as failed:
+        return SOLVE_RATE_FALLBACK, f"the solver did not finish on the pilot graph ({failed})"
+    return (clock() - began) / edges, ""
 
 
 def decide(
@@ -261,16 +275,17 @@ def decide(
         estimate = abstraction.estimate(
             [start], actions, clock=clock, limit=ADDING_LIMIT if walked else DEFAULT_LIMIT, seconds=max(budget * PILOT_SHARE, PILOT_FLOOR_SECONDS) if walked else None
         )
-    except EstimateRefused:
-        return choose(None, 0.0, 0.0, budget)
+    except EstimateRefused as refused:
+        return choose(None, 0.0, 0.0, budget, refusal=str(refused))
     rates = rates or Rates()
     r_kernel = estimate.kernel_rate if rates.kernel is None else rates.kernel
     r_solve = rates.solve
+    rate_why = ""
     if r_solve is None:
         r_solve = SOLVE_RATE_CEILING
         if estimate.seconds(r_kernel, r_solve) > budget:
             costs = {p.offer.action: p.cost for p in offered}
-            r_solve = calibrate_solve_rate(abstraction, start, estimate, costs, clock)
+            r_solve, rate_why = measure_solve_rate(abstraction, start, estimate, costs, clock)
     refusal = coarse_refusal(abstraction, actions)
     candidates = []
     if refusal is None and (estimate.seconds(r_kernel, r_solve) > budget or not estimate.complete):
@@ -288,4 +303,4 @@ def decide(
                 if level.kind == "tail":
                     named = replace(level, size=base.level.size, name=f"{level.name} over {base.level.name}")
                     candidates.append(Candidate(named, base.estimate, base.coarsening))
-    return choose(estimate, r_kernel, r_solve, budget, levels=candidates, refusal=refusal)
+    return replace(choose(estimate, r_kernel, r_solve, budget, levels=candidates, refusal=refusal), rate_why=rate_why)

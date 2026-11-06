@@ -30,7 +30,7 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-from crafting_system.actions import ActionError
+from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.config import PRICE_SOURCES, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
@@ -171,7 +171,7 @@ def main(
                 buy_spec=spec, cache_dir=config.cache_dir, target_name=name,
             )  # fmt: skip
             print(f"Route view written to {page}")
-    except (TargetError, DataError, PriceFileNotFound, PlanError, ActionError, ConvergenceError, ValueError, OSError) as error:
+    except (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError) as error:  # the refusals are ValueErrors: named so that the Error: line is known to carry their text
         print(f"Error: {error}", file=sys.stderr)
         return 1
     finally:

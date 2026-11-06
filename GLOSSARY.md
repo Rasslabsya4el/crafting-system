@@ -347,6 +347,10 @@ _Avoid_: plan, strategy
 One thing an answer leaves out and what it still guarantees: a kind of action not offered, actions with no price, an offer proved not needed, a start item counted as free, a percentile the grid could not reach. `Plan.limits` holds them; the text report, the JSON policy and the goal card of the route page ("What this answer leaves out") show the same records. Every limit has a guarantee sentence in player words (OR-13).
 _Avoid_: note, left-out line, dropped action
 
+**Game refusal** and **Model gap**:
+The two ways an action can be unavailable in a state. A game refusal (`NotApplicableError`) is the game saying no: the plan is exact under it and the answer says nothing. A model gap (`OutOfScopeError`) is our model having no rule for that state: the action may be fine in the game, so the answer says it left the action out (`Abstraction.gaps`, the limit kind `model-gap`, ticket #506). `ActionError` is only their common base and is never raised or caught by itself.
+_Avoid_: refusal (alone), unsupported
+
 **Route**:
 A policy read as a person follows it: the main line of actions and where to go on a miss.
 _Avoid_: chain, path

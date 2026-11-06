@@ -13,7 +13,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, ActionError, Axis, Need, Reads, StrandUse, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -465,7 +465,7 @@ def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed:
         return True
     try:
         return bool(limited & drawable_mod_ids(data, start_item))
-    except ActionError:  # a pool the model cannot build: no proof the mod is out of reach, so keep the orb
+    except (NotApplicableError, OutOfScopeError):  # either: a pool that cannot be built is no proof the mod is out of reach, so the orb stays (nothing is left out)
         return True
 
 

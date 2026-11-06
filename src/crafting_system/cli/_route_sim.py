@@ -7,7 +7,7 @@ action, and the simulator uses it. The result is a Monte Carlo mean, p90 and CVa
 a state no rule covers, or where the game refuses the rule's action (a gap of the guide), stops that run, which the report counts as stopped.
 """
 
-from crafting_system.actions import ActionError
+from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.simulator import SimulationReport, Step, simulate
@@ -45,7 +45,7 @@ def route_policy(plan: Plan, route: Route, data: GameData, *, skip_refused: bool
                 priced = offers[rule.do]
                 try:
                     outcomes = memo.setdefault(priced.label, Memoized(priced.offer.action)).outcomes(data, item)
-                except ActionError:
+                except (NotApplicableError, OutOfScopeError):  # either: the rule's action cannot be used on this item, a gap of the route
                     if skip_refused or route.skip_refused:
                         continue
                     return None  # the game refuses the rule's action here: a gap, as in `evaluate_route`

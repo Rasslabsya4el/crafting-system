@@ -22,6 +22,7 @@ What this answer leaves out:
   Not offered, 28 in all: Harvest reforges that favour a mod, Harvest quality enchants, Alchemy Orb, Influenced Exalted Orb, Orb of Dominance, Scouring Orb, Awakener's Orb, Beast influence recipe, Blessed Orb, Recombinators, Catalysts, Eldritch implicit currency, Eldritch Chaos Orb, Eldritch Exalted Orb, Eldritch Annulment Orb, Orb of Conflict, Tempering, Tailoring, Imprint, Restore, Jeweller's Orb, Orb of Fusing, Bench socket count, Bench socket links, Chromatic Orb, Bench socket colours, Quality currency, Re-anoint (methods the planner cannot use yet). The plan is the cheapest among the methods the planner can use.
   Not offered: Vaal Orb (the target takes no corrupted item, so these would only corrupt it). The plan is unaffected: nothing here could be used for this target.
   Memory Strands are not considered: Foulborn Augmentation Orb, Foulborn Regal Orb, Foulborn Exalted Orb (the start item has none, and the planner cannot plan with them yet). The plan makes no use of Memory Strands.
+  A state lists the other mods only as a count per side (the model keeps the mods the target does not ask for by kind, not by name). The odds and costs count every one of them.
 States solved: 786
 
 Policy (S = a state of the item; the start is S1)

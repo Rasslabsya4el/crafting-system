@@ -45,6 +45,7 @@ from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.abstraction import Coarsening, Goal, Wanted
 from crafting_system.prices import PriceEntry
 from crafting_system.risk import Estimate
+from crafting_system.risk._report import GridInfo
 from crafting_system.targets import load_target, parse_target
 from crafting_system.actions import kinds
 
@@ -126,9 +127,10 @@ def test_u1_the_actions_without_a_price_are_limits_grouped_by_what_is_missing(pl
 
 
 def test_g12_a_search_run_whole_past_the_budget_says_so_and_stays_exact():
-    solved = only(make_plan(DATA, load_target(R12, DATA), price_file(), budget=1e-9).limits, "how-solved")
+    limits = make_plan(DATA, load_target(R12, DATA), price_file(), budget=1e-9).limits
+    (solved,) = [limit for limit in of_kind(limits, "how-solved") if limit.what == "The whole search was run"]
 
-    assert solved.what == "The whole search was run" and "no approximate level available" in solved.why
+    assert "no approximate level available" in solved.why
     assert solved.guarantee == "The answer is exact among the methods offered."
 
 
@@ -153,9 +155,10 @@ def test_g20_a_quantile_the_grid_cannot_reach_is_a_limit_and_a_reached_one_is_no
     def estimate(value):
         return Estimate(value, value, value)
 
-    unreached = SimpleNamespace(success_probability=estimate(1.0), p50=estimate(10.0), p90=estimate(float("inf")), cvar=estimate(float("inf")))
-    reached = SimpleNamespace(success_probability=estimate(1.0), p50=estimate(10.0), p90=estimate(20.0), cvar=estimate(30.0))
-    failing = SimpleNamespace(success_probability=estimate(0.5), p50=estimate(float("inf")), p90=estimate(float("inf")), cvar=estimate(float("inf")))
+    grid = GridInfo(0.5, True, 100, 0.0, 0.0)
+    unreached = SimpleNamespace(success_probability=estimate(1.0), p50=estimate(10.0), p90=estimate(float("inf")), cvar=estimate(float("inf")), grid=grid)
+    reached = SimpleNamespace(success_probability=estimate(1.0), p50=estimate(10.0), p90=estimate(20.0), cvar=estimate(30.0), grid=grid)
+    failing = SimpleNamespace(success_probability=estimate(0.5), p50=estimate(float("inf")), p90=estimate(float("inf")), cvar=estimate(float("inf")), grid=grid)
 
     (limit,) = risk_limits(unreached)
     assert limit.what == "Not computed: p90, CVaR" and limit.guarantee == "The success chance and the mean cost are exact."

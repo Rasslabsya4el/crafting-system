@@ -404,3 +404,24 @@ def test_the_planner_offers_the_toy_to_a_target_that_allows_corruption_and_not_t
     }
     assert "Toy Corruption" in labels["allowing"] and "Toy Corruption" not in labels["plain"]
     assert "Chaos Orb" in labels["plain"]
+
+
+def test_k13_a_corrupting_offer_left_out_of_a_state_is_written_so_that_the_answer_can_say_it():
+    from crafting_system.cli._limits import pruning_limits
+
+    start_item = fixture_items()["rare_junk"].changed(TOY_DATA, mods=(_mod(LIFE_1),))  # no resistance
+    toy, restart = _priced(ToyCorruption(), COST, start_item), _restart(start_item)
+    for goal, written in (
+        (Goal((Wanted(RESISTS),), asks_corrupted=True), True),  # asks: offered from the passing state only
+        (Goal((Wanted(RESISTS),), allow_corrupted=True), False),  # allows: offered everywhere, nothing is left out
+    ):
+        ab, failing, model = _model(goal, start_item, toy, restart)
+        model.actions(failing)
+        assert ab.prunings.labels("corrupting") == (("Toy Corruption",) if written else ())
+    ab, failing, model = _model(Goal((Wanted(RESISTS),), asks_corrupted=True), start_item, toy, restart)
+    model.actions(failing)
+
+    (limit,) = pruning_limits(ab.prunings)
+    assert limit.labels == ("Toy Corruption",) and limit.kind == "proved-unneeded"
+    assert limit.why == "a corrupting action ends the craft, so from any other state it could only lose the item"
+    assert limit.guarantee == "The plan is the cheapest among the methods offered. Offering them in the other states would change no cost."

@@ -358,7 +358,7 @@ def keeps_shape(abstraction: Abstraction, state: CompressedState, action: Action
     A pruning that holds the start's flags and fractured mods fixed for an action it bounds needs this
     (#118): `reach_bound` is read at one state, and it holds at another only when the result of the
     action does not move the item to another shape. False when the action fractures a mod or changes
-    the rarity, the corruption or the influences. Raises what the action raises (`ActionError`) when
+    the rarity, the corruption or the influences. Raises what the action raises (`NotApplicableError` or `OutOfScopeError`) when
     it is refused on the item `state` stands for.
     """
     prepared = abstraction._prepared(state, action)

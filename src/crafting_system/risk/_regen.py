@@ -27,7 +27,8 @@ import numpy as np
 from .. import parallel
 from ._budget import BudgetRun, run_budget
 from ._chain import Chain
-from ._fold import fold_free
+from ._fold import FOLD_GAVE_UP, FOLD_LIMIT, fold_free
+from ._gaveup import note
 
 TRACE = None  # a caller that wants to see each step of a long run sets this to a function of one line of text (never set by the library)
 
@@ -141,13 +142,17 @@ def regenerative_runs(
     jobs = [(attempt_pmf, (chain, bins), {"success": success, "max_bins": attempt_bins}) for bins in distinct for success in (True, False)]
     found = run_jobs(jobs)  # the attempt runs share nothing: side by side when workers can be forked
     if any(each is None for each in found):
+        note(FOLD_GAVE_UP.format(FOLD_LIMIT))  # an attempt cut short by `fold_free`; said here as well, since a forked worker's note is not seen
         return None
     runs: list[BudgetRun] = []
     for k in range(len(distinct)):
         (g, _), (f, _) = found[2 * k], found[2 * k + 1]
         chance = float(g.sum())
         missing = max(0.0, 1.0 - chance - float(f.sum()))
-        if chance <= 0.0 or missing / chance > MAX_MISSING or float(f[0]) >= 1.0:
+        if chance <= 0.0 or float(f[0]) >= 1.0:
+            return None
+        if missing / chance > MAX_MISSING:
+            note(f"the attempts cut short hold {missing / chance:.1e} of the chance of success, more than the {MAX_MISSING:.0e} the run attempt by attempt allows")
             return None
         cdf = renewal_cdf(g, f, target, max_bins, allowance)
         runs.append(BudgetRun(cdf, max(0.0, 1.0 - cdf[-1])))

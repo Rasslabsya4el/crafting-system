@@ -21,6 +21,9 @@ The text report and the JSON name every label (nothing left out is hidden, OR-16
 
 A limit that is not about a list has no labels. `kind` is a plain string so that the limits the next step records (a model gap met
 inside a solve, a price's provenance, a constant of the risk run or the solver) are new values of it, not a new type.
+
+The model gaps (ticket #506) are the limits of a refusal that is not the game's: `model_gap_limits` writes what `Abstraction.gaps` holds, and
+`pruning_limits` what `Abstraction.prunings` holds. A game refusal is silent (the plan is exact under it); a model gap never is.
 """
 
 from __future__ import annotations
@@ -40,10 +43,13 @@ FIXED_MOD = "fixed-mod"
 ROLLS = "rolls"
 CRAFTED_MODS = "crafted-mods"
 UNPRICED = "unpriced"
+CONSUMES = "consumes-items"
+MODEL_GAP = "model-gap"
 PROVED = "proved-unneeded"
 START = "start-item"
 SOLVE = "how-solved"
 DISPLAY = "display"
+STATE_LINE = "state-line"
 RISK = "risk"
 
 GROUPS: tuple[tuple[str, str], ...] = (
@@ -58,10 +64,13 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (ROLLS, "Value rerolls without a roll limit"),
     (CRAFTED_MODS, "Removing crafted mods"),
     (UNPRICED, "Actions with no price"),
+    (CONSUMES, "Actions that consume other items"),
+    (MODEL_GAP, "Actions the model has no rule for in some states"),
     (PROVED, "Actions proved not needed"),
     (START, "The start item"),
     (SOLVE, "How the answer was found"),
     (DISPLAY, "What is shown"),
+    (STATE_LINE, "What a state line shows"),
     (RISK, "Percentiles"),
 )
 TITLES = dict(GROUPS)
@@ -226,26 +235,148 @@ def unpriced_limits(dropped: Iterable[tuple[str, Sequence[str]]]) -> tuple[Limit
     )
 
 
+SHOWN_CAUSES = 3  # the causes of the model gaps one limit names; the rest are one more of the same
+
+
+def _states(count: int, blocks: bool = False) -> str:
+    """"3 states", or for a coarse level "3 groups of states" (a block stands for many item states)."""
+    if blocks:
+        return f"{count:,} group of states" if count == 1 else f"{count:,} groups of states"
+    return f"{count:,} state" if count == 1 else f"{count:,} states"
+
+
+def model_gap_limits(gaps: Iterable) -> tuple[Limit, ...]:
+    """The limits of the actions the model had no rule for (K14, G6): the `Gap`s of `Abstraction.gaps`.
+
+    An action that consumes other items (G6) is refused in every state, so its limit names the action; any other gap names the action and the
+    number of states it was left out of, and the first cause of each action. A game refusal is not here: the plan is exact under it.
+    """
+    gaps = tuple(gaps)
+    found: list[Limit] = []
+    consuming = [gap for gap in gaps if gap.consumes_inputs]
+    if consuming:
+        found.append(
+            Limit(
+                CONSUMES,
+                "Not offered",
+                "they consume other items, and the planner does not price those yet, so it would count them as free",
+                labels=tuple(gap.label for gap in consuming),
+                **claim("the actions that consume no other item", "An action that consumes other items could make it cheaper."),
+            )
+        )
+    others = [gap for gap in gaps if not gap.consumes_inputs]
+    if others:
+        causes = tuple(dict.fromkeys(gap.cause for gap in others))
+        shown = causes[:SHOWN_CAUSES] + ((f"{len(causes) - SHOWN_CAUSES} more causes",) if len(causes) > SHOWN_CAUSES else ())
+        found.append(
+            Limit(
+                MODEL_GAP,
+                "Left out where the model has no rule",
+                "the model has no rule for them there, so they are not offered there: {names}",
+                labels=tuple(f"{gap.label} in {_states(gap.states, gap.blocks)}" for gap in others),
+                names=shown,
+                **claim("the actions the model can apply in each state", "An action the model has no rule for could make it cheaper."),
+            )
+        )
+    return tuple(found)
+
+
+def pruning_limits(prunings) -> tuple[Limit, ...]:
+    """The limits of the offers left out of the states that cannot use them (K13): exact, so each says that nothing is lost."""
+    found: list[Limit] = []
+    corrupting = prunings.labels("corrupting")
+    if corrupting:
+        found.append(
+            Limit(
+                PROVED,
+                "Offered only once the rest of the target is met",
+                "a corrupting action ends the craft, so from any other state it could only lose the item",
+                labels=corrupting,
+                **claim("the methods offered", "Offering them in the other states would change no cost."),
+            )
+        )
+    quality = prunings.labels("quality")
+    if quality:
+        found.append(
+            Limit(
+                PROVED,
+                "Offered only once the rest of the target is met",
+                "quality changes no odds, so setting it later costs the same",
+                labels=quality,
+                **claim("the methods offered", "Offering them in the other states would change no cost."),
+            )
+        )
+    return tuple(found)
+
+
+def twins_limit(twins: Sequence[tuple[str, str]]) -> Limit:
+    """The limit of offers left out because a cheaper offer does the same (K15, G17): `twins` are (dropped label, kept label)."""
+    return Limit(
+        PROVED,
+        "Not searched",
+        "same outcome as a cheaper offer",
+        "The answer is exact among the methods offered: a cheaper action does the same.",
+        tuple(dropped for dropped, _ in twins),
+        approximate=f"The plan is {WITHIN_GAP} among the methods offered: a cheaper action does the same.",
+    )
+
+
 def unresolved(risk, estimate) -> bool:
     """Whether a quantile or CVaR is infinite only because the budget grid could not reach it: the odds are 1."""
-    return math.isinf(estimate.value) and risk.success_probability.value >= 1.0
+    return math.isinf(estimate.value) and risk.success_probability.value >= 1.0 and not risk.grid.cause
 
 
 def risk_limits(risk) -> tuple[Limit, ...]:
     """The limit of a risk report whose percentiles the grid could not reach (empty when it reached them all)."""
     if risk is None:
         return ()
+    found: list[Limit] = []
+    if risk.grid.cause in ("subcritical", "improper"):
+        gone = [
+            name
+            for name, estimate in (("mean", risk.mean), ("variance", risk.variance), ("p50", risk.p50), ("p90", risk.p90), ("CVaR", risk.cvar))
+            if math.isinf(estimate.value)
+        ]  # the ones the report leaves infinite: a grid that did run may still have given some
+        found.append(
+            Limit(
+                RISK,
+                f"Not computed: {', '.join(gone)}",
+                "the policy starts more runs of its inputs than it finishes, so the cost of the whole craft has no finite mean"
+                if risk.grid.cause == "subcritical"
+                else "a state the policy reaches cannot finish and its inputs depend on each other in a cycle, so no cost of the whole craft is computed",
+                "Only the bracket around the success chance is certified; no cost is claimed.",
+            )
+        )
+    elif risk.grid.cause == "unordered":
+        found.append(
+            Limit(
+                RISK,
+                "Not computed: p50, p90, CVaR",
+                "the inputs of the policy depend on each other in a cycle, so the cost of a run has no order to follow",
+                "The success chance, the mean cost and the variance are exact.",
+            )
+        )
     cut = [name for name, estimate in (("p50", risk.p50), ("p90", risk.p90), ("CVaR", risk.cvar)) if unresolved(risk, estimate)]
-    if not cut:
-        return ()
-    return (
-        Limit(
-            RISK,
-            f"Not computed: {', '.join(cut)}",
-            "the cost of the whole craft is far above its cheapest step, so the grid that measures percentiles cannot reach them",
-            "The success chance and the mean cost are exact.",
-        ),
-    )
+    if cut:
+        found.append(
+            Limit(
+                RISK,
+                f"Not computed: {', '.join(cut)}",
+                "the cost of the whole craft is far above its cheapest step, so the grid that measures percentiles cannot reach them"
+                + (f"; the faster methods gave up first: {'; '.join(risk.grid.gave_up)}" if risk.grid.gave_up else ""),
+                "The success chance and the mean cost are exact.",
+            )
+        )
+    elif risk.grid.gave_up:
+        found.append(
+            Limit(
+                RISK,
+                "Percentiles by a slower method",
+                "; ".join(risk.grid.gave_up),
+                "Each percentile shown is certified by the method that finished; one it could not reach is marked as not computed.",
+            )
+        )
+    return tuple(found)
 
 
 def with_limits(limits: Sequence[Limit], added: Iterable[Limit], kind: str | None = None) -> tuple[Limit, ...]:

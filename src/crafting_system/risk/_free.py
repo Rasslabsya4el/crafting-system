@@ -30,6 +30,7 @@ from collections.abc import Sequence
 from ._budget import run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain
 from ._fold import fold_free
+from ._gaveup import note
 from ._moments import interval
 
 FREE_TAIL = 1e-9  # the probability with which the free states may pay more than `free_allowance`
@@ -54,7 +55,9 @@ def free_allowance(chain: Chain, free: Sequence[int]) -> tuple[float, int] | Non
     `None` when the paying states cannot be folded away or the count does not settle in `COUNT_BINS`.
     """
     largest = max(chain.action[i].cost for i in free)
-    if len(chain.finishing_states()) - len(free) > PAID_STATES_LIMIT:
+    paying = len(chain.finishing_states()) - len(free)
+    if paying > PAID_STATES_LIMIT:
+        note(f"{paying:,} states pay, more than the {PAID_STATES_LIMIT:,} the count of free actions follows")
         return None
     bins = [0] * len(chain.states)
     for i in free:
@@ -66,7 +69,10 @@ def free_allowance(chain: Chain, free: Sequence[int]) -> tuple[float, int] | Non
         folded.chain, bins, target=1.0 - FREE_TAIL, tail_mass=FREE_TAIL, max_bins=COUNT_BINS, initial=folded.initial, goal_mass=folded.goal_mass
     )
     visits = run.first_reaching(1.0 - FREE_TAIL + run.delta)
-    return None if visits is None else (largest, visits)
+    if visits is None:
+        note(f"the count of free actions does not settle within {COUNT_BINS:,} steps")
+        return None
+    return largest, visits
 
 
 def free_means(

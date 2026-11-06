@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import NoReturn
 
 from crafting_system.abstraction import CompressedState, Status
-from crafting_system.actions import ActionError
+from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
 from crafting_system.items import Rarity, Side, capacity
 from crafting_system.risk import RiskReport
@@ -462,7 +462,7 @@ def _decide(plan: Plan, route: Route, data: GameData, state: CompressedState) ->
         priced = next(offer for offer in plan.offers if offer.label == rule.do)
         try:
             return offer_action(plan.abstraction, priced, state)
-        except ActionError as problem:  # the game refuses it here, or no admitted rule covers it
+        except (NotApplicableError, OutOfScopeError) as problem:  # either: the route's rule cannot be used here, and the line says why
             refusal = f"{rule.do} cannot be used here (rule at line {rule.line}): {problem}"
             if not route.skip_refused:
                 return refusal

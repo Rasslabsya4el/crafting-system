@@ -127,6 +127,25 @@ def test_catalysts_are_not_offered_while_another_requirement_fails_and_are_offer
     assert labels(failing, prune_quality=False) == ["Chaos Orb", "Intrinsic Catalyst"]  # the reference the values are compared with
 
 
+def test_k13_a_catalyst_left_out_of_a_state_is_written_so_that_the_answer_can_say_it():
+    from crafting_system.cli._limits import pruning_limits
+
+    found = ability(actions=[CATALYST, ChaosOrb()])
+    failing = found.compress(amulet(roll(LIFE_1)))
+    only_quality = found.compress(amulet(roll(RESIST_2)))
+    offers = [priced(ChaosOrb(), "Chaos Orb", 1), priced(CATALYST, "Intrinsic Catalyst", 3)]
+
+    chosen_offers(found, offers, only_quality, failing)  # the catalyst is offered: nothing is left out
+    assert found.prunings.labels("quality") == () and pruning_limits(found.prunings) == ()
+    chosen_offers(found, offers, failing, failing, prune_quality=False)  # the reference run prunes nothing
+    assert found.prunings.labels("quality") == ()
+    chosen_offers(found, offers, failing, failing)
+
+    (limit,) = pruning_limits(found.prunings)
+    assert limit.labels == ("Intrinsic Catalyst",) and "quality changes no odds" in limit.why
+    assert limit.guarantee == "The plan is the cheapest among the methods offered. Offering them in the other states would change no cost."
+
+
 def test_a_missing_implicit_or_one_whose_roll_misses_holds_the_catalysts_back_too():
     goal = goal_of(QUALITY_20, RESIST_LEAF, implicits=())
     goal = dataclasses.replace(goal, implicits=(ImplicitWanted(frozenset({"AvoidShockEldritchImplicit2"})),))

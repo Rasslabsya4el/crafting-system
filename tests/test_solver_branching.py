@@ -401,3 +401,18 @@ def test_a_state_whose_repr_fails_does_not_hide_the_convergence_error():
 
     assert raised.value.error_bound == math.inf
     assert "a component of 2 states" in str(raised.value)
+
+
+def test_c31_an_elimination_that_gives_up_leaves_the_sweeps_and_never_a_value_it_did_not_certify(monkeypatch, eliminate_early):
+    """`WORK_LIMIT` stops an elimination (`_evaluate_sparse` returns None). The solve then goes on with sweeps, which certify every value they
+    return or end in `ConvergenceError`: a give-up changes no answer (ticket #506, C31)."""
+    real = _component._evaluate_sparse
+    monkeypatch.setattr(_component, "_evaluate_sparse", lambda bellman, policy, work_limit=5: real(bellman, policy, 5))
+    table = stiff_belt(60)
+
+    with pytest.raises(ConvergenceError):  # 3000 sweeps cannot finish the belt, and the elimination gave up: a refusal, not a guess
+        solve_table(table, [0], direct_solve_limit=64, max_sweeps=3000)
+    gave_up = solve_table(table, [0], direct_solve_limit=64)
+    swept = solve_table(table, [0], direct_solve_limit=0)
+
+    assert gave_up.error_bound <= 1e-8 and gave_up.values[0] == pytest.approx(swept.values[0], rel=1e-9)

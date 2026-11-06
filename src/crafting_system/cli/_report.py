@@ -205,7 +205,7 @@ def _leaf_chance(plan: Plan, share: WeightShare) -> float | None:
     leaf = plan.leaf_labels.index(share.leaf)
     try:
         kernel = plan.abstraction.kernel(plan.start, offer.offer.action)
-    except ValueError:
+    except ValueError:  # a refusal of either family or a kernel that cannot be asked: the chance of one use is left out of the line
         return None
     return float(sum((c for state, c in kernel.items() if state.status[leaf] is Status.PASSING), Fraction(0)))
 
@@ -239,7 +239,16 @@ def interval(estimate: Estimate, divine: float) -> str:
 UNRESOLVED = "not resolved on the grid (the cost scale is far above the cheapest action, ticket #190)"
 
 
+NOT_COMPUTED = {
+    "subcritical": "not computed: the policy starts more runs of its inputs than it finishes, so its cost has no finite mean",
+    "unordered": "not computed: the inputs of the policy depend on each other in a cycle",
+    "improper": "not computed: a state the policy reaches cannot finish, and its inputs depend on each other in a cycle",
+}
+
+
 def _quantile_text(risk, estimate: Estimate, shift: float, divine: float) -> str:
+    if risk.grid.cause and math.isinf(estimate.value):  # its own cause (M7), not the grid's; a quantile the grid did compute is shown
+        return NOT_COMPUTED[risk.grid.cause]
     return UNRESOLVED if unresolved(risk, estimate) else interval(_shifted(estimate, shift), divine)
 
 
