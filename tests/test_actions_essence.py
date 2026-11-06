@@ -257,7 +257,7 @@ def test_rune_dagger_takes_the_dagger_mod_and_warstaff_the_staff_mod():
     for item_class, expected in (("Rune Dagger", "LocalAddedColdDamage1"), ("Warstaff", None)):
         base = dataclasses.replace(sword, item_class=item_class)
         data = dataclasses.replace(DATA, base_items={**DATA.base_items, sword.id: base})
-        item = dataclasses.replace(amulet(rarity=Rarity.NORMAL), base_id=sword.id)
+        item = dataclasses.replace(amulet(rarity=Rarity.NORMAL), base_id=sword.id, implicits=())  # the amulet's implicit is not the sword's
         if expected is None:
             staff = data.essences["Metadata/Items/Currency/CurrencyEssenceHatred1"].mod_for("Staff")
             expected = staff

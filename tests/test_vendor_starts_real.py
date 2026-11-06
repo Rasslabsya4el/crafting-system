@@ -246,7 +246,7 @@ def test_the_real_fire_ladder_is_t3_at_the_wiki_cap_and_t2_at_the_coe_cap(data):
 
     (candidate,) = [each for each in found.candidates if each.recipe == "weapon_fire"]
     assert candidate.key == "vendor:weapon_fire:9" and candidate.reading_values == ("coe",)
-    assert candidate.item.mods[0].mod_id == "LocalAddedFireDamage9" and candidate.item.mods[0].tier == 2
+    assert candidate.item.mods[0].mod_id == "LocalAddedFireDamage9" and tier_table(data, candidate.item.base_id)["LocalAddedFireDamage9"] == 2
     assert [(each.recipe, each.reason, each.reading_values) for each in found.refused if each.recipe == "weapon_fire"] == [
         ("weapon_fire", CAP_BELOW_ASKED, ("wiki",))
     ]

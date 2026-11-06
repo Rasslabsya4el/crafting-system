@@ -8,7 +8,6 @@ start_item:
   rarity: rare
   mods:
     - mod: LightningResist2
-      tier: 7
       values: [14]
       fractured: true
 start: bought

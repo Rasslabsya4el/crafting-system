@@ -50,7 +50,6 @@ from bloodstained_support import (
     plain,
     pool_weights,
     starts,
-    unstored_of,
 )
 from test_actions_fossil import roll
 
@@ -66,7 +65,7 @@ from crafting_system.actions import (
 )
 from crafting_system.actions.bloodstained import BloodstainedOutcomes, ImplicitDraw
 from crafting_system.cli._offers import offers_for
-from crafting_system.items import ImplicitMod, Influence
+from crafting_system.items import ImplicitMod, Influence, Item, Rarity
 
 FIRE = Wanted(frozenset({"FireA", "FireB"}), min_tier=1)
 LIFE = Wanted(frozenset({"LifeA", "LifeB"}))
@@ -87,6 +86,7 @@ SETS = [
     ("Opulent", "Gilded"),
 ]
 STARTS = list(starts())
+REACHABLE = [start for start in STARTS if start != "base-and-eldritch"]  # no game route holds a base implicit beside an Eldritch one (an Ember replaces it, #484): the state cannot tell it apart
 
 
 def the_plain_reroll(others: tuple[str, ...]) -> Action:
@@ -119,7 +119,7 @@ def implicit_of(item, mod_id: str) -> ImplicitMod:
 
 def the_cases(others: tuple[str, ...], start: str):
     item = starts()[start]
-    return implicit_cases([entry.mod_id for entry in item.implicits], pool_weights(item.item_level), "Gilded" in others, unstored_of(item))
+    return implicit_cases([entry.mod_id for entry in item.implicits], pool_weights(item.item_level), "Gilded" in others)
 
 
 @cache
@@ -138,7 +138,7 @@ def enumerated(others: tuple[str, ...], start: str):
 # --- Done when 1: layer 1 -------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("start", STARTS)
+@pytest.mark.parametrize("start", REACHABLE)
 @pytest.mark.parametrize("others", SETS, ids=lambda others: "+".join(("Bloodstained", *others)))
 def test_the_kernel_equals_the_brute_force_of_the_fossil_times_the_implicit_cases(others, start):
     """Layer 1. The compressed state keeps no corrupted implicit (ADR-0036), so the drawn mod collapses in it; what the draw leaves of the
@@ -237,7 +237,7 @@ def test_the_cases_of_the_draw_are_the_hand_cases(start, replaces_all):
     item = starts()[start]
     draw = draw_of(start, replaces_all)
     expected = Counter()
-    for chance, ids in implicit_cases([e.mod_id for e in item.implicits], pool_weights(item.item_level), replaces_all, unstored_of(item)):
+    for chance, ids in implicit_cases([e.mod_id for e in item.implicits], pool_weights(item.item_level), replaces_all):
         expected[ids] += chance
 
     got = Counter()
@@ -275,18 +275,22 @@ def test_the_base_implicit_is_replaced_like_any_other():
     assert outcomes.chance_all([BASE_IMPLICIT, "EldritchEaterImplicit2"]) == 0  # one of the two goes
 
 
-def test_a_base_implicit_the_item_does_not_store_is_a_candidate_for_the_replacement_all_the_same():
-    """`Item` stores an implicit only when given one, but the game's boots have the base implicit: the Eldritch one goes with chance 1/2, not 1."""
-    item = starts()["unstored-base-implicit"]
-    assert [entry.mod_id for entry in item.implicits] == ["EldritchEaterImplicit2"] and unstored_of(item) == [BASE_IMPLICIT]
+def test_an_item_whose_base_implicit_was_replaced_has_the_eldritch_one_alone_to_lose():
+    """#484: an item lists every implicit it holds. Boots whose base implicit an Ember replaced list the Eater one alone, so it is the one that goes."""
+    item = starts()["replaced-base-implicit"]
+    assert [entry.mod_id for entry in item.implicits] == ["EldritchEaterImplicit2"]
+    assert DATA.base_items[item.base_id].implicits == (BASE_IMPLICIT,)
 
     outcomes = bloodstained().outcomes(DATA, item)
-    assert outcomes.chance_all(["EldritchEaterImplicit2"]) == Fraction(1, 2)
-    assert outcomes.chance_all([BASE_IMPLICIT]) == 0  # not on the finished item: it is not stored, and it is not drawn
-    assert bloodstained("Gilded").outcomes(DATA, item).chance_all(["EldritchEaterImplicit2"]) == 0
-    only = starts()["none"]  # a base with no implicit of its own: nothing to replace
-    assert ImplicitDraw.for_item(DATA, dataclasses.replace(only, base_id=IMPLICIT_BOOTS), False).unstored == 1
-    assert ImplicitDraw.for_item(DATA, only, False).unstored == 0
+    assert outcomes.chance_all(["EldritchEaterImplicit2"]) == 0  # the only candidate goes, with chance 1
+    assert outcomes.chance_all([BASE_IMPLICIT]) == 0  # and the base implicit does not come back
+    assert {case.kept for case in draw_of("replaced-base-implicit").cases} == {()}
+
+
+def test_a_fresh_item_of_a_base_with_an_implicit_loses_that_one():
+    fresh = Item.build(DATA, base_id=IMPLICIT_BOOTS, item_level=LEVEL, rarity=Rarity.RARE)
+    assert [entry.mod_id for entry in fresh.implicits] == [BASE_IMPLICIT]  # Item.build carries the base's own
+    assert {case.kept for case in ImplicitDraw.for_item(DATA, fresh, False).cases} == {()}
 
 
 def test_the_pool_is_cut_at_the_item_level():

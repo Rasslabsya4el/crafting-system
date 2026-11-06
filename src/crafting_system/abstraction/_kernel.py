@@ -1176,7 +1176,7 @@ class Abstraction:
         for side, held in zip(EldritchSide, state.implicits):  # the pair is in the order of EldritchSide: Searing Exarch, then Eater of Worlds
             if held.grade:
                 replaced = True
-                mod = self._implicit_mod(side, held.grade, held.contribution)
+                mod = self._implicit_mod(side, held.grade, held.contribution, held.line)
                 implicits.append(ImplicitMod(mod.id, held.grade, self._roll_of(mod, held.grade, held.contribution)))
         for mod_id, held in zip(self._base_named, state.implicits[2:]):
             if any(held.contribution):  # all ABSENT: the item does not store it

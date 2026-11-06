@@ -45,7 +45,7 @@ def target_of(**fields) -> Target:
 
 
 def test_an_item_without_implicits_quality_or_offer_has_the_card_it_had_before():
-    card = plain_card(build())
+    card = plain_card(build(), rolled=False)  # a card that is not rolled shows the range of the implicit the item carries
 
     assert card == ItemCard(
         name="Heavy Belt",
@@ -58,8 +58,12 @@ def test_an_item_without_implicits_quality_or_offer_has_the_card_it_had_before()
     assert card.offer == ()
 
 
+def test_a_rolled_card_shows_the_low_end_a_fresh_belt_carries_its_implicit_at():
+    assert plain_card(build()).implicits == (Slot("+25 to Strength", "implicit"),)  # #484: the item holds it at the low end of (25-35)
+
+
 def test_the_html_of_such_a_card_has_the_plain_implicit_line_and_no_offer_block():
-    html = _item(plain_card(build()))
+    html = _item(plain_card(build(), rolled=False))
 
     assert f'<div class="sd">Implicit</div><div class="s i">{STRENGTH_RANGE}</div><div class="sd">Prefixes</div>' in html
     assert "Unveil offer" not in html and "catalyst" not in html
@@ -69,20 +73,17 @@ def test_the_html_of_such_a_card_has_the_plain_implicit_line_and_no_offer_block(
 
 
 def test_an_eldritch_implicit_has_its_value_filled_in_its_grade_and_its_side():
-    item = build(implicits=(ImplicitMod("AvoidShockEldritchImplicit2", 2, (37,)),))
+    item = build(implicits=(ImplicitMod("AvoidShockEldritchImplicit2", 2, (37,)),))  # the Eldritch implicit took the base implicit's place
 
     card = plain_card(item)
 
-    assert card.implicits == (
-        Slot(STRENGTH_RANGE, "implicit"),
-        Slot("37% chance to Avoid being Shocked", "implicit", ("searing exarch",), "grade 2 (Greater)"),
-    )
+    assert card.implicits == (Slot("37% chance to Avoid being Shocked", "implicit", ("searing exarch",), "grade 2 (Greater)"),)
 
 
 def test_an_eater_of_worlds_implicit_names_its_side():
     item = build(implicits=(ImplicitMod("ChanceToShockEldritchImplicit2", 2, (10,)),))
 
-    (_, eldritch) = plain_card(item).implicits
+    (eldritch,) = plain_card(item).implicits
 
     assert eldritch == Slot("10% chance to Shock", "implicit", ("eater of worlds",), "grade 2 (Greater)")
 
@@ -105,7 +106,7 @@ def test_a_stored_base_implicit_beside_an_eldritch_one_does_not_repeat_the_base_
 def test_a_card_that_is_not_rolled_still_shows_the_rolled_value_of_a_stored_implicit_with_its_grade():
     item = build(implicits=(ImplicitMod("AvoidShockEldritchImplicit2", 2, (37,)),))
 
-    (_, eldritch) = plain_card(item, rolled=False).implicits
+    (eldritch,) = plain_card(item, rolled=False).implicits
 
     assert eldritch.text == "37% chance to Avoid being Shocked" and eldritch.note == "grade 2 (Greater)"
 

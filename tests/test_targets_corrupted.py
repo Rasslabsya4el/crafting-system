@@ -434,14 +434,14 @@ def test_the_locus_replaces_two_so_one_eldritch_implicit_and_one_corrupted_one_n
 
 
 def test_a_target_file_without_the_keys_parses_as_before():
-    text = "implicits:\n  - stat: '%s'\nstart_item:\n  rarity: rare\n  mods:\n    - mod: ColdResist1\n      tier: 1\n      values: [8]\n" % ALL_RES
+    text = "implicits:\n  - stat: '%s'\nstart_item:\n  rarity: rare\n  mods:\n    - mod: ColdResist1\n      values: [8]\n" % ALL_RES
     target = parse(text)
 
     assert target.allow_corrupted is False and not target.asks_corrupted and not target.takes_corrupted
     assert [wish.corrupted for wish in target.implicits] == [False]
     assert target.start_item.corrupted is False
     assert target.implicits[0].mod_ids == {"RingResistImplicit"}
-    assert not target.is_met_by(target.start_item)  # an ordinary target still reads the same
+    assert target.is_met_by(target.start_item)  # the ring carries the implicit the file asks for (#484: an item carries its base's implicits)
 
 
 def test_the_corrupting_kind_names_are_the_ones_the_catalog_registers():

@@ -11,6 +11,9 @@ resources, declarations, twin keys, refusals, every component of the outcomes wi
   Hollow, Fractured, Sanctified, Opulent, Faceted and Gilded Fossils among them), components and pools only. It needs the cached dump
   and skips without it. `REAL_EXPECTED` was computed on the source of `main` just before this change; a new data pin moves it.
 
+Both moved once with ticket #484, and only because the text writes the items: an `ExplicitMod` has no `tier` field any more and an item
+carries the implicits of its base. No pool, weight, chance or kernel changed; the values before were 320bde1c... and 27f9ecdf....
+
 Neither moves unless an ordinary fossil set changes. If one fails after a deliberate change, work the new value out with
 `python tests/fossil_digest.py` and say in the ticket why the answer of an ordinary set moved.
 """
@@ -18,9 +21,9 @@ Neither moves unless an ordinary fossil set changes. If one fails after a delibe
 from abstraction_support import real_game_data
 from fossil_digest import digest, real_digest
 
-EXPECTED = "320bde1cfcd37649b6dfb03fb282a4187aad2d5deee7cb80ea21146b30724c71"
+EXPECTED = "27f035e9794b130db1785278064f137af2da332c7ee788e3cceb2db380754f88"
 PAIRS = 319
-REAL_EXPECTED = "27f9ecdf88b56413595ea03343033f3aff60673f33d16e2a6db433a1aa40b26d"
+REAL_EXPECTED = "466e83b64d5935ee8826e6c1488c7d7fe2be4bd566e2e37431c093a00269e305"
 REAL_PAIRS = 44
 
 

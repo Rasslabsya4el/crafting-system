@@ -246,7 +246,19 @@ def test_the_scan_sees_a_second_copy_when_there_is_one():
 
 def test_the_judgement_path_has_no_default_tier():
     """No `.get(..., 1)` and no literal tier 1 where a mod is judged against a leaf (T4, T14, T15, T16, T23 of the inventory)."""
-    default = re.compile(r"\.get\([^()]*,\s*1\)|BENCH_TIER|CRAFTED_TIER|ELEVATED_TIER")
+    default = re.compile(r"\.get\([^()]*,\s*1\)|\b(?:BENCH|CRAFTED|ELEVATED)_TIER\b")
     texts = {name: (SRC / name).read_text(encoding="utf-8") for name in JUDGEMENT_PATH}
 
     assert {name: default.findall(text) for name, text in texts.items() if default.search(text)} == {}
+
+
+def test_no_module_of_src_writes_a_default_tier_on_a_mod():
+    """Ticket #484: the constants that gave a made mod a tier (bench, aspect, Elevated) and every `ExplicitMod(..., tier, ...)` are gone."""
+    constant = re.compile(r"\b(?:BENCH|CRAFTED|ELEVATED)_TIER\b")
+    written = re.compile(r"ExplicitMod\([^()]*\btiers?\b")
+    found = []
+    for path in sorted(SRC.rglob("*.py")):
+        text = path.read_text(encoding="utf-8")
+        found += [f"{path.relative_to(SRC).as_posix()}: {hit}" for hit in constant.findall(text) + written.findall(text)]
+
+    assert found == []

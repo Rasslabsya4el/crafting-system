@@ -34,7 +34,6 @@
       {
         "_type": "ExplicitMod",
         "mod_id": "IncreasedLife1",
-        "tier": 3,
         "values": [
           12
         ],

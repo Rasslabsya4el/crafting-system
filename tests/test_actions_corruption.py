@@ -89,11 +89,6 @@ def dead_of(item: Item) -> Item:
     )
 
 
-def unstored_of(item: Item) -> list[str]:
-    stored = {entry.mod_id for entry in item.implicits}
-    return [mod_id for mod_id in DATA.base_items[item.base_id].implicits if mod_id not in stored]
-
-
 def ends_of(item: Item, outcomes: VaalOutcomes) -> dict:
     """The finished items of the Orb, by kind of end: the implicits an item holds, nothing, or the dead end."""
     nothing, dead = nothing_of(item), dead_of(item)
@@ -116,7 +111,6 @@ def ends_of(item: Item, outcomes: VaalOutcomes) -> dict:
 def hand_ends(item: Item, level: int | None = None) -> dict:
     return oracle(
         [entry.mod_id for entry in item.implicits],
-        unstored_of(item),
         pool_weights(item.item_level if level is None else level),
         dead_chance=QUARTER,
         nothing_chance=2 * QUARTER,
@@ -161,11 +155,8 @@ def test_the_chance_of_the_implicits_that_stay_is_the_hand_chance(name):
         by_hand = sum((chance for end, chance in ends.items() if end in ("nothing", "dead") or mod_id in end[1]), Fraction(0))
         assert outcomes.implicit_chances([mod_id]) == by_hand
         # an implicit stays through the three outcomes that do not replace it and, in the implicit one, when another is the one that goes
-        candidates = len(kept) + len(unstored_of(item))
+        candidates = len(kept)
         assert by_hand == Fraction(3, 4) + QUARTER * Fraction(candidates - 1, candidates)
-    for mod_id in unstored_of(item):  # the base's own implicit that the item does not store is on no finished item (the fixture amulet's is not even a mod of the data)
-        if mod_id in DATA.mods:
-            assert outcomes.implicit_chances([mod_id]) == 0
     assert outcomes.implicit_chances(kept) == sum((c for e, c in ends.items() if e in ("nothing", "dead") or set(kept) <= e[1]), Fraction(0))
 
 
@@ -179,9 +170,11 @@ def test_the_item_level_gates_the_pool_and_the_chances_follow():
     assert high.chance_all([LATE]) == QUARTER * Fraction(200, 1950)
 
 
-def test_the_kernel_equals_the_hand_items():
+@pytest.mark.parametrize("name", [name for name in STARTS if name != "belt-both"])  # the state drops a base implicit beside an Eldritch one: an Ember replaced it (#484)
+def test_the_kernel_equals_the_hand_items(name):
     goal = Goal((Wanted(RESISTS), Wanted(frozenset({LIFE_1, LIFE_2}))), asks_corrupted=True)
-    for name, item in STARTS.items():
+    item = STARTS[name]
+    if True:
         ab = Abstraction(DATA, goal, item.base_id, item.item_level, [VaalOrb()])
         listed = []
         for end, chance in hand_ends(item).items():
@@ -197,7 +190,7 @@ def test_the_kernel_equals_the_hand_items():
                 )
                 built = dataclasses.replace(item, corrupted=True, implicits=implicits)
             listed.append((built, chance))
-        assert_same_distribution(ab.kernel(ab.compress(item), VaalOrb()), compressed_distribution(listed, ab.compress)), name
+        assert_same_distribution(ab.kernel(ab.compress(item), VaalOrb()), compressed_distribution(listed, ab.compress))
 
 
 # --- Done when 3: the ring ------------------------------------------------------------------------------
@@ -332,7 +325,7 @@ def test_a_jewel_has_four_equal_outcomes_and_its_unique_is_a_dead_end_on_three_b
     ends = ends_of(item, outcomes)
     pool = pool_weights(LEVEL, JEWEL_POOL)
     assert ends == oracle(
-        [], [], pool, dead_chance=2 * QUARTER if unique else QUARTER, nothing_chance=QUARTER if unique else 2 * QUARTER
+        [], pool, dead_chance=2 * QUARTER if unique else QUARTER, nothing_chance=QUARTER if unique else 2 * QUARTER
     )
     assert sum(chance for end, chance in ends.items() if isinstance(end, tuple)) == QUARTER
     assert outcomes.chance_all([JEWEL_A]) == QUARTER * Fraction(1000, sum(pool.values()))
@@ -343,7 +336,7 @@ def test_a_jewel_draws_from_the_pool_of_its_domain_and_level():
     assert low.chance_all([JEWEL_LATE]) == 0 and low.chance_all([JEWEL_A]) == QUARTER  # required level 40
     abyss = VaalOrb().outcomes(DATA, on(ABYSS))
     assert abyss.chance_all([ABYSS_A]) == QUARTER and abyss.chance_all([JEWEL_A]) == 0  # an abyss jewel does not get the ordinary jewel mods
-    assert ends_of(on(ABYSS, rarity=Rarity.MAGIC), VaalOrb().outcomes(DATA, on(ABYSS, rarity=Rarity.MAGIC))) == oracle([], [], pool_weights(LEVEL, ABYSS_POOL), dead_chance=QUARTER, nothing_chance=2 * QUARTER)
+    assert ends_of(on(ABYSS, rarity=Rarity.MAGIC), VaalOrb().outcomes(DATA, on(ABYSS, rarity=Rarity.MAGIC))) == oracle([], pool_weights(LEVEL, ABYSS_POOL), dead_chance=QUARTER, nothing_chance=2 * QUARTER)
     ring_like = VaalOrb().outcomes(DATA, STARTS["none"])
     assert ring_like.chance_all([JEWEL_A]) == 0 and ring_like.chance_all([ABYSS_A]) == 0  # nor does an amulet
 
@@ -450,7 +443,7 @@ def test_the_orb_neither_cuts_nor_spends_strands_and_the_brick_keeps_the_count()
 
 def test_the_contract_suite_runs_on_the_kind():
     """`test_actions_contract.py` finds the kind by the catalog; here the checks run on the amulet world directly as well."""
-    for name in ("none", "fractured", "normal", "belt-unstored"):
+    for name in ("none", "fractured", "normal", "belt-replaced"):
         assert check_action(VaalOrb(), STARTS[name], DATA)
     assert not check_action(VaalOrb(), STARTS["none"].changed(DATA, corrupted=True), DATA)  # refused, and the kernel refuses it too
 

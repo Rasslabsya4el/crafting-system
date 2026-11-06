@@ -112,14 +112,15 @@ def base_implicit() -> ImplicitMod:
 
 
 def starts() -> dict[str, Item]:
-    """Rare items with no implicit, one, two, a base implicit stored or not, a fractured mod, a normal and a magic item."""
+    """Rare items with no implicit listed, one, two, a base implicit listed with an Eater one or replaced by it, a fractured mod, a normal and a magic item."""
     junk = (_roll(RESIST_2), _roll(LIFE_1))
     return {
         "none": amulet(*junk),
         "one": on(BOOTS, *junk, implicits=(exarch(),)),
         "two": on(BOOTS, *junk, implicits=(exarch(), eater())),
-        "belt-stored": on(BELT, *junk, implicits=(base_implicit(), eater())),
-        "belt-unstored": on(BELT, *junk, implicits=(eater(),)),
+        "belt-stored": on(BELT, *junk, implicits=(base_implicit(),)),  # a belt as it is bought: its base implicit
+        "belt-both": on(BELT, *junk, implicits=(base_implicit(), eater())),  # the model allows it, no game route makes it (an Ember replaces the base implicit)
+        "belt-replaced": on(BELT, *junk, implicits=(eater(),)),  # the base implicit went to an Ember (#484): the item lists the Eater one alone
         "fractured": amulet(_roll(RESIST_2, fractured=True), _roll(LIFE_1), _roll(MANA_1)),
         "normal": amulet(rarity=Rarity.NORMAL),
         "magic": amulet(_roll(LIFE_1), rarity=Rarity.MAGIC),
@@ -131,15 +132,14 @@ def pool_weights(level: int = LEVEL, pool: dict = POOL) -> dict[str, int]:
     return {mod_id: weight for mod_id, (weight, required, *_) in pool.items() if required <= level}
 
 
-def oracle(held: list[str], unstored: list[str], pool: dict[str, int], *, dead_chance: Fraction, nothing_chance: Fraction):
+def oracle(held: list[str], pool: dict[str, int], *, dead_chance: Fraction, nothing_chance: Fraction):
     """Every end of one Vaal Orb by hand: a dict from the end to its chance.
 
-    An end is `("implicit", frozenset of the implicit ids the item holds)`, `"nothing"` or `"dead"`. The game's item has the `held` implicits it
-    stores and the `unstored` implicits of its base; one of them, chosen uniformly, is replaced by the drawn mod, and an item with none gains it. An unstored
-    implicit is on no finished item. The four outcomes are equal; the caller gives the chances of the dead end and of nothing (they differ by base).
+    An end is `("implicit", frozenset of the implicit ids the item holds)`, `"nothing"` or `"dead"`. The item has the `held` implicits it
+    lists, the base's own included (#484); one of them, chosen uniformly, is replaced by the drawn mod, and an item with none gains it.
+    The four outcomes are equal; the caller gives the chances of the dead end and of nothing (they differ by base).
     """
-    candidates = [*held, *unstored]
-    kept = [(Fraction(1), list(held))] if not candidates else [(Fraction(1, len(candidates)), [i for i in held if i != gone]) for gone in candidates]
+    kept = [(Fraction(1), list(held))] if not held else [(Fraction(1, len(held)), [i for i in held if i != gone]) for gone in held]
     whole = sum(pool.values())
     ends: dict = {}
     for stay, left in kept:

@@ -87,7 +87,7 @@ def test_an_at_least_group_takes_the_k_th_lowest_of_its_members():
 
 
 def test_a_requirement_the_start_item_meets_asks_no_level_but_its_mods_need_their_own():
-    start = "start_item:\n  rarity: rare\n  mods:\n    - mod: LightningResist5\n      tier: 4\n      values: [30]\n      fractured: true\n"
+    start = "start_item:\n  rarity: rare\n  mods:\n    - mod: LightningResist5\n      values: [30]\n      fractured: true\n"
 
     found = floor("family: LightningResistance\n  min_tier: any", tail=start)
 

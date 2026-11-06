@@ -74,7 +74,6 @@ start_item:
   memory_strands: 60
   mods:
     - mod: AllAttributes4
-      tier: 1
       values: [14]
       fractured: true
 

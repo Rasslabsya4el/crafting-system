@@ -58,13 +58,20 @@ DATA = dataclasses.replace(
 
 
 def belt(value: int | None, *mods, **fields) -> Item:
-    implicits = () if value is None else (ImplicitMod(STRENGTH, 0, (value,)),)
-    return Item.build(DATA, base_id=BELT, item_level=84, rarity=Rarity.RARE, mods=mods, implicits=implicits, **fields)
+    """A rare Heavy Belt. `value` None: built as it is bought, carrying its base implicit at the low end, 25 (#484, #449)."""
+    implicits = {} if value is None else {"implicits": (ImplicitMod(STRENGTH, 0, (value,)),)}
+    return Item.build(DATA, base_id=BELT, item_level=84, rarity=Rarity.RARE, mods=mods, **implicits, **fields)
+
+
+def replaced_belt(*mods, **fields) -> Item:
+    """A belt whose base implicit a replacer took (it lists none): the implicit is not there, for the goal or for the Blessed Orb."""
+    return Item.build(DATA, base_id=BELT, item_level=84, rarity=Rarity.RARE, mods=mods, implicits=(), **fields)
 
 
 def ring(first: int | None = None, second: int = 5, *mods, **fields) -> Item:
-    implicits = () if first is None else (ImplicitMod(TWO_STAT, 0, (first, second)),)
-    return Item.build(DATA, base_id=RING, item_level=84, rarity=Rarity.RARE, mods=mods, implicits=implicits, **fields)
+    """A rare ring with two base implicits. `first` None: built as it is bought, with both at the low end of their ranges."""
+    implicits = {} if first is None else {"implicits": (ImplicitMod(TWO_STAT, 0, (first, second)),)}
+    return Item.build(DATA, base_id=RING, item_level=84, rarity=Rarity.RARE, mods=mods, **implicits, **fields)
 
 
 def want(*mod_ids: str, **limits) -> ImplicitWanted:
@@ -93,7 +100,8 @@ def test_a_state_holds_what_the_roll_of_a_base_implicit_gives_each_requirement()
     assert entries(found.compress(belt(25))) == [(0, (BELOW, BELOW))]
     assert entries(found.compress(belt(30))) == [(0, (PASSING, BELOW))]
     assert entries(found.compress(belt(35))) == [(0, (PASSING, PASSING))]
-    assert entries(found.compress(belt(None))) == [(0, (ABSENT, ABSENT))]  # the item does not store it: it gives nothing
+    assert entries(found.compress(belt(None))) == entries(found.compress(belt(25))) == [(0, (BELOW, BELOW))]  # carried at the low end
+    assert entries(found.compress(replaced_belt())) == [(0, (ABSENT, ABSENT))]  # a replacer took it: it gives nothing
     assert found.compress(belt(31)) == found.compress(belt(33))  # two rolls no requirement tells apart are one state
     assert found.compress(belt(31)) != found.compress(belt(34))
     assert not found.is_goal(found.compress(belt(30)))
@@ -122,7 +130,8 @@ def test_the_state_of_an_implicit_is_rebuilt_into_an_item_that_holds_a_roll_that
         rebuilt = found._item_of(state, False)[0]  # what an action is given in place of the state
         assert found.compress(rebuilt) == state
     assert found._item_of(found.compress(belt(30)), False)[0].implicits == (ImplicitMod(STRENGTH, 0, (30,)),)  # the lowest roll that gives it
-    assert found._item_of(found.compress(belt(None)), False)[0].implicits == ()
+    assert found._item_of(found.compress(belt(None)), False)[0].implicits == (ImplicitMod(STRENGTH, 0, (25,)),)
+    assert found._item_of(found.compress(replaced_belt()), False)[0].implicits == ()  # it does not come back
 
 
 # --- the Blessed Orb ----------------------------------------------------------------------------------------------------
@@ -266,9 +275,9 @@ def eldritch_starts() -> list[Item]:
     return [
         boots(roll(LIFE), implicits=(exarch(3), eater(2))),
         boots(roll(LIFE), roll(FIRE), implicits=(exarch(4), eater(1))),
-        boots(roll(LIFE), implicits=()),
+        boots(roll(LIFE), implicits=(base_roll(BASE_IMPLICIT, (4,)),)),  # no start lists none: an item carries its base implicit until a replacer takes its place (#484)
         boots(roll(LIFE), implicits=(base_roll(BASE_IMPLICIT, (3,)),)),
-        boots(roll(LIFE), implicits=(base_roll(BASE_IMPLICIT, (4,)), eater(2))),
+        boots(roll(LIFE), implicits=(eater(2),)),  # the base implicit went to an Ember (#484)
     ]
 
 

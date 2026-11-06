@@ -516,7 +516,7 @@ def test_unmet_lists_requirements_then_implicits_then_quality():
           min_percent: 20
         """
     )
-    nothing = make()
+    nothing = make(implicits=())  # a belt whose base implicit a replacer took (#484): a fresh belt carries it
     only_strength = holding(implicit("StrengthImplicitBelt1"), quality=Quality(CatalystType.INTRINSIC, 20))
 
     assert target.unmet(nothing) == (*target.requirements, *target.implicits, target.quality)

@@ -145,12 +145,19 @@ def test_only_the_implicit_values_change_the_explicit_mods_and_the_rest_stay():
     assert outcomes.fractures is False
 
 
-def test_an_item_built_without_implicits_stores_the_ranged_base_implicits_rolled_and_not_the_fixed_one():
-    given = _item(RING)
-    assert given.implicits == ()
+def test_an_item_built_without_implicits_carries_the_base_implicits_and_rerolls_only_the_ranged_one():
+    given = _item(RING)  # ticket #484: an item carries every implicit of its base, at the low end of its range
+    assert [(entry.mod_id, entry.values) for entry in given.implicits] == [(FIXED, (3,)), (TWO_STAT, (1, 5))]
     ((_, result),) = BlessedOrb().outcomes(DATA, given).results
-    assert [entry.mod_id for entry in result.implicits] == [TWO_STAT]  # the fixed implicit has no range: not rerolled, not stored
+    assert [entry.mod_id for entry in result.implicits] == [FIXED, TWO_STAT]  # the fixed implicit has no range: kept as it is
+    assert BlessedOrb().outcomes(DATA, given).rerolled == (TWO_STAT,)
     assert held(BlessedOrb().outcomes(DATA, given).sample(random.Random(3)), TWO_STAT).grade == 0
+
+
+def test_an_item_whose_base_implicit_was_replaced_has_none_of_it_to_reroll():
+    replaced = _item(RING, implicits=())
+    with pytest.raises(NotApplicableError, match="no implicit with a range"):
+        BlessedOrb().outcomes(DATA, replaced)
 
 
 def test_a_fixed_implicit_the_item_stores_is_kept_as_it_is_next_to_a_rerolled_one():
