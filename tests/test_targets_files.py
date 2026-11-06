@@ -32,7 +32,7 @@ def test_the_r12_example_parses_into_the_route():
     assert (family.min_tier, family.any_tier, family.min_roll, family.not_crafted) == (None, True, None, False)
     assert "LightningResist2" in family.tier_ok and "JunMaster2AllDamage3" not in family.tier_ok  # the start amulet's tier 7 counts; no craft does
     assert target.start_item.rarity is Rarity.RARE
-    assert target.start_item.mods == (ExplicitMod("LightningResist2", 3, (14,), fractured=True),)
+    assert target.start_item.mods == (ExplicitMod("LightningResist2", (14,), fractured=True),)
     assert target.price_file is None
 
 
@@ -251,8 +251,8 @@ def with_mods(real, item, *mods):
 
 
 def tiered(real, base_id, mod_id, *values, crafted=False):
-    """A mod as the game data tiers it on the base, with the given rolls."""
-    return ExplicitMod(mod_id, mod_tier(real, base_id, mod_id), values, crafted=crafted)
+    """A mod with the given rolls (its tier is the game data's)."""
+    return ExplicitMod(mod_id, values, crafted=crafted)
 
 
 def unmet_families(target, real, *mods):
@@ -265,7 +265,7 @@ def test_the_r10_target_asks_for_the_fractured_speed_the_essence_intelligence_to
     target = load_target(EXAMPLES / "r10-fractured-boots.yaml", real)
 
     assert target.base_id == "Metadata/Items/Armours/Boots/BootsInt9" and target.item_level == 84
-    assert target.start_item.mods == (ExplicitMod("MovementVelocity5", 2, (30,), fractured=True),)
+    assert target.start_item.mods == (ExplicitMod("MovementVelocity5", (30,), fractured=True),)
     speed, intelligence, life, ailments = target.requirements
     assert (speed.family, speed.mod_ids, speed.min_tier) == ("MovementVelocity", {"MovementVelocity5"}, None)
     assert (intelligence.family, intelligence.mod_ids) == ("Intelligence", {"Intelligence8"})
@@ -282,7 +282,7 @@ def test_the_r10_start_boots_carry_the_thirty_percent_speed_the_buy_spec_prices(
 
     assert [(mod.stat, mod.minimum) for mod in spec.mods] == [("30% increased Movement Speed", 30)]
     assert (start_mod.mod_id, start_mod.values) == ("MovementVelocity5", (30,))
-    assert start_mod.tier == mod_tier(real, target.base_id, "MovementVelocity5") == 2
+    assert mod_tier(real, target.base_id, "MovementVelocity5") == 2  # the tier is the data's: the file writes none
     assert target.requirements[0].is_met_by(target.start_item)
 
 
@@ -294,7 +294,7 @@ def test_the_r10_boots_are_met_by_the_essence_intelligence_top_life_and_the_craf
         target.start_item,
         tiered(real, base_id, "Intelligence8", 48),
         tiered(real, base_id, "IncreasedLife8", 120),
-        ExplicitMod("EinharMasterAvoidElementalAilments1", 1, (18,), crafted=True),
+        ExplicitMod("EinharMasterAvoidElementalAilments1", (18,), crafted=True),
     )
 
     assert target.is_met_by(finished)
@@ -305,11 +305,11 @@ def test_the_r10_boots_are_not_met_by_another_tier_of_intelligence_life_or_ailme
     target = load_target(EXAMPLES / "r10-fractured-boots.yaml", real)
     base_id = target.base_id
     intelligence, life = tiered(real, base_id, "Intelligence8", 48), tiered(real, base_id, "IncreasedLife8", 120)
-    craft = ExplicitMod("EinharMasterAvoidElementalAilments1", 1, (18,), crafted=True)
+    craft = ExplicitMod("EinharMasterAvoidElementalAilments1", (18,), crafted=True)
     weaker_intelligence = tiered(real, base_id, "Intelligence7", 40)
     top_intelligence = tiered(real, base_id, "Intelligence9", 53)  # exactly the essence mod, not a better one
     second_life = tiered(real, base_id, "IncreasedLife7", 105)
-    stronger_craft = ExplicitMod("EinharMasterAvoidElementalAilments2_", 1, (23,), crafted=True)
+    stronger_craft = ExplicitMod("EinharMasterAvoidElementalAilments2_", (23,), crafted=True)
 
     assert unmet_families(target, real, weaker_intelligence, life, craft) == ["Intelligence"]
     assert unmet_families(target, real, top_intelligence, life, craft) == ["Intelligence"]
@@ -327,7 +327,7 @@ def test_the_r11_target_asks_for_top_chaos_resistance_the_shrieking_reservation_
     target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
 
     assert target.base_id == "Metadata/Items/Armours/Helmets/HelmetDex10" and target.item_level == 84
-    assert target.start_item.mods == (ExplicitMod("ChaosResist6", 1, (33,), fractured=True),)
+    assert target.start_item.mods == (ExplicitMod("ChaosResist6", (33,), fractured=True),)
     chaos, reservation, evasion, life = target.requirements
     assert (chaos.family, chaos.min_tier, chaos.not_crafted) == ("ChaosResistance", 1, False)
     assert reservation.family == "ReducedManaReservationsCost"
@@ -352,10 +352,10 @@ def test_the_r11_start_helmet_is_the_top_chaos_resistance_and_the_buy_minimum_is
 def test_the_r11_helmet_needs_the_top_evasion_and_life_and_exactly_the_shrieking_reservation(real):
     target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
     base_id = target.base_id
-    reservation = ExplicitMod("ManaReservationEfficiencyEssence6_", 1, (7,))
+    reservation = ExplicitMod("ManaReservationEfficiencyEssence6_", (7,))
     life = tiered(real, base_id, "IncreasedLife9", 135)
     evasion = tiered(real, base_id, "LocalIncreasedEvasionRatingPercent7", 95)
-    screaming = ExplicitMod("ManaReservationEfficiencyEssence5__", 1, (5,))
+    screaming = ExplicitMod("ManaReservationEfficiencyEssence5__", (5,))
     second_life = tiered(real, base_id, "IncreasedLife8", 120)
     second_evasion = tiered(real, base_id, "LocalIncreasedEvasionRatingPercent6", 85)
 
@@ -370,7 +370,7 @@ def test_the_r05_target_asks_for_all_attributes_the_essence_strength_and_one_top
     target = load_target(EXAMPLES / "r05-strength-ring.yaml", real)
 
     assert target.base_id == "Metadata/Items/Rings/Ring10" and target.item_level == 75
-    assert target.start_item.mods == (ExplicitMod("AllAttributes4", 1, (14,), fractured=True),)
+    assert target.start_item.mods == (ExplicitMod("AllAttributes4", (14,), fractured=True),)
     attributes, strength, extra = target.requirements
     assert (attributes.family, attributes.min_tier, attributes.not_crafted) == ("AllAttributes", 1, True)
     assert (strength.family, strength.mod_ids, strength.min_tier) == ("Strength", {"StrengthEssence7_"}, None)
@@ -386,8 +386,8 @@ def test_the_r05_target_asks_for_all_attributes_the_essence_strength_and_one_top
 def test_the_r05_ring_is_met_by_the_essence_strength_and_a_top_tier_life_or_resistance_rolled_not_crafted(real):
     target = load_target(EXAMPLES / "r05-strength-ring.yaml", real)
     base_id = target.base_id
-    with_strength = target.start_item.add_mod(real, ExplicitMod("StrengthEssence7_", 1, (55,)))
-    crafted_life = ExplicitMod("EinharMasterIncreasedLife3", 1, (45,), crafted=True)
+    with_strength = target.start_item.add_mod(real, ExplicitMod("StrengthEssence7_", (55,)))
+    crafted_life = ExplicitMod("EinharMasterIncreasedLife3", (45,), crafted=True)
 
     assert not target.is_met_by(with_strength)
     assert target.is_met_by(with_strength.add_mod(real, tiered(real, base_id, "IncreasedLife7", 105)))
@@ -399,7 +399,7 @@ def test_the_r05_ring_is_met_by_the_essence_strength_and_a_top_tier_life_or_resi
 def test_the_r05_ring_is_not_met_by_a_lower_tier_life_or_resistance_or_by_another_strength(real):
     target = load_target(EXAMPLES / "r05-strength-ring.yaml", real)
     base_id = target.base_id
-    essence_strength = ExplicitMod("StrengthEssence7_", 1, (55,))
+    essence_strength = ExplicitMod("StrengthEssence7_", (55,))
     top_life = tiered(real, base_id, "IncreasedLife7", 105)
     second_life = tiered(real, base_id, "IncreasedLife6", 90)
     third_fire = tiered(real, base_id, "FireResist6", 38)

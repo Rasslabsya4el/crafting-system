@@ -115,13 +115,11 @@ def test_the_best_of_several_mods_counts_for_a_leaf():
     assert ab.compress(small_item(roll(LIFE_1), roll(DAMAGE_2))).status == (PASSING,)
 
 
-def test_the_tier_stored_on_a_mod_is_never_read_the_game_data_decides():
+def test_the_tier_of_a_mod_is_the_game_datas_the_item_stores_none():
     ab = abstraction("tier")
-    claimed_best = dataclasses.replace(roll(RESIST_1, fractured=True), tier=1)  # the data has it worse than tier 2
-    claimed_worst = dataclasses.replace(roll(RESIST_3, fractured=True), tier=5)  # the data has it better than tier 2
 
-    assert ab.compress(small_item(claimed_best)).status == (ABSENT, BELOW)
-    assert ab.compress(small_item(claimed_worst)).status == (ABSENT, PASSING)
+    assert ab.compress(small_item(roll(RESIST_1, fractured=True))).status == (ABSENT, BELOW)  # the data has it worse than tier 2
+    assert ab.compress(small_item(roll(RESIST_3, fractured=True))).status == (ABSENT, PASSING)  # the data has it better than tier 2
 
 
 @pytest.mark.parametrize(

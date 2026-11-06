@@ -257,7 +257,7 @@ def test_rune_dagger_takes_the_dagger_mod_and_warstaff_the_staff_mod():
     for item_class, expected in (("Rune Dagger", "LocalAddedColdDamage1"), ("Warstaff", None)):
         base = dataclasses.replace(sword, item_class=item_class)
         data = dataclasses.replace(DATA, base_items={**DATA.base_items, sword.id: base})
-        item = dataclasses.replace(amulet(rarity=Rarity.NORMAL), base_id=sword.id)
+        item = dataclasses.replace(amulet(rarity=Rarity.NORMAL), base_id=sword.id, implicits=())  # the amulet's implicit is not the sword's
         if expected is None:
             staff = data.essences["Metadata/Items/Currency/CurrencyEssenceHatred1"].mod_for("Staff")
             expected = staff
@@ -301,7 +301,7 @@ def test_a_forced_mod_in_a_family_of_a_fractured_mod_is_refused_by_the_game():
     low = tuple(min(stat.min, stat.max) for stat in clash.stats)
     item = Item.build(
         data, base_id=AMULET, item_level=86, rarity=Rarity.RARE,
-        mods=(ExplicitMod("ClashMod", 1, low, fractured=True),),
+        mods=(ExplicitMod("ClashMod", low, fractured=True),),
     )  # fmt: skip
 
     with pytest.raises(NotApplicableError, match="already has a mod of this type.*ClashMod"):

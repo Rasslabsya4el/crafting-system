@@ -71,11 +71,9 @@ requirements:
 start_item:
   rarity: rare
   mods:
-    # The mod is named by its game-data id: MovementVelocity5 is "30% increased Movement Speed",
-    # tier 2 of Movement Speed on this base. The tier is taken as written, so it was checked by hand
-    # against the game data (3.29.3.3).
+    # The mod is named by its game-data id: MovementVelocity5 is "30% increased Movement Speed". The
+    # file writes no tier: the tier is the game data's (OR-3).
     - mod: MovementVelocity5
-      tier: 2
       # One whole number per stat of the mod, in the units of the game data.
       values: [30]
       # Locked in place by a Fracturing Orb.

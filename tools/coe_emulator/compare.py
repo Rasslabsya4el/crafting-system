@@ -47,7 +47,7 @@ from crafting_system.actions.catalog import catalog  # noqa: E402
 from crafting_system.actions.contract import Fixed  # noqa: E402
 from crafting_system.actions.errors import NotApplicableError, OutOfScopeError  # noqa: E402
 from crafting_system.data import load_game_data  # noqa: E402
-from crafting_system.items import ExplicitMod, Influence, Item, Rarity, tier_table  # noqa: E402
+from crafting_system.items import ExplicitMod, Influence, Item, Rarity  # noqa: E402
 
 TIER_WORDS = ("Whispering", "Muttering", "Weeping", "Wailing", "Screaming", "Shrieking", "Deafening")
 CURRENCY = {
@@ -236,12 +236,11 @@ def mod_text(mod) -> str:
 
 
 def build_item(data, spec: dict) -> Item:
-    table = tier_table(data, spec["base"])
     mods = []
     for mod_id in spec.get("mods", []):
         mod = data.mods[mod_id]
         low = tuple(min(s.min, s.max) for s in mod.stats)
-        mods.append(ExplicitMod(mod_id, table.get(mod_id, 1), low, fractured=mod_id in spec.get("fractured", []), crafted=mod.domain == "crafted"))
+        mods.append(ExplicitMod(mod_id, low, fractured=mod_id in spec.get("fractured", []), crafted=mod.domain == "crafted"))
     fields = {"base_id": spec["base"], "item_level": spec.get("item_level", 100), "rarity": Rarity(spec.get("rarity", "rare")),
               "mods": tuple(mods), "influences": frozenset(Influence(i) for i in spec.get("influences", []))}
     if spec.get("corrupted"):

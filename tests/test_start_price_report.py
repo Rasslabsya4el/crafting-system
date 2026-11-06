@@ -36,7 +36,7 @@ def sourced(trade: float, day: str, ninja: float) -> SourcedPrice:
 
 
 def boots() -> Item:
-    return Item.build(TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity5", 2, (30,)),))
+    return Item.build(TOY, base_id=TOY_BOOTS, item_level=86, rarity=Rarity.MAGIC, mods=(ExplicitMod("MovementVelocity5", (30,)),))
 
 
 def candidate(key: str, price: float, price_sourced: SourcedPrice | None) -> StartCandidate:

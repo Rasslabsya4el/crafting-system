@@ -106,7 +106,7 @@ def test_the_upgraded_mod_is_the_next_tier_of_the_same_mod_at_its_lowest_values(
     item = helmet(roll(P1, 3), roll(S1, 2), influences=frozenset({SHAPER}))
     upgraded = next(r for _, r in DOMINANCE.outcomes(DATA, item).results if any(e.mod_id == P2 for e in r.mods))
     entry = next(e for e in upgraded.mods if e.mod_id == P2)
-    assert entry.tier == 2 and entry.values == tuple(min(s.min, s.max) for s in DATA.mods[P2].stats)
+    assert tiers_of(DATA, item)[P2] == 2 and entry.values == tuple(min(s.min, s.max) for s in DATA.mods[P2].stats)  # the tier is the data's
 
 
 # --- Elevated mods ---------------------------------------------------------------------------------------------------------
@@ -115,8 +115,7 @@ def test_the_upgraded_mod_is_the_next_tier_of_the_same_mod_at_its_lowest_values(
 def test_a_top_tier_mod_becomes_its_elevated_version():
     item = helmet(roll(P3, 1), roll(S1, 2), influences=frozenset({SHAPER}))
     assert results(DOMINANCE.outcomes(DATA, item)) == {frozenset({S2}): Fraction(1, 2), frozenset({P3_MAVEN}): Fraction(1, 2)}
-    elevated = next(e for _, r in DOMINANCE.outcomes(DATA, item).results for e in r.mods if e.mod_id == P3_MAVEN)
-    assert elevated.tier == 1  # the best tier an item can store
+    assert P3_MAVEN not in tiers_of(DATA, item)  # an Elevated mod never spawns: it has no natural tier, and the item stores none
 
 
 def test_an_elevated_mod_stays_the_same_mod_when_it_is_upgraded():
@@ -146,8 +145,8 @@ def test_the_next_tier_is_one_of_the_mods_own_influence_on_an_item_with_two_infl
 
     assert results(outcomes) == {frozenset({S2}): Fraction(1, 2), frozenset({P2}): Fraction(1, 2)}
     tiers = tiers_of(data, item)
-    stored = {entry.mod_id: entry.tier for _, r in outcomes.results for entry in r.mods}
-    assert stored == {S2: tiers[S2], P2: tiers[P2]} == {S2: 1, P2: 2}  # the tier numbers every other action gives these mods
+    stored = {entry.mod_id for _, r in outcomes.results for entry in r.mods}
+    assert stored == {S2, P2} and (tiers[S2], tiers[P2]) == (1, 2)  # the mods the orb makes, at the tier numbers the data gives them
 
 
 def test_a_lower_tier_needs_no_elevated_mapping():

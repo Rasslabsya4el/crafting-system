@@ -81,7 +81,7 @@ def test_exactly_one_mod_is_fractured_and_nothing_else_changes():
 
     for _, result in outcomes.results:
         assert len(result.fractured_mods) == 1
-        assert [(e.mod_id, e.tier, e.values, e.crafted) for e in result.mods] == [(e.mod_id, e.tier, e.values, e.crafted) for e in item.mods]
+        assert [(e.mod_id, e.values, e.crafted) for e in result.mods] == [(e.mod_id, e.values, e.crafted) for e in item.mods]
         assert (result.rarity, result.influences, result.corrupted, result.item_level) == (item.rarity, item.influences, item.corrupted, item.item_level)
 
 

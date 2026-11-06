@@ -87,10 +87,8 @@ start_item:
   rarity: rare
   mods:
     # The mod is named by its game-data id: ChanceToSuppressSpells5__ is "+(13-14)% chance to
-    # Suppress Spell Damage", tier 1 on this base. The tier is taken as written, so it was checked
-    # by hand against the game data (3.29.3.3).
+    # Suppress Spell Damage". The file writes no tier: the tier is the game data's (OR-3).
     - mod: ChanceToSuppressSpells5__
-      tier: 1
       # One whole number per stat of the mod, in the units of the game data.
       values: [13]
       # Locked in place by a Fracturing Orb.

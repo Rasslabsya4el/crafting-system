@@ -5,7 +5,7 @@ A planner for Path of Exile 1 item crafting: for a target item it finds the craf
 ## Items and modifiers
 
 **Concrete item**:
-One specific item: its base, item level, influence, rarity, Memory Strand count and every mod with its tier, roll and origin.
+One specific item: its base, item level, influence, rarity, Memory Strand count, every implicit it holds and every explicit mod with its roll and origin. An item stores no tier; the tier of a mod is read from the game data (`Natural tier`).
 _Avoid_: real item, full item
 
 **Mod**:
@@ -35,6 +35,10 @@ A bench-crafted mod that changes what other actions may do to the item, such as 
 
 **Fractured mod**:
 A mod made permanent in its slot by the Fracturing Orb.
+
+**Base implicit**:
+An implicit of the base itself (`BaseItem.implicits`, grade 0), such as the Heavy Belt's `+(25-35) to Strength`. An item carries every implicit of its base until a replacer puts another implicit in its place (a Vaal outcome, a Locus, a Bloodstained Fossil, an Ember or an Ichor, synthesis); a Scouring, Annulment, Chaos, Harvest, Awakener or an enchant keeps it. A fresh or bought item holds it at the low end of its range, since the bought item was priced with no filter on that roll (ADR-0027, #484).
+_Avoid_: stored implicit, unstored implicit
 
 **Eldritch implicit**:
 An implicit of The Searing Exarch (the prefix side) or The Eater of Worlds (the suffix side), added to a body armour, boots, gloves or helmet by an Ember or an Ichor or moved by an Orb of Conflict (ADR-0025).

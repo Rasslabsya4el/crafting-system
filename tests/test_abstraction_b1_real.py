@@ -30,7 +30,7 @@ def real():
 
 
 def rolled(data, mod_id, **flags):
-    return ExplicitMod(mod_id, 1, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats), **flags)
 
 
 def subset(data, base_id, families, extra_ids):

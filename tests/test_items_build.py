@@ -23,7 +23,6 @@ def make(**fields) -> Item:
 
 
 def mod(mod_id, **fields) -> ExplicitMod:
-    fields.setdefault("tier", 1)
     fields.setdefault("values", (1,))
     return ExplicitMod(mod_id, **fields)
 
@@ -67,9 +66,9 @@ def test_the_edge_item_levels_are_accepted(level):
     assert make(item_level=level).item_level == level
 
 
-def test_a_tier_below_1_is_rejected():
-    with pytest.raises(ItemError, match="AaaMod.*tier 0"):
-        make(mods=(mod("AaaMod", tier=0),))
+def test_an_explicit_mod_has_no_tier_field():
+    """Ticket #484: the tier of a mod is a fact of the game data on a base, never stored on the item."""
+    assert [field for field in ExplicitMod.__dataclass_fields__] == ["mod_id", "values", "fractured", "crafted"]
 
 
 def test_a_mod_can_be_both_fractured_and_crafted():
@@ -122,9 +121,8 @@ def test_the_rarity_must_be_a_rarity():
         {"item_level": 50.5},
         {"item_level": True},
         {"mods": ("IncreasedLife1",)},
-        {"mods": (ExplicitMod("IncreasedLife1", 1.5, (10,)),)},
-        {"mods": (ExplicitMod("IncreasedLife1", 1, [10]),)},
-        {"mods": (ExplicitMod("IncreasedLife1", 1, (10.5,)),)},
+        {"mods": (ExplicitMod("IncreasedLife1", [10]),)},
+        {"mods": (ExplicitMod("IncreasedLife1", (10.5,)),)},
     ],
 )
 def test_wrongly_typed_fields_are_an_item_error_not_a_stray_type_error(fields):

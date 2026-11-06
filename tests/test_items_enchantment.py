@@ -75,7 +75,7 @@ def test_the_enchantment_rides_along_when_mods_change():
     from crafting_system.items import ExplicitMod
 
     life = DATA.mods[LIFE_PREFIX]
-    rolled = ExplicitMod(LIFE_PREFIX, 1, tuple(stat.min for stat in life.stats))
+    rolled = ExplicitMod(LIFE_PREFIX, tuple(stat.min for stat in life.stats))
     assert held.add_mod(DATA, rolled).enchantment == LIFE
     assert held.add_mod(DATA, rolled).remove_mod(DATA, LIFE_PREFIX).enchantment == LIFE
 

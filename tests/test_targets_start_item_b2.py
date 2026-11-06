@@ -1,4 +1,4 @@
-"""The start item's `implicits`, `quality` and `veil_offer` keys, and a veiled start mod without tier or values (ticket #141).
+"""The start item's `implicits`, `quality` and `veil_offer` keys, and a veiled start mod without values (ticket #141; no start mod writes a tier since #484).
 
 Item errors are blamed on the key that holds the offending entry: `start_item.implicits[i]`,
 `start_item.quality`, `start_item.veil_offer` or `[i]`. The text of a test starts on line 5; the file is `t.yaml`.
@@ -31,6 +31,21 @@ def test_a_base_implicit_has_grade_zero_and_a_list_of_values_is_allowed():
     item = parse(start("implicits:\n  - mod: StrengthImplicitBelt1\n    values: [30]")).start_item
 
     assert item.implicits == (ImplicitMod("StrengthImplicitBelt1", 0, (30,)),)
+
+
+def test_a_start_item_that_lists_no_implicit_carries_the_base_implicit_at_the_low_end_of_its_range():
+    """Ticket #484 (decided on #449): the bought item was priced with no filter on that roll, so the plan must not count on more."""
+    low = ImplicitMod("StrengthImplicitBelt1", 0, (25,))  # +(25-35) to Strength
+
+    assert parse(start("rarity: normal")).start_item.implicits == (low,)
+    assert parse("").start_item.implicits == (low,)  # no start_item at all: a fresh belt
+
+
+def test_a_start_item_that_lists_an_implicit_in_the_base_implicits_place_says_so():
+    """An Eldritch implicit is a replacer (an Ember takes the base implicit away): the list is the whole of what the item holds."""
+    item = parse(start(f"implicits:\n  - mod: {SHOCK}1\n    values: 34")).start_item
+
+    assert [entry.mod_id for entry in item.implicits] == [f"{SHOCK}1"]
 
 
 def test_a_written_grade_is_kept_and_checked_by_the_item():
@@ -228,18 +243,18 @@ def veiled(body: str = "") -> str:
     return start("mods:\n  - mod: VeiledPrefix\n" + body)
 
 
-def test_a_veiled_start_mod_needs_neither_tier_nor_values():
+def test_a_veiled_start_mod_needs_no_values():
     item = parse(veiled()).start_item
 
     (placeholder,) = item.mods
-    assert placeholder.mod_id == "VeiledPrefix" and placeholder.tier == 1 and placeholder.values == (1, 1)
+    assert placeholder.mod_id == "VeiledPrefix" and placeholder.values == (1, 1)
     assert item.rarity.value == "rare"
 
 
-def test_a_written_veiled_seed_is_made_canonical_and_a_written_tier_is_kept():
-    item = parse(veiled("    tier: 2\n    values: [1, 777]")).start_item
+def test_a_written_veiled_seed_is_made_canonical():
+    item = parse(veiled("    values: [1, 777]")).start_item
 
-    assert item.mods[0].values == (1, 1) and item.mods[0].tier == 2
+    assert item.mods[0].values == (1, 1)
 
 
 def test_a_veiled_suffix_gets_its_own_canonical_values():
@@ -248,11 +263,8 @@ def test_a_veiled_suffix_gets_its_own_canonical_values():
     assert item.mods[0].values == (2, 1)
 
 
-def test_every_other_start_mod_still_needs_a_tier_and_values():
-    message = parse_error(start("mods:\n  - mod: IncreasedLife1\n    values: 12"))
-    assert_error(message, 7, "start_item.mods[0].tier", "this key is required but missing")
-
-    message = parse_error(start("mods:\n  - mod: IncreasedLife1\n    tier: 3"))
+def test_every_other_start_mod_still_needs_values():
+    message = parse_error(start("mods:\n  - mod: IncreasedLife1"))
     assert_error(message, 7, "start_item.mods[0].values", "this key is required but missing")
 
 
@@ -313,6 +325,6 @@ def test_an_offer_of_more_than_three_mods_is_blamed_on_the_offer_key():
 
 
 def test_explicit_mod_errors_are_still_blamed_on_the_mod():
-    message = parse_error(start("implicits:\n  - mod: StrengthImplicitBelt1\n    values: 30\nmods:\n  - mod: IncreasedLife1\n    tier: 1\n    values: 99"))
+    message = parse_error(start("implicits:\n  - mod: StrengthImplicitBelt1\n    values: 30\nmods:\n  - mod: IncreasedLife1\n    values: 99"))
 
     assert_error(message, 10, "start_item.mods[0]", "IncreasedLife1")

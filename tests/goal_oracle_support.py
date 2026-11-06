@@ -11,7 +11,8 @@ and never writes a tier by hand:
     lowest or the highest value;
   * the target's own start item, as the target parser built it;
   * an implicit (ticket #416): `Item.build(..., implicits=(ImplicitMod(mod id, grade, values),))` with the grade the planner gives
-    it (`eldritch_grade` of an Eldritch mod, 0 for an implicit of the base), the way the target parser builds a start implicit;
+    it (`eldritch_grade` of an Eldritch mod, 0 for an implicit of the base), the way the target parser builds a start implicit, with the
+    base's own implicits it does not list added at the low end unless the listed one takes their place (#484, `with_base_implicits`);
   * a quality (#416): `Item.build(..., quality=Quality(CatalystType(type), percent))`, or `PlainQuality(percent)`;
 An influence is not probed: it is a start input of the target, not a condition on the finished item (decided on #444).
 
@@ -40,6 +41,7 @@ from crafting_system.items import (
     Quality,
     Rarity,
     eldritch_grade,
+    with_base_implicits,
 )
 from crafting_system.targets import load_target
 
@@ -123,7 +125,7 @@ def probe_item(data, target, spec: g.ProbeSpec, fillers: tuple[ExplicitMod, ...]
     )
     if spec.kind == "natural":
         tier = tiers_of(data, base).get(spec.mod_id, 1)
-        return base.add_mod(data, ExplicitMod(spec.mod_id, tier, spec.values, fractured=spec.fractured))
+        return base.add_mod(data, ExplicitMod(spec.mod_id, spec.values, fractured=spec.fractured))
     if spec.kind == "essence":
         item = retained_item(data, base, forced=data.mods[spec.mod_id])
         if spec.values != tuple(min(s.min, s.max) for s in data.mods[spec.mod_id].stats):
@@ -162,7 +164,7 @@ def filler_mods(data, export: g.Export, target, spec: g.OracleTarget) -> tuple[E
         if taken & set(mod.families):
             continue
         taken.update(mod.families)
-        found.append(ExplicitMod(mod_id, tier, tuple(stat.min for stat in mod.stats)))
+        found.append(ExplicitMod(mod_id, tuple(stat.min for stat in mod.stats)))
         if len(found) == 8:
             break
     return tuple(found)
@@ -194,7 +196,8 @@ def implicit_item(data, target, probe: g.ImplicitProbe) -> Item:
     """A rare item of the target's base holding one implicit; the grade is the planner's (`eldritch_grade`, 0 for the base's own)."""
     mod = data.mods[probe.mod_id]
     grade = 0 if probe.mod_id in data.base_items[target.base_id].implicits else (eldritch_grade(mod) or 0)
-    return base_item(data, target).changed(data, implicits=(ImplicitMod(probe.mod_id, grade, probe.values),))
+    listed = (ImplicitMod(probe.mod_id, grade, probe.values),)
+    return base_item(data, target).changed(data, implicits=with_base_implicits(data, data.base_items[target.base_id], listed))
 
 
 def quality_item(data, target, probe: g.QualityProbe) -> Item:

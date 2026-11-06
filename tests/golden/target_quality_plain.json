@@ -29,7 +29,16 @@
     "mods": [],
     "influences": [],
     "corrupted": false,
-    "implicits": [],
+    "implicits": [
+      {
+        "_type": "ImplicitMod",
+        "mod_id": "AccuracyPercentImplicitSword1",
+        "grade": 0,
+        "values": [
+          40
+        ]
+      }
+    ],
     "quality": {
       "_type": "PlainQuality",
       "percent": 8

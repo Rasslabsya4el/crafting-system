@@ -19,7 +19,7 @@ register_forced_put_back(VeiledChaosOrb)  # the placeholder it erased may be put
 def _placeholder() -> ExplicitMod:
     from contract_support import CONTRACT_DATA  # late: contract_support loads this module while it builds CONTRACT_DATA
 
-    return ExplicitMod(PLACEHOLDER_PREFIX, 1, tuple(min(stat.min, stat.max) for stat in CONTRACT_DATA.mods[PLACEHOLDER_PREFIX].stats))
+    return ExplicitMod(PLACEHOLDER_PREFIX, tuple(min(stat.min, stat.max) for stat in CONTRACT_DATA.mods[PLACEHOLDER_PREFIX].stats))
 
 
 def _rare_veiled():

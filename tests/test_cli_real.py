@@ -38,7 +38,7 @@ def amulet(data, *, level: int, fractured_resist: bool) -> Item:
     if fractured_resist:
         mod = data.mods[RESIST]
         low = tuple(min(stat.min, stat.max) for stat in mod.stats)
-        mods = (ExplicitMod(RESIST, tier_table(data, AMULET)[RESIST], low, fractured=True),)
+        mods = (ExplicitMod(RESIST, low, fractured=True),)
     return Item.build(data, base_id=AMULET, rarity=Rarity.RARE, item_level=level, mods=mods)
 
 

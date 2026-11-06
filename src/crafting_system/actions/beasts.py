@@ -56,7 +56,6 @@ CHAOS_ORB = "Chaos Orb"  # the price-file name the rare beasts are paid in
 TALISMAN_TAG = "talisman"  # the tag of the Talisman bases (bases of the amulet class)
 ASPECT_WORDS = {"avian": "Bird", "cat": "Cat", "crab": "Crab", "spider": "Spider"}  # the aspect as it reads in the id of its mod
 ASPECT_LEVELS = (20, 30)
-CRAFTED_TIER = 1  # the aspect mods have no tier in the data (they never spawn); `Item` needs one, from 1
 
 
 def recipe_resources(recipe: str, rare_creature_price: int = ANY_RARE_CREATURE_PRICE.value) -> Mapping[str, int]:
@@ -236,7 +235,7 @@ class AspectBeast(Action):
         if item.blocks(data, mod):
             raise NotApplicableError(f"the item holds a mod that shares a family with the aspect {self.mod_id}")
         low = tuple(min(stat.min, stat.max) for stat in mod.stats)
-        added = item.add_mod(data, ExplicitMod(mod.id, CRAFTED_TIER, low, crafted=False))
+        added = item.add_mod(data, ExplicitMod(mod.id, low, crafted=False))
         return Finite(data, item, ((Fraction(1), added),))
 
 

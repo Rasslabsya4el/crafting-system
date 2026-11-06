@@ -100,7 +100,7 @@ INFLUENCE_DATA = influence_data()
 def roll(mod_id: str, tier: int, data: GameData = INFLUENCE_DATA, **flags) -> ExplicitMod:
     """The mod `mod_id` at tier `tier` with every stat rolled at the low end of its range."""
     mod = data.mods[mod_id]
-    return ExplicitMod(mod_id, tier, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def helmet(*mods: ExplicitMod, level: int = 84, rarity: Rarity = Rarity.RARE, data: GameData = INFLUENCE_DATA, **fields) -> Item:

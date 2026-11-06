@@ -139,11 +139,9 @@ def test_the_start_item_is_built_from_its_mods():
         start_item:
           mods:
             - mod: LightningResist2
-              tier: 3
               values: 14
               fractured: true
             - mod: IncreasedLife1
-              tier: 1
               values: [10]
         """
     )
@@ -152,8 +150,8 @@ def test_the_start_item_is_built_from_its_mods():
     assert start.rarity is Rarity.RARE
     assert start.base_id == AMULET and start.item_level == 84
     assert start.mods == (
-        ExplicitMod("IncreasedLife1", 1, (10,)),
-        ExplicitMod("LightningResist2", 3, (14,), fractured=True),
+        ExplicitMod("IncreasedLife1", (10,)),
+        ExplicitMod("LightningResist2", (14,), fractured=True),
     )
 
 
@@ -169,7 +167,6 @@ def test_the_start_item_rarity_and_corruption_are_read():
           corrupted: true
           mods:
             - mod: LightningResist1
-              tier: 1
               values: [6]
         """
     )

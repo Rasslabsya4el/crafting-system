@@ -36,7 +36,6 @@ class FileFormatError(Exception):
 @dataclass(frozen=True)
 class StartMod:
     mod: str
-    tier: int | None
     values: tuple
     fractured: bool
 
@@ -104,7 +103,6 @@ def read_target(path: Path) -> Target:
         mods = tuple(
             StartMod(
                 mod=entry["mod"],
-                tier=entry.get("tier"),
                 values=tuple(entry.get("values") or ()),
                 fractured=bool(entry.get("fractured", False)),
             )

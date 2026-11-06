@@ -59,7 +59,7 @@ def items_of(ab: Abstraction, data, state: CompressedState) -> list[Item]:
         if len(set(families)) != len(families) or set(families) & taken_by_fixed:
             continue
         mods = [
-            ExplicitMod(mod_id, tiers.get(mod_id, 1), _low(data, mod_id), fractured=where == "fractured")
+            ExplicitMod(mod_id, _low(data, mod_id), fractured=where == "fractured")
             for (where, _), mod_id in zip(wanted, choice)
         ]
         key = frozenset((entry.mod_id, entry.fractured) for entry in (*fixed, *mods))

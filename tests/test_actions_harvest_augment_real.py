@@ -21,7 +21,7 @@ from abstraction_support import real_game_data
 
 from crafting_system.actions import HarvestAddRemove, HarvestDamageSwap, HarvestResistanceSwap, NotApplicableError
 from crafting_system.cli._offers import offer_of, price_offers
-from crafting_system.items import ExplicitMod, ImplicitMod, Item, Rarity
+from crafting_system.items import ExplicitMod, ImplicitMod, Item, Rarity, tier_table
 from crafting_system.prices import PriceEntry, PriceFile
 
 # the prices of 2026-10-31 in chaos; the Sacred price is the one that makes the Fire craft 283.75 (15000 Wild = 234, Sacred = 49.75)
@@ -53,23 +53,25 @@ def only_result(outcomes) -> Item:
     return result
 
 
-def shown(item: Item) -> list[tuple]:
-    return sorted((e.mod_id, e.tier, e.values) for e in item.mods)
+def shown(item: Item, data) -> list[tuple]:
+    """The mods of `item` as (mod id, tier, values); the tier is the game data's on the item's base, the item stores none."""
+    tiers = tier_table(data, item.base_id)
+    return sorted((e.mod_id, tiers[e.mod_id], e.values) for e in item.mods)
 
 
 # --- (1) Fire add/remove on the amulet ---------------------------------------------------------------
 
 # three prefixes (a full side): Life 8 (tier 1), Mana 8 (tier 6), Lightning gem level (tier 1), each at its lowest values
 FULL_PREFIXES = (
-    ExplicitMod("IncreasedLife8", 1, (115,)),
-    ExplicitMod("IncreasedMana8", 6, (50,)),
-    ExplicitMod("GlobalLightningGemLevel1", 1, (1,)),
+    ExplicitMod("IncreasedLife8", (115,)),
+    ExplicitMod("IncreasedMana8", (50,)),
+    ExplicitMod("GlobalLightningGemLevel1", (1,)),
 )
 # two prefixes and a suffix, the families Fire Damage and Fire Resistance held: Life 8, Added Fire Damage 5 (tier 5), Fire Resistance 5 (tier 4)
 FIRE_HELD = (
-    ExplicitMod("IncreasedLife8", 1, (115,)),
-    ExplicitMod("AddedFireDamage5", 5, (9, 19)),
-    ExplicitMod("FireResist5", 4, (30,)),
+    ExplicitMod("IncreasedLife8", (115,)),
+    ExplicitMod("AddedFireDamage5", (9, 19)),
+    ExplicitMod("FireResist5", (30,)),
 )
 # what the hand walk finds (by hand): the fire mods an empty amulet rolls at level 86 are AddedFireDamage1..9 (prefixes, 500 each but
 # 250 for the 9th), FireResist1..8 (suffixes, 1000), FireDamagePercent1..5 (suffixes, 500) and GlobalFireGemLevel1_ (a prefix, 200)
@@ -136,8 +138,9 @@ def test_fire_add_remove_with_a_full_prefix_side_draws_only_among_the_fire_suffi
 
 def test_the_new_mod_is_rolled_at_its_table_tier_and_lowest_values(data):
     item = rare(data, "Coral Amulet", 86, *FULL_PREFIXES)
+    tiers = tier_table(data, item.base_id)
     new = {
-        (e.mod_id, e.tier, e.values)
+        (e.mod_id, tiers[e.mod_id], e.values)
         for _, result in HarvestAddRemove("fire").outcomes(data, item).results
         for e in result.mods
         if e.mod_id in ("FireResist8", "FireResist1", "FireDamagePercent5")
@@ -173,23 +176,23 @@ def test_fire_add_remove_costs_283_75_chaos_at_the_prices_of_2026_10_31(data):
 
 
 def test_fire_to_cold_on_a_ring_keeps_tier_one(data):
-    item = rare(data, "Coral Ring", 86, ExplicitMod("FireResist8", 1, (46,)))
+    item = rare(data, "Coral Ring", 86, ExplicitMod("FireResist8", (46,)))
     result = only_result(HarvestResistanceSwap("fire", "cold").outcomes(data, item))
-    assert shown(result) == [("ColdResist8", 1, (46,))]
+    assert shown(result, data) == [("ColdResist8", 1, (46,))]
 
 
 def test_a_tier_four_fire_resistance_cannot_become_cold_at_item_level_49_but_can_become_lightning(data):
-    item = rare(data, "Coral Ring", 49, ExplicitMod("FireResist5", 4, (30,)))  # Fire tier 4 needs 48
+    item = rare(data, "Coral Ring", 49, ExplicitMod("FireResist5", (30,)))  # Fire tier 4 needs 48
     with pytest.raises(NotApplicableError, match="above the item level"):
         HarvestResistanceSwap("fire", "cold").outcomes(data, item)  # ColdResist5, tier 4, needs 50
     result = only_result(HarvestResistanceSwap("fire", "lightning").outcomes(data, item))  # LightningResist5 needs 49
-    assert shown(result) == [("LightningResist5", 4, (30,))]
+    assert shown(result, data) == [("LightningResist5", 4, (30,))]
 
 
 def test_at_item_level_50_the_same_swap_to_cold_works(data):
-    item = rare(data, "Coral Ring", 50, ExplicitMod("FireResist5", 4, (30,)))
+    item = rare(data, "Coral Ring", 50, ExplicitMod("FireResist5", (30,)))
     result = only_result(HarvestResistanceSwap("fire", "cold").outcomes(data, item))
-    assert shown(result) == [("ColdResist5", 4, (30,))]
+    assert shown(result, data) == [("ColdResist5", 4, (30,))]
 
 
 @pytest.mark.parametrize(
@@ -202,9 +205,9 @@ def test_at_item_level_50_the_same_swap_to_cold_works(data):
     ],
 )
 def test_the_tier_is_kept_down_the_ladder(data, start, tier, low, target, end):
-    item = rare(data, "Coral Ring", 86, ExplicitMod(start, tier, (low,)))
+    item = rare(data, "Coral Ring", 86, ExplicitMod(start, (low,)))
     result = only_result(HarvestResistanceSwap("fire", target).outcomes(data, item))
-    assert shown(result) == [(end, tier, (low,))]
+    assert shown(result, data) == [(end, tier, (low,))]
 
 
 # --- (3) a maximum-resistance swap on a shield ---------------------------------------------------------
@@ -219,17 +222,17 @@ def test_the_tier_is_kept_down_the_ladder(data, start, tier, low, target, end):
     ],
 )
 def test_a_maximum_resistance_swap_keeps_the_tier(data, start, tier, value, end):
-    item = rare(data, "Splintered Tower Shield", 86, ExplicitMod(start, tier, (value,)))
+    item = rare(data, "Splintered Tower Shield", 86, ExplicitMod(start, (value,)))
     result = only_result(HarvestResistanceSwap("fire", "cold").outcomes(data, item))
-    assert shown(result) == [(end, tier, (value,))]
+    assert shown(result, data) == [(end, tier, (value,))]
 
 
 def test_a_plain_and_a_maximum_resistance_on_a_shield_are_two_sources_of_one_half(data):
     item = rare(
-        data, "Splintered Tower Shield", 86, ExplicitMod("FireResist8", 1, (46,)), ExplicitMod("MaximumFireResist1", 3, (1,))
+        data, "Splintered Tower Shield", 86, ExplicitMod("FireResist8", (46,)), ExplicitMod("MaximumFireResist1", (1,))
     )
     outcomes = HarvestResistanceSwap("fire", "cold").outcomes(data, item)
-    assert {tuple(shown(result)): chance for chance, result in outcomes.results} == {
+    assert {tuple(shown(result, data)): chance for chance, result in outcomes.results} == {
         (("ColdResist8", 1, (46,)), ("MaximumFireResist1", 3, (1,))): Fraction(1, 2),
         (("FireResist8", 1, (46,)), ("MaximumColdResist1", 3, (1,))): Fraction(1, 2),
     }
@@ -239,22 +242,22 @@ def test_a_plain_and_a_maximum_resistance_on_a_shield_are_two_sources_of_one_hal
 
 
 def test_local_added_fire_damage_becomes_the_cold_mod_of_the_same_tier(data):
-    item = rare(data, "Driftwood Wand", 86, ExplicitMod("LocalAddedFireDamage8", 3, (59, 120)))
+    item = rare(data, "Driftwood Wand", 86, ExplicitMod("LocalAddedFireDamage8", (59, 120)))
     result = only_result(HarvestDamageSwap("fire", "cold").outcomes(data, item))
-    assert shown(result) == [("LocalAddedColdDamage8", 3, (54, 108))]  # tier 3: Fire needs level 62, Cold 63
+    assert shown(result, data) == [("LocalAddedColdDamage8", 3, (54, 108))]  # tier 3: Fire needs level 62, Cold 63
 
 
 def test_the_top_tier_of_local_added_damage_swaps_too(data):
-    item = rare(data, "Driftwood Wand", 86, ExplicitMod("LocalAddedFireDamage10_", 1, (89, 180)))
+    item = rare(data, "Driftwood Wand", 86, ExplicitMod("LocalAddedFireDamage10_", (89, 180)))
     result = only_result(HarvestDamageSwap("fire", "cold").outcomes(data, item))
-    assert shown(result) == [("LocalAddedColdDamage10__", 1, (81, 163))]
+    assert shown(result, data) == [("LocalAddedColdDamage10__", 1, (81, 163))]
 
 
 @pytest.mark.parametrize(("level", "works"), [(62, False), (63, True)])
 def test_a_wand_at_item_level_62_cannot_take_the_cold_mod_that_needs_63(data, level, works):
-    item = rare(data, "Driftwood Wand", level, ExplicitMod("LocalAddedFireDamage8", 3, (59, 120)))
+    item = rare(data, "Driftwood Wand", level, ExplicitMod("LocalAddedFireDamage8", (59, 120)))
     if works:
-        assert shown(only_result(HarvestDamageSwap("fire", "cold").outcomes(data, item))) == [("LocalAddedColdDamage8", 3, (54, 108))]
+        assert shown(only_result(HarvestDamageSwap("fire", "cold").outcomes(data, item)), data) == [("LocalAddedColdDamage8", 3, (54, 108))]
     else:
         with pytest.raises(NotApplicableError, match="above the item level"):
             HarvestDamageSwap("fire", "cold").outcomes(data, item)
@@ -264,7 +267,7 @@ def test_an_eldritch_implicit_does_not_refuse_the_add_remove_craft_and_stays_on_
     """The owner's answer (grill B2): the craft works on an item with an Eldritch implicit; the implicit is no explicit mod, so it is never removed."""
     implicit = ImplicitMod("AvoidShockEldritchImplicit3", 3, (min(data.mods["AvoidShockEldritchImplicit3"].stats[0].min, data.mods["AvoidShockEldritchImplicit3"].stats[0].max),))
     body = base_id(data, "Astral Plate")
-    life = ExplicitMod("IncreasedLife7", 1, (min(data.mods["IncreasedLife7"].stats[0].min, data.mods["IncreasedLife7"].stats[0].max),))
+    life = ExplicitMod("IncreasedLife7", (min(data.mods["IncreasedLife7"].stats[0].min, data.mods["IncreasedLife7"].stats[0].max),))
     item = Item.build(data, base_id=body, item_level=86, rarity=Rarity.RARE, mods=(life,), implicits=(implicit,))
     outcomes = HarvestAddRemove("life").outcomes(data, item)
     assert outcomes.results

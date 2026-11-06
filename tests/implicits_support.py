@@ -130,7 +130,7 @@ def placeholder(mod_id: str = "VeiledPrefix", *, seed: int = 1) -> ExplicitMod:
     """A veiled placeholder with the given (possibly non-canonical) seed."""
     mod = EXTENDED.mods[mod_id]
     values = tuple(seed if stat.id == "veiled_mod_seed" else stat.min for stat in mod.stats)
-    return ExplicitMod(mod_id, 1, values)
+    return ExplicitMod(mod_id, values)
 
 
 def make(*mods: ExplicitMod, base_id: str = BELT, rarity: Rarity = Rarity.RARE, **fields) -> Item:

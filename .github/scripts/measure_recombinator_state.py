@@ -53,7 +53,7 @@ def main() -> None:
     prefixes = (*targets, *junk_ids)
 
     def make(chosen: tuple[str, ...]) -> Item:
-        mods = tuple(ExplicitMod(mod_id, 1, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats)) for mod_id in chosen)
+        mods = tuple(ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats)) for mod_id in chosen)
         return Item.build(data, base_id=BOOTS, item_level=LEVEL, rarity=Rarity.MAGIC if len(chosen) == 1 else Rarity.RARE, mods=mods)
 
     items = [make(chosen) for size in range(1, 4) for chosen in itertools.combinations(prefixes, size)]

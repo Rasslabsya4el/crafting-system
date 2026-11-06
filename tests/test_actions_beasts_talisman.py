@@ -165,7 +165,7 @@ def test_nothing_but_the_flag_changes():
     item = talisman(5)
 
     for _, result in TalismanFracture(1).outcomes(BEAST_DATA, item).results:
-        assert [(e.mod_id, e.tier, e.values, e.crafted) for e in result.mods] == [(e.mod_id, e.tier, e.values, e.crafted) for e in item.mods]
+        assert [(e.mod_id, e.values, e.crafted) for e in result.mods] == [(e.mod_id, e.values, e.crafted) for e in item.mods]
         assert (result.base_id, result.rarity, result.influences, result.corrupted, result.item_level) == (
             item.base_id, item.rarity, item.influences, item.corrupted, item.item_level
         )  # fmt: skip
@@ -319,7 +319,7 @@ def test_a_count_other_than_one_or_two_is_a_value_error():
 def item_refuses_a_fractured_crafted_mod() -> bool:
     """True until ticket #68 lets `Item` hold a mod that is both fractured and crafted."""
     try:
-        Item(base_id=TALISMAN, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(CRAFTED, 1, (12,), fractured=True, crafted=True),))
+        Item(base_id=TALISMAN, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(CRAFTED, (12,), fractured=True, crafted=True),))
     except ItemError:
         return True
     return False

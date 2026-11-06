@@ -75,7 +75,7 @@ def finished_items(
     kept_mods = start.fractured_mods
     if forced is not None:
         low = tuple(min(stat.min, stat.max) for stat in data.mods[forced].stats)
-        kept_mods = (*kept_mods, ExplicitMod(forced, tier_table(data, start.base_id).get(forced, 1), low))
+        kept_mods = (*kept_mods, ExplicitMod(forced, low))
     retained = start.changed(data, rarity=Rarity.RARE, mods=kept_mods)
     kept = len(retained.mods)
     room = {
@@ -139,13 +139,13 @@ def finished_items(
 
 def _drawn(data: GameData, tiers: Mapping[str, int], mod_id: str) -> ExplicitMod:
     stats = data.mods[mod_id].stats
-    return ExplicitMod(mod_id, tiers.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in stats))
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in stats))
 
 
 def crafted_item(data: GameData, start: Item, mod_id: str) -> Item:
     """`start` with the crafted mod `mod_id` added at the low end of its range."""
     low = tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats)
-    return start.add_mod(data, ExplicitMod(mod_id, 1, low, crafted=True))
+    return start.add_mod(data, ExplicitMod(mod_id, low, crafted=True))
 
 
 def uncrafted_item(data: GameData, start: Item) -> Item:

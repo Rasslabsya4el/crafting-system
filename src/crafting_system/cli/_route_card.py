@@ -220,12 +220,9 @@ def _capacity(data: GameData, base_id: str, side: Side) -> int:
     return capacity(data, base_id, Rarity.RARE).of(side)
 
 
-def _implicits(data: GameData, base_id: str, stored: Sequence[ImplicitMod] = ()) -> tuple[Slot, ...]:
-    """The implicits the base has as ranges, leaving out those the item `stored` (they show their rolled values)."""
-    held = {entry.mod_id for entry in stored}
-    return tuple(
-        Slot(mod_text(data.mods[mod_id]), "implicit") for mod_id in data.base_items[base_id].implicits if mod_id not in held
-    )
+def _implicits(data: GameData, base_id: str) -> tuple[Slot, ...]:
+    """The implicits the base has, as ranges."""
+    return tuple(Slot(mod_text(data.mods[mod_id]), "implicit") for mod_id in data.base_items[base_id].implicits)
 
 
 def _stored_implicit(data: GameData, entry: ImplicitMod) -> Slot:
@@ -317,8 +314,13 @@ def card_of_item(
     its tier as the note; with `rolled` False it shows the range of its tier, not the roll.
     """
     table = tier_table(data, item.base_id) if tiers else {}
-    stored = tuple(  # the base's implicit first, then the Eldritch ones by grade
-        _stored_implicit(data, entry) for entry in sorted(item.implicits, key=lambda entry: (entry.grade, entry.mod_id))
+    base_implicits = data.base_items[item.base_id].implicits
+    shown_implicits = tuple(  # the base's implicit first, then the Eldritch ones by grade
+        # an item carries every implicit of its base (#484), at a roll the state does not hold: without `rolled` the base's own shows its range
+        Slot(mod_text(data.mods[entry.mod_id]), "implicit")
+        if not rolled and entry.mod_id in base_implicits
+        else _stored_implicit(data, entry)
+        for entry in sorted(item.implicits, key=lambda entry: (entry.grade, entry.mod_id))
     )
     offer = tuple(
         Slot(mod_text(mod), "mod", _marks(mod), _tier_note(table, [mod.id]))
@@ -345,7 +347,7 @@ def card_of_item(
     return ItemCard(
         data.base_items[item.base_id].name,
         properties,
-        (*_implicits(data, item.base_id, item.implicits), *stored),
+        shown_implicits,
         (),
         sides[Side.PREFIX],
         sides[Side.SUFFIX],

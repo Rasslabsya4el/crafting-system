@@ -409,10 +409,30 @@ def test_or4_an_implicit_min_roll_is_a_roll_with_no_grade_and_min_grade_is_the_l
     assert implicit_ok(listed, "RingImplicit1", (8,)) and not implicit_ok(listed, "RingImplicit1", (7,))
 
 
-def test_an_implicit_counts_only_when_the_item_lists_it_and_every_entry_is_asked():
+def test_an_item_holds_the_implicit_of_its_base_at_the_low_end_of_its_range_unless_another_implicit_takes_its_place():
+    """Ticket #484 (decided on #449), written here from the rule alone: an item carries every implicit of its base, and the ones it does
+    not list are at the low end of the range, until a listed implicit that is not the base's own takes their place."""
+    export = tiny_export()
+    present = target(LIFE, extra="implicits:\n  - family: RingResist\n")
+    at_five = target(LIFE, extra="implicits:\n  - family: RingResist\n    min_roll: [5]\n")
+    at_six = target(LIFE, extra="implicits:\n  - family: RingResist\n    min_roll: [6]\n")
+    nothing_listed = g.OItem(())
+
+    assert g.Oracle(export, present).implicit_met(present.implicits[0], nothing_listed)  # present although the item lists none
+    assert g.Oracle(export, at_five).implicit_met(at_five.implicits[0], nothing_listed)  # at the low end of (5-10)
+    assert not g.Oracle(export, at_six).implicit_met(at_six.implicits[0], nothing_listed)  # one above the low end: a question about the roll
+    listed_high = g.OItem((), (g.OImplicit("RingImplicit1", (8,)),))
+    assert g.Oracle(export, at_six).implicit_met(at_six.implicits[0], listed_high)  # a listed roll is the roll held
+    assert [(entry.mod_id, entry.values) for entry in g.Oracle(export, present).held_implicits(nothing_listed)] == [("RingImplicit1", (5,))]
+
+    replaced = g.OItem((), (g.OImplicit("ShockCorruption", (15,)),))  # a corrupted implicit in its place
+    assert [entry.mod_id for entry in g.Oracle(export, present).held_implicits(replaced)] == ["ShockCorruption"]
+    assert not g.Oracle(export, present).implicit_met(present.implicits[0], replaced)
+
+
+def test_an_implicit_requirement_is_asked_of_every_entry():
     spec = target(LIFE, extra="implicits:\n  - family: RingResist\n  - family: ShockAvoid\n")
     oracle = g.Oracle(tiny_export(), spec)
-    assert not oracle.implicit_met(spec.implicits[0], g.OItem(()))  # a base implicit the item does not list is absent
     both = g.OItem((), (g.OImplicit("RingImplicit1", (6,)),))
     assert oracle.implicit_met(spec.implicits[0], both) and not oracle.implicit_met(spec.implicits[1], both)
 

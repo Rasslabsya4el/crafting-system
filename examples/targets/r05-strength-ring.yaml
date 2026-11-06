@@ -69,11 +69,9 @@ requirements:
 start_item:
   rarity: rare
   mods:
-    # The mod is named by its game-data id: AllAttributes4 is "+(13-16) to all Attributes", tier 1
-    # of All Attributes on this base. The tier is taken as written, so it was checked by hand
-    # against the game data (3.29.3.3).
+    # The mod is named by its game-data id: AllAttributes4 is "+(13-16) to all Attributes". The file
+    # writes no tier: the tier is the game data's (OR-3).
     - mod: AllAttributes4
-      tier: 1
       # One whole number per stat of the mod, in the units of the game data.
       values: [14]
       # Locked in place by a Fracturing Orb.

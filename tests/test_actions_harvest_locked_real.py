@@ -59,7 +59,7 @@ def shield(data, mod_ids) -> Item:
     mods = []
     for mod_id in mod_ids:
         mod = data.mods[mod_id]
-        mods.append(ExplicitMod(mod_id, 1, tuple(min(s.min, s.max) for s in mod.stats), crafted=mod.domain == "crafted"))
+        mods.append(ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in mod.stats), crafted=mod.domain == "crafted"))
     return Item.build(data, base_id=base.id, item_level=ITEM_LEVEL, rarity=Rarity.RARE, mods=tuple(mods))
 
 
@@ -206,11 +206,11 @@ requirements:
 start_item:
   rarity: rare
   mods:
-    - {{mod: {ENERGY_SHIELD}, tier: 1, values: [105]}}
-    - {{mod: {RECHARGE}, tier: 1, values: [62]}}
-    - {{mod: {MULTIMOD}, tier: 1, values: [1], crafted: true}}
-    - {{mod: {LOCK_PREFIXES}, tier: 1, values: [1], crafted: true}}
-    - {{mod: {LOCK_SUFFIXES}, tier: 1, values: [1], crafted: true}}
+    - {{mod: {ENERGY_SHIELD}, values: [105]}}
+    - {{mod: {RECHARGE}, values: [62]}}
+    - {{mod: {MULTIMOD}, values: [1], crafted: true}}
+    - {{mod: {LOCK_PREFIXES}, values: [1], crafted: true}}
+    - {{mod: {LOCK_SUFFIXES}, values: [1], crafted: true}}
 start: bought   # the guide buys the item; --start-price gives its price, and the plan buys it again when the reforge fails
 """
 LIFEFORCE = {"Wild Crystallised Lifeforce": 0.01, "Vivid Crystallised Lifeforce": 0.02, "Primal Crystallised Lifeforce": 0.03}

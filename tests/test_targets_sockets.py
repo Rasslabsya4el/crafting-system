@@ -46,7 +46,7 @@ from crafting_system.targets import (
 WHITE = SocketColour.WHITE
 RED, GREEN, BLUE = SocketColour.RED, SocketColour.GREEN, SocketColour.BLUE
 SIX_LINK = "sockets: {count: 6, links: 6, colours: {R: 2, G: 2, B: 2}}\n"
-ABYSS_START_MOD = f"start_item:\n  mods:\n    - mod: {ABYSS_MOD}\n      tier: 1\n      values: 1\n"
+ABYSS_START_MOD = f"start_item:\n  mods:\n    - mod: {ABYSS_MOD}\n      values: 1\n"
 
 
 def start_sockets(body: str) -> str:
@@ -932,7 +932,6 @@ start_item:
   rarity: rare
   mods:
     - mod: IncreasedLife1
-      tier: 3
       values: [12]
   quality:
     percent: 12

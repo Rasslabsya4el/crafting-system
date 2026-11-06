@@ -48,7 +48,7 @@ def data():
 
 def rolled(data, mod_id: str, **flags) -> ExplicitMod:
     mod = data.mods[mod_id]
-    return ExplicitMod(mod_id, 1, tuple(min(s.min, s.max) for s in mod.stats), crafted=mod.domain == "crafted", **flags)
+    return ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in mod.stats), crafted=mod.domain == "crafted", **flags)
 
 
 def base_of(data, name: str, id_suffix: str | None = None):

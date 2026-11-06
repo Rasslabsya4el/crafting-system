@@ -58,7 +58,7 @@ def belt(data, *mods, rarity=Rarity.MAGIC):
     tiers = tier_table(data, BELT)
     rolled = tuple(
         ExplicitMod(
-            mod_id, tiers[mod_id], tuple(min(s.min, s.max) for s in data.mods[mod_id].stats),
+            mod_id, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats),
             fractured=fractured,
         )
         for mod_id, fractured in mods

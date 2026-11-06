@@ -56,12 +56,12 @@ Keys (unknown keys are errors, with a close-match hint):
     start_item:             # optional; absent means a fresh normal item of the base, level and influence
       rarity: rare          # normal, magic or rare; default rare when mods are given, else normal
       corrupted: false      # optional
-      mods:                 # optional; each mod by its game-data id, tier taken as written
+      mods:                 # optional; each mod by its game-data id, its values and whether it is fractured; its tier is the game data's (OR-3)
         - mod: LightningResist2
-          tier: 3           # whole number >= 1, stored as written; the goal check ignores it and reads the mod's tier in the game data
           values: [14]      # one whole number per stat; a bare number is allowed for one stat
           fractured: true   # optional; `crafted` is optional too
-      implicits:            # optional; the implicits the item starts with (none are filled in from the base)
+      implicits:            # optional; the implicits the item starts with. Every implicit of the base it does not list is added at the low
+                            # end of its range (a bought item was priced with no filter on that roll), unless a listed implicit takes its place
         - mod: AvoidShockEldritchImplicit3
           values: [40]      # one whole number per stat; a bare number is allowed for one stat
           grade: 3          # optional: 0 for a base implicit, 1 to 6 for an Eldritch one; taken from the mod if left out
@@ -103,7 +103,7 @@ stores, so a guide's value shown with catalyst quality is written as the base ro
 42 with 20% quality, since 35 x 1.2 = 42) plus a `quality` entry. The stat text of an implicit is resolved
 among implicits only, so "#% chance to Avoid being Shocked" under `implicits:` never picks the suffix of the
 same text, and without `mod` it skips the "in your Presence" variants. A start mod of a veiled placeholder
-(domain `veiled`) may leave out `tier` and `values`: tier 1 and the canonical seed are used. How a mod got on the item does not matter unless `not_crafted`
+(domain `veiled`) may leave out `values`: the canonical seed is used. How a mod got on the item does not matter unless `not_crafted`
 is set or the leaf asks a tier (a mod with no natural tier meets no tier leaf). The members of an `at_least` group are checked independently, so one mod can satisfy two of
 them (say a family and a stat text that select the same mod); groups may nest 20 levels deep. Merge keys
 (`<<`), anchors (`&name`) and aliases (`*name`) are not supported.

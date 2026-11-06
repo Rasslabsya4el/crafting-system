@@ -164,11 +164,11 @@ def _roll(mod, high: bool) -> tuple[int, ...]:
     return tuple(max(stat.min, stat.max) if high else min(stat.min, stat.max) for stat in mod.stats)
 
 
-def _start_item(context: StartContext, step: RecipeStep, tier: int, values: tuple[int, ...]) -> Item:
+def _start_item(context: StartContext, step: RecipeStep, values: tuple[int, ...]) -> Item:
     target = context.target
     return Item.build(
         context.data, base_id=target.base_id, item_level=target.item_level, rarity=Rarity.MAGIC,
-        mods=(ExplicitMod(step.mod_id, tier, values),), influences=target.influences,
+        mods=(ExplicitMod(step.mod_id, values),), influences=target.influences,
     )  # fmt: skip
 
 
@@ -202,14 +202,13 @@ def _examine(
     unlimited = tuple(dataclasses.replace(leaf, min_roll=None) for leaf in leaves)
     cannot_spawn: list[RecipeStep] = []
     for step in steps:
-        tier = table.get(step.mod_id)
-        if tier is None:
+        if step.mod_id not in table:
             cannot_spawn.append(step)
             continue
         mod = data.mods[step.mod_id]
         try:
-            low = _start_item(context, step, tier, _roll(mod, high=False))
-            high = low if _roll(mod, high=True) == _roll(mod, high=False) else _start_item(context, step, tier, _roll(mod, high=True))
+            low = _start_item(context, step, _roll(mod, high=False))
+            high = low if _roll(mod, high=True) == _roll(mod, high=False) else _start_item(context, step, _roll(mod, high=True))
         except ItemError as problem:
             refusals.append(_Refusal(INVALID_ITEM, f"step {step.number}: {problem}"))
             continue

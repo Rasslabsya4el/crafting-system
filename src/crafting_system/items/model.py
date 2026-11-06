@@ -5,9 +5,10 @@ imprints it holds (ADR-0034, ADR-0060).
 An `Item` is a value: frozen, hashable, and equal to any other item with the same fields, whatever
 order its mods were given in (mods are stored sorted by id). Building one checks the rules that
 need no game data; `Item.validate` checks the rest against a `GameData`, and `Item.build`,
-`changed`, `add_mod` and `remove_mod` always return an item that passed it. Implicits are stored only
-when given (the base's own implicits are not filled in), and an item built without implicits, quality
-offer, enchantment, strands or sockets behaves as it did before ADR-0027, ADR-0040 and ADR-0046. The strand count is a whole number
+`changed`, `add_mod` and `remove_mod` always return an item that passed it. An item carries every implicit of its base
+(ticket #484, #449): `Item.build` without `implicits` gives it each at the low end of its range, and the only way for it to
+lack one is a replacer that puts another implicit in its place (a Vaal outcome, an Ember, Bloodstained), which lists the new one.
+An item built without quality offer, enchantment, strands or sockets behaves as it did before ADR-0040 and ADR-0046. The strand count is a whole number
 from 0 to 100, 0 by default; it is part of the item's equality and hash. The quality is of two kinds (ADR-0049): the catalyst
 `Quality` of a ring, amulet or belt and the `PlainQuality` of a weapon or armour; `validate` refuses either on the other's base.
 The sockets are `Sockets` (a colour per socket and the link groups) or None, on a base of one of the 20 socket classes and at most
@@ -20,8 +21,8 @@ Words follow ADR-0021: a "family" is the exclusion set of a mod.
 Not enforced here, because they are rules of `actions` or open questions: a mod's required level
 against the item level, whether a mod can spawn on the base's tags, the limit of one crafted mod
 (and the metamod that lifts it), a magic item needing at least one mod and a rare at least four,
-the limit of two influences, fractured mods only on rares, and what corruption forbids. The `tier`
-of a mod is stored as given; `tiers.py` derives the tier of a mod on a base from the data.
+the limit of two influences, fractured mods only on rares, and what corruption forbids. An explicit mod has no tier:
+`tiers.py` derives the tier of a mod on a base from the data (OR-3), and a mod with no natural tier has none.
 """
 
 from dataclasses import dataclass, replace
@@ -53,6 +54,7 @@ from .implicits import (
     MAX_ELDRITCH_GRADE,
     EldritchSide,
     ImplicitMod,
+    base_implicits,
     eldritch_grade,
     eldritch_side,
     fits_corrupted_implicit,
@@ -104,13 +106,13 @@ class Metamod(StrEnum):
 class ExplicitMod:
     """One explicit mod on an item.
 
-    `tier` is 1 for the best and is stored as given. `values` holds one rolled integer per stat of
+    There is no tier here (ticket #484): the tier of a mod is a fact of the game data on a base and an item level
+    (`tier_table`), never of the item. `values` holds one rolled integer per stat of
     the mod, in the order of `Mod.stats`. A mod can be both fractured and crafted: a Fracturing Orb
     may pick a crafted mod, a metamod included (D6 of issue #28), and it then stays like any fractured mod.
     """
 
     mod_id: str
-    tier: int
     values: tuple[int, ...]
     fractured: bool = False
     crafted: bool = False
@@ -161,14 +163,13 @@ MAX_VEIL_OFFER = 3
 
 
 def veiled_placeholder(data: GameData, mod_id: str) -> ExplicitMod:
-    """The veiled placeholder `mod_id` as an explicit mod: tier 1 (a veiled mod has no spawn weight, so
-    it has no derived tier) and every stat at its minimum, which makes the seed canonical."""
+    """The veiled placeholder `mod_id` as an explicit mod: every stat at its minimum, which makes the seed canonical."""
     mod = data.mods.get(mod_id)
     if mod is None:
         raise UnknownModError(f"mod {mod_id} is not in the game data")
     if mod.domain != VEILED_DOMAIN:
         raise ModSlotError(f"mod {mod_id} is of domain {mod.domain}, not {VEILED_DOMAIN}")
-    return ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in mod.stats))
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats))
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,12 +207,10 @@ class Item:
             raise self._error("mods must all be ExplicitMod with a string mod id")
         ordered = tuple(sorted(self.mods, key=lambda mod: mod.mod_id))
         for mod in ordered:
-            if type(mod.tier) is not int or not isinstance(mod.values, tuple):
-                raise self._error(f"mod {mod.mod_id} needs an integer tier and a tuple of values")
+            if not isinstance(mod.values, tuple):
+                raise self._error(f"mod {mod.mod_id} needs a tuple of values")
             if any(type(value) is not int for value in mod.values):
                 raise self._error(f"mod {mod.mod_id} has a rolled value that is not an integer")
-            if mod.tier < 1:
-                raise self._error(f"mod {mod.mod_id} has tier {mod.tier}, tiers start at 1")
         for first, second in zip(ordered, ordered[1:]):
             if first.mod_id == second.mod_id:
                 raise self._error(f"mod {first.mod_id} is on the item twice")
@@ -296,7 +295,13 @@ class Item:
 
     @classmethod
     def build(cls, data: GameData, **fields) -> Self:
-        """Construct an item from `fields` and validate it against `data`."""
+        """Construct an item from `fields` and validate it against `data`.
+
+        With no `implicits` among the fields the item carries every implicit of its base at the low end of its range
+        (`base_implicits`); `implicits=` says what it holds, so an item whose base implicit was replaced lists the replacer.
+        """
+        if "implicits" not in fields and fields.get("base_id") in data.base_items:
+            fields["implicits"] = base_implicits(data, data.base_items[fields["base_id"]])
         built = cls(**fields).canonical(data)
         built.validate(data)
         return built

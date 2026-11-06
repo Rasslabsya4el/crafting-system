@@ -210,13 +210,13 @@ def test_the_pair_is_drawn_uniformly_among_the_valid_pairs():
     assert held(outcomes, CRUSADER_SUFFIX) == 1  # the donor's mod always comes over
 
 
-def test_a_kept_mod_keeps_its_tier_and_gets_a_new_value_and_the_rest_is_replaced():
+def test_a_kept_mod_stays_and_gets_a_new_value_and_the_rest_is_replaced():
     item = Item.build(
         CONTRACT_DATA,
         base_id=AMULET,
         item_level=90,
         rarity=Rarity.MAGIC,
-        mods=(dataclasses.replace(_roll(SHAPER_SUFFIX), tier=3), _roll(LIFE_1)),
+        mods=(_roll(SHAPER_SUFFIX), _roll(LIFE_1)),
         influences=frozenset({Influence.SHAPER}),
     )
     outcomes = orb(CRUSADER_SUFFIX).outcomes(CONTRACT_DATA, item)  # a magic receiver becomes a rare one
@@ -228,8 +228,7 @@ def test_a_kept_mod_keeps_its_tier_and_gets_a_new_value_and_the_rest_is_replaced
         assert finished.rarity is Rarity.RARE and finished.item_level == 90 and finished.base_id == AMULET
         assert finished.influences == {Influence.SHAPER, Influence.CRUSADER}
         by_id = {entry.mod_id: entry for entry in finished.mods}
-        assert by_id[SHAPER_SUFFIX].tier == 3  # the tier stays
-        assert by_id[CRUSADER_SUFFIX].tier == 1
+        assert SHAPER_SUFFIX in by_id and CRUSADER_SUFFIX in by_id  # the receiver's mod stays, the donor's comes over
         seen_values.add(by_id[SHAPER_SUFFIX].values)
         assert len(finished.mods) <= 6  # the draw may run dry, never over
     assert len(seen_values) > 1  # the value is rolled afresh, not kept

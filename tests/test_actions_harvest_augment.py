@@ -246,20 +246,20 @@ def test_the_added_mod_sits_at_its_tier_and_lowest_values():
     mods are tier 1; Life 1, Damage 1, Mana Leech 1 and Lightning Resistance 2 are tier 2; Lightning Resistance 1 is tier 3.
     """
     tiers = {
-        LIFE_1: ExplicitMod(LIFE_1, 2, (10,)),
-        LIFE_2: ExplicitMod(LIFE_2, 1, (25,)),
-        DAMAGE_1: ExplicitMod(DAMAGE_1, 2, (1, 5)),
-        DAMAGE_2: ExplicitMod(DAMAGE_2, 1, (1, 14)),
-        MANA_1: ExplicitMod(MANA_1, 2, (20,)),
-        MANA_2: ExplicitMod(MANA_2, 1, (60,)),
-        RESIST_1: ExplicitMod(RESIST_1, 3, (6,)),
-        RESIST_2: ExplicitMod(RESIST_2, 2, (12,)),
-        RESIST_3: ExplicitMod(RESIST_3, 1, (18,)),
-        FIRE_RESIST: ExplicitMod(FIRE_RESIST, 1, (6,)),
-        COLD_RESIST: ExplicitMod(COLD_RESIST, 1, (6,)),
-        GEM: ExplicitMod(GEM, 1, (1,)),
-        FIRE_GEM: ExplicitMod(FIRE_GEM, 1, (1,)),
-        COLD_GEM: ExplicitMod(COLD_GEM, 1, (1,)),
+        LIFE_1: ExplicitMod(LIFE_1, (10,)),
+        LIFE_2: ExplicitMod(LIFE_2, (25,)),
+        DAMAGE_1: ExplicitMod(DAMAGE_1, (1, 5)),
+        DAMAGE_2: ExplicitMod(DAMAGE_2, (1, 14)),
+        MANA_1: ExplicitMod(MANA_1, (20,)),
+        MANA_2: ExplicitMod(MANA_2, (60,)),
+        RESIST_1: ExplicitMod(RESIST_1, (6,)),
+        RESIST_2: ExplicitMod(RESIST_2, (12,)),
+        RESIST_3: ExplicitMod(RESIST_3, (18,)),
+        FIRE_RESIST: ExplicitMod(FIRE_RESIST, (6,)),
+        COLD_RESIST: ExplicitMod(COLD_RESIST, (6,)),
+        GEM: ExplicitMod(GEM, (1,)),
+        FIRE_GEM: ExplicitMod(FIRE_GEM, (1,)),
+        COLD_GEM: ExplicitMod(COLD_GEM, (1,)),
     }
     for craft, added in ADDED_ON_BASE.items():
         outcomes = HarvestAddRemove(craft).outcomes(META_DATA, amulet(roll(RESIST_2), roll(DAMAGE_1)))
@@ -270,10 +270,10 @@ def test_the_added_mod_sits_at_its_tier_and_lowest_values():
 
 
 def test_a_held_mod_keeps_its_tier_and_values():
-    start = amulet(ExplicitMod(LIFE_1, 2, (17,)), roll(COLD_RESIST))
+    start = amulet(ExplicitMod(LIFE_1, (17,)), roll(COLD_RESIST))
     for _, result in HarvestAddRemove("fire").outcomes(META_DATA, start).results:
         kept = [entry for entry in result.mods if entry.mod_id == LIFE_1]
-        assert kept in ([], [ExplicitMod(LIFE_1, 2, (17,))])
+        assert kept in ([], [ExplicitMod(LIFE_1, (17,))])
 
 
 # --- the refusals -----------------------------------------------------------------------------------
@@ -527,7 +527,6 @@ def test_a_sample_is_a_valid_item_with_the_new_mod_rolled_in_its_range():
             added += 1
             (entry,) = (entry for entry in item.mods if entry.mod_id == FIRE_RESIST)
             assert 6 <= entry.values[0] <= 11
-            assert entry.tier == 1
             values.add(entry.values[0])
         else:
             (entry,) = (entry for entry in item.mods if entry.mod_id == FIRE_GEM)

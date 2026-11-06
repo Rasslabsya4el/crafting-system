@@ -306,7 +306,7 @@ def test_the_chromatic_orb_refusals():
     with pytest.raises(OutOfScopeError, match="states no sockets"):
         chromatic(socketed(None))
     abyss = abyss_data()
-    held = Item.build(abyss, base_id=BODY, item_level=84, rarity=Rarity.RARE, mods=(ExplicitMod(ABYSS_MOD, 1, (1,)),), sockets=white(2))
+    held = Item.build(abyss, base_id=BODY, item_level=84, rarity=Rarity.RARE, mods=(ExplicitMod(ABYSS_MOD, (1,)),), sockets=white(2))
     with pytest.raises(OutOfScopeError, match="Abyssal"):
         ChromaticOrb().outcomes(dataclasses.replace(DATA, mods=abyss.mods), held)
 

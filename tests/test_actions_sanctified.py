@@ -146,7 +146,7 @@ def test_a_fair_roll_uses_one_draw_per_stat_so_seeded_runs_do_not_change():
 
 
 def test_the_mods_a_sanctified_resonator_keeps_keep_their_values():
-    kept = ExplicitMod("LightningResist1", 8, (9,), fractured=True)
+    kept = ExplicitMod("LightningResist1", (9,), fractured=True)
     outcomes = ApplyFossils(("Sanctified Fossil",)).outcomes(LUCKY_DATA, amulet(kept))
     rng = random.Random(12)
 

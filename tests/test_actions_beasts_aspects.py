@@ -84,7 +84,7 @@ def test_the_craft_adds_its_suffix_at_its_lowest_values_as_an_ordinary_mod_with_
     assert chance == 1
     assert result.mods == tuple(sorted((*start.mods, roll(IDS[aspect, level])), key=lambda mod: mod.mod_id))
     added = next(entry for entry in result.mods if entry.mod_id == IDS[aspect, level])
-    assert (added.tier, added.values, added.crafted, added.fractured) == (1, (level,), False, False)
+    assert (added.values, added.crafted, added.fractured) == ((level,), False, False)
     assert result.crafted_mods == ()
     assert outcomes.fractures is False
 

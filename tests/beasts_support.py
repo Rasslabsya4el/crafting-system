@@ -71,7 +71,7 @@ BEAST_DATA = beast_data()
 def roll(mod_id: str, *, tier: int = 1, fractured: bool = False, crafted: bool = False, data: GameData = BEAST_DATA) -> ExplicitMod:
     """The mod `mod_id` with every stat rolled at the low end of its range."""
     mod = data.mods[mod_id]
-    return ExplicitMod(mod_id, tier, tuple(min(stat.min, stat.max) for stat in mod.stats), fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), fractured=fractured, crafted=crafted)
 
 
 def contract_beast_data() -> GameData:
@@ -86,7 +86,7 @@ def contract_item(base_id: str, mod_ids=(), *, data: GameData, rarity: Rarity = 
     from contract_support import TIERS  # imported here: the module builds the whole abstraction fixture
 
     mods = tuple(
-        ExplicitMod(mod_id, TIERS.get(mod_id, 1), tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats))
+        ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats))
         for mod_id in mod_ids
     )
     return Item.build(data, base_id=base_id, item_level=84, rarity=rarity, mods=mods)

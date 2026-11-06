@@ -41,7 +41,7 @@ def data():
 
 def rolled(data, mod_id, **flags):
     mod = data.mods[mod_id]
-    return ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def rare(data, base_id, *mod_ids, **fields):

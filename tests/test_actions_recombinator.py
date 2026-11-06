@@ -77,7 +77,7 @@ DATA = _world()
 
 
 def roll(mod_id: str, **flags) -> ExplicitMod:
-    return ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in DATA.mods[mod_id].stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in DATA.mods[mod_id].stats), **flags)
 
 
 def make(mod_ids, rarity=Rarity.RARE, base=AMULET, level=84, flags=None, **fields) -> Item:

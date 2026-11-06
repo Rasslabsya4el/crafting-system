@@ -54,8 +54,13 @@ The other requirement kinds (ticket #416, read from the export and the owner's r
     mod (they carry a `local_influence_mod_requires_*_presence` stat: a conditional effect, not the plain one) are counted
     only by `mod:` naming one (OR-2). `mod:` is exactly that mod. The Eldritch grade (1 Lesser to 6 Perfect) is the digit
     that ends the mod's id: the value ranges of one family rise with it (AvoidShockEldritchImplicit1 33-35 ... 6 48-50);
-    a base implicit has grade 0. `min_roll` is a roll with no grade (OR-4); `min_grade` is the lowest grade. An implicit
-    counts when the item lists it; a base implicit the item does not list is absent (an open point, issue #449).
+    a base implicit has grade 0. `min_roll` is a roll with no grade (OR-4); `min_grade` is the lowest grade.
+    What an item holds (ticket #484, decided on #449): an item carries every implicit of its base until another implicit takes
+    its place (a Vaal outcome, a Bloodstained Fossil, a Locus, an Ember or Ichor, synthesis). So the implicits an item holds are
+    the ones it lists plus each implicit of its base that it does not list, at the LOW end of the range of each stat (the bought
+    item was priced with no filter on that roll, so the roll is not assumed higher), unless the item lists an implicit that is not
+    one of its base's own: that one is in their place, and the list says all it holds. A `min_roll` on a base implicit is thus
+    judged on the roll the item holds, never on its presence.
   * Quality (`quality:`). A catalyst quality (`type` given) is met by quality of that catalyst type, at least `min_percent`;
     quality with no `type` is plain quality (a weapon's or armour's), at least `min_percent`. The catalyst types are the
     `* Catalyst` currencies of the export whose description says "Adds quality that enhances" (so the Tainted Catalyst,
@@ -571,8 +576,18 @@ class Oracle:
                 return False
         return True
 
+    def held_implicits(self, item: OItem) -> tuple[OImplicit, ...]:
+        """The implicits the item holds: the listed ones, and the base's own that it does not list at the low end of their ranges,
+        unless a listed implicit is not one of the base's own (it took their place, so the list is the whole of it)."""
+        own = [mod_id for mod_id in self.export.base_items[self.base_id].get("implicits", []) if mod_id in self.export.mods]
+        if any(entry.mod_id not in own for entry in item.implicits):
+            return item.implicits
+        listed = {entry.mod_id for entry in item.implicits}
+        low = lambda mod_id: tuple(min(stat["min"], stat["max"]) for stat in self.export.mods[mod_id]["stats"])  # noqa: E731
+        return (*item.implicits, *(OImplicit(mod_id, low(mod_id)) for mod_id in own if mod_id not in listed))
+
     def implicit_met(self, req: OImplicitReq, item: OItem) -> bool:
-        return any(self.implicit_counts(req, entry) for entry in item.implicits)
+        return any(self.implicit_counts(req, entry) for entry in self.held_implicits(item))
 
     def quality_met(self, req: OQualityReq, held: OQuality | None) -> bool:
         """Whether the quality an item holds is of the wanted catalyst type (None: plain quality) and at least the wanted percent."""

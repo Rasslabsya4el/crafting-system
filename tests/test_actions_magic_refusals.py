@@ -123,8 +123,9 @@ def test_augmentation_is_refused_when_the_open_side_has_no_legal_mod():
 
 
 def only_mods(*mod_ids):
-    """The fixture data cut down to a few mods, to build a pool whose every candidate is blocked."""
-    return dataclasses.replace(DATA, mods={mod_id: DATA.mods[mod_id] for mod_id in mod_ids})
+    """The fixture data cut down to a few mods (and the implicits of its bases, which an item carries, #484), to build a pool whose every candidate is blocked."""
+    implicits = {mod_id for base in DATA.base_items.values() for mod_id in base.implicits if mod_id in DATA.mods}
+    return dataclasses.replace(DATA, mods={mod_id: DATA.mods[mod_id] for mod_id in (*mod_ids, *sorted(implicits))})
 
 
 def test_an_add_is_refused_when_the_family_of_every_candidate_is_on_the_item():

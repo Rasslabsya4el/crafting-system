@@ -74,7 +74,7 @@ def ab(goal: Goal = GOAL_SPEED, actions=EVERY_ACTION, **options) -> Abstraction:
 
 
 def fractured_veil(mod_id: str = PRE) -> ExplicitMod:
-    return ExplicitMod(mod_id, 1, holder(mod_id).values, fractured=True)
+    return ExplicitMod(mod_id, holder(mod_id).values, fractured=True)
 
 
 # --- layer 1 -----------------------------------------------------------------------------------------
@@ -254,7 +254,7 @@ def test_a_fractured_placeholder_is_the_generic_placeholder_and_a_fractured_pick
 @pytest.mark.parametrize(
     "item",
     [
-        amulet(ExplicitMod(SIGNATURE_PLACEHOLDER, 1, holder(SIGNATURE_PLACEHOLDER).values), rolled(RESIST_2)),
+        amulet(ExplicitMod(SIGNATURE_PLACEHOLDER, holder(SIGNATURE_PLACEHOLDER).values), rolled(RESIST_2)),
         amulet(holder(PRE), holder(SUF)),
     ],
     ids=["signature_placeholder", "double_veil"],

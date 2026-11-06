@@ -66,11 +66,9 @@ requirements:
 start_item:
   rarity: rare
   mods:
-    # The mod is named by its game-data id: ChaosResist6 is "+(31-35)% to Chaos Resistance", tier 1
-    # of Chaos Resistance on this base. The tier is taken as written, so it was checked by hand
-    # against the game data (3.29.3.3).
+    # The mod is named by its game-data id: ChaosResist6 is "+(31-35)% to Chaos Resistance". The file
+    # writes no tier: the tier is the game data's (OR-3).
     - mod: ChaosResist6
-      tier: 1
       # One whole number per stat of the mod, in the units of the game data.
       values: [33]
       # Locked in place by a Fracturing Orb.

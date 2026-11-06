@@ -107,7 +107,7 @@ def test_r10_asks_the_30_percent_boots_so_the_recipe_start_is_an_option_priced_b
 
     assert candidate.key == "vendor:boots_movement_speed:5"
     assert candidate.item.rarity is Rarity.MAGIC and candidate.item.item_level == 84
-    assert candidate.item.mods == (ExplicitMod("MovementVelocity5", 2, (30,)),)  # the tier the target file writes for it by hand
+    assert candidate.item.mods == (ExplicitMod("MovementVelocity5", (30,)),)  # the tier the target file writes for it by hand
     assert candidate.price == pytest.approx(3.0 + 5 * 1.5 + 5 * 0.25)
 
 
@@ -188,7 +188,7 @@ def test_a_minion_helmet_is_one_step_priced_by_the_base_and_the_gem_line(data):
     (candidate,) = found.candidates
     assert candidate.recipe == "minion_helmet" and candidate.steps == 0 and candidate.key == "vendor:minion_helmet:1"
     assert candidate.goods == (("General's Helmet (ilvl 84)", 1, 2.0, "fixture"), (gems, 1, 6.0, "fixture"))
-    assert candidate.item.mods == (ExplicitMod("GlobalIncreaseMinionSpellSkillGemLevel1", 2, (1,)),)
+    assert candidate.item.mods == (ExplicitMod("GlobalIncreaseMinionSpellSkillGemLevel1", (1,)),)
     assert candidate.price == pytest.approx(8.0)
     assert "vendor.gem_qualification_is_uncorrupted_skill_gems" in candidate.claims
     assert found.refused == ()
@@ -202,7 +202,7 @@ def test_a_fire_spell_gem_wand_is_one_step_and_the_other_tags_are_asked_for_noth
 
     (candidate,) = found.candidates
     assert candidate.recipe == "spell_gem_fire" and candidate.price == pytest.approx(5.0)
-    assert candidate.item.mods == (ExplicitMod("GlobalFireSpellGemsLevel1_", 1, (1,)),)
+    assert candidate.item.mods == (ExplicitMod("GlobalFireSpellGemsLevel1_", (1,)),)
     refused = {each.recipe: each.reason for each in found.refused}
     assert refused["spell_gem_cold"] == refused["spell_gem_chaos"] == refused["weapon_physical"] == NO_TARGET_MOD
     assert "spell_gem_fire" not in refused
@@ -216,7 +216,7 @@ def test_a_staff_gets_plus_two_and_a_plus_three_is_beyond_the_recipe(data):
     three = listing(data, gem_target(data, "Eclipse Staff", "+3 to Level of all Fire Spell Skill Gems"), prices)
 
     (candidate,) = two.candidates
-    assert candidate.item.mods == (ExplicitMod("GlobalFireSpellGemsLevelTwoHand1__", 3, (2,)),)  # tier 3 from the top on a staff
+    assert candidate.item.mods == (ExplicitMod("GlobalFireSpellGemsLevelTwoHand1__", (2,)),)  # tier 3 from the top on a staff
     assert three.candidates == ()
     assert [(each.recipe, each.reason) for each in three.refused if each.recipe == "spell_gem_fire"] == [("spell_gem_fire", CAP_BELOW_ASKED)]
 
@@ -246,7 +246,7 @@ def test_the_real_fire_ladder_is_t3_at_the_wiki_cap_and_t2_at_the_coe_cap(data):
 
     (candidate,) = [each for each in found.candidates if each.recipe == "weapon_fire"]
     assert candidate.key == "vendor:weapon_fire:9" and candidate.reading_values == ("coe",)
-    assert candidate.item.mods[0].mod_id == "LocalAddedFireDamage9" and candidate.item.mods[0].tier == 2
+    assert candidate.item.mods[0].mod_id == "LocalAddedFireDamage9" and tier_table(data, candidate.item.base_id)["LocalAddedFireDamage9"] == 2
     assert [(each.recipe, each.reason, each.reading_values) for each in found.refused if each.recipe == "weapon_fire"] == [
         ("weapon_fire", CAP_BELOW_ASKED, ("wiki",))
     ]

@@ -26,10 +26,25 @@ AVOID3 = implicit("AvoidShockEldritchImplicit3", 3)
 EATER2 = implicit("ChanceToShockEldritchImplicit2", 2)
 
 
-def test_an_item_built_without_the_new_fields_has_none_of_them():
+def test_an_item_built_without_the_new_fields_carries_the_implicits_of_its_base_and_nothing_else():
     built = make()
 
-    assert (built.implicits, built.quality, built.veil_offer) == ((), None, ())
+    assert (built.implicits, built.quality, built.veil_offer) == ((BASE,), None, ())  # the Heavy Belt's Strength, at the low end (#484)
+    assert make(base_id=BOOTS, rarity=Rarity.NORMAL).implicits == ()  # a base with no implicit has none
+
+
+def test_a_fresh_heavy_belt_carries_its_strength_implicit_at_the_low_end_of_its_range():
+    """Ticket #484 (decided on #449): an item carries every implicit of its base; the bought item was priced with no filter on the roll."""
+    (held,) = make().implicits
+    stat = EXTENDED.mods["StrengthImplicitBelt1"].stats[0]
+
+    assert (held.mod_id, held.grade, held.values) == ("StrengthImplicitBelt1", 0, (stat.min,)) and stat.min < stat.max
+
+
+def test_an_item_that_lists_its_implicits_holds_exactly_those():
+    """`implicits=` says what the item holds: an item whose base implicit was replaced lists the replacer and not the base's."""
+    assert make(implicits=()).implicits == ()
+    assert make(implicits=(AVOID1,)).implicits == (AVOID1,)
 
 
 def test_a_base_implicit_with_grade_0_is_accepted():
@@ -163,7 +178,7 @@ def test_a_mixed_type_list_of_ids_is_an_implicit_error_not_a_type_error():
 
 def test_a_mixed_type_list_of_mod_ids_is_an_item_error_not_a_type_error():
     with pytest.raises(ItemError, match="string mod id"):
-        make(ExplicitMod(5, 1, (1,)), ExplicitMod("IncreasedLife1", 1, (10,)))
+        make(ExplicitMod(5, (1,)), ExplicitMod("IncreasedLife1", (10,)))
 
 
 @pytest.mark.parametrize("bad", [[BASE], (BASE, "StrengthImplicitBelt1"), "StrengthImplicitBelt1"])
@@ -251,7 +266,7 @@ def test_add_mod_and_remove_mod_keep_the_implicits():
 
 def test_an_item_without_implicits_equals_and_hashes_like_one_with_the_defaults():
     plain = make()
-    explicit = make(implicits=(), quality=None, veil_offer=())
+    explicit = make(implicits=(BASE,), quality=None, veil_offer=())
 
     assert plain == explicit
     assert hash(plain) == hash(explicit)

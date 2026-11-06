@@ -151,7 +151,7 @@ def veil_target(tmp_path):
     lines = []
     for mod_id in (LIFE_1, DAMAGE_1, GEM):
         entry = rolled(mod_id, data=DATA)
-        lines.append(f"    - mod: {mod_id}\n      tier: {entry.tier}\n      values: {list(entry.values)}\n      fractured: true")
+        lines.append(f"    - mod: {mod_id}\n      values: {list(entry.values)}\n      fractured: true")
     path = tmp_path / "veil.yaml"
     path.write_text(TARGET.format(fractured="\n".join(lines)), encoding="utf-8")
     return load_target(path, DATA)

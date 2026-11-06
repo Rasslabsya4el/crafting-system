@@ -47,13 +47,13 @@ def data():
 
 def low(data, mod_id: str, **flags) -> ExplicitMod:
     mod = data.mods[mod_id]
-    return ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def tiered(data, base_id: str, mod_id: str, **flags) -> ExplicitMod:
     mod = data.mods[mod_id]
     tier = tier_table(data, base_id).get(mod_id, 1)
-    return ExplicitMod(mod_id, tier, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), **flags)
 
 
 def with_veil(data, base_id: str, side: str, *mods: ExplicitMod, level: int = 84) -> Item:
@@ -159,7 +159,7 @@ def test_the_legacy_trigger_socketed_spell_mod_of_r07_is_never_offered(data):
     assert all("TriggerSocketedSpellOnSkillUse" not in mod_id for offer in shown for mod_id in offer)
 
 
-def test_a_pick_lands_the_chosen_mod_at_its_tier_and_lowest_values(data):
+def test_a_pick_lands_the_chosen_mod_at_its_lowest_values(data):
     start = with_veil(data, BOOTS, "prefix", tiered(data, BOOTS, FIRE))
     _, offered = next((c, r) for c, r in Unveil().outcomes(data, start).results if MS_ONSLAUGHT in r.veil_offer)
     index = offered.veil_offer.index(MS_ONSLAUGHT) + 1
@@ -167,7 +167,7 @@ def test_a_pick_lands_the_chosen_mod_at_its_tier_and_lowest_values(data):
     assert {entry.mod_id for entry in landed.mods} == {FIRE, MS_ONSLAUGHT} and landed.veil_offer == ()
     (picked,) = (entry for entry in landed.mods if entry.mod_id == MS_ONSLAUGHT)
     assert picked.values == tuple(min(stat.min, stat.max) for stat in data.mods[MS_ONSLAUGHT].stats)
-    assert picked.tier == tier_table(data, BOOTS).get(MS_ONSLAUGHT, 1) and not picked.fractured
+    assert not picked.fractured  # the item stores no tier; the data has the mod's
 
 
 # --- the Veiled Exalted Orb on the real export ---------------------------------------------------------------------------------

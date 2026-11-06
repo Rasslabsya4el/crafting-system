@@ -72,7 +72,7 @@ LIMITS = {  # (multimod held, extra slot) -> the limit
 
 def roll(mod_id: str, *, crafted: bool = False) -> ExplicitMod:
     mod = DATA.mods[mod_id]
-    return ExplicitMod(mod_id, 1, tuple(min(stat.min, stat.max) for stat in mod.stats), crafted=crafted)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), crafted=crafted)
 
 
 def body(*extra, enchantment=None, multimod=False, rarity=Rarity.RARE) -> Item:

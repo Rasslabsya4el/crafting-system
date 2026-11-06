@@ -48,7 +48,7 @@ MOVERS = (AnnulmentOrb(), ExaltedOrb())
 
 def rolled(mod_id: str, data=DATA, **flags) -> ExplicitMod:
     mod = data.mods[mod_id]
-    return ExplicitMod(mod_id, tier_table(data, TALISMAN).get(mod_id, 1), tuple(min(s.min, s.max) for s in mod.stats), **flags)
+    return ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in mod.stats), **flags)
 
 
 def talisman(*mod_ids: str, data=DATA, rarity: Rarity = Rarity.RARE, fractured=(), crafted=(), **fields) -> Item:

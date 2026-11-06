@@ -80,7 +80,7 @@ def r05():
     ab = Abstraction(data, Goal((life, Wanted(frozenset({FORCED})))), BASE, LEVEL, [RemoveCraftedMods(), *crafts])
     low = tuple(min(stat.min, stat.max) for stat in data.mods[FRACTURED].stats)
     start = ab.compress(
-        Item.build(data, base_id=BASE, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(FRACTURED, 1, low, fractured=True),))
+        Item.build(data, base_id=BASE, item_level=LEVEL, rarity=Rarity.RARE, mods=(ExplicitMod(FRACTURED, low, fractured=True),))
     )
     # the label of an offer names it once: 141 ring crafts share 80 display texts ("Bench craft +# to maximum Life" is three of them)
     offers = [("essence", ESSENCE), ("remove crafted mods", RemoveCraftedMods()), *((f"craft:{craft.mod_id}", craft) for craft in crafts)]

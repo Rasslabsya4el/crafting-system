@@ -5,7 +5,7 @@ The amulet of the fixture has no corrupted pool, so the Vaal Orb declares `appli
 
 * `vaal_amulet`: a rare amulet with two mods and no implicit (the implicit is just added); `vaal_amulet_fractured`: a fractured mod stays;
 * `vaal_normal` and `vaal_magic`: the Orb is accepted on any rarity; * `vaal_boots_two`: an Exarch and an Eater implicit, one goes;
-* `vaal_belt_stored` and `vaal_belt_unstored`: a base implicit the item stores or leaves to its base, with an Eater one;
+* `vaal_belt_stored` and `vaal_belt_replaced`: a belt with its base implicit, and an item whose base implicit went to an Ember (it lists the Eater one alone, #484);
 * `vaal_cobalt` and `vaal_prismatic`: a jewel with a corruption-exclusive unique (a dead end) and one without (nothing);
 * `vaal_amulet_stranded`: 40 Memory Strands, which the Orb neither cuts nor spends; `vaal_amulet_corrupted`: the refusal.
 """
@@ -36,8 +36,8 @@ def _items():
         "vaal_normal": lambda: amulet(rarity=Rarity.NORMAL),
         "vaal_magic": lambda: amulet(_roll(LIFE_1), rarity=Rarity.MAGIC),
         "vaal_boots_two": lambda: on(BOOTS, *junk, implicits=(exarch(), eater())),
-        "vaal_belt_stored": lambda: on(BELT, *junk, implicits=(base_implicit(), eater())),
-        "vaal_belt_unstored": lambda: on(BELT, *junk, implicits=(eater(),)),
+        "vaal_belt_stored": lambda: on(BELT, *junk, implicits=(base_implicit(),)),
+        "vaal_belt_replaced": lambda: on(BELT, *junk, implicits=(eater(),)),
         "vaal_cobalt": lambda: on(COBALT),
         "vaal_prismatic": lambda: on(PRISMATIC),
         "vaal_amulet_stranded": lambda: amulet(*junk, memory_strands=40),
@@ -50,7 +50,7 @@ def _build(name: str):
 
 
 for _name in (
-    "vaal_amulet", "vaal_amulet_fractured", "vaal_normal", "vaal_magic", "vaal_boots_two", "vaal_belt_stored", "vaal_belt_unstored",
+    "vaal_amulet", "vaal_amulet_fractured", "vaal_normal", "vaal_magic", "vaal_boots_two", "vaal_belt_stored", "vaal_belt_replaced",
     "vaal_cobalt", "vaal_prismatic", "vaal_amulet_stranded", "vaal_amulet_corrupted",
 ):
     register_extra_item(_name, KINDS, _data, lambda name=_name: _build(name))

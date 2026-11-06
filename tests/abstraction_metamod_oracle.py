@@ -114,7 +114,7 @@ def tier_table(data: GameData, base_id: str, influences: Iterable[Influence] = (
 def low_roll(data: GameData, mod_id: str, tier: int = 1, **flags: bool) -> ExplicitMod:
     """The mod at `tier` with every stat at the low end of its range."""
     values = tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats)
-    return ExplicitMod(mod_id, tier, values, **flags)
+    return ExplicitMod(mod_id, values, **flags)
 
 
 def _drawn(data: GameData, tiers: Mapping[str, int], mod_id: str) -> ExplicitMod:

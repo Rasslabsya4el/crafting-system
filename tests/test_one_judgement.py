@@ -3,7 +3,7 @@
 Each rule has a unit test on a hand-made export: the committed excerpt plus two mods added here, a bench craft of Life
 (domain `crafted`) and an essence-only Life mod (spawn weight 0). The natural Life ladder of the excerpt on an amulet is
 IncreasedLife3 (tier 1, level 18), IncreasedLife2 (tier 2, level 11), IncreasedLife1 (tier 3, level 5). The tier of a mod
-always comes from that ladder in the game data, never from the number stored on the item.
+always comes from that ladder in the game data; the item stores none (ticket #484).
 
 Both callers are checked on every case: `Requirement.is_met_by` (a concrete item) and `status_of` (the planner's leaf).
 """
@@ -70,17 +70,17 @@ def target(requirement: str, *, level: int = 84):
     return parse_target(text, DATA, source="t.yaml")
 
 
-def held(mod_id: str, *, stored_tier: int = 1, values: tuple[int, ...] | None = None, crafted: bool = False) -> Item:
+def held(mod_id: str, *, values: tuple[int, ...] | None = None, crafted: bool = False) -> Item:
     mod = DATA.mods[mod_id]
     values = values or tuple(max(stat.min, stat.max) for stat in mod.stats)
-    entry = ExplicitMod(mod_id, stored_tier, values, crafted=crafted)
+    entry = ExplicitMod(mod_id, values, crafted=crafted)
     return Item.build(DATA, base_id=AMULET, item_level=84, rarity=Rarity.RARE, mods=(entry,))
 
 
-def judged(requirement: str, mod_id: str, *, stored_tier: int = 1, values=None, level: int = 84) -> bool:
+def judged(requirement: str, mod_id: str, *, values=None, level: int = 84) -> bool:
     """Whether the item holding `mod_id` meets the requirement, by both callers (they must agree)."""
     wanted = target(requirement, level=level)
-    item = held(mod_id, stored_tier=stored_tier, values=values, crafted=DATA.mods[mod_id].domain == "crafted")
+    item = held(mod_id, values=values, crafted=DATA.mods[mod_id].domain == "crafted")
     entry = item.mods[0]
     by_item = wanted.is_met_by(item)
     leaf = Goal.from_target(wanted).leaves[0]
@@ -159,11 +159,12 @@ def test_an_essence_only_mod_has_no_tier_and_meets_no_tier_leaf():
     assert judged(f"- family: IncreasedLife\n  mod: {ESSENCE_LIFE}\n", ESSENCE_LIFE)
 
 
-def test_the_tier_stored_on_the_item_is_never_read():
-    # the data says IncreasedLife1 is tier 3 and IncreasedLife3 is tier 1, whatever the item wrote
-    assert not judged(LIFE, LIFE_LOW, stored_tier=1)
-    assert judged(LIFE, LIFE_TOP, stored_tier=9)
-    assert judged(LIFE + "  min_tier: 1\n", LIFE_TOP, stored_tier=5)
+def test_the_item_stores_no_tier_the_data_has_it():
+    # the data says IncreasedLife1 is tier 3 and IncreasedLife3 is tier 1; an explicit mod holds no tier to say otherwise
+    assert "tier" not in ExplicitMod.__dataclass_fields__
+    assert not judged(LIFE, LIFE_LOW)
+    assert judged(LIFE, LIFE_TOP)
+    assert judged(LIFE + "  min_tier: 1\n", LIFE_TOP)
 
 
 def test_not_crafted_keeps_its_meaning():
@@ -245,7 +246,19 @@ def test_the_scan_sees_a_second_copy_when_there_is_one():
 
 def test_the_judgement_path_has_no_default_tier():
     """No `.get(..., 1)` and no literal tier 1 where a mod is judged against a leaf (T4, T14, T15, T16, T23 of the inventory)."""
-    default = re.compile(r"\.get\([^()]*,\s*1\)|BENCH_TIER|CRAFTED_TIER|ELEVATED_TIER")
+    default = re.compile(r"\.get\([^()]*,\s*1\)|\b(?:BENCH|CRAFTED|ELEVATED)_TIER\b")
     texts = {name: (SRC / name).read_text(encoding="utf-8") for name in JUDGEMENT_PATH}
 
     assert {name: default.findall(text) for name, text in texts.items() if default.search(text)} == {}
+
+
+def test_no_module_of_src_writes_a_default_tier_on_a_mod():
+    """Ticket #484: the constants that gave a made mod a tier (bench, aspect, Elevated) and every `ExplicitMod(..., tier, ...)` are gone."""
+    constant = re.compile(r"\b(?:BENCH|CRAFTED|ELEVATED)_TIER\b")
+    written = re.compile(r"ExplicitMod\([^()]*\btiers?\b")
+    found = []
+    for path in sorted(SRC.rglob("*.py")):
+        text = path.read_text(encoding="utf-8")
+        found += [f"{path.relative_to(SRC).as_posix()}: {hit}" for hit in constant.findall(text) + written.findall(text)]
+
+    assert found == []

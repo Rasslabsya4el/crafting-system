@@ -48,7 +48,7 @@ def belt(data, rarity, *mod_ids, level):
     return Item.build(
         data, base_id=BELT, item_level=level, rarity=rarity,
         mods=tuple(
-            ExplicitMod(mod_id, tiers[mod_id], tuple(min(s.min, s.max) for s in data.mods[mod_id].stats))
+            ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats))
             for mod_id in mod_ids
         ),
     )  # fmt: skip

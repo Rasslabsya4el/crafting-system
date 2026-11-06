@@ -277,7 +277,7 @@ def toy_item(*mod_ids, fractured=()):
     from crafting_system.items import ExplicitMod, Item
 
     mods = tuple(
-        ExplicitMod(mod_id, 1, tuple(min(s.min, s.max) for s in TOY.mods[mod_id].stats), fractured=mod_id in fractured)
+        ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in TOY.mods[mod_id].stats), fractured=mod_id in fractured)
         for mod_id in mod_ids
     )
     return Item.build(TOY, base_id=AMULET, item_level=LEVEL, rarity=Rarity.RARE, mods=mods)

@@ -403,7 +403,6 @@ def test_a_start_item_mod_with_an_unknown_id_is_refused_with_close_ids():
         start_item:
           mods:
             - mod: LightningResist22
-              tier: 1
               values: [14]
         """
     )
@@ -419,7 +418,6 @@ def test_a_start_item_that_the_item_model_rejects_keeps_its_words():
         start_item:
           mods:
             - mod: LightningResist2
-              tier: 3
               values: [99]
         """
     )
@@ -435,15 +433,13 @@ def test_an_item_error_about_the_second_mod_is_reported_at_that_mod():
         start_item:
           mods:
             - mod: IncreasedLife1
-              tier: 1
               values: [10]
             - mod: LightningResist2
-              tier: 3
               values: [99]
         """
     )
 
-    assert_error(message, 10, "start_item.mods[1]", "mod LightningResist2 has value 99")
+    assert_error(message, 9, "start_item.mods[1]", "mod LightningResist2 has value 99")
 
 
 def test_an_item_error_naming_two_mods_is_reported_at_the_one_its_words_name_first():
@@ -454,16 +450,14 @@ def test_an_item_error_naming_two_mods_is_reported_at_the_one_its_words_name_fir
         start_item:
           mods:
             - mod: LightningResist2
-              tier: 3
               values: [14]
             - mod: LightningResist1
-              tier: 3
               values: [7]
         """
     )
 
     assert "mods LightningResist1 and LightningResist2 share" in message
-    assert_error(message, 10, "start_item.mods[1]", "share the family LightningResistance")
+    assert_error(message, 9, "start_item.mods[1]", "share the family LightningResistance")
 
 
 def test_a_normal_start_item_with_mods_is_rejected_by_the_item_model():
@@ -475,7 +469,6 @@ def test_a_normal_start_item_with_mods_is_rejected_by_the_item_model():
           rarity: normal
           mods:
             - mod: LightningResist2
-              tier: 3
               values: [14]
         """
     )
@@ -483,18 +476,24 @@ def test_a_normal_start_item_with_mods_is_rejected_by_the_item_model():
     assert_error(message, 5, "start_item", "normal item")
 
 
-def test_a_start_item_mod_needs_a_mod_a_tier_and_values():
+def test_a_start_item_mod_needs_a_mod_and_values():
     base = "requirements:\n  - family: IncreasedLife\nstart_item:\n  mods:\n    - mod: LightningResist2\n"
-    message = parse_error(base + "      values: [14]\n")
+    message = parse_error(base)
 
-    assert_error(message, 7, "start_item.mods[0].tier", "required but missing")
+    assert_error(message, 7, "start_item.mods[0].values", "required but missing")
+
+
+def test_a_start_item_mod_writes_no_tier_the_game_data_has_it():
+    """Ticket #484: the tier of a start mod is a fact of the game data (OR-3); a file that writes one is refused."""
+    base = "requirements:\n  - family: IncreasedLife\nstart_item:\n  mods:\n    - mod: LightningResist2\n"
+    message = parse_error(base + "      tier: 3\n      values: [14]\n")
+
+    assert_error(message, 8, "start_item.mods[0].tier", "unknown key `tier`")
 
 
 @pytest.mark.parametrize(
     ("field", "line", "cause"),
     [
-        ("tier", "tier: 0", "whole number of 1 or more"),
-        ("tier", "tier: true", "whole number of 1 or more"),
         ("values[0]", "values: [1.5]", "must be a whole number"),
         ("values", "values: abc", "whole number or a list"),
         ("values[0]", "values: [true]", "must be a whole number"),
@@ -503,7 +502,7 @@ def test_a_start_item_mod_needs_a_mod_a_tier_and_values():
     ],
 )
 def test_the_fields_of_a_start_item_mod_are_checked(field, line, cause):
-    fields = {"mod": "mod: LightningResist2", "tier": "tier: 3", "values": "values: [14]"}
+    fields = {"mod": "mod: LightningResist2", "values": "values: [14]"}
     fields[line.split(":")[0]] = line
     body = "".join(f"    {'- ' if key == 'mod' else '  '}{text}\n" for key, text in fields.items())
     head = "requirements:\n  - family: IncreasedLife\nstart_item:\n  mods:\n"

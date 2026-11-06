@@ -48,7 +48,6 @@ start_item:
   rarity: rare
   mods:
     - mod: AllAttributes7
-      tier: 1
       values: {low}
       fractured: true
 start: bought

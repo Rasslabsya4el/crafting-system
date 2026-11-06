@@ -41,7 +41,7 @@ def base_of(data, name: str, domain_tag: str):
 
 
 def rolled(data, mod_id: str) -> ExplicitMod:
-    return ExplicitMod(mod_id, 1, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats))
+    return ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in data.mods[mod_id].stats))
 
 
 def bow(data, *mod_ids, influences=HUNTER, rarity=Rarity.RARE):

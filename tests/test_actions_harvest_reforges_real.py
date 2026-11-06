@@ -131,7 +131,7 @@ def test_a_likelihood_reforge_weighs_the_held_families_ten_times_more_or_a_tenth
     life = data.mods["IncreasedLife10"]
     held = Item.build(
         data, base_id=item.base_id, item_level=86, rarity=Rarity.RARE,
-        mods=(ExplicitMod(life.id, 1, tuple(min(s.min, s.max) for s in life.stats)),),
+        mods=(ExplicitMod(life.id, tuple(min(s.min, s.max) for s in life.stats)),),
     )  # fmt: skip
     plain = {(f.family, e.mod.id): e.weight for f in build_pool(data, item) for e in f.mods}
     boosted = {(f.family, e.mod.id): e.weight for f in HarvestReforgeLikelihood(more).outcomes(data, held).pool for e in f.mods}

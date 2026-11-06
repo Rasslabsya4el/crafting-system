@@ -69,7 +69,7 @@ def test_a_swap_target_is_planned_end_to_end_with_the_hand_figure(tmp_path):
     lines = []
     for mod_id in (FIRE_RESIST, MAX_FIRE):
         entry = world_mod(mod_id)
-        lines.append(f"    - mod: {mod_id}\n      tier: {entry.tier}\n      values: {list(entry.values)}")
+        lines.append(f"    - mod: {mod_id}\n      values: {list(entry.values)}")
     path.write_text(
         "base: Paua Amulet\nitem_level: 84\ninfluence: []\nrequirements:\n  - family: " + WORLD.mods[COLD_RESIST].families[0] + "\n    mod: " + COLD_RESIST + "\n"
         "start_item:\n  rarity: rare\n  mods:\n" + "\n".join(lines) + "\nactions: [harvest-resistance-swap]\nstart: given\n",
@@ -91,7 +91,7 @@ def test_an_aspect_target_is_planned_end_to_end_and_costs_the_beasts_once(tmp_pa
     mod = BEAST_DATA.mods[CAT_30]
     path.write_text(
         "base: Paua Amulet\nitem_level: 84\ninfluence: []\nrequirements:\n  - family: " + mod.families[0] + "\n    mod: " + CAT_30 + "\n"
-        "start_item:\n  rarity: rare\n  mods:\n    - mod: " + FIRE_RESIST + "\n      tier: 1\n      values: [6]\nactions: [aspect-beast]\nstart: given\n",
+        "start_item:\n  rarity: rare\n  mods:\n    - mod: " + FIRE_RESIST + "\n      values: [6]\nactions: [aspect-beast]\nstart: given\n",
         encoding="utf-8",
     )
     target = load_target(path, BEAST_DATA)

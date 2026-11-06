@@ -31,6 +31,7 @@ from crafting_system.items import ExplicitMod, Influence, Rarity, Side, accepted
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target
 
 IMPLICIT = "(20-30)% increased Mana Regeneration Rate"
+IMPLICIT_HELD = "20% increased Mana Regeneration Rate"  # the start amulet carries it at the low end of its range (#484)
 IMPLICIT_ID = "ManaRegenerationImplicitAmulet1"
 POOL = dataclasses.replace(SMALL, mods={**SMALL.mods, IMPLICIT_ID: DATA.mods[IMPLICIT_ID]})  # SMALL plus the base's implicit
 EMPTY = Slot("empty", "empty")
@@ -123,7 +124,7 @@ def test_a_mod_without_text_is_shown_by_its_name():
 
 
 def r12_start():
-    return item(ExplicitMod("LightningResist2", 3, (14,), fractured=True), base_id=AMULET)
+    return item(ExplicitMod("LightningResist2", (14,), fractured=True), base_id=AMULET)
 
 
 def test_the_r12_start_amulet_is_a_rare_with_a_fractured_resistance_in_the_suffixes():
@@ -132,7 +133,7 @@ def test_the_r12_start_amulet_is_a_rare_with_a_fractured_resistance_in_the_suffi
     assert card == ItemCard(
         name="Paua Amulet",
         properties=("Rare", "item level 84"),
-        implicits=(Slot(IMPLICIT, "implicit"),),
+        implicits=(Slot(IMPLICIT_HELD, "implicit"),),
         enchantments=(),
         prefixes=(EMPTY, EMPTY, EMPTY),
         suffixes=(Slot("+14% to Lightning Resistance", "mod", ("fractured",)), EMPTY, EMPTY),
@@ -163,7 +164,7 @@ def test_rows_run_fractured_first_then_the_mods_then_the_crafted_ones_and_each_s
         roll("StrMasterItemGenerationCannotChangePrefixes", crafted=True),
         roll("FireResist1"),
         roll("IncreasedLife3"),
-        ExplicitMod("ColdResist1", 1, (7,), fractured=True),
+        ExplicitMod("ColdResist1", (7,), fractured=True),
     )
 
     card = card_of_item(DATA, item(*mods, base_id=AMULET))
@@ -446,7 +447,7 @@ def test_a_family_told_apart_is_a_mod_of_that_family_not_junk():
 def test_a_slot_below_its_tier_in_a_tracked_state_is_the_wanted_text_with_a_note():
     ab = Abstraction(DATA, Goal((Wanted(frozenset({LIFE, "IncreasedLife2", LIFE_3}), min_tier=1),)), BELT, BELT_LEVEL, CRAFTS)
 
-    card = card_of_states(ab, [ab.compress(belt(ExplicitMod(LIFE, 3, (10,))))])
+    card = card_of_states(ab, [ab.compress(belt(ExplicitMod(LIFE, (10,))))])
 
     assert card.prefixes == (Slot("+# to maximum Life", "wanted", note="tier too low"), EMPTY, EMPTY)
 
@@ -530,7 +531,7 @@ def test_the_real_r12_start_card_is_the_fractured_resistance_with_its_rolled_val
     card = card_of_item(data, target.start_item)
 
     assert card.name == "Paua Amulet" and card.properties == ("Rare", "item level 84")
-    assert card.implicits == (Slot(IMPLICIT, "implicit"),) and card.enchantments == ()
+    assert card.implicits == (Slot(IMPLICIT_HELD, "implicit"),) and card.enchantments == ()
     assert card.prefixes == (EMPTY, EMPTY, EMPTY)
     assert card.suffixes == (Slot("+14% to Lightning Resistance", "mod", ("fractured",)), EMPTY, EMPTY)
 

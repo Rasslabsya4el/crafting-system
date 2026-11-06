@@ -54,7 +54,6 @@ OTHER_OPTIONS_NOT_MOD_CRAFTS = get_rule("bench_craft.other_options_not_mod_craft
 REMOVES_ALL_CRAFTED_MODS = get_rule("bench_craft.remove_crafted_mods_removes_all")
 VALUES_UNIFORM_INTEGERS = get_rule("affix_pool.values_uniform_integers")
 
-CRAFTED_TIER = 1  # crafted mods have no tier in the data (they never spawn); `Item` needs one, from 1
 ONE = Fraction(1)
 
 
@@ -117,7 +116,7 @@ class BenchOutcomes:
         if self.added is None:
             return ((ONE, Fixed(self.data, self.retained)),)
         low = tuple(min(stat.min, stat.max) for stat in self.added.stats)
-        crafted = ExplicitMod(self.added.id, CRAFTED_TIER, low, crafted=True)
+        crafted = ExplicitMod(self.added.id, low, crafted=True)
         return ((ONE, Fixed(self.data, self.retained.changed(self.data, mods=(*self.retained.mods, crafted)))),)
 
     @property
@@ -153,7 +152,7 @@ class BenchOutcomes:
         values = tuple(
             rng.randint(min(stat.min, stat.max), max(stat.min, stat.max)) for stat in self.added.stats
         )
-        crafted = ExplicitMod(self.added.id, CRAFTED_TIER, values, crafted=True)
+        crafted = ExplicitMod(self.added.id, values, crafted=True)
         return self.retained.changed(self.data, mods=(*self.retained.mods, crafted))
 
 

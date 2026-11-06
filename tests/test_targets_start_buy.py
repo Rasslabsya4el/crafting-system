@@ -29,7 +29,6 @@ requirements:
 start_item:
   mods:
     - mod: LightningResist7
-      tier: 2
       values: [43]
       fractured: true
 """

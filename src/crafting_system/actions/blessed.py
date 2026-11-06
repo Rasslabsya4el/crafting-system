@@ -7,9 +7,9 @@ uniform over the integers of the stat's range, both ends included, independently
 (`blessed_orb.previous_value_can_repeat`, the owner's answer, against the wiki's exclusion), so the law of the new value
 does not depend on the old one, whatever the item held.
 
-The implicits that count are the item's own (`Item.implicits`) and the ranged implicits of its base: an item built
-without them still has the base's implicit in the game, so the Orb stores it, freshly rolled, on the result. A base
-implicit with no range (every stat fixed) is not rerolled and not stored.
+The implicits that count are the item's own (`Item.implicits`): an item carries every implicit of its base until a
+replacer takes its place (ticket #484, #449), so the base's ranged implicit is among them and is rerolled; an item whose
+base implicit was replaced has none of it to reroll. An implicit with no range (every stat fixed) is not rerolled.
 
 Refusals, in this order:
 
@@ -41,7 +41,6 @@ from fractions import Fraction
 
 from crafting_system.data import GameData, Mod, StatRange
 from crafting_system.items import ImplicitMod, Item, eldritch_side
-from crafting_system.items.implicits import BASE_GRADE
 from crafting_system.rules import get_rule
 
 from .catalog import kind
@@ -164,16 +163,14 @@ class BlessedOrb(Action):
                     f"the item holds the Eldritch implicit {entry.mod_id}: a Blessed Orb may be used on it, but no admitted "
                     "claim says what it does to an Eldritch implicit, so the action is not offered (ADR-0027)"
                 )
-        base = data.base_items[item.base_id]
         kept = tuple(entry for entry in item.implicits if not has_range(data.mods[entry.mod_id]))
-        ranged = [mod_id for mod_id in base.implicits if mod_id in data.mods and has_range(data.mods[mod_id])]
-        ranged += [mod_id for mod_id, entry in stored.items() if has_range(data.mods[mod_id]) and mod_id not in ranged]
+        ranged = [mod_id for mod_id, entry in stored.items() if has_range(data.mods[mod_id])]
         if not ranged:
             raise NotApplicableError(
                 "a Blessed Orb cannot be used here: the item has no implicit with a range of values"
             )
         rolled = tuple(
-            ImplicitMod(mod_id, stored[mod_id].grade if mod_id in stored else BASE_GRADE, _lowest(data.mods[mod_id]))
+            ImplicitMod(mod_id, stored[mod_id].grade, _lowest(data.mods[mod_id]))
             for mod_id in sorted(ranged)
         )
         result = item.changed(data, implicits=(*kept, *rolled))
@@ -197,6 +194,5 @@ def _blessed_orb(data: GameData, item: Item):
         return
     if any(eldritch_side(data.mods[entry.mod_id]) is not None for entry in item.implicits):
         return  # not offered: no admitted claim says what the Orb does to an Eldritch implicit (`outcomes` refuses it too)
-    stored = (data.mods[entry.mod_id] for entry in item.implicits)
-    if any(has_range(mod) for mod in stored) or any(mod_id in data.mods and has_range(data.mods[mod_id]) for mod_id in base.implicits):
+    if any(has_range(data.mods[entry.mod_id]) for entry in item.implicits):
         yield BlessedOrb()

@@ -70,7 +70,7 @@ def item_text(item) -> str:
             item.base_id,
             item.item_level,
             item.rarity.value,
-            [(m.mod_id, m.tier, m.values, m.fractured, m.crafted) for m in item.mods],
+            [(m.mod_id, m.values, m.fractured, m.crafted) for m in item.mods],
             sorted(i.value for i in item.influences),
             item.corrupted,
             item.implicits,

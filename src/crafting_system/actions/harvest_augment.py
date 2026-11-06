@@ -168,11 +168,10 @@ class HarvestAddRemove(Action):
                 f"the {self.craft} craft cannot remove a mod: every mod of the item is fractured or on a locked side, or there is none"
             )
         total = sum((entry.weight for entry in candidates), Fraction(0))
-        tiers = tiers_of(data, item)
         results = []
         for entry in candidates:
             mod = entry.mod
-            added = item.add_mod(data, ExplicitMod(mod.id, tiers.get(mod.id, 1), _lowest(mod)))
+            added = item.add_mod(data, ExplicitMod(mod.id, _lowest(mod)))
             for gone in removable:
                 results.append((entry.weight / total / len(removable), added.remove_mod(data, gone.mod_id)))
         return RolledFinite(data, item, tuple(results))
@@ -263,7 +262,7 @@ def _swap_outcomes(data: GameData, item: Item, source: str, target: str, source_
         new = found[0]
         if new.required_level > item.item_level or item.remove_mod(data, entry.mod_id).blocks(data, new):
             continue
-        swaps.append((entry, ExplicitMod(new.id, tier, _lowest(new))))
+        swaps.append((entry, ExplicitMod(new.id, _lowest(new))))
     if not swaps:
         if with_target == 0:
             raise NotApplicableError(

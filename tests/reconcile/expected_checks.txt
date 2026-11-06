@@ -13,7 +13,7 @@ r03-avoid-shock-boots::buy.item_level
 r03-avoid-shock-boots::buy.rarity
 r03-avoid-shock-boots::buy.influence
 r03-avoid-shock-boots::buy.pool
-r03-avoid-shock-boots::start_mod.ChanceToSuppressSpells5__.tier
+r03-avoid-shock-boots::start_mod.ChanceToSuppressSpells5__.ladder
 r03-avoid-shock-boots::start_mod.ChanceToSuppressSpells5__.values
 r03-avoid-shock-boots::start_mod.ChanceToSuppressSpells5__.buy_mod
 r03-avoid-shock-boots::start_mod.ChanceToSuppressSpells5__.buy_minimum
@@ -48,7 +48,7 @@ r05-strength-ring::buy.item_level
 r05-strength-ring::buy.rarity
 r05-strength-ring::buy.influence
 r05-strength-ring::buy.pool
-r05-strength-ring::start_mod.AllAttributes4.tier
+r05-strength-ring::start_mod.AllAttributes4.ladder
 r05-strength-ring::start_mod.AllAttributes4.values
 r05-strength-ring::start_mod.AllAttributes4.buy_mod
 r05-strength-ring::start_mod.AllAttributes4.buy_minimum
@@ -113,7 +113,7 @@ r10-fractured-boots-70-life::buy.item_level
 r10-fractured-boots-70-life::buy.rarity
 r10-fractured-boots-70-life::buy.influence
 r10-fractured-boots-70-life::buy.pool
-r10-fractured-boots-70-life::start_mod.MovementVelocity5.tier
+r10-fractured-boots-70-life::start_mod.MovementVelocity5.ladder
 r10-fractured-boots-70-life::start_mod.MovementVelocity5.values
 r10-fractured-boots-70-life::start_mod.MovementVelocity5.buy_mod
 r10-fractured-boots-70-life::start_mod.MovementVelocity5.buy_minimum
@@ -133,7 +133,7 @@ r10-fractured-boots::buy.item_level
 r10-fractured-boots::buy.rarity
 r10-fractured-boots::buy.influence
 r10-fractured-boots::buy.pool
-r10-fractured-boots::start_mod.MovementVelocity5.tier
+r10-fractured-boots::start_mod.MovementVelocity5.ladder
 r10-fractured-boots::start_mod.MovementVelocity5.values
 r10-fractured-boots::start_mod.MovementVelocity5.buy_mod
 r10-fractured-boots::start_mod.MovementVelocity5.buy_minimum
@@ -153,7 +153,7 @@ r11-reservation-helmet::buy.item_level
 r11-reservation-helmet::buy.rarity
 r11-reservation-helmet::buy.influence
 r11-reservation-helmet::buy.pool
-r11-reservation-helmet::start_mod.ChaosResist6.tier
+r11-reservation-helmet::start_mod.ChaosResist6.ladder
 r11-reservation-helmet::start_mod.ChaosResist6.values
 r11-reservation-helmet::start_mod.ChaosResist6.buy_mod
 r11-reservation-helmet::start_mod.ChaosResist6.buy_minimum
@@ -173,7 +173,7 @@ r12-lightning-amulet::buy.item_level
 r12-lightning-amulet::buy.rarity
 r12-lightning-amulet::buy.influence
 r12-lightning-amulet::buy.pool
-r12-lightning-amulet::start_mod.LightningResist2.tier
+r12-lightning-amulet::start_mod.LightningResist2.ladder
 r12-lightning-amulet::start_mod.LightningResist2.values
 r12-lightning-amulet::start_mod.LightningResist2.buy_mod
 r12-lightning-amulet::start_mod.LightningResist2.buy_minimum

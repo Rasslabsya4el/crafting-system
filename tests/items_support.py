@@ -14,7 +14,7 @@ def roll(mod_id: str, *, tier: int = 1, fractured: bool = False, crafted: bool =
     """The mod `mod_id` with every stat rolled at the low end of its range."""
     mod = DATA.mods[mod_id]
     values = tuple(min(stat.min, stat.max) for stat in mod.stats)
-    return ExplicitMod(mod_id, tier, values, fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, values, fractured=fractured, crafted=crafted)
 
 
 def item(*mods: ExplicitMod, base_id: str = BODY, rarity: Rarity = Rarity.RARE, **fields) -> Item:

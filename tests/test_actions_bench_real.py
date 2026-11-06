@@ -55,7 +55,7 @@ def has_family(*families):
 def rolled(data, mod_id, **flags):
     mod = data.mods[mod_id]
     return ExplicitMod(
-        mod_id, 1, tuple(min(stat.min, stat.max) for stat in mod.stats), crafted=mod.domain == "crafted", **flags
+        mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), crafted=mod.domain == "crafted", **flags
     )
 
 

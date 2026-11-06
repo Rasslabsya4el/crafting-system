@@ -44,10 +44,8 @@ requirements:
 start_item:
   rarity: rare
   mods:
-    # The mod is named by its game-data id. The tier is taken as written until the planner can
-    # derive tiers from the game data itself (ticket #23), so check it by hand.
+    # The mod is named by its game-data id. The file writes no tier: the tier is the game data's (OR-3).
     - mod: LightningResist2
-      tier: 3
       # One whole number per stat of the mod, in the units of the game data (resistance is a plain
       # percentage; life regeneration, for example, is per minute).
       values: [14]

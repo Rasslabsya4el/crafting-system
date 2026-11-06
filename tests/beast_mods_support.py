@@ -60,7 +60,7 @@ SMALL = _small()
 def roll(mod_id: str, *, fractured: bool = False, crafted: bool = False, tier: int = 1) -> ExplicitMod:
     """The mod `mod_id` at the low end of its ranges."""
     mod = SMALL.mods[mod_id]
-    return ExplicitMod(mod_id, tier, tuple(min(stat.min, stat.max) for stat in mod.stats), fractured=fractured, crafted=crafted)
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in mod.stats), fractured=fractured, crafted=crafted)
 
 
 def item_of(
