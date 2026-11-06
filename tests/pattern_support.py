@@ -8,7 +8,6 @@ member policies are compared with. Nothing here imports the member builder of th
 import random
 from collections import defaultdict
 from fractions import Fraction
-from itertools import combinations_with_replacement
 
 from crafting_system.abstraction import Abstraction, CompressedState, integer_weights
 from crafting_system.abstraction._pattern import Pattern, PatternOffer

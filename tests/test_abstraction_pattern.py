@@ -26,7 +26,6 @@ from abstraction_removals_support import (
     BOW,
     BOW_DATA,
     CASTER,
-    CASTER_LEAF,
     FIRE,
     FIRE_RES,
     METAMODS,

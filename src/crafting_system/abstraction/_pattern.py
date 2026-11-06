@@ -59,12 +59,13 @@ produces it, and the build starts again with the larger universe (`universe_grow
 
 import time
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from fractions import Fraction
+from functools import reduce
 from itertools import product
-from math import lcm
+from math import gcd, lcm
 from typing import NamedTuple
 
 from crafting_system.actions import BLOCKED_TAG, Action, ActionError, OutOfScopeError, allowed_by_tags
@@ -74,7 +75,7 @@ from crafting_system.items import ItemError, Metamod, Side
 from ._goal import Status
 from ._kernel import Abstraction
 from ._kinds import TYPE_PREFIX, kind_tags
-from ._state import CompressedState, FracturedMod, Slot, best_of
+from ._state import CompressedState, Slot, best_of
 
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
@@ -600,9 +601,6 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     items = sorted(pushed.items())
     common = lcm(*(chance.denominator for _, chance in items))
     weights = [chance.numerator * (common // chance.denominator) for _, chance in items]
-    from math import gcd
-    from functools import reduce
-
     divisor = reduce(gcd, weights)
     entry = (tuple(k for k, _ in items), tuple(w // divisor for w in weights))
     found = ids.get(entry)
