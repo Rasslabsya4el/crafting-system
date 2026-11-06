@@ -47,6 +47,20 @@ jobs:
           overwrite: true  # a re-run of one failed shard replaces its earlier result
           path: out/
           if-no-files-found: warn
+      # The reachability report (ticket #414, docs/ci.md): which action kinds and settings a plan can reach, read from the planner's
+      # code. It solves nothing and takes about 30 seconds; it runs in one job (shard 1 on Ubuntu) so it adds no runner job. The text
+      # goes to the job summary and to the artifact `reachability`; `tests/test_reachability_report.py` compares it with the golden copy.
+      - name: Reachability report
+        if: ${{ always() && matrix.shard == 1 && matrix.os == 'ubuntu-latest' }}
+        timeout-minutes: 2
+        run: uv run --no-sync python .github/scripts/reachability_report.py --out reachability/reachability.md --summary
+      - uses: actions/upload-artifact@v7.0.2
+        if: ${{ always() && matrix.shard == 1 && matrix.os == 'ubuntu-latest' }}
+        with:
+          name: reachability
+          overwrite: true
+          path: reachability/
+          if-no-files-found: warn
 
   summary:
     name: CI summary

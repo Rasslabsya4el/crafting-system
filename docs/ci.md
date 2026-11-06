@@ -193,6 +193,27 @@ their relative difference. The goldens of `tests/test_packed_heavy.py` (R04, R14
 `CRAFTING_HEAVY=1 UPDATE_GOLDEN=1 ... pytest tests/test_packed_heavy.py` and are tied to the commit of `main` they were
 taken on.
 
+## The reachability report (ticket #414)
+
+`.github/scripts/reachability_report.py` writes a Markdown report of what a plan can reach today: which action kinds some
+benchmark target's planner entry offers (and, for those none is offered, the reason the code gives), which settings and
+flags any code reads (an AST search of `src/`, not a grep of the name), and whether the planning path calls the modules the
+audit says are built and not wired. It reads the planner's own code, so unlike an oracle it imports `crafting_system`; it
+solves nothing (`make_plan(solve_it=False)` for each target of `examples/targets/`), and takes about 30 seconds, most of it
+the two fossil targets R08 and R09. A target whose entry takes over `--target-seconds` (30) is reported as "not measured,
+too slow".
+
+- **In CI.** The `test` job of shard 1 on Ubuntu runs it after the shard (no extra runner job): the report goes to that
+  job's summary and to the artifact `reachability` (`reachability.md`).
+- **The golden copy.** `tests/golden/reachability.md` is the committed report, and `tests/test_reachability_report.py` fails
+  with a unified diff when the report differs. A PR that makes a kind reachable, gives a setting a reader or removes a gate
+  therefore changes the file, and the change is read in review. To update it, take the artifact `reachability` of the PR's CI
+  run (the real game data is needed, so a PC without the cache cannot make it), check it, and commit it as
+  `tests/golden/reachability.md`; `UPDATE_GOLDEN=1 pytest tests/test_reachability_report.py` writes the same file where the
+  data is.
+- **By hand.** `CRAFTING_CACHE_DIR=<cache> uv run python .github/scripts/reachability_report.py --out reachability.md`
+  (a quick run, one process; it never starts a solve).
+
 ## Keeping the shards balanced
 
 After a run, download the artifact `shard-durations` and commit it as `tests/shard_durations.json`. It holds the
