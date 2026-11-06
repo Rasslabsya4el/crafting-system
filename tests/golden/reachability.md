@@ -20,8 +20,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry plans them | 12 |
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
-| Settings and flags the planner accepts | 24 |
-| - read by some code | 19 |
+| Settings and flags the planner accepts | 28 |
+| - read by some code | 23 |
 | - never read | 5 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
@@ -136,7 +136,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 
 | Setting or flag | Accepted in | Default | Verdict | Where it is read, or where it stops |
 |---|---|---|---|---|
-| `data` | [paths] | `local/data` | read | prices/price_file.py: default_overrides_path (used in an operation; not on the planning path); prices/price_file.py: default_price_file_path (used in an operation; on the planning path) |
+| `data` | [paths] | `local/data` | read | prices/price_file.py: default_overrides_path (used in an operation; on the planning path); prices/price_file.py: default_price_file_path (used in an operation; on the planning path) |
 | `cache` | [paths] | `local/cache` | read | cli/_route_view.py: _trade_stats (compared; on the planning path); cli/_route_view.py: _trade_stats (used in an operation; on the planning path); and 4 more |
 | `output` | [paths] | `local/output` | read | cli/_benchmark.py: benchmark_main (used in an operation; on the planning path); cli/_main.py: main (used in an operation; on the planning path) |
 | `memory_strands` | [planner] | `false` | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
@@ -146,18 +146,22 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `price_source` | [planner] | `both` | **never read** | stops at the field `StartContext.price_source` |
 | `price_gap_percent` | [planner] | `20.0` | **never read** | stops at the field `StartContext.gap_percent` |
 | `--budget` | command `plan` |  | read | cli/_approx.py: climb (decides a branch; on the planning path); cli/_approx.py: climb (used in an operation; on the planning path); and 4 more |
-| `--buy-spec` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |
 | `--exact` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--heavy` | command `benchmark` |  | read | cli/_benchmark.py: run_route (used in an operation; on the planning path) |
+| `--indexed` | command `trade` |  | read | cli/_trade.py: trade_main (compared; on the planning path); prices/trade_pricing.py: _window_hint (compared; on the planning path); and 6 more |
 | `--json` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |
+| `--k` | command `trade` |  | read | prices/price_file.py: _entry_to_json (compared; on the planning path); prices/price_file.py: write_price_file (used in DictComp; on the planning path); and 7 more |
+| `--max-requests` | command `trade` |  | read | prices/trade_http.py: RequestBudget.__init__ (compared; on the planning path); prices/trade_http.py: RequestBudget.remaining (used in an operation; not on the planning path); and 2 more |
+| `--min-listings` | command `trade` |  | read | prices/trade_market.py: classify (compared; on the planning path); prices/trade_pricing.py: market_of_listings (compared; on the planning path); and 1 more |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--out` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path); cli/_benchmark.py: benchmark_main (passed to `Path` (outside src); on the planning path) |
 | `--price-source` | command `plan` |  | **never read** | stops at the field `StartContext.price_source` |
 | `--progress` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
+| `--refresh-stats` | command `trade` |  | read | prices/trade_pricing.py: _stats (decides a branch; on the planning path) |
 | `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 1 more |
 | `--runs` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 9 more |
 | `--seed` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 4 more |
-| `--start-price` | command `plan` |  | read | cli/_plan.py: make_plan (compared; on the planning path); cli/_plan.py: resolve_start_price (compared; on the planning path); and 2 more |
+| `--start-price` | command `plan` |  | read | cli/_plan.py: _override (compared; on the planning path); cli/_plan.py: _override (formatted into text; on the planning path); and 3 more |
 | `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 
@@ -180,7 +184,7 @@ The public names of the modules the audit says are built and not wired. *Referen
 |---|---|---|---|---|---|
 | the market rule | `TradeOffer` | `prices/trade_market.py` | nothing | **no** | INPUTS-2 |
 | the market rule | `age_in_days` | `prices/trade_market.py` | prices/trade_pricing.py: trade_price_age_days | **no** | INPUTS-2 |
-| the market rule | `classify` | `prices/trade_market.py` | prices/trade_pricing.py: market_of_listings | **no** | INPUTS-2 |
+| the market rule | `classify` | `prices/trade_market.py` | prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
 | the market rule | `offer` | `prices/trade_market.py` | prices/price_source.py: source_price | **no** | INPUTS-2 |
 | the price-source rule | `SourcedPrice` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
@@ -190,11 +194,11 @@ The public names of the modules the audit says are built and not wired. *Referen
 | the price-source rule | `source_price` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the item-level floor | `ItemLevelFloor` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `ItemLevelOptions` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the item-level floor | `LevelGroup` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
+| the item-level floor | `LevelGroup` | `targets/floor.py` | nothing | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `NodeLevel` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `floor_of` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `item_level_options` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
-| the item-level floor | `level_groups` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
+| the item-level floor | `level_groups` | `targets/floor.py` | targets/start_buy.py: item_level_window | yes | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `refusal_at` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the item-level floor | `target_at_level` | `targets/floor.py` | nothing | **no** | TARGETS-3, PLANNING-8, ROUTES-13 |
 | the donor loop of two-input actions | `DonorModel` | `cli/_donors.py` | nothing | **no** | ACT2-11 |
@@ -213,7 +217,7 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_plan.py, cli/_route_card.py, cli/_start_options.py |  |
 | `start_item` | cli/_benchmark_outcomes.py, cli/_plan.py, cli/_starts.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
-| `start_price` | cli/_benchmark.py, cli/_plan.py, cli/_starts.py |  |
+| `buys_start_item` | cli/_benchmark.py, cli/_main.py, cli/_plan.py, cli/_starts.py, cli/_trade.py |  |
 | `implicits` | abstraction/_goal.py, cli/_plan.py, cli/_route_card.py |  |
 | `quality` | abstraction/_goal.py, cli/_plan.py, cli/_route_card.py |  |
 | `actions` | cli/_benchmark_outcomes.py, cli/_plan.py |  |
