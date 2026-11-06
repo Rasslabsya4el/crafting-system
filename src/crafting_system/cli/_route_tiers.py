@@ -23,8 +23,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.actions import ActionError, Mixture, Outcomes
-from crafting_system.actions.contract import Action
+from crafting_system.actions import Action, ActionError
 from crafting_system.items import tier_table
 
 from ._route_card import _hashes, _own_text
@@ -80,21 +79,27 @@ def wanted_families(ab: Abstraction) -> list[_Family]:
 
 
 def _signature(outcomes) -> Hashable | None:
-    """What decides an exact distribution of a pool draw (None when the outcomes are not made of pool draws)."""
-    if isinstance(outcomes, Outcomes):
-        return (
-            outcomes.pool,
-            tuple(sorted((side.value, free) for side, free in outcomes.free.items())),
-            outcomes.tag,
-            tuple(sorted(outcomes.totals.items())),
-            len(outcomes.retained.mods),
-            outcomes.guaranteed_blocked,
-            outcomes.forced,
+    """What decides an exact distribution of a pool draw: for each part, its pool, free slots, guaranteed tag, totals, kept mods and forced mod.
+
+    None when some part is not a pool draw (a fixed result needs no sharing, it is cheap).
+    """
+    parts = []
+    for share, part in outcomes.components:
+        if not hasattr(part, "pool"):
+            return None
+        parts.append(
+            (
+                share,
+                part.pool,
+                tuple(sorted((side.value, free) for side, free in part.free.items())),
+                part.tag,
+                tuple(sorted(part.totals.items())),
+                len(part.retained.mods),
+                part.guaranteed_blocked,
+                part.forced,
+            )
         )
-    if isinstance(outcomes, Mixture):
-        parts = tuple((p, _signature(part)) for p, part in outcomes.components)
-        return None if any(part is None for _, part in parts) else (parts, outcomes.fractures)
-    return None
+    return tuple(parts), outcomes.fractures
 
 
 def _added(outcomes, wanted_ids: frozenset[str]) -> dict[str, Fraction]:
