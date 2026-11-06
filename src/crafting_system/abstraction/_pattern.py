@@ -54,8 +54,8 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
 
 Every member offered is checked to be an item (`Abstraction._item_of`), so a member that no item has is never offered.
 
-**Refusals.** An action that the game forbids at a member (`GAME_REFUSAL`, `NotApplicableError`) is not an action of that member and is left out
-of it. An action that raises a model gap at a member (`MODEL_GAP`, `OutOfScopeError`: no admitted rule covers the item) is left out only when
+**Refusals.** An action that the game forbids at a member (`NotApplicableError`) is not an action of that member and is left out
+of it. An action that raises a model gap at a member (`OutOfScopeError`: no admitted rule covers the item) is left out only when
 no member of the key can take it (each is a game refusal or a gap: the exact model has no action at any state of the key, as the walk and the
 planner treat a gap as unavailable). If another member can take it, the build refuses and names the offer and the key: the exact model drops
 the action only at the states where the gap is, so leaving it out of the key could put the bound above the exact cost (`_gap_everywhere`). A
@@ -90,13 +90,10 @@ from ._kernel import Abstraction
 from ._kinds import TYPE_PREFIX, kind_tags
 from ._state import CompressedState, Slot, best_of
 
-# The two families of refusal an action raises (`actions/errors.py`). A GAME refusal (the game forbids the action on that item) may drop the
-# action at a member: it is not an action there. A MODEL GAP (no admitted rule covers the item) may not: the exact model treats the action as
-# unavailable there, but at a member that is not a state of the route the gap says nothing about the states that are, and dropping the action
-# from the key could put the bound above the exact cost. The build refuses and says why. Named here, once, so that a change of the names
-# in `actions/errors.py` (ticket #506) is one line.
-GAME_REFUSAL = NotApplicableError
-MODEL_GAP = OutOfScopeError
+# The two families of refusal an action raises (`actions/errors.py`, #506). A game refusal (`NotApplicableError`: the game forbids the action on that
+# item) may drop the action at a member: it is not an action there. A model gap (`OutOfScopeError`: no admitted rule covers the item) may not: at a
+# member that is not a state of the route it says nothing about the states that are, and dropping the action from the key could put the bound
+# above the exact cost. The build refuses and says why. The clauses name the families themselves (`tests/test_cli_model_gaps.py` scans for them).
 
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
@@ -190,7 +187,7 @@ class _Universe:
         for action in pattern.actions:
             try:
                 adds = action.adds(ab.data, probe)
-            except GAME_REFUSAL:
+            except NotApplicableError:
                 continue
             if adds.crafted:
                 continue
@@ -460,7 +457,7 @@ class Pattern:
             try:
                 self.ab._item_of(state, False)
                 found = True
-            except MODEL_GAP:
+            except OutOfScopeError:
                 raise
             except (ValueError, ItemError):
                 found = False
@@ -618,10 +615,10 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
                     stats.pairs += 1
                     try:
                         ck = ab.kernel_key(member, offer.action)
-                    except GAME_REFUSAL:
+                    except NotApplicableError:
                         stats.refused_pairs += 1
                         continue
-                    except MODEL_GAP as gap:
+                    except OutOfScopeError as gap:
                         if _gap_everywhere(pattern, gaps, key, offer):
                             stats.gap_pairs += 1
                             continue
@@ -630,10 +627,10 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
                     if kid is None:
                         try:
                             exact = ab.kernel(member, offer.action)
-                        except GAME_REFUSAL:
+                        except NotApplicableError:
                             stats.refused_pairs += 1
                             continue
-                        except MODEL_GAP as gap:
+                        except OutOfScopeError as gap:
                             if _gap_everywhere(pattern, gaps, key, offer):
                                 stats.gap_pairs += 1
                                 continue
@@ -687,7 +684,7 @@ def _gap_everywhere(pattern: Pattern, memo: dict, key: PatternKey, offer: Patter
         for member in pattern.members(key, Mode.ALL):
             try:
                 pattern.ab.kernel_key(member, offer.action)
-            except (GAME_REFUSAL, MODEL_GAP):
+            except (NotApplicableError, OutOfScopeError):
                 continue
             found = False
             break
