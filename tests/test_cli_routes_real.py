@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from limits_support import labels_of, only
-from route_view_support import assert_golden
+from route_view_support import alike_key, assert_golden
 
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, make_plan, verify
@@ -216,7 +216,7 @@ def test_no_step_prints_two_lines_that_read_alike(solved, data):
     for row in build_section(route_input(plan), data).rows:
         for field in row.fields:
             if field.label in ("Chance per use", "On failure"):
-                texts = [line.text.rsplit(":", 1)[0].rsplit(" (", 1)[0] for line in field.lines]
+                texts = [alike_key(line.text) for line in field.lines]
                 assert len(texts) == len(set(texts)), (row.title, texts)  # two branches that read alike say what the player does next
 
 

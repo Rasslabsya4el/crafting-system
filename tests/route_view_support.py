@@ -9,6 +9,7 @@ the junk of a state is tracked, the offers are priced with `price_offers`, the a
 
 import datetime
 import os
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -63,6 +64,11 @@ def assert_golden(name: str, html: str, extension: str = "html") -> None:
         path.write_text(html, encoding="utf-8", newline="\n")
     assert path.exists(), f"no golden file {path}; run with UPDATE_GOLDEN=1 to write it"
     golden_diff.check(path.read_text(encoding="utf-8"), html, golden_diff.kind_of(path), f"{name} differs from its golden file tests/golden/{path.name}")
+
+
+def alike_key(text: str) -> str:
+    """A line of "Chance per use" or "On failure" without its chance: two lines of one step with the same key read alike."""
+    return re.sub(r": [^:]*%$|\s\([^()]*%\)$", "", text)
 
 
 def belt(*mods, rarity: Rarity = Rarity.RARE) -> Item:

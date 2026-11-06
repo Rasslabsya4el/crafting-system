@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+from route_view_support import alike_key
 
 from crafting_system.cli import make_plan
 from crafting_system.cli._benchmark import BENCHMARKS
@@ -84,7 +85,7 @@ def test_no_step_prints_two_lines_that_read_alike(section):
     for row in section.rows:
         for field in row.fields:
             if field.label in ("Chance per use", "On failure"):
-                texts = [line.text.rsplit(":", 1)[0].rsplit(" (", 1)[0] for line in field.lines]
+                texts = [alike_key(line.text) for line in field.lines]
                 assert len(texts) == len(set(texts)), (row.title, texts)
 
 

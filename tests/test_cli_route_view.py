@@ -26,6 +26,7 @@ from route_view_support import (
     HYSTERIA_REQ,
     LIFE,
     START_NAME,
+    alike_key,
     assert_golden,
     belt,
     crafted_damage,
@@ -741,7 +742,7 @@ def test_two_branches_that_read_alike_say_what_the_player_does_next_and_the_plai
     for row in section.rows:  # no step prints two lines that read alike
         for field in row.fields:
             if field.label in ("Chance per use", "On failure"):
-                texts = [line.text.rsplit(":", 1)[0].rsplit(" (", 1)[0] for line in field.lines]
+                texts = [alike_key(line.text) for line in field.lines]
                 assert len(texts) == len(set(texts)), (row.title, texts)
 
     solved = _route_flow._visits
