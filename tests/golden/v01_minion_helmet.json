@@ -1,5 +1,5 @@
 {
-  "format": "crafting-system-policy/1",
+  "format": "crafting-system-policy/2",
   "unit": "chaos",
   "answer": {
     "approximate": false
@@ -18,7 +18,6 @@
       "reason": "The wiki's wording does not say whether the base type stays, and the one Reddit thread that touches it is split."
     }
   ],
-  "note": "",
   "target": "v01-minion-helmet.yaml",
   "requirements": [
     "+1 to Level of all Minion Skill Gems",
@@ -149,36 +148,101 @@
       "vendor.result_keeps_the_input_base_type"
     ]
   },
-  "dropped_actions": [],
-  "left_out_actions": [
+  "limits": [
     {
-      "reason": "the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones",
+      "kind": "kinds-not-named",
+      "what": "Not offered",
+      "why": "kinds this target does not name",
+      "guarantee": "The plan is the cheapest among the kinds offered.",
       "count": 23,
-      "actions": [
-        "chaos-orb",
-        "harvest-reforge",
-        "harvest-reforge-influence",
-        "harvest-add-remove",
-        "harvest-resistance-swap",
-        "harvest-damage-swap",
-        "essence",
-        "corrupted-essence",
-        "bench-craft",
-        "remove-crafted-mods",
-        "fossil-set",
-        "exalted-orb",
-        "veiled-chaos-orb",
-        "veiled-exalted-orb",
-        "unveil",
-        "pick",
-        "annulment-orb",
-        "fracturing-orb",
-        "talisman-fracture",
-        "aspect-beast",
-        "beast-side-swap",
-        "wild-bristle-matron",
-        "divine-orb"
-      ]
+      "labels": [
+        "Chaos Orb",
+        "Harvest reforges",
+        "Harvest reforges of an influence",
+        "Harvest add or remove a mod",
+        "Harvest resistance swaps",
+        "Harvest damage swaps",
+        "Essences",
+        "Corrupted essences",
+        "Bench crafts",
+        "Remove Crafted Mods",
+        "Fossil sets",
+        "Exalted Orb",
+        "Veiled Chaos Orb",
+        "Veiled Exalted Orb",
+        "Unveil",
+        "Pick from the unveil offer",
+        "Annulment Orb",
+        "Fracturing Orb",
+        "Talisman fracture",
+        "Aspect beast",
+        "Beast side swap",
+        "Wild Bristle Matron",
+        "Divine Orb"
+      ],
+      "names": []
+    },
+    {
+      "kind": "kinds-not-built",
+      "what": "Not offered",
+      "why": "methods the planner cannot use yet",
+      "guarantee": "The plan is the cheapest among the methods the planner can use.",
+      "count": 28,
+      "labels": [
+        "Harvest reforges that favour a mod",
+        "Harvest quality enchants",
+        "Alchemy Orb",
+        "Influenced Exalted Orb",
+        "Orb of Dominance",
+        "Scouring Orb",
+        "Awakener's Orb",
+        "Beast influence recipe",
+        "Blessed Orb",
+        "Recombinators",
+        "Catalysts",
+        "Eldritch implicit currency",
+        "Eldritch Chaos Orb",
+        "Eldritch Exalted Orb",
+        "Eldritch Annulment Orb",
+        "Orb of Conflict",
+        "Tempering",
+        "Tailoring",
+        "Imprint",
+        "Restore",
+        "Jeweller's Orb",
+        "Orb of Fusing",
+        "Bench socket count",
+        "Bench socket links",
+        "Chromatic Orb",
+        "Bench socket colours",
+        "Quality currency",
+        "Re-anoint"
+      ],
+      "names": []
+    },
+    {
+      "kind": "corrupting",
+      "what": "Not offered",
+      "why": "the target takes no corrupted item, so these would only corrupt it",
+      "guarantee": "The plan is unaffected: nothing here could be used for this target.",
+      "count": 1,
+      "labels": [
+        "Vaal Orb"
+      ],
+      "names": []
+    },
+    {
+      "kind": "strands",
+      "what": "Memory Strands are not considered",
+      "why": "the start item has none, and the planner cannot plan with them yet",
+      "guarantee": "The plan makes no use of Memory Strands.",
+      "count": 3,
+      "labels": [
+        "Foulborn Augmentation Orb",
+        "Foulborn Regal Orb",
+        "Foulborn Exalted Orb"
+      ],
+      "names": []
     }
   ],
   "offered_actions": [
