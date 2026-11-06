@@ -61,6 +61,19 @@ jobs:
           overwrite: true
           path: reachability/
           if-no-files-found: warn
+      # The golden changes of the PR (ticket #436, docs/ci.md): every file under tests/golden/ that the PR changes against the base it was
+      # merged with, as the readable before/after (HTML as visible text and structure, JSON pretty-printed, text by line), in this job's
+      # summary. Only on a PR, once (shard 1 on Ubuntu); it reads git and the files, so it needs no game data and no extra runner job.
+      # It is information, not a gate: if it fails the step is red but the job is not.
+      - name: Golden changes against main
+        if: ${{ always() && github.event_name == 'pull_request' && matrix.shard == 1 && matrix.os == 'ubuntu-latest' }}
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          python3 .github/scripts/golden_changes.py --base "$BASE_SHA" --summary
 
   summary:
     name: CI summary

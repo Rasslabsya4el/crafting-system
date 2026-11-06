@@ -30,6 +30,7 @@ from fractions import Fraction
 from pathlib import Path
 from types import SimpleNamespace
 
+import golden_diff
 import pytest
 from abstraction_support import real_game_data
 from test_abstraction_b1_real import LEVEL, rolled, subset
@@ -636,14 +637,17 @@ def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gav
     stem, plan = route_plan
     expected = golden[stem]
 
-    assert repr(plan.start) == expected["start"]
+    golden_diff.check_objects(expected["start"], repr(plan.start), f"{stem}: the start state differs from tests/golden/plans_118.json")
     assert plan.mean_remaining == pytest.approx(expected["mean_remaining"], rel=1e-9)
     # The pruned model leaves out offers that are never better, so it may reach FEWER states than the golden
     # plan (R05: 262 of 597); every state it does solve has the action the golden plan has there.
     assert len(plan.solution.values) <= expected["states"]
     policy = {repr(state): action.label for state, action in plan.policy.items()}
-    assert policy.keys() <= expected["policy"].keys()
-    assert {state: label for state, label in policy.items() if label != expected["policy"][state]} == {}
+    title = f"{stem}: the policy differs from tests/golden/plans_118.json"
+    golden_diff.check_objects([], sorted(policy.keys() - expected["policy"].keys()), f"{title} (states the golden plan does not have)")
+    golden_diff.check_objects(
+        {state: expected["policy"][state] for state in policy}, policy, f"{title} (the action at a state both reach)"
+    )
     if plan.pruned is None or not plan.pruned.fell_back and not plan.pruned.bounded:
         assert len(plan.solution.values) == expected["states"]
 

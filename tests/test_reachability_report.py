@@ -8,13 +8,13 @@ Two kinds of test:
   data is needed (CI has it; without it the test skips, as the other real-data tests do).
 """
 
-import difflib
 import importlib.util
 import os
 import sys
 import threading
 from pathlib import Path
 
+import golden_diff
 import pytest
 from abstraction_support import real_game_data
 
@@ -251,14 +251,6 @@ def real_report():
     return report.build_report(real_game_data(), seconds=300)  # a slow machine must not turn a target into "too slow"
 
 
-def diff_of(expected: str, actual: str) -> str:
-    return "\n".join(
-        difflib.unified_diff(
-            expected.splitlines(), actual.splitlines(), "tests/golden/reachability.md", "the report as it is now", lineterm="", n=2
-        )
-    )
-
-
 def test_the_report_equals_its_committed_copy(real_report):
     text = real_report + "\n"
     if os.environ.get("UPDATE_GOLDEN"):
@@ -266,9 +258,12 @@ def test_the_report_equals_its_committed_copy(real_report):
         GOLDEN.write_text(text, encoding="utf-8", newline="\n")
     assert GOLDEN.exists(), f"no committed report {GOLDEN}; run with UPDATE_GOLDEN=1 to write it"
     expected = GOLDEN.read_text(encoding="utf-8")
-    assert text == expected, (
+    golden_diff.check(
+        expected,
+        text,
+        "text",
         "the reachability report changed. If the change is meant (a kind became reachable, a setting got a reader), "
-        "run with UPDATE_GOLDEN=1 and commit tests/golden/reachability.md so the change is seen in review.\n" + diff_of(expected, text)
+        "run with UPDATE_GOLDEN=1 and commit tests/golden/reachability.md so the change is seen in review.",
     )
 
 

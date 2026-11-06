@@ -7,6 +7,7 @@ ordinary grid, the coarse grid, the policies with inputs and the ones that can f
 
 import json
 
+import golden_diff
 from risk_unchanged_support import GOLDEN, snapshot
 
 
@@ -15,6 +16,4 @@ def test_the_risk_reports_of_policies_without_a_free_action_are_the_ones_main_ga
 
     found = snapshot()
 
-    assert sorted(found) == sorted(expected)
-    for name in sorted(expected):
-        assert found[name] == expected[name], name
+    golden_diff.check_objects(expected, found, "the risk reports differ from tests/golden/risk_unchanged_349.json")

@@ -24,6 +24,7 @@ import re
 from fractions import Fraction
 from pathlib import Path
 
+import golden_diff
 import pytest
 from abstraction_support import real_game_data
 from cli_support import TODAY
@@ -173,7 +174,11 @@ def test_the_json_policy_is_the_golden(report):
         path.write_text(text, encoding="utf-8", newline="\n")
 
     assert path.exists(), f"no golden file {path}; run with UPDATE_GOLDEN=1 to write it"
-    assert rounded(json.loads(text)) == rounded(json.loads(path.read_text(encoding="utf-8")))  # floats to 9 digits, everything else exact
+    golden_diff.check_objects(  # floats to 9 digits, everything else exact
+        rounded(json.loads(path.read_text(encoding="utf-8"))),
+        rounded(json.loads(text)),
+        "the JSON policy differs from its golden file tests/golden/v01_minion_helmet.json",
+    )
 
 
 def test_the_route_page_is_the_golden(report, data, tmp_path):

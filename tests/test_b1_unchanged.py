@@ -10,6 +10,7 @@ golden pages of the CLI tests. The fingerprints need the cached dump and skip cl
 import json
 from pathlib import Path
 
+import golden_diff
 import pytest
 from abstraction_support import real_game_data
 from b1_unchanged_support import TARGETS, route_fingerprint
@@ -31,7 +32,10 @@ def test_the_offers_and_the_kernels_of_the_route_did_not_move(real, stem):
     found = route_fingerprint(real, stem)
     expected = GOLDEN[stem]
 
-    assert found["offers"] == expected["offers"] and found["offers_sha"] == expected["offers_sha"], "the offers moved"
-    assert found["left_out"] == expected["left_out"] and found["left_out_sha"] == expected["left_out_sha"], "the offers left out moved"
-    assert found["start"] == expected["start"], "the start state moved (its repr is what a B1 state always read)"
-    assert found["kernels"] == expected["kernels"] and found["kernels_sha"] == expected["kernels_sha"], "a kernel moved"
+    def same(keys: tuple[str, ...], title: str) -> None:
+        golden_diff.check_objects({key: expected[key] for key in keys}, {key: found[key] for key in keys}, f"{stem}: {title}")
+
+    same(("offers", "offers_sha"), "the offers moved")
+    same(("left_out", "left_out_sha"), "the offers left out moved")
+    same(("start",), "the start state moved (its repr is what a B1 state always read)")
+    same(("kernels", "kernels_sha"), "a kernel moved")
