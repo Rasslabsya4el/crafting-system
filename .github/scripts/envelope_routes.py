@@ -1,6 +1,6 @@
 """The envelope search against the full walk on a route (ticket #377, ADR-0063 point 4); run by the `Run a command` workflow.
 
-    python .github/scripts/envelope_routes.py --route r05|r13|r04|r14 [--phase both|envelope|full] [--out DIR] [--incumbent]
+    python .github/scripts/envelope_routes.py --route r05|r13|r04|r14 [--phase both|envelope|full] [--out DIR] [--incumbent] [--net-seconds N]
     python .github/scripts/envelope_routes.py compare ENVELOPE.json FULL.json
 
 `--phase both` (the default) plans the route with `make_plan(solver="envelope")` and then with `make_plan(solver="packed")` (the full walk) in
@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import packed_routes as P  # noqa: E402  (the inputs of a route, the memory watch)
 
 from crafting_system.cli import _packed, make_plan  # noqa: E402
+from crafting_system.cli._envelope import Net  # noqa: E402
 from crafting_system.cli._envelope_plan import route_incumbent  # noqa: E402
 from crafting_system.cli._route import load_route  # noqa: E402
 
@@ -46,11 +47,13 @@ def incumbent_of(route: str, data, target, prices, start_price):
     return route_incumbent(load_route(path, plan, data), data)
 
 
-def run_phase(phase: str, route: str, say, use_incumbent: bool) -> dict:
+def run_phase(phase: str, route: str, say, use_incumbent: bool, net_seconds: float | None = None) -> dict:
     data, target, prices, start_price = P.inputs(route)
     options = {}
     if phase == "envelope" and use_incumbent:
         options["incumbent"] = incumbent_of(route, data, target, prices, start_price)
+    if phase == "envelope" and net_seconds is not None:
+        options["net"] = Net(seconds=net_seconds)  # a stop-and-say-so net (OR-12): the plan then says it is not shown to be the best
     began = time.perf_counter()
     plan = make_plan(
         data, target, prices, start_price=start_price, budget=None, solver="envelope" if phase == "envelope" else "packed", with_risk=False, **options
@@ -110,6 +113,7 @@ def main() -> None:
     parser.add_argument("--route", required=True)
     parser.add_argument("--phase", default="both", choices=("both", "envelope", "full"))
     parser.add_argument("--incumbent", action="store_true")
+    parser.add_argument("--net-seconds", type=float, help="stop the envelope search after this many seconds (the plan then states [LB, U])")
     parser.add_argument("--out")
     arguments = parser.parse_args()
     faulthandler.dump_traceback_later(600, repeat=True, file=sys.stderr)
@@ -124,7 +128,7 @@ def main() -> None:
     phases = ("envelope", "full") if arguments.phase == "both" else (arguments.phase,)
     results = {}
     for phase in phases:
-        results[phase] = run_phase(phase, arguments.route, say, arguments.incumbent)
+        results[phase] = run_phase(phase, arguments.route, say, arguments.incumbent, arguments.net_seconds)
         if out is not None:
             out.mkdir(parents=True, exist_ok=True)
             (out / f"{arguments.route}.{phase}.json").write_text(json.dumps(results[phase]), encoding="utf-8")
