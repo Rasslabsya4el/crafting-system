@@ -41,6 +41,7 @@ start_item:
     - mod: {MANA_1}
       tier: 1
       values: {[min(stat.min, stat.max) for stat in DATA.mods[MANA_1].stats]}
+start: given   # the player holds the amulet (OR-6): nothing is bought, so there is no price and no restart
 """
 OFFERS = [
     Offer("Chaos Orb", CHAOS, {CH: 1}),
@@ -58,7 +59,7 @@ def target():
 
 @pytest.fixture(scope="module")
 def exact(target):
-    return make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0)
+    return make_plan(DATA, target, PRICES, offers=OFFERS)
 
 
 @pytest.fixture(scope="module")
@@ -71,7 +72,7 @@ def budget(exact):
 
 @pytest.fixture(scope="module")
 def approximate(target, budget):
-    return make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, budget=budget, rates=RATES)
+    return make_plan(DATA, target, PRICES, offers=OFFERS, budget=budget, rates=RATES)
 
 
 def priced():
@@ -101,7 +102,7 @@ def test_the_policy_is_a_policy_of_blocks_that_starts_at_the_start_block(approxi
 
 
 def test_the_same_query_inside_the_budget_is_exact_and_unmarked(target, exact):
-    plan = make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, budget=1e12, rates=RATES)
+    plan = make_plan(DATA, target, PRICES, offers=OFFERS, budget=1e12, rates=RATES)
 
     assert plan.approximation is None and plan.risk is not None and notes(plan.limits) == []
     assert plan.mean_remaining == exact.mean_remaining
@@ -363,7 +364,7 @@ def command(tmp_path, monkeypatch, budget):
 
     def run(*arguments):
         out = tmp_path / "policy.json"
-        code = main([str(path), "--json", str(out), "--start-price", "0", *arguments], data=DATA, prices=PRICES, env={}, today=datetime.date(2026, 10, 31))
+        code = main([str(path), "--json", str(out), *arguments], data=DATA, prices=PRICES, env={}, today=datetime.date(2026, 10, 31))
         return code, out
 
     return run

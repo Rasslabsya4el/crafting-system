@@ -192,6 +192,7 @@ start_item:
     - mod: {MANA_1}
       tier: 1
       values: {[min(stat.min, stat.max) for stat in DATA.mods[MANA_1].stats]}
+start: given   # the player holds the amulet (OR-6): nothing is bought, so there is no price and no restart
 """
 OFFERS = [
     Offer("Chaos Orb", CHAOS, {CH: 1}),
@@ -208,7 +209,7 @@ def target():
 
 @pytest.fixture(scope="module")
 def exact(target):
-    return make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0)
+    return make_plan(DATA, target, PRICES, offers=OFFERS)
 
 
 def priced(offers=OFFERS):
@@ -292,17 +293,17 @@ def test_make_plan_stops_with_the_refusal_when_the_exact_run_is_beyond_the_large
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
 
     with pytest.raises(PlanError, match=r"no approximate level available \(Undeclared reroll is not declared block-invariant"):
-        make_plan(DATA, target, PRICES, offers=offers, start_price=0.0, budget=0.0, rates=Rates(1.0, 1.0), solver="object")
+        make_plan(DATA, target, PRICES, offers=offers, budget=0.0, rates=Rates(1.0, 1.0), solver="object")
 
 
 def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(target, monkeypatch):
     """Ticket #70: no coarse level and a graph beyond the object solver is no longer a refusal, the packed solver answers it exactly."""
     offers = [Offer("Undeclared reroll", UndeclaredReroll(), {CH: 1}), *OFFERS[1:]]
-    exact = make_plan(DATA, target, PRICES, offers=offers, start_price=0.0)
+    exact = make_plan(DATA, target, PRICES, offers=offers)
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
     monkeypatch.setattr(_packed, "OBJECT_SOLVER_EDGES", 100)
 
-    plan = make_plan(DATA, target, PRICES, offers=offers, start_price=0.0, budget=0.0, rates=Rates(1.0, 1.0))
+    plan = make_plan(DATA, target, PRICES, offers=offers, budget=0.0, rates=Rates(1.0, 1.0))
 
     assert plan.approximation is None and plan.packed is not None
     assert plan.mean_remaining == pytest.approx(exact.mean_remaining, rel=1e-9)
@@ -326,7 +327,7 @@ def test_the_text_tree_stops_after_its_limit_and_says_where_the_rest_is(exact, m
 
 
 def test_make_plan_without_a_budget_never_decides(target, exact):
-    plan = make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, rates=Rates(1e9, 1e9))
+    plan = make_plan(DATA, target, PRICES, offers=OFFERS, rates=Rates(1e9, 1e9))
 
     assert plan.approximation is None and notes(plan.limits) == [] and plan.mean_remaining == exact.mean_remaining
 

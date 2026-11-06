@@ -8,9 +8,15 @@ import collections
 
 import pytest
 from abstraction_support import real_game_data
+from start_support import with_start
 
 from crafting_system.items import EnchantClass, EnchantKind, Item, Rarity, enchant_info
-from crafting_system.targets import parse_target
+from crafting_system.targets import parse_target as parse_target_text
+
+
+def parse_target(text: str, data, source: str = "t.yaml"):
+    """The target of `text`, closed with `start: given` unless it says how its start item is had (OR-6)."""
+    return parse_target_text(with_start(text), data, source=source)
 
 ARMOUR_BASE = "Metadata/Items/Armours/BodyArmours/BodyStr1"
 SWORD_BASE = "Metadata/Items/Weapons/OneHandWeapons/OneHandSwords/OneHandSword1"

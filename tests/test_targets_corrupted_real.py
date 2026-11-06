@@ -13,15 +13,24 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+from start_support import with_start
 
 from crafting_system.actions import corrupted_implicit_pool
 from crafting_system.items import ExplicitMod, ImplicitMod, Item, Rarity, fits_corrupted_implicit
-from crafting_system.targets import TargetError, load_target, parse_target
+from crafting_system.targets import TargetError, load_target
+from crafting_system.targets import parse_target as parse_target_text
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples" / "targets"
 PRISMATIC = "Metadata/Items/Rings/Ring8"
 RESIST = "V2AllResistancesCorrupted"
 COLD_TIERS = ("V2AddedColdDamageCorrupted1", "V2AddedColdDamageCorrupted2", "V2AddedColdDamageCorrupted3")
+
+
+def parse_target(text: str, data, source: str = "t.yaml"):
+    """The target of `text`, closed with `start: given` unless it says how its start item is had (OR-6)."""
+    return parse_target_text(with_start(text), data, source=source)
+
+
 HEADER = "base: Prismatic Ring\nitem_level: {level}\nrequirements:\n  - family: ColdResistance\n    min_tier: any\n"
 
 

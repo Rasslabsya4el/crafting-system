@@ -298,7 +298,10 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         f"1 Divine = {divine:,.2f} Chaos"
     )
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
-    lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
+    if plan.start_price.given:  # OR-6: nothing is paid for it, so no number is printed
+        lines.append(f"Start item: {plan.start_price.source}")
+    else:
+        lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
     if plan.start_price.taken_for:
         lines.append(f"  {plan.start_price.taken_for}")
     if report.first_step is not None:
@@ -504,6 +507,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "price_name": plan.start_price.name,
             "price_chaos": shift,
             "price_source": plan.start_price.source,
+            "given": plan.start_price.given,
         },
         **({"start_options": start_document(plan.starts, report.first_step)} if plan.starts is not None else {}),
         "limits": [limit_document(limit) for limit in ordered(plan.limits)],

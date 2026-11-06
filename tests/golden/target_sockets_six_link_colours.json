@@ -70,8 +70,8 @@
     },
     "imprints": []
   },
+  "start": "given",
   "price_file": null,
-  "buys_start_item": false,
   "implicits": [],
   "quality": {
     "_type": "PlainQualityRequirement",

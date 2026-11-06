@@ -36,8 +36,10 @@
 #     Boss in your Presence (name one with `mod:` if you want it). `min_roll: 40` is read as the
 #     value 40 or more: grade 3 ("(39-41)%") rolled 40 or 41, or any better grade.
 #   * "get suppression fracture boot": the start item below is a rare boot with the T1 Suppress Spell
-#     Damage suffix fractured. The guide gives no more, so no other mod is written, and no price: the
-#     file does not say `buys_start_item`, so the planner treats it as free (#427, the next step-4 ticket).
+#     Damage suffix fractured. The guide gives no more, so no other mod is written. A fractured base is
+#     not made by the route (the guide's step 1 only says to get it, and its mechanics list names the
+#     trade site, docs/research/2026-10-30-5-reference-routes.md), so the start item is bought: `start:
+#     bought` at the end of this file, and it must have a price (OR-6, #505).
 
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Velour Boots
@@ -93,3 +95,9 @@ start_item:
       values: [13]
       # Locked in place by a Fracturing Orb.
       fractured: true
+
+# How the start item is had (OR-6): bought. The guide's step 1 is "Get suppression fracture boot" and its mechanics list the trade
+# site. Its buy spec, trade query and price key are computed from this file (base, item level, start item), so nothing else
+# describes it. It must have a price under that key, and the exact item has no listing (0 on 2026-11-06, search #483; the
+# query itself cannot be built yet, #514), so none is written.
+start: bought

@@ -132,10 +132,10 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
     assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01"]
     entry = entry_of(document)
     assert entry["missing_price"]["name"] == START
-    assert entry["missing_price"]["override_line"] == f'"{START}" = 0'
+    assert entry["missing_price"]["override_line"] == f'"{START}" = <the price in Chaos Orbs>'  # a missing price is an error, never a 0 placeholder (OR-6)
     assert entry["missing_price"]["overrides_file"] == expected_overrides_file()
     out = capsys.readouterr().out
-    assert f'"{START}" = 0' in [line.strip() for line in out.splitlines()]
+    assert f'"{START}" = <the price in Chaos Orbs>' in [line.strip() for line in out.splitlines()]
     assert f"add to {expected_overrides_file()} under [prices]:" in out
     for route_id in ("R10", "R11", "R05", "R08", "R09"):  # their own files fail first: the test data has no such base
         assert entry_of(document, route_id)["error"] is not None

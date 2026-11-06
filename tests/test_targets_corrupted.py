@@ -338,7 +338,7 @@ def test_the_corrupting_fossil_set_gives_one():
     assert_error(message, 8, "implicits[1]", "(`fossil-set`, `vaal`) give at most 1")
 
 
-@pytest.mark.parametrize("suffix", ["buys_start_item: true\nactions: [vaal]\n", "actions: [vaal]\nstart_item:\n  corrupted: true\n"])
+@pytest.mark.parametrize("suffix", ["start: bought\nactions: [vaal]\n", "actions: [vaal]\nstart_item:\n  corrupted: true\n"])
 def test_it_is_not_an_error_when_the_target_buys_its_item(suffix):
     target = parse(TWO + suffix)
 
@@ -346,9 +346,9 @@ def test_it_is_not_an_error_when_the_target_buys_its_item(suffix):
 
 
 def test_a_target_that_buys_its_item_may_leave_out_every_corrupting_kind():
-    target = parse(f"implicits:\n  - stat: '{ALL_RES}'\n    corrupted: true\nbuys_start_item: true\nactions: [chaos-orb]\n")
+    target = parse(f"implicits:\n  - stat: '{ALL_RES}'\n    corrupted: true\nstart: bought\nactions: [chaos-orb]\n")
 
-    assert target.buys_start_item and target.actions == ("chaos-orb",)
+    assert target.bought and target.actions == ("chaos-orb",)
 
 
 # -- two of one mod group --------------------------------------------------------------------------------
@@ -382,7 +382,7 @@ def test_two_entries_one_implicit_could_meet_are_not_two_implicits():
 
 
 def test_it_is_not_an_error_when_the_target_buys_its_item_and_two_groups_clash():
-    assert len(parse(SAME_GROUP + "buys_start_item: true\n").implicits) == 2
+    assert len(parse(SAME_GROUP + "start: bought\n").implicits) == 2
 
 
 # -- more implicits than the item holds after corruption -------------------------------------------------
@@ -399,7 +399,7 @@ def test_error_a_base_implicit_asked_with_a_corrupted_one_on_a_one_implicit_base
 
 def test_the_same_two_implicits_are_fine_when_the_target_buys_a_corrupted_item_that_cannot_hold_both_the_error_stays():
     message = parse_error(
-        f"implicits:\n  - stat: '{ALL_RES}'\n  - stat: '{COLD_DAMAGE}'\n    corrupted: true\nbuys_start_item: true\n"
+        f"implicits:\n  - stat: '{ALL_RES}'\n  - stat: '{COLD_DAMAGE}'\n    corrupted: true\nstart: bought\n"
     )
 
     assert_error(message, 7, "implicits[1]", "asks for 2 implicits in all")

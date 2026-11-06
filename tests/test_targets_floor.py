@@ -176,7 +176,7 @@ def test_a_stated_floor_raises_the_derived_one_and_never_lowers_it():
 
 
 def test_a_target_that_asks_for_more_than_its_own_level_is_not_lowered():
-    target = parse_target("base: Paua Amulet\nitem_level: 80\n" + requirements(LIGHTNING_1), DATA)
+    target = parse_target("base: Paua Amulet\nitem_level: 80\n" + requirements(LIGHTNING_1) + "start: given\n", DATA)
     found = floor_of(DATA, target)
 
     assert (found.level, found.kind) == (80, "at target")

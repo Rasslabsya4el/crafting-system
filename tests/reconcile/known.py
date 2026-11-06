@@ -11,14 +11,16 @@ Every entry names the issue that holds the work (OR-29: a finding is an issue, n
 in a start price (R08, R09), OR-7 where a stand-in stands for a trade price.
 
     #484  rebuild 3b: the stored and written tier of a start mod goes (the R12 start amulet)
-    #417  the buy spec and the target describe different start items (left: the price entries of R08 and R09 are of a normal base plus a
-          typed Alchemy, OR-16; the spec is computed from the target since #474, so the buy rows are gone)
+    #417  (closed) the buy spec and the target described different start items; the spec is computed from the target since #474
+    #494  point 2: the price entries of R08 and R09 are of a normal base plus a typed Alchemy, OR-16 (what was left of #417)
     #418  the start price is keyed by base name, not base id (the key says the base since #474; rows moved to #483 and #486)
     #425  R04's price is for item level 85 against 81; V01's hand price records no level
     #426  R04, R13, V01 start prices are poe.ninja or hand stand-ins
-    #427  targets with no start price (J01, R03, R06); the buy spec of the others is computed since #474
+    #427  targets with no start price (J01, R03, R06): closed by #505, every target says `start: given` (J01) or `start: bought`, and a
+          bought one has a key and a computed spec; the two prices that cannot be taken are #483
     #428  the spec and the price accept bases with another mod pool (rows moved to #483 and #486)
-    #483  the exact start item of R05, R10, R11, R12, R14 has no trade market, so the committed price is for a wider item
+    #483  the exact start item of R03, R05, R06, R10, R11, R12, R14 has no trade market (R03 and R06 have no price at all, a bought start item
+          needs one, OR-6), so the committed price is for a wider item
     #486  the trade site cannot tell bases of one name apart by `type` (R04 quivers; the three Two-Toned Boots by their implicit since #474)
 
 Since #474 the buy spec is not a hand-written file: `derived_specs/<target>.yaml` is what the planner computes from the target, written
@@ -53,19 +55,15 @@ def _known(rows: dict[tuple[str, str], tuple[str, str, str, str, str]]) -> dict[
 
 KNOWN: dict[tuple[str, str], Known] = _known(
     {
-        ("j01-cobalt-life-attack-speed", "start_price.written"): ("#427", "OR-3", "no start_price: the start item is counted free", "none", "free"),
-        ("j01-cobalt-life-attack-speed", "buy_spec.exists"): ("#427", "OR-3", "no start price, so no buy spec", "none", "no buy spec"),
-        ("r03-avoid-shock-boots", "start_price.written"): ("#427", "OR-3", "no start_price: the start item is counted free", "none", "free"),
-        ("r03-avoid-shock-boots", "buy_spec.exists"): ("#427", "OR-3", "no start price, so no buy spec", "none", "no buy spec"),
-        ("r06-strength-heavy-belt", "start_price.written"): ("#427", "OR-3", "no start_price: the start item is counted free", "none", "free"),
-        ("r06-strength-heavy-belt", "buy_spec.exists"): ("#427", "OR-3", "no start price, so no buy spec", "none", "no buy spec"),
+        ("r03-avoid-shock-boots", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage", "no entry"),
+        ("r06-strength-heavy-belt", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Heavy Belt, normal, item level 75, Hunter influence", "no entry"),
         ("r04-penetrating-quiver", "price.base"): ("#486", "OR-3", "the price entry is by a name that two bases share, and neither the trade site nor poe.ninja can tell them apart", f"{_QUIVER}QuiverNew5", f"{_QUIVER}Quiver12, {_QUIVER}QuiverNew5"),
         ("r04-penetrating-quiver", "price.item_level"): ("#425", "OR-3", "the poe.ninja line the price was read from is item level 85, labelled 81", "81", "85"),
         ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
         ("r05-strength-ring", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any ring; the exact item has no market (0 listings)", "Amethyst Ring", "any accessory.ring"),
         ("r05-strength-ring", "price.pool"): ("#483", "OR-3", "the price entry accepts the Unset Ring and the Bone Ring; the exact item has no market", "Amethyst Ring", f"{_RING}Ring15 (+3 -0); {_RING}Ring16 (+23 -0)"),
-        ("r08-energy-shield-boots", "price.rarity"): ("#417", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2)", "rare", "normal"),
-        ("r09-life-boots", "price.rarity"): ("#417", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2)", "rare", "normal"),
+        ("r08-energy-shield-boots", "price.rarity"): ("#494", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2, was #417)", "rare", "normal"),
+        ("r09-life-boots", "price.rarity"): ("#494", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2, was #417)", "rare", "normal"),
         ("r09-life-boots", "price.base"): ("#483", "OR-3", "the price entry is by a name that three bases share: it was taken for any of them, the computed query now asks for BootsAtlas1's implicit", f"{_ATLAS}BootsAtlas1", f"{_ATLAS}BootsAtlas1, {_ATLAS}BootsAtlas2, {_ATLAS}BootsAtlas3"),
         ("r09-life-boots", "price.pool"): ("#483", "OR-3", "the price entry accepts BootsAtlas2 and BootsAtlas3 (taken for any of the three)", "Two-Toned Boots", f"{_ATLAS}BootsAtlas2 (+45 -62); {_ATLAS}BootsAtlas3 (+45 -45)"),
         ("r12-lightning-amulet", "start_mod.LightningResist2.tier"): ("#484", "OR-3", "written tier 3, the data says tier 7 of 8", "3", "7"),

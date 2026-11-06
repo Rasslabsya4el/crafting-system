@@ -38,6 +38,7 @@ from crafting_system.targets import (
     QualityRequirement,
     Requirement,
     SocketRequirement,
+    StartKind,
     Target,
     load_target,
 )
@@ -1003,7 +1004,7 @@ def test_the_plan_of_a_plain_quality_target_is_refused_too(r12_target):
 
 
 def test_the_card_of_a_plain_quality_target_says_quality_twenty_percent_or_more():
-    target = Target(ROBE, 84, frozenset(), (), robe_with("W"), quality=PlainQualityRequirement(20))
+    target = Target(ROBE, 84, frozenset(), (), robe_with("W"), start=StartKind.GIVEN, quality=PlainQualityRequirement(20))
 
     card = card_of_target(DATA, target)
 
@@ -1033,7 +1034,7 @@ def test_the_card_of_an_item_with_sockets_but_no_quality_has_no_quality_pill():
 
 
 def test_the_html_of_a_plain_quality_target_and_item_do_not_crash():
-    target = Target(ROBE, 84, frozenset(), (), robe_with("W"), quality=PlainQualityRequirement(20))
+    target = Target(ROBE, 84, frozenset(), (), robe_with("W"), start=StartKind.GIVEN, quality=PlainQualityRequirement(20))
 
     assert "Quality 20% or more" in _item(card_of_target(DATA, target), target=True)
     assert "Quality 20%" in _item(card_of_item(DATA, robe_with("RGB", (3,), quality=PlainQuality(20))))

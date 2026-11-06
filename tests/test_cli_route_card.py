@@ -28,7 +28,7 @@ from crafting_system.cli._route_card import (
     tracks_junk,
 )
 from crafting_system.items import ExplicitMod, Influence, Rarity, Side, accepted_by_tier, tier_table
-from crafting_system.targets import KOfN, Requirement, Target, load_target
+from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target
 
 IMPLICIT = "(20-30)% increased Mana Regeneration Rate"
 IMPLICIT_ID = "ManaRegenerationImplicitAmulet1"
@@ -63,7 +63,7 @@ def belt(*mods, **fields):
 
 
 def target_of(*requirements, influences=frozenset()) -> Target:
-    return Target(AMULET, 84, influences, tuple(requirements), small_item())
+    return Target(AMULET, 84, influences, tuple(requirements), small_item(), start=StartKind.GIVEN)
 
 
 def gem_leaf() -> Requirement:

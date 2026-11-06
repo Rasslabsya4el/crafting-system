@@ -296,7 +296,7 @@ def test_the_old_oracle_rule_and_the_shared_rule_name_the_same_base_for_every_na
     bases = export["base_items"]
     references = [target["base"] for target in _yaml_files(TARGETS_DIR)] + [spec["base_type"] for spec in _yaml_files(BUY_DIR) if spec.get("base_type")]
 
-    assert len(references) == 14 + 10  # the computed specs: one per bought start item, the two R10 files sharing one
+    assert len(references) == 14 + 12  # the computed specs: one per bought start item, the two R10 files sharing one
     for reference in references:
         merged = shared.base_ids_of(bases, reference)
         assert merged and oracle_base_v411(bases, reference) in merged

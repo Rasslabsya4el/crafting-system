@@ -29,7 +29,7 @@ from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_f
 from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
-from crafting_system.targets import KOfN, Requirement, Target, load_target, start_price_key
+from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
 
 from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
@@ -427,7 +427,8 @@ def _start_entry(plan: Plan, data: GameData, expected: ExpectedStart | None) -> 
                 "key": row.candidate.key,
                 "label": row.candidate.label,
                 "outcome": row.outcome,
-                "start_price": _number(row.candidate.price),
+                "start_price": None if row.candidate.price is None else _number(row.candidate.price),
+                "given": row.candidate.given,
                 "total": None if row.total is None else _number(row.total),
             }
             for row in choice.considered
@@ -439,7 +440,8 @@ def _start_entry(plan: Plan, data: GameData, expected: ExpectedStart | None) -> 
         "why": expected.why,
         "chosen": chosen,
         "matches": chosen == expected.key,
-        "start_price": _number(plan.start_price.chaos),
+        "start_price": None if plan.start_price.given else _number(plan.start_price.chaos),
+        "given": plan.start_price.given,
         "options": options,
         "refused": refused,
         "first_step": None if step is None else first_step_document(step),
@@ -453,7 +455,7 @@ def _missing_start_price(data: GameData, target: Target, prices: PriceFile, root
     beside the price file. The trade command is only named, never run: the benchmark does not call the trade API, so a run stays
     reproducible and offline.
     """
-    if not target.buys_start_item:
+    if target.start is not StartKind.BOUGHT:  # a given start item (OR-6) has no price to miss
         return None
     name = start_price_key(data, target)
     if name in prices.prices:
@@ -461,7 +463,7 @@ def _missing_start_price(data: GameData, target: Target, prices: PriceFile, root
     price_file = target.price_file if target.price_file is not None else default_price_file_path(config)
     return {
         "name": name,
-        "override_line": f'"{name}" = 0',
+        "override_line": f'"{name}" = <the price in Chaos Orbs>',
         "overrides_file": _without_root(str(price_file.parent / OVERRIDES_FILE_NAME), root),
         "trade_target": target_file,
     }
@@ -471,8 +473,7 @@ def _missing_message(missing: dict) -> str:
     """The error of a route whose start item has no price: the line to write, and the trade command for the target."""
     text = (
         f"no price for the start item {missing['name']!r}. Add this line under [prices] in "
-        f"{missing['overrides_file']}: {missing['override_line']}, then replace the 0 with the item's price in Chaos Orbs "
-        "(a 0 left in place is refused by the overrides loader, which names the item)"
+        f"{missing['overrides_file']}: {missing['override_line']} (a bought start item must have a price above 0)"
     )
     text += f", or price it on the trade API with: python -m crafting_system.cli trade {missing['trade_target']}"
     return text + "."
@@ -622,8 +623,8 @@ def render_summary(document: dict) -> str:
 
 def _start_summary(start: dict) -> list[str]:
     verdict = "as expected" if start["matches"] else "NOT the expected one"
-    price = money(start["start_price"] or 0.0)
-    lines = [f"  start        {start['chosen']} ({verdict}; expected {start['expected']}), start price {price} Chaos"]
+    price = "given, not counted" if start["given"] else "no price" if start["start_price"] is None else f"{money(start['start_price'])} Chaos"
+    lines = [f"  start        {start['chosen']} ({verdict}; expected {start['expected']}), start price {price}"]
     for option in start["options"]:
         total = "not planned" if option["total"] is None else f"{money(option['total'])} Chaos in all"
         lines.append(f"    {option['outcome']}: {option['label']}: {total}")

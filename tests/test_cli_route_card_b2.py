@@ -16,7 +16,7 @@ from crafting_system.abstraction import Abstraction
 from crafting_system.cli._route_card import ItemCard, Slot, card_of_item, card_of_states, card_of_target, mod_text
 from crafting_system.cli._route_html import _item
 from crafting_system.items import CatalystType, ImplicitMod, Influence, Item, Quality, Rarity
-from crafting_system.targets import ImplicitRequirement, QualityRequirement, Target
+from crafting_system.targets import ImplicitRequirement, QualityRequirement, StartKind, Target
 
 STRENGTH = "StrengthImplicitBelt1"
 STRENGTH_RANGE = "+(25-35) to Strength"
@@ -38,7 +38,7 @@ def plain_card(item: Item, **options) -> ItemCard:
 
 
 def target_of(**fields) -> Target:
-    return Target(BELT, 84, frozenset(), (), build(), **fields)
+    return Target(BELT, 84, frozenset(), (), build(), **{"start": StartKind.GIVEN, **fields})
 
 
 # --- an item with nothing new reads as it did -------------------------------------------------------------

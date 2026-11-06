@@ -234,4 +234,4 @@ def test_the_page_of_a_plain_start_is_unchanged_by_the_ticket():
 
     section = build_section(route_input(plan), TOY)
 
-    assert section.rows[0].title == "Start item" and field_of(section.goal, "Start") is None
+    assert section.rows[0].title == "Start item (given)" and field_of(section.goal, "Start") is None

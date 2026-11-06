@@ -39,7 +39,8 @@ def _row(row: ConsideredStart) -> str:
     if row.outcome in ("chosen", "planned"):
         assert row.total is not None and row.mean_remaining is not None
         approximate = ", approximate" if row.approximate else ""
-        words = f"{money(row.total)} Chaos = start {money(candidate.price)} + crafting {money(row.mean_remaining)}{approximate}"
+        start = "given (not counted)" if candidate.given else "no price" if candidate.price is None else money(candidate.price)
+        words = f"{money(row.total)} Chaos = start {start} + crafting {money(row.mean_remaining)}{approximate}"
         return f"  {'chosen' if row.outcome == 'chosen' else 'planned'}: {head}: {words}"
     if row.outcome == "failed":
         return f"  failed: {head}: {row.note}"
@@ -111,7 +112,8 @@ def _option(row: ConsideredStart) -> dict:
         "outcome": row.outcome,
         "recipe": candidate.recipe,
         "steps": candidate.steps,
-        "start_price_chaos": _number(candidate.price),
+        "start_price_chaos": None if candidate.price is None else _number(candidate.price),
+        "given": candidate.given,
         "goods": [
             {"name": name, "count": count, "chaos": chaos, "price_source": source} for name, count, chaos, source in candidate.goods
         ],

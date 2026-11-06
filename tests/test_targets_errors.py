@@ -348,7 +348,7 @@ def test_an_empty_file_is_refused(text):
 
 @pytest.mark.parametrize("text", ["- base\n- item_level\n", "just text\n", "42\n"])
 def test_a_top_level_that_is_not_a_mapping_is_refused(text):
-    message = parse_error(text, header=False)
+    message = parse_error(text, header=False, start=None)
 
     assert message.startswith("t.yaml:1: the file must be a mapping")
 
@@ -534,7 +534,7 @@ def test_a_price_file_must_be_text():
 
 
 COPY = "Metadata/Items/Amulets/Copy0"
-BASE_TEXT = "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n"
+BASE_TEXT = "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nstart: given\n"
 
 
 def two_amulets(original_state: str, copy_state: str):

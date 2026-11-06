@@ -35,7 +35,7 @@ from crafting_system.config import PRICE_SOURCES, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
 from crafting_system.solver import ConvergenceError
-from crafting_system.targets import TargetError, buy_spec_of, load_target
+from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_target
 
 from . import _packed
 from ._benchmark import benchmark_main
@@ -165,7 +165,7 @@ def main(
         if plan.approximation is not None:
             print("Route view not written: it is not built for an approximate answer yet.")
         else:
-            spec = buy_spec_of(game, target) if target.buys_start_item else None  # computed from the target: the buy step's link and filter
+            spec = buy_spec_of(game, target) if target.start is StartKind.BOUGHT else None  # computed from the target: the buy step's link and filter
             page = write_route_page(
                 out.parent / f"{target_path.stem}.route.html", report, game, route=route, given=given,
                 buy_spec=spec, cache_dir=config.cache_dir, target_name=name,

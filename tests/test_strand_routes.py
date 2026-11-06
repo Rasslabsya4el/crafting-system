@@ -202,7 +202,7 @@ def test_each_test_target_asks_what_the_base_target_asks_and_the_start_strands_m
         # a target never asks for strands: no requirement names them
         assert "strand" not in yaml.safe_dump(target["requirements"]).lower()
         if not strands:
-            assert "start_item" not in target and target["start_price"] and base["buys_start_item"] is True  # the research file keeps its typed price name; the example target computes its own
+            assert "start_item" not in target and target["start_price"] and base["start"] == "bought"  # the research file keeps its typed price name; the example target computes its own
             assert "remembrance-orb" in target["actions"]
             continue
         assert target["start_item"]["memory_strands"] == strands
@@ -216,8 +216,10 @@ def test_each_target_names_the_price_of_its_buy_spec():
 
 
 def without_strand_words(text: str) -> str:
-    """The file as today's loaders read it: no `memory_strands:` line, no `start_price:` line (the research files predate #474) and no proposed strand kind."""
-    text = re.sub(r"(?m)^\s*(?:memory_strands|start_price):.*\n", "", text)
+    """The file as today's loaders read it: no `memory_strands:` line, `start: bought` for the `start_price:` line (the research files predate
+    #474 and #505; they buy their start item) and no proposed strand kind."""
+    text = re.sub(r"(?m)^\s*memory_strands:.*\n", "", text)
+    text = re.sub(r"(?m)^start_price:.*$", "start: bought", text)
     return re.sub(r"\b(?:%s)\b,? ?" % "|".join(STRAND_KINDS), "", text)
 
 

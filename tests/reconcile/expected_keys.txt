@@ -1,8 +1,10 @@
 # The price key of the start item of each bought benchmark target, written by hand and read by the reconcile package and by
 # tests/test_start_buy_real.py. It is the independent side: src computes the key from the target (targets/start_buy.py), and a test
 # holds the two equal. Tab between the target file stem and the key. A change here is a change of the price the planner looks up.
+r03-avoid-shock-boots	Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage
 r04-penetrating-quiver	Penetrating Arrow Quiver [QuiverNew5], normal, item level 81
 r05-strength-ring	Amethyst Ring, item level 75, fractured +(13-16) to all Attributes
+r06-strength-heavy-belt	Heavy Belt, normal, item level 75, Hunter influence
 r08-energy-shield-boots	Sorcerer Boots, item level 86-100
 r09-life-boots	Two-Toned Boots [BootsAtlas1], item level 86-100
 r10-fractured-boots	Sorcerer Boots, item level 84, fractured 30% increased Movement Speed

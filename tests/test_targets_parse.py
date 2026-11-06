@@ -5,7 +5,7 @@ from pathlib import Path
 from targets_support import AMULET, BELT, DATA, parse, parse_error
 
 from crafting_system.items import ExplicitMod, Influence, Item, Rarity
-from crafting_system.targets import KOfN, Requirement, Target
+from crafting_system.targets import KOfN, Requirement, StartKind, Target
 
 
 def test_a_minimal_target_resolves_the_base_and_fills_the_defaults():
@@ -198,21 +198,47 @@ def test_a_base_name_that_only_one_base_carries_finds_it():
     assert parse(text, header=False).base_id == BELT
 
 
-def test_buys_start_item_says_the_start_item_is_bought_and_its_key_is_computed_from_the_target():
-    target = parse("requirements:\n  - family: IncreasedLife\nbuys_start_item: true\n")
+def test_start_bought_says_the_start_item_is_bought_and_its_key_is_computed_from_the_target():
+    target = parse("requirements:\n  - family: IncreasedLife\nstart: bought\n")
 
-    assert target.buys_start_item is True
+    assert target.start is StartKind.BOUGHT and target.bought
     assert not hasattr(target, "start_price")  # no typed name: the buy spec, the query and the key come from the target (#474)
 
 
-def test_a_target_without_buys_start_item_does_not_buy_its_start_item():
-    assert parse("requirements:\n  - family: IncreasedLife\n").buys_start_item is False
+def test_start_given_says_the_start_item_is_given():
+    target = parse("requirements:\n  - family: IncreasedLife\nstart: given\n")
+
+    assert target.start is StartKind.GIVEN and not target.bought
 
 
-def test_buys_start_item_must_be_true_or_false():
-    message = parse_error("requirements:\n  - family: IncreasedLife\nbuys_start_item: R12 start amulet\n")
+def test_the_start_key_is_required_and_the_message_offers_both_words():
+    message = parse_error("requirements:\n  - family: IncreasedLife\n", start=None)
 
-    assert message.startswith("t.yaml:5: ") and ": buys_start_item: must be true or false" in message
+    assert message.startswith("t.yaml:1: start: this key is required but missing")
+    assert "`start: bought`" in message and "`start: given`" in message
+
+
+def test_a_target_with_a_start_item_block_still_has_to_say_how_it_is_had():
+    message = parse_error("requirements:\n  - family: IncreasedLife\nstart_item:\n  rarity: rare\n", start=None)
+
+    assert "start: this key is required but missing" in message
+
+
+def test_start_must_be_bought_or_given():
+    for wrong in ("R12 start amulet", "true", "free", "''"):
+        message = parse_error(f"requirements:\n  - family: IncreasedLife\nstart: {wrong}\n", start=None)
+
+        assert message.startswith("t.yaml:5: ") and ": start: must be one of `given`, `bought`, got " in message, wrong
+
+
+def test_start_is_read_in_any_case_and_with_spaces():
+    assert parse("requirements:\n  - family: IncreasedLife\nstart: ' Bought '\n").bought
+
+
+def test_the_old_buys_start_item_key_is_an_unknown_key():
+    message = parse_error("requirements:\n  - family: IncreasedLife\nbuys_start_item: true\n")
+
+    assert message.startswith("t.yaml:5: ") and "unknown key `buys_start_item`" in message
 
 
 def test_the_old_start_price_line_is_an_unknown_key():

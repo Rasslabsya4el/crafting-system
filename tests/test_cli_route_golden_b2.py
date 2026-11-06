@@ -25,7 +25,7 @@ from crafting_system.items import CatalystType, Item, Quality, Rarity
 from crafting_system.prices import CHAOS_ORB
 from crafting_system.risk import evaluate
 from crafting_system.solver import Solution
-from crafting_system.targets import ImplicitRequirement, QualityRequirement, Requirement, Target
+from crafting_system.targets import ImplicitRequirement, QualityRequirement, Requirement, StartKind, Target
 
 CONFLICT_ODDS = make_rule(
     "conflict.odds",
@@ -88,7 +88,7 @@ def unveil_plan() -> Plan:
 
     target = Target(
         BELT, 84, frozenset(), (Requirement("IncreasedLife", None, frozenset({"IncreasedLife1"})),), UNVEIL_START,
-        implicits=(SHOCK_IMPLICIT,), quality=QualityRequirement(CatalystType.PRISMATIC, 15), buys_start_item=True,
+        implicits=(SHOCK_IMPLICIT,), quality=QualityRequirement(CatalystType.PRISMATIC, 15), start=StartKind.BOUGHT,
     )  # fmt: skip
     # The plan is made by hand to show the cards, not to be solved: its policy is one Chaos Orb, which cannot give an implicit or a quality. A goal built
     # from the target reads them since ticket #158 (and would show the route as never finishing), so the goal here is the target's mods only.

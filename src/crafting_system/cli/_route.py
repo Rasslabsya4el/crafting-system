@@ -19,7 +19,7 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
               status: absent          # absent, below or passing, or a list of them
         do: Harvest Reforge Lightning # an action as the solver prints it, or `restart`
 
-`restart` buys the start item again: an action that costs the start price and ends in the start state.
+`restart` buys the start item again: an action that costs the start price and ends in the start state. Only a bought start item has one; a given item is never bought again (OR-6).
 Conditions speak only of what the compressed state holds; one it cannot answer yet (mods per side, metamods)
 is refused, not guessed. `open_prefixes` and `open_suffixes` count the free slots of a side, which the state holds only
 when a bench action is offered (the other mods are then kept as slots); without one they are refused. A goal state is never acted on. A reachable state that no rule
@@ -251,12 +251,12 @@ class _Reader:
         label = self.text(rule, "do", path)
         line = rule.key_lines["do"]
         if label == RESTART:
-            if not self.plan.start_price.chaos > 0:
+            if self.plan.start_price.given:
                 self.fail(
                     line,
                     path,
-                    "`restart` buys the start item again for the start price, which is 0 here; the solver needs "
-                    "every action to cost more than 0. Give the start item a price",
+                    "`restart` buys the start item again, and the target says its start item is given (`start: given`): "
+                    "a given item is never bought again. Remove the rule, or write `start: bought` and give the item a price",
                 )
             return label
         known = [priced.label for priced in self.plan.offers]

@@ -26,7 +26,7 @@ from crafting_system.prices.price_file import PriceEntry
 from crafting_system.risk import IntervalReport, evaluate, has_inputs, solve_readings
 from crafting_system.actions.contract import Reading
 from crafting_system.solver import Acquisition, Action, Need, Solution, TabularModel
-from crafting_system.targets import Target
+from crafting_system.targets import StartKind, Target
 
 GRID = tuple(Fraction(x) for x in ("2/5", "7/10", "1", "13/10", "8/5"))
 CRAFT, BUY, SCOUR, RECOMBINE = "Craft a prefix", "Buy a prefix", "Scour", "Recombine with a donor"
@@ -89,7 +89,7 @@ def toy_report_plan(labels: tuple[str, ...] = LABELS, recombine: str = RECOMBINE
     The belt policy of the report body is only there to make the report.
     """
     start = belt(FRACTURED_COLD, roll("LifeRegeneration1"))
-    target = Target(BELT, LEVEL, frozenset(), (COLD_REQ, LIFE), start, buys_start_item=True)
+    target = Target(BELT, LEVEL, frozenset(), (COLD_REQ, LIFE), start, start=StartKind.BOUGHT)
     ab = Abstraction(DATA, Goal.from_target(target), BELT, LEVEL, ())
     donor = belt(roll("LifeRegeneration1"), rarity=Rarity.MAGIC)
     recombinator = Recombinator(donor)

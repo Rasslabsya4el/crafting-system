@@ -51,7 +51,7 @@ start_item:
       tier: 1
       values: {low}
       fractured: true
-buys_start_item: true
+start: bought
 """,
         data,
         source="r05.yaml",

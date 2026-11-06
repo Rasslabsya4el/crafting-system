@@ -1,14 +1,14 @@
 """What an answer leaves out, as one record (ticket #459, OR-13).
 
 A `Limit` is one thing the answer does not cover and what it still guarantees: a kind of action that was not offered,
-offers dropped for lack of a price, an offer proved not needed, a start item counted as free, a percentile the grid could not reach.
+offers dropped for lack of a price, an offer proved not needed, a given start item, a percentile the grid could not reach.
 `Plan.limits` holds them all, and the text report, the JSON policy (`crafting-system-policy/2`) and the route page's goal card
 show the same records in the same words, so no surface keeps a second copy.
 
 The fields:
 
 * `kind` is the group of the limit, one of the constants below; the page groups by it and the order of `GROUPS` is the order shown.
-* `what` is the short head ("Not offered", "No restart"), `why` the cause in plain words, `guarantee` one sentence that says what
+* `what` is the short head ("Not offered", "The start item is given"), `why` the cause in plain words, `guarantee` one sentence that says what
   the answer still guarantees (OR-13). `guarantee` is in player words: no setting key, no module name, no ticket number.
 * `labels` are the things left out, by their names in the game ("Exalted Orb", "Bench craft Cannot roll Attack Modifiers").
 * `names` are the things the cause is about, for a limit that has them: the items with no price of an unpriced group.

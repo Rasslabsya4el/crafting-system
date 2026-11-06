@@ -19,7 +19,7 @@ item_level: 86
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it. Its committed price is a stand-in (#426).
-buys_start_item: true
+start: bought
 
 # The kinds of actions the planner may use: the guide's orbs and the bench. Without this line the
 # planner also offers every other orb it can use, a Chaos Orb among them, and a belt rerolled that way

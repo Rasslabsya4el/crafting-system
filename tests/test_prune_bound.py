@@ -63,7 +63,7 @@ from crafting_system.cli._prune import solver_actions
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file
 from crafting_system.solver import Action as SolverAction
-from crafting_system.targets import Requirement, Target, load_target
+from crafting_system.targets import Requirement, StartKind, Target, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "golden" / "plans_118.json"
@@ -294,7 +294,8 @@ def planned(world):
         key = (start, goal, with_fractured_sets, start_price)
         if key not in cache:
             item = getattr(world, start)
-            target = Target(BASE, LEVEL, frozenset(), goals(world.data)[goal], item)
+            start = StartKind.GIVEN if start_price is None else StartKind.BOUGHT  # a restart is the buying of a bought start item (OR-6)
+            target = Target(BASE, LEVEL, frozenset(), goals(world.data)[goal], item, start=start)
             actions = fossil_sets(world.data, item, fractured=with_fractured_sets)
             cache[key] = Planned(world.data, target, world.prices, offers_of(world.data, item, actions), start_price)
         return cache[key]
@@ -333,7 +334,7 @@ def test_a_fractured_fossil_set_in_the_model_moves_the_item_to_another_shape_and
     prices = PriceFile(
         "Test", world.prices.fetched_at, 300.0, {**world.prices.prices, "Fractured Fossil": PriceEntry(0.01, "made-up")}
     )
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item)
+    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item, start=StartKind.GIVEN)
     actions = [a for a in fossil_actions(world.data, item) if len(a.fossils) <= 2][:40]
     actions.append(next(a for a in actions if a.fossils == ("Fractured Fossil",)))
     offers = offers_of(world.data, item, list(dict.fromkeys(actions)))
@@ -406,7 +407,7 @@ def test_the_rounds_grow_the_set_when_the_first_guess_is_too_small(world, monkey
     monkeypatch.setattr(_bound_prune, "SMALL_START", 1)
     monkeypatch.setattr(_bound_prune, "PER_ROUND", 2)
     item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["with-an-either-or"], item)
+    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["with-an-either-or"], item, start=StartKind.GIVEN)
     offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
 
     result = Planned(world.data, target, world.prices, offers)
@@ -419,7 +420,7 @@ def test_the_last_round_takes_every_offer_that_fails_and_still_closes(world, mon
     monkeypatch.setattr(_bound_prune, "SMALL_START", 1)
     monkeypatch.setattr(_bound_prune, "PER_ROUND", 1)
     item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["three-top-tier"], item)
+    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["three-top-tier"], item, start=StartKind.GIVEN)
     offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
 
     with pytest.MonkeyPatch.context() as patch:
@@ -434,7 +435,7 @@ def test_a_model_with_no_proper_policy_in_the_first_round_gets_more_offers_not_a
     """Only the cheapest offers at first: when they cannot reach the goal, the next round adds more."""
     monkeypatch.setattr(_bound_prune, "SMALL_START", 0)
     item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item)
+    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item, start=StartKind.GIVEN)
     offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
 
     result = Planned(world.data, target, world.prices, offers)
@@ -446,7 +447,7 @@ def test_too_few_rounds_step_back_to_the_whole_model(world, monkeypatch):
     monkeypatch.setattr(_bound_prune, "SMALL_START", 0)
     monkeypatch.setattr(_bound_prune, "PER_ROUND", 1)
     item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["three-top-tier"], item)
+    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["three-top-tier"], item, start=StartKind.GIVEN)
     offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
     abstraction = Abstraction(world.data, Goal.from_target(target), BASE, LEVEL)
     start = abstraction.compress(item)
@@ -460,7 +461,7 @@ def test_too_few_rounds_step_back_to_the_whole_model(world, monkeypatch):
 
 def test_fewer_than_min_offers_are_solved_whole(world):
     item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two"], item)
+    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two"], item, start=StartKind.GIVEN)
     offers = offers_of(world.data, item, fossil_sets(world.data, item)[:10])
 
     plan = make_plan(world.data, target, world.prices, offers=offers)
@@ -479,7 +480,7 @@ def bench(real):
     actions = [BenchCraft(LIFE_CRAFT), RemoveCraftedMods(), *fossil_sets(data, item)[:90]]
     prices = made_up_prices(data, "Orb of Alteration", "Orb of Scouring")
     life, speed1 = requirement(data, "IncreasedLife"), requirement(data, "MovementVelocity", min_tier=1)
-    target = Target(BASE, LEVEL, frozenset(), (life, speed1), item)
+    target = Target(BASE, LEVEL, frozenset(), (life, speed1), item, start=StartKind.GIVEN)
     offers = [offer_of(ChaosOrb(), "Chaos Orb", data, item)] + [offer_of(a, a.label(data), data, item) for a in actions]
     return SimpleNamespace(data=data, item=item, target=target, offers=offers, prices=prices)
 
@@ -551,7 +552,7 @@ def test_keeps_shape_tells_a_reroll_from_an_action_that_fractures_or_changes_the
 def test_the_kind_of_a_scouring_orb_is_a_reroll_until_its_shape_is_read(world):
     """A Scouring Orb reads no junk, so it starts as a reroll; `raise_level` makes it terminal (it moves the rarity)."""
     data, item = world.data, world.plain
-    abstraction = Abstraction(data, Goal.from_target(Target(BASE, LEVEL, frozenset(), (requirement(data, "IncreasedLife"),), item)), BASE, LEVEL)
+    abstraction = Abstraction(data, Goal.from_target(Target(BASE, LEVEL, frozenset(), (requirement(data, "IncreasedLife"),), item, start=StartKind.GIVEN)), BASE, LEVEL)
     start = abstraction.compress(item)
     priced = [priced_of(world, ScouringOrb()), *(priced_of(world, a) for a in fossil_actions(data, item)[:45])]
 
@@ -572,7 +573,7 @@ def test_a_wrong_bound_gives_a_wrong_plan_and_the_comparison_with_the_unpruned_p
     goal"): the best offer is then dropped as proved dear, and the plan is dearer than the true optimum.
     """
     item = world.fractured
-    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item)
+    target = Target(BASE, LEVEL, frozenset(), goals(world.data)["two-top-tier"], item, start=StartKind.GIVEN)
     offers = offers_of(world.data, item, fossil_sets(world.data, item)[:120])
     honest = Planned(world.data, target, world.prices, offers)
     best = honest.whole.policy[honest.whole.start].label
@@ -597,7 +598,7 @@ def test_a_wrong_bound_gives_a_wrong_plan_and_the_comparison_with_the_unpruned_p
 
 def test_the_cache_of_built_actions_builds_each_state_and_offer_once(world, monkeypatch):
     item = world.fractured
-    abstraction = Abstraction(world.data, Goal.from_target(Target(BASE, LEVEL, frozenset(), goals(world.data)["two"], item)), BASE, LEVEL)
+    abstraction = Abstraction(world.data, Goal.from_target(Target(BASE, LEVEL, frozenset(), goals(world.data)["two"], item, start=StartKind.GIVEN)), BASE, LEVEL)
     start = abstraction.compress(item)
     priced, _ = price_offers(offers_of(world.data, item, fossil_sets(world.data, item)[:6]), world.prices)
     built = []

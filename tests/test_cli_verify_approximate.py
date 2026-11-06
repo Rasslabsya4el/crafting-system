@@ -34,7 +34,7 @@ def target():
 
 @pytest.fixture(scope="module")
 def exact(target):
-    return make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0)
+    return make_plan(DATA, target, PRICES, offers=OFFERS)
 
 
 @pytest.fixture(scope="module")
@@ -46,7 +46,7 @@ def budget(exact):
 
 @pytest.fixture(scope="module")
 def approximate(target, budget):
-    return make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, budget=budget, rates=RATES)
+    return make_plan(DATA, target, PRICES, offers=OFFERS, budget=budget, rates=RATES)
 
 
 @pytest.fixture(scope="module")
@@ -124,7 +124,7 @@ def command(tmp_path, monkeypatch):
 
     def run(*arguments):
         out = tmp_path / "policy.json"
-        code = main([str(path), "--json", str(out), "--start-price", "0", *arguments], data=DATA, prices=PRICES, env={}, today=datetime.date(2026, 10, 31))
+        code = main([str(path), "--json", str(out), *arguments], data=DATA, prices=PRICES, env={}, today=datetime.date(2026, 10, 31))
         return code, out
 
     return run

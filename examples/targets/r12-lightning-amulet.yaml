@@ -56,7 +56,7 @@ start_item:
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it.
-buys_start_item: true
+start: bought
 
 # Optional: the price file, relative to the folder of this file. It is not read by the target
 # loader and the file does not have to exist yet.

@@ -15,6 +15,7 @@ import datetime
 import textwrap
 
 from items_support import DATA
+from start_support import with_start
 
 from crafting_system.data import BaseItem, GameData, Mod, StatRange, Weight
 from crafting_system.prices import PriceEntry, PriceFile
@@ -127,7 +128,7 @@ requirements:
 
 def toy_target(text: str = BOOTS_TARGET, data: GameData = TOY) -> Target:
     """A target on the toy items (default: 30% or better movement speed boots with life and chaos resistance, from a free rare start)."""
-    return parse_target(textwrap.dedent(text), data, source="toy.yaml")
+    return parse_target(with_start(textwrap.dedent(text)), data, source="toy.yaml")
 
 
 def prices(*, base: float | None = BASE_PRICE, flask: float | None = FLASK_PRICE, divine: float = 300.0, **lines: float) -> PriceFile:

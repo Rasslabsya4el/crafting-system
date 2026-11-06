@@ -19,10 +19,18 @@ colours counted in such a group; it is a requirement of the finish, not of the m
 """
 
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
 from crafting_system.abstraction import Status, status_of
 from crafting_system.items import CatalystType, ExplicitMod, ImplicitMod, Influence, Item, PlainQuality, SocketColour
+
+
+class StartKind(StrEnum):
+    """How the target's start item is had (OR-6): `given` (the player already holds it) or `bought` (it has a price on the market)."""
+
+    GIVEN = "given"
+    BOUGHT = "bought"
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,8 +271,9 @@ class Target:
 
     `requirements` are all required at once, then `implicits` and `quality` when given. `start_item` is a fresh normal item of the base, item
     level and influences unless the file gave one. `price_file` is the path as resolved against the
-    target file's folder; it is not read or checked here. `buys_start_item` says the start item is bought: its buy spec, trade query and
-    price key are computed from the target (`start_buy.py`), so the target is its only description (#474). `actions` names the
+    target file's folder; it is not read or checked here. `start` says how the start item is had (OR-6, #505): `given` (its cost is not
+    counted and the plan never buys another) or `bought` (it must have a price under the key computed from the target, `start_buy.py`,
+    #474, and a restart buys it again). The file must say which, and so must a `Target` built in code: the field has no default, because a target built without it would silently be given. `actions` names the
     kinds of actions the planner may use, or the labels of single actions (ADR-0024, ticket #70), or None for every kind it
     offers by default; the names are not checked here.
     `enchantment` is the acceptable set for the item's enchantment, or None when the target asks for none.
@@ -283,8 +292,8 @@ class Target:
     influences: frozenset[Influence]
     requirements: tuple[Node, ...]
     start_item: Item
+    start: StartKind
     price_file: Path | None = None
-    buys_start_item: bool = False
     implicits: tuple[ImplicitRequirement, ...] = ()
     quality: QualityRequirement | PlainQualityRequirement | None = None
     actions: tuple[str, ...] | None = None
@@ -293,6 +302,11 @@ class Target:
     sockets: SocketRequirement | None = None
     start_sockets_assumed: bool = False
     item_level_floor: int | None = None
+
+    @property
+    def bought(self) -> bool:
+        """Whether the start item is bought, so it has a price and a restart (OR-6)."""
+        return self.start is StartKind.BOUGHT
 
     @property
     def asks_corrupted(self) -> bool:
