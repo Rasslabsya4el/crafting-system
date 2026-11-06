@@ -19,6 +19,7 @@ Run by `.github/scripts/heavy_dispatch.py`, see `docs/ci.md`.
 """
 
 import argparse
+import faulthandler
 import json
 import subprocess
 import sys
@@ -30,7 +31,7 @@ from packed_routes import inputs, peak_mb, watch_memory
 
 from crafting_system.cli import _packed, make_plan
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, _View, build_section, route_input
 
 
 def rows_text(section) -> str:
@@ -48,6 +49,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--route", required=True)
     parser.add_argument("--out")
+    parser.add_argument("--profile", action="store_true", help="time the flow and each row before the page is drawn")
     arguments = parser.parse_args()
     threading.Thread(target=watch_memory, daemon=True).start()
     began = time.perf_counter()
@@ -60,6 +62,15 @@ def main() -> None:
     plan = make_plan(data, target, prices, start_price=start_price, budget=None, solver="auto")
     planned = time.perf_counter()
     say(f"planned: {len(plan.policy):,} policy states, {len(plan.view_policy):,} in the view")
+    if arguments.profile:  # where the page spends its time: the flow, then each row; a stack every 5 minutes shows where a slow one sits
+        faulthandler.dump_traceback_later(300, repeat=True, file=sys.stdout)
+        view = _View(route_input(plan), data, None, "", True)
+        say(f"flow: {len(view.flow.steps):,} steps, measured {view.flow.measured}, entered {view.flow.entered}")
+        for step in view.flow.steps[:60]:
+            before = time.perf_counter()
+            view.step_row(step)
+            say(f"row {step.number}: {len(step.states):,} states, {len(step.edges)} edges, {time.perf_counter() - before:.1f}s")
+        faulthandler.cancel_dump_traceback_later()
     section = build_section(route_input(plan), data)
     drawn = time.perf_counter()
     say(f"section: {len(section.rows):,} rows")
