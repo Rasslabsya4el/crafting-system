@@ -30,7 +30,8 @@ actions: [transmutation-orb, alteration-orb, augmentation-orb, regal-orb, bench-
 
 # Everything below must be present on the finished item.
 requirements:
-  # Tier-1 life. "family" is the game's own name for a group of mods that exclude each other.
+  # Post (Reddit, "Alt-Regal, just as Chris intended", thread pq4owv, u/Fabere's "Rule 10"): "Alt spam for T1 Life and a resist". A named
+  # tier: tier 1. "family" is the game's own name for a group of mods that exclude each other.
   # min_tier: 1 means only the best tier counts (tier 1 is the BEST; min_tier: 2 would accept T1
   # and T2). not_crafted: true refuses a copy of the mod that came from the crafting bench.
   - family: IncreasedLife
@@ -38,6 +39,7 @@ requirements:
     not_crafted: true
 
   # "At least 2 of these 3": two tier-1 resistances out of fire, cold and lightning.
+  # Post: "Alt spam for T1 Life and a resist" and "Regal for another T1 resist": the first resistance is tier 1 too.
   - at_least: 2
     of:
       - family: FireResistance
@@ -50,8 +52,7 @@ requirements:
         min_tier: 1
         not_crafted: true
 
-  # The guide's prefix is "crafted damage modifier" (docs/research/2026-10-30-5-reference-routes.md, R13,
-  # step 3 "Multi-mod damage."). It is made at the bench, so it has no natural tier, and OR-2 asks the exact
+  # Post: "Multi-mod damage because I play softcore and hate defenses" (the research note's "crafted damage modifier"). It is made at the bench, so it has no natural tier, and OR-2 asks the exact
   # mod, not "any of N crafts": the craft the given route buys (examples/routes/r13-life-resist-belt.yaml,
   # "the highest one the belt's item level allows") is "(15-17)% increased Damage", mod JunMaster2AllDamage3
   # (needs item level 81; the belt is 86). The game data gives AllDamage a spawn weight of 0 on belts, so only the
