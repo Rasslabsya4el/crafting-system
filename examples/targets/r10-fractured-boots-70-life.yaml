@@ -1,5 +1,6 @@
 # Target for benchmark route R10, with the guide's "preferably at least 70" Life asked as a roll
-# (ticket #71): Intelligence-base boots with a fractured Movement Speed, an Intelligence suffix from a
+# (ticket #71; since #404 `r10-fractured-boots.yaml` asks the same Life, because that is what the guide says,
+# so the two files differ only in this comment): Intelligence-base boots with a fractured Movement Speed, an Intelligence suffix from a
 # Shrieking Essence of Spite, a Life prefix of at least 70 and a crafted
 # "#% chance to Avoid Elemental Ailments".
 #

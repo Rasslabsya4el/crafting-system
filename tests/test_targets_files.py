@@ -1,5 +1,6 @@
 """Target files on disk: R12, R13, the B1 routes R10, R11, R05 with their computed buy specs, and the price file path."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -261,7 +262,7 @@ def unmet_families(target, real, *mods):
     return [getattr(node, "family", None) or getattr(node, "stat", None) or "a group" for node in unmet]
 
 
-def test_the_r10_target_asks_for_the_fractured_speed_the_essence_intelligence_top_life_and_the_one_craft(real):
+def test_the_r10_target_asks_for_the_fractured_speed_the_essence_intelligence_a_life_roll_of_70_and_the_one_craft(real):
     target = load_target(EXAMPLES / "r10-fractured-boots.yaml", real)
 
     assert target.base_id == "Metadata/Items/Armours/Boots/BootsInt9" and target.item_level == 84
@@ -270,7 +271,8 @@ def test_the_r10_target_asks_for_the_fractured_speed_the_essence_intelligence_to
     assert (speed.family, speed.mod_ids, speed.min_tier) == ("MovementVelocity", {"MovementVelocity5"}, None)
     assert (intelligence.family, intelligence.mod_ids) == ("Intelligence", {"Intelligence8"})
     assert (intelligence.min_tier, intelligence.min_roll) == (None, None)
-    assert (life.family, life.min_tier, life.min_roll, life.not_crafted) == ("IncreasedLife", 1, None, True)
+    # the guide: "+# to maximum life. We want at least 70, but more is always better": a number and no tier (OR-4, #404)
+    assert (life.family, life.stat, life.min_tier, life.min_roll, life.not_crafted) == (None, "+# to maximum Life", None, (70,), True)
     assert ailments.family == "AvoidElementalStatusAilments"
     assert ailments.mod_ids == {"EinharMasterAvoidElementalAilments1"}
 
@@ -286,7 +288,7 @@ def test_the_r10_start_boots_carry_the_thirty_percent_speed_the_buy_spec_prices(
     assert target.requirements[0].is_met_by(target.start_item)
 
 
-def test_the_r10_boots_are_met_by_the_essence_intelligence_top_life_and_the_crafted_sixteen_to_twenty_avoidance(real):
+def test_the_r10_boots_are_met_by_the_essence_intelligence_a_life_roll_of_70_and_the_crafted_sixteen_to_twenty_avoidance(real):
     target = load_target(EXAMPLES / "r10-fractured-boots.yaml", real)
     base_id = target.base_id
     finished = with_mods(
@@ -299,42 +301,58 @@ def test_the_r10_boots_are_met_by_the_essence_intelligence_top_life_and_the_craf
 
     assert target.is_met_by(finished)
     assert target.unmet(finished) == ()
+    # no tier is asked of the Life (OR-4): a lower tier whose roll reaches 70 meets it too (tier 4 of the boots is 70-84)
+    lower_tier = with_mods(
+        real,
+        target.start_item,
+        tiered(real, base_id, "Intelligence8", 48),
+        tiered(real, base_id, "IncreasedLife5", 70),
+        ExplicitMod("EinharMasterAvoidElementalAilments1", (18,), crafted=True),
+    )
+    assert target.unmet(lower_tier) == ()
 
 
-def test_the_r10_boots_are_not_met_by_another_tier_of_intelligence_life_or_ailment_avoidance(real):
+def test_the_r10_boots_are_not_met_by_another_tier_of_intelligence_a_life_roll_below_70_or_ailment_avoidance(real):
     target = load_target(EXAMPLES / "r10-fractured-boots.yaml", real)
     base_id = target.base_id
     intelligence, life = tiered(real, base_id, "Intelligence8", 48), tiered(real, base_id, "IncreasedLife8", 120)
     craft = ExplicitMod("EinharMasterAvoidElementalAilments1", (18,), crafted=True)
     weaker_intelligence = tiered(real, base_id, "Intelligence7", 40)
     top_intelligence = tiered(real, base_id, "Intelligence9", 53)  # exactly the essence mod, not a better one
-    second_life = tiered(real, base_id, "IncreasedLife7", 105)
+    low_life = tiered(real, base_id, "IncreasedLife4", 69)  # a tier-5 roll, and 69 is below the guide's 70
+    crafted_life = ExplicitMod("EinharMasterIncreasedLife5_", (80,), crafted=True)  # a roll above 70, but from the bench
     stronger_craft = ExplicitMod("EinharMasterAvoidElementalAilments2_", (23,), crafted=True)
+    life_stat = "+# to maximum Life"
 
     assert unmet_families(target, real, weaker_intelligence, life, craft) == ["Intelligence"]
     assert unmet_families(target, real, top_intelligence, life, craft) == ["Intelligence"]
-    assert unmet_families(target, real, intelligence, second_life, craft) == ["IncreasedLife"]
+    assert unmet_families(target, real, intelligence, low_life, craft) == [life_stat]
+    assert unmet_families(target, real, intelligence, crafted_life, craft) == [life_stat]
     assert unmet_families(target, real, intelligence, life, stronger_craft) == ["AvoidElementalStatusAilments"]
     assert unmet_families(target, real, intelligence, life) == ["AvoidElementalStatusAilments"]
-    assert unmet_families(target, real, weaker_intelligence, second_life, stronger_craft) == [
+    assert unmet_families(target, real, weaker_intelligence, low_life, stronger_craft) == [
         "Intelligence",
-        "IncreasedLife",
+        life_stat,
         "AvoidElementalStatusAilments",
     ]
 
 
-def test_the_r11_target_asks_for_top_chaos_resistance_the_shrieking_reservation_top_evasion_and_top_life(real):
+def test_the_r11_target_asks_for_any_chaos_resistance_a_shrieking_or_deafening_reservation_any_evasion_and_a_life_roll_over_95(real):
     target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
 
     assert target.base_id == "Metadata/Items/Armours/Helmets/HelmetDex10" and target.item_level == 84
     assert target.start_item.mods == (ExplicitMod("ChaosResist6", (33,), fractured=True),)
     chaos, reservation, evasion, life = target.requirements
-    assert (chaos.family, chaos.min_tier, chaos.not_crafted) == ("ChaosResistance", 1, False)
-    assert reservation.family == "ReducedManaReservationsCost"
-    assert (reservation.min_tier, reservation.min_roll) == (None, None)
-    assert reservation.mod_ids == {"ManaReservationEfficiencyEssence6_"}
-    assert (evasion.family, evasion.min_tier, evasion.not_crafted) == ("DefencesPercent", 1, True)
-    assert (life.family, life.min_tier, life.not_crafted) == ("IncreasedLife", 1, True)
+    # the guide: "Buy a Fractured Chaos Resistance Base" (no tier), "Essences of Loathing (at least Shrieking)",
+    # "Evasion/Life prefixes you are happy with", "+# to Maximum Life - Ideally > 95" (OR-4, #404)
+    assert (chaos.family, chaos.min_tier, chaos.any_tier, chaos.not_crafted) == ("ChaosResistance", None, True, False)
+    assert isinstance(reservation, KOfN) and reservation.at_least == 1
+    assert [(member.family, member.min_tier, member.min_roll, sorted(member.mod_ids)) for member in reservation.of] == [
+        ("ReducedManaReservationsCost", None, None, ["ManaReservationEfficiencyEssence6_"]),
+        ("ReducedManaReservationsCost", None, None, ["ManaReservationEfficiencyEssence7"]),
+    ]
+    assert (evasion.family, evasion.min_tier, evasion.any_tier, evasion.not_crafted) == ("DefencesPercent", None, True, True)
+    assert (life.family, life.stat, life.min_tier, life.min_roll, life.not_crafted) == (None, "+# to maximum Life", None, (96,), True)
 
 
 def test_the_r11_start_helmet_is_the_top_chaos_resistance_and_the_buy_minimum_is_the_lowest_roll_of_it(real):
@@ -349,21 +367,35 @@ def test_the_r11_start_helmet_is_the_top_chaos_resistance_and_the_buy_minimum_is
     assert target.requirements[0].is_met_by(target.start_item)
 
 
-def test_the_r11_helmet_needs_the_top_evasion_and_life_and_exactly_the_shrieking_reservation(real):
+def test_the_r11_helmet_needs_a_shrieking_or_deafening_reservation_any_evasion_and_a_life_roll_over_95(real):
     target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
     base_id = target.base_id
     reservation = ExplicitMod("ManaReservationEfficiencyEssence6_", (7,))
+    deafening = ExplicitMod("ManaReservationEfficiencyEssence7", (9,))
     life = tiered(real, base_id, "IncreasedLife9", 135)
     evasion = tiered(real, base_id, "LocalIncreasedEvasionRatingPercent7", 95)
     screaming = ExplicitMod("ManaReservationEfficiencyEssence5__", (5,))
-    second_life = tiered(real, base_id, "IncreasedLife8", 120)
-    second_evasion = tiered(real, base_id, "LocalIncreasedEvasionRatingPercent6", 85)
+    low_tier_life = tiered(real, base_id, "IncreasedLife6", 96)  # tier 4, but the roll is over 95: meets the guide's "> 95"
+    short_life = tiered(real, base_id, "IncreasedLife6", 95)  # "> 95" is not 95
+    low_tier_evasion = tiered(real, base_id, "LocalIncreasedEvasionRatingPercent1", 20)  # "prefixes you are happy with": any tier
+    life_stat = "+# to maximum Life"
 
     assert target.is_met_by(with_mods(real, target.start_item, reservation, life, evasion))
-    assert unmet_families(target, real, screaming, life, evasion) == ["ReducedManaReservationsCost"]
-    assert unmet_families(target, real, reservation, second_life, evasion) == ["IncreasedLife"]
-    assert unmet_families(target, real, reservation, life, second_evasion) == ["DefencesPercent"]
+    assert target.is_met_by(with_mods(real, target.start_item, deafening, life, evasion))
+    assert target.is_met_by(with_mods(real, target.start_item, reservation, low_tier_life, low_tier_evasion))
+    assert unmet_families(target, real, screaming, life, evasion) == ["a group"]
+    assert unmet_families(target, real, reservation, short_life, evasion) == [life_stat]
     assert unmet_families(target, real, reservation, life) == ["DefencesPercent"]
+
+
+def test_the_r11_chaos_resistance_leaf_takes_any_tier_of_the_fractured_resistance(real):
+    target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
+    chaos = target.requirements[0]
+    base_id = target.base_id
+    lower_fractured = ExplicitMod("ChaosResist3", mod_tier(real, base_id, "ChaosResist3"), (18,), fractured=True)
+
+    assert mod_tier(real, base_id, "ChaosResist3") == 4  # not the tier the start item and the buy spec price (1)
+    assert chaos.is_met_by(replace(target.start_item, mods=(lower_fractured,)))
 
 
 def test_the_r05_target_asks_for_all_attributes_the_essence_strength_and_one_top_tier_life_or_resistance(real):
@@ -375,12 +407,14 @@ def test_the_r05_target_asks_for_all_attributes_the_essence_strength_and_one_top
     assert (attributes.family, attributes.min_tier, attributes.not_crafted) == ("AllAttributes", 1, True)
     assert (strength.family, strength.mod_ids, strength.min_tier) == ("Strength", {"StrengthEssence7_"}, None)
     assert isinstance(extra, KOfN) and extra.at_least == 1
+    # the guide names no tier for them ("extra useful modifiers like Maximum Life, Resistances"): no `min_tier`, OR-1's top tier at level 75
     assert [(member.family, member.min_tier, member.not_crafted) for member in extra.of] == [
-        ("IncreasedLife", 1, False),
-        ("FireResistance", 2, False),
-        ("ColdResistance", 2, False),
-        ("LightningResistance", 2, False),
+        ("IncreasedLife", None, False),
+        ("FireResistance", None, False),
+        ("ColdResistance", None, False),
+        ("LightningResistance", None, False),
     ]
+    assert [sorted(mod_tier(real, target.base_id, mod_id) for mod_id in member.tier_ok) for member in extra.of] == [[1], [1, 2], [1, 2], [1, 2]]
 
 
 def test_the_r05_ring_is_met_by_the_essence_strength_and_a_top_tier_life_or_resistance_rolled_not_crafted(real):

@@ -21,6 +21,11 @@
 #   * "crafted Chaos Damage over Time Multiplier": the top craft a bow takes, +(18-20)% (cost 4 Chaos Orbs);
 #     "crafted +2 to Level of Socketed Support Gems": +2 (cost 4 Exalted Orbs).
 #   * The guide's lists of "prefixes" and "suffixes" are not always the item's sides; the data decides.
+#   * Ticket #404 could not re-read this guide by its own words: it is a Reddit post (r/PathOfExileSSF, "Peuget guide",
+#     comments/1f6a963), Reddit answers 403 to a plain request and the web archive refused, so only the research note's
+#     paraphrase (docs/research/2026-10-30-5-reference-routes.md, R14) was read. Its "T1 attack speed" names tier 1, as the
+#     first leaf asks; the "guarantee" Exalted Orbs follow OR-4's bullet on guarantees (OR-1 holds, #410). Every leaf is left as
+#     it was; the open point is filed as an issue.
 
 # The base item: a Thicket Bow, Hunter influence (the influence adds the prefixes above).
 base: Thicket Bow

@@ -1,4 +1,4 @@
-# Target for benchmark route R06: a Hunter-influenced Heavy Belt with a Life or Armour prefix, the
+# Target for benchmark route R06: a Hunter-influenced Heavy Belt with a Life, Armour or Resistance modifier, the
 # top "% increased Attributes" and the Strength of a Deafening Essence of Rage as suffixes, a 42
 # Strength implicit and 20% Intrinsic Catalyst quality.
 #
@@ -17,8 +17,14 @@
 # rule for tiers: a mod whose tier the guide does not state is the TOP tier the item level allows
 # (nobody crafts that without a guaranteed top-tier mod); a mod the guide's essence or bench craft
 # forces is exactly that tier; a mod of the bought start item is the tier the buy spec prices.
-#   * "Hunter or Elder": the guide allows both; this file takes Hunter. For Elder, write
-#     `influence: [elder]` and, for the Attributes line, the Elder mod (PercentageAllAttributesUberElder2).
+#   * The start belt: the guide says "Buy a Heavy Belt with Hunter or Elder Influence. Make sure that the belt is item level 75 or
+#     higher. Make sure it is uncorrupted" (step 1), so it accepts either influence and any rarity. A belt carries one of the two
+#     here (`influence: [hunter, elder]` would be a belt with both, another item), so this file takes Hunter and does not make up
+#     a rule for choosing. For Elder, write `influence: [elder]` and, for the Attributes line, the Elder mod
+#     (PercentageAllAttributesUberElder2). The start is a Normal belt (the file has no `start_item`): the guide does not say its
+#     mods, and the first Deafening Essence of Rage rerolls whatever the bought belt holds (the bought belt's other mods read "any
+#     mod or empty", OR-17). The guide's "any rarity" is not written: whether a Normal influenced belt exists to buy, and what
+#     rarity the start should have, is issue #515; the item level window is #483 and #445.
 #   * "Tier 1 % Increased Attributes": on a Hunter belt of item level 75 it is "(10-12)% increased
 #     Attributes" (mod PercentageAllAttributesInfluence2, tier 1 of the Hunter pool; its lower tier is
 #     (6-9)%). The guide then uses a Divine Orb "until 14%": 14% is the 12 shown with 20% quality
@@ -26,9 +32,9 @@
 #   * "Tier 1 Strength": at item level 75 the natural Strength tops out at tier 3 ("+(43-50)"), so
 #     the tier-1 Strength is the one the Deafening Essence of Rage adds, "+(51-58) to Strength" (mod
 #     StrengthEssence7_), exactly that tier, as in the R05 example.
-#   * "Life / Armour as available": at least one of Life and Armour, each at the top tier the item
-#     level (75) allows: Life tier 1, "+(130-144)"; Armour tier 3, "+(323-400)" (its tiers 2 and 1
-#     need item level 83 and 86). The guide ends with a bench craft of an open modifier, which is
+#   * "Life, # to Armour, or Resistances": at least one of Life, Armour and the three elemental resistances, each at the top tier
+#     the item level (75) allows: Life tier 1, "+(130-144)"; Armour tier 3, "+(323-400)" (its tiers 2 and 1
+#     need item level 83 and 86); each resistance tier 2, "+(42-45)%". The guide ends with a bench craft of an open modifier, which is
 #     not a tier of these mods: a bench craft has no natural tier and meets no tier line (OR-1).
 #   * "42 to Strength" (implicit): the Heavy Belt's own implicit, "+(25-35) to Strength" (mod
 #     StrengthImplicitBelt1). A requirement compares the BASE roll the item stores, never the value
@@ -48,13 +54,19 @@ influence: [hunter]
 
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
-  # "Life / Armour as available": at least 1 of these 2, each at the top tier the item level allows.
+  # The prefix or suffix the guide leaves to the crafter: at least 1 of these 5. Guide (poe-vault.com/guides/shrapnel-ballista-
+  # hierophant-gear-flasks, "Belt"): "The remaining modifiers are up to you. You can choose from Life, # to Armour, or Resistances,
+  # depending on what your character needs", and step 3: "Exalted Orb to add new useful ones". It names no tier, so there is no
+  # `min_tier` and OR-1 holds: the top tier the item level (75) allows (Life tier 1; Armour tier 3, the same mods `min_tier: 1` and
+  # `min_tier: 3` asked before #404; each resistance tier 2). The three elemental resistances are new here: the guide lists
+  # "Resistances" and the file named only Life and Armour. (Chaos Resistance is not read into "Resistances", as in R05.)
   - at_least: 1
     of:
       - family: IncreasedLife
-        min_tier: 1
       - family: IncreasedPhysicalDamageReductionRating
-        min_tier: 3
+      - family: FireResistance
+      - family: ColdResistance
+      - family: LightningResistance
 
   # The top "% increased Attributes" of the Hunter pool, with the roll the Divine Orb aims at.
   # `mod` narrows the family to that one mod; `min_roll` is the base roll (see the readings above).

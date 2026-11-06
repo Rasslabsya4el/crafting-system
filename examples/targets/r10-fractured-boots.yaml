@@ -19,10 +19,19 @@
 #     The base below is Sorcerer Boots; every Intelligence boot base has the same pool of mods.
 #   * "30%+ increased Movement Speed (fractured)": the fractured mod is the bought one, the 30%
 #     tier (mod MovementVelocity5, tier 2); the buy spec prices a fractured Movement Speed of 30 or
-#     more, and 30 is the cheapest of those.
+#     more, and 30 is the cheapest of those. The guide accepts more than one bought mod here ("30%+");
+#     at item level 84 the only one above 30 would need item level 86, so the file reads it as the 30%
+#     one and makes up no other start. (Item level: the guide gives none.)
 #   * "48 Intelligence from Shrieking Essence of Spite": exactly what that essence adds,
-#     "+(43-50) to Intelligence" (mod Intelligence8, tier 2 on boots).
-#   * "Life": the top tier of Life at item level 84 (tier 1, +(115-129)), rolled (not from the bench).
+#     "+(43-50) to Intelligence" (mod Intelligence8, tier 2 on boots). The guide's priority list says
+#     "+# to intelligence. We preferably want a roll of at least 40", and its step says "Once you hit 48
+#     int and life, with an open suffix, you're done"; every roll of the essence (43 to 50) is above
+#     the 40, and the 48 is read as the essence's usual roll, not as a minimum (the guide also says
+#     "Whatever additional stats you get is pure bonus"), so no `min_roll` is written for it.
+#   * "Life": "We want at least 70, but more is always better": a Life roll of 70 or more with no tier
+#     (OR-4); see the requirement.
+#   * The guide's priority list also names Lightning Resistance ("roughly 40%, but slightly lower values can do"), which the
+#     steps do not work toward ("Whatever additional stats you get is pure bonus"), so it is not asked.
 #   * "#% chance to Avoid Elemental Ailments": exactly the bench craft the guide uses, (16-20)%.
 #   * "an open suffix for the craft": the item has three suffixes; the fractured prefix, the Life
 #     prefix and the essence suffix leave room, so the planner may craft there.
@@ -50,11 +59,14 @@ requirements:
   - family: Intelligence
     mod: Intelligence8
 
-  # Life, the top tier (min_tier: 1), rolled by the essence reforge, not crafted.
-  # The guide says only "preferably at least 70" Life, a soft wish; the owner's rule for a tier the
-  # guide does not state is the top tier, which is what is asked here.
-  - family: IncreasedLife
-    min_tier: 1
+  # Life with a rolled value of at least 70, rolled by the essence reforge, not crafted.
+  # Guide (poe-vault.com/guides/ice-shot-deadeye-gear-jewels-and-flasks, "Boots"): "+# to maximum life. We want at least 70, but
+  # more is always better." It names a number and no tier (OR-4), so the leaf is a `min_roll` with no tier: any tier whose roll
+  # reaches 70 counts, and the top tier is not asked (it was, as `min_tier: 1`, before #404: 128 c against about 46 c). The
+  # selector is the stat text, not the family: the Life family also holds two-stat mods, and one `min_roll` list cannot fit
+  # mods with different numbers of stats. A Divine Orb rerolls the value inside its tier.
+  - stat: "+# to maximum Life"
+    min_roll: [70]
     not_crafted: true
 
   # "#% chance to Avoid Elemental Ailments", exactly the bench craft of the guide, (16-20)%

@@ -25,7 +25,8 @@
 #     modifier", which is a craft on a free slot, not a tier of these mods: a bench craft has no
 #     natural tier and meets no tier line (OR-1), whatever its range. (The
 #     guide calls them prefixes; in the game Life is a prefix and the resistances are suffixes.)
-#   * "20 Intrinsic Catalysts" (quality): left out, it is B2. The bench craft of the guide is the
+#   * "20 Intrinsic Catalysts" (quality): left out, it is B2 (the guide's step 3 asks it; a target with a `quality:` block cannot be
+#     planned yet, issue #516, and the line is issue #159). The bench craft of the guide is the
 #     crafted Life or Resistance above; a bench craft of no use to the requirements below is not
 #     offered by the planner anyway.
 
@@ -43,6 +44,7 @@ influence: []
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
   # The fractured All Attributes, tier 1 (13-16). The fractured mod of the start item counts.
+  # Guide (poe-vault.com/guides/shrapnel-ballista-hierophant-gear-flasks, "Rings"): "Tier 1 to All Attributes" is mandatory.
   - family: AllAttributes
     min_tier: 1
     not_crafted: true
@@ -52,18 +54,16 @@ requirements:
   - family: Strength
     mod: StrengthEssence7_
 
-  # "At least 1 of these 4": Life, or one of the three elemental resistances, each at the top tier
-  # the item level allows.
+  # "At least 1 of these 4": Life, or one of the three elemental resistances. The guide names no tier for them (step 2: "use it on
+  # your fractured ring until you hit some extra useful modifiers like Maximum Life, Resistances, depending on what your character
+  # needs"), so there is no `min_tier` and OR-1 holds, as its own example says: the top tier the item level (75) allows, which is
+  # Life tier 1 and the resistances tier 2 (written `min_tier: 1` and `min_tier: 2` before #404, the same mods).
   - at_least: 1
     of:
       - family: IncreasedLife
-        min_tier: 1
       - family: FireResistance
-        min_tier: 2
       - family: ColdResistance
-        min_tier: 2
       - family: LightningResistance
-        min_tier: 2
 
 # Where the crafting starts: a ring that already has All Attributes fractured.
 start_item:
