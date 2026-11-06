@@ -582,3 +582,9 @@ Options only; nothing is chosen. Counts are of files that name the thing (`grep 
 - Not re-measured: the audit's 1,322 of 2,200 forced mods without a tier and 614 weaker than T1; the section 3.7 counts are per target leaf.
 - Not read in full, only searched: `abstraction/_coarse.py`, `_estimate.py`, `_inputs.py` (crafted-slot readers D7, D8), `cli/_route_card.py`, `cli/_route_flow.py`, `cli/_interval.py`, `risk/`, `solver/`, `simulator/`, `prices/` outside `price_file.py`.
 - The 14 `examples/targets/` files were searched for keys and read for start items, not re-read for guide wording (#404).
+
+## Open points filed as issues (OR-29)
+
+- Lines no issue covered (essence-forced and veiled tier-1 fallbacks, price-0 code places, made-up start items other than R08 and R09): #453.
+- The imprint test that pins three "UNVERIFIED" claims as not approximate, against the audit and #409: #454.
+- The interval driver (`build_interval_answer`, `with_interval`) with no caller in `src/`, rebuild step 7: #455.
