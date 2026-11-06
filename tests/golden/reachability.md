@@ -217,7 +217,7 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_plan.py, cli/_route_card.py, cli/_start_options.py |  |
 | `start_item` | cli/_benchmark_outcomes.py, cli/_plan.py, cli/_starts.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
-| `start` | **nothing** |  |
+| `start` | cli/_benchmark.py, cli/_main.py, cli/_plan.py, cli/_starts.py, cli/_trade.py |  |
 | `implicits` | abstraction/_goal.py, cli/_plan.py, cli/_route_card.py |  |
 | `quality` | abstraction/_goal.py, cli/_plan.py, cli/_route_card.py |  |
 | `actions` | cli/_benchmark_outcomes.py, cli/_plan.py |  |
