@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from limits_support import labels_of, only
-from route_view_support import assert_golden
+from route_view_support import alike_key, assert_golden
 
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, make_plan, verify
@@ -210,11 +210,21 @@ def test_a_fractured_mod_reads_as_the_mod_of_the_item_not_as_a_mod_only_an_essen
 NOTE_PARTS = re.compile(r"T\d+( or better| to T\d+)?|any tier|crafted|essence only|tier too low|in some|at least \d+ of \d+")
 
 
+def test_no_step_prints_two_lines_that_read_alike(solved, data):
+    _, _, _, plan = solved
+
+    for row in build_section(route_input(plan), data).rows:
+        for field in row.fields:
+            if field.label in ("Chance per use", "On failure"):
+                texts = [alike_key(line.text) for line in field.lines]
+                assert len(texts) == len(set(texts)), (row.title, texts)  # two branches that read alike say what the player does next
+
+
 def test_every_mod_line_of_the_pages_has_the_one_format_and_the_bought_item_has_no_empty_slot(solved, data):
     _, _, _, plan = solved
     section = build_section(route_input(plan), data)
 
-    cards = [section.goal.target, *(row.after for row in section.rows)]
+    cards = [section.goal.target, *(row.after for row in section.rows), *(branch.card for row in section.rows for branch in row.branches)]
     for card in cards:
         for slot in (*card.prefixes, *card.suffixes):
             assert all(NOTE_PARTS.fullmatch(part) for part in slot.note.split(", ") if part), slot

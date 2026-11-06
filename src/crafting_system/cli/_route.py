@@ -157,6 +157,7 @@ class RouteResult:
     gaps: tuple[Gap, ...]
     divergence: Divergence | None
     seconds: float
+    chain: object | None = None  # the route on item states as arrays (`_route_chain.Chain`), set when it was read on a packed plan whose `policy` is a lumped view
 
 
 # --- reading -------------------------------------------------------------------------------------

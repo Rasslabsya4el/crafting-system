@@ -193,6 +193,16 @@ their relative difference. The goldens of `tests/test_packed_heavy.py` (R04, R14
 `CRAFTING_HEAVY=1 UPDATE_GOLDEN=1 ... pytest tests/test_packed_heavy.py` and are tied to the commit of `main` they were
 taken on.
 
+### Counting a route's page (#465, #466)
+
+`.github/scripts/page_size.py` makes the plan of a route the way `packed_routes.py plan` does, draws the route page of the planner's own
+policy and writes `<route>.page.json` (steps, rows, HTML megabytes, the states of the policy and of its lumped view, seconds of each phase,
+peak memory) and `<route>.rows.txt` (every row of the page as text, tier lines included). It is how the size of a big route's page is
+measured, before and after a change of the page: run it on two refs and compare the files.
+
+    D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 1'
+    $D --long --timeout-minutes 120 --command 'uv run --no-sync python .github/scripts/page_size.py --route r14 --out $OUT_DIR'
+
 ## The reachability report (ticket #414)
 
 `.github/scripts/reachability_report.py` writes a Markdown report of what a plan can reach today: which action kinds some

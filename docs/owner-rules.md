@@ -135,7 +135,7 @@ Every cut of the search states what the answer still guarantees.
 Pruning works on the route as a whole, not only inside one step.
 
 - **Example.** R14 walks 816,153 item states. Its optimal policy has 87,251 item states, which merge into 65,147 classes reached, or into 14,742 blocks; the guide route has 946 acting item states (1 gap), which merge into 19 blocks. R04 walks 177,242 item states. Its optimal policy has 18,696 item states, which merge into 11,767 classes reached, or into 551 blocks; the guide route has 18,629 acting item states (13 gaps), which merge into 22 blocks. Units: an item state is a `CompressedState`; a class is the exact merge of states with the same future; a block is the exact lumping of the policy chain (`docs/research/2026-11-06-rebuild-6-inventory.md`, section 0).
-- **Counter-example.** R14's page of 87,272 steps (151 MB), 65,433 of them the same Restart card. A page like that must not exist.
+- **Counter-example.** R14's page of 87,272 steps (151 MB), 65,433 of them the same Restart card, built on `86aa0b0` before the lumped view of #70. A page like that must not exist. Counted on `main` after #70 (heavy run 42243540582, `.github/scripts/page_size.py`, #465): 14,742 steps, 14,743 rows, 17.9 MB, one step per block of the lumped policy. Since #466 it is 12 steps, 13 rows, 0.067 MB (heavy run 42304575904, on `ce5e88b`).
 - **Source.** Owner decisions on #396, point 3, 2026-11-02; measurement results on #396, 2026-11-04 (route-level pruning comes before a "minimal state").
 
 ## The answer and the page
@@ -169,7 +169,7 @@ A bought item is never drawn empty; its mods other than the wanted one read "any
 A page step is the set of states on which the policy takes the same player action, no more and no less: states with different actions branch, and nothing else splits one action into several steps, neither its chance nor a detail the search does not track (their mixture is OR-20).
 
 - **Example.** V01 has 3 player actions (audit PRES-1).
-- **Counter-example.** V01's page has 11 rows for those 3, and R14's 87,272 steps come from the "same exact chance" refinement in `cli/_route_flow.py:194-235` that splits one action by chance (audit PRES-1).
+- **Counter-example.** V01's page has 11 rows for those 3, and R14's page had one step per state (14,742 steps counted on `main`, 87,272 before #70) because the "same exact chance" refinement in `cli/_route_flow.py` split one action by chance and, past `REFINE_WORK`, made every state a step (audit PRES-1; counts in OR-14). #466 removed both.
 - **Source.** Issue [#58](https://github.com/Rasslabsya4el/crafting-system/issues/58), the "Exact states: the general rule" comment, 2026-10-31; memory note `audit-decisions-2026-11-02.md`.
 
 ### OR-19. The same route is never shown twice
@@ -194,6 +194,7 @@ When a step can add a mod of a family the target wants, the page shows the chanc
 
 - **Example.** R04's first Exalted Orb after "Cannot roll Attack Modifiers" adds Maximum Life or Increased Damage with Bow Skills every time (100%), and a top-tier mod of whichever lands 2 times in 15; the step shows the share of every tier of both families.
 - **Counter-example.** The R04 benchmark's check of the published odds (`tests/test_cli_r04_r14_real.py:104-111`) gives the first Exalted Orb only two numbers, 100% at any tier and 13% at the top tier, with nothing for the tiers in between.
+- **Format.** Runs of tiers with equal chances are joined ("T2 to T10 1.4% each"); the target's tier stays apart. Source: owner in the main chat, 2026-11-06 ([#491](https://github.com/Rasslabsya4el/crafting-system/issues/491)).
 - **Source.** Owner in the main chat, 2026-11-06: the system should say "T1 this chance, T2 this chance, and so on".
 
 ## Evidence
