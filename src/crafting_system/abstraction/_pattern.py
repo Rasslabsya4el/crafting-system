@@ -201,7 +201,7 @@ class PatternStats:
     abstract_edges: int = 0
     refused_pairs: int = 0
     universe_growth: int = 0
-    modes: Counter = field(default_factory=Counter)  # (label of the action class) -> keys expanded with it
+    modes: Counter = field(default_factory=Counter)  # (member mode, label of the offer) -> keys it was expanded at
     seconds: float = 0.0
     fallbacks: int = 0  # keys whose extremes were impossible and used every member
 
@@ -557,7 +557,7 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
                 if members is None:
                     members = by_mode[mode] = pattern.members(key, mode)
                     stats.members += len(members)
-                stats.modes[(mode.value, type(offer.action).__name__)] += 1
+                stats.modes[(mode.value, offer.label)] += 1
                 seen: set[int] = set()
                 for member in members:
                     stats.pairs += 1
