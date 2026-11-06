@@ -13,6 +13,71 @@
       "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
       "source": "poe.ninja"
     },
+    "Amethyst Ring, item level 75, fractured +(13-16) to all Attributes": {
+      "chaos": 2.6,
+      "detail": {
+        "date": "2026-10-31",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 602,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "fractured_item": {
+                    "option": "true"
+                  },
+                  "ilvl": {
+                    "min": 75
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "accessory.ring"
+                  },
+                  "rarity": {
+                    "option": "rare"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [
+                  {
+                    "disabled": false,
+                    "id": "fractured.stat_1379411836",
+                    "value": {
+                      "min": 13
+                    }
+                  }
+                ],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            }
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "bdb5af8472203c4fce6f8b9e43ceb12e956dcbe13e28a9a5d64cb7ef21081bca",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 602 on the site, listed any time; priced for any ring of item level 75 or more; the exact item has no market today (0 listings), issue #483",
+      "source": "trade-api"
+    },
     "Armourer's Scrap": {
       "chaos": 0.04312,
       "source": "poe.ninja"
@@ -202,341 +267,17 @@
       "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: a normal Leather Belt of item level 86, 41 observations",
       "source": "poe.ninja"
     },
+    "Leather Belt, normal, item level 86-100": {
+      "chaos": 10.0,
+      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: a normal Leather Belt of item level 86, 41 observations",
+      "source": "poe.ninja"
+    },
     "Lion Pelt (ilvl 84)": {
       "chaos": 2.0,
       "note": "hand price for benchmark route V01 (ticket #331); the refresher does not fetch this line yet (ticket #360)",
       "source": "hand"
     },
-    "Lucent Fossil": {
-      "chaos": 6.18,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Metallic Fossil": {
-      "chaos": 7.39,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Opulent Fossil": {
-      "chaos": 7.48,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Orb of Alchemy": {
-      "chaos": 0.02716,
-      "source": "poe.ninja"
-    },
-    "Orb of Alteration": {
-      "chaos": 0.1001,
-      "source": "poe.ninja"
-    },
-    "Orb of Annulment": {
-      "chaos": 11.42,
-      "note": "poe.ninja currency exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Orb of Augmentation": {
-      "chaos": 0.01604,
-      "source": "poe.ninja"
-    },
-    "Orb of Chance": {
-      "chaos": 0.04383,
-      "source": "poe.ninja"
-    },
-    "Orb of Scouring": {
-      "chaos": 0.3668,
-      "source": "poe.ninja"
-    },
-    "Orb of Transmutation": {
-      "chaos": 0.005804,
-      "source": "poe.ninja"
-    },
-    "Penetrating Arrow Quiver (ilvl 81)": {
-      "chaos": 9.0,
-      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: the cheapest normal Penetrating Arrow Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); the overview has no line below item level 82, and the guide says 81 or more",
-      "source": "poe.ninja"
-    },
-    "Potent Chaotic Resonator": {
-      "chaos": 1.39,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Powerful Chaotic Resonator": {
-      "chaos": 3.19,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Primal Crystallised Lifeforce": {
-      "chaos": 0.03529,
-      "source": "poe.ninja"
-    },
-    "Prime Chaotic Resonator": {
-      "chaos": 155.0,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Primitive Chaotic Resonator": {
-      "chaos": 1.39,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Prismatic Fossil": {
-      "chaos": 0.2,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Pristine Fossil": {
-      "chaos": 12.1,
-      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
-      "source": "poe.ninja"
-    },
-    "Quicksilver Flask": {
-      "chaos": 1.5,
-      "note": "hand price for benchmark route V01 (ticket #331); the refresher does not fetch this line yet (ticket #360)",
-      "source": "hand"
-    },
-    "R05 start ring": {
-      "chaos": 2.6,
-      "detail": {
-        "date": "2026-10-31",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 602,
-        "query": {
-          "query": {
-            "filters": {
-              "misc_filters": {
-                "filters": {
-                  "corrupted": {
-                    "option": "false"
-                  },
-                  "fractured_item": {
-                    "option": "true"
-                  },
-                  "ilvl": {
-                    "min": 75
-                  },
-                  "mirrored": {
-                    "option": "false"
-                  }
-                }
-              },
-              "type_filters": {
-                "filters": {
-                  "category": {
-                    "option": "accessory.ring"
-                  },
-                  "rarity": {
-                    "option": "rare"
-                  }
-                }
-              }
-            },
-            "stats": [
-              {
-                "filters": [
-                  {
-                    "disabled": false,
-                    "id": "fractured.stat_1379411836",
-                    "value": {
-                      "min": 13
-                    }
-                  }
-                ],
-                "type": "and"
-              }
-            ],
-            "status": {
-              "option": "securable"
-            }
-          },
-          "sort": {
-            "price": "asc"
-          }
-        },
-        "query_hash": "bdb5af8472203c4fce6f8b9e43ceb12e956dcbe13e28a9a5d64cb7ef21081bca",
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 602 on the site, listed any time",
-      "source": "trade-api"
-    },
-    "R08 start boots": {
-      "chaos": 29.82716,
-      "detail": {
-        "date": "2026-11-01",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 22,
-        "query": {
-          "query": {
-            "filters": {
-              "misc_filters": {
-                "filters": {
-                  "corrupted": {
-                    "option": "false"
-                  },
-                  "ilvl": {
-                    "min": 86
-                  },
-                  "mirrored": {
-                    "option": "false"
-                  }
-                }
-              },
-              "type_filters": {
-                "filters": {
-                  "category": {
-                    "option": "armour.boots"
-                  },
-                  "rarity": {
-                    "option": "normal"
-                  }
-                }
-              }
-            },
-            "stats": [
-              {
-                "filters": [],
-                "type": "and"
-              }
-            ],
-            "status": {
-              "option": "securable"
-            },
-            "type": "Sorcerer Boots"
-          },
-          "sort": {
-            "price": "asc"
-          }
-        },
-        "query_hash": "d467d2c75cacc86cc4851e454966d8c884b9e4f4094b1b3ca65fb1609efe2e6e",
-        "used": 5
-      },
-      "note": "trade price of a normal base of item level 86 (29.8) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target",
-      "source": "trade-api"
-    },
-    "R09 start boots": {
-      "chaos": 5.02716,
-      "detail": {
-        "date": "2026-11-01",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 37,
-        "query": {
-          "query": {
-            "filters": {
-              "misc_filters": {
-                "filters": {
-                  "corrupted": {
-                    "option": "false"
-                  },
-                  "ilvl": {
-                    "min": 86
-                  },
-                  "mirrored": {
-                    "option": "false"
-                  }
-                }
-              },
-              "type_filters": {
-                "filters": {
-                  "category": {
-                    "option": "armour.boots"
-                  },
-                  "rarity": {
-                    "option": "normal"
-                  }
-                }
-              }
-            },
-            "stats": [
-              {
-                "filters": [],
-                "type": "and"
-              }
-            ],
-            "status": {
-              "option": "securable"
-            },
-            "type": "Two-Toned Boots"
-          },
-          "sort": {
-            "price": "asc"
-          }
-        },
-        "query_hash": "5df0f609e43627b47c12a3ab884def71f47c36c291610427e98328e8741e1f92",
-        "used": 5
-      },
-      "note": "trade price of a normal base of item level 86 (5.0) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target",
-      "source": "trade-api"
-    },
-    "R10 start boots": {
-      "chaos": 17.0,
-      "detail": {
-        "date": "2026-10-31",
-        "k": 5,
-        "league": "Allflame",
-        "listings": 156,
-        "query": {
-          "query": {
-            "filters": {
-              "misc_filters": {
-                "filters": {
-                  "corrupted": {
-                    "option": "false"
-                  },
-                  "fractured_item": {
-                    "option": "true"
-                  },
-                  "ilvl": {
-                    "min": 84
-                  },
-                  "mirrored": {
-                    "option": "false"
-                  }
-                }
-              },
-              "type_filters": {
-                "filters": {
-                  "category": {
-                    "option": "armour.boots"
-                  },
-                  "rarity": {
-                    "option": "rare"
-                  }
-                }
-              }
-            },
-            "stats": [
-              {
-                "filters": [
-                  {
-                    "disabled": false,
-                    "id": "fractured.stat_2250533757",
-                    "value": {
-                      "min": 30
-                    }
-                  }
-                ],
-                "type": "and"
-              }
-            ],
-            "status": {
-              "option": "securable"
-            },
-            "type": "Sorcerer Boots"
-          },
-          "sort": {
-            "price": "asc"
-          }
-        },
-        "query_hash": "87d77da5263e8e3d965f3a7024311a646d396b09779a66684bc0cc05b29afb1d",
-        "used": 5
-      },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 156 on the site, listed any time",
-      "source": "trade-api"
-    },
-    "R11 start helmet": {
+    "Lion Pelt, item level 84, fractured +(31-35)% to Chaos Resistance": {
       "chaos": 20.0,
       "detail": {
         "date": "2026-10-31",
@@ -599,10 +340,59 @@
         "query_hash": "619adea02934d4015fa357f00c4f0aa3c28c5a9032587c3a4cff95ee852c81f2",
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 42 on the site, listed any time",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 42 on the site, listed any time; priced for a helmet of item level 84 or more; the exact item (item level 84 only) has 3 listings, below the rail of 10, issue #483",
       "source": "trade-api"
     },
-    "R12 start amulet": {
+    "Lion Pelt, normal, item level 84": {
+      "chaos": 2.0,
+      "note": "hand price for benchmark route V01 (ticket #331); the refresher does not fetch this line yet (ticket #360)",
+      "source": "hand"
+    },
+    "Lucent Fossil": {
+      "chaos": 6.18,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Metallic Fossil": {
+      "chaos": 7.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Opulent Fossil": {
+      "chaos": 7.48,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Orb of Alchemy": {
+      "chaos": 0.02716,
+      "source": "poe.ninja"
+    },
+    "Orb of Alteration": {
+      "chaos": 0.1001,
+      "source": "poe.ninja"
+    },
+    "Orb of Annulment": {
+      "chaos": 11.42,
+      "note": "poe.ninja currency exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Orb of Augmentation": {
+      "chaos": 0.01604,
+      "source": "poe.ninja"
+    },
+    "Orb of Chance": {
+      "chaos": 0.04383,
+      "source": "poe.ninja"
+    },
+    "Orb of Scouring": {
+      "chaos": 0.3668,
+      "source": "poe.ninja"
+    },
+    "Orb of Transmutation": {
+      "chaos": 0.005804,
+      "source": "poe.ninja"
+    },
+    "Paua Amulet, item level 84, fractured +(12-17)% to Lightning Resistance": {
       "chaos": 1.0,
       "detail": {
         "date": "2026-10-31",
@@ -661,8 +451,57 @@
         "query_hash": "71430f3c6f6a1b616e4150414f1519e16fc760a7971b72e67bba77f6447653b2",
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 909 on the site, listed any time",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 909 on the site, listed any time; priced for any amulet of item level 75 or more with any roll; the exact item (item level 84 only, roll 12 or more) has 1 listing, below the rail of 10, issue #483",
       "source": "trade-api"
+    },
+    "Penetrating Arrow Quiver (ilvl 81)": {
+      "chaos": 9.0,
+      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: the cheapest normal Penetrating Arrow Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); the overview has no line below item level 82, and the guide says 81 or more",
+      "source": "poe.ninja"
+    },
+    "Penetrating Arrow Quiver [QuiverNew5], normal, item level 81": {
+      "chaos": 9.0,
+      "note": "poe.ninja BaseType overview, Allflame, 2026-11-01: the cheapest normal Penetrating Arrow Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); the overview has no line below item level 82, and the guide says 81 or more",
+      "source": "poe.ninja"
+    },
+    "Potent Chaotic Resonator": {
+      "chaos": 1.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Powerful Chaotic Resonator": {
+      "chaos": 3.19,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Primal Crystallised Lifeforce": {
+      "chaos": 0.03529,
+      "source": "poe.ninja"
+    },
+    "Prime Chaotic Resonator": {
+      "chaos": 155.0,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Primitive Chaotic Resonator": {
+      "chaos": 1.39,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Prismatic Fossil": {
+      "chaos": 0.2,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Pristine Fossil": {
+      "chaos": 12.1,
+      "note": "poe.ninja exchange overview, Allflame, 2026-11-01",
+      "source": "poe.ninja"
+    },
+    "Quicksilver Flask": {
+      "chaos": 1.5,
+      "note": "hand price for benchmark route V01 (ticket #331); the refresher does not fetch this line yet (ticket #360)",
+      "source": "hand"
     },
     "Regal Orb": {
       "chaos": 0.06364,
@@ -889,7 +728,128 @@
       "note": "hand price for benchmark route V01 (ticket #331); the refresher does not fetch this line yet (ticket #360)",
       "source": "hand"
     },
-    "Thicket Bow (ilvl 78, Hunter)": {
+    "Sorcerer Boots, item level 84, fractured 30% increased Movement Speed": {
+      "chaos": 17.0,
+      "detail": {
+        "date": "2026-10-31",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 156,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "fractured_item": {
+                    "option": "true"
+                  },
+                  "ilvl": {
+                    "min": 84
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.boots"
+                  },
+                  "rarity": {
+                    "option": "rare"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [
+                  {
+                    "disabled": false,
+                    "id": "fractured.stat_2250533757",
+                    "value": {
+                      "min": 30
+                    }
+                  }
+                ],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Sorcerer Boots"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "87d77da5263e8e3d965f3a7024311a646d396b09779a66684bc0cc05b29afb1d",
+        "used": 5
+      },
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 156 on the site, listed any time; priced for boots of item level 84 or more; the exact item (item level 84 only) has 9 listings, below the rail of 10, issue #483",
+      "source": "trade-api"
+    },
+    "Sorcerer Boots, normal, item level 86-100": {
+      "chaos": 29.82716,
+      "detail": {
+        "date": "2026-11-01",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 22,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "ilvl": {
+                    "min": 86
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.boots"
+                  },
+                  "rarity": {
+                    "option": "normal"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Sorcerer Boots"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "d467d2c75cacc86cc4851e454966d8c884b9e4f4094b1b3ca65fb1609efe2e6e",
+        "used": 5
+      },
+      "note": "trade price of a normal base of item level 86 (29.8) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target",
+      "source": "trade-api"
+    },
+    "Thicket Bow, normal, item level 78-79, Hunter influence": {
       "chaos": 13.0,
       "detail": {
         "date": "2026-11-01",
@@ -949,7 +909,62 @@
         "query_hash": "0c8292aec6aca6eec1c1e19559b01b9b10ad8274aadd17b75c65ec95b5c1cd37",
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 164 on the site, listed any time",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 164 on the site, listed any time; priced for a Hunter bow of item level 78 or more, any non-unique rarity; the exact item (normal, item level 78 to 79) has 0 listings, issue #483",
+      "source": "trade-api"
+    },
+    "Two-Toned Boots [BootsAtlas1], normal, item level 86-100": {
+      "chaos": 5.02716,
+      "detail": {
+        "date": "2026-11-01",
+        "k": 5,
+        "league": "Allflame",
+        "listings": 37,
+        "query": {
+          "query": {
+            "filters": {
+              "misc_filters": {
+                "filters": {
+                  "corrupted": {
+                    "option": "false"
+                  },
+                  "ilvl": {
+                    "min": 86
+                  },
+                  "mirrored": {
+                    "option": "false"
+                  }
+                }
+              },
+              "type_filters": {
+                "filters": {
+                  "category": {
+                    "option": "armour.boots"
+                  },
+                  "rarity": {
+                    "option": "normal"
+                  }
+                }
+              }
+            },
+            "stats": [
+              {
+                "filters": [],
+                "type": "and"
+              }
+            ],
+            "status": {
+              "option": "securable"
+            },
+            "type": "Two-Toned Boots"
+          },
+          "sort": {
+            "price": "asc"
+          }
+        },
+        "query_hash": "5df0f609e43627b47c12a3ab884def71f47c36c291610427e98328e8741e1f92",
+        "used": 5
+      },
+      "note": "trade price of a normal base of item level 86 (5.0) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target",
       "source": "trade-api"
     },
     "Vaal Orb": {
