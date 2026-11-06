@@ -7,9 +7,11 @@ of the top tier, and the target's own start item. `goal_oracle_support.py` build
 set by hand) and asks the planner's `Target.unmet` and the oracle the same question. Where they differ, the planner contradicts a rule
 of `docs/owner-rules.md`.
 
-Every disagreement found today is in `KNOWN` below with its issue and rule, and has a strict `xfail` test of its own: it fails when the
-disagreement disappears (remove the entry), and `test_no_new_disagreement` fails when a new one appears or a known one changes its
-count. So a rebuild of steps 3 to 6 of the audit shows as these `xfail`s turning into passes.
+Every disagreement found today is committed by its exact probe id and direction in `tests/fixtures/goal_oracle_known.txt`, and its class
+is in `KNOWN` below with its issue, its rule and its cause (a tier comparison, or an empty natural ladder). `test_the_disagreements_are_exactly_the_committed_ones`
+fails on any difference in either direction, so a fix offset by a new disagreement in the same requirement shows. Each class has a strict
+`xfail` test of its own that fails when the class disappears. A rebuild of steps 3 to 6 of the audit shows as these `xfail`s turning into
+passes, and the committed file shrinking. The targets are taken from `examples/targets/*.yaml`, so a 15th target is compared at once.
 
 What is not here: the disagreements of #404 (a target that disagrees with the guide's words). The oracle reads a target as written, so
 `r10-fractured-boots.yaml` asking Life tier 1 where the guide says "at least 70" is not a planner-against-oracle disagreement; the
@@ -19,17 +21,19 @@ guide-to-target step is not checked here. Implicits, quality, sockets, enchantme
 from dataclasses import dataclass
 
 import pytest
-from goal_oracle_support import TARGETS, Disagreement, Result, compare_target, load_export, target_stems
+from goal_oracle_support import TARGETS, Disagreement, Result, compare_target, load_export, read_known, target_stems
 from oracle import goal_oracle as g
 
 from crafting_system.data import MissingDataError, load_game_data
 
-BENCHMARKS = (
+BENCHMARKS = (  # the 14 targets that must be there; the tests below run on every file of the folder
     "j01-cobalt-life-attack-speed", "r03-avoid-shock-boots", "r04-penetrating-quiver", "r05-strength-ring",
     "r06-strength-heavy-belt", "r08-energy-shield-boots", "r09-life-boots", "r10-fractured-boots-70-life",
     "r10-fractured-boots", "r11-reservation-helmet", "r12-lightning-amulet", "r13-life-resist-belt",
     "r14-hunter-bow", "v01-minion-helmet",
 )  # fmt: skip
+TIER_COMPARISON = "tier comparison"
+EMPTY_LADDER = "empty ladder"
 
 # What the oracle does not judge in each target (the rest of the 14 have nothing of the kind); #416.
 UNJUDGED = {
@@ -40,11 +44,15 @@ UNJUDGED = {
 
 @dataclass(frozen=True)
 class Known:
-    """A known disagreement: how many probes of this class the planner and the oracle split on, and whose fault it is."""
+    """A known class of disagreement: whose fault it is, and where the oracle's "not met" comes from.
 
-    count: int
+    `cause` is `tier comparison` (the leaf has a natural ladder at the item level and the probe's tier or values lose on it) or
+    `empty ladder` (the leaf's family has no natural mod on this base at the item level, so only `mod:` can meet it; OR-2).
+    """
+
     issue: str
     rules: str
+    cause: str
     why: str
 
 
@@ -55,23 +63,21 @@ BENCH_AS_TIER_1 = "a bench craft is stored as tier 1 (actions/bench.py:57) and a
 
 KNOWN: dict[tuple[str, str, str], Known] = {
     # R05: the file's own header says a bench craft "counts as tier 1 ... whatever its range" (r05-strength-ring.yaml:26, :61-72).
-    ("r05-strength-ring", "requirements[2].of[0]", BENCH): Known(12, "#403", "OR-1, OR-2", "R05's bench Life, +(15-25) to +(41-55) or with Mana regeneration, meets Life T1, +(100-114): " + BENCH_AS_TIER_1),
-    ("r05-strength-ring", "requirements[2].of[1]", BENCH): Known(4, "#403", "OR-1, OR-2", "a bench Fire Resistance meets Fire Resistance T2, +(42-45)%: " + BENCH_AS_TIER_1),
-    ("r05-strength-ring", "requirements[2].of[2]", BENCH): Known(4, "#403", "OR-1, OR-2", "a bench Cold Resistance meets Cold Resistance T2: " + BENCH_AS_TIER_1),
-    ("r05-strength-ring", "requirements[2].of[3]", BENCH): Known(4, "#403", "OR-1, OR-2", "a bench Lightning Resistance meets Lightning Resistance T2: " + BENCH_AS_TIER_1),
+    ("r05-strength-ring", "requirements[2].of[0]", BENCH): Known("#403", "OR-1, OR-2", TIER_COMPARISON, "R05's bench Life, +(15-25) to +(41-55) or with Mana regeneration, meets Life T1, +(100-114): " + BENCH_AS_TIER_1),
+    ("r05-strength-ring", "requirements[2].of[1]", BENCH): Known("#403", "OR-1, OR-2", TIER_COMPARISON, "a bench Fire Resistance meets Fire Resistance T2, +(42-45)%: " + BENCH_AS_TIER_1),
+    ("r05-strength-ring", "requirements[2].of[2]", BENCH): Known("#403", "OR-1, OR-2", TIER_COMPARISON, "a bench Cold Resistance meets Cold Resistance T2: " + BENCH_AS_TIER_1),
+    ("r05-strength-ring", "requirements[2].of[3]", BENCH): Known("#403", "OR-1, OR-2", TIER_COMPARISON, "a bench Lightning Resistance meets Lightning Resistance T2: " + BENCH_AS_TIER_1),
     # R06: the same root; the target file is not in the list of #403, hence #415.
-    ("r06-strength-heavy-belt", "requirements[0].of[0]", BENCH): Known(12, "#415", "OR-1", "a bench Life craft meets Life T1 on R06's belt: " + BENCH_AS_TIER_1),
-    ("r06-strength-heavy-belt", "requirements[0].of[1]", BENCH): Known(12, "#415", "OR-1", "a bench Armour craft meets Armour T3 on R06's belt: " + BENCH_AS_TIER_1),
+    ("r06-strength-heavy-belt", "requirements[0].of[0]", BENCH): Known("#415", "OR-1", TIER_COMPARISON, "a bench Life craft meets Life T1 on R06's belt: " + BENCH_AS_TIER_1),
+    ("r06-strength-heavy-belt", "requirements[0].of[1]", BENCH): Known("#415", "OR-1", TIER_COMPARISON, "a bench Armour craft meets Armour T3 on R06's belt: " + BENCH_AS_TIER_1),
     # R12: "every tier of the mod counts, because no minimum tier is given" (r12-lightning-amulet.yaml:28); the start mod is written as tier 3 (:48-49).
-    ("r12-lightning-amulet", "requirements[1]", BELOW_TOP): Known(14, "#403", "OR-1", "a Lightning Resistance below the top tier meets a requirement with no tier (the model reads no tier as any tier, targets/model.py:57)"),
-    ("r12-lightning-amulet", "requirements[1]", BENCH): Known(4, "#403", "OR-1", "a bench Lightning Resistance meets a requirement with no tier: " + BENCH_AS_TIER_1),
-    ("r12-lightning-amulet", "requirements[1]", START): Known(1, "#403", "OR-1, OR-3", "the start amulet's fractured LightningResist2, written as tier 3 while the data has tier 7, meets the requirement with no tier"),
+    ("r12-lightning-amulet", "requirements[1]", BELOW_TOP): Known("#403", "OR-1", TIER_COMPARISON, "a Lightning Resistance below the top tier meets a requirement with no tier (the model reads no tier as any tier, targets/model.py:57)"),
+    ("r12-lightning-amulet", "requirements[1]", BENCH): Known("#403", "OR-1", TIER_COMPARISON, "a bench Lightning Resistance meets a requirement with no tier: " + BENCH_AS_TIER_1),
+    ("r12-lightning-amulet", "requirements[1]", START): Known("#403", "OR-1, OR-3", TIER_COMPARISON, "the start amulet's fractured LightningResist2, written as tier 3 while the data has tier 7, meets the requirement with no tier"),
     # R13: "a crafted damage modifier" read as any tier of two families (r13-life-resist-belt.yaml:53-65), the cheapest craft against the given route's dearer one.
-    ("r13-life-resist-belt", "requirements[2].of[0]", BENCH): Known(4, "#403", "OR-2, OR-1", "a bench All Damage craft meets 'any tier of All Damage': " + BENCH_AS_TIER_1),
-    ("r13-life-resist-belt", "requirements[2].of[1]", BELOW_TOP): Known(10, "#403", "OR-1", "an Elemental Damage with Attacks tier below the top meets a requirement with no tier"),
-    ("r13-life-resist-belt", "requirements[2].of[1]", BENCH): Known(4, "#403", "OR-2, OR-1", "a bench Elemental Damage with Attacks craft meets the requirement with no tier: " + BENCH_AS_TIER_1),
-    # V01: a requirement by stat text with no `min_tier` (v01-minion-helmet.yaml); the target file is not in the list of #403, hence #415.
-    ("v01-minion-helmet", "requirements[0]", BELOW_TOP): Known(1, "#415", "OR-1", "a Minion Skill Gems level mod one tier below the top meets a requirement with no tier"),
+    ("r13-life-resist-belt", "requirements[2].of[0]", BENCH): Known("#403", "OR-2, OR-1", EMPTY_LADDER, "All Damage has no natural mod on a belt, so by OR-2 the target should name the craft with `mod:`; a bench All Damage craft meets 'any tier of All Damage': " + BENCH_AS_TIER_1),
+    ("r13-life-resist-belt", "requirements[2].of[1]", BELOW_TOP): Known("#403", "OR-1", TIER_COMPARISON, "an Elemental Damage with Attacks tier below the top meets a requirement with no tier"),
+    ("r13-life-resist-belt", "requirements[2].of[1]", BENCH): Known("#403", "OR-2, OR-1", TIER_COMPARISON, "a bench Elemental Damage with Attacks craft meets the requirement with no tier: " + BENCH_AS_TIER_1),
 }  # fmt: skip
 
 
@@ -97,11 +103,51 @@ def results() -> dict[str, Result]:
     return {stem: compare_target(data, export, stem) for stem in target_stems()}
 
 
-def classes(result: Result) -> dict[tuple[str, str, str], int]:
-    counted: dict[tuple[str, str, str], int] = {}
-    for found in result.disagreements:
-        counted[classify(found)] = counted.get(classify(found), 0) + 1
-    return counted
+@pytest.fixture(scope="module")
+def export() -> g.Export:
+    try:
+        return load_export()
+    except (MissingDataError, FileNotFoundError) as problem:
+        pytest.skip(f"the real game data is not in the cache: {problem}")
+
+
+def oracle_for(export: g.Export, stem: str) -> tuple[g.OracleTarget, g.Oracle]:
+    spec = g.OracleTarget.from_text((TARGETS / f"{stem}.yaml").read_text(encoding="utf-8"))
+    return spec, g.Oracle(export, spec)
+
+
+def empty_ladder(export: g.Export, stem: str, leaf_path: str) -> bool:
+    """Whether the requirement leaf has no natural mod on the target's base at its item level (only `mod:` can then meet it)."""
+    spec, oracle = oracle_for(export, stem)
+    leaf = next(leaf for node in spec.requirements for leaf in g.leaves(node) if leaf.path == leaf_path)
+    ladders = export.selected_ladders(oracle.base_id, spec.influences, leaf.family, leaf.stat)
+    return not any(
+        rung.level <= spec.item_level and export.selects(rung.mod_id, leaf.family, leaf.stat) for ladder in ladders.values() for rung in ladder
+    )
+
+
+def unmeetable_leaves(export: g.Export, stem: str) -> set[str]:
+    """The requirement leaves of the target that no probe meets under the oracle: a leaf that cannot be met at all."""
+    spec, oracle = oracle_for(export, stem)
+    probes = g.probe_specs(export, spec)
+    return {
+        leaf.path
+        for node in spec.requirements
+        for leaf in g.leaves(node)
+        if not any(
+            oracle.counts(leaf, g.OMod(p.mod_id, p.values, p.fractured)) for p in probes if p.path == leaf.path
+        )
+    }
+
+
+# A leaf the oracle cannot meet with any probe is itself a fault of the target (a requirement that nothing satisfies) or of the oracle.
+UNMEETABLE: dict[tuple[str, str], Known] = {
+    ("r13-life-resist-belt", "requirements[2].of[0]"): Known(
+        "#403", "OR-2", EMPTY_LADDER,
+        "`family: AllDamage` has no natural mod on a belt, so under the oracle no mod meets it; a crafted damage modifier is a craft, "
+        "and by OR-2 the target should name it with `mod:` (r13-life-resist-belt.yaml:53-65)",
+    ),
+}  # fmt: skip
 
 
 def test_all_14_benchmark_targets_are_compared(results):
@@ -110,22 +156,32 @@ def test_all_14_benchmark_targets_are_compared(results):
         assert results[stem].probes > 0, f"{stem}: no probe was built"
 
 
-@pytest.mark.parametrize("stem", BENCHMARKS)
+@pytest.mark.parametrize("stem", target_stems())
 def test_every_probe_is_built_and_the_unjudged_keys_are_the_ones_listed(results, stem):
     assert not results[stem].skipped, "a probe the planner cannot build is a probe nobody checks:\n" + "\n".join(results[stem].skipped)
     assert results[stem].unjudged == UNJUDGED.get(stem, ())
 
 
-@pytest.mark.parametrize("stem", BENCHMARKS)
-def test_no_new_disagreement(results, stem):
-    """Every disagreement of the target is a known one, in the number recorded; any other is a new fault (or a fixed one)."""
-    found = classes(results[stem])
-    known = {key: entry.count for key, entry in KNOWN.items() if key[0] == stem}
-    unknown = {key: count for key, count in found.items() if key not in known}
-    changed = {key: (known[key], count) for key, count in found.items() if key in known and known[key] != count}
-    detail = [f"new: {key} x{count} (first: {next(d for d in results[stem].disagreements if classify(d) == key).probe})" for key, count in unknown.items()]
-    detail += [f"count changed: {key} known {old}, now {now}" for key, (old, now) in changed.items()]
+@pytest.mark.parametrize("stem", target_stems())
+def test_the_disagreements_are_exactly_the_committed_ones(results, stem):
+    """Probe by probe, with the direction: the found set equals `tests/fixtures/goal_oracle_known.txt` for this target, no more, no less."""
+    found = {d.id: d.direction for d in results[stem].disagreements}
+    committed = read_known().get(stem, {})
+    detail = [f"new: {probe} ({found[probe]})" for probe in sorted(found.keys() - committed.keys())]
+    detail += [f"gone: {probe}" for probe in sorted(committed.keys() - found.keys())]
+    detail += [f"direction changed: {probe} was {committed[probe]}, now {found[probe]}" for probe in sorted(found.keys() & committed.keys()) if found[probe] != committed[probe]]
     assert not detail, "\n".join(detail)
+
+
+def test_every_committed_disagreement_belongs_to_a_known_class(results):
+    """Each committed id is in a class of `KNOWN` (with its issue and rule), each class has an id, and the direction is planner met, oracle not met."""
+    classes_found: set[tuple[str, str, str]] = set()
+    for stem, ids in read_known().items():
+        by_id = {d.id: d for d in results[stem].disagreements}
+        for probe_id, direction in ids.items():
+            assert direction == "planner=met oracle=not-met", f"{probe_id}: {direction}"
+            classes_found.add(classify(by_id[probe_id]))
+    assert classes_found == set(KNOWN)
 
 
 @pytest.mark.parametrize(
@@ -134,7 +190,7 @@ def test_no_new_disagreement(results, stem):
         pytest.param(
             key,
             id=":".join(key),
-            marks=pytest.mark.xfail(strict=True, raises=AssertionError, reason=f"{entry.issue} {entry.rules}: {entry.why}"),
+            marks=pytest.mark.xfail(strict=True, raises=AssertionError, reason=f"{entry.issue} {entry.rules} ({entry.cause}): {entry.why}"),
         )
         for key, entry in KNOWN.items()
     ],
@@ -145,9 +201,36 @@ def test_known_disagreement(results, key):
     assert not stuck, f"{len(stuck)} probes split, e.g. {stuck[0].probe}: planner {stuck[0].planner}, oracle {stuck[0].oracle}"
 
 
-def test_the_oracle_alone_reads_r05_as_the_rules_do(results):
+def test_the_cause_of_each_class_is_what_the_registry_says(export):
+    for (stem, leaf_path, _), entry in KNOWN.items():
+        node_leaf = leaf_path  # a start-item class is keyed by its top-level requirement, which is a leaf in every target that has one
+        assert (EMPTY_LADDER if empty_ladder(export, stem, node_leaf) else TIER_COMPARISON) == entry.cause, (stem, leaf_path)
+
+
+@pytest.mark.parametrize("stem", target_stems())
+def test_the_leaves_nothing_can_meet_are_exactly_the_registered_ones(export, stem):
+    registered = {leaf for (target, leaf) in UNMEETABLE if target == stem}
+    assert unmeetable_leaves(export, stem) == registered
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        pytest.param(
+            key,
+            id=":".join(key),
+            marks=pytest.mark.xfail(strict=True, raises=AssertionError, reason=f"{entry.issue} {entry.rules} ({entry.cause}): {entry.why}"),
+        )
+        for key, entry in UNMEETABLE.items()
+    ],
+)
+def test_every_requirement_can_be_met_by_some_probe(export, key):
+    """A requirement that no probe meets under the oracle cannot be met by any item the oracle knows; it is a strict xfail with its reason."""
+    assert key[1] not in unmeetable_leaves(export, key[0])
+
+
+def test_the_oracle_alone_reads_r05_as_the_rules_do(export):
     """Not a comparison: the oracle's own reading of R05 (Amethyst Ring, item level 75), the numbers of the ticket and of OR-1."""
-    export = load_export()
     spec = g.OracleTarget.from_text((TARGETS / "r05-strength-ring.yaml").read_text(encoding="utf-8"))
     oracle = g.Oracle(export, spec)
 

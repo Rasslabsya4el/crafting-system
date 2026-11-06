@@ -22,6 +22,7 @@ The rules it implements
     the best natural tier whose range holds it).
   * OR-2. `mod:` is exactly that mod, and no other tier of its family.
   * OR-4. `min_roll` is a roll with no tier: with a `min_roll` and no `min_tier` the tier is not asked.
+    A `stat:` text that states its value (no `#`) is the guide's own wording, so it asks no top tier either (checker, #420).
   * k-of-n (`at_least` / `of`): at least that many of the members are met; members may be groups.
 
 The natural ladder of a family on a base, worked out from the raw mods here and nowhere else
@@ -413,6 +414,9 @@ class Oracle:
             return False
         if req.not_crafted and self.is_crafted(mod):
             return False
+        # OR-4: a stat text that states its value ("+1 to Level of all Minion Skill Gems", no `#`) is the guide's own wording of
+        # the mod, not an unstated tier, so it asks no top tier; its text picks the mod.
+        states_value = req.stat is not None and "#" not in normal_text(req.stat)
         if req.min_tier is not None or (req.mod is None and req.min_roll is None):
             found = self.tier_of(req, mod)
             if found is None:
@@ -421,8 +425,11 @@ class Oracle:
             if req.min_tier is not None:
                 if tier > req.min_tier:
                     return False
-            elif top is None or tier > top:  # OR-1: no tier means the top tier the item level allows
+            elif not states_value and (top is None or tier > top):  # OR-1: no tier means the top tier the item level allows
                 return False
+        # OPEN POINT (#416, not settled by docs/owner-rules.md): with a `min_roll` and no tier, nothing below asks where the mod
+        # came from, so a crafted mod that no requirement names counts by its roll alone (it is not judged on the ladder,
+        # which OR-1 says for a crafted mod). `not_crafted: true` is the only thing that keeps it out. Behaviour kept as is.
         if req.min_roll is not None:
             if len(mod.values) != len(req.min_roll):
                 return False

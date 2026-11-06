@@ -49,6 +49,8 @@ def tiny_export() -> g.Export:
         "Fire1": mod("Fire1", "Fire", "suffix", 1, 5, 9, stat="base_fire", text="+(5-9)% to Fire Resistance"),
         "Cold1": mod("Cold1", "Cold", "suffix", 1, 5, 9, stat="base_cold", text="+(5-9)% to Cold Resistance"),
         "Light1": mod("Light1", "Light", "suffix", 1, 5, 9, stat="base_light", text="+(5-9)% to Lightning Resistance"),
+        "Gem1": mod("Gem1", "Gem", "suffix", 1, 1, 1, stat="gem_level", text="+1 to Level of all Test Gems"),
+        "Gem2": mod("Gem2", "Gem", "suffix", 50, 2, 2, stat="gem_level", text="+2 to Level of all Test Gems"),
         "LifeRoyale": mod("LifeRoyale", "Life", "prefix", 90, 60, 69),  # a Battle Royale copy: never natural
     }
     bases = {
@@ -242,6 +244,16 @@ def test_k_of_n_members_can_be_groups_and_every_top_level_entry_is_required():
     assert judge(nested, [("Life3", 30), ("Fire1", 6), ("Cold1", 6)])
 
 
+def test_or4_a_stat_text_that_states_its_value_asks_no_top_tier():
+    """The V01 case: "+1 to Level of all ..." picks the mod whose text it is; the "+2" mod, the top tier, is another mod."""
+    stated = '  - stat: "+1 to Level of all Test Gems"\n'
+    assert judge(stated, [("Gem1", 1)])  # not the top tier of the type (Gem2 is), and it counts
+    assert not judge(stated, [("Gem2", 2)])  # another text
+    assert judge("  - family: Gem\n", [("Gem2", 2)])  # by family with no tier the top tier is asked, as OR-1 says
+    assert not judge("  - family: Gem\n", [("Gem1", 1)])
+    assert not judge(stated + "    min_tier: 1\n", [("Gem1", 1)])  # a stated tier is still asked
+
+
 # --- the probes -----------------------------------------------------------------------------------------------------------
 
 
@@ -320,15 +332,60 @@ def imported_modules(source: str) -> set[str]:
     return found
 
 
+def sneaky_imports(source: str) -> list[str]:
+    """Imports that the plain import scan cannot see: `__import__(...)`, anything named `importlib` or `import_module`,
+    `exec` and `eval`, and a relative import that leaves the `oracle` folder (two dots or more, or a sibling that is not there)."""
+    found = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Name) and node.id in {"__import__", "importlib", "import_module", "exec", "eval"}:
+            found.append(f"line {node.lineno}: uses {node.id}")
+        elif isinstance(node, ast.Attribute) and node.attr in {"import_module", "__import__", "importlib"}:
+            found.append(f"line {node.lineno}: uses .{node.attr}")
+        elif isinstance(node, ast.Constant) and node.value in {"__import__", "importlib", "import_module"}:
+            found.append(f"line {node.lineno}: names {node.value} as a string")
+        elif isinstance(node, ast.Import) and any(alias.name.split(".")[0] == "importlib" for alias in node.names):
+            found.append(f"line {node.lineno}: imports importlib")
+        elif isinstance(node, ast.ImportFrom) and not node.level and (node.module or "").split(".")[0] == "importlib":
+            found.append(f"line {node.lineno}: imports from importlib")
+        elif isinstance(node, ast.ImportFrom) and node.level:
+            sibling = node.module is None or (ORACLE_DIR / f"{node.module}.py").exists()
+            if node.level > 1 or not sibling:
+                found.append(f"line {node.lineno}: relative import leaves the oracle folder")
+    return found
+
+
 @pytest.mark.parametrize("source", [path for path in sorted(ORACLE_DIR.glob("*.py"))], ids=lambda path: path.name)
 def test_the_oracle_imports_the_standard_library_and_yaml_only(source):
     modules = imported_modules(source.read_text(encoding="utf-8"))
     assert not {name for name in modules if name.split(".")[0] == "crafting_system"}, "the oracle shares no code with the planner"
     allowed = {"json", "os", "re", "dataclasses", "pathlib", "yaml"}
     assert {name.split(".")[0] for name in modules if not name.startswith(".")} <= allowed
+    assert not sneaky_imports(source.read_text(encoding="utf-8"))
 
 
 def test_the_import_scan_sees_every_way_to_import_the_planner():
     for text in ("import crafting_system", "import crafting_system.items as items", "from crafting_system import items", "from crafting_system.items import Item"):
         assert any(name.split(".")[0] == "crafting_system" for name in imported_modules(text))
     assert not any(name.split(".")[0] == "crafting_system" for name in imported_modules("import json\nfrom pathlib import Path"))
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "__import__('crafting_system')",
+        "import importlib\nimportlib.import_module('crafting_system')",
+        "from importlib import import_module",
+        "mod = getattr(__builtins__, '__import__')",
+        "exec('import crafting_system')",
+        "eval('1')",
+        "from .. import conftest",
+        "from ..goal_oracle_support import x",
+        "from .no_such_sibling import x",
+    ],
+)
+def test_the_import_scan_sees_dynamic_and_outside_imports(text):
+    assert sneaky_imports(text)
+
+
+def test_a_sibling_import_inside_the_oracle_folder_is_fine():
+    assert not sneaky_imports("from . import goal_oracle\nfrom .goal_oracle import Oracle")

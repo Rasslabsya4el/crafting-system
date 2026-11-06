@@ -64,8 +64,13 @@ class Disagreement:
     oracle: bool
 
     @property
-    def key(self) -> tuple[str, str, str]:
-        return (self.target, self.path, self.probe)
+    def id(self) -> str:
+        """A stable name for the probe: target, the top-level requirement, the probe."""
+        return f"{self.target} :: {self.path} :: {self.probe}"
+
+    @property
+    def direction(self) -> str:
+        return f"planner={'met' if self.planner else 'not-met'} oracle={'met' if self.oracle else 'not-met'}"
 
 
 @dataclass
@@ -82,6 +87,19 @@ class Result:
     def __post_init__(self) -> None:
         self.disagreements = [] if self.disagreements is None else self.disagreements
         self.skipped = [] if self.skipped is None else self.skipped
+
+
+KNOWN_FILE = REPO / "tests" / "fixtures" / "goal_oracle_known.txt"
+
+
+def read_known() -> dict[str, dict[str, str]]:
+    """The committed disagreements: target -> {probe id: direction}. One line each: id, a tab, the direction."""
+    known: dict[str, dict[str, str]] = {}
+    for line in KNOWN_FILE.read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.startswith("#"):
+            probe_id, direction = line.split("\t")
+            known.setdefault(probe_id.split(" :: ")[0], {})[probe_id] = direction
+    return known
 
 
 def target_stems() -> list[str]:
