@@ -1,5 +1,8 @@
 """The start prices of the real routes name their recorded search (ticket #163).
 
+Since #474 the entries sit under the key computed from the target; four of them (R05, R10, R11, R12) were priced for a wider item than the
+target now computes (issue #483), so they still hold the body they were recorded with, which these checks replay.
+
 `tests/fixtures/prices/routes-allflame-2026-10-31.json` holds one `trade-api` price per start item; each comes from
 an instant-buyout search of any listing age, recorded in `fixtures/trade/recorded/start_items/` (see the README
 there). The files need no network: the checks replay the recording against the price entry.
@@ -11,18 +14,17 @@ from pathlib import Path
 
 import pytest
 
-from crafting_system.prices import load_price_file
+from crafting_system.prices import load_buy_spec, load_price_file
 from crafting_system.prices.trade_pricing import CURRENCY_NAMES, DEFAULT_K, TRADE_SOURCE
 from crafting_system.prices.trade_query import query_hash
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 PRICES = FIXTURES / "prices" / "routes-allflame-2026-10-31.json"
 RECORDED = FIXTURES / "trade" / "recorded" / "start_items"
-STARTS = {
-    "r10": "R10 start boots",
-    "r11": "R11 start helmet",
-    "r05": "R05 start ring",
-    "r12": "R12 start amulet",
+DERIVED = Path(__file__).resolve().parent / "reconcile" / "derived_specs"  # the buy spec the planner computes from each target (#474)
+STARTS = {  # tag of the recording -> the price key of the start item it priced, which is the name of the computed spec
+    tag: load_buy_spec(DERIVED / f"{stem}.yaml").name
+    for tag, stem in {"r10": "r10-fractured-boots", "r11": "r11-reservation-helmet", "r05": "r05-strength-ring", "r12": "r12-lightning-amulet"}.items()
 }
 
 

@@ -41,8 +41,9 @@ start_item:
   rarity: rare
   mods: []
 
-# The name of the start item in the price file: the `name` of examples/buy/r09-start-boots.yaml.
-start_price: R09 start boots
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base plus an Orb of Alchemy, not of this rare item (OR-16, #494 point 2).
+buys_start_item: true
 
 # See R08: the guide's fossils and the bench.
 actions: [fossil-set, bench-craft]

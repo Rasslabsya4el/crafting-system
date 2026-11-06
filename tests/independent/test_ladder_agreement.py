@@ -30,7 +30,7 @@ from independent import ladder as shared
 
 REPO = Path(__file__).resolve().parents[2]
 TARGETS_DIR = REPO / "examples" / "targets"
-BUY_DIR = REPO / "examples" / "buy"
+BUY_DIR = REPO / "tests" / "reconcile" / "derived_specs"  # the buy specs the planner computes from the targets (#474); the hand-written ones are gone
 SIDES = ("prefix", "suffix")
 
 
@@ -126,7 +126,7 @@ def subjects(export):
 
 def test_the_benchmark_names_many_bases_and_two_influenced_ones(export, subjects):
     assert len(_yaml_files(TARGETS_DIR)) == 14
-    assert len({base_id for base_id, _ in subjects}) > 100  # the two category-only buy specs accept 16 rings and 88 amulets
+    assert len({base_id for base_id, _ in subjects}) >= 14  # the computed buy specs name a base each (the old category-only ones accepted 16 rings and 88 amulets)
     assert sum(1 for _, influences in subjects if influences) == 2  # the Hunter belt and the Hunter bow
 
 
@@ -146,7 +146,7 @@ def test_the_old_oracle_and_the_old_reconcile_copy_build_the_same_ladder_on_ever
             if theirs.get((type_, side, domain)) != ours:
                 differences.append((base_id, sorted(influences), type_, side))
 
-    assert compared > 4000  # not vacuous: over 4000 ladders on 116 bases
+    assert compared > 400  # not vacuous: over 400 ladders on 14 bases (4000 on 116 while the buy specs were by category)
     assert differences == []
 
 
@@ -296,7 +296,7 @@ def test_the_old_oracle_rule_and_the_shared_rule_name_the_same_base_for_every_na
     bases = export["base_items"]
     references = [target["base"] for target in _yaml_files(TARGETS_DIR)] + [spec["base_type"] for spec in _yaml_files(BUY_DIR) if spec.get("base_type")]
 
-    assert len(references) == 14 + 6
+    assert len(references) == 14 + 10  # the computed specs: one per bought start item, the two R10 files sharing one
     for reference in references:
         merged = shared.base_ids_of(bases, reference)
         assert merged and oracle_base_v411(bases, reference) in merged

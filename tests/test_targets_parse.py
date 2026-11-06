@@ -198,20 +198,27 @@ def test_a_base_name_that_only_one_base_carries_finds_it():
     assert parse(text, header=False).base_id == BELT
 
 
-def test_the_start_price_is_the_name_the_start_item_has_in_the_price_file():
-    target = parse("requirements:\n  - family: IncreasedLife\nstart_price: '  R12 start amulet '\n")
+def test_buys_start_item_says_the_start_item_is_bought_and_its_key_is_computed_from_the_target():
+    target = parse("requirements:\n  - family: IncreasedLife\nbuys_start_item: true\n")
 
-    assert target.start_price == "R12 start amulet"
-
-
-def test_a_target_without_a_start_price_has_none():
-    assert parse("requirements:\n  - family: IncreasedLife\n").start_price is None
+    assert target.buys_start_item is True
+    assert not hasattr(target, "start_price")  # no typed name: the buy spec, the query and the key come from the target (#474)
 
 
-def test_a_start_price_must_be_non_empty_text():
-    message = parse_error("requirements:\n  - family: IncreasedLife\nstart_price: 5\n")
+def test_a_target_without_buys_start_item_does_not_buy_its_start_item():
+    assert parse("requirements:\n  - family: IncreasedLife\n").buys_start_item is False
 
-    assert message.startswith("t.yaml:5: ") and ": start_price: must be non-empty text" in message
+
+def test_buys_start_item_must_be_true_or_false():
+    message = parse_error("requirements:\n  - family: IncreasedLife\nbuys_start_item: R12 start amulet\n")
+
+    assert message.startswith("t.yaml:5: ") and ": buys_start_item: must be true or false" in message
+
+
+def test_the_old_start_price_line_is_an_unknown_key():
+    message = parse_error("requirements:\n  - family: IncreasedLife\nstart_price: R12 start amulet\n")
+
+    assert message.startswith("t.yaml:5: ") and "unknown key `start_price`" in message
 
 
 def test_the_actions_key_names_the_kinds_the_planner_may_use():

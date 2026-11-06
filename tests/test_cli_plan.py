@@ -127,7 +127,7 @@ def test_a_start_item_without_a_price_stops_with_a_message(tmp_path, capsys):
     code, _ = run(tmp_path, prices=price_file(start=None))
 
     assert code == 1
-    assert "no price for the start item 'R12 start amulet'" in capsys.readouterr().err
+    assert f"no price for the start item {START!r}" in capsys.readouterr().err
 
 
 def test_an_action_without_a_price_is_dropped_and_listed(tmp_path, capsys):

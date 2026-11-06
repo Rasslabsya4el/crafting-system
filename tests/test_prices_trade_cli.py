@@ -1,4 +1,4 @@
-"""`python -m crafting_system.prices trade`: the owner's hand-started trade pricing, on recorded responses (#39)."""
+"""`python -m crafting_system.cli trade TARGET.yaml`: the owner's hand-started trade pricing of a bought start item, on recorded responses (#39, #474)."""
 
 import json
 import re
@@ -8,8 +8,9 @@ import pytest
 
 from ninja_support import ninja  # noqa: F401  (a fixture)
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, SECRET, FakeTrade, api_row, price_file
+from trade_support import NOW, R12_KEY, R12_TARGET, SECRET, FakeTrade, api_row, price_file
 
+from crafting_system.cli._trade import trade_main
 from crafting_system.data import DataError
 from crafting_system.prices import (
     TRADE_SOURCE,
@@ -26,12 +27,6 @@ from crafting_system.prices.trade_pricing import QUERY_TTL
 REPO_URL = "https://github.com/Rasslabsya4el/crafting-system"
 
 
-@pytest.fixture(autouse=True)
-def game_data(monkeypatch):
-    """The repoe data the family ids come from: the small fixture set, not the real cache."""
-    monkeypatch.setattr("crafting_system.prices.__main__.load_game_data", lambda **kwargs: fixture_game_data())
-
-
 @pytest.fixture
 def trade():
     return FakeTrade()
@@ -44,12 +39,12 @@ def prices_path(tmp_path):
     return path
 
 
-def run(tmp_path, trade, *argv, spec=R12_SPEC, now=NOW, env=None, ninja=None):
+def run(tmp_path, trade, *argv, target=R12_TARGET, now=NOW, env=None, ninja=None, data=None):
     environment = {"CRAFTING_DATA_DIR": str(tmp_path / "data"), "CRAFTING_CACHE_DIR": str(tmp_path / "cache")}
     environment.update(env or {})
-    command = ["trade", "--spec", str(spec), *argv]
-    return main(
-        command,
+    return trade_main(
+        [str(target), *argv],
+        data=fixture_game_data() if data is None else data,
         transport=trade,
         sleep=lambda seconds: None,
         monotonic=lambda: 0.0,
@@ -66,15 +61,16 @@ def search_body(trade):
 # -- R12 end to end --------------------------------------------------------------------------------
 
 
-def test_r12_is_priced_end_to_end_and_the_query_sent_is_the_r12_query(tmp_path, trade, prices_path):
+def test_the_start_item_of_a_target_is_priced_end_to_end_and_the_query_sent_is_the_one_computed_from_the_target(tmp_path, trade, prices_path):
     code = run(tmp_path, trade)
 
     assert code == 0
     body = search_body(trade)["query"]
-    assert body["stats"][0]["filters"][0]["id"] == "fractured.stat_1671376347"
+    assert body["stats"][0]["filters"][0] == {"id": "fractured.stat_1671376347", "disabled": False, "value": {"min": 12}}
+    assert body["type"] == "Paua Amulet"
     filters = body["filters"]
     assert filters["misc_filters"]["filters"]["fractured_item"] == {"option": "true"}
-    assert filters["misc_filters"]["filters"]["ilvl"] == {"min": 75}
+    assert filters["misc_filters"]["filters"]["ilvl"] == {"min": 84}
     assert filters["misc_filters"]["filters"]["corrupted"] == {"option": "false"}
     assert filters["misc_filters"]["filters"]["mirrored"] == {"option": "false"}
     assert filters["type_filters"]["filters"]["category"] == {"option": "accessory.amulet"}
@@ -87,12 +83,12 @@ def test_r12_entry_is_stored_beside_the_untouched_poe_ninja_prices(tmp_path, tra
     run(tmp_path, trade)
 
     saved = load_price_file(prices_path)
-    entry = saved.prices["R12 start amulet"]
+    entry = saved.prices[R12_KEY]
     assert (entry.chaos, entry.source) == (1.0, TRADE_SOURCE)
     assert (entry.detail["listings"], entry.detail["used"], entry.detail["league"]) == (910, 5, "Allflame")
     assert re.fullmatch(r"[0-9a-f]{64}", entry.detail["query_hash"])
     assert entry.detail["query"] == search_body(trade)
-    assert {k: v for k, v in saved.prices.items() if k != "R12 start amulet"} == before.prices
+    assert {k: v for k, v in saved.prices.items() if k != R12_KEY} == before.prices
     assert (saved.fetched_at, saved.league, saved.chaos_per_divine) == (
         before.fetched_at,
         before.league,
@@ -104,7 +100,7 @@ def test_the_report_names_price_counts_league_and_requests(tmp_path, trade, pric
     run(tmp_path, trade)
 
     out = capsys.readouterr().out
-    assert "R12 start amulet" in out and "1 Chaos" in out and "0.0025 Divine" in out
+    assert R12_KEY in out and "1 Chaos" in out and "0.0025 Divine" in out
     assert "mean of the 5 cheapest instant-buyout listings (10 fetched, 910 on the site)" in out
     assert "Allflame" in out
     assert "3 requests" in out
@@ -174,7 +170,7 @@ def test_an_expired_query_cache_is_asked_again(tmp_path, trade, prices_path):
 def test_k_is_taken_from_the_command_line(tmp_path, trade, prices_path):
     run(tmp_path, trade, "--k", "3")
 
-    detail = load_price_file(prices_path).prices["R12 start amulet"].detail
+    detail = load_price_file(prices_path).prices[R12_KEY].detail
     assert (detail["k"], detail["used"]) == (3, 3)
 
 
@@ -233,7 +229,7 @@ def test_too_few_priced_listings_exit_1_and_record_thin(tmp_path, trade, prices_
     assert "no price" in capsys.readouterr().err
     saved = load_price_file(prices_path)
     assert saved.prices == before.prices  # no price was made
-    record = saved.markets["R12 start amulet"]
+    record = saved.markets[R12_KEY]
     assert (record.state, record.listings, record.usable) == ("thin", 910, 2)
 
 
@@ -245,7 +241,7 @@ def test_a_search_with_no_listings_exits_1_and_records_none(tmp_path, trade, pri
     assert capsys.readouterr().err.startswith("Error:")
     saved = load_price_file(prices_path)
     assert saved.prices == before.prices
-    record = saved.markets["R12 start amulet"]
+    record = saved.markets[R12_KEY]
     assert (record.state, record.listings, record.usable) == ("none", 0, 0)
 
 
@@ -254,20 +250,20 @@ def test_a_nine_listing_search_exits_1_and_records_thin(tmp_path, trade, prices_
 
     assert run(tmp_path, trade) == 1
     assert "only 9 listings" in capsys.readouterr().err
-    assert load_price_file(prices_path).markets["R12 start amulet"].state == "thin"
+    assert load_price_file(prices_path).markets[R12_KEY].state == "thin"
 
 
 def test_the_listing_count_rail_is_a_setting(tmp_path, trade, prices_path):
     assert run(tmp_path, trade, "--min-listings", "1000") == 1  # 910 listings are thin under a rail of 1000
-    assert load_price_file(prices_path).markets["R12 start amulet"].state == "thin"
+    assert load_price_file(prices_path).markets[R12_KEY].state == "thin"
 
 
-def test_a_name_that_is_a_poe_ninja_price_is_refused(tmp_path, trade, prices_path, capsys):
-    spec = tmp_path / "spec.yaml"
-    spec.write_text(R12_SPEC.read_text(encoding="utf-8").replace("R12 start amulet", "Hollow Fossil"), encoding="utf-8")
+def test_a_key_that_is_a_poe_ninja_price_is_refused(tmp_path, trade, prices_path, capsys):
+    base = price_file()
+    write_price_file(prices_path, price_file(prices={**base.prices, R12_KEY: PriceEntry(3.0, "poe.ninja")}))
     before = prices_path.read_bytes()
 
-    code = run(tmp_path, trade, spec=spec)
+    code = run(tmp_path, trade)
 
     assert code == 1
     assert "collides with a poe.ninja price" in capsys.readouterr().err
@@ -283,32 +279,48 @@ def test_a_missing_price_file_says_to_run_fetch_first(tmp_path, trade, capsys):
     assert trade.requests == []
 
 
-def test_a_bad_spec_file_exits_1_without_a_request(tmp_path, trade, prices_path, capsys):
-    spec = tmp_path / "spec.yaml"
-    spec.write_text("name: x\nbogus: 1\n", encoding="utf-8")
+def test_a_bad_target_file_exits_1_without_a_request(tmp_path, trade, prices_path, capsys):
+    target = tmp_path / "target.yaml"
+    target.write_text("base: Paua Amulet\nitem_level: 84\nbogus: 1\nrequirements:\n  - family: IncreasedLife\n", encoding="utf-8")
 
-    code = run(tmp_path, trade, spec=spec)
+    code = run(tmp_path, trade, target=target)
 
     assert code == 1
     assert "bogus" in capsys.readouterr().err and trade.requests == []
 
 
-def test_without_game_data_a_text_stat_still_prices_and_a_note_is_printed(tmp_path, trade, prices_path, capsys, monkeypatch):
+def test_a_target_that_does_not_buy_its_start_item_has_nothing_to_price(tmp_path, trade, prices_path, capsys):
+    target = tmp_path / "target.yaml"
+    target.write_text(R12_TARGET.read_text(encoding="utf-8").replace("buys_start_item: true\n", ""), encoding="utf-8")
+
+    code = run(tmp_path, trade, target=target)
+
+    assert code == 1
+    assert "does not buy its start item" in capsys.readouterr().err and trade.requests == []
+
+
+def test_without_game_data_the_command_says_to_fetch_it_and_sends_nothing(tmp_path, trade, prices_path, capsys, monkeypatch):
     def missing(**kwargs):
         raise DataError("no cache")
 
-    monkeypatch.setattr("crafting_system.prices.__main__.load_game_data", missing)
-    spec = tmp_path / "spec.yaml"
-    spec.write_text(
-        "name: Text amulet\ncategory: accessory.amulet\nmods:\n  - stat: '+#% to Lightning Resistance'\n    fractured: true\n",
-        encoding="utf-8",
+    monkeypatch.setattr("crafting_system.cli._trade.load_game_data", missing)
+
+    code = trade_main(
+        [str(R12_TARGET)],
+        transport=trade,
+        sleep=lambda seconds: None,
+        monotonic=lambda: 0.0,
+        now=NOW,
+        env={"CRAFTING_DATA_DIR": str(tmp_path / "data"), "CRAFTING_CACHE_DIR": str(tmp_path / "cache")},
     )
 
-    code = run(tmp_path, trade, spec=spec)
+    assert code == 1
+    assert "crafting_system.data fetch" in capsys.readouterr().err and trade.requests == []
 
-    assert code == 0
-    assert "crafting_system.data fetch" in capsys.readouterr().out
-    assert "Text amulet" in load_price_file(prices_path).prices
+
+def test_the_old_trade_command_of_the_prices_module_says_where_it_went(tmp_path, capsys):
+    assert main(["trade", "--spec", "x.yaml"], env={"CRAFTING_DATA_DIR": str(tmp_path)}) == 2
+    assert "python -m crafting_system.cli trade TARGET.yaml" in capsys.readouterr().err
 
 
 # -- a hand override wins --------------------------------------------------------------------------
@@ -316,7 +328,7 @@ def test_without_game_data_a_text_stat_still_prices_and_a_note_is_printed(tmp_pa
 
 def test_a_hand_override_for_the_spec_name_means_no_request_and_the_override_wins(tmp_path, trade, prices_path, capsys):
     overrides = tmp_path / "data" / "price_overrides.toml"
-    overrides.write_text('[prices]\n"R12 start amulet" = 7\n', encoding="utf-8")
+    overrides.write_text(f'[prices]\n"{R12_KEY}" = 7\n', encoding="utf-8")
     before = prices_path.read_bytes()
 
     code = run(tmp_path, trade)
@@ -324,7 +336,7 @@ def test_a_hand_override_for_the_spec_name_means_no_request_and_the_override_win
     assert code == 0 and trade.requests == []
     assert "override" in capsys.readouterr().out
     assert prices_path.read_bytes() == before
-    assert load_prices(prices_path, overrides).prices["R12 start amulet"] == PriceEntry(7.0, "override")
+    assert load_prices(prices_path, overrides).prices[R12_KEY] == PriceEntry(7.0, "override")
 
 
 # -- fetch keeps the trade prices ------------------------------------------------------------------
@@ -333,7 +345,7 @@ def test_a_hand_override_for_the_spec_name_means_no_request_and_the_override_win
 def old_file_with_trade(path, league="Allflame"):
     base = price_file(league=league)
     entry = PriceEntry(2.0, TRADE_SOURCE, "median", {"league": league, "listings": 910})
-    write_price_file(path, price_file(league=league, prices={**base.prices, "R12 start amulet": entry}))
+    write_price_file(path, price_file(league=league, prices={**base.prices, R12_KEY: entry}))
 
 
 def fetch(tmp_path, ninja, trade, *argv):
@@ -348,7 +360,7 @@ def test_fetch_keeps_a_trade_price_of_the_same_league_and_never_calls_the_trade_
 
     assert code == 0 and trade.requests == []
     saved = load_price_file(prices_path)
-    assert saved.prices["R12 start amulet"].detail == {"league": "Allflame", "listings": 910}
+    assert saved.prices[R12_KEY].detail == {"league": "Allflame", "listings": 910}
     assert saved.prices["Hollow Fossil"].chaos == 206.8  # the fresh poe.ninja number
 
 
@@ -357,9 +369,9 @@ def test_fetch_for_another_league_drops_the_trade_price_with_a_warning(tmp_path,
 
     fetch(tmp_path, ninja, trade, "--league", "Standard")
 
-    assert "R12 start amulet" not in load_price_file(prices_path).prices
+    assert R12_KEY not in load_price_file(prices_path).prices
     out = capsys.readouterr().out
-    assert any(line.startswith("Warning:") and "R12 start amulet" in line for line in out.splitlines())
+    assert any(line.startswith("Warning:") and R12_KEY in line for line in out.splitlines())
 
 
 def test_fetch_ignores_an_old_file_that_does_not_load(tmp_path, ninja, trade, prices_path):

@@ -470,6 +470,8 @@ class _View:
             return self.vendor_row(self.first, final)
         price = self.plan.start_price
         cost = [money(price.chaos)] if price.chaos > 0 else ["free"]
+        if price.taken_for:
+            cost.append(price.taken_for)
         fields = _fields(
             _plain("Accepts", *self.start_accepts()),
             self.trade_field(),

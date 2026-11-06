@@ -231,18 +231,23 @@ class BuyMod:
     """A mod the bought item must have. `stat` is a repoe family id, a mod id or the English stat text.
 
     `implicit` asks for it among the item's implicits (a corrupted implicit, ADR-0036) instead of among its explicit mods.
+    `own` marks that implicit as the base's own (the three Two-Toned Boots differ in theirs): it is part of the base the spec
+    searches, not a mod that is bought, so it does not need a corrupted item (#474).
     """
 
     stat: str
     minimum: float | None = None
     fractured: bool = False
     implicit: bool = False
+    own: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.stat, str) or not self.stat.strip():
             raise TradeSpecError(f"a buy mod needs a stat, got {self.stat!r}")
         if self.implicit and self.fractured:
             raise TradeSpecError(f"buy mod {self.stat}: an implicit cannot be fractured")
+        if self.own and not self.implicit:
+            raise TradeSpecError(f"buy mod {self.stat}: only an implicit can be the base's own")
         if self.minimum is not None:
             _check_number(f"buy mod {self.stat}: minimum", self.minimum)
 
@@ -280,7 +285,7 @@ class BuySpec:
         _check_level("item_level_min", self.item_level_min)
         _check_level("item_level_max", self.item_level_max)
         _check_range("item level", self.item_level_min, self.item_level_max)
-        implicit = next((mod.stat for mod in self.mods if mod.implicit), None)
+        implicit = next((mod.stat for mod in self.mods if mod.implicit and not mod.own), None)
         if implicit is not None and not self.corrupted:
             raise TradeSpecError(
                 f"buy spec {self.name!r}: the mod {implicit!r} is an implicit, which a buy spec names only for a corrupted"
@@ -328,7 +333,7 @@ _SPEC_KEYS = frozenset(
         "mods",
     }
 )
-_MOD_KEYS = frozenset({"stat", "minimum", "fractured", "implicit"})
+_MOD_KEYS = frozenset({"stat", "minimum", "fractured", "implicit", "own"})
 
 
 def _field(
@@ -369,6 +374,7 @@ def _parse_mod(record: Any, where: str) -> BuyMod:
         minimum=_field(record, "minimum", where, "a number", _is_number),
         fractured=_field(record, "fractured", where, "true or false", _is_bool, default=False),
         implicit=_field(record, "implicit", where, "true or false", _is_bool, default=False),
+        own=_field(record, "own", where, "true or false", _is_bool, default=False),
     )
 
 

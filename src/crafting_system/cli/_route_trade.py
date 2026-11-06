@@ -72,9 +72,13 @@ def _named_text(name: str, mods: tuple[Mod, ...]) -> str | None:
 
 
 def _accepts(spec: BuySpec, mods: tuple[Mod, ...]) -> tuple[str, ...]:
-    lines = [spec.rarity.capitalize()]
+    lines = [f"{spec.rarity.capitalize()} {spec.base_type}" if spec.base_type else spec.rarity.capitalize()]
     if spec.item_level_min is not None and spec.item_level_max is not None:
-        lines.append(f"item level {spec.item_level_min} to {spec.item_level_max}")
+        lines.append(
+            f"item level {spec.item_level_min}"
+            if spec.item_level_min == spec.item_level_max
+            else f"item level {spec.item_level_min} to {spec.item_level_max}"
+        )
     elif spec.item_level_min is not None:
         lines.append(f"item level {spec.item_level_min} or more")
     elif spec.item_level_max is not None:

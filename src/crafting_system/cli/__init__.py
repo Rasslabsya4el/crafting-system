@@ -23,14 +23,14 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
 * `parse_route`, `load_route`, `evaluate_route`: a given route (rules in YAML) read and evaluated as a fixed
   policy with `risk.evaluate`; `--route ROUTE.yaml` prints it next to the policy, first divergence and gaps included.
 * `write_route_page(path, report, data, ...)`: the route view, one self-contained HTML page next to the JSON
-  (`<target>.route.html`): the goal card, then a row per step with its card and the item after it; `--buy-spec`
-  gives the buy step its trade-site search link. The page model is `_route_view`, the HTML `_route_html`.
+  (`<target>.route.html`): the goal card, then a row per step with its card and the item after it; the buy step of a
+  target that buys its start item gets the trade-site search link of the buy spec computed from the target. The page model is `_route_view`, the HTML `_route_html`.
 * `main(argv)`: the command, and `main(["benchmark", "--out", DIR])`: the solver and the given route of every
   benchmark route, the published odds, machine info and run times, written to `benchmark.json`.
 
 Costs are in Chaos Orbs. The click cost of a Harvest reforge is its lifeforce price times the
 count in the rules registry (`harvest_reforge.lifeforce_cost`); the start item costs what the price
-file says under the target's `start_price` name (a trade-API price, a hand override on top), or
+file says under the price key computed from the target (a trade-API price, a hand override on top), or
 `--start-price`.
 """
 

@@ -65,5 +65,6 @@ requirements:
   - family: IncreaseSpecificSocketedGemLevel
     mod: JunMaster2LocalIncreaseSocketedSupportGemLevel2
 
-# The bow is bought as a Hunter base (normal), uncorrupted; its price name is the trade price below.
-start_price: Thicket Bow (ilvl 78, Hunter)
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it.
+buys_start_item: true

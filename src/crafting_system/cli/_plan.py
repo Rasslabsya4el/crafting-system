@@ -22,10 +22,10 @@ from crafting_system.actions import BLOCKING, kinds
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
-from crafting_system.prices.price_names import canonical_price_name
 from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
 from crafting_system.solver import Action, Outcome, Solution, solve
-from crafting_system.targets import KOfN, Requirement, Target
+from crafting_system.prices.query_compare import other_item
+from crafting_system.targets import KOfN, Requirement, StartBuyError, Target, buy_spec_of
 
 from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
@@ -82,6 +82,7 @@ class StartPrice:
     name: str | None
     chaos: float
     source: str
+    taken_for: str | None = None  # "price taken for a wider item (...)": the stored search is not the item the key names (#474, OR-7)
 
 
 @dataclass(frozen=True)
@@ -233,27 +234,41 @@ def leaf_labels(target: Target) -> tuple[str, ...]:
 
 
 def resolve_start_price(
-    target: Target, prices: PriceFile, override: float | None
+    data: GameData, target: Target, prices: PriceFile, override: float | None
 ) -> StartPrice:
     """The cost of the start item: a run's own number, else the price file (hand overrides already in it).
 
-    A target without `start_price` counts its start item as free. A name that is not in the price
-    file is an error: the cost of the whole craft would be wrong without it.
+    A target that does not buy its start item (`buys_start_item`) counts it as free. A bought one is looked up in the price file under
+    the key computed from the target (`start_price_key`); a key that is not in the file is an error: the cost of the whole craft would
+    be wrong without it.
     """
+    if not target.buys_start_item:
+        if override is not None:
+            return StartPrice(None, _override(override), "given on the command line")
+        return StartPrice(None, 0.0, "the target does not buy its start item, so it counts as free")
+    try:
+        spec = buy_spec_of(data, target)
+        name = spec.name
+    except StartBuyError as error:
+        if override is not None:  # the run gives its own number, so the key is only a label
+            return StartPrice(None, _override(override), "given on the command line")
+        raise PlanError(f"the start item of the target cannot be searched: {error}") from error
     if override is not None:
-        if not override >= 0 or override == float("inf"):
-            raise PlanError(f"the start price must be a number of Chaos, zero or more, got {override!r}")
-        return StartPrice(target.start_price, float(override), "given on the command line")
-    if target.start_price is None:
-        return StartPrice(None, 0.0, "the target names no start price, so the start item counts as free")
-    name = canonical_price_name(target.start_price)
+        return StartPrice(name, _override(override), "given on the command line")
     entry = prices.prices.get(name)
     if entry is None:
         raise PlanError(
-            f"no price for the start item {name!r}. Price it with `python -m crafting_system.prices trade "
-            "--spec <buy spec>`, write it in price_overrides.toml, or give it with --start-price"
+            f"no price for the start item {name!r}. Price it with `python -m crafting_system.cli trade "
+            "<target file>`, write it in price_overrides.toml, or give it with --start-price"
         )
-    return StartPrice(name, entry.chaos, entry.source)
+    stored = (entry.detail or {}).get("query")
+    return StartPrice(name, entry.chaos, entry.source, other_item(spec, stored) if isinstance(stored, dict) else None)
+
+
+def _override(override: float) -> float:
+    if not override >= 0 or override == float("inf"):
+        raise PlanError(f"the start price must be a number of Chaos, zero or more, got {override!r}")
+    return float(override)
 
 
 def make_plan(
@@ -291,7 +306,7 @@ def make_plan(
     `strands` is the setting `memory_strands` of the query (ADR-0040): with it off and no strands on the start item the
     plan does not consider strands, as before; with either on, `PlanError` says the planner cannot plan with them yet
     (tickets of batch B5). `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
-    not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the target's `start_price` name.
+    not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the price the target's computed key has in the file.
 
     `solver` picks the exact solve (ticket #374, ADR-0063): "auto" (the default) walks the graph on packed arrays first and
     solves it there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02), otherwise the
@@ -311,7 +326,6 @@ def make_plan(
             f"Memory Strands are on ({setting.why}), which the planner cannot plan yet"
             " (batch B5, tickets #275 onward); the cut and the spend of strands are not built, so an answer would silently ignore them"
         )
-    price_of_start = start_price_of if start_price_of is not None else resolve_start_price(target, prices, start_price)
     if target.implicits or target.quality is not None:
         raise PlanError(
             "the target asks for implicits or quality, which the planner cannot plan yet"
@@ -327,6 +341,7 @@ def make_plan(
             "the target asks for an enchantment, which the planner cannot plan yet"
             " (batch B7, ticket #242 onward)"
         )
+    price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price)
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
     if offers is None:
@@ -345,7 +360,7 @@ def make_plan(
     if removed:
         limits += (crafted_mods_limit(tuple(p.label for p in priced if p.offer.action not in kept)),)
     priced = tuple(p for p in priced if p.offer.action in kept)
-    named = start_price_of is not None or start_price is not None or target.start_price is not None
+    named = start_price_of is not None or start_price is not None or target.buys_start_item
     limits += start_limits(price_of_start, named)
     if price_of_start.chaos > 0:
         bought = price_of_start.name or "start item"
@@ -457,7 +472,7 @@ def start_limits(price: StartPrice, named: bool) -> tuple[Limit, ...]:
             Limit(
                 _limits.START,
                 "The start item is counted as free",
-                "the target names no start price",
+                "the target does not say it buys its start item",
                 "The cost of the answer does not include getting the start item.",
             ),
         )

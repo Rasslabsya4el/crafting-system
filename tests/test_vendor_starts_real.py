@@ -132,7 +132,7 @@ def test_r13_belt_is_taken_by_no_recipe(data):
 
 
 def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(tmp_path, data, capsys):
-    prices = r12_prices(lifeforce=LIFEFORCE_PRICE)
+    prices = r12_prices(lifeforce=LIFEFORCE_PRICE, data=data)
 
     code, out = run_r12(tmp_path, "--no-recipe-starts", data=data, prices=prices)
     printed = capsys.readouterr().out
@@ -150,7 +150,7 @@ def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(
 
 
 def test_r12_with_recipe_starts_on_gives_the_same_plan_and_names_the_refused_recipe(tmp_path, data, capsys):
-    prices = r12_prices(lifeforce=LIFEFORCE_PRICE)
+    prices = r12_prices(lifeforce=LIFEFORCE_PRICE, data=data)
 
     code, out = run_r12(tmp_path, data=data, prices=prices)
     printed = capsys.readouterr().out

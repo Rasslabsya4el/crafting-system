@@ -1,4 +1,4 @@
-"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--buy-spec PATH] [--strands] [--no-recipe-starts] [--price-source ninja|trade|both] [--verify] [--json PATH]`, and `benchmark`.
+"""The command line: `python -m crafting_system.cli TARGET.yaml [--route ROUTE.yaml] [--strands] [--no-recipe-starts] [--price-source ninja|trade|both] [--verify] [--json PATH]`, `benchmark`, and `trade TARGET.yaml` (price the target's bought start item on the trade site, by hand).
 
 This is the one place of the planner that reads the clock and the environment. It loads the game
 data from the cache, the target, and the price file with its hand overrides, makes the plan, prints
@@ -33,9 +33,9 @@ from pathlib import Path
 from crafting_system.actions import ActionError
 from crafting_system.config import PRICE_SOURCES, load_config
 from crafting_system.data import DataError, GameData, load_game_data
-from crafting_system.prices import PriceFile, PriceFileNotFound, load_buy_spec, stale_warning
+from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
 from crafting_system.solver import ConvergenceError
-from crafting_system.targets import TargetError, load_target
+from crafting_system.targets import TargetError, buy_spec_of, load_target
 
 from . import _packed
 from ._benchmark import benchmark_main
@@ -47,6 +47,7 @@ from ._route import evaluate_route, load_route
 from ._route_report import render_route_text, route_document
 from ._route_view import write_route_page
 from ._starts import plan_with_starts
+from ._trade import trade_main
 from ._verify import DEFAULT_RUNS, DEFAULT_SEED, verify
 
 COMMAND = "python -m crafting_system.cli"
@@ -88,6 +89,9 @@ def main(
     if arguments[:1] == ["benchmark"]:
         return benchmark_main(arguments[1:], command=COMMAND, env=env, today=today, data=data, prices=prices)
 
+    if arguments[:1] == ["trade"]:
+        return trade_main(arguments[1:], env=env, data=data)
+
     parser = argparse.ArgumentParser(
         prog=COMMAND, description="Find the cheapest crafting policy for a target item (YAML in, text and JSON out)."
     )
@@ -95,7 +99,6 @@ def main(
     parser.add_argument("--json", metavar="PATH", help="where to write the JSON policy (default: <output dir>/<target>.policy.json)")
     parser.add_argument("--start-price", type=float, metavar="CHAOS", help="what the start item costs, in Chaos; wins over the price file")
     parser.add_argument("--route", metavar="ROUTE.yaml", help="also evaluate this given route (rules in YAML, see examples/routes/) as a fixed policy and compare it with the policy")
-    parser.add_argument("--buy-spec", metavar="PATH", help="a buy spec YAML: the route view's buy step gets a trade-site search link built from it")
     parser.add_argument("--strands", action="store_true", help="consider Memory Strands (the setting memory_strands of crafting.toml); a start item with strands turns it on by itself")
     parser.add_argument("--no-recipe-starts", action="store_true", help="plan only from the target's own start item; do not compare the start items a vendor recipe can make (the setting recipe_starts of crafting.toml)")
     parser.add_argument("--price-source", choices=PRICE_SOURCES, help="which price a bought start item is priced with: ninja, trade or both (the setting price_source of crafting.toml, default both)")
@@ -162,7 +165,7 @@ def main(
         if plan.approximation is not None:
             print("Route view not written: it is not built for an approximate answer yet.")
         else:
-            spec = load_buy_spec(Path(args.buy_spec)) if args.buy_spec else None
+            spec = buy_spec_of(game, target) if target.buys_start_item else None  # computed from the target: the buy step's link and filter
             page = write_route_page(
                 out.parent / f"{target_path.stem}.route.html", report, game, route=route, given=given,
                 buy_spec=spec, cache_dir=config.cache_dir, target_name=name,

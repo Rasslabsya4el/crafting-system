@@ -98,7 +98,7 @@ def toy_registry(monkeypatch):
 def toy_plan(label: str, offers=OFFERS) -> Plan:
     """A plan whose policy uses the offer called `label` in every state; the solver's values are 1 per state, as the report needs some."""
     start = belt(FRACTURED_COLD, roll("LifeRegeneration1"))
-    target = Target(BELT, LEVEL, frozenset(), (COLD_REQ, LIFE), start, start_price=START_NAME)
+    target = Target(BELT, LEVEL, frozenset(), (COLD_REQ, LIFE), start, buys_start_item=True)
     ab = Abstraction(DATA, Goal.from_target(target), BELT, LEVEL, ACTIONS)
     first = ab.compress(start)
     priced, _ = price_offers(offers, PRICES)

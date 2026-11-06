@@ -27,8 +27,8 @@ from crafting_system.cli import RESTART, build_report, evaluate_route, load_rout
 from crafting_system.cli._reach import policy_states
 from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_view import build_section, route_input, write_route_page
-from crafting_system.prices import load_buy_spec, load_price_file
-from crafting_system.targets import KOfN, load_target
+from crafting_system.prices import load_price_file
+from crafting_system.targets import KOfN, buy_spec_of, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
@@ -48,7 +48,6 @@ ROUTES = {
     "R11": "r11-reservation-helmet",
     "R05": "r05-strength-ring",
 }
-BUY_SPECS = {"R10": "r10-start-boots", "R11": "r11-start-helmet", "R05": "r05-start-ring"}
 
 
 @pytest.fixture(scope="module")
@@ -153,7 +152,7 @@ def route_page(route_id, stem, plan, data, tmp_path) -> str:
     (cache_dir / "trade").mkdir(parents=True)
     (cache_dir / "trade" / "stats.json").write_bytes(gzip.decompress(TRADE_STATS.read_bytes()))
     route = load_route(ROOT / "examples" / "routes" / f"{stem}.yaml", plan, data)
-    spec = load_buy_spec(ROOT / "examples" / "buy" / f"{BUY_SPECS[route_id]}.yaml")
+    spec = buy_spec_of(data, plan.target)  # computed from the target (#474)
     path = write_route_page(
         tmp_path / f"{stem}.route.html", build_report(plan, data), data, route=route,
         given=evaluate_route(plan, route, data), buy_spec=spec, cache_dir=cache_dir, target_name=f"{stem}.yaml",

@@ -693,7 +693,7 @@ def cli_flags(index: SourceIndex, prefix: str = f"{PACKAGE}.cli.") -> list[tuple
                 if dest is None:
                     longs = [n for n in names if n.startswith("--")]
                     dest = (longs[0] if longs else names[0]).lstrip("-").replace("-", "_")
-                command = "benchmark" if func.qual == "benchmark_main" else "plan"
+                command = {"benchmark_main": "benchmark", "trade_main": "trade"}.get(func.qual, "plan")
                 found.append((" / ".join(names), dest, command, func.module))
     return sorted(found)
 
@@ -893,7 +893,7 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
             if candidate.item in seen_items:
                 continue
             seen_items.add(candidate.item)
-            moved = dataclasses.replace(target, start_item=candidate.item, start_price=None)
+            moved = dataclasses.replace(target, start_item=candidate.item, buys_start_item=False)
             price = StartPrice(candidate.price_name, candidate.price, candidate.price_source)
             probes.append(plan_one(ids[stem], "recipe start", moved, prices, start_price_of=price))
     return probes

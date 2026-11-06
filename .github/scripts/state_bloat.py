@@ -285,7 +285,7 @@ def plan_of(bench: BenchmarkRoute, data: GameData, root: Path, config: Config, p
     """The plan `run_route` makes for `bench` (its target, prices, start options and offers), without the risk run."""
     target = load_target(root / bench.target, data)
     loaded = prices if prices is not None else load_target_prices(target.price_file, config)
-    missing = _missing_start_price(target, loaded, root, config)
+    missing = _missing_start_price(data, target, loaded, root, config, bench.target)
     if missing is not None:
         raise ValueError(_missing_message(missing))
     if bench.start is None:

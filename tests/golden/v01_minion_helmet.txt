@@ -15,7 +15,7 @@ First step, before S1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 rec
   You get back: Magic Lion Pelt, item level 84, with only +1 to Level of all Minion Skill Gems, T2 (the recipe wipes every other mod)
   Start price: 8.00 Chaos = the goods above; a restart makes the item again at this price
 Start options (the cheapest total of start price and expected cost to craft wins; the plain start item is always one; `--no-recipe-starts`, or recipe_starts = false under [planner] in crafting.toml, turns recipe starts off):
-  planned: the target's own start item (Lion Pelt (ilvl 84)): 1,348.94 Chaos = start 2.00 + crafting 1,346.94
+  planned: the target's own start item (Lion Pelt, normal, item level 84): 1,348.94 Chaos = start 2.00 + crafting 1,346.94
   chosen: Helmet with +1 to Minion Skill Gems (vendor recipe): 866.40 Chaos = start 8.00 + crafting 858.40
 What this answer leaves out:
   Not offered, 23 in all: Chaos Orb, Harvest reforges, Harvest reforges of an influence, Harvest add or remove a mod, Harvest resistance swaps, Harvest damage swaps, Essences, Corrupted essences, Bench crafts, Remove Crafted Mods, Fossil sets, Exalted Orb, Veiled Chaos Orb, Veiled Exalted Orb, Unveil, Pick from the unveil offer, Annulment Orb, Fracturing Orb, Talisman fracture, Aspect beast, Beast side swap, Wild Bristle Matron, Divine Orb (kinds this target does not name). The plan is the cheapest among the kinds offered.

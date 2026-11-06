@@ -85,6 +85,6 @@ start_item:
       # Locked in place by a Fracturing Orb.
       fractured: true
 
-# The name the start item has in the price file, which is what it costs to get: the `name` of
-# examples/buy/r05-start-ring.yaml.
-start_price: R05 start ring
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it.
+buys_start_item: true

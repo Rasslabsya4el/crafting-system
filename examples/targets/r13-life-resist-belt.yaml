@@ -17,9 +17,9 @@ item_level: 86
 
 # No start_item block: the crafting starts from a fresh white (normal) Leather Belt.
 
-# What the belt costs, the name it has in the price file: a normal Leather Belt of item level 86, the
-# poe.ninja base price. The planner buys it again whenever the route restarts.
-start_price: Leather Belt (ilvl 86)
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it. Its committed price is a stand-in (#426).
+buys_start_item: true
 
 # The kinds of actions the planner may use: the guide's orbs and the bench. Without this line the
 # planner also offers every other orb it can use, a Chaos Orb among them, and a belt rerolled that way

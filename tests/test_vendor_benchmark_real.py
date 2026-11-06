@@ -45,7 +45,7 @@ from crafting_system.cli._start_step import first_step
 from crafting_system.config import load_config
 from crafting_system.items import Rarity
 from crafting_system.prices import PriceFile, load_price_file
-from crafting_system.targets import load_target
+from crafting_system.targets import load_target, start_price_key
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "examples" / "targets" / "v01-minion-helmet.yaml"
@@ -82,7 +82,8 @@ def test_the_target_names_the_committed_price_file(data):
     target = load_target(TARGET, data)
 
     assert target.price_file is not None and target.price_file.resolve() == PRICES.resolve() and PRICES.is_file()
-    assert target.start_price == "Lion Pelt (ilvl 84)" and target.start_price in load_price_file(PRICES).prices
+    assert target.buys_start_item and start_price_key(data, target) == "Lion Pelt, normal, item level 84"
+    assert start_price_key(data, target) in load_price_file(PRICES).prices
 
 
 def test_the_plan_starts_from_the_recipe_made_helmet(plan):

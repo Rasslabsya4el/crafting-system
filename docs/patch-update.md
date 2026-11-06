@@ -54,7 +54,7 @@ Findings that needed code (all five are done):
 2. **Name a patch, not a commit.** Done in #119: `data diff pinned 3.29.4.1` and `data pin 3.29.4.1`.
 3. **A claim keeps its history.** Done in [#120](https://github.com/Rasslabsya4el/crafting-system/issues/120): an optional `history` list on a claim, and `rules stale`.
 4. **Real-data tests do not hold the pin.** Done in #119: the pin test reads `PIN.json`, `test_simulator_real_data.py` reads the cache.
-5. **The benchmark names its prerequisites.** Done in #119: a missing start-item price prints the line for `price_overrides.toml` and the buy-spec command (the benchmark does not call the trade API itself, so a run stays offline and repeatable).
+5. **The benchmark names its prerequisites.** Done in #119: a missing start-item price prints the line for `price_overrides.toml` and the `python -m crafting_system.cli trade TARGET.yaml` command (the benchmark does not call the trade API itself, so a run stays offline and repeatable).
 
 ## After the rehearsal: the update by command
 

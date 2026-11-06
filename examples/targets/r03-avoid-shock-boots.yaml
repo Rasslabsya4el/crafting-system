@@ -37,7 +37,7 @@
 #     value 40 or more: grade 3 ("(39-41)%") rolled 40 or 41, or any better grade.
 #   * "get suppression fracture boot": the start item below is a rare boot with the T1 Suppress Spell
 #     Damage suffix fractured. The guide gives no more, so no other mod is written, and no price: the
-#     file has no buy spec for it, so the planner treats it as free until one is added.
+#     file does not say `buys_start_item`, so the planner treats it as free (#427, the next step-4 ticket).
 
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Velour Boots

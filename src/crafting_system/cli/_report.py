@@ -299,6 +299,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     )
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
     lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
+    if plan.start_price.taken_for:
+        lines.append(f"  {plan.start_price.taken_for}")
     if report.first_step is not None:
         lines.extend(first_step_lines(report.first_step))
     if plan.starts is not None:

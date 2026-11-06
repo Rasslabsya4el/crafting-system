@@ -38,6 +38,7 @@ from .files import (
     priced_base_name,
     priced_category,
     priced_item_level,
+    priced_rarity,
     read_price_entry,
 )
 from .ladder import (
@@ -89,9 +90,9 @@ def slots(target: Target, spec: BuySpec | None) -> list[str]:
         if spec is not None:
             names += [f"start_mod.{mod.mod}.buy_mod", f"start_mod.{mod.mod}.buy_minimum"]
     if spec is not None:
-        names += [f"buy_mod.{normalise_stat_text(mod.stat)}.in_target" for mod in spec.mods]
+        names += [f"buy_mod.{normalise_stat_text(mod.stat)}.in_target" for mod in spec.mods if not mod.own]
     if target.start_price is not None:
-        names += ["price.entry", "price.base", "price.item_level", "price.source", "price.pool"]
+        names += ["price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool"]
     return names
 
 
@@ -141,6 +142,18 @@ def _pool_differences(export: Export, target_ids: list[str], accepted_ids: list[
     ]
 
 
+def _with_own_implicits(export: Export, accepted: list[str], spec: BuySpec) -> list[str]:
+    """The accepted bases that have every implicit the spec names as the base's own (the three Two-Toned Boots differ in theirs)."""
+    wanted = {normalise_stat_text(mod.stat) for mod in spec.mods if mod.own}
+    if not wanted:
+        return accepted
+
+    def reads(base_id: str) -> set[str]:
+        return {normalise_stat_text(export.mods[mod_id]["text"]) for mod_id in export.bases[base_id].get("implicits", ()) if mod_id in export.mods}
+
+    return [base_id for base_id in accepted if wanted <= reads(base_id)]
+
+
 def reconcile(
     target: Target, spec: BuySpec | None, export: Export, entries: list[PriceEntry]
 ) -> dict[str, list[Disagreement]]:
@@ -175,6 +188,7 @@ def reconcile(
         if spec.category not in derived:
             add("buy.category", f"{where_target}: base class {', '.join(target_classes)} = {', '.join(derived)}", f"{where_spec}: category = {spec.category!r}", ", ".join(derived), str(spec.category))
         accepted = bases_named(export.bases, spec.base_type) if spec.base_type else bases_of_category(export.bases, spec.category or "")
+        accepted = _with_own_implicits(export, accepted, spec)
         different = _pool_differences(export, base_ids, accepted)
         if not accepted:
             add("buy.pool", written, f"{where_spec}: accepts no base of the game data", ", ".join(target_names), "no base")
@@ -265,7 +279,7 @@ def reconcile(
     if spec is not None:
         for buy in spec.mods:
             text = normalise_stat_text(buy.stat)
-            if text not in own_texts:
+            if text not in own_texts and not buy.own:
                 add(f"buy_mod.{text}.in_target", f"{where_spec}: mod {buy.stat!r}", f"{where_target}: the start item has no mod with this text", "not in the target", buy.stat)
 
     # --- the price entry ---------------------------------------------------------------------------------
@@ -293,6 +307,9 @@ def reconcile(
                 add("price.item_level", f"{where_target}: item_level = {target.item_level}", f"{where_entry}: only the key says item level {level}; the entry records none, so the check cannot tell", target.item_level, f"cannot tell (label {level})")
             elif level != target.item_level:
                 add("price.item_level", f"{where_target}: item_level = {target.item_level}", f"{where_entry}: item level {level} ({origin})", target.item_level, level)
+            rarity = priced_rarity(entry)
+            if rarity is not None and rarity != target.rarity:
+                add("price.rarity", f"{where_target}: start item rarity = {target.rarity}", f"{where_entry}: the search asked for rarity {rarity}", target.rarity, rarity)
             if entry.source != TRADE_SOURCE:
                 add("price.source", f"{where_target}: start item bought on the trade site", f"{where_entry}: source {entry.source!r}, a stand-in for a trade price", "trade-api", str(entry.source))
     return out

@@ -3,7 +3,7 @@
 The ring is the one of ADR-0023 (Iron Ring, item level 86, a fractured All Attributes, goal Life and the forced Strength of
 the Deafening Essence of Rage) with Remove Crafted Mods and either the 32 crafts that touch the goal's families or all the
 ring crafts but the four that add a lock or an Attack/Caster metamod (137 of the 141; since ticket #69 such a craft makes the
-state model metamods, which the coarse level does not pool). Prices are the committed fixture `routes-allflame-2026-10-31.json`; the start ring costs what it says there. The
+state model metamods, which the coarse level does not pool). Prices are the committed fixture `routes-allflame-2026-10-31.json`; the start ring costs what the R05 entry says there (2.6 Chaos, given as the run's own start price: this Iron Ring is not the R05 item, so no entry carries its key). The
 rates are injected (4e-5 s per kernel outcome, 7e-6 s per solved edge, the values of ADR-0023), so the decision does not
 depend on the machine; no time is asserted (ADR-0014).
 """
@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 BASE = "Metadata/Items/Rings/Ring1"
 RATES = Rates(4e-5, 7e-6)
+START_PRICE = 2.6  # the committed price of R05's start ring
 TOUCHING = {
     "IncreasedLife", "FireResistance", "ColdResistance", "LightningResistance", "ChaosResistance",
     "AllAttributes", "Strength", "Dexterity", "Intelligence",
@@ -50,7 +51,7 @@ start_item:
       tier: 1
       values: {low}
       fractured: true
-start_price: R05 start ring
+buys_start_item: true
 """,
         data,
         source="r05.yaml",
@@ -79,14 +80,14 @@ def offers(data, target, crafts):
 def exact_32(ring):
     data, target, crafts = ring
     touching = [craft for craft in crafts if set(data.mods[craft.mod_id].families) & TOUCHING]
-    plan = make_plan(data, target, load_price_file(PRICES), offers=offers(data, target, touching), budget=60.0, rates=RATES)
+    plan = make_plan(data, target, load_price_file(PRICES), offers=offers(data, target, touching), budget=60.0, rates=RATES, start_price=START_PRICE)
     return touching, plan
 
 
 @pytest.fixture(scope="module")
 def approximate_141(ring):
     data, target, crafts = ring
-    return crafts, make_plan(data, target, load_price_file(PRICES), offers=offers(data, target, crafts), budget=60.0, rates=RATES)
+    return crafts, make_plan(data, target, load_price_file(PRICES), offers=offers(data, target, crafts), budget=60.0, rates=RATES, start_price=START_PRICE)
 
 
 def test_32_crafts_stay_exact(exact_32):

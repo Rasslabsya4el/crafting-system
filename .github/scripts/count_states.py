@@ -53,7 +53,7 @@ def main() -> None:
     priced = tuple(p for p in priced if p.label not in drop)
     kept = usable_actions(data, target.start_item, [p.offer.action for p in priced])
     priced = tuple(p for p in priced if p.offer.action in kept)
-    start_price = resolve_start_price(target, prices, None)
+    start_price = resolve_start_price(data, target, prices, None)
     if start_price.chaos > 0:
         restart = Offer(RESTART, BuyStartItem(target.start_item), {start_price.name or "start item": 1}, shares=False)
         priced = (*priced, PricedOffer(restart, start_price.chaos, ()))

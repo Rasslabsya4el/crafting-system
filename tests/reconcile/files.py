@@ -3,16 +3,20 @@
 Formats (learned from `src/crafting_system/targets/` and `.../prices/`, not imported):
 
 - target: `base`, `item_level`, `influence`, `start_item` (`rarity`, `mods`: `mod`, `tier`, `values`, `fractured`),
-  `start_price`, `price_file`. A target without `start_item` starts from a normal item; a `start_item` without
-  `rarity` is rare when it lists mods, else normal.
+  `price_file`. A target without `start_item` starts from a normal item; a `start_item` without `rarity` is rare when
+  it lists mods, else normal. A target file no longer names its price (#474): `start_price` is the price key of the
+  start item, taken from the hand-written table `expected_keys.txt` by the target's file stem (`read_expected_keys`),
+  and a target with no row in it buys nothing (J01, R03, R06: #427).
 - buy spec: `name`, `base_type`, `category`, `rarity`, `item_level_min`, `influence`, `mods` (`stat`, `minimum`,
-  `fractured`).
+  `fractured`). The planner computes it from the target; `derived_specs/<target>.yaml` is that result written down
+  (`tests/test_start_buy_real.py` holds the folder equal to it), so the reconciliation can read it without importing the
+  planner and checks it against the target, the game data and the price entry.
 - price file: `prices` by name; an entry made from a trade search holds its query in `detail.query`.
 """
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yaml
@@ -20,7 +24,8 @@ import yaml
 from .export import REPO_ROOT
 
 TARGETS_DIR = REPO_ROOT / "examples" / "targets"
-BUY_DIR = REPO_ROOT / "examples" / "buy"
+BUY_DIR = REPO_ROOT / "tests" / "reconcile" / "derived_specs"
+KEYS_FILE = REPO_ROOT / "tests" / "reconcile" / "expected_keys.txt"
 PRICES_DIR = REPO_ROOT / "tests" / "fixtures" / "prices"
 
 
@@ -54,6 +59,7 @@ class BuyMod:
     stat: str
     minimum: float | None
     fractured: bool
+    own: bool = False  # the base's own implicit: it tells bases of one name apart, it is not a bought mod
 
 
 @dataclass(frozen=True)
@@ -131,14 +137,29 @@ def read_buy_spec(path: Path) -> BuySpec:
         item_level_min=document.get("item_level_min"),
         influence=frozenset(document.get("influence") or ()),
         mods=tuple(
-            BuyMod(stat=entry["stat"], minimum=entry.get("minimum"), fractured=bool(entry.get("fractured", False)))
+            BuyMod(stat=entry["stat"], minimum=entry.get("minimum"), fractured=bool(entry.get("fractured", False)), own=bool(entry.get("own", False)))
             for entry in (document.get("mods") or ())
         ),
     )
 
 
-def read_targets(directory: Path = TARGETS_DIR) -> list[Target]:
-    return [read_target(path) for path in sorted(directory.glob("*.yaml"))]
+def read_expected_keys(path: Path = KEYS_FILE) -> dict[str, str]:
+    """The price key of the start item of each bought target, by target file stem (tab-separated lines; `#` lines are comments)."""
+    keys = {}
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line or line.startswith("#"):
+            continue
+        stem, tab, key = line.partition("\t")
+        if not tab or not stem or not key or stem in keys:
+            raise FileFormatError(f"{path.name}:{number}: expected `<target stem>`, a tab and a key, once per target")
+        keys[stem] = key
+    return keys
+
+
+def read_targets(directory: Path = TARGETS_DIR, keys: dict[str, str] | None = None) -> list[Target]:
+    """The targets of a folder, each with the price key of its start item from `keys` (default: `expected_keys.txt`)."""
+    table = read_expected_keys() if keys is None else keys
+    return [replace(target, start_price=table.get(target.name, target.start_price)) for target in map(read_target, sorted(directory.glob("*.yaml")))]
 
 
 def read_buy_specs(directory: Path = BUY_DIR) -> list[BuySpec]:
@@ -183,16 +204,28 @@ def read_price_entry(path: Path, key: str) -> PriceEntry | None:
     return PriceEntry(file=path, key=key, chaos=raw.get("chaos"), source=raw.get("source"), note=raw.get("note") or "", query=query)
 
 
-_KEY_BASE = re.compile(r"^(?P<base>.+?) \((?:ilvl (?P<ilvl>\d+))?")
+_KEY_BASE = re.compile(r"^(?P<base>.+?)(?: \[[^\]]*\])?, (?:(?:normal|magic|rare), )?item level (?P<ilvl>\d+)")
 
 
 def priced_base_name(entry: PriceEntry) -> str | None:
-    """The base name the price was taken for: the trade query's `type`, else the name in the key (`Lion Pelt (ilvl 84)`)."""
+    """The base name the price was taken for: the trade query's `type`, else the name in the key (`Lion Pelt, normal, item level 84`).
+
+    A base id in brackets after the name (`Two-Toned Boots [BootsAtlas1]`) is a label of the key, not a fact about the price: a
+    poe.ninja line and a trade search are both by name, so it is left out here.
+    """
     typed = entry.query.get("type")
     if typed:
         return typed
+    if entry.query:
+        return None  # a search with no base type prices every base of its category, whatever the key says
     match = _KEY_BASE.match(entry.key)
-    return match.group("base") if match and match.group("ilvl") else None
+    return match.group("base") if match else None
+
+
+def priced_rarity(entry: PriceEntry) -> str | None:
+    """The rarity of the entry's trade query, or None when it has none (a poe.ninja or hand line is a price of a normal base)."""
+    filters = ((entry.query.get("filters") or {}).get("type_filters") or {}).get("filters") or {}
+    return (filters.get("rarity") or {}).get("option")
 
 
 def priced_category(entry: PriceEntry) -> str | None:
@@ -209,7 +242,7 @@ def priced_item_level(entry: PriceEntry) -> tuple[int | None, str]:
 
     "query": the trade query's `ilvl.min`. "note": the line the price was read from, as the entry's note
     records it (a poe.ninja line has its own level, which can be above the one in the key). "label": only
-    the `ilvl N` in the key, which is a name, not a record; the check cannot tell from it. (None, "") when the
+    the `item level N` in the key, which is a name, not a record; the check cannot tell from it. (None, "") when the
     entry has no level at all.
     """
     filters = ((entry.query.get("filters") or {}).get("misc_filters") or {}).get("filters") or {}
@@ -220,5 +253,5 @@ def priced_item_level(entry: PriceEntry) -> tuple[int | None, str]:
         found = pattern.search(entry.note)
         if found:
             return int(found.group(1)), "note"
-    match = re.search(r"\bilvl (\d+)", entry.key)
+    match = re.search(r"\bitem level (\d+)", entry.key)
     return (int(match.group(1)), "label") if match else (None, "")

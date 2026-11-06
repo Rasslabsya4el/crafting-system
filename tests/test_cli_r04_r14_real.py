@@ -44,7 +44,7 @@ OFFERS = {
         "Bench craft +2 to Level of Socketed Support Gems", "Bench craft +#% to Chaos Damage over Time Multiplier", "restart",
     },
 }
-START = {"R04": ("Penetrating Arrow Quiver (ilvl 81)", "poe.ninja", 9.0), "R14": ("Thicket Bow (ilvl 78, Hunter)", "trade-api", 13.0)}
+START = {"R04": ("Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja", 9.0), "R14": ("Thicket Bow, normal, item level 78-79, Hunter influence", "trade-api", 13.0)}
 
 
 @pytest.fixture(scope="module")

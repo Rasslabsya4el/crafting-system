@@ -88,7 +88,7 @@ uv run python -m crafting_system.prices fetch
 uv run python -m crafting_system.prices check
 ```
 
-`fetch` takes the league poe.ninja lists as current; pass `--league <id>` otherwise. The benchmark needs the start-item price of each benchmark target (R12: `R12 start amulet`) in `price_overrides.toml` beside `prices.json` (`[prices]` table, Chaos), or from `prices trade --spec`. A route whose start item has no price is not run; `benchmark` prints the exact line (`"R12 start amulet" = 0`, put the price in place of the 0), the file it goes in, and the `prices trade --spec examples/buy/...` command when a buy spec names the item.
+`fetch` takes the league poe.ninja lists as current; pass `--league <id>` otherwise. The benchmark needs the start-item price of each benchmark target (the key is computed from the target, `Paua Amulet, item level 84, fractured +(12-17)% to Lightning Resistance` for R12) in `price_overrides.toml` beside `prices.json` (`[prices]` table, Chaos), or from `python -m crafting_system.cli trade TARGET.yaml`. A route whose start item has no price is not run; `benchmark` prints the exact line (`"<key>" = 0`, put the price in place of the 0), the file it goes in, and the `python -m crafting_system.cli trade examples/targets/...` command.
 
 Done when `check` reports no stale file and the start items are priced.
 

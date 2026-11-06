@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from crafting_system.prices import load_buy_spec, load_price_file, price_buy_spec, write_price_file
-from crafting_system.prices.__main__ import main
+from crafting_system.cli._trade import trade_main
 from crafting_system.prices.trade_pricing import entry_for
 from crafting_system.prices.trade_query import (
     DEFAULT_INDEXED,
@@ -25,7 +25,7 @@ from crafting_system.prices.trade_query import (
     query_hash,
 )
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, FakeTrade, make_client, price_file, recorded
+from trade_support import NOW, R12_KEY, R12_SPEC, R12_TARGET, FakeTrade, make_client, price_file, recorded
 
 BODY = {"filters": {"indexed": {"option": "1week"}}}
 
@@ -212,15 +212,11 @@ def prices_path(tmp_path):
     return path
 
 
-@pytest.fixture(autouse=True)
-def game_data(monkeypatch):
-    monkeypatch.setattr("crafting_system.prices.__main__.load_game_data", lambda **kwargs: fixture_game_data())
-
-
 def cli(tmp_path, trade, *argv):
     environment = {"CRAFTING_DATA_DIR": str(tmp_path / "data"), "CRAFTING_CACHE_DIR": str(tmp_path / "cache")}
-    return main(
-        ["trade", "--spec", str(R12_SPEC), *argv],
+    return trade_main(
+        [str(R12_TARGET), *argv],
+        data=fixture_game_data(),
         transport=trade,
         sleep=lambda seconds: None,
         monotonic=lambda: 0.0,
@@ -243,7 +239,7 @@ def test_the_command_line_default_is_instant_buyout_of_any_age(tmp_path, trade, 
 def test_indexed_one_week_adds_the_window_to_the_search_body(tmp_path, trade, prices_path, capsys):
     assert cli(tmp_path, trade, "--indexed", "1week") == 0
 
-    assert search_body(trade) == sent_body()
+    assert search_body(trade)["query"]["filters"]["trade_filters"] == {"filters": {"indexed": {"option": "1week"}}}
     assert "listings from the last 1week" in capsys.readouterr().out
 
 
@@ -274,7 +270,7 @@ def test_an_invalid_window_exits_with_code_2_and_sends_nothing(tmp_path, trade, 
 def test_the_price_file_entry_carries_the_window(tmp_path, trade, prices_path):
     cli(tmp_path, trade, "--indexed", "3days")
 
-    entry = load_price_file(prices_path).prices["R12 start amulet"]
+    entry = load_price_file(prices_path).prices[R12_KEY]
     assert entry.detail["query"]["query"]["filters"]["trade_filters"] == {
         "filters": {"indexed": {"option": "3days"}}
     }

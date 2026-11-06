@@ -7,7 +7,7 @@ import pytest
 
 from ninja_support import ninja  # noqa: F401  (a fixture)
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, FakeTrade, price_file
+from trade_support import NOW, R12_KEY, R12_TARGET, FakeTrade, price_file
 
 from crafting_system.prices import (
     TRADE_SOURCE,
@@ -18,18 +18,14 @@ from crafting_system.prices import (
     load_price_file,
     write_price_file,
 )
+from crafting_system.cli._trade import trade_main
 from crafting_system.prices.__main__ import main
 from crafting_system.prices.fetch import fetch_price_file
 from crafting_system.prices.trade_pricing import merge_trade_prices, stale_trade_warnings
 
-NAME = "R12 start amulet"
+NAME = R12_KEY  # the price key of the fixture R12 target, computed from it (#474)
 UNORDERED = "Stygian Vise (ilvl 85, Warlord/Hunter)"
 CANONICAL = "Stygian Vise (ilvl 85, Hunter/Warlord)"
-
-
-@pytest.fixture(autouse=True)
-def game_data(monkeypatch):
-    monkeypatch.setattr("crafting_system.prices.__main__.load_game_data", lambda **kwargs: fixture_game_data())
 
 
 def trade_entry(days_old: int, chaos: float = 2.0) -> PriceEntry:
@@ -130,9 +126,9 @@ def test_the_next_trade_run_re_requests_an_aged_price_and_replaces_it(tmp_path, 
     write_price_file(path, file_with_trade(9, NAME))
     trade = FakeTrade()
 
-    code = main(
-        ["trade", "--spec", str(R12_SPEC)],
-        transport=trade, sleep=lambda seconds: None, monotonic=lambda: 0.0, now=NOW, env=cli_env(tmp_path),
+    code = trade_main(
+        [str(R12_TARGET)],
+        data=fixture_game_data(), transport=trade, sleep=lambda seconds: None, monotonic=lambda: 0.0, now=NOW, env=cli_env(tmp_path),
     )
 
     assert code == 0

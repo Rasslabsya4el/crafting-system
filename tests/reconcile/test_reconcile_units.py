@@ -15,6 +15,7 @@ from .files import (
     priced_base_name,
     priced_category,
     priced_item_level,
+    priced_rarity,
     read_buy_spec,
     read_buy_specs,
     read_price_entry,
@@ -361,15 +362,15 @@ def test_the_priced_base_and_item_level_come_from_the_query_else_from_the_key(tm
         {
             "prices": {
                 "T start ring": ENTRY,
-                "Lion Pelt (ilvl 84)": {"chaos": 2, "source": "hand"},
-                "Thicket Bow (ilvl 78, Hunter)": {"chaos": 2, "source": "ninja"},
+                "Lion Pelt, normal, item level 84": {"chaos": 2, "source": "hand"},
+                "Thicket Bow, normal, item level 78-79, Hunter influence": {"chaos": 2, "source": "ninja"},
                 "R12 start amulet": {"chaos": 1, "source": "trade-api"},
             }
         },
     )
     by_query = read_price_entry(path, "T start ring")
-    by_key = read_price_entry(path, "Lion Pelt (ilvl 84)")
-    hunter = read_price_entry(path, "Thicket Bow (ilvl 78, Hunter)")
+    by_key = read_price_entry(path, "Lion Pelt, normal, item level 84")
+    hunter = read_price_entry(path, "Thicket Bow, normal, item level 78-79, Hunter influence")
     none = read_price_entry(path, "R12 start amulet")
 
     assert (priced_base_name(by_query), priced_item_level(by_query), priced_category(by_query)) == ("Ruby Ring", (80, "query"), "accessory.ring")
@@ -378,22 +379,45 @@ def test_the_priced_base_and_item_level_come_from_the_query_else_from_the_key(tm
     assert (priced_base_name(none), priced_item_level(none)) == (None, (None, ""))
 
 
+def test_a_base_id_in_brackets_in_a_key_is_a_label_and_a_query_with_no_type_prices_every_base_whatever_the_key_says(tmp_path):
+    path = _write(
+        tmp_path,
+        "p.json",
+        {
+            "prices": {
+                "Two-Toned Boots [BootsAtlas1], normal, item level 86-100": {"chaos": 5, "source": "poe.ninja"},
+                "Amethyst Ring, item level 75, fractured +(13-16) to all Attributes": {
+                    "chaos": 2,
+                    "source": "trade-api",
+                    "detail": {"query": {"query": {"filters": {"type_filters": {"filters": {"category": {"option": "accessory.ring"}}}}}}},
+                },
+            }
+        },
+    )
+
+    labelled = read_price_entry(path, "Two-Toned Boots [BootsAtlas1], normal, item level 86-100")
+    category_only = read_price_entry(path, "Amethyst Ring, item level 75, fractured +(13-16) to all Attributes")
+
+    assert (priced_base_name(labelled), priced_item_level(labelled)) == ("Two-Toned Boots", (86, "label"))
+    assert (priced_base_name(category_only), priced_category(category_only)) == (None, "accessory.ring")
+
+
 def test_a_poe_ninja_line_has_its_own_item_level_in_the_note_which_wins_over_the_label(tmp_path):
     path = _write(
         tmp_path,
         "p.json",
         {
             "prices": {
-                "Quiver (ilvl 81)": {"chaos": 9, "source": "poe.ninja", "note": "the cheapest normal Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); no line below item level 82"},
-                "Belt (ilvl 86)": {"chaos": 9, "source": "poe.ninja", "note": "poe.ninja BaseType overview: a normal Belt of item level 86, 41 observations"},
-                "Only (ilvl 70)": {"chaos": 9, "source": "poe.ninja", "note": "item level 81 or more, no line below item level 82"},
+                "Quiver [Q5], normal, item level 81": {"chaos": 9, "source": "poe.ninja", "note": "the cheapest normal Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); no line below item level 82"},
+                "Belt, normal, item level 86-100": {"chaos": 9, "source": "poe.ninja", "note": "poe.ninja BaseType overview: a normal Belt of item level 86, 41 observations"},
+                "Only, item level 70": {"chaos": 9, "source": "poe.ninja", "note": "item level 81 or more, no line below item level 82"},
             }
         },
     )
 
-    assert priced_item_level(read_price_entry(path, "Quiver (ilvl 81)")) == (85, "note")
-    assert priced_item_level(read_price_entry(path, "Belt (ilvl 86)")) == (86, "note")
-    assert priced_item_level(read_price_entry(path, "Only (ilvl 70)")) == (70, "label")  # "81 or more" is a floor, not a record
+    assert priced_item_level(read_price_entry(path, "Quiver [Q5], normal, item level 81")) == (85, "note")
+    assert priced_item_level(read_price_entry(path, "Belt, normal, item level 86-100")) == (86, "note")
+    assert priced_item_level(read_price_entry(path, "Only, item level 70")) == (70, "label")  # "81 or more" is a floor, not a record
 
 
 # --- the export ----------------------------------------------------------------------------------------
@@ -456,7 +480,7 @@ def test_files_that_agree_have_every_slot_empty(tmp_path):
             "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
             "start_mod.ResA2.tier", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
             "buy_mod.+#% to Resist.in_target",
-            "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
+            "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
         ]
     )  # fmt: skip
 
@@ -470,11 +494,11 @@ def test_the_slots_come_from_the_two_yaml_files_alone(tmp_path):
         "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
         "start_mod.ResA2.tier", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
         "buy_mod.+#% to Resist.in_target",
-        "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
+        "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
     ]  # fmt: skip
     assert slots(target, None) == [
         "target.base", "start_price.written", "buy_spec.exists", "start_mod.ResA2.tier", "start_mod.ResA2.values",
-        "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
+        "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
     ]  # fmt: skip
 
 
@@ -731,13 +755,13 @@ def test_an_entry_priced_for_another_item_level_or_none_is_a_disagreement(tmp_pa
 
 
 def _hand_target(tmp_path):
-    return read_target(_write(tmp_path, "t.yaml", {**TARGET, "start_price": "Ruby Ring (ilvl 80)", "start_item": {"rarity": "normal"}}))
+    return read_target(_write(tmp_path, "t.yaml", {**TARGET, "start_price": "Ruby Ring, normal, item level 80", "start_item": {"rarity": "normal"}}))
 
 
 def test_a_stand_in_entry_is_read_by_the_words_of_its_key_and_the_level_of_its_note(tmp_path):
     note = "poe.ninja BaseType overview: a normal Ruby Ring of item level 80, 3 observations"
-    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring (ilvl 80)": {"chaos": 2, "source": "poe.ninja", "note": note}}})
-    entry = read_price_entry(price_path, "Ruby Ring (ilvl 80)")
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring, normal, item level 80": {"chaos": 2, "source": "poe.ninja", "note": note}}})
+    entry = read_price_entry(price_path, "Ruby Ring, normal, item level 80")
 
     result = reconcile(_hand_target(tmp_path), None, EXPORT, [entry])
 
@@ -747,17 +771,17 @@ def test_a_stand_in_entry_is_read_by_the_words_of_its_key_and_the_level_of_its_n
 
 def test_a_stand_in_whose_note_gives_another_level_than_its_label_is_a_level_disagreement(tmp_path):
     note = "the cheapest normal Ruby Ring line of item level 80 or more (item level 85, 43 observations)"
-    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring (ilvl 80)": {"chaos": 2, "source": "poe.ninja", "note": note}}})
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring, normal, item level 80": {"chaos": 2, "source": "poe.ninja", "note": note}}})
 
-    result = reconcile(_hand_target(tmp_path), None, EXPORT, [read_price_entry(price_path, "Ruby Ring (ilvl 80)")])
+    result = reconcile(_hand_target(tmp_path), None, EXPORT, [read_price_entry(price_path, "Ruby Ring, normal, item level 80")])
 
     assert result["price.item_level"][0].values == ("80", "85")
 
 
 def test_a_hand_entry_with_the_level_only_in_its_key_is_a_cannot_tell_not_a_pass(tmp_path):
-    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring (ilvl 80)": {"chaos": 2, "source": "hand", "note": "a hand price"}}})
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring, normal, item level 80": {"chaos": 2, "source": "hand", "note": "a hand price"}}})
 
-    result = reconcile(_hand_target(tmp_path), None, EXPORT, [read_price_entry(price_path, "Ruby Ring (ilvl 80)")])
+    result = reconcile(_hand_target(tmp_path), None, EXPORT, [read_price_entry(price_path, "Ruby Ring, normal, item level 80")])
 
     assert result["price.item_level"][0].values == ("80", "cannot tell (label 80)")
     assert result["price.source"][0].values == ("trade-api", "hand")
@@ -840,3 +864,41 @@ def test_a_disagreement_prints_both_places_and_both_values():
 
     assert str(item) == "buy.base: target: Ruby Ring  <>  spec: any ring  [Ruby Ring <> any ring]"
     assert item.values == ("Ruby Ring", "any ring")
+
+
+# --- the rarity of the search the price was taken with ------------------------------------------------------------
+
+
+def test_an_entry_priced_for_another_rarity_than_the_start_item_is_a_disagreement(tmp_path):
+    result = _bad(_run(tmp_path, entry=lambda d: d["detail"]["query"]["query"]["filters"]["type_filters"]["filters"]["rarity"].update(option="normal")))
+
+    assert list(result) == ["price.rarity"]
+
+
+def test_an_entry_with_no_search_has_no_rarity_to_compare(tmp_path):
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring, normal, item level 80": {"chaos": 2, "source": "poe.ninja"}}})
+    entry = read_price_entry(price_path, "Ruby Ring, normal, item level 80")
+
+    assert priced_rarity(entry) is None
+
+
+def test_the_base_s_own_implicit_of_a_spec_narrows_the_bases_it_accepts_and_is_no_bought_mod(tmp_path):
+    mods = {**EXPORT.mods, "BootMod": _mod("Boot", 1, 1, 2, [("extra", 1000)]), "ImpA": _mod("Imp", 1, 5, 9, [], domain="item", generation="unique", text="+(5-9)% to A Resistance"),
+            "ImpB": _mod("Imp", 1, 5, 9, [], domain="item", generation="unique", text="+(5-9)% to B Resistance")}
+    bases = {**EXPORT.bases, TWIN_A: {**_base("Twin Boots", "Boots", ["boots", "default"]), "implicits": ["ImpA"]},
+             TWIN_B: {**_base("Twin Boots", "Boots", ["extra", "boots", "default"]), "implicits": ["ImpB"]}}  # B has another pool
+    export = Export(mods=mods, bases=bases)
+
+    def target(document):
+        document["base"] = TWIN_A
+        document["start_item"] = {"rarity": "rare"}
+
+    def spec(document):
+        document.update(base_type="Twin Boots", category="armour.boots")
+        document["mods"] = [{"stat": "+(5-9)% to A Resistance", "implicit": True, "own": True}]
+
+    result = _run(tmp_path, target=target, spec=spec, entry=lambda d: d["detail"]["query"]["query"].update(type="Twin Boots"), export=export)
+
+    assert result["buy.pool"] == []  # without the implicit the spec would accept Twin B, whose pool has one more mod
+    assert _run(tmp_path, target=target, spec=lambda d: (spec(d), d.update(mods=[])), entry=lambda d: d["detail"]["query"]["query"].update(type="Twin Boots"), export=export)["buy.pool"] != []
+    assert "buy_mod.+#% to A Resistance.in_target" not in result

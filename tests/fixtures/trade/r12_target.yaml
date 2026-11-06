@@ -1,0 +1,14 @@
+# A target on the small fixture export (tests/fixtures/repoe): an amulet whose start item is bought, a rare Paua Amulet with a
+# fractured Lightning Resistance of tier 7. `python -m crafting_system.cli trade` computes its buy spec, trade query and price key.
+base: Paua Amulet
+item_level: 84
+requirements:
+  - family: LightningResistance
+start_item:
+  rarity: rare
+  mods:
+    - mod: LightningResist2
+      tier: 7
+      values: [14]
+      fractured: true
+buys_start_item: true
