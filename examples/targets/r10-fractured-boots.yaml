@@ -39,8 +39,9 @@
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Sorcerer Boots
 
-# The item level of the boots, a whole number from 1 to 100. The guide gives none; 84 lets every
-# tier of every mod appear, as in the R12 example.
+# The item level of the boots, a whole number from 1 to 100. The guide gives none; 84 is this file's choice (the level of the
+# R12 example). It does not let every tier appear: the 35% Movement Speed, tier 1, needs item level 86, so at 84 the 30% tier
+# is the highest the pool holds.
 item_level: 84
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
@@ -49,9 +50,13 @@ influence: []
 
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
-  # The fractured Movement Speed. A family is the game's own name for the group of mods that exclude
-  # each other. `mod` narrows it to one mod of the family, so exactly that tier: the 30% one. The
-  # fractured mod of the start item counts, and no other mod of this family can be added next to it.
+  # The fractured Movement Speed, the 30% one.
+  # Guide (poe-vault.com/guides/ice-shot-deadeye-gear-jewels-and-flasks, "Boots"): "#%Increased Movement Speed (30%+)". A number
+  # (OR-4), which would be `min_roll: 30` on the Movement Speed family, but the loader refuses that: the family also holds two-stat
+  # hybrids, and one `min_roll` list cannot fit mods with different numbers of stats; a `stat:` text selects the fixed 30% mod
+  # only, so it cannot say "30 or more" either (issue #534). So the leaf names the one mod that is 30 or more
+  # at item level 84 (the 35% tier needs 86), which is also the mod the buy spec prices. The fractured mod of the start item
+  # counts, and no other mod of this family can be added next to it.
   - family: MovementVelocity
     mod: MovementVelocity5
 

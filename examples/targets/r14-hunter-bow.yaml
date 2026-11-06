@@ -54,13 +54,13 @@ requirements:
     min_tier: 1
     not_crafted: true
   # Post, step 5: "Slam 2 exalts, this will guarantee +1 socketed gems and chaos damage over time". It names no tier for either,
-  # so OR-1 holds (OR-4, the "guarantee" bullet). The +1 mod has one tier (tier 1), so `min_tier: 1` and no tier are the same mod.
+  # so there is no `min_tier` and OR-1 holds (OR-4, the "guarantee" bullet). The +1 mod has one tier (tier 1: the same mod as
+  # `min_tier: 1` asked before #404).
   - family: IncreaseSocketedGemLevel
-    min_tier: 1
     not_crafted: true
-  # Same sentence: "chaos damage over time", the Hunter prefix at the top tier the item level 78 allows (tier 1).
+  # Same sentence: "chaos damage over time", the Hunter prefix. No tier is named, so no `min_tier`: the top tier of the ladder at
+  # item level 78 (tier 1, `PoisonDamagePrefixInfluence4`, which `mod:` pinned before #404).
   - family: WeaponCasterDamagePrefix
-    mod: PoisonDamagePrefixInfluence4
     not_crafted: true
   # Post, step 7: "Chaos Damage Over Time Multiplier" (a bench craft; the post names no tier, so the top craft a bow takes, OR-1).
   # Crafted by nature, so no not_crafted mark.

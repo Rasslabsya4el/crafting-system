@@ -32,8 +32,8 @@
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Sorcerer Boots
 
-# The item level of the boots, a whole number from 1 to 100. The guide gives none; 84 lets every
-# tier of every mod appear, as in the R12 example.
+# The item level of the boots, a whole number from 1 to 100. The guide gives none; 84 is this file's choice. It does not let
+# every tier appear: the 35% Movement Speed, tier 1, needs item level 86.
 item_level: 84
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
@@ -42,9 +42,8 @@ influence: []
 
 # Everything below must be present on the finished item (a list: every entry is required).
 requirements:
-  # The fractured Movement Speed. A family is the game's own name for the group of mods that exclude
-  # each other. `mod` narrows it to one mod of the family, so exactly that tier: the 30% one. The
-  # fractured mod of the start item counts, and no other mod of this family can be added next to it.
+  # The fractured Movement Speed, the 30% one ("#%Increased Movement Speed (30%+)"; why it is `mod:` and not a `min_roll`: see
+  # r10-fractured-boots.yaml). The fractured mod of the start item counts.
   - family: MovementVelocity
     mod: MovementVelocity5
 
