@@ -278,6 +278,7 @@ def test_golden_a_given_route_that_differs_is_a_second_section_with_its_differin
 
     assert_golden("given_route_differs", html)
     assert html.count("<h2>") == 2 and "<nav>" in html
+    assert html.count("What this answer leaves out") == 1  # the plan's limits are said once, in the planner's section
     ids = re.findall(r' id="([^"]+)"', html)
     assert len(ids) == len(set(ids))
     assert set(re.findall(r'href="#([^"]+)"', html)) <= set(ids)

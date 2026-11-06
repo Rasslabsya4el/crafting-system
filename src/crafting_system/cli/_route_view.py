@@ -647,8 +647,10 @@ def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tupl
     Rows that are the same step (`_same_steps`) are drawn once, in the planner's section. When every row of the given
     route is one of the planner's, one for one, the planner's section says so in a line and the given route has no
     section. Otherwise the given route's section keeps its differing rows only, lists the steps it shares with the
-    planner (as links, with the planner's number) and sends the links that pointed at a shared row to the planner's row.
+    planner (as links, with the planner's number) and sends the links that pointed at a shared row to the planner's row. What the answer
+    leaves out is the plan's, so it stays in the planner's section only.
     """
+    given = replace(given, goal=replace(given.goal, leaves_out=()))  # the same plan's limits are in the planner's section: said once
     prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
     shared = _same_steps(policy, given, prefix)
     if len(shared) == len(given.rows) == len(policy.rows) == len({row.number for row in shared.values()}):
