@@ -3,7 +3,7 @@ Approximate inputs (claims that no other source settles):
   vendor.gem_qualification_is_uncorrupted_skill_gems: The wiki names no rule for support, Awakened or corrupted gems and no other source says.
   vendor.item_level_of_the_result_is_not_settled: The two wiki pages disagree in wording and no other source settles whether the flask or the gems lower the result's item level.
   vendor.result_keeps_the_input_base_type: The wiki's wording does not say whether the base type stays, and the one Reddit thread that touches it is split.
-Requirements: +1 to Level of all Minion Skill Gems; family IncreasedLife (top tier, not crafted)
+Requirements: +1 to Level of all Minion Skill Gems; family IncreasedLife (tier 1 or better, not crafted)
 Prices: league Allflame, fetched 2026-10-31, 1 Divine = 372.20 Chaos
 Start item (Helmet with +1 to Minion Skill Gems (vendor recipe)): 8.00 Chaos [vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)]
 First step, before S1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe
@@ -26,7 +26,7 @@ What this answer leaves out:
 States solved: 786
 
 Policy (S = a state of the item; the start is S1)
-S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix
+S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix
   do: Orb of Augmentation (1 Orb of Augmentation = 0.02 Chaos each)
   expected cost from here 858.40 Chaos, reached with chance 100%
     35.81%  S2
@@ -37,7 +37,7 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
      3.98%  S9
      1.99%  S6
      1.72%  S8
-    S2: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix
+    S2: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix
       do: Regal Orb (1 Regal Orb = 0.06 Chaos each)
       expected cost from here 858.24 Chaos, reached with chance 98.37%
        0.9488%  goal reached
@@ -55,63 +55,63 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
          1.90%  S21
          1.42%  S19
          1.23%  S22
-        S18: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S18: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 94.57%
               100%  S1 (shown above)
-        S10: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S10: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 86.77%
               100%  S1 (shown above)
-        S11: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S11: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 76.63%
               100%  S1 (shown above)
-        S14: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S14: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 74.45%
               100%  S1 (shown above)
-        S16: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S16: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 85.07%
               100%  S1 (shown above)
-        S12: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S12: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 71.83%
               100%  S1 (shown above)
-        S13: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S13: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 68.61%
               100%  S1 (shown above)
-        S15: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S15: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 68.61%
               100%  S1 (shown above)
-        S20: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S20: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 81.17%
               100%  S1 (shown above)
-        S17: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S17: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 76.66%
               100%  S1 (shown above)
-        S23: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S23: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 68.02%
               100%  S1 (shown above)
-        S21: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S21: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 42.15%
               100%  S1 (shown above)
-        S19: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S19: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 51.38%
               100%  S1 (shown above)
-        S22: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S22: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 47.78%
               100%  S1 (shown above)
-    S5: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix
+    S5: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix
       do: Regal Orb (1 Regal Orb = 0.06 Chaos each)
       expected cost from here 858.32 Chaos, reached with chance 98.05%
        0.9398%  goal reached
@@ -129,59 +129,59 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
          1.88%  S56
          1.41%  S54
          1.22%  S57
-        S53: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S53: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 83.69%
               100%  S1 (shown above)
-        S48: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S48: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 74.27%
               100%  S1 (shown above)
-        S51: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S51: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 71.96%
               100%  S1 (shown above)
-        S30: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S30: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 83.44%
               100%  S1 (shown above)
-        S49: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S49: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 69.19%
               100%  S1 (shown above)
-        S50: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S50: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 65.81%
               100%  S1 (shown above)
-        S52: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S52: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 65.81%
               100%  S1 (shown above)
-        S55: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S55: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 79.23%
               100%  S1 (shown above)
-        S42: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S42: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 74.40%
               100%  S1 (shown above)
-        S58: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S58: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 65.30%
               100%  S1 (shown above)
-        S56: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S56: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 39.08%
               100%  S1 (shown above)
-        S54: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S54: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 48.31%
               100%  S1 (shown above)
-        S57: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S57: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 44.73%
               100%  S1 (shown above)
-    S3: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix
+    S3: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix
       do: Regal Orb (1 Regal Orb = 0.06 Chaos each)
       expected cost from here 858.61 Chaos, reached with chance 92.69%
        0.9058%  goal reached
@@ -199,55 +199,55 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
          1.81%  S33
          1.36%  S31
          1.18%  S34
-        S24: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S24: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 48.12%
               100%  S1 (shown above)
-        S27: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S27: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 45.19%
               100%  S1 (shown above)
-        S25: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S25: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 41.91%
               100%  S1 (shown above)
-        S26: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S26: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 38.21%
               100%  S1 (shown above)
-        S28: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S28: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 38.21%
               100%  S1 (shown above)
-        S32: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S32: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 55.52%
               100%  S1 (shown above)
-        S29: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S29: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 48.74%
               100%  S1 (shown above)
-        S36: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S36: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 29.19%
               100%  S1 (shown above)
-        S35: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S35: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 38.10%
               100%  S1 (shown above)
-        S33: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S33: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 17.09%
               100%  S1 (shown above)
-        S31: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S31: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 23.42%
               100%  S1 (shown above)
-        S34: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S34: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 20.93%
               100%  S1 (shown above)
-    S7: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix
+    S7: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix
       do: Regal Orb (1 Regal Orb = 0.06 Chaos each)
       expected cost from here 858.47 Chaos, reached with chance 90.26%
        0.9225%  goal reached
@@ -264,47 +264,47 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
          1.85%  S73
          1.38%  S64
          1.20%  S74
-        S68: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S68: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 41.47%
               100%  S1 (shown above)
-        S71: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S71: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 38.64%
               100%  S1 (shown above)
-        S69: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S69: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 35.53%
               100%  S1 (shown above)
-        S70: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S70: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 32.08%
               100%  S1 (shown above)
-        S72: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S72: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 32.08%
               100%  S1 (shown above)
-        S44: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S44: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 41.85%
               100%  S1 (shown above)
-        S75: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S75: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 31.78%
               100%  S1 (shown above)
-        S73: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S73: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 13.60%
               100%  S1 (shown above)
-        S64: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S64: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 18.79%
               100%  S1 (shown above)
-        S74: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S74: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 16.70%
               100%  S1 (shown above)
-    S4: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix
+    S4: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix
       do: Regal Orb (1 Regal Orb = 0.06 Chaos each)
       expected cost from here 858.57 Chaos, reached with chance 87.43%
        0.9107%  goal reached
@@ -321,43 +321,43 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
          1.82%  S45
          1.37%  S43
          1.18%  S46
-        S37: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S37: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 34.91%
               100%  S1 (shown above)
-        S40: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S40: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 32.28%
               100%  S1 (shown above)
-        S38: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S38: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 29.43%
               100%  S1 (shown above)
-        S39: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S39: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 26.33%
               100%  S1 (shown above)
-        S41: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S41: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 26.33%
               100%  S1 (shown above)
-        S47: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S47: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 26.19%
               100%  S1 (shown above)
-        S45: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S45: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 10.65%
               100%  S1 (shown above)
-        S43: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S43: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 14.99%
               100%  S1 (shown above)
-        S46: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S46: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 13.24%
               100%  S1 (shown above)
-    S9: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix
+    S9: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix
       do: Regal Orb (1 Regal Orb = 0.06 Chaos each)
       expected cost from here 858.68 Chaos, reached with chance 81.61%
        0.8977%  goal reached
@@ -374,39 +374,39 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
          1.80%  S88
          1.35%  S67
          1.17%  S82
-        S83: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S83: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 25.63%
               100%  S1 (shown above)
-        S86: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S86: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 23.45%
               100%  S1 (shown above)
-        S84: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S84: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 21.14%
               100%  S1 (shown above)
-        S85: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S85: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 18.69%
               100%  S1 (shown above)
-        S87: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S87: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 18.69%
               100%  S1 (shown above)
-        S88: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S88: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 7.11%
               100%  S1 (shown above)
-        S67: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S67: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 10.24%
               100%  S1 (shown above)
-        S82: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S82: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 8.99%
               100%  S1 (shown above)
-    S6: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix
+    S6: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix
       do: Regal Orb (1 Regal Orb = 0.06 Chaos each)
       expected cost from here 858.79 Chaos, reached with chance 68.50%
        0.8857%  goal reached
@@ -423,35 +423,35 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
          2.66%  S67 (shown above)
          1.77%  S65
          1.15%  S66
-        S59: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S59: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 14.53%
               100%  S1 (shown above)
-        S62: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S62: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 13.13%
               100%  S1 (shown above)
-        S60: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S60: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 11.68%
               100%  S1 (shown above)
-        S61: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S61: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 10.18%
               100%  S1 (shown above)
-        S63: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S63: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 10.18%
               100%  S1 (shown above)
-        S65: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S65: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 3.64%
               100%  S1 (shown above)
-        S66: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes
+        S66: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 4.68%
               100%  S1 (shown above)
-    S8: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix
+    S8: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix
       do: Regal Orb (1 Regal Orb = 0.06 Chaos each)
       expected cost from here 858.80 Chaos, reached with chance 65.27%
        0.8842%  goal reached
@@ -468,27 +468,27 @@ S1: magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife 
          2.65%  S82 (shown above)
          1.77%  S81
          1.33%  S66 (shown above)
-        S76: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S76: rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 12.83%
               100%  S1 (shown above)
-        S79: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S79: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 11.57%
               100%  S1 (shown above)
-        S77: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S77: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 10.27%
               100%  S1 (shown above)
-        S78: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S78: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 8.93%
               100%  S1 (shown above)
-        S80: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S80: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 8.93%
               100%  S1 (shown above)
-        S81: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix
+        S81: rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix
           do: restart (1 Helmet with +1 to Minion Skill Gems (vendor recipe) = 8.00 Chaos each)
           expected cost from here 866.40 Chaos, reached with chance 3.17%
               100%  S1 (shown above)

@@ -21,7 +21,7 @@
   "target": "v01-minion-helmet.yaml",
   "requirements": [
     "+1 to Level of all Minion Skill Gems",
-    "family IncreasedLife (top tier, not crafted)"
+    "family IncreasedLife (tier 1 or better, not crafted)"
   ],
   "prices": {
     "league": "Allflame",
@@ -300,7 +300,7 @@
   "states": [
     {
       "id": "S1",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix",
       "action": "Orb of Augmentation",
       "cost_per_use": 0.01604,
       "resources": [
@@ -351,7 +351,7 @@
     },
     {
       "id": "S2",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
       "action": "Regal Orb",
       "cost_per_use": 0.06364,
       "resources": [
@@ -430,7 +430,7 @@
     },
     {
       "id": "S3",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
       "action": "Regal Orb",
       "cost_per_use": 0.06364,
       "resources": [
@@ -509,7 +509,7 @@
     },
     {
       "id": "S4",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
       "action": "Regal Orb",
       "cost_per_use": 0.06364,
       "resources": [
@@ -584,7 +584,7 @@
     },
     {
       "id": "S5",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
       "action": "Regal Orb",
       "cost_per_use": 0.06364,
       "resources": [
@@ -663,7 +663,7 @@
     },
     {
       "id": "S6",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
       "action": "Regal Orb",
       "cost_per_use": 0.06364,
       "resources": [
@@ -738,7 +738,7 @@
     },
     {
       "id": "S7",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
       "action": "Regal Orb",
       "cost_per_use": 0.06364,
       "resources": [
@@ -813,7 +813,7 @@
     },
     {
       "id": "S8",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
       "action": "Regal Orb",
       "cost_per_use": 0.06364,
       "resources": [
@@ -888,7 +888,7 @@
     },
     {
       "id": "S9",
-      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 1 suffix",
+      "description": "magic; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 1 suffix",
       "action": "Regal Orb",
       "cost_per_use": 0.06364,
       "resources": [
@@ -963,7 +963,7 @@
     },
     {
       "id": "S10",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -986,7 +986,7 @@
     },
     {
       "id": "S11",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1009,7 +1009,7 @@
     },
     {
       "id": "S12",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1032,7 +1032,7 @@
     },
     {
       "id": "S13",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1055,7 +1055,7 @@
     },
     {
       "id": "S14",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1078,7 +1078,7 @@
     },
     {
       "id": "S15",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1101,7 +1101,7 @@
     },
     {
       "id": "S16",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1124,7 +1124,7 @@
     },
     {
       "id": "S17",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1147,7 +1147,7 @@
     },
     {
       "id": "S18",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1170,7 +1170,7 @@
     },
     {
       "id": "S19",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1193,7 +1193,7 @@
     },
     {
       "id": "S20",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1216,7 +1216,7 @@
     },
     {
       "id": "S21",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1239,7 +1239,7 @@
     },
     {
       "id": "S22",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1262,7 +1262,7 @@
     },
     {
       "id": "S23",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1285,7 +1285,7 @@
     },
     {
       "id": "S24",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1308,7 +1308,7 @@
     },
     {
       "id": "S25",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1331,7 +1331,7 @@
     },
     {
       "id": "S26",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1354,7 +1354,7 @@
     },
     {
       "id": "S27",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1377,7 +1377,7 @@
     },
     {
       "id": "S28",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1400,7 +1400,7 @@
     },
     {
       "id": "S29",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1423,7 +1423,7 @@
     },
     {
       "id": "S30",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1446,7 +1446,7 @@
     },
     {
       "id": "S31",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1469,7 +1469,7 @@
     },
     {
       "id": "S32",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1492,7 +1492,7 @@
     },
     {
       "id": "S33",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1515,7 +1515,7 @@
     },
     {
       "id": "S34",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1538,7 +1538,7 @@
     },
     {
       "id": "S35",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1561,7 +1561,7 @@
     },
     {
       "id": "S36",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1584,7 +1584,7 @@
     },
     {
       "id": "S37",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1607,7 +1607,7 @@
     },
     {
       "id": "S38",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1630,7 +1630,7 @@
     },
     {
       "id": "S39",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1653,7 +1653,7 @@
     },
     {
       "id": "S40",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1676,7 +1676,7 @@
     },
     {
       "id": "S41",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1699,7 +1699,7 @@
     },
     {
       "id": "S42",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1722,7 +1722,7 @@
     },
     {
       "id": "S43",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1745,7 +1745,7 @@
     },
     {
       "id": "S44",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1768,7 +1768,7 @@
     },
     {
       "id": "S45",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1791,7 +1791,7 @@
     },
     {
       "id": "S46",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1814,7 +1814,7 @@
     },
     {
       "id": "S47",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1837,7 +1837,7 @@
     },
     {
       "id": "S48",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1860,7 +1860,7 @@
     },
     {
       "id": "S49",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1883,7 +1883,7 @@
     },
     {
       "id": "S50",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1906,7 +1906,7 @@
     },
     {
       "id": "S51",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1929,7 +1929,7 @@
     },
     {
       "id": "S52",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1952,7 +1952,7 @@
     },
     {
       "id": "S53",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1975,7 +1975,7 @@
     },
     {
       "id": "S54",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -1998,7 +1998,7 @@
     },
     {
       "id": "S55",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2021,7 +2021,7 @@
     },
     {
       "id": "S56",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2044,7 +2044,7 @@
     },
     {
       "id": "S57",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2067,7 +2067,7 @@
     },
     {
       "id": "S58",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2090,7 +2090,7 @@
     },
     {
       "id": "S59",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2113,7 +2113,7 @@
     },
     {
       "id": "S60",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2136,7 +2136,7 @@
     },
     {
       "id": "S61",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2159,7 +2159,7 @@
     },
     {
       "id": "S62",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2182,7 +2182,7 @@
     },
     {
       "id": "S63",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2205,7 +2205,7 @@
     },
     {
       "id": "S64",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2228,7 +2228,7 @@
     },
     {
       "id": "S65",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2251,7 +2251,7 @@
     },
     {
       "id": "S66",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2274,7 +2274,7 @@
     },
     {
       "id": "S67",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2297,7 +2297,7 @@
     },
     {
       "id": "S68",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2320,7 +2320,7 @@
     },
     {
       "id": "S69",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2343,7 +2343,7 @@
     },
     {
       "id": "S70",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2366,7 +2366,7 @@
     },
     {
       "id": "S71",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2389,7 +2389,7 @@
     },
     {
       "id": "S72",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2412,7 +2412,7 @@
     },
     {
       "id": "S73",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2435,7 +2435,7 @@
     },
     {
       "id": "S74",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2458,7 +2458,7 @@
     },
     {
       "id": "S75",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2481,7 +2481,7 @@
     },
     {
       "id": "S76",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2504,7 +2504,7 @@
     },
     {
       "id": "S77",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2527,7 +2527,7 @@
     },
     {
       "id": "S78",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2550,7 +2550,7 @@
     },
     {
       "id": "S79",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2573,7 +2573,7 @@
     },
     {
       "id": "S80",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2596,7 +2596,7 @@
     },
     {
       "id": "S81",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2619,7 +2619,7 @@
     },
     {
       "id": "S82",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 1 prefix, 2 suffixes",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 1 prefix, 2 suffixes",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2642,7 +2642,7 @@
     },
     {
       "id": "S83",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; too weak: family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2665,7 +2665,7 @@
     },
     {
       "id": "S84",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2688,7 +2688,7 @@
     },
     {
       "id": "S85",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2711,7 +2711,7 @@
     },
     {
       "id": "S86",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2734,7 +2734,7 @@
     },
     {
       "id": "S87",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
@@ -2757,7 +2757,7 @@
     },
     {
       "id": "S88",
-      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (top tier, not crafted); other mods: 2 prefixes, 1 suffix",
+      "description": "rare; has +1 to Level of all Minion Skill Gems; lacks family IncreasedLife (tier 1 or better, not crafted); other mods: 2 prefixes, 1 suffix",
       "action": "restart",
       "cost_per_use": 8.0,
       "resources": [
