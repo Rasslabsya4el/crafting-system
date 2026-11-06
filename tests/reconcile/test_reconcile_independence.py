@@ -1,9 +1,16 @@
-"""The reconcile package imports nothing from the planner (ticket #412, the principle of independence).
+"""The reconcile package imports nothing from the planner and runs no code it cannot see (ticket #412, independence).
 
-The scan reads the AST of every `.py` file of `tests/reconcile/` and fails on any import of `crafting_system`, plain,
-`from`, or through `__import__` / `importlib.import_module` with a literal name. The package code (not the tests) may use the
-standard library and `yaml` only. The planner's name is assembled from pieces in the samples below, so the scan does not
-flag this file for them.
+The scan reads the AST of every `.py` file under `tests/reconcile/`, subfolders included, and fails on:
+
+- any import of the planner, plain or `from`;
+- any relative import that leaves `tests/reconcile/` (it is resolved to its real module, so `from .. import x` in
+  a top-level file is outside) or does not name a module of the package;
+- any import outside the standard library, `yaml` and the package itself (`pytest` too in a test file);
+- any use of the dynamic ways around an import: the import machinery module, the `__import__` builtin, `exec`, `eval`,
+  `spec_from_file_location`, `import_module`, whether imported, called, read as an attribute, or named as a string
+  (`getattr(builtins, "exec")`).
+
+The banned names and the planner's name are assembled from pieces here, so this file does not flag itself.
 """
 
 import ast
@@ -12,34 +19,64 @@ from pathlib import Path
 
 import pytest
 
+PACKAGE_NAME = "reconcile"
 PACKAGE = Path(__file__).resolve().parent
 PLANNER = "crafting_" + "system"
-ALLOWED_IN_CODE = set(sys.stdlib_module_names) | {"yaml"}
+OUTSIDE = "<outside tests/reconcile>"
+BANNED = frozenset({"import" + "lib", "__imp" + "ort__", "ex" + "ec", "ev" + "al", "spec_from_" + "file_location", "import_" + "module"})
+ALLOWED_IN_CODE = set(sys.stdlib_module_names) | {"yaml", PACKAGE_NAME}
 ALLOWED_IN_TESTS = ALLOWED_IN_CODE | {"pytest"}
-DYNAMIC = {"__import__", "import_module"}
 
 
-def imported_roots(source: str) -> set[str]:
-    """The top-level names this source imports, absolute imports only (a relative import stays inside the package).
+def package_of(path: Path, root: Path = PACKAGE) -> tuple[str, ...]:
+    """The dotted package a file belongs to, as parts: `("reconcile",)` for a top-level file of the package."""
+    return (PACKAGE_NAME, *path.resolve().relative_to(root.resolve()).parent.parts)
 
-    A call of `__import__` or `import_module` with a literal name counts as an import of that name.
+
+def scan_source(source: str, package: tuple[str, ...] = (PACKAGE_NAME,)) -> tuple[set[str], set[tuple[str, ...]], set[str]]:
+    """What a source imports and misuses: (top-level names, resolved relative modules, banned names used).
+
+    A relative import is resolved against `package`: the name `OUTSIDE` stands for one that leaves the package
+    folder; otherwise the resolved module is returned as parts, for `resolves_inside` to look up.
     """
-    roots = set()
+    roots: set[str] = set()
+    relative: set[tuple[str, ...]] = set()
+    banned: set[str] = set()
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
             roots |= {alias.name.split(".")[0] for alias in node.names}
-        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-            roots.add(node.module.split(".")[0])
-        elif isinstance(node, ast.Call):
-            function = node.func
-            name = function.id if isinstance(function, ast.Name) else getattr(function, "attr", None)
-            if name in DYNAMIC and node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str):
-                roots.add(node.args[0].value.split(".")[0])
-    return roots
+            banned |= {alias.name.split(".")[0] for alias in node.names} & BANNED
+        elif isinstance(node, ast.ImportFrom):
+            names = {alias.name for alias in node.names}
+            banned |= names & BANNED
+            if node.level == 0:
+                roots.add((node.module or "").split(".")[0])
+                banned |= {(node.module or "").split(".")[0]} & BANNED
+                continue
+            up = node.level - 1
+            if up >= len(package):
+                roots.add(OUTSIDE)
+                continue
+            parts = (*package[: len(package) - up], *(node.module.split(".") if node.module else ()))
+            roots.add(parts[0])
+            relative.add(parts)
+        elif isinstance(node, ast.Name) and node.id in BANNED:
+            banned.add(node.id)
+        elif isinstance(node, ast.Attribute) and node.attr in BANNED:
+            banned.add(node.attr)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value in BANNED:
+            banned.add(node.value)
+    return roots, relative, banned
 
 
-def package_files() -> list[Path]:
-    return sorted(PACKAGE.glob("*.py"))
+def resolves_inside(parts: tuple[str, ...], root: Path = PACKAGE) -> bool:
+    """Whether the relative module `parts` (first part: the package) is a folder or a `.py` file of the package."""
+    path = root.joinpath(*parts[1:])
+    return path.is_dir() or path.with_suffix(".py").is_file()
+
+
+def package_files(root: Path = PACKAGE) -> list[Path]:
+    return sorted(root.rglob("*.py"))
 
 
 def test_the_package_has_code_and_tests_to_scan():
@@ -50,15 +87,18 @@ def test_the_package_has_code_and_tests_to_scan():
 
 
 @pytest.mark.parametrize("path", package_files(), ids=lambda path: path.name)
-def test_no_file_imports_the_planner(path):
-    assert PLANNER not in imported_roots(path.read_text(encoding="utf-8"))
-
-
-@pytest.mark.parametrize("path", package_files(), ids=lambda path: path.name)
-def test_the_package_uses_the_standard_library_and_yaml_only(path):
+def test_no_file_imports_the_planner_or_leaves_the_package_or_goes_around_an_import(path):
+    roots, relative, banned = scan_source(path.read_text(encoding="utf-8"), package_of(path))
     allowed = ALLOWED_IN_TESTS if path.name.startswith("test_") else ALLOWED_IN_CODE
 
-    assert imported_roots(path.read_text(encoding="utf-8")) <= allowed
+    assert PLANNER not in roots
+    assert OUTSIDE not in roots
+    assert roots <= allowed, sorted(roots - allowed)
+    assert all(resolves_inside(parts) for parts in relative), sorted(parts for parts in relative if not resolves_inside(parts))
+    assert banned == set()
+
+
+# --- the scanner itself: each hole it must catch ---------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -70,17 +110,103 @@ def test_the_package_uses_the_standard_library_and_yaml_only(path):
         f"from {PLANNER}.items import tiers",
         f"import json, {PLANNER}",
         f"def late():\n    from {PLANNER}.prices import price_file\n",
-        f"importlib.import_module('{PLANNER}.items')",
-        f"__import__('{PLANNER}')",
     ],
 )
-def test_the_scan_sees_every_way_to_import_the_planner(source):
-    assert PLANNER in imported_roots(source)
+def test_the_scan_sees_every_plain_import_of_the_planner(source):
+    assert PLANNER in scan_source(source)[0]
 
 
 @pytest.mark.parametrize(
     "source",
-    ["import json\nfrom pathlib import Path", "from . import checks", "from .ladder import ladder", "import yaml", "x = 'crafting_system'"],
+    [
+        "from .. import checks",
+        "from ..known import KNOWN",
+        "from ...anything import value",
+        "def late():\n    from .. import x\n",
+    ],
 )
-def test_the_scan_does_not_flag_other_code_or_a_relative_import(source):
-    assert PLANNER not in imported_roots(source)
+def test_a_relative_import_that_leaves_the_package_is_outside(source):
+    assert OUTSIDE in scan_source(source)[0]
+
+
+def test_a_relative_import_is_resolved_to_its_real_module_by_the_folder_of_the_file():
+    inside = scan_source("from . import checks\nfrom .ladder import ladder\nfrom ..export import Export", ("reconcile", "sub"))
+
+    assert inside[1] == {("reconcile", "sub"), ("reconcile", "sub", "ladder"), ("reconcile", "export")}
+    assert OUTSIDE not in inside[0]
+    assert OUTSIDE in scan_source("from ... import x", ("reconcile", "sub"))[0]
+    assert OUTSIDE not in scan_source("from .. import x", ("reconcile", "sub"))[0]
+
+
+def test_a_relative_import_must_name_a_module_that_exists_in_the_package(tmp_path):
+    (tmp_path / "real.py").write_text("", encoding="utf-8")
+    (tmp_path / "folder").mkdir()
+
+    assert resolves_inside(("reconcile", "real"), tmp_path)
+    assert resolves_inside(("reconcile", "folder"), tmp_path)
+    assert resolves_inside(("reconcile",), tmp_path)
+    assert not resolves_inside(("reconcile", "missing"), tmp_path)
+    assert not resolves_inside(("reconcile", "folder", "missing"), tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("source", "name"),
+    [
+        ("import " + "import" + "lib", "import" + "lib"),
+        ("from " + "import" + "lib import util", "import" + "lib"),
+        ("import " + "import" + "lib.util", "import" + "lib"),
+        ("from os import path as p\nfrom x import " + "import_" + "module", "import_" + "module"),
+        ("x = " + "__imp" + "ort__" + "('json')", "__imp" + "ort__"),
+        ("name = 'json'\n" + "ex" + "ec" + "('import ' + name)", "ex" + "ec"),
+        ("v = " + "ev" + "al" + "('1')", "ev" + "al"),
+        ("util." + "spec_from_" + "file_location" + "('m', 'p')", "spec_from_" + "file_location"),
+        ("m = pkg." + "import_" + "module" + "(name)", "import_" + "module"),
+        ("f = getattr(__builtins__, '" + "ex" + "ec" + "')", "ex" + "ec"),
+        ("from " + "spec_from_" + "file_location" + " import x", "spec_from_" + "file_location"),
+    ],
+)
+def test_every_way_around_an_import_is_a_banned_use(source, name):
+    assert name in scan_source(source)[2]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import json\nfrom pathlib import Path",
+        "import re\npattern = re.compile('x')",
+        "from . import checks\nfrom .ladder import ladder",
+        "import yaml",
+        "x = 'crafting_system'",
+        "executed = 1\nevaluate = 2\nimportance = 3",
+    ],
+)
+def test_the_scan_does_not_flag_ordinary_code(source):
+    roots, relative, banned = scan_source(source)
+
+    assert PLANNER not in roots
+    assert OUTSIDE not in roots
+    assert banned == set()
+
+
+def test_the_scan_walks_subfolders_and_reads_their_package_name(tmp_path):
+    (tmp_path / "deep" / "deeper").mkdir(parents=True)
+    (tmp_path / "top.py").write_text("", encoding="utf-8")
+    (tmp_path / "deep" / "mid.py").write_text("", encoding="utf-8")
+    (tmp_path / "deep" / "deeper" / "low.py").write_text("", encoding="utf-8")
+
+    found = package_files(tmp_path)
+
+    assert [path.name for path in found] == ["low.py", "mid.py", "top.py"]
+    assert package_of(tmp_path / "top.py", tmp_path) == ("reconcile",)
+    assert package_of(tmp_path / "deep" / "deeper" / "low.py", tmp_path) == ("reconcile", "deep", "deeper")
+
+
+def test_a_planner_import_in_a_subfolder_file_is_found_through_the_walk(tmp_path):
+    (tmp_path / "deep").mkdir()
+    bad = tmp_path / "deep" / "bad.py"
+    bad.write_text(f"from {PLANNER} import data\nfrom ...x import y\n", encoding="utf-8")
+
+    roots = set().union(*(scan_source(path.read_text(encoding="utf-8"), package_of(path, tmp_path))[0] for path in package_files(tmp_path)))
+
+    assert PLANNER in roots
+    assert OUTSIDE in roots

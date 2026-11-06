@@ -6,7 +6,7 @@ from copy import deepcopy
 import pytest
 import yaml
 
-from .checks import reconcile, reconcile_files, slots
+from .checks import Disagreement, check_ids, reconcile, reconcile_files, slots
 from .export import Export, ExportMissing, load_export, version_folder
 from .files import (
     FileFormatError,
@@ -20,7 +20,17 @@ from .files import (
     read_price_entry,
     read_target,
 )
-from .ladder import base_ids_of, bases_named, ladder, normalise_stat_text, spawn_weight, stat_ranges
+from .ladder import (
+    base_ids_of,
+    bases_named,
+    bases_of_category,
+    is_royale,
+    ladder,
+    normalise_stat_text,
+    pool_of,
+    spawn_weight,
+    stat_ranges,
+)
 
 RING = "Metadata/Items/Rings/Ring1"
 RING2 = "Metadata/Items/Rings/Ring2"
@@ -59,6 +69,7 @@ EXPORT = Export(
         "TieB": _mod("Tie", 10, 3, 4, [("ring", 1)], text="tie b"),
         "TieLow": _mod("Tie", 5, 0, 1, [("ring", 1)], text="tie low"),
         "Speed1": _mod("Speed", 55, 30, 30, [("ring", 1)], text="30% increased Movement Speed"),
+        "ResA2Royale": _mod("ResA", 5, 20, 30, [("ring", 1000)]),  # a Battle Royale copy that can spawn (#248): never on the ladder
     },
     bases={
         RING: _base("Ruby Ring", "Ring", ["ring", "default"]),
@@ -67,6 +78,11 @@ EXPORT = Export(
         TWIN_A: _base("Twin Boots", "Boots", ["boots", "default"]),
         TWIN_B: _base("Twin Boots", "Boots", ["boots", "default"]),
         "Metadata/Items/Amulets/A": _base("Gold Amulet", "Amulet", ["amulet", "default"]),
+        "Metadata/Items/Rings/RingRoyale9": _base("Ruby Ring", "Ring", ["not_for_sale", "ring", "default"]),
+        "Metadata/Items/Belts/Belt3": _base("Cloth Belt", "Belt", ["belt", "default"]),
+        "Metadata/Items/Belts/BeltRoyale1": _base("Cloth Belt", "Belt", ["not_for_sale", "belt", "default"]),
+        "Metadata/Items/Boots/Atlas1": _base("Pied Boots", "Boots", ["not_for_sale", "boots", "default"]),
+        "Metadata/Items/Boots/Atlas2": _base("Pied Boots", "Boots", ["not_for_sale", "boots", "default"]),
     },
 )
 
@@ -145,6 +161,15 @@ def test_the_ladder_leaves_out_zero_weight_other_type_other_domain_other_generat
     assert set(tiers) == {"ResA1", "ResA2", "ResA3"}
 
 
+def test_a_battle_royale_mod_that_can_spawn_is_not_on_the_ladder_and_does_not_shift_the_tiers():
+    tiers = ladder(EXPORT.mods, ["ring", "default"], "ResA1")
+
+    assert "ResA2Royale" not in tiers
+    assert tiers["ResA1"] == 3  # tier 4 if the Royale copy (level 5) counted
+    assert spawn_weight(EXPORT.mods["ResA2Royale"], ["ring"]) > 0
+    assert is_royale("ResA2Royale") and is_royale("Metadata/Items/Belts/BeltRoyale1") and not is_royale("ResA2")
+
+
 def test_the_first_matching_spawn_entry_decides_the_weight():
     mod = EXPORT.mods["ResAFirstZero"]
 
@@ -197,6 +222,28 @@ def test_base_ids_of_reads_an_id_a_name_a_shared_name_and_ignores_unreleased_bas
     assert base_ids_of(EXPORT.bases, "Twin Boots") == [TWIN_A, TWIN_B]
     assert base_ids_of(EXPORT.bases, "No Such Base") == []
     assert bases_named(EXPORT.bases, "Twin Boots") == [TWIN_A, TWIN_B]
+
+
+def test_a_royale_base_is_not_a_namesake_and_a_not_for_sale_one_is_dropped_only_if_others_are_on_sale():
+    assert bases_named(EXPORT.bases, "Cloth Belt") == ["Metadata/Items/Belts/Belt3"]  # the Royale belt is no second base
+    assert bases_named(EXPORT.bases, "Pied Boots") == ["Metadata/Items/Boots/Atlas1", "Metadata/Items/Boots/Atlas2"]  # all not for sale: all stay
+    assert bases_named(EXPORT.bases, "Ruby Ring") == [RING]  # the Royale ring and the removed ring are not namesakes
+
+
+def test_the_bases_of_a_category_are_the_released_royale_free_ones_on_sale():
+    assert bases_of_category(EXPORT.bases, "accessory.ring") == [RING, RING2]
+    assert bases_of_category(EXPORT.bases, "armour.boots") == [TWIN_A, TWIN_B]
+    assert bases_of_category(EXPORT.bases, "no.such") == []
+
+
+def test_the_pool_of_a_base_is_its_ordinary_spawnable_mods_without_royale_copies():
+    pool = pool_of(EXPORT.mods, ["ring", "default"])
+
+    assert "ResA1" in pool and "ResA3" in pool
+    assert "ResA2Royale" not in pool and "ResCrafted" not in pool and "ResAOff" not in pool
+    cache = {}
+    assert pool_of(EXPORT.mods, ["ring", "default"], cache) == pool
+    assert pool_of(EXPORT.mods, ["default", "ring"], cache) is cache[(id(EXPORT.mods), ("default", "ring"))]
 
 
 # --- the files -----------------------------------------------------------------------------------------
@@ -289,10 +336,28 @@ def test_the_priced_base_and_item_level_come_from_the_query_else_from_the_key(tm
     hunter = read_price_entry(path, "Thicket Bow (ilvl 78, Hunter)")
     none = read_price_entry(path, "R12 start amulet")
 
-    assert (priced_base_name(by_query), priced_item_level(by_query), priced_category(by_query)) == ("Ruby Ring", 80, "accessory.ring")
-    assert (priced_base_name(by_key), priced_item_level(by_key), priced_category(by_key)) == ("Lion Pelt", 84, None)
-    assert (priced_base_name(hunter), priced_item_level(hunter)) == ("Thicket Bow", 78)
-    assert (priced_base_name(none), priced_item_level(none)) == (None, None)
+    assert (priced_base_name(by_query), priced_item_level(by_query), priced_category(by_query)) == ("Ruby Ring", (80, "query"), "accessory.ring")
+    assert (priced_base_name(by_key), priced_item_level(by_key), priced_category(by_key)) == ("Lion Pelt", (84, "label"), None)
+    assert (priced_base_name(hunter), priced_item_level(hunter)) == ("Thicket Bow", (78, "label"))
+    assert (priced_base_name(none), priced_item_level(none)) == (None, (None, ""))
+
+
+def test_a_poe_ninja_line_has_its_own_item_level_in_the_note_which_wins_over_the_label(tmp_path):
+    path = _write(
+        tmp_path,
+        "p.json",
+        {
+            "prices": {
+                "Quiver (ilvl 81)": {"chaos": 9, "source": "poe.ninja", "note": "the cheapest normal Quiver line of item level 81 or more with at least 5 observations (item level 85, 43 observations); no line below item level 82"},
+                "Belt (ilvl 86)": {"chaos": 9, "source": "poe.ninja", "note": "poe.ninja BaseType overview: a normal Belt of item level 86, 41 observations"},
+                "Only (ilvl 70)": {"chaos": 9, "source": "poe.ninja", "note": "item level 81 or more, no line below item level 82"},
+            }
+        },
+    )
+
+    assert priced_item_level(read_price_entry(path, "Quiver (ilvl 81)")) == (85, "note")
+    assert priced_item_level(read_price_entry(path, "Belt (ilvl 86)")) == (86, "note")
+    assert priced_item_level(read_price_entry(path, "Only (ilvl 70)")) == (70, "label")  # "81 or more" is a floor, not a record
 
 
 # --- the export ----------------------------------------------------------------------------------------
@@ -340,11 +405,11 @@ def test_files_that_agree_have_every_slot_empty(tmp_path):
     assert _bad(result) == {}
     assert sorted(result) == sorted(
         [
-            "target.base",
-            "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence",
+            "target.base", "start_price.written", "buy_spec.exists",
+            "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
             "start_mod.ResA2.tier", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
             "buy_mod.+#% to Resist.in_target",
-            "price.entry", "price.base", "price.item_level",
+            "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
         ]
     )  # fmt: skip
 
@@ -354,20 +419,51 @@ def test_the_slots_come_from_the_two_yaml_files_alone(tmp_path):
     spec = read_buy_spec(_write(tmp_path, "b.yaml", SPEC))
 
     assert slots(target, spec) == [
-        "target.base", "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence",
+        "target.base", "start_price.written", "buy_spec.exists",
+        "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
         "start_mod.ResA2.tier", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
-        "buy_mod.+#% to Resist.in_target", "price.entry", "price.base", "price.item_level",
+        "buy_mod.+#% to Resist.in_target",
+        "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
     ]  # fmt: skip
     assert slots(target, None) == [
-        "target.base", "start_mod.ResA2.tier", "start_mod.ResA2.values", "price.entry", "price.base", "price.item_level"
-    ]
+        "target.base", "start_price.written", "buy_spec.exists", "start_mod.ResA2.tier", "start_mod.ResA2.values",
+        "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
+    ]  # fmt: skip
 
 
-def test_a_target_without_spec_or_price_has_only_the_data_slots(tmp_path):
+def test_a_target_with_no_start_price_and_no_buy_spec_fails_both_slots_and_has_no_price_slots(tmp_path):
     target = read_target(_write(tmp_path, "t.yaml", {"base": "Ruby Ring", "item_level": 80}))
 
-    assert slots(target, None) == ["target.base"]
-    assert reconcile(target, None, EXPORT, []) == {"target.base": []}
+    result = reconcile(target, None, EXPORT, [])
+
+    assert slots(target, None) == ["target.base", "start_price.written", "buy_spec.exists"]
+    assert [slot for slot, items in result.items() if items] == ["start_price.written", "buy_spec.exists"]
+    assert result["start_price.written"][0].values == ("none", "free")
+    assert result["buy_spec.exists"][0].values == ("none", "no buy spec")
+
+
+def test_a_start_price_with_no_buy_spec_fails_only_the_spec_slot(tmp_path):
+    target = read_target(_write(tmp_path, "t.yaml", TARGET))
+
+    result = reconcile(target, None, EXPORT, [])
+
+    assert [slot for slot, items in result.items() if items and not slot.startswith("price.")] == ["buy_spec.exists"]
+    assert result["buy_spec.exists"][0].values == ("T start ring", "no buy spec")
+
+
+def test_removing_the_start_price_or_renaming_the_spec_is_a_failure_and_changes_the_check_set(tmp_path):
+    whole = [read_target(_write(tmp_path, "t.yaml", TARGET))]
+    specs = [read_buy_spec(_write(tmp_path, "b.yaml", SPEC))]
+    unpriced = [read_target(_write(tmp_path, "t.yaml", {k: v for k, v in TARGET.items() if k != "start_price"}))]
+    renamed = [read_buy_spec(_write(tmp_path, "r.yaml", {**SPEC, "name": "another name"}))]
+
+    full = check_ids(whole, specs)
+
+    assert full[0] == "t::target.base"
+    assert set(check_ids(unpriced, specs)) < set(full)  # the price checks and the spec checks are gone
+    assert set(check_ids(whole, renamed)) < set(full)  # the spec checks are gone
+    assert reconcile(unpriced[0], None, EXPORT, [])["start_price.written"] != []
+    assert reconcile(whole[0], None, EXPORT, [])["buy_spec.exists"] != []
 
 
 def test_a_base_that_is_not_in_the_game_data_is_reported_once(tmp_path):
@@ -587,12 +683,88 @@ def test_an_entry_priced_for_another_item_level_or_none_is_a_disagreement(tmp_pa
     assert list(lower) == ["price.item_level"] and list(none) == ["price.item_level"]
 
 
-def test_an_entry_made_by_hand_is_read_by_the_words_of_its_key(tmp_path):
-    target = read_target(_write(tmp_path, "t.yaml", {**TARGET, "start_price": "Ruby Ring (ilvl 80)", "start_item": {"rarity": "normal"}}))
-    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring (ilvl 80)": {"chaos": 2, "source": "hand"}}})
+def _hand_target(tmp_path):
+    return read_target(_write(tmp_path, "t.yaml", {**TARGET, "start_price": "Ruby Ring (ilvl 80)", "start_item": {"rarity": "normal"}}))
+
+
+def test_a_stand_in_entry_is_read_by_the_words_of_its_key_and_the_level_of_its_note(tmp_path):
+    note = "poe.ninja BaseType overview: a normal Ruby Ring of item level 80, 3 observations"
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring (ilvl 80)": {"chaos": 2, "source": "poe.ninja", "note": note}}})
     entry = read_price_entry(price_path, "Ruby Ring (ilvl 80)")
 
-    assert {s: i for s, i in reconcile(target, None, EXPORT, [entry]).items() if i} == {}
+    result = reconcile(_hand_target(tmp_path), None, EXPORT, [entry])
+
+    assert [slot for slot, items in result.items() if items and slot.startswith("price.")] == ["price.source"]
+    assert result["price.source"][0].values == ("trade-api", "poe.ninja")
+
+
+def test_a_stand_in_whose_note_gives_another_level_than_its_label_is_a_level_disagreement(tmp_path):
+    note = "the cheapest normal Ruby Ring line of item level 80 or more (item level 85, 43 observations)"
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring (ilvl 80)": {"chaos": 2, "source": "poe.ninja", "note": note}}})
+
+    result = reconcile(_hand_target(tmp_path), None, EXPORT, [read_price_entry(price_path, "Ruby Ring (ilvl 80)")])
+
+    assert result["price.item_level"][0].values == ("80", "85")
+
+
+def test_a_hand_entry_with_the_level_only_in_its_key_is_a_cannot_tell_not_a_pass(tmp_path):
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring (ilvl 80)": {"chaos": 2, "source": "hand", "note": "a hand price"}}})
+
+    result = reconcile(_hand_target(tmp_path), None, EXPORT, [read_price_entry(price_path, "Ruby Ring (ilvl 80)")])
+
+    assert result["price.item_level"][0].values == ("80", "cannot tell (label 80)")
+    assert result["price.source"][0].values == ("trade-api", "hand")
+
+
+def test_an_entry_with_no_level_and_no_base_anywhere_is_reported_on_both_slots(tmp_path):
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby": {"chaos": 2, "source": "trade-api"}}})
+    target = read_target(_write(tmp_path, "t.yaml", {**TARGET, "start_price": "Ruby", "start_item": {"rarity": "normal"}}))
+
+    result = reconcile(target, None, EXPORT, [read_price_entry(price_path, "Ruby")])
+
+    assert result["price.item_level"][0].values == ("80", "none")
+    assert result["price.base"][0].values == ("Ruby Ring", "no base")
+
+
+def _bone_export():
+    mods = {**EXPORT.mods, "BoneMod": _mod("Bone", 1, 1, 2, [("bone", 1000)])}
+    bases = {**EXPORT.bases, "Metadata/Items/Rings/Bone": _base("Bone Ring", "Ring", ["bone", "ring", "default"])}
+    return Export(mods=mods, bases=bases)
+
+
+def test_a_spec_with_no_base_type_accepts_every_ring_and_one_with_another_pool_is_a_disagreement(tmp_path):
+    result = _run(tmp_path, spec=lambda d: d.pop("base_type"), export=_bone_export())
+
+    assert result["buy.pool"][0].values == ("Ruby Ring", "Metadata/Items/Rings/Bone (+1 -0)")
+
+
+def test_a_spec_by_a_base_type_accepts_that_name_only_so_the_pool_agrees(tmp_path):
+    assert _run(tmp_path, export=_bone_export())["buy.pool"] == []
+
+
+def test_a_category_only_price_entry_accepts_every_ring_and_its_pool_difference_is_reported(tmp_path):
+    result = _run(tmp_path, entry=lambda d: d["detail"]["query"]["query"].pop("type"), export=_bone_export())
+
+    assert result["price.pool"][0].values == ("Ruby Ring", "Metadata/Items/Rings/Bone (+1 -0)")
+    assert result["price.base"][0].values == ("Ruby Ring", "any accessory.ring")
+
+
+def test_a_shared_name_whose_bases_have_another_pool_is_a_pool_disagreement(tmp_path):
+    mods = {**EXPORT.mods, "BootMod": _mod("Boot", 1, 1, 2, [("extra", 1000)])}
+    bases = {**EXPORT.bases, TWIN_B: _base("Twin Boots", "Boots", ["extra", "boots", "default"])}
+    export = Export(mods=mods, bases=bases)
+
+    def target(document):
+        document["base"] = TWIN_A
+        document["start_item"] = {"rarity": "rare"}
+
+    def entry(document):
+        document["detail"]["query"]["query"]["type"] = "Twin Boots"
+
+    result = _run(tmp_path, target=target, spec=lambda d: d.update(base_type="Twin Boots", category="armour.boots", mods=[]), entry=entry, export=export)
+
+    assert result["buy.pool"][0].values == ("Twin Boots", f"{TWIN_B} (+1 -0)")
+    assert result["price.pool"][0].values == ("Twin Boots", f"{TWIN_B} (+1 -0)")
 
 
 def test_a_start_price_in_no_price_file_is_a_disagreement(tmp_path):
@@ -616,9 +788,8 @@ def test_reconcile_files_finds_the_spec_and_the_price_entries_itself(tmp_path):
     assert result["price.base"] == []
 
 
-def test_a_disagreement_prints_both_places():
-    from .checks import Disagreement
+def test_a_disagreement_prints_both_places_and_both_values():
+    item = Disagreement("buy.base", "target: Ruby Ring", "spec: any ring", "Ruby Ring", "any ring")
 
-    text = str(Disagreement("buy.base", "target: Ruby Ring", "spec: any ring"))
-
-    assert text == "buy.base: target: Ruby Ring  <>  spec: any ring"
+    assert str(item) == "buy.base: target: Ruby Ring  <>  spec: any ring  [Ruby Ring <> any ring]"
+    assert item.values == ("Ruby Ring", "any ring")

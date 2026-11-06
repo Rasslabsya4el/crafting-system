@@ -9,6 +9,10 @@ The ladder does not depend on the item level (a tier the item level does not all
 
 The ticket calls the ladder "of a family". Mods of one `groups` family can have several mod types (the
 five "+1 to Level of all X Skill Gems" amulet prefixes), each its own ladder, so the type is used.
+
+Battle Royale copies (a mod id with `Royale` in it) are left out: four of them have a positive spawn weight
+in the data (issue #248) and the Craft of Exile emulator never rolls them, so on Sorcerer Boots
+`MovementVelocity1` is tier 6 of 6, not 7 of 7. The same goes for Royale bases.
 """
 
 import re
@@ -31,6 +35,11 @@ _RANGE = re.compile(r"\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)")
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
+def is_royale(identifier: str) -> bool:
+    """A Battle Royale mod or base: its id says so."""
+    return "Royale" in identifier
+
+
 def spawn_weight(mod: dict, tags) -> int:
     """The weight of `mod` on an item with `tags`: the first spawn entry the tags satisfy, else 0."""
     for entry in mod.get("spawn_weights", ()):
@@ -50,7 +59,9 @@ def ladder(mods: dict, base_tags, mod_id: str) -> dict[str, int]:
     members = {
         other_id: other["required_level"]
         for other_id, other in mods.items()
-        if (other["type"], other["generation_type"], other["domain"]) == key and spawn_weight(other, base_tags) > 0
+        if not is_royale(other_id)
+        and (other["type"], other["generation_type"], other["domain"]) == key
+        and spawn_weight(other, base_tags) > 0
     }
     return {
         member: 1 + sum(level > own_level for level in members.values()) for member, own_level in members.items()
@@ -70,8 +81,19 @@ def normalise_stat_text(text: str) -> str:
 
 
 def bases_named(bases: dict, name: str) -> list[str]:
-    """The ids of the released bases whose English name is `name`, sorted."""
-    return sorted(base_id for base_id, base in bases.items() if base["name"] == name and base["release_state"] == "released")
+    """The ids of the bases a player can hold under the English name `name`, sorted.
+
+    Released bases only, Royale bases never. Where a name is shared and some of its bases are on sale, the
+    ones tagged `not_for_sale` are dropped (the second Leather Belt is `BeltRoyale1`); where all are tagged
+    so (the three Two-Toned Boots, the Atlas bases), all stay, since none is the better reading.
+    """
+    ids = [
+        base_id
+        for base_id, base in bases.items()
+        if base["name"] == name and base["release_state"] == "released" and not is_royale(base_id)
+    ]
+    on_sale = [base_id for base_id in ids if "not_for_sale" not in bases[base_id]["tags"]]
+    return sorted(on_sale or ids)
 
 
 def base_ids_of(bases: dict, reference: str) -> list[str]:
@@ -79,3 +101,31 @@ def base_ids_of(bases: dict, reference: str) -> list[str]:
     if reference in bases:
         return [reference]
     return bases_named(bases, reference)
+
+
+def bases_of_category(bases: dict, category: str) -> list[str]:
+    """The ids of the bases on sale in a trade category (a search without a base type accepts all of them)."""
+    classes = {item_class for item_class, option in TRADE_CATEGORY.items() if option == category}
+    return sorted(
+        base_id
+        for base_id, base in bases.items()
+        if base["item_class"] in classes
+        and base["release_state"] == "released"
+        and not is_royale(base_id)
+        and "not_for_sale" not in base["tags"]
+    )
+
+
+def pool_of(mods: dict, base_tags, cache: dict | None = None) -> frozenset:
+    """The ids of the ordinary mods (domain `item`, no Royale copy) that can spawn on a base with `base_tags`."""
+    key = (id(mods), tuple(sorted(base_tags)))
+    if cache is not None and key in cache:
+        return cache[key]
+    found = frozenset(
+        mod_id
+        for mod_id, mod in mods.items()
+        if mod["domain"] == "item" and not is_royale(mod_id) and spawn_weight(mod, base_tags) > 0
+    )
+    if cache is not None:
+        cache[key] = found
+    return found

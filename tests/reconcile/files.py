@@ -74,6 +74,7 @@ class PriceEntry:
     key: str
     chaos: float | None
     source: str | None
+    note: str = ""
     query: dict = field(default_factory=dict)  # the trade query, {} when the entry was not made from one
 
 
@@ -179,7 +180,7 @@ def read_price_entry(path: Path, key: str) -> PriceEntry | None:
         return None
     detail = raw.get("detail") or {}
     query = (detail.get("query") or {}).get("query") or {}
-    return PriceEntry(file=path, key=key, chaos=raw.get("chaos"), source=raw.get("source"), query=query)
+    return PriceEntry(file=path, key=key, chaos=raw.get("chaos"), source=raw.get("source"), note=raw.get("note") or "", query=query)
 
 
 _KEY_BASE = re.compile(r"^(?P<base>.+?) \((?:ilvl (?P<ilvl>\d+))?")
@@ -200,11 +201,24 @@ def priced_category(entry: PriceEntry) -> str | None:
     return (filters.get("category") or {}).get("option")
 
 
-def priced_item_level(entry: PriceEntry) -> int | None:
-    """The item level the price was taken for: the query's `ilvl.min`, else the `ilvl N` in the key."""
+_NOTE_LEVELS = (re.compile(r"\(item level (\d+)"), re.compile(r"\bof item level (\d+)(?! or more)"))
+
+
+def priced_item_level(entry: PriceEntry) -> tuple[int | None, str]:
+    """The item level the price was taken for, and where that is recorded: (level, "query" | "note" | "label").
+
+    "query": the trade query's `ilvl.min`. "note": the line the price was read from, as the entry's note
+    records it (a poe.ninja line has its own level, which can be above the one in the key). "label": only
+    the `ilvl N` in the key, which is a name, not a record; the check cannot tell from it. (None, "") when the
+    entry has no level at all.
+    """
     filters = ((entry.query.get("filters") or {}).get("misc_filters") or {}).get("filters") or {}
     minimum = (filters.get("ilvl") or {}).get("min")
     if minimum is not None:
-        return minimum
+        return minimum, "query"
+    for pattern in _NOTE_LEVELS:
+        found = pattern.search(entry.note)
+        if found:
+            return int(found.group(1)), "note"
     match = re.search(r"\bilvl (\d+)", entry.key)
-    return int(match.group(1)) if match else None
+    return (int(match.group(1)), "label") if match else (None, "")

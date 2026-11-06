@@ -7,7 +7,7 @@ checked against the pin's hashes: `data verify` does that in CI before any test 
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +26,7 @@ class Export:
     mods: dict
     bases: dict
     source: str = ""
+    cache: dict = field(default_factory=dict, compare=False, repr=False)  # derived data (mod pools), filled on demand
 
 
 def cache_dir(environ=None) -> Path:
