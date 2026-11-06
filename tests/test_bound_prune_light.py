@@ -440,6 +440,22 @@ def test_when_every_offer_outside_the_set_costs_more_than_the_values_the_certifi
     assert state.calls == [("a", False), ("a", True), ("b", False), ("c", False), ("d", False)]
 
 
+def test_each_bound_is_raised_one_level_at_a_time_and_only_when_the_test_needs_it(monkeypatch):
+    harness, _, offers = world(monkeypatch)
+    harness.default = values_of(6.5)
+    harness.answers[S1 | {"c", "e"}] = values_of(4.5)
+    raised_calls = []
+    real = bp._raised
+    monkeypatch.setattr(bp, "_raised", lambda ab, bare, item, chosen, action, kind, level, pbar, target: raised_calls.append((action.name, level, target)) or real(ab, bare, item, chosen, action, kind, level, pbar, target))
+
+    run(offers)
+
+    assert raised_calls == [
+        ("a", 0, 1), ("a", 1, 2), ("b", 0, 1), ("c", 0, 1),  # best first: the search for rho
+        ("c", 1, 2), ("d", 0, 1), ("e", 0, 1), ("e", 1, 2),  # round 1: c to its exact chance, d and e one level and two
+    ]  # (round 2: d's raised bound 7 is over T = 4.5: nothing to raise)
+
+
 def test_an_offer_that_cannot_be_proved_needless_joins_the_set_and_the_next_round_solves_again(monkeypatch):
     harness, state, offers = world(monkeypatch)
     harness.default = values_of(6.5)
@@ -698,6 +714,7 @@ class PoolSpy(parallel.WorkerPool):
     made: list = []
     mapped: list = []
     jobs: list = []
+    returned: list = []
 
     def __init__(self, factory, args=(), *, workers=None):
         PoolSpy.made.append(workers)
@@ -707,11 +724,13 @@ class PoolSpy(parallel.WorkerPool):
     def map(self, function, pieces, *, chunk=None):
         pieces = list(pieces)
         PoolSpy.mapped.append((len(pieces), chunk))
-        return super().map(function, pieces, chunk=chunk)
+        found = super().map(function, pieces, chunk=chunk)
+        PoolSpy.returned.append(len(found))  # only when every piece ran: a piece that raises never gets here
+        return found
 
 
 def with_pool(monkeypatch, workers="2", inherit=True):
-    PoolSpy.made, PoolSpy.mapped, PoolSpy.jobs = [], [], []
+    PoolSpy.made, PoolSpy.mapped, PoolSpy.jobs, PoolSpy.returned = [], [], [], []
     monkeypatch.setenv("CRAFTING_WORKERS", workers)
     monkeypatch.setattr(parallel, "can_inherit", lambda: inherit)
     monkeypatch.setattr(parallel, "WorkerPool", PoolSpy)
@@ -736,8 +755,19 @@ def test_the_bounds_of_the_offers_outside_the_set_are_raised_a_level_at_a_time_s
     # level 1: d and e (c is at level 1 already) pass the quick test lower <= T = 6.5; level 2: c and e (d's raised bound 7 is above T)
     assert PoolSpy.made == [2, 2] and PoolSpy.mapped == [(2, 1), (2, 1)]  # min(workers, jobs) each; one piece at a time
     assert PoolSpy.jobs == [[("d", 1), ("e", 1)], [("c", 2), ("e", 2)]]
+    assert PoolSpy.returned == [2, 2]  # every piece ran in the pool, none failed and fell back to this process
     assert (found.rounds, found.bounded, found.j_max, found.rho) == (serial.rounds, serial.bounded, serial.j_max, serial.rho)
     assert labels(found.used) == labels(serial.used) == S1 | {"c", "e"}
+
+
+def test_the_quick_test_that_picks_the_batch_takes_the_slack_off_the_lower_bound(monkeypatch):
+    # T = 5.999999999997 is between e's 6 (1 - 1e-12) = 5.999999999994 and 6: e is in the batch (and d, whose lower bound is 5)
+    with_pool(monkeypatch)
+    harness, _, offers = parallel_world(monkeypatch, j=(5.999999999997 - 1e-9) / (1 + 1e-9))
+
+    run(offers, rounds=1)
+
+    assert PoolSpy.jobs[0] == [("d", 1), ("e", 1)]
 
 
 def test_a_batch_of_one_is_raised_in_this_process(monkeypatch):

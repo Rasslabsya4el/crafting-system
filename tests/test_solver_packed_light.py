@@ -291,11 +291,13 @@ def test_bicgstab_stops_at_the_first_step_whose_residual_is_below_the_tolerance_
     # step, 0.05 after the second, and 1e-3 only after the third; scaling b by a million changes nothing
     for scale in (1.0, 1e6):
         b = (A3 @ X3) * scale
-        for tol, steps in ((0.1, 1), (0.05, 2), (1e-3, 3)):
+        for tol, steps in ((0.3, 1), (0.1, 1), (0.05, 2), (1e-3, 3)):
             x, relative, taken = ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), tol, 100)
 
             assert taken == steps, (scale, tol)
             assert relative <= tol and relative == pytest.approx(residual_of(A3, b, x), rel=1e-6, abs=1e-14)
+        # a tolerance of 0.3 is met by the half step (x + alpha p, residual 0.28) before the second half of the step is made (0.066)
+        assert ps._bicgstab(lambda v: A3 @ v, b, np.zeros(3), 0.3, 100)[1] > 0.2
 
 
 def test_bicgstab_started_at_the_answer_takes_no_step():
@@ -463,21 +465,17 @@ def test_an_improper_policy_is_refused_with_its_singular_system():
         evaluate_policy(work, np.ones(3), np.array([0, 1, -1]), np.zeros(3), 100, 1e-13, {})
 
 
-def test_a_stiff_system_gets_its_iterative_refinement(monkeypatch):
-    # 40 states in a row, each leaving with chance 1 / (1 + 1e9): the values are (1 + 1e9) (40 - i). One LU solve of this matrix loses
-    # nine digits; the first refinement brings the residual under 4 eps and the second finds nothing left to do
-    n, leaving = 40, 10**9
+def test_a_stiff_system_gets_its_iterative_refinement():
+    # 300 states in a row, each leaving with chance 1 / (1 + 1e14): the values are (1 + 1e14) (300 - i). One LU solve of this matrix is
+    # a few parts in 1e15 off (7e-15 on the machine this was written on); the refinement brings it to the rounding of the sum
+    n, leaving = 300, 10**14
     graph = build(*[(False, [(1.0, [(i + 1, 1), (i, leaving)])]) for i in range(n)], (True, []))
     work, leave = prepared(graph)
-    solves = []
-    real = np.linalg.solve
-    monkeypatch.setattr(np.linalg, "solve", lambda a, b: solves.append(1) or real(a, b))
 
-    values = evaluate_policy(work, leave, np.concatenate((np.arange(n), [-1])), np.zeros(n + 1), 100, 1e-13, {})
+    values = evaluate_policy(work, leave, np.concatenate((np.arange(n), [-1])), np.zeros(n + 1), 1000, 1e-13, {})
 
     expected = np.array([(1 + leaving) * (n - i) for i in range(n)], dtype=float)
-    assert values[:n] == pytest.approx(expected, rel=1e-14)
-    assert len(solves) == 3  # the solve and two refinements: the second refinement still saw a residual above the allowance
+    assert values[:n] == pytest.approx(expected, rel=2e-15)  # a correction of the wrong sign would leave twice the error of the solve
 
 
 # --- solve_graph and solve_packed ---------------------------------------------------------------------------------------
