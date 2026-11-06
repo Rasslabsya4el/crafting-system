@@ -90,6 +90,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_route_packed.py", "_Reading.action", ("NotApplicableError", "OutOfScopeError"), EITHER, "that offer is not a twin here"),
     ("cli/_route_sim.py", "route_policy.policy", ("NotApplicableError", "OutOfScopeError"), EITHER, "the rule's action cannot be used on this item: a gap of the route"),
     ("targets/corrupted.py", "CorruptedResolver._pools", ("NotApplicableError", "OutOfScopeError"), EITHER, "the target cannot ask for `corrupted: true` here, and the error says why"),
+    ("targets/parse.py", "_Ladder.tiers", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base, as `Abstraction._context` reads them"),
     ("targets/floor.py", "_change_points", ("NotApplicableError", "OutOfScopeError"), EITHER, "no pool to read, so every level counts and nothing is left out"),
 ]
 # Clauses that catch the refusals through their parent `ValueError` (both families are ValueErrors) or through a tuple constant (`ROUTE_ERRORS`), in the

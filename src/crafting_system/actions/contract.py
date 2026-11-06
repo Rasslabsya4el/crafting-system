@@ -7,7 +7,7 @@ the base class answers for it unless its file holds several actions):
   Reforge Lightning", an essence's own name). Two actions of a catalog can share a label only when
   their `variant` differs (two bench crafts that read alike, told apart by their mod id).
 * `outcomes(data, item)`: the exact result on a concrete item (see `ActionOutcomes`), or an
-  `ActionError` when the game refuses (`NotApplicableError`) or no admitted rule covers the item
+  a refusal when the game refuses (`NotApplicableError`) or no admitted rule covers the item
   (`OutOfScopeError`).
 * `resources(data)`: what one use consumes, by price-file name; read from claims of the registry.
 * `reads(data)`: what of the item besides its fractured mods the result depends on (`Reads`).
