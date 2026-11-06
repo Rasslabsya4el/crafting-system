@@ -29,7 +29,7 @@ from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_f
 from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
-from crafting_system.targets import KOfN, Requirement, Target, load_target, start_price_key
+from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
 
 from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
@@ -455,7 +455,7 @@ def _missing_start_price(data: GameData, target: Target, prices: PriceFile, root
     beside the price file. The trade command is only named, never run: the benchmark does not call the trade API, so a run stays
     reproducible and offline.
     """
-    if not target.bought:  # a given start item (OR-6) has no price to miss
+    if target.start is not StartKind.BOUGHT:  # a given start item (OR-6) has no price to miss
         return None
     name = start_price_key(data, target)
     if name in prices.prices:

@@ -58,12 +58,12 @@ def plain_candidate(data: GameData, target: Target, prices: PriceFile, override:
         chaos, name, source = price.chaos, price.name, price.source
     except PlanError as error:
         chaos, name, source = None, _key_of(data, target), str(error)
-    return StartCandidate(PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, target.start_item, chaos, name, source, given=not target.bought)
+    return StartCandidate(PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, target.start_item, chaos, name, source, given=target.start is not StartKind.BOUGHT)
 
 
 def _key_of(data: GameData, target: Target) -> str | None:
     """The price key of a bought start item, or None when the target buys nothing or its item cannot be searched."""
-    if not target.bought:
+    if target.start is not StartKind.BOUGHT:
         return None
     try:
         return start_price_key(data, target)

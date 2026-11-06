@@ -32,7 +32,8 @@
     "state": "S1",
     "price_name": "Helmet with +1 to Minion Skill Gems (vendor recipe)",
     "price_chaos": 8.0,
-    "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)"
+    "price_source": "vendor recipe: 1 Lion Pelt (ilvl 84) + 1 Vendor recipe gems (minion, 40% quality)",
+    "given": false
   },
   "start_options": {
     "first_step": {
@@ -90,6 +91,7 @@
         "recipe": null,
         "steps": 0,
         "start_price_chaos": 2.0,
+        "given": false,
         "goods": [],
         "mean_cost_without_start": 1346.9387888470606,
         "total_chaos": 1348.9387888470606,
@@ -106,6 +108,7 @@
         "recipe": "minion_helmet",
         "steps": 0,
         "start_price_chaos": 8.0,
+        "given": false,
         "goods": [
           {
             "name": "Lion Pelt (ilvl 84)",

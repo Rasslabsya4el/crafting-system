@@ -25,7 +25,7 @@ from crafting_system.prices import PriceFile
 from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
 from crafting_system.solver import Action, Outcome, Solution, solve
 from crafting_system.prices.query_compare import other_item
-from crafting_system.targets import KOfN, Requirement, StartBuyError, Target, buy_spec_of
+from crafting_system.targets import KOfN, Requirement, StartBuyError, StartKind, Target, buy_spec_of
 
 from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
@@ -269,7 +269,7 @@ def resolve_start_price(
     (`--start-price`, above 0), else the price file (hand overrides already in it) under the key computed from the target
     (`start_price_key`); a key that is not in the file is an error that names it: the cost of the whole craft would be wrong without it.
     """
-    if not target.bought:
+    if target.start is not StartKind.BOUGHT:
         if override is not None:
             raise PlanError(
                 "the target says its start item is given, so it has no price and `--start-price` has nothing to set; "

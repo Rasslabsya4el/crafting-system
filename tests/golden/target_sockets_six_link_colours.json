@@ -71,7 +71,7 @@
     "imprints": []
   },
   "price_file": null,
-  "buys_start_item": false,
+  "start": "given",
   "implicits": [],
   "quality": {
     "_type": "PlainQualityRequirement",
