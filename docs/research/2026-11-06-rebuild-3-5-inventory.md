@@ -4,10 +4,12 @@ Date: 2026-11-06. Read-only inventory of `main` at `7c9e8df`, game data repoe-fo
 
 ## How it was made, and what it did not do
 
-- The files the brief names were read from the first line to the last: `src/crafting_system/items/model.py` (lines 1 to 400, and every flag and tier line after it by search), `actions/bench.py`, `targets/model.py`, `targets/floor.py`, `cli/_plan.py`, `cli/_offers.py`, `cli/_report.py`, `cli/_marking.py`, `cli/_decide.py`, `cli/_main.py`, `cli/_reach.py` (top), and `tests/golden/reachability.md`. The route page (`cli/_route_view.py`) was read from line 100 to the end.
+- The files the brief names were read from the first line to the last: `src/crafting_system/items/model.py` (lines 1 to 400, and every flag and tier line after it by search), `actions/bench.py`, `targets/model.py`, `targets/floor.py`, `cli/_plan.py`, `cli/_offers.py`, `cli/_report.py`, `cli/_marking.py`, `cli/_decide.py`, `cli/_main.py`, `cli/_reach.py` (top), and `tests/golden/reachability.md`. The route page (`cli/_route_view.py`) was read from line 100 to the end. `abstraction/_estimate.py` was read from line 1 to 290 and around lines 323-347 and 408-420.
+- `risk/` (16 files), `solver/` (19 files), `simulator/` (5 files), `abstraction/_coarse.py`, `_estimate.py` and `_inputs.py` (10,246 lines in all) were scanned for every module constant, every `raise`, every `except`, and the words "cap", "limit", "gives up", "falls back", "refuse", "unresolved"; each hit was read in its context. The algorithms of these files were not read line by line, and the list of limits in 5.4 and 5.5 is only as complete as that scan.
 - The rest of `src/` (198 files, 47,739 lines) and `tests/` were searched with complete patterns, not read line by line; the files that a search pointed to were read around the hit. The patterns are named at each list, so a reader can run them again. `ExplicitMod(`, `.crafted`, `fractured`, `tiers.get(`, `tier_table`, `OutOfScopeError`, `except ... ActionError`, `start_price`, `get_rule`, `Item.build(`, and every key of the 14 target files were each searched over all of `src/` and `tests/`. Where the brief asked for "read in full" and a list rests on a search, the list says so.
 - Counts of leaves per target in section 3.7 were computed once with a read-only script against the cached 3.29.3.3 export (`tier_table`, `catalog(..., names={"bench-craft", "essence"})`). They say what the data and the catalog hold. They are not planner results, and no plan was solved.
 - Numbers quoted from the audit are marked "audit" and were not measured again here, except where a line says "re-counted".
+- Every file count states its pattern. The ones in Part C are collected in the table "Counts and the pattern behind them" at the end of that part; they were taken once with a script over `src/**/*.py` and `tests/**/*.py` after the merge of `main` at `7c9e8df`.
 - Surfaces of the answer are abbreviated: **T** the text report (`render_text`), **J** the JSON policy (`policy_document`), **P** the route page (`write_route_page`), **E** the one `Error:` line on stderr (`cli/_main.py:171-173`).
 - Rules cited: `OR-n` of `docs/owner-rules.md`. Issues: the contradiction issues #403 to #410, #415 to #418, #423, #425 to #429 (all open), and #411, #412, #414, #419 (closed) that they came from.
 
@@ -17,19 +19,21 @@ Date: 2026-11-06. Read-only inventory of `main` at `7c9e8df`, game data repoe-fo
 |---|---|
 | 3.1 Origin of a mod: stored | 11 |
 | 3.1 Origin: decided (writers) | 21 |
-| 3.1 Origin: read downstream | 22 |
+| 3.1 Origin: read downstream | 26 |
 | 3.1 Origin: lost | 8 |
-| 3.2 Default tiers in `src/` (constants 4, fallbacks and literals 19, defaults on the target side 4) | 27 |
+| 3.2 Default tiers in `src/` (constants 4, fallbacks and literals 20, defaults on the target side 4) | 28 |
+| 3.2 Places that derive a tier and refuse, skip or raise (not defaults) | 4 |
 | 3.2 Default tiers in `tests/` (helper sites) | 35 |
 | 3.3 Start items the code or a target file makes up | 13 |
-| 3.4 Places where a price of 0 or no price means free or no restart | 14 |
+| 3.4 Places where a price of 0 or no price means free or no restart | 20 |
 | 3.5 Claims whose "approximate" lives only in their text | 15 |
 | 5.1 Gates and constants of the planner entry | 24 |
 | 5.2 Offer filters and withheld kinds (code places) | 17 |
-| 5.2 Kinds withheld: `planner=False` 28, opt-in 17, needs strands 3, corrupting 1 | 59 kinds in the catalog |
+| 5.2 Kinds withheld: `planner=False` 28, opt-in 17, needs strands 3, corrupting 1 (opt-in and strands overlap on one kind) | 59 kinds in the catalog; 28 closed by `planner=False`, 20 of the 31 planner kinds withheld by a flag, 11 offered by default |
 | 5.3 Unpriced items and price-provenance facts | 17 |
-| 5.4 Cuts and bounds of the search | 17 |
+| 5.4 Cuts and bounds of the search (C1 to C17 from the planner entry and the cli, C18 to C35 from `abstraction/_estimate.py`, `risk/`, `solver/`, `simulator/`; C35 is one row of implementation constants) | 35 |
 | 5.5 Model gaps: `OutOfScopeError` raise sites | 84 (in 25 files) |
+| 5.5 The second refusal family (`EstimateRefused`, `ConvergenceError`, `NoPolicyError`, `BlockHoldsMetamod`, `LevelTimeout`, `BranchingError`, `NotSubcritical`) | 7 |
 | 5.5 Model gaps: `except` clauses on `ActionError` or its subclasses | 34 (27 treat both causes alike, 3 catch only the game's refusal, 4 only the model gap) |
 | 5.6 Display limits | 9 |
 | 5.7 Settings accepted and never read | 5 (of 24) |
@@ -43,8 +47,12 @@ Date: 2026-11-06. Read-only inventory of `main` at `7c9e8df`, game data repoe-fo
 | OR-3 | the target, the buy spec and the price agree on the start item | 3.2 (T27), 3.3, 3.4 |
 | OR-4 | the guide's own wording wins | 3.7 (targets with `min_tier: 1` for a "soft wish") |
 | OR-5 | a target never restricts the actions; the answer shows a user's setting | 5.2 (K1, K4) |
+| OR-6 | a start item is given or bought; how it was acquired is not modelled | 3.3 (I1 to I5) |
 | OR-7, OR-8 | trade price: instant buyout only, mean of the cheapest few, a marked fallback may stand in | 5.3 |
-| OR-13 | every cut says what it still guarantees | 5.1, 5.2 (K16, K17), 5.4 |
+| OR-10 | detail that no later decision reads is not tracked | 3.3 (I5: a bought item holds one mod only), 5.4 (C26) |
+| OR-11 | the answer is exact among realistic routes, never an interval | 5.1 (G12, G22), 5.4 (C17, C20, C21, C28) |
+| OR-12 | no hard-coded cut-offs; a fixed rail is a stop-and-say-so safety net | every constant of 5.4 (C1 to C35) and 5.1 (G14 to G16, G19, G20) |
+| OR-13 | every cut says what it still guarantees | 5.1, 5.2 (K16, K17), 5.4, 5.5 |
 | OR-15, OR-16, OR-17, OR-18 | one mod format; every in-game step shown; the bought item's other mods shown; one page step is one player step | 3.1 (D15 to D18), 3.3 (I3), 5.6 |
 | OR-23 | an unknown gets the best estimate, marked approximate | 3.5, 5.2 (K12) |
 
@@ -57,6 +65,7 @@ Date: 2026-11-06. Read-only inventory of `main` at `7c9e8df`, game data repoe-fo
 - `tier` is "stored as given" (`items/model.py:23-24`). `Item.__post_init__` only checks that it is an integer of 1 or more (`items/model.py:209-214`). Nothing, at construction or in `Item.validate`, compares it with `tier_table`.
 - `crafted` is stored twice. `Item.validate` requires `entry.crafted == (mod.domain == "crafted")` (`items/model.py:358-361`), so the flag always equals a fact of the game data.
 - Every other origin is a fact of the data and not of the item: essence-only is `Mod.is_essence_only` (`data/model.py:51`, read from the export at `data/normalize.py:174`), veiled and unveiled are `Mod.domain` (`items/model.py:157-158`), Elevated is the word in the mod's name (`data/elevated.py:42-44`), an influence mod is a spawn weight on an influence tag (`actions/pool.py:118`, `influence_spawn_test`).
+- An implicit keeps its origin in a number, `ImplicitMod.grade` (`items/implicits.py:63-72`): 0 for a base implicit, 1 (Lesser) to 6 (Perfect) for an Eldritch one. It has defaults too: a target's implicit with no grade gets `BASE_GRADE` unless the mod is Eldritch (`targets/parse.py:1135,1137`), and the state turns a base implicit back into an item at grade 0 (`abstraction/_kernel.py:1185`). Implicits are out of the planner until ticket #159 (gate G2); they are listed here only so that step 3 does not forget them.
 
 `Requirement` (`targets/model.py:25-63`) judges a mod with `mod_id in mod_ids`, `mod.tier > min_tier`, `not_crafted and mod.crafted`, then `min_roll` (lines 52-63). The planner has a second copy of the same judgement, `status_of` (`abstraction/_state.py:269-289`), called from `abstraction/_kernel.py:811` (for a mod of a concrete item, with `entry.tier`), `abstraction/_kernel.py:960` (for a mod an action draws, with the table tier) and `abstraction/_rolls.py:124` (for the roll law). The goal oracle (`tests/oracle/goal_oracle.py`) is a third, independent copy; it reads the natural ladder from `tests/independent/ladder.py`. No test compares that ladder with `items/tiers.py` (`tests/independent/test_ladder_agreement.py` compares the oracle's and the reconcile package's former copies only).
 
@@ -132,6 +141,10 @@ Search patterns: `ExplicitMod\(`, `\.crafted\b`, `crafted=`, `\.fractured\b`, `f
 | D20 | `cli/_verify.py:59` | fractured, crafted | the simulator's key of a concrete item |
 | D21 | `prices/trade_query.py:238,311`, `prices/trade_pricing.py:246`, `prices/trade_stats.py:171` | buy-side `BuyMod.fractured` | the trade search for a fractured start item; a second, separate record of "fractured" |
 | D22 | `items/model.py:287-295` | fractured, crafted | the `fractured_mods` and `crafted_mods` properties |
+| D23 | `abstraction/_kinds.py:227-228,432,444` | domain (unveiled, veiled) | a mod of the unveiled domain gets its own kind (`UNVEILED_PREFIX`), told apart from ordinary mods of its family; the representative of a class is chosen among the base's domain plus the extra domains, a signature placeholder after the generic one |
+| D24 | `items/veiled.py:45,52,64,72,81` | domain (veiled, unveiled, crafted) | which families are veiled; the crafted bench mod of Jun that is the "craftable version" of an unveiled mod is found by its id prefix and its stat signature (`is_craftable_version`, `is_veiled_mod`): an origin derived from a pattern in the data |
+| D25 | `items/model.py:483,495,626` | domain (veiled, unveiled) | the veil-offer checks: exactly one placeholder; an offered mod must be of the unveiled domain; `has_veiled` |
+| D26 | `cli/_route_trade.py:89` | buy-side `BuyMod.fractured` | the trade-link line "fractured: <mod>" (second reader of the record of D21) |
 
 **Lost (8).**
 
@@ -148,12 +161,12 @@ Search patterns: `ExplicitMod\(`, `\.crafted\b`, `crafted=`, `\.fractured\b`, `f
 
 Tests that pin origin and tier behaviour, by origin:
 
-- **C, bench craft stored as tier 1 and meeting a leaf with no `not_crafted`**: `tests/test_targets_goal.py:62-70` (a crafted hybrid meets the roll limit by values), `:138-147` (`not_crafted` rejects a crafted mod; without it the crafted mod counts), `:210-225` (R13's crafted damage mod meets the belt target); `tests/test_targets_floor.py:98-106` and `tests/test_targets_floor_real.py:73` (BENCH_TIER in the floor); `tests/test_cli_offers.py:63-92,159,223-226` (`counting`); `tests/test_offers_wanted_only.py`; `tests/test_crafted_slot.py`; `tests/test_actions_bench.py`, `tests/test_actions_bench_real.py`; `tests/test_actions_beast_mods.py:87` (crafted, tier 1). `crafted=True` appears 776 times in 100 test files.
+- **C, bench craft stored as tier 1 and meeting a leaf with no `not_crafted`**: `tests/test_targets_goal.py:62-70` (a crafted hybrid meets the roll limit by values), `:138-147` (`not_crafted` rejects a crafted mod; without it the crafted mod counts), `:210-225` (R13's crafted damage mod meets the belt target); `tests/test_targets_floor.py:98-106` and `tests/test_targets_floor_real.py:73` (BENCH_TIER in the floor); `tests/test_cli_offers.py:63-92,159,223-226` (`counting`); `tests/test_offers_wanted_only.py`; `tests/test_crafted_slot.py`; `tests/test_actions_bench.py`, `tests/test_actions_bench_real.py`; `tests/test_actions_beast_mods.py:87` (crafted, tier 1). `crafted=True` appears on 233 lines of 57 test `.py` files (the 776 matches of `grep -r` in `tests/` include 543 in the repr text of `tests/golden/plans_118.json`).
 - **Strict xfails that name the disagreement**: `tests/test_goal_oracle_comparison.py:67-81` (12 classes of probes, issues #403 and #415, plus `UNMEETABLE` at `:145` for R13's All Damage), `tests/reconcile/known.py:71-72` (R12's start mod tier).
 - **B, aspect tier 1, not crafted**: `tests/test_actions_beasts_aspects.py:87`.
 - **L, Elevated tier 1**: `tests/test_actions_dominance.py:119`; `tests/test_abstraction_dominance.py`, `tests/test_abstraction_dominance_real.py`.
 - **V, veiled placeholder and pick**: `tests/test_targets_start_item_b2.py:235` (placeholder tier 1), `tests/test_actions_veiled.py:164`, `tests/test_actions_veiled_real.py:170` (pick tier `.get(..., 1)`).
-- **E, essence tier**: `tests/test_targets_floor.py:119,133` ("forced mod" source at level 1); `tests/test_cli_routes_real.py:224-243` (uses `tiers.get(m, 1)` itself, and skips essence-only leaves).
+- **E, essence tier**: `tests/test_targets_floor.py:119,133` ("forced mod" source at level 1); `tests/test_cli_routes_real.py:224-242` (uses `tiers.get(m, 1)` itself at `:239`, and skips essence-only leaves).
 - **F, fractured**: `tests/test_targets_goal.py:149-153` (a fractured mod meets `not_crafted`), `tests/test_actions_fracture.py`, `tests/test_actions_harvest_swap.py:505`.
 
 ### 3.2 Default tiers
@@ -191,10 +204,18 @@ A default tier is a tier number that did not come from `tier_table` for that mod
 | T25 | `abstraction/_goal.py:27,178` | default | `min_tier = None` | `Wanted` copies T24 |
 | T26 | `targets/model.py:296` | default | `tiers_top_at_item_level = False` | the owner's "top tier" is an opt-in key of a target (`parse.py:226,244-248`); set in 11 of 14 targets (not J01, R08, R13) |
 | T27 | `targets/parse.py:1067,1075` | required hand value | `tier:` | start mods carry a hand-written tier (6 start mods in 6 files; R12's is 3 where the data says 7, `tests/reconcile/known.py:71`) |
+| T28 | `abstraction/_kernel.py:428-430` | fallback | `tier_table(data, base_id)` | when `tiers_of(probe)` raises `OutOfScopeError` (an item class with no influence key), the tiers of an influenced item are the base's, without the influence mods; the comment says every action that draws raises on such an item |
 
-One place derives a tier correctly and refuses when there is none: `cli/_start_options.py:205-207`, which reads `tier_table(...).get(step.mod_id)` and, on `None`, refuses the recipe step with `MOD_CANNOT_SPAWN` (`cli/_start_types.py:27`).
+Places that derive a tier and refuse, skip or raise when there is none (the pattern the fallbacks above do not follow). They are not defaults and are not counted in T1 to T28:
 
-Re-count against the audit's "14 sites in `src`, 4 separate constants": four constants (T1 to T4); 19 places that write or fall back to a tier of 1 without the table (T5 to T23, in 11 files: `items/model.py`, `targets/parse.py`, `actions/outcomes.py`, `veiled.py`, `awakener.py`, `beast_mods.py`, `harvest_augment.py`, `recombinator.py`, `abstraction/_kernel.py`, `cli/_benchmark_outcomes.py`, `targets/floor.py`); and four defaults on the target side (T24 to T27). Tier numbers produced by `tiers_of` (`actions/pool.py:145`) and `tier_table` are derived, not defaults. The fallbacks of the form `.get(x, 1)` in T10 to T13 are not expected to fire, because the mod is taken from the pool the table is built from; this was not proved here and no test asserts it.
+| ID | Place | What happens with no tier |
+|---|---|---|
+| R1 | `items/tiers.py:66-77` (`mod_tier`, exported at `items/__init__.py:72,140`) | raises `TierError` ("it cannot spawn there"), `UnknownModError`, `UnknownBaseError`. Production code does not call it; 3 test files name it (`tests/test_items_tiers.py`, `tests/test_targets_files.py`, `tests/reconcile/test_reconcile_real.py`) |
+| R2 | `actions/influence.py:316-317` | Orb of Dominance: a mod with no tier on the item raises `OutOfScopeError` ("its upgrade is not modelled"); `tests/test_actions_dominance.py:223-225` pins it |
+| R3 | `actions/harvest_augment.py:245-247` | a swap skips a mod that is not in `tiers` (`entry.mod_id not in tiers`) |
+| R4 | `cli/_start_options.py:205-207` | reads `tier_table(...).get(step.mod_id)` and, on `None`, refuses the recipe step with `MOD_CANNOT_SPAWN` (`cli/_start_types.py:27`) |
+
+Re-count against the audit's "14 sites in `src`, 4 separate constants": four constants (T1 to T4); 20 places that write or fall back to a tier of 1 or to another table without the table of the mod (T5 to T23 and T28, in 11 files: `items/model.py`, `targets/parse.py`, `actions/outcomes.py`, `veiled.py`, `awakener.py`, `beast_mods.py`, `harvest_augment.py`, `recombinator.py`, `abstraction/_kernel.py`, `cli/_benchmark_outcomes.py`, `targets/floor.py`); and four defaults on the target side (T24 to T27). Tier numbers produced by `tiers_of` (`actions/pool.py:145`) and `tier_table` are derived, not defaults. The fallbacks of the form `.get(x, 1)` in T10 to T13 are not expected to fire, because the mod is taken from the pool the table is built from; this was not proved here and no test asserts it.
 
 **In `tests/` (35 helper sites).** Test helpers that build a mod with tier 1 or `.get(mod_id, 1)`:
 
@@ -202,7 +223,7 @@ Re-count against the audit's "14 sites in `src`, 4 separate constants": four con
 - `.get(mod_id, 1)` (11): `tests/abstraction_adds_oracle.py:36`, `tests/abstraction_b2_support.py:44`, `tests/abstraction_oracle.py:142`, `tests/abstraction_veiled_support.py:74`, `tests/coarse_support.py:185`, `tests/contract_support.py:317`, `tests/recombinator_state_support.py:62`, `tests/test_abstraction_awakener.py:104`, `tests/test_abstraction_b2_real.py:79`, `tests/test_abstraction_beasts.py:51`, `tests/test_coe_emulator_record.py:64`.
 - Parameter default `tier: int = 1` (3): `tests/items_support.py:13`, `tests/beasts_support.py:71`, `tests/beast_mods_support.py:60`.
 
-The layer-1 oracles `tests/abstraction_oracle.py:142,148` and `tests/abstraction_adds_oracle.py:36` use the same fallback as `_kernel.py:958`. `tests/test_cli_routes_real.py:243` (the test #403 says passes at any `min_tier`) also uses `tiers.get(m, 1)`.
+The layer-1 oracles `tests/abstraction_oracle.py:142,148` and `tests/abstraction_adds_oracle.py:36` use the same fallback as `_kernel.py:958`. `tests/test_cli_routes_real.py:239` (the test #403 says passes at any `min_tier`) also uses `tiers.get(m, 1)`.
 
 Which tests pin the constants: none imports `CRAFTED_TIER`, `ELEVATED_TIER` or `BENCH_TIER`; they pin the number through behaviour (list under 3.1). Which benchmark targets the defaults change is in 3.7.
 
@@ -248,8 +269,14 @@ Why it is coupled: the solver refuses an action cost that is not above zero (`so
 | P12 | `cli/_offers.py:128-131` | an offer with no resources costs `FREE_ACTION_SHARE` (1e-6) of the cheapest paid offer; recognised later by its value (`risk/_free.py:41-43`, `is_free`; `risk/_evaluate.py:195-198`) |
 | P13 | `cli/_starts.py:55-57` | an unpriced start has price `math.inf` (a second sentinel) |
 | P14 | `cli/_offers.py:115-116,120-121` | a Chaos Orb is worth 1 whether or not the file lists it (source "fixed"); a Divine Orb is priced from the rate (source "rate") |
+| P15 | `cli/_report.py:293,505` | `shift = plan.start_price.chaos`: the start price, 0 for a free item, is added to every total of the text and the JSON |
+| P16 | `cli/_route_report.py:31,71` | the same `shift` for a given route's report |
+| P17 | `cli/_route_sim.py:72`, `cli/_verify.py:139-141,156` | `start_cost=plan.start_price.chaos` and the p90 `start_price.chaos + risk.p90`: the simulator pays the start price once per run, so a free start item makes a run start at 0 |
+| P18 | `cli/_interval.py:345` | `shift = plan.start_price.chaos` for the interval answer |
+| P19 | `cli/_starts.py:88` | a vendor-recipe start is planned with `start_price=None` and the price handed in (`start_price_of`), so the "no price means free" branch of P1 is skipped by construction |
+| P20 | `risk/_evaluate.py:119-120,472-495` | `FREE_BINS = 0.1`, `FREE_SLACK = 1e-6`: a free state (a cost of 0 bins on the quantile grid) is charged 0.1 bins because the solver needs a positive cost, and the charge is taken off again (`_coarse_means`, `_regen_means`) |
 
-Tests that pin P1 to P7: `tests/test_cli_offers.py:129` (a free start item has no restart), `tests/test_cli_route.py:446` (a restart needs a start price above zero), `tests/test_cli_approximate.py:365` and `tests/test_cli_verify_approximate.py:127` (`--start-price 0`), `tests/test_vendor_starts.py:334,502` (`plan.start_price.chaos == 0.0`), `tests/test_cli_benchmark.py:112-144` (missing start price messages). P12: `tests/test_cli_free_actions.py`, `tests/test_risk_free_actions.py`, `tests/test_risk_unchanged_349.py`.
+Tests that pin P1 to P7 (P15 to P20 are covered by the same plans, `tests/test_cli_verify_approximate.py:127`, `tests/test_risk_free_actions.py`, `tests/test_risk_free_real.py`): `tests/test_cli_offers.py:129` (a free start item has no restart), `tests/test_cli_route.py:446` (a restart needs a start price above zero), `tests/test_cli_approximate.py:365` and `tests/test_cli_verify_approximate.py:127` (`--start-price 0`), `tests/test_vendor_starts.py:334,502` (`plan.start_price.chaos == 0.0`), `tests/test_cli_benchmark.py:112-144` (missing start price messages). P12: `tests/test_cli_free_actions.py`, `tests/test_risk_free_actions.py`, `tests/test_risk_unchanged_349.py`.
 
 Benchmark targets: J01, R03, R06 have no `start_price` (P1: free, no restart). R03 and R06 are refused before pricing matters (`make_plan` gate G2, section 5.1). J01 is planned from a free rare jewel with no restart. All others carry a price.
 
@@ -277,7 +304,12 @@ Issues: #410 point 4 (the decision "a start price is required"), #427 (J01, R03,
 | A14 | `recombinator_cost.dust_rule_average_tier_report` | `recombinator_cost.yaml:110` | "UNVERIFIED player assertion" | none | none | none |
 | A15 | `recombinator_cost.idol_cost_cut_3_27` | `recombinator_cost.yaml:143` | "UNVERIFIED (read second-hand ...)" | none | none | none |
 
-Read downstream: nothing but `approximate_inputs_of` reads the field, and it lists only claims that an action of the policy cites (`cli/_marking.py:199-221`). So no answer today could list any of the 15, even if a benchmark route reached them. Seven of the 15 are cited by no `get_rule` call in `src/` at all (A1 and A10 to A15); the other eight (A2 to A9) are cited at the lines shown. Two claims put the marker inside the statement (A6, A7), so a check that tests only the start of a statement would miss them. The imprint test (A8 to A10) is the one test that asserts the opposite of the audit's finding, as a decision of the owner (grill B3).
+Read downstream: outside the registry, `Rule.approximate` is read at `cli/_marking.py:217` and `items/vendor_recipes.py:126`, and `approximate_reason` at `cli/_marking.py:220` and `cli/_start_options.py:367` (searched `\.approximate\b|approximate_reason` over `src/`).
+- `cli/_marking.py:216-221` (`approximate_inputs_of`): for the claims that an action of the policy cites (`action.claims(data)`), plus `starts.claims` (`:209-210`); it skips every claim whose field is false (`:217`). This is the "Approximate inputs" block of the text (`_marking.py:224-233`), of the JSON `approximate_inputs` and of the page (`_route_view.py:540-554`).
+- `items/vendor_recipes.py:123-126` (`Recipe.approximate_claims`): the claims behind a vendor recipe that carry the field. `cli/_start_options.py:354` stores their ids in the start candidate (`claims=`, which reach the block above through `starts.claims`), and `:366-367` (`claim_reason`) reads `approximate_reason`. So vendor start options already show their approximate claims; they are claims of `vendor.yaml`, and none of the 15 is one.
+- `cli/_start_report.py:41,120` print "approximate" for a start option, but that is `ConsideredStart.approximate`, which `cli/_starts.py:93` sets from `plan.approximation is not None` (an approximate answer), not from a claim.
+
+So no answer today could list any of the 15 even if a route reached them: the planner path would drop them at `_marking.py:217`. Seven of the 15 are cited by no `get_rule` call in `src/` at all (A1 and A10 to A15); the other eight (A2 to A9) are cited at the lines shown. Two claims put the marker inside the statement (A6, A7), so a check that tests only the start of a statement would miss them. The imprint test (A8 to A10) is the one test that asserts the opposite of the audit's finding, as a decision of the owner (grill B3).
 
 The registry code is `rules/registry.py:188-189` (the two fields of `Rule`), `:195` (the allowed keys), `:261-275` (`_check_approximate`: requires a reason with `true`, refuses `false`, refuses a reason without `true`). It reads no text.
 
@@ -318,7 +350,10 @@ Method: for each of the 14 target files, the leaves (requirements, flattened thr
 | R08 | Movement Speed T1 | 0 | 1 of 3 | not offered |
 | R14 | Attack Speed T1 | 0 | 4 of 4 | not offered |
 | V01 | Life T1 | 0 | 7 of 7 | not offered |
-| J01, R03 | (no craft or forced mod counted) | 0 | 0 | R03: refused by G2 |
+| R05 | Strength, `mod: StrengthEssence7_`, no `min_tier` | 0 | 1 of 1 | the leaf names the essence mod exactly (OR-2); no tier limit, so the stored tier 1 is not read; essence is offered |
+| R04 | Strength, `mod: StrengthEssence7_`, no `min_tier` | 0 | 1 of 1 | the same; essence is offered |
+| R03, R06, R11 | the avoid-shock implicit leaf of R03, the Strength leaf of R06, the Mana reservation leaf of R11 (all `mod:`, no `min_tier`) | 0 | 1 of 1 each | the same reading; R03 and R06 are refused by G2 |
+| J01 | none | 0 | 0 | no bench craft or essence is offered for a jewel (`actions: [chaos-orb]`) |
 
 Also: six target files name their bench craft exactly (`mod:`) and so read no default for it (R03: Life; R08, R09: Movement Speed; R10 and R10-70-life: Avoid Elemental Ailments; R14: two crafts). Targets whose start mod tier is hand-written: R03, R05, R10 x2, R11, R12 (one wrong, R12).
 
@@ -397,7 +432,7 @@ Search: `catalog`, `kinds(`, `opt_in`, `planner=`, `needs_strands`, `corrupting`
 | K8 | `_offers.py:254-255,321-328` | an action that adds one fixed mod nobody wants (`Adds.wanted_only`, aspects) | yes / yes / no | `test_offers_wanted_only.py` | #405 |
 | K9 | `_offers.py:256-257,312-320` | a value-reroll (`needs_roll_limit`, Divine Orb) without a roll limit; named only when the goal has a roll limit | yes (conditionally) / yes / no | `test_cli_offers_divine.py` | none |
 | K10 | `_offers.py:395-400` | `usable_actions`: Remove Crafted Mods removed when no crafted mod can exist | no / no / no | `test_cli_plan.py:179-181` | none |
-| K11 | `_offers.py:339-361` | `actions:` naming an unknown kind or a `planner=False` kind raises `ValueError` ("cannot be used by the planner yet") | E | E | `test_cli_offers.py:181` | #405 |
+| K11 | `_offers.py:339-361` | `actions:` naming an unknown kind or a `planner=False` kind raises `ValueError` ("cannot be used by the planner yet") | E / no / no | `test_cli_offers.py:181` | #405 |
 | K12 | `_offers.py:94-132` | an offer with an unpriced resource is dropped, not estimated (OR-23) | yes / yes / no | `test_cli_plan.py:137-168` | #406 |
 | K13 | `cli/_prune.py:77,79` | corrupting and quality offers pruned at states that cannot use them | no / no / no | `test_actions_corrupting_toy.py:309` | none |
 | K14 | `cli/_prune.py:84-87,127-130` | an offer for which the kernel raises `ActionError` at a state is skipped, game refusal and model gap alike | no / no / no | `test_prune_equal.py` | none |
@@ -411,6 +446,7 @@ Search: `catalog`, `kinds(`, `opt_in`, `planner=`, `needs_strands`, `corrupting`
 - `opt_in` (17), offered only when the target names them: `harvest-add-remove` (`harvest_augment.py:181`), `harvest-resistance-swap` (`:358`), `harvest-damage-swap` (`:365`), `corrupted-essence` (`essence.py:150`), `fossil-set` (`fossil.py:539`), `exalted-orb` (`exalted.py:83`), `veiled-chaos-orb` (`veiled.py:448`), `veiled-exalted-orb` (`:459`), `unveil` (`:470`), `pick` (`:481`), `annulment-orb` (`annul.py:105`), `fracturing-orb` (`fracture.py:109`), `talisman-fracture` (`beasts.py:173`), `aspect-beast` (`:243`), `beast-side-swap` (`beast_mods.py:246`), `wild-bristle-matron` (`:149`), `foulborn-exalted-orb` (`foulborn.py:146`). Five of the 17 are offered by some benchmark target (corrupted-essence R04; fossil-set R08, R09; exalted-orb R04, R14; annulment-orb R04, R14; fracturing-orb R04); 12 by none.
 - `needs_strands` (3): `foulborn-augmentation-orb` (`foulborn.py:134`), `foulborn-regal-orb` (`:140`), `foulborn-exalted-orb` (`:146`). They are `planner=True` and can never be offered while G1 stands (#423).
 - `corrupting` (1): `vaal` (`corruption.py:210`).
+- The groups overlap: `foulborn-exalted-orb` is both opt-in and needs strands. Of the 31 planner kinds, 17 + 3 + 1 - 1 = 20 are withheld by a flag (opt-in, strands or corrupting) and 11 are offered by default; 28 + 20 = 48 kinds are withheld by a flag, not 49, and 11 kinds are offered by default.
 - Planner kinds no benchmark target reaches: 16 (`reachability.md:17-18`).
 
 ### 5.3 Unpriced items and price provenance
@@ -456,6 +492,24 @@ Search: `catalog`, `kinds(`, `opt_in`, `planner=`, `needs_strands`, `corrupting`
 | C15 | `_reach.py:15,43` | `MAX_TRANSIENT = 400`: above it no "reached with chance" | not stated | silently absent (`_report.py:338`) | `reach_probability: null` | no | none |
 | C16 | `_route_flow.py:50-51` | `MAX_STEPS = 1_500`, `REFINE_WORK = 250_000` (past `REFINE_WORK` every state is a step: R14's 87,272 steps) | for `MAX_STEPS` only: "how often a step is used and what it costs are left out" | no | no | `Note` (`_route_view.py:537,556`) for `MAX_STEPS` only | #407, #408 |
 | C17 | `cli/_interval.py:328`, `cli/_report.py:78` | not a cut: the interval driver over rule axes (`build_interval_answer`, `with_interval`) has no caller in `src/`; tests call it (`tests/interval_support.py:122`) | n/a | `interval.text_lines` unreachable from the CLI | same | page code exists (`_route_view.py:539-546`) | #407 (ADR-0012, ADR-0023) |
+| C18 | `abstraction/_estimate.py:49-50,343-344` | `DEFAULT_LIMIT = 400_000`, `ADDING_LIMIT = 20_000` states (and a `seconds` deadline) for the pilot walk; past them `complete=False` and every count is a lower bound | `choose` then never calls the graph small (`_decide.py:186,198`) and `exact_offer` says "the count stopped at N transitions" (`:154-158`) | `Note` | `note` | no | #407 |
+| C19 | `abstraction/_estimate.py:149,248,264`; `cli/_decide.py:264-265` | `EstimateRefused` (rerolling action; a walked kernel that raises `ValueError`; a fractured family type): the pilot cannot count, `decide` returns `choose(None, ...)` = exact, message "the size of the exact graph could not be forecast, so it is built as it is" (`:183`). The text of the `EstimateRefused` itself is dropped (`except EstimateRefused:` binds nothing) | the cause is lost; the note says only that no forecast exists | `Note` | `note` | no | #407 |
+| C20 | `risk/_coarse.py:36-41,47,101` | `DENSE_STATES = 2500`, `GAP_TARGET = 0.02`, `GAP_LIMIT = 0.1`, `COSTS_TRIED = 12`, `PARTS_TRIED = 64`, `DENSE_WORK = 1e11`: no coarse quantile grid if the best step leaves a gap above 10% of the mean, or above 2,500 states | the grid used is stated in `GridInfo` | quantile text | `quantiles_resolved` | `_route_view.py:534` | #407 |
+| C21 | `risk/_evaluate.py:111-125` | `HORIZON_SDS = 6`, `COVERED_STEPS = 64`, `FINE_STEPS = 64`, `WORK_BUDGET = 3e8` (a larger policy gets a coarser grid), `SPREAD_SDS = 6`, `REGEN_PARTS = (4, 8, 16, 32)`, `REGEN_WIDTH = 0.03`, `REGEN_SECONDS = 600`, `REGEN_SLOWER = 3` | the quantile intervals report their own width (`certified`, `_report.py:230-237`) | yes | `low`/`high` | no | #407, OR-11 |
+| C22 | `risk/_evaluate.py:112-113,220-225` | `MIN_COST = 1e-150`, `MAX_COST = 1e150`: a policy with a cost outside this range is refused (`ValueError`) | refusal | E | no | no | none |
+| C23 | `risk/_free.py:35-38` | `FREE_TAIL = 1e-9`, `PAID_STATES_LIMIT = 600`, `COUNT_BINS = 100_000`, `PAID_CHARGE = 1e-3`: past 600 paying states the free-action count is not attempted and the ordinary grid is used | `free_action_*` allowances (`_report.py:256-269`) when it ran | yes | `free_action_*` | no | #407 |
+| C24 | `risk/_fold.py:25` | `FOLD_LIMIT = 1500` states of the largest free component that is folded; past it `None` and the free-action path gives up | not stated | no | no | no | none |
+| C25 | `risk/_regen.py:40-41` | `ATTEMPT_TAIL = 1e-13`, `MAX_MISSING = 1e-10`: the attempt-wise run is refused (`None`) when the cut attempts' mass is above `MAX_MISSING` | the ordinary grid is tried next | no | no | no | none |
+| C26 | `risk/_nested.py:65-67` | `START_BINS = 64`, `TINY = 1e-150`: masses below `TINY` are dropped into the unresolved mass | counted as `unresolved_mass` (`risk/_report.py:22-33`) | no | `grid` info only | no | none |
+| C27 | `risk/_dense.py:39`; `risk/_moments.py:28` | `DENSE_LIMIT = 50_000_000` cells for the dense engine (`ValueError` past it, `:79-80`); `PACKED_FROM_EDGES = 2_000_000` edges move the moments to packed arrays | not stated | no | no | no | none |
+| C28 | `solver/_minmax.py:75-76` | `MAX_ROUNDS = 100` of nature's best response; the module says a stop "can cost tightness but never soundness" | the certified gap | via `solver_error_bound` | `solver_error_bound` | no | #407 |
+| C29 | `solver/_component.py:11-20` | `MAX_POLICY_ITERATIONS = 100`, `SWEEPS_BEFORE_DIRECT = 300`, `MAX_SPARSE_POLICY_ITERATIONS = 1000`; a component that does not reach tolerance raises `ConvergenceError` (`solver/_solve.py:146`) | refusal | E | no | no | none |
+| C30 | `solver/_packed_solve.py:41-43,204-208` | `ACCEPT_BOUND = 1e-6` (a certified relative bound above it raises `ConvergenceError`, `:404,454`), `DENSE_LIMIT = 1500`, `STAGNATION = 400`, `BICGSTAB_ITERATIONS = 4_000`, `BICGSTAB_RESTARTS = 3`, `DENSE_FALLBACK = 6_000` | refusal when the bound fails | E | no | no | #407 |
+| C31 | `solver/_sparse.py:31` | `WORK_LIMIT = 200_000_000` multiply-adds one elimination may spend before it "gives up" (`solver/_sparse.py:31`, comment) | not stated | no | no | no | none |
+| C32 | `solver/_packed_lump.py:34-35,230,263`; `solver/_packed_merge.py:164` | `CHECK_TOLERANCE = 1e-12`; a lumping that does not settle or disagrees with a state raises `ValueError`; an exact merge that does not settle in its rounds raises `ConvergenceError` | refusal | E | no | no | none |
+| C33 | `solver/_tail.py:48` | `PUSH_FLOOR = 1e-3` of `theta`: mass below it waiting in an expanded state is not pushed on (the tail-cut levels of C4) | the level's gap | `Answer:` | `answer` | no | #407 |
+| C34 | `simulator/_simulate.py:54,149-152` | `MAX_NESTING = 100` levels of inputs asking for inputs; a deeper chain is cut and the run is unfinished | `unfinished` in the verification | `--verify` lines | `verification.unfinished` | no | #407 |
+| C35 | implementation constants, not limits of an answer | `risk/_budget.py:62-68`, `risk/_chain.py:21-22`, `risk/_inputs.py:52-54`, `risk/_moments.py:27,29`, `risk/_readings.py:60-61`, `risk/_regen.py:32`, `solver/_certify.py:57`, `solver/_graph.py:22-23,499`, `solver/_packed.py:27-28`, `solver/_packed_lump.py:33`, `solver/_packed_merge.py:27`, `solver/_peek.py:51-53`, `simulator/_estimate.py:13`, `abstraction/_coarse.py:77`: epsilons, chunk sizes, tolerances | none | no | no | no | none |
 
 ### 5.5 Model gaps and refusals
 
@@ -508,6 +562,20 @@ Shown: only the top-level case (the target stops with one stderr line) and the `
 
 Messages that are shared: "not resolved on the grid (#190)" is the text for the p90 cut, the memory limit and donors in a cycle (`_report.py:240`, `_route_view.py:534`; audit SOLVER-6). "cannot plan yet" is shared by G1 to G4.
 
+**The second refusal family: errors of the search and the solve, not of the game.** They are raised below `make_plan` and handled in different ways; none is an `ActionError`.
+
+| ID | Error | Raised at | Handled at | What the answer says |
+|---|---|---|---|---|
+| M1 | `EstimateRefused(ValueError)` (`abstraction/_estimate.py:54`) | `_estimate.py:149` (an enabled action rerolls values), `:248` (a walked kernel raises `ValueError`), `:264` (a fractured family type) | `cli/_decide.py:264-265`: `except EstimateRefused:` returns `choose(None, 0.0, 0.0, budget)` = exact | the generic note of C19; its own text is dropped |
+| M2 | `ConvergenceError(RuntimeError)` (`solver/_certify.py:60`) | `solver/_solve.py:146`; `solver/_packed_solve.py:313,338,404,454`; `solver/_packed_merge.py:164`; `solver/_peek.py:441` | swallowed at `cli/_decide.py:243` (the rate calibration falls back to `SOLVE_RATE_FALLBACK`, together with `ValueError`), at `cli/_approx.py:312` (a tail-cut level: `continue`; any other level re-raises) and at `cli/_bound_prune.py:363` (the reduced model: `fallback(...)` solves the whole model, `Pruned.fell_back = True`, `Pruned.why` = the message); otherwise it reaches `cli/_main.py:171` | the reduced-model case sets `Pruned.fell_back` and `Pruned.why`, which no renderer reads (searched `fell_back`, `\.why` in `src/crafting_system/cli/_report.py`, `_route_view.py`, `_plan.py`); the others print nothing, or one `Error:` line |
+| M3 | `NoPolicyError(ValueError)` (`solver/_tail.py:51`) | `solver/_tail.py:118` (the coarse models have no proper policy from the start) | `cli/_approx.py:312`: for a tail-cut level `continue`, for any other level re-raised | the levels before it stand; the ladder note names no tail cut |
+| M4 | `BlockHoldsMetamod` (`abstraction/_coarse.py:540`) | `_coarse.py:540` | `cli/_approx.py:135` (re-raised: "a model without them is no bound") and `:309` (`stopped = ... a block holds a metamod`, next level) | the `stopped` text enters the approximate answer's message (`_approx.py:324-330`) |
+| M5 | `LevelTimeout(RuntimeError)` (`cli/_approx.py:298`) | `cli/_approx.py:298` (C6) | `cli/_approx.py:306-308` | the same `stopped` text |
+| M6 | `BranchingError(ValueError)` (`risk/_nested.py:70`) | `risk/_nested.py:183` (inputs that depend on themselves) | not caught below `cli/_main.py:171` (a `ValueError`) | one `Error:` line |
+| M7 | `NotSubcritical(Exception)` (`risk/_inputs.py:57`) | `risk/_inputs.py:192,195,213,215,233,235` | `risk/_evaluate.py:235` (the policy is called improper), `risk/_mean.py:34` and `risk/_visits.py:42` (the mean or the visits become `INFINITE`) | a quantile reported as unresolved; "not resolved on the grid" is shared with the p90 cut (audit SOLVER-6) |
+
+Tests that touch this family: `tests/test_cli_decide.py:93` (an estimate that could not be made means the exact run), `tests/test_cli_approximate*.py`, `tests/test_solver_*.py`, `tests/test_risk_inputs*.py`; none asserts that an answer says why a forecast or a reduced model fell back.
+
 ### 5.6 Display limits
 
 | ID | Place | Limit | Stated |
@@ -534,19 +602,19 @@ Options only; nothing is chosen. Counts are of files that name the thing (`grep 
 
 **3-A. `ExplicitMod.tier: int | None`, with `None` meaning "no tier in the data".**
 - Types: `items/model.py:113` and the check at `:209-214`.
-- Writers to change (T1 to T23): 14 files in `src/` (bench, beasts, beast_mods, influence, outcomes, veiled, awakener, harvest_augment, recombinator, `items/model.py`, `abstraction/_kernel.py`, `cli/_benchmark_outcomes.py`, `targets/parse.py`, `targets/floor.py`).
+- Writers to change (T1 to T23 and T28): 14 files in `src/` (bench, beasts, beast_mods, influence, outcomes, veiled, awakener, harvest_augment, recombinator, `items/model.py`, `abstraction/_kernel.py`, `cli/_benchmark_outcomes.py`, `targets/parse.py`, `targets/floor.py`).
 - Readers that decide something with an item's stored tier: `targets/model.py:55` and `abstraction/_kernel.py:811` (into `status_of`, `_state.py:269-289`). The table tier is passed on by `_kernel.py:958,973` and `_rolls.py:104,124`; `recombinator.py:253` builds a key string.
-- Needs a rule for what a `None` tier meets: the judgement `status_of` / `Requirement._counts` would change in two copies, and the oracle in `tests/oracle/goal_oracle.py` is a third reader.
+- Needs a rule for what a `None` tier meets: the judgement `status_of` / `Requirement._counts` would change in two copies, and the oracle in `tests/oracle/goal_oracle.py` is a third reader. The places that already refuse when there is no tier (R1 to R4 in 3.2) would then have to say whether `None` is "no tier" or "cannot spawn".
 - Tests: 31 files read `.tier`; 35 helper sites (3.2) default to 1; 88 files name `ExplicitMod`. The 12 strict xfail classes of `tests/test_goal_oracle_comparison.py:67-81` would turn into failures to delete; `tests/reconcile/known.py:71-72` is unaffected.
 - Goldens: those that print a tier note (`T<n>` is computed from `tier_table`, not from the item) do not change.
 
 **3-B. `ExplicitMod.origin: Origin` (an enum such as rolled, crafted, essence, veiled, elevated, beast), `fractured` kept as the second, independent flag.**
 - Types: `items/model.py:103-116`, the domain check at `:358-361` becomes "origin agrees with the domain".
-- If `crafted` stays as a read-only property of `origin`, the 776 `crafted=True` uses in 100 test files and the readers D1 to D22 do not change. Writers (W1 to W21) in 14 `src/` files must set `origin`.
+- If `crafted` stays only as a read-only property of `origin`, it can no longer be a constructor keyword, so every `ExplicitMod(..., crafted=...)` and every test helper `roll(..., crafted=True)` breaks, unless `crafted` is kept as an `InitVar` (or a custom `__init__`) that sets `origin`. The callers: 9 places in `src/` that pass `crafted=` to the constructor (`_kernel.py:385,1123-1129,1142`, `beasts.py:239`, `beast_mods.py:145`, `bench.py:120,156`, `_benchmark_outcomes.py:52`, `parse.py:1088` through `**flags`) and, in `tests/`, 233 lines with `crafted=True` in 57 `.py` files (75 test files pass `crafted=` in some form: 295 hits). The earlier figure of 776 counted `crafted=True` in every file of `tests/`; 543 of those 776 are repr text in `tests/golden/plans_118.json`, and the other 233 are the `.py` lines above. The readers D1 to D26 of the property do not change. Writers (W1 to W21) in 14 `src/` files must set `origin`.
 - The state: `Slot.crafted` (`abstraction/_state.py:73`) and its readers in `_kernel.py`, `_coarse.py`, `_estimate.py`, `_inputs.py`, `_bound.py` (7 files in `abstraction/` mention the flags) change only if the state has to tell essence-forced or Elevated apart. That changes `CompressedState` equality and the two goldens that print states or hash them: `tests/golden/plans_118.json` (the reprs of the R05 policy states, among others) and `tests/golden/b1_unchanged_142.json` (hashes of kernels and offers).
 - Existing derivable origins (S4 to S7) remain facts of the data.
 
-**3-C. A target-side switch for "any tier".** A leaf's omitted `min_tier` stops meaning "any" (T24, T25, T26): `targets/parse.py:415-436`, `targets/model.py:25-63`, `abstraction/_goal.py:27,178`, `targets/floor.py:137,165`. Needs the syntax of #410 point 1. Files that name `min_tier` or `not_crafted`: 12 in `src/`, 42 in `tests/`; 14 target files and the `Wanted(` constructions in 70 test sites if a field is added with a default (none edited).
+**3-C. A target-side switch for "any tier".** A leaf's omitted `min_tier` stops meaning "any" (T24, T25, T26): `targets/parse.py:415-436`, `targets/model.py:25-63`, `abstraction/_goal.py:27,178`, `targets/floor.py:137,165`. Needs the syntax of #410 point 1. Files that name `min_tier` or `not_crafted`: 12 in `src/`, 42 in `tests/`; 14 target files; `Wanted(` is built in 1 `src/` file and 71 test files (317 hits), none edited if a field is added with a default.
 
 **3-D. A start price that is a fact, not a number.** Options: (i) `Target.start_price` required (`targets/parse.py:221`), which changes three target files (J01, R03, R06) and the 40 test files that write target YAML with `start_price` text; (ii) split "free" from "not buyable": `StartPrice` (`_plan.py:76-82`) gains `restart: bool` or `chaos: float | None`, read at `_plan.py:340`, `_route.py:253,460`, `_route_view.py:388,467,527`, `_benchmark.py:458,640`, `_starts.py:55-57,89`. Tests: 13 files name `StartPrice` or `plan.start_price`; 6 tests pin P3 and P4 (3.4).
 
@@ -556,18 +624,44 @@ Options only; nothing is chosen. Counts are of files that name the thing (`grep 
 
 ### Step 5
 
-**5-A. One record type, one field on `Plan`.** `Limit(kind, what, why, guarantee, labels)` and `Plan.limits: tuple[Limit, ...]`, filled by the places that today write `left_out` (K4, K7 to K9, K15), `dropped` (K12), `note` (G12 to G14, G19), `strands` (G1), `approximation`, plus the withheld kinds (K1 to K3, K5, K6, K10) and the price facts (5.3).
+**5-A. One record type, one field on `Plan`.** `Limit(kind, what, why, guarantee, labels)` and `Plan.limits: tuple[Limit, ...]`, filled by the places that today write `left_out` (K4, K7 to K9, K15), `dropped` (K12), `note` (G12 to G14, G19, C18, C19), `strands` (G1), `approximation`, plus the withheld kinds (K1 to K3, K5, K6, K10), the skipped offers (K13, K14), the silent cuts (G6, G17, C15, V8; the unread `Pruned.fell_back` and `Pruned.why`, M2), the limits of 5.4 and the price facts (5.3).
 - Types: `cli/_plan.py:85-107`, `cli/_offers.py:143-158`.
 - Renderers: `_report.py` (text near `:315-327`, JSON near `:528-532`), `_route_view.py` goal card (`:547-557`).
-- `Plan(` is built in 3 places in `_plan.py` (`:369,390,426`) and in 5 test files; a field with the default `()` leaves them unchanged. 28 test files name `left_out`; 12 name `plan.dropped`/`DroppedOffer`.
+- `Plan(` is built in 3 places in `_plan.py` (`:369,390,426`) and in 5 test files; a field with the default `()` leaves them unchanged. 30 test files name `left_out` (pattern `left_out`; `LeftOut` itself is named by no test file, 3 `src/` files); 12 test files match `plan\.dropped|DroppedOffer|dropped=`.
 - Goldens: 2 text/JSON (`v01_minion_helmet.txt/.json`), and the html pages that would gain a field, up to 16; a page whose `limits` are empty need not change if the field is dropped when empty (`_fields` already drops `None`). `tests/golden/b1_unchanged_142.json` hashes `repr(LeftOut)` (`tests/b1_unchanged_support.py:52,61-62`), so any new field on `LeftOut` changes that golden.
 - JSON format name `crafting-system-policy/1` (`_report.py:39`) is read by 13 test files that call `policy_document` and by the scripts of `.github/scripts` (12 name `make_plan` or the policy JSON).
 
-**5-B. Model gap as data, not as an exception caught.** Record, at the three main skip sites (`_prune.py:86,129`, `_packed.py:124`), the `OutOfScopeError` that was swallowed, with its action, count and message, into the plan. The 84 raise sites and the other 31 `except` clauses (5.5) keep their behaviour. Tests: 56 files name `OutOfScopeError`; none asserts reporting. The two subclasses already exist (`actions/errors.py:37,41`), so no hierarchy edit is needed to tell the causes apart; the 27 clauses that catch the parent are where it is lost.
+**5-B. Model gap as data, not as an exception caught.** Record, at the three main skip sites (`_prune.py:86,129`, `_packed.py:124`), the `OutOfScopeError` that was swallowed, with its action, count and message, into the plan. The 84 raise sites and the other 31 `except` clauses (5.5) keep their behaviour. The second refusal family (M1 to M7) needs its own record or the same one: `EstimateRefused` loses its text at `_decide.py:264`, and `Pruned.why` is set and not read. Tests: 57 test files name `OutOfScopeError` (pattern `OutOfScopeError`); none asserts reporting. The two subclasses already exist (`actions/errors.py:37,41`), so no hierarchy edit is needed to tell the causes apart; the 27 clauses that catch the parent are where it is lost.
 
-**5-C. Price provenance carried to the answer.** `StartPrice` and the 4th element of `PricedOffer.parts` carry `PriceEntry.note` and `detail` (or `Plan.price_facts` beside them), and the page prints them. Types: `_plan.py:76-82,231-252`, `_offers.py:46-57,109-127`. Readers: `_report.py:304-310,340-344,516-526`, `_route_view.py:390,466-474,555`, `_interval.py:324`, `_start_step.py`, `_start_options.py`. Tests: 10 files name `PricedOffer`, 13 name `StartPrice`; `test_cli_route_view.py:219` and 4 route goldens print the one-line "league ..., fetched ..." text. U5 to U7 show the data exists in `prices/` and is not read.
+**5-C. Price provenance carried to the answer.** `StartPrice` and the 4th element of `PricedOffer.parts` carry `PriceEntry.note` and `detail` (or `Plan.price_facts` beside them), and the page prints them. Types: `_plan.py:76-82,231-252`, `_offers.py:46-57,109-127`. Readers: `_report.py:304-310,340-344,516-526`, `_route_view.py:390,466-474,555`, `_interval.py:324`, `_start_step.py`, `_start_options.py`. Tests: 12 files name `PricedOffer`, 13 match `StartPrice|plan\.start_price`; `test_cli_route_view.py:219` and 4 route goldens print the one-line "league ..., fetched ..." text. U5 to U7 show the data exists in `prices/` and is not read.
 
 **5-D. A cut that names its guarantee.** `Decision`, `Approximation`, `Pruned` and `LeftOut` each get a `guarantee: str`; today only the `actions:` case has one (K17, `_offers.py:300-302`). Types: `_decide.py:122-138`, `_approx.py:60-66`, `_bound_prune.py` (`Pruned`), `_offers.py:143-149`. Small on its own; it needs 5-A to be shown, and a new field on `LeftOut` changes `b1_unchanged_142.json` (see 5-A).
+
+### Counts and the pattern behind them
+
+Taken once with a script (`re` over every `.py` file under `src/` and under `tests/`, files that match at least once), on the tree of `7c9e8df`. Patterns are regular expressions. The counts in Part C use these and no others.
+
+| Pattern | `src/` files | `tests/` files |
+|---|---|---|
+| `ExplicitMod` | 18 | 88 |
+| `\.tier\b` | 8 | 31 |
+| `min_tier\|not_crafted` | 12 | 42 |
+| `[^a-zA-Z_]Wanted\(` | 1 | 71 (317 hits) |
+| `[^a-zA-Z_]Target\(` | 1 | 11 |
+| `start_price` | 16 | 40 |
+| `StartPrice\|plan\.start_price` | 11 | 13 |
+| `left_out` | 3 | 30 |
+| `LeftOut` | 3 | 0 |
+| `plan\.dropped\|DroppedOffer\|dropped=` | 6 | 12 |
+| `[^a-z_]Plan\(` | 1 | 5 |
+| `PricedOffer` | 10 | 12 |
+| `policy_document` | 3 | 13 |
+| `OutOfScopeError` | 38 | 57 |
+| `crafted=True` | 4 (9 hits) | 57 (233 lines; 257 hits) |
+| `crafted=` | 11 | 75 (295 hits) |
+| `mod_tier` | 2 | 3 |
+
+Other counts: 12 files of `.github/scripts` match `make_plan|policy\.json|left_out_actions|dropped_actions|"totals"` (searched with the `Grep` tool); `tests/golden/` holds 16 html, 8 json, 2 txt and 1 md file; 84 `raise OutOfScopeError` (`grep -rn "raise OutOfScopeError" src`); 34 `except` clauses matching `except[^:]*(OutOfScopeError|ActionError|NotApplicableError)`.
 
 ### What the options share
 
@@ -580,7 +674,8 @@ Options only; nothing is chosen. Counts are of files that name the thing (`grep 
 
 - Row counts in the first table count rows of the lists above; a row with several line numbers (for example D7, D12) is one place of one kind.
 - Not re-measured: the audit's 1,322 of 2,200 forced mods without a tier and 614 weaker than T1; the section 3.7 counts are per target leaf.
-- Not read in full, only searched: `abstraction/_coarse.py`, `_estimate.py`, `_inputs.py` (crafted-slot readers D7, D8), `cli/_route_card.py`, `cli/_route_flow.py`, `cli/_interval.py`, `risk/`, `solver/`, `simulator/`, `prices/` outside `price_file.py`.
+- Scanned for constants, `raise`, `except` and limit words, with each hit read in context, but whose algorithms were not read line by line: `risk/`, `solver/`, `simulator/`, `abstraction/_coarse.py`, `abstraction/_inputs.py` and lines 290-420 of `abstraction/_estimate.py` (lines 1-290 were read through). 5.4 and 5.5 are only as complete as that scan.
+- Searched only: `cli/_route_card.py`, `cli/_route_flow.py`, `cli/_interval.py`, `prices/` outside `price_file.py`.
 - The 14 `examples/targets/` files were searched for keys and read for start items, not re-read for guide wording (#404).
 
 ## Open points filed as issues (OR-29)
@@ -588,3 +683,4 @@ Options only; nothing is chosen. Counts are of files that name the thing (`grep 
 - Lines no issue covered (essence-forced and veiled tier-1 fallbacks, price-0 code places, made-up start items other than R08 and R09): #453.
 - The imprint test that pins three "UNVERIFIED" claims as not approximate, against the audit and #409: #454.
 - The interval driver (`build_interval_answer`, `with_interval`) with no caller in `src/`, rebuild step 7: #455.
+- The silent cuts and refusals of step 5 that no issue lists (G6, G17, K5, K6, K10, K13, K14, C15, V8, C19, C24 to C27, C31, M1 to M3, M7 and the silent skip of a model gap): #467.
