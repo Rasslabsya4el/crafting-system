@@ -13,6 +13,7 @@ import dataclasses
 import textwrap
 
 from implicits_support import EXTENDED
+from start_support import with_start
 
 from crafting_system.data import GameData, Weight
 from crafting_system.targets import Target, TargetError, parse_target
@@ -70,10 +71,10 @@ def _with_weights(mods: dict) -> dict:
 TEXTED = _texted()
 
 
-def parse(text: str, *, header: bool = True) -> Target:
-    """Parse `text` on `TEXTED`; unless `header` is false it follows `HEADER` (so it starts on line 5)."""
+def parse(text: str, *, header: bool = True, start: str | None = "given") -> Target:
+    """Parse `text` on `TEXTED`; unless `header` is false it follows `HEADER` (so it starts on line 5). Closed with `start: given` (OR-6)."""
     body = textwrap.dedent(text).lstrip("\n")
-    return parse_target(HEADER + body if header else body, TEXTED, source="t.yaml")
+    return parse_target(with_start(HEADER + body if header else body, start), TEXTED, source="t.yaml")
 
 
 def parse_error(text: str, *, header: bool = True) -> str:

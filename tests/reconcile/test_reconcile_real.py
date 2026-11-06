@@ -71,7 +71,7 @@ def test_the_set_of_checks_is_the_committed_one():
     assert built == committed
 
 
-def test_every_target_file_is_checked_for_its_start_price_and_its_buy_spec():
+def test_every_target_file_is_checked_for_how_its_start_item_is_had():
     assert len(TARGETS) >= 14
     for target in TARGETS:
         names = slots(target, buy_spec_of(target, SPECS))
@@ -97,11 +97,22 @@ def test_the_r12_start_mod_tier_is_a_known_strict_xfail():
     assert known.values == ("3", "7")
 
 
-def test_a_target_with_no_start_price_or_no_buy_spec_fails_unless_it_is_a_known_disagreement(results):
+def test_a_bought_target_with_no_price_key_or_no_buy_spec_fails_unless_it_is_a_known_disagreement(results):
     for target in TARGETS:
         for slot in ("start_price.written", "buy_spec.exists"):
             if results[target.name][slot]:
                 assert (target.name, slot) in KNOWN, (target.name, slot)
+
+
+def test_every_target_says_given_or_bought_and_only_a_bought_one_has_a_price_key():
+    for target in TARGETS:
+        assert target.start in ("given", "bought"), target.name
+        assert (target.start_price is not None) == (target.start == "bought"), target.name
+    assert [target.name for target in TARGETS if target.start == "given"] == ["j01-cobalt-life-attack-speed"]
+
+
+def test_no_known_disagreement_is_left_of_the_427_rows_of_targets_without_a_start_price():
+    assert not [key for key, known in KNOWN.items() if known.issue == "#427" or key[1] in ("start_price.written", "buy_spec.exists")]
 
 
 def test_the_ladder_puts_the_r12_start_mod_at_tier_7_of_8_on_the_paua_amulet(export):

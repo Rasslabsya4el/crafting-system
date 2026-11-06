@@ -4,6 +4,7 @@ import textwrap
 from pathlib import Path
 
 from items_support import AMULET, BODY, DATA, item, roll
+from start_support import with_start
 
 from crafting_system.items import ExplicitMod, Item
 from crafting_system.targets import Target, TargetError, parse_target
@@ -30,16 +31,19 @@ item_level: 84
 """
 
 
-def parse(text: str, *, header: bool = True, **kwargs) -> Target:
-    """Parse `text` against the fixture data. Unless `header` is false, `base` and `item_level` are lines 1 and 2, so the text starts on line 3."""
+def parse(text: str, *, header: bool = True, start: str | None = "given", **kwargs) -> Target:
+    """Parse `text` against the fixture data. Unless `header` is false, `base` and `item_level` are lines 1 and 2, so the text starts on line 3.
+
+    The text is closed with `start: given` unless it has a `start:` line or `start` is None (the file must say how its start item is had, OR-6).
+    """
     body = textwrap.dedent(text).lstrip("\n")
-    return parse_target(HEADER + body if header else body, DATA, source="t.yaml", **kwargs)
+    return parse_target(with_start(HEADER + body if header else body, start), DATA, source="t.yaml", **kwargs)
 
 
-def parse_error(text: str, *, header: bool = True, **kwargs) -> str:
+def parse_error(text: str, *, header: bool = True, start: str | None = "given", **kwargs) -> str:
     """The message of the `TargetError` that parsing `text` raises; fails the test if none is raised."""
     try:
-        parse(text, header=header, **kwargs)
+        parse(text, header=header, start=start, **kwargs)
     except TargetError as error:
         return str(error)
     raise AssertionError("the target parsed without an error")

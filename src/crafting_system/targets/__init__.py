@@ -76,8 +76,10 @@ Keys (unknown keys are errors, with a close-match hint):
       veil_offer: [UnveiledPrefixLife1]   # optional: up to 3 mod ids offered for the one veiled placeholder in `mods`
       memory_strands: 57    # optional (ADR-0040): the Memory Strands count, a whole number from 0 to 100 (default 0); or a pasted item text
                             # holding the game's line "Memory Strands: 57". A start item with 1 or more turns the strand setting on.
-    buys_start_item: true   # optional: the start item is bought. Its buy spec, trade query and price key are computed from this file
-                            # (`start_buy.py`, #474); the target is their only description. Without it the start item counts as free
+    start: bought           # required (OR-6, #505): `bought` or `given`. A bought start item must have a price under the key computed from
+                            # this file (`start_buy.py`, #474: its buy spec, trade query and price key; the target is their only
+                            # description), and a `restart` buys it again. A given one costs nothing, is never bought again, and
+                            # names its reason in a comment that quotes the guide ("you already have the item")
     price_file: prices.json # optional path; a relative path counts from the target file's folder
     actions: [alteration-orb]  # optional: the kinds of actions the planner may use (default: every kind it offers by
                             # default); a name may also be the label of one action, e.g. "Essence of Insanity" (#70)
@@ -108,8 +110,8 @@ them (say a family and a stat text that select the same mod); groups may nest 20
 Whether a mod can spawn on the base is not checked here; that belongs to `actions`.
 
 Corruption (ADR-0036): a corrupted implicit that the pool cannot give at `item_level`, more corrupted implicits than the corrupting
-kinds of `actions:` give (`vaal` and `fossil-set` one, `locus` two; not checked when the target buys its item, that is when it names
-`buys_start_item` or its start item is corrupted), two of one mod group (the Locus never draws them), more implicits in all than the item
+kinds of `actions:` give (`vaal` and `fossil-set` one, `locus` two; not checked when the target buys its item, that is when it says
+`start: bought` or its start item is corrupted), two of one mod group (the Locus never draws them), more implicits in all than the item
 holds after the corrupting action, and a corrupted start item under a target that neither asks nor allows are errors when the file
 is read. `Target.is_met_by` is false for a corrupted item unless the target asks for a corrupted implicit or allows one.
 """
@@ -140,6 +142,7 @@ from .model import (
     QualityRequirement,
     Requirement,
     SocketRequirement,
+    StartKind,
     Target,
 )
 from .parse import parse_target_text
@@ -160,6 +163,7 @@ __all__ = [
     "Requirement",
     "SocketRequirement",
     "StartBuyError",
+    "StartKind",
     "Target",
     "TargetError",
     "buy_spec_of",

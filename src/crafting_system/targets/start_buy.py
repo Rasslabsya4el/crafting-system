@@ -1,6 +1,6 @@
 """The bought start item, described once: the buy spec, the trade query and the price key are computed from the target (#474, OR-3).
 
-A target that buys its start item (`buys_start_item`) is the only description of it. `buy_spec_of(data, target)` turns the target's base,
+A target that buys its start item (`start: bought`) is the only description of it. `buy_spec_of(data, target)` turns the target's base,
 item level, influences, start rarity and start mods into a `BuySpec`; `start_price_key(data, target)` is that spec's name, the key the
 price is stored under; the trade query is `build_query` of the spec. Nothing is typed twice, so the three cannot disagree.
 

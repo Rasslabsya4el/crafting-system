@@ -93,6 +93,7 @@ TARGET = {
     "influence": [],
     "requirements": [{"family": "ResA"}],
     "start_item": {"rarity": "rare", "mods": [{"mod": "ResA2", "tier": 2, "values": [14], "fractured": True}]},
+    "start": "bought",
     "start_price": "T start ring",
 }
 SPEC = {
@@ -502,15 +503,33 @@ def test_the_slots_come_from_the_two_yaml_files_alone(tmp_path):
     ]  # fmt: skip
 
 
-def test_a_target_with_no_start_price_and_no_buy_spec_fails_both_slots_and_has_no_price_slots(tmp_path):
-    target = read_target(_write(tmp_path, "t.yaml", {"base": "Ruby Ring", "item_level": 80}))
+def test_a_bought_target_with_no_start_price_and_no_buy_spec_fails_both_slots_and_has_no_price_slots(tmp_path):
+    target = read_target(_write(tmp_path, "t.yaml", {"base": "Ruby Ring", "item_level": 80, "start": "bought"}))
 
     result = reconcile(target, None, EXPORT, [])
 
     assert slots(target, None) == ["target.base", "start_price.written", "buy_spec.exists"]
     assert [slot for slot, items in result.items() if items] == ["start_price.written", "buy_spec.exists"]
-    assert result["start_price.written"][0].values == ("none", "free")
+    assert result["start_price.written"][0].values == ("bought", "no price key")
     assert result["buy_spec.exists"][0].values == ("none", "no buy spec")
+
+
+def test_a_given_target_needs_no_start_price_and_no_buy_spec_and_has_no_price_slots(tmp_path):
+    target = read_target(_write(tmp_path, "t.yaml", {"base": "Ruby Ring", "item_level": 80, "start": "given"}))
+
+    result = reconcile(target, None, EXPORT, [])
+
+    assert slots(target, None) == ["target.base", "start_price.written", "buy_spec.exists"]
+    assert [slot for slot, items in result.items() if items] == []
+
+
+def test_a_target_that_does_not_say_how_its_start_item_is_had_fails_the_start_slot(tmp_path):
+    target = read_target(_write(tmp_path, "t.yaml", {"base": "Ruby Ring", "item_level": 80}))
+
+    result = reconcile(target, None, EXPORT, [])
+
+    assert [slot for slot, items in result.items() if items] == ["start_price.written"]
+    assert result["start_price.written"][0].values == ("none", "not said")
 
 
 def test_a_start_price_with_no_buy_spec_fails_only_the_spec_slot(tmp_path):
@@ -520,6 +539,15 @@ def test_a_start_price_with_no_buy_spec_fails_only_the_spec_slot(tmp_path):
 
     assert [slot for slot, items in result.items() if items and not slot.startswith("price.")] == ["buy_spec.exists"]
     assert result["buy_spec.exists"][0].values == ("T start ring", "no buy spec")
+
+
+def test_a_bought_target_with_a_key_and_a_spec_but_no_price_entry_fails_the_entry_slot(tmp_path):
+    target = read_target(_write(tmp_path, "t.yaml", TARGET))
+    spec = read_buy_spec(_write(tmp_path, "b.yaml", SPEC))
+
+    result = reconcile(target, spec, EXPORT, [])
+
+    assert result["price.entry"][0].values == ("T start ring", "no entry")
 
 
 def test_removing_the_start_price_or_renaming_the_spec_is_a_failure_and_changes_the_check_set(tmp_path):

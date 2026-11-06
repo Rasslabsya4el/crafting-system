@@ -11,4 +11,4 @@ start_item:
       tier: 7
       values: [14]
       fractured: true
-buys_start_item: true
+start: bought

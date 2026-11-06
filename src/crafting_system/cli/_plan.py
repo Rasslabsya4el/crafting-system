@@ -75,14 +75,37 @@ def strand_setting(start_item: Item, *, asked: bool = False) -> StrandSetting:
     return STRANDS_OFF
 
 
+GIVEN_SOURCE = "given: its cost is not counted, and the plan never buys another"  # what a given start item reads as (OR-6, #505)
+
+
 @dataclass(frozen=True)
 class StartPrice:
-    """What the start item costs to get, in Chaos, and where the number came from."""
+    """What the start item costs to get, in Chaos, and where the number came from.
+
+    A bought start item (OR-6) has a price above 0 and a restart. A given one has `given` set, costs 0 by definition, and has no restart:
+    whether the item can be bought again is this flag, never the number (#505).
+    """
 
     name: str | None
     chaos: float
     source: str
     taken_for: str | None = None  # "price taken for a wider item (...)": the stored search is not the item the key names (#474, OR-7)
+    given: bool = False
+
+    def __post_init__(self) -> None:
+        if self.given and self.chaos != 0:
+            raise ValueError(f"a given start item costs nothing, got {self.chaos!r} Chaos")
+        if not self.given and not (self.chaos > 0 and self.chaos != float("inf")):
+            raise ValueError(f"a bought start item has a price above 0 Chaos, got {self.chaos!r}")
+
+    @property
+    def bought(self) -> bool:
+        return not self.given
+
+
+def given_price() -> StartPrice:
+    """The cost of a given start item: not counted (OR-6)."""
+    return StartPrice(None, 0.0, GIVEN_SOURCE, given=True)
 
 
 @dataclass(frozen=True)
@@ -240,16 +263,19 @@ def leaf_labels(target: Target) -> tuple[str, ...]:
 def resolve_start_price(
     data: GameData, target: Target, prices: PriceFile, override: float | None
 ) -> StartPrice:
-    """The cost of the start item: a run's own number, else the price file (hand overrides already in it).
+    """The cost of the start item (OR-6): a given one costs nothing and is never bought again; a bought one has a price.
 
-    A target that does not buy its start item (`buys_start_item`) counts it as free. A bought one is looked up in the price file under
-    the key computed from the target (`start_price_key`); a key that is not in the file is an error: the cost of the whole craft would
-    be wrong without it.
+    A target that says `start: given` has no price to set: `--start-price` on it is refused. A bought one is a run's own number
+    (`--start-price`, above 0), else the price file (hand overrides already in it) under the key computed from the target
+    (`start_price_key`); a key that is not in the file is an error that names it: the cost of the whole craft would be wrong without it.
     """
-    if not target.buys_start_item:
+    if not target.bought:
         if override is not None:
-            return StartPrice(None, _override(override), "given on the command line")
-        return StartPrice(None, 0.0, "the target does not buy its start item, so it counts as free")
+            raise PlanError(
+                "the target says its start item is given, so it has no price and `--start-price` has nothing to set; "
+                "write `start: bought` in the target if the item is bought"
+            )
+        return given_price()
     try:
         spec = buy_spec_of(data, target)
         name = spec.name
@@ -262,16 +288,16 @@ def resolve_start_price(
     entry = prices.prices.get(name)
     if entry is None:
         raise PlanError(
-            f"no price for the start item {name!r}. Price it with `python -m crafting_system.cli trade "
-            "<target file>`, write it in price_overrides.toml, or give it with --start-price"
+            f"no price for the start item {name!r}. A bought start item must have a price. Price it with "
+            "`python -m crafting_system.cli trade <target file>`, write it in price_overrides.toml, or give it with --start-price"
         )
     stored = (entry.detail or {}).get("query")
     return StartPrice(name, entry.chaos, entry.source, other_item(spec, stored) if isinstance(stored, dict) else None)
 
 
 def _override(override: float) -> float:
-    if not override >= 0 or override == float("inf"):
-        raise PlanError(f"the start price must be a number of Chaos, zero or more, got {override!r}")
+    if not override > 0 or override == float("inf"):
+        raise PlanError(f"the start price must be a number of Chaos above 0, got {override!r}")
     return float(override)
 
 
@@ -299,7 +325,7 @@ def make_plan(
 
     Remove Crafted Mods is kept only when a priced bench craft is, or the start item holds a crafted
     mod: otherwise no crafted mod can ever exist and tracking the junk slots for it would only grow
-    the state space. A start item with a price is offered again as `restart` from every state.
+    the state space. A bought start item is offered again as `restart` from every state; a given one never is (OR-6).
 
     `budget` (seconds) turns on the decision of ADR-0023: when the forecast of the exact run is longer, the
     answer is approximate within the tolerance if some coarse level reaches it, and `PlanError` says so
@@ -364,9 +390,8 @@ def make_plan(
     if removed:
         limits += (crafted_mods_limit(tuple(p.label for p in priced if p.offer.action not in kept)),)
     priced = tuple(p for p in priced if p.offer.action in kept)
-    named = start_price_of is not None or start_price is not None or target.buys_start_item
-    limits += start_limits(price_of_start, named)
-    if price_of_start.chaos > 0:
+    limits += start_limits(price_of_start)
+    if price_of_start.bought:
         bought = price_of_start.name or "start item"
         restart = Offer(RESTART, BuyStartItem(target.start_item), {bought: 1}, shares=False)
         part = (bought, 1, price_of_start.chaos, price_of_start.source)
@@ -468,28 +493,18 @@ def strands_limit() -> Limit:
     )
 
 
-def start_limits(price: StartPrice, named: bool) -> tuple[Limit, ...]:
-    """The limits of a start item that costs nothing: the target names no price for it (P1), and it is never bought again (P3)."""
-    found: tuple[Limit, ...] = ()
-    if not named:
-        found += (
-            Limit(
-                _limits.START,
-                "The start item is counted as free",
-                "the target does not say it buys its start item",
-                "The cost of the answer does not include getting the start item.",
-            ),
-        )
-    if not price.chaos > 0:
-        found += (
-            Limit(
-                _limits.START,
-                "No restart",
-                "the start item costs nothing, so buying it again is not offered",
-                **claim("the plans that never start over", "It only improves the item it has."),
-            ),
-        )
-    return found
+def start_limits(price: StartPrice) -> tuple[Limit, ...]:
+    """The limit of a given start item (OR-6, OR-13): its cost is not counted and it is never bought again; a bought one has none."""
+    if price.bought:
+        return ()
+    return (
+        Limit(
+            _limits.START,
+            "The start item is given",
+            "the target says the player already holds it",
+            **claim("the plans that never start over", "The cost of the start item is not counted, and the plan never buys another."),
+        ),
+    )
 
 
 def whole_search_limit(why: str) -> Limit:

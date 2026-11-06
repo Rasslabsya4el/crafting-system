@@ -141,6 +141,7 @@ start_item:
 {fractured}
     - mod: VeiledSuffix
 actions: [veiled-chaos-orb, unveil, pick]
+start: given
 """
 
 

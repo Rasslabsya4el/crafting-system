@@ -25,7 +25,7 @@ from crafting_system.items import Item, Rarity
 from crafting_system.prices import CHAOS_ORB, PriceEntry, PriceFile
 from crafting_system.risk import evaluate
 from crafting_system.solver import Solution
-from crafting_system.targets import Requirement, Target
+from crafting_system.targets import Requirement, StartKind, Target
 
 GOLDEN = Path(__file__).resolve().parent / "golden"
 
@@ -88,7 +88,7 @@ Chooser = Callable[[CompressedState, Abstraction], str | None]
 
 def hand_input(start: Item, requirements: tuple[Requirement, ...], choose: Chooser, label: str = "Hand-made policy") -> RouteInput:
     """A route drawn from the policy `choose(state, abstraction)` (an offer label, or None for no action)."""
-    target = Target(BELT, LEVEL, frozenset(), requirements, start, buys_start_item=True)
+    target = Target(BELT, LEVEL, frozenset(), requirements, start, start=StartKind.BOUGHT)
     ab = Abstraction(DATA, Goal.from_target(target), BELT, LEVEL, ACTIONS)
     first = ab.compress(start)
     priced, _ = price_offers(OFFERS, PRICES)

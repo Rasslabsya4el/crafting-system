@@ -35,7 +35,7 @@ WEAPON = "Rusted Sword"
 
 def parse(text: str, *, base: str = ARMOUR):
     body = textwrap.dedent(text).lstrip("\n")
-    return parse_target(f"base: {base}\nitem_level: 84\nrequirements:\n  - stat: \"+# to maximum Life\"\n{body}", DATA, source="t.yaml")
+    return parse_target(f"base: {base}\nitem_level: 84\nrequirements:\n  - stat: \"+# to maximum Life\"\n{body}start: given\n", DATA, source="t.yaml")
 
 
 def parse_error(text: str, *, base: str = ARMOUR) -> str:

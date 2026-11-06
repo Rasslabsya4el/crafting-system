@@ -32,6 +32,7 @@ start_item:
     - mod: {MANA_1}
       tier: 1
       values: {[min(stat.min, stat.max) for stat in DATA.mods[MANA_1].stats]}
+start: given   # the player holds the amulet (OR-6): nothing is bought, so there is no price and no restart
 """
 OFFERS = [
     Offer("Chaos Orb", CHAOS, {CH: 1}),
@@ -51,7 +52,7 @@ def answer_of(plan) -> str:
 def planned(monkeypatch, workers: int, **options):
     monkeypatch.setenv("CRAFTING_WORKERS", str(workers))
     target = parse_target(TARGET, DATA, source="t.yaml")
-    return make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, **options)
+    return make_plan(DATA, target, PRICES, offers=OFFERS, **options)
 
 
 @pytest.fixture

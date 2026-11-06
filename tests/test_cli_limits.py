@@ -12,7 +12,7 @@ One test per source of a limit, by the row of the fact base (`docs/research/2026
   `test_actions_fossil_bloodstained.py`.
 * G12 a whole search run past the budget: `test_g12_*`. G13 the packed solver: `test_cli_decide.py`. G14 a tree of groups:
   `test_g14_*`. G19 percentiles not computed: `test_g19_*` and `test_packed_plan_real.py`. G20 a quantile the grid cannot reach: `test_g20_*`.
-* P1 a start item counted as free, P3 no restart: `test_p1_*`, `test_p3_*`.
+* P1 a given start item, P3 no restart for it: `test_p1_*`, `test_p3_*`.
 
 Then what the three surfaces show: the text report, the JSON `crafting-system-policy/2` and the goal card of the route page.
 """
@@ -26,7 +26,7 @@ from html import escape
 from types import SimpleNamespace
 
 import pytest
-from cli_support import R12, price_file, read_json
+from cli_support import R12, given, price_file, read_json
 from coarse_support import CRAFTS, REMOVE
 from coarse_support import DATA as COARSE
 from limits_support import labels_of, of_kind, only, sentences
@@ -162,24 +162,20 @@ def test_g20_a_quantile_the_grid_cannot_reach_is_a_limit_and_a_reached_one_is_no
     assert risk_limits(reached) == () and risk_limits(failing) == () and risk_limits(None) == ()
 
 
-def test_p1_a_start_item_the_target_gives_no_price_is_counted_as_free(tmp_path):
-    text = R12.read_text(encoding="utf-8")
-    assert "buys_start_item: true" in text
-    path = tmp_path / "free.yaml"
-    path.write_text(re.sub(r"(?m)^buys_start_item:.*\n", "", text), encoding="utf-8")
+def test_p1_a_given_start_item_says_its_cost_is_not_counted_and_the_plan_never_buys_another():
+    free = make_plan(DATA, given(load_target(R12, DATA)), price_file())
 
-    free = make_plan(DATA, load_target(path, DATA), price_file())
-
-    (counted,) = [limit for limit in free.limits if limit.what == "The start item is counted as free"]
-    assert counted.why == "the target does not say it buys its start item" and "does not include getting the start item" in counted.guarantee
+    (counted,) = [limit for limit in free.limits if limit.what == "The start item is given"]
+    assert counted.why == "the target says the player already holds it"
+    assert counted.guarantee == "The plan is the cheapest among the plans that never start over. The cost of the start item is not counted, and the plan never buys another."
+    assert not [limit for limit in free.limits if limit.what in ("The start item is counted as free", "No restart")]
 
 
-def test_p3_a_free_start_item_has_no_restart_and_the_plan_says_so():
-    free = make_plan(DATA, load_target(R12, DATA), price_file(), start_price=0.0)
+def test_p3_a_given_start_item_has_no_restart_offer_whatever_the_price_file_holds():
+    free = make_plan(DATA, given(load_target(R12, DATA)), price_file(start=4.0))  # the file prices the item: a given item is still never bought again
 
-    (no_restart,) = [limit for limit in free.limits if limit.what == "No restart"]
-    assert "never start over" in no_restart.guarantee
-    assert not [limit for limit in free.limits if limit.what == "The start item is counted as free"]  # P2: the price was given as 0, not left out
+    assert all(priced.label != "restart" for priced in free.offers)
+    assert free.start_price.given and free.start_price.chaos == 0.0
 
 
 def test_a_priced_start_item_has_neither_start_limit(plan):
@@ -354,11 +350,11 @@ def approximate_pair():
     prices = dataclasses.replace(APPROX_PRICES, prices={name: PriceEntry(2.0, "test") for name in names})
     keys = json.dumps(["chaos-orb", "remove-crafted-mods", *(craft.label(COARSE) for craft in CRAFTS)])
     target = parse_target(APPROX_TARGET + f"actions: {keys}\n", COARSE, source="t.yaml")
-    exact = make_plan(COARSE, target, prices, start_price=0.0)
+    exact = make_plan(COARSE, target, prices)
     forecast = exact.abstraction.estimate([exact.start], [priced.offer.action for priced in exact.offers])
     pooling = Coarsening.pooling_irrelevant(exact.abstraction, None, exact.start)
     budget = (forecast.seconds(1.0, 1.0) + forecast.coarsened(pooling).seconds(1.0, 1.0)) / 2
-    return exact, make_plan(COARSE, target, prices, start_price=0.0, budget=budget, rates=APPROX_RATES)
+    return exact, make_plan(COARSE, target, prices, budget=budget, rates=APPROX_RATES)
 
 
 def test_an_exact_plan_claims_the_cheapest_and_an_approximate_one_only_within_its_gap(approximate_pair):

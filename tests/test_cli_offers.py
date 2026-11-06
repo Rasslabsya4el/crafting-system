@@ -9,7 +9,7 @@ import dataclasses
 import random
 
 import pytest
-from cli_support import R12, START, price_file
+from cli_support import R12, START, given, price_file
 from items_support import AMULET, DATA, item, roll
 from limits_support import labels_of, only
 
@@ -138,7 +138,7 @@ def test_the_restart_is_an_action_of_every_state_but_the_start_and_ends_in_the_s
 
 def test_a_free_start_item_has_no_restart():
     target = load_target(R12, DATA)
-    plan = make_plan(DATA, target, price_file(start=None), start_price=0.0)
+    plan = make_plan(DATA, given(target), price_file(start=None))
 
     assert all(priced.label != RESTART for priced in plan.offers)
 

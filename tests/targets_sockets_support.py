@@ -14,6 +14,7 @@ import textwrap
 from pathlib import Path
 
 import golden_diff
+from start_support import with_start
 from targets_implicits_support import TEXTED, assert_error
 
 from crafting_system.data import GameData, StatRange
@@ -69,10 +70,10 @@ ABYSS_DATA = _abyss(DATA)
 ABYSS_BASE_DATA = _robe_with_abyss_implicit(ABYSS_DATA)
 
 
-def parse(text: str, *, base: str = "Simple Robe", data: GameData = DATA, header: bool = True) -> Target:
-    """Parse `text` after the four header lines of `base` (so it starts on line 5); unless `header` is false it stands alone."""
+def parse(text: str, *, base: str = "Simple Robe", data: GameData = DATA, header: bool = True, start: str | None = "given") -> Target:
+    """Parse `text` after the four header lines of `base` (so it starts on line 5); unless `header` is false it stands alone. Closed with `start: given` (OR-6)."""
     body = textwrap.dedent(text).lstrip("\n")
-    return parse_target((HEADER.format(base=base) if header else "") + body, data, source="t.yaml")
+    return parse_target(with_start((HEADER.format(base=base) if header else "") + body, start), data, source="t.yaml")
 
 
 def parse_error(text: str, *, base: str = "Simple Robe", data: GameData = DATA, header: bool = True) -> str:

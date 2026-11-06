@@ -42,7 +42,7 @@ from crafting_system.cli._bound_prune import merge_twins, solve_pruned, starting
 from crafting_system.cli._decide import LADDER, Rates
 from crafting_system.cli._offers import BuyStartItem, PricedOffer, offer_of, price_offers
 from crafting_system.items import Item, Rarity
-from crafting_system.targets import Target
+from crafting_system.targets import StartKind, Target
 
 RATES = Rates(4e-5, 7e-6)
 
@@ -182,7 +182,7 @@ def pooled(real):
     offers = offers_of(data, item, [*crafts, *fossil_sets(data, item)[:120]])
     prices = made_up_prices(data, "Orb of Alteration", "Orb of Scouring", "Orb of Transmutation")
     life, speed = requirement(data, "IncreasedLife"), requirement(data, "MovementVelocity", min_tier=1)
-    target = Target(BASE, LEVEL, frozenset(), (life, speed), item)
+    target = Target(BASE, LEVEL, frozenset(), (life, speed), item, start=StartKind.BOUGHT)  # the restart of the budget tests buys it again
     exact = make_plan(data, target, prices, offers=offers, start_price=RESTART_PRICE)
     merged = merge_twins(data, item, exact.offers)[0]
     first = starting_offers(exact.abstraction, exact.start, merged, item, min_offers=40)

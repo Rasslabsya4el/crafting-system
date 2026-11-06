@@ -18,6 +18,11 @@ item_level: 84
 start_item:
   rarity: rare
 
+# How the start item is had (OR-6): given. There is no guide to read for this target (it is the example of ticket #201); its own
+# words are "what you hold after you scour a rare jewel", that is, you already have the item. Nothing is bought, so the cost of the
+# start item is not counted and the plan never buys another (no restart). A rare jewel with no mod is not sold either.
+start: given
+
 # The kinds of actions the planner may use. The ordinary orbs work on jewels; essences, the bench and
 # the recombinator do not (the claims in src/crafting_system/rules/claims/jewel.yaml).
 actions: [chaos-orb]

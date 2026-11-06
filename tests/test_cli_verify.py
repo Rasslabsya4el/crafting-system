@@ -9,7 +9,7 @@ shows; the real-data version of this check is in `test_cli_real.py`.
 import dataclasses
 
 import pytest
-from cli_support import R12, price_file, read_json
+from cli_support import R12, given, price_file, read_json
 from cli_support import run as run_command
 from targets_support import DATA
 
@@ -136,7 +136,7 @@ def test_a_mean_six_percent_off_is_rejected_when_the_run_can_see_it():
     # A craft's cost is as spread as its mean, so the standard error is about mean / sqrt(runs) and five of
     # them are 3.5% at 20,000 runs. The default 10,000 runs see errors above about 5%, not smaller ones:
     # the output says so (`detectable_error`).
-    exact = make_plan(DATA, load_target(R12, DATA), price_file(), start_price=0.0)
+    exact = make_plan(DATA, given(load_target(R12, DATA)), price_file())
     off = Solution({s: v * 1.06 for s, v in exact.solution.values.items()}, exact.solution.policy, 0.0)
 
     wrong = verify(DATA, dataclasses.replace(exact, solution=off), runs=BIG_RUNS, seed=3)

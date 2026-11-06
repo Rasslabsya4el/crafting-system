@@ -63,7 +63,7 @@ from crafting_system.cli._prune import solver_actions
 from crafting_system.items import Item, Rarity
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file
 from crafting_system.solver import Action as SolverAction
-from crafting_system.targets import Requirement, Target, load_target
+from crafting_system.targets import Requirement, StartKind, Target, load_target
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "golden" / "plans_118.json"
@@ -294,7 +294,8 @@ def planned(world):
         key = (start, goal, with_fractured_sets, start_price)
         if key not in cache:
             item = getattr(world, start)
-            target = Target(BASE, LEVEL, frozenset(), goals(world.data)[goal], item)
+            start = StartKind.GIVEN if start_price is None else StartKind.BOUGHT  # a restart is the buying of a bought start item (OR-6)
+            target = Target(BASE, LEVEL, frozenset(), goals(world.data)[goal], item, start=start)
             actions = fossil_sets(world.data, item, fractured=with_fractured_sets)
             cache[key] = Planned(world.data, target, world.prices, offers_of(world.data, item, actions), start_price)
         return cache[key]

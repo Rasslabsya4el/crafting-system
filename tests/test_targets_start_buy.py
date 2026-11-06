@@ -23,7 +23,7 @@ AMULET = "Metadata/Items/Amulets/Amulet1"
 STATS = parse_trade_stats(json.loads((Path(__file__).parent / "fixtures" / "trade" / "stats_excerpt.json").read_text(encoding="utf-8")))
 
 FRACTURED_RESIST = """\
-buys_start_item: true
+start: bought
 requirements:
   - family: IncreasedLife
 start_item:
@@ -53,14 +53,14 @@ def target_at(level: int, tail: str, *, base: str = "Paua Amulet", data=DATA):
 )
 def test_the_trade_category_comes_from_the_item_class_of_the_base(base, requirement, category):
     name = {"Simple Robe": "Simple Robe"}.get(base, base)
-    found = buy_spec_of(DATA, target_at(80, f"buys_start_item: true\nrequirements:\n  - {requirement}\n", base=name))
+    found = buy_spec_of(DATA, target_at(80, f"start: bought\nrequirements:\n  - {requirement}\n", base=name))
 
     assert found.category == category
     assert found.base_type == name
 
 
 def test_a_base_class_with_no_trade_category_is_refused_by_name():
-    target = target_at(80, "buys_start_item: true\nrequirements:\n  - family: IncreasedAttackSpeed\n", base="Rusted Sword")
+    target = target_at(80, "start: bought\nrequirements:\n  - family: IncreasedAttackSpeed\n", base="Rusted Sword")
 
     with pytest.raises(StartBuyError, match="One Hand Sword"):
         buy_spec_of(DATA, target)
@@ -92,8 +92,8 @@ def test_the_window_runs_from_the_target_level_to_the_highest_level_with_the_sam
 
 
 def test_a_window_that_ends_below_the_top_has_a_maximum_in_the_query_and_one_that_runs_to_the_top_has_none():
-    closed = buy_spec_of(DATA, target_at(81, "buys_start_item: true\nrequirements:\n  - family: IncreasedLife\n"))
-    open_ = buy_spec_of(DATA, target_at(84, "buys_start_item: true\nrequirements:\n  - family: IncreasedLife\n"))
+    closed = buy_spec_of(DATA, target_at(81, "start: bought\nrequirements:\n  - family: IncreasedLife\n"))
+    open_ = buy_spec_of(DATA, target_at(84, "start: bought\nrequirements:\n  - family: IncreasedLife\n"))
 
     assert (closed.item_level_min, closed.item_level_max) == (81, 83)
     assert (open_.item_level_min, open_.item_level_max) == (84, None)
@@ -161,7 +161,7 @@ def test_a_mod_of_two_stats_is_refused():
     ],
 )
 def test_the_rarity_is_the_start_items_even_for_a_rare_with_no_mods(start, rarity):
-    spec = buy_spec_of(DATA, target_at(84, f"buys_start_item: true\nrequirements:\n  - family: IncreasedLife\n{start}"))
+    spec = buy_spec_of(DATA, target_at(84, f"start: bought\nrequirements:\n  - family: IncreasedLife\n{start}"))
 
     assert spec.rarity == rarity
 
@@ -174,7 +174,7 @@ def test_a_rare_start_item_with_a_mod_stays_rare():
 
 
 def test_the_influences_of_the_start_item_are_in_the_spec_the_query_and_the_key():
-    target = target_at(84, "influence: [hunter]\nbuys_start_item: true\nrequirements:\n  - family: FireResistance\n", base="Leather Belt")
+    target = target_at(84, "influence: [hunter]\nstart: bought\nrequirements:\n  - family: FireResistance\n", base="Leather Belt")
     spec = buy_spec_of(DATA, target)
     body = build_query(spec, []).body()["query"]
 
@@ -202,7 +202,7 @@ def test_a_one_level_window_says_the_level_once():
 
 
 def test_two_items_that_differ_have_two_keys():
-    plain = "buys_start_item: true\nrequirements:\n  - family: IncreasedLife\n"
+    plain = "start: bought\nrequirements:\n  - family: IncreasedLife\n"
     keys = {
         start_price_key(DATA, target_at(84, plain)),
         start_price_key(DATA, target_at(81, plain)),
@@ -342,12 +342,12 @@ def test_a_price_typed_under_the_old_name_of_the_item_is_not_found():
         resolve_start_price(DATA, target, prices(**{"Paua Amulet (ilvl 84)": 1.0}), None)
 
 
-def test_a_target_that_does_not_buy_counts_its_start_item_as_free():
-    target = target_at(84, FRACTURED_RESIST.replace("buys_start_item: true\n", ""))
+def test_a_target_that_gives_its_start_item_has_a_given_start_item_that_costs_nothing():
+    target = target_at(84, FRACTURED_RESIST.replace("start: bought\n", "start: given\n"))
 
     found = resolve_start_price(DATA, target, prices(), None)
 
-    assert (found.name, found.chaos) == (None, 0.0)
+    assert (found.name, found.chaos, found.given) == (None, 0.0, True)
 
 
 def test_the_price_given_on_the_command_line_wins_and_carries_the_computed_key():

@@ -82,7 +82,7 @@ def test_the_target_names_the_committed_price_file(data):
     target = load_target(TARGET, data)
 
     assert target.price_file is not None and target.price_file.resolve() == PRICES.resolve() and PRICES.is_file()
-    assert target.buys_start_item and start_price_key(data, target) == "Lion Pelt, normal, item level 84"
+    assert target.bought and start_price_key(data, target) == "Lion Pelt, normal, item level 84"
     assert start_price_key(data, target) in load_price_file(PRICES).prices
 
 

@@ -289,14 +289,14 @@ def test_a_bad_target_file_exits_1_without_a_request(tmp_path, trade, prices_pat
     assert "bogus" in capsys.readouterr().err and trade.requests == []
 
 
-def test_a_target_that_does_not_buy_its_start_item_has_nothing_to_price(tmp_path, trade, prices_path, capsys):
+def test_a_target_that_gives_its_start_item_has_nothing_to_price(tmp_path, trade, prices_path, capsys):
     target = tmp_path / "target.yaml"
-    target.write_text(R12_TARGET.read_text(encoding="utf-8").replace("buys_start_item: true\n", ""), encoding="utf-8")
+    target.write_text(R12_TARGET.read_text(encoding="utf-8").replace("start: bought\n", "start: given\n"), encoding="utf-8")
 
     code = run(tmp_path, trade, target=target)
 
     assert code == 1
-    assert "does not buy its start item" in capsys.readouterr().err and trade.requests == []
+    assert "start: given" in capsys.readouterr().err and trade.requests == []
 
 
 def test_without_game_data_the_command_says_to_fetch_it_and_sends_nothing(tmp_path, trade, prices_path, capsys, monkeypatch):

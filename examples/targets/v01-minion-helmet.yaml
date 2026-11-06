@@ -54,7 +54,7 @@ requirements:
 # of the base and level above). The planner also tries the start items a vendor recipe can make.
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it. Its committed price is a stand-in (#426).
-buys_start_item: true
+start: bought
 
 # The price file of this route (a path from this file's folder): the committed poe.ninja snapshot of the other benchmark routes plus
 # hand prices for the base and the gem line (`tests/fixtures/prices/vendor-v01-2026-11-01.json`).

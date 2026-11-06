@@ -211,6 +211,7 @@ start_item:
     - {{mod: {MULTIMOD}, tier: 1, values: [1], crafted: true}}
     - {{mod: {LOCK_PREFIXES}, tier: 1, values: [1], crafted: true}}
     - {{mod: {LOCK_SUFFIXES}, tier: 1, values: [1], crafted: true}}
+start: bought   # the guide buys the item; --start-price gives its price, and the plan buys it again when the reforge fails
 """
 LIFEFORCE = {"Wild Crystallised Lifeforce": 0.01, "Vivid Crystallised Lifeforce": 0.02, "Primal Crystallised Lifeforce": 0.03}
 START_PRICE = 5.0

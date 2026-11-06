@@ -56,6 +56,7 @@ start_item:
     - mod: {MANA_1}
       tier: 1
       values: {[min(stat.min, stat.max) for stat in DATA.mods[MANA_1].stats]}
+start: given
 """
 
 
@@ -79,7 +80,7 @@ MAIN = "additions_with_chaos"
 @functools.cache
 def exact_plan(name: str):
     rarity, offers = WORLDS[name]
-    return make_plan(DATA, parse_target(target_text(rarity), DATA, source="t.yaml"), PRICES, offers=offers, start_price=0.0)
+    return make_plan(DATA, parse_target(target_text(rarity), DATA, source="t.yaml"), PRICES, offers=offers)
 
 
 def actions_of(name: str):
@@ -121,7 +122,7 @@ def budget(rung_seconds):
 @pytest.fixture(scope="module")
 def approximate(budget):
     rarity, offers = WORLDS[MAIN]
-    return make_plan(DATA, parse_target(target_text(rarity), DATA, source="t.yaml"), PRICES, offers=offers, start_price=0.0, budget=budget, rates=RATES)
+    return make_plan(DATA, parse_target(target_text(rarity), DATA, source="t.yaml"), PRICES, offers=offers, budget=budget, rates=RATES)
 
 
 
@@ -215,7 +216,7 @@ def test_a_query_over_the_budget_with_an_undeclared_action_is_refused_when_the_e
     assert decision.action == "refused" and "no approximate level available (Regal Orb is not declared block-invariant" in decision.message
 
     with pytest.raises(PlanError, match=r"no approximate level available \(Regal Orb is not declared block-invariant"):
-        make_plan(DATA, exact.target, PRICES, offers=offers, start_price=0.0, budget=0.0, rates=RATES, solver="object")  # (the packed solver answers it, ticket #70)
+        make_plan(DATA, exact.target, PRICES, offers=offers, budget=0.0, rates=RATES, solver="object")  # (the packed solver answers it, ticket #70)
 
 
 # --- 3. decide on a query with additions -------------------------------------------------------------------------------
@@ -346,7 +347,7 @@ def test_a_ladder_of_one_rung_gives_a_gap_within_one_percent_or_the_narrowest_in
     monkeypatch.setattr(_decide, "LADDER", ())  # no tail cut after the rung
     rarity, offers = WORLDS[MAIN]
 
-    plan = make_plan(DATA, exact.target, PRICES, offers=offers, start_price=0.0, budget=budget, rates=RATES)
+    plan = make_plan(DATA, exact.target, PRICES, offers=offers, budget=budget, rates=RATES)
 
     found = plan.approximation
     assert found is not None and found.level == level.name
@@ -372,7 +373,7 @@ def test_a_tail_cut_follows_the_spread_rung_and_reaches_the_tolerance_the_rung_a
     monkeypatch.setattr(_decide, "SPREAD_LADDER", (level,))
     rarity, offers = WORLDS[MAIN]
 
-    plan = make_plan(DATA, exact.target, PRICES, offers=offers, start_price=0.0, budget=budget, rates=RATES)
+    plan = make_plan(DATA, exact.target, PRICES, offers=offers, budget=budget, rates=RATES)
 
     found = plan.approximation
     assert found is not None and found.level.startswith("tail cut at theta") and found.level.endswith(level.name)

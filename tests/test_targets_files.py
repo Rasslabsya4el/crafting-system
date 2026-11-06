@@ -128,7 +128,7 @@ def test_a_relative_price_file_counts_from_the_folder_of_the_target_file(tmp_pat
     path = tmp_path / "targets" / "t.yaml"
     path.parent.mkdir()
     path.write_text(
-        "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nprice_file: ../prices/day.json\n",
+        "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nprice_file: ../prices/day.json\nstart: given\n",
         encoding="utf-8",
     )
 
@@ -138,7 +138,7 @@ def test_a_relative_price_file_counts_from_the_folder_of_the_target_file(tmp_pat
 def test_a_price_file_is_neither_read_nor_checked(tmp_path):
     path = tmp_path / "t.yaml"
     path.write_text(
-        "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nprice_file: not-there.json\n",
+        "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nprice_file: not-there.json\nstart: given\n",
         encoding="utf-8",
     )
 
@@ -149,7 +149,7 @@ def test_a_price_file_is_neither_read_nor_checked(tmp_path):
 
 def test_a_target_without_a_price_file_has_none(tmp_path):
     path = tmp_path / "t.yaml"
-    path.write_text("base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n", encoding="utf-8")
+    path.write_text("base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nstart: given\n", encoding="utf-8")
 
     assert load_target(path, DATA).price_file is None
 
@@ -157,7 +157,7 @@ def test_a_target_without_a_price_file_has_none(tmp_path):
 def test_a_file_is_read_as_utf8(tmp_path):
     path = tmp_path / "t.yaml"
     path.write_text(
-        "# Verstärkung — 魔法\nbase: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n",
+        "# Verstärkung — 魔法\nbase: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nstart: given\n",
         encoding="utf-8",
     )
 
@@ -166,7 +166,7 @@ def test_a_file_is_read_as_utf8(tmp_path):
 
 def test_a_file_with_a_byte_order_mark_is_read(tmp_path):
     path = tmp_path / "t.yaml"
-    path.write_bytes(b"\xef\xbb\xbfbase: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\n")
+    path.write_bytes(b"\xef\xbb\xbfbase: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nstart: given\n")
 
     assert load_target(path, DATA).base_id == AMULET
 
@@ -205,7 +205,7 @@ def test_errors_from_a_file_name_the_path_as_given(tmp_path):
 
 def test_loading_works_from_a_relative_path(tmp_path, monkeypatch):
     (tmp_path / "t.yaml").write_text(
-        "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nprice_file: p.json\n",
+        "base: Paua Amulet\nitem_level: 84\nrequirements:\n  - family: IncreasedLife\nprice_file: p.json\nstart: given\n",
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
@@ -239,7 +239,7 @@ def test_a_route_target_loads_on_the_real_data_with_a_fractured_start_item(real,
 
     assert target.start_item.rarity is Rarity.RARE
     assert [mod.fractured for mod in target.start_item.mods] == [True]
-    assert target.buys_start_item
+    assert target.bought
     assert not target.is_met_by(target.start_item)
 
 

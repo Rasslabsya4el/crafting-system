@@ -58,7 +58,7 @@ from . import _route_flow
 from ._interval import IntervalAnswer
 from ._limits import SHOWN_LABELS, grouped, limit_text, more_labels
 from ._marking import approximate_inputs
-from ._plan import Plan
+from ._plan import GIVEN_SOURCE, Plan
 from ._report import Report
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
@@ -469,7 +469,10 @@ class _View:
         if self.first is not None:
             return self.vendor_row(self.first, final)
         price = self.plan.start_price
-        cost = [money(price.chaos)] if price.chaos > 0 else ["free"]
+        if price.given:  # OR-6: the player already holds it; nothing is bought, so there is no trade field and no price
+            fields = _fields(_plain("Start item", *self.start_accepts()), _plain("Cost per use", GIVEN_SOURCE))
+            return StepRow(1, "Start item (given)", fields, self.start_card(), self.anchor(1), final, price.chaos)
+        cost = [money(price.chaos)]
         if price.taken_for:
             cost.append(price.taken_for)
         fields = _fields(
@@ -526,7 +529,9 @@ class _View:
             if row.total is None:
                 continue
             head = "chosen" if row.outcome == "chosen" else "planned"
-            lines.append(f"{head}: {row.candidate.label}: {money(row.total)} in all (start {money(row.candidate.price)} + crafting {money(row.mean_remaining or 0.0)})")
+            candidate = row.candidate
+            start = "given, not counted" if candidate.given else "no price" if candidate.price is None else money(candidate.price)
+            lines.append(f"{head}: {candidate.label}: {money(row.total)} in all (start {start} + crafting {money(row.mean_remaining or 0.0)})")
         return _plain("Start", *lines)
 
     def goal_card(self) -> GoalCard:

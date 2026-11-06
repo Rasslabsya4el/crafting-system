@@ -29,7 +29,7 @@ from typing import Any
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
-from crafting_system.targets import StartBuyError, Target, start_price_key
+from crafting_system.targets import StartBuyError, StartKind, Target, start_price_key
 
 from ._offers import Offer
 from ._plan import Plan, PlanError, StartPrice, add_risk, make_plan, resolve_start_price
@@ -49,23 +49,33 @@ SOURCES: tuple[StartSource, ...] = (vendor_recipe_starts,)  # a bought-item sour
 
 
 def plain_candidate(data: GameData, target: Target, prices: PriceFile, override: float | None) -> StartCandidate:
-    """The target's own start item with its price (`resolve_start_price`); an unpriced one has an infinite price and fails when planned."""
+    """The target's own start item with its price (`resolve_start_price`); an unpriced bought one has no price (None) and fails when planned.
+
+    A given start item (OR-6) costs 0 and is marked given; a bought one with no price is reported as unpriced, never as an infinite price.
+    """
     try:
         price = resolve_start_price(data, target, prices, override)
         chaos, name, source = price.chaos, price.name, price.source
     except PlanError as error:
-        chaos, name, source = math.inf, _key_of(data, target), str(error)
-    return StartCandidate(PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, target.start_item, chaos, name, source)
+        chaos, name, source = None, _key_of(data, target), str(error)
+    return StartCandidate(PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, target.start_item, chaos, name, source, given=not target.bought)
 
 
 def _key_of(data: GameData, target: Target) -> str | None:
     """The price key of a bought start item, or None when the target buys nothing or its item cannot be searched."""
-    if not target.buys_start_item:
+    if not target.bought:
         return None
     try:
         return start_price_key(data, target)
     except StartBuyError:
         return None
+
+
+def _by_price(candidate: StartCandidate) -> tuple[float, str]:
+    """The order of the candidates after the plain one: from the cheapest. A candidate a source offers is priced (its goods are)."""
+    if candidate.price is None:
+        raise PlanError(f"the start option {candidate.label!r} has no price, so it cannot be compared")
+    return (candidate.price, candidate.key)
 
 
 def readings_of(axes: tuple[tuple[str, tuple[str, ...]], ...]) -> list[Reading]:
@@ -95,7 +105,10 @@ def _plan_candidate(
         if candidate.key == PLAIN_KEY:
             plan = make_plan(data, target, prices, start_price=override, with_risk=False, **kwargs)
         else:
-            moved = dataclasses.replace(target, start_item=candidate.item, buys_start_item=False)
+            # the recipe-made item is bought (its goods have a price) and is priced by the candidate, never by the target's own key
+            moved = dataclasses.replace(target, start_item=candidate.item, start=StartKind.BOUGHT)
+            if candidate.price is None or not candidate.price > 0:
+                raise PlanError(f"the start option {candidate.label!r} has no price above 0, so it cannot be bought")
             price = StartPrice(candidate.price_name, candidate.price, candidate.price_source)
             plan = make_plan(data, moved, prices, start_price_of=price, with_risk=False, **kwargs)
     except PlanError as error:
@@ -134,7 +147,7 @@ def plan_with_starts(
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
 
     plain = plain_candidate(data, target, prices, start_price)
-    order = [plain, *sorted(listing.candidates, key=lambda candidate: (candidate.price, candidate.key))]
+    order = [plain, *sorted(listing.candidates, key=_by_price)]
     outcomes: dict[str, _Outcome] = {}
     skipped: dict[str, str] = {}
     by_reading: list[ReadingChoice] = []
@@ -145,7 +158,7 @@ def plan_with_starts(
             if not candidate.exists_in(reading):
                 continue
             if candidate.key not in outcomes:
-                if candidate.key != PLAIN_KEY and candidate.price >= best_total:
+                if candidate.key != PLAIN_KEY and candidate.price is not None and candidate.price >= best_total:
                     skipped.setdefault(candidate.key, f"its start price {candidate.price:,.2f} Chaos is not below the best total found, {best_total:,.2f}")
                     continue
                 outcomes[candidate.key] = _plan_candidate(data, target, prices, candidate, start_price, offers=offers, **kwargs)

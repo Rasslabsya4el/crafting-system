@@ -19,6 +19,7 @@ from abstraction_support import real_game_data
 from cli_support import price_file as r12_prices
 from cli_support import read_json
 from cli_support import run as run_r12
+from start_support import with_start
 
 from crafting_system.cli import StartContext, build_report, make_plan, policy_document, render_text, vendor_recipe_starts
 from crafting_system.cli._start_options import gem_price_name
@@ -26,7 +27,13 @@ from crafting_system.cli._start_types import CAP_BELOW_ASKED, NO_PRICE, NO_TARGE
 from crafting_system.items import ExplicitMod, Rarity, tier_table
 from crafting_system.items.vendor_recipes import RECIPES
 from crafting_system.prices import PriceEntry, PriceFile
-from crafting_system.targets import load_target, parse_target
+from crafting_system.targets import load_target
+from crafting_system.targets import parse_target as parse_target_text
+
+
+def parse_target(text: str, data, source: str = "t.yaml"):
+    """The target of `text`, closed with `start: given` unless it says how its start item is had (OR-6)."""
+    return parse_target_text(with_start(text), data, source=source)
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ROOT / "examples" / "targets"

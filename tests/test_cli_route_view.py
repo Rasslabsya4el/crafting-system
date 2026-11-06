@@ -151,7 +151,7 @@ requirements:
     min_tier: any
 start_item:
   rarity: rare
-buys_start_item: true
+start: bought
 """
 RESTART_ROUTE = f"""\
 name: Restart on a lone gem

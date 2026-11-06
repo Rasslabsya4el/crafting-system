@@ -38,7 +38,8 @@ class StartCandidate:
     """One priced start item.
 
     `key` names the candidate in a run (`plain`, `vendor:weapon_fire:8`). `price` is the whole Chaos price of the item;
-    for a recipe it is the sum of `goods`, for the plain start item the price the target names. `price_name` and
+    for a recipe it is the sum of `goods`, for the plain start item the price of the target's bought item (0 when the target gives it),
+    and None when a bought item has no price: an unpriced start option is reported as unpriced, never as an infinite price (#505). `price_name` and
     `price_source` are what the report prints on the start line. `claims` are the ids of the claims behind a recipe-made item
     that are marked `approximate` (ADR-0028). `sourced` is the price of a bought item under the profile's price source (ticket #357):
     the trade and poe.ninja prices side by side, the fallback mark and the gap flag; the report prints it under the option. A candidate that exists only at some values of a rule axis names the axis in
@@ -49,7 +50,7 @@ class StartCandidate:
     source: str
     label: str
     item: Item
-    price: float
+    price: float | None
     price_name: str | None
     price_source: str
     goods: Goods = ()
@@ -59,6 +60,7 @@ class StartCandidate:
     axis: str | None = None
     reading_values: tuple[str, ...] = ()
     sourced: SourcedPrice | None = None
+    given: bool = False  # the target gives this start item (OR-6): its cost is not counted, the price is 0 by definition
 
     def exists_in(self, reading: Reading) -> bool:
         """Whether this candidate can be had at `reading` of the rule axes (one without an axis exists at every reading)."""

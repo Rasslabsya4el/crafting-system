@@ -9,6 +9,8 @@ only the belt can get, a base implicit and an explicit suffix that share the tex
 
 import textwrap
 
+from start_support import with_start
+
 from crafting_system.data import GameData, normalize_game_data
 from crafting_system.targets import Target, TargetError, parse_target
 
@@ -129,16 +131,16 @@ RAW_BASES = {
 DATA: GameData = normalize_game_data(RAW_MODS, RAW_BASES, {}, {}, [], version="0.0-test")
 
 
-def parse(text: str, *, header: bool = True) -> Target:
-    """Parse `text` on `DATA`; unless `header` is false it follows `HEADER` (so it starts on line `HEADER_LINES + 1`)."""
+def parse(text: str, *, header: bool = True, start: str | None = "given") -> Target:
+    """Parse `text` on `DATA`; unless `header` is false it follows `HEADER` (so it starts on line `HEADER_LINES + 1`). Closed with `start: given` (OR-6)."""
     body = textwrap.dedent(text).lstrip("\n")
-    return parse_target(HEADER + body if header else body, DATA, source="t.yaml")
+    return parse_target(with_start(HEADER + body if header else body, start), DATA, source="t.yaml")
 
 
-def parse_error(text: str, *, header: bool = True) -> str:
+def parse_error(text: str, *, header: bool = True, start: str | None = "given") -> str:
     """The message of the `TargetError` that parsing `text` raises; fails the test if none is raised."""
     try:
-        parse(text, header=header)
+        parse(text, header=header, start=start)
     except TargetError as error:
         return str(error)
     raise AssertionError("the target parsed without an error")

@@ -120,7 +120,7 @@ What the guide says about a mod: a tier, a number ("at least 70 Life") or a soft
 _Avoid_: the owner's reading (it is the guide's words that win)
 
 **Start item**:
-The concrete item a query starts from; by default a fresh normal base.
+The concrete item a query starts from; by default a fresh normal base. A target says how it is had, `start: bought` (it has a price and a restart buys it again) or `start: given` (the player already holds it: its cost is not counted and it is never bought again), OR-6.
 
 **Vendor recipe**:
 One of five recipes (boots movement speed, weapon flat damage, jewellery chaos resistance, a spell-gem weapon, a minion helmet) that turn a Normal base and cheap goods into a Magic item with one chosen mod. It is a start-item source chosen outside the solver: the planner plans the plain start item and each recipe-made one and keeps the cheapest total (ADR-0059).
@@ -344,7 +344,7 @@ The action to take in every state reachable from the start item, with the expect
 _Avoid_: plan, strategy
 
 **Limit**:
-One thing an answer leaves out and what it still guarantees: a kind of action not offered, actions with no price, an offer proved not needed, a start item counted as free, a percentile the grid could not reach. `Plan.limits` holds them; the text report, the JSON policy and the goal card of the route page ("What this answer leaves out") show the same records. Every limit has a guarantee sentence in player words (OR-13).
+One thing an answer leaves out and what it still guarantees: a kind of action not offered, actions with no price, an offer proved not needed, a given start item, a percentile the grid could not reach. `Plan.limits` holds them; the text report, the JSON policy and the goal card of the route page ("What this answer leaves out") show the same records. Every limit has a guarantee sentence in player words (OR-13).
 _Avoid_: note, left-out line, dropped action
 
 **Route**:

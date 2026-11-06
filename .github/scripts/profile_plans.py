@@ -117,7 +117,7 @@ def filled_prices(data, target, offers):
     base = load_price_file(PRICES)
     _, dropped = price_offers(offers, base)
     missing = {name for drop in dropped for name in drop.missing}
-    if target.buys_start_item and start_price_key(data, target) not in base.prices:
+    if target.bought and start_price_key(data, target) not in base.prices:
         missing.add(start_price_key(data, target))
     for name in sorted(missing):
         share = int(hashlib.sha256(name.encode()).hexdigest()[:8], 16) / 0xFFFFFFFF

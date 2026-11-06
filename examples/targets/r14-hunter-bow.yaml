@@ -64,4 +64,4 @@ requirements:
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it.
-buys_start_item: true
+start: bought

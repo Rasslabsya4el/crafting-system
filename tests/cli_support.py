@@ -1,5 +1,6 @@
 """Shared helpers for the `cli` tests: a price file in memory, the R12 target, a run of the command."""
 
+import dataclasses
 import datetime
 import json
 import math
@@ -9,12 +10,17 @@ from targets_support import DATA, EXAMPLES
 
 from crafting_system.cli import main
 from crafting_system.prices import PriceEntry, PriceFile
-from crafting_system.targets import load_target, start_price_key
+from crafting_system.targets import StartKind, Target, load_target, start_price_key
 
 R12 = EXAMPLES / "r12-lightning-amulet.yaml"
 TODAY = datetime.date(2026, 10, 31)
 LIFEFORCE = "Primal Crystallised Lifeforce"
 START = start_price_key(DATA, load_target(R12, DATA))  # the price key computed from the R12 target (#474)
+
+
+def given(target: Target) -> Target:
+    """`target` with its start item given (OR-6): its cost is not counted and the plan never buys another."""
+    return dataclasses.replace(target, start=StartKind.GIVEN)
 
 
 def price_file(lifeforce: float | None = 0.01, start: float | None = 4.0, divine: float = 300.0, data=None) -> PriceFile:

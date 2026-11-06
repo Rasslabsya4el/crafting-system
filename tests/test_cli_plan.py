@@ -9,7 +9,7 @@ least number of clicks that is done with chance 0.9 (the costs share one unit, s
 import dataclasses
 
 import pytest
-from cli_support import LIFEFORCE, R12, START, geometric_p90_clicks, price_file, read_json
+from cli_support import LIFEFORCE, R12, START, geometric_p90_clicks, given, price_file, read_json
 from cli_support import run as run_command
 from targets_support import DATA
 
@@ -76,7 +76,7 @@ def test_the_cli_returns_the_policy_with_odds_mean_cost_and_p90(tmp_path, q):
     assert totals["p90"]["low"] <= totals["p90"]["value"] <= totals["p90"]["high"]
     assert totals["mean_cost_divine"] == pytest.approx(totals["mean_cost"]["value"] / 300.0)
     assert document["start"] == {
-        "state": "S1", "price_name": START, "price_chaos": 4.0, "price_source": "trade-api"
+        "state": "S1", "price_name": START, "price_chaos": 4.0, "price_source": "trade-api", "given": False
     }  # fmt: skip
 
 
@@ -187,7 +187,7 @@ def test_the_offer_filter_keeps_the_usable_offers_in_their_order(target):
         Offer("Chaos Orb 2", ChaosOrb(), {"Chaos Orb": 2}),
     ]
 
-    plan = make_plan(DATA, target, price_file(), start_price=0.0, offers=offers, solve_it=False)
+    plan = make_plan(DATA, given(target), price_file(), offers=offers, solve_it=False)
 
     assert [priced.label for priced in plan.offers] == ["Chaos Orb", "Chaos Orb 2"]
 

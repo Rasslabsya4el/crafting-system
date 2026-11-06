@@ -18,9 +18,12 @@ import pytest
 import yaml
 from abstraction_support import real_game_data
 
-from crafting_system.prices.trade_query import build_query
+from crafting_system.cli import RESTART, make_plan
+from crafting_system.cli._plan import PlanError, resolve_start_price
+from crafting_system.prices import load_price_file
+from crafting_system.prices.trade_query import TradeSpecError, build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
-from crafting_system.targets import buy_spec_of, load_target, start_price_key
+from crafting_system.targets import StartKind, buy_spec_of, load_target, start_price_key
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ROOT / "examples" / "targets"
@@ -29,8 +32,10 @@ STATS = ROOT / "tests" / "fixtures" / "trade" / "recorded" / "stats_full.json.gz
 DERIVED = ROOT / "tests" / "reconcile" / "derived_specs"  # the buy spec of each bought target, written down for the reconcile package
 KEYS = ROOT / "tests" / "reconcile" / "expected_keys.txt"  # the independent table of keys, hand-written, read by the reconcile package too
 
-NOT_BOUGHT = {"j01-cobalt-life-attack-speed", "r03-avoid-shock-boots", "r06-strength-heavy-belt"}  # #427, the next step-4 ticket
+GIVEN = {"j01-cobalt-life-attack-speed"}  # "what you hold after you scour a rare jewel": the player already has it (OR-6, #505); every other target buys
 WINDOWS = {  # (item level, highest item level with the same pool)
+    "r03-avoid-shock-boots": (100, 100),
+    "r06-strength-heavy-belt": (75, 75),
     "r04-penetrating-quiver": (81, 81),
     "r05-strength-ring": (75, 75),
     "r08-energy-shield-boots": (86, 100),
@@ -45,6 +50,8 @@ WINDOWS = {  # (item level, highest item level with the same pool)
 }
 # The entries priced for another item than the one the target computes (a price file entry keeps the body it was priced with).
 OTHER_ITEM = {
+    "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06, anonymous; the query itself is #514): the bought start item has no price, so none is written",
+    "r06-strength-heavy-belt": "#483 the exact item has 0 listings (searched on 2026-11-06, anonymous; a normal item cannot carry an influence, #515): the bought start item has no price, so none is written",
     "r05-strength-ring": "#483 the exact item has 0 listings: the stored price is for any ring of item level 75 or more",
     "r10-fractured-boots": "#483 the exact item has 9 listings (rail 10): the stored price is for item level 84 or more",
     "r10-fractured-boots-70-life": "#483 the exact item has 9 listings (rail 10): the stored price is for item level 84 or more",
@@ -79,7 +86,7 @@ def stems() -> list[str]:
 
 
 def bought(stem: str) -> bool:
-    return stem not in NOT_BOUGHT
+    return stem not in GIVEN
 
 
 def entries_of(key: str) -> list[dict]:
@@ -100,10 +107,11 @@ def query_of(data, stats, stem: str) -> dict:
 
 
 @pytest.mark.parametrize("stem", stems())
-def test_a_target_buys_its_start_item_unless_it_is_one_of_the_three_without_a_price(data, stem):
+def test_a_target_gives_its_start_item_only_where_it_is_given_and_buys_it_everywhere_else(data, stem):
     target = load_target(TARGETS / f"{stem}.yaml", data)
 
-    assert target.buys_start_item is bought(stem)
+    assert target.bought is bought(stem)
+    assert target.start is (StartKind.BOUGHT if bought(stem) else StartKind.GIVEN)
 
 
 @pytest.mark.parametrize("stem", [stem for stem in stems() if bought(stem)])
@@ -130,7 +138,18 @@ def test_the_shared_names_of_r04_and_r09_say_which_base_and_the_others_do_not(da
     assert [stem for stem, key in keys.items() if "[" in key.split(",")[0]] == ["r04-penetrating-quiver", "r09-life-boots"]
 
 
-@pytest.mark.parametrize("stem", [stem for stem in stems() if bought(stem)])
+NO_PRICE = {
+    "r03-avoid-shock-boots": OTHER_ITEM["r03-avoid-shock-boots"],
+    "r06-strength-heavy-belt": OTHER_ITEM["r06-strength-heavy-belt"],
+}  # bought, and the market holds fewer listings than the rail: kept bought, no price written (#505, #483)
+
+
+def price_row(stem: str):
+    marks = [pytest.mark.xfail(strict=True, raises=AssertionError, reason=NO_PRICE[stem])] if stem in NO_PRICE else []
+    return pytest.param(stem, id=stem, marks=marks)
+
+
+@pytest.mark.parametrize("stem", [price_row(stem) for stem in stems() if bought(stem)])
 def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_file_that_has_it(stem):
     key = expected_keys()[stem]
     committed = [path.name for path in sorted(PRICES.glob("*.json")) if key in json.loads(path.read_text(encoding="utf-8"))["prices"]]
@@ -140,7 +159,7 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
 
 
 def row(stem: str):
-    marks = [pytest.mark.xfail(strict=True, raises=AssertionError, reason=OTHER_ITEM[stem])] if stem in OTHER_ITEM else []
+    marks = [pytest.mark.xfail(strict=True, raises=(AssertionError, TradeSpecError), reason=OTHER_ITEM[stem])] if stem in OTHER_ITEM else []
     return pytest.param(stem, id=stem, marks=marks)
 
 
@@ -181,6 +200,93 @@ def test_each_two_toned_base_asks_for_its_own_implicit_stat_of_the_recorded_stat
 
     assert [found.id for found in filters] == [stat]
     assert spec.name.startswith(f"Two-Toned Boots [{base}]")
+
+
+@pytest.mark.parametrize("stem", stems())
+def test_every_example_target_says_in_its_own_text_how_its_start_item_is_had(stem):
+    text = (TARGETS / f"{stem}.yaml").read_text(encoding="utf-8")
+
+    (word,) = re.findall(r"(?m)^start:\s*(\w+)\s*$", text)
+    assert word == ("bought" if bought(stem) else "given")
+    assert "buys_start_item" not in text
+
+
+def test_a_given_start_item_names_its_reason_in_a_comment_that_quotes_the_guide():
+    text = (TARGETS / "j01-cobalt-life-attack-speed.yaml").read_text(encoding="utf-8")
+
+    comment = text[text.index("# How the start item is had") : text.index("start: given")]
+    assert "you already have the item" in comment and "what you hold after you scour a rare jewel" in comment
+
+
+@pytest.mark.parametrize(("stem", "guide_words"), [("r03-avoid-shock-boots", "Get suppression fracture boot"), ("r06-strength-heavy-belt", "Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt")])
+def test_where_the_guide_buys_the_start_item_the_target_says_bought_and_quotes_the_guide(stem, guide_words):
+    text = (TARGETS / f"{stem}.yaml").read_text(encoding="utf-8")
+
+    assert "start: bought" in text
+    assert guide_words.lower() in text.lower()
+
+
+SEARCHES = ROOT / "tests" / "fixtures" / "trade" / "recorded" / "start_items" / "searches_r03_r06_2026-11-06.json"
+
+
+def test_the_recorded_search_of_r06_is_the_query_built_from_the_target_and_had_no_listing(data, stats):
+    record = json.loads(SEARCHES.read_text(encoding="utf-8"))["r06-strength-heavy-belt"]
+
+    assert record["key"] == expected_keys()["r06-strength-heavy-belt"] and record["date"] == "2026-11-06" and record["league"] == "Allflame"
+    assert record["total"] == 0 and record["requests"] == 1
+    assert record["query"] == query_of(data, stats, "r06-strength-heavy-belt")  # the stored query is the computed one (OR-3)
+
+
+def test_r03_asks_for_a_stat_the_trade_site_lists_twice_and_both_were_searched_with_no_listing(data, stats):
+    record = json.loads(SEARCHES.read_text(encoding="utf-8"))["r03-avoid-shock-boots"]
+
+    assert record["key"] == expected_keys()["r03-avoid-shock-boots"] and record["date"] == "2026-11-06"
+    assert [(each["stat"], each["total"]) for each in record["searches"]] == [("fractured.stat_3680664274", 0), ("fractured.stat_492027537", 0)]
+    with pytest.raises(TradeSpecError, match="several trade stats.*stat_3680664274.*stat_492027537|several trade stats.*stat_492027537.*stat_3680664274"):
+        query_of(data, stats, "r03-avoid-shock-boots")  # #514: the query cannot be built from the target alone yet
+
+
+PRICE_FILE = PRICES / "routes-allflame-2026-10-31.json"
+
+
+@pytest.mark.parametrize("stem", sorted(NO_PRICE))
+def test_a_bought_start_item_with_no_price_in_the_committed_files_is_refused_naming_its_key(data, stem):
+    target = load_target(TARGETS / f"{stem}.yaml", data)
+
+    with pytest.raises(PlanError) as caught:
+        resolve_start_price(data, target, load_price_file(PRICE_FILE), None)
+
+    # when #483 gives the exact item a price this test fails: remove the strict xfails that name #483 with it
+    assert repr(expected_keys()[stem]) in str(caught.value) and "must have a price" in str(caught.value)
+
+
+def test_j01_plans_from_its_example_file_as_a_given_start_item_with_no_restart(data):
+    target = load_target(TARGETS / "j01-cobalt-life-attack-speed.yaml", data)
+
+    plan = make_plan(data, target, load_price_file(PRICE_FILE))
+
+    assert plan.start_price.given and plan.start_price.chaos == 0.0
+    assert all(priced.label != RESTART for priced in plan.offers)
+    assert [limit.what for limit in plan.limits if limit.kind == "start-item"] == ["The start item is given"]
+
+
+@pytest.mark.parametrize(
+    "stem",
+    [
+        pytest.param(
+            "r03-avoid-shock-boots",
+            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price, and #516 the planner refuses its implicits first"),
+        ),
+        pytest.param(
+            "r06-strength-heavy-belt",
+            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price, and #516 the planner refuses its implicits and quality first"),
+        ),
+    ],
+)
+def test_r03_and_r06_plan_from_their_example_files(data, stem):
+    plan = make_plan(data, load_target(TARGETS / f"{stem}.yaml", data), load_price_file(PRICE_FILE))
+
+    assert plan.start_price.bought and plan.start_price.chaos > 0
 
 
 def test_no_buy_spec_file_and_no_start_price_line_is_left():

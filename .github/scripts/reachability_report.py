@@ -850,7 +850,7 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
     from crafting_system.cli import StartContext, make_plan, vendor_recipe_starts
     from crafting_system.cli._plan import PlanError, StartPrice
     from crafting_system.prices import load_price_file
-    from crafting_system.targets import load_target
+    from crafting_system.targets import StartKind, load_target
 
     default_prices = load_price_file(prices_path)
     stems = sorted(path.stem for path in targets_dir.glob("*.yaml"))
@@ -893,7 +893,7 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
             if candidate.item in seen_items:
                 continue
             seen_items.add(candidate.item)
-            moved = dataclasses.replace(target, start_item=candidate.item, buys_start_item=False)
+            moved = dataclasses.replace(target, start_item=candidate.item, start=StartKind.BOUGHT)
             price = StartPrice(candidate.price_name, candidate.price, candidate.price_source)
             probes.append(plan_one(ids[stem], "recipe start", moved, prices, start_price_of=price))
     return probes

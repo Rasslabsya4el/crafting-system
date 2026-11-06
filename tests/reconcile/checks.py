@@ -9,8 +9,9 @@ found there; an empty list means the places agree. A disagreement names both pla
 Slots (the rule behind all of them is OR-3, "the target, the buy spec and the price agree"):
 
 - `target.base`: the base the target names exists in the game data.
-- `start_price.written`, `buy_spec.exists`: the target names a start price and a buy spec carries that name.
-  Without them the start item is described once and counted free (audit INPUTS-8).
+- `start_price.written`, `buy_spec.exists`: a target says `start: given` or `start: bought` (OR-6, #505). A bought one has a
+  price key (a row of `expected_keys.txt`) and a buy spec that carries that name; a given one needs neither. A target that does
+  not say how its start item is had, or a bought one without them, is counted free by nobody: it is a disagreement (audit INPUTS-8).
 - `buy.base`, `buy.category`, `buy.item_level`, `buy.rarity`, `buy.influence`: the target's start item
   against the buy spec whose `name` is the target's `start_price`.
 - `buy.pool`: every base the spec accepts has the same mod pool as the target's base.
@@ -171,11 +172,13 @@ def reconcile(
         add("target.base", f"{where_target}: base = {target.base!r}", "game data: no released base has this id or name", target.base, "no base")
     target_names = sorted({export.bases[i]["name"] for i in base_ids})
     target_classes = sorted({export.bases[i]["item_class"] for i in base_ids})
-    if target.start_price is None:
-        add("start_price.written", f"{where_target}: no start_price", "the start item is counted free", "none", "free")
-    if spec is None:
+    if target.start not in ("bought", "given"):
+        add("start_price.written", f"{where_target}: no `start:`", "the file does not say whether its start item is given or bought", "none", "not said")
+    elif target.start == "bought" and target.start_price is None:
+        add("start_price.written", f"{where_target}: start: bought", "no price key is written for it", "bought", "no price key")
+    if target.start == "bought" and spec is None:
         named = f"start_price = {target.start_price!r}" if target.start_price else "no start_price"
-        add("buy_spec.exists", f"{where_target}: {named}", "examples/buy: no buy spec has this name", target.start_price or "none", "no buy spec")
+        add("buy_spec.exists", f"{where_target}: start: bought, {named}", "no buy spec has this name", target.start_price or "none", "no buy spec")
 
     # --- the buy spec against the target's start item ---------------------------------------------------
     if spec is not None and base_ids:

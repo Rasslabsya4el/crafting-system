@@ -165,7 +165,7 @@ def main(
         if plan.approximation is not None:
             print("Route view not written: it is not built for an approximate answer yet.")
         else:
-            spec = buy_spec_of(game, target) if target.buys_start_item else None  # computed from the target: the buy step's link and filter
+            spec = buy_spec_of(game, target) if target.bought else None  # computed from the target: the buy step's link and filter
             page = write_route_page(
                 out.parent / f"{target_path.stem}.route.html", report, game, route=route, given=given,
                 buy_spec=spec, cache_dir=config.cache_dir, target_name=name,

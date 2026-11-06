@@ -28,6 +28,7 @@ from cli_support import R12, TODAY, read_json
 from cli_support import price_file as r12_prices
 from cli_support import run as run_r12
 from targets_support import DATA
+from start_support import with_start
 from vendor_starts_support import (
     AUGMENTATION,
     AUGMENTATION_PRICE,
@@ -73,7 +74,14 @@ from crafting_system.cli._start_types import (
 from crafting_system.items import ExplicitMod, Item, Rarity
 from crafting_system.items.vendor_recipes import RECIPES
 from crafting_system.prices import load_prices, write_price_file
-from crafting_system.targets import load_target, parse_target, start_price_key
+from crafting_system.targets import load_target, start_price_key
+from crafting_system.targets import parse_target as parse_target_text
+
+
+def parse_target(text: str, data, source: str):
+    """The target of `text`, closed with `start: given` unless it says how its start item is had (OR-6)."""
+    return parse_target_text(with_start(text), data, source=source)
+
 
 FIVE_STEPS = BASE_PRICE + 5 * (FLASK_PRICE + AUGMENTATION_PRICE)  # the movement speed recipe to 30%: the base and five rounds of goods
 BOOTS_KEY = "vendor:boots_movement_speed:5"
@@ -365,10 +373,11 @@ def test_goods_dearer_than_the_best_total_are_listed_as_not_planned():
 
 
 def test_a_tie_goes_to_the_plain_start():
-    plain = starts_module.plain_candidate(TOY, toy_target(), prices(), None)
+    bought = toy_target(BOOTS_TARGET.replace("start_item:", "start: bought\nstart_item:"))  # a bought plain start at 3 Chaos (--start-price)
+    plain = starts_module.plain_candidate(TOY, bought, prices(), 3.0)
     twin = dataclasses.replace(plain, key="twin", source="bought", label="the same item, bought")
 
-    plan = plan_with_starts(TOY, toy_target(), prices(), sources=(lambda context: StartList((twin,)),))
+    plan = plan_with_starts(TOY, bought, prices(), start_price=3.0, sources=(lambda context: StartList((twin,)),))
 
     assert plan.starts.chosen.key == "plain"
     assert {row.candidate.key: row.outcome for row in plan.starts.considered} == {"plain": "chosen", "twin": "planned"}
@@ -424,14 +433,14 @@ def test_a_target_no_recipe_takes_is_planned_as_before_even_with_the_setting_on(
 
 
 def test_a_plan_whose_every_start_fails_raises_the_plain_starts_error():
-    target = toy_target(BOOTS_TARGET.replace("start_item:", "buys_start_item: true\nstart_item:"))  # a start price the file lacks
+    target = toy_target(BOOTS_TARGET.replace("start_item:", "start: bought\nstart_item:"))  # a start price the file lacks
 
     with pytest.raises(PlanError, match=re.escape(f"no price for the start item '{start_price_key(TOY, target)}'")):
         plan_with_starts(TOY, target, prices(base=None, flask=None))
 
 
 def test_a_recipe_start_can_win_when_the_plain_start_has_no_price():
-    target = toy_target(BOOTS_TARGET.replace("start_item:", "buys_start_item: true\nstart_item:"))
+    target = toy_target(BOOTS_TARGET.replace("start_item:", "start: bought\nstart_item:"))
 
     plan = plan_with_starts(TOY, target, prices())
 
@@ -536,7 +545,7 @@ def test_a_tier_both_caps_reach_is_one_start_at_both_readings_and_the_range_is_a
 
 def run_command(tmp_path, *arguments, target=BOOTS_TARGET, data=TOY, price_file=None, env=None):
     path = tmp_path / "toy.yaml"
-    path.write_text(target, encoding="utf-8")
+    path.write_text(with_start(target), encoding="utf-8")
     out = tmp_path / "policy.json"
     code = main(
         [str(path), "--json", str(out), *arguments], data=data, prices=price_file if price_file is not None else prices(),

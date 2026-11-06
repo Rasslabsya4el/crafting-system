@@ -80,3 +80,9 @@ implicits:
 quality:
   type: intrinsic
   min_percent: 20
+
+# How the start item is had (OR-6): bought. The guide's step 1 reads "Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt"
+# (docs/research/2026-10-30-5-reference-routes.md). Its buy spec, trade query and price key are computed from this file (base,
+# item level, influence), so nothing else describes it. It must have a price under that key, and the exact item has no listing (0 on
+# 2026-11-06, anonymous search, #483: the start item is a Normal one that carries an influence, #515), so none is written.
+start: bought

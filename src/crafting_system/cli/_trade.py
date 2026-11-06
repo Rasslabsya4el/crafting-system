@@ -68,7 +68,7 @@ def trade_main(
     parser = argparse.ArgumentParser(
         prog=COMMAND, description="Price the bought start item of a target from the trade site (by hand only; a few requests)."
     )
-    parser.add_argument("target", help="the target YAML file whose start item is priced (it must say buys_start_item: true)")
+    parser.add_argument("target", help="the target YAML file whose start item is priced (it must say start: bought)")
     parser.add_argument("--k", type=int, default=DEFAULT_K, help="price as the mean of the k cheapest listings")
     parser.add_argument(
         "--min-listings",
@@ -124,8 +124,8 @@ def _trade(
     except DataError as error:
         raise DataError(f"{error}; run `{DATA_FETCH_COMMAND}`") from error
     target = load_target(Path(target_file), game)
-    if not target.buys_start_item:
-        raise ValueError(f"{target_file}: the target does not buy its start item (no `buys_start_item: true`), so there is nothing to price")
+    if not target.bought:
+        raise ValueError(f"{target_file}: the target says `start: given`, so its start item has no price to fetch")
     spec = buy_spec_of(game, target)
     if canonical_price_name(spec.name) in load_overrides(overrides_path):
         print(f"{spec.name}: a hand override wins, so no request was made and the price file is unchanged")

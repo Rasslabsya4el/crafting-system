@@ -2,11 +2,11 @@
 
 Formats (learned from `src/crafting_system/targets/` and `.../prices/`, not imported):
 
-- target: `base`, `item_level`, `influence`, `start_item` (`rarity`, `mods`: `mod`, `tier`, `values`, `fractured`),
-  `price_file`. A target without `start_item` starts from a normal item; a `start_item` without `rarity` is rare when
-  it lists mods, else normal. A target file no longer names its price (#474): `start_price` is the price key of the
-  start item, taken from the hand-written table `expected_keys.txt` by the target's file stem (`read_expected_keys`),
-  and a target with no row in it buys nothing (J01, R03, R06: #427).
+- target: `base`, `item_level`, `influence`, `start` (`bought` or `given`, #505), `start_item` (`rarity`, `mods`: `mod`, `tier`,
+  `values`, `fractured`), `price_file`. A target without `start_item` starts from a normal item; a `start_item` without `rarity` is
+  rare when it lists mods, else normal. A target file no longer names its price (#474): `start_price` is the price key of the
+  start item, taken from the hand-written table `expected_keys.txt` by the target's file stem (`read_expected_keys`). A bought
+  start item has a row in it, a given one has none (J01).
 - buy spec: `name`, `base_type`, `category`, `rarity`, `item_level_min`, `influence`, `mods` (`stat`, `minimum`,
   `fractured`). The planner computes it from the target; `derived_specs/<target>.yaml` is that result written down
   (`tests/test_start_buy_real.py` holds the folder equal to it), so the reconciliation can read it without importing the
@@ -52,6 +52,7 @@ class Target:
     start_mods: tuple[StartMod, ...]
     start_price: str | None
     price_file: Path | None
+    start: str | None = None  # "bought" or "given" as the file says it; None when the file does not say (the planner refuses such a file)
 
 
 @dataclass(frozen=True)
@@ -121,6 +122,7 @@ def read_target(path: Path) -> Target:
         start_mods=mods,
         start_price=document.get("start_price"),
         price_file=(path.parent / price_file).resolve() if price_file else None,
+        start=str(document["start"]).strip().lower() if "start" in document else None,
     )
 
 

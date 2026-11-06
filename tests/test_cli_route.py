@@ -12,7 +12,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
-from cli_support import R12, geometric_p90_clicks, price_file, read_json
+from cli_support import R12, geometric_p90_clicks, given, price_file, read_json
 from cli_support import run as run_command
 from targets_support import DATA, EXAMPLES
 
@@ -304,7 +304,7 @@ requirements:
     min_tier: any
 start_item:
   rarity: rare
-buys_start_item: true
+start: bought
 """
     two = parse_target(text, DATA, source="two.yaml")
     plan = make_plan(DATA, two, priced_for(two))
@@ -452,12 +452,16 @@ def test_an_action_dropped_for_lack_of_a_price_names_the_missing_price(target):
     assert "Primal Crystallised Lifeforce" in message
 
 
-def test_a_restart_needs_a_start_price_above_zero(target):
-    free = make_plan(DATA, target, price_file(), start_price=0.0)
+def test_a_restart_is_refused_for_a_given_start_item_and_the_message_says_why(target):
+    free = make_plan(DATA, given(target), price_file())
 
     message = error_of("rules:\n  - do: restart\n", free)
 
-    assert message.startswith("route.yaml:2: rules[0].do: ") and "start price" in message
+    assert message.startswith("route.yaml:2: rules[0].do: ") and "`start: given`" in message and "never bought again" in message
+
+
+def test_a_restart_is_read_for_a_bought_start_item(plan):
+    assert read("rules:\n  - do: restart\n", plan).rules[0].do == "restart"
 
 
 def test_an_unknown_requirement_selector_lists_the_selectors_of_the_target(plan):
@@ -473,7 +477,7 @@ def test_an_unknown_requirement_selector_lists_the_selectors_of_the_target(plan)
 def test_a_selector_that_names_two_leaves_is_ambiguous():
     twice = parse_target(
         f"base: Paua Amulet\nitem_level: 84\nrequirements:\n  - stat: \"{GEM_TEXT}\"\n  - stat: \"{GEM_TEXT}\"\n"
-        "start_item:\n  rarity: rare\nbuys_start_item: true\n",
+        "start_item:\n  rarity: rare\nstart: bought\n",
         DATA,
         source="twice.yaml",
     )
@@ -544,7 +548,7 @@ def test_open_prefixes_and_suffixes_count_what_is_free_on_the_item():
 
     belt = "Metadata/Items/Belts/Belt3"
     target = parse_target(
-        f"base: Leather Belt\nitem_level: 86\nrequirements:\n  - family: IncreasedLife\nstart_item:\n  rarity: rare\n",
+        f"base: Leather Belt\nitem_level: 86\nrequirements:\n  - family: IncreasedLife\nstart_item:\n  rarity: rare\nstart: given\n",
         DATA,
         source="belt.yaml",
     )

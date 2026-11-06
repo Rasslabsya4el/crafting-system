@@ -16,9 +16,11 @@ in a start price (R08, R09), OR-7 where a stand-in stands for a trade price.
     #418  the start price is keyed by base name, not base id (the key says the base since #474; rows moved to #483 and #486)
     #425  R04's price is for item level 85 against 81; V01's hand price records no level
     #426  R04, R13, V01 start prices are poe.ninja or hand stand-ins
-    #427  targets with no start price (J01, R03, R06); the buy spec of the others is computed since #474
+    #427  targets with no start price (J01, R03, R06): closed by #505, every target says `start: given` (J01) or `start: bought`, and a
+          bought one has a key and a computed spec; the two prices that cannot be taken are #483
     #428  the spec and the price accept bases with another mod pool (rows moved to #483 and #486)
-    #483  the exact start item of R05, R10, R11, R12, R14 has no trade market, so the committed price is for a wider item
+    #483  the exact start item of R03, R05, R06, R10, R11, R12, R14 has no trade market (R03 and R06 have no price at all, a bought start item
+          needs one, OR-6), so the committed price is for a wider item
     #486  the trade site cannot tell bases of one name apart by `type` (R04 quivers; the three Two-Toned Boots by their implicit since #474)
 
 Since #474 the buy spec is not a hand-written file: `derived_specs/<target>.yaml` is what the planner computes from the target, written
@@ -53,12 +55,8 @@ def _known(rows: dict[tuple[str, str], tuple[str, str, str, str, str]]) -> dict[
 
 KNOWN: dict[tuple[str, str], Known] = _known(
     {
-        ("j01-cobalt-life-attack-speed", "start_price.written"): ("#427", "OR-3", "no start_price: the start item is counted free", "none", "free"),
-        ("j01-cobalt-life-attack-speed", "buy_spec.exists"): ("#427", "OR-3", "no start price, so no buy spec", "none", "no buy spec"),
-        ("r03-avoid-shock-boots", "start_price.written"): ("#427", "OR-3", "no start_price: the start item is counted free", "none", "free"),
-        ("r03-avoid-shock-boots", "buy_spec.exists"): ("#427", "OR-3", "no start price, so no buy spec", "none", "no buy spec"),
-        ("r06-strength-heavy-belt", "start_price.written"): ("#427", "OR-3", "no start_price: the start item is counted free", "none", "free"),
-        ("r06-strength-heavy-belt", "buy_spec.exists"): ("#427", "OR-3", "no start price, so no buy spec", "none", "no buy spec"),
+        ("r03-avoid-shock-boots", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage", "no entry"),
+        ("r06-strength-heavy-belt", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Heavy Belt, normal, item level 75, Hunter influence", "no entry"),
         ("r04-penetrating-quiver", "price.base"): ("#486", "OR-3", "the price entry is by a name that two bases share, and neither the trade site nor poe.ninja can tell them apart", f"{_QUIVER}QuiverNew5", f"{_QUIVER}Quiver12, {_QUIVER}QuiverNew5"),
         ("r04-penetrating-quiver", "price.item_level"): ("#425", "OR-3", "the poe.ninja line the price was read from is item level 85, labelled 81", "81", "85"),
         ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
