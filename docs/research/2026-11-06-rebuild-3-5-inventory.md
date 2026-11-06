@@ -594,6 +594,31 @@ Tests that touch this family: `tests/test_cli_decide.py:93` (an estimate that co
 
 From `reachability.md:137-173`: 24 settings and flags; 19 read; 5 never read: `recombinator_junk_craft` (`actions/recombinator.py`), `max_imprints` (`actions/imprint.py:65`), `price_source` and `price_gap_percent` (stop at `StartContext`, `cli/_starts.py:105-106,122`), `--price-source` (`cli/_main.py:101,134`). Two are read and turn every plan into a refusal: `memory_strands` and `--strands` (G1). Target keys nothing reads: `start_sockets_assumed`, `item_level_floor`, `tiers_top_at_item_level` (`reachability.md:223-225`). None of the five is shown in any answer. Issues: #406 (prices), #407 (imprints), audit PLANNING-6/7.
 
+### 5.8 Status after #506
+
+The two refusal families (5.5) and the rows of #467 and #480 below are done by #506. A row is either a `Limit` in `Plan.limits` (shown in the text, the JSON and the page) or marked as changing no answer, each with the test that shows it. The sources and their tests are listed in `tests/test_cli_limits_506.py`.
+
+**The two families.** `ActionError` is no longer raised itself; every `except` clause that names a refusal names the family it means, and `tests/test_cli_model_gaps.py::CLAUSES` lists them all (the scan fails for a clause added, removed or changed). The 34 clauses of 5.5 became 41 handlers (a clause that records a gap is a pair), one more (`cli/_benchmark.py`, `ROUTE_ERRORS`, a tuple the search of 5.5 did not see) was found and narrowed, and `abstraction/_prime.py` (`ValueError`) is listed beside them. A game refusal stays silent. A model gap met by the walk or the solve is written in `Abstraction.gaps` and becomes the limit kind `model-gap`; the bound pruning no longer calls a model gap "the game refuses it wherever it can be".
+
+| Row | Now | Test |
+|---|---|---|
+| K14, the silent skip of a model gap | limit `model-gap` ("Left out where the model has no rule"), the action and the number of states, the first causes | `test_cli_model_gaps.py` |
+| G6 | limit `consumes-items` (the kernel raises `ConsumesInputsError`, a model gap of its own kind) | `test_g6_*` |
+| G17 | the twins of the packed path and of an approximate answer are the limit of K15 | `test_prune_forecast.py::test_g17_*` |
+| K13 | limit `proved-unneeded` ("Offered only once the rest of the target is met"), exact | `test_k13_*` (three files) |
+| C15, V8 | limit `state-line` ("The chance of reaching each state is not shown") | `test_c15_*` |
+| V4 | limit `state-line` ("A state does not list the other mods", or "only as a count per side") | `test_v4_*` |
+| C19, M1 | the text of `EstimateRefused` is in the limit of the whole search | `test_m1_*` |
+| M2 (rate) | limit `how-solved` ("The solver's speed was guessed") | `test_m2_rate_*` |
+| M2 (bound pruning) | limit `how-solved` ("All the actions were solved") | `test_m2_prune_*` |
+| M3 | limit `how-solved` ("Levels skipped") | `test_cli_approximate.py::test_m3_*` |
+| M7 | the cause is `GridInfo.cause` (`subcritical` or, for inputs in a cycle, `unordered`), its own limit and its own quantile text | `test_risk_inputs.py::test_m7_*` |
+| C24, C25, C27 (dense), and C23 | each source writes the words of its give-up in `GridInfo.gave_up`; the limit says the percentiles came from a slower method | `test_c24_*`, `test_c23_*`, `test_c25_*`, `test_c27_a_coarse_*` |
+
+**Shown not to change an answer** (so not a limit): C26 (`TINY` drops mass below 1e-150 per cell and counts it as unresolved; the most it could drop is far below the rounding allowance; `test_risk_inputs.py::test_c26_*`), C27 (`PACKED_FROM_EDGES`: the packed moments are the same numbers, certified; `test_c27_the_packed_moments_*`), C31 (`WORK_LIMIT`: an elimination that gives up leaves the sweeps, which certify every value or end in `ConvergenceError`; `test_solver_branching.py::test_c31_*`).
+
+**Not done here, filed (OR-29):** a model gap met while the actions of a kind are listed (`actions/fossil.py` three clauses, `actions/corruption.py` `_vaal_orb`, `actions/recombinator.py` `junk_craft_for`) still drops the action without a word: #511. The interval driver's mean and visits (`risk/_mean.py`, `risk/_visits.py`) and the route page's quantile text still lack the cause of M7: #512 (the page text is decided at page build time, with #489 and #481). `solve_pruned` reports `fell_back` for a pruning it never tried: #513. K5, K6 and K10 of #467 were done by #459; the page's own "Note" is #489.
+
 ## Part C. The smallest type or field changes that would carry this
 
 Options only; nothing is chosen. Counts are of files that name the thing (`grep -l`), so they bound the edit and do not predict it. "Tests" counts test files; "goldens" counts files in `tests/golden/` (16 html, 8 json, 2 txt, 1 md).

@@ -246,6 +246,15 @@
         "Foulborn Exalted Orb"
       ],
       "names": []
+    },
+    {
+      "kind": "state-line",
+      "what": "A state lists the other mods only as a count per side",
+      "why": "the model keeps the mods the target does not ask for by kind, not by name",
+      "guarantee": "The odds and costs count every one of them.",
+      "count": 0,
+      "labels": [],
+      "names": []
     }
   ],
   "offered_actions": [

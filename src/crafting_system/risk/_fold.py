@@ -21,8 +21,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
 from ._chain import Chain
+from ._gaveup import note
 
 FOLD_LIMIT = 1500  # states of the largest free component that is still folded
+FOLD_GAVE_UP = "a loop of states that cost less than one grid step is larger than the {:,} states the faster methods fold away"  # what `_gaveup` is told
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +129,7 @@ def _exit_distributions(chain: Chain, free: set[int]) -> dict[int, dict[int, flo
     """For every free state, the first non-free state it reaches by probability; `None` past `FOLD_LIMIT`."""
     components = _components(chain, free)
     if any(len(c) > FOLD_LIMIT for c in components):
+        note(FOLD_GAVE_UP.format(FOLD_LIMIT))
         return None
     exits: dict[int, dict[int, float]] = {}
     for component in components:

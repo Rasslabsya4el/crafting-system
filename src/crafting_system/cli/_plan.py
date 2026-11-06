@@ -31,11 +31,12 @@ from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from . import _limits
-from ._limits import Limit, approximate_limits, claim, kind_title, risk_limits, unpriced_limits, with_limits
+from ._limits import Limit, approximate_limits, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, offers_for, price_offers, split_usable
 from . import _packed
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._prune import chosen_offers, solver_actions
+from ._reach import reach_limit
 from ._start_types import StartChoice
 
 VIEW_FROM_STATES = 1_000  # a packed plan whose policy visits more item states than this is shown by its lumped chain (ticket #70)
@@ -219,8 +220,8 @@ def offer_action(
 ) -> Action[CompressedState]:
     """The solver's action for one priced offer used in `state`: its cost and the integer weights of the kernel.
 
-    `restart` ends in `start` for certain. Raises `ActionError` when the game refuses the action there
-    or no admitted rule covers it.
+    `restart` ends in `start` for certain. Raises `NotApplicableError` when the game refuses the action there
+    or `OutOfScopeError` when no admitted rule covers it.
     """
     if isinstance(priced.offer.action, BuyStartItem):
         if start is None:
@@ -422,14 +423,17 @@ def make_plan(
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
     if budget is not None:
         forecast = merged = priced
+        merged_twins: list[tuple[str, str]] = []
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
             # The exact run solves a small set first and proves the rest not needed: it is forecast on that set, not on
             # a pilot over thousands of fossil sets. An approximate answer is made of all the offers, twins merged.
-            merged = tuple(merge_twins(data, target.start_item, priced)[0])
+            merged, merged_twins = (tuple(each) for each in merge_twins(data, target.start_item, priced))
             forecast = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE))
         decision = decide(abstraction, start, forecast, budget, rates)
         if decision.message:
             limits += (whole_search_limit(decision.message),)
+        if decision.rate_why:
+            limits += (guessed_rate_limit(decision.rate_why),)
         if decision.action == "refused":
             if solver == "object" or (PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE):
                 raise PlanError(decision.message)
@@ -441,10 +445,13 @@ def make_plan(
                 solved = climb(decision, start, merged)
             except ValueError as error:
                 raise PlanError(str(error)) from error
-            return Plan(
+            limits += skipped_level_limits(solved.skipped)
+            if merged_twins:
+                limits += (twins_limit(merged_twins),)  # G17: the approximate answer is made of the offers left after the twins
+            return finished(Plan(
                 target, abstraction, leaf_labels(target), prices, solved.start, price_of_start, priced, limits,
                 solved.solution, None, solved.seconds, 0.0, solved.approximation,
-            )  # fmt: skip
+            ))  # fmt: skip
 
     began = time.perf_counter()
     pruned = None
@@ -455,7 +462,9 @@ def make_plan(
         solution = pruned.solution
         limits += _pruned_limits(pruned)
     else:
-        offered = tuple(merge_twins(data, target.start_item, priced)[0]) if many else priced
+        offered, twins = (tuple(each) for each in merge_twins(data, target.start_item, priced)) if many else (priced, ())
+        if twins:
+            limits += (twins_limit(twins),)  # G17: the packed path leaves out the dearer twins, as the bound pruning does
         packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
         solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
     solve_seconds = time.perf_counter() - began
@@ -475,9 +484,68 @@ def make_plan(
     if packed is not None and packed.view is not None and len(solution.policy) > VIEW_FROM_STATES:
         limits += (lumped_limit(len(solution.policy), len(packed.view) + 1),)
 
-    return Plan(
+    return finished(Plan(
         target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
         solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed,
+    ))
+
+
+def finished(plan: Plan) -> Plan:
+    """`plan` with the limits only the finished walk and policy can tell: the actions the model had no rule for, the offers left out of states
+    that cannot use them, and what the state descriptions and the reach chances leave out."""
+    added = (*model_gap_limits(plan.abstraction.gaps.entries()), *pruning_limits(plan.abstraction.prunings), *display_limits(plan))
+    return replace(plan, limits=(*plan.limits, *added))
+
+
+def display_limits(plan: Plan) -> tuple[Limit, ...]:
+    """What the text report, the JSON and the page leave out of a state's description (V4) and of its reach chance (C15, V8)."""
+    found = [states_limit(plan.abstraction.keeps_junk)]
+    reach = reach_limit(plan.start, plan.view_policy, plan.is_goal)
+    if reach is not None:
+        found.append(reach)
+    return tuple(found)
+
+
+def states_limit(tracked: bool) -> Limit:
+    """The limit of a state description, which names the mods the model tracks and nothing of the others (V4)."""
+    if tracked:
+        return Limit(
+            _limits.STATE_LINE,
+            "A state lists the other mods only as a count per side",
+            "the model keeps the mods the target does not ask for by kind, not by name",
+            "The odds and costs count every one of them.",
+        )
+    return Limit(
+        _limits.STATE_LINE,
+        "A state does not list the other mods",
+        "no offered action reads the mods the target does not ask for, so the model does not track them",
+        "The odds and costs do not depend on them: no offered action reads them.",
+    )
+
+
+def guessed_rate_limit(why: str) -> Limit:
+    """The limit of a forecast that used a fixed solver speed because the speed could not be measured (M2)."""
+    return Limit(
+        _limits.SOLVE,
+        "The solver's speed was guessed",
+        why + ", so the forecast used a fixed speed",
+        "The answer's own guarantee does not depend on it: the forecast only chose between the exact run and an approximate one.",
+    )
+
+
+def skipped_level_limits(skipped: Sequence[tuple[str, str]]) -> tuple[Limit, ...]:
+    """The limit of the tail-cut levels the ladder skipped because they had no policy to follow or did not converge (M3)."""
+    if not skipped:
+        return ()
+    return (
+        Limit(
+            _limits.SOLVE,
+            "Levels skipped",
+            "no policy to follow or no convergence: {names}",
+            labels=tuple(name for name, _ in skipped),
+            names=tuple(dict.fromkeys(why for _, why in skipped)),
+            guarantee="The stated gap is that of the level shown; a skipped level could only have narrowed it.",
+        ),
     )
 
 
@@ -635,16 +703,17 @@ def evaluate_risk(
 def _pruned_limits(pruned: Pruned) -> tuple[Limit, ...]:
     """The offers the pruning left out of the solve, by reason (the plan still prices and evaluates all of them); the answer stays exact (K15)."""
     found = []
-    if pruned.twins:
+    if pruned.fell_back:
         found.append(
             Limit(
-                _limits.PROVED,
-                "Not searched",
-                "same outcome as a cheaper offer",
-                "The answer is exact among the methods offered: a cheaper action does the same.",
-                tuple(dropped for dropped, _ in pruned.twins),
+                _limits.SOLVE,
+                "All the actions were solved",
+                f"the search first solved a smaller set of actions and could not prove it enough ({pruned.why})",
+                "The answer is exact among the methods offered.",
             )
         )
+    if pruned.twins:
+        found.append(twins_limit(pruned.twins))
     if pruned.inapplicable:
         found.append(
             Limit(

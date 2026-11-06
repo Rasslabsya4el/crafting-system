@@ -63,7 +63,7 @@ from .catalog import kind
 from .contract import Action, Adds, Reads
 from .draw import refuse_unmodelled
 from .metamods import refuse_blocking_metamod
-from .errors import ActionError, NotApplicableError, OutOfScopeError
+from .errors import NotApplicableError, OutOfScopeError
 from .fossil_weights import FossilWeights, fossil_weights
 from .mixture import FossilOutcomes
 from .outcomes import Outcomes, retained_item
@@ -391,7 +391,7 @@ def usable_fossils(data: GameData, item: Item) -> list[str]:
     try:
         _check_item(data, item)
         refuse_unmodelled(data, item, jewels=True)
-    except ActionError:
+    except (NotApplicableError, OutOfScopeError):  # either: no fossil is listed for this item (a model gap here is #511)
         return []
 
     base = data.base_items.get(item.base_id)
@@ -405,7 +405,7 @@ def usable_fossils(data: GameData, item: Item) -> list[str]:
             _check_fossil(record, base.tags, item)
             if _special(record, "bloodstained"):
                 ImplicitDraw.for_item(data, item, replaces_all=False)
-        except ActionError:
+        except (NotApplicableError, OutOfScopeError):  # either: this fossil is not listed for the item (a model gap here is #511)
             continue
         usable.append(record.name)
     return usable
@@ -425,7 +425,7 @@ def fossil_actions(data: GameData, item: Item) -> list[ApplyFossils]:
         for chosen in combinations(names, size):
             try:
                 _check_set([by_name[name] for name in chosen])
-            except ActionError:
+            except (NotApplicableError, OutOfScopeError):  # either: this set is not listed for the item (a model gap here is #511)
                 continue
             actions.append(ApplyFossils(chosen))
     return actions

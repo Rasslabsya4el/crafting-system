@@ -57,7 +57,7 @@ from fractions import Fraction
 from itertools import combinations, product
 from typing import Literal
 
-from crafting_system.actions import BLOCKING, Action, ActionError, OutOfScopeError, build_pool, partners
+from crafting_system.actions import BLOCKING, Action, ActionError, NotApplicableError, OutOfScopeError, build_pool, partners
 from crafting_system.items import Influence, Item, Rarity, Side
 
 from ._kernel import Abstraction
@@ -569,8 +569,9 @@ class Coarsening:
         for member in members:
             try:
                 exact = self.abstraction.kernel(member, action)
-            except ActionError as refusal:
-                error = error or refusal
+            except (NotApplicableError, OutOfScopeError) as refusal:  # either: the refusal is kept and raised again by `variants`; a model gap wins over a game refusal
+                if error is None or (isinstance(refusal, OutOfScopeError) and not isinstance(error, OutOfScopeError)):
+                    error = refusal
                 continue
             if invariant and kernels:
                 continue
@@ -601,7 +602,7 @@ class Coarsening:
             for action in actions:
                 try:
                     kernels = self.variants(block, action, bound)
-                except ActionError:
+                except (NotApplicableError, OutOfScopeError):  # the blocks reachable by the actions that can be applied; a test helper (no caller in `src`)
                     continue
                 for successors in kernels:
                     for successor in successors:

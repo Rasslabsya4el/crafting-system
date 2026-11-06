@@ -93,7 +93,7 @@ from crafting_system.abstraction import (
     keeps_shape,
     reach_bound,
 )
-from crafting_system.actions import ActionError
+from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.solver import ConvergenceError, Solution, solve
@@ -420,8 +420,10 @@ def _raised(abstraction, bare, item, chosen, action, kind: str, level: int, pbar
     if level == 0:
         try:
             same_shape = keeps_shape(abstraction, bare, action)
-        except ActionError:
+        except NotApplicableError:
             return REFUSED, ONE, level
+        except OutOfScopeError:  # no rule for the bare item proves nothing for the states: the offer stays in the search, and the walk writes its gap (ticket #506)
+            return TERMINAL, ONE, level
         adds = action.adds(data, item)
         if not same_shape or adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted:
             return TERMINAL, ONE, level

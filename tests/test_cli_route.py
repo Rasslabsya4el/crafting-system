@@ -352,11 +352,11 @@ def test_a_missing_route_file_is_named(plan, tmp_path):
 
 def test_skip_refused_passes_a_rule_the_game_refuses_over_to_the_next_that_matches(plan, monkeypatch):
     """Ticket #70: a route completed by a last `restart` says `skip_refused: true`, so a refused Exalted Orb falls through to the restart."""
-    from crafting_system.actions import ActionError
+    from crafting_system.actions import NotApplicableError
     from crafting_system.cli import _route
 
     def refuse(abstraction, priced, state, start=None):
-        raise ActionError("the game refuses it here")
+        raise NotApplicableError("the game refuses it here")
 
     monkeypatch.setattr(_route, "offer_action", refuse)
     rules = f"rules:\n  - do: {REFORGE}\n  - do: restart\n"

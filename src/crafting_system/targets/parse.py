@@ -10,7 +10,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import NoReturn
 
-from crafting_system.actions import ActionError, tiers_of
+from crafting_system.actions import OutOfScopeError, tiers_of
 from crafting_system.data import BaseItem, GameData
 from crafting_system.items import (
     ANY_TIER,
@@ -189,7 +189,7 @@ class _Ladder:
                 probe = Item.build(self.data, base_id=self.base_id, item_level=self.item_level, rarity=Rarity.RARE, influences=self.influences)
                 try:
                     self._table = tiers_of(self.data, probe)
-                except ActionError:  # an item class with no influence class key has no influence pool: its tiers are the base's
+                except OutOfScopeError:  # an item class with no influence class key has no influence pool: its tiers are the base's
                     self._table = None
             self._read = True
         return self._table

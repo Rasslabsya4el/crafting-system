@@ -25,13 +25,24 @@ Refusals, raised by `outcomes` in this order (a message names the reason):
 
 __all__ = [
     "ActionError",
+    "ConsumesInputsError",
     "NotApplicableError",
     "OutOfScopeError",
 ]
 
 
 class ActionError(ValueError):
-    """Base of every error an action raises on purpose."""
+    """Base of the two refusal families; never raised itself (ticket #506).
+
+    A game refusal (`NotApplicableError`) is silent: the plan is exact under it. A model gap (`OutOfScopeError`) is not: the model has no
+    rule for the action there, so the answer must say so. A clause that catches the base class cannot tell them apart, so a clause names
+    the family it means (`tests/test_cli_model_gaps.py` lists every one), and a raise of the base itself is refused here.
+    """
+
+    def __init__(self, *args: object) -> None:
+        if type(self) is ActionError:
+            raise TypeError("ActionError is the base of two families: raise NotApplicableError (the game refuses) or OutOfScopeError (the model has no rule)")
+        super().__init__(*args)
 
 
 class NotApplicableError(ActionError):
@@ -40,3 +51,7 @@ class NotApplicableError(ActionError):
 
 class OutOfScopeError(ActionError):
     """The item is in a state that no admitted rule covers yet, so no outcome is given."""
+
+
+class ConsumesInputsError(OutOfScopeError):
+    """An action that consumes other items, asked of an abstraction that does not price them (`allow_inputs=False`, G6): never offered, never priced as free."""

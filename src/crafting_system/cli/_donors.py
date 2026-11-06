@@ -26,7 +26,7 @@ from collections.abc import Callable, Iterable
 
 from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.actions import Action as GameAction
-from crafting_system.actions import ActionError, Need as ItemNeed
+from crafting_system.actions import Need as ItemNeed, NotApplicableError, OutOfScopeError
 from crafting_system.solver import Action, LazySolution, Need, solve_lazily
 
 from ._offers import BuyStartItem, PricedOffer
@@ -80,7 +80,10 @@ class DonorModel:
         try:
             wanted = self.abstraction.inputs(state, priced.offer.action)
             built = offer_action(self.abstraction, priced, state, self.start)
-        except ActionError:  # the game refuses it here, or no admitted rule covers it
+        except NotApplicableError:  # the game refuses it here
+            return None
+        except OutOfScopeError as gap:  # the model has no rule for it here: left out, and the answer says so (ticket #506)
+            self.abstraction.gaps.note(priced.label, state, gap)
             return None
         if not wanted:
             return built

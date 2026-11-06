@@ -22,7 +22,6 @@ from datetime import UTC, date, datetime
 from fractions import Fraction
 from pathlib import Path
 
-from crafting_system.actions import ActionError
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_file_path, stale_warning
@@ -255,8 +254,9 @@ class _Skipped(Exception):
     """A heavy route that `benchmark` leaves unsolved; its entry already says why."""
 
 
-# What a route can fail with; each is written into the route's entry, none ends the command.
-ROUTE_ERRORS = (ValueError, OSError, DataError, PriceFileNotFound, ActionError, ConvergenceError)
+# What a route can fail with; each is written into the route's entry, none ends the command. `ValueError` stays the parent of both refusal families
+# (a game refusal, a model gap) and of every other error of a route (a bad target, a bad price): the entry carries the text of whichever it was.
+ROUTE_ERRORS = (ValueError, OSError, DataError, PriceFileNotFound, ConvergenceError)
 
 
 def benchmark_main(

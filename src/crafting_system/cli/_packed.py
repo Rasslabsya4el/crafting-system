@@ -27,7 +27,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState, integer_weights
-from crafting_system.actions import ActionError
+from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import (
     Action,
     LumpedChain,
@@ -121,7 +121,10 @@ def walk(
                     if found is None:
                         try:
                             weights = integer_weights(abstraction.kernel(state, action))
-                        except ActionError:  # the game refuses it here after all (as `solver_actions` skips it)
+                        except NotApplicableError:  # the game refuses it here after all (as `solver_actions` skips it)
+                            continue
+                        except OutOfScopeError as gap:  # the model has no rule for it here: left out, and the answer says so (ticket #506)
+                            abstraction.gaps.note(priced.label, state, gap)
                             continue
                         found = shared[key] = builder.kernel([intern(s) for s in weights], list(weights.values()))
                     kernel = found

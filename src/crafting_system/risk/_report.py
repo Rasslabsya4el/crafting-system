@@ -13,6 +13,11 @@ class Estimate(NamedTuple):
     high: float
 
 
+SUBCRITICAL = "subcritical"
+UNORDERED = "unordered"
+IMPROPER = "improper"
+
+
 @dataclass(frozen=True, slots=True)
 class GridInfo:
     """How the cost distribution was computed.
@@ -25,6 +30,12 @@ class GridInfo:
     `free_allowance` and `free_tail` are for a policy with free actions counted apart from the grid (ticket #349, `_free`): the free
     actions pay at most `free_allowance` altogether except with probability `free_tail`, which is what the quantile intervals are widened by,
     and the CVaR intervals are widened by `free_cvar_allowance` (E[E] / (1 - level), on each side); the intervals already contain them. Both are 0.0 when no action was free, and are not part of the `repr`, so a report without free actions reads as before.
+
+    `cause` is why the quantiles are not computed when the grid is not the reason (M7): `SUBCRITICAL`, the policy starts more runs of its inputs than
+    it finishes (`_inputs.NotSubcritical`), so its cost has no finite mean; `IMPROPER`, a state it reaches cannot finish and its inputs depend on each
+    other in a cycle, so no cost is computed; `UNORDERED`, the policy is proper but its inputs depend on each other in a cycle, so there is no order to
+    run the distribution in (the mean and the variance are exact). Empty otherwise. `gave_up` holds the words of each faster method that
+    reached a size limit and left the work to a slower one (`_gaveup`, C24, C25, C27). Neither is part of the `repr`.
     """
 
     step: float
@@ -35,6 +46,8 @@ class GridInfo:
     free_allowance: float = field(default=0.0, repr=False)
     free_tail: float = field(default=0.0, repr=False)
     free_cvar_allowance: float = field(default=0.0, repr=False)
+    cause: str = field(default="", repr=False)
+    gave_up: tuple[str, ...] = field(default=(), repr=False)
 
 
 @dataclass(frozen=True, slots=True)

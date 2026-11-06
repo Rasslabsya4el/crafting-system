@@ -26,8 +26,9 @@ from dataclasses import dataclass
 from crafting_system.actions import (
     CORRUPTING_KINDS,
     DEFAULT_CORRUPTING_KINDS,
-    ActionError,
     CorruptedImplicitPool,
+    NotApplicableError,
+    OutOfScopeError,
     corrupted_implicit_pool,
 )
 from crafting_system.data import BaseItem, GameData, Mod, conflicts
@@ -73,7 +74,7 @@ class CorruptedResolver:
         try:
             here = corrupted_implicit_pool(self.data, base_id, item_level)
             anywhere = corrupted_implicit_pool(self.data, base_id, MAX_ITEM_LEVEL)
-        except ActionError as problem:
+        except (NotApplicableError, OutOfScopeError) as problem:  # either: the target cannot ask for `corrupted: true` here, and the error says why
             raise Unresolved(f"`corrupted: true` cannot be asked for here: {problem}") from None
         if not here.mods:
             lowest = min(entry.mod.required_level for entry in anywhere.mods)

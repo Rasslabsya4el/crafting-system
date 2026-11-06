@@ -22,7 +22,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 from crafting_system.abstraction import BlockHoldsMetamod, CompressedState, integer_weights
-from crafting_system.actions import ActionError
+from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import (
     Action,
     Bounds,
@@ -72,6 +72,7 @@ class Solved:
     solution: Solution[CompressedState]
     start: CompressedState
     seconds: float
+    skipped: tuple[tuple[str, str], ...] = ()  # (level name, why) of each tail-cut level that had no policy to follow or did not converge (M3)
 
 
 LEVEL_ALLOWANCE = 10.0  # the levels of a `climb` may take this many budgets of seconds together (a level with no forecast is built to find its size)
@@ -134,7 +135,10 @@ class BlockModel:
                     kernels = self.coarsening.variants(block, priced.offer.action, bound)
                 except BlockHoldsMetamod:
                     raise  # the exact state offers actions here that blocks cannot: a model without them is no bound
-                except ActionError:
+                except NotApplicableError:
+                    continue
+                except OutOfScopeError as gap:  # the model has no rule for it in this block: left out, and the answer says so (ticket #506)
+                    self.coarsening.abstraction.gaps.note(priced.label, block, gap, block=True)
                     continue
                 variants = tuple(tuple(Outcome(s, w) for s, w in integer_weights(kernel).items()) for kernel in kernels)
                 if len(variants) == 1:
@@ -186,7 +190,10 @@ class ExactModel:
                     continue
                 try:
                     weights = integer_weights(self.abstraction.kernel(state, priced.offer.action))
-                except ActionError:
+                except NotApplicableError:
+                    continue
+                except OutOfScopeError as gap:  # the model has no rule for it here: left out, and the answer says so (ticket #506)
+                    self.abstraction.gaps.note(priced.label, state, gap)
                     continue
                 found.append(Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in weights.items())))
             self.known[state] = found
@@ -300,6 +307,7 @@ def climb(
     models = Models(start, offers, guard)
     best: Solved | None = None
     stopped = ""
+    skipped: list[tuple[str, str]] = []
     for candidate in decision.levels:
         try:
             solved = solve_level(candidate, start, offers, models)
@@ -309,9 +317,10 @@ def climb(
         except BlockHoldsMetamod as held:
             stopped = stopped or f"a block holds a metamod ({held})"
             continue  # this level cannot bound the route; the next may pool differently
-        except (NoPolicyError, ConvergenceError):
+        except (NoPolicyError, ConvergenceError) as failed:
             if candidate.level.kind != "tail":
                 raise
+            skipped.append((candidate.level.name, str(failed) or "no reason was given"))
             continue  # a tail cut that has no policy to follow or does not converge leaves the levels before it as they are
         if best is None or solved.approximation.gap < best.approximation.gap:
             best = solved
@@ -330,4 +339,4 @@ def climb(
             f"(level: {approximation.level}). " + (f"The ladder stopped early: {stopped}. " if stopped else "") + exact_offer(decision.transitions, decision.predicted, decision.estimate is None or decision.estimate.complete),
             approximation.expanded,
         )  # fmt: skip
-    return Solved(approximation, best.solution, best.start, clock() - began)
+    return Solved(approximation, best.solution, best.start, clock() - began, tuple(skipped))

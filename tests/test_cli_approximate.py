@@ -249,6 +249,22 @@ def test_a_tail_cut_over_a_coarse_level_with_no_policy_is_skipped_not_an_error(a
     assert solved.approximation.level == good.level.name
 
 
+def test_m3_a_skipped_tail_cut_is_kept_by_name_and_cause_and_becomes_a_limit_that_claims_only_the_level_shown(approximate):
+    from crafting_system.cli._plan import skipped_level_limits
+
+    wide = candidate(approximate, [{COLD, MANA}, {FIRE, "LightningResistance"}])
+    good = candidate(approximate, [{MANA, "LightningResistance"}])
+    skipped = tail(wide, 0.0)
+
+    solved = climbed(approximate, skipped, good)
+
+    assert [name for name, _ in solved.skipped] == [skipped.level.name] and solved.skipped[0][1]  # the level and why it was skipped
+    (limit,) = skipped_level_limits(solved.skipped)
+    assert limit.kind == "how-solved" and limit.labels == (skipped.level.name,) and solved.skipped[0][1] in limit.reason()
+    assert limit.guarantee == "The stated gap is that of the level shown; a skipped level could only have narrowed it."
+    assert climbed(approximate, good).skipped == () and skipped_level_limits(()) == ()  # a ladder that skipped nothing says nothing
+
+
 def test_the_ladder_stops_at_the_first_level_within_the_tolerance(approximate):
     bad, good = candidate(approximate, [{COLD, MANA}]), candidate(approximate, [{MANA, "LightningResistance"}])
     never = Candidate(Level("groups", None, "never tried"), None, None)

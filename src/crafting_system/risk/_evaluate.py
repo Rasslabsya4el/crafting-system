@@ -100,11 +100,13 @@ from . import _free, _inputs, _moments, _regen
 from ._budget import BudgetRun, rounding_allowance, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
 from ._coarse import beyond_ordinary_grid, choose_step, expected_visits, may_exceed_ordinary_grid
+from . import _dense
 from ._dense import fits_dense, run_dense
 from ._fold import fold_free
+from ._gaveup import collected, note
 from ._moments import interval, real_costs
 from ._nested import nested_work, run_nested
-from ._report import Estimate, GridInfo, RiskReport
+from ._report import IMPROPER, SUBCRITICAL, UNORDERED, Estimate, GridInfo, RiskReport
 
 INFINITE = Estimate(math.inf, math.inf, math.inf)
 ZERO = Estimate(0.0, 0.0, 0.0)
@@ -125,6 +127,7 @@ REGEN_SLOWER = 3.0  # (a step half as wide costs two to four times the work)
 REGEN_EPSILON = 1e-3  # the cost of a paying state in the solve that counts the visits of the free states
 
 
+@collected
 def evaluate[S](
     policy: Mapping[S, Action[S]],
     start: S,
@@ -227,6 +230,7 @@ def evaluate[S](
     if resolution is not None and not free:
         _check_resolution(resolution, c_min)
     proper = chain.proper
+    cause = ""
     horizon = None
     spread = COVERED_STEPS * c_min
     if proper:
@@ -234,11 +238,13 @@ def evaluate[S](
             mean, variance, m1 = _mean_and_variance(chain)
         except _inputs.NotSubcritical:  # every state can finish, but the runs need more than they make
             proper = False
+            cause = SUBCRITICAL
         else:
             horizon = m1[0] + HORIZON_SDS * math.sqrt(variance[0])
             spread = SPREAD_SDS * math.sqrt(variance[0])
     if chain.has_inputs and _inputs.branching(chain):
-        return _unordered_report(chain, (mean, variance) if proper else None, cvar_level, levels)
+        # moments only for a proper policy with a finite mean: `unordered` is true of that case alone
+        return _unordered_report(chain, (mean, variance) if proper else None, cvar_level, levels, UNORDERED if proper else cause or IMPROPER)
     if proper and not chain.has_inputs and not resolve_quantiles:
         return _unordered_report(chain, (mean, variance), cvar_level, levels)
     if free:
@@ -302,7 +308,7 @@ def evaluate[S](
         mean = variance = cvar = INFINITE
     quantiles = {x: _quantile(x, step, low_run, high_run, success_high) for x in levels}
     grid = GridInfo(
-        step, exact, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs)
+        step, exact, max(r.bins for r in runs), max(r.unresolved for r in runs), max(r.delta for r in runs), cause=cause
     )
     return RiskReport(
         success,
@@ -397,7 +403,10 @@ def _coarse_report(
     step = chosen[0]
     low_bins, high_bins = _bin_costs(chain, step)
     folded = fold_free(chain, low_bins)
-    if folded is None or not fits_dense(folded.chain, low_bins, max_bins) or not fits_dense(chain, high_bins, max_bins):
+    if folded is None:
+        return None
+    if not fits_dense(folded.chain, low_bins, max_bins) or not fits_dense(chain, high_bins, max_bins):
+        note(f"the coarse grid would need more than the {_dense.DENSE_LIMIT:,} cells the dense method holds")
         return None
     low_run, high_run = _both(
         (run_dense, (folded.chain, low_bins), dict(
@@ -561,9 +570,10 @@ def _input_runs(chain: Chain) -> dict:
     return {chain.states[y]: Estimate(*u) for y, u in uses.items()}
 
 
-def _unordered_report(chain: Chain, moments, cvar_level: float, levels: Sequence[float]) -> RiskReport:
-    """The report for inputs in a cycle with their users: exact moments, quantiles and CVaR unresolved."""
-    unresolved = GridInfo(0.0, False, 0, 1.0, 0.0)
+def _unordered_report(chain: Chain, moments, cvar_level: float, levels: Sequence[float], cause: str = "") -> RiskReport:
+    """The report with exact moments and the quantiles and CVaR unresolved: for inputs in a cycle with their users, or an improper policy (the `cause` the
+    grid did not give), or, with no cause, a caller that left the quantile grid out (`resolve_quantiles` False, the packed route)."""
+    unresolved = GridInfo(0.0, False, 0, 1.0, 0.0, cause=cause)
     first = chain.action[0].cost  # every run pays the first action at least
     quantiles = {x: Estimate(math.inf, first, math.inf) for x in levels}
     if moments is None:

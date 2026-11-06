@@ -49,3 +49,17 @@ def test_coarse_first_changes_nothing_when_the_ordinary_grid_certainly_reaches()
     again = evaluate(easy, "start", lambda s: s == GOAL, coarse_first=True)
 
     assert again == plain
+
+
+def test_c27_a_coarse_grid_the_dense_engine_cannot_hold_is_written(monkeypatch):
+    from crafting_system.cli._limits import risk_limits
+    from crafting_system.risk import _dense
+
+    assert not levels(coarse_first=True).grid.gave_up
+    monkeypatch.setattr(_dense, "DENSE_LIMIT", 1)
+    held = levels(coarse_first=True)
+
+    assert held.grid.gave_up == ("the coarse grid would need more than the 1 cells the dense method holds",)
+    assert math.isinf(held.p90.high)  # the ordinary grid ran instead
+    (limit,) = risk_limits(held)
+    assert held.grid.gave_up[0] in limit.reason()

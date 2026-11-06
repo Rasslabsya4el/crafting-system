@@ -257,3 +257,95 @@ def test_many_copies_of_one_donor_stay_cheap():
     assert report.mean.value == pytest.approx(4 * (2 + 12 * 9), rel=1e-12)
     assert report.p50.low <= report.mean.value <= report.p90.high
     assert report.input_runs["D"].value == pytest.approx(4 * 12, rel=1e-12)
+
+
+# --- ticket #506: the cause of a quantile that is not computed is its own (M7), and two limits that change no answer (C26, C27) -------------
+
+
+def improper_in_a_cycle():
+    """A needs B and B goes back to A (inputs in a cycle), and A can also step to C, which only loops on itself: C can never finish."""
+    return {
+        "A": Action("a", 1.0, (("goal", 1), ("C", 1)), extra_inputs=("B",)),
+        "B": Action("b", 1.0, (("donor_done", 1), ("A", 1))),
+        "C": Action("c", 1.0, (("C", 1),)),
+    }
+
+
+def test_m7_a_policy_that_starts_more_runs_than_it_finishes_says_so_and_a_cycle_of_inputs_says_that():
+    from crafting_system.cli._limits import limit_text, risk_limits, unresolved
+    from crafting_system.cli._report import NOT_COMPUTED, _quantile_text
+
+    for policy, start, cause in ((supercritical(), "A", "subcritical"), (cyclic_but_finite(), "A", "unordered"), (improper_in_a_cycle(), "A", "improper")):
+        report = evaluate(policy, start, is_goal)
+        (limit,) = risk_limits(report)
+
+        assert report.grid.cause == cause
+        assert not unresolved(report, report.p90)  # not "the grid could not reach it": the grid is not the cause
+        assert _quantile_text(report, report.p90, 0.0, 1.0) == NOT_COMPUTED[cause]
+        assert "#190" not in NOT_COMPUTED[cause] and "#190" not in limit_text(limit)
+    assert risk_limits(evaluate(one_donor(), "S", is_goal)) == ()  # an ordinary policy with inputs says nothing
+
+
+def test_m7_the_guarantee_of_each_cause_is_true_of_the_report_it_is_attached_to():
+    """`unordered` means a proper policy: its mean and variance are exact. An improper policy has an infinite mean and a success chance between 0 and 1."""
+    from crafting_system.cli._limits import risk_limits
+
+    unordered = evaluate(cyclic_but_finite(), "A", is_goal)
+    improper = evaluate(improper_in_a_cycle(), "A", is_goal)
+
+    (said,) = risk_limits(unordered)
+    assert said.guarantee == "The success chance, the mean cost and the variance are exact."
+    assert unordered.success_probability.value == 1.0 and math.isfinite(unordered.mean.value) and math.isfinite(unordered.variance.value)
+    (denied,) = risk_limits(improper)
+    assert "cannot finish" in denied.why and "exact" not in denied.guarantee and denied.guarantee.startswith("Only the bracket")
+    assert improper.success_probability.low == 0.0 and improper.success_probability.high == 1.0 and math.isinf(improper.mean.value)
+    assert denied.what == "Not computed: mean, variance, p50, p90, CVaR"
+
+
+def test_m7_a_quantile_the_grid_did_compute_is_shown_and_only_an_infinite_one_gets_the_cause():
+    import dataclasses
+
+    from crafting_system.cli._limits import risk_limits
+    from crafting_system.cli._report import NOT_COMPUTED, _quantile_text
+    from crafting_system.risk import Estimate
+
+    report = evaluate(one_donor(), "S", is_goal)
+    graded = dataclasses.replace(
+        report, quantiles={0.5: Estimate(40.0, 39.0, 41.0), 0.9: Estimate(math.inf, 1.0, math.inf)}, mean=Estimate(math.inf, math.inf, math.inf),
+        grid=dataclasses.replace(report.grid, cause="subcritical"),
+    )
+
+    assert _quantile_text(graded, graded.p50, 0.0, 1.0).startswith("40.00 Chaos")
+    assert _quantile_text(graded, graded.p90, 0.0, 1.0) == NOT_COMPUTED["subcritical"]
+    (limit,) = risk_limits(graded)
+    assert limit.what == "Not computed: mean, p90"  # p50 was computed and is not claimed lost
+
+
+def test_c26_the_mass_the_nested_run_drops_is_counted_and_is_far_below_the_rounding_allowance():
+    import numpy as np
+
+    from crafting_system.risk import _nested
+
+    values = np.array([1e-200, 0.5, 1e-160, 1e-10])
+    dropped = _nested._clean(values)
+
+    assert dropped == pytest.approx(1e-160, rel=1e-9, abs=0.0) and list(values) == [0.0, 0.5, 0.0, 1e-10]  # what it zeroes it returns, to be counted as unresolved
+    assert _nested.TINY * 200_000 * 1_000 < 1e-100  # even every cell of a grid of 200,000 bins over 1,000 states cannot reach what a float rounds away
+    assert evaluate(one_donor(), "S", is_goal).grid.rounding > 1e-100
+
+
+def test_c27_the_packed_moments_are_the_same_numbers_as_the_object_ones(monkeypatch):
+    from crafting_system.risk import _moments
+
+    policy = {"s": Action("try", 2.0, (("goal", 1), ("t", 2))), "t": Action("again", 3.0, (("goal", 1), ("s", 3)))}  # no inputs: the moments come from `_moments`
+    plain = evaluate(policy, "s", is_goal)
+    packed_calls = []
+    real = _moments.solve_packed_model
+    monkeypatch.setattr(_moments, "solve_packed_model", lambda *args, **options: packed_calls.append(1) or real(*args, **options))
+    assert not packed_calls and evaluate(policy, "s", is_goal) == plain
+    monkeypatch.setattr(_moments, "PACKED_FROM_EDGES", 0)
+    packed = evaluate(policy, "s", is_goal)
+
+    assert packed_calls  # the packed arrays were used
+    assert packed.mean.value == pytest.approx(plain.mean.value, rel=1e-9) and packed.variance.value == pytest.approx(plain.variance.value, rel=1e-9)
+    assert packed.mean.low <= plain.mean.value <= packed.mean.high  # certified either way

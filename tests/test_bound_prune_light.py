@@ -32,7 +32,7 @@ import pytest
 
 from crafting_system import parallel
 from crafting_system.abstraction import AtLeast, Goal, Status, Wanted
-from crafting_system.actions import ActionError
+from crafting_system.actions import NotApplicableError
 from crafting_system.cli import _bound_prune as bp
 from crafting_system.cli import _plan
 from crafting_system.cli._bound_prune import (
@@ -237,7 +237,7 @@ def bounds(monkeypatch):
 
     def keeps_shape(abstraction, bare, action):
         if action.name in state.refused:
-            raise ActionError("refused")
+            raise NotApplicableError("refused")
         return action.name not in state.moves
 
     def reach_bound(abstraction, bare, action, chosen, exact=False):
@@ -388,7 +388,7 @@ def world(monkeypatch, *, refused=(), moves=(), loose=None, exact=None, small_st
 
     def keeps_shape(abstraction, bare, action):
         if action.name in refused:
-            raise ActionError("refused")
+            raise NotApplicableError("refused")
         return action.name not in moves
 
     def reach_bound(abstraction, bare, action, chosen, exact_chance=False, **kw):

@@ -40,7 +40,7 @@ is imported or tested for here.
   family type), the family key for a family told apart, the canonical mod id for a crafted mod.
 * `Abstraction.compress(item)`, `is_goal(state)`, `kernel(state, action)` (exact `Fraction`s that
   sum to 1, no zero entries), `signature(state, action)`, `reachable(starts, actions)` (breadth-first
-  closure; an action that raises an `ActionError` in a state is skipped there),
+  closure; an action that the game refuses in a state, or the model has no rule for there, is skipped there),
   `family_types(tag, fossils)` (the families of the empty pool grouped by family type: the "family types
   of the amulet's junk"; with a resonator, of the pool its fossils make), `stats` (`CacheStats(kernels, hits)`).
 * `reach_bound(abstraction, state, action, leaves, exact=False)`: an upper bound, from the pool alone, on the
@@ -194,12 +194,15 @@ claim of the rules registry.
 from ._bound import keeps_shape, reach_bound
 from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
+from ._gaps import PRUNED_CORRUPTING, PRUNED_QUALITY, Gap, ModelGaps, Prunings
 from ._goal import AtLeast, Goal, ImplicitWanted, QualityWanted, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
 from ._state import CompressedState, Flags, FracturedMod, ImplicitSide, OfferedMod, Slot, status_of
 
 __all__ = [
     "ADDING_LIMIT",
+    "PRUNED_CORRUPTING",
+    "PRUNED_QUALITY",
     "DEFAULT_LIMIT",
     "Abstraction",
     "AtLeast",
@@ -210,10 +213,13 @@ __all__ = [
     "Estimate",
     "EstimateRefused",
     "FamilyType",
+    "Gap",
     "Flags",
     "FracturedMod",
     "ImplicitSide",
     "ImplicitWanted",
+    "ModelGaps",
+    "Prunings",
     "QualityWanted",
     "OfferedMod",
     "Slot",

@@ -18,8 +18,8 @@ Quality changes no odds, so the same catalysts put on later cost the same, and t
 
 from collections.abc import Iterable
 
-from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.actions import ActionError
+from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState
+from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import Action
 
 from ._offers import RESTART, BuyStartItem, PricedOffer
@@ -39,7 +39,7 @@ def chosen_offers(
 
     This is the choice `solver_actions` makes before it builds any kernel (the key is cheaper than the kernel).
     `restart` is an action of every state but `start` and is never merged (it has no kernel). An offer the game refuses at
-    `state`, or no admitted rule covers (`ActionError`), is skipped. With `merge_equal`, of the offers whose
+    `state` is skipped, and so is one the model has no rule for there (the gap is written in `abstraction.gaps`, ticket #506). With `merge_equal`, of the offers whose
     `Abstraction.kernel_key` is equal at `state` only the cheapest stays (on a tie the earliest in `offers`, the one the
     solver took before); without it every allowed offer stays.
 
@@ -75,15 +75,20 @@ def keyed_offers(
         if priced.label == RESTART and state == start:
             continue
         if prune_corrupting and corrupting_offer_pruned(abstraction, priced, state):
+            abstraction.prunings.note(priced.label, PRUNED_CORRUPTING)
             continue
         if prune_quality and not isinstance(priced.offer.action, BuyStartItem) and abstraction.quality_offer_pruned(state, priced.offer.action):
+            abstraction.prunings.note(priced.label, PRUNED_QUALITY)
             continue
         if isinstance(priced.offer.action, BuyStartItem) or not merge_equal:
             allowed.append((position, priced, None))
             continue
         try:
             allowed.append((position, priced, abstraction.kernel_key(state, priced.offer.action)))
-        except ActionError:  # the game refuses it here, or no admitted rule covers it
+        except NotApplicableError:  # the game refuses it here: the plan is exact under it, nothing is said
+            continue
+        except OutOfScopeError as gap:  # the model has no rule for it here: left out, and the answer says so (ticket #506)
+            abstraction.gaps.note(priced.label, state, gap)
             continue
 
     cheapest: dict[object, PricedOffer] = {}
@@ -107,8 +112,8 @@ def solver_actions(
     """The solver's actions at `state`: one per priced offer the game allows there, in the order of `offers`.
 
     `restart` is an action of every state but `start` and is never merged (it has no kernel). An offer
-    the game refuses at `state`, or no admitted rule covers (`ActionError`), is skipped. With
-    `merge_equal`, of the offers whose `Abstraction.kernel_key` is equal at `state` only the cheapest
+    the game refuses at `state` is skipped, and so is one the model has no rule for there (the gap is written in
+    `abstraction.gaps`, ticket #506). With `merge_equal`, of the offers whose `Abstraction.kernel_key` is equal at `state` only the cheapest
     stays (on a tie the earliest in `offers`, the one the solver took before); the key is cheaper than
     the kernel, so the dearer ones are never built. Without it every allowed offer stays.
 
@@ -126,7 +131,10 @@ def solver_actions(
         if built is None:
             try:
                 built = offer_action(abstraction, priced, state, start)
-            except ActionError:
+            except NotApplicableError:
+                continue
+            except OutOfScopeError as gap:
+                abstraction.gaps.note(priced.label, state, gap)
                 continue
             if cache is not None:
                 cache[(state, priced.label, priced.cost)] = built

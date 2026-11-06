@@ -312,3 +312,33 @@ def test_a_bad_free_cost_is_a_value_error(bad):
 def test_a_bad_fallback_is_a_value_error(bad):
     with pytest.raises(ValueError, match="free_fallback_bins"):
         evaluate(veil_loop(), "placeholder", is_goal, free_cost=5e-6, free_fallback_bins=bad)
+
+
+# --- the faster methods say when they gave up (ticket #506, C23, C24) ----------------------------------------------------------
+
+
+def test_c24_a_free_component_too_large_to_fold_is_written_in_the_grid_info(monkeypatch):
+    from crafting_system.cli._limits import risk_limits
+
+    within = evaluate(with_a_free_loop(1e-6), "start", is_goal, free_cost=1e-6, max_bins=5_000)
+    monkeypatch.setattr(_fold, "FOLD_LIMIT", 1)
+    report = evaluate(with_a_free_loop(1e-6), "start", is_goal, free_cost=1e-6, max_bins=5_000)
+
+    assert not within.grid.gave_up  # within the limit nothing is written
+    assert report.grid.gave_up == ("a loop of states that cost less than one grid step is larger than the 1 states the faster methods fold away",)
+    (limit,) = risk_limits(report)
+    assert report.grid.gave_up[0] in limit.reason() and "the faster methods gave up first" in limit.reason()  # the grid reached no percentile: the cause is named
+
+
+def test_c23_a_count_of_free_visits_that_does_not_settle_and_too_many_paying_states_are_written(monkeypatch):
+    policy = veil_loop(5.0, 5e-6)
+    within = evaluate(policy, "placeholder", is_goal, free_cost=5e-6, max_bins=5_000)
+    monkeypatch.setattr(_free, "COUNT_BINS", 3)
+    counted = evaluate(policy, "placeholder", is_goal, free_cost=5e-6, max_bins=5_000)
+    monkeypatch.undo()
+    monkeypatch.setattr(_free, "PAID_STATES_LIMIT", 0)
+    paying = evaluate(policy, "placeholder", is_goal, free_cost=5e-6, max_bins=5_000)
+
+    assert not within.grid.gave_up
+    assert counted.grid.gave_up == ("the count of free actions does not settle within 3 steps",)
+    assert paying.grid.gave_up == ("1 states pay, more than the 0 the count of free actions follows",)

@@ -19,11 +19,11 @@ That second logic is written apart from `BenchCraft.outcomes` on purpose: `tests
 compares its count with the real expansion on random crafts and starts;
 * any other action that reads the junk (an addition: Augmentation, Regal, Exalted; Annulment) is **walked**.
   Its kernel depends on the whole set of held families and kinds, so there is no cheap closed form: the walk
-  calls the real `Abstraction.kernel` for it on every state it expands (an `ActionError` means the action is
+  calls the real `Abstraction.kernel` for it on every state it expands (a refusal of either family means the action is
   not legal there) and the transitions are the kernel's size. A walk of these actions pays one real kernel per
   state and action, so a caller passes the smaller `ADDING_LIMIT` for them (`needs_walk` tells whether to);
   `Estimate.walked` says that some were among the actions. A walked action whose kernel cannot be computed at
-  all (a `ValueError` that is not an `ActionError`, which a build would meet too) makes `estimate` raise
+  all (a `ValueError` that is not a refusal, which a build would meet too) makes `estimate` raise
   `EstimateRefused`, so a caller falls back to building the graph without a forecast.
 
 The result also keeps the states it reached, so that a coarse level can be forecast without a second
@@ -38,7 +38,7 @@ from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
-from crafting_system.actions import Action, ActionError, crafted_limit_of
+from crafting_system.actions import Action, NotApplicableError, OutOfScopeError, crafted_limit_of
 from crafting_system.items import Metamod, Rarity, Side, capacity
 
 from ._kernel import Abstraction, integer_weights
@@ -219,7 +219,7 @@ class _Pilot:
             return self._kernels[key]
         try:
             found = self.abstraction.kernel(state, action)
-        except ActionError:
+        except (NotApplicableError, OutOfScopeError):  # either: the forecast only counts the graph, it offers nothing (the build writes a gap)
             found = None
         self._kernels[key] = found
         if found:
@@ -242,7 +242,7 @@ class _Pilot:
         """
         try:
             found = self.abstraction.kernel(state, action)
-        except ActionError:
+        except (NotApplicableError, OutOfScopeError):  # either: the forecast only counts the graph, it offers nothing (the build writes a gap)
             return None
         except ValueError as error:  # a build would meet the same error, so there is nothing to forecast
             raise EstimateRefused(f"the kernel of {self._name(action)} cannot be computed: {error}") from error

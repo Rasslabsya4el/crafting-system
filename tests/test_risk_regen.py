@@ -64,3 +64,18 @@ def test_a_chain_that_never_starts_over_is_left_to_the_other_grids():
     found = evaluate(easy, "a", lambda state: state == GOAL, max_bins=2, max_coarse_bins=3, regenerative=True)
 
     assert math.isinf(found.p90.high)  # not attempt-wise (no edge into the start), and the 2-bin cap leaves it unresolved
+
+
+def test_c25_an_attempt_wise_run_refused_for_the_mass_it_cuts_is_written_and_a_resolved_one_is_not(monkeypatch):
+    from crafting_system.cli._limits import risk_limits, limit_text
+    from crafting_system.risk import _regen
+
+    assert not narrow(regenerative=True).grid.gave_up
+    monkeypatch.setattr(_regen, "MAX_MISSING", -1.0)  # any cut attempt mass is now too much
+    refused = narrow(regenerative=True)
+
+    (said,) = refused.grid.gave_up
+    assert said.startswith("the attempts cut short hold ") and "more than the -1e+00 the run attempt by attempt allows" in said
+    assert math.isinf(refused.p90.high)  # the ordinary grid ran instead and could not reach it
+    (limit,) = risk_limits(refused)
+    assert limit.what == "Not computed: p90, CVaR" and said in limit.reason() and "the faster methods gave up first" in limit_text(limit)
