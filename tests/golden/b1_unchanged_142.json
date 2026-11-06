@@ -3,7 +3,7 @@
   "kernels": 45,
   "kernels_sha": "31ce3b0aef26e30150dab88e38a1ea92f285445bd9112b91f04dbf75c8fc536f",
   "limits": 4,
-  "limits_sha": "7509ac8cf49d16e689948a5cd75e2259438eed0b6073eddc73dc2748932fb93d",
+  "limits_sha": "14eab03c495a24e43eaed6ee53da85f731c2647c67d49fcf4e557e276e69fbab",
   "offers": 90,
   "offers_sha": "0a41888549a197b41f8f526049dcd3900348fcab96c29ef9d2d5149a679e0d7f",
   "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='AllAttributes4', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)),), status=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
@@ -12,7 +12,7 @@
   "kernels": 79,
   "kernels_sha": "56af11950b6b8f6340b13f4c946a0a93637077b7fe1914f09899cacfb3f4cbc2",
   "limits": 4,
-  "limits_sha": "387c3ab06b2f629c1e6cb177fac939c6bc970220d5df4d4e4e1c7097bd5a7c8e",
+  "limits_sha": "cdb02483eafcdc2875441b4fbb2e58e03f1f431944d64cfe72a3a5e55cfa424d",
   "offers": 79,
   "offers_sha": "230f26ac02b175b9f61c04a26dffb42e2804421e6c0d68b7e9f872e39f739eea",
   "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='MovementVelocity5', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)),), status=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
@@ -21,7 +21,7 @@
   "kernels": 40,
   "kernels_sha": "356000a0fa23366510e2f7199e52bf5f203db61e85078556c795388ee59611ae",
   "limits": 4,
-  "limits_sha": "54520494e18a55429604c4186f416c8c9d88d4584dbd2ae37ad46daf1ac6f457",
+  "limits_sha": "2ad6987e002b5e795a6be7d76035566d274f62cdeaa7a6888ea5d972a1a50aea",
   "offers": 80,
   "offers_sha": "0b52eeb2c5ba67a3f84fc25730eb8857df565cf77988be518d6d4ad26d353a14",
   "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='MovementVelocity5', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)),), status=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
@@ -30,7 +30,7 @@
   "kernels": 77,
   "kernels_sha": "6925dd6550e7bc84b01e2a72c78f4612eb164d8ed23ac8e2e392d9f42488af3f",
   "limits": 5,
-  "limits_sha": "a523ddbc1a51019ed3963f536546f14e5a7231380015dae9d3988ce699bb4908",
+  "limits_sha": "4ed619d69af662da75a386d9331c2bb5372c85cdf65b6c81eccffca981c311b6",
   "offers": 77,
   "offers_sha": "6f99a2a2f06e08f323c38e52f72de0f4f17d1d57f0f8ee1f7e9f9e445ebbfb4b",
   "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='ChaosResist6', contribution=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>)),), status=(<Status.PASSING: 2>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
@@ -39,7 +39,7 @@
   "kernels": 40,
   "kernels_sha": "f087f0dfccc59ed620e2e0ac28604e2938b175c316a2ee726e1634c30ad01f06",
   "limits": 4,
-  "limits_sha": "4a21e8717bf51111573085fda66a06c7ac51c4c27ff86570ef8df7731484976e",
+  "limits_sha": "95691ab639bfbaa7c6f3c353bbc8a86c47e7aff54326269a29ba3b6d6f328b73",
   "offers": 80,
   "offers_sha": "2134bfdf1a6d3e7364957b12a3b053b11e39694d5da18a84ebd2cd6fa3c5f4fb",
   "start": "CompressedState(flags=Flags(rarity=<Rarity.RARE: 'rare'>, corrupted=False, influences=frozenset()), fractured=(FracturedMod(mod_id='LightningResist1', contribution=(<Status.ABSENT: 0>, <Status.PASSING: 2>)),), status=(<Status.ABSENT: 0>, <Status.PASSING: 2>), slots=())"
@@ -48,7 +48,7 @@
   "kernels": 9,
   "kernels_sha": "50270f87ecd87881c542a5b44aae0efc1adb861e7d715658b42bde4bc6540689",
   "limits": 4,
-  "limits_sha": "b8688383a5fb7cfd4a3f393257e49413d2b0a8a174803e350d70bea24149baa0",
+  "limits_sha": "405bee4ed2660bcaed9e8d34be3f6d2a0505b3f1092c0e80cc947fda8318c069",
   "offers": 9,
   "offers_sha": "2a8e0fd8f0f2eceb18045ac2165fce185eccee9408923d980f9c446a138ea21d",
   "start": "CompressedState(flags=Flags(rarity=<Rarity.NORMAL: 'normal'>, corrupted=False, influences=frozenset()), fractured=(), status=(<Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>, <Status.ABSENT: 0>), slots=())"
