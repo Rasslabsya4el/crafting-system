@@ -33,7 +33,7 @@ rules:
           status: passing
         - family: ColdResistance
           status: passing
-    do: "Bench craft #% increased Damage"
+    do: "Bench craft (15-17)% increased Damage"
   - when:
       rarity: rare
       requirements:
@@ -43,7 +43,7 @@ rules:
           status: passing
         - family: LightningResistance
           status: passing
-    do: "Bench craft #% increased Damage"
+    do: "Bench craft (15-17)% increased Damage"
   - when:
       rarity: rare
       requirements:
@@ -53,7 +53,7 @@ rules:
           status: passing
         - family: LightningResistance
           status: passing
-    do: "Bench craft #% increased Damage"
+    do: "Bench craft (15-17)% increased Damage"
 
   # Step 2: a rare belt that is not one of those is a Regal that gave something else: buy the belt again.
   - when:

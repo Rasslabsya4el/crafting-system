@@ -53,7 +53,7 @@ def plan():
 
 def test_m1_a_refused_forecast_puts_its_own_text_in_the_limit_and_the_answer_stays_exact(monkeypatch):
     def refused(self, starts, actions, **options):
-        raise EstimateRefused("the state holds a fractured mod as the family type ~1: the pilot count has no rule for it")
+        raise EstimateRefused("a state holds a fracture made during the craft, which the size forecast has no rule for")
 
     monkeypatch.setattr(Abstraction, "estimate", refused)
 
@@ -62,8 +62,8 @@ def test_m1_a_refused_forecast_puts_its_own_text_in_the_limit_and_the_answer_sta
     (whole,) = [limit for limit in of_kind(made.limits, "how-solved") if limit.what == "The whole search was run"]
     assert made.approximation is None and made.risk is not None
     assert whole.why == (
-        "the size of the exact graph could not be forecast "
-        "(the state holds a fractured mod as the family type ~1: the pilot count has no rule for it), so it is built as it is"
+        "the size of the exact search could not be forecast "
+        "(a state holds a fracture made during the craft, which the size forecast has no rule for), so it was run in full"
     )
     assert whole.guarantee == "The answer is exact among the methods offered."
 
@@ -88,8 +88,8 @@ def test_m2_rate_a_calibration_that_cannot_run_names_why_and_a_measured_one_says
     few = _decide.measure_solve_rate(abstraction, 0, calibration_layers(10)[0], {})
 
     assert measured[1] == "" and measured[0] != _decide.SOLVE_RATE_FALLBACK
-    assert failed == (_decide.SOLVE_RATE_FALLBACK, "the solver did not finish on the pilot graph (no luck in 3000 sweeps)")
-    assert few == (_decide.SOLVE_RATE_FALLBACK, "the pilot graph has 20 transitions, too few to time the solver on")
+    assert failed == (_decide.SOLVE_RATE_FALLBACK, "the timing run did not finish (no luck in 3000 sweeps)")
+    assert few == (_decide.SOLVE_RATE_FALLBACK, "the forecast covers only 20 possible moves between states, too few to time the search on")
     assert _decide.calibrate_solve_rate(abstraction, 0, estimate, {}) == _decide.SOLVE_RATE_FALLBACK  # the old function keeps its answer
 
 
@@ -97,10 +97,10 @@ def test_m2_rate_a_plan_whose_forecast_used_the_guessed_speed_says_so_and_a_give
     guessed = plan_of(budget=1e-9)  # no rates given, a forecast above the budget: the solver is timed, and R12's pilot graph is too small to time
     given = plan_of(budget=1e-9, rates=_decide.Rates(1.0, 1.0))
 
-    (limit,) = [each for each in guessed.limits if each.what == "The solver's speed was guessed"]
-    assert limit.kind == "how-solved" and "too few to time the solver on" in limit.why and limit.why.endswith("so the forecast used a fixed speed")
+    (limit,) = [each for each in guessed.limits if each.what == "The time of the search was guessed"]
+    assert limit.kind == "how-solved" and "too few to time the search on" in limit.why and limit.why.endswith("so the forecast used a fixed speed")
     assert limit.guarantee == "The answer's own guarantee does not depend on it: the forecast only chose between the exact run and an approximate one."
-    assert not [each for each in given.limits if each.what == "The solver's speed was guessed"]
+    assert not [each for each in given.limits if each.what == "The time of the search was guessed"]
 
 
 # --- M2: the fall-back of the bound pruning ----------------------------------------------------------------------------------
@@ -178,7 +178,7 @@ def test_k13_the_prunings_the_walk_wrote_are_in_the_limits_of_the_finished_plan(
 
 
 def test_the_percentiles_a_slower_method_gave_are_a_limit_that_marks_the_unreached_ones(plan):
-    gave_up = dataclasses.replace(plan.risk.grid, gave_up=("a loop of states that cost less than one grid step is larger than the 1 states the faster methods fold away",))
+    gave_up = dataclasses.replace(plan.risk.grid, gave_up=("a loop of states that cost almost nothing is longer than the 1 states the quicker percentile methods can follow",))
     risk = dataclasses.replace(plan.risk, grid=gave_up)
 
     (limit,) = risk_limits(risk)
@@ -193,14 +193,14 @@ def test_the_percentiles_a_slower_method_gave_are_a_limit_that_marks_the_unreach
 
 def every_new_limit(plan) -> list[Limit]:
     """One of each limit this ticket adds, as the sources write them."""
-    risk = dataclasses.replace(plan.risk, grid=dataclasses.replace(plan.risk.grid, gave_up=("the coarse grid would need more than the 1 cells the dense method holds",), cause="unordered"))
+    risk = dataclasses.replace(plan.risk, grid=dataclasses.replace(plan.risk.grid, gave_up=("a quicker percentile method would need more than the 1 figures it can hold in memory",), cause="unordered"))
     return [
         *model_gap_limits([Gap("Harvest Reforge Defence", 3, "the model has no rule for a pool with a family on both sides", False), Gap("Toy Graft", 7, "consumes", True)]),
         _plan.states_limit(True),
         *risk_limits(risk),
-        _plan.guessed_rate_limit("the pilot graph has 20 transitions, too few to time the solver on"),
+        _plan.guessed_rate_limit("the forecast covers only 20 possible moves between states, too few to time the search on"),
         *_plan.skipped_level_limits([("tail cut at theta 0.01 over family groups of 8", "no proper policy")]),
-        _plan.whole_search_limit("the size of the exact graph could not be forecast (a reason), so it is built as it is"),
+        _plan.whole_search_limit("the size of the exact search could not be forecast (a reason), so it was run in full"),
     ]
 
 

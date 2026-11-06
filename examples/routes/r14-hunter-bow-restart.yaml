@@ -71,7 +71,7 @@ rules:
           status: passing
         - family: DamageOverTimeMultiplier
           status: absent
-    do: Bench craft +#% to Chaos Damage over Time Multiplier
+    do: Bench craft +(18-20)% to Chaos Damage over Time Multiplier
   - when:
       rarity: rare
       crafted_mods: true

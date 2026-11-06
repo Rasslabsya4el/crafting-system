@@ -215,3 +215,17 @@ def test_r14_a_bow_of_item_level_78_takes_the_finishing_crafts_of_the_route(data
         "JunMaster2ChaosDamageOverTimeMultiplier3",
     ):
         assert BenchCraft(mod_id).outcomes(data, item).chance_all([mod_id]) == 1
+
+
+def test_the_tiers_of_one_craft_have_labels_that_tell_them_apart_by_their_roll_range(data):
+    """#500: three tiers of the Fire Resistance craft read alike without their range, and the limit of the left-out crafts named all three the same."""
+    fire = {craft.mod_id: craft.label(data) for craft in bench_crafts(data) if craft.mod_id.endswith(("FireResist1", "FireResist2", "FireResist3_"))}
+
+    assert fire == {
+        "HelenaMasterFireResist1": "Bench craft +(16-20)% to Fire Resistance",
+        "EinharMasterFireResist2": "Bench craft +(21-28)% to Fire Resistance",
+        "EinharMasterFireResist3_": "Bench craft +(29-35)% to Fire Resistance",
+    }
+    labels = [craft.label(data) for craft in bench_crafts(data)]
+    shared = {label for label in labels if labels.count(label) > 1}
+    assert len(shared) < 20  # before, 171 of the 263 labels were shared by several crafts; what is left shares range and text (offers_for adds the mod id)

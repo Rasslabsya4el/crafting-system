@@ -416,9 +416,9 @@ def test_a_query_that_cannot_be_pooled_runs_exactly_and_says_why(tmp_path, capsy
     code, out = run(tmp_path, "--budget", "0", prices=price_file())
 
     text = capsys.readouterr().out
-    assert code == 0 and "no approximate level available" in text and "is run as it is" in text
+    assert code == 0 and "no approximate answer was possible" in text and "was run in full" in text
     solved = [limit for limit in read_json(out)["limits"] if limit["kind"] == "how-solved"]  # G12
-    assert read_json(out)["answer"] == {"approximate": False} and "no approximate level" in solved[0]["why"] and solved[0]["guarantee"]
+    assert read_json(out)["answer"] == {"approximate": False} and "no approximate answer was possible" in solved[0]["why"] and solved[0]["guarantee"]
 
 
 def test_a_gap_just_above_the_tolerance_never_prints_as_the_tolerance():

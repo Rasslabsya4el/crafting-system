@@ -204,7 +204,7 @@ def test_a_query_over_the_budget_with_an_undeclared_action_is_exact_when_small_a
     decision = decide(ab, start, priced(offers), 0.0, RATES)
 
     assert decision.action == "exact" and decision.levels == ()
-    assert decision.message.startswith("no approximate level available (Regal Orb is not declared block-invariant")
+    assert decision.message.startswith("no approximate answer was possible (Regal Orb is not declared block-invariant")
 
 
 def test_a_query_over_the_budget_with_an_undeclared_action_is_refused_when_the_exact_run_is_beyond_what_was_run(exact, monkeypatch):
@@ -212,9 +212,9 @@ def test_a_query_over_the_budget_with_an_undeclared_action_is_refused_when_the_e
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
 
     decision = decide(ab, start, priced(offers), 0.0, RATES)
-    assert decision.action == "refused" and "no approximate level available (Regal Orb is not declared block-invariant" in decision.message
+    assert decision.action == "refused" and "no approximate answer was possible (Regal Orb is not declared block-invariant" in decision.message
 
-    with pytest.raises(PlanError, match=r"no approximate level available \(Regal Orb is not declared block-invariant"):
+    with pytest.raises(PlanError, match=r"no approximate answer was possible \(Regal Orb is not declared block-invariant"):
         make_plan(DATA, exact.target, PRICES, offers=offers, budget=0.0, rates=RATES, solver="object")  # (the packed solver answers it, ticket #70)
 
 

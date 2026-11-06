@@ -41,7 +41,7 @@ OFFERS = {
     "R14": {
         "Orb of Transmutation", "Orb of Alteration", "Orb of Augmentation", "Regal Orb", "Orb of Annulment", "Exalted Orb",
         "Remove Crafted Mods", "Bench craft Can have up to 3 Crafted Modifiers", "Bench craft Cannot roll Attack Modifiers",
-        "Bench craft +2 to Level of Socketed Support Gems", "Bench craft +#% to Chaos Damage over Time Multiplier", "restart",
+        "Bench craft +2 to Level of Socketed Support Gems", "Bench craft +(18-20)% to Chaos Damage over Time Multiplier", "restart",
     },
 }
 START = {"R04": ("Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja", 9.0), "R14": ("Thicket Bow, normal, item level 78-79, Hunter influence", "trade-api", 13.0)}
@@ -132,12 +132,12 @@ def test_benchmark_checks_the_odds_and_leaves_the_heavy_route_unsolved(data, pri
 
 
 def test_the_decision_finds_no_approximate_level_and_the_planner_goes_on_to_the_packed_solver(unsolved, route_id):
-    """Ticket #70: what was a refusal ("no approximate level available") is now an exact answer of the packed solver, with the reason in the note."""
+    """Ticket #70: what was a refusal ("no approximate answer was possible") is now an exact answer of the packed solver, with the reason in the note."""
     decision = decide(unsolved.abstraction, unsolved.start, unsolved.offers, 60.0)
 
     assert decision.action == "refused" and "Attack/Caster tags" in decision.why
     note = _packed_note(decision)
-    assert "Attack/Caster tags" in note and "packed solver" in note and "the answer is exact" in note
+    assert "Attack/Caster tags" in note and "whole search ran" in note
 
 
 def test_no_vendor_recipe_makes_a_quiver_or_a_bow_so_the_default_run_plans_the_target_once(data, prices, route_id):
@@ -155,7 +155,7 @@ def test_no_vendor_recipe_makes_a_quiver_or_a_bow_so_the_default_run_plans_the_t
 def test_a_budget_run_with_the_object_solver_asked_for_still_refuses_with_the_reason(data, prices, route_id):
     target = load_target(ROOT / ROUTES[route_id][0], data)
 
-    with pytest.raises(PlanError, match=r"no approximate level available.*Attack/Caster tags"):
+    with pytest.raises(PlanError, match=r"no approximate answer was possible.*Attack/Caster tags"):
         make_plan(data, target, prices, budget=60.0, solver="object")
 
 

@@ -130,7 +130,7 @@ def test_g12_a_search_run_whole_past_the_budget_says_so_and_stays_exact():
     limits = make_plan(DATA, load_target(R12, DATA), price_file(), budget=1e-9).limits
     (solved,) = [limit for limit in of_kind(limits, "how-solved") if limit.what == "The whole search was run"]
 
-    assert "no approximate level available" in solved.why
+    assert "no approximate answer was possible" in solved.why
     assert solved.guarantee == "The answer is exact among the methods offered."
 
 
@@ -139,7 +139,7 @@ def test_g14_a_tree_of_groups_of_item_states_says_it_and_keeps_the_numbers_exact
 
     shown = only(make_plan(DATA, load_target(R12, DATA), price_file(), solver="packed").limits, "display")
 
-    assert shown.what == "The tree shows groups of item states" and "are one group" in shown.why
+    assert shown.what == "The tree shows groups of states" and "are one group" in shown.why
     assert shown.guarantee == "The odds, costs and percentiles are exact for the groups."
 
 

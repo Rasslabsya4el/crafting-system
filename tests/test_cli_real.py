@@ -119,4 +119,9 @@ def test_without_a_lifeforce_price_the_reforge_is_dropped_and_the_chaos_orb_poli
     assert 0.0 < state["goal_chance_per_use"] < 0.01  # about 0.42% a Chaos Orb, the weights are huge integers
     assert state["reach_probability"] == pytest.approx(1.0)
     assert document["totals"]["mean_cost"]["value"] == pytest.approx(4.0 + 1.0 / state["goal_chance_per_use"], rel=1e-9)
-    assert "(no price for Primal Crystallised Lifeforce)" in capsys.readouterr().out
+    printed = capsys.readouterr().out
+    assert "(no price for Primal Crystallised Lifeforce)" in printed
+    (essences,) = [limit for limit in document["limits"] if limit["what"] == "These essences have no price"]  # #487: one line for them all, not one for each
+    assert essences["count"] > 5 and all("Essence of" in label for label in essences["labels"]) and essences["names"] == []
+    assert all(f"(no price for {label})" not in printed for label in essences["labels"])
+    assert f"These essences have no price, {essences['count']:,} in all: {', '.join(essences['labels'])}." in printed

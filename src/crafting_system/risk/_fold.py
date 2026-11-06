@@ -24,7 +24,7 @@ from ._chain import Chain
 from ._gaveup import note
 
 FOLD_LIMIT = 1500  # states of the largest free component that is still folded
-FOLD_GAVE_UP = "a loop of states that cost less than one grid step is larger than the {:,} states the faster methods fold away"  # what `_gaveup` is told
+FOLD_GAVE_UP = "a loop of states that cost almost nothing is longer than the {:,} states the quicker percentile methods can follow"  # what `_gaveup` is told
 
 
 @dataclass(frozen=True, slots=True)

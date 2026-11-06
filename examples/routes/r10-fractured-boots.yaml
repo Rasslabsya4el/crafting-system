@@ -28,7 +28,7 @@ rules:
         - family: AvoidElementalStatusAilments
           status: absent
       open_suffixes: 1
-    do: "Bench craft #% chance to Avoid Elemental Ailments"
+    do: "Bench craft (16-20)% chance to Avoid Elemental Ailments"
   # Step 1: use the essence again (this is also the first use, on the bought boots).
   - when:
       rarity: rare

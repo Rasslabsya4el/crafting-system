@@ -70,6 +70,18 @@ def test_a_craft_whose_mod_counts_toward_a_requirement_is_offered_and_the_others
     assert any(isinstance(offer.action, RemoveCraftedMods) for offer in chosen.offers)
 
 
+def test_two_crafts_of_one_text_are_told_apart_by_their_roll_range_in_the_label_and_in_the_limit():
+    """#500: the tiers of a craft share their text; the label has the range, as the card of a craft reads."""
+    assert BenchCraft(DAMAGE_1).label(DATA) == "Bench craft (12-14)% increased Damage"
+    assert BenchCraft(DAMAGE_2).label(DATA) == "Bench craft (15-17)% increased Damage"
+
+    chosen = offered(Goal((Wanted(frozenset({DAMAGE_1})),)))
+
+    left = only(chosen.limits, "crafts").labels
+    assert "Bench craft (15-17)% increased Damage" in left  # the tier left out is named, not "Bench craft #% increased Damage"
+    assert not any(label.startswith("Bench craft #") for label in left)
+
+
 def test_a_craft_giving_the_goal_nothing_is_not_offered_and_neither_is_remove_crafted_mods():
     chosen = offered(Goal((Wanted(frozenset({LIFE})),)))
 

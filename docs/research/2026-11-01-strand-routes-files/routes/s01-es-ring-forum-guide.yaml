@@ -53,7 +53,7 @@ rules:
           status: passing
         - family: CriticalStrikeMultiplier
           status: passing
-    do: "Bench craft +#% to Fire Resistance [EinharMasterFireResist2]"
+    do: "Bench craft +(21-28)% to Fire Resistance"
 
   # Step 5: the three prefixes are there and the critical multiplier is not: lock the prefixes, then reforge.
   - when:

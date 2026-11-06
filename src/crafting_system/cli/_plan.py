@@ -66,9 +66,7 @@ class StrandSetting:
     why: str
 
 
-STRANDS_OFF = StrandSetting(
-    False, "the setting memory_strands is off and the start item has none; `--strands`, or memory_strands = true under [planner] in crafting.toml, turns them on"
-)
+STRANDS_OFF = StrandSetting(False, "the start item has none and the query does not ask for them")
 
 
 def strand_setting(start_item: Item, *, asked: bool = False) -> StrandSetting:
@@ -402,7 +400,7 @@ def make_plan(
     if not priced:
         names = sorted({name for drop in dropped for name in drop.missing})
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
-    limits += unpriced_limits((drop.label, drop.missing) for drop in dropped)
+    limits += unpriced_limits((drop.label, drop.missing, drop.kind) for drop in dropped)
     usable, removed = split_usable(data, target.start_item, [p.offer.action for p in priced])
     kept = set(usable)
     if removed:
@@ -548,10 +546,10 @@ def states_limit(tracked: bool) -> Limit:
 
 
 def guessed_rate_limit(why: str) -> Limit:
-    """The limit of a forecast that used a fixed solver speed because the speed could not be measured (M2)."""
+    """The limit of a forecast that used a fixed search speed because the speed could not be measured (M2)."""
     return Limit(
         _limits.SOLVE,
-        "The solver's speed was guessed",
+        "The time of the search was guessed",
         why + ", so the forecast used a fixed speed",
         "The answer's own guarantee does not depend on it: the forecast only chose between the exact run and an approximate one.",
     )
@@ -564,11 +562,11 @@ def skipped_level_limits(skipped: Sequence[tuple[str, str]]) -> tuple[Limit, ...
     return (
         Limit(
             _limits.SOLVE,
-            "Levels skipped",
-            "no policy to follow or no convergence: {names}",
+            "Approximate answers skipped",
+            "they gave no plan to follow or did not settle: {names}",
             labels=tuple(name for name, _ in skipped),
             names=tuple(dict.fromkeys(why for _, why in skipped)),
-            guarantee="The stated gap is that of the level shown; a skipped level could only have narrowed it.",
+            guarantee="The stated gap is that of the approximate answer shown; a skipped one could only have narrowed it.",
         ),
     )
 
@@ -605,22 +603,22 @@ def whole_search_limit(why: str) -> Limit:
 
 
 def lumped_limit(item_states: int, shown: int) -> Limit:
-    """The limit of a tree that shows groups of item states, not every item state (G14)."""
+    """The limit of a tree that shows groups of states, not every state (G14)."""
     return Limit(
         _limits.DISPLAY,
-        "The tree shows groups of item states",
-        f"the policy visits {item_states:,} item states and the tree shows {shown:,} groups of them: item states that pay alike and lead on to "
+        "The tree shows groups of states",
+        f"the plan passes through {item_states:,} states and the tree shows {shown:,} groups of them: states that cost the same and lead on to "
         "the same groups with the same chances are one group, shown by one of its members",
         "The odds, costs and percentiles are exact for the groups.",
     )
 
 
 def _packed_note(decision: Decision) -> str:
-    """The plan's note for a query the decision refused and the packed solver answers exactly: why there is no approximation and what ran."""
-    size = "" if decision.transitions is None else f" (forecast: at least {decision.transitions:,} transitions)"
+    """The plan's note for a query the decision refused and the large-graph solver answers exactly: why there is no approximation and what ran."""
+    size = "" if decision.transitions is None else f" (forecast: at least {decision.transitions:,} possible moves between states)"
     return (
-        f"No approximate level exists ({decision.why}), so the answer is exact: the graph{size} is larger than the object solver "
-        "has been run on and is solved on the packed solver, which takes minutes and several GB of memory."
+        f"No approximate answer was possible ({decision.why}), so the whole search ran: it is large{size} "
+        "and takes minutes and several GB of memory."
     )
 
 
@@ -655,8 +653,8 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
             Limit(
                 _limits.RISK,
                 "Not computed: p50, p90, CVaR",
-                f"the policy's merged chain has {moves:,} transitions, more than the {RISK_QUANTILE_TRANSITIONS:,} the percentile "
-                "calculation can hold in memory (it ran out of a 16 GB runner on R04)",
+                f"the plan can lead from one state to another in {moves:,} ways, more than the {RISK_QUANTILE_TRANSITIONS:,} the percentile "
+                "calculation can hold in memory",
                 "The odds, the mean and the variance are exact.",
             ),
         )

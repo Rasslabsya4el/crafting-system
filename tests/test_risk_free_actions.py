@@ -325,7 +325,7 @@ def test_c24_a_free_component_too_large_to_fold_is_written_in_the_grid_info(monk
     report = evaluate(with_a_free_loop(1e-6), "start", is_goal, free_cost=1e-6, max_bins=5_000)
 
     assert not within.grid.gave_up  # within the limit nothing is written
-    assert report.grid.gave_up == ("a loop of states that cost less than one grid step is larger than the 1 states the faster methods fold away",)
+    assert report.grid.gave_up == ("a loop of states that cost almost nothing is longer than the 1 states the quicker percentile methods can follow",)
     (limit,) = risk_limits(report)
     assert report.grid.gave_up[0] in limit.reason() and "the faster methods gave up first" in limit.reason()  # the grid reached no percentile: the cause is named
 
@@ -340,5 +340,5 @@ def test_c23_a_count_of_free_visits_that_does_not_settle_and_too_many_paying_sta
     paying = evaluate(policy, "placeholder", is_goal, free_cost=5e-6, max_bins=5_000)
 
     assert not within.grid.gave_up
-    assert counted.grid.gave_up == ("the count of free actions does not settle within 3 steps",)
-    assert paying.grid.gave_up == ("1 states pay, more than the 0 the count of free actions follows",)
+    assert counted.grid.gave_up == ("the quicker method for free actions does not settle within 3 steps",)
+    assert paying.grid.gave_up == ("1 states cost something, more than the 0 the quicker method for free actions follows",)

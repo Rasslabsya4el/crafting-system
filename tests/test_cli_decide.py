@@ -103,15 +103,15 @@ def test_an_action_that_is_not_block_invariant_leaves_no_level_so_a_small_query_
     decision = choose(mid, R_KERNEL, R_SOLVE, 60.0, levels=LEVELS, refusal="Annulment is not declared block-invariant")
 
     assert decision.action == "exact"
-    assert decision.message.startswith("no approximate level available (Annulment is not declared block-invariant)")
-    assert "is run as it is" in decision.message
+    assert decision.message.startswith("no approximate answer was possible (Annulment is not declared block-invariant)")
+    assert "was run in full" in decision.message
 
 
 def test_an_action_that_is_not_block_invariant_refuses_a_query_past_what_the_exact_solver_has_run_on():
     decision = choose(BIG, R_KERNEL, R_SOLVE, 60.0, levels=LEVELS, refusal="Annulment is not declared block-invariant")
 
     assert decision.action == "refused"
-    assert decision.message.startswith("no approximate level available (Annulment is not declared block-invariant). ")
+    assert decision.message.startswith("no approximate answer was possible (Annulment is not declared block-invariant). ")
     assert "22,994,524 transitions" in decision.message and "not offered" in decision.message
     assert decision.levels == ()
 
@@ -127,7 +127,7 @@ def test_no_level_that_fits_gives_the_same_two_ways_out():
 def test_nothing_to_pool_is_said_as_such():
     decision = choose(BIG, R_KERNEL, R_SOLVE, 60.0, levels=())
 
-    assert decision.action == "refused" and "too few to pool" in decision.message
+    assert decision.action == "refused" and "too few mod families can be pooled" in decision.message
 
 
 def test_the_exact_run_is_offered_up_to_two_million_transitions_only():
@@ -291,7 +291,7 @@ def test_make_plan_stops_with_the_refusal_when_the_exact_run_is_beyond_the_large
     offers = [Offer("Undeclared reroll", UndeclaredReroll(), {CH: 1}), *OFFERS[1:]]
     monkeypatch.setattr(_decide, "EXACT_TRANSITIONS", 100)
 
-    with pytest.raises(PlanError, match=r"no approximate level available \(Undeclared reroll is not declared block-invariant"):
+    with pytest.raises(PlanError, match=r"no approximate answer was possible \(Undeclared reroll is not declared block-invariant"):
         make_plan(DATA, target, PRICES, offers=offers, budget=0.0, rates=Rates(1.0, 1.0), solver="object")
 
 
@@ -307,7 +307,7 @@ def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(
     assert plan.approximation is None and plan.packed is not None
     assert plan.mean_remaining == pytest.approx(exact.mean_remaining, rel=1e-9)
     solved = only(plan.limits, "how-solved")  # G13: one limit, the packed note replaces the decision's message
-    assert "Undeclared reroll is not declared block-invariant" in solved.why and "packed solver" in solved.why
+    assert "Undeclared reroll is not declared block-invariant" in solved.why and "whole search ran" in solved.why
     assert solved.guarantee == "The answer is exact among the methods offered."
 
 

@@ -177,7 +177,7 @@ def test_a_budget_that_the_exact_run_overshoots_falls_back_to_the_exact_run_for_
 
     plan = make_plan(DATA, veil_target(tmp_path), price_file(Veiled_Chaos_Orb=5.0), budget=1e-9)
 
-    assert plan.approximation is None and "no approximate level" in note_text(plan.limits)  # the family-group level refuses the veiled actions, and says so
+    assert plan.approximation is None and "no approximate answer was possible" in note_text(plan.limits)  # the family-group level refuses the veiled actions, and says so
     assert plan.mean_remaining == pytest.approx(1.5 + 2.6 * 5.0 * FREE_ACTION_SHARE, rel=1e-12)
 
 
@@ -250,7 +250,7 @@ def test_the_text_and_the_json_of_a_veil_plan_show_the_percentiles_and_state_the
     text = render_text(report)
     totals = policy_document(report)["totals"]
 
-    assert math.isfinite(plan.risk.p90.high) and "not resolved on the grid" not in text
+    assert math.isfinite(plan.risk.p90.high) and "far above its cheapest step" not in text
     assert "free actions are counted at 5e-06 Chaos each" in text and "the percentiles hold to within" in text and "and the CVaR to within" in text
     assert totals["quantiles_resolved"] is True
     assert totals["free_action_allowance"] == pytest.approx(plan.risk.grid.free_allowance) and totals["free_action_tail"] == 1e-9

@@ -9,7 +9,8 @@ The fields:
 
 * `kind` is the group of the limit, one of the constants below; the page groups by it and the order of `GROUPS` is the order shown.
 * `what` is the short head ("Not offered", "The start item is given"), `why` the cause in plain words, `guarantee` one sentence that says what
-  the answer still guarantees (OR-13). `guarantee` is in player words: no setting key, no module name, no ticket number.
+  the answer still guarantees (OR-13). `what`, `why` and `guarantee` are in player words: no setting key, no module name, no ticket number, none of the solver's own words (#481;
+  `tests/test_cli_limit_words.py` reads every limit the planner can write).
 * `labels` are the things left out, by their names in the game ("Exalted Orb", "Bench craft Cannot roll Attack Modifiers").
 * `names` are the things the cause is about, for a limit that has them: the items with no price of an unpriced group.
 
@@ -219,12 +220,32 @@ def grouped(limits: Iterable[Limit]) -> list[tuple[str, list[Limit]]]:
     return [(TITLES.get(kind, kind), group) for kind, group in found.items()]
 
 
-def unpriced_limits(dropped: Iterable[tuple[str, Sequence[str]]]) -> tuple[Limit, ...]:
-    """One limit for each set of missing prices: the offers (label, missing names) that lack the same prices are one limit."""
+def unpriced_limits(dropped: Iterable[tuple]) -> tuple[Limit, ...]:
+    """The limits of the offers left out for lack of a price: `dropped` holds (label, missing names) or (label, missing names, kind).
+
+    The offers whose missing price is their own item (an essence that no price source lists) are one limit for each kind, "These essences have
+    no price", with every one of them named in the line (#487); the JSON keeps them all. Any other offer is grouped by the prices it lacks:
+    the offers that lack the same prices are one limit that names the prices.
+    """
+    own: dict[str, list[str]] = {}
     by_missing: dict[tuple[str, ...], list[str]] = {}
-    for label, missing in dropped:
-        by_missing.setdefault(tuple(missing), []).append(label)
-    return tuple(
+    for label, missing, *rest in dropped:
+        kind = rest[0] if rest else ""
+        if kind and tuple(missing) == (label,):
+            own.setdefault(kind, []).append(label)
+        else:
+            by_missing.setdefault(tuple(missing), []).append(label)
+    found = [
+        Limit(
+            UNPRICED,
+            f"These {kind_title(kind).lower()} have no price",
+            "",
+            labels=tuple(labels),
+            **claim("the actions that have a price", "A price for these could make it cheaper."),
+        )
+        for kind, labels in own.items()
+    ]
+    found += [
         Limit(
             UNPRICED,
             "Not offered",
@@ -234,14 +255,15 @@ def unpriced_limits(dropped: Iterable[tuple[str, Sequence[str]]]) -> tuple[Limit
             **claim("the actions that have a price", "A price for these could make it cheaper."),
         )
         for missing, labels in by_missing.items()
-    )
+    ]
+    return tuple(found)
 
 
 SHOWN_CAUSES = 3  # the causes of the model gaps one limit names; the rest are one more of the same
 
 
 def _states(count: int, blocks: bool = False) -> str:
-    """"3 states", or for a coarse level "3 groups of states" (a block stands for many item states)."""
+    """"3 states", or for an approximate answer "3 groups of states" (a group stands for many states)."""
     if blocks:
         return f"{count:,} group of states" if count == 1 else f"{count:,} groups of states"
     return f"{count:,} state" if count == 1 else f"{count:,} states"
@@ -343,9 +365,9 @@ def risk_limits(risk) -> tuple[Limit, ...]:
             Limit(
                 RISK,
                 f"Not computed: {', '.join(gone)}",
-                "the policy starts more runs of its inputs than it finishes, so the cost of the whole craft has no finite mean"
+                "the plan starts more runs of its inputs than it finishes, so the cost of the whole craft has no finite mean"
                 if risk.grid.cause == "subcritical"
-                else "a state the policy reaches cannot finish and its inputs depend on each other in a cycle, so no cost of the whole craft is computed",
+                else "the plan can reach a state from which it cannot finish, and its inputs depend on each other in a cycle, so no cost of the whole craft is computed",
                 "Only the bracket around the success chance is certified; no cost is claimed.",
             )
         )
@@ -354,7 +376,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
             Limit(
                 RISK,
                 "Not computed: p50, p90, CVaR",
-                "the inputs of the policy depend on each other in a cycle, so the cost of a run has no order to follow",
+                "the inputs of the plan depend on each other in a cycle, so the cost of a run has no order to follow",
                 "The success chance, the mean cost and the variance are exact.",
             )
         )
@@ -364,7 +386,7 @@ def risk_limits(risk) -> tuple[Limit, ...]:
             Limit(
                 RISK,
                 f"Not computed: {', '.join(cut)}",
-                "the cost of the whole craft is far above its cheapest step, so the grid that measures percentiles cannot reach them"
+                "the cost of the whole craft is far above its cheapest step, so the percentile calculation cannot reach them"
                 + (f"; the faster methods gave up first: {'; '.join(risk.grid.gave_up)}" if risk.grid.gave_up else ""),
                 "The success chance and the mean cost are exact.",
             )

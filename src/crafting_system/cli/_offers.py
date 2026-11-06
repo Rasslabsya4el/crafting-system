@@ -13,7 +13,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
 from crafting_system.abstraction import Goal, Status, status_of
-from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, default_actions, drawable_mod_ids, kinds
+from crafting_system.actions import Action, Axis, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, catalog, catalog_kinds, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
 from crafting_system.items import Item
@@ -44,6 +44,7 @@ class Offer:
     shares: bool = True  # whether the report quotes a single-draw weight share (a Chaos Orb, a Harvest reforge)
     inputs: tuple[Need, ...] = ()
     axes: tuple[Axis, ...] = ()
+    kind: str = ""  # the name of the catalog kind that lists the action ("" for an offer made by hand); the unpriced limit groups by it (#487)
 
 
 @dataclass(frozen=True)
@@ -65,9 +66,10 @@ class DroppedOffer:
 
     label: str
     missing: tuple[str, ...]
+    kind: str = ""
 
 
-def offer_of(action: Action, label: str, data: GameData | None = None, item: Item | None = None) -> Offer:
+def offer_of(action: Action, label: str, data: GameData | None = None, item: Item | None = None, kind: str = "") -> Offer:
     """The offer of `action` under `label`: its resources, and whether the report quotes a single-draw share (with its tag).
 
     `data` and `item` only matter to an action whose resources or additions depend on them (an essence, a bench craft).
@@ -75,7 +77,7 @@ def offer_of(action: Action, label: str, data: GameData | None = None, item: Ite
     adds = action.adds(data, item)
     inputs = action.inputs(data, item) if data is not None else ()
     axes = action.rule_axes(data) if data is not None else ()
-    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes)
+    return Offer(label, action, dict(action.resources(data)), tag=adds.tag, shares=adds.single_draw, inputs=inputs, axes=axes, kind=kind)
 
 
 def isolated_feeder(goal: Goal) -> Callable[[Need], bool]:
@@ -125,7 +127,7 @@ def price_offers(
             else:
                 missing.append(name)
         if missing:
-            dropped.append(DroppedOffer(offer.label, tuple(sorted(missing))))
+            dropped.append(DroppedOffer(offer.label, tuple(sorted(missing)), offer.kind))
         else:
             priced.append(PricedOffer(offer, sum(part[2] for part in parts), tuple(parts)))
     if any(not entry.offer.resources for entry in priced):
@@ -240,7 +242,8 @@ def offers_for(
     named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
     candidates = []
     left_out_unwanted: list[str] = []
-    listed = _listed(data, start_item, kind_names, label_names)
+    kind_of = _listed(data, start_item, kind_names, label_names)
+    listed = list(kind_of)
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
     left_out_rolls: list[str] = []
     left_out_corrupting: list[str] = []  # the target takes no corrupted item
@@ -282,7 +285,7 @@ def offers_for(
         if len(set(variants)) != len(variants) or "" in variants:
             variants = [str(number) for number in range(1, len(actions) + 1)]
         for action, variant in zip(actions, variants):
-            offers.append(offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item))
+            offers.append(offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item, kind_of.get(action, "")))
 
     limits = _kind_limits(kinds_named, kind_names, goal, start_item)
     unlisted = (
@@ -444,13 +447,13 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     return frozenset(kind_names), frozenset(name for name in names if name not in exist)
 
 
-def _listed(data: GameData, start_item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str]) -> list[Action]:
-    """The planner actions of the kinds named, plus those named by label (any planner kind, default or not)."""
-    found = list(catalog(data, start_item, planner_only=True, names=kind_names))
+def _listed(data: GameData, start_item: Item, kind_names: frozenset[str] | None, label_names: frozenset[str]) -> dict[Action, str]:
+    """The planner actions of the kinds named, plus those named by label (any planner kind, default or not), each with its kind."""
+    found = catalog_kinds(data, start_item, planner_only=True, names=kind_names)
     if label_names:
         usable = {entry.name for entry in kinds(planner_only=True)}
-        extra = [a for a in catalog(data, start_item, planner_only=True, names=usable) if a.label(data) in label_names]
-        found.extend(action for action in extra if action not in found)
+        extra = {a: k for a, k in catalog_kinds(data, start_item, planner_only=True, names=usable).items() if a.label(data) in label_names}
+        found.update({a: k for a, k in extra.items() if a not in found})
     return found
 
 

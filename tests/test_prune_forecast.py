@@ -130,7 +130,7 @@ def test_the_starting_offers_hold_every_bench_craft(world):
 
     start_set = starting_offers(world.abstraction, world.start, merged, item, min_offers=40)
 
-    assert {"Bench craft +# to maximum Life", "Remove Crafted Mods"} <= set(labels(start_set))
+    assert {BenchCraft(LIFE_CRAFT).label(data), "Remove Crafted Mods"} <= set(labels(start_set))
     assert len(start_set) < len(merged)
 
 
@@ -249,7 +249,7 @@ def test_a_budget_that_no_coarse_level_fits_runs_exactly_and_says_why_the_graph_
     plan = planned(pooled, 0.001)
 
     assert plan.approximation is None
-    assert only(plan.limits, "how-solved").why.startswith("no approximate level available (no coarse level fits the time)")  # G12
+    assert only(plan.limits, "how-solved").why.startswith("no approximate answer was possible (none fits the time)")  # G12
     assert plan.mean_remaining == pytest.approx(pooled.exact.mean_remaining, rel=1e-9)
 
 

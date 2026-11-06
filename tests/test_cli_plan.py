@@ -172,6 +172,33 @@ def test_many_unpriced_actions_are_one_limit_to_a_missing_price_and_the_text_nam
     assert sorted(limit["count"] for limit in listed) == [3, 307]  # the JSON holds every label
 
 
+def test_the_offers_priced_by_their_own_item_are_one_limit_for_each_kind_and_the_others_stay_by_what_they_lack(target):
+    plan = make_plan(DATA, target, price_file())
+    essences = [(f"{name} Essence of {noun}", (f"{name} Essence of {noun}",), "essence") for name, noun in (("Screaming", "Greed"), ("Shrieking", "Spite"), ("Wailing", "Hatred"), ("Deafening", "Zeal"))]
+    dropped = (
+        essences[0],
+        ("Harvest Reforge Fire", (LIFEFORCE,), "harvest-reforge"),
+        essences[1],
+        ("Perfect Catalyst", ("Perfect Catalyst",), "catalyst"),
+        ("Harvest Reforge Cold", (LIFEFORCE,), "harvest-reforge"),
+        *essences[2:],
+        ("Bare Essence", ("Bare Essence",)),  # no kind given: it is told by the price it lacks, as before
+    )
+
+    limits = unpriced_limits(dropped)
+    lines = [line for line in render_text(build_report(dataclasses.replace(plan, limits=limits), DATA)).splitlines() if "have no price" in line or "no price for" in line]
+
+    claim = "The plan is the cheapest among the actions that have a price. A price for these could make it cheaper."
+    assert lines == [
+        "  These essences have no price, 4 in all: Screaming Essence of Greed, Shrieking Essence of Spite, Wailing Essence of Hatred, Deafening Essence of Zeal. " + claim,
+        "  These catalysts have no price: Perfect Catalyst. " + claim,
+        f"  Not offered: Harvest Reforge Fire, Harvest Reforge Cold (no price for {LIFEFORCE}). " + claim,
+        "  Not offered: Bare Essence (no price for Bare Essence). " + claim,
+    ]
+    listed = [limit for limit in policy_document(build_report(dataclasses.replace(plan, limits=limits), DATA))["limits"] if limit["what"] == "These essences have no price"]
+    assert [limit["labels"] for limit in listed] == [[label for label, _, _ in essences]]  # the JSON names every one
+
+
 def test_a_plan_with_no_priced_action_is_refused(target):
     offers = [Offer("Chaos Orb", ChaosOrb(), {"Unobtainium": 1})]
 

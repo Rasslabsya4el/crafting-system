@@ -491,7 +491,7 @@ def test_with_bench_crafts_offered_the_pruned_plan_is_the_plan_without_pruning(b
 
     assert_exact(result)
     assert not pruned.fell_back, pruned.why
-    assert {"Bench craft +# to maximum Life", "Remove Crafted Mods"} <= {priced.label for priced in pruned.used}
+    assert {BenchCraft(LIFE_CRAFT).label(bench.data), "Remove Crafted Mods"} <= {priced.label for priced in pruned.used}
     assert len(pruned.twins) + len(pruned.bounded) + len(pruned.inapplicable) > len(result.pruned.offers) / 2
 
 

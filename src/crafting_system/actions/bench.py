@@ -172,7 +172,7 @@ class BenchCraft(Action):
         mod = data.mods.get(self.mod_id)
         if mod is None:
             raise ValueError(f"the craft {self.mod_id} names a mod that is not in the game data")
-        return f"Bench craft {_one_line(without_ranges(mod.text or mod.name))}"
+        return f"Bench craft {_one_line(mod.text or mod.name)}"  # with its roll range: the tiers of one craft are told apart by it (#500)
 
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.untouched(NOT_SPENT_BY, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: a bench craft picks its mod and spends nothing

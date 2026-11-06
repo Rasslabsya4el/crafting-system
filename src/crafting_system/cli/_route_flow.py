@@ -374,8 +374,8 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
             Limit(
                 STEPS,
                 "How often a step is used is not shown",
-                "how often a run is in each state could not be solved to a relative residual of 1e-9: a chance per use is too small for the float "
-                "arithmetic, or the iterative solve did not converge",
+                "how often a run is in each state could not be computed reliably: some chances are too small for the arithmetic used, "
+                "or the calculation did not settle",
                 **claim(
                     "the methods offered",
                     "The page leaves out how often each step is used and what it costs, and the chances of a step that joins several states are the "
@@ -388,8 +388,8 @@ def flow_limits(chain: Chain) -> tuple[Limit, ...]:
             Limit(
                 STEPS,
                 "How often a run enters a step is not shown",
-                f"the policy has {int(finishing.sum()):,} states that can finish, and the chance of entering a step needs a solve for each step, "
-                f"made for at most {ENTRY_STATES:,} states",
+                f"the plan has {int(finishing.sum()):,} states that can finish, and the chance of entering a step needs a separate calculation "
+                f"for each, made only up to {ENTRY_STATES:,} states",
                 **claim(
                     "the methods offered",
                     "The uses and cost of each step and the chances of each step are as shown; only the share of runs that ever enter a step is missing.",

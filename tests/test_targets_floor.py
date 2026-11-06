@@ -140,7 +140,7 @@ def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_onl
 def test_naming_one_bench_craft_offers_that_craft_only():
     entry = "family: IncreasedWeaponElementalDamagePercent\n  mod: EinharMasterWeaponElementalDamage1_"
 
-    by_label = floor(entry, tail="actions: ['Bench craft #% increased Elemental Damage with Attack Skills']\n")
+    by_label = floor(entry, tail="actions: ['Bench craft (15-23)% increased Elemental Damage with Attack Skills']\n")
     other = floor(entry, tail="actions: ['Bench craft Prefixes Cannot Be Changed']\n")
 
     assert (by_label.nodes[0].source, by_label.nodes[0].level) == ("bench", 30)
