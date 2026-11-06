@@ -603,9 +603,12 @@ def imported_modules(source: str) -> set[str]:
     return found
 
 
-def outside_imports(modules: set[str]) -> set[str]:
+PAGE_LINT_MODULES = {"__future__", "collections", "html"}  # the standard library modules that `page_lint.py` reads a page with (#543); the other oracles have no use for them
+
+
+def outside_imports(modules: set[str], extra: set[str] = frozenset()) -> set[str]:
     """The absolute imports that are not the standard library modules the oracle uses, `yaml`, or exactly one of the shared modules."""
-    allowed = {"json", "os", "re", "dataclasses", "pathlib", "yaml"}
+    allowed = {"json", "os", "re", "dataclasses", "pathlib", "yaml"} | extra
     return {name for name in modules - SHARED_MODULES if not name.startswith(".") and name.split(".")[0] not in allowed}
 
 
@@ -635,7 +638,8 @@ def sneaky_imports(source: str) -> list[str]:
 def test_the_oracle_imports_the_standard_library_and_yaml_only(source):
     modules = imported_modules(source.read_text(encoding="utf-8"))
     assert not {name for name in modules if name.split(".")[0] == "crafting_system"}, "the oracle shares no code with the planner"
-    assert not outside_imports(modules), "the standard library, yaml and exactly the shared ladder and export modules"
+    extra = PAGE_LINT_MODULES if source.name == "page_lint.py" else set()
+    assert not outside_imports(modules, extra), "the standard library, yaml and exactly the shared ladder and export modules"
     assert not sneaky_imports(source.read_text(encoding="utf-8"))
 
 

@@ -6,7 +6,7 @@ a CI shard or on a PC:
     python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --long --timeout-minutes 120 \
         --command 'CRAFTING_ROUTES=R14 CRAFTING_HEAVY=1 uv run --no-sync pytest -q -p no:cacheprovider -s tests/test_cli_route_page_heavy.py'
 
-(`CRAFTING_ROUTES` is `R04`, `R14` or both.) Without `CRAFTING_HEAVY` they skip, and without the cached dump they skip too.
+(`CRAFTING_ROUTES` is `R04`, `R14` or both. The last tests judge the real page with the page lint of `tests/oracle/page_lint.py` (#543).) Without `CRAFTING_HEAVY` they skip, and without the cached dump they skip too.
 
 Both pages are shown from the lumped chain of the optimal policy, one shown member per block. The steps are made from the item states of
 the policy (`_route_chain`), so what a page says of an item is a fact about items: an orb that only adds a mod loses none (the lines the
@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+from oracle import page_lint
 from route_view_support import alike_key
 
 from crafting_system.cli import make_plan
@@ -199,3 +200,29 @@ def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_i
     page = render_page(Page(route_id, (section,))).encode("utf-8")  # the page the command writes for a plan with no buy spec and no given route
 
     assert len(page) < MEASURED_MB[route_id] * HEADROOM * 1_000_000, (route_id, len(page))
+
+
+# --- the page lint (ticket #543, OR-13 to OR-23 and OR-31): the real page, read as the owner reads it -----------------------------------
+# The lint (`tests/oracle/page_lint.py`) reads the rendered `.html` with the standard library and imports nothing of the planner; the page it
+# judges here is the one `render_page` writes for the lumped chain of the optimal policy, the page the command writes. A fault of today's page is
+# a strict `xfail` that names its issue (OR-29): the day the page is fixed the case turns red until its entry leaves `KNOWN_REAL`.
+
+KNOWN_REAL: dict[tuple[str, str], int] = {}  # (route, check) -> the issue that holds the fault
+JUDGES = (*page_lint.CHECKS, page_lint.check_no_internal_names)
+
+
+@pytest.fixture(scope="module")
+def page_faults(section, route_id):
+    page = page_lint.read_page(render_page(Page(route_id, (section,))))
+    assert page.routes and page.routes[0].steps, "the lint read no step from the page"
+    return {check.__name__: check(page) for check in JUDGES}
+
+
+@HEAVY
+@pytest.mark.parametrize("check", JUDGES, ids=lambda check: check.__name__)
+def test_the_page_keeps_the_rule_of_every_check_of_the_page_lint(request, page_faults, route_id, check):
+    issue = KNOWN_REAL.get((route_id, check.__name__))
+    if issue:
+        request.applymarker(pytest.mark.xfail(strict=True, reason=f"#{issue}"))
+    faults = page_faults[check.__name__]
+    assert faults == [], f"{len(faults)} fault(s), the first ones:\n" + "\n".join(map(str, faults[:10]))
