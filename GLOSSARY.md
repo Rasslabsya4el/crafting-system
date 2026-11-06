@@ -339,6 +339,10 @@ An optional step before a recombination: a low-tier non-exclusive bench craft on
 The action to take in every state reachable from the start item, with the expected remaining cost of each state. It is what the planner returns.
 _Avoid_: plan, strategy
 
+**Limit**:
+One thing an answer leaves out and what it still guarantees: a kind of action not offered, actions with no price, an offer proved not needed, a start item counted as free, a percentile the grid could not reach. `Plan.limits` holds them; the text report, the JSON policy and the goal card of the route page ("What this answer leaves out") show the same records. Every limit has a guarantee sentence in player words (OR-13).
+_Avoid_: note, left-out line, dropped action
+
 **Route**:
 A policy read as a person follows it: the main line of actions and where to go on a miss.
 _Avoid_: chain, path

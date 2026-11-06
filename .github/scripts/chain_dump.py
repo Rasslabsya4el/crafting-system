@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from packed_routes import inputs, peak_mb, risk_row  # noqa: E402
 
 from crafting_system.cli import _packed, make_plan  # noqa: E402
+from crafting_system.cli._limits import limit_document  # noqa: E402
 from crafting_system.cli._plan import add_risk  # noqa: E402
 
 
@@ -91,7 +92,7 @@ def main() -> None:
         profiler.disable()
         pstats.Stats(profiler).sort_stats("cumulative").print_stats(30)
         row = risk_row(risky) or {}
-        row.update(risk_seconds=risky.risk_seconds, note=risky.note, peak_mb=peak_mb())
+        row.update(risk_seconds=risky.risk_seconds, limits=[limit_document(limit) for limit in risky.limits if limit.kind in ("how-solved", "display", "risk")], peak_mb=peak_mb())
         if risky.risk is not None:
             grid = risky.risk.grid
             row["grid"] = {"step": grid.step, "exact": grid.exact, "bins": grid.bins, "unresolved": grid.unresolved_mass}

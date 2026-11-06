@@ -19,6 +19,9 @@ from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile
 
+from . import _limits
+from ._limits import Limit, kind_title
+
 RESTART = "restart"
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
 
@@ -142,19 +145,11 @@ def free_action_cost(priced: Iterable[PricedOffer]) -> float | None:
 
 
 @dataclass(frozen=True)
-class LeftOut:
-    """Offers the model leaves out on purpose, with the reason; unlike a dropped offer, nothing is missing."""
-
-    reason: str
-    labels: tuple[str, ...]
-
-
-@dataclass(frozen=True)
 class OfferSet:
-    """The offers for one target and the ones left out because they cannot matter."""
+    """The offers for one target and the limits of that choice: every kind or action left out on purpose, each with what the plan still guarantees."""
 
     offers: tuple[Offer, ...]
-    left_out: tuple[LeftOut, ...]
+    limits: tuple[Limit, ...]
 
 
 @dataclass(frozen=True)
@@ -217,7 +212,7 @@ def offers_for(
       Exalted Orb and Annulment Orb (#67) and the metamods and the multimod (#68). The crafts left out are reported.
     * With `kinds_named` (the target's `actions:` key) only the kinds of those names are listed at all and the filters
       below see only them. That is the target's choice, not a proof: the plan is the cheapest among the named kinds,
-      and the kinds not named are listed in `left_out`. A name may also be the label of ONE action (`Essence of
+      and the kinds not named are a `Limit` of the answer (`_limits`). A name may also be the label of ONE action (`Essence of
       Insanity`, `Bench craft Cannot roll Attack Modifiers`): that action is offered whatever the filters below say
       (a metamod craft counts toward no requirement and would be left out), and only the actions named that way are
       listed of a kind that is not named as a whole. An `opt_in` kind (Exalted Orb, Annulment, Fracturing
@@ -234,7 +229,7 @@ def offers_for(
       roll limit and every one is on a mod that cannot occur (a target without a roll limit needs no word about it).
     * An action that corrupts the item (`Adds.corrupts`, a Vaal Orb, the Locus) is offered only when the goal asks for a corrupted
       implicit or allows a corrupted item (`Goal.takes_corrupted`): an item never arrives corrupted unasked (ADR-0036). For any
-      other target it is absent from the offers and the report says nothing about it. Which states offer it, for a target that
+      other target it is absent from the offers and the answer carries a `Limit` that names it. Which states offer it, for a target that
       asks, is `solver_actions`' business (`_prune.py`). One that also declares `Adds.asked_only` (a fossil set with the Bloodstained
       Fossil: its reroll exists without the corruption) is offered only when the goal asks for a corrupted implicit, not when it
       merely allows a corrupted item (ADR-0038).
@@ -247,10 +242,12 @@ def offers_for(
     listed = _listed(data, start_item, kind_names, label_names)
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
     left_out_rolls: list[str] = []
+    left_out_corrupting: list[str] = []
     for action in listed:
         adds = action.adds(data, start_item)
         if adds.corrupts and (not goal.takes_corrupted or (adds.asked_only and not goal.asks_corrupted)):
-            continue  # an item never arrives corrupted unasked, and the report does not mention what the target could never use
+            left_out_corrupting.append(action.label(data))  # an item never arrives corrupted unasked
+            continue
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))
         elif adds.needs_roll_limit and not roll_matters:
@@ -272,7 +269,7 @@ def offers_for(
             left_out_crafts.append(action.label(data))
             continue
         chosen.append(action)
-    chosen = usable_actions(data, start_item, chosen)
+    chosen, unusable = split_usable(data, start_item, chosen)
 
     groups: dict[str, list[Action]] = defaultdict(list)
     for action in chosen:
@@ -285,48 +282,122 @@ def offers_for(
         for action, variant in zip(actions, variants):
             offers.append(offer_of(action, label if len(actions) == 1 else f"{label} [{variant}]", data, start_item))
 
-    left_out = ()
-    if kinds_named is not None:
-        # a kind that only corrupts is not mentioned for a target that takes no corrupted item: nothing of it could ever be used;
-        # a kind that needs Memory Strands is not mentioned either while the start item has none: the catalog does not list one then
-        # (the planner does not pass `strands` yet, #277)
-        absent = _strand_kinds_absent(start_item)
-        skipped = tuple(
-            entry.name
-            for entry in kinds(planner_only=True)
-            if entry.name not in kind_names and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in absent
+    limits = _kind_limits(kinds_named, kind_names, goal, start_item)
+    unlisted = (
+        tuple(kind_title(entry.name) for entry in kinds(planner_only=True) if entry.corrupting and entry.name not in kind_names)
+        if kind_names is not None and not goal.takes_corrupted
+        else ()
+    )
+    if left_out_corrupting or unlisted:
+        limits += (
+            Limit(
+                _limits.CORRUPTING,
+                "Not offered",
+                "the target takes no corrupted item, so these would only corrupt it",
+                "The plan is unaffected: nothing here could be used for this target.",
+                tuple(dict.fromkeys((*unlisted, *left_out_corrupting))),
+            ),
         )
-        if skipped:
-            left_out += (
-                LeftOut("the target's `actions:` does not name these kinds, so the plan is the cheapest among the named ones", skipped),
-            )
     if left_out_crafts:
-        reason = (
-            "its mod counts toward no requirement, so the craft only takes a slot and costs currency "
-            "(exact while every other action erases crafted mods; see `offers_for`)"
+        why = (
+            "its mod counts toward no requirement, so the craft only takes a slot and costs currency"
             if erased_by_all
             else "its mod counts toward no requirement; an offered action keeps crafted mods, so a craft could still "
-            "pay off by clearing a family from the pool, and the plan is the cheapest among the offered crafts only"
+            "pay off by clearing a family from the pool"
         )
-        left_out += (LeftOut(reason, tuple(left_out_crafts)),)
+        guarantee = (
+            "The plan is the cheapest among all the offered methods: such a craft cannot lower the cost, because every other offered action erases crafted mods."
+            if erased_by_all
+            else "The plan is the cheapest among the offered crafts only; a craft left out could still pay off, and that is not checked."
+        )
+        limits += (Limit(_limits.CRAFTS, "Not offered", why, guarantee, tuple(left_out_crafts)),)
     if left_out_rolls and any(leaf.has_roll_limit for leaf in goal.leaves):  # a target without a roll limit needs no word about it
-        left_out = (
-            *left_out,
-            LeftOut(
+        limits += (
+            Limit(
+                _limits.ROLLS,
+                "Not offered",
                 "it only changes rolled values and the roll limit of the target is on a mod that cannot occur on the item, "
                 "so it would only cost currency",
+                "The plan is unaffected: no roll can matter for this target.",
                 tuple(left_out_rolls),
             ),
         )
     if left_out_unwanted:
-        left_out = (
-            *left_out,
-            LeftOut(
+        limits += (
+            Limit(
+                _limits.FIXED_MOD,
+                "Not offered",
                 "it adds one fixed mod and the target wants none of those, so it only takes a slot and costs currency",
+                "The plan is unaffected: such an action cannot help this target.",
                 tuple(left_out_unwanted),
             ),
         )
-    return OfferSet(tuple(offers), left_out)
+    if unusable:
+        limits += (crafted_mods_limit(tuple(action.label(data) for action in unusable)),)
+    return OfferSet(tuple(offers), limits)
+
+
+def _kind_limits(
+    kinds_named: Collection[str] | None, kind_names: frozenset[str] | None, goal: Goal, start_item: Item
+) -> tuple[Limit, ...]:
+    """The kinds of the catalog that no plan for this target offers, each group with its reason: not named, opt-in, not built (K1, K2, K4).
+
+    A kind that only corrupts is the corrupting limit's when the target takes no corrupted item, and a kind that needs Memory
+    Strands, while the start item has none, is the strands limit's (`make_plan`): neither is named here.
+    """
+    strands = _strand_kinds_absent(start_item)
+    found: tuple[Limit, ...] = ()
+    if kinds_named is not None:
+        not_named = tuple(
+            kind_title(entry.name)
+            for entry in kinds(planner_only=True)
+            if entry.name not in (kind_names or ()) and not (entry.corrupting and not goal.takes_corrupted) and entry.name not in strands
+        )
+        if not_named:
+            found += (
+                Limit(
+                    _limits.NOT_NAMED,
+                    "Not offered",
+                    "kinds this target does not name",
+                    "The plan is the cheapest among the kinds offered.",
+                    not_named,
+                ),
+            )
+    else:
+        opt_in = tuple(kind_title(entry.name) for entry in kinds(planner_only=True) if entry.opt_in and entry.name not in strands)
+        if opt_in:
+            found += (
+                Limit(
+                    _limits.OPT_IN,
+                    "Not offered",
+                    "kinds that are offered only when a target names them",
+                    "The plan is the cheapest among the kinds offered; a kind left out could be cheaper.",
+                    opt_in,
+                ),
+            )
+    not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner)
+    if not_built:
+        found += (
+            Limit(
+                _limits.NOT_BUILT,
+                "Not offered",
+                "methods the planner cannot use yet",
+                "The plan is the cheapest among the methods the planner can use.",
+                not_built,
+            ),
+        )
+    return found
+
+
+def crafted_mods_limit(labels: tuple[str, ...]) -> Limit:
+    """The limit of an action that needs a crafted mod to act on, dropped because no crafted mod can exist in the plan."""
+    return Limit(
+        _limits.CRAFTED_MODS,
+        "Not offered",
+        "no crafted mod can exist in this plan, so there is nothing to remove",
+        "The plan is unaffected: the action would have nothing to act on.",
+        labels,
+    )
 
 
 def _strand_kinds_absent(start_item: Item) -> frozenset[str]:
@@ -392,9 +463,17 @@ def _only_crafts(data: GameData, item: Item, action: Action) -> bool:
     return adds.crafted and not adds.draws and adds.named is not None
 
 
-def usable_actions(data: GameData, start_item: Item, actions: Iterable[Action]) -> list[Action]:
-    """`actions` without those that need a crafted mod when neither the start item nor another of them gives one."""
+def split_usable(data: GameData, start_item: Item, actions: Iterable[Action]) -> tuple[list[Action], list[Action]]:
+    """(`actions` without those that need a crafted mod when neither the start item nor another of them gives one, those removed)."""
     actions = list(actions)
     if start_item.crafted_mods or any(action.adds(data, start_item).crafted for action in actions):
-        return actions
-    return [action for action in actions if not action.reads(data).needs_crafted]
+        return actions, []
+    return (
+        [action for action in actions if not action.reads(data).needs_crafted],
+        [action for action in actions if action.reads(data).needs_crafted],
+    )
+
+
+def usable_actions(data: GameData, start_item: Item, actions: Iterable[Action]) -> list[Action]:
+    """`actions` without those that need a crafted mod when neither the start item nor another of them gives one."""
+    return split_usable(data, start_item, actions)[0]

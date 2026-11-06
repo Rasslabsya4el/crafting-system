@@ -8,6 +8,7 @@ a planner kind of the same actions that is not opt-in, for the length of each te
 
 import pytest
 from contract_support import CONTRACT_DATA, GOAL, fixture_items
+from limits_support import labels_of
 
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import AspectBeast, Kind, registered
@@ -42,7 +43,7 @@ def test_the_aspect_beasts_are_declared_wanted_only():
 def test_no_aspect_is_offered_for_a_target_that_names_none(aspects_registered):
     offers, offered = aspect_offers(GOAL)
     assert offers == []
-    reported = [label for left in offered.left_out if "fixed mod" in left.reason for label in left.labels]
+    reported = labels_of(offered.limits, "fixed-mod")  # K8
     assert len(reported) == len(ASPECT_WORDS) * len(ASPECT_LEVELS)
     assert all(label.startswith("Beastcraft Aspect") for label in reported)
 

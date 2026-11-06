@@ -33,6 +33,7 @@ from test_prune_bound import (
     world_data,
 )
 from abstraction_support import real_game_data
+from limits_support import notes, only
 
 from crafting_system.abstraction import Abstraction, Coarsening, Goal
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
@@ -212,7 +213,7 @@ def test_the_world_of_the_budget_tests_has_a_forecast_set_far_smaller_than_the_o
 def test_a_budget_that_fits_gives_the_exact_mean_of_the_plan_without_a_budget(pooled):
     plan = planned(pooled, 60)
 
-    assert plan.approximation is None and plan.note == ""
+    assert plan.approximation is None and notes(plan.limits) == []
     assert plan.mean_remaining == pytest.approx(pooled.exact.mean_remaining, rel=1e-9)
     assert plan.risk is not None and plan.pruned is not None
 
@@ -225,7 +226,7 @@ def test_a_budget_the_starting_set_fits_but_all_the_merged_offers_would_not_is_a
     plan = planned(pooled, budget)
 
     assert seconds.first <= budget < seconds.merged
-    assert plan.approximation is None and plan.note == ""
+    assert plan.approximation is None and notes(plan.limits) == []
     assert plan.mean_remaining == pytest.approx(pooled.exact.mean_remaining, rel=1e-9)
 
 
@@ -248,5 +249,5 @@ def test_a_budget_that_no_coarse_level_fits_runs_exactly_and_says_why_the_graph_
     plan = planned(pooled, 0.001)
 
     assert plan.approximation is None
-    assert plan.note.startswith("no approximate level available (no coarse level fits the time)")
+    assert only(plan.limits, "how-solved").why.startswith("no approximate level available (no coarse level fits the time)")  # G12
     assert plan.mean_remaining == pytest.approx(pooled.exact.mean_remaining, rel=1e-9)

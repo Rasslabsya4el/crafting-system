@@ -98,7 +98,7 @@ def unveil_plan() -> Plan:
     policy = {first: offer_action(ab, priced[0], first)}
     return Plan(
         target=target, abstraction=ab, leaf_labels=leaf_labels(target), prices=PRICES, start=first,
-        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced, dropped=(), left_out=(),
+        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced, limits=(),
         solution=Solution({first: 1.0}, policy, 0.0), risk=evaluate(policy, first, ab.is_goal),
         solve_seconds=0.0, risk_seconds=0.0,
     )  # fmt: skip

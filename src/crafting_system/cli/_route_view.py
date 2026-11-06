@@ -56,6 +56,7 @@ from crafting_system.solver import Action
 
 from . import _route_flow
 from ._interval import IntervalAnswer
+from ._limits import grouped, limit_text
 from ._marking import approximate_inputs
 from ._plan import Plan
 from ._report import Report
@@ -112,8 +113,11 @@ class StepRow:
 
 @dataclass(frozen=True)
 class GoalCard:
+    """The goal card: its fields, the target item, and the section "What this answer leaves out" (one field to a group of limits, OR-13)."""
+
     fields: tuple[Field, ...]
     target: ItemCard
+    leaves_out: tuple[Field, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -555,7 +559,8 @@ class _View:
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
             None if self.flow.measured else _plain("Note", note),
         )
-        return GoalCard(fields, card_of_target(self.data, plan.target))
+        leaves_out = tuple(Field(title, tuple(Line(limit_text(limit)) for limit in group)) for title, group in grouped(plan.limits))
+        return GoalCard(fields, card_of_target(self.data, plan.target), leaves_out)
 
 
 def build_section(

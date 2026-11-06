@@ -15,6 +15,7 @@ from abstraction_pool import DAMAGE_1, GEM, LEVEL, LIFE_1
 from abstraction_veiled_support import DATA as WITH_ORDINARY_SPEED
 from abstraction_veiled_support import SPEED_ORDINARY, SUF, amulet, holder, rolled
 from items_support import AMULET
+from limits_support import note_text
 from veiled_support import SPEED
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
@@ -175,7 +176,7 @@ def test_a_budget_that_the_exact_run_overshoots_falls_back_to_the_exact_run_for_
 
     plan = make_plan(DATA, veil_target(tmp_path), price_file(Veiled_Chaos_Orb=5.0), budget=1e-9)
 
-    assert plan.approximation is None and "no approximate level" in plan.note  # the family-group level refuses the veiled actions, and says so
+    assert plan.approximation is None and "no approximate level" in note_text(plan.limits)  # the family-group level refuses the veiled actions, and says so
     assert plan.mean_remaining == pytest.approx(1.5 + 2.6 * 5.0 * FREE_ACTION_SHARE, rel=1e-12)
 
 

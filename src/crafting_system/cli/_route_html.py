@@ -11,6 +11,7 @@ marks the target and the final state. Deterministic: the same page model gives t
 
 from html import escape
 
+from ._limits import HEADING
 from ._route_card import ItemCard, Slot
 
 CSS = """\
@@ -73,6 +74,17 @@ def _fields(fields) -> str:
     return f'<div class="f">{cells}</div>'
 
 
+def _leaves_out(fields) -> str:
+    """The section "What this answer leaves out" of the goal card: a heading and one field to a group of limits; nothing when there are none."""
+    if not fields:
+        return ""
+    groups = "".join(
+        f'<div class="k">{escape(field.label)}</div><div class="v ml">' + "".join(f"<div>{_line(line)}</div>" for line in field.lines) + "</div>"
+        for field in fields
+    )
+    return f'<div><div class="sd">{escape(HEADING)}</div>{groups}</div>'
+
+
 def _slot(slot: Slot) -> str:
     note = f'<span class="n"> · {escape(slot.note)}</span>' if slot.note else ""
     marks = "".join(f'<span class="b">{escape(mark)}</span>' for mark in slot.marks)
@@ -109,6 +121,7 @@ def _section(section, heading: bool) -> str:
     out.append(
         '<div class="rw"><div class="cd tg"><h3>Route goal</h3>'
         + _fields(section.goal.fields)
+        + _leaves_out(section.goal.leaves_out)
         + "</div>"
         + _item(section.goal.target, target=True)
         + "</div>"

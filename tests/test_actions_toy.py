@@ -12,6 +12,7 @@ import pytest
 from abstraction_pool import LIFE_1, RESIST_2
 from cli_support import R12, price_file
 from contract_support import CONTRACT_DATA, GOAL, check_action, fixture_items
+from limits_support import of_kind, only
 from targets_support import DATA
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
@@ -106,7 +107,7 @@ def test_the_plan_of_a_target_offers_the_toy(toy_registered):
     prices = dataclasses.replace(price_file(), prices={**price_file().prices, TOY_ORB: PriceEntry(0.5, "test")})
     plan = make_plan(CONTRACT_DATA, load_target(R12, CONTRACT_DATA), prices)
     assert "Toy Annulment" in [priced.label for priced in plan.offers]
-    assert plan.dropped  # the crafts it keeps in play have no price in the file, and are reported as dropped
+    assert of_kind(plan.limits, "unpriced")  # the crafts it keeps in play have no price in the file, and are reported as dropped
 
 
 def test_crafts_that_count_for_nothing_are_left_out_and_the_reason_says_when_that_is_not_a_proof(items):
@@ -117,12 +118,12 @@ def test_crafts_that_count_for_nothing_are_left_out_and_the_reason_says_when_tha
         return [offer.label for offer in offers if offer.label.startswith("Bench craft")]
 
     exact = offers_for(CONTRACT_DATA, goal, start.base_id, start)
-    assert crafts(exact.offers) == [] and "exact while every other action erases crafted mods" in exact.left_out[0].reason
+    assert crafts(exact.offers) == [] and "every other offered action erases crafted mods" in only(exact.limits, "crafts").guarantee
     with registered(Kind("toy-annulment", toy_members, order=900)):  # it declares that a crafted mod can survive
         offered = offers_for(CONTRACT_DATA, goal, start.base_id, start)
     assert crafts(offered.offers) == []  # still left out: all of them would make the graph too big (R13, #66) ...
-    (left,) = offered.left_out
-    assert "keeps crafted mods" in left.reason and "cheapest among the offered crafts" in left.reason  # ... and the report says so
+    left = only(offered.limits, "crafts")
+    assert "keeps crafted mods" in left.why and "cheapest among the offered crafts" in left.guarantee  # ... and the report says so
 
 
 def test_the_kernel_of_the_toy_is_exact(items):

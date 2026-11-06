@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 from crafting_system.cli import _bound_prune, make_plan
+from crafting_system.cli._limits import limit_document
 from crafting_system.data import load_game_data
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
@@ -56,7 +57,7 @@ def main() -> None:
         "states": len(plan.solution.values),
         "offers": len(plan.offers),
         "mean_remaining": plan.mean_remaining,
-        "note": plan.note,
+        "limits": [limit_document(limit) for limit in plan.limits if limit.kind in ("how-solved", "display", "risk")],
         "approximation": None
         if approximation is None
         else {"lower": approximation.lower, "upper": approximation.upper, "gap": approximation.gap, "level": str(approximation.level)},

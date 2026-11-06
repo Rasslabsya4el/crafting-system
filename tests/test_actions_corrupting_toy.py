@@ -15,6 +15,7 @@ from fractions import Fraction
 import pytest
 from abstraction_pool import LIFE_1, RESIST_2, RESISTS
 from contract_support import CONTRACT_DATA, _roll, check_action, fixture_items
+from limits_support import labels_of, only
 from targets_corrupted_support import DATA as TARGET_DATA
 from targets_corrupted_support import parse
 
@@ -229,15 +230,18 @@ def test_the_cli_offers_the_toy_for_a_target_with_corrupted_true_and_not_for_one
     assert "Chaos Orb" in _offered("")  # the other offers are as before
 
 
-def test_the_report_says_nothing_of_a_corrupting_kind_for_a_target_that_takes_no_corrupted_item(toy_registered):
-    def left_out(text: str) -> tuple[str, ...]:
+def test_the_answer_names_a_corrupting_kind_as_unused_for_a_target_that_takes_no_corrupted_item(toy_registered):
+    def limits(text: str):
         target = parse(text)
-        chosen = offers_for(TARGET_DATA, Goal.from_target(target), target.base_id, target.start_item, target.actions)
-        return tuple(name for entry in chosen.left_out for name in entry.labels)
+        return offers_for(TARGET_DATA, Goal.from_target(target), target.base_id, target.start_item, target.actions).limits
 
-    assert KIND not in left_out("actions: [chaos-orb]\n")  # nothing of it could be used, so the "does not name these kinds" line leaves it out
-    assert KIND in left_out("actions: [chaos-orb]\nallow_corrupted: true\n")  # a target that could use it is told it was not named
-    assert "harvest-reforge" in left_out("actions: [chaos-orb]\n")  # the other kinds are listed as before
+    plain = limits("actions: [chaos-orb]\n")  # K5
+    assert "Toy Corruption" in labels_of(plain, "corrupting") and "Toy Corruption" not in labels_of(plain, "kinds-not-named")
+    assert "unaffected" in only(plain, "corrupting").guarantee  # nothing of it could be used
+    allowing = limits("actions: [chaos-orb]\nallow_corrupted: true\n")
+    assert "Toy Corruption" in labels_of(allowing, "kinds-not-named")  # a target that could use it is told it was not named
+    assert not labels_of(allowing, "corrupting")
+    assert "Harvest reforges" in labels_of(plain, "kinds-not-named")  # the other kinds are listed as before
 
 
 def test_a_target_that_names_the_toy_kind_gets_it_only_when_it_takes_a_corrupted_item(toy_registered):

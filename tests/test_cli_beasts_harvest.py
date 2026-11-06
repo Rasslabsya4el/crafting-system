@@ -14,6 +14,7 @@ import datetime
 
 import pytest
 from beasts_support import ASPECT_IDS, beast_data
+from limits_support import labels_of, of_kind
 from test_actions_harvest_swap import COLD_RESIST, FIRE_RESIST, MAX_FIRE, WORLD as SWAP_WORLD, mod as world_mod
 
 from crafting_system.abstraction import Goal, Wanted
@@ -59,7 +60,7 @@ def test_an_aspect_is_offered_for_a_target_that_names_the_kind_and_wants_the_asp
     other = Goal((Wanted(frozenset({COLD_RESIST})),))
     assert [offer.action for offer in offers_for(BEAST_DATA, wanted, AMULET, start, ["aspect-beast"]).offers] == [AspectBeast("cat", 30)]
     unwanted = offers_for(BEAST_DATA, other, AMULET, start, ["aspect-beast"])
-    assert unwanted.offers == () and any("fixed mod" in left.reason for left in unwanted.left_out)
+    assert unwanted.offers == () and any("fixed mod" in limit.why for limit in of_kind(unwanted.limits, "fixed-mod"))
     assert not [offer for offer in offers_for(BEAST_DATA, wanted, AMULET, start, None).offers if isinstance(offer.action, AspectBeast)]  # the kind is not named
 
 
@@ -80,7 +81,7 @@ def test_a_swap_target_is_planned_end_to_end_with_the_hand_figure(tmp_path):
     assert plan.mean_remaining == pytest.approx(uses * 500 * 0.02, rel=1e-12)
     assert {priced.label for priced in plan.offers} == {"Harvest Swap Resistance Fire to Cold", "Harvest Swap Resistance Fire to Lightning",
         "Harvest Swap Resistance Cold to Fire", "Harvest Swap Resistance Cold to Lightning", "Harvest Swap Resistance Lightning to Fire",
-        "Harvest Swap Resistance Lightning to Cold"} - {d.label for d in plan.dropped}
+        "Harvest Swap Resistance Lightning to Cold"} - labels_of(plan.limits, "unpriced")
     text = render_text(build_report(plan, WORLD))
     assert "Harvest Swap Resistance Fire to Cold" in text
 

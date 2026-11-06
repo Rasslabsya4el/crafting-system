@@ -161,7 +161,7 @@ def evaluate_route_packed(plan: Plan, route, data: GameData):
     say(f"route chain lumped into {lumped.count:,} blocks, {lumped.transitions:,} transitions ({time.perf_counter() - began:.1f} s)")
     goal = lumped.goal
     result = PackedResult(plan.solution, lumped_policy(lumped, reduced, walked.offers), lumped.start, lambda b: bool(goal[b]), {})
-    risk, _ = packed_risk(result, plan.mean_remaining, free_action_cost(plan.offers), "")  # the route costs at least the solver's mean
+    risk, _ = packed_risk(result, plan.mean_remaining, free_action_cost(plan.offers))  # the route costs at least the solver's mean
     say(f"route risk evaluated ({time.perf_counter() - began:.1f} s)")
     view = lumped_view(lumped, reduced, classes.cls, walked)
     return RouteResult(view, risk, found_gaps, _divergence(plan, route, data, labels, Divergence), time.perf_counter() - began)

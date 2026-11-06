@@ -36,6 +36,6 @@ def test_the_offers_and_the_kernels_of_the_route_did_not_move(real, stem):
         golden_diff.check_objects({key: expected[key] for key in keys}, {key: found[key] for key in keys}, f"{stem}: {title}")
 
     same(("offers", "offers_sha"), "the offers moved")
-    same(("left_out", "left_out_sha"), "the offers left out moved")
+    same(("limits", "limits_sha"), "the limits of the offers moved")
     same(("start",), "the start state moved (its repr is what a B1 state always read)")
     same(("kernels", "kernels_sha"), "a kernel moved")

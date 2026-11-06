@@ -10,6 +10,7 @@ import datetime
 
 from actions_support import DATA, amulet
 from items_support import roll
+from limits_support import labels_of, of_kind
 
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import DivineOrb
@@ -46,7 +47,7 @@ def test_a_divine_orb_is_left_out_for_a_target_without_a_roll_limit_and_nothing_
     offers, offered = divine_offers(goal, amulet(roll(RESIST)))
 
     assert offers == []
-    assert not any("Divine Orb" in left.labels for left in offered.left_out)
+    assert "Divine Orb" not in labels_of(offered.limits, "rolls")  # nothing is said about it
 
 
 def test_a_roll_limit_that_asks_for_no_value_is_no_roll_limit():
@@ -62,7 +63,7 @@ def test_a_roll_limit_on_a_mod_that_cannot_occur_on_the_item_does_not_offer_it()
     offers, offered = divine_offers(goal, amulet(roll(RESIST)))
 
     assert offers == []
-    assert [left.labels for left in offered.left_out if "roll limit" in left.reason] == [("Divine Orb",)]  # a limit was asked for, so the report says why
+    assert [limit.labels for limit in of_kind(offered.limits, "rolls")] == [("Divine Orb",)]  # a limit was asked for, so the report says why
 
 
 def test_a_normal_start_item_is_offered_no_divine_orb_even_when_a_draw_may_give_the_mod():

@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 from abstraction_pool import AMULET, DAMAGE_1, LIFE_1, SMALL, roll, small_item
 from contract_support import CONTRACT_DATA, check_action, fixture_items
+from limits_support import labels_of
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import (
@@ -35,6 +36,7 @@ from crafting_system.actions import (
 from crafting_system.actions.errors import ActionError
 from crafting_system.actions.cut import Cut, rollable_tiers
 from crafting_system.actions.pool import build_pool
+from crafting_system.cli._limits import kind_title
 from crafting_system.cli._offers import offer_of, price_offers
 from crafting_system.data import Weight
 from crafting_system.items import Item, Rarity
@@ -341,8 +343,8 @@ def test_an_offer_set_with_named_kinds_and_no_strands_does_not_mention_the_foulb
 
     chosen = offers_for(CONTRACT_DATA, goal, item.base_id, item, ["chaos-orb"])
 
-    mentioned = {name for left in chosen.left_out for name in left.labels}
-    assert mentioned and not mentioned & set(KIND_NAMES)
+    mentioned = {name for limit in chosen.limits for name in limit.labels}
+    assert mentioned and not mentioned & {kind_title(name) for name in KIND_NAMES}  # the strands limit of `make_plan` names them
 
 
 def test_naming_a_foulborn_kind_in_a_target_is_refused_until_the_planner_plans_with_strands():
@@ -363,8 +365,8 @@ def test_a_stranded_start_item_has_the_kinds_in_its_catalog_so_they_are_named_or
     item = fixture_items()["magic_stranded"]
     goal = Goal((Wanted(frozenset({"LightningResist3"})),))
 
-    left_out = offers_for(CONTRACT_DATA, goal, item.base_id, item, ["chaos-orb"]).left_out
+    left_out = offers_for(CONTRACT_DATA, goal, item.base_id, item, ["chaos-orb"]).limits
     named = offers_for(CONTRACT_DATA, goal, item.base_id, item, ["foulborn-regal-orb"])
 
-    assert set(KIND_NAMES) <= {name for left in left_out for name in left.labels}  # the catalog lists them for this item, so they are left out
+    assert {kind_title(name) for name in KIND_NAMES} <= labels_of(left_out, "kinds-not-named")  # the catalog lists them for this item, so they are left out
     assert any(offer.label == "Foulborn Regal Orb" for offer in named.offers)

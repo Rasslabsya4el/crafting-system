@@ -17,6 +17,7 @@ from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN
 
 from ._interval import IntervalAnswer
+from ._limits import HEADING, limit_document, limit_text, ordered, unresolved
 from ._marking import (
     ApproximateInput,
     approximate_inputs,
@@ -36,13 +37,11 @@ from ._start_report import first_step_document, first_step_lines, start_document
 from ._start_step import FirstStep, first_step
 from ._verify import SIGMAS, Verification
 
-FORMAT = "crafting-system-policy/1"
+FORMAT = "crafting-system-policy/2"
 GOAL = "goal"
 DEAD_END = "dead end"
 MAX_TREE_DEPTH = 40
 MAX_TREE_STATES = 1_000  # the text tree stops here (R14's policy has 14,742 groups of states, 22 MB of text); the JSON policy and the route page hold all (ticket #70)
-
-MAX_DROPPED_LINES = 300  # more dropped actions than this are told in one line per missing price
 
 
 @dataclass(frozen=True)
@@ -240,11 +239,6 @@ def interval(estimate: Estimate, divine: float) -> str:
 UNRESOLVED = "not resolved on the grid (the cost scale is far above the cheapest action, ticket #190)"
 
 
-def unresolved(risk, estimate: Estimate) -> bool:
-    """Whether a quantile or CVaR is infinite only because the budget grid could not reach it: the odds are 1."""
-    return math.isinf(estimate.value) and risk.success_probability.value >= 1.0
-
-
 def _quantile_text(risk, estimate: Estimate, shift: float, divine: float) -> str:
     return UNRESOLVED if unresolved(risk, estimate) else interval(_shifted(estimate, shift), divine)
 
@@ -278,11 +272,11 @@ def money_small(chaos: float) -> str:
     return f"{chaos:.2g}"
 
 
-def strands_line(plan: Plan) -> str:
-    """The one line on Memory Strands (ADR-0040): when they were not considered it says so, so the omission is never hidden."""
-    if plan.strands.on:
-        return f"Memory Strands: considered ({plan.strands.why})"
-    return f"Memory Strands: not considered ({plan.strands.why})"
+def limit_lines(plan: Plan) -> list[str]:
+    """What the answer leaves out, one line to a limit in the order of the groups of `_limits`, each with what the answer still guarantees (OR-13)."""
+    if not plan.limits:
+        return []
+    return [f"{HEADING}:", *(f"  {limit_text(limit)}" for limit in ordered(plan.limits))]
 
 
 def render_text(report: Report, verification: Verification | None = None, *, target_name: str = "") -> str:
@@ -298,8 +292,6 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if report.interval is not None:
         lines.extend(report.interval.text_lines(divine))
     lines.extend(approximate_lines(report.approximate_inputs))
-    if plan.note:
-        lines.append(f"Note: {plan.note}")
     lines.append(f"Requirements: {'; '.join(plan.leaf_labels)}")
     lines.append(
         f"Prices: league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}, "
@@ -307,23 +299,11 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     )
     name = f" ({plan.start_price.name})" if plan.start_price.name else ""
     lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
-    lines.append(strands_line(plan))
     if report.first_step is not None:
         lines.extend(first_step_lines(report.first_step))
     if plan.starts is not None:
         lines.extend(start_lines(plan.starts))
-    if len(plan.dropped) <= MAX_DROPPED_LINES:
-        for dropped in plan.dropped:
-            lines.append(f"Dropped for lack of a price: {dropped.label} (no price for {', '.join(dropped.missing)})")
-    else:  # thousands of fossil sets can share one missing price: one line for each missing price
-        by_missing: dict[tuple[str, ...], list[str]] = {}
-        for dropped in plan.dropped:
-            by_missing.setdefault(dropped.missing, []).append(dropped.label)
-        for missing, labels in by_missing.items():
-            shown = ", ".join(labels[:3]) + (", ..." if len(labels) > 3 else "")
-            lines.append(f"Dropped for lack of a price, {len(labels)} actions (no price for {', '.join(missing)}): {shown}")
-    for left in plan.left_out:
-        lines.append(f"Not offered, {len(left.labels)} actions: {left.reason}")
+    lines.extend(limit_lines(plan))
     lines.append(f"Blocks solved: {plan.approximation.blocks:,}" if plan.approximation else f"States solved: {len(plan.solution.values)}")
     lines.append("")
     lines.append("Policy (S = a state of the item; the start is S1)")
@@ -510,7 +490,6 @@ def policy_document(report: Report, verification: Verification | None = None, *,
         "answer": marking_document(plan.approximation, shift),
         "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
         **({"interval": report.interval.document()} if report.interval is not None else {}),
-        "note": plan.note,
         "target": target_name,
         "requirements": list(plan.leaf_labels),
         "prices": {
@@ -525,10 +504,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "price_source": plan.start_price.source,
         },
         **({"start_options": start_document(plan.starts, report.first_step)} if plan.starts is not None else {}),
-        "dropped_actions": [{"action": drop.label, "missing_prices": list(drop.missing)} for drop in plan.dropped],
-        "left_out_actions": [
-            {"reason": left.reason, "count": len(left.labels), "actions": list(left.labels)} for left in plan.left_out
-        ],
+        "limits": [limit_document(limit) for limit in ordered(plan.limits)],
         "offered_actions": [priced.label for priced in plan.offers],
         "states_solved": len(plan.solution.values),
         "totals": _totals(plan, shift, divine),

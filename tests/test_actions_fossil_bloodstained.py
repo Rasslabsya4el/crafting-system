@@ -26,6 +26,7 @@ from functools import cache
 import pytest
 from abstraction_fossil import fossil_finished
 from abstraction_oracle import assert_same_distribution, compressed_distribution
+from limits_support import labels_of
 from bloodstained_support import (
     ALL_RES,
     BASE_IMPLICIT,
@@ -565,11 +566,12 @@ def test_a_set_named_by_its_label_is_still_filtered_by_the_goal():
     assert label not in offered(PLAIN_TARGET, names=(label,)) and label not in offered(ALLOWING_TARGET, names=(label,))
 
 
-def test_the_report_says_nothing_of_a_bloodstained_set_that_is_left_out():
+def test_the_answer_names_a_bloodstained_set_that_is_left_out_as_corrupting_and_nowhere_else():
     item = starts()["none"]
     for goal in (PLAIN_TARGET, ALLOWING_TARGET):
         chosen = offers_for(DATA, goal, item.base_id, item, ("fossil-set",))
-        assert not any(BLOODSTAINED in label for entry in chosen.left_out for label in entry.labels)
+        assert any(BLOODSTAINED in label for label in labels_of(chosen.limits, "corrupting"))  # K5
+        assert not any(BLOODSTAINED in label for limit in chosen.limits if limit.kind != "corrupting" for label in limit.labels)
 
 
 def test_a_bloodstained_offer_is_not_pruned_from_a_state_that_misses_a_requirement():

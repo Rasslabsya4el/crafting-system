@@ -33,6 +33,7 @@ from types import SimpleNamespace
 import golden_diff
 import pytest
 from abstraction_support import real_game_data
+from limits_support import of_kind
 from test_abstraction_b1_real import LEVEL, rolled, subset
 from test_abstraction_fossil_real import BASE, FORCED, FRACTURED
 
@@ -374,7 +375,7 @@ def test_a_restart_is_kept_and_the_plan_stays_exact(planned):
 def test_the_plan_keeps_every_priced_offer_and_says_what_it_left_out(planned):
     result = planned("fractured", "two-top-tier")
     plan = result.pruned
-    reasons = {left.reason: left.labels for left in plan.left_out}
+    reasons = {limit.why: limit.labels for limit in of_kind(plan.limits, "proved-unneeded")}  # K15
     labels = {priced.label for priced in plan.offers}
 
     assert len(plan.offers) == len(result.whole.offers)
@@ -383,7 +384,8 @@ def test_the_plan_keeps_every_priced_offer_and_says_what_it_left_out(planned):
     assert set(reasons["same outcome as a cheaper offer"]) | set(plan.pruned.bounded) <= labels
     assert not {priced.label for priced in plan.pruned.used} & set(plan.pruned.bounded)
     assert plan.pruned.rho > 0 and plan.pruned.j_max >= plan.pruned.rho * (1 - 1e-9)
-    assert result.whole.pruned is None and not result.whole.left_out
+    assert result.whole.pruned is None and not of_kind(result.whole.limits, "proved-unneeded")
+    assert all(limit.guarantee.startswith("The answer is exact") for limit in of_kind(plan.limits, "proved-unneeded"))  # OR-13
 
 
 def test_a_route_may_name_an_offer_the_pruning_left_out_and_it_is_priced_and_evaluated(planned, world):
@@ -463,7 +465,7 @@ def test_fewer_than_min_offers_are_solved_whole(world):
 
     plan = make_plan(world.data, target, world.prices, offers=offers)
 
-    assert plan.pruned is None and not plan.left_out
+    assert plan.pruned is None and not of_kind(plan.limits, "proved-unneeded")
 
 
 # --- the bench: a goal leaf a craft can finish ---------------------------------------------------------------
