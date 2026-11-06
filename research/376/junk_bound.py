@@ -368,6 +368,24 @@ def cut_rows(flat: dict, start: int, v_star: np.ndarray, lb: np.ndarray, label: 
     return rows
 
 
+def tolerance_rows(flat: dict, start: int, v_star: np.ndarray, class_sizes: np.ndarray) -> list[dict]:
+    """What a bound of a given relative error could cut at most: the classes reachable through the actions within `eps` of their state's optimal value.
+
+    With a perfect upper bound an action is competitive when its cost with the lower bound does not exceed the best action's value; a lower
+    bound that is `eps` below the exact value at every state keeps at least the actions within `eps` of the best. So this is the floor of the
+    envelope for a bound of error `eps` (a bound with a smaller error may keep fewer, never more than the row of its own error).
+    """
+    state = flat["state"]
+    non_goal_action = ~flat["goal"][state]
+    gap = (P.q_values(flat, v_star) - v_star[state]) / np.maximum(v_star[state], 1e-300)
+    rows = []
+    for eps in (0.0, 1e-7, 1e-6, 1e-5, 1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2):
+        keep = (gap <= eps + 1e-12) & non_goal_action
+        seen = P.reach(flat, start, keep)
+        rows.append({"eps": eps, "classes": int(seen.sum()), "raw_states": int(class_sizes[seen].sum()), "actions_kept": int((keep & seen[state]).sum())})
+    return rows
+
+
 # ---- main ---------------------------------------------------------------------------------------------------------------
 
 
@@ -482,6 +500,8 @@ def main() -> None:
         ratios = lb[inside] / np.maximum(v_star[inside], 1e-300)
         row["ratio_in_optimal_policy"] = {"median": float(np.median(ratios)), "p10": float(np.percentile(ratios, 10)), "mean": float(ratios.mean()), "classes": int(inside.sum())}
         say(began, f"ratio {name}: {row['ratio']:.4f}, violations {row['violations']}, in the optimal policy {row['ratio_in_optimal_policy']}")
+    result["tolerance_envelopes"] = tolerance_rows(flat, start_class, v_star, class_sizes)
+    say(began, "tolerance envelopes " + json.dumps(result["tolerance_envelopes"]))
     if args.cut_keys == "all":
         cut_names = list(class_lb)
     else:
