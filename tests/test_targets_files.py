@@ -392,7 +392,7 @@ def test_the_r11_chaos_resistance_leaf_takes_any_tier_of_the_fractured_resistanc
     target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
     chaos = target.requirements[0]
     base_id = target.base_id
-    lower_fractured = ExplicitMod("ChaosResist3", mod_tier(real, base_id, "ChaosResist3"), (18,), fractured=True)
+    lower_fractured = ExplicitMod("ChaosResist3", (18,), fractured=True)
 
     assert mod_tier(real, base_id, "ChaosResist3") == 4  # not the tier the start item and the buy spec price (1)
     assert chaos.is_met_by(replace(target.start_item, mods=(lower_fractured,)))
