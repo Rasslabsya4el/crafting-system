@@ -638,7 +638,9 @@ def test_the_routes_give_the_mean_and_the_policy_the_code_before_the_pruning_gav
     expected = golden[stem]
 
     golden_diff.check_objects(expected["start"], repr(plan.start), f"{stem}: the start state differs from tests/golden/plans_118.json")
-    assert plan.mean_remaining == pytest.approx(expected["mean_remaining"], rel=1e-9)
+    golden_diff.check_objects(
+        expected["mean_remaining"], plan.mean_remaining, f"{stem}: the mean differs from tests/golden/plans_118.json", rel=1e-9
+    )
     # The pruned model leaves out offers that are never better, so it may reach FEWER states than the golden
     # plan (R05: 262 of 597); every state it does solve has the action the golden plan has there.
     assert len(plan.solution.values) <= expected["states"]

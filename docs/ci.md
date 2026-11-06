@@ -243,8 +243,11 @@ real game data is taken from where it is made, since a PC without the cache cann
 `reachability` of the PR's CI run (uploaded by the "Reachability report" step above). The `real_*` pages (`tests/golden/real_r05.html`,
 `real_r10.html`, `real_r11.html`) are not CI artifacts: `assert_golden` in `tests/route_view_support.py` rewrites each one when
 `UPDATE_GOLDEN=1` is set, and `tests/test_cli_routes_real.py` makes them on a runner or machine that has the real game data in its
-cache (`CRAFTING_CACHE_DIR`). Regenerate them through a heavy run (`heavy_dispatch.py`) that copies the three files into `$OUT_DIR`,
-then commit them after reading the diff. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
+cache (`CRAFTING_CACHE_DIR`). Regenerate them through a heavy run that copies the three files into `$OUT_DIR`, with this command (`BRANCH` is the branch to run):
+
+    python .github/scripts/heavy_dispatch.py run --ref BRANCH --runners 1 --command 'UPDATE_GOLDEN=1 uv run --no-sync python -m pytest tests/test_cli_routes_real.py -q; cp tests/golden/real_r05.html tests/golden/real_r10.html tests/golden/real_r11.html "$OUT_DIR"/'
+
+Then commit them after reading the diff. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
 
 ## Keeping the shards balanced
 
