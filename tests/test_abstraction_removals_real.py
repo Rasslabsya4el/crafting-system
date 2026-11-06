@@ -163,7 +163,7 @@ def hunter_case(real, *, mark_caster=False):
         },
         lambda ids: Goal(
             (
-                Wanted(frozenset(HYBRID), min_tier=2),
+                Wanted(frozenset(HYBRID), min_tier=2, tier_ok=frozenset(HYBRID[3:])),  # Hunter hybrid 4 and 5 are tiers 2 and 1 in the Hunter pool
                 Wanted(frozenset(ids["IncreaseSocketedGemLevel"])),
                 Wanted(frozenset(ids["IncreasedAttackSpeed"]), min_tier=1),
             )

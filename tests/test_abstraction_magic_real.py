@@ -73,7 +73,7 @@ def check(ab, start, action, finished):
 
 
 def test_the_target_goal_asks_for_the_tier_one_mods(goal):
-    assert len(goal.leaves) == 6
+    assert len(goal.leaves) == 5  # life, three resistances and the one damage craft (OR-2)
 
 
 @pytest.mark.parametrize(

@@ -222,6 +222,10 @@ def leaf_labels(target: Target) -> tuple[str, ...]:
         limits = []
         if node.min_tier is not None:
             limits.append(f"tier {node.min_tier} or better")
+        elif node.any_tier:
+            limits.append("any tier")
+        elif node.tier_ok is not None:
+            limits.append("top tier")  # OR-1: no tier written, so the top tier of the ladder at the item level
         if node.min_roll is not None and any(roll is not None for roll in node.min_roll):
             limits.append("roll at least " + "/".join("any" if r is None else str(r) for r in node.min_roll))
         if node.not_crafted:

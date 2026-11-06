@@ -122,6 +122,7 @@ def test_the_pilot_counts_the_exact_graphs_of_the_adr(ring, exact_32, approximat
     large = approximate_141[1].abstraction.estimate([approximate_141[1].abstraction.compress(target.start_item)], actions)
 
     # 13,172 in the ADR, before ticket #68 lifted the multimod's dead end; 14,350 with the four metamod crafts, which ticket #69 leaves out
-    assert (small.states, large.states) == (76, 13_392)
+    # (76, 13,392) until ticket #457: the one judgement reads R05's Life and resistance lines as the top tier of the ring, so more statuses tell states apart
+    assert (small.states, large.states) == (108, 17_064)
     assert small.complete and large.complete
     assert large.transitions > 20_000_000

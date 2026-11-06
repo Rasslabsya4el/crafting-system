@@ -14,14 +14,14 @@ from pathlib import Path
 import pytest
 from cli_support import R12, geometric_p90_clicks, price_file, read_json
 from cli_support import run as run_command
-from targets_support import DATA
+from targets_support import DATA, EXAMPLES
 
 from crafting_system.actions import ChaosOrb
 from crafting_system.cli import RouteError, RouteResult, evaluate_route, load_route, make_plan, parse_route
 from crafting_system.prices import PriceEntry
 from crafting_system.targets import load_target, parse_target, start_price_key
 
-ROUTE = R12.parents[1] / "routes" / "r12-lightning-amulet.yaml"
+ROUTE = EXAMPLES.parent / "routes" / "r12-lightning-amulet.yaml"
 GEM = "GlobalLightningGemLevel1"
 GEM_TEXT = "+1 to Level of all Lightning Skill Gems"
 START_PRICE = 4.0
@@ -301,6 +301,7 @@ item_level: 84
 requirements:
   - stat: "{GEM_TEXT}"
   - family: LightningResistance
+    min_tier: any
 start_item:
   rarity: rare
 buys_start_item: true

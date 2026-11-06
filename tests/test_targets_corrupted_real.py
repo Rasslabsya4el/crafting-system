@@ -22,7 +22,7 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "examples" / "targets"
 PRISMATIC = "Metadata/Items/Rings/Ring8"
 RESIST = "V2AllResistancesCorrupted"
 COLD_TIERS = ("V2AddedColdDamageCorrupted1", "V2AddedColdDamageCorrupted2", "V2AddedColdDamageCorrupted3")
-HEADER = "base: Prismatic Ring\nitem_level: {level}\nrequirements:\n  - family: ColdResistance\n"
+HEADER = "base: Prismatic Ring\nitem_level: {level}\nrequirements:\n  - family: ColdResistance\n    min_tier: any\n"
 
 
 @pytest.fixture(scope="module")
@@ -76,7 +76,7 @@ def test_error_the_third_cold_tier_at_item_level_80_names_its_level_and_the_near
         )
 
     message = str(caught.value)
-    assert message.startswith("t.yaml:8: implicits[0].mod: ") and "needs an item level of 81" in message
+    assert message.startswith("t.yaml:9: implicits[0].mod: ") and "needs an item level of 81" in message
     assert "`V2AddedColdDamageCorrupted2`" in message
 
 

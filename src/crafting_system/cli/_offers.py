@@ -12,7 +12,7 @@ from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
-from crafting_system.abstraction import Goal
+from crafting_system.abstraction import Goal, Status, status_of
 from crafting_system.actions import Action, ActionError, Axis, Need, Reads, StrandUse, catalog, default_actions, drawable_mod_ids, kinds
 from crafting_system.actions import without_ranges  # noqa: F401  (the report reads it from here)
 from crafting_system.data import GameData
@@ -234,7 +234,8 @@ def offers_for(
       Fossil: its reroll exists without the corruption) is offered only when the goal asks for a corrupted implicit, not when it
       merely allows a corrupted item (ADR-0038).
     """
-    counting = {mod_id for leaf in goal.leaves if not leaf.not_crafted for mod_id in leaf.mod_ids}
+    goal = goal.resolved(data, start_item.base_id, start_item.item_level)  # a leaf built by hand with a `min_tier` reads it from the data
+    counting = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids if _counts_as_crafted(data, leaf, mod_id)}
     kind_names, label_names = _split_names(data, start_item, kinds_named)
     named = {mod_id for leaf in goal.leaves for mod_id in leaf.mod_ids}  # a `wanted_only` mod is no crafted one, so `not_crafted` does not hide it
     candidates = []
@@ -466,6 +467,19 @@ def _roll_limit_can_matter(data: GameData, goal: Goal, start_item: Item, listed:
         return bool(limited & drawable_mod_ids(data, start_item))
     except ActionError:  # a pool the model cannot build: no proof the mod is out of reach, so keep the orb
         return True
+
+
+def _counts_as_crafted(data: GameData, leaf, mod_id: str) -> bool:
+    """Whether the mod `mod_id`, added as a crafted mod at its highest roll, passes the leaf by the one judgement (`status_of`).
+
+    A bench craft has no natural tier (OR-1, OR-2), so a leaf with a tier limit counts it only when `mod:` names it; a leaf with
+    `not_crafted` never counts it.
+    """
+    mod = data.mods.get(mod_id)
+    if mod is None:
+        return False
+    values = tuple(max(stat.min, stat.max) for stat in mod.stats)
+    return status_of(leaf, mod_id, values, True) is Status.PASSING
 
 
 def _only_crafts(data: GameData, item: Item, action: Action) -> bool:

@@ -3,8 +3,10 @@
 Parsing turns every selector into mod ids and every stat count into a tuple, so a `Target` holds no
 reference to the game data and `Target.is_met_by` needs none. A requirement is checked against each
 explicit mod of the item on its own: a minimum tier and a minimum roll must hold on the same mod.
-The tier is the one stored on the `ExplicitMod` (tier 1 is the best), never derived here, and how a
-mod got onto the item (natural, fractured, crafted) matters only when `not_crafted` is set.
+The judgement is `abstraction.status_of`, the same function the planner's states use (ticket #457). The tier
+is the mod's natural tier in the game data (OR-1; tier 1 is the best), resolved by the parser into `tier_ok`: the tier
+stored on an `ExplicitMod` is never read, and a mod with no natural tier (a bench craft, an essence-only mod, a veiled
+one) meets a tier leaf only when `mod:` names it. How a mod got onto the item matters only when `not_crafted` is set.
 
 Implicits and quality are checked on their own (ADR-0027): an `ImplicitRequirement` is met by one
 implicit of the item whose mod, Eldritch grade and rolled values all pass; a `QualityRequirement` by
@@ -19,6 +21,7 @@ colours counted in such a group; it is a requirement of the finish, not of the m
 from dataclasses import dataclass
 from pathlib import Path
 
+from crafting_system.abstraction import Status, status_of
 from crafting_system.items import CatalystType, ExplicitMod, ImplicitMod, Influence, Item, PlainQuality, SocketColour
 
 
@@ -27,9 +30,12 @@ class Requirement:
     """One mod wanted on the item.
 
     Exactly one of `family` (a family id) and `stat` (English stat text) is the selector as the owner
-    wrote it; `mod_ids` is every mod that selector counts, or the one mod a `mod:` key names. `min_tier` is the worst tier accepted, so
-    2 accepts tiers 1 and 2. `min_roll` has one entry per stat of the mod, None where any value will
-    do. Rolls are the raw numbers of the game data.
+    wrote it; `mod_ids` is every mod that selector counts, or the one mod a `mod:` key names. `min_tier` is the worst natural tier the owner
+    wrote, so 2 accepts tiers 1 and 2; `any_tier` is `min_tier: any`; with neither, a leaf that names no `mod:` and no roll asks the
+    top tier of OR-1. `tier_ok` is what that means in the game data: the mods of `mod_ids` whose natural tier on the target's base the
+    leaf accepts (a mod with no natural tier is never in it), or None when the leaf asks no tier (a `mod:` leaf, a leaf that limits a
+    roll and states no tier, a stat text that states its value). The parser fills it; a `min_tier` with no `tier_ok` cannot be judged.
+    `min_roll` has one entry per stat of the mod, None where any value will do. Rolls are the raw numbers of the game data.
     """
 
     family: str | None
@@ -38,6 +44,8 @@ class Requirement:
     min_tier: int | None = None
     min_roll: tuple[int | None, ...] | None = None
     not_crafted: bool = False
+    tier_ok: frozenset[str] | None = None
+    any_tier: bool = False
 
     def __post_init__(self) -> None:
         if (self.family is None) == (self.stat is None):
@@ -50,17 +58,8 @@ class Requirement:
         return any(self._counts(mod) for mod in item.mods)
 
     def _counts(self, mod: ExplicitMod) -> bool:
-        if mod.mod_id not in self.mod_ids:
-            return False
-        if self.min_tier is not None and mod.tier > self.min_tier:
-            return False
-        if self.not_crafted and mod.crafted:
-            return False
-        if self.min_roll is None:
-            return True
-        if len(mod.values) != len(self.min_roll):
-            return False
-        return all(wanted is None or got >= wanted for wanted, got in zip(self.min_roll, mod.values))
+        """The one judgement (`abstraction.status_of`); the tier stored on `mod` is not read."""
+        return status_of(self, mod.mod_id, mod.values, mod.crafted) is Status.PASSING
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,8 +273,9 @@ class Target:
     `quality` is the catalyst quality of a ring, amulet or belt or the plain quality of a weapon or armour (ADR-0049).
     `sockets` is the socket requirement (ADR-0046) or None; `start_sockets_assumed` says the start item stated no sockets and
     got the one white, unlinked socket a target with sockets assumes, so that a report can say so.
-    `item_level_floor` and `tiers_top_at_item_level` are the author's word on how far the planner may plan below `item_level`
-    (ADR-0061, `floor.py`): a stated lowest level, and the statement that the tiers written are the top tiers of `item_level`.
+    `item_level_floor` is the author's word on how far the planner may plan below `item_level` (ADR-0061, `floor.py`): a stated
+    lowest level. (The statement that the tiers written are the top tiers of `item_level`, `tiers_top_at_item_level`, is gone:
+    that is OR-1 for every leaf with no `min_tier`, ticket #457.)
     """
 
     base_id: str
@@ -293,7 +293,6 @@ class Target:
     sockets: SocketRequirement | None = None
     start_sockets_assumed: bool = False
     item_level_floor: int | None = None
-    tiers_top_at_item_level: bool = False
 
     @property
     def asks_corrupted(self) -> bool:

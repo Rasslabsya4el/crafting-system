@@ -174,7 +174,7 @@ def test_r05_the_strength_and_all_attributes_crafts_on_a_ring(data):
     assert {row[1] for row in rows} == {"suffix"}
 
 
-def test_r13_the_damage_prefixes_on_a_belt_are_the_two_families_of_the_target_file(data):
+def test_r13_the_damage_prefixes_on_a_belt_are_two_families_and_the_target_file_names_the_one_craft_the_route_buys(data):
     rows = listed(data, "Belt", lambda mod: mod.generation_type == "prefix" and "damage" in (mod.text or "").lower())
 
     assert [(row[0], row[2], row[3]) for row in rows] == [
@@ -188,7 +188,7 @@ def test_r13_the_damage_prefixes_on_a_belt_are_the_two_families_of_the_target_fi
         "AllDamage",
         "IncreasedWeaponElementalDamagePercent",
     }
-    assert all(family in text for family in ("AllDamage", "IncreasedWeaponElementalDamagePercent"))
+    assert "family: AllDamage" in text and "mod: JunMaster2AllDamage3" in text  # OR-2: the one craft of the given route, not either family
 
 
 def test_r14_the_finishing_crafts_on_a_bow(data):

@@ -109,19 +109,20 @@ def test_a_goal_is_built_from_a_parsed_target_without_importing_targets():
 
     assert goal == Goal(
         (
-            Wanted(gem.mod_ids),
-            Wanted(resist.mod_ids, min_tier=2),
+            Wanted(gem.mod_ids),  # the text states its value: no tier is asked
+            Wanted(resist.mod_ids, min_tier=2, tier_ok=resist.tier_ok),
             AtLeast(
                 1,
                 (
-                    Wanted(damage.mod_ids, not_crafted=True),
-                    AtLeast(1, (Wanted(life.mod_ids, min_roll=(10,)), Wanted(mana.mod_ids))),
+                    Wanted(damage.mod_ids, not_crafted=True, tier_ok=damage.tier_ok),  # no tier written: the top tier (OR-1)
+                    AtLeast(1, (Wanted(life.mod_ids, min_roll=(10,)), Wanted(mana.mod_ids, tier_ok=mana.tier_ok))),
                 ),
             ),
         )
     )
     assert len(leaves_of(goal)) == 5
     assert leaves_of(goal)[3].min_roll == (10,)
+    assert resist.tier_ok and resist.tier_ok == leaves_of(goal)[1].tier_ok  # the resolved tier limit travels with the leaf
 
 
 def test_from_target_reads_attributes_only_so_any_object_with_the_right_shape_works():

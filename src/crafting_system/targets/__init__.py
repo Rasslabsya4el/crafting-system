@@ -14,7 +14,12 @@ Keys (unknown keys are errors, with a close-match hint):
       - stat: "+1 to Level of all Lightning Skill Gems"   # exact English stat text, or
       - family: LightningResistance                       # a family id (repoe `groups`)
         mod: Intelligence8  # optional: one mod (game-data id) of the family or stat, so exactly that tier of it
-        min_tier: 2         # optional: whole number >= 1; tier 1 is best, so 2 accepts tiers 1 and 2
+        min_tier: 2         # optional: whole number >= 1, or the word any. Tier 1 is best, so 2 accepts natural tiers 1 and 2; `any`
+                            # accepts every tier of the natural ladder and is written only where the guide accepts any tier (OR-4),
+                            # with the guide quoted in a comment. Without `min_tier` (and without `mod:`, `min_roll` or a stat
+                            # text that states its value) the leaf asks the top tier of its ladder at `item_level` (OR-1). The tier is
+                            # always the mod's natural tier in the game data: a bench craft, an essence-only, a veiled or an
+                            # Elevated mod has none and meets a tier leaf only through `mod:` (OR-2)
         min_roll: 40        # optional: a number (single-stat mods) or a list, one number or null per stat
         not_crafted: true   # optional: true or false, default false
       - at_least: 2         # a "k of n" entry: 1 <= k <= len(of)
@@ -53,7 +58,7 @@ Keys (unknown keys are errors, with a close-match hint):
       corrupted: false      # optional
       mods:                 # optional; each mod by its game-data id, tier taken as written
         - mod: LightningResist2
-          tier: 3           # whole number >= 1, stored as written (tier derivation is not built yet)
+          tier: 3           # whole number >= 1, stored as written; the goal check ignores it and reads the mod's tier in the game data
           values: [14]      # one whole number per stat; a bare number is allowed for one stat
           fractured: true   # optional; `crafted` is optional too
       implicits:            # optional; the implicits the item starts with (none are filled in from the base)
@@ -78,7 +83,6 @@ Keys (unknown keys are errors, with a close-match hint):
                             # default); a name may also be the label of one action, e.g. "Essence of Insanity" (#70)
     item_level_floor: 84    # optional (ADR-0061): the lowest item level the planner may plan at; 1 to `item_level`. Without it the planner
                             # derives the floor from the tiers the requirements ask for (`floor.py`). It never goes below the derived one.
-    tiers_top_at_item_level: true   # optional (ADR-0061): the tiers written are "the top tier at `item_level`", so the level is not lowered
     allow_corrupted: true   # optional (ADR-0036): a corrupted item may be the goal even with no corrupted implicit; without this key
                             # and without a `corrupted: true` implicit, a corrupted item is never a goal
 
@@ -98,7 +102,7 @@ stores, so a guide's value shown with catalyst quality is written as the base ro
 among implicits only, so "#% chance to Avoid being Shocked" under `implicits:` never picks the suffix of the
 same text, and without `mod` it skips the "in your Presence" variants. A start mod of a veiled placeholder
 (domain `veiled`) may leave out `tier` and `values`: tier 1 and the canonical seed are used. How a mod got on the item does not matter unless `not_crafted`
-is set. The members of an `at_least` group are checked independently, so one mod can satisfy two of
+is set or the leaf asks a tier (a mod with no natural tier meets no tier leaf). The members of an `at_least` group are checked independently, so one mod can satisfy two of
 them (say a family and a stat text that select the same mod); groups may nest 20 levels deep. Merge keys
 (`<<`), anchors (`&name`) and aliases (`*name`) are not supported.
 Whether a mod can spawn on the base is not checked here; that belongs to `actions`.

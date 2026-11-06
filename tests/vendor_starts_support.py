@@ -103,7 +103,9 @@ requirements:
   - family: MovementVelocity
     min_tier: 2
   - family: IncreasedLife
+    min_tier: any
   - family: ChaosResistance
+    min_tier: any
 """
 
 WAND_TARGET = """\
@@ -117,7 +119,9 @@ requirements:
   - family: LocalAddedFireDamage
     min_tier: 2
   - family: IncreasedLife
+    min_tier: any
   - family: ChaosResistance
+    min_tier: any
 """
 
 

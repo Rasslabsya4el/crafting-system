@@ -266,19 +266,22 @@ def best_of(width: int, vectors: Iterable[Sequence[int]]) -> tuple[Status, ...]:
     return tuple(Status(value) for value in result)
 
 
-def status_of(
-    leaf: Wanted, mod_id: str, tier: int, values: tuple[int, ...], crafted: bool
-) -> Status:
-    """What a mod gives `leaf`, by the rule of a target requirement.
+def status_of(leaf, mod_id: str, values: tuple[int, ...], crafted: bool) -> Status:
+    """The one judgement of a mod against a requirement leaf (ticket #457; OR-1, OR-2, OR-4), used by every caller.
 
-    ABSENT when the mod is not one of the leaf's; BELOW when its tier is worse than `min_tier`, it is
-    crafted and `not_crafted` is set, or its roll fails (the number of values equals `len(min_roll)`
-    and every wanted value is reached); otherwise PASSING.
+    `leaf` is a `Wanted` or a target `Requirement`: the attributes it reads are `mod_ids`, `tier_ok`, `min_tier`, `min_roll` and
+    `not_crafted`. ABSENT when the mod is not one of the leaf's. BELOW when the leaf asks a tier and the mod is not among
+    `tier_ok` (its natural tier in the game data is worse than the leaf accepts, or it has none), when it is crafted and
+    `not_crafted` is set, or when its roll fails (the number of values equals `len(min_roll)` and every wanted value is
+    reached). Otherwise PASSING. The tier is never an argument: the tier stored on an item and any default are not read.
     """
     if mod_id not in leaf.mod_ids:
         return Status.ABSENT
-    if leaf.min_tier is not None and tier > leaf.min_tier:
-        return Status.BELOW
+    if leaf.tier_ok is not None:
+        if mod_id not in leaf.tier_ok:
+            return Status.BELOW
+    elif leaf.min_tier is not None:
+        raise ValueError("the leaf asks a tier but holds no resolved `tier_ok`: read it from the game data first")
     if leaf.not_crafted and crafted:
         return Status.BELOW
     if leaf.min_roll is None:

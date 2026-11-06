@@ -337,7 +337,7 @@ def listed_law(leaves, data, mod_id, lucky):
     """The law of a mod found by rolling it in every way (`value_cases`) and asking `status_of` of each."""
     law: dict = {}
     for values, chance in value_cases(data, mod_id, lucky):
-        ints = tuple(int(status_of(leaf, mod_id, 1, values, False)) for leaf in leaves)
+        ints = tuple(int(status_of(leaf, mod_id, values, False)) for leaf in leaves)
         law[ints] = law.get(ints, Fraction(0)) + chance
     return tuple(sorted(law.items()))
 
@@ -348,7 +348,7 @@ LEAVES_UNDER_TEST = {
     "two_leaves": (Wanted(frozenset({"M"}), min_roll=(2,)), Wanted(frozenset({"M"}), min_roll=(5,))),
     "second_stat": (Wanted(frozenset({"M"}), min_roll=(None, 2)), Wanted(frozenset({"M"}), min_roll=(3, 3))),
     "outside": (Wanted(frozenset({"M"}), min_roll=(0,)), Wanted(frozenset({"M"}), min_roll=(9,))),
-    "tier_and_roll": (Wanted(frozenset({"M"}), min_tier=1, min_roll=(3,)), Wanted(frozenset({"M"}), min_roll=(3,))),
+    "tier_and_roll": (Wanted(frozenset({"M"}), min_tier=1, min_roll=(3,), tier_ok=frozenset({"M"})), Wanted(frozenset({"M"}), min_roll=(3,))),
     "another_number_of_stats": (Wanted(frozenset({"M"}), min_roll=(2, 2, 2)), Wanted(frozenset({"M"}), min_roll=(3,))),
 }
 
@@ -362,27 +362,27 @@ def test_the_roll_law_is_the_listing_of_every_roll(ranges, leaves, lucky):
     mod = dataclasses.replace(base, id="M", stats=stats)
     data = dataclasses.replace(TINY, mods={"M": mod})
     wanted = LEAVES_UNDER_TEST[leaves]
-    law = roll_law(wanted, mod, 1, False, lucky)
+    law = roll_law(wanted, mod, False, lucky)
     assert law == listed_law(wanted, data, "M", lucky)
     assert sum(chance for _, chance in law) == 1 and all(type(chance) is Fraction for _, chance in law)
 
 
 def test_a_mod_is_rollable_when_its_law_has_more_than_one_outcome():
-    assert is_rollable(roll_law((Wanted(frozenset({LIFE_1}), min_roll=(3,)),), TINY.mods[LIFE_1], 2))
-    assert not is_rollable(roll_law((Wanted(frozenset({LIFE_1}), min_roll=(1,)),), TINY.mods[LIFE_1], 2))  # every roll meets it
-    assert not is_rollable(roll_law((Wanted(frozenset({LIFE_1}), min_roll=(5,)),), TINY.mods[LIFE_1], 2))  # none does
-    assert not is_rollable(roll_law((Wanted(frozenset({LIFE_1}), min_tier=1, min_roll=(3,)),), TINY.mods[LIFE_1], 2))  # tier 2 is below
-    assert not is_rollable(roll_law((Wanted(frozenset({LIFE_2}), min_roll=(3,)),), TINY.mods[LIFE_1], 2))  # not its mod
+    assert is_rollable(roll_law((Wanted(frozenset({LIFE_1}), min_roll=(3,)),), TINY.mods[LIFE_1]))
+    assert not is_rollable(roll_law((Wanted(frozenset({LIFE_1}), min_roll=(1,)),), TINY.mods[LIFE_1]))  # every roll meets it
+    assert not is_rollable(roll_law((Wanted(frozenset({LIFE_1}), min_roll=(5,)),), TINY.mods[LIFE_1]))  # none does
+    assert not is_rollable(roll_law((Wanted(frozenset({LIFE_1}), min_tier=1, min_roll=(3,), tier_ok=frozenset()),), TINY.mods[LIFE_1]))  # its tier is not accepted: BELOW
+    assert not is_rollable(roll_law((Wanted(frozenset({LIFE_2}), min_roll=(3,)),), TINY.mods[LIFE_1]))  # not its mod
 
 
 @pytest.mark.parametrize("count", [1, 2, 3])
 def test_mods_that_share_a_law_spread_over_its_outcomes_by_the_multinomial(count):
     leaves = (Wanted(frozenset({LIFE_1}), min_roll=(2,)), Wanted(frozenset({LIFE_1}), min_roll=(4,)))
-    cells = roll_law(leaves, TINY.mods[LIFE_1], 2)
+    cells = roll_law(leaves, TINY.mods[LIFE_1])
     listed: dict = {}
     for rolls in itertools.product(range(1, 5), repeat=count):  # every way `count` mods roll 1..4 each
         spread = frozenset(
-            collections.Counter(tuple(int(status_of(leaf, LIFE_1, 2, (roll,), False)) for leaf in leaves) for roll in rolls).items()
+            collections.Counter(tuple(int(status_of(leaf, LIFE_1, (roll,), False)) for leaf in leaves) for roll in rolls).items()
         )
         listed[spread] = listed.get(spread, Fraction(0)) + Fraction(1, 4**count)
     assert {frozenset(spread): chance for spread, chance in multinomial(cells, count)} == listed

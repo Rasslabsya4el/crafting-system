@@ -8,15 +8,15 @@ down the planner may go and which levels are one plan; it builds no start option
 * **The floor is the lowest level at which every requirement can be met.** A tier is absolute on a base (`items.tier_table`), so
   what a requirement asks for fixes the lowest level of the mods that give it: for each requirement the lowest `required_level` among
   the mods that pass its tier, its roll limit and `not_crafted`, from the sources the planner has: the pool of a random draw, the bench
-  (the mod's own required level, the crafted mod counting as tier 1 at its lowest roll) and a fixed mod an action forces (an essence, a fossil; it ignores the item
+  (the mod's own required level, the crafted mod at its lowest roll, judged as crafted) and a fixed mod an action forces (an essence, a fossil; it ignores the item
   level, `essence.forced_mod_ignores_item_level`). They are those of the actions the target offers: the planner's catalog
   that its `actions:` names (a kind, or the label of one action; none is every default kind, corrupted essences left out). `at_least` groups take
   the k-th lowest of their members. A requirement the start item already meets asks nothing, but a mod the start item holds needs its
   own level. A requirement no source can give has no level; the target is then met at no level and the floor stays at the file's.
-* **The author can say more.** `item_level_floor: N` raises the floor to N, never lowers it below the derived one. `tiers_top_at_item_level:
-  true` says the tiers written are "the top tier at that level" (R05's resistances are tier 2 because the guide's ring is level 75),
-  so the level is not lowered at all. A target that asks for a corrupted implicit is not lowered either: its mod ids are the corrupted
-  pool of the file's level.
+* **The author can say more.** `item_level_floor: N` raises the floor to N, never lowers it below the derived one. (The key
+  `tiers_top_at_item_level` is gone, ticket #457: a leaf with no `min_tier` asks the top tier of its ladder at the file's level, OR-1,
+  and the floor keeps that tier reachable, because it asks the one judgement `status_of` of each source.) A target that asks for a
+  corrupted implicit is not lowered either: its mod ids are the corrupted pool of the file's level.
 * **Levels are grouped by pool.** Two levels are one plan when no random draw sees a difference: the mods that can spawn are those whose
   `required_level` is at most the level, so the pool changes only at the required levels of the candidate mods. Quality makes every level
   its own group, because a catalyst's gain depends on the item level (`catalyst.gain_depends_on_item_level`). The top group runs up to
@@ -27,6 +27,7 @@ down the planner may go and which levels are one plan; it builds no start option
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 
+from crafting_system.abstraction import Status, status_of
 from crafting_system.actions import (
     Action,
     ActionError,
@@ -54,11 +55,8 @@ __all__ = [
     "target_at_level",
 ]
 
-BENCH_TIER = 1  # `actions.bench.CRAFTED_TIER`: a crafted mod counts as tier 1 of what it crafts, whatever its range
-
 DERIVED = "derived"
 STATED = "stated"
-PINNED = "pinned"
 CORRUPTED = "corrupted"
 AT_TARGET = "at target"
 
@@ -82,7 +80,7 @@ class ItemLevelFloor:
     """The lowest item level the planner may plan a target at, and why.
 
     `level` is at most the file's `item_level`. `kind` is `derived` (the tiers the requirements ask for), `stated` (the target's
-    `item_level_floor` is the higher), `pinned` (`tiers_top_at_item_level`), `corrupted` (a corrupted implicit is asked for) or
+    `item_level_floor` is the higher), `corrupted` (a corrupted implicit is asked for) or
     `at target` (the leaves ask for more than the file's level, so no level below the file's can do). `reason` is that in a sentence.
     `nodes` are the levels of the top-level requirements, in file order; `start_level` is the level the mods of the start item need.
     """
@@ -160,20 +158,10 @@ def _offered(data: GameData, target: Target) -> list[Action]:
     return found
 
 
-def _within(wish: Requirement, tier: int) -> bool:
-    """Whether `tier` (1 is the best) is accepted by the requirement's `min_tier`."""
-    return wish.min_tier is None or tier <= wish.min_tier
-
-
-def _roll_passes(mod: Mod, wanted: tuple[int | None, ...] | None, *, high: bool) -> bool:
-    if wanted is None:
-        return True
-    if len(mod.stats) != len(wanted):
-        return False
-    return all(
-        limit is None or (max(stat.min, stat.max) if high else min(stat.min, stat.max)) >= limit
-        for stat, limit in zip(mod.stats, wanted, strict=True)
-    )
+def _passes(wish: Requirement, mod: Mod, *, crafted: bool, high: bool) -> bool:
+    """Whether `mod` from a source meets `wish` by the one judgement (`status_of`): at its highest roll when `high`, else at its lowest."""
+    values = tuple((max if high else min)(stat.min, stat.max) for stat in mod.stats)
+    return status_of(wish, mod.id, values, crafted) is Status.PASSING
 
 
 class _Sources:
@@ -221,12 +209,11 @@ class _Sources:
         return NodeLevel(label, best[0], best[1], best[2])
 
     def _gates(self, wish: Requirement, mod: Mod) -> Iterable[tuple[int, str]]:
-        tier = self.tiers.get(mod.id)
-        if tier is not None and _within(wish, tier) and _roll_passes(mod, wish.min_roll, high=True):
+        if mod.id in self.tiers and _passes(wish, mod, crafted=False, high=True):
             yield max(mod.required_level, MIN_ITEM_LEVEL), "pool"
-        if mod.id in self.bench and not wish.not_crafted and _within(wish, BENCH_TIER) and _roll_passes(mod, wish.min_roll, high=False):
+        if mod.id in self.bench and _passes(wish, mod, crafted=True, high=False):
             yield max(mod.required_level, MIN_ITEM_LEVEL), "bench"
-        if mod.id in self.forced and _within(wish, tier if tier is not None else 1) and _roll_passes(mod, wish.min_roll, high=True):
+        if mod.id in self.forced and _passes(wish, mod, crafted=False, high=True):
             yield MIN_ITEM_LEVEL, "forced mod"
 
 
@@ -254,8 +241,6 @@ def floor_of(data: GameData, target: Target) -> ItemLevelFloor:
     )
     asked = max([start_level, *(node.level for node in nodes if node.level is not None)])
     at = target.item_level
-    if target.tiers_top_at_item_level:
-        return ItemLevelFloor(at, PINNED, f"the target says its tiers are the top tiers of item level {at}, so the level is not lowered", nodes, start_level)
     if target.asks_corrupted:
         return ItemLevelFloor(at, CORRUPTED, f"the target asks for a corrupted implicit, drawn from the pool of item level {at}", nodes, start_level)
     if any(node.level is None for node in nodes):

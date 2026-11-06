@@ -101,8 +101,8 @@ def _intervals(thresholds: set[int], stat_min: int, stat_max: int, lucky: bool) 
     ]
 
 
-def roll_law(leaves: Sequence[Wanted], mod: Mod, tier: int, crafted: bool = False, lucky: bool = False) -> Cells:
-    """The exact law of what `mod`, rolled at `tier`, gives each of `leaves`; sums to 1.
+def roll_law(leaves: Sequence[Wanted], mod: Mod, crafted: bool = False, lucky: bool = False) -> Cells:
+    """The exact law of what `mod`, rolled, gives each of `leaves`; sums to 1. The tier is the leaves' (`status_of`), not an argument.
 
     The leaves that name the mod and limit a stat give the thresholds; a leaf whose `min_roll` has another
     number of entries than the mod has stats is BELOW at every roll and cuts nothing.
@@ -121,7 +121,7 @@ def roll_law(leaves: Sequence[Wanted], mod: Mod, tier: int, crafted: bool = Fals
         chance = ONE
         for _, each in cell:
             chance *= each
-        ints = tuple(int(status_of(leaf, mod.id, tier, values, crafted)) for leaf in leaves)
+        ints = tuple(int(status_of(leaf, mod.id, values, crafted)) for leaf in leaves)
         law[ints] = law.get(ints, Fraction(0)) + chance
     return tuple(sorted(law.items()))
 

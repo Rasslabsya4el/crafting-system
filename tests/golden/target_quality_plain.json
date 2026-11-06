@@ -16,7 +16,9 @@
       ],
       "min_tier": null,
       "min_roll": null,
-      "not_crafted": false
+      "not_crafted": false,
+      "tier_ok": [],
+      "any_tier": false
     }
   ],
   "start_item": {
@@ -50,6 +52,5 @@
   "allow_corrupted": false,
   "sockets": null,
   "start_sockets_assumed": false,
-  "item_level_floor": null,
-  "tiers_top_at_item_level": false
+  "item_level_floor": null
 }

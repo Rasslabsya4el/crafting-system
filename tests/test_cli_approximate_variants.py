@@ -47,7 +47,9 @@ base: Paua Amulet
 item_level: 84
 requirements:
   - family: LightningResistance
+    min_tier: any
   - family: IncreasedLife
+    min_tier: any
 start_item:
   rarity: {rarity}
   mods:

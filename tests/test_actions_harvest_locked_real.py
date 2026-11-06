@@ -202,6 +202,7 @@ requirements:
   - family: EnergyShieldDelay
     mod: {RECHARGE}
   - stat: "#% increased Fire Damage"
+    min_tier: any
 start_item:
   rarity: rare
   mods:

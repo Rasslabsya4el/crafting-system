@@ -1,9 +1,12 @@
 """The goal as the abstraction sees it: requirement leaves with a status each, and the check over them."""
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import IntEnum
 from functools import cached_property
+
+from crafting_system.data import GameData
+from crafting_system.items import accepted_by_tier
 
 
 class Status(IntEnum):
@@ -18,15 +21,22 @@ class Status(IntEnum):
 class Wanted:
     """One requirement leaf: a mod from `mod_ids` that passes every limit.
 
-    The limits are those of a target requirement: `min_tier` is the worst tier accepted (1 is the
+    The limits are those of a target requirement: `min_tier` is the worst natural tier accepted (1 is the
     best), `min_roll` has one entry per stat (None where any value will do), `not_crafted` refuses a
     crafted mod.
+
+    `tier_ok` is what the tier limit means in the game data (ticket #457): the mods of `mod_ids` whose natural tier on
+    the base the leaf accepts (a mod with no natural tier is never in it), or None when the leaf asks no tier (a `mod:`
+    leaf, a leaf that limits a roll and no tier). A target's leaf arrives with it resolved; a leaf built by hand with a
+    `min_tier` is resolved by the `Abstraction` that gets it (`Goal.resolved`). `status_of` reads `tier_ok` and nothing else
+    of the tier.
     """
 
     mod_ids: frozenset[str]
     min_tier: int | None = None
     min_roll: tuple[int | None, ...] | None = None
     not_crafted: bool = False
+    tier_ok: frozenset[str] | None = None
 
     @property
     def has_roll_limit(self) -> bool:
@@ -171,8 +181,26 @@ class Goal:
         )
 
 
+    def resolved(self, data: GameData, base_id: str, item_level: int) -> "Goal":
+        """This goal with the tier limit of every hand-built leaf read from the game data of `base_id`.
+
+        A leaf from a target already holds its `tier_ok`. A leaf with a `min_tier` and no `tier_ok` gets the mods whose natural
+        tier on the base (`items.accepted_by_tier`, no influences) is that tier or better. A leaf with neither asks no tier.
+        """
+
+        def resolve(node: Node) -> Node:
+            if isinstance(node, AtLeast):
+                return AtLeast(node.k, tuple(resolve(member) for member in node.members))
+            if node.min_tier is None or node.tier_ok is not None:
+                return node
+            return replace(node, tier_ok=accepted_by_tier(data, base_id, item_level, node.mod_ids, node.min_tier))
+
+        return replace(self, requirements=tuple(resolve(node) for node in self.requirements))
+
+
 def _node(node) -> Node:
     if hasattr(node, "at_least") and hasattr(node, "of"):
         return AtLeast(node.at_least, tuple(_node(member) for member in node.of))
     min_roll = None if node.min_roll is None else tuple(node.min_roll)
-    return Wanted(frozenset(node.mod_ids), node.min_tier, min_roll, node.not_crafted)
+    tier_ok = getattr(node, "tier_ok", None)
+    return Wanted(frozenset(node.mod_ids), node.min_tier, min_roll, node.not_crafted, None if tier_ok is None else frozenset(tier_ok))

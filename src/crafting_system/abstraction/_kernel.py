@@ -200,6 +200,7 @@ class Abstraction:
         self.data = data
         self._reading = reading
         self._allow_inputs = allow_inputs
+        goal = goal.resolved(data, base_id, item_level)  # a leaf built by hand with a `min_tier` reads it from the data (#457)
         self.goal = goal
         self.base_id = base_id
         self.item_level = item_level
@@ -807,10 +808,7 @@ class Abstraction:
         return {kind: tuple(sorted(names)) for kind, names in grouped.items()}
 
     def _contribution(self, entry: ExplicitMod) -> tuple[Status, ...]:
-        return tuple(
-            status_of(leaf, entry.mod_id, entry.tier, entry.values, entry.crafted)
-            for leaf in self.goal.leaves
-        )
+        return tuple(status_of(leaf, entry.mod_id, entry.values, entry.crafted) for leaf in self.goal.leaves)
 
     # --- the implicits, the quality and the offer (ADR-0027) ---------------------------------------------
 
@@ -954,23 +952,24 @@ class Abstraction:
     def _drawn_contribution(
         self, mod: Mod, crafted: bool = False, influences: frozenset[Influence] = frozenset()
     ) -> tuple[Status, ...]:
-        """What `mod` gives each leaf when an action draws, forces or crafts it: its table tier (that of the pool of an item with these influences), low rolls."""
-        tier = self._context(influences).tiers.get(mod.id, 1)
-        return tuple(
-            status_of(leaf, mod.id, tier, _low_values(mod), crafted) for leaf in self.goal.leaves
-        )
+        """What `mod` gives each leaf when an action draws, forces or crafts it: the leaf's judgement (`status_of`) at its low rolls.
+
+        The tier is the leaf's (`Wanted.tier_ok`, the natural tier in the game data), so a crafted, forced or veiled mod with no
+        natural tier never meets a tier leaf. `influences` are those of the item the mod lands on; the judgement does not read them.
+        """
+        return tuple(status_of(leaf, mod.id, _low_values(mod), crafted) for leaf in self.goal.leaves)
 
     def passes(self, mod: Mod, leaf: int) -> bool:
-        """Whether `mod`, drawn by an action (its table tier, low rolls), gives leaf number `leaf` the status PASSING."""
+        """Whether `mod`, drawn by an action (low rolls), gives leaf number `leaf` the status PASSING."""
         return self._drawn_contribution(mod)[leaf] is Status.PASSING
 
     def _law(self, mod: Mod, influences: frozenset[Influence], lucky: bool = False, crafted: bool = False) -> Cells:
-        """The roll law of `mod` at its table tier (that of the pool of an item with these influences); see `_rolls.py`."""
+        """The roll law of `mod` against the goal's leaves; see `_rolls.py`."""
         context = self._context(influences)
         key = (mod.id, lucky, crafted)
         law = context.laws.get(key)
         if law is None:
-            law = context.laws[key] = roll_law(self.goal.leaves, mod, context.tiers.get(mod.id, 1), crafted, lucky)
+            law = context.laws[key] = roll_law(self.goal.leaves, mod, crafted, lucky)
         return law
 
     def _rollable_mods(self, influences: frozenset[Influence]):

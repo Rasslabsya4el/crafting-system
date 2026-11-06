@@ -13,9 +13,6 @@ base: Paua Amulet
 
 # The item level of the amulet, a whole number from 1 to 100.
 item_level: 84
-# No tier is written, so each mod is the top tier the item level above allows (the owner's reading of an unstated tier), and the
-# planner must not plan a lower item level (ADR-0061, ticket #352).
-tiers_top_at_item_level: true
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # [] means none.
@@ -25,18 +22,22 @@ influence: []
 requirements:
   # A mod named by its exact English text, as the game shows it.
   # A range such as (10-24) can be written in full or as #: "+# to maximum Life" is the same text.
-  # Every tier of the mod counts, because no minimum tier is given.
+  # The text states its value ("+1"), which is the guide's own wording, so no tier is asked (OR-4).
   - stat: "+1 to Level of all Lightning Skill Gems"
 
   # A mod named by its family id (the game's own name for the group of mods that exclude each
-  # other, here every tier of Lightning Resistance). How the mod got onto the item does not
-  # matter: the fractured one from the start item counts.
+  # other, here the Lightning Resistance ladder). With no minimum tier this would ask the top tier of the
+  # ladder at the item level (OR-1). The guide's step 1 is "Start from an amulet with Lightning Resistance
+  # fractured": it names no tier, and the amulet is bought with whatever tier its fractured resistance has
+  # (here LightningResist2, tier 7 in the game data), so the guide accepts any tier (OR-4) and the line says so:
+  # `min_tier: any` counts every tier of the ladder. A mod with no natural tier (a bench craft) still needs `mod:`.
   # Other things you could add under a requirement:
   #   min_tier: 2        accept this tier or better (tier 1 is the BEST, so 2 accepts T1 and T2)
   #   min_roll: 40       accept only a roll of at least 40 (a list gives one number per stat,
   #                      null for a stat you do not care about)
   #   not_crafted: true  refuse a mod that came from the crafting bench
   - family: LightningResistance
+    min_tier: any
 
 # Where the crafting starts. Leave this block out to start from a fresh white (normal) item.
 # Here the route starts from an amulet that already has Lightning Resistance fractured.

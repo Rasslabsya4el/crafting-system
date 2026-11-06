@@ -21,9 +21,9 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
 One format for every mod line: the game's text with its ranges, then the tier as the note, `+(100-114) to
 maximum Life · T1`. The tier is the mod's place among the mods that can spawn on the base
 (`items.tier_table`, 1 is the best); a crafted or essence-only mod has none and says `crafted` or `essence only` when a leaf can only be met by it. A leaf that several mods can
-meet (the candidates are those that spawn on the base at the item level and pass `min_tier`) writes the texts
+meet (the candidates are those that spawn on the base at the item level and that the leaf's tier judgement accepts, `tier_ok`) writes the texts
 of all of them with `#` for the ranges, joined by ` or `, and the note `T2 or better` (`min_tier`) or
-`any tier`. A fractured mod of a state is stored by a canonical id that stands for every tier of the same
+`any tier`, or the tiers the candidates have (`T1 to T3`) when the leaf asked a tier it did not write. A fractured mod of a state is stored by a canonical id that stands for every tier of the same
 contribution, so it is drawn the same way.
 
 Implicits (ADR-0027) are slots of the tone `implicit` in the same format. The implicits the base has and the
@@ -241,19 +241,34 @@ def _note(*parts: str) -> str:
     return ", ".join(part for part in parts if part)
 
 
-def _tier_note(tiers, mod_ids, min_tier: int | None = None) -> str:
-    """The tier note of a line that stands for `mod_ids`: `T2`, `T2 or better`, `any tier`; "" for a mod with no tier."""
+def _tier_note(tiers, mod_ids, min_tier: int | None = None, asked: bool = False) -> str:
+    """The tier note of a line that stands for `mod_ids`: `T2`, `T2 or better`, `any tier`; "" for a mod with no tier.
+
+    `asked` says the leaf's tier limit (`tier_ok`) left a spawning mod out without a written `min_tier` (OR-1, the top tier): the note then names the tiers
+    its candidates have, `T1 to T3`. A leaf that leaves none out (`min_tier: any`, or no tier asked) is `any tier`.
+    """
     ids = list(mod_ids)
     if len(ids) == 1:
         return f"T{tiers[ids[0]]}" if ids[0] in tiers else ""
-    return f"T{min_tier} or better" if min_tier is not None else "any tier"
+    if min_tier is not None:
+        return f"T{min_tier} or better"
+    found = sorted({tiers[mod_id] for mod_id in ids if mod_id in tiers})
+    if asked and found:
+        return f"T{found[0]}" if len(found) == 1 else f"T{found[0]} to T{found[-1]}"
+    return "any tier"
 
 
 # --- a wanted mod drawn at random -----------------------------------------------------------------------
 
 
 def _leaf_slot(
-    data: GameData, base_id: str, tiers, mod_ids, min_tier: int | None, item_level: int | None = None
+    data: GameData,
+    base_id: str,
+    tiers,
+    mod_ids,
+    min_tier: int | None,
+    item_level: int | None = None,
+    tier_ok: frozenset[str] | None = None,
 ) -> tuple[Side, str, str]:
     """The side, the text and the tier note of a requirement leaf (see the module docstring)."""
     base_domain = data.base_items[base_id].domain
@@ -266,7 +281,7 @@ def _leaf_slot(
         ),
         key=lambda mod_id: (tiers[mod_id], mod_id),
     )
-    candidates = [mod_id for mod_id in spawning if min_tier is None or tiers[mod_id] <= min_tier]
+    candidates = [mod_id for mod_id in spawning if tier_ok is None or mod_id in tier_ok]  # the leaf's own tier judgement (#457)
     at_level = [mod_id for mod_id in candidates if item_level is None or data.mods[mod_id].required_level <= item_level]
     candidates = at_level or candidates
     if not candidates:
@@ -281,7 +296,8 @@ def _leaf_slot(
     if len(candidates) == 1:
         return side, _own_text(data.mods[candidates[0]]), _tier_note(tiers, candidates)
     texts = list(dict.fromkeys(_hashes(_own_text(data.mods[mod_id])) for mod_id in candidates))
-    return side, " or ".join(texts), _tier_note(tiers, candidates, min_tier)
+    limited = tier_ok is not None and any(mod_id not in tier_ok for mod_id in spawning)  # the leaf's tier limit left some spawning mod out
+    return side, " or ".join(texts), _tier_note(tiers, candidates, min_tier, limited)
 
 
 # --- the card of a concrete item ------------------------------------------------------------------------
@@ -355,7 +371,7 @@ def card_of_target(data: GameData, target: Target) -> ItemCard:
             if isinstance(node, KOfN):
                 add(node.of, f"at least {node.at_least} of {len(node.of)}")
                 continue
-            side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level)
+            side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok)
             wanted[side].append(Slot(text, "wanted", (), _note(tier_note, group)))
 
     add(target.requirements, "")
@@ -414,7 +430,7 @@ class _StateReader:
         if index not in self._leaves:
             leaf: Wanted = self.ab.goal.leaves[index]
             self._leaves[index] = _leaf_slot(
-                self.data, self.ab.base_id, self.tiers, leaf.mod_ids, leaf.min_tier, self.ab.item_level
+                self.data, self.ab.base_id, self.tiers, leaf.mod_ids, leaf.min_tier, self.ab.item_level, leaf.tier_ok
             )
         return self._leaves[index]
 

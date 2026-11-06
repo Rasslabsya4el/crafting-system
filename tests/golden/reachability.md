@@ -43,8 +43,8 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | `harvest-quality-enchant` | **no** | only: weapon and body armour | none | `planner=False`: a finish step, priced by the finish cost of ADR-0050, never searched over |  |
 | `essence` | yes |  | r04, r05, r10-fractured-boots, r10-fractured-boots-70-life, r11, r12 |  |  |
 | `corrupted-essence` | yes | opt-in | r04 |  |  |
-| `bench-craft` | yes |  | r04, r05, r08, r09, r10-fractured-boots, r10-fractured-boots-70-life, r12, r13, r14 |  |  |
-| `remove-crafted-mods` | yes |  | r04, r05, r10-fractured-boots, r10-fractured-boots-70-life, r12, r13, r14 |  |  |
+| `bench-craft` | yes |  | r04, r08, r09, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14 |  |  |
+| `remove-crafted-mods` | yes |  | r04, r10-fractured-boots, r10-fractured-boots-70-life, r13, r14 |  |  |
 | `fossil-set` | yes | opt-in | r08, r09 |  |  |
 | `alchemy-orb` | **no** |  | none | `planner=False`: not in the B1 offer set; which actions a target needs is pruning (#118) | ACT1-4, PLANNING-2 |
 | `transmutation-orb` | yes |  | r13, r14, v01 |  |  |
@@ -100,15 +100,15 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | j01 | plans | 1 names | 1 | 0 | 0 | 1 | chaos-orb |
 | r03 | refused: the target asks for implicits or quality, which the planner cannot plan yet (batch B2, tickets #142 onward) |  |  |  |  |  |  |
 | r04 | plans | 8 names | 7 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
-| r05 | plans | no key | 71 | 19 | 0 | 5 | bench-craft, chaos-orb, essence, harvest-reforge, remove-crafted-mods |
+| r05 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
 | r06 | refused: the target asks for implicits or quality, which the planner cannot plan yet (batch B2, tickets #142 onward) |  |  |  |  |  |  |
 | r08 | plans | 2 names | 10674 | 2026 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 10674 | 2026 | 0 | 2 | bench-craft, fossil-set |
 | r10-fractured-boots | plans | no key | 60 | 19 | 0 | 5 | bench-craft, chaos-orb, essence, harvest-reforge, remove-crafted-mods |
 | r10-fractured-boots-70-life | plans | no key | 61 | 19 | 0 | 6 | bench-craft, chaos-orb, divine-orb, essence, harvest-reforge, remove-crafted-mods |
 | r11 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
-| r12 | plans | no key | 61 | 19 | 0 | 5 | bench-craft, chaos-orb, essence, harvest-reforge, remove-crafted-mods |
-| r13 | plans | 6 names | 9 | 0 | 0 | 6 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods, transmutation-orb |
+| r12 | plans | no key | 58 | 19 | 0 | 3 | chaos-orb, essence, harvest-reforge |
+| r13 | plans | 6 names | 6 | 0 | 0 | 6 | alteration-orb, augmentation-orb, bench-craft, regal-orb, remove-crafted-mods, transmutation-orb |
 | r14 | plans | 10 names | 11 | 0 | 0 | 8 | alteration-orb, annulment-orb, augmentation-orb, bench-craft, exalted-orb, regal-orb, remove-crafted-mods, transmutation-orb |
 | v01 | plans | 4 names | 4 | 0 | 0 | 4 | alteration-orb, augmentation-orb, regal-orb, transmutation-orb |
 | v01 (recipe start) | plans | 4 names | 3 | 0 | 0 | 3 | alteration-orb, augmentation-orb, regal-orb |
@@ -226,5 +226,4 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `sockets` | cli/_plan.py |  |
 | `start_sockets_assumed` | **nothing** |  |
 | `item_level_floor` | **nothing** | TARGETS-3, PLANNING-8 |
-| `tiers_top_at_item_level` | **nothing** | TARGETS-3, PLANNING-8 |
 

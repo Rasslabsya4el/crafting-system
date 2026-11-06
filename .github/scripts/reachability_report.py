@@ -69,7 +69,7 @@ KIND_FINDINGS = {
 }
 
 STRANDS_KEYS = ("memory_strands", "--strands")  # the setting and the flag that turn Memory Strands on, which `make_plan` refuses
-TARGET_FIELD_NOTES = {"item_level_floor": "TARGETS-3, PLANNING-8", "tiers_top_at_item_level": "TARGETS-3, PLANNING-8"}
+TARGET_FIELD_NOTES = {"item_level_floor": "TARGETS-3, PLANNING-8"}
 
 
 # ---------------------------------------------------------------------------------------------------------------------

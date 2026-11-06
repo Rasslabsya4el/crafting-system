@@ -23,6 +23,10 @@ _Avoid_: group (Path of Building's `group` is a mod type)
 **Tier**:
 One level-gated version of a mod within its family on a given item class; tier 1 is the best.
 
+**Natural tier**:
+The tier a mod has on the ladder of a draw: it is a prefix or a suffix of the base's own domain, not essence-only, and it can spawn on the base, and its number is `tier_table` (with the influence tags for an influenced item). A bench craft, an essence-only mod, a veiled mod, an Elevated mod and an aspect have none. A requirement with a tier (`min_tier`, or the unstated tier) judges a mod by its natural tier and never by the number stored on the item; a mod with none meets it only when `mod:` names it (`docs/owner-rules.md`, OR-1, OR-2; ticket #457). The one judgement is `status_of` (`abstraction/_state.py`), used by `Requirement` and by the planner's states.
+_Avoid_: default tier, stored tier
+
 **Roll**:
 The value a mod's stat takes within its tier's range.
 
@@ -108,7 +112,7 @@ A requirement met when at least k of its n listed requirements are met.
 _Avoid_: group, choice group
 
 **Unstated tier**:
-A requirement that names a mod and no tier because the guide states none. It means the top tier of the mod's ladder that the target's item level allows, rolled on the item, not made at the bench (`docs/owner-rules.md`, OR-1; ADR-0008, amendment). A tier the guide does state is that tier; a number in the guide is a minimum roll, not a tier, and a soft wish is taken in the guide's words (guide wording, below).
+A requirement that names a mod and no tier because the guide states none. It means the top tier of the mod's ladder that the target's item level allows, rolled on the item, not made at the bench (`docs/owner-rules.md`, OR-1; ADR-0008, amendment). A tier the guide does state is that tier (`min_tier: 2` is natural tier 2 or better; `min_tier: any`, written only where the guide accepts any tier, counts every natural tier); a number in the guide is a minimum roll, not a tier, and a soft wish is taken in the guide's words (guide wording, below).
 _Avoid_: default tier, any tier
 
 **Guide wording**:
@@ -135,7 +139,7 @@ What the owner does before the first state of the policy when the start item is 
 _Avoid_: buy step (nothing is bought from another player), recipe action
 
 **Item level floor**:
-The lowest item level the planner may plan a target at (ADR-0061). The target's `item_level` is where the guide put the level; the floor is the lowest level at which every requirement can still be met, derived from the tiers it asks for (a tier is absolute on a base), or stated by `item_level_floor`. A target whose tiers are "the top tier at that level" (`tiers_top_at_item_level`) and one that asks for a corrupted implicit are not lowered. In the code it is an `ItemLevelFloor` (`targets/floor.py`).
+The lowest item level the planner may plan a target at (ADR-0061). The target's `item_level` is where the guide put the level; the floor is the lowest level at which every requirement can still be met, derived from the tiers it asks for (a tier is absolute on a base), or stated by `item_level_floor`. A target that asks for a corrupted implicit is not lowered (the key `tiers_top_at_item_level` is gone: a leaf with no `min_tier` asks the top tier, OR-1). In the code it is an `ItemLevelFloor` (`targets/floor.py`).
 _Avoid_: minimum item level (the file's number is not a minimum)
 
 **Level group**:

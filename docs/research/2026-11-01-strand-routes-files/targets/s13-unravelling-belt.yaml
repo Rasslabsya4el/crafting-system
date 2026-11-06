@@ -34,20 +34,14 @@ requirements:
         min_tier: 1
         not_crafted: true
 
-  # "A crafted damage modifier". The route does not say which one, so this is an interpretation:
-  # either of the damage prefixes the crafting bench offers on a belt counts. Source: the
-  # crafting_bench_options.json of the pinned repoe-fork dump 3.29.3.3, the options whose item
-  # classes include Belt and whose mod is a damage prefix (the dump lists them under the master
-  # Niko). They are exactly these two families, two tiers each, and no other damage prefix:
-  #   AllDamage: (12-14)% increased Damage, needs item level 72; (15-17)%, needs item level 81
-  #   IncreasedWeaponElementalDamagePercent: (15-23)% increased Elemental Damage with Attack
-  #     Skills, needs item level 30; (24-32)%, needs item level 50
-  # The game data gives AllDamage a spawn weight of 0 on belts, so only the bench can add it;
-  # the bench copy is crafted by nature, so these two carry no not_crafted mark.
-  - at_least: 1
-    of:
-      - family: AllDamage                                  # "(12-14)% increased Damage" and its tiers
-      - family: IncreasedWeaponElementalDamagePercent      # "(15-23)% increased Elemental Damage with Attack Skills"
+  # The guide's prefix is "crafted damage modifier" (docs/research/2026-10-30-5-reference-routes.md, R13,
+  # step 3 "Multi-mod damage."). It is made at the bench, so it has no natural tier, and OR-2 asks the exact
+  # mod, not "any of N crafts": the craft the given route buys (examples/routes/r13-life-resist-belt.yaml,
+  # "the highest one the belt's item level allows") is "(15-17)% increased Damage", mod JunMaster2AllDamage3
+  # (needs item level 81; the belt is 86). The game data gives AllDamage a spawn weight of 0 on belts, so only the
+  # bench can add it, and the bench copy is crafted by nature, so the line carries no not_crafted mark.
+  - family: AllDamage
+    mod: JunMaster2AllDamage3
 
 # Where the crafting starts: a normal Leather Belt with 82 Memory Strands and no mod.
 start_item:

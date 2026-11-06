@@ -140,6 +140,11 @@ def test_the_states_of_a_policy_with_crafts_show_the_crafted_and_the_other_mods(
 
     text = " | ".join(state.description for state in build_report(plan, data).states)
 
+    if route_id == "R05":
+        # since ticket #457 a bench Life or resistance has no natural tier and counts toward no line of R05: no craft is offered,
+        # so no state holds a crafted mod or "other mods" (before it, the cheap answer was a bench craft that met "Life T1")
+        assert "other mods:" not in text and "crafted" not in text.replace("not crafted", "")
+        return
     assert "other mods:" in text
 
 
@@ -202,7 +207,7 @@ def test_a_fractured_mod_reads_as_the_mod_of_the_item_not_as_a_mod_only_an_essen
         assert all("for each nearby Enemy" not in slot.text for slot in fractured)
 
 
-NOTE_PARTS = re.compile(r"T\d+( or better)?|any tier|crafted|essence only|tier too low|in some|at least \d+ of \d+")
+NOTE_PARTS = re.compile(r"T\d+( or better| to T\d+)?|any tier|crafted|essence only|tier too low|in some|at least \d+ of \d+")
 
 
 def test_every_mod_line_of_the_pages_has_the_one_format_and_the_bought_item_has_no_empty_slot(solved, data):
@@ -222,11 +227,12 @@ def test_every_mod_line_of_the_pages_has_the_one_format_and_the_bought_item_has_
 
 
 def test_the_tiers_the_target_asks_for_can_appear_at_its_item_level(solved, data):
-    """The owner's rule is the top tier the item level allows: some mod of every leaf spawns at the item level."""
-    from crafting_system.items import tier_table
+    """The owner's rule is the top tier the item level allows: some mod the leaf accepts spawns at the item level.
 
+    The leaf's own tier judgement picks the mods (`tier_ok`, the natural tier in the game data, no default); a leaf that asks no tier
+    (`mod:`, a roll, a stated value) takes all of its mods.
+    """
     _, _, target, _ = solved
-    tiers = tier_table(data, target.base_id)
 
     def leaves(node):
         if isinstance(node, KOfN):
@@ -236,7 +242,7 @@ def test_the_tiers_the_target_asks_for_can_appear_at_its_item_level(solved, data
             yield node
 
     for leaf in (found for node in target.requirements for found in leaves(node)):
-        mods = [data.mods[m] for m in leaf.mod_ids if leaf.min_tier is None or tiers.get(m, 1) <= leaf.min_tier]
+        mods = [data.mods[m] for m in (leaf.mod_ids if leaf.tier_ok is None else leaf.tier_ok)]
         if all(mod.is_essence_only for mod in mods):
             continue  # an essence forces its mod whatever the item level
         assert any(mod.required_level <= target.item_level for mod in mods), (leaf.family, leaf.min_tier)

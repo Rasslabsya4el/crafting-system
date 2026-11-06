@@ -69,11 +69,12 @@ from .sockets import (
 )
 from .spawn import effective_weight, generation_factor, is_battle_royale, spawn_weight
 from .strands import MAX_MEMORY_STRANDS, has_memory_strands_line, memory_strands_line, read_memory_strands
-from .tiers import mod_tier, tier_table
+from .tiers import ANY_TIER, accepted_by_tier, mod_tier, natural_tiers, tier_table, top_tiers
 from .veiled import GENERIC_PLACEHOLDERS, is_craftable_version, is_veiled_mod, placeholder_families, veiled_families
 
 __all__ = [
     "ABYSSAL_SOCKET_STAT",
+    "ANY_TIER",
     "CATALYST_ITEM_CLASSES",
     "EXTRA_CRAFTED_SLOT_STAT",
     "GENERIC_PLACEHOLDERS",
@@ -137,10 +138,13 @@ __all__ = [
     "is_veiled_mod",
     "memory_strands_line",
     "placeholder_families",
+    "accepted_by_tier",
     "mod_tier",
+    "natural_tiers",
     "read_memory_strands",
     "spawn_weight",
     "tier_table",
+    "top_tiers",
     "veiled_families",
     "veiled_placeholder",
 ]
