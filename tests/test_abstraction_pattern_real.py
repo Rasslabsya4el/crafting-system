@@ -10,7 +10,6 @@ Needs the cached dump; skips without it (CI fetches it, ticket #165). Nothing he
 """
 
 import sys
-import time
 from pathlib import Path
 
 import numpy as np
@@ -41,7 +40,7 @@ def test_the_bound_is_never_above_the_exact_cost_on_the_walked_graph(route, tags
     real_game_data()  # skips without the dump
     data, target, goal, abstraction, start, priced, info = E.build_model(ROOT / "examples" / "targets" / route, "twins", True, False)
     bound = pattern_lower_bound(abstraction, start, priced, tags=tags)
-    g, reason, _ = E.walk(abstraction, start, priced, time.perf_counter(), 3000, 1e9, 1_000_000, 0)
+    g, reason, _ = E.walk(abstraction, start, priced, 0.0, float("inf"), 1e9, 1_000_000, 0)  # no clock: the walk of these routes is short
     assert reason == "finished"
     n = g.expanded
     flat = P.flatten(
