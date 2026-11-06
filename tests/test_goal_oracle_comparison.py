@@ -63,26 +63,12 @@ class Known:
 BENCH = "bench craft"
 BELOW_TOP = "natural tier below the top"
 START = "start item"
-BENCH_AS_TIER_1 = "a bench craft is stored as tier 1 (actions/bench.py:57) and a crafted mod meets a requirement with no `not_crafted`"
 
-KNOWN: dict[tuple[str, str, str], Known] = {
-    # R05: the file's own header says a bench craft "counts as tier 1 ... whatever its range" (r05-strength-ring.yaml:26, :61-72).
-    ("r05-strength-ring", "requirements[2].of[0]", BENCH): Known("#403", "OR-1, OR-2", TIER_COMPARISON, "R05's bench Life, +(15-25) to +(41-55) or with Mana regeneration, meets Life T1, +(100-114): " + BENCH_AS_TIER_1),
-    ("r05-strength-ring", "requirements[2].of[1]", BENCH): Known("#403", "OR-1, OR-2", TIER_COMPARISON, "a bench Fire Resistance meets Fire Resistance T2, +(42-45)%: " + BENCH_AS_TIER_1),
-    ("r05-strength-ring", "requirements[2].of[2]", BENCH): Known("#403", "OR-1, OR-2", TIER_COMPARISON, "a bench Cold Resistance meets Cold Resistance T2: " + BENCH_AS_TIER_1),
-    ("r05-strength-ring", "requirements[2].of[3]", BENCH): Known("#403", "OR-1, OR-2", TIER_COMPARISON, "a bench Lightning Resistance meets Lightning Resistance T2: " + BENCH_AS_TIER_1),
-    # R06: the same root; the target file is not in the list of #403, hence #415.
-    ("r06-strength-heavy-belt", "requirements[0].of[0]", BENCH): Known("#415", "OR-1", TIER_COMPARISON, "a bench Life craft meets Life T1 on R06's belt: " + BENCH_AS_TIER_1),
-    ("r06-strength-heavy-belt", "requirements[0].of[1]", BENCH): Known("#415", "OR-1", TIER_COMPARISON, "a bench Armour craft meets Armour T3 on R06's belt: " + BENCH_AS_TIER_1),
-    # R12: "every tier of the mod counts, because no minimum tier is given" (r12-lightning-amulet.yaml:28); the start mod is written as tier 3 (:48-49).
-    ("r12-lightning-amulet", "requirements[1]", BELOW_TOP): Known("#403", "OR-1", TIER_COMPARISON, "a Lightning Resistance below the top tier meets a requirement with no tier (the model reads no tier as any tier, targets/model.py:57)"),
-    ("r12-lightning-amulet", "requirements[1]", BENCH): Known("#403", "OR-1", TIER_COMPARISON, "a bench Lightning Resistance meets a requirement with no tier: " + BENCH_AS_TIER_1),
-    ("r12-lightning-amulet", "requirements[1]", START): Known("#403", "OR-1, OR-3", TIER_COMPARISON, "the start amulet's fractured LightningResist2, written as tier 3 while the data has tier 7, meets the requirement with no tier"),
-    # R13: "a crafted damage modifier" read as any tier of two families (r13-life-resist-belt.yaml:53-65), the cheapest craft against the given route's dearer one.
-    ("r13-life-resist-belt", "requirements[2].of[0]", BENCH): Known("#403", "OR-2, OR-1", EMPTY_LADDER, "All Damage has no natural mod on a belt, so by OR-2 the target should name the craft with `mod:`; a bench All Damage craft meets 'any tier of All Damage': " + BENCH_AS_TIER_1),
-    ("r13-life-resist-belt", "requirements[2].of[1]", BELOW_TOP): Known("#403", "OR-1", TIER_COMPARISON, "an Elemental Damage with Attacks tier below the top meets a requirement with no tier"),
-    ("r13-life-resist-belt", "requirements[2].of[1]", BENCH): Known("#403", "OR-2, OR-1", TIER_COMPARISON, "a bench Elemental Damage with Attacks craft meets the requirement with no tier: " + BENCH_AS_TIER_1),
-}  # fmt: skip
+# Empty since ticket #457 (one judgement, the tier from the game data): every class that stood here, the 85 probes of R05, R06, R12 and R13
+# (a bench craft stored as tier 1, a tier-less requirement read as "any tier", the start mod's written tier), is gone, and the planner and the
+# oracle agree on every probe of all 14 targets. A new disagreement is a new entry here with its issue, rule and cause, and its lines in
+# `tests/fixtures/goal_oracle_known.txt`.
+KNOWN: dict[tuple[str, str, str], Known] = {}
 
 
 def classify(found: Disagreement) -> tuple[str, str, str]:
@@ -145,13 +131,8 @@ def unmeetable_leaves(export: g.Export, stem: str) -> set[str]:
 
 
 # A leaf the oracle cannot meet with any probe is itself a fault of the target (a requirement that nothing satisfies) or of the oracle.
-UNMEETABLE: dict[tuple[str, str], Known] = {
-    ("r13-life-resist-belt", "requirements[2].of[0]"): Known(
-        "#403", "OR-2", EMPTY_LADDER,
-        "`family: AllDamage` has no natural mod on a belt, so under the oracle no mod meets it; a crafted damage modifier is a craft, "
-        "and by OR-2 the target should name it with `mod:` (r13-life-resist-belt.yaml:53-65)",
-    ),
-}  # fmt: skip
+# None today: R13's damage line used to be one (`family: AllDamage` has no natural mod on a belt) until ticket #457 named the craft with `mod:`.
+UNMEETABLE: dict[tuple[str, str], Known] = {}
 
 
 def test_all_14_benchmark_targets_are_compared(results):
@@ -188,23 +169,6 @@ def test_every_committed_disagreement_belongs_to_a_known_class(results):
     assert classes_found == set(KNOWN)
 
 
-@pytest.mark.parametrize(
-    "key",
-    [
-        pytest.param(
-            key,
-            id=":".join(key),
-            marks=pytest.mark.xfail(strict=True, raises=AssertionError, reason=f"{entry.issue} {entry.rules} ({entry.cause}): {entry.why}"),
-        )
-        for key, entry in KNOWN.items()
-    ],
-)
-def test_known_disagreement(results, key):
-    """The planner and the oracle agree on this class of probes. They do not today; when they do, this test passes and the strict xfail fails."""
-    stuck = [d for d in results[key[0]].disagreements if classify(d) == key]
-    assert not stuck, f"{len(stuck)} probes split, e.g. {stuck[0].probe}: planner {stuck[0].planner}, oracle {stuck[0].oracle}"
-
-
 def test_the_cause_of_each_class_is_what_the_registry_says(export):
     for (stem, leaf_path, _), entry in KNOWN.items():
         node_leaf = leaf_path  # a start-item class is keyed by its top-level requirement, which is a leaf in every target that has one
@@ -215,22 +179,6 @@ def test_the_cause_of_each_class_is_what_the_registry_says(export):
 def test_the_leaves_nothing_can_meet_are_exactly_the_registered_ones(export, stem):
     registered = {leaf for (target, leaf) in UNMEETABLE if target == stem}
     assert unmeetable_leaves(export, stem) == registered
-
-
-@pytest.mark.parametrize(
-    "key",
-    [
-        pytest.param(
-            key,
-            id=":".join(key),
-            marks=pytest.mark.xfail(strict=True, raises=AssertionError, reason=f"{entry.issue} {entry.rules} ({entry.cause}): {entry.why}"),
-        )
-        for key, entry in UNMEETABLE.items()
-    ],
-)
-def test_every_requirement_can_be_met_by_some_probe(export, key):
-    """A requirement that no probe meets under the oracle cannot be met by any item the oracle knows; it is a strict xfail with its reason."""
-    assert key[1] not in unmeetable_leaves(export, key[0])
 
 
 def test_the_oracle_alone_reads_r05_as_the_rules_do(export):
@@ -255,14 +203,10 @@ def test_the_oracle_alone_reads_r05_as_the_rules_do(export):
     assert not oracle.counts(life_leaf, g.OMod("IncreasedLife6", (99,)))
 
 
-def test_r05_bench_life_is_one_of_the_known_disagreements(results):
-    """The R05 fault of the audit: the planner says a bench Life craft meets 'Life T1'; the oracle says it does not."""
-    bench_life = [
-        d for d in results["r05-strength-ring"].disagreements if d.probe.startswith("requirements[2].of[0] | bench EinharMasterIncreasedLife")
-    ]
-    assert bench_life, "R05's bench Life no longer splits the planner and the oracle: remove its strict xfail entries"
-    assert all(d.planner and not d.oracle for d in bench_life)
-    assert KNOWN[("r05-strength-ring", "requirements[2].of[0]", BENCH)].issue == "#403"
+@pytest.mark.parametrize("stem", ["r05-strength-ring", "r06-strength-heavy-belt", "r12-lightning-amulet", "r13-life-resist-belt"])
+def test_the_four_targets_that_stood_in_issues_403_and_415_no_longer_split_the_planner_and_the_oracle(results, stem):
+    """R05's bench Life craft met 'Life T1' (12.2 c against the guide route's 135 c); R06, R12 and R13 had the same root. All agree now."""
+    assert results[stem].probes > 0 and results[stem].disagreements == []
 
 
 # --- implicits and quality (#416) --------------------------------------------------------------------------------------

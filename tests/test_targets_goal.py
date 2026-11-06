@@ -26,8 +26,8 @@ def test_a_target_is_met_only_when_every_requirement_is():
           - family: LightningResistance
         """
     )
-    both = item(roll("IncreasedLife1"), roll("LightningResist1"))
-    only_life = item(roll("IncreasedLife1"))
+    both = item(roll("IncreasedLife3"), roll("LightningResist8"))  # the top tiers of the amulet ladder (OR-1)
+    only_life = item(roll("IncreasedLife3"))
 
     assert target.is_met_by(both) and target.unmet(both) == ()
     assert not target.is_met_by(only_life)
@@ -36,8 +36,8 @@ def test_a_target_is_met_only_when_every_requirement_is():
 
 
 def test_a_family_id_and_the_stat_text_select_the_same_mods():
-    by_family = parse("requirements:\n  - family: LightningResistance\n").requirements[0]
-    by_stat = parse('requirements:\n  - stat: "+(6-11)% to Lightning Resistance"\n').requirements[0]
+    by_family = parse("requirements:\n  - family: LightningResistance\n    min_tier: any\n").requirements[0]
+    by_stat = parse('requirements:\n  - stat: "+(6-11)% to Lightning Resistance"\n    min_tier: any\n').requirements[0]
 
     assert by_family.mod_ids == by_stat.mod_ids
     assert {"LightningResist1", "LightningResist2", "LightningResist3"} <= by_family.mod_ids
@@ -76,19 +76,20 @@ def test_a_family_also_counts_mods_that_are_not_prefixes_or_suffixes():
     assert {"IncreasedLife1", "IncreasedLife2", "IncreasedLife3"} <= requirement.mod_ids
 
 
-@pytest.mark.parametrize(("tier", "expected"), [(1, True), (2, True), (3, False)])
-def test_minimum_tier_two_accepts_tiers_one_and_two(tier, expected):
-    mod = life(tier, 30 if tier == 2 else 10 if tier == 1 else 40)
+@pytest.mark.parametrize(("mod_id", "expected"), [("IncreasedLife3", True), ("IncreasedLife2", True), ("IncreasedLife1", False)])
+def test_minimum_tier_two_accepts_natural_tiers_one_and_two(mod_id, expected):
+    # in the fixture data IncreasedLife3, 2 and 1 are tiers 1, 2 and 3 of the Life ladder
+    mod = roll(mod_id)
 
     assert met("  - family: IncreasedLife\n    min_tier: 2\n", mod) is expected
 
 
-def test_the_stored_tier_is_read_and_never_derived():
-    cheap_mod_marked_tier_one = ExplicitMod("IncreasedLife3", 1, (40,))
-    best_mod_marked_tier_three = ExplicitMod("IncreasedLife1", 3, (10,))
+def test_the_tier_stored_on_the_item_is_never_read():
+    marked_tier_one = ExplicitMod("IncreasedLife1", 1, (10,))  # the data has it as tier 3
+    marked_tier_three = ExplicitMod("IncreasedLife3", 3, (40,))  # the data has it as tier 1
 
-    assert met("  - family: IncreasedLife\n    min_tier: 1\n", cheap_mod_marked_tier_one)
-    assert not met("  - family: IncreasedLife\n    min_tier: 2\n", best_mod_marked_tier_three)
+    assert not met("  - family: IncreasedLife\n    min_tier: 2\n", marked_tier_one)
+    assert met("  - family: IncreasedLife\n    min_tier: 1\n", marked_tier_three)
 
 
 def test_minimum_roll_with_one_stat_passes_exactly_at_the_minimum_and_fails_one_below():
@@ -122,17 +123,16 @@ def test_the_two_stat_mod_of_another_tier_is_also_counted_by_its_text():
 
 
 def test_tier_and_roll_must_hold_on_the_same_mod():
-    requirement = Requirement(
-        None, "+# to maximum Life", frozenset({"IncreasedLife1", "IncreasedLife2"}), min_tier=1, min_roll=(25,)
-    )
-    tier_fails = item(life(2, 30))
-    roll_fails = item(life(1, 24))
-    both_on_one_mod = item(ExplicitMod("IncreasedLife2", 1, (30,)))
+    text = '  - stat: "+# to maximum Life"\n    min_tier: 1\n    min_roll: 45\n'
+    tier_fails = item(ExplicitMod("IncreasedLife2", 1, (30,)))  # tier 2, whatever it is marked
+    roll_fails = item(ExplicitMod("IncreasedLife3", 1, (44,)))
+    both_on_one_mod = item(ExplicitMod("IncreasedLife3", 1, (45,)))
+    target = parse("requirements:\n" + text)
 
-    assert not requirement.is_met_by(tier_fails)
-    assert not requirement.is_met_by(roll_fails)
-    assert requirement.is_met_by(both_on_one_mod)
-    assert not requirement.is_met_by(item())
+    assert not target.is_met_by(tier_fails)
+    assert not target.is_met_by(roll_fails)
+    assert target.is_met_by(both_on_one_mod)
+    assert not target.is_met_by(item())
 
 
 def test_not_crafted_rejects_a_crafted_mod_of_the_same_family_and_accepts_a_natural_one():
@@ -142,15 +142,18 @@ def test_not_crafted_rejects_a_crafted_mod_of_the_same_family_and_accepts_a_natu
 
     assert not met(text, crafted)
     assert met(text, natural)
-    assert met("  - family: IncreasedEnergyShield\n", crafted)
-    assert met("  - family: IncreasedEnergyShield\n    not_crafted: false\n", crafted)
+    # a bench craft has no natural tier: it meets a tier leaf only through `mod:` (OR-1, OR-2)
+    assert not met("  - family: IncreasedEnergyShield\n", crafted)
+    assert not met("  - family: IncreasedEnergyShield\n    not_crafted: false\n", crafted)
+    assert met("  - family: IncreasedEnergyShield\n    mod: JunMaster2ArmourAndEnergyShield1\n    min_roll: [null, 11]\n", crafted)
 
 
 def test_a_fractured_mod_satisfies_a_requirement_even_when_it_is_marked_not_crafted():
     fractured = roll("LightningResist2", fractured=True)
 
-    assert met("  - family: LightningResistance\n", fractured)
-    assert met("  - family: LightningResistance\n    not_crafted: true\n    min_tier: 3\n", ExplicitMod("LightningResist2", 3, (14,), fractured=True))
+    assert met("  - family: LightningResistance\n    min_tier: any\n", fractured)
+    assert not met("  - family: LightningResistance\n", fractured)  # tier 7 of 8 is not the top tier
+    assert met("  - family: LightningResistance\n    not_crafted: true\n    min_tier: 7\n", ExplicitMod("LightningResist2", 3, (14,), fractured=True))
 
 
 def test_a_mod_of_another_family_never_counts():
@@ -168,7 +171,7 @@ def test_k_of_n_is_met_at_k_and_not_below():
               - family: LightningResistance
         """
     )
-    fire, cold, lightning = roll("FireResist1"), roll("ColdResist1"), roll("LightningResist1")
+    fire, cold, lightning = roll("FireResist1"), roll("ColdResist1"), roll("LightningResist8")
 
     assert not target.is_met_by(belt())
     assert not target.is_met_by(belt(fire))
@@ -183,18 +186,19 @@ def test_k_of_n_members_keep_their_own_limits():
         requirements:
           - at_least: 2
             of:
-              - family: FireResistance
-                min_tier: 1
+              - family: LightningResistance
+                min_tier: 2
               - family: ColdResistance
                 min_roll: 10
-              - family: LightningResistance
+              - family: FireResistance
         """
     )
+    lightning_t1, lightning_t6 = roll("LightningResist8"), roll("LightningResist3")  # tiers 1 and 6
 
-    assert not target.is_met_by(belt(roll("FireResist1"), ExplicitMod("ColdResist1", 1, (9,))))
-    assert target.is_met_by(belt(roll("FireResist1"), ExplicitMod("ColdResist1", 1, (10,))))
-    assert target.is_met_by(belt(ExplicitMod("ColdResist1", 1, (10,)), roll("LightningResist1")))
-    assert not target.is_met_by(belt(ExplicitMod("FireResist1", 2, (6,)), roll("ColdResist1")))
+    assert not target.is_met_by(belt(lightning_t1, ExplicitMod("ColdResist1", 1, (9,))))
+    assert target.is_met_by(belt(lightning_t1, ExplicitMod("ColdResist1", 1, (10,))))
+    assert target.is_met_by(belt(ExplicitMod("ColdResist1", 1, (10,)), roll("FireResist1")))
+    assert not target.is_met_by(belt(lightning_t6, roll("ColdResist1")))
 
 
 def test_nested_k_of_n_counts_a_met_inner_entry_as_one_member():
@@ -210,9 +214,10 @@ def test_nested_k_of_n_counts_a_met_inner_entry_as_one_member():
                   - family: ColdResistance
                   - family: LightningResistance
               - family: AllDamage
+                mod: JunMaster2AllDamage2_
         """
     )
-    life_mod = roll("IncreasedLife1")
+    life_mod = roll("IncreasedLife3")
     fire, cold = roll("FireResist1"), roll("ColdResist1")
     damage = roll("JunMaster2AllDamage2_", crafted=True)
 
@@ -230,11 +235,13 @@ def test_group_members_are_checked_independently_so_one_mod_can_satisfy_two_of_t
           - at_least: 2
             of:
               - family: LightningResistance
+                min_tier: any
               - stat: "+(6-11)% to Lightning Resistance"
+                min_tier: any
         """
     )
 
-    assert target.is_met_by(belt(roll("LightningResist1")))
+    assert target.is_met_by(belt(roll("LightningResist8")))
     assert not target.is_met_by(belt(roll("ColdResist1")))
 
 
@@ -270,4 +277,4 @@ def test_a_k_of_n_entry_needs_k_between_one_and_its_size(count):
 def test_the_goal_check_never_needs_the_game_data():
     target = parse("requirements:\n  - family: IncreasedLife\n")
 
-    assert target.is_met_by(item(roll("IncreasedLife1"), base_id=BODY))
+    assert target.is_met_by(item(roll("IncreasedLife3"), base_id=BODY))

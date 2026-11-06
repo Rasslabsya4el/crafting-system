@@ -31,9 +31,9 @@ def data():
     return real_game_data()
 
 
-def law_of(data, mod_id: str, min_roll: tuple, *, lucky: bool = False, tier: int = 1):
+def law_of(data, mod_id: str, min_roll: tuple, *, lucky: bool = False):
     leaf = Wanted(frozenset(LIFE_TIERS) | {HYBRID}, min_roll=min_roll)
-    return dict(roll_law((leaf,), data.mods[mod_id], tier, False, lucky))
+    return dict(roll_law((leaf,), data.mods[mod_id], False, lucky))
 
 
 def test_at_least_70_life_is_the_border_between_two_tiers_so_no_tier_rolls_across_it(data):
@@ -45,7 +45,7 @@ def test_at_least_70_life_is_the_border_between_two_tiers_so_no_tier_rolls_acros
     assert law_of(data, LIFE_4, (70,)) == {(int(BELOW),): 1}  # 55..69: no roll reaches 70
     assert law_of(data, LIFE_5, (70,)) == {(int(PASSING),): 1}  # 70..84: every roll does
     assert law_of(data, LIFE_6, (70,)) == {(int(PASSING),): 1}
-    assert not any(is_rollable(roll_law((Wanted(frozenset(LIFE_TIERS), min_roll=(70,)),), data.mods[mod_id], 1)) for mod_id in LIFE_TIERS)
+    assert not any(is_rollable(roll_law((Wanted(frozenset(LIFE_TIERS), min_roll=(70,)),), data.mods[mod_id])) for mod_id in LIFE_TIERS)
 
 
 def test_at_least_75_life_cuts_tier_5_in_ten_values_of_fifteen(data):
@@ -63,8 +63,8 @@ def test_a_lucky_roll_of_tier_5_misses_75_only_when_both_rolls_do(data):
 
 def test_a_hybrid_mod_needs_both_stats(data):
     leaf = Wanted(frozenset({HYBRID}), min_roll=(75, 4))  # Life 70..79 (5 of 10 reach 75) and Life % 3..5 (2 of 3 reach 4)
-    assert dict(roll_law((leaf,), data.mods[HYBRID], 1)) == {(int(BELOW),): 1 - Fraction(1, 2) * Fraction(2, 3), (int(PASSING),): Fraction(1, 3)}
-    assert dict(roll_law((leaf,), data.mods[HYBRID], 1, False, True)) == {
+    assert dict(roll_law((leaf,), data.mods[HYBRID])) == {(int(BELOW),): 1 - Fraction(1, 2) * Fraction(2, 3), (int(PASSING),): Fraction(1, 3)}
+    assert dict(roll_law((leaf,), data.mods[HYBRID], False, True)) == {
         (int(PASSING),): (1 - Fraction(1, 4)) * (1 - Fraction(1, 9)),  # each stat: not both rolls under the wanted value
         (int(BELOW),): 1 - Fraction(3, 4) * Fraction(8, 9),
     }

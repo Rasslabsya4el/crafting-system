@@ -92,7 +92,7 @@ def test_every_known_disagreement_names_a_slot_an_issue_and_a_rule():
 def test_the_r12_start_mod_tier_is_a_known_strict_xfail():
     known = KNOWN[("r12-lightning-amulet", "start_mod.LightningResist2.tier")]
 
-    assert known.issue == "#403"
+    assert known.issue == "#484"
     assert known.rule == "OR-3"
     assert known.values == ("3", "7")
 

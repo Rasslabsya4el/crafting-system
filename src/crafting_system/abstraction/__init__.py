@@ -8,7 +8,9 @@ from the action's own declaration `reads(data)`. `actions` are the enabled actio
 besides the fractured ones (none by default): they decide what a state keeps. No concrete action class
 is imported or tested for here.
 
-* `Goal`: the requirements as `Wanted` leaves (`mod_ids`, `min_tier`, `min_roll`, `not_crafted`)
+* `Goal`: the requirements as `Wanted` leaves (`mod_ids`, `min_tier`, `min_roll`, `not_crafted`, and `tier_ok`, the mods the tier limit
+  accepts by their natural tier in the game data). `status_of` is the one judgement of a mod against a leaf (ticket #457); a target's
+  `Requirement` uses it too
   and `AtLeast(k, members)` groups; `Goal.from_target(target)` reads a target by duck typing and
   imports nothing of `targets`. `Goal.leaves` is the depth-first, file-order list of leaves and the
   order of `CompressedState.status`; `Goal.is_met(statuses)` needs `Status.PASSING` for a leaf.
@@ -194,7 +196,7 @@ from ._coarse import Block, BlockHoldsMetamod, Coarsening
 from ._estimate import ADDING_LIMIT, DEFAULT_LIMIT, Estimate, EstimateRefused, needs_walk
 from ._goal import AtLeast, Goal, ImplicitWanted, QualityWanted, Status, Wanted
 from ._kernel import Abstraction, CacheStats, FamilyType, integer_weights
-from ._state import CompressedState, Flags, FracturedMod, ImplicitSide, OfferedMod, Slot
+from ._state import CompressedState, Flags, FracturedMod, ImplicitSide, OfferedMod, Slot, status_of
 
 __all__ = [
     "ADDING_LIMIT",
@@ -221,6 +223,7 @@ __all__ = [
     "integer_weights",
     "keeps_shape",
     "reach_bound",
+    "status_of",
     "BlockHoldsMetamod",
     "needs_walk",
 ]

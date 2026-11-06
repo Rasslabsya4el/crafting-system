@@ -10,8 +10,10 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import NoReturn
 
+from crafting_system.actions import ActionError, tiers_of
 from crafting_system.data import BaseItem, GameData
 from crafting_system.items import (
+    ANY_TIER,
     CATALYST_ITEM_CLASSES,
     MAX_MEMORY_STRANDS,
     MAX_PLAIN_QUALITY,
@@ -35,6 +37,7 @@ from crafting_system.items import (
     SocketError,
     Sockets,
     VeilOfferError,
+    accepted_by_tier,
     class_maximum,
     eldritch_grade,
     eldritch_side,
@@ -62,7 +65,7 @@ from .model import (
     SocketRequirement,
     Target,
 )
-from .resolve import Resolver, Unresolved, close_matches, quoted
+from .resolve import Resolver, Unresolved, close_matches, normalise_stat_text, quoted
 
 TOP_KEYS = (
     "base",
@@ -79,7 +82,6 @@ TOP_KEYS = (
     "actions",
     "allow_corrupted",
     "item_level_floor",
-    "tiers_top_at_item_level",
 )
 REQUIREMENT_KEYS = ("family", "stat", "mod", "min_tier", "min_roll", "not_crafted")
 IMPLICIT_KEYS = ("family", "stat", "mod", "min_grade", "min_roll", "corrupted")
@@ -168,6 +170,34 @@ def blamed_id(message: str, ids: Iterable[str], *, last_written: bool = False) -
     return min(found)[1]
 
 
+class _Ladder:
+    """What a tier leaf means on the target's base: the natural tiers of the game data, at the target's item level and influences (OR-1)."""
+
+    def __init__(self, data: GameData, base_id: str, item_level: int, influences: frozenset[Influence]) -> None:
+        self.data = data
+        self.base_id = base_id
+        self.item_level = item_level
+        self.influences = influences
+        self._read = False
+        self._table: object = None
+
+    def tiers(self):
+        """The tier table of an item with the target's influences (`actions.tiers_of`), or None for the base's own `tier_table`."""
+        if not self._read:
+            if self.influences:
+                probe = Item.build(self.data, base_id=self.base_id, item_level=self.item_level, rarity=Rarity.RARE, influences=self.influences)
+                try:
+                    self._table = tiers_of(self.data, probe)
+                except ActionError:  # an item class with no influence class key has no influence pool: its tiers are the base's
+                    self._table = None
+            self._read = True
+        return self._table
+
+    def accepted(self, mod_ids: frozenset[str], min_tier: int | str | None) -> frozenset[str]:
+        """The mods of `mod_ids` whose natural tier the leaf accepts (`items.accepted_by_tier`)."""
+        return accepted_by_tier(self.data, self.base_id, self.item_level, mod_ids, min_tier, self.tiers())
+
+
 class _Reader:
     def __init__(self, data: GameData, source: str, base_dir: Path | None) -> None:
         self.data = data
@@ -195,6 +225,7 @@ class _Reader:
         base_id = self.read_base(root)
         item_level = self.read_item_level(root)
         influences = self.read_influences(root)
+        self.ladder = _Ladder(self.data, base_id, item_level, influences)
         requirements = self.read_requirements(root["requirements"], "requirements", root.key_lines["requirements"])
         implicits = (
             self.read_implicits(root["implicits"], root.key_lines["implicits"], base_id, item_level) if "implicits" in root else ()
@@ -223,12 +254,11 @@ class _Reader:
         allow_corrupted = self.read_allow_corrupted(root) if "allow_corrupted" in root else False
         self.check_corruption(root, base_id, item_level, implicits, allow_corrupted, start_item, buys_start_item, actions)
         item_level_floor = self.read_item_level_floor(root, item_level) if "item_level_floor" in root else None
-        tiers_top = self.read_tiers_top(root) if "tiers_top_at_item_level" in root else False
         if sockets is not None:
             self.check_socket_scope(root, requirements, start_item)
         return Target(
             base_id, item_level, influences, requirements, start_item, price_file, buys_start_item, implicits, quality,
-            actions, enchantment, allow_corrupted, sockets, assumed, item_level_floor, tiers_top,
+            actions, enchantment, allow_corrupted, sockets, assumed, item_level_floor,
         )  # fmt: skip
 
     def read_item_level_floor(self, root: LineMap, item_level: int) -> int:
@@ -245,12 +275,6 @@ class _Reader:
         value = root["buys_start_item"]
         if not isinstance(value, bool):
             self.fail(root.key_lines["buys_start_item"], "buys_start_item", f"must be true or false, got {describe(value)}")
-        return value
-
-    def read_tiers_top(self, root: LineMap) -> bool:
-        value = root["tiers_top_at_item_level"]
-        if not isinstance(value, bool):
-            self.fail(root.key_lines["tiers_top_at_item_level"], "tiers_top_at_item_level", f"must be true or false, got {describe(value)}")
         return value
 
     def read_allow_corrupted(self, root: LineMap) -> bool:
@@ -419,14 +443,19 @@ class _Reader:
                 self.fail(entry.key_lines["mod"], f"{path}.mod", f"`{mod_id}` is not a mod of the {selector} `{text}`")
             mod_ids = frozenset({mod_id})
         min_tier = None
+        any_tier = False
         if "min_tier" in entry:
-            min_tier = entry["min_tier"]
-            if not is_whole(min_tier) or min_tier < 1:
-                self.fail(
-                    entry.key_lines["min_tier"],
-                    f"{path}.min_tier",
-                    f"must be a whole number of 1 or more, got {describe(min_tier)}",
-                )
+            written = entry["min_tier"]
+            if written == ANY_TIER:  # `min_tier: any`: every tier of the natural ladder counts (OR-4; #410 point 1)
+                any_tier = True
+            else:
+                min_tier = written
+                if not is_whole(min_tier) or min_tier < 1:
+                    self.fail(
+                        entry.key_lines["min_tier"],
+                        f"{path}.min_tier",
+                        f"must be a whole number of 1 or more, or the word any, got {describe(min_tier)}",
+                    )
         not_crafted = False
         if "not_crafted" in entry:
             not_crafted = entry["not_crafted"]
@@ -439,7 +468,33 @@ class _Reader:
         min_roll = None
         if "min_roll" in entry:
             min_roll = self.read_min_roll(entry, f"{path}.min_roll", mod_ids)
-        return Requirement(family, stat, mod_ids, min_tier, min_roll, not_crafted)
+        tier_ok = self.tier_ok(entry, mod_ids, stat, min_tier, any_tier, min_roll)
+        return Requirement(family, stat, mod_ids, min_tier, min_roll, not_crafted, tier_ok, any_tier)
+
+    def tier_ok(
+        self,
+        entry: LineMap,
+        mod_ids: frozenset[str],
+        stat: str | None,
+        min_tier: int | None,
+        any_tier: bool,
+        min_roll: tuple[int | None, ...] | None,
+    ) -> frozenset[str] | None:
+        """The mods of the leaf that its tier limit accepts, by natural tier in the game data; None when the leaf asks no tier.
+
+        `min_tier: k` asks natural tier k or better; `min_tier: any` every natural tier. With no `min_tier`, OR-1 asks the top tier of
+        the ladder at the item level, except where the owner's own words state the mod: a `mod:` is exactly that mod (OR-2), a
+        `min_roll` is a roll with no tier (OR-4), and a stat text that states its value (no `#`) is the guide's wording.
+        """
+        if min_tier is not None:
+            return self.ladder.accepted(mod_ids, min_tier)
+        if any_tier:
+            return None if "mod" in entry else self.ladder.accepted(mod_ids, ANY_TIER)
+        if "mod" in entry or min_roll is not None:
+            return None
+        if stat is not None and "#" not in normalise_stat_text(stat):
+            return None
+        return self.ladder.accepted(mod_ids, None)
 
     def read_min_roll(self, entry: LineMap, path: str, mod_ids: frozenset[str]) -> tuple[int | None, ...]:
         line = entry.key_lines["min_roll"]

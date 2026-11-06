@@ -49,7 +49,9 @@ from crafting_system.actions import (
 )
 
 LEVEL = 78
-HYBRID_TIER_2 = Wanted(frozenset(HYBRID), min_tier=2)  # Chaos Damage Hybrid 4 or 5
+# Chaos Damage Hybrid 4 or 5: tiers 2 and 1 among the mods of the type that spawn with the Hunter tag (the leaf carries what the Hunter pool
+# says, as a leaf of a Hunter target does; an influence mod is in no table of the bare base)
+HYBRID_TIER_2 = Wanted(frozenset(HYBRID), min_tier=2, tier_ok=frozenset(HYBRID[3:]))
 GOAL = Goal((HYBRID_TIER_2, SOCKET_LEAF, SPEED_TIER_1))
 R14_GOAL = Goal((SOCKET_LEAF, CASTER_LEAF, SPEED_TIER_1, HYBRID_TIER_2))
 ANNUL, EXALT, SCOUR, CHAOS = AnnulmentOrb(), ExaltedOrb(), ScouringOrb(), ChaosOrb()

@@ -100,7 +100,8 @@ AWAKENERS = (AwakenersOrb(HELMET, LEVEL, ELDER, ELDER_S), AwakenersOrb(HELMET, L
 TOP_PREFIX = Wanted(frozenset({P3, P3_MAVEN}))  # the best Shaper prefix, or the Elevated one
 SHAPER_SUFFIX = Wanted(frozenset({S2, S2_MAVEN}))
 ELDER_SUFFIX = Wanted(frozenset({ELDER_S, ELDER_S_MAVEN}))
-MIXED_BEST = Wanted(frozenset({MIX_S1, MIX_S2, MIX_S2_MAVEN}), min_tier=1)  # tier 1 of the mixed family: the best Shaper mod or its Elevated version
+# tier 1 of the mixed family: the best Shaper mod. Its Elevated version has no natural tier (OR-1), so a tier leaf does not count it.
+MIXED_BEST = Wanted(frozenset({MIX_S1, MIX_S2, MIX_S2_MAVEN}), min_tier=1, tier_ok=frozenset({MIX_S2}))
 GOAL = Goal((TOP_PREFIX, SHAPER_SUFFIX, ELDER_SUFFIX, MIXED_BEST))
 
 
@@ -179,7 +180,7 @@ def test_layer_1_of_every_influence_craft_together():
     assert any(len(held.influences) == 2 for held in items)  # the Awakener's Orb and the orbs reach items of two influences
 
 
-@pytest.mark.parametrize("goal", [Goal((TOP_PREFIX,)), Goal((MIXED_BEST, ELDER_SUFFIX)), Goal((Wanted(frozenset({P1, P2, P3, P3_MAVEN}), min_tier=2),))], ids=["one", "mixed_tier", "tier_two"])
+@pytest.mark.parametrize("goal", [Goal((TOP_PREFIX,)), Goal((MIXED_BEST, ELDER_SUFFIX)), Goal((Wanted(frozenset({P1, P2, P3, P3_MAVEN}), min_tier=2, tier_ok=frozenset({P2, P3})),))], ids=["one", "mixed_tier", "tier_two"])
 def test_layer_1_for_other_goals(goal):
     actions = (DOMINANCE, *EXALTED, RECIPES[0])
     found = ability(actions, goal)
@@ -191,14 +192,17 @@ def test_layer_1_for_other_goals(goal):
 # --- the Elevated tier ---------------------------------------------------------------------------------------------------
 
 
-def test_a_top_tier_mod_becomes_its_elevated_version_and_that_meets_the_best_tier():
+def test_a_top_tier_mod_becomes_its_elevated_version_and_that_no_longer_meets_a_tier_leaf():
     found = ability((DOMINANCE,), Goal((MIXED_BEST,)))
     start = found.compress(item(rolled(MIX_S2, 1), rolled(S1, 2), influences={SHAPER}))
     assert start.status == (Status.PASSING,)
     after = found.kernel(start, DOMINANCE)  # removed S1 and upgraded the mixed top mod, or the other way round
     assert sorted(float(chance) for chance in after.values()) == [0.5, 0.5]
     elevated = [state for state in after if any(slot.kind == f"${MIX_S2_MAVEN}" for slot in state.slots)]
-    assert len(elevated) == 1 and elevated[0].status == (Status.PASSING,)
+    assert len(elevated) == 1 and elevated[0].status == (Status.BELOW,)  # an Elevated mod has no natural tier: it meets a tier leaf only by `mod:`
+    named = ability((DOMINANCE,), Goal((Wanted(frozenset({MIX_S2_MAVEN})),)))  # `mod:` names it: no tier is asked
+    assert [state.status for state in named.kernel(named.compress(item(rolled(MIX_S2, 1), rolled(S1, 2), influences={SHAPER})), DOMINANCE)
+            if any(slot.kind == f"${MIX_S2_MAVEN}" for slot in state.slots)] == [(Status.PASSING,)]
     # an Elevated mod is upgraded to itself: the pick is still uniform and the state does not change
     held = found.compress(item(rolled(MIX_S2_MAVEN, 1), rolled(S1, 2), influences={SHAPER}))
     assert f"${MIX_S2_MAVEN}" in {slot.kind for slot in held.slots}
@@ -207,7 +211,7 @@ def test_a_top_tier_mod_becomes_its_elevated_version_and_that_meets_the_best_tie
 
 
 def test_the_elevated_tier_is_the_same_in_the_item_the_orb_makes_and_in_the_state_that_rebuilds_it():
-    found = ability((DOMINANCE,), Goal((Wanted(frozenset({P3_MAVEN}), min_tier=1),)))
+    found = ability((DOMINANCE,), Goal((Wanted(frozenset({P3_MAVEN})),)))  # the Elevated mod named, no tier asked
     start = item(rolled(P3, 1), rolled(S1, 2), influences={SHAPER})
     for chance, result in DOMINANCE.outcomes(DATA, start).results:
         state = found.compress(result)

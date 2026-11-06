@@ -28,8 +28,8 @@
 #     StrengthEssence7_), exactly that tier, as in the R05 example.
 #   * "Life / Armour as available": at least one of Life and Armour, each at the top tier the item
 #     level (75) allows: Life tier 1, "+(130-144)"; Armour tier 3, "+(323-400)" (its tiers 2 and 1
-#     need item level 83 and 86). The guide ends with a bench craft of an open modifier, so a crafted
-#     one counts too (the group has no not_crafted).
+#     need item level 83 and 86). The guide ends with a bench craft of an open modifier, which is
+#     not a tier of these mods: a bench craft has no natural tier and meets no tier line (OR-1).
 #   * "42 to Strength" (implicit): the Heavy Belt's own implicit, "+(25-35) to Strength" (mod
 #     StrengthImplicitBelt1). A requirement compares the BASE roll the item stores, never the value
 #     shown with quality (ADR-0027). The guide's 42 is shown with 20% Intrinsic quality:
@@ -41,9 +41,6 @@ base: Heavy Belt
 
 # The item level of the belt, a whole number from 1 to 100. The guide says "75+".
 item_level: 75
-# The tiers of this target are the top tiers the item level above allows (the rule at the top of this file), so the planner
-# must not plan a lower item level (ADR-0061, ticket #352).
-tiers_top_at_item_level: true
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # The guide allows Hunter or Elder; this file takes Hunter.

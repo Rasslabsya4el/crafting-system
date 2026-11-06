@@ -50,7 +50,8 @@ def floor(*entries: str, tail: str = ""):
         (LIGHTNING_1, 84),  # tier 1 is LightningResist8, required level 84
         (LIGHTNING_2, 72),  # tier 2 accepts LightningResist7 (72)
         (LIFE_1, 18),
-        ("family: LightningResistance", 1),  # any tier: the lowest tier is level 1
+        ("family: LightningResistance", 84),  # no tier written: the top tier of the ladder (OR-1), LightningResist8
+        ("family: LightningResistance\n  min_tier: any", 1),  # any tier: the lowest tier is level 1
         ("family: ChaosResistance\n  min_roll: 31", 81),  # only ChaosResist6 rolls 31 or more
     ],
 )
@@ -88,7 +89,7 @@ def test_an_at_least_group_takes_the_k_th_lowest_of_its_members():
 def test_a_requirement_the_start_item_meets_asks_no_level_but_its_mods_need_their_own():
     start = "start_item:\n  rarity: rare\n  mods:\n    - mod: LightningResist5\n      tier: 4\n      values: [30]\n      fractured: true\n"
 
-    found = floor("family: LightningResistance", tail=start)
+    found = floor("family: LightningResistance\n  min_tier: any", tail=start)
 
     assert found.nodes[0].source == "start item" and found.nodes[0].level == 1
     assert found.start_level == 49  # LightningResist5 needs level 49
@@ -96,7 +97,7 @@ def test_a_requirement_the_start_item_meets_asks_no_level_but_its_mods_need_thei
 
 
 def test_the_bench_gives_a_mod_at_its_own_level_unless_the_target_wants_it_rolled_or_leaves_the_bench_out():
-    entry = "family: IncreasedWeaponElementalDamagePercent"
+    entry = "family: IncreasedWeaponElementalDamagePercent\n  mod: EinharMasterWeaponElementalDamage1_"  # a craft has no tier: `mod:` names it
 
     on_bench = floor(entry)
     rolled = floor(entry + "\n  not_crafted: true")
@@ -108,7 +109,7 @@ def test_the_bench_gives_a_mod_at_its_own_level_unless_the_target_wants_it_rolle
 
 
 def test_an_essence_gives_its_mod_when_the_target_offers_it_and_no_other_does():
-    entry = "family: ColdDamagePercentage"  # only Whispering Essence of Hatred gives this mod to an amulet
+    entry = "family: ColdDamagePercentage\n  mod: ColdDamagePercentEssence1"  # only Whispering Essence of Hatred gives this mod to an amulet
 
     by_default = floor(entry)
     by_kind = floor(entry, tail="actions: [essence]\n")
@@ -121,7 +122,8 @@ def test_an_essence_gives_its_mod_when_the_target_offers_it_and_no_other_does():
 
 
 def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_only_when_named():
-    hatred, hysteria = "family: ColdDamagePercentage", "family: IncreasedLifeLeechRate"  # the second mod needs level 63 as a drawn mod
+    hatred = "family: ColdDamagePercentage\n  mod: ColdDamagePercentEssence1"
+    hysteria = "family: IncreasedLifeLeechRate\n  mod: IncreasedLifeLeechRateEssence1"  # the mod needs level 63 as a drawn mod
 
     other_essence = floor(hatred, tail="actions: ['Essence of Hysteria']\n")
     unnamed = floor(hysteria)
@@ -136,7 +138,7 @@ def test_naming_one_essence_offers_that_essence_only_and_a_corrupted_essence_onl
 
 
 def test_naming_one_bench_craft_offers_that_craft_only():
-    entry = "family: IncreasedWeaponElementalDamagePercent"
+    entry = "family: IncreasedWeaponElementalDamagePercent\n  mod: EinharMasterWeaponElementalDamage1_"
 
     by_label = floor(entry, tail="actions: ['Bench craft #% increased Elemental Damage with Attack Skills']\n")
     other = floor(entry, tail="actions: ['Bench craft Prefixes Cannot Be Changed']\n")
@@ -158,11 +160,11 @@ def test_an_at_least_group_with_one_unreachable_member_still_has_a_level_when_en
 # -- where the floor is not below the file's level -------------------------------------------------------------
 
 
-def test_tiers_top_at_item_level_says_the_level_is_not_lowered():
-    found = floor(LIFE_1, tail="tiers_top_at_item_level: true\n")
+def test_a_leaf_with_no_tier_keeps_the_level_of_its_top_tier():
+    found = floor("family: LightningResistance")  # OR-1: the top tier, LightningResist8, needs item level 84
 
-    assert (found.level, found.kind) == (84, "pinned")
-    assert [group.lowest for group in item_level_options(DATA, parse(requirements(LIFE_1, tail="tiers_top_at_item_level: true\n"))).groups] == [84]
+    assert (found.level, found.kind) == (84, "derived")
+    assert [group.lowest for group in item_level_options(DATA, parse(requirements("family: LightningResistance"))).groups] == [84]
 
 
 def test_a_stated_floor_raises_the_derived_one_and_never_lowers_it():
@@ -200,12 +202,12 @@ def test_a_corrupted_implicit_target_is_not_lowered():
 # -- the keys in a file ----------------------------------------------------------------------------------------
 
 
-def test_the_two_keys_parse_and_default_to_off():
+def test_the_floor_key_parses_and_defaults_to_off():
     plain = parse(requirements(LIFE_1))
-    keyed = parse(requirements(LIFE_1, tail="item_level_floor: 70\ntiers_top_at_item_level: false\n"))
+    keyed = parse(requirements(LIFE_1, tail="item_level_floor: 70\n"))
 
-    assert (plain.item_level_floor, plain.tiers_top_at_item_level) == (None, False)
-    assert (keyed.item_level_floor, keyed.tiers_top_at_item_level) == (70, False)
+    assert plain.item_level_floor is None
+    assert keyed.item_level_floor == 70
 
 
 @pytest.mark.parametrize(
@@ -214,7 +216,6 @@ def test_the_two_keys_parse_and_default_to_off():
         ("item_level_floor: 85\n", "item_level_floor: must be a whole number from 1 to the item level (84)"),
         ("item_level_floor: 0\n", "item_level_floor: must be a whole number from 1 to the item level (84)"),
         ("item_level_floor: high\n", "item_level_floor: must be a whole number"),
-        ("tiers_top_at_item_level: yes please\n", "tiers_top_at_item_level: must be true or false"),
     ],
 )
 def test_error_a_bad_key_value_names_the_key(text, needle):

@@ -29,7 +29,8 @@ def test_the_r12_example_parses_into_the_route():
     assert isinstance(stat, Requirement) and stat.stat == "+1 to Level of all Lightning Skill Gems"
     assert "GlobalLightningGemLevel1" in stat.mod_ids
     assert isinstance(family, Requirement) and family.family == "LightningResistance"
-    assert (family.min_tier, family.min_roll, family.not_crafted) == (None, None, False)
+    assert (family.min_tier, family.any_tier, family.min_roll, family.not_crafted) == (None, True, None, False)
+    assert "LightningResist2" in family.tier_ok and "JunMaster2AllDamage3" not in family.tier_ok  # the start amulet's tier 7 counts; no craft does
     assert target.start_item.rarity is Rarity.RARE
     assert target.start_item.mods == (ExplicitMod("LightningResist2", 3, (14,), fractured=True),)
     assert target.price_file is None
@@ -57,37 +58,37 @@ def test_the_r13_example_parses_into_the_route():
     assert isinstance(resists, KOfN) and resists.at_least == 2
     assert [member.family for member in resists.of] == ["FireResistance", "ColdResistance", "LightningResistance"]
     assert all(member.min_tier == 1 and member.not_crafted for member in resists.of)
-    assert isinstance(damage, KOfN) and damage.at_least == 1
-    assert [member.family for member in damage.of] == ["AllDamage", "IncreasedWeaponElementalDamagePercent"]
-    assert "JunMaster2AllDamage2_" in damage.of[0].mod_ids
-    assert "EinharMasterWeaponElementalDamage1_" in damage.of[1].mod_ids
+    # "a crafted damage modifier" is exactly the craft the given route buys (OR-2): (15-17)% increased Damage
+    assert isinstance(damage, Requirement) and damage.family == "AllDamage"
+    assert damage.mod_ids == frozenset({"JunMaster2AllDamage3"}) and damage.tier_ok is None
 
 
-def test_the_r13_damage_families_are_damage_prefixes_the_bench_offers_on_a_belt_in_two_tiers():
+def test_the_r13_damage_craft_is_a_damage_prefix_the_bench_offers_on_a_belt():
     target = load_target(R13, DATA)
     damage = target.requirements[2]
-    assert isinstance(damage, KOfN)
 
-    for member in damage.of:
-        offered = {
-            option.actions.add_explicit_mod
-            for option in DATA.bench_options
-            if "Belt" in option.item_classes
-            and option.actions.add_explicit_mod in member.mod_ids
-            and DATA.mods[option.actions.add_explicit_mod].generation_type == "prefix"
-        }
-        assert offered == member.mod_ids and len(offered) == 2, member.family
+    offered = {
+        option.actions.add_explicit_mod
+        for option in DATA.bench_options
+        if "Belt" in option.item_classes
+        and option.actions.add_explicit_mod is not None
+        and DATA.mods[option.actions.add_explicit_mod].generation_type == "prefix"
+    }
+    assert damage.mod_ids <= offered
 
 
-def test_the_r13_belt_is_met_by_life_two_resists_and_a_crafted_damage_mod():
+def test_the_r13_belt_is_met_by_life_two_resists_and_the_named_damage_craft_and_no_other_damage_mod():
     target = load_target(R13, DATA)
-    life = roll("IncreasedLife1")
+    life = roll("IncreasedLife3")  # tier 1
     fire, cold = roll("FireResist1"), roll("ColdResist1")
-    damage = roll("JunMaster2AllDamage2_", crafted=True)
+    damage = roll("JunMaster2AllDamage3", crafted=True)
+    other_craft = roll("JunMaster2AllDamage2_", crafted=True)  # the (12-14)% craft: not the one the route buys
     elemental = roll("EinharMasterWeaponElementalDamage1_", crafted=True)
 
     assert target.is_met_by(belt(life, damage, fire, cold))
-    assert target.is_met_by(belt(life, elemental, cold, roll("LightningResist1")))
+    assert target.is_met_by(belt(life, damage, cold, roll("LightningResist8")))
+    assert not target.is_met_by(belt(life, other_craft, fire, cold))  # OR-2: exactly that mod
+    assert not target.is_met_by(belt(life, elemental, fire, cold))
     assert not target.is_met_by(belt(life, fire, cold))
     assert not target.is_met_by(belt(life, damage, fire))
     assert not target.is_met_by(belt(damage, fire, cold))
@@ -96,9 +97,9 @@ def test_the_r13_belt_is_met_by_life_two_resists_and_a_crafted_damage_mod():
 
 def test_the_r13_resists_must_be_tier_one():
     target = load_target(R13, DATA)
-    life, damage = roll("IncreasedLife1"), roll("JunMaster2AllDamage2_", crafted=True)
+    life, damage = roll("IncreasedLife3"), roll("JunMaster2AllDamage3", crafted=True)
 
-    second_tier = ExplicitMod("ColdResist1", 2, (6,))
+    second_tier = roll("LightningResist7")  # tier 2 in the data, whatever an item marks
 
     assert not target.is_met_by(belt(life, damage, roll("FireResist1"), second_tier))
 
@@ -382,7 +383,7 @@ def test_the_r05_target_asks_for_all_attributes_the_essence_strength_and_one_top
     ]
 
 
-def test_the_r05_ring_is_met_by_the_essence_strength_and_a_top_tier_life_or_resistance_rolled_or_crafted(real):
+def test_the_r05_ring_is_met_by_the_essence_strength_and_a_top_tier_life_or_resistance_rolled_not_crafted(real):
     target = load_target(EXAMPLES / "r05-strength-ring.yaml", real)
     base_id = target.base_id
     with_strength = target.start_item.add_mod(real, ExplicitMod("StrengthEssence7_", 1, (55,)))
@@ -391,7 +392,8 @@ def test_the_r05_ring_is_met_by_the_essence_strength_and_a_top_tier_life_or_resi
     assert not target.is_met_by(with_strength)
     assert target.is_met_by(with_strength.add_mod(real, tiered(real, base_id, "IncreasedLife7", 105)))
     assert target.is_met_by(with_strength.add_mod(real, tiered(real, base_id, "FireResist7", 43)))
-    assert target.is_met_by(with_strength.add_mod(real, crafted_life))  # the guide ends with a bench craft
+    # the guide's closing bench craft is not a tier of Life: it has none, so it meets no tier line (OR-1; R05 once read it as tier 1, 12 c against 135 c)
+    assert not target.is_met_by(with_strength.add_mod(real, crafted_life))
 
 
 def test_the_r05_ring_is_not_met_by_a_lower_tier_life_or_resistance_or_by_another_strength(real):

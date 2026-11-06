@@ -23,6 +23,8 @@ The rules it implements
     craft exactly (`mod:`); otherwise its values are judged on the natural ladder (a crafted value counts as
     the best natural tier whose range holds it).
   * OR-2. `mod:` is exactly that mod, and no other tier of its family.
+  * `min_tier: any` (syntax of ticket #457, decided in #410 point 1): every tier of the natural ladder counts; a mod with no natural tier (a bench
+    craft, an essence-only mod) is not on the ladder and still needs `mod:`. No tier is compared and no top tier is asked.
   * OR-4. `min_roll` is a roll with no tier: with a `min_roll` and no `min_tier` the tier is not asked.
     A `stat:` text that states its value (no `#`) is the guide's own wording, so it asks no top tier either (checker, #420).
   * k-of-n (`at_least` / `of`): at least that many of the members are met; members may be groups.
@@ -306,6 +308,7 @@ class OReq:
     min_tier: int | None = None
     min_roll: tuple[int | None, ...] | None = None
     not_crafted: bool = False
+    any_tier: bool = False  # `min_tier: any`
 
 
 @dataclass(frozen=True)
@@ -334,9 +337,10 @@ def _read_node(entry: dict, path: str) -> ONode:
         family=entry.get("family"),
         stat=entry.get("stat"),
         mod=entry.get("mod"),
-        min_tier=entry.get("min_tier"),
+        min_tier=None if entry.get("min_tier") == "any" else entry.get("min_tier"),
         min_roll=roll,
         not_crafted=bool(entry.get("not_crafted", False)),
+        any_tier=entry.get("min_tier") == "any",
     )
 
 
@@ -516,7 +520,11 @@ class Oracle:
         # OR-4: a stat text that states its value ("+1 to Level of all Minion Skill Gems", no `#`) is the guide's own wording of
         # the mod, not an unstated tier, so it asks no top tier; its text picks the mod.
         states_value = req.stat is not None and "#" not in normal_text(req.stat)
-        if req.min_tier is not None or (req.mod is None and req.min_roll is None):
+        if req.any_tier:
+            # `min_tier: any`: the mod must be on the natural ladder (by its id, not by its values); `mod:` names a mod of any origin
+            if req.mod is None and export.ladder_of_mod(self.base_id, self.target.influences, mod.mod_id) is None:
+                return False
+        elif req.min_tier is not None or (req.mod is None and req.min_roll is None):
             found = self.tier_of(req, mod)
             if found is None:
                 return False

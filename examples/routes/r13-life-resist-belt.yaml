@@ -22,8 +22,8 @@ name: R13, Reddit guide
 
 rules:
   # Step 3: life and two tier-1 resistances are on the belt, in the three ways to pick two of the three.
-  # The target's damage modifier is a bench craft that the target does not mind the tier of; the
-  # highest one the belt's item level allows is used.
+  # The guide's "crafted damage modifier" is a bench craft that the target names exactly (mod JunMaster2AllDamage3, OR-2):
+  # the highest damage craft the belt's item level allows is used.
   - when:
       rarity: rare
       requirements:
@@ -33,7 +33,7 @@ rules:
           status: passing
         - family: ColdResistance
           status: passing
-    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+    do: "Bench craft #% increased Damage"
   - when:
       rarity: rare
       requirements:
@@ -43,7 +43,7 @@ rules:
           status: passing
         - family: LightningResistance
           status: passing
-    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+    do: "Bench craft #% increased Damage"
   - when:
       rarity: rare
       requirements:
@@ -53,7 +53,7 @@ rules:
           status: passing
         - family: LightningResistance
           status: passing
-    do: "Bench craft #% increased Damage [JunMaster2AllDamage3]"
+    do: "Bench craft #% increased Damage"
 
   # Step 2: a rare belt that is not one of those is a Regal that gave something else: buy the belt again.
   - when:

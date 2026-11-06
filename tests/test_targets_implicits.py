@@ -535,11 +535,11 @@ def test_a_target_is_met_when_requirements_implicits_and_quality_all_are():
           min_percent: 20
         """
     )
-    life = TEXTED.mods["IncreasedLife1"]
+    life = TEXTED.mods["IncreasedLife3"]  # tier 1 of the amulet ladder: a requirement with no tier asks it (OR-1)
     from crafting_system.items import ExplicitMod
 
     done = make(
-        ExplicitMod("IncreasedLife1", 9, (life.stats[0].min,)),
+        ExplicitMod("IncreasedLife3", 9, (life.stats[0].min,)),
         implicits=(exarch(3, 40),),
         quality=Quality(CatalystType.INTRINSIC, 20),
     )

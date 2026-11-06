@@ -148,6 +148,7 @@ item_level: 84
 requirements:
   - stat: "{GEM_TEXT}"
   - family: LightningResistance
+    min_tier: any
 start_item:
   rarity: rare
 buys_start_item: true

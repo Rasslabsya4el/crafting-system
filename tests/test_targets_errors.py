@@ -163,7 +163,7 @@ def test_the_message_shows_the_value_the_owner_wrote():
     message = parse_error('requirements:\n  - family: IncreasedLife\n    min_tier: "high"\n')
 
     assert message == (
-        't.yaml:5: requirements[0].min_tier: must be a whole number of 1 or more, got "high"'
+        't.yaml:5: requirements[0].min_tier: must be a whole number of 1 or more, or the word any, got "high"'
     )
 
 

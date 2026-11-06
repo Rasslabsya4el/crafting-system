@@ -27,7 +27,7 @@ from crafting_system.cli._route_card import (
     mod_text,
     tracks_junk,
 )
-from crafting_system.items import ExplicitMod, Influence, Rarity, Side, tier_table
+from crafting_system.items import ExplicitMod, Influence, Rarity, Side, accepted_by_tier, tier_table
 from crafting_system.targets import KOfN, Requirement, Target, load_target
 
 IMPLICIT = "(20-30)% increased Mana Regeneration Rate"
@@ -339,9 +339,10 @@ def test_a_leaf_meets_only_mods_that_can_appear_at_the_item_level():
     tiers = tier_table(DATA, BELT)
     life = {"IncreasedLife1", "IncreasedLife2", "IncreasedLife3"}  # tiers 3, 2, 1 (item levels 5, 11, 18)
 
-    assert _leaf_slot(DATA, BELT, tiers, life, 2, 12) == (Side.PREFIX, "+(25-39) to maximum Life", "T2")  # tier 1 needs 18
-    assert _leaf_slot(DATA, BELT, tiers, life, 2, 18)[2] == "T2 or better"
-    assert _leaf_slot(DATA, BELT, tiers, life, None, 12)[2] == "any tier"
+    tier_2 = accepted_by_tier(DATA, BELT, 12, frozenset(life), 2)
+    assert _leaf_slot(DATA, BELT, tiers, life, 2, 12, tier_2) == (Side.PREFIX, "+(25-39) to maximum Life", "T2")  # tier 1 needs 18
+    assert _leaf_slot(DATA, BELT, tiers, life, 2, 18, tier_2)[2] == "T2 or better"
+    assert _leaf_slot(DATA, BELT, tiers, life, None, 12)[2] == "any tier"  # no tier asked
 
 
 def test_a_leaf_only_a_crafted_mod_meets_says_crafted():

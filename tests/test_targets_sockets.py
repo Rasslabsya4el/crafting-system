@@ -761,7 +761,7 @@ def test_a_six_link_target_is_met_by_a_six_link_and_not_by_a_five_link_with_a_si
     ],
 )
 def test_an_item_with_no_sockets_meets_no_socket_requirement(wanted):
-    assert not wanted.is_met_by(fixture_item(roll("IncreasedLife1")))
+    assert not wanted.is_met_by(fixture_item(roll("IncreasedLife3")))
 
 
 def test_an_item_with_no_sockets_is_not_met_even_by_a_requirement_of_one_socket():
@@ -860,14 +860,14 @@ def test_unmet_lists_the_socket_requirement_last_after_requirements_implicits_qu
 
 def test_unmet_leaves_out_the_socket_requirement_when_the_sockets_are_met():
     target = parse(SIX_LINK)
-    met = fixture_item(roll("IncreasedLife1"), sockets=Sockets((RED, GREEN, BLUE, RED, GREEN, BLUE), (6,)))
+    met = fixture_item(roll("IncreasedLife3"), sockets=Sockets((RED, GREEN, BLUE, RED, GREEN, BLUE), (6,)))
 
     assert target.unmet(met) == ()
 
 
 def test_unmet_names_only_the_socket_requirement_when_everything_else_is_met():
     target = parse(SIX_LINK + "quality: {min_percent: 20}\n")
-    item = fixture_item(roll("IncreasedLife1"), quality=PlainQuality(20), sockets=Sockets((RED, GREEN, BLUE, RED, GREEN, BLUE), (5, 1)))
+    item = fixture_item(roll("IncreasedLife3"), quality=PlainQuality(20), sockets=Sockets((RED, GREEN, BLUE, RED, GREEN, BLUE), (5, 1)))
 
     assert target.unmet(item) == (target.sockets,)
 
@@ -880,14 +880,14 @@ def test_a_target_without_sockets_has_no_socket_condition_in_unmet():
 
 def test_the_target_is_met_by_an_item_that_holds_the_mods_the_quality_and_the_sockets():
     target = parse(SIX_LINK + "quality: {min_percent: 20}\n")
-    item = fixture_item(roll("IncreasedLife1"), quality=PlainQuality(20), sockets=Sockets((RED, GREEN, BLUE, RED, GREEN, BLUE), (6,)))
+    item = fixture_item(roll("IncreasedLife3"), quality=PlainQuality(20), sockets=Sockets((RED, GREEN, BLUE, RED, GREEN, BLUE), (6,)))
 
     assert target.is_met_by(item) is True
 
 
 def test_the_target_is_not_met_when_only_the_sockets_are_not():
     target = parse(SIX_LINK)
-    item = fixture_item(roll("IncreasedLife1"), sockets=Sockets((RED, GREEN, BLUE, RED, GREEN, BLUE), (3, 3)))
+    item = fixture_item(roll("IncreasedLife3"), sockets=Sockets((RED, GREEN, BLUE, RED, GREEN, BLUE), (3, 3)))
 
     assert target.requirements[0].is_met_by(item)
     assert target.is_met_by(item) is False
@@ -896,7 +896,7 @@ def test_the_target_is_not_met_when_only_the_sockets_are_not():
 def test_the_target_is_not_met_by_an_item_with_no_sockets_at_all():
     target = parse("sockets: {count: 1}\n")
 
-    assert target.is_met_by(fixture_item(roll("IncreasedLife1"))) is False
+    assert target.is_met_by(fixture_item(roll("IncreasedLife3"))) is False
 
 
 def test_the_assumed_start_item_does_not_meet_a_socket_target_of_two_sockets():

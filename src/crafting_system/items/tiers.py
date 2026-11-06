@@ -75,3 +75,71 @@ def mod_tier(data: GameData, base_id: str, mod_id: str) -> int:
     if mod_id not in table:
         raise TierError(f"mod {mod_id} has no tier on base {base_id}: it cannot spawn there")
     return table[mod_id]
+
+
+# -- the natural tier: what a requirement may ask of a mod (ticket #457, OR-1, OR-2, OR-4) -------------------
+
+ANY_TIER = "any"  # `min_tier: any`: every tier of the natural ladder counts
+_NATURAL_SIDES = ("prefix", "suffix")
+
+
+def natural_tiers(data: GameData, base_id: str, tiers: Mapping[str, int] | None = None) -> Mapping[str, int]:
+    """The natural tier of every mod that a draw can roll on the base: `tier_table` cut down to the mods that have a natural ladder.
+
+    A mod is natural when it is a prefix or a suffix of the base's own domain, it is not essence-only and it can spawn on the base
+    (it is in the table). A bench craft (domain `crafted`), an essence-only mod, a veiled one, an Elevated one or an aspect has no
+    natural tier and is absent. `tiers` is the table to cut: the default is `tier_table`; pass `actions.tiers_of` for an item with
+    influences. The tier of a mod is the table's, the one number of the game data (`independent/ladder.py` computes the same).
+    """
+    table = tier_table(data, base_id) if tiers is None else tiers
+    domain = data.base_items[base_id].domain
+    found: dict[str, int] = {}
+    for mod_id, tier in table.items():
+        mod = data.mods[mod_id]
+        if mod.domain == domain and mod.generation_type in _NATURAL_SIDES and not mod.is_essence_only:
+            found[mod_id] = tier
+    return MappingProxyType(found)
+
+
+def top_tiers(data: GameData, natural: Mapping[str, int], item_level: int) -> Mapping[str, int]:
+    """For each natural mod, the top tier of its ladder that `item_level` allows (OR-1); absent where no rung of the ladder is that low.
+
+    A ladder is the natural mods of one mod type and one generation type. Its top tier at a level is the lowest tier number
+    among its mods whose required level is at most the level.
+    """
+    best: dict[tuple[str, str], int] = {}
+    for mod_id, tier in natural.items():
+        mod = data.mods[mod_id]
+        if mod.required_level <= item_level:
+            key = (mod.type, mod.generation_type)
+            if key not in best or tier < best[key]:
+                best[key] = tier
+    top: dict[str, int] = {}
+    for mod_id in natural:
+        mod = data.mods[mod_id]
+        key = (mod.type, mod.generation_type)
+        if key in best:
+            top[mod_id] = best[key]
+    return MappingProxyType(top)
+
+
+def accepted_by_tier(
+    data: GameData,
+    base_id: str,
+    item_level: int,
+    mod_ids: frozenset[str],
+    min_tier: int | str | None,
+    tiers: Mapping[str, int] | None = None,
+) -> frozenset[str]:
+    """The mods of `mod_ids` that a tier leaf accepts, by their natural tier on the base; a mod with no natural tier is never in it.
+
+    `min_tier` is a number k (natural tier k or better), `ANY_TIER` (every natural tier) or None (the OR-1 default: the top tier
+    of the mod's ladder that `item_level` allows). `tiers` is as in `natural_tiers`.
+    """
+    natural = natural_tiers(data, base_id, tiers)
+    if min_tier is None:
+        top = top_tiers(data, natural, item_level)
+        return frozenset(mod_id for mod_id in mod_ids if mod_id in top and natural[mod_id] <= top[mod_id])
+    if min_tier == ANY_TIER:
+        return frozenset(mod_id for mod_id in mod_ids if mod_id in natural)
+    return frozenset(mod_id for mod_id in mod_ids if mod_id in natural and natural[mod_id] <= min_tier)

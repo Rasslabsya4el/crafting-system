@@ -187,6 +187,15 @@ def test_or1_a_min_tier_is_judged_on_the_ladder_at_that_tier():
     assert not judge(asked, [("Life1", 19)])
 
 
+def test_min_tier_any_counts_every_tier_of_the_natural_ladder_and_nothing_off_it():
+    asked = "  - family: Life\n    min_tier: any\n"
+    assert judge(asked, [("Life1", 19)]) and judge(asked, [("Life2", 29)]) and judge(asked, [("Life3", 35)])  # every rung, not only the top
+    assert judge(asked, [("Life3", 35, True)])  # a fractured natural mod
+    assert not judge(asked, [("LifeCraftTop", 35)])  # a craft is not on the ladder, whatever its values
+    assert not judge(asked, [("LifeEssence", 55)])
+    assert judge("  - family: Life\n    mod: LifeCraftTop\n    min_tier: any\n", [("LifeCraftTop", 35)])  # `mod:` names any origin
+
+
 def test_or1_a_fractured_mod_is_a_rolled_mod():
     assert judge(LIFE, [("Life3", 35, True)])
     assert not judge(LIFE, [("Life2", 25, True)])

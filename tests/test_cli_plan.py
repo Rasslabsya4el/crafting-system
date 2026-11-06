@@ -194,7 +194,7 @@ def test_the_offer_filter_keeps_the_usable_offers_in_their_order(target):
 
 def test_a_start_item_that_already_meets_the_target_costs_only_its_price(tmp_path):
     text = R12.read_text(encoding="utf-8").replace(
-        '- stat: "+1 to Level of all Lightning Skill Gems"', "- family: LightningResistance"
+        '- stat: "+1 to Level of all Lightning Skill Gems"', "- family: LightningResistance\n    min_tier: any"
     )
     target_file = tmp_path / "done.yaml"
     target_file.write_text(text, encoding="utf-8")
@@ -208,7 +208,7 @@ def test_a_start_item_that_already_meets_the_target_costs_only_its_price(tmp_pat
 
 def test_a_start_item_that_already_meets_the_target_is_planned_the_same_by_the_packed_solver(tmp_path):
     text = R12.read_text(encoding="utf-8").replace(
-        '- stat: "+1 to Level of all Lightning Skill Gems"', "- family: LightningResistance"
+        '- stat: "+1 to Level of all Lightning Skill Gems"', "- family: LightningResistance\n    min_tier: any"
     )
     target_file = tmp_path / "done.yaml"
     target_file.write_text(text, encoding="utf-8")

@@ -85,6 +85,15 @@ def test_a_requirement_that_refuses_a_crafted_mod_does_not_count_the_craft():
     assert crafts(chosen) == set()
 
 
+def test_a_craft_counts_only_when_the_leaf_accepts_it_as_a_crafted_mod():
+    # a leaf that asks a tier (`tier_ok` holds the natural-tier mods only) never counts a bench craft: it has no natural tier (OR-1)
+    tier_leaf = Wanted(frozenset({DAMAGE_1}), tier_ok=frozenset())
+    named_leaf = Wanted(frozenset({DAMAGE_1}))  # `mod:` or a roll limit asks no tier
+
+    assert crafts(offered(Goal((tier_leaf,)))) == set()
+    assert crafts(offered(Goal((named_leaf,)))) == {DAMAGE_1}
+
+
 def test_a_craft_of_another_item_class_is_not_listed():
     chosen = offered(Goal((Wanted(frozenset({DAMAGE_1})),)), base_id=AMULET)
 
