@@ -24,7 +24,8 @@ from crafting_system.items import Item
 from crafting_system.prices import PriceFile
 from crafting_system.risk import RiskReport, _regen, evaluate, is_free_cost
 from crafting_system.solver import Action, Outcome, Solution, solve
-from crafting_system.targets import KOfN, Requirement, StartBuyError, Target, start_price_key
+from crafting_system.prices.query_compare import other_item
+from crafting_system.targets import KOfN, Requirement, StartBuyError, Target, buy_spec_of
 
 from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
@@ -81,6 +82,7 @@ class StartPrice:
     name: str | None
     chaos: float
     source: str
+    taken_for: str | None = None  # "price taken for a wider item (...)": the stored search is not the item the key names (#474, OR-7)
 
 
 @dataclass(frozen=True)
@@ -245,7 +247,8 @@ def resolve_start_price(
             return StartPrice(None, _override(override), "given on the command line")
         return StartPrice(None, 0.0, "the target does not buy its start item, so it counts as free")
     try:
-        name = start_price_key(data, target)
+        spec = buy_spec_of(data, target)
+        name = spec.name
     except StartBuyError as error:
         if override is not None:  # the run gives its own number, so the key is only a label
             return StartPrice(None, _override(override), "given on the command line")
@@ -258,7 +261,8 @@ def resolve_start_price(
             f"no price for the start item {name!r}. Price it with `python -m crafting_system.cli trade "
             "<target file>`, write it in price_overrides.toml, or give it with --start-price"
         )
-    return StartPrice(name, entry.chaos, entry.source)
+    stored = (entry.detail or {}).get("query")
+    return StartPrice(name, entry.chaos, entry.source, other_item(spec, stored) if isinstance(stored, dict) else None)
 
 
 def _override(override: float) -> float:

@@ -42,7 +42,7 @@ start_item:
   mods: []
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
-# (base, item level, influence, start item), so nothing else describes it. The rare item with no mods is searched as a Normal base; the Orb of Alchemy that makes it rare is in the price (OR-16, a later ticket).
+# (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base plus an Orb of Alchemy, not of this rare item (OR-16, #494 point 2).
 buys_start_item: true
 
 # See R08: the guide's fossils and the bench.
