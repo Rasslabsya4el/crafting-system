@@ -211,3 +211,11 @@ each new test, and a new group costs its tests at the median.
 - **The report:** `report.md` (`.github/scripts/measure_summary.py`) holds every step's `summary.md` under its heading.
 - **A failed step does not stop the chain:** its note says so, and the next step starts.
 - **Runners:** every matrix of the chain keeps `max-parallel: 16`, so 4 of the repository's 20 runner jobs stay free for CI.
+- **Measuring a few modules again (ticket #413):** the week's artifacts `measure-mutplan` and `measure-mut-*` hold the plan and the
+  outcome of every mutant. `research/413/mutation_rerun.py` turns them and the files of the module(s) into two small plans in the same
+  format (`plan-before.json`: the mutants not killed, with the week's tests; `plan-after.json`: the same with the new test files first;
+  a mutant is matched to the week's by its text, not its line). Run a plan through the dispatcher, one slice per runner, then merge
+  with `.github/scripts/mutation_summary.py`:
+  `heavy_dispatch.py run --ref BRANCH --runners 16 --min-runners 4 --command 'mkdir -p "$OUT_DIR/res" && uv run --no-sync python .github/scripts/mutation_run.py --plan research/413/plan-after.json --out "$OUT_DIR/res" --round 1 --job "$RUNNER_INDEX" --jobs "$RUNNER_COUNT" --minutes 48'`.
+  A slice stops starting mutants after `--minutes`; the ids it did not reach go into a second plan. About 460 mutants took 11 to 22
+  minutes on 7 runners.
