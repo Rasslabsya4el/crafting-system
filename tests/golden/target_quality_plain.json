@@ -40,8 +40,8 @@
     "sockets": null,
     "imprints": []
   },
-  "price_file": null,
   "start": "given",
+  "price_file": null,
   "implicits": [],
   "quality": {
     "_type": "PlainQualityRequirement",
