@@ -6,7 +6,10 @@ Code: `src/crafting_system/abstraction/_pattern.py` (the key, its members, the m
 
 ## Short answer
 
-RESULT_TABLE_PLACEHOLDER
+1. **The bound is built without the walk and reproduces the member-union bound of #376 to 1e-12.** On every route walked for the comparison (R04, S02, R05, R13) the value of the start from `build_pattern_model` equals the value of the member-union experiment built from the walked graph for the same key, to a relative 3e-13 or better, with the same number of abstract states (R04 13,060 with the tags and 7,791 without, R14 1,969 and 850, S02 91, R13 517; R05 455). Start value over the exact cost: **R04 99.62% (tags) and 99.48% (no tags), R14 99.99% (tags) and 98.10% (no tags), S02 99.9998%** (the research's 100.00%: the unreachable members cost 0.0002%), R05 and R13 100.00%. The ticket's tolerance was 0.1%.
+2. **It is never above the exact cost, at any walked state.** 0 violations of the exact value (the largest excess is negative on R04 and S02) and 0 walked states whose key the model never reached, on R04 (177,242 states), S02 (106,002), R05 (1,185), R13 (4,066) and R14 (816,153, see the table): the members that the model makes include every state the walk meets.
+3. **It evaluates a small part of the walk's kernels.** R14: 10,615 kernels (tags) or 10,752 (no tags) against the walk's 1,578,415, and against the 307,163 and 206,626 that the member-union experiment needed for the extreme members: 0.7%. R04: 79,278 against 350,923 (every kernel of the walk, since every member of a key is an extreme there). S02: 35 against 186 (114 for the extremes). Time and memory: R14 17-21 s and 260-290 MB, R04 172-258 s and 660-760 MB, S02 157 s and 2.4 GB (the Harvest reforge kernels, as in the walk), R05 34 s, R13 1 s; the walks take 2,221 s, 361 s, 640 s. The solve of the model takes 0.1 to 1.1 s.
+4. **What is not proved.** The Fracturing Orb, an erasing reroll under a lock, and any action not declared one of the classes below are offered at every member of the key (sound by construction, not shown to need fewer); a goal with a roll limit, an action that rerolls values, an unveil offer and imprints are refused. The classes whose members are reduced have an argument (the module docstring) and a test against every member (below). Filed: ISSUES_LIST.
 
 ## What is built
 

@@ -501,18 +501,19 @@ def build_pattern_model(
     (`Pattern.mode_of`); members that the action refuses do not offer it, and a restart leads to the start key from every key but the start's.
     Two members with the same pushed kernel give one abstract action. If a kernel produces an ordinary slot the pool did not list, the
     universe grows and the build runs again (`stats.universe_growth` counts the restarts). Raises `OutOfScopeError` as `Pattern` does and
-    `RuntimeError` when `max_keys` keys were found (a safety net the caller asked for, never a default).
+    `RuntimeError` when more than `max_keys` keys were found (a safety net the caller asks for, never a default).
     """
     pattern = Pattern(abstraction, tags)
     began = time.perf_counter()
-    for attempt in range(8):
+    passes = 0
+    while True:  # each pass that grows the universe adds slots to a finite set, so this ends; a pass that adds none is the answer
         pattern.grew = 0
         model = _explore(pattern, start, offers, progress, max_keys)
         if not pattern.grew:
-            model.stats.universe_growth = attempt
+            model.stats.universe_growth = passes
             model.stats.seconds = time.perf_counter() - began
             return model
-    raise RuntimeError("the universe of slots kept growing: the pool and the kernels disagree about the slots an item can hold")
+        passes += 1
 
 
 def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternOffer], progress, max_keys) -> PatternModel:
