@@ -11,7 +11,7 @@ from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState, integer_weights
 from crafting_system.abstraction._pattern import Pattern, PatternOffer
-from crafting_system.actions import ActionError
+from crafting_system.actions import ActionError, NotApplicableError, OutOfScopeError
 from crafting_system.solver import PackedBuilder, solve_packed
 
 
@@ -66,7 +66,7 @@ def pushed(pattern: Pattern, ab: Abstraction, state: CompressedState, action) ->
     """The kernel of `action` on `state` seen through the key, or None when the action refuses the state."""
     try:
         kernel = ab.kernel(state, action)
-    except ActionError:
+    except (NotApplicableError, OutOfScopeError):  # no action at this member: the game refuses, or no rule covers it (the exact model's view)
         return None
     out: dict = defaultdict(Fraction)
     for successor, chance in kernel.items():

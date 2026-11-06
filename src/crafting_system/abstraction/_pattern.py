@@ -52,9 +52,22 @@ class. In the notation `V` is any value of the successor keys and `backup_m(V)` 
   member holds: not of the weights), any action that is not declared one of the above, and an erasing reroll under a lock. **Unproved to be
   cheaper, and exact by construction.**
 
-Every member offered is checked to be an item (`Abstraction._item_of`), so a member that no item has is never offered. The family types are the
-ones of the abstraction (`Kinds`); a slot that the pool does not list (an essence-only mod, a crafted copy) joins the universe when a kernel
-produces it, and the build starts again with the larger universe (`universe_growth`).
+Every member offered is checked to be an item (`Abstraction._item_of`), so a member that no item has is never offered.
+
+**Refusals.** An action that the game forbids at a member (`GAME_REFUSAL`, `NotApplicableError`) is not an action of that member and is left out
+of it. An action that raises a model gap at a member (`MODEL_GAP`, `OutOfScopeError`: no admitted rule covers the item) is left out only when
+no member of the key can take it (each is a game refusal or a gap: the exact model has no action at any state of the key, as the walk and the
+planner treat a gap as unavailable). If another member can take it, the build refuses and names the offer and the key: the exact model drops
+the action only at the states where the gap is, so leaving it out of the key could put the bound above the exact cost (`_gap_everywhere`). A
+model gap in `_item_of` always refuses.
+
+**The universe.** The members of a key are made of the ordinary slots an item can hold. They come from three places: the pool of an empty rare
+item (every mod a draw can give; the pure junk types are made of these), what an offered action adds by name (`Adds.named`: an essence's forced
+mod, which the pool does not list; `Universe._seed_named`), and every slot a kernel the build evaluates produces (`note`; a slot found this way
+that the two others missed starts the build again, `stats.universe_growth`). A slot that a non-offered member's kernel would produce, and no
+offered member's, cannot be one of the first two: a draw gives a mod of the pool, and a forced mod is the same at every member. What is left is
+a draw from a pool wider than the empty rare item's (a fossil's added mods) at a member that is not offered, which `Adds` does not name: the
+universe may miss that slot, and the members that hold it are not made (issue #520). No route of the benchmark has such an action.
 """
 
 import time
@@ -68,14 +81,22 @@ from itertools import product
 from math import gcd, lcm
 from typing import NamedTuple
 
-from crafting_system.actions import BLOCKED_TAG, Action, ActionError, OutOfScopeError, allowed_by_tags
+from crafting_system.actions import BLOCKED_TAG, Action, NotApplicableError, OutOfScopeError, allowed_by_tags
 from crafting_system.data import Mod
-from crafting_system.items import ItemError, Metamod, Side
+from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
 
 from ._goal import Status
 from ._kernel import Abstraction
 from ._kinds import TYPE_PREFIX, kind_tags
 from ._state import CompressedState, Slot, best_of
+
+# The two families of refusal an action raises (`actions/errors.py`). A GAME refusal (the game forbids the action on that item) may drop the
+# action at a member: it is not an action there. A MODEL GAP (no admitted rule covers the item) may not: the exact model treats the action as
+# unavailable there, but at a member that is not a state of the route the gap says nothing about the states that are, and dropping the action
+# from the key could put the bound above the exact cost. The build refuses and says why. Named here, once, so that a change of the names
+# in `actions/errors.py` (ticket #506) is one line.
+GAME_REFUSAL = NotApplicableError
+MODEL_GAP = OutOfScopeError
 
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
@@ -156,6 +177,28 @@ class _Universe:
             for kind in sorted({slot.kind for _, _, slot in rows}):
                 self.classes[side][_tagset(kind)].append(_PureKind(kind, Slot(side, kind, zero), kind_type))
         self.zero = zero
+        self._seed_named(pattern, influences, kinds)
+
+    def _seed_named(self, pattern: "Pattern", influences: frozenset, kinds) -> None:
+        """Add the ordinary mods an offered action puts on the item by name and that the pool does not list (an essence's forced mod).
+
+        `Adds.named` is the same on every use, so the slot is known before any kernel is run; this is what keeps a slot that only a member that
+        is not offered would have produced from missing (see the module docstring, "The universe").
+        """
+        ab = pattern.ab
+        probe = Item.build(ab.data, base_id=ab.base_id, item_level=ab.item_level, rarity=Rarity.RARE, influences=influences)
+        for action in pattern.actions:
+            try:
+                adds = action.adds(ab.data, probe)
+            except GAME_REFUSAL:
+                continue
+            if adds.crafted:
+                continue
+            for mod_id in adds.named or ():
+                mod = ab.data.mods.get(mod_id)
+                if mod is None or mod.domain == "crafted" or mod.generation_type not in (side.value for side in SIDES):
+                    continue
+                self.note(Slot(Side(mod.generation_type), kinds.of(mod), ab._drawn_contribution(mod, False, influences)))
 
     def note(self, slot: Slot) -> bool:
         """Add a slot a kernel produced that the pool did not list; True when the universe grew."""
@@ -200,6 +243,7 @@ class PatternStats:
     abstract_actions: int = 0
     abstract_edges: int = 0
     refused_pairs: int = 0
+    gap_pairs: int = 0  # pairs left out because the action is a model gap at every member of the key that is not a game refusal
     universe_growth: int = 0
     modes: Counter = field(default_factory=Counter)  # (member mode, label of the offer) -> keys it was expanded at
     seconds: float = 0.0
@@ -226,13 +270,14 @@ class Pattern:
     rerolls values, or one that reads the unveil offer or the imprints.
     """
 
-    def __init__(self, abstraction: Abstraction, tags: bool | None = None):
+    def __init__(self, abstraction: Abstraction, tags: bool | None = None, actions: Sequence[Action] = ()):
         if abstraction._has_laws or abstraction.rerolls_values or abstraction.tracks_offer or abstraction.tracks_imprints:
             raise OutOfScopeError(
                 "the crafted-pattern bound has no members for a goal with a roll limit, an action that rerolls values, an unveil offer or imprints (#497)"
             )
         self.ab = abstraction
         self.data = abstraction.data
+        self.actions = tuple(actions)  # the offered actions: what they add by name joins the universe of slots
         self.tags = abstraction.models_metamods if tags is None else tags
         self.width = len(abstraction.goal.leaves)
         self.zero = (Status.ABSENT,) * self.width
@@ -410,7 +455,9 @@ class Pattern:
             try:
                 self.ab._item_of(state, False)
                 found = True
-            except (ValueError, ItemError, OutOfScopeError):
+            except MODEL_GAP:
+                raise
+            except (ValueError, ItemError):
                 found = False
             self._feasible[state] = found
         return found
@@ -503,7 +550,7 @@ def build_pattern_model(
     universe grows and the build runs again (`stats.universe_growth` counts the restarts). Raises `OutOfScopeError` as `Pattern` does and
     `RuntimeError` when more than `max_keys` keys were found (a safety net the caller asks for, never a default).
     """
-    pattern = Pattern(abstraction, tags)
+    pattern = Pattern(abstraction, tags, [offer.action for offer in offers if offer.action is not None])
     began = time.perf_counter()
     passes = 0
     while True:  # each pass that grows the universe adds slots to a finite set, so this ends; a pass that adds none is the answer
@@ -540,6 +587,7 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
     kernel_ids: dict[tuple, int] = {}
     kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
     computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
+    gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
     last = time.perf_counter()
     i = 0
     while i < len(keys):
@@ -563,16 +611,26 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
                     stats.pairs += 1
                     try:
                         ck = ab.kernel_key(member, offer.action)
-                    except ActionError:
+                    except GAME_REFUSAL:
                         stats.refused_pairs += 1
                         continue
+                    except MODEL_GAP as gap:
+                        if _gap_everywhere(pattern, gaps, key, offer):
+                            stats.gap_pairs += 1
+                            continue
+                        raise _gap(offer, key, gap) from gap
                     kid = computed.get(ck)
                     if kid is None:
                         try:
                             exact = ab.kernel(member, offer.action)
-                        except ActionError:
+                        except GAME_REFUSAL:
                             stats.refused_pairs += 1
                             continue
+                        except MODEL_GAP as gap:
+                            if _gap_everywhere(pattern, gaps, key, offer):
+                                stats.gap_pairs += 1
+                                continue
+                            raise _gap(offer, key, gap) from gap
                         stats.kernels += 1
                         pushed: dict[int, Fraction] = defaultdict(Fraction)
                         for successor, chance in exact.items():
@@ -595,6 +653,36 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
     stats.goal_keys = sum(goal)
     stats.fallbacks = pattern.fallbacks
     return PatternModel(keys, goal, actions, kernels, stats, index)
+
+
+def _gap_everywhere(pattern: Pattern, memo: dict, key: PatternKey, offer: PatternOffer) -> bool:
+    """Whether no member of the key can take the action: each is refused by the game or is a model gap.
+
+    Then the exact model has no action at any state of the key either (a gap makes it unavailable, as the walk and the planner do), so leaving
+    it out of the key is what the exact model does. If one member can take it, a gap at the member that was asked may not be left out.
+    """
+    found = memo.get((key, id(offer)))
+    if found is None:
+        found = True
+        for member in pattern.members(key, Mode.ALL):
+            try:
+                pattern.ab.kernel_key(member, offer.action)
+            except (GAME_REFUSAL, MODEL_GAP):
+                continue
+            found = False
+            break
+        memo[(key, id(offer))] = found
+    return found
+
+
+def _gap(offer: PatternOffer, key: PatternKey, gap: Exception) -> OutOfScopeError:
+    """The refusal of a build that met a model gap at a member: the action cannot be dropped from the key without risking a bound above the exact cost."""
+    return OutOfScopeError(
+        f"{offer.label} raised a model gap at a member of a key (status {[int(v) for v in key.status]}, {len(key.crafted)} crafted, "
+        f"counts {key.counts}) while another member of the key can take it: {gap}. The crafted-pattern bound cannot drop the action from the "
+        "key (the exact model drops it only where the gap is), so it refuses the route instead of returning a bound that may be above the "
+        "exact cost (OR-12, OR-13)."
+    )
 
 
 def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]) -> int:
