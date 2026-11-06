@@ -112,3 +112,37 @@ def test_weights_beyond_the_range_of_a_float_are_divided_as_integers():
     exact = exact_values(g)
     lower = bound(g, np.arange(g.expanded, dtype=np.int64))
     assert lower[live(exact)] == pytest.approx(exact[live(exact)], rel=1e-9, abs=1e-9)
+
+
+def hand_graph(cost_of_1: float, cost_of_2: float) -> E.Graph:
+    """Start 0 moves to state 1 or 2 with chance 1/2 each (cost 1); states 1 and 2 SHARE one kernel (to the goal 3), at different costs.
+
+    Exact: V(1) = cost_of_1, V(2) = cost_of_2, V(0) = 1 + (cost_of_1 + cost_of_2) / 2.
+    """
+    g = E.Graph()
+    g.states = list(range(4))
+    g.goal = bytearray([0, 0, 0, 1])
+    g.expanded = 4
+    g.k_succ = [np.array([1, 2], dtype=np.int32), np.array([3], dtype=np.int32)]
+    g.k_wt = [np.array([1, 1], dtype=np.int64), np.array([1], dtype=np.int64)]
+    g.k_big = [False, False]
+    for cost, kernel in [(1.0, 0), (cost_of_1, 1), (cost_of_2, 1)]:
+        g.act_offer.append(0)
+        g.act_cost.append(cost)
+        g.act_kernel.append(kernel)
+        g.act_ptr.append(len(g.act_offer))
+    g.act_ptr.append(len(g.act_offer))  # the goal has no action
+    return g
+
+
+@pytest.mark.parametrize("costs", [(5.0, 9.0), (9.0, 5.0)])
+def test_states_of_one_key_that_share_a_kernel_are_offered_at_the_cheaper_cost(costs):
+    """The minimum over the members' costs, whichever member comes first; the bound is worked out by hand and is neither 0 nor exact."""
+    g = hand_graph(*costs)
+    exact = exact_values(g)
+    assert exact[0] == pytest.approx(8.0)  # 1 + (5 + 9) / 2
+    lower = bound(g, np.array([0, 1, 1, 2], dtype=np.int64))
+    # V(abstract {1, 2}) = min(5, 9) = 5, so V(0) = 1 + 5 = 6: strictly between 0 and the exact 8
+    assert lower[0] == pytest.approx(6.0)
+    assert lower[1] == lower[2] == pytest.approx(5.0)
+    assert lower[0] / exact[0] == pytest.approx(0.75)

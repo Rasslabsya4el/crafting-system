@@ -283,7 +283,8 @@ def optimistic_value(g, pk: dict, acts: dict, cmap: np.ndarray, C: int, began: f
     a_state = (code_s[cut] // count).astype(np.int64)
     a_kernel = (code_s[cut] % count).astype(np.int64)
     sizes = ck_sizes[a_kernel]
-    # a content merge of equal abstract actions (same abstract successors and chances, dearer one dropped) keeps the model small
+    # one abstract action per (abstract state, kernel id), at the cheapest cost of the members that use that kernel; two kernel ids whose
+    # pushed distributions are equal are NOT merged (the model is a little bigger, never different)
     edges = int(sizes.sum())
     info = {"abstract_states": C, "abstract_actions": len(a_state), "abstract_edges": edges, "aggregate_seconds": round(time.perf_counter() - t0, 1)}
     if edges > max_flat_edges:
@@ -372,8 +373,12 @@ def tolerance_rows(flat: dict, start: int, v_star: np.ndarray, class_sizes: np.n
     """What a bound of a given relative error could cut at most: the classes reachable through the actions within `eps` of their state's optimal value.
 
     With a perfect upper bound an action is competitive when its cost with the lower bound does not exceed the best action's value; a lower
-    bound that is `eps` below the exact value at every state keeps at least the actions within `eps` of the best. So this is the floor of the
-    envelope for a bound of error `eps` (a bound with a smaller error may keep fewer, never more than the row of its own error).
+    bound whose error is at least `eps` at every state cannot keep fewer than the actions within `eps` of the best. So this is a floor of the
+    envelope for a bound with a UNIFORM error of `eps`; a bound whose error differs from state to state can keep fewer (or more) and is
+    measured by `cut_rows`, not read off this table.
+
+    Measurement settings, not planner defaults (ADR-0063 point 5, OR-12): the `eps` values here, the sweeps (0, 8) of `cut_rows`, the 1e-12
+    and 1e-7 tolerances, `--max-flat-edges` and `--seconds` only bound what this research ran; nothing in `src/` reads them.
     """
     state = flat["state"]
     non_goal_action = ~flat["goal"][state]
