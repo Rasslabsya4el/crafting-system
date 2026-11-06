@@ -12,8 +12,18 @@ module does not compute:
 * the mean of the lumped chain against `risk.evaluate`, which knows nothing of the walk.
 
 The kernels themselves are always the abstraction's (`Abstraction.kernel`): the walk packs them, and what it must keep is exactly
-them. Their own correctness is checked against brute force over concrete items by the `test_abstraction_*` files, and there is no
-second source for the kernels of a hundred states that is not a copy of those tests; this file does not repeat them.
+them. This file has no second source for them. The second source is accepted to be the `test_abstraction_*` files, which check
+`Abstraction.kernel` against brute force over concrete items, compressed one by one and added up in exact fractions:
+
+* the Chaos Orb on the amulet pool of this world (`abstraction_pool.SMALL`):
+  `test_abstraction_kernel.py::test_the_kernel_equals_the_enumeration_over_concrete_items` (with `abstraction_support.check_kernel`,
+  which also checks the sum is exactly 1) and `test_abstraction_oracle.py` (which checks the brute force itself against `actions`);
+* a bench craft and Remove Crafted Mods, on the belt fixture and not on this world:
+  `test_abstraction_b1.py::test_a_craft_adds_a_crafted_slot_and_equals_the_deterministic_result` and
+  `::test_remove_crafted_mods_drops_the_crafted_slots_and_equals_the_deterministic_result` (the one result of a craft, compared with
+  `assert_same_distribution`); `test_abstraction_estimate.py` keeps the legality of this world's four crafts equal to `BenchCraft.outcomes`.
+
+What is not covered is the kernel of this world's own four synthetic crafts and of Remove Crafted Mods by brute force (issue #460).
 
 The conversion of a kernel to integer weights is not shared with the code under test: `cli/_packed.py` imports
 `abstraction.integer_weights`, and every expectation here uses `weights_by_hand`, written in this file by another route (the product
@@ -157,7 +167,8 @@ def test_integer_weights_is_the_weights_by_hand_on_the_kernels_of_the_world(worl
             assert integer_weights(kernel) == weights_by_hand(kernel)
             checked += 1
 
-    assert checked > 100  # a hundred states, a few offers each
+    graph, restart_tag = walked.graph, len(make_offers()) - 1
+    assert checked == sum(1 for tag in graph.act_tag.tolist() if tag != restart_tag)  # exactly the actions the walk built, but the restarts
 
 
 @pytest.mark.parametrize("kernel,expected", WEIGHTS_ON_PAPER, ids=lambda case: str(case))
