@@ -6,8 +6,9 @@ The scan reads the AST of every `.py` file under `tests/reconcile/`, subfolders 
 - any relative import that leaves `tests/reconcile/` (it is resolved to its real module, so `from .. import x` in
   a top-level file is outside) or does not name a module of the package;
 - any import outside the standard library, `yaml` and the package itself (`pytest` too in a test file), except the one shared module
-  `independent.ladder` (ticket #419), imported as `from independent import ladder` or `from independent.ladder import x`; any other
-  module of `independent` is outside;
+  `independent.ladder` (ticket #419) and the raw export loader `independent.export` (ticket #432), imported as
+  `from independent import ladder` or `from independent.ladder import x` (and the same for `export`); any other module of
+  `independent` is outside;
 - any use of the dynamic ways around an import: the import machinery module, the `__import__` builtin, `exec`, `eval`,
   `spec_from_file_location`, `import_module`, whether imported, called, read as an attribute, or named as a string
   (`getattr(builtins, "exec")`).
@@ -27,7 +28,8 @@ PLANNER = "crafting_" + "system"
 OUTSIDE = "<outside tests/reconcile>"
 BANNED = frozenset({"import" + "lib", "__imp" + "ort__", "ex" + "ec", "ev" + "al", "spec_from_" + "file_location", "import_" + "module"})
 SHARED_PACKAGE = "independent"
-SHARED_MODULE = "independent.ladder"
+SHARED_MODULES = frozenset({"independent.ladder", "independent.export"})  # the shared modules this package may import
+SHARED_NAMES = frozenset({"ladder", "export"})  # the same, as the names `from independent import <name>` takes
 ALLOWED_IN_CODE = set(sys.stdlib_module_names) | {"yaml", PACKAGE_NAME}
 ALLOWED_IN_TESTS = ALLOWED_IN_CODE | {"pytest"}
 
@@ -48,13 +50,13 @@ def scan_source(source: str, package: tuple[str, ...] = (PACKAGE_NAME,)) -> tupl
     banned: set[str] = set()
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
-            roots |= {alias.name.split(".")[0] for alias in node.names if alias.name != SHARED_MODULE}
+            roots |= {alias.name.split(".")[0] for alias in node.names if alias.name not in SHARED_MODULES}
             banned |= {alias.name.split(".")[0] for alias in node.names} & BANNED
         elif isinstance(node, ast.ImportFrom):
             names = {alias.name for alias in node.names}
             banned |= names & BANNED
             if node.level == 0:
-                shared_ok = node.module == SHARED_MODULE or (node.module == SHARED_PACKAGE and names == {"ladder"})
+                shared_ok = node.module in SHARED_MODULES or (node.module == SHARED_PACKAGE and names <= SHARED_NAMES)
                 if not shared_ok:
                     roots.add((node.module or "").split(".")[0])
                 banned |= {(node.module or "").split(".")[0]} & BANNED
@@ -85,8 +87,9 @@ def package_files(root: Path = PACKAGE) -> list[Path]:
     return sorted(root.rglob("*.py"))
 
 
-def test_the_shared_ladder_module_is_where_the_package_expects_it():
+def test_the_shared_modules_are_where_the_package_expects_them():
     assert (PACKAGE.parent / "independent" / "ladder.py").is_file()
+    assert (PACKAGE.parent / "independent" / "export.py").is_file()
 
 
 @pytest.mark.parametrize(
@@ -96,9 +99,15 @@ def test_the_shared_ladder_module_is_where_the_package_expects_it():
         "from independent import ladder as shared",
         "from independent.ladder import ladder_of, item_tags",
         "import independent.ladder",
+        "from independent import export",
+        "from independent import export as shared_export",
+        "from independent import ladder, export",
+        "from independent.export import load_export, ExportMissing",
+        "import independent.export",
+        "import independent.export, independent.ladder",
     ],
 )
-def test_the_shared_ladder_module_is_the_one_import_from_outside_the_package_that_is_allowed(source):
+def test_the_two_shared_modules_are_the_only_imports_from_outside_the_package_that_are_allowed(source):
     assert scan_source(source)[0] <= ALLOWED_IN_CODE
 
 

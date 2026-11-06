@@ -39,13 +39,14 @@ _RANGE = re.compile(r"\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)")
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
-def ladder(mods: dict, base_tags, domain: str, mod_id: str, influences=()) -> dict[str, int]:
+def ladder(mods: dict, base_tags, domain: str, mod_id: str, influences=(), item_class: str | None = None) -> dict[str, int]:
     """Tier by mod id of every mod in the ladder of `mod_id` on a base with `base_tags` and the base's `domain`.
 
     The ladder holds the natural mods of the same type and generation type. `mod_id` itself is in it only if it
-    can spawn there. `influences` add the influence tags of the item.
+    can spawn there. `influences` add the influence tags of the item; they need the base's `item_class`, and a class that
+    takes no influence is refused (`independent.ladder.item_tags`).
     """
-    return ladder_of(mods, item_tags(base_tags, influences), domain, mod_id)
+    return ladder_of(mods, item_tags(base_tags, influences, item_class), domain, mod_id)
 
 
 def stat_ranges(mod: dict) -> list[tuple[float, float]]:
@@ -60,15 +61,19 @@ def normalise_stat_text(text: str) -> str:
     return re.sub(r"[ \t]+", " ", text).strip()
 
 
-def pool_of(mods: dict, base_tags, cache: dict | None = None) -> frozenset:
-    """The ids of the ordinary mods (domain `item`, no Royale copy) that can spawn on a base with `base_tags`."""
-    key = (id(mods), tuple(sorted(base_tags)))
+def pool_of(mods: dict, base_tags, domain: str, cache: dict | None = None) -> frozenset:
+    """The ids of the mods of the base's own `domain` (no Royale copy) that can spawn on a base with `base_tags`.
+
+    The domain is the base's (`item` for gear, `misc` for jewels), as `ladder` takes it: the game rolls on a base only the
+    mods of its domain, so the item-domain life mods that carry a `default` weight are not in a jewel's pool (ticket #433).
+    """
+    key = (id(mods), domain, tuple(sorted(base_tags)))
     if cache is not None and key in cache:
         return cache[key]
     found = frozenset(
         mod_id
         for mod_id, mod in mods.items()
-        if mod["domain"] == "item" and not is_royale(mod_id) and spawn_weight(mod, base_tags) > 0
+        if mod["domain"] == domain and not is_royale(mod_id) and spawn_weight(mod, base_tags) > 0
     )
     if cache is not None:
         cache[key] = found

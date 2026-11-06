@@ -6,7 +6,7 @@ from copy import deepcopy
 import pytest
 import yaml
 
-from .checks import Disagreement, check_ids, reconcile, reconcile_files, slots
+from .checks import Disagreement, _pool_differences, check_ids, reconcile, reconcile_files, slots
 from .export import Export, ExportMissing, load_export, version_folder
 from .files import (
     FileFormatError,
@@ -237,13 +237,49 @@ def test_the_bases_of_a_category_are_the_released_royale_free_ones_on_sale():
 
 
 def test_the_pool_of_a_base_is_its_ordinary_spawnable_mods_without_royale_copies():
-    pool = pool_of(EXPORT.mods, ["ring", "default"])
+    pool = pool_of(EXPORT.mods, ["ring", "default"], "item")
 
     assert "ResA1" in pool and "ResA3" in pool
     assert "ResA2Royale" not in pool and "ResCrafted" not in pool and "ResAOff" not in pool
     cache = {}
-    assert pool_of(EXPORT.mods, ["ring", "default"], cache) == pool
-    assert pool_of(EXPORT.mods, ["default", "ring"], cache) is cache[(id(EXPORT.mods), ("default", "ring"))]
+    assert pool_of(EXPORT.mods, ["ring", "default"], "item", cache) == pool
+    assert pool_of(EXPORT.mods, ["default", "ring"], "item", cache) is cache[(id(EXPORT.mods), "item", ("default", "ring"))]
+
+
+JEWEL_MODS = {
+    "IncreasedLife": _mod("Life", 1, 5, 9, [("default", 1000)], generation="prefix"),  # item domain, a default weight: no jewel mod
+    "LifeRegeneration": _mod("Regen", 1, 1, 2, [("default", 1000)]),
+    "JewelLife": _mod("JewelLife", 1, 5, 9, [("jewel", 1000)], generation="prefix", domain="misc"),
+    "JewelResist": _mod("JewelResist", 1, 3, 5, [("jewel", 1000)], domain="misc"),
+    "RingResist": _mod("RingResist", 1, 3, 5, [("ring", 1000)]),
+}
+
+
+def test_the_pool_of_a_jewel_is_its_own_domain_not_the_item_domain_mods_with_a_default_weight():
+    jewel_tags = ["jewel", "default"]
+
+    assert pool_of(JEWEL_MODS, jewel_tags, "misc") == {"JewelLife", "JewelResist"}
+    assert pool_of(JEWEL_MODS, jewel_tags, "item") == {"IncreasedLife", "LifeRegeneration"}  # what every base used to get
+    assert pool_of(JEWEL_MODS, ["ring", "default"], "item") == {"IncreasedLife", "LifeRegeneration", "RingResist"}
+
+
+def test_the_pool_cache_keeps_the_domains_of_one_tag_list_apart():
+    cache = {}
+
+    assert pool_of(JEWEL_MODS, ["jewel", "default"], "misc", cache) == {"JewelLife", "JewelResist"}
+    assert pool_of(JEWEL_MODS, ["jewel", "default"], "item", cache) == {"IncreasedLife", "LifeRegeneration"}
+    assert pool_of(JEWEL_MODS, ["jewel", "default"], "misc", cache) == {"JewelLife", "JewelResist"}
+    assert len(cache) == 2
+
+
+def test_the_pools_the_checks_compare_are_those_of_each_base_own_domain():
+    jewel = {"name": "Cobalt Jewel", "item_class": "Jewel", "tags": ["jewel", "default"], "release_state": "released", "domain": "misc"}
+    other_jewel = {**jewel, "name": "Crimson Jewel", "tags": ["jewel", "default"]}
+    ring = _base("Ruby Ring", "Ring", ["ring", "default"])
+    export = Export(mods=JEWEL_MODS, bases={"Metadata/Jewel1": jewel, "Metadata/Jewel2": other_jewel, RING: ring})
+
+    assert _pool_differences(export, ["Metadata/Jewel1"], ["Metadata/Jewel2"]) == []
+    assert _pool_differences(export, ["Metadata/Jewel1"], [RING]) == [f"{RING} (+3 -2)"]  # 3 ring-side mods in, the 2 jewel mods out
 
 
 # --- the files -----------------------------------------------------------------------------------------
@@ -386,14 +422,25 @@ def test_a_missing_export_file_is_reported_with_its_folder(tmp_path):
         load_export(tmp_path / "cache", pin)
 
 
-def test_without_a_pin_file_the_only_version_folder_is_used_and_two_are_refused(tmp_path):
+def test_with_no_pin_the_only_version_folder_is_used_and_two_are_refused(tmp_path):
     holder = tmp_path / "repoe-fork"
     (holder / "1.0").mkdir(parents=True)
 
-    assert version_folder(tmp_path, tmp_path / "no-pin.json") == holder / "1.0"
+    assert version_folder(tmp_path, None) == holder / "1.0"
     (holder / "2.0").mkdir()
     with pytest.raises(ExportMissing, match="2 version folders"):
+        version_folder(tmp_path, None)
+
+
+def test_a_pin_file_that_is_given_but_absent_or_without_a_version_is_an_error_not_a_fallback(tmp_path):
+    (tmp_path / "repoe-fork" / "1.0").mkdir(parents=True)  # the only version folder: the old fallback would take it
+
+    with pytest.raises(ExportMissing, match="the pin file .*no-pin.json is not there"):
         version_folder(tmp_path, tmp_path / "no-pin.json")
+    empty = tmp_path / "empty-pin.json"
+    empty.write_text("{}", encoding="utf-8")
+    with pytest.raises(ExportMissing, match="names no version"):
+        version_folder(tmp_path, empty)
 
 
 # --- the reconciliation --------------------------------------------------------------------------------

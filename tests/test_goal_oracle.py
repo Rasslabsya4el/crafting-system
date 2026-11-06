@@ -15,7 +15,9 @@ import json
 from pathlib import Path
 
 import pytest
+from independent.export import ExportMissing
 from oracle import goal_oracle as g
+from reconcile.export import load_export as load_reconcile_export
 
 ORACLE_DIR = Path(__file__).resolve().parent / "oracle"
 RING = "Metadata/Items/Rings/TestRing"
@@ -301,29 +303,58 @@ def test_stat_texts_compare_without_ranges_and_markup():
     assert g.normal_text("2 [ValourFunction|Valour] consumed") == "2 Valour consumed"
 
 
-def test_the_export_is_read_from_the_cache_folder_of_the_pin(tmp_path):
-    version = json.loads(PIN_FILE.read_text(encoding="utf-8"))["version"]
-    folder = tmp_path / "repoe-fork" / version
+def write_version(folder: Path, export: g.Export, *, essences: dict | None = None) -> None:
     folder.mkdir(parents=True)
-    export = tiny_export()
     (folder / "mods.json").write_text(json.dumps(export.mods), encoding="utf-8")
     (folder / "base_items.json").write_text(json.dumps(export.base_items), encoding="utf-8")
     (folder / "crafting_bench_options.json").write_text(json.dumps(export.bench_options), encoding="utf-8")
+    if essences is not None:
+        (folder / "essences.json").write_text(json.dumps(essences), encoding="utf-8")
+
+
+def test_the_export_is_read_from_the_cache_folder_of_the_pin(tmp_path):
+    version = json.loads(PIN_FILE.read_text(encoding="utf-8"))["version"]
+    export = tiny_export()
+    write_version(tmp_path / "repoe-fork" / version, export, essences={"E": {}})
     other = tmp_path / "repoe-fork" / "0.0.0"
     other.mkdir()
     (other / "mods.json").write_text("{}", encoding="utf-8")
     loaded = g.Export.from_cache(tmp_path, pin_file=PIN_FILE)
     assert loaded.mods.keys() == export.mods.keys()
+    assert loaded.bench_options == export.bench_options and loaded.essences == {"E": {}}
     assert g.Oracle(loaded, target(LIFE)).base_id == RING
-    with pytest.raises(FileNotFoundError):  # two versions and no pin file: it does not guess
-        g.Export.from_cache(tmp_path)
+    assert g.Export.from_cache(tmp_path).mods.keys() == export.mods.keys()  # the repo's pin file is the default
+    with pytest.raises(ExportMissing, match="2 version folders"):  # two versions and no pin file: it does not guess
+        g.Export.from_cache(tmp_path, pin_file=None)
+
+
+def test_the_export_comes_from_the_cache_dir_of_the_environment_and_a_missing_one_is_export_missing(tmp_path, monkeypatch):
+    version = json.loads(PIN_FILE.read_text(encoding="utf-8"))["version"]
+    write_version(tmp_path / "repoe-fork" / version, tiny_export())
+    monkeypatch.setenv("CRAFTING_CACHE_DIR", str(tmp_path))
+    assert g.Export.from_cache().mods.keys() == tiny_export().mods.keys()
+    assert g.Export.from_cache().essences == {}  # no essences file: empty, as the oracle read it before
+    monkeypatch.setenv("CRAFTING_CACHE_DIR", str(tmp_path / "empty"))
+    with pytest.raises(ExportMissing, match="mods.json is not in"):
+        g.Export.from_cache()
+    with pytest.raises(FileNotFoundError):  # the shared error is still a missing file
+        g.Export.from_cache()
+
+
+def test_the_oracle_and_the_reconciliation_read_one_folder_alike(tmp_path):
+    version = json.loads(PIN_FILE.read_text(encoding="utf-8"))["version"]
+    write_version(tmp_path / "repoe-fork" / version, tiny_export(), essences={"E": {}})
+    oracle_side = g.Export.from_cache(tmp_path)
+    reconcile_side = load_reconcile_export(tmp_path)
+    assert oracle_side.mods == reconcile_side.mods and oracle_side.base_items == reconcile_side.bases
+    assert oracle_side.bench_options == reconcile_side.bench_options and oracle_side.essences == reconcile_side.essences
 
 
 # --- independence ---------------------------------------------------------------------------------------------------------
 
 
-SHARED_MODULE = "independent.ladder"  # the one module outside this folder that the oracle may import (ticket #419)
-SHARED_FILE = Path(__file__).resolve().parent / "independent" / "ladder.py"
+SHARED_MODULES = {"independent.ladder", "independent.export"}  # the modules outside this folder that the oracle may import (#419, #432)
+SHARED_FILES = [Path(__file__).resolve().parent / "independent" / "ladder.py", Path(__file__).resolve().parent / "independent" / "export.py"]
 
 
 def imported_modules(source: str) -> set[str]:
@@ -340,9 +371,9 @@ def imported_modules(source: str) -> set[str]:
 
 
 def outside_imports(modules: set[str]) -> set[str]:
-    """The absolute imports that are not the standard library modules the oracle uses, `yaml`, or exactly the shared ladder module."""
+    """The absolute imports that are not the standard library modules the oracle uses, `yaml`, or exactly one of the shared modules."""
     allowed = {"json", "os", "re", "dataclasses", "pathlib", "yaml"}
-    return {name for name in modules - {SHARED_MODULE} if not name.startswith(".") and name.split(".")[0] not in allowed}
+    return {name for name in modules - SHARED_MODULES if not name.startswith(".") and name.split(".")[0] not in allowed}
 
 
 def sneaky_imports(source: str) -> list[str]:
@@ -371,15 +402,19 @@ def sneaky_imports(source: str) -> list[str]:
 def test_the_oracle_imports_the_standard_library_and_yaml_only(source):
     modules = imported_modules(source.read_text(encoding="utf-8"))
     assert not {name for name in modules if name.split(".")[0] == "crafting_system"}, "the oracle shares no code with the planner"
-    assert not outside_imports(modules), "the standard library, yaml and exactly the shared ladder module"
+    assert not outside_imports(modules), "the standard library, yaml and exactly the shared ladder and export modules"
     assert not sneaky_imports(source.read_text(encoding="utf-8"))
 
 
-def test_the_shared_ladder_module_is_the_only_import_from_outside_the_folder_and_it_is_there():
-    assert SHARED_FILE.is_file()
+def test_the_two_shared_modules_are_the_only_imports_from_outside_the_folder_and_they_are_there():
+    assert all(path.is_file() for path in SHARED_FILES)
     assert not outside_imports(imported_modules("from independent import ladder as shared"))
     assert not outside_imports(imported_modules("import independent.ladder"))
     assert not outside_imports(imported_modules("from independent.ladder import natural_ladders"))
+    assert not outside_imports(imported_modules("from independent import export as shared_export"))
+    assert not outside_imports(imported_modules("import independent.export"))
+    assert not outside_imports(imported_modules("from independent.export import load_export"))
+    assert not outside_imports(imported_modules("from independent import export, ladder"))
 
 
 @pytest.mark.parametrize(

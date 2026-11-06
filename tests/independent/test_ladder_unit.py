@@ -5,6 +5,8 @@ in the jewel's own domain, an item-domain mod that carries a `default` weight (s
 copy, an essence-only mod, a crafted mod, a unique mod and a Hunter-only mod.
 """
 
+import re
+
 import pytest
 from independent import ladder as shared
 
@@ -95,16 +97,41 @@ def test_the_domain_of_the_base_decides_not_the_domain_of_the_mod_asked_about():
 
 
 def test_an_influence_adds_its_tag_suffix_to_every_base_tag():
-    assert shared.item_tags(["ring", "default"], ["hunter"]) == {"ring", "default", "ring_basilisk", "default_basilisk"}
-    assert shared.item_tags(["ring"], ["hunter", "shaper"]) == {"ring", "ring_basilisk", "ring_shaper"}
+    assert shared.item_tags(["ring", "default"], ["hunter"], "Ring") == {"ring", "default", "ring_basilisk", "default_basilisk"}
+    assert shared.item_tags(["ring"], ["hunter", "shaper"], "Ring") == {"ring", "ring_basilisk", "ring_shaper"}
     assert shared.item_tags(["ring"]) == {"ring"}
-    with pytest.raises(KeyError):
-        shared.item_tags(["ring"], ["no-such-influence"])
+    assert shared.item_tags(["jewel", "default"]) == {"jewel", "default"}  # no influence: the class is not asked
+
+
+@pytest.mark.parametrize("item_class", ["Jewel", "AbyssJewel", "LifeFlask", "Tincture", "Fishing Rod"])
+def test_an_influence_on_a_class_that_takes_none_is_refused_as_the_planner_refuses_it(item_class):
+    with pytest.raises(shared.InfluenceError, match=f"class '{item_class}' takes no influence"):
+        shared.item_tags(["jewel", "default"], ["hunter"], item_class)
+    assert shared.item_tags(["jewel", "default"], [], item_class) == {"jewel", "default"}
+
+
+def test_an_unknown_influence_is_a_clear_error_that_lists_the_six():
+    with pytest.raises(shared.InfluenceError, match="no influence named 'no-such-influence'; the influences are .*warlord"):
+        shared.item_tags(["ring"], ["no-such-influence"], "Ring")
+    with pytest.raises(shared.InfluenceError, match="no influence named 'no-such-influence'"):  # a typo is a typo on any class
+        shared.item_tags(["jewel"], ["no-such-influence"], "Jewel")
+    assert issubclass(shared.InfluenceError, ValueError)
+
+
+def test_an_influence_without_the_item_class_is_refused_not_guessed():
+    with pytest.raises(shared.InfluenceError, match="needs the item class"):
+        shared.item_tags(["ring"], ["hunter"])
+
+
+def test_the_classes_that_take_an_influence_are_the_24_gear_classes():
+    assert len(shared.INFLUENCE_CLASSES) == 24
+    assert {"Ring", "Bow", "Thrusting One Hand Sword", "Body Armour"} <= shared.INFLUENCE_CLASSES
+    assert not shared.INFLUENCE_CLASSES & {"Jewel", "AbyssJewel", "LifeFlask", "Tincture", "Fishing Rod"}
 
 
 def test_a_mod_that_only_an_influence_gives_is_on_the_ladder_of_an_influenced_item_only():
     plain = tiers(RING_TAGS, "item", "Life1")
-    hunter = shared.ladder_of(MODS, shared.item_tags(RING_TAGS, ["hunter"]), "item", "Life1")
+    hunter = shared.ladder_of(MODS, shared.item_tags(RING_TAGS, ["hunter"], "Ring"), "item", "Life1")
 
     assert "LifeHunter" not in plain
     assert hunter["LifeHunter"] == 1 and hunter["Life4"] == 2  # level 83 is above the level 80 of the best natural tier
@@ -137,6 +164,41 @@ def test_a_name_means_the_released_bases_without_royale_and_without_not_for_sale
     assert shared.bases_named(BASES, "Pied Boots") == ["Metadata/Items/Boots/Atlas1", "Metadata/Items/Boots/Atlas2"]  # all not for sale: all stay
     assert shared.bases_named(BASES, "Cobalt Jewel") == ["Metadata/Items/Jewels/JewelInt"]
     assert shared.bases_named(BASES, "No Such Base") == []
+
+
+@pytest.mark.parametrize(
+    ("entry", "problem"),
+    [
+        ({"item_class": "Ring", "tags": ["ring"], "release_state": "released"}, "has no 'name'"),
+        ({"name": None, "item_class": "Ring", "tags": ["ring"]}, "'name' is NoneType, not text"),
+        ({"name": "Odd Ring", "item_class": "Ring", "release_state": "released"}, "has no 'tags'"),
+        ({"name": "Odd Ring", "item_class": "Ring", "tags": "ring"}, "'tags' is str, not a list"),
+        ("not a mapping", "is str, not a mapping"),
+        (None, "is NoneType, not a mapping"),
+    ],
+)
+def test_a_malformed_base_entry_fails_loudly_instead_of_being_skipped(entry, problem):
+    broken = {**BASES, "Metadata/Items/Rings/Broken": entry}
+
+    with pytest.raises(shared.MalformedBase, match="'Metadata/Items/Rings/Broken'.*" + re.escape(problem)):
+        shared.bases_named(broken, "Sapphire Ring")  # even for a name the broken entry could not be
+    with pytest.raises(shared.MalformedBase, match="Metadata/Items/Rings/Broken"):
+        shared.base_ids_of(broken, "Sapphire Ring")
+
+
+def test_a_base_entry_without_an_item_class_fails_loudly_in_a_category_search():
+    broken = {**BASES, "Metadata/Items/Rings/Broken": {"name": "Odd Ring", "tags": ["ring"]}}
+
+    with pytest.raises(shared.MalformedBase, match="'Metadata/Items/Rings/Broken' has no 'item_class'"):
+        shared.bases_of_category(broken, "accessory.ring")
+    assert issubclass(shared.MalformedBase, ValueError)
+
+
+def test_a_missing_release_state_reads_as_released():
+    bases = {"Metadata/Items/Rings/R": {"name": "Plain Ring", "item_class": "Ring", "tags": ["ring"]}}
+
+    assert shared.bases_named(bases, "Plain Ring") == ["Metadata/Items/Rings/R"]
+    assert shared.bases_of_category(bases, "accessory.ring") == ["Metadata/Items/Rings/R"]
 
 
 def test_a_reference_is_an_id_or_a_name_and_an_id_wins():

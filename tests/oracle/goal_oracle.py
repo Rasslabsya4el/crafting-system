@@ -11,9 +11,9 @@ What it reads, and only this:
     `base_items.json`, `crafting_bench_options.json`);
   * the owner's rules (`docs/owner-rules.md`), written below as code.
 
-It imports the standard library, `yaml` and the one shared module `independent/ladder.py` (ticket #419: the natural
-ladder and the base-name rule, shared with `tests/reconcile/`) and nothing from `crafting_system` (a test scans this
-file for that). The planner's `targets/parse.py` and `targets/model.py` were read only to learn the YAML keys.
+It imports the standard library, `yaml` and two shared modules, `independent/ladder.py` (ticket #419: the natural
+ladder and the base-name rule) and `independent/export.py` (ticket #432: the loader of the raw export), both shared with
+`tests/reconcile/`, and nothing from `crafting_system` (a test scans this file for that). The planner's `targets/parse.py` and `targets/model.py` were read only to learn the YAML keys.
 
 The rules it implements
   * OR-1. A requirement with no tier, or with a `min_tier`, is judged on the natural ladder of its family on
@@ -43,19 +43,13 @@ start item's own text. `OracleTarget.unjudged` lists the keys of a target that i
 comparison says so; it never answers for them.
 """
 
-import json
-import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+from independent import export as shared_export
 from independent import ladder as shared
-
-MODS_FILE = "mods.json"
-BASES_FILE = "base_items.json"
-BENCH_FILE = "crafting_bench_options.json"
-ESSENCES_FILE = "essences.json"
 
 SIDES = shared.SIDES
 CRAFTED_DOMAIN = "crafted"
@@ -116,33 +110,18 @@ class Export:
         self._ladders: dict[tuple[str, frozenset[str]], dict[tuple[str, str], Ladder]] = {}
 
     @classmethod
-    def from_dir(cls, folder: Path) -> "Export":
-        def read(name: str, required: bool = True):
-            path = folder / name
-            if not path.exists():
-                if required:
-                    raise FileNotFoundError(f"{path} is not there")
-                return None
-            return json.loads(path.read_text(encoding="utf-8"))
+    def from_cache(cls, cache_dir: Path | None = None, pin_file: Path | None = shared_export.PIN_FILE) -> "Export":
+        """The export in `<cache dir>/repoe-fork/<version>/`, read by the loader shared with the reconciliation checks.
 
-        return cls(read(MODS_FILE), read(BASES_FILE), read(BENCH_FILE, required=False), read(ESSENCES_FILE, required=False))
+        The cache dir defaults to `CRAFTING_CACHE_DIR`, then `local/cache`; the version is the one the pin file names (the
+        repo's by default); `pin_file=None` takes the only version folder there. `ExportMissing` (a `FileNotFoundError`) when
+        the export, a file of it or the pin file is absent (`independent/export.py`).
+        """
+        return cls.from_raw(shared_export.load_export(cache_dir, pin_file))
 
     @classmethod
-    def from_cache(cls, cache_dir: Path | None = None, pin_file: Path | None = None) -> "Export":
-        """The export in `<cache dir>/repoe-fork/<version>/`; the cache dir defaults to `CRAFTING_CACHE_DIR`.
-
-        The version is read from the pin file (a JSON file with a `version` key) when it is given; otherwise the
-        cache must hold exactly one version folder with a mods file.
-        """
-        root = cache_dir if cache_dir is not None else Path(os.environ["CRAFTING_CACHE_DIR"])
-        site = root / "repoe-fork"
-        if pin_file is not None:
-            version = json.loads(pin_file.read_text(encoding="utf-8"))["version"]
-            return cls.from_dir(site / version)
-        folders = sorted(path for path in site.iterdir() if (path / MODS_FILE).exists())
-        if len(folders) != 1:
-            raise FileNotFoundError(f"{site} holds {len(folders)} versions with a mods file; give the pin file")
-        return cls.from_dir(folders[0])
+    def from_raw(cls, raw: "shared_export.RawExport") -> "Export":
+        return cls(raw.mods, raw.bases, raw.bench_options, raw.essences)
 
     # -- bases and tags ------------------------------------------------------------------------------------------
 
@@ -161,7 +140,8 @@ class Export:
         return self.base_items[base_id]["item_class"]
 
     def tags(self, base_id: str, influences: frozenset[str] = frozenset()) -> frozenset[str]:
-        return shared.item_tags(self.base_items[base_id]["tags"], influences)
+        base = self.base_items[base_id]
+        return shared.item_tags(base["tags"], influences, base["item_class"])
 
     @staticmethod
     def spawn_weight(mod: dict, tags: frozenset[str]) -> int:
