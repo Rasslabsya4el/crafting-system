@@ -48,9 +48,9 @@ def relative_width(estimate) -> float:
 def test_r04_has_a_p90_within_two_percent_and_the_exact_mean():
     result, mean = chain_result("r04")
 
-    risk, note = packed_risk(result, mean, None, "")
+    risk, found = packed_risk(result, mean, None)
 
-    assert note == "" and risk.success_probability.value == 1.0
+    assert found == () and risk.success_probability.value == 1.0
     assert risk.mean.value == pytest.approx(69257.5365, abs=1e-3)
     assert risk.p50.low <= 48_537.7 <= risk.p50.high and relative_width(risk.p50) < 0.02
     assert risk.p90.low <= 157_293.1 <= risk.p90.high and relative_width(risk.p90) < 0.02
@@ -62,9 +62,9 @@ def test_r04_has_a_p90_within_two_percent_and_the_exact_mean():
 def test_r14_has_a_p90_within_fifteen_percent_and_the_exact_mean():
     result, mean = chain_result("r14")
 
-    risk, note = packed_risk(result, mean, None, "")
+    risk, found = packed_risk(result, mean, None)
 
-    assert note == "" and risk.success_probability.value == 1.0
+    assert found == () and risk.success_probability.value == 1.0
     assert risk.mean.value == pytest.approx(5784.4887, abs=1e-3)
     assert risk.p50.low <= 4_570.3 <= risk.p50.high and relative_width(risk.p50) < 0.15
     assert risk.p90.low <= 12_278.1 <= risk.p90.high and relative_width(risk.p90) < 0.15
