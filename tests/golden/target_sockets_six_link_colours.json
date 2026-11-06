@@ -16,7 +16,13 @@
       ],
       "min_tier": 3,
       "min_roll": null,
-      "not_crafted": false
+      "not_crafted": false,
+      "tier_ok": [
+        "IncreasedLife1",
+        "IncreasedLife2",
+        "IncreasedLife3"
+      ],
+      "any_tier": false
     }
   ],
   "start_item": {
@@ -83,6 +89,5 @@
     "blue": 2
   },
   "start_sockets_assumed": false,
-  "item_level_floor": null,
-  "tiers_top_at_item_level": false
+  "item_level_floor": null
 }
