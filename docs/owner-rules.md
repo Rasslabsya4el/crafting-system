@@ -193,7 +193,7 @@ When all mechanics of a case are known, the page shows one exact chance; states 
 When a step can add a mod of a family the target wants, the page shows the chance of each tier of that family (T1, T2, ... and "none"), with the target's tier marked, not only whether the requirement is met.
 
 - **Example.** R04's two Exalted Orbs after "Cannot roll Attack Modifiers": Maximum Life lands at some tier every time, and at tier 1 2 times in 15; the step shows the share of every tier of Life and of Bow Skills damage.
-- **Counter-example.** The R04 benchmark prints only "100% published, 13% computed" for the first Exalted Orb (`tests/test_cli_r04_r14_real.py:104-111`), with no tier below the top.
+- **Counter-example.** The R04 benchmark's check of the published odds (`tests/test_cli_r04_r14_real.py:104-111`) gives the first Exalted Orb only two numbers, 100% at any tier and 13% at the top tier, with nothing for the tiers in between.
 - **Source.** Owner in the main chat, 2026-11-06: the system should say "T1 this chance, T2 this chance, and so on".
 
 ## Evidence
