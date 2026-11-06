@@ -14,12 +14,14 @@ from .files import (
     price_files_of,
     priced_base_name,
     priced_category,
+    priced_corrupted,
     priced_item_level,
     priced_rarity,
     read_buy_spec,
     read_buy_specs,
     read_price_entry,
     read_target,
+    read_trade_stat_texts,
 )
 from .ladder import (
     base_ids_of,
@@ -105,6 +107,15 @@ SPEC = {
     "corrupted": False,
     "mods": [{"stat": "+#% to Resist", "minimum": 12, "fractured": True}],
 }
+STAT_TEXTS = {  # the trade site's stat list, as far as the hand-made entries need it
+    "fractured.stat_1": "+#% to Resist",
+    "explicit.stat_1": "+#% to Resist",
+    "implicit.stat_9": "+#% to Imp",
+    "fractured.stat_2": "#% increased Movement Speed",
+    "explicit.stat_3": "+# to Dexterity",
+    "pseudo.pseudo_has_hunter_influence": "Has Hunter Influence",
+    "pseudo.pseudo_has_elder_influence": "Has Elder Influence",
+}
 ENTRY = {
     "chaos": 5.0,
     "source": "trade-api",
@@ -112,9 +123,10 @@ ENTRY = {
         "query": {
             "query": {
                 "filters": {
-                    "misc_filters": {"filters": {"ilvl": {"min": 80}}},
+                    "misc_filters": {"filters": {"ilvl": {"min": 80}, "corrupted": {"option": "false"}, "fractured_item": {"option": "true"}}},
                     "type_filters": {"filters": {"category": {"option": "accessory.ring"}, "rarity": {"option": "rare"}}},
                 },
+                "stats": [{"type": "and", "filters": [{"id": "fractured.stat_1", "disabled": False, "value": {"min": 12}}]}],
                 "type": "Ruby Ring",
             }
         }
@@ -131,17 +143,47 @@ def _write(tmp_path, name, document):
     return path
 
 
-def _run(tmp_path, *, target=None, spec=None, entry=None, export=EXPORT):
-    """Write the three files (each with the given changes applied) and reconcile them."""
+def _mirror(spec_doc, entry_doc):
+    """Make the entry's search ask for the mods of the spec (so a test of another slot is not about the entry's mods).
+
+    Returns the stat list to read it with: STAT_TEXTS plus a made-up id for each mod text it does not have.
+    """
+    query = entry_doc["detail"]["query"]["query"]
+    texts = dict(STAT_TEXTS)
+    filters = []
+    for number, mod in enumerate(spec_doc["mods"]):
+        group = "implicit" if mod.get("own") or mod.get("implicit") else "fractured" if mod.get("fractured") else "explicit"
+        text = normalise_stat_text(mod["stat"])
+        found = [i for i, shown in texts.items() if i.startswith(f"{group}.") and normalise_stat_text(shown) == text]
+        stat_id = found[0] if found else f"{group}.stat_made_{number}"
+        texts[stat_id] = text
+        filters.append({"id": stat_id, "disabled": False, **({"value": {"min": mod["minimum"]}} if mod.get("minimum") is not None else {})})
+    query["stats"] = [{"type": "and", "filters": filters}]
+    flag = query["filters"]["misc_filters"]["filters"]
+    flag["fractured_item"] = {"option": "true"}
+    if not any(mod.get("fractured") for mod in spec_doc["mods"]):
+        del flag["fractured_item"]
+    return texts
+
+
+def _run(tmp_path, *, target=None, spec=None, entry=None, export=EXPORT, stat_texts=STAT_TEXTS, mirror=True):
+    """Write the three files (each with the given changes applied) and reconcile them.
+
+    The entry asks for the mods of the (changed) spec unless `mirror=False`, so that a test of another slot is not also a test of that.
+    """
     target_doc, spec_doc, entry_doc = deepcopy(TARGET), deepcopy(SPEC), deepcopy(ENTRY)
-    for document, change in ((target_doc, target), (spec_doc, spec), (entry_doc, entry)):
+    for document, change in ((target_doc, target), (spec_doc, spec)):
         if change:
             change(document)
+    if mirror:
+        stat_texts = _mirror(spec_doc, entry_doc)
+    if entry:
+        entry(entry_doc)
     target_file = read_target(_write(tmp_path, "t.yaml", target_doc))
     spec_file = read_buy_spec(_write(tmp_path, "b.yaml", spec_doc))
     price_path = _write(tmp_path, "prices.json", {"prices": {"T start ring": entry_doc}})
     found = read_price_entry(price_path, "T start ring")
-    return reconcile(target_file, spec_file, export, [found])
+    return reconcile(target_file, spec_file, export, [found], stat_texts)
 
 
 def _bad(result):
@@ -481,7 +523,7 @@ def test_files_that_agree_have_every_slot_empty(tmp_path):
             "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
             "start_mod.ResA2.ladder", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
             "buy_mod.+#% to Resist.in_target",
-            "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
+            "price.entry", "price.base", "price.item_level", "price.rarity", "price.influence", "price.corrupted", "price.mods", "price.source", "price.pool",
         ]
     )  # fmt: skip
 
@@ -495,11 +537,11 @@ def test_the_slots_come_from_the_two_yaml_files_alone(tmp_path):
         "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
         "start_mod.ResA2.ladder", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
         "buy_mod.+#% to Resist.in_target",
-        "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
+        "price.entry", "price.base", "price.item_level", "price.rarity", "price.influence", "price.corrupted", "price.mods", "price.source", "price.pool",
     ]  # fmt: skip
     assert slots(target, None) == [
         "target.base", "start_price.written", "buy_spec.exists", "start_mod.ResA2.ladder", "start_mod.ResA2.values",
-        "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
+        "price.entry", "price.base", "price.item_level", "price.rarity", "price.influence", "price.corrupted", "price.mods", "price.source", "price.pool",
     ]  # fmt: skip
 
 
@@ -873,7 +915,7 @@ def test_reconcile_files_finds_the_spec_and_the_price_entries_itself(tmp_path):
     target = read_target(_write(tmp_path, "t.yaml", TARGET))
     spec = read_buy_spec(_write(tmp_path, "b.yaml", SPEC))
 
-    result = reconcile_files(target, [spec], EXPORT, prices)
+    result = reconcile_files(target, [spec], EXPORT, prices, STAT_TEXTS)
 
     assert _bad(result) == {}
     assert result["price.base"] == []
@@ -922,3 +964,103 @@ def test_the_base_s_own_implicit_of_a_spec_narrows_the_bases_it_accepts_and_is_n
     assert result["buy.pool"] == []  # without the implicit the spec would accept Twin B, whose pool has one more mod
     assert _run(tmp_path, target=target, spec=lambda d: (spec(d), d.update(mods=[])), entry=lambda d: d["detail"]["query"]["query"].update(type="Twin Boots"), export=export)["buy.pool"] != []
     assert "buy_mod.+#% to A Resistance.in_target" not in result
+
+
+# --- the influence, the corrupted flag and the mods of the search the price was taken with (#470, OR-3) ----------------
+
+
+def _query(document):
+    return document["detail"]["query"]["query"]
+
+
+def _filters(document):
+    return _query(document)["stats"][0]["filters"]
+
+
+def test_an_entry_that_asks_for_the_influence_the_start_item_has_agrees_and_another_one_does_not(tmp_path):
+    def influenced(document):
+        _filters(document).append({"id": "pseudo.pseudo_has_hunter_influence", "value": {"min": 1}})
+
+    agree = _run(tmp_path, target=lambda d: d.update(influence=["hunter"]), spec=lambda d: d.update(influence=["hunter"]), entry=influenced)
+    other = _run(tmp_path, target=lambda d: d.update(influence=["hunter"]), spec=lambda d: d.update(influence=["hunter"]), entry=lambda d: _filters(d).append({"id": "pseudo.pseudo_has_elder_influence", "value": {"min": 1}}))
+    missing = _run(tmp_path, target=lambda d: d.update(influence=["hunter"]), spec=lambda d: d.update(influence=["hunter"]))
+    extra = _run(tmp_path, entry=influenced)
+
+    assert _bad(agree) == {}
+    assert other["price.influence"][0].values == ("hunter", "elder")
+    assert missing["price.influence"][0].values == ("hunter", "none")
+    assert extra["price.influence"][0].values == ("none", "hunter")
+    assert "price.mods" not in _bad(extra)  # an influence is no bought mod
+
+
+def test_a_price_taken_for_another_corruption_than_the_start_item_has_or_for_none_is_a_disagreement(tmp_path):
+    def option(value):
+        return lambda d: _query(d)["filters"]["misc_filters"]["filters"].update(corrupted={"option": value})
+
+    assert _bad(_run(tmp_path, entry=option("true"))).keys() == {"price.corrupted"}
+    assert _run(tmp_path, entry=option("true"))["price.corrupted"][0].values == ("not corrupted", "corrupted")
+    assert _run(tmp_path, entry=lambda d: _query(d)["filters"]["misc_filters"]["filters"].pop("corrupted"))["price.corrupted"][0].values == ("not corrupted", "any")
+    corrupted = _run(tmp_path, target=lambda d: d["start_item"].update(corrupted=True), spec=lambda d: d.update(corrupted=True), entry=option("true"))
+    assert _bad(corrupted) == {}
+
+
+def test_an_entry_with_no_search_has_no_influence_corruption_or_mods_to_compare(tmp_path):
+    path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring, normal, item level 80": {"chaos": 2, "source": "poe.ninja"}}})
+    entry = read_price_entry(path, "Ruby Ring, normal, item level 80")
+    target = read_target(_write(tmp_path, "t.yaml", TARGET))
+    spec = read_buy_spec(_write(tmp_path, "b.yaml", SPEC))
+
+    result = reconcile(target, spec, EXPORT, [entry], STAT_TEXTS)
+
+    assert priced_corrupted(entry) is None
+    assert result["price.influence"] == result["price.corrupted"] == result["price.mods"] == []
+
+
+@pytest.mark.parametrize(
+    ("change", "values"),
+    [
+        (lambda d: _filters(d)[0].update(id="explicit.stat_1"), ("fractured +#% to Resist at least 12", "explicit +#% to Resist at least 12")),
+        (lambda d: _filters(d)[0].update(value={"min": 14}), ("fractured +#% to Resist at least 12", "fractured +#% to Resist at least 14")),
+        (lambda d: _filters(d)[0].pop("value"), ("fractured +#% to Resist at least 12", "fractured +#% to Resist (no minimum)")),
+        (lambda d: _filters(d).clear(), ("fractured +#% to Resist at least 12", "no mod")),
+        (lambda d: _filters(d).append({"id": "implicit.stat_9"}), ("fractured +#% to Resist at least 12", "fractured +#% to Resist at least 12; implicit +#% to Imp (no minimum)")),
+    ],
+)
+def test_a_price_entry_whose_mods_differ_from_the_spec_in_group_text_or_minimum_is_a_disagreement(tmp_path, change, values):
+    assert _run(tmp_path, entry=change, mirror=False)["price.mods"][0].values == values
+
+
+def test_the_fractured_filter_is_asked_for_exactly_when_a_mod_is_fractured(tmp_path):
+    no_filter = _run(tmp_path, entry=lambda d: _query(d)["filters"]["misc_filters"]["filters"].pop("fractured_item"))
+    def asks(document):
+        _filters(document).clear()
+        _query(document)["filters"]["misc_filters"]["filters"]["fractured_item"] = {"option": "true"}
+
+    unrequired = _run(tmp_path, target=lambda d: d["start_item"].update(mods=[]), spec=lambda d: d.update(mods=[]), entry=asks)
+
+    assert no_filter["price.mods"][0].values == ("fractured_item: true", "fractured_item: not asked")
+    assert unrequired["price.mods"][0].values == ("fractured_item: not asked", "fractured_item: true")
+
+
+def test_the_own_implicit_of_the_spec_is_a_mod_the_entry_must_ask_for(tmp_path):
+    def spec(document):
+        document["mods"].append({"stat": "+(5-9)% to Imp", "implicit": True, "own": True})
+
+    missing = _run(tmp_path, spec=spec, mirror=False)
+    asked = _run(tmp_path, spec=spec)
+
+    assert missing["price.mods"][0].values == ("fractured +#% to Resist at least 12; implicit +#% to Imp (no minimum)", "fractured +#% to Resist at least 12")
+    assert asked["price.mods"] == []
+
+
+def test_a_stat_id_the_recorded_list_does_not_have_is_a_disagreement_not_a_pass(tmp_path):
+    result = _run(tmp_path, entry=lambda d: _filters(d)[0].update(id="fractured.stat_404"))
+
+    assert result["price.mods"][0].values == ("fractured +#% to Resist at least 12", "fractured.stat_404 (not in the recorded stat list) at least 12")
+
+
+def test_the_recorded_stat_list_gives_the_text_of_each_stat_id():
+    texts = read_trade_stat_texts()
+
+    assert texts["fractured.stat_1671376347"] == "+#% to Lightning Resistance"
+    assert texts["pseudo.pseudo_has_hunter_influence"] == "Has Hunter Influence"

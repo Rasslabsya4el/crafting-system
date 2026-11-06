@@ -13,6 +13,7 @@ import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 import yaml
@@ -20,6 +21,7 @@ from abstraction_support import real_game_data
 
 from crafting_system.cli import RESTART, make_plan
 from crafting_system.cli._plan import PlanError, resolve_start_price
+from crafting_system.cli._route_trade import buy_step
 from crafting_system.prices import load_price_file
 from crafting_system.prices.trade_query import TradeSpecError, build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
@@ -172,6 +174,65 @@ def test_the_query_built_from_the_target_is_the_body_stored_in_its_price_entry(d
     for entry in entries:
         assert entry["source"] == "trade-api"
         assert entry["detail"]["query"] == built
+
+
+RECORDED = ROOT / "tests" / "fixtures" / "trade" / "recorded" / "start_items"
+SEARCH_BODIES = {  # tag of the recorded search -> the target whose start item it priced (the files `search_body_<tag>.json`)
+    "r05": "r05-strength-ring",
+    "r10": "r10-fractured-boots",
+    "r11": "r11-reservation-helmet",
+    "r12": "r12-lightning-amulet",
+}
+
+
+def body_row(tag: str):
+    marks = [pytest.mark.xfail(strict=True, raises=(AssertionError, TradeSpecError), reason=OTHER_ITEM[SEARCH_BODIES[tag]])]
+    return pytest.param(tag, id=tag, marks=marks)
+
+
+@pytest.mark.parametrize("tag", [body_row(tag) for tag in SEARCH_BODIES])
+def test_the_query_built_from_the_target_is_the_recorded_search_body(data, stats, tag):
+    """#470 point 2: the recorded body, the stored `detail.query` and the query of the target are one body, or the xfail names why not."""
+    recorded = json.loads((RECORDED / f"search_body_{tag}.json").read_text(encoding="utf-8"))
+
+    assert query_of(data, stats, SEARCH_BODIES[tag]) == recorded
+
+
+def link_body(url: str) -> dict:
+    return json.loads(parse_qs(urlparse(url).query)["q"][0])
+
+
+@pytest.mark.parametrize("stem", [stem for stem in stems() if bought(stem) and stem != "r03-avoid-shock-boots"])
+def test_the_trade_link_of_the_page_is_the_query_built_from_the_target(data, stats, stem):
+    """#470 point 2: every bought target's buy step links the very body the price is taken with (R04, R08, R09, R12, R14 had no check)."""
+    spec = buy_spec_of(data, load_target(TARGETS / f"{stem}.yaml", data))
+
+    step = buy_step(spec, "Allflame", data.mods.values(), stats)
+
+    assert step.unresolved == ()
+    assert link_body(step.url) == query_of(data, stats, stem)
+
+
+def test_the_link_of_r03_leaves_out_the_one_stat_the_site_lists_twice_and_the_page_says_so(data, stats):
+    spec = buy_spec_of(data, load_target(TARGETS / "r03-avoid-shock-boots.yaml", data))
+
+    step = buy_step(spec, "Allflame", data.mods.values(), stats)
+
+    assert len(step.unresolved) == 1 and "Suppress Spell Damage" in step.unresolved[0]  # #514
+    assert link_body(step.url)["query"]["stats"][0]["filters"] == []
+
+
+@pytest.mark.parametrize("stem", [stem for stem in stems() if bought(stem)])
+def test_the_buy_step_is_titled_by_the_price_key_and_names_the_base(data, stats, stem):
+    """#470 point 4: not "Buy R05 start ring" and not a step without the base: the key names the base, the Accepts line starts with it."""
+    target = load_target(TARGETS / f"{stem}.yaml", data)
+    spec = buy_spec_of(data, target)
+
+    step = buy_step(spec, "Allflame", data.mods.values(), stats)
+
+    assert step.name == expected_keys()[stem]
+    assert step.accepts[0] == f"{target.start_item.rarity.value.capitalize()} {data.base_items[target.base_id].name}"
+    assert step.name.startswith(data.base_items[target.base_id].name)
 
 
 def test_the_three_two_toned_boots_are_told_apart_by_their_implicit_and_the_two_quivers_are_not(data, stats):
