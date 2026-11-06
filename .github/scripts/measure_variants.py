@@ -438,7 +438,7 @@ def metamod_item(case: Case, metamod: Metamod, report: Report) -> Item | None:
     """A rare Hunter bow with its tier 1 attack speed and the craft of `metamod` on it, made by the craft itself (None: no such craft, or refused)."""
     data = case.data
     mod = data.mods[T1_ATTACK_SPEED]
-    held = ExplicitMod(mod.id, 1, tuple(min(stat.min, stat.max) for stat in mod.stats))
+    held = ExplicitMod(mod.id, tuple(min(stat.min, stat.max) for stat in mod.stats))
     rare = Item.build(
         data, base_id=case.base_id, item_level=case.item_level, rarity=Rarity.RARE, influences=frozenset({Influence.HUNTER}), mods=(held,)
     )

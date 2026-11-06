@@ -91,7 +91,7 @@ def test_an_aspect_target_is_planned_end_to_end_and_costs_the_beasts_once(tmp_pa
     mod = BEAST_DATA.mods[CAT_30]
     path.write_text(
         "base: Paua Amulet\nitem_level: 84\ninfluence: []\nrequirements:\n  - family: " + mod.families[0] + "\n    mod: " + CAT_30 + "\n"
-        "start_item:\n  rarity: rare\n  mods:\n    - mod: " + FIRE_RESIST + "\n\n      values: [6]\nactions: [aspect-beast]\nstart: given\n",
+        "start_item:\n  rarity: rare\n  mods:\n    - mod: " + FIRE_RESIST + "\n      values: [6]\nactions: [aspect-beast]\nstart: given\n",
         encoding="utf-8",
     )
     target = load_target(path, BEAST_DATA)
