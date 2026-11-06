@@ -23,7 +23,7 @@ The main chat thinks and decides: the idea, the grill, the ticket, the plan, the
 
 Each helper prompt names its ticket (`#N`), the files or worktree, and the result to reach. A `coder-light` prompt also carries the places to read with their line ranges; `finder` finds them when the main chat does not know them. Pieces that touch different files run in parallel, each coder with `isolation: "worktree"`.
 
-The owner's rules are in `docs/owner-rules.md` (`OR-1`, `OR-2`, ...). A brief that touches targets, routes, prices or pages names the rules from that file it must follow, and the `checker` reviews every change against the file as well as against its ticket. A PR's open points (findings, placeholders, places that contradict a rule) become issues before the PR lands; they are not left in its prose.
+The owner's rules are in `docs/owner-rules.md` (`OR-1`, `OR-2`, ...). A brief that touches targets, routes, prices or pages names the rules from that file it must follow, and the `checker` reviews every change against the file as well as against its ticket. A PR's open points (findings, placeholders, places that contradict a rule) are not left in its prose: the PR's author files them as issues before asking to land, the `checker` confirms they are filed, and the main chat lands nothing without them.
 
 Model of the main chat: Opus for ideas, grills and decisions; Sonnet 5.5 for a stretch of plain implementation. A session started for one ticket runs on Sonnet 5.5 with effort high.
 

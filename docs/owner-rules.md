@@ -43,17 +43,17 @@ The start item's own mods are the tier priced on the trade site, and the target,
 When a guide gives a tier, a number or a soft wish, the target takes the guide's words; the top tier of OR-1 applies only where the guide states no tier.
 
 - **Example.** `r10-fractured-boots-70-life.yaml` reads the guide's "preferably at least 70" Life as a roll of at least 70 with no tier (about 46 c at 70). R14 asks `IncreasedAttackSpeed` `min_tier: 1` because the guide says "T1 Attack Speed"; R13 asks tier 1 Life because the guide says "tier-1 life".
-- **Counter-example.** `r10-fractured-boots.yaml` asks Life tier 1 where the guide says "preferably at least 70" (128 c). R11 asks Evasion and Life tier 1 where the guide says "prefixes you are happy with" (1,110 c). R04 and R14: the guide's two Exalted Orbs "guarantee" Life and the damage mod, 100%; at the target's top tiers the same orbs are 13% and 20% (R04) and 55% and 10% (R14).
+- **Counter-example.** `r10-fractured-boots.yaml` asks Life tier 1 where the guide says "preferably at least 70" (128 c). R11 asks Evasion and Life tier 1 where the guide says "prefixes you are happy with" (1,110 c).
 - **Source.** Owner decisions on #396, point 1, 2026-11-02 (memory note `audit-decisions-2026-11-02.md`).
 - **Replaces.** OR-1 where a guide states a number, a tier or a wish. This is the answer to the first open question of the audit.
 
-### OR-5. A target never says which actions are allowed
+### OR-5. A target never restricts the actions; a user setting may, and the answer shows it
 
-A target states what to end with and what to start from; every kind of action is offered and pruning decides.
+A target states what to end with and what to start from, and every kind of action is offered and pruned by the search; turning a method off is a setting of whoever runs the planner ([#323](https://github.com/Rasslabsya4el/crafting-system/issues/323), the owner's list of user inputs), and the answer shows it (OR-13).
 
 - **Example.** None. No target in `examples/targets/` meets this today: the seven with an `actions:` key (J01, R04, R08, R09, R13, R14, V01) name the allowed kinds, and a target without it gets the silent default of leaving out the opt-in kinds. The rule is the owner's decision, and R05 (no key, yet no Exalted Orb offered) is the nearest case.
 - **Counter-example.** `j01-cobalt-life-attack-speed.yaml:23` (`actions: [chaos-orb]`); V01 (`v01-minion-helmet.yaml:44`) lists four orbs "because fewer kinds keep the state space small".
-- **Source.** Owner decisions on #396, point 2, 2026-11-02 (memory note `audit-decisions-2026-11-02.md`): the silent opt-in default is "a hard contradiction" with the product.
+- **Source.** Owner decisions on #396, point 2, 2026-11-02, which says "as the norm" (memory note `audit-decisions-2026-11-02.md`): the silent opt-in default is "a hard contradiction" with the product. The user setting is #323, "turn methods off".
 
 ### OR-6. A start item is given or bought; how it was acquired is not modelled
 
@@ -66,13 +66,14 @@ A start item is a concrete item that is given or bought; where it came from (a G
 
 ## Prices
 
-### OR-7. A trade price counts instant-buyout listings only, of any age
+### OR-7. A trade price counts instant-buyout listings only, of any age; a marked fallback may stand in
 
-The trade query asks for "Instant Buyout" and never "Instant Buyout and In Person", and sets no listing-age window.
+The trade query asks for "Instant Buyout" and never "Instant Buyout and In Person", and sets no listing-age window; where no trade price exists, a poe.ninja row may stand in, and the price is marked as that fallback.
 
-- **Example.** R10's start boots (ticket [#133](https://github.com/Rasslabsya4el/crafting-system/issues/133)): status `securable` and no `indexed` filter; the route page's trade link carries the same filters, so the link shows the listings the price came from.
-- **Counter-example.** R04's start quiver is priced at 9 c from a poe.ninja line while trade shows 130 c (audit ROUTES-7). A poe.ninja row proves no instant-buyout listing.
-- **Source.** Owner on the R10 page, 2026-10-31 (memory note `owner-route-reading.md`; #133).
+- **Example.** R10's start boots (ticket [#133](https://github.com/Rasslabsya4el/crafting-system/issues/133)): status `securable` and no `indexed` filter; the route page's trade link carries the same filters, so the link shows the listings the price came from. With `price_source` `both` (the default) the planner prices with the trade data and, when it is missing or stale, uses the poe.ninja row marked as a fallback with its reason.
+- **Counter-example.** Before #133 the query status defaulted to `available` ("Instant Buyout and In Person"). A price from another league or source shown as a plain number is an unmarked fallback: the V01 page prints "league Allflame, fetched 2026-10-31" for every price whatever its source (audit INPUTS-3, ROUTES-8).
+- **Source.** Owner on the R10 page, 2026-10-31 (memory note `owner-route-reading.md`; #133). The fallback: ADR-0061, decision 2 (owner answers of 2026-11-01, [#337](https://github.com/Rasslabsya4el/crafting-system/issues/337)), and the setting `price_source` `ninja`/`trade`/`both` of [#357](https://github.com/Rasslabsya4el/crafting-system/issues/357).
+- **Replaces.** The sentence of ADR-0007 (line 7) that the trade query "keeps only listings from the last week by default". Narrowed by the later ADR-0061, decision 2, for the marked fallback.
 
 ### OR-8. A price is the mean of the cheapest few
 
@@ -81,6 +82,7 @@ The price is the mean of the cheapest few instant-buyout listings, five by defau
 - **Example.** R10's start boots: "mean of the 5 cheapest instant-buyout listings" (#133; ADR-0061, decision 3).
 - **Counter-example.** The median of the cheapest, which `trade_pricing.py` computed before #133.
 - **Source.** Memory note `owner-route-reading.md`, 2026-10-31; #133.
+- **Replaces.** The median of the cheapest listings that `trade_pricing.py` used before #133.
 
 ### OR-9. The system refreshes prices itself
 
@@ -105,9 +107,10 @@ The search keeps no detail that a later decision never sees, like a crafter who 
 
 A good answer is exact among realistic routes; "approximate with an interval" reads as useless.
 
-- **Example.** R10 (128 c), R11 (1,110 c) and R12 (56.6 c) are exact means that an independent Monte Carlo of the audit matched.
+- **Example.** R12 (56.6 c) is an exact mean that an independent Monte Carlo of the audit matched. (R10's 128 c and R11's 1,110 c are exact for their targets as written, but OR-4 calls those targets too strict.)
 - **Counter-example.** R04 and R14 at default flags are refused or answered "within a certified 1%" with no route page (audit PLANNING-15).
 - **Source.** Memory note `realism-rails.md`, 2026-11-01.
+- **Replaces.** The resolution of [#81](https://github.com/Rasslabsya4el/crafting-system/issues/81), question 2 (owner, 2026-10-31): exact when a query fits in about a minute, otherwise an approximate answer marked as such, with an error of at most 1%.
 
 ### OR-12. No hard-coded cut-offs
 
@@ -160,12 +163,12 @@ A bought item is never drawn empty; its mods other than the wanted one read "any
 - **Counter-example.** The R10 page the owner rejected on 2026-10-31 drew the bought item empty.
 - **Source.** Issue #96, first comment (asked) and second comment (accepted), both 2026-10-31.
 
-### OR-18. A page step is a player step
+### OR-18. One page step is one player step
 
-A step stands for a set of states only when the policy takes the same action in all of them; look-alike states that need different actions branch.
+A page step is the set of states on which the policy takes the same player action, no more and no less: states with different actions branch, and nothing else splits one action into several steps, neither its chance nor a detail the search does not track (their mixture is OR-20).
 
 - **Example.** V01 has 3 player actions (audit PRES-1).
-- **Counter-example.** V01's page has 11 rows for those 3, and R14's 87,272 steps come from the "same exact chance" refinement added later (audit PRES-1).
+- **Counter-example.** V01's page has 11 rows for those 3, and R14's 87,272 steps come from the "same exact chance" refinement in `cli/_route_flow.py:194-235` that splits one action by chance (audit PRES-1).
 - **Source.** Issue [#58](https://github.com/Rasslabsya4el/crafting-system/issues/58), the "Exact states: the general rule" comment, 2026-10-31; memory note `audit-decisions-2026-11-02.md`.
 
 ### OR-19. The same route is never shown twice
@@ -251,7 +254,7 @@ A brief that touches targets, routes, prices or pages names the rules of this fi
 
 - **Example.** `.claude/agents/checker.md` and `CLAUDE.md`, "How work is split", as amended by #401.
 - **Counter-example.** Of 37 tickets after 2026-10-31 that touched targets or pages, 2 carried a rule (audit TESTS-6).
-- **Source.** Owner decisions on #396, point 4, 2026-11-02 ("Owner rules written in the repo: yes"); audit rebuild proposal 1.
+- **Source.** The owner's only word is "yes" to "owner rules written in the repo" (#396, point 4, 2026-11-02). That briefs and the checker read the file is the main chat's process from the audit's rebuild proposal 1 and TESTS-6, not an owner statement.
 
 ### OR-29. Open points of a PR become issues before it lands
 
@@ -259,7 +262,7 @@ A finding, placeholder or contradiction found in a PR is filed as an issue befor
 
 - **Example.** The list of places that contradict a rule, in the PR of #401.
 - **Counter-example.** PR #74 flagged the crafted tier placeholder in its text and no ticket followed; 33 of 153 PRs parked findings in prose (audit TESTS-14).
-- **Source.** Audit rebuild proposal 1 and TESTS-14; ticket #401.
+- **Source.** A process rule of the main chat, from the audit's rebuild proposal 1 and TESTS-14 and ticket #401; not an owner statement.
 
 ### OR-30. The rebuild is accepted by rerunning the measurement
 
@@ -267,7 +270,7 @@ After the rebuild, `measure-sim/full` and the bloat step are run again, and thei
 
 - **Example.** The simulation on concrete items matched the computed means on all 10 benchmark routes (max |z| 2.01; `measure-sim.yml`, run 41591954486).
 - **Counter-example.** Page goldens accepted by their own regeneration, 43 commits (audit TESTS-5).
-- **Source.** Comment on #396, 2026-11-04 (memory note `measurement-week-results.md`).
+- **Source.** A decision of the main chat, posted as a comment on #396 on 2026-11-04 (memory note `measurement-week-results.md`); not an owner statement.
 
 ## Left out on purpose
 

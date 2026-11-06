@@ -108,7 +108,7 @@ A requirement met when at least k of its n listed requirements are met.
 _Avoid_: group, choice group
 
 **Unstated tier**:
-A requirement that names a mod and no tier because the guide states none. It means the top tier of the mod's ladder that the target's item level allows, rolled on the item, not made at the bench (`docs/owner-rules.md`, OR-1; ADR-0008, amendment). A tier the guide does state is that tier, and so is a number or a soft wish in the guide's words (guide wording, below).
+A requirement that names a mod and no tier because the guide states none. It means the top tier of the mod's ladder that the target's item level allows, rolled on the item, not made at the bench (`docs/owner-rules.md`, OR-1; ADR-0008, amendment). A tier the guide does state is that tier; a number in the guide is a minimum roll, not a tier, and a soft wish is taken in the guide's words (guide wording, below).
 _Avoid_: default tier, any tier
 
 **Guide wording**:
