@@ -335,7 +335,7 @@ def make_plan(
     if not priced:
         names = sorted({name for drop in dropped for name in drop.missing})
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
-    kept = usable_actions(data, target.start_item, [p.offer.action for p in priced])
+    kept = set(usable_actions(data, target.start_item, [p.offer.action for p in priced]))
     priced = tuple(p for p in priced if p.offer.action in kept)
     if price_of_start.chaos > 0:
         bought = price_of_start.name or "start item"
