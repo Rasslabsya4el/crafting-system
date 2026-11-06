@@ -12,7 +12,7 @@ import difflib
 import importlib.util
 import os
 import sys
-import time
+import threading
 from pathlib import Path
 
 import pytest
@@ -228,7 +228,9 @@ def test_the_gates_of_make_plan_are_read_from_its_code_in_order():
 
 
 def test_a_run_over_its_time_is_given_up_and_reported():
-    finished, _ = report.run_with_limit(lambda: time.sleep(5), 0.05)
+    stuck = threading.Event()
+    finished, _ = report.run_with_limit(lambda: stuck.wait(30), 0.05)
+    stuck.set()  # let the left-behind thread end
     assert finished is False
     finished, value = report.run_with_limit(lambda: 42, 5)
     assert (finished, value) == (True, 42)
