@@ -2,7 +2,7 @@
 
 Ticket #142 added the implicits, the quality and the offer to the contract and to the compressed state. A route of
 B1 holds none of the three, so its offers and the kernels of its start state must be what they were: the same
-labels, resources and left-out reasons, and the same states (by their `repr`) with the same integer weights.
+labels, resources and limits (what is left out and why), and the same states (by their `repr`) with the same integer weights.
 `fingerprint(data)` summarises them as counts and SHA-256 digests; `tests/golden/b1_unchanged_142.json` holds the
 result of the code of main before the ticket (made by `python tests/b1_unchanged_support.py <data dir> > ...` with that
 code on the path), and `test_b1_unchanged.py` compares it with today's.
@@ -49,7 +49,7 @@ def route_fingerprint(data, stem: str) -> dict:
     goal = Goal.from_target(target)
     chosen = offers_for(data, goal, target.base_id, target.start_item, target.actions)
     offers = [[offer.label, sorted(offer.resources.items()), offer.tag, offer.shares] for offer in chosen.offers]
-    left_out = sorted(repr(entry) for entry in chosen.left_out)
+    limits = sorted(repr(entry) for entry in chosen.limits)
     enabled = [offer.action for offer in chosen.offers if offer.action.reads(data).junk]
     ab = Abstraction(data, goal, target.base_id, target.item_level, enabled)
     start = ab.compress(target.start_item)
@@ -58,8 +58,8 @@ def route_fingerprint(data, stem: str) -> dict:
     return {
         "offers": len(offers),
         "offers_sha": _digest(offers),
-        "left_out": len(left_out),
-        "left_out_sha": _digest(left_out),
+        "limits": len(limits),
+        "limits_sha": _digest(limits),
         "start": repr(start),
         "kernels": len(kernels),
         "kernels_sha": _digest(kernels),

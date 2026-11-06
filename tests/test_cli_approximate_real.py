@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+from limits_support import notes, of_kind
 
 from crafting_system.actions import BLOCKING, ApplyEssence, RemoveCraftedMods
 from crafting_system.actions.bench import bench_crafts
@@ -92,9 +93,9 @@ def test_32_crafts_stay_exact(exact_32):
     touching, plan = exact_32
 
     assert len(touching) == 32
-    assert plan.approximation is None and plan.risk is not None and plan.note == ""
+    assert plan.approximation is None and plan.risk is not None and notes(plan.limits) == []
     assert plan.risk.success_probability.value == pytest.approx(1.0)
-    assert plan.dropped == ()
+    assert of_kind(plan.limits, "unpriced") == []
 
 
 def test_141_crafts_are_answered_approximately_within_one_percent_around_the_exact_optimum_of_the_32_craft_model(ring, exact_32, approximate_141):
@@ -103,7 +104,7 @@ def test_141_crafts_are_answered_approximately_within_one_percent_around_the_exa
 
     found = plan.approximation
 
-    assert len(crafts) == 137 and plan.dropped == ()
+    assert len(crafts) == 137 and of_kind(plan.limits, "unpriced") == []
     assert found is not None and plan.risk is None
     assert found.lower <= exact.mean_remaining <= found.upper  # the 105 other crafts never enter the best policy
     assert found.gap <= 0.01 and found.within_tolerance

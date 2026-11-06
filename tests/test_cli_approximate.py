@@ -12,6 +12,7 @@ import json
 import pytest
 from abstraction_pool import MANA_1
 from cli_support import read_json
+from limits_support import notes
 from coarse_support import CHAOS, COLD, CRAFTS, DATA, FIRE, HYBRID_CRAFT, MANA, REMOVE
 
 from crafting_system.abstraction import Coarsening
@@ -102,7 +103,7 @@ def test_the_policy_is_a_policy_of_blocks_that_starts_at_the_start_block(approxi
 def test_the_same_query_inside_the_budget_is_exact_and_unmarked(target, exact):
     plan = make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, budget=1e12, rates=RATES)
 
-    assert plan.approximation is None and plan.risk is not None and plan.note == ""
+    assert plan.approximation is None and plan.risk is not None and notes(plan.limits) == []
     assert plan.mean_remaining == exact.mean_remaining
     assert marking_lines(plan.approximation, 0.0, 300.0) == []
 
@@ -114,7 +115,7 @@ def test_an_exact_answer_has_the_same_text_as_before_and_an_unmarked_json(exact)
     document = policy_document(report)
 
     assert "approximate" not in text.lower() and "Answer:" not in text
-    assert document["answer"] == {"approximate": False} and document["note"] == ""
+    assert document["answer"] == {"approximate": False} and not [limit for limit in document["limits"] if limit["kind"] == "how-solved"]
     assert document["totals"]["p90"]["value"] is not None
 
 
@@ -400,7 +401,8 @@ def test_a_query_that_cannot_be_pooled_runs_exactly_and_says_why(tmp_path, capsy
 
     text = capsys.readouterr().out
     assert code == 0 and "no approximate level available" in text and "is run as it is" in text
-    assert read_json(out)["answer"] == {"approximate": False} and "no approximate level" in read_json(out)["note"]
+    solved = [limit for limit in read_json(out)["limits"] if limit["kind"] == "how-solved"]  # G12
+    assert read_json(out)["answer"] == {"approximate": False} and "no approximate level" in solved[0]["why"] and solved[0]["guarantee"]
 
 
 def test_a_gap_just_above_the_tolerance_never_prints_as_the_tolerance():

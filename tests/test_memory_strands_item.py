@@ -11,6 +11,7 @@ import textwrap
 import pytest
 from cli_support import R12, TODAY, price_file, read_json, run
 from items_support import AMULET, DATA, item, roll
+from limits_support import only
 from targets_implicits_support import TEXTED, parse, parse_error
 
 from crafting_system.cli import STRANDS_OFF, PlanError, StrandSetting, build_report, main, make_plan, render_text, strand_setting
@@ -347,10 +348,9 @@ def test_the_report_names_the_setting_when_it_is_off(tmp_path, capsys):
 
     assert code == 0
     lines = capsys.readouterr().out.splitlines()
-    (found,) = [line for line in lines if line.startswith("Memory Strands:")]
-    assert found.startswith("Memory Strands: not considered (the setting memory_strands is off")
-    assert "--strands" in found and "[planner]" in found
-    assert lines[lines.index(found) - 1].startswith("Start item")  # in the header, before the policy
+    (found,) = [line for line in lines if line.startswith("  Memory Strands are not considered")]  # G1, a limit of the answer
+    assert "the start item has none" in found and found.endswith("The plan makes no use of Memory Strands.")
+    assert lines.index("What this answer leaves out:") < lines.index(found) < lines.index("Policy (S = a state of the item; the start is S1)")
 
 
 def test_a_plan_made_without_the_setting_says_it_is_off():
@@ -358,15 +358,19 @@ def test_a_plan_made_without_the_setting_says_it_is_off():
 
     plan = make_plan(DATA, load_target(path, DATA), price_file())
 
-    assert plan.strands is STRANDS_OFF
-    assert "Memory Strands: not considered" in render_text(build_report(plan, DATA))
+    strands = only(plan.limits, "strands")
+    assert strands.what == "Memory Strands are not considered" and strands.guarantee == "The plan makes no use of Memory Strands."
+    assert "Foulborn Exalted Orb" in strands.labels  # K3, K6: the kinds that need strands, by their names in the game
+    assert "Memory Strands are not considered" in render_text(build_report(plan, DATA))
 
 
 def test_the_json_policy_is_what_it_was(tmp_path):
     code, out = run(tmp_path, prices=price_file())
 
     assert code == 0
-    assert not any("strand" in key.lower() for key in read_json(out))
+    document = read_json(out)
+    assert not any("strand" in key.lower() for key in document)
+    assert [limit["kind"] for limit in document["limits"]].count("strands") == 1  # the strands are a limit of the answer
 
 
 def test_asking_for_strands_is_refused_until_the_batch_builds_them(tmp_path, capsys):

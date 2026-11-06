@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+from limits_support import labels_of, of_kind
 
 from crafting_system.cli import PlanError, When, load_route, make_plan
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
@@ -76,8 +77,8 @@ def test_the_start_item_costs_its_committed_price(unsolved, route_id):
 
 def test_the_plan_offers_the_guides_actions_all_priced(unsolved, route_id):
     assert {priced.label for priced in unsolved.offers} == OFFERS[route_id]
-    assert unsolved.dropped == ()
-    assert "chaos-orb" in {name for entry in unsolved.left_out for name in entry.labels}  # named out by the target's `actions:`
+    assert of_kind(unsolved.limits, "unpriced") == []
+    assert "Chaos Orb" in labels_of(unsolved.limits, "kinds-not-named")  # named out by the target's `actions:`
 
 
 def test_an_unsolved_plan_has_no_policy_and_an_infinite_value(unsolved):

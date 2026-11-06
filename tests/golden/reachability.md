@@ -157,7 +157,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 1 more |
 | `--runs` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 9 more |
 | `--seed` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 4 more |
-| `--start-price` | command `plan` |  | read | cli/_plan.py: resolve_start_price (compared; on the planning path); cli/_plan.py: resolve_start_price (formatted into text; on the planning path); and 1 more |
+| `--start-price` | command `plan` |  | read | cli/_plan.py: make_plan (compared; on the planning path); cli/_plan.py: resolve_start_price (compared; on the planning path); and 2 more |
 | `--strands` | command `plan` |  | read | cli/_plan.py: strand_setting (decides a branch; on the planning path); turned on, it makes `make_plan` refuse every plan (section 3) |
 | `--verify` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 

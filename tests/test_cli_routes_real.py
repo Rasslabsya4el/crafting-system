@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 from abstraction_support import real_game_data
+from limits_support import labels_of, only
 from route_view_support import assert_golden
 
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
@@ -89,7 +90,7 @@ def test_the_policy_reaches_the_goal_with_odds_mean_and_p90(solved):
     assert plan.mean_remaining == pytest.approx(risk.mean.value, rel=1e-9)
     # only some essences that no source prices (poe.ninja, poe.watch, an earlier league) are dropped, and the
     # Harvest reforges whose lifeforce the fixture price file lacks (it holds the Primal lifeforce only)
-    assert {drop.label for drop in plan.dropped if not drop.label.startswith("Harvest Reforge")} <= UNPRICED_ESSENCES
+    assert {label for label in labels_of(plan.limits, "unpriced") if not label.startswith("Harvest Reforge")} <= UNPRICED_ESSENCES
 
 
 def test_verify_agrees_with_the_computed_mean(solved, data):
@@ -107,7 +108,7 @@ def test_only_the_crafts_whose_mod_counts_toward_a_requirement_are_offered(solve
     counting = leaf_mods(target)
     crafts = [priced.offer.action for priced in plan.offers if isinstance(priced.offer.action, BenchCraft)]
     assert all(craft.mod_id in counting for craft in crafts)
-    (left,) = [entry for entry in plan.left_out if "counts toward no requirement" in entry.reason]  # the rest of the bench is left out and listed, none of it unpriced (the pruning lists its own)
+    left = only(plan.limits, "crafts")  # the rest of the bench is left out and listed, none of it unpriced (the pruning lists its own)
     assert len(left.labels) > 100
     assert any(isinstance(priced.offer.action, RemoveCraftedMods) for priced in plan.offers) == bool(crafts)
 

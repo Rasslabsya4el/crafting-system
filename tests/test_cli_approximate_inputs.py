@@ -113,7 +113,7 @@ def toy_plan(label: str, offers=OFFERS) -> Plan:
     values = {state: 0.0 if ab.is_goal(state) else 1.0 for state in order}
     return Plan(
         target=target, abstraction=ab, leaf_labels=leaf_labels(target), prices=PRICES, start=first,
-        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced, dropped=(), left_out=(),
+        start_price=StartPrice(START_NAME, 6.0, "trade-api"), offers=priced, limits=(),
         solution=Solution(values, policy, 0.0), risk=evaluate(policy, first, ab.is_goal),
         solve_seconds=0.0, risk_seconds=0.0,
     )  # fmt: skip

@@ -45,6 +45,7 @@ from crafting_system.targets.lines import LineList, LineMap, load_with_lines
 from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
 
+from ._limits import UNPRICED
 from ._offers import free_action_cost
 from ._packed import PackedPolicy
 from ._plan import Plan, evaluate_risk, offer_action
@@ -261,12 +262,12 @@ class _Reader:
         known = [priced.label for priced in self.plan.offers]
         if label in known:
             return label
-        for dropped in self.plan.dropped:
-            if dropped.label == label:
+        for limit in self.plan.limits:
+            if limit.kind == UNPRICED and label in limit.labels:
                 self.fail(
                     line,
                     path,
-                    f"{describe(label)} has no price: missing {', '.join(dropped.missing)}. "
+                    f"{describe(label)} has no price: missing {', '.join(limit.names)}. "
                     "Price it or remove the rule",
                 )
         near = close_matches(label, [*known, RESTART])

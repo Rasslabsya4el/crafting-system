@@ -12,6 +12,7 @@ import pytest
 from abstraction_pool import MANA_1
 from coarse_support import CHAOS, CRAFTS, DATA, HYBRID_CRAFT, REMOVE, abstraction, item, roll
 from contract_support import contract_pairs, fixture_items, CONTRACT_DATA
+from limits_support import notes, only
 
 from crafting_system.abstraction import Abstraction, Estimate, Goal
 from crafting_system.actions import Adds, ChaosOrb, RegalOrb, Reads
@@ -305,7 +306,9 @@ def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(
 
     assert plan.approximation is None and plan.packed is not None
     assert plan.mean_remaining == pytest.approx(exact.mean_remaining, rel=1e-9)
-    assert "Undeclared reroll is not declared block-invariant" in plan.note and "packed solver" in plan.note
+    solved = only(plan.limits, "how-solved")  # G13: one limit, the packed note replaces the decision's message
+    assert "Undeclared reroll is not declared block-invariant" in solved.why and "packed solver" in solved.why
+    assert solved.guarantee == "The answer is exact among the methods offered."
 
 
 def test_the_text_tree_stops_after_its_limit_and_says_where_the_rest_is(exact, monkeypatch):
@@ -325,7 +328,7 @@ def test_the_text_tree_stops_after_its_limit_and_says_where_the_rest_is(exact, m
 def test_make_plan_without_a_budget_never_decides(target, exact):
     plan = make_plan(DATA, target, PRICES, offers=OFFERS, start_price=0.0, rates=Rates(1e9, 1e9))
 
-    assert plan.approximation is None and plan.note == "" and plan.mean_remaining == exact.mean_remaining
+    assert plan.approximation is None and notes(plan.limits) == [] and plan.mean_remaining == exact.mean_remaining
 
 
 # --- a count that was cut short is only a lower bound ---------------------------------------------------------

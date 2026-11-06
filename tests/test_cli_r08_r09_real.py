@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from cli_support import read_json
+from limits_support import notes, of_kind
 
 from crafting_system.actions import ApplyFossils, BenchCraft
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, main, make_plan
@@ -83,12 +84,12 @@ def test_the_fossil_sets_the_bench_crafts_and_the_restart_are_offered(plan, rout
     assert len(fossil_sets) == 10_670  # 12,700 sets of the boots, 2,030 with a Tangled Fossil unpriced and dropped
     assert f"Fossils {guide_fossil} + Shuddering Fossil" in offers
     assert len(crafts) == SPEED_CRAFTS
-    unpriced = {name for drop in plan.dropped for name in drop.missing}
+    unpriced = {name for limit in of_kind(plan.limits, "unpriced") for name in limit.names}
     assert unpriced == {"Tangled Fossil"}
 
 
 def test_the_policy_reaches_the_goal_with_exact_odds_and_mean(plan):
-    assert plan.approximation is None and plan.note == ""  # the forecast fits the budget: the answer is exact
+    assert plan.approximation is None and notes(plan.limits) == []  # the forecast fits the budget: the answer is exact
     risk = plan.risk
 
     assert risk.success_probability.value == pytest.approx(1.0)

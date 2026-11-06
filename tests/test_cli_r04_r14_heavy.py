@@ -78,7 +78,8 @@ def cli(tmp_path_factory, data, route_id):
 def test_the_default_budget_run_reaches_the_packed_solver_and_says_so(cli, route_id):
     _, document, _ = cli
 
-    assert "packed solver" in document["note"] and "No approximate level exists" in document["note"]
+    solved = [limit for limit in document["limits"] if limit["kind"] == "how-solved"]
+    assert len(solved) == 1 and "packed solver" in solved[0]["why"] and "No approximate level exists" in solved[0]["why"]
     golden_diff.check_objects(
         {"states": GOLDEN[route_id]["states"]}, {"states": document["states_solved"]},
         f"{route_id}: the states solved differ from tests/golden/packed_values.json",

@@ -18,7 +18,7 @@ from fractions import Fraction
 
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
-from crafting_system.actions import BLOCKING
+from crafting_system.actions import BLOCKING, kinds
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
@@ -30,7 +30,9 @@ from crafting_system.targets import KOfN, Requirement, Target
 from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
-from ._offers import RESTART, BuyStartItem, DroppedOffer, LeftOut, Offer, PricedOffer, free_action_cost, offers_for, price_offers, usable_actions
+from . import _limits
+from ._limits import Limit, approximate_limits, claim, kind_title, risk_limits, unpriced_limits, with_limits
+from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, offers_for, price_offers, split_usable
 from . import _packed
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._prune import chosen_offers, solver_actions
@@ -93,18 +95,20 @@ class Plan:
     start: CompressedState
     start_price: StartPrice
     offers: tuple[PricedOffer, ...]
-    dropped: tuple[DroppedOffer, ...]
-    left_out: tuple[LeftOut, ...]
+    limits: tuple[Limit, ...]  # everything the answer leaves out, each with what it still guarantees (OR-13, `_limits`)
     solution: Solution[CompressedState]
     risk: RiskReport | None
     solve_seconds: float
     risk_seconds: float
     approximation: Approximation | None = None  # set when the answer is approximate: `start`, `solution` and `policy` are then of blocks
-    note: str = ""  # a plain-English remark on how the query was decided (empty when it simply fit)
     pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
-    strands: StrandSetting = STRANDS_OFF  # whether Memory Strands were considered (ADR-0040); the report says so when not
     starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
     packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
+
+    def __post_init__(self) -> None:
+        # one place decides what a guarantee of cheapness says: an approximate answer reaches the cheapest only to within its stated gap (OR-13)
+        if self.approximation is not None:
+            object.__setattr__(self, "limits", approximate_limits(self.limits))
 
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
@@ -324,19 +328,25 @@ def make_plan(
             " (batch B7, ticket #242 onward)"
         )
     goal = Goal.from_target(target)
-    left_out: tuple[LeftOut, ...] = ()
+    limits: tuple[Limit, ...] = (strands_limit(),)
     if offers is None:
         try:
             chosen = offers_for(data, goal, target.base_id, target.start_item, target.actions)
         except ValueError as error:
             raise PlanError(str(error)) from error
-        offers, left_out = chosen.offers, chosen.left_out
+        offers, limits = chosen.offers, (*chosen.limits, *limits)
     priced, dropped = price_offers(offers, prices)
     if not priced:
         names = sorted({name for drop in dropped for name in drop.missing})
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
-    kept = set(usable_actions(data, target.start_item, [p.offer.action for p in priced]))
+    limits += unpriced_limits((drop.label, drop.missing) for drop in dropped)
+    usable, removed = split_usable(data, target.start_item, [p.offer.action for p in priced])
+    kept = set(usable)
+    if removed:
+        limits += (crafted_mods_limit(tuple(p.label for p in priced if p.offer.action not in kept)),)
     priced = tuple(p for p in priced if p.offer.action in kept)
+    named = start_price_of is not None or start_price is not None or target.start_price is not None
+    limits += start_limits(price_of_start, named)
     if price_of_start.chaos > 0:
         bought = price_of_start.name or "start item"
         restart = Offer(RESTART, BuyStartItem(target.start_item), {bought: 1}, shares=False)
@@ -363,10 +373,9 @@ def make_plan(
     )
     start = abstraction.compress(target.start_item)
 
-    note = ""
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
-        return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out, unsolved, None, 0.0, 0.0)
+        return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
     if budget is not None:
         forecast = merged = priced
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
@@ -375,21 +384,22 @@ def make_plan(
             merged = tuple(merge_twins(data, target.start_item, priced)[0])
             forecast = tuple(starting_offers(abstraction, start, merged, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE))
         decision = decide(abstraction, start, forecast, budget, rates)
-        note = decision.message
+        if decision.message:
+            limits += (whole_search_limit(decision.message),)
         if decision.action == "refused":
             if solver == "object" or (PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE):
                 raise PlanError(decision.message)
             # no coarse level exists and the graph is beyond the object solver: the packed solver holds it (ticket #70, ADR-0063), so the
             # answer is exact and takes the walk's minutes instead of being refused
-            note = _packed_note(decision)
+            limits = with_limits(limits, (whole_search_limit(_packed_note(decision)),), _limits.SOLVE)
         if decision.action == "approximate":
             try:
                 solved = climb(decision, start, merged)
             except ValueError as error:
                 raise PlanError(str(error)) from error
             return Plan(
-                target, abstraction, leaf_labels(target), prices, solved.start, price_of_start, priced, dropped, left_out,
-                solved.solution, None, solved.seconds, 0.0, solved.approximation, note,
+                target, abstraction, leaf_labels(target), prices, solved.start, price_of_start, priced, limits,
+                solved.solution, None, solved.seconds, 0.0, solved.approximation,
             )  # fmt: skip
 
     began = time.perf_counter()
@@ -399,7 +409,7 @@ def make_plan(
     if many and solver != "packed":
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE)
         solution = pruned.solution
-        left_out = (*left_out, *_pruned_left_out(pruned))
+        limits += _pruned_limits(pruned)
     else:
         offered = tuple(merge_twins(data, target.start_item, priced)[0]) if many else priced
         packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
@@ -412,20 +422,70 @@ def make_plan(
     if with_risk:
         began = time.perf_counter()
         if packed is not None:
-            risk, note = packed_risk(packed, solution.values[start], free_action_cost(priced), note)
+            risk, risk_found = packed_risk(packed, solution.values[start], free_action_cost(priced))
         else:
             risk = evaluate_risk(solution.policy, start, abstraction.is_goal, solution.values[start], free_cost=free_action_cost(priced))
+            risk_found = risk_limits(risk)
+        limits += risk_found
         risk_seconds = time.perf_counter() - began
     if packed is not None and packed.view is not None and len(solution.policy) > VIEW_FROM_STATES:
-        shown = len(packed.view) + 1
-        note = (note + " " if note else "") + (
-            f"The policy visits {len(solution.policy):,} item states; the tree below shows {shown:,} groups of them: item states that pay alike and lead on to "
-            "the same groups with the same chances are one group, shown by one of its members. The odds, costs and percentiles are exact for the groups."
-        )
+        limits += (lumped_limit(len(solution.policy), len(packed.view) + 1),)
 
     return Plan(
-        target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, dropped, left_out,
-        solution, risk, solve_seconds, risk_seconds, None, note, pruned, packed=packed,
+        target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits,
+        solution, risk, solve_seconds, risk_seconds, None, pruned, packed=packed,
+    )
+
+
+def strands_limit() -> Limit:
+    """The limit of a plan that does not consider Memory Strands (ADR-0040), naming the kinds that need them (K3, K6, G1)."""
+    needing = tuple(kind_title(entry.name) for entry in kinds() if entry.needs_strands)
+    return Limit(
+        _limits.STRANDS,
+        "Memory Strands are not considered",
+        "the start item has none, and the planner cannot plan with them yet",
+        "The plan makes no use of Memory Strands.",
+        needing,
+    )
+
+
+def start_limits(price: StartPrice, named: bool) -> tuple[Limit, ...]:
+    """The limits of a start item that costs nothing: the target names no price for it (P1), and it is never bought again (P3)."""
+    found: tuple[Limit, ...] = ()
+    if not named:
+        found += (
+            Limit(
+                _limits.START,
+                "The start item is counted as free",
+                "the target names no start price",
+                "The cost of the answer does not include getting the start item.",
+            ),
+        )
+    if not price.chaos > 0:
+        found += (
+            Limit(
+                _limits.START,
+                "No restart",
+                "the start item costs nothing, so buying it again is not offered",
+                **claim("the plans that never start over", "It only improves the item it has."),
+            ),
+        )
+    return found
+
+
+def whole_search_limit(why: str) -> Limit:
+    """The limit of an exact answer found by the whole search, which took longer than the time budget or could not be forecast (G12, G13)."""
+    return Limit(_limits.SOLVE, "The whole search was run", why, "The answer is exact among the methods offered.")
+
+
+def lumped_limit(item_states: int, shown: int) -> Limit:
+    """The limit of a tree that shows groups of item states, not every item state (G14)."""
+    return Limit(
+        _limits.DISPLAY,
+        "The tree shows groups of item states",
+        f"the policy visits {item_states:,} item states and the tree shows {shown:,} groups of them: item states that pay alike and lead on to "
+        "the same groups with the same chances are one group, shown by one of its members",
+        "The odds, costs and percentiles are exact for the groups.",
     )
 
 
@@ -441,11 +501,11 @@ def _packed_note(decision: Decision) -> str:
 RISK_QUANTILE_TRANSITIONS = 2_000_000  # a merged chain with more transitions gets no quantile DP (ticket #374): the DP's entries outgrew 16 GB on R04's 4.7 M
 
 
-def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note: str) -> tuple[RiskReport, str]:
-    """The risk of a packed plan's policy, evaluated on its merged chain (same mean, odds and quantiles), and the plan's note.
+def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> tuple[RiskReport, tuple[Limit, ...]]:
+    """The risk of a packed plan's policy, evaluated on its merged chain (same mean, odds and quantiles), and the limits of that risk.
 
     A merged chain of more than `RISK_QUANTILE_TRANSITIONS` transitions gets its exact odds, mean and variance and no quantile grid,
-    and the note says so.
+    and the limit says so.
     """
     if _packed.PROGRESS is not None:
         _packed.PROGRESS(f"solved: mean {mean!r}; evaluating the risk on the merged chain ({len(packed.risk_policy):,} classes)")
@@ -465,12 +525,16 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None, note
     if _packed.PROGRESS is not None:
         _packed.PROGRESS(f"risk: p50 {risk.p50!r}, p90 {risk.p90!r}")
     if not resolve:
-        note = (note + " " if note else "") + (
-            f"The p50, p90 and CVaR are not computed: the policy's merged chain has {moves:,} transitions, more than the "
-            f"{RISK_QUANTILE_TRANSITIONS:,} the budget DP of the risk run holds in memory (it ran out of a 16 GB runner on R04). "
-            "The odds, mean and variance are exact."
+        return risk, (
+            Limit(
+                _limits.RISK,
+                "Not computed: p50, p90, CVaR",
+                f"the policy's merged chain has {moves:,} transitions, more than the {RISK_QUANTILE_TRANSITIONS:,} the percentile "
+                "calculation can hold in memory (it ran out of a 16 GB runner on R04)",
+                "The odds, the mean and the variance are exact.",
+            ),
         )
-    return risk, note
+    return risk, risk_limits(risk)
 
 
 def add_risk(plan: Plan) -> Plan:
@@ -480,10 +544,11 @@ def add_risk(plan: Plan) -> Plan:
     began = time.perf_counter()
     free = free_action_cost(plan.offers)
     if plan.packed is not None:
-        risk, note = packed_risk(plan.packed, plan.solution.values[plan.start], free, plan.note)
-        return replace(plan, risk=risk, note=note, risk_seconds=time.perf_counter() - began)
-    risk = evaluate_risk(plan.solution.policy, plan.start, plan.abstraction.is_goal, plan.solution.values[plan.start], free_cost=free)
-    return replace(plan, risk=risk, risk_seconds=time.perf_counter() - began)
+        risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
+    else:
+        risk = evaluate_risk(plan.solution.policy, plan.start, plan.abstraction.is_goal, plan.solution.values[plan.start], free_cost=free)
+        found = risk_limits(risk)
+    return replace(plan, risk=risk, limits=with_limits(plan.limits, found, _limits.RISK), risk_seconds=time.perf_counter() - began)
 
 
 RISK_BINS = 200_000  # the default `max_bins` of `risk.evaluate`
@@ -533,16 +598,38 @@ def evaluate_risk(
     return evaluate(policy, start, is_goal, max_bins=apart, max_coarse_bins=COARSE_BINS, free_cost=free_cost, free_fallback_bins=bins, **extra)
 
 
-def _pruned_left_out(pruned: Pruned) -> tuple[LeftOut, ...]:
-    """The offers the pruning left out of the solve, by reason (the plan still prices and evaluates all of them)."""
+def _pruned_limits(pruned: Pruned) -> tuple[Limit, ...]:
+    """The offers the pruning left out of the solve, by reason (the plan still prices and evaluates all of them); the answer stays exact (K15)."""
     found = []
     if pruned.twins:
-        found.append(LeftOut("same outcome as a cheaper offer", tuple(dropped for dropped, _ in pruned.twins)))
+        found.append(
+            Limit(
+                _limits.PROVED,
+                "Not searched",
+                "same outcome as a cheaper offer",
+                "The answer is exact among the methods offered: a cheaper action does the same.",
+                tuple(dropped for dropped, _ in pruned.twins),
+            )
+        )
     if pruned.inapplicable:
-        found.append(LeftOut("the game refuses it on this item wherever it can be", pruned.inapplicable))
+        found.append(
+            Limit(
+                _limits.PROVED,
+                "Not searched",
+                "the game refuses it on this item wherever it can be",
+                "The answer is exact among the methods offered: the game never lets these be used here.",
+                tuple(pruned.inapplicable),
+            )
+        )
     if pruned.bounded:
         found.append(
-            LeftOut("proved never better: even its best case costs more than the plan", pruned.bounded)
+            Limit(
+                _limits.PROVED,
+                "Not searched",
+                "proved never better: even its best case costs more than the plan",
+                "The answer is exact among the methods offered: none of these can beat the plan.",
+                tuple(pruned.bounded),
+            )
         )
     return tuple(found)
 

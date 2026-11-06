@@ -14,7 +14,8 @@ from cli_support import run as run_command
 from targets_support import DATA
 
 from crafting_system.actions import ChaosOrb, HarvestReforge, RemoveCraftedMods
-from crafting_system.cli import DroppedOffer, Offer, PlanError, build_report, default_offers, make_plan, policy_document, render_text
+from crafting_system.cli import Offer, PlanError, build_report, default_offers, make_plan, policy_document, render_text
+from crafting_system.cli._limits import unpriced_limits
 from crafting_system.items import CatalystType
 from crafting_system.prices import write_price_file
 from crafting_system.rules import get_rule
@@ -134,38 +135,41 @@ def test_an_action_without_a_price_is_dropped_and_listed(tmp_path, capsys):
 
     assert code == 0
     document = read_json(out)
-    dropped = {drop["action"]: drop["missing_prices"] for drop in document["dropped_actions"]}
+    unpriced = [limit for limit in document["limits"] if limit["kind"] == "unpriced"]  # U1
+    dropped = {label: limit["names"] for limit in unpriced for label in limit["labels"]}
     assert dropped["Harvest Reforge Lightning"] == [LIFEFORCE]  # the other reforges lack their own lifeforce
     assert document["states"][0]["action"] == "Chaos Orb"
-    assert "Dropped for lack of a price: Harvest Reforge Lightning" in capsys.readouterr().out
+    assert f"(no price for {LIFEFORCE}). The plan is the cheapest among the actions that have a price" in capsys.readouterr().out
 
 
-def test_three_dropped_actions_are_each_printed_on_their_own_line(target):
+def test_the_unpriced_actions_of_a_plan_are_one_limit_with_their_names_in_the_text(target):
     plan = make_plan(DATA, target, price_file())
-    dropped = tuple(DroppedOffer(label, (LIFEFORCE,)) for label in ("Alpha", "Beta", "Gamma"))
+    limits = unpriced_limits((label, (LIFEFORCE,)) for label in ("Alpha", "Beta", "Gamma"))
 
-    text = render_text(build_report(dataclasses.replace(plan, dropped=dropped), DATA))
+    text = render_text(build_report(dataclasses.replace(plan, limits=limits), DATA))
 
-    for label in ("Alpha", "Beta", "Gamma"):
-        assert f"Dropped for lack of a price: {label} (no price for {LIFEFORCE})" in text
-    assert "actions (no price for" not in text
+    assert f"Not offered: Alpha, Beta, Gamma (no price for {LIFEFORCE}). The plan is the cheapest among the actions that have a price" in text
 
 
-def test_many_dropped_actions_are_grouped_into_one_line_per_missing_price(target):
+def test_many_unpriced_actions_are_one_limit_to_a_missing_price_and_the_text_names_every_one(target):
     plan = make_plan(DATA, target, price_file())
-    tangled = [DroppedOffer(f"Tangled set {n}", ("Tangled Fossil",)) for n in range(1, 308)]
-    hollow = [DroppedOffer(f"Hollow set {n}", ("Hollow Fossil",)) for n in range(1, 4)]
-    # interleaved, so the lines must come out grouped by the missing price, not by the order of the list
+    tangled = [(f"Tangled set {n}", ("Tangled Fossil",)) for n in range(1, 308)]
+    hollow = [(f"Hollow set {n}", ("Hollow Fossil",)) for n in range(1, 4)]
+    # interleaved, so the limits must come out grouped by the missing price, not by the order of the list
     dropped = (tangled[0], hollow[0], tangled[1], hollow[1], tangled[2], hollow[2]) + tuple(tangled[3:])
 
-    report = build_report(dataclasses.replace(plan, dropped=dropped), DATA)
-    lines = [line for line in render_text(report).splitlines() if line.startswith("Dropped for lack of a price")]
+    report = build_report(dataclasses.replace(plan, limits=unpriced_limits(dropped)), DATA)
+    lines = [line for line in render_text(report).splitlines() if line.startswith("  Not offered")]
 
+    every = ", ".join(f"Tangled set {n}" for n in range(1, 308))  # OR-16: nothing left out is hidden, however many
     assert lines == [
-        "Dropped for lack of a price, 307 actions (no price for Tangled Fossil): Tangled set 1, Tangled set 2, Tangled set 3, ...",
-        "Dropped for lack of a price, 3 actions (no price for Hollow Fossil): Hollow set 1, Hollow set 2, Hollow set 3",
+        f"  Not offered, 307 in all: {every} (no price for Tangled Fossil). "
+        "The plan is the cheapest among the actions that have a price. A price for these could make it cheaper.",
+        "  Not offered: Hollow set 1, Hollow set 2, Hollow set 3 (no price for Hollow Fossil). "
+        "The plan is the cheapest among the actions that have a price. A price for these could make it cheaper.",
     ]
-    assert len(policy_document(report)["dropped_actions"]) == 310
+    listed = [limit for limit in policy_document(report)["limits"] if limit["kind"] == "unpriced"]
+    assert sorted(limit["count"] for limit in listed) == [3, 307]  # the JSON holds every label
 
 
 def test_a_plan_with_no_priced_action_is_refused(target):

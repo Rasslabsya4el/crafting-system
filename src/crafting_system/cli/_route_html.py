@@ -11,6 +11,7 @@ marks the target and the final state. Deterministic: the same page model gives t
 
 from html import escape
 
+from ._limits import HEADING
 from ._route_card import ItemCard, Slot
 
 CSS = """\
@@ -53,9 +54,16 @@ def _link(href: str, text: str, external: bool = False) -> str:
     return f'<a href="{escape(href, quote=True)}"{rel}>{escape(text)}</a>'
 
 
+def _more(line) -> str:
+    """The entries a line does not name, in a "details" element that is closed by default; every one is in the page."""
+    if not line.more:
+        return ""
+    return f"<details><summary>the other {len(line.more):,}</summary>{escape(', '.join(line.more))}</details>"
+
+
 def _line(line) -> str:
     if line.href is None:
-        return escape(line.text)
+        return escape(line.text) + _more(line)
     external = not line.href.startswith("#")
     if line.anchor:
         return f"{escape(line.text)} {_link(line.href, line.anchor, external)}"
@@ -71,6 +79,17 @@ def _field(field) -> tuple[str, str]:
 def _fields(fields) -> str:
     cells = "".join("".join(_field(field)) for field in fields)
     return f'<div class="f">{cells}</div>'
+
+
+def _leaves_out(fields) -> str:
+    """The section "What this answer leaves out" of the goal card: a heading and one field to a group of limits; nothing when there are none."""
+    if not fields:
+        return ""
+    groups = "".join(
+        f'<div class="k">{escape(field.label)}</div><div class="v ml">' + "".join(f"<div>{_line(line)}</div>" for line in field.lines) + "</div>"
+        for field in fields
+    )
+    return f'<div><div class="sd">{escape(HEADING)}</div>{groups}</div>'
 
 
 def _slot(slot: Slot) -> str:
@@ -109,6 +128,7 @@ def _section(section, heading: bool) -> str:
     out.append(
         '<div class="rw"><div class="cd tg"><h3>Route goal</h3>'
         + _fields(section.goal.fields)
+        + _leaves_out(section.goal.leaves_out)
         + "</div>"
         + _item(section.goal.target, target=True)
         + "</div>"

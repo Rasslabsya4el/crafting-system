@@ -56,6 +56,7 @@ from crafting_system.solver import Action
 
 from . import _route_flow
 from ._interval import IntervalAnswer
+from ._limits import SHOWN_LABELS, grouped, limit_text, more_labels
 from ._marking import approximate_inputs
 from ._plan import Plan
 from ._report import Report
@@ -82,6 +83,7 @@ class Line:
     text: str
     href: str | None = None
     anchor: str = ""
+    more: tuple[str, ...] = ()  # entries the text does not name: the page holds them in a "details" element, closed by default
 
 
 @dataclass(frozen=True)
@@ -112,8 +114,11 @@ class StepRow:
 
 @dataclass(frozen=True)
 class GoalCard:
+    """The goal card: its fields, the target item, and the section "What this answer leaves out" (one field to a group of limits, OR-13)."""
+
     fields: tuple[Field, ...]
     target: ItemCard
+    leaves_out: tuple[Field, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -555,7 +560,8 @@ class _View:
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
             None if self.flow.measured else _plain("Note", note),
         )
-        return GoalCard(fields, card_of_target(self.data, plan.target))
+        leaves_out = tuple(Field(title, tuple(Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit)) for limit in group)) for title, group in grouped(plan.limits))
+        return GoalCard(fields, card_of_target(self.data, plan.target), leaves_out)
 
 
 def build_section(
@@ -642,8 +648,10 @@ def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tupl
     Rows that are the same step (`_same_steps`) are drawn once, in the planner's section. When every row of the given
     route is one of the planner's, one for one, the planner's section says so in a line and the given route has no
     section. Otherwise the given route's section keeps its differing rows only, lists the steps it shares with the
-    planner (as links, with the planner's number) and sends the links that pointed at a shared row to the planner's row.
+    planner (as links, with the planner's number) and sends the links that pointed at a shared row to the planner's row. What the answer
+    leaves out is the plan's, so it stays in the planner's section only.
     """
+    given = replace(given, goal=replace(given.goal, leaves_out=()))  # the same plan's limits are in the planner's section: said once
     prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
     shared = _same_steps(policy, given, prefix)
     if len(shared) == len(given.rows) == len(policy.rows) == len({row.number for row in shared.values()}):

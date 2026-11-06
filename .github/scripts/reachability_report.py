@@ -912,6 +912,9 @@ def offered_kinds(probe: Probe) -> dict[str, int]:
     return dict(counts)
 
 
+ACTION_LIMITS = frozenset({"crafts", "fixed-mod", "rolls", "proved-unneeded"})  # the limits (`cli/_limits.py`) whose labels are actions
+
+
 def why_not_offered(data, kind, probe: Probe) -> str:
     """The first reason, in the order the planner applies them, that this planner kind gives no offer on this probe."""
     from crafting_system.abstraction import Goal
@@ -936,10 +939,11 @@ def why_not_offered(data, kind, probe: Probe) -> str:
     if not members:
         return "the kind lists no action for this start item"
     left = {}
-    for group in plan.left_out:  # type: ignore[attr-defined]
-        for label in group.labels:
-            left.setdefault(label, group.reason)
-    dropped = {d.label: d.missing for d in plan.dropped}  # type: ignore[attr-defined]
+    for group in plan.limits:  # type: ignore[attr-defined]
+        if group.kind in ACTION_LIMITS:  # the other limits list kinds by name, not actions by label
+            for label in group.labels:
+                left.setdefault(label, group.why)
+    dropped = {label: limit.names for limit in plan.limits if limit.kind == "unpriced" for label in limit.labels}  # type: ignore[attr-defined]
     fates: Counter = Counter()
     for action in members:
         label = action.label(data)
@@ -1201,7 +1205,7 @@ def build_report(data, seconds: float = TARGET_SECONDS, src_root: Path = SRC, lo
                     "plans",
                     f"{len(names)} names" if names is not None else "no key",
                     len(plan.offers) - restart,  # type: ignore[attr-defined]
-                    len(plan.dropped),  # type: ignore[attr-defined]
+                    sum(len(limit.labels) for limit in plan.limits if limit.kind == "unpriced"),  # type: ignore[attr-defined]
                     with_inputs,
                     len(kinds_here),
                     _listing(sorted(kinds_here), 40),

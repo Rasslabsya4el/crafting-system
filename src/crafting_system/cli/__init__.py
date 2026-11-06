@@ -34,12 +34,12 @@ file says under the target's `start_price` name (a trade-API price, a hand overr
 `--start-price`.
 """
 
+from ._limits import Limit
 from ._main import main
 from ._offers import (
     RESTART,
     BuyStartItem,
     DroppedOffer,
-    LeftOut,
     Offer,
     OfferSet,
     PricedOffer,
@@ -65,7 +65,7 @@ __all__ = [
     "Divergence",
     "DroppedOffer",
     "Gap",
-    "LeftOut",
+    "Limit",
     "Offer",
     "OfferSet",
     "Plan",

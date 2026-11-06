@@ -11,6 +11,7 @@ import random
 import pytest
 from cli_support import R12, START, price_file
 from items_support import AMULET, DATA, item, roll
+from limits_support import labels_of, only
 
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, RemoveCraftedMods, bench_crafts
@@ -64,7 +65,7 @@ def test_a_craft_whose_mod_counts_toward_a_requirement_is_offered_and_the_others
     chosen = offered(Goal((Wanted(frozenset({DAMAGE_1})),)))
 
     assert crafts(chosen) == {DAMAGE_1}
-    (left,) = chosen.left_out
+    left = only(chosen.limits, "crafts")
     assert len(left.labels) == crafts_for("Belt") - 1  # every other craft of the belt
     assert any(isinstance(offer.action, RemoveCraftedMods) for offer in chosen.offers)
 
@@ -74,7 +75,7 @@ def test_a_craft_giving_the_goal_nothing_is_not_offered_and_neither_is_remove_cr
 
     assert crafts(chosen) == set()
     assert not any(isinstance(offer.action, RemoveCraftedMods) for offer in chosen.offers)
-    (left,) = chosen.left_out
+    left = only(chosen.limits, "crafts")
     assert len(left.labels) == crafts_for("Belt") and all(label.startswith("Bench craft ") for label in left.labels)
 
 
@@ -88,8 +89,8 @@ def test_a_craft_of_another_item_class_is_not_listed():
     chosen = offered(Goal((Wanted(frozenset({DAMAGE_1})),)), base_id=AMULET)
 
     assert crafts(chosen) == set()
-    assert sum(len(left.labels) for left in chosen.left_out) == crafts_for("Amulet")  # only the crafts of its class
-    assert all(("increased Damage" not in label) for left in chosen.left_out for label in left.labels)  # Ring and Belt
+    assert len(labels_of(chosen.limits, "crafts")) == crafts_for("Amulet")  # only the crafts of its class
+    assert all(("increased Damage" not in label) for label in labels_of(chosen.limits, "crafts"))  # Ring and Belt
 
 
 def test_a_start_item_with_a_crafted_mod_gets_remove_crafted_mods_without_any_craft():
@@ -156,8 +157,9 @@ def test_a_target_naming_action_kinds_is_offered_those_kinds_only_and_the_rest_i
     labels = {offer.label for offer in chosen.offers}
     assert "Chaos Orb" in labels and not any(label.startswith("Harvest") or "Essence" in label for label in labels)
     assert crafts(chosen) == {DAMAGE_1}
-    named = chosen.left_out[0]
-    assert "essence" in named.labels and "harvest-reforge" in named.labels and "chaos-orb" not in named.labels
+    named = only(chosen.limits, "kinds-not-named")
+    assert "Essences" in named.labels and "Harvest reforges" in named.labels and "Chaos Orb" not in named.labels
+    assert named.guarantee == "The plan is the cheapest among the kinds offered."  # OR-13
 
 
 def test_an_unknown_action_kind_is_refused_with_the_kinds_there_are():
@@ -220,10 +222,10 @@ def test_a_craft_named_by_label_is_offered_though_it_counts_toward_no_requiremen
     other = next(craft for craft in bench_crafts(DATA) if craft.mod_id == HYBRID)
     label = other.label(DATA)
 
-    left_out = offers_for(PRICED_DATA, goal, BELT, start, ["bench-craft"])
+    not_named = offers_for(PRICED_DATA, goal, BELT, start, ["bench-craft"])
     chosen = offers_for(PRICED_DATA, goal, BELT, start, ["bench-craft", label])
 
-    assert HYBRID not in crafts(left_out) and crafts(left_out) == {DAMAGE_1}
+    assert HYBRID not in crafts(not_named) and crafts(not_named) == {DAMAGE_1}
     assert crafts(chosen) == {DAMAGE_1, HYBRID}
 
 

@@ -67,7 +67,7 @@ def test_the_text_report_names_the_goods_with_counts_the_item_that_comes_back_an
     assert text.isascii()
     lines = text.splitlines()
     first = lines.index("First step, before S1: Vendor recipe: Boots with movement speed, 5 recipes in a row")
-    assert lines[first - 1].startswith("Memory Strands:")  # the step sits in the header, before the options and the policy
+    assert lines[first - 1].startswith("Start item")  # the step sits in the header, before the options and the policy
     assert lines.index(next(line for line in lines if line.startswith("Start options"))) > first
     assert lines.index("Policy (S = a state of the item; the start is S1)") > first
     assert lines[first + 1 : first + 5] == [

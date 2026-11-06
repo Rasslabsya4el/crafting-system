@@ -26,6 +26,7 @@ from functools import cache
 import pytest
 from abstraction_fossil import fossil_finished
 from abstraction_oracle import assert_same_distribution, compressed_distribution
+from limits_support import labels_of, only
 from bloodstained_support import (
     ALL_RES,
     BASE_IMPLICIT,
@@ -565,11 +566,23 @@ def test_a_set_named_by_its_label_is_still_filtered_by_the_goal():
     assert label not in offered(PLAIN_TARGET, names=(label,)) and label not in offered(ALLOWING_TARGET, names=(label,))
 
 
-def test_the_report_says_nothing_of_a_bloodstained_set_that_is_left_out():
+def test_the_answer_names_a_bloodstained_set_that_is_left_out_with_the_cause_that_is_true_for_the_target():
     item = starts()["none"]
-    for goal in (PLAIN_TARGET, ALLOWING_TARGET):
-        chosen = offers_for(DATA, goal, item.base_id, item, ("fossil-set",))
-        assert not any(BLOODSTAINED in label for entry in chosen.left_out for label in entry.labels)
+    plain = offers_for(DATA, PLAIN_TARGET, item.base_id, item, ("fossil-set",))  # takes no corrupted item
+    allowing = offers_for(DATA, ALLOWING_TARGET, item.base_id, item, ("fossil-set",))  # takes one, asks for no corrupted implicit
+    asking = offers_for(DATA, ASKING_TARGET, item.base_id, item, ("fossil-set",))  # asks for one: the sets are offered
+
+    cause = only(plain.limits, "corrupting")  # K5
+    assert any(BLOODSTAINED in label for label in cause.labels) and "takes no corrupted item" in cause.why
+    assert cause.guarantee == "The plan is unaffected: nothing here could be used for this target."
+    asked = only(allowing.limits, "corrupting-asked")  # the same sets, a different cause: ADR-0038
+    assert any(BLOODSTAINED in label for label in asked.labels) and not labels_of(allowing.limits, "corrupting")
+    assert "asks for a corrupted implicit" in asked.why and "takes no corrupted item" not in asked.why
+    assert asked.guarantee == "The plan is the cheapest among the kinds offered." and "unaffected" not in asked.guarantee
+    for chosen in (plain, allowing):
+        assert not any(BLOODSTAINED in label for limit in chosen.limits if limit.kind not in ("corrupting", "corrupting-asked") for label in limit.labels)
+    assert not any(BLOODSTAINED in label for limit in asking.limits for label in limit.labels)
+    assert any(BLOODSTAINED in label for label in (offer.label for offer in asking.offers))
 
 
 def test_a_bloodstained_offer_is_not_pruned_from_a_state_that_misses_a_requirement():
