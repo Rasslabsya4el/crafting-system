@@ -152,8 +152,13 @@ def pack_kernels(g) -> dict:
     succ = np.concatenate(g.k_succ).astype(np.int32) if count else np.zeros(0, dtype=np.int32)
     prob = np.empty(int(ptr[-1]), dtype=np.float64)
     for k, wt in enumerate(g.k_wt):
-        w = np.asarray(wt).astype(np.float64)
-        prob[ptr[k] : ptr[k + 1]] = w / w.sum()
+        if wt.dtype == object:  # weights beyond 62 bits (the essence rerolls): exact integers, divided as integers (a float would overflow)
+            ints = [int(x) for x in wt.tolist()]
+            total = sum(ints)
+            prob[ptr[k] : ptr[k + 1]] = [x / total for x in ints]
+        else:
+            w = wt.astype(np.float64)
+            prob[ptr[k] : ptr[k + 1]] = w / w.sum()
     return {"ptr": ptr, "sizes": sizes, "succ": succ, "prob": prob, "count": count}
 
 
@@ -305,7 +310,8 @@ def main() -> None:
     parser.add_argument("--strand-stripped", action="store_true")
     parser.add_argument("--merge", default="auto", choices=("auto", "yes", "no"), help="exact classes before the exact solve (auto: when the walk holds over 50 M edges)")
     parser.add_argument("--keys", default="all")
-    parser.add_argument("--cut-keys", default="")
+    parser.add_argument("--cut-keys", default="", help="keys whose cuts are measured: names, or all")
+    parser.add_argument("--cut-top", type=int, default=0, help="also the N keys with the best ratio")
     parser.add_argument("--seconds", type=float, default=3300)
     parser.add_argument("--max-rss-mb", type=float, default=13_000)
     parser.add_argument("--max-flat-edges", type=int, default=80_000_000)
@@ -394,11 +400,20 @@ def main() -> None:
         ratios = lb[inside] / np.maximum(v_star[inside], 1e-300)
         row["ratio_in_optimal_policy"] = {"median": float(np.median(ratios)), "p10": float(np.percentile(ratios, 10)), "mean": float(ratios.mean()), "classes": int(inside.sum())}
         say(began, f"ratio {name}: {row['ratio']:.4f}, violations {row['violations']}, in the optimal policy {row['ratio_in_optimal_policy']}")
-    cut_names = list(class_lb) if args.cut_keys == "all" else [k for k in args.cut_keys.split(",") if k and k in class_lb]
+    if args.cut_keys == "all":
+        cut_names = list(class_lb)
+    else:
+        cut_names = [k for k in args.cut_keys.split(",") if k and k in class_lb]
+        best = sorted((name for name in class_lb if name not in cut_names and name != "identity"), key=lambda name: -result["bounds"][name]["ratio"])
+        cut_names += best[: args.cut_top]
     result["cuts"] += cut_rows(flat, start_class, v_star, v_star.copy(), "perfect (lb = V*)", class_sizes, restart_cost, sweeps=(0,))
     for name in cut_names:
         result["cuts"] += cut_rows(flat, start_class, v_star, class_lb[name], name, class_sizes, restart_cost)
         say(began, f"cuts {name}: {result['cuts'][-1]}")
+        if args.out:
+            (Path(args.out) / f"{path.stem}.partial.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
+    if args.out:
+        (Path(args.out) / f"{path.stem}.partial.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
     result["peak_rss_mb"] = round(E.rss_mb())
     result["total_seconds"] = round(time.perf_counter() - began, 1)
     text = json.dumps(result, indent=1)
