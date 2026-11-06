@@ -50,12 +50,15 @@ ENTRY_POINTS = (
     (f"{PACKAGE}.cli._starts", "plan_with_starts"),
 )
 
-# the modules the audit says are built and not wired: (what it is, module, finding ids)
+# the modules the audit says are built and not wired: (what it is, module, finding ids, the public names it lists or None for all of them).
+# `with_interval` lives in `cli._report`, a module the command uses, so only the name that is built and not wired is listed from it.
 BUILT_MODULES = (
-    ("the market rule", f"{PACKAGE}.prices.trade_market", "INPUTS-2"),
-    ("the price-source rule", f"{PACKAGE}.prices.price_source", "INPUTS-2, PLANNING-6"),
-    ("the item-level floor", f"{PACKAGE}.targets.floor", "TARGETS-3, PLANNING-8, ROUTES-13"),
-    ("the donor loop of two-input actions", f"{PACKAGE}.cli._donors", "ACT2-11"),
+    ("the market rule", f"{PACKAGE}.prices.trade_market", "INPUTS-2", None),
+    ("the price-source rule", f"{PACKAGE}.prices.price_source", "INPUTS-2, PLANNING-6", None),
+    ("the item-level floor", f"{PACKAGE}.targets.floor", "TARGETS-3, PLANNING-8, ROUTES-13", None),
+    ("the donor loop of two-input actions", f"{PACKAGE}.cli._donors", "ACT2-11", None),
+    ("the interval driver (ticket #220)", f"{PACKAGE}.cli._interval", "PRES-15", ("build_interval_answer",)),
+    ("the interval driver (ticket #220)", f"{PACKAGE}.cli._report", "PRES-15", ("with_interval",)),
 )
 
 # the findings of the audit that touch a kind, for the reader: ids only, no claim (the claim is the audit's)
@@ -1046,6 +1049,27 @@ def _setting_result(index: SourceIndex, row: SettingRow, reach: dict) -> tuple[s
     return ("read" if on_path else "read, but not on the planning path"), shown
 
 
+def built_module_rows(index: SourceIndex, reach: dict, built: Iterable[tuple[str, str, str, tuple[str, ...] | None]]) -> list[list[object]]:
+    """The rows of section 5: for each `(what, module, findings, names)` the public functions and classes of the module (only `names` when given), who refers to each, and whether the planning path reaches it.
+
+    A name in `names` that the module no longer has is an error, so a rename shows up here and not as a row that quietly disappears.
+    """
+    rows: list[list[object]] = []
+    for what, module, findings, only in built:
+        info = index.modules[module]
+        names = [(n, f) for n, f in info.funcs.items() if not n.startswith("_")] + [(n, c) for n, c in info.classes.items() if not n.startswith("_")]
+        if only is not None:
+            missing = sorted(set(only) - {name for name, _ in names})
+            if missing:
+                raise ValueError(f"{module} has no public {', '.join(missing)}: renamed? update BUILT_MODULES")
+            names = [pair for pair in names if pair[0] in only]
+        for name, definition in sorted(names, key=lambda pair: pair[0]):
+            refs = [r for r in index.referrers(definition.key) if r[1] != module]
+            texts = [f"{index.modules[r[1]].rel}: {r[2]}" if r[0] != "mod" else f"{index.modules[r[1]].rel} (module level)" for r in refs]
+            rows.append([what, f"`{name}`", f"`{info.rel}`", _listing(texts, 3) or "nothing", "yes" if definition.key in reach else "**no**", findings])
+    return rows
+
+
 def build_report(data, seconds: float = TARGET_SECONDS, src_root: Path = SRC, log: Callable[[str], None] = lambda text: None) -> str:
     from crafting_system.abstraction import Goal
     from crafting_system.actions import kinds
@@ -1290,18 +1314,11 @@ def build_report(data, seconds: float = TARGET_SECONDS, src_root: Path = SRC, lo
     out.append("## 5. Built modules")
     out.append("")
     out.append(
-        "The public names of the modules the audit says are built and not wired. *Referenced by* lists the other modules of `src/` that name "
+        "The public names of the modules the audit says are built and not wired (of a module the command does use, only the names that are built and not wired). *Referenced by* lists the other modules of `src/` that name "
         "it (tests are not counted); *Planning path* says whether `main`, `make_plan` or `plan_with_starts` reaches it through such references."
     )
     out.append("")
-    rows = []
-    for what, module, findings in BUILT_MODULES:
-        info = index.modules[module]
-        names = [(n, f) for n, f in info.funcs.items() if not n.startswith("_")] + [(n, c) for n, c in info.classes.items() if not n.startswith("_")]
-        for name, definition in sorted(names, key=lambda pair: pair[0]):
-            refs = [r for r in index.referrers(definition.key) if r[1] != module]
-            texts = [f"{index.modules[r[1]].rel}: {r[2]}" if r[0] != "mod" else f"{index.modules[r[1]].rel} (module level)" for r in refs]
-            rows.append([what, f"`{name}`", f"`{info.rel}`", _listing(texts, 3) or "nothing", "yes" if definition.key in reach else "**no**", findings])
+    rows = built_module_rows(index, reach, BUILT_MODULES)
     out.extend(table(["Built module", "Name", "In", "Referenced by", "Planning path", "Audit"], rows))
     out.append("")
 

@@ -277,3 +277,24 @@ def test_every_kind_of_the_catalog_has_a_row(real_report):
 def test_the_settings_the_audit_names_are_in_the_report(real_report):
     for name in ("price_source", "price_gap_percent", "--price-source", "max_imprints", "recombinator_junk_craft", "memory_strands"):
         assert f"| `{name}` |" in real_report
+
+
+# --- the built modules ------------------------------------------------------------------------------------------------
+
+
+def test_a_built_module_lists_all_its_public_names_or_only_the_ones_it_names(tmp_path):
+    index = tree(tmp_path, ENTRY_FILES)
+    reach = index.reachable_from([("func", "toy.plan", "make_plan")])
+
+    whole = report.built_module_rows(index, reach, (("the rules", "toy.rules", "X-1", None),))
+    some = report.built_module_rows(index, reach, (("the rules", "toy.rules", "X-1", ("floor",)),))
+
+    assert [row[1] for row in whole] == ["`floor`", "`helper`", "`offer`"]
+    assert some == [["the rules", "`floor`", "`rules.py`", "unused.py: nobody_calls_me", "**no**", "X-1"]]
+
+
+def test_a_built_name_that_is_not_in_its_module_is_an_error_not_a_missing_row(tmp_path):
+    index = tree(tmp_path, ENTRY_FILES)
+
+    with pytest.raises(ValueError, match="renamed"):
+        report.built_module_rows(index, set(), (("the rules", "toy.rules", "X-1", ("renamed",)),))
