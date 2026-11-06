@@ -13,7 +13,7 @@ from cli_support import LIFEFORCE, R12, START, geometric_p90_clicks, price_file,
 from cli_support import run as run_command
 from targets_support import DATA
 
-from crafting_system.actions import ChaosOrb, HarvestReforge
+from crafting_system.actions import ChaosOrb, HarvestReforge, RemoveCraftedMods
 from crafting_system.cli import DroppedOffer, Offer, PlanError, build_report, default_offers, make_plan, policy_document, render_text
 from crafting_system.items import CatalystType
 from crafting_system.prices import write_price_file
@@ -173,6 +173,19 @@ def test_a_plan_with_no_priced_action_is_refused(target):
 
     with pytest.raises(PlanError, match="no action has a price; missing: Unobtainium"):
         make_plan(DATA, target, price_file(), offers=offers)
+
+
+def test_the_offer_filter_keeps_the_usable_offers_in_their_order(target):
+    """Remove Crafted Mods is dropped (the start item has no crafted mod); the two Chaos offers are kept, in their order."""
+    offers = [
+        Offer("Remove Crafted Mods", RemoveCraftedMods(), {"Chaos Orb": 1}),
+        Offer("Chaos Orb", ChaosOrb(), {"Chaos Orb": 1}),
+        Offer("Chaos Orb 2", ChaosOrb(), {"Chaos Orb": 2}),
+    ]
+
+    plan = make_plan(DATA, target, price_file(), start_price=0.0, offers=offers, solve_it=False)
+
+    assert [priced.label for priced in plan.offers] == ["Chaos Orb", "Chaos Orb 2"]
 
 
 def test_a_start_item_that_already_meets_the_target_costs_only_its_price(tmp_path):
