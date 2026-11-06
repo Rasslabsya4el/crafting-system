@@ -73,7 +73,7 @@ from ._report import Report
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, mod_text
 from ._route_chain import chain_of_packed_policy
-from ._route_flow import ENTRY_STATES, Chain, Edge, Step, chain_of_policy, flow_of
+from ._route_flow import Chain, Edge, Step, chain_of_policy, flow_limits, flow_of
 from ._route_html import render_page
 from ._route_tiers import TierLine, tier_lines
 from ._route_trade import BuyStep, buy_step
@@ -262,8 +262,8 @@ class _View:
         self.route_field = route_field
         self.ab = self.plan.abstraction
         self.reader = _StateReader(self.ab)
-        chain = inp.chain if inp.chain is not None else chain_of_policy(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
-        self.flow = flow_of(chain, is_restart=lambda action: action.label == RESTART, loss=_lost_leaves)
+        self.chain = inp.chain if inp.chain is not None else chain_of_policy(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
+        self.flow = flow_of(self.chain, is_restart=lambda action: action.label == RESTART, loss=_lost_leaves)
         # a start item made at a vendor (ADR-0059): row 1 is the recipe, not a buy
         starts = getattr(self.plan, "starts", None)  # a stand-in plan of a test has none
         self.first: FirstStep | None = None if starts is None else first_step(starts.chosen, data, self.plan.target)
@@ -667,18 +667,6 @@ class _View:
             "not resolved on the grid (#190)" if risk.success_probability.value >= 1.0 else "no finish in 9 runs of 10"
         )
         success = risk.success_probability.value
-        # TODO(#459): carry these two notes as a `Limit` with its guarantee, once that record exists.
-        notes = []
-        if not self.flow.measured:
-            notes.append(
-                "how often a step is used and what it costs are left out, and a step that joins several states shows the plain mean "
-                "of their chances: the chances per use are too small to solve in floating point"
-            )
-        elif not self.flow.entered:
-            notes.append(
-                f"how often a run enters a step is left out: the policy has more than {ENTRY_STATES:,} states that can finish "
-                "(uses, costs and chances are exact)"
-            )
         interval = self.inp.interval
         if interval is None:
             approximate = [f"{item.claim}: {item.reason}" for item in approximate_inputs(plan, self.inp.policy, self.data)]
@@ -697,9 +685,10 @@ class _View:
             *rule,
             _plain("Approximate inputs", *approximate, tone="warn"),
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
-            _plain("Note", *notes) if notes else None,
         )
-        leaves_out = tuple(Field(title, tuple(Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit)) for limit in group)) for title, group in grouped(plan.limits))
+        # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
+        limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)
+        leaves_out = tuple(Field(title, tuple(Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit)) for limit in group)) for title, group in grouped(limits))
         return GoalCard(fields, card_of_target(self.data, plan.target), leaves_out)
 
 
@@ -788,9 +777,8 @@ def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tupl
     route is one of the planner's, one for one, the planner's section says so in a line and the given route has no
     section. Otherwise the given route's section keeps its differing rows only, lists the steps it shares with the
     planner (as links, with the planner's number) and sends the links that pointed at a shared row to the planner's row. What the answer
-    leaves out is the plan's, so it stays in the planner's section only.
+    leaves out is the plan's, said once in the planner's section; the given section holds only what its own steps cannot show (`flow_limits`).
     """
-    given = replace(given, goal=replace(given.goal, leaves_out=()))  # the same plan's limits are in the planner's section: said once
     prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
     shared = _same_steps(policy, given, prefix)
     if len(shared) == len(given.rows) == len(policy.rows) == len({row.number for row in shared.values()}):

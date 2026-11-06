@@ -49,6 +49,7 @@ PROVED = "proved-unneeded"
 START = "start-item"
 SOLVE = "how-solved"
 DISPLAY = "display"
+STEPS = "step-numbers"
 STATE_LINE = "state-line"
 RISK = "risk"
 
@@ -70,6 +71,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (START, "The start item"),
     (SOLVE, "How the answer was found"),
     (DISPLAY, "What is shown"),
+    (STEPS, "What the steps show"),
     (STATE_LINE, "What a state line shows"),
     (RISK, "Percentiles"),
 )

@@ -31,12 +31,13 @@ Two things are stated, not hidden (OR-12, OR-13), and both leave the chances and
 
 * `Flow.measured` is False when the visits cannot be solved (a chance per use so small that it is lost in the
   float, or a sparse solve that did not reach its residual): the uses and visits are then not known, and the chances
-  of a step with several states are the plain mean of them. The page says so on the goal card and on each step it
-  applies to.
+  of a step with several states are the plain mean of them. The page says so on each step it applies to.
 * `Flow.entered` is False when the policy has more than `ENTRY_STATES` states that can finish: the chance a run
   enters a step needs a solve per step, and it is left out (`Step.reached` is None for every step but the first,
   which is reached for sure). Uses, costs and chances do not depend on it.
-  TODO(#459): carry both as a `Limit` with its guarantee, once that record exists.
+
+Both are `Limit` records (`flow_limits`, kind `STEPS`) written into `Plan.limits` when a plan is finished and shown, like every limit, by the text
+report, the JSON and the goal card of the page; a given route's own chain gets its own on its section.
 
 An edge groups the outcomes that lead to the same place: a goal, or the next step. `kind`: "goal", "failure"
 (the item lost a wanted mod, the action is a restart, or the item lands in a step that restarts or that has no
@@ -56,6 +57,7 @@ import numpy as np
 from crafting_system.solver import Action
 from crafting_system.solver._packed_solve import _bicgstab
 
+from ._limits import STEPS, Limit, claim
 from ._reach import policy_states
 
 ENTRY_STATES = 1000  # up to this many states that can finish N is inverted and the chance of entering a step is solved per step; above it only the visits are found (sparse)
@@ -354,6 +356,47 @@ def flow_of[S: Hashable](
         )
     entered = inverse is not None or not finishing[0]
     return Flow(tuple(steps), {chain.states[i]: int(step[i]) + 1 for i in range(m)}, solved, entered)
+
+
+def flow_limits(chain: Chain) -> tuple[Limit, ...]:
+    """The limits of the steps made from `chain` (OR-12, OR-13): what the page then cannot promise. Empty when the visits were solved and the entry chances computed.
+
+    Found by the solve itself, so they are written wherever a plan is finished (`Plan.limits`) and for a given route's own chain.
+    """
+    if chain.m == 0:
+        return ()
+    src = np.repeat(np.arange(chain.m), np.diff(chain.ptr))
+    into_goal = chain.dst >= chain.m
+    finishing = _can_finish(chain.m, src, chain.dst, into_goal, ~into_goal)
+    _, solved, inverse, _ = _visits(chain, src, finishing)
+    if not solved:
+        return (
+            Limit(
+                STEPS,
+                "How often a step is used is not shown",
+                "how often a run is in each state could not be solved to a relative residual of 1e-9: a chance per use is too small for the float "
+                "arithmetic, or the iterative solve did not converge",
+                **claim(
+                    "the methods offered",
+                    "The page leaves out how often each step is used and what it costs, and the chances of a step that joins several states are the "
+                    "plain mean of those states, not the mean weighted by how often a run is in each.",
+                ),
+            ),
+        )
+    if inverse is None and finishing[0]:
+        return (
+            Limit(
+                STEPS,
+                "How often a run enters a step is not shown",
+                f"the policy has {int(finishing.sum()):,} states that can finish, and the chance of entering a step needs a solve for each step, "
+                f"made for at most {ENTRY_STATES:,} states",
+                **claim(
+                    "the methods offered",
+                    "The uses and cost of each step and the chances of each step are as shown; only the share of runs that ever enter a step is missing.",
+                ),
+            ),
+        )
+    return ()
 
 
 def _can_finish(m: int, src: np.ndarray, dst: np.ndarray, into_goal: np.ndarray, into_state: np.ndarray) -> np.ndarray:

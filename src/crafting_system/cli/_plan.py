@@ -35,6 +35,8 @@ from ._limits import Limit, approximate_limits, claim, kind_title, model_gap_lim
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, offers_for, price_offers, split_usable
 from . import _packed
 from ._packed import SOLVERS, PackedResult, packed_result
+from ._route_chain import chain_of_plan
+from ._route_flow import flow_limits
 from ._prune import chosen_offers, solver_actions
 from ._reach import reach_limit
 from ._start_types import StartChoice
@@ -503,7 +505,7 @@ def display_limits(plan: Plan) -> tuple[Limit, ...]:
     reach = reach_limit(plan.start, plan.view_policy, plan.is_goal)
     if reach is not None:
         found.append(reach)
-    return tuple(found)
+    return (*found, *flow_limits(chain_of_plan(plan)))  # what the route page cannot say of the steps of the policy (#466)
 
 
 def states_limit(tracked: bool) -> Limit:

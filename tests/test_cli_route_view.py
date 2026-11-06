@@ -515,7 +515,7 @@ def test_two_given_rows_that_repeat_one_planner_row_are_not_the_same_route():
     assert len(merge_sections(policy, given_route, "the guide")) == 2
 
 
-def test_when_the_chain_cannot_be_solved_in_floats_the_rows_have_no_uses_or_step_costs_and_the_goal_card_says_so(monkeypatch):
+def test_when_the_chain_cannot_be_solved_in_floats_the_rows_have_no_uses_or_step_costs_and_the_step_says_so(monkeypatch):
     solved = _route_flow._visits
 
     def unsolvable(*arguments):  # the one place the numbers can still stop: a chance per use lost in the float
@@ -528,9 +528,8 @@ def test_when_the_chain_cannot_be_solved_in_floats_the_rows_have_no_uses_or_step
 
     assert all("Uses on average" not in labels_of(row) and "Step cost" not in labels_of(row) for row in section.rows)
     assert lines_of(section.rows[1], "Cost per use") == ["1 × Essence of Hysteria 3 c"]
-    note = [field for field in section.goal.fields if field.label == "Note"][0]
-    assert note.lines[0].text.startswith("how often a step is used and what it costs are left out")
-    assert "plain mean" in note.lines[0].text
+    joined = [row for row in section.rows if any("plain mean of its" in line for line in lines_of(row, "Note"))]
+    assert joined  # said on a step that joins states (the goal card says it as a limit, `flow_limits`)
 
 
 def test_a_policy_with_more_states_than_the_entry_limit_says_so_and_keeps_every_other_number(monkeypatch):
@@ -538,8 +537,6 @@ def test_a_policy_with_more_states_than_the_entry_limit_says_so_and_keeps_every_
 
     section = build_section(INPUTS["branch"](), DATA)
 
-    note = [field for field in section.goal.fields if field.label == "Note"][0]
-    assert note.lines[0].text.startswith("how often a run enters a step is left out") and "exact" in note.lines[0].text
     chaos = section.rows[2]
     assert "Uses on average" in labels_of(chaos) and "reached" not in lines_of(chaos, "Uses on average")[0]
     assert lines_of(section.rows[1], "Chance per use")[0] == "the target: ≈84%"  # the mixture does not depend on it

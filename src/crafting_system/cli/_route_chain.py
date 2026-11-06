@@ -20,7 +20,7 @@ from crafting_system.solver import Action, Outcome
 from crafting_system.solver._packed import expand_ranges
 
 from ._packed import PackedPolicy, Walked
-from ._route_flow import Chain, empty_chain
+from ._route_flow import Chain, chain_of_policy, empty_chain
 
 
 def packed_chain(
@@ -103,8 +103,22 @@ def packed_chain(
     )
 
 
+def chain_of_plan(plan) -> Chain[CompressedState]:
+    """The item-state chain of a plan's own policy: from the walked graph for a plan shown by its lumped chain, else from the policy mapping."""
+    if plan.lumped:
+        return chain_of_packed_policy(plan.policy)
+    return chain_of_policy(plan.start, plan.policy, plan.is_goal)
+
+
 def chain_of_packed_policy(policy: PackedPolicy) -> Chain[CompressedState]:
-    """The chain of the optimal policy of a packed plan."""
+    """The chain of the optimal policy of a packed plan (made once: the plan's limits and the page both read it)."""
+    cached = getattr(policy, "_item_chain", None)
+    if cached is None:
+        cached = policy._item_chain = _chain_of_packed_policy(policy)  # type: ignore[attr-defined]
+    return cached
+
+
+def _chain_of_packed_policy(policy: PackedPolicy) -> Chain[CompressedState]:
     walked = policy.walked
     graph = walked.graph
     action = policy.action_array
