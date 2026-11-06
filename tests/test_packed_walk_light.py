@@ -7,9 +7,13 @@ bench crafts, Remove Crafted Mods and a restart) in about a quarter of a second,
 module does not compute:
 
 * the states and the kernels of the walk against a plain breadth-first search over `Abstraction.kernel`;
-* the counts of the shared-kernel check against a formula over the number of actions and of kernels;
-* the values against the object solver `solver.solve` on the same graph written out as a table;
+* the counts of the shared-kernel check against the count of a plain search (actions less distinct kernels), not the graph's own;
+* the values against the object solver `solver.solve` on a table written out by a plain search over `Abstraction.kernel`;
 * the mean of the lumped chain against `risk.evaluate`, which knows nothing of the walk.
+
+The kernels themselves are always the abstraction's (`Abstraction.kernel`): the walk packs them, and what it must keep is exactly
+them. Their own correctness is checked against brute force over concrete items by the `test_abstraction_*` files, and there is no
+second source for the kernels of a hundred states that is not a copy of those tests.
 """
 
 import math
@@ -162,13 +166,38 @@ def test_the_walked_offers_are_the_offers_given_in_order(world):
 # --- the shared-kernel check ----------------------------------------------------------------------------------------------
 
 
-def counts_of(walked):
-    """(shared-kernel hits, kernels computed) from the graph: actions other than restart, and the kernels they share."""
-    graph = walked.graph
-    restart_tag = len(walked.offers) - 1
-    others = sum(1 for a in range(graph.num_actions) if int(graph.act_tag[a]) != restart_tag)
-    computed = graph.num_kernels - 1  # all but the restart kernel
-    return others - computed, computed
+def counts_of(ab, start, offers):
+    """(shared-kernel hits, kernels computed) by a plain search of the abstraction, not from the graph the walk built.
+
+    Each state the search reaches has one action for each distinct kernel among the offers it takes (equal kernels at one state are merged;
+    the restart is not counted, it has a kernel of its own). A kernel is computed once, so the number computed is the number of distinct
+    kernels in the whole world, and every other action is a hit on a kernel computed before: hits = actions - distinct kernels. This holds
+    when `kernel_key` is exact, which is what the walk's own check of shared kernels is there to catch, so a key that said too little would
+    show up as a count that is off (and as the ValueError of the tests below).
+    """
+    seen, queue = {start}, [start]
+    actions, distinct = 0, set()
+    while queue:
+        state = queue.pop()
+        if ab.is_goal(state):
+            continue
+        here = set()
+        for priced in offers:
+            action = priced.offer.action
+            if isinstance(action, BuyStartItem):
+                continue
+            try:
+                found = ab.kernel(state, action)
+            except ActionError:
+                continue
+            here.add(frozenset(integer_weights(found).items()))
+            for successor in found:
+                if successor not in seen:
+                    seen.add(successor)
+                    queue.append(successor)
+        actions += len(here)
+        distinct |= here
+    return actions - len(distinct), len(distinct)
 
 
 def check_line(lines):
@@ -183,11 +212,12 @@ def test_the_check_of_shared_kernels_covers_the_first_few_and_then_one_in_so_man
     monkeypatch.setattr(_packed, "VERIFY_FIRST", first)
     monkeypatch.setattr(_packed, "VERIFY_EVERY", every)
 
-    ab, _, walked, lines = fresh_walk()
+    ab, start, walked, lines = fresh_walk()
 
-    hits, computed = counts_of(walked)
+    hits, computed = counts_of(ab, start, make_offers())
     checked, said_hits, line = check_line(lines)
     assert said_hits == hits and hits > 100
+    assert walked.graph.num_kernels == computed + 1  # the kernels of the world, and the restart's
     assert checked == sum(1 for h in range(1, hits + 1) if h <= first or h % every == 0)
     assert line.endswith("checked against a fresh kernel: all equal")
 
@@ -395,14 +425,37 @@ def test_the_action_of_a_state_is_built_once_from_the_abstraction(world):
 # --- solving a walked graph ---------------------------------------------------------------------------------------------
 
 
-def table_of(graph):
-    """The graph written out as a model of the object solver: state numbers, actions with their outcomes."""
-    table = {}
-    for i in range(graph.n):
-        table[i] = [
-            Action(str(a), float(graph.act_cost[a]), tuple(Outcome(s, w) for s, w in kernel_of(graph, a).items())) for a in actions_of(graph, i)
-        ]
-    return TabularModel([i for i in range(graph.n) if graph.goal[i]], table)
+def table_by_search(ab, start, offers):
+    """The world written out as a model of the object solver by a plain search over `Abstraction.kernel`, without the walk's graph.
+
+    A state has one action for each offer it takes, at the price of the offer; the restart goes back to the start from every state but the
+    start. (The walk merges equal kernels to the cheapest and the table keeps them all: the optimal values are the same.)
+    """
+    table, goals, seen, queue = {}, [], {start}, [start]
+    while queue:
+        state = queue.pop()
+        if ab.is_goal(state):
+            goals.append(state)
+            table[state] = []
+            continue
+        acts = []
+        for priced in offers:
+            action = priced.offer.action
+            if isinstance(action, BuyStartItem):
+                if state != start:
+                    acts.append(Action(priced.label, priced.cost, (Outcome(start, 1),)))
+                continue
+            try:
+                found = integer_weights(ab.kernel(state, action))
+            except ActionError:
+                continue
+            acts.append(Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in found.items())))
+            for successor in found:
+                if successor not in seen:
+                    seen.add(successor)
+                    queue.append(successor)
+        table[state] = acts
+    return TabularModel(goals, table)
 
 
 @pytest.fixture(scope="module")
@@ -413,15 +466,18 @@ def solved(world):
     return result, lines
 
 
-def test_the_values_of_the_walked_states_are_those_of_the_object_solver_on_the_same_graph(world, solved):
-    _, _, walked, _ = world
+def test_the_values_of_the_walked_states_are_those_of_the_object_solver_on_a_table_made_by_a_plain_search(world, solved):
+    # the table is not the graph of the walk (that would test the solver on what the walk built, and a wrong walk would give a wrong table
+    # with right values): it is searched over `Abstraction.kernel` here. The kernels are the abstraction's own, which other tests check
+    # against brute force over concrete items (`test_abstraction_*`); there is no second source for them at this size.
+    ab, start, walked, _ = world
     result, _ = solved
 
-    exact = solve(table_of(walked.graph), [0])
+    exact = solve(table_by_search(ab, start, make_offers()), [start])
 
-    assert set(result.solution.values) == set(walked.states)
-    for i, state in enumerate(walked.states):
-        assert result.solution.values[state] == pytest.approx(exact.values[i], rel=1e-9, abs=1e-12)
+    assert set(result.solution.values) == set(walked.states) == set(exact.values)
+    for state in walked.states:
+        assert result.solution.values[state] == pytest.approx(exact.values[state], rel=1e-9, abs=1e-12)
     assert result.solution.error_bound < 1e-9
 
 
@@ -434,7 +490,6 @@ def test_the_policy_of_the_solution_takes_for_each_state_an_action_as_good_as_th
     for state in result.solution.policy:
         i = walked.index[state]
         built = result.solution.policy[state]
-        q = built.cost + sum(o.weight * values[walked.index[o.state]] for o in built.outcomes) / sum(o.weight for o in built.outcomes)
         # the self loop is compiled out of a value, not of this sum: the action's value is the fixed point cost-to-go with it included
         total = sum(o.weight for o in built.outcomes)
         stay = sum(o.weight for o in built.outcomes if walked.index[o.state] == i)

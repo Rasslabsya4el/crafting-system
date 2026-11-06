@@ -151,7 +151,12 @@ def test_the_quantile_is_certainly_beyond_the_ordinary_grid_only_past_the_bins_w
 
 
 def oracle_step(visits, mean, variance, level, max_bins, dense_work=1e11):
-    """The step of the module text, by exact search: `visits` is {cost: expected visits}, all Fractions or ints."""
+    """The step of the module text, by exact search: `visits` is {cost: expected visits}, all Fractions or ints.
+
+    This re-implements the rule of the module text with the same constants (12 costs, 64 fractions, 0.02 and 0.1 of the mean, 1e11 cells),
+    so it is a second reading of the text and not an independent source for the constants: a changed constant is told by the hand cases
+    of this file (the cases above, and the tables `ONE_COST_BY_HAND` and `CRAFT_BY_HAND` below, worked out on paper), not by this oracle.
+    """
     n = len(visits)
     horizon = mean + math.sqrt(variance * level / (1.0 - level))
     floor = horizon / max_bins
@@ -301,3 +306,41 @@ def test_choose_step_is_the_step_of_an_exact_search(name, mean, variance, level,
 
 def test_a_chain_with_no_visits_has_no_step():
     assert _coarse.choose_step(build_chain({}, "S", is_goal), 1.0, 0.0, 0.5, 100) is None
+
+
+# --- the whole grid of settings by hand: two chains, every answer worked out on paper -----------------------------------------------
+
+# The settings are (variance, level, bins); the horizon is mean + sqrt(variance * level / (1 - level)) and no step may be below horizon / bins.
+SETTINGS = [(0.0, 0.5, 40), (0.0, 0.9, 300), (2.0, 0.9, 80), (30.0, 0.99, 10_000)]
+MEANS = [0.5, 1.0, 1.5, 3.5, 12.0, 50.0, 400.0]
+
+# ONE_COST: the one cost 1/2 is a whole multiple of each of its fractions 1/2 / m, so every step has the gap 0 and the coarsest is 1/2 itself;
+# it is allowed when horizon / bins <= 1/2 (horizons: the mean, the mean, the mean + 4.24, the mean + 54.5; the answer is None otherwise).
+ONE_COST_BY_HAND = {
+    SETTINGS[0]: [(0.5, 0.0)] * 5 + [None, None],  # horizon = mean <= 20
+    SETTINGS[1]: [(0.5, 0.0)] * 6 + [None],  # mean <= 150
+    SETTINGS[2]: [(0.5, 0.0)] * 5 + [None, None],  # mean + 4.24 <= 40, so mean <= 35.7
+    SETTINGS[3]: [(0.5, 0.0)] * 7,  # mean + 54.5 <= 5000
+}
+
+# CRAFT: costs 1/4 (2 visits), 1/2 (4) and 1 (1). The step 1 leaves the costs 1/4 and 1/2 off its multiples: gap 1 * (2 + 4) = 6; the step 1/2
+# leaves the 1/4: gap 1/2 * 2 = 1; 1/3 gives 2; the step 1/4 is a whole divisor of all three: gap 0. The coarsest step with a gap of at most
+# 0.02 * mean is 1/4 up to mean 12 (target 0.24), 1/2 at mean 50 (target 1.0, the gap 1 just fits), 1 at mean 400 (target 8 >= 6);
+# when the floor horizon / bins is above 1/4 the step 1/4 is gone and the least gap within 0.1 * mean is taken.
+CRAFT_BY_HAND = {
+    SETTINGS[0]: [(0.25, 0.0)] * 4 + [(0.5, 1.0), None, None],  # mean 12: floor 12 / 40 = 0.3 > 1/4: the step 1/2, gap 1 <= 0.1 * 12 = 1.2
+    SETTINGS[1]: [(0.25, 0.0)] * 5 + [(0.5, 1.0), None],  # mean 400: floor 4/3 > 1 = the coarsest step
+    SETTINGS[2]: [(0.25, 0.0)] * 5 + [None, None],  # mean 50: floor (50 + 4.24) / 80 = 0.68, only the step 1 (gap 6 > 0.1 * 50 = 5)
+    SETTINGS[3]: [(0.25, 0.0)] * 5 + [(0.5, 1.0), (1.0, 6.0)],
+}
+
+
+@pytest.mark.parametrize("setting", SETTINGS, ids=str)
+@pytest.mark.parametrize("name,table", [("one", ONE_COST_BY_HAND), ("craft", CRAFT_BY_HAND)])
+def test_choose_step_on_the_two_chains_is_the_table_worked_out_by_hand(name, table, setting):
+    policy, _ = CHAINS[name]
+    variance, level, bins = setting
+
+    found = [_coarse.choose_step(chain_of(policy), mean, variance, level, bins) for mean in MEANS]
+
+    assert found == table[setting]
