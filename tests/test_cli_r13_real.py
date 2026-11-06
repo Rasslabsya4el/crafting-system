@@ -22,7 +22,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from cli_support import read_json
-from limits_support import labels_of
+from limits_support import labels_of, only
 
 from crafting_system.actions import BenchCraft, RemoveCraftedMods
 from crafting_system.cli import RESTART, build_report, evaluate_route, load_route, main, make_plan
@@ -86,7 +86,7 @@ def test_only_the_crafts_whose_mod_counts_toward_a_requirement_are_offered(plan)
     assert crafts and all(craft.mod_id in counting for craft in crafts)
     assert any(isinstance(priced.offer.action, RemoveCraftedMods) for priced in plan.offers)
     kinds_left = labels_of(plan.limits, "kinds-not-named")  # none of it unpriced
-    crafts_left = labels_of(plan.limits, "crafts")
+    crafts_left = only(plan.limits, "crafts").labels  # a list: two crafts may read alike
     assert "Chaos Orb" in kinds_left and len(crafts_left) > 50  # 81 belt crafts
 
 

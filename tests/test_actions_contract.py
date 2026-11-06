@@ -120,7 +120,7 @@ def test_the_label_round_trips_through_a_given_route(pair, plan):
     _, action, item = pair
     label = action.label(CONTRACT_DATA)
     priced = PricedOffer(offer_of(action, label, CONTRACT_DATA, ITEMS[item]), 1.0, ())
-    only = dataclasses.replace(plan, offers=(priced,), dropped=())
+    only = dataclasses.replace(plan, offers=(priced,), limits=())
     route = parse_route(f"rules:\n  - do: {json.dumps(label)}\n", only, DATA, "route.yaml")
     assert route.rules[0].do == label
 
@@ -142,7 +142,7 @@ def test_every_offer_label_of_the_planner_round_trips_through_a_given_route(name
     labels = [offer.label for offer in offers]
     assert len(labels) == len(set(labels))
     for offer in offers:
-        only = dataclasses.replace(plan, offers=(PricedOffer(offer, 1.0, ()),), dropped=())
+        only = dataclasses.replace(plan, offers=(PricedOffer(offer, 1.0, ()),), limits=())
         text = "rules:\n  - do: " + json.dumps(offer.label) + "\n"
         route = parse_route(text, only, DATA, "route.yaml")
         assert route.rules[0].do == offer.label
