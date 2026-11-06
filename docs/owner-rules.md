@@ -44,6 +44,7 @@ When a guide gives a tier, a number or a soft wish, the target takes the guide's
 
 - **Example.** `r10-fractured-boots-70-life.yaml` reads the guide's "preferably at least 70" Life as a roll of at least 70 with no tier (about 46 c at 70). R14 asks `IncreasedAttackSpeed` `min_tier: 1` because the guide says "T1 Attack Speed"; R13 asks tier 1 Life because the guide says "tier-1 life".
 - **Counter-example.** `r10-fractured-boots.yaml` asks Life tier 1 where the guide says "preferably at least 70" (128 c). R11 asks Evasion and Life tier 1 where the guide says "prefixes you are happy with" (1,110 c).
+- **A guide's "guarantee".** A guide that says an orb "guarantees" a mod guarantees its family, not its tier: R04's and R14's two Exalted Orbs after "Cannot roll Attack Modifiers" always add one of the two prefix families left, at a random tier. With no tier stated, OR-1 still asks the top tier, and the page shows the chance of each tier (OR-31). Source: owner in the main chat, 2026-11-06 ([#410](https://github.com/Rasslabsya4el/crafting-system/issues/410), point 2).
 - **Source.** Owner decisions on #396, point 1, 2026-11-02 (memory note `audit-decisions-2026-11-02.md`).
 - **Replaces.** OR-1 where a guide states a number, a tier or a wish. This is the answer to the first open question of the audit.
 
@@ -133,7 +134,7 @@ Every cut of the search states what the answer still guarantees.
 
 Pruning works on the route as a whole, not only inside one step.
 
-- **Example.** R14 walks 816,153 states, its optimal policy reaches 65,147 of them and the guide route 946; R04 walks 177,242 and the guide route reaches 22.
+- **Example.** R14 walks 816,153 item states. Its optimal policy has 87,251 item states, which merge into 65,147 classes reached, or into 14,742 blocks; the guide route has 946 acting item states (1 gap), which merge into 19 blocks. R04 walks 177,242 item states. Its optimal policy has 18,696 item states, which merge into 11,767 classes reached, or into 551 blocks; the guide route has 18,629 acting item states (13 gaps), which merge into 22 blocks. Units: an item state is a `CompressedState`; a class is the exact merge of states with the same future; a block is the exact lumping of the policy chain (`docs/research/2026-11-06-rebuild-6-inventory.md`, section 0).
 - **Counter-example.** R14's page of 87,272 steps (151 MB), 65,433 of them the same Restart card. A page like that must not exist.
 - **Source.** Owner decisions on #396, point 3, 2026-11-02; measurement results on #396, 2026-11-04 (route-level pruning comes before a "minimal state").
 
@@ -186,6 +187,14 @@ When all mechanics of a case are known, the page shows one exact chance; states 
 - **Example.** V01: the eight Regal states take the same action, so "Augmentation, then Regal" has one chance, the mixture of the eight.
 - **Counter-example.** The same page shows eight Regal rows between ≈0.88% and ≈0.95% (`tests/golden/v01_minion_helmet.txt:408,453`). That spread was a display artefact, not an uncertainty.
 - **Source.** Owner decisions on #396, point 5, 2026-11-02. A display merge of this kind is exact and needs no bound.
+
+### OR-31. A step that can add a wanted mod shows the chance of each tier
+
+When a step can add a mod of a family the target wants, the page shows the chance of each tier of that family (T1, T2, ... and "none"), with the target's tier marked, not only whether the requirement is met.
+
+- **Example.** R04's first Exalted Orb after "Cannot roll Attack Modifiers" adds Maximum Life or Increased Damage with Bow Skills every time (100%), and a top-tier mod of whichever lands 2 times in 15; the step shows the share of every tier of both families.
+- **Counter-example.** The R04 benchmark's check of the published odds (`tests/test_cli_r04_r14_real.py:104-111`) gives the first Exalted Orb only two numbers, 100% at any tier and 13% at the top tier, with nothing for the tiers in between.
+- **Source.** Owner in the main chat, 2026-11-06: the system should say "T1 this chance, T2 this chance, and so on".
 
 ## Evidence
 
