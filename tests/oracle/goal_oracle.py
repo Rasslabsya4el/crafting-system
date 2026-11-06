@@ -11,8 +11,9 @@ What it reads, and only this:
     `base_items.json`, `crafting_bench_options.json`);
   * the owner's rules (`docs/owner-rules.md`), written below as code.
 
-It imports the standard library and `yaml` and nothing from `crafting_system` (a test scans this file for
-that). The planner's `targets/parse.py` and `targets/model.py` were read only to learn the YAML keys.
+It imports the standard library, `yaml` and the one shared module `independent/ladder.py` (ticket #419: the natural
+ladder and the base-name rule, shared with `tests/reconcile/`) and nothing from `crafting_system` (a test scans this
+file for that). The planner's `targets/parse.py` and `targets/model.py` were read only to learn the YAML keys.
 
 The rules it implements
   * OR-1. A requirement with no tier, or with a `min_tier`, is judged on the natural ladder of its family on
@@ -25,7 +26,7 @@ The rules it implements
     A `stat:` text that states its value (no `#`) is the guide's own wording, so it asks no top tier either (checker, #420).
   * k-of-n (`at_least` / `of`): at least that many of the members are met; members may be groups.
 
-The natural ladder of a family on a base, worked out from the raw mods here and nowhere else
+The natural ladder of a family on a base, worked out from the raw mods in `independent/ladder.py`
   * A mod is natural when its domain is the base's own domain (`item` for gear, `misc` for jewels), it is a prefix or a suffix, it is not essence-only, it is not a
     Battle Royale copy (its id holds "Royale"), and its spawn weight on the item's tags is above zero.
   * The spawn weight is the weight of the FIRST entry of the mod's `spawn_weights` whose tag the item has; a
@@ -49,25 +50,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+from independent import ladder as shared
 
 MODS_FILE = "mods.json"
 BASES_FILE = "base_items.json"
 BENCH_FILE = "crafting_bench_options.json"
 ESSENCES_FILE = "essences.json"
 
-SIDES = ("prefix", "suffix")
+SIDES = shared.SIDES
 CRAFTED_DOMAIN = "crafted"
-ROYALE_MARKER = "Royale"
-
-# The tag an influence adds to a base tag: `belt_basilisk` is a Hunter belt (the export's own spelling).
-INFLUENCE_TAG = {
-    "shaper": "shaper",
-    "elder": "elder",
-    "crusader": "crusader",
-    "hunter": "basilisk",
-    "redeemer": "eyrie",
-    "warlord": "adjudicator",
-}
 
 # Top-level target keys the oracle does not judge (OR-29), with what each one asks for.
 UNJUDGED_KEYS = {
@@ -156,14 +147,12 @@ class Export:
     # -- bases and tags ------------------------------------------------------------------------------------------
 
     def base_id(self, base: str) -> str:
-        """The id of a base given by id or by its English name (a Battle Royale copy of a name is never picked)."""
-        if base in self.base_items:
-            return base
-        found = sorted(
-            base_id
-            for base_id, entry in self.base_items.items()
-            if entry.get("name") == base and ROYALE_MARKER not in base_id and entry.get("release_state", "released") == "released"
-        )
+        """The id of a base given by id or by its English name, by the rule shared with the reconciliation checks.
+
+        A Battle Royale copy of a name is never picked; where a name has bases on sale, one tagged `not_for_sale` is not
+        picked either; of several bases left the first id counts (`independent/ladder.py`).
+        """
+        found = shared.base_ids_of(self.base_items, base)
         if not found:
             raise KeyError(f"no base named {base!r}")
         return found[0]
@@ -172,55 +161,35 @@ class Export:
         return self.base_items[base_id]["item_class"]
 
     def tags(self, base_id: str, influences: frozenset[str] = frozenset()) -> frozenset[str]:
-        base_tags = set(self.base_items[base_id]["tags"])
-        tags = set(base_tags)
-        for influence in influences:
-            suffix = INFLUENCE_TAG[influence]
-            tags.update(f"{tag}_{suffix}" for tag in base_tags)
-        return frozenset(tags)
+        return shared.item_tags(self.base_items[base_id]["tags"], influences)
 
     @staticmethod
     def spawn_weight(mod: dict, tags: frozenset[str]) -> int:
         """The weight of the first spawn entry whose tag the item has; 0 when none."""
-        for entry in mod.get("spawn_weights", []):
-            if entry["tag"] in tags:
-                return entry["weight"]
-        return 0
+        return shared.spawn_weight(mod, tags)
 
     # -- the natural ladders ------------------------------------------------------------------------------------
 
     def is_natural(self, mod_id: str, mod: dict, tags: frozenset[str], domain: str) -> bool:
-        return (
-            mod["domain"] == domain
-            and mod["generation_type"] in SIDES
-            and not mod.get("is_essence_only", False)
-            and ROYALE_MARKER not in mod_id
-            and self.spawn_weight(mod, tags) > 0
-        )
+        return shared.is_natural(mod_id, mod, tags, domain)
 
     def ladders(self, base_id: str, influences: frozenset[str] = frozenset()) -> dict[tuple[str, str], Ladder]:
-        """Every natural ladder on the base, by (mod type, generation type); each is best tier first."""
+        """Every natural ladder on the base, by (mod type, generation type); each is best tier first.
+
+        The tiers come from the ladder shared with the reconciliation checks (`independent/ladder.py`); this adds the
+        required level and the stat ranges of each rung.
+        """
         key = (base_id, influences)
         if key in self._ladders:
             return self._ladders[key]
-        tags = self.tags(base_id, influences)
-        domain = self.base_items[base_id]["domain"]
-        groups: dict[tuple[str, str], list[tuple[str, dict]]] = {}
-        for mod_id, mod in self.mods.items():
-            if self.is_natural(mod_id, mod, tags, domain):
-                groups.setdefault((mod["type"], mod["generation_type"]), []).append((mod_id, mod))
+        tiers_by_ladder = shared.natural_ladders(self.mods, self.tags(base_id, influences), self.base_items[base_id]["domain"])
         built: dict[tuple[str, str], Ladder] = {}
-        for group_key, members in groups.items():
-            levels = [mod["required_level"] for _, mod in members]
-            rungs = [
-                Rung(
-                    mod_id,
-                    1 + sum(level > mod["required_level"] for level in levels),
-                    mod["required_level"],
-                    tuple((stat["id"], min(stat["min"], stat["max"]), max(stat["min"], stat["max"])) for stat in mod["stats"]),
-                )
-                for mod_id, mod in members
-            ]
+        for group_key, tiers in tiers_by_ladder.items():
+            rungs = []
+            for mod_id, tier in tiers.items():
+                mod = self.mods[mod_id]
+                stats = tuple((stat["id"], min(stat["min"], stat["max"]), max(stat["min"], stat["max"])) for stat in mod["stats"])
+                rungs.append(Rung(mod_id, tier, mod["required_level"], stats))
             built[group_key] = tuple(sorted(rungs, key=lambda rung: (rung.tier, rung.mod_id)))
         self._ladders[key] = built
         return built

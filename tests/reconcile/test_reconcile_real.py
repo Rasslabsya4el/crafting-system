@@ -107,7 +107,7 @@ def test_a_target_with_no_start_price_or_no_buy_spec_fails_unless_it_is_a_known_
 def test_the_ladder_puts_the_r12_start_mod_at_tier_7_of_8_on_the_paua_amulet(export):
     (paua,) = base_ids_of(export.bases, "Paua Amulet")
 
-    tiers = ladder(export.mods, export.bases[paua]["tags"], "LightningResist2")
+    tiers = ladder(export.mods, export.bases[paua]["tags"], export.bases[paua]["domain"], "LightningResist2")
 
     assert tiers["LightningResist2"] == 7
     assert len(tiers) == 8
@@ -118,7 +118,7 @@ def test_the_ladder_puts_the_r12_start_mod_at_tier_7_of_8_on_the_paua_amulet(exp
 def test_the_movement_speed_ladder_on_sorcerer_boots_has_6_tiers_without_the_battle_royale_copy(export):
     (boots,) = bases_named(export.bases, "Sorcerer Boots")
 
-    tiers = ladder(export.mods, export.bases[boots]["tags"], "MovementVelocity1")
+    tiers = ladder(export.mods, export.bases[boots]["tags"], export.bases[boots]["domain"], "MovementVelocity1")
 
     assert "MovementVelocity2Royale" in export.mods  # in the data, and spawnable on boots, but never rolled (#248)
     assert "MovementVelocity2Royale" not in tiers
