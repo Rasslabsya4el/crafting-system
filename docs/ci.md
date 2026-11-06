@@ -214,6 +214,31 @@ too slow".
 - **By hand.** `CRAFTING_CACHE_DIR=<cache> uv run python .github/scripts/reachability_report.py --out reachability.md`
   (a quick run, one process; it never starts a solve).
 
+## Golden files: how to read and update a change (ticket #436)
+
+The golden files under `tests/golden/` (`*.html` pages, `*.json`, `*.txt`, `reachability.md`) are the saved output of a test, and a
+change to one is a change to what the owner sees. Their bytes are kept as they are (single-line HTML sections included); what is readable
+is the **view** `tests/golden_diff.py` makes of them, and the same view is used in three places.
+
+- **The view.** HTML is reduced to its structure and visible text, one block per line: every block element (`div`, `li`, `tr`, `h3`, ...)
+  starts a line with its start tag, indented by its depth; inline elements (`span`, `a`) stay in their block's line; a link address is
+  shown percent-decoded; `<style>` is one CSS rule per line; whitespace is collapsed as a browser collapses it. JSON is pretty-printed
+  with sorted keys. Text and Markdown go line by line. A line longer than 160 characters is cut after its commas and semicolons, the
+  continuation starting with `~`, so no line of the view is long.
+- **A failing golden test** prints that view as a unified diff (`-` is the golden file, `+` what the test produced), at most 120
+  lines. Every comparison with a golden file goes through `golden_diff.check` (bytes) or `golden_diff.check_objects` (parsed values):
+  `assert_golden` and `assert_golden_json`, the V01 JSON, the risk and B1 fingerprints, `plans_118.json`, `reachability.md`. A golden file
+  of scalar numbers (`packed_values.json`, compared with `approx` by the heavy tests) fails with pytest's own message, two short numbers.
+  When the bytes differ but the view is equal, the message says only whitespace or invisible bytes differ and shows where.
+- **A pull request** that changes a golden file gets the same diff for every such file in the job summary of the `Golden changes against
+  main` step (`.github/scripts/golden_changes.py`; it runs once, on Ubuntu, in shard 1 of a PR's CI, and is information, not a gate). By
+  hand: `python3 .github/scripts/golden_changes.py --base origin/main` from the branch, no game data needed; `--lines N` cuts each file's diff.
+
+To update a golden file, run its test with `UPDATE_GOLDEN=1` (the test writes the file, then compares), read the diff of the step above
+in the PR, and commit the file. Do not accept a change you have not read: the diff is what a reviewer reads. A golden file made from the
+real game data (`reachability.md`, the `real_*` pages) is taken from the PR's CI as described above, since a PC without the cache cannot
+make it. A reformat of a golden file is never mixed with a content change: it is its own commit, with a test that the parsed content is equal.
+
 ## Keeping the shards balanced
 
 After a run, download the artifact `shard-durations` and commit it as `tests/shard_durations.json`. It holds the

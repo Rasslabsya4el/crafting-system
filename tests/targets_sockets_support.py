@@ -13,6 +13,7 @@ import os
 import textwrap
 from pathlib import Path
 
+import golden_diff
 from targets_implicits_support import TEXTED, assert_error
 
 from crafting_system.data import GameData, StatRange
@@ -116,9 +117,10 @@ def _plain(value: object) -> object:
 
 def assert_golden_json(name: str, text: str) -> None:
     """`text` equals `tests/golden/<name>.json`; `UPDATE_GOLDEN=1` writes it first, a missing file fails."""
+    __tracebackhide__ = True
     path = GOLDEN / f"{name}.json"
     if os.environ.get("UPDATE_GOLDEN"):
         GOLDEN.mkdir(exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
     assert path.exists(), f"no golden file {path}; run with UPDATE_GOLDEN=1 to write it"
-    assert text == path.read_text(encoding="utf-8"), f"{name} differs from its golden file {path}"
+    golden_diff.check(path.read_text(encoding="utf-8"), text, "json", f"{name} differs from its golden file tests/golden/{path.name}")

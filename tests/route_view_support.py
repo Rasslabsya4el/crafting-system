@@ -12,6 +12,7 @@ import os
 from collections.abc import Callable
 from pathlib import Path
 
+import golden_diff
 from abstraction_oracle import crafted_item
 from items_support import DATA, item, roll
 
@@ -55,12 +56,13 @@ HYSTERIA_REQ = Requirement(None, "Elemental Penetration during Flask Effect", fr
 
 def assert_golden(name: str, html: str, extension: str = "html") -> None:
     """The page equals `tests/golden/<name>.<extension>` (`html`, or `txt` for a text report); `UPDATE_GOLDEN=1` writes it first, a missing file fails."""
+    __tracebackhide__ = True
     path = GOLDEN / f"{name}.{extension}"
     if os.environ.get("UPDATE_GOLDEN"):
         GOLDEN.mkdir(exist_ok=True)
         path.write_text(html, encoding="utf-8", newline="\n")
     assert path.exists(), f"no golden file {path}; run with UPDATE_GOLDEN=1 to write it"
-    assert html == path.read_text(encoding="utf-8"), f"{name} differs from its golden file {path}"
+    golden_diff.check(path.read_text(encoding="utf-8"), html, golden_diff.kind_of(path), f"{name} differs from its golden file tests/golden/{path.name}")
 
 
 def belt(*mods, rarity: Rarity = Rarity.RARE) -> Item:
