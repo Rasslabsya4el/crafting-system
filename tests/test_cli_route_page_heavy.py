@@ -12,6 +12,9 @@ Both pages are shown from the lumped chain of the optimal policy, one shown memb
 the policy (`_route_chain`), so what a page says of an item is a fact about items: an orb that only adds a mod loses none (the lines the
 lumped view printed after R04's Remove Crafted Mods and R14's Augmentation), and the tier chances of R04's Exalted Orb are those of the
 published odds (13% and 20%, `tests/test_cli_r04_r14_real.py`) on the guide's two states.
+
+The page is also counted (ticket #476; OR-12, OR-14, OR-18): its steps are the player actions of the policy, no step is printed twice, and
+the page stays under a size set from the measurement of `.github/scripts/page_size.py` (`MEASURED_MB`).
 """
 
 import os
@@ -26,8 +29,9 @@ from crafting_system.cli._benchmark import BENCHMARKS
 from crafting_system.cli._benchmark_outcomes import item_of, published_outcomes
 from crafting_system.cli._route_chain import chain_of_packed_policy
 from crafting_system.cli._route_flow import flow_of
+from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_tiers import tier_lines
-from crafting_system.cli._route_view import build_section, route_input
+from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
@@ -35,6 +39,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
 TARGETS = {"R04": "r04-penetrating-quiver", "R14": "r14-hunter-bow"}
 HEAVY = pytest.mark.skipif(not os.environ.get("CRAFTING_HEAVY"), reason="heavy: set CRAFTING_HEAVY=1 (a heavy run of GitHub, not a CI shard or a PC)")
+MEASURED_MB = {"R04": 0.067, "R14": 0.067}  # the page as `page_size.py` counted it after #466: heavy runs 42304541274 (R04) and 42304575904 (R14), on ce5e88b
+HEADROOM = 2.0  # twice the measured page is a page with more words; a step per chance or per state (17.9 MB in 14,742 steps, 151 MB in 87,272 before) is not
 ADDING = {"Orb of Transmutation", "Orb of Augmentation", "Regal Orb", "Exalted Orb", "Orb of Alchemy"}  # orbs that put a mod on an item and take none off
 
 
@@ -51,6 +57,11 @@ def route_id(request):
 @pytest.fixture(scope="module")
 def plan(data, route_id):
     return make_plan(data, load_target(ROOT / "examples" / "targets" / f"{TARGETS[route_id]}.yaml", data), load_price_file(PRICES))
+
+
+@pytest.fixture(scope="module")
+def flow(plan):
+    return flow_of(chain_of_packed_policy(plan.policy))
 
 
 @pytest.fixture(scope="module")
@@ -152,3 +163,39 @@ def test_the_exalted_step_of_the_page_is_the_visit_weighted_mixture_of_its_item_
         for share in line.tiers:
             weighted = sum(weight * single.get(text, {}).get(share.tier, 0.0) for weight, single in zip(step.weights, apart))
             assert share.chance == pytest.approx(weighted / total, rel=1e-9, abs=1e-12), (text, share.tier)
+
+
+def repeated_steps(section) -> dict[tuple, list[int]]:
+    """The steps that print the same action, goal and accepts (the V01 duplicate scan of audit PRES-1): {(title, goal, accepts): [row numbers]}, only those that repeat."""
+    seen: dict[tuple, list[int]] = {}
+    for row in section.rows:
+        by_label = {field.label: tuple(line.text for line in field.lines) for field in row.fields}
+        seen.setdefault((row.title, by_label.get("Goal", ()), by_label.get("Accepts", ())), []).append(row.number)
+    return {key: numbers for key, numbers in seen.items() if len(numbers) > 1}
+
+
+@HEAVY
+def test_the_steps_of_the_page_are_the_player_actions_of_the_policy(plan, flow, section):
+    actions = {state: priced.label for state, priced in plan.policy.offers()}  # the player action of each state, from the policy itself: its priced offer
+    assert len(actions) == len(plan.policy)
+    labels = set(actions.values())
+
+    assert [step.number for step in flow.steps if step.action is None] == []  # a solved policy takes an action in every state it reaches
+    assert len(flow.steps) == len(labels)  # one step per player action
+    assert {step.action.label for step in flow.steps} == labels
+    for step in flow.steps:  # a step holds the states of its action, no more and no less (OR-18)
+        assert {actions[state] for state in step.states} == {step.action.label}, step.number
+    assert sum(len(step.states) for step in flow.steps) == len(actions)
+    assert len(section.rows) == 1 + len(labels)  # the page: the start row, then a row per step
+
+
+@HEAVY
+def test_no_step_of_the_page_repeats_another_in_action_goal_and_accepts(section):
+    assert repeated_steps(section) == {}
+
+
+@HEAVY
+def test_the_page_stays_under_the_size_set_from_the_measurement(section, route_id):
+    page = render_page(Page(route_id, (section,))).encode("utf-8")  # the page the command writes for a plan with no buy spec and no given route
+
+    assert len(page) < MEASURED_MB[route_id] * HEADROOM * 1_000_000, (route_id, len(page))
