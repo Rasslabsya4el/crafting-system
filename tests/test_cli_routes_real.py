@@ -214,7 +214,7 @@ def test_every_mod_line_of_the_pages_has_the_one_format_and_the_bought_item_has_
     _, _, _, plan = solved
     section = build_section(route_input(plan), data)
 
-    cards = [section.goal.target, *(row.after for row in section.rows)]
+    cards = [section.goal.target, *(row.after for row in section.rows), *(branch.card for row in section.rows for branch in row.branches)]
     for card in cards:
         for slot in (*card.prefixes, *card.suffixes):
             assert all(NOTE_PARTS.fullmatch(part) for part in slot.note.split(", ") if part), slot

@@ -47,6 +47,7 @@ from crafting_system.cli._route_view import (
     RouteInput,
     RouteSection,
     StepRow,
+    _View,
     build_section,
     chance_text,
     count,
@@ -56,6 +57,7 @@ from crafting_system.cli._route_view import (
     route_input,
     write_route_page,
 )
+from crafting_system.cli._route_tiers import TierLine, TierShare
 from crafting_system.prices import PriceEntry, load_buy_spec
 from crafting_system.prices.trade_query import build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
@@ -712,6 +714,14 @@ def test_every_text_is_escaped():
     html = render_page(nasty)
 
     assert "<b>x</b>" not in html and "&lt;b&gt;x&lt;/b&gt; &amp; &quot;y&quot;" in html
+
+
+def test_a_tier_line_marks_the_tiers_of_the_target_ends_with_none_and_is_in_the_one_mod_format():
+    line = TierLine("+# to maximum Life", (TierShare(1, 2 / 15, True), TierShare(2, 0.1, False), TierShare(3, 0.0, False)), 0.77)
+    all_wanted = TierLine("#% increased Damage", (TierShare(1, 0.5, True), TierShare(2, 0.25, True)), 0.25)
+
+    assert _View.tier_text(line) == "+# to maximum Life: T1 ≈13% (target) · T2 10% · T3 0% · none 77%"
+    assert _View.tier_text(all_wanted) == "#% increased Damage: T1 50% · T2 25% · none 25% · every tier is the target"  # nothing to tell apart
 
 
 def test_the_same_model_renders_the_same_bytes():
