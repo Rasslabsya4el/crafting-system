@@ -33,6 +33,21 @@ def test_a_base_implicit_has_grade_zero_and_a_list_of_values_is_allowed():
     assert item.implicits == (ImplicitMod("StrengthImplicitBelt1", 0, (30,)),)
 
 
+def test_a_start_item_that_lists_no_implicit_carries_the_base_implicit_at_the_low_end_of_its_range():
+    """Ticket #484 (decided on #449): the bought item was priced with no filter on that roll, so the plan must not count on more."""
+    low = ImplicitMod("StrengthImplicitBelt1", 0, (25,))  # +(25-35) to Strength
+
+    assert parse(start("rarity: normal")).start_item.implicits == (low,)
+    assert parse("").start_item.implicits == (low,)  # no start_item at all: a fresh belt
+
+
+def test_a_start_item_that_lists_an_implicit_in_the_base_implicits_place_says_so():
+    """An Eldritch implicit is a replacer (an Ember takes the base implicit away): the list is the whole of what the item holds."""
+    item = parse(start(f"implicits:\n  - mod: {SHOCK}1\n    values: 34")).start_item
+
+    assert [entry.mod_id for entry in item.implicits] == [f"{SHOCK}1"]
+
+
 def test_a_written_grade_is_kept_and_checked_by_the_item():
     item = parse(start(f"implicits:\n  - mod: {SHOCK}2\n    values: 37\n    grade: 2")).start_item
 
