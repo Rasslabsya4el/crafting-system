@@ -36,7 +36,7 @@ from targets_support import EXAMPLES
 from crafting_system.actions import HarvestReforge
 from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, parse_route
 from crafting_system.cli._reach import policy_states
-from crafting_system.cli._report import build_report
+from crafting_system.cli._report import build_report, render_text
 from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
@@ -57,9 +57,10 @@ from crafting_system.cli._route_view import (
     write_route_page,
 )
 from crafting_system.prices import PriceEntry, load_buy_spec
-from crafting_system.prices.trade_stats import parse_trade_stats
+from crafting_system.prices.trade_query import build_query
+from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
 from crafting_system.risk import evaluate
-from crafting_system.targets import Requirement, load_target, parse_target, start_price_key
+from crafting_system.targets import Requirement, buy_spec_of, load_target, parse_target, start_price_key
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "trade"
 SPEC = load_buy_spec(FIXTURES / "r12_buy_spec.yaml")
@@ -740,3 +741,31 @@ def test_a_mod_of_the_family_without_a_text_does_not_stop_the_trade_link(tmp_pat
 
     html = path.read_text(encoding="utf-8")
     assert "not in the link" not in html and "fractured.stat_1671376347" in unquote(html)
+
+
+# --- a price taken for a wider item says so next to the price (OR-3, OR-7) ----------------------------------------
+
+
+def plan_with_a_wider_price():
+    target = load_target(R12, DATA)
+    spec = buy_spec_of(DATA, target)
+    body = build_query(spec, [resolve_buy_mod(mod, list(DATA.mods.values()), STATS) for mod in spec.mods]).body()
+    del body["query"]["filters"]["misc_filters"]["filters"]["ilvl"]  # the stored search had no item level at all
+    prices = price_file(start=None)
+    prices.prices[spec.name] = PriceEntry(4.0, "trade-api", "a note", {"query": body})
+    return make_plan(DATA, target, prices)
+
+
+def test_the_buy_step_prints_the_line_next_to_the_price_and_a_price_for_the_same_item_prints_none(r12_plan):
+    wider = build_section(route_input(plan_with_a_wider_price()), DATA).rows[0]
+    same = build_section(route_input(r12_plan), DATA).rows[0]
+
+    assert lines_of(wider, "Cost per use") == ["4 c", "price taken for a wider item (any item level)"]
+    assert lines_of(same, "Cost per use") == ["4 c"]
+
+
+def test_the_text_report_prints_the_line_under_the_start_price():
+    lines = render_text(build_report(plan_with_a_wider_price(), DATA)).splitlines()
+
+    start = next(number for number, line in enumerate(lines) if line.startswith("Start item"))
+    assert lines[start + 1] == "  price taken for a wider item (any item level)"

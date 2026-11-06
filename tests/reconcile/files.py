@@ -59,6 +59,7 @@ class BuyMod:
     stat: str
     minimum: float | None
     fractured: bool
+    own: bool = False  # the base's own implicit: it tells bases of one name apart, it is not a bought mod
 
 
 @dataclass(frozen=True)
@@ -136,7 +137,7 @@ def read_buy_spec(path: Path) -> BuySpec:
         item_level_min=document.get("item_level_min"),
         influence=frozenset(document.get("influence") or ()),
         mods=tuple(
-            BuyMod(stat=entry["stat"], minimum=entry.get("minimum"), fractured=bool(entry.get("fractured", False)))
+            BuyMod(stat=entry["stat"], minimum=entry.get("minimum"), fractured=bool(entry.get("fractured", False)), own=bool(entry.get("own", False)))
             for entry in (document.get("mods") or ())
         ),
     )
@@ -219,6 +220,12 @@ def priced_base_name(entry: PriceEntry) -> str | None:
         return None  # a search with no base type prices every base of its category, whatever the key says
     match = _KEY_BASE.match(entry.key)
     return match.group("base") if match else None
+
+
+def priced_rarity(entry: PriceEntry) -> str | None:
+    """The rarity of the entry's trade query, or None when it has none (a poe.ninja or hand line is a price of a normal base)."""
+    filters = ((entry.query.get("filters") or {}).get("type_filters") or {}).get("filters") or {}
+    return (filters.get("rarity") or {}).get("option")
 
 
 def priced_category(entry: PriceEntry) -> str | None:

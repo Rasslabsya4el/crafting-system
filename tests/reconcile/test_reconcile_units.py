@@ -15,6 +15,7 @@ from .files import (
     priced_base_name,
     priced_category,
     priced_item_level,
+    priced_rarity,
     read_buy_spec,
     read_buy_specs,
     read_price_entry,
@@ -479,7 +480,7 @@ def test_files_that_agree_have_every_slot_empty(tmp_path):
             "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
             "start_mod.ResA2.tier", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
             "buy_mod.+#% to Resist.in_target",
-            "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
+            "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
         ]
     )  # fmt: skip
 
@@ -493,11 +494,11 @@ def test_the_slots_come_from_the_two_yaml_files_alone(tmp_path):
         "buy.base", "buy.category", "buy.item_level", "buy.rarity", "buy.influence", "buy.pool",
         "start_mod.ResA2.tier", "start_mod.ResA2.values", "start_mod.ResA2.buy_mod", "start_mod.ResA2.buy_minimum",
         "buy_mod.+#% to Resist.in_target",
-        "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
+        "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
     ]  # fmt: skip
     assert slots(target, None) == [
         "target.base", "start_price.written", "buy_spec.exists", "start_mod.ResA2.tier", "start_mod.ResA2.values",
-        "price.entry", "price.base", "price.item_level", "price.source", "price.pool",
+        "price.entry", "price.base", "price.item_level", "price.rarity", "price.source", "price.pool",
     ]  # fmt: skip
 
 
@@ -863,3 +864,41 @@ def test_a_disagreement_prints_both_places_and_both_values():
 
     assert str(item) == "buy.base: target: Ruby Ring  <>  spec: any ring  [Ruby Ring <> any ring]"
     assert item.values == ("Ruby Ring", "any ring")
+
+
+# --- the rarity of the search the price was taken with ------------------------------------------------------------
+
+
+def test_an_entry_priced_for_another_rarity_than_the_start_item_is_a_disagreement(tmp_path):
+    result = _bad(_run(tmp_path, entry=lambda d: d["detail"]["query"]["query"]["filters"]["type_filters"]["filters"]["rarity"].update(option="normal")))
+
+    assert list(result) == ["price.rarity"]
+
+
+def test_an_entry_with_no_search_has_no_rarity_to_compare(tmp_path):
+    price_path = _write(tmp_path, "p.json", {"prices": {"Ruby Ring, normal, item level 80": {"chaos": 2, "source": "poe.ninja"}}})
+    entry = read_price_entry(price_path, "Ruby Ring, normal, item level 80")
+
+    assert priced_rarity(entry) is None
+
+
+def test_the_base_s_own_implicit_of_a_spec_narrows_the_bases_it_accepts_and_is_no_bought_mod(tmp_path):
+    mods = {**EXPORT.mods, "BootMod": _mod("Boot", 1, 1, 2, [("extra", 1000)]), "ImpA": _mod("Imp", 1, 5, 9, [], domain="item", generation="unique", text="+(5-9)% to A Resistance"),
+            "ImpB": _mod("Imp", 1, 5, 9, [], domain="item", generation="unique", text="+(5-9)% to B Resistance")}
+    bases = {**EXPORT.bases, TWIN_A: {**_base("Twin Boots", "Boots", ["boots", "default"]), "implicits": ["ImpA"]},
+             TWIN_B: {**_base("Twin Boots", "Boots", ["extra", "boots", "default"]), "implicits": ["ImpB"]}}  # B has another pool
+    export = Export(mods=mods, bases=bases)
+
+    def target(document):
+        document["base"] = TWIN_A
+        document["start_item"] = {"rarity": "rare"}
+
+    def spec(document):
+        document.update(base_type="Twin Boots", category="armour.boots")
+        document["mods"] = [{"stat": "+(5-9)% to A Resistance", "implicit": True, "own": True}]
+
+    result = _run(tmp_path, target=target, spec=spec, entry=lambda d: d["detail"]["query"]["query"].update(type="Twin Boots"), export=export)
+
+    assert result["buy.pool"] == []  # without the implicit the spec would accept Twin B, whose pool has one more mod
+    assert _run(tmp_path, target=target, spec=lambda d: (spec(d), d.update(mods=[])), entry=lambda d: d["detail"]["query"]["query"].update(type="Twin Boots"), export=export)["buy.pool"] != []
+    assert "buy_mod.+#% to A Resistance.in_target" not in result

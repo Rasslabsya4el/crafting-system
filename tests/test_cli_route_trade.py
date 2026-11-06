@@ -99,3 +99,11 @@ def test_the_link_asks_for_instant_buyout_listings_of_any_age():
 
     assert query["status"] == {"option": "securable"}
     assert "trade_filters" not in query["filters"]
+
+
+def test_equal_ends_of_the_item_level_window_read_as_one_level_not_as_84_to_84():
+    one = BuySpec("Spec", base_type="Onyx Amulet", item_level_min=84, item_level_max=84)
+    two = BuySpec("Spec", base_type="Onyx Amulet", item_level_min=84, item_level_max=85)
+
+    assert buy_step(one, "Allflame", MODS, STATS).accepts[1] == "item level 84"
+    assert buy_step(two, "Allflame", MODS, STATS).accepts[1] == "item level 84 to 85"

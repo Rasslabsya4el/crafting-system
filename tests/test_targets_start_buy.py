@@ -14,7 +14,7 @@ from targets_support import DATA, parse
 
 from crafting_system.cli._plan import PlanError, resolve_start_price
 from crafting_system.prices import PriceEntry, PriceFile
-from crafting_system.prices.trade_query import build_query
+from crafting_system.prices.trade_query import BuyMod, BuySpec, TradeSpecError, build_query
 from crafting_system.prices.trade_stats import parse_trade_stats, resolve_buy_mod
 from crafting_system.targets import StartBuyError, buy_spec_of, parse_target, start_price_key
 from crafting_system.targets.start_buy import TRADE_CATEGORY, item_level_window, same_name_bases
@@ -156,11 +156,11 @@ def test_a_mod_of_two_stats_is_refused():
     ("start", "rarity"),
     [
         ("", "normal"),  # no start_item block: a fresh normal item
-        ("start_item:\n  rarity: rare\n  mods: []\n", "normal"),  # R08 and R09: bought Normal, made rare by the Alchemy folded into the price
+        ("start_item:\n  rarity: rare\n  mods: []\n", "rare"),  # R08 and R09: the target's rarity is kept, whatever a price file folds in
         ("start_item:\n  rarity: magic\n  mods: []\n", "magic"),
     ],
 )
-def test_the_rarity_is_the_start_items_and_a_rare_with_no_mods_is_searched_as_normal(start, rarity):
+def test_the_rarity_is_the_start_items_even_for_a_rare_with_no_mods(start, rarity):
     spec = buy_spec_of(DATA, target_at(84, f"buys_start_item: true\nrequirements:\n  - family: IncreasedLife\n{start}"))
 
     assert spec.rarity == rarity
@@ -239,13 +239,52 @@ def test_a_name_that_two_released_bases_share_puts_the_base_id_in_the_key():
     assert start_price_key(data, second) == "Paua Amulet [Amulet1Twin], item level 84-100, fractured +(42-45)% to Lightning Resistance"
 
 
-def test_the_trade_site_cannot_tell_such_bases_apart_so_the_query_is_the_same_for_both():
-    data = with_bases(**{"Metadata/Items/Amulets/Amulet1Twin": {}})
+TWIN = "Metadata/Items/Amulets/Amulet1Twin"
+IMPLICIT_STATS = parse_trade_stats(
+    {"result": [{"id": "implicit", "entries": [{"id": "implicit.stat_77", "text": "+# to maximum Life"}, {"id": "implicit.stat_88", "text": "#% increased Mana Regeneration Rate"}]}]}
+)
+
+
+def twin_pair(**fields):
+    """(data, spec of the amulet, spec of its twin): the same name, the twin with the fields given."""
+    data = with_bases(**{TWIN: fields})
     first = buy_spec_of(data, parse_target(f"base: {AMULET}\nitem_level: 84\n{FRACTURED_RESIST}", data, source="t.yaml"))
-    second = buy_spec_of(data, parse_target(f"base: Metadata/Items/Amulets/Amulet1Twin\nitem_level: 84\n{FRACTURED_RESIST}", data, source="t.yaml"))
+    second = buy_spec_of(data, parse_target(f"base: {TWIN}\nitem_level: 84\n{FRACTURED_RESIST}", data, source="t.yaml"))
+    return data, first, second
+
+
+def own_filters(data, spec):
+    return [resolve_buy_mod(mod, list(data.mods.values()), IMPLICIT_STATS) for mod in spec.mods if mod.own]
+
+
+def test_bases_of_one_name_whose_implicits_differ_are_told_apart_by_their_own_implicit_in_the_query():
+    data, first, second = twin_pair(implicits=("IncreasedLifeImplicitBelt1",))
+
+    assert first.name != second.name
+    assert [(mod.stat, mod.implicit, mod.own, mod.minimum) for mod in first.mods if mod.own] == [("(20-30)% increased Mana Regeneration Rate", True, True, None)]
+    assert [found.id for found in own_filters(data, first)] == ["implicit.stat_88"]
+    assert [found.id for found in own_filters(data, second)] == ["implicit.stat_77"]
+    query = build_query(second, own_filters(data, second)).body()["query"]
+    assert query["stats"][0]["filters"] == [{"id": "implicit.stat_77", "disabled": False}]
+
+
+def test_the_own_implicit_is_part_of_the_base_so_the_spec_needs_no_corrupted_item_but_a_bought_implicit_still_does():
+    _, first, _ = twin_pair(implicits=("IncreasedLifeImplicitBelt1",))
+
+    assert first.corrupted is False
+    with pytest.raises(TradeSpecError, match="corrupted"):
+        BuySpec("x", category="accessory.amulet", mods=(BuyMod("(20-30)% increased Mana Regeneration Rate", implicit=True),))
+    with pytest.raises(TradeSpecError, match="own"):
+        BuyMod("x", own=True)
+
+
+def test_bases_of_one_name_whose_implicits_read_alike_are_not_told_apart_and_ask_for_no_implicit():
+    """The two Penetrating Arrow Quivers have two implicit mods with the same text, and the same pool."""
+    _, first, second = twin_pair(implicits=("ManaRegenerationImplicitAmulet1",))
 
     assert first.name != second.name
     assert replace(first, name="x") == replace(second, name="x")
+    assert not any(mod.own for mod in first.mods)
 
 
 def test_a_battle_royale_copy_and_an_unreleased_base_are_not_a_second_base():
@@ -322,3 +361,72 @@ def test_the_price_given_on_the_command_line_wins_and_carries_the_computed_key()
 def test_the_old_start_price_key_is_no_longer_read():
     with pytest.raises(Exception, match="start_price"):
         parse(FRACTURED_RESIST + "start_price: R12 start amulet\n")
+
+
+# -- the minimum is the number of the mod's stat, not a number read from its text ----------------------------------
+
+
+def test_the_minimum_is_the_low_end_of_the_stat_range_even_where_the_text_shows_another_number():
+    """LifeLeechPermyriadSuffix1's text says (0.2-0.4)% and its stat range is 20 to 40: the minimum is read from the stat."""
+    text = FRACTURED_RESIST.replace("LightningResist7", "LifeLeechPermyriadSuffix1").replace("[43]", "[30]")
+
+    (mod,) = buy_spec_of(DATA, target_at(84, text)).mods
+
+    assert mod.minimum == 20
+
+
+# -- a price taken for another item says so -------------------------------------------------------------------------
+
+
+def wider_prices(change):
+    """A price file whose entry for the target of FRACTURED_RESIST at item level 76 keeps a search that `change` altered."""
+    target = target_at(76, FRACTURED_RESIST)
+    spec = buy_spec_of(DATA, target)
+    body = build_query(spec, [resolve_buy_mod(mod, list(DATA.mods.values()), STATS) for mod in spec.mods]).body()
+    change(body["query"])
+    entry = PriceEntry(7.5, "trade-api", "a note", {"query": body})
+    return target, PriceFile("Allflame", prices_date(), 400.0, {spec.name: entry})
+
+
+def prices_date():
+    from datetime import UTC, datetime
+
+    return datetime(2026, 11, 1, tzinfo=UTC)
+
+
+def test_a_price_whose_stored_search_is_the_computed_one_says_nothing():
+    target, prices = wider_prices(lambda query: None)
+
+    assert resolve_start_price(DATA, target, prices, None).taken_for is None
+
+
+def test_a_price_whose_stored_search_was_wider_in_item_level_says_what_it_was_taken_for():
+    target, prices = wider_prices(lambda query: query["filters"]["misc_filters"]["filters"].__setitem__("ilvl", {"min": 76}))
+
+    found = resolve_start_price(DATA, target, prices, None)
+
+    assert found.taken_for == "price taken for a wider item (item level 76 or more)"
+    assert found.chaos == 7.5  # the number is the stored one: only the line is new
+
+
+def test_a_price_taken_for_another_rarity_and_with_no_base_type_says_both():
+    def change(query):
+        query["filters"]["type_filters"]["filters"]["rarity"] = {"option": "nonunique"}
+        del query["type"]
+
+    target, prices = wider_prices(change)
+
+    found = resolve_start_price(DATA, target, prices, None)
+
+    assert found.taken_for == "price taken for another item (rarity nonunique, any accessory.amulet base)"
+
+
+def test_a_lower_minimum_is_a_wider_item_and_a_price_with_no_stored_search_has_no_line():
+    def change(query):
+        del query["stats"][0]["filters"][0]["value"]
+
+    target, prices = wider_prices(change)
+
+    assert resolve_start_price(DATA, target, prices, None).taken_for == "price taken for a wider item (a lower minimum)"
+    plain = PriceFile("Allflame", prices_date(), 400.0, {start_price_key(DATA, target): PriceEntry(2.0, "poe.ninja")})
+    assert resolve_start_price(DATA, target, plain, None).taken_for is None

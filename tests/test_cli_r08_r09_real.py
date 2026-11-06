@@ -33,8 +33,8 @@ RUNS = 200
 BUDGET = 60.0  # the plan is made as the command makes it by default: exact when the forecast fits, else approximate
 RATES = Rates(4e-5, 7e-6)  # injected (ADR-0023), so the decision does not depend on the machine
 ROUTES = {
-    "r08": ("r08-energy-shield-boots", "Sorcerer Boots, normal, item level 86-100", 29.82716, "Dense Fossil"),
-    "r09": ("r09-life-boots", "Two-Toned Boots [BootsAtlas1], normal, item level 86-100", 5.02716, "Pristine Fossil"),
+    "r08": ("r08-energy-shield-boots", "Sorcerer Boots, item level 86-100", 29.82716, "Dense Fossil"),
+    "r09": ("r09-life-boots", "Two-Toned Boots [BootsAtlas1], item level 86-100", 5.02716, "Pristine Fossil"),
 }
 SPEED_CRAFTS = 4  # the bench's plain Movement Speed craft and its three hybrids, at their top tier, are the only crafts that count
 

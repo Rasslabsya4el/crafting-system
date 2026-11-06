@@ -7,6 +7,7 @@ priced for another item; they are strict `xfail`s that name the issue that holds
 and skip cleanly without it.
 """
 
+import dataclasses
 import gzip
 import json
 import os
@@ -50,6 +51,8 @@ OTHER_ITEM = {
     "r11-reservation-helmet": "#483 the exact item has 3 listings (rail 10): the stored price is for item level 84 or more",
     "r12-lightning-amulet": "#483 the exact item has 1 listing (rail 10): the stored price is for any amulet of item level 75 or more",
     "r14-hunter-bow": "#483 the exact item has 0 listings: the stored price is for any non-unique rarity of item level 78 or more",
+    "r08-energy-shield-boots": "#494 point 2 the key names a rare item with no mods, the stored price is of a normal base plus a typed Alchemy",
+    "r09-life-boots": "#494 point 2 and #483 the stored price is of a normal base plus a typed Alchemy, taken for any of the three Two-Toned Boots",
     "r04-penetrating-quiver": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "r13-life-resist-belt": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "v01-minion-helmet": "#426 the stored price is a hand price, not a trade search: it has no body",
@@ -137,7 +140,7 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
 
 
 def row(stem: str):
-    marks = [pytest.mark.xfail(strict=True, reason=OTHER_ITEM[stem])] if stem in OTHER_ITEM else []
+    marks = [pytest.mark.xfail(strict=True, raises=AssertionError, reason=OTHER_ITEM[stem])] if stem in OTHER_ITEM else []
     return pytest.param(stem, id=stem, marks=marks)
 
 
@@ -152,11 +155,32 @@ def test_the_query_built_from_the_target_is_the_body_stored_in_its_price_entry(d
         assert entry["detail"]["query"] == built
 
 
-def test_the_stored_body_of_a_priced_entry_is_the_one_the_target_builds_for_r08_and_r09(data, stats):
-    for stem in ("r08-energy-shield-boots", "r09-life-boots"):
-        (entry, *_) = entries_of(expected_keys()[stem])
+def test_the_three_two_toned_boots_are_told_apart_by_their_implicit_and_the_two_quivers_are_not(data, stats):
+    def implicit_ids(stem):
+        body = query_of(data, stats, stem)["query"]
+        return [found["id"] for found in body["stats"][0]["filters"] if found["id"].startswith("implicit.")]
 
-        assert entry["detail"]["query"] == query_of(data, stats, stem)
+    assert implicit_ids("r09-life-boots") == ["implicit.stat_4277795662"]  # BootsAtlas1: Cold and Lightning Resistances
+    assert implicit_ids("r04-penetrating-quiver") == []  # QuiverNew5 and Quiver12 share their implicit and their pool
+    assert implicit_ids("r08-energy-shield-boots") == []  # a name with one base needs none
+
+
+@pytest.mark.parametrize(
+    ("base", "stat"),
+    [
+        ("BootsAtlas1", "implicit.stat_4277795662"),
+        ("BootsAtlas2", "implicit.stat_2915988346"),
+        ("BootsAtlas3", "implicit.stat_3441501978"),
+    ],
+)
+def test_each_two_toned_base_asks_for_its_own_implicit_stat_of_the_recorded_stat_list(data, stats, base, stat):
+    target = load_target(TARGETS / "r09-life-boots.yaml", data)
+    other = dataclasses.replace(target, base_id=f"Metadata/Items/Armours/Boots/{base}")
+    spec = buy_spec_of(data, other)
+    filters = [resolve_buy_mod(mod, list(data.mods.values()), stats) for mod in spec.mods]
+
+    assert [found.id for found in filters] == [stat]
+    assert spec.name.startswith(f"Two-Toned Boots [{base}]")
 
 
 def test_no_buy_spec_file_and_no_start_price_line_is_left():
@@ -182,7 +206,10 @@ def spec_text(stem: str, spec) -> str:
     if spec.influences:
         document["influence"] = list(spec.influences)
     document["corrupted"] = spec.corrupted
-    document["mods"] = [{"stat": mod.stat, "minimum": mod.minimum, "fractured": mod.fractured} for mod in spec.mods]
+    document["mods"] = [
+        {"stat": mod.stat, **({} if mod.minimum is None else {"minimum": mod.minimum}), "fractured": mod.fractured, **({"implicit": True, "own": True} if mod.own else {})}
+        for mod in spec.mods
+    ]
     return HEADER.format(stem=stem) + yaml.safe_dump(document, sort_keys=False, allow_unicode=True)
 
 

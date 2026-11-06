@@ -11,15 +11,15 @@ Every entry names the issue that holds the work (OR-29: a finding is an issue, n
 in a start price (R08, R09), OR-7 where a stand-in stands for a trade price.
 
     #403  owner-rules contradictions: tier default (the R12 start amulet)
-    #417  the buy spec and the target describe different start items (left: R08, R09, the hidden Alchemy; the spec is computed from
-          the target since #474, so the other rows are gone)
+    #417  the buy spec and the target describe different start items (left: the price entries of R08 and R09 are of a normal base plus a
+          typed Alchemy, OR-16; the spec is computed from the target since #474, so the buy rows are gone)
     #418  the start price is keyed by base name, not base id (the key says the base since #474; rows moved to #483 and #486)
     #425  R04's price is for item level 85 against 81; V01's hand price records no level
     #426  R04, R13, V01 start prices are poe.ninja or hand stand-ins
     #427  targets with no start price (J01, R03, R06); the buy spec of the others is computed since #474
     #428  the spec and the price accept bases with another mod pool (rows moved to #483 and #486)
     #483  the exact start item of R05, R10, R11, R12, R14 has no trade market, so the committed price is for a wider item
-    #486  the trade site cannot tell bases of one name apart (R09 Two-Toned Boots, R04 quivers)
+    #486  the trade site cannot tell bases of one name apart by `type` (R04 quivers; the three Two-Toned Boots by their implicit since #474)
 
 Since #474 the buy spec is not a hand-written file: `derived_specs/<target>.yaml` is what the planner computes from the target, written
 down by `tests/test_start_buy_real.py` (which holds it equal to the planner's result), and the price key of each target is the table
@@ -64,15 +64,15 @@ KNOWN: dict[tuple[str, str], Known] = _known(
         ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
         ("r05-strength-ring", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any ring; the exact item has no market (0 listings)", "Amethyst Ring", "any accessory.ring"),
         ("r05-strength-ring", "price.pool"): ("#483", "OR-3", "the price entry accepts the Unset Ring and the Bone Ring; the exact item has no market", "Amethyst Ring", f"{_RING}Ring15 (+3 -0); {_RING}Ring16 (+23 -0)"),
-        ("r08-energy-shield-boots", "buy.rarity"): ("#417", "OR-16", "the target starts rare, the spec buys a normal base: the Alchemy is hidden in the price", "rare", "normal"),
-        ("r09-life-boots", "buy.rarity"): ("#417", "OR-16", "the target starts rare, the spec buys a normal base: the Alchemy is hidden in the price", "rare", "normal"),
-        ("r09-life-boots", "buy.pool"): ("#486", "OR-3", "the trade site has one type Two-Toned Boots for BootsAtlas2 and BootsAtlas3 too, other pools: it cannot tell them apart", "Two-Toned Boots", f"{_ATLAS}BootsAtlas2 (+45 -62); {_ATLAS}BootsAtlas3 (+45 -45)"),
-        ("r09-life-boots", "price.base"): ("#486", "OR-3", "the price entry is by a name that three bases share, and the trade site cannot tell them apart", f"{_ATLAS}BootsAtlas1", f"{_ATLAS}BootsAtlas1, {_ATLAS}BootsAtlas2, {_ATLAS}BootsAtlas3"),
-        ("r09-life-boots", "price.pool"): ("#486", "OR-3", "the price entry accepts BootsAtlas2 and BootsAtlas3", "Two-Toned Boots", f"{_ATLAS}BootsAtlas2 (+45 -62); {_ATLAS}BootsAtlas3 (+45 -45)"),
+        ("r08-energy-shield-boots", "price.rarity"): ("#417", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2)", "rare", "normal"),
+        ("r09-life-boots", "price.rarity"): ("#417", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2)", "rare", "normal"),
+        ("r09-life-boots", "price.base"): ("#483", "OR-3", "the price entry is by a name that three bases share: it was taken for any of them, the computed query now asks for BootsAtlas1's implicit", f"{_ATLAS}BootsAtlas1", f"{_ATLAS}BootsAtlas1, {_ATLAS}BootsAtlas2, {_ATLAS}BootsAtlas3"),
+        ("r09-life-boots", "price.pool"): ("#483", "OR-3", "the price entry accepts BootsAtlas2 and BootsAtlas3 (taken for any of the three)", "Two-Toned Boots", f"{_ATLAS}BootsAtlas2 (+45 -62); {_ATLAS}BootsAtlas3 (+45 -45)"),
         ("r12-lightning-amulet", "start_mod.LightningResist2.tier"): ("#403", "OR-3", "written tier 3, the data says tier 7 of 8", "3", "7"),
         ("r12-lightning-amulet", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any amulet; the exact item has 1 listing", "Paua Amulet", "any accessory.amulet"),
         ("r12-lightning-amulet", "price.item_level"): ("#483", "OR-3", "the price entry is for item level 75, the target plans 84; the exact item has 1 listing", "84", "75"),
         ("r13-life-resist-belt", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
+        ("r14-hunter-bow", "price.rarity"): ("#483", "OR-3", "the target starts normal, the price entry searched any non-unique item", "normal", "nonunique"),
         ("v01-minion-helmet", "price.item_level"): ("#425", "OR-3", "the hand price records no item level: the check cannot tell", "84", "cannot tell (label 84)"),
         ("v01-minion-helmet", "price.source"): ("#426", "OR-7", "the start price is a hand stand-in", "trade-api", "hand"),
     }
