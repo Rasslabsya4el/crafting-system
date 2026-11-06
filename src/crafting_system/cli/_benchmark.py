@@ -22,17 +22,14 @@ from datetime import UTC, date, datetime
 from fractions import Fraction
 from pathlib import Path
 
-import yaml
-
 from crafting_system.actions import ActionError
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_file_path, stale_warning
 from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
-from crafting_system.prices.price_names import canonical_price_name
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
-from crafting_system.targets import KOfN, Requirement, Target, load_target
+from crafting_system.targets import KOfN, Requirement, Target, load_target, start_price_key
 
 from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
@@ -378,7 +375,7 @@ def run_route(
         stale = stale_warning(loaded, today if today is not None else datetime.now(UTC).date())
         if stale:
             print(f"Warning: {stale}", file=sys.stderr)
-        missing = _missing_start_price(target, loaded, root, config)
+        missing = _missing_start_price(data, target, loaded, root, config, bench.target)
         entry["missing_price"] = missing
         if missing is not None:
             raise ValueError(_missing_message(missing))
@@ -449,15 +446,16 @@ def _start_entry(plan: Plan, data: GameData, expected: ExpectedStart | None) -> 
     }
 
 
-def _missing_start_price(target: Target, prices: PriceFile, root: Path, config: Config) -> dict | None:
+def _missing_start_price(data: GameData, target: Target, prices: PriceFile, root: Path, config: Config, target_file: str) -> dict | None:
     """What a route misses when its start item has no price in `prices`, else None.
 
-    The overrides file is the one `load_target_prices` reads beside the price file. The buy spec is only
-    named, never run: the benchmark does not call the trade API, so a run stays reproducible and offline.
+    The name is the price key computed from the target (`start_price_key`). The overrides file is the one `load_target_prices` reads
+    beside the price file. The trade command is only named, never run: the benchmark does not call the trade API, so a run stays
+    reproducible and offline.
     """
-    if target.start_price is None:
+    if not target.buys_start_item:
         return None
-    name = canonical_price_name(target.start_price)
+    name = start_price_key(data, target)
     if name in prices.prices:
         return None
     price_file = target.price_file if target.price_file is not None else default_price_file_path(config)
@@ -465,31 +463,18 @@ def _missing_start_price(target: Target, prices: PriceFile, root: Path, config: 
         "name": name,
         "override_line": f'"{name}" = 0',
         "overrides_file": _without_root(str(price_file.parent / OVERRIDES_FILE_NAME), root),
-        "buy_spec": _buy_spec_named(name, root),
+        "trade_target": target_file,
     }
 
 
-def _buy_spec_named(name: str, root: Path) -> str | None:
-    """The path, from the project root, of the buy spec in examples/buy/ whose top-level `name:` is `name`, else None."""
-    for spec in sorted((root / "examples" / "buy").glob("*.yaml")):
-        try:
-            record = yaml.safe_load(spec.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, yaml.YAMLError):
-            continue
-        if isinstance(record, dict) and record.get("name") == name:
-            return spec.relative_to(root).as_posix()
-    return None
-
-
 def _missing_message(missing: dict) -> str:
-    """The error of a route whose start item has no price: the line to write, and the trade command if a buy spec exists."""
+    """The error of a route whose start item has no price: the line to write, and the trade command for the target."""
     text = (
         f"no price for the start item {missing['name']!r}. Add this line under [prices] in "
         f"{missing['overrides_file']}: {missing['override_line']}, then replace the 0 with the item's price in Chaos Orbs "
         "(a 0 left in place is refused by the overrides loader, which names the item)"
     )
-    if missing["buy_spec"] is not None:
-        text += f", or price it on the trade API with: python -m crafting_system.prices trade --spec {missing['buy_spec']}"
+    text += f", or price it on the trade API with: python -m crafting_system.cli trade {missing['trade_target']}"
     return text + "."
 
 

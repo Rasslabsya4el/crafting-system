@@ -31,3 +31,13 @@ The owner's rules for reading a target are written in [`docs/owner-rules.md`](..
 - **A start item is given or bought** (OR-6), as ADR-0043 says; this ADR's start item is not an acquisition method.
 
 The model, the target files and the tests are not changed by this amendment. Where they still follow the old default, that is listed in the open points of #401 and fixed by the tickets of the audit's rebuild (steps 2 to 4), against an oracle that does not share the planner's reading. Until then `docs/owner-rules.md` is what a builder, a checker and a test follows, and the old default is not to be copied into a new target.
+
+## Amendment: the target is the only description of a bought start item ([#474](https://github.com/Rasslabsya4el/crafting-system/issues/474), 2026-11-06)
+
+The key `start_price` and the hand-written buy specs of `examples/buy/` are gone. A target says `buys_start_item: true` when its start item is bought (a stand-in for the full given-or-bought statement of OR-6, which is the next ticket of audit step 4); the base, item level, influences, start rarity and start mods it already states are then the only description of the item. From them `targets/start_buy.py` computes:
+
+- the buy spec (`buy_spec_of`): the trade `type` is the base's name, the category comes from the item class, the rarity is the start item's (a rare item with no mods is searched Normal: the Orb of Alchemy of R08 and R09 is folded into the price, OR-16, a later ticket), the item level window runs from the target's level to the highest level with the same mod pool (`floor.level_groups`), the influences are the start item's, and each start mod is searched by its stat text with the lowest roll of the mod's own range as the minimum (OR-3), fractured as the target says;
+- the trade query: `build_query` of that spec;
+- the price key (`start_price_key`), the name of the spec, readable as the item: `Amethyst Ring, item level 75, fractured +(13-16) to all Attributes`. A base whose name another released base shares carries its id (`Two-Toned Boots [BootsAtlas1], normal, item level 86-100`): the trade site's item list has one entry per base type and its `disc` field only marks legacy uniques, so the query cannot tell such bases apart and the key at least names the target's.
+
+`python -m crafting_system.cli trade TARGET.yaml` prices a target's start item (it replaces `prices trade --spec`; it sits in `cli` because `prices` may not import `targets`, ADR-0018). The route page's buy step is titled by the key and gets its filter and trade link from the computed spec, so `--buy-spec` is gone.

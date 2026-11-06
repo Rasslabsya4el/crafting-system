@@ -893,7 +893,7 @@ def probe_targets(data, seconds: float, prices_path: Path = DEFAULT_PRICES, targ
             if candidate.item in seen_items:
                 continue
             seen_items.add(candidate.item)
-            moved = dataclasses.replace(target, start_item=candidate.item, start_price=None)
+            moved = dataclasses.replace(target, start_item=candidate.item, buys_start_item=False)
             price = StartPrice(candidate.price_name, candidate.price, candidate.price_source)
             probes.append(plan_one(ids[stem], "recipe start", moved, prices, start_price_of=price))
     return probes

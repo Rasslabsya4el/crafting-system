@@ -29,7 +29,7 @@ from typing import Any
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
-from crafting_system.targets import Target
+from crafting_system.targets import StartBuyError, Target, start_price_key
 
 from ._offers import Offer
 from ._plan import Plan, PlanError, StartPrice, add_risk, make_plan, resolve_start_price
@@ -48,14 +48,24 @@ PLAIN_LABEL = "the target's own start item"
 SOURCES: tuple[StartSource, ...] = (vendor_recipe_starts,)  # a bought-item source (research #337) is one more entry
 
 
-def plain_candidate(target: Target, prices: PriceFile, override: float | None) -> StartCandidate:
+def plain_candidate(data: GameData, target: Target, prices: PriceFile, override: float | None) -> StartCandidate:
     """The target's own start item with its price (`resolve_start_price`); an unpriced one has an infinite price and fails when planned."""
     try:
-        price = resolve_start_price(target, prices, override)
+        price = resolve_start_price(data, target, prices, override)
         chaos, name, source = price.chaos, price.name, price.source
     except PlanError as error:
-        chaos, name, source = math.inf, target.start_price, str(error)
+        chaos, name, source = math.inf, _key_of(data, target), str(error)
     return StartCandidate(PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, target.start_item, chaos, name, source)
+
+
+def _key_of(data: GameData, target: Target) -> str | None:
+    """The price key of a bought start item, or None when the target buys nothing or its item cannot be searched."""
+    if not target.buys_start_item:
+        return None
+    try:
+        return start_price_key(data, target)
+    except StartBuyError:
+        return None
 
 
 def readings_of(axes: tuple[tuple[str, tuple[str, ...]], ...]) -> list[Reading]:
@@ -85,7 +95,7 @@ def _plan_candidate(
         if candidate.key == PLAIN_KEY:
             plan = make_plan(data, target, prices, start_price=override, with_risk=False, **kwargs)
         else:
-            moved = dataclasses.replace(target, start_item=candidate.item, start_price=None)
+            moved = dataclasses.replace(target, start_item=candidate.item, buys_start_item=False)
             price = StartPrice(candidate.price_name, candidate.price, candidate.price_source)
             plan = make_plan(data, moved, prices, start_price_of=price, with_risk=False, **kwargs)
     except PlanError as error:
@@ -123,7 +133,7 @@ def plan_with_starts(
     if not listing.candidates and not listing.refused:
         return make_plan(data, target, prices, start_price=start_price, offers=offers, **kwargs)
 
-    plain = plain_candidate(target, prices, start_price)
+    plain = plain_candidate(data, target, prices, start_price)
     order = [plain, *sorted(listing.candidates, key=lambda candidate: (candidate.price, candidate.key))]
     outcomes: dict[str, _Outcome] = {}
     skipped: dict[str, str] = {}

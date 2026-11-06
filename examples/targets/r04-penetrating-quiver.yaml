@@ -73,5 +73,6 @@ requirements:
     min_tier: 2
     not_crafted: true
 
-# The quiver is bought plain (normal), uncorrupted; its price name is the base price at item level 81.
-start_price: Penetrating Arrow Quiver (ilvl 81)
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it. Its committed price is a stand-in (#426).
+buys_start_item: true

@@ -84,6 +84,6 @@ start_item:
       # Locked in place by a Fracturing Orb.
       fractured: true
 
-# The name the start item has in the price file, which is what it costs to get: the `name` of
-# examples/buy/r10-start-boots.yaml.
-start_price: R10 start boots
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it.
+buys_start_item: true

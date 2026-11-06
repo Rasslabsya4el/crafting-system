@@ -586,6 +586,10 @@ class TradeClient:
         """GET the list of stat ids the site knows."""
         return self._call("data", "data/stats", "GET", f"{TRADE_URL}/data/stats")
 
+    def data_items(self) -> dict:
+        """GET the list of item types the site knows (the base types and how it tells bases of one name apart)."""
+        return self._call("data", "data/items", "GET", f"{TRADE_URL}/data/items")
+
     def search(self, league: str, body: dict) -> dict:
         """POST a query to the league; the answer has the search `id` and the result ids."""
         url = f"{TRADE_URL}/search/{urllib.parse.quote(league, safe='')}"

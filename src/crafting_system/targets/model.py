@@ -264,8 +264,8 @@ class Target:
 
     `requirements` are all required at once, then `implicits` and `quality` when given. `start_item` is a fresh normal item of the base, item
     level and influences unless the file gave one. `price_file` is the path as resolved against the
-    target file's folder; it is not read or checked here. `start_price` is the name the start item
-    has in the price file (for example the buy spec's name), or None; it is not looked up here. `actions` names the
+    target file's folder; it is not read or checked here. `buys_start_item` says the start item is bought: its buy spec, trade query and
+    price key are computed from the target (`start_buy.py`), so the target is its only description (#474). `actions` names the
     kinds of actions the planner may use, or the labels of single actions (ADR-0024, ticket #70), or None for every kind it
     offers by default; the names are not checked here.
     `enchantment` is the acceptable set for the item's enchantment, or None when the target asks for none.
@@ -284,7 +284,7 @@ class Target:
     requirements: tuple[Node, ...]
     start_item: Item
     price_file: Path | None = None
-    start_price: str | None = None
+    buys_start_item: bool = False
     implicits: tuple[ImplicitRequirement, ...] = ()
     quality: QualityRequirement | PlainQualityRequirement | None = None
     actions: tuple[str, ...] | None = None

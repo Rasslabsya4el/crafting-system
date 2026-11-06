@@ -1,26 +1,23 @@
-"""Command line for the price file: `python -m crafting_system.prices fetch|check|trade`.
+"""Command line for the price file: `python -m crafting_system.prices fetch|check`.
 
 This is the one place that reads the clocks (`datetime.now(UTC)`, `time.monotonic`, `time.sleep`);
-the library functions take `now`, `today`, a clock and a sleep from here. `trade` prices a buy spec
-from the trade site and is only ever run by hand: `fetch` never calls it.
+the library functions take `now`, `today`, a clock and a sleep from here. The trade-site pricing of a target's start item is
+`python -m crafting_system.cli trade TARGET.yaml` (`cli/_trade.py`): it reads a target, which this layer may not import (#474).
 """
 
 import argparse
-import os
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-from ..config import Config, load_config
-from ..data import DataError, load_game_data
+from ..config import load_config
 from .fallbacks import MIN_COUNT
 from .fetch import fetch_price_file
 from .http_json import GetJson, SourceError, http_get_json, paced
 from .price_names import FORESIGHT_PRICE_NAMES, canonical_price_name
 from .price_file import (
-    OVERRIDE_SOURCE,
     PriceFile,
     PriceFileNotFound,
     default_overrides_path,
@@ -30,35 +27,10 @@ from .price_file import (
     load_prices,
     missing_prices,
     stale_warning,
-    to_divine,
     write_price_file,
 )
-from .trade_http import (
-    RateLimiter,
-    RequestBudget,
-    TradeClient,
-    TradeError,
-    Transport,
-    package_version,
-    urllib_transport,
-    user_agent,
-)
-from .trade_market import DEFAULT_MIN_LISTINGS
-from .trade_pricing import (
-    DEFAULT_K,
-    DEFAULT_MAX_REQUESTS,
-    NotEnoughListings,
-    entry_for,
-    merge_trade_prices,
-    price_buy_spec,
-    refuse_name_collision,
-    stale_trade_warnings,
-    store_market,
-    store_trade_price,
-)
-from .trade_query import DEFAULT_INDEXED, INDEXED_OPTIONS, load_buy_spec
-
-DATA_FETCH_COMMAND = "python -m crafting_system.data fetch"
+from .trade_http import TradeError, Transport
+from .trade_pricing import merge_trade_prices, stale_trade_warnings
 
 
 def main(
@@ -84,36 +56,14 @@ def main(
     fetch.add_argument("--wanted-file", help="text file, one resource name per line")
     check = commands.add_parser("check", help="report a stale price file and unpriced names")
     check.add_argument("--wanted-file", help="text file, one resource name per line")
-    trade = commands.add_parser(
-        "trade", help="price a buy spec from the trade site (by hand only; a few requests)"
-    )
-    trade.add_argument("--spec", required=True, help="YAML file with the buy spec")
-    trade.add_argument("--k", type=int, default=DEFAULT_K, help="price as the mean of the k cheapest listings")
-    trade.add_argument(
-        "--min-listings",
-        type=int,
-        default=DEFAULT_MIN_LISTINGS,
-        help="a market needs at least this many listings on the site (the listing-count rail)",
-    )
-    trade.add_argument(
-        "--max-requests", type=int, default=DEFAULT_MAX_REQUESTS, help="most requests this run may send"
-    )
-    trade.add_argument(
-        "--indexed",
-        choices=[*INDEXED_OPTIONS, "any"],
-        default=DEFAULT_INDEXED,
-        help=(
-            "keep only listings made within this window (default: listings of any age, since an "
-            "instant-buyout price stands however old the listing is); 'any' keeps all"
-        ),
-    )
-    trade.add_argument("--refresh-stats", action="store_true", help="download the stat list again")
+    commands.add_parser("trade", help="moved: python -m crafting_system.cli trade TARGET.yaml")
+    if list(argv if argv is not None else sys.argv[1:])[:1] == ["trade"]:
+        print("Error: `trade` moved to the target's own command: python -m crafting_system.cli trade TARGET.yaml", file=sys.stderr)
+        return 2
     args = parser.parse_args(argv)
 
     try:
         config = load_config(env)
-        if args.command == "trade":
-            return _trade(args, config, env, now, transport, sleep, monotonic)
         wanted = [*_read_wanted(args.wanted_file), *FORESIGHT_PRICE_NAMES]  # the Lock and its burns are always wanted (ADR-0056)
         price_path = default_price_file_path(config)
         overrides_path = default_overrides_path(config)
@@ -178,76 +128,6 @@ def _old_price_file(path: Path) -> tuple[PriceFile | None, str | None]:
         return None, None
     except (ValueError, OSError) as error:
         return None, str(error)
-
-
-def _trade(
-    args: argparse.Namespace,
-    config: Config,
-    env: Mapping[str, str] | None,
-    now: datetime | None,
-    transport: Transport | None,
-    sleep: Callable[[float], None] | None,
-    monotonic: Callable[[], float] | None,
-) -> int:
-    """`trade`: one buy spec, a few requests, one write at the very end. Errors propagate to `main`."""
-    price_path = default_price_file_path(config)
-    overrides_path = default_overrides_path(config)
-    price_file = load_prices(price_path, overrides_path)  # a missing file says to run `fetch` first
-    spec = load_buy_spec(Path(args.spec))
-    if canonical_price_name(spec.name) in load_overrides(overrides_path):
-        print(f"{spec.name}: a hand override wins, so no request was made and the price file is unchanged")
-        return 0
-    existing = price_file.prices.get(spec.name)
-    if existing is not None and existing.source != OVERRIDE_SOURCE:
-        refuse_name_collision(spec.name, existing)  # before any request is spent
-    try:
-        game_mods = list(load_game_data(cache_dir=config.cache_dir).mods.values())
-    except DataError:
-        game_mods = []
-        print(f"Note: no repoe data in the cache, so family ids cannot be used; run `{DATA_FETCH_COMMAND}`")
-
-    cookie = (env if env is not None else os.environ).get("POESESSID") or None
-    budget = RequestBudget(args.max_requests)
-    client = TradeClient(
-        transport if transport is not None else urllib_transport(),
-        user_agent(package_version()),
-        RateLimiter(
-            monotonic if monotonic is not None else time.monotonic,
-            sleep if sleep is not None else time.sleep,
-        ),
-        budget,
-        cookie,
-    )
-    instant = now if now is not None else datetime.now(UTC)
-    try:
-        price = price_buy_spec(
-            spec,
-            game_mods,
-            price_file,
-            client,
-            config.cache_dir,
-            instant,
-            args.k,
-            args.refresh_stats,
-            None if args.indexed == "any" else args.indexed,
-            args.min_listings,
-        )
-    except NotEnoughListings as error:
-        if error.market is not None:  # thin or none: kept as a state, the price file has no price for it
-            store_market(price_path, error.market)
-            print(f"{spec.name}: no market ({error.market.state}); recorded as {error.market.state}, not offered")
-        raise
-    store_trade_price(price_path, price, entry_for(price))
-    print(
-        f"{price.name}: {price.chaos:g} Chaos ({to_divine(price.chaos, price_file):.4g} Divine), "
-        f"mean of the {price.used} cheapest instant-buyout listings ({price.fetched} fetched, "
-        f"{price.listings} on the site), league {price.league}"
-    )
-    print(f"  listings from {'any time' if price.indexed is None else 'the last ' + price.indexed}")
-    for reason, count in sorted(price.dropped.items()):
-        print(f"  dropped {count} {reason}")
-    print(f"{budget.used} requests used")
-    return 0
 
 
 def _read_wanted(path: str | None) -> list[str]:

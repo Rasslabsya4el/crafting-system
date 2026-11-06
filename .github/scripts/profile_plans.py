@@ -111,14 +111,14 @@ def filled_prices(data, target, offers):
     """The fixture's prices plus a made-up price for each resource the offers (and the start item) need and it lacks."""
     from crafting_system.cli._offers import price_offers
     from crafting_system.prices import load_price_file
-    from crafting_system.prices.price_names import canonical_price_name
+    from crafting_system.targets import start_price_key
 
     document = json.loads(PRICES.read_text(encoding="utf-8"))
     base = load_price_file(PRICES)
     _, dropped = price_offers(offers, base)
     missing = {name for drop in dropped for name in drop.missing}
-    if target.start_price is not None and canonical_price_name(target.start_price) not in base.prices:
-        missing.add(target.start_price)
+    if target.buys_start_item and start_price_key(data, target) not in base.prices:
+        missing.add(start_price_key(data, target))
     for name in sorted(missing):
         share = int(hashlib.sha256(name.encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
         document["prices"][name] = {"chaos": round(0.6 + 11.4 * share, 2), "source": "made-up (timing only)"}

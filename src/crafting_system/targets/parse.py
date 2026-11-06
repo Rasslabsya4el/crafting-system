@@ -74,7 +74,7 @@ TOP_KEYS = (
     "sockets",
     "enchantment",
     "start_item",
-    "start_price",
+    "buys_start_item",
     "price_file",
     "actions",
     "allow_corrupted",
@@ -218,16 +218,16 @@ class _Reader:
         if enchantment is not None:
             self.check_enchantment_reachable(root["enchantment"], enchantment, base_id, start_item)
         price_file = self.read_price_file(root)
-        start_price = self.text(root, "start_price", "start_price") if "start_price" in root else None
+        buys_start_item = self.read_buys_start_item(root) if "buys_start_item" in root else False
         actions = self.read_actions(root["actions"], root.key_lines["actions"]) if "actions" in root else None
         allow_corrupted = self.read_allow_corrupted(root) if "allow_corrupted" in root else False
-        self.check_corruption(root, base_id, item_level, implicits, allow_corrupted, start_item, start_price, actions)
+        self.check_corruption(root, base_id, item_level, implicits, allow_corrupted, start_item, buys_start_item, actions)
         item_level_floor = self.read_item_level_floor(root, item_level) if "item_level_floor" in root else None
         tiers_top = self.read_tiers_top(root) if "tiers_top_at_item_level" in root else False
         if sockets is not None:
             self.check_socket_scope(root, requirements, start_item)
         return Target(
-            base_id, item_level, influences, requirements, start_item, price_file, start_price, implicits, quality,
+            base_id, item_level, influences, requirements, start_item, price_file, buys_start_item, implicits, quality,
             actions, enchantment, allow_corrupted, sockets, assumed, item_level_floor, tiers_top,
         )  # fmt: skip
 
@@ -239,6 +239,12 @@ class _Reader:
                 "item_level_floor",
                 f"must be a whole number from {MIN_ITEM_LEVEL} to the item level ({item_level}), got {describe(value)}",
             )
+        return value
+
+    def read_buys_start_item(self, root: LineMap) -> bool:
+        value = root["buys_start_item"]
+        if not isinstance(value, bool):
+            self.fail(root.key_lines["buys_start_item"], "buys_start_item", f"must be true or false, got {describe(value)}")
         return value
 
     def read_tiers_top(self, root: LineMap) -> bool:
@@ -261,14 +267,14 @@ class _Reader:
         implicits: tuple[ImplicitRequirement, ...],
         allow_corrupted: bool,
         start_item: Item,
-        start_price: str | None,
+        buys_start_item: bool,
         actions: tuple[str, ...] | None,
     ) -> None:
         """Refuse a target whose corrupted implicits, corrupted start item or `actions:` make the goal impossible (ADR-0036).
 
-        A target buys its item when it prices the start item (`start_price`) or the start item is corrupted itself.
+        A target buys its item when it says so (`buys_start_item`) or the start item is corrupted itself.
         """
-        buys = start_price is not None or start_item.corrupted
+        buys = buys_start_item or start_item.corrupted
         problem = corruption_problem(
             self.data, base_id, item_level, implicits, allow_corrupted, start_item, buys, actions
         )

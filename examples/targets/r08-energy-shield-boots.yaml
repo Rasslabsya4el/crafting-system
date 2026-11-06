@@ -46,9 +46,9 @@ start_item:
   rarity: rare
   mods: []
 
-# The name the start item has in the price file, which is what it costs to get: the `name` of
-# examples/buy/r08-start-boots.yaml. The planner buys it again whenever the route restarts.
-start_price: R08 start boots
+# The start item is bought. Its buy spec, trade query and price key are computed from this file
+# (base, item level, influence, start item), so nothing else describes it. The rare item with no mods is searched as a Normal base; the Orb of Alchemy that makes it rare is in the price (OR-16, a later ticket).
+buys_start_item: true
 
 # The kinds of actions the planner may use: the guide's fossils (with their resonators) and the bench. The kinds not named are not offered, and the report says so: the
 # plan is the cheapest among the named kinds. `fossil-set` is offered only when named.
