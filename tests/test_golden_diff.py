@@ -93,7 +93,7 @@ def test_whitespace_a_browser_ignores_is_not_a_readable_change_but_the_message_s
 
     assert golden_diff.html_lines(spaced) == golden_diff.html_lines(PAGE)
     diff = golden_diff.readable_diff(PAGE, spaced, "html")
-    assert diff.startswith("The readable html lines are equal; only whitespace or invisible bytes differ. First difference at character")
+    assert diff.startswith("The readable view is equal; the bytes differ (case, entity, encoding, key order or whitespace). First difference at character")
 
 
 def test_a_link_address_is_shown_decoded_so_a_trade_query_reads_as_the_json_it_holds():
@@ -202,6 +202,42 @@ def test_check_objects_compares_values_and_shows_sorted_key_json():
     assert 'values moved\n' in str(caught.value) and '-  "a": 1,' in str(caught.value) and '+  "a": 2,' in str(caught.value)
 
 
+def test_check_objects_with_a_tolerance_accepts_floats_within_it_and_keeps_ints_and_strings_exact():
+    golden_diff.check_objects({"mean": 69257.53649796372, "states": 177242}, {"mean": 69257.53649796372 * (1 + 5e-10), "states": 177242}, "t", rel=1e-9)
+    with pytest.raises(AssertionError) as caught:
+        golden_diff.check_objects({"mean": 5784.488692221155}, {"mean": 5784.488692221155 * (1 + 1e-6)}, "mean moved", rel=1e-9)
+    with pytest.raises(AssertionError):
+        golden_diff.check_objects({"states": 10}, {"states": 11}, "states moved", rel=1e-9)
+
+    assert str(caught.value).startswith("mean moved\n") and '-  "mean": 5784.488692221155' in str(caught.value)
+
+
+def test_a_golden_changed_only_in_line_endings_says_so_and_shows_no_empty_diff_block(repo):
+    run_git(repo, "checkout", "-q", "branch")
+    (repo / "tests" / "golden" / "same.json").write_bytes(b'{"k": 1}\r\n')
+    run_git(repo, "add", "-A")
+    run_git(repo, "commit", "-q", "-m", "crlf")
+
+    text = changes.report("main", "branch", "tests/golden", 150, root=repo)
+    section = text.split("### `tests/golden/same.json`: changed", 1)[1].split("### ", 1)[0]
+
+    assert "line endings" in section and "the readable view is equal" in section
+    assert "````diff" not in section
+
+
+def test_the_size_limit_of_the_summary_counts_utf8_bytes_not_characters(repo, monkeypatch):
+    (repo / "tests" / "golden" / "zz.txt").write_text("ё" * 400 + "\n", encoding="utf-8", newline="\n")
+    run_git(repo, "add", "-A")
+    run_git(repo, "commit", "-q", "-m", "cyrillic")
+    whole = changes.report("main", "branch", "tests/golden", 150, root=repo)
+    assert len(whole) < len(whole.encode("utf-8")) and "(left out" not in whole
+
+    monkeypatch.setattr(changes, "SUMMARY_LIMIT", len(whole.encode("utf-8")) - 1)
+    cut = changes.report("main", "branch", "tests/golden", 150, root=repo)
+
+    assert "(left out: the report would pass the size" in cut and "### `tests/golden/zz.txt`: added" in cut
+
+
 def test_assert_golden_fails_with_the_readable_diff_not_two_page_strings(tmp_path, monkeypatch):
     monkeypatch.setattr(route_view_support, "GOLDEN", tmp_path)
     monkeypatch.delenv("UPDATE_GOLDEN", raising=False)
@@ -288,6 +324,7 @@ def repo(tmp_path):
     golden = tmp_path / "tests" / "golden"
     golden.mkdir(parents=True)
     run_git(tmp_path, "init", "-q", "-b", "main")
+    run_git(tmp_path, "config", "core.autocrlf", "false")  # a line ending is kept as written, whatever the machine's git says
     (golden / "page.html").write_text(PAGE, encoding="utf-8", newline="\n")
     (golden / "gone.txt").write_text("a\nb\n", encoding="utf-8", newline="\n")
     (golden / "same.json").write_text('{"k": 1}\n', encoding="utf-8", newline="\n")

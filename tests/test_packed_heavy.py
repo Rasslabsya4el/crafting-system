@@ -20,6 +20,7 @@ import json
 import os
 from pathlib import Path
 
+import golden_diff
 import pytest
 from abstraction_support import real_game_data
 from test_strand_routes import without_strand_words
@@ -77,8 +78,11 @@ def test_the_planner_gives_the_exact_value_of_the_route(planned):
         )
         GOLDEN.write_text(json.dumps(found, indent=1) + "\n", encoding="utf-8")
         return
-    assert plan.mean_remaining == pytest.approx(expected["mean_remaining"], rel=1e-9)
-    assert len(plan.solution.values) == expected["states"]
+    golden_diff.check_objects(  # the tolerance of pytest.approx on the mean (rel 1e-9); the states exactly
+        {"mean_remaining": expected["mean_remaining"], "states": expected["states"]},
+        {"mean_remaining": plan.mean_remaining, "states": len(plan.solution.values)},
+        f"{route}: the exact value differs from tests/golden/packed_values.json", rel=1e-9,
+    )  # fmt: skip
 
 
 @HEAVY
