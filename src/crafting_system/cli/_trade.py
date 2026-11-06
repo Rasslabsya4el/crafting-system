@@ -90,14 +90,23 @@ def trade_main(
     args = parser.parse_args(list(argv))
     try:
         config = load_config(env)
-        return _trade(args, config, env, data, now, transport, sleep, monotonic)
+        indexed = None if args.indexed == "any" else args.indexed
+        return _trade(
+            args.target, args.k, args.min_listings, args.max_requests, indexed, args.refresh_stats,
+            config, env, data, now, transport, sleep, monotonic,
+        )  # fmt: skip
     except (TradeError, TargetError, DataError, PriceFileNotFound, ValueError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
 
 
 def _trade(
-    args: argparse.Namespace,
+    target_file: str,
+    k: int,
+    min_listings: int,
+    max_requests: int,
+    indexed: str | None,
+    refresh_stats: bool,
     config: Config,
     env: Mapping[str, str] | None,
     data: GameData | None,
@@ -114,9 +123,9 @@ def _trade(
         game = data if data is not None else load_game_data(cache_dir=config.cache_dir)
     except DataError as error:
         raise DataError(f"{error}; run `{DATA_FETCH_COMMAND}`") from error
-    target = load_target(Path(args.target), game)
+    target = load_target(Path(target_file), game)
     if not target.buys_start_item:
-        raise ValueError(f"{args.target}: the target does not buy its start item (no `buys_start_item: true`), so there is nothing to price")
+        raise ValueError(f"{target_file}: the target does not buy its start item (no `buys_start_item: true`), so there is nothing to price")
     spec = buy_spec_of(game, target)
     if canonical_price_name(spec.name) in load_overrides(overrides_path):
         print(f"{spec.name}: a hand override wins, so no request was made and the price file is unchanged")
@@ -126,7 +135,7 @@ def _trade(
         refuse_name_collision(spec.name, existing)  # before any request is spent
 
     cookie = (env if env is not None else os.environ).get("POESESSID") or None
-    budget = RequestBudget(args.max_requests)
+    budget = RequestBudget(max_requests)
     client = TradeClient(
         transport if transport is not None else urllib_transport(),
         user_agent(package_version()),
@@ -146,10 +155,10 @@ def _trade(
             client,
             config.cache_dir,
             instant,
-            args.k,
-            args.refresh_stats,
-            None if args.indexed == "any" else args.indexed,
-            args.min_listings,
+            k,
+            refresh_stats,
+            indexed,
+            min_listings,
         )
     except NotEnoughListings as error:
         if error.market is not None:  # thin or none: kept as a state, the price file has no price for it

@@ -693,7 +693,7 @@ def cli_flags(index: SourceIndex, prefix: str = f"{PACKAGE}.cli.") -> list[tuple
                 if dest is None:
                     longs = [n for n in names if n.startswith("--")]
                     dest = (longs[0] if longs else names[0]).lstrip("-").replace("-", "_")
-                command = "benchmark" if func.qual == "benchmark_main" else "plan"
+                command = {"benchmark_main": "benchmark", "trade_main": "trade"}.get(func.qual, "plan")
                 found.append((" / ".join(names), dest, command, func.module))
     return sorted(found)
 
