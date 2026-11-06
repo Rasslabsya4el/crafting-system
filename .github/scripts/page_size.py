@@ -62,6 +62,7 @@ def main() -> None:
     plan = make_plan(data, target, prices, start_price=start_price, budget=None, solver="auto")
     planned = time.perf_counter()
     say(f"planned: {len(plan.policy):,} policy states, {len(plan.view_policy):,} in the view")
+    faulthandler.dump_traceback_later(1200, exit=True, file=sys.stdout)  # the page takes a minute; if it takes twenty, show where it is and stop
     if arguments.profile:  # where the page spends its time: the flow, then each row; a stack every 5 minutes shows where a slow one sits
         faulthandler.dump_traceback_later(300, repeat=True, file=sys.stdout)
         view = _View(route_input(plan), data, None, "", True)
@@ -76,6 +77,7 @@ def main() -> None:
     say(f"section: {len(section.rows):,} rows")
     html = render_page(Page(arguments.route, (section,)))
     rendered = time.perf_counter()
+    faulthandler.cancel_dump_traceback_later()
     commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False).stdout.strip()
     result = {
         "route": arguments.route,
