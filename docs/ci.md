@@ -68,6 +68,15 @@ The serial command is unchanged:
 
     uv run python .github/scripts/run_shard.py --shard 3/8 --procs 4 --out out -- -p no:cacheprovider --shard-durations tests/shard_durations.json
 
+### The tests' clock (#542)
+
+A price ages with the calendar (`MAX_AGE_DAYS` = 7), so no test may read it against the day it runs on. Code takes `today` / `now`
+as arguments; the four places that default to `datetime.now(UTC)` (`CLOCK_READERS` in `tests/clock_support.py`) read the fixed
+`FIXED_NOW` (2026-11-01 12:00 UTC) in every test, by the autouse fixture `fixed_clock` in `tests/conftest.py`. A new place that reads
+the clock is added to `CLOCK_READERS`. `CRAFTING_TEST_REAL_CLOCK=1` turns the fixture off. The rule itself (7 days fresh, 8 stale) is
+pinned on the committed price files in `tests/test_price_age_rule.py`. To check that the suite does not depend on the date, run it
+under a faked one on a runner: `sudo apt-get install -y faketime` and `faketime '2026-12-01 12:00:00' <the shard command>`.
+
 ## Heavy runs on GitHub: the runner budget (#249)
 
 **Nothing heavy runs on the owner's PC.** Locally only quick, targeted tests (under a minute, one process); the full suite goes to CI and benchmarks, profiling, sweeps, solves and measurements go to a heavy run, because a local multi-process sweep pins his machine at 100%. `.github/workflows/run.yml`
