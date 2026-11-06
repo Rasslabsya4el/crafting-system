@@ -134,7 +134,7 @@ Every cut of the search states what the answer still guarantees.
 
 Pruning works on the route as a whole, not only inside one step.
 
-- **Example.** R14 walks 816,153 item states. Its optimal policy has 87,251 item states, which merge into 65,147 classes, or into 14,742 blocks; the guide route has 946 item states, which merge into 19 blocks. R04 walks 177,242 item states. Its optimal policy has 18,696 item states, which merge into 11,767 classes, or into 551 blocks; the guide route has 22 blocks (its item states are not measured). Units: an item state is a `CompressedState`; a class is the exact merge of states with the same future; a block is the exact lumping of the policy chain (`docs/research/2026-11-06-rebuild-6-inventory.md`, section 0).
+- **Example.** R14 walks 816,153 item states. Its optimal policy has 87,251 item states, which merge into 65,147 classes reached, or into 14,742 blocks; the guide route has 946 acting item states (1 gap), which merge into 19 blocks. R04 walks 177,242 item states. Its optimal policy has 18,696 item states, which merge into 11,767 classes reached, or into 551 blocks; the guide route has 18,629 acting item states (13 gaps), which merge into 22 blocks. Units: an item state is a `CompressedState`; a class is the exact merge of states with the same future; a block is the exact lumping of the policy chain (`docs/research/2026-11-06-rebuild-6-inventory.md`, section 0).
 - **Counter-example.** R14's page of 87,272 steps (151 MB), 65,433 of them the same Restart card. A page like that must not exist.
 - **Source.** Owner decisions on #396, point 3, 2026-11-02; measurement results on #396, 2026-11-04 (route-level pruning comes before a "minimal state").
 
