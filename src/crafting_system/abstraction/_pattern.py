@@ -557,7 +557,7 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
                 if members is None:
                     members = by_mode[mode] = pattern.members(key, mode)
                     stats.members += len(members)
-                stats.modes[(mode.value, getattr(offer.action, "__class__", type(None)).__name__)] += 1
+                stats.modes[(mode.value, type(offer.action).__name__)] += 1
                 seen: set[int] = set()
                 for member in members:
                     stats.pairs += 1
