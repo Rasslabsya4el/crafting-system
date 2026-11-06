@@ -18,21 +18,19 @@ stays runnable and the settled differences stay pinned:
     the whole export they differ on 61 names, all maps, where the oracle took the first of four ids (a retired `not_for_sale` map) and the
     reconcile rule takes the one on sale.
 
-The real export is in `CRAFTING_CACHE_DIR` (default `local/cache`); without it these tests skip with the message CI reads as missing data.
+The real export is in `CRAFTING_CACHE_DIR` (default `local/cache`), read by `independent/export.py`; without it these tests skip with the message CI reads as missing data.
 """
 
-import json
-import os
 from pathlib import Path
 
 import pytest
 import yaml
+from independent import export as shared_export
 from independent import ladder as shared
 
 REPO = Path(__file__).resolve().parents[2]
 TARGETS_DIR = REPO / "examples" / "targets"
 BUY_DIR = REPO / "examples" / "buy"
-PIN_FILE = REPO / "src" / "crafting_system" / "data" / "PIN.json"
 SIDES = ("prefix", "suffix")
 
 
@@ -97,11 +95,11 @@ def oracle_base_v411(bases, reference):
 
 @pytest.fixture(scope="module")
 def export():
-    root = Path(os.environ.get("CRAFTING_CACHE_DIR") or REPO / "local" / "cache")
-    folder = root / "repoe-fork" / json.loads(PIN_FILE.read_text(encoding="utf-8"))["version"]
-    if not (folder / "mods.json").is_file() or not (folder / "base_items.json").is_file():
-        pytest.skip(f"the real game data is not in the cache: mods.json is not in {folder}")
-    return {name: json.loads((folder / f"{name}.json").read_text(encoding="utf-8")) for name in ("mods", "base_items")}
+    try:
+        raw = shared_export.load_export()
+    except shared_export.ExportMissing as problem:
+        pytest.skip(f"the real game data is not in the cache: {problem}")
+    return {"mods": raw.mods, "base_items": raw.bases}
 
 
 def _yaml_files(folder):
@@ -140,7 +138,7 @@ def test_the_old_oracle_and_the_old_reconcile_copy_build_the_same_ladder_on_ever
     mods, bases = export["mods"], export["base_items"]
     compared, differences = 0, []
     for base_id, influences in subjects:
-        tags = shared.item_tags(bases[base_id]["tags"], influences)
+        tags = shared.item_tags(bases[base_id]["tags"], influences, bases[base_id]["item_class"])
         domain = bases[base_id]["domain"]
         theirs = reconcile_groups_v412(mods, tags)
         for (type_, side), ours in oracle_ladders_v411(mods, tags, domain).items():
@@ -155,7 +153,7 @@ def test_the_old_oracle_and_the_old_reconcile_copy_build_the_same_ladder_on_ever
 def test_the_shared_ladder_is_the_oracle_ladder_and_holds_every_old_reconcile_ladder_of_the_base_domain(export, subjects):
     mods, bases = export["mods"], export["base_items"]
     for base_id, influences in subjects:
-        tags = shared.item_tags(bases[base_id]["tags"], influences)
+        tags = shared.item_tags(bases[base_id]["tags"], influences, bases[base_id]["item_class"])
         domain = bases[base_id]["domain"]
         merged = shared.natural_ladders(mods, tags, domain)
 
@@ -184,7 +182,7 @@ def test_every_ladder_only_the_old_reconcile_copy_built_is_of_another_domain_or_
     mods, bases = export["mods"], export["base_items"]
     reasons = set()
     for base_id, influences in subjects:
-        tags = shared.item_tags(bases[base_id]["tags"], influences)
+        tags = shared.item_tags(bases[base_id]["tags"], influences, bases[base_id]["item_class"])
         domain = bases[base_id]["domain"]
         oracle = oracle_ladders_v411(mods, tags, domain)
         for type_, side, mod_domain in reconcile_groups_v412(mods, tags):
@@ -212,7 +210,7 @@ def test_the_cobalt_jewel_is_the_one_base_where_a_mod_of_the_other_domain_would_
     for base_id, influences in subjects:
         if bases[base_id]["domain"] == "item":
             continue
-        for (type_, side, mod_domain), ladder in reconcile_groups_v412(mods, shared.item_tags(bases[base_id]["tags"], influences)).items():
+        for (type_, side, mod_domain), ladder in reconcile_groups_v412(mods, shared.item_tags(bases[base_id]["tags"], influences, bases[base_id]["item_class"])).items():
             if mod_domain == "item" and side in SIDES:
                 types.add((type_, side))
 
@@ -234,12 +232,45 @@ def test_an_influence_adds_ladders_of_its_own_and_changes_no_tier_of_a_ladder_th
     for base_id, influences in influenced:
         domain = bases[base_id]["domain"]
         plain = shared.natural_ladders(mods, shared.item_tags(bases[base_id]["tags"]), domain)
-        raised = shared.natural_ladders(mods, shared.item_tags(bases[base_id]["tags"], influences), domain)
+        raised = shared.natural_ladders(mods, shared.item_tags(bases[base_id]["tags"], influences, bases[base_id]["item_class"]), domain)
 
         assert set(plain) < set(raised)  # new ladders ...
         assert all(raised[key] == plain[key] for key in plain)  # ... and no tier moved in the old ones
         for key in set(raised) - set(plain):
             assert all(first_weight(mods[m], shared.item_tags(bases[base_id]["tags"])) == 0 for m in raised[key])
+
+
+# --- 3b. which classes take an influence (ticket #433) ----------------------------------------------------------------------
+
+
+INFLUENCE_SUFFIXES = tuple(shared.INFLUENCE_TAG.values())
+
+
+def test_the_classes_that_take_an_influence_are_those_whose_base_tags_the_mods_give_an_influence_weight_to(export):
+    """`INFLUENCE_CLASSES` is read from the data: a class takes an influence when one of its base tags with an influence suffix
+    is a tag in the spawn weights of some mod. The 24 classes of the list are exactly those."""
+    mods, bases = export["mods"], export["base_items"]
+    weighted = {entry["tag"] for mod in mods.values() for entry in mod.get("spawn_weights", ())}
+    derived = {
+        base["item_class"]
+        for base in bases.values()
+        if any(f"{tag}_{suffix}" in weighted for tag in base["tags"] for suffix in INFLUENCE_SUFFIXES)
+    }
+
+    assert derived == shared.INFLUENCE_CLASSES
+
+
+def test_a_jewel_a_flask_a_tincture_and_every_other_class_without_influence_tags_refuses_an_influence(export):
+    bases = export["base_items"]
+    refused = {base["item_class"] for base in bases.values() if base["item_class"] not in shared.INFLUENCE_CLASSES}
+
+    assert {"Jewel", "AbyssJewel", "LifeFlask", "ManaFlask", "Tincture"} <= refused
+    for item_class in sorted(refused):
+        with pytest.raises(shared.InfluenceError, match="takes no influence"):
+            shared.item_tags(["default"], ["hunter"], item_class)
+    for base in bases.values():
+        if base["domain"] in {"misc", "abyss_jewel", "affliction_jewel", "flask", "tincture"}:
+            assert base["item_class"] in refused, base["name"]
 
 
 # --- 4. Battle Royale copies --------------------------------------------------------------------------------------------
@@ -249,7 +280,7 @@ def test_a_royale_copy_with_a_spawn_weight_is_in_no_ladder(export, subjects):
     mods, bases = export["mods"], export["base_items"]
     seen = set()
     for base_id, influences in subjects:
-        tags = shared.item_tags(bases[base_id]["tags"], influences)
+        tags = shared.item_tags(bases[base_id]["tags"], influences, bases[base_id]["item_class"])
         spawnable = {m for m, mod in mods.items() if "Royale" in m and first_weight(mod, tags) > 0}
         seen |= spawnable
         in_ladders = {m for ladder in shared.natural_ladders(mods, tags, bases[base_id]["domain"]).values() for m in ladder}

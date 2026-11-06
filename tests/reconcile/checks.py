@@ -115,7 +115,7 @@ def _text_of(export: Export, mod_id: str) -> str | None:
 def _ladder_on(export: Export, base_id: str, mod_id: str, influence: frozenset) -> dict[str, int]:
     """The natural ladder of `mod_id` on a base, with the item's influence tags."""
     base = export.bases[base_id]
-    return ladder(export.mods, base["tags"], base["domain"], mod_id, influence)
+    return ladder(export.mods, base["tags"], base["domain"], mod_id, influence, base["item_class"])
 
 
 def _tiers_of(export: Export, base_ids: list[str], mod_id: str, influence: frozenset) -> dict[str, int | None]:
@@ -130,7 +130,8 @@ def _pool_differences(export: Export, target_ids: list[str], accepted_ids: list[
     cache = export.cache
 
     def pool(base_id: str) -> frozenset:
-        return pool_of(export.mods, export.bases[base_id]["tags"], cache)
+        base = export.bases[base_id]
+        return pool_of(export.mods, base["tags"], base["domain"], cache)
 
     reference = pool(target_ids[0])
     return [

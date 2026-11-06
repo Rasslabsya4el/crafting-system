@@ -22,6 +22,7 @@ from dataclasses import dataclass
 
 import pytest
 from goal_oracle_support import TARGETS, Disagreement, Result, compare_target, load_export, read_known, target_stems
+from independent.export import ExportMissing
 from oracle import goal_oracle as g
 
 from crafting_system.data import MissingDataError, load_game_data
@@ -98,7 +99,7 @@ def results() -> dict[str, Result]:
     try:
         data = load_game_data()
         export = load_export()
-    except (MissingDataError, FileNotFoundError) as problem:
+    except (MissingDataError, ExportMissing) as problem:
         pytest.skip(f"the real game data is not in the cache: {problem}")
     return {stem: compare_target(data, export, stem) for stem in target_stems()}
 
@@ -107,7 +108,7 @@ def results() -> dict[str, Result]:
 def export() -> g.Export:
     try:
         return load_export()
-    except (MissingDataError, FileNotFoundError) as problem:
+    except (MissingDataError, ExportMissing) as problem:
         pytest.skip(f"the real game data is not in the cache: {problem}")
 
 

@@ -15,7 +15,6 @@ Then the planner's verdict is `Target.unmet(item)` (the goal check) for the node
 the same mods, given only as ids and values.
 """
 
-import os
 import random
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -31,17 +30,11 @@ from crafting_system.targets import load_target
 
 REPO = Path(__file__).resolve().parents[1]
 TARGETS = REPO / "examples" / "targets"
-PIN_FILE = REPO / "src" / "crafting_system" / "data" / "PIN.json"
-
-
-def cache_dir() -> Path:
-    """`CRAFTING_CACHE_DIR`, or the project's default folder (`local/cache`) when it is not set, as the planner finds it."""
-    return Path(os.environ.get("CRAFTING_CACHE_DIR") or REPO / "local" / "cache")
 
 
 def load_export() -> g.Export:
-    """The raw export of the pinned version from the cache; `FileNotFoundError` when it is not there."""
-    return g.Export.from_cache(cache_dir(), pin_file=PIN_FILE)
+    """The raw export of the pinned version from the cache (`CRAFTING_CACHE_DIR`, else `local/cache`); `ExportMissing` when it is not there."""
+    return g.Export.from_cache()
 
 
 class Extreme(random.Random):
