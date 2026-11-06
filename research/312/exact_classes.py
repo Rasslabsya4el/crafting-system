@@ -100,14 +100,14 @@ def build_model(target_path: Path, offers_mode: str, with_restart: bool = True, 
     priced, dropped = price_offers(chosen.offers, prices)
     kept = usable_actions(data, target.start_item, [p.offer.action for p in priced])
     priced = tuple(p for p in priced if p.offer.action in kept)
-    price_of_start = resolve_start_price(target, prices, 10.0 if strand_stripped else None)
+    price_of_start = resolve_start_price(data, target, prices, 10.0 if strand_stripped else None)
     if price_of_start.chaos > 0 and with_restart:
         bought = price_of_start.name or "start item"
         restart = Offer(RESTART, BuyStartItem(target.start_item), {bought: 1}, shares=False)
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, ((bought, 1, price_of_start.chaos, price_of_start.source),)))
-    enabled = [p.offer.action for p in priced if p.offer.action.reads(data).junk]
+    enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]  # as make_plan
     holds_metamod = bool(target.start_item.metamods(data) & BLOCKING)
-    abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod)
+    abstraction = Abstraction(data, goal, target.base_id, target.item_level, enabled, metamods=holds_metamod, enchantment=target.start_item.enchantment, allow_inputs=False)
     start = abstraction.compress(target.start_item)
     info = {"offers_total": len(priced), "dropped_unpriced": len(dropped)}
     if offers_mode in ("twins", "start"):
