@@ -12,12 +12,29 @@ module does not compute:
 * the mean of the lumped chain against `risk.evaluate`, which knows nothing of the walk.
 
 The kernels themselves are always the abstraction's (`Abstraction.kernel`): the walk packs them, and what it must keep is exactly
-them. Their own correctness is checked against brute force over concrete items by the `test_abstraction_*` files, and there is no
-second source for the kernels of a hundred states that is not a copy of those tests.
+them. This file has no second source for them. The second source is accepted to be the `test_abstraction_*` files, which check
+`Abstraction.kernel` against brute force over concrete items, compressed one by one and added up in exact fractions:
+
+* the Chaos Orb on the amulet pool of this world (`abstraction_pool.SMALL`):
+  `test_abstraction_kernel.py::test_the_kernel_equals_the_enumeration_over_concrete_items` (with `abstraction_support.check_kernel`,
+  which also checks the sum is exactly 1) and `test_abstraction_oracle.py` (which checks the brute force itself against `actions`);
+* a bench craft and Remove Crafted Mods, on the belt fixture and not on this world:
+  `test_abstraction_b1.py::test_a_craft_adds_a_crafted_slot_and_equals_the_deterministic_result` and
+  `::test_remove_crafted_mods_drops_the_crafted_slots_and_equals_the_deterministic_result` (the one result of a craft, compared with
+  `assert_same_distribution`); `test_abstraction_estimate.py` keeps the legality of this world's four crafts equal to `BenchCraft.outcomes`.
+
+What is not covered is the kernel of this world's own four synthetic crafts and of Remove Crafted Mods by brute force (issue #460).
+
+The conversion of a kernel to integer weights is not shared with the code under test: `cli/_packed.py` imports
+`abstraction.integer_weights`, and every expectation here uses `weights_by_hand`, written in this file by another route (the product
+of the denominators, not their least common multiple) and checked on kernels worked out on paper
+(`test_the_weights_by_hand_are_the_ones_worked_out_on_paper`). A bug in `integer_weights` therefore shows as a difference between
+the walk and the expectation; `test_integer_weights_is_the_weights_by_hand_on_the_kernels_of_the_world` also compares the two on every
+kernel of the world.
 """
 
 import math
-
+from fractions import Fraction
 from types import SimpleNamespace
 
 import numpy as np
@@ -36,6 +53,25 @@ from crafting_system.solver import Action, Outcome, TabularModel, solve, solve_p
 START_ITEM = item(roll(MANA_1))
 LABELS = ["Chaos Orb", *(f"Craft {c.mod_id}" for c in CRAFTS), "Remove Crafted Mods", RESTART]
 PRICES = [1.0, 2.0, 2.0, 2.0, 2.0, 1.0, 3.0]
+
+
+def weights_by_hand(kernel):
+    """The kernel as integers with no common factor, written here and not taken from `abstraction.integer_weights`.
+
+    Multiply every chance by the product of all the denominators (a whole number, though a larger one than the least common multiple),
+    then divide by the greatest common divisor of the results.
+    """
+    if not kernel:
+        return {}
+    product = 1
+    for chance in kernel.values():
+        product *= Fraction(chance).denominator
+    scaled = {state: Fraction(chance) * product for state, chance in kernel.items()}
+    assert all(weight.denominator == 1 for weight in scaled.values())
+    divisor = 0
+    for weight in scaled.values():
+        divisor = math.gcd(divisor, int(weight))
+    return {state: int(weight) // divisor for state, weight in scaled.items()}
 
 
 def make_offers(start_item=START_ITEM):
@@ -89,6 +125,57 @@ def reachable_by_search(ab, start, offers):
     return seen
 
 
+# --- the conversion to integer weights, worked out on paper ---------------------------------------------------------------
+
+WEIGHTS_ON_PAPER = [
+    ({}, {}),
+    ({"a": Fraction(1)}, {"a": 1}),
+    ({"a": Fraction(1, 2), "b": Fraction(1, 2)}, {"a": 1, "b": 1}),
+    ({"a": Fraction(3, 4), "b": Fraction(1, 4)}, {"a": 3, "b": 1}),
+    # 1/6, 1/3, 1/2 over 6: 1, 2, 3 (the product of the denominators is 36: 6, 12, 18, and the common factor 6 goes)
+    ({"a": Fraction(1, 6), "b": Fraction(1, 3), "c": Fraction(1, 2)}, {"a": 1, "b": 2, "c": 3}),
+    # 1/6, 1/6, 2/3 = 1/6, 1/6, 4/6: 1, 1, 4
+    ({"a": Fraction(1, 6), "b": Fraction(1, 6), "c": Fraction(2, 3)}, {"a": 1, "b": 1, "c": 4}),
+    # 1/10, 3/10, 3/5 = 1/10, 3/10, 6/10: 1, 3, 6
+    ({"a": Fraction(1, 10), "b": Fraction(3, 10), "c": Fraction(3, 5)}, {"a": 1, "b": 3, "c": 6}),
+    # 2/3, 1/3 over 3: 2, 1 (the order of the keys is kept)
+    ({"b": Fraction(2, 3), "a": Fraction(1, 3)}, {"b": 2, "a": 1}),
+]
+
+
+@pytest.mark.parametrize("kernel,expected", WEIGHTS_ON_PAPER, ids=lambda case: str(case))
+def test_the_weights_by_hand_are_the_ones_worked_out_on_paper(kernel, expected):
+    found = weights_by_hand(kernel)
+
+    assert found == expected and list(found) == list(expected)
+
+
+def test_integer_weights_is_the_weights_by_hand_on_the_kernels_of_the_world(world):
+    ab, _, walked, _ = world
+    checked = 0
+
+    for state in walked.states:
+        if ab.is_goal(state):
+            continue
+        for priced in make_offers():
+            if isinstance(priced.offer.action, BuyStartItem):
+                continue
+            try:
+                kernel = ab.kernel(state, priced.offer.action)
+            except ActionError:
+                continue
+            assert integer_weights(kernel) == weights_by_hand(kernel)
+            checked += 1
+
+    graph, restart_tag = walked.graph, len(make_offers()) - 1
+    assert checked == sum(1 for tag in graph.act_tag.tolist() if tag != restart_tag)  # exactly the actions the walk built, but the restarts
+
+
+@pytest.mark.parametrize("kernel,expected", WEIGHTS_ON_PAPER, ids=lambda case: str(case))
+def test_integer_weights_is_the_weights_worked_out_on_paper(kernel, expected):
+    assert integer_weights(kernel) == expected
+
+
 # --- the graph the walk builds --------------------------------------------------------------------------------------------
 
 
@@ -128,7 +215,7 @@ def test_every_action_has_the_cost_and_the_kernel_the_abstraction_gives_for_its_
                 restarts += 1
                 assert kernel_of(graph, a) == {0: 1}  # back to the start, for certain
             else:
-                expected = {walked.index[s]: w for s, w in integer_weights(ab.kernel(state, priced.offer.action)).items()}
+                expected = {walked.index[s]: w for s, w in weights_by_hand(ab.kernel(state, priced.offer.action)).items()}
                 assert kernel_of(graph, a) == expected
     assert restarts == sum(1 for i in range(1, graph.n) if not graph.goal[i])  # every state but the start (and the goals) can restart
 
@@ -190,7 +277,7 @@ def counts_of(ab, start, offers):
                 found = ab.kernel(state, action)
             except ActionError:
                 continue
-            here.add(frozenset(integer_weights(found).items()))
+            here.add(frozenset(weights_by_hand(found).items()))
             for successor in found:
                 if successor not in seen:
                     seen.add(successor)
@@ -419,7 +506,7 @@ def test_the_action_of_a_state_is_built_once_from_the_abstraction(world):
     assert built is policy[state]
     priced = walked.offers[int(graph.act_tag[action[0]])]
     assert built.label == priced.label and built.cost == priced.cost
-    assert {o.state: o.weight for o in built.outcomes} == dict(integer_weights(ab.kernel(state, priced.offer.action)))
+    assert {o.state: o.weight for o in built.outcomes} == dict(weights_by_hand(ab.kernel(state, priced.offer.action)))
 
 
 # --- solving a walked graph ---------------------------------------------------------------------------------------------
@@ -446,7 +533,7 @@ def table_by_search(ab, start, offers):
                     acts.append(Action(priced.label, priced.cost, (Outcome(start, 1),)))
                 continue
             try:
-                found = integer_weights(ab.kernel(state, action))
+                found = weights_by_hand(ab.kernel(state, action))
             except ActionError:
                 continue
             acts.append(Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in found.items())))

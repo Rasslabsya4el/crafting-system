@@ -154,8 +154,18 @@ def oracle_step(visits, mean, variance, level, max_bins, dense_work=1e11):
     """The step of the module text, by exact search: `visits` is {cost: expected visits}, all Fractions or ints.
 
     This re-implements the rule of the module text with the same constants (12 costs, 64 fractions, 0.02 and 0.1 of the mean, 1e11 cells),
-    so it is a second reading of the text and not an independent source for the constants: a changed constant is told by the hand cases
-    of this file (the cases above, and the tables `ONE_COST_BY_HAND` and `CRAFT_BY_HAND` below, worked out on paper), not by this oracle.
+    so it is a second reading of the text and not an independent source for the constants: it follows a changed constant of the module only
+    if the constant is changed here too, and tells nothing about it. What pins each constant is a test with an answer worked out on paper
+    that does not read the module's constants:
+
+    * `GAP_TARGET`: `test_a_gap_of_two_and_a_half_hundredths_of_the_mean_is_not_within_the_target` (above 0.02, below 0.03) and
+      `test_the_costs_are_ranked_by_visits_times_cost` (the target 0.02 * 50 met exactly, 0.02 * 49.9 not met);
+    * `COSTS_TRIED`: `test_the_twelfth_cost_is_tried` (the twelfth cost alone gives the step: 2 to 11 costs do not find it) and
+      `test_only_the_twelve_costs_with_the_most_visits_times_cost_give_steps` (the thirteenth is not tried);
+    * `PARTS_TRIED`: `test_the_fractions_of_a_cost_are_tried_up_to_sixty_four_of_them` (the 64th fraction is tried) and
+      `test_the_sixty_fifth_fraction_of_a_cost_is_not_tried`;
+    * `GAP_LIMIT`: `test_with_no_step_within_the_target_the_least_gap_within_the_limit_is_taken` (both sides, inclusive);
+    * `DENSE_WORK`: `test_the_dense_work_limit_is_inclusive_and_counts_cells_as_states_times_states_plus_four`.
     """
     n = len(visits)
     horizon = mean + math.sqrt(variance * level / (1.0 - level))
@@ -236,6 +246,41 @@ def test_the_fractions_of_a_cost_are_tried_up_to_sixty_four_of_them():
     visits = {Fraction(1): Fraction(2), Fraction(65, 64): Fraction(2)}
 
     assert _coarse.choose_step(chain_of(policy), 0.4, 0.0, 0.5, 100_000) == oracle_step(visits, 0.4, 0.0, 0.5, 100_000) == (1 / 64, 0.0)
+
+
+def exact_gap(visits, step):
+    """The gap of a step on `Fraction`s: the step times the visits of the costs that are not a whole multiple of it (at least one)."""
+    return step * sum(w for cost, w in visits.items() if not (cost / step >= 1 and (cost / step).denominator == 1))
+
+
+def test_a_gap_of_two_and_a_half_hundredths_of_the_mean_is_not_within_the_target():
+    # TWO_COSTS: the step 1/2 has the gap 1/2 * 2 = 1 (the cost 1/4 is half a step), the step 1/4 the gap 0. With the mean 40 the gap 1 is
+    # 1/40 = 0.025 of it: above the target 0.02 (0.8), so the coarsest step within the target is 1/4; a target of 0.03 (1.2) would take 1/2
+    assert exact_gap(TWO_COSTS_VISITS, HALF) == 1 and exact_gap(TWO_COSTS_VISITS, QUARTER) == 0
+    assert Fraction(1, 50) < Fraction(1) / 40 < Fraction(3, 100)
+
+    assert _coarse.choose_step(chain_of(TWO_COSTS), 40.0, 0.0, 0.5, 100_000) == (0.25, 0.0)
+    assert _coarse.choose_step(chain_of(TWO_COSTS), 40.0, 0.0, 0.5, 100_000) == oracle_step(TWO_COSTS_VISITS, 40.0, 0.0, 0.5, 100_000)
+
+
+def test_the_twelfth_cost_is_tried():
+    # Eleven dear costs 65/2 .. 75/2 (32.5, 33, ... 37.5) and the cost 1, one visit each: the shares are the costs, so 1 is the twelfth.
+    # Every cost is a whole multiple of 1/2, so the step 1/2 has the gap 0 (32.5 is 65 halves). It is a fraction of the cost 1 (m = 2)
+    # and of no dear cost k/2, whose 1/2 is the fraction m = k >= 65. The steps of the dear costs alone are at least 65/128 and leave
+    # off most of the costs: their least gap (exact, below) is over the limit 0.1 * 40 = 4. So with the mean 40 the answer is (1/2, 0)
+    # if the twelfth cost is tried, and no step at all if only 2 to 11 costs are.
+    dear = [Fraction(65 + k, 2) for k in range(11)]
+    visits = {cost: Fraction(1) for cost in [*dear, Fraction(1)]}
+    assert sorted(visits, key=lambda cost: -visits[cost] * cost).index(Fraction(1)) == 11  # the twelfth by share
+    assert exact_gap(visits, HALF) == 0
+    dear_steps = {cost / m for cost in dear for m in range(1, 65)}
+    assert HALF not in dear_steps and min(dear_steps) == Fraction(65, 128)
+    assert min(exact_gap(visits, step) for step in dear_steps) > Fraction(1, 10) * 40  # 4: no step of the eleven dear costs is within the limit
+
+    found = _coarse.choose_step(line_of([float(cost) for cost in [*dear, Fraction(1)]]), 40.0, 0.0, 0.5, 100_000)
+
+    assert found == (0.5, 0.0)
+    assert found == oracle_step(visits, 40.0, 0.0, 0.5, 100_000)
 
 
 def line_of(costs):
