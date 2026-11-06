@@ -50,12 +50,35 @@ def say(began: float, text: str) -> None:
 # ---- the features of a state -------------------------------------------------------------------------------------------
 
 
-def kind_weights(abstraction) -> dict[str, int]:
-    """The pool weight of each numbered family type "~n": the sum of the weights of the mods of its family (what a held junk mod takes out of the pool of an Exalted Orb)."""
-    out = {}
-    for key, number in abstraction._numbers._numbers.items():
-        out[f"{TYPE_PREFIX}{number}"] = int(sum(shape[1] for shape in key[1]))
-    return out
+def kind_weights(abstraction, influence_sets) -> tuple[dict[str, int], callable]:
+    """The pool weight of each numbered family type "~n" (the sum of the weights of the mods of its families), and a function giving
+    the weight a held junk slot takes out of the pool of an Exalted Orb: its type's weight, or the weight of the families it names.
+
+    A kind is a family type "~n", a family key "A|B" (an action reads the family by name), a mod "$id" (a family with a requirement, an
+    influence mod) or an unveiled mod "^...": the weight of the last is not known here and counts 0 (reported as the share of slots with a weight).
+    """
+    types = {f"{TYPE_PREFIX}{number}": int(sum(shape[1] for shape in key[1])) for key, number in abstraction._numbers._numbers.items()}
+    totals: dict[tuple[str, str], int] = {}
+    family_of_mod: dict[str, tuple[str, str]] = {}
+    for influences in influence_sets:
+        kinds = abstraction._kinds if not influences else abstraction._context(influences).kinds
+        for (family, side), mods in kinds._weighted_mods().items():
+            totals[(family, side)] = max(totals.get((family, side), 0), int(sum(weights[0] for _mod, weights in mods.values())))
+            for mod_id in mods:
+                family_of_mod[mod_id] = (family, side)
+
+    def weight(kind: str, side: str) -> int | None:
+        base = base_kind(kind)
+        if base.startswith(TYPE_PREFIX):
+            return types.get(base)
+        if base.startswith("$"):
+            found = family_of_mod.get(base[1:])
+            return None if found is None else totals.get(found)
+        if base.startswith("^") or base == "":
+            return None
+        return sum(totals.get((family, side), 0) for family in base.split("|"))
+
+    return types, weight
 
 
 FEATURES = (
@@ -66,8 +89,11 @@ FEATURES = (
 
 def extract(g, abstraction, began) -> dict[str, np.ndarray]:
     """One integer column per feature, over the expanded states of the walk (equal values = equal feature)."""
-    weights = kind_weights(abstraction)
     n = g.expanded
+    influence_sets = {st.flags.influences for st in g.states[:n]} or {frozenset()}
+    types, weight_of = kind_weights(abstraction, influence_sets)
+    seen_kinds: Counter = Counter()
+    known = unknown = 0
     cols = {name: np.empty(n, dtype=np.int64) for name in FEATURES}
     ids = {name: {} for name in FEATURES}
     raw_weight = np.zeros(n, dtype=np.int64)
@@ -92,9 +118,16 @@ def extract(g, abstraction, began) -> dict[str, np.ndarray]:
             "slots": st.slots,
             "all": st,
         }
-        raw_weight[r] = sum(weights.get(base_kind(s.kind), 0) for s in ordinary)
         for s in ordinary:
-            side_weight[r, 0 if s.side.value == "prefix" else 1] += weights.get(base_kind(s.kind), 0)
+            w = weight_of(s.kind, s.side.value)
+            seen_kinds[(s.side.value, base_kind(s.kind)[:60])] += 1
+            if w is None:
+                unknown += 1
+                w = 0
+            else:
+                known += 1
+            raw_weight[r] += w
+            side_weight[r, 0 if s.side.value == "prefix" else 1] += w
         values["junk_weight"] = int(raw_weight[r])
         for name in FEATURES:
             table = ids[name]
@@ -103,7 +136,10 @@ def extract(g, abstraction, began) -> dict[str, np.ndarray]:
             say(began, f"features of {r + 1:,} states")
     cols["_raw_weight"] = raw_weight
     cols["_side_weight"] = side_weight
-    cols["_junk_types"] = {"numbered_types": len(weights), "weights": sorted(weights.values())}
+    cols["_junk_types"] = {
+        "numbered_types": len(types), "type_weights": sorted(types.values()), "junk_slots_with_a_weight": known, "junk_slots_without": unknown,
+        "most_frequent_kinds": [[side, kind, count] for (side, kind), count in seen_kinds.most_common(40)], "distinct_kinds": len(seen_kinds),
+    }
     return cols
 
 
