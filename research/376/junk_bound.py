@@ -409,7 +409,8 @@ def main() -> None:
             value2, info2 = optimistic_value(g, pk, sub, cmap, C, began, args.max_flat_edges)
             if value2 is not None:
                 row["extremes"] = {"members_kept": int(keep.sum()), "of_members": int(len(keep)), "actions_kept": int(mask.sum()), "of_actions": int(len(mask)),
-                                   "start_value": float(value2[cmap[0]]), "abstract_actions": info2["abstract_actions"], "abstract_edges": info2["abstract_edges"]}
+                                   "start_value": float(value2[cmap[0]]), "abstract_actions": info2["abstract_actions"], "abstract_edges": info2["abstract_edges"],
+                                   "kernels_used": int(len(np.unique(sub["kernel"]))), "of_kernels": int(pk["count"])}
         result["bounds"][name] = row
         say(began, f"key {name}: {C:,} abstract states; {json.dumps({k: v for k, v in row.items() if k not in ('features', 'solve')})} ({time.perf_counter() - t0:.0f}s)")
     if args.out:
