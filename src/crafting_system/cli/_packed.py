@@ -45,7 +45,7 @@ from ._offers import BuyStartItem, PricedOffer
 from ._prune import keyed_offers
 
 OBJECT_SOLVER_EDGES = EXACT_TRANSITIONS  # at most this many transitions: `solver="auto"` keeps the object solver
-SOLVERS = ("auto", "object", "packed")
+SOLVERS = ("auto", "object", "packed", "envelope")
 PROGRESS: Callable[[str], None] | None = None  # a measuring script sets it to see each phase as it ends (never set by the library)
 REPORT_EVERY = 30.0  # seconds between the lines of a long walk
 VERIFY_FIRST = 20  # the first this many shared kernels are checked against a fresh `kernel(state, action)` ...

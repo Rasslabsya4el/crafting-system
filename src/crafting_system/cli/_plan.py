@@ -18,7 +18,7 @@ from fractions import Fraction
 
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState, Goal, integer_weights
-from crafting_system.actions import BLOCKING, kinds
+from crafting_system.actions import BLOCKING, OutOfScopeError, kinds
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.prices import PriceFile
@@ -34,6 +34,8 @@ from . import _limits
 from ._limits import Limit, approximate_limits, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, offers_for, price_offers, split_usable
 from . import _packed
+from ._envelope import Net, NoPolicy
+from ._envelope_plan import EnvelopeInfo, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._prune import chosen_offers, solver_actions
 from ._reach import reach_limit
@@ -316,6 +318,8 @@ def make_plan(
     start_price_of: StartPrice | None = None,
     solver: str = "auto",
     with_risk: bool = True,
+    incumbent: Callable[[CompressedState], Sequence[str]] | None = None,
+    net: Net | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -343,7 +347,14 @@ def make_plan(
     solves it there when it holds more than `_packed.OBJECT_SOLVER_EDGES` transitions (R04, R14, S02), otherwise the
     object solver solves it as it always did; "object" never packs; "packed" always does, and with 40 offers or more it
     solves the offers left after the twins are merged, without the bound pruning (the cross-check of the two solvers).
-    The values are the same to the certificate; only the cost differs.
+    The values are the same to the certificate; only the cost differs. "envelope" (ticket #377, ADR-0063 point 4) is the exact branch-and-bound
+    of OR-12: the walk-free lower bound of #497 (`_pattern_bound`) and a search that expands only the states, and builds only the actions, the
+    bound cannot rule out (`_envelope`); it gives the same plan and mean as "packed" and says so in `Plan.limits` (which cut ran, what it
+    guarantees). It takes the offers after the twins are merged, as "packed" does, ignores `budget` (it is always exact), and refuses with
+    `PlanError` an abstraction the bound cannot be built for (#507). `incumbent` (a state to the labels of the offers it takes) is the policy the search completes with a restart for its
+    first upper bound (`_envelope_plan.route_incumbent` reads a given route as one); `net` is a stop-and-say-so safety net (time, states or
+    memory; none by default): when it ends the search the plan is the best executable one, `Plan.limits` says it is not shown to be the best and
+    gives the lower and upper bounds of its cost.
 
     With `with_risk` False the policy is solved but its risk (the p50, p90 and CVaR grid, which can take minutes where the solve takes
     seconds) is left out, `Plan.risk` is None, and `add_risk` fills it in later: the choice among start options compares the
@@ -421,7 +432,7 @@ def make_plan(
     if not solve_it:
         unsolved = Solution({start: float("inf")}, {}, float("inf"))
         return Plan(target, abstraction, leaf_labels(target), prices, start, price_of_start, priced, limits, unsolved, None, 0.0, 0.0)
-    if budget is not None:
+    if budget is not None and solver != "envelope":
         forecast = merged = priced
         merged_twins: list[tuple[str, str]] = []
         if PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE:
@@ -457,7 +468,7 @@ def make_plan(
     pruned = None
     packed = None
     many = PRUNE_BOUND and len(priced) >= MIN_OFFERS_TO_PRUNE
-    if many and solver != "packed":
+    if many and solver not in ("packed", "envelope"):
         pruned = solve_pruned(abstraction, start, priced, target.start_item, min_offers=MIN_OFFERS_TO_PRUNE)
         solution = pruned.solution
         limits += _pruned_limits(pruned)
@@ -465,7 +476,14 @@ def make_plan(
         offered, twins = (tuple(each) for each in merge_twins(data, target.start_item, priced)) if many else (priced, ())
         if twins:
             limits += (twins_limit(twins),)  # G17: the packed path leaves out the dearer twins, as the bound pruning does
-        packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
+        if solver == "envelope":
+            try:
+                packed = envelope_result(abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent, net=net)
+            except (OutOfScopeError, NoPolicy) as error:
+                raise PlanError(f"the envelope search cannot answer this target: {error}") from error
+            limits += envelope_limits(packed.info["envelope"])
+        else:
+            packed = packed_result(abstraction, start, offered, solver=solver, prune_corrupting=PRUNE_CORRUPTING)
         solution = packed.solution if packed is not None else solve(_Model(abstraction, start, priced), [start])
     solve_seconds = time.perf_counter() - began
     if not abstraction.is_goal(start) and not _finite(solution.values[start]):
