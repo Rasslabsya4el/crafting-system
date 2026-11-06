@@ -56,11 +56,11 @@ def run_phase(phase: str, route: str, say, use_incumbent: bool) -> dict:
         data, target, prices, start_price=start_price, budget=None, solver="envelope" if phase == "envelope" else "packed", with_risk=False, **options
     )
     seconds = time.perf_counter() - began
-    policy = {digest(state): action.label for state, action in plan.policy.items()}
+    policy = {digest(state): priced.label for state, priced in plan.policy.offers()}  # the offer, not the built action: R04's kernels hold thousands of outcomes
     row = {
         "phase": phase, "route": route, "seconds": round(seconds, 1), "solve_seconds": round(plan.solve_seconds, 1), "peak_mb": P.peak_mb(),
         "mean": plan.mean_remaining, "error_bound": plan.solution.error_bound, "states_known": len(plan.solution.values),
-        "policy_states": len(plan.policy), "offers": len(plan.offers), "start_label": plan.policy[plan.start].label,
+        "policy_states": len(plan.policy), "offers": len(plan.offers), "start_label": plan.policy.offer(plan.start).label,
     }
     if phase == "envelope":
         info = plan.packed.info["envelope"]
