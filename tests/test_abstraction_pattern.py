@@ -356,3 +356,22 @@ def test_a_route_that_keeps_no_junk_has_one_member_for_each_key(world):
         assert [state] == pattern.members(key, Mode.ALL), "a key of a route that keeps no junk stands for the state alone"
         assert float(solved.value[model.index[key]]) <= value * (1 + 1e-9) + 1e-9
     assert float(solved.value[0]) == pytest.approx(exact[start], rel=1e-9)
+
+
+def test_a_reached_key_with_no_member_makes_the_build_refuse(world, monkeypatch):
+    """An empty member set at a reached non-goal key is a builder defect, and it would put the bound above the exact cost: the build refuses."""
+    ab, start, _ = planted_world(world)
+    start_key = Pattern(ab, True).key(start)
+    real = Pattern.members
+    emptied = []
+
+    def members(self, key, mode):
+        if key != start_key and (not emptied or emptied[0] == key):
+            emptied[:] = [key]
+            return []
+        return real(self, key, mode)
+
+    monkeypatch.setattr(Pattern, "members", members)
+    with pytest.raises(OutOfScopeError, match="no member of"):
+        build_pattern_model(ab, start, offers_of())
+    assert emptied

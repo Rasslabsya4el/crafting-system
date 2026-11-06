@@ -599,6 +599,8 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
         key = keys[i]
         row: list[tuple[int, int]] = []
         if not goal[i]:
+            if not pattern.members(key, Mode.ANY):
+                raise _no_member(key)
             by_mode: dict[Mode, list[CompressedState]] = {}
             for oi, offer in enumerate(offers):
                 if offer.action is None:
@@ -658,6 +660,19 @@ def _explore(pattern: Pattern, start: CompressedState, offers: Sequence[PatternO
     stats.goal_keys = sum(goal)
     stats.fallbacks = pattern.fallbacks
     return PatternModel(keys, goal, actions, kernels, stats, index)
+
+
+def _no_member(key: PatternKey) -> OutOfScopeError:
+    """The refusal of a build that reached a non-goal key it can make no member of: a defect of the member builder, never a fact about the game.
+
+    The concrete state that reached the key is itself an item of the key, so the key has a member. With none, the key would keep only the
+    restart, and its value, and every value that leans on it, would sit above the exact cost: a bound that a cut would trust (OR-12, OR-13).
+    """
+    return OutOfScopeError(
+        f"the crafted-pattern bound reached a key it can make no member of (status {[int(v) for v in key.status]}, {len(key.crafted)} crafted, "
+        f"counts {key.counts}, tags {key.tags}, rarity {key.flags.rarity.value}, {len(key.fractured)} fractured). That is a defect of the member "
+        "builder, since the state that reached the key is a member of it; its value would sit above the exact cost, so the build refuses."
+    )
 
 
 def _gap_everywhere(pattern: Pattern, memo: dict, key: PatternKey, offer: PatternOffer) -> bool:
