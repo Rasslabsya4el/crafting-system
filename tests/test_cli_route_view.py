@@ -653,6 +653,7 @@ def test_nothing_is_shown_as_absent_outside_the_buy_filter(r12_plan):
     assert "no influence" in accepts and "not corrupted" in accepts
     assert html.count("no influence") == 1 and html.count("not corrupted") == 1
     visible = re.sub(r'href="[^"]*"', "", html.replace(accepts, ""))  # the link's query names the filter, the page does not
+    visible = re.sub(r'What this answer leaves out.*?(?=<div class="cd tg">)', "", visible, flags=re.S)  # the kinds left out are named in game words ("Corrupted essences")
     assert "orrupted" not in visible and "nfluence" not in visible
 
 

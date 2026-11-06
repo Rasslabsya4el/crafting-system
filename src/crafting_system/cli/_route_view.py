@@ -56,7 +56,7 @@ from crafting_system.solver import Action
 
 from . import _route_flow
 from ._interval import IntervalAnswer
-from ._limits import grouped, limit_text
+from ._limits import SHOWN_LABELS, grouped, limit_text, more_labels
 from ._marking import approximate_inputs
 from ._plan import Plan
 from ._report import Report
@@ -83,6 +83,7 @@ class Line:
     text: str
     href: str | None = None
     anchor: str = ""
+    more: tuple[str, ...] = ()  # entries the text does not name: the page holds them in a "details" element, closed by default
 
 
 @dataclass(frozen=True)
@@ -559,7 +560,7 @@ class _View:
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}"),
             None if self.flow.measured else _plain("Note", note),
         )
-        leaves_out = tuple(Field(title, tuple(Line(limit_text(limit)) for limit in group)) for title, group in grouped(plan.limits))
+        leaves_out = tuple(Field(title, tuple(Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit)) for limit in group)) for title, group in grouped(plan.limits))
         return GoalCard(fields, card_of_target(self.data, plan.target), leaves_out)
 
 

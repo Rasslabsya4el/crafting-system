@@ -151,7 +151,7 @@ def test_the_unpriced_actions_of_a_plan_are_one_limit_with_their_names_in_the_te
     assert f"Not offered: Alpha, Beta, Gamma (no price for {LIFEFORCE}). The plan is the cheapest among the actions that have a price" in text
 
 
-def test_many_unpriced_actions_are_one_limit_to_a_missing_price_with_a_count_and_the_first_three(target):
+def test_many_unpriced_actions_are_one_limit_to_a_missing_price_and_the_text_names_every_one(target):
     plan = make_plan(DATA, target, price_file())
     tangled = [(f"Tangled set {n}", ("Tangled Fossil",)) for n in range(1, 308)]
     hollow = [(f"Hollow set {n}", ("Hollow Fossil",)) for n in range(1, 4)]
@@ -161,11 +161,12 @@ def test_many_unpriced_actions_are_one_limit_to_a_missing_price_with_a_count_and
     report = build_report(dataclasses.replace(plan, limits=unpriced_limits(dropped)), DATA)
     lines = [line for line in render_text(report).splitlines() if line.startswith("  Not offered")]
 
+    every = ", ".join(f"Tangled set {n}" for n in range(1, 308))  # OR-16: nothing left out is hidden, however many
     assert lines == [
-        "  Not offered, 307 in all: Tangled set 1, Tangled set 2, Tangled set 3 and 304 more (no price for Tangled Fossil). "
-        "The plan is the cheapest among the actions that have a price; a price for these could make it cheaper.",
+        f"  Not offered, 307 in all: {every} (no price for Tangled Fossil). "
+        "The plan is the cheapest among the actions that have a price. A price for these could make it cheaper.",
         "  Not offered: Hollow set 1, Hollow set 2, Hollow set 3 (no price for Hollow Fossil). "
-        "The plan is the cheapest among the actions that have a price; a price for these could make it cheaper.",
+        "The plan is the cheapest among the actions that have a price. A price for these could make it cheaper.",
     ]
     listed = [limit for limit in policy_document(report)["limits"] if limit["kind"] == "unpriced"]
     assert sorted(limit["count"] for limit in listed) == [3, 307]  # the JSON holds every label

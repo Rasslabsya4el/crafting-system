@@ -20,7 +20,7 @@ from crafting_system.items import Item
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB, PriceFile
 
 from . import _limits
-from ._limits import Limit, kind_title
+from ._limits import Limit, claim, kind_title
 
 RESTART = "restart"
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
@@ -242,11 +242,12 @@ def offers_for(
     listed = _listed(data, start_item, kind_names, label_names)
     roll_matters = _roll_limit_can_matter(data, goal, start_item, listed)
     left_out_rolls: list[str] = []
-    left_out_corrupting: list[str] = []
+    left_out_corrupting: list[str] = []  # the target takes no corrupted item
+    left_out_asked: list[str] = []  # the target allows a corrupted item but asks for no corrupted implicit, and the set is offered only to one that does (ADR-0038)
     for action in listed:
         adds = action.adds(data, start_item)
         if adds.corrupts and (not goal.takes_corrupted or (adds.asked_only and not goal.asks_corrupted)):
-            left_out_corrupting.append(action.label(data))  # an item never arrives corrupted unasked
+            (left_out_asked if goal.takes_corrupted else left_out_corrupting).append(action.label(data))  # an item never arrives corrupted unasked
             continue
         if adds.wanted_only and not (adds.named or frozenset()) & named and action.label(data) not in label_names:
             left_out_unwanted.append(action.label(data))
@@ -298,6 +299,16 @@ def offers_for(
                 tuple(dict.fromkeys((*unlisted, *left_out_corrupting))),
             ),
         )
+    if left_out_asked:
+        limits += (
+            Limit(
+                _limits.CORRUPT_ASKED,
+                "Not offered",
+                "each of these corrupts the item, and it is offered only to a target that asks for a corrupted implicit; this target allows a corrupted item but asks for none",
+                labels=tuple(left_out_asked),
+                **claim("the kinds offered"),
+            ),
+        )
     if left_out_crafts:
         why = (
             "its mod counts toward no requirement, so the craft only takes a slot and costs currency"
@@ -306,11 +317,11 @@ def offers_for(
             "pay off by clearing a family from the pool"
         )
         guarantee = (
-            "The plan is the cheapest among all the offered methods: such a craft cannot lower the cost, because every other offered action erases crafted mods."
+            claim("all the offered methods", "Such a craft cannot lower the cost, because every other offered action erases crafted mods.")
             if erased_by_all
-            else "The plan is the cheapest among the offered crafts only; a craft left out could still pay off, and that is not checked."
+            else claim("the offered crafts only", "A craft left out could still pay off, and that is not checked.")
         )
-        limits += (Limit(_limits.CRAFTS, "Not offered", why, guarantee, tuple(left_out_crafts)),)
+        limits += (Limit(_limits.CRAFTS, "Not offered", why, labels=tuple(left_out_crafts), **guarantee),)
     if left_out_rolls and any(leaf.has_roll_limit for leaf in goal.leaves):  # a target without a roll limit needs no word about it
         limits += (
             Limit(
@@ -359,8 +370,8 @@ def _kind_limits(
                     _limits.NOT_NAMED,
                     "Not offered",
                     "kinds this target does not name",
-                    "The plan is the cheapest among the kinds offered.",
-                    not_named,
+                    labels=not_named,
+                    **claim("the kinds offered"),
                 ),
             )
     else:
@@ -371,8 +382,8 @@ def _kind_limits(
                     _limits.OPT_IN,
                     "Not offered",
                     "kinds that are offered only when a target names them",
-                    "The plan is the cheapest among the kinds offered; a kind left out could be cheaper.",
-                    opt_in,
+                    labels=opt_in,
+                    **claim("the kinds offered", "A kind left out could be cheaper."),
                 ),
             )
     not_built = tuple(kind_title(entry.name) for entry in kinds() if not entry.planner)
@@ -382,8 +393,8 @@ def _kind_limits(
                 _limits.NOT_BUILT,
                 "Not offered",
                 "methods the planner cannot use yet",
-                "The plan is the cheapest among the methods the planner can use.",
-                not_built,
+                labels=not_built,
+                **claim("the methods the planner can use"),
             ),
         )
     return found

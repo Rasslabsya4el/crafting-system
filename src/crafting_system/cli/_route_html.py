@@ -54,9 +54,16 @@ def _link(href: str, text: str, external: bool = False) -> str:
     return f'<a href="{escape(href, quote=True)}"{rel}>{escape(text)}</a>'
 
 
+def _more(line) -> str:
+    """The entries a line does not name, in a "details" element that is closed by default; every one is in the page."""
+    if not line.more:
+        return ""
+    return f"<details><summary>the other {len(line.more):,}</summary>{escape(', '.join(line.more))}</details>"
+
+
 def _line(line) -> str:
     if line.href is None:
-        return escape(line.text)
+        return escape(line.text) + _more(line)
     external = not line.href.startswith("#")
     if line.anchor:
         return f"{escape(line.text)} {_link(line.href, line.anchor, external)}"

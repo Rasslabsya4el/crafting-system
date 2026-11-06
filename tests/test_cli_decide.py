@@ -308,7 +308,7 @@ def test_make_plan_solves_such_a_query_exactly_on_the_packed_solver_and_says_so(
     assert plan.mean_remaining == pytest.approx(exact.mean_remaining, rel=1e-9)
     solved = only(plan.limits, "how-solved")  # G13: one limit, the packed note replaces the decision's message
     assert "Undeclared reroll is not declared block-invariant" in solved.why and "packed solver" in solved.why
-    assert solved.guarantee == "The answer is exact."
+    assert solved.guarantee == "The answer is exact among the methods offered."
 
 
 def test_the_text_tree_stops_after_its_limit_and_says_where_the_rest_is(exact, monkeypatch):

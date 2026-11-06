@@ -20,9 +20,9 @@ def labels_of(limits, kind: str) -> set[str]:
     return {label for limit in of_kind(limits, kind) for label in limit.labels}
 
 
-def sentences(limits) -> list[str]:
-    """Each limit as the sentence the text report and the page print."""
-    return [limit_text(limit) for limit in limits]
+def sentences(limits, shown: int | None = None) -> list[str]:
+    """Each limit as the sentence the text report prints; with `shown`, as the page prints it (the first `shown` labels)."""
+    return [limit_text(limit, shown) for limit in limits]
 
 
 def notes(limits) -> list[Limit]:

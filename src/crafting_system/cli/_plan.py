@@ -31,7 +31,7 @@ from ._approx import Approximation, climb
 from ._bound_prune import Pruned, merge_twins, solve_pruned, starting_offers
 from ._decide import Rates, decide
 from . import _limits
-from ._limits import Limit, kind_title, risk_limits, unpriced_limits, with_limits
+from ._limits import Limit, approximate_limits, claim, kind_title, risk_limits, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, crafted_mods_limit, free_action_cost, offers_for, price_offers, split_usable
 from . import _packed
 from ._packed import SOLVERS, PackedResult, packed_result
@@ -104,6 +104,11 @@ class Plan:
     pruned: Pruned | None = None  # what the bound pruning did, None when the plan was solved whole
     starts: StartChoice | None = None  # the start options compared and refused (ADR-0059, `_starts.plan_with_starts`); None when none was compared
     packed: PackedResult | None = None  # set when the packed solver solved it (ticket #374): what its risk is evaluated on
+
+    def __post_init__(self) -> None:
+        # one place decides what a guarantee of cheapness says: an approximate answer reaches the cheapest only to within its stated gap (OR-13)
+        if self.approximation is not None:
+            object.__setattr__(self, "limits", approximate_limits(self.limits))
 
     @property
     def policy(self) -> Mapping[CompressedState, Action[CompressedState]]:
@@ -462,7 +467,7 @@ def start_limits(price: StartPrice, named: bool) -> tuple[Limit, ...]:
                 _limits.START,
                 "No restart",
                 "the start item costs nothing, so buying it again is not offered",
-                "The plan is the cheapest that never starts over: it only improves the item it has.",
+                **claim("the plans that never start over", "It only improves the item it has."),
             ),
         )
     return found
@@ -470,7 +475,7 @@ def start_limits(price: StartPrice, named: bool) -> tuple[Limit, ...]:
 
 def whole_search_limit(why: str) -> Limit:
     """The limit of an exact answer found by the whole search, which took longer than the time budget or could not be forecast (G12, G13)."""
-    return Limit(_limits.SOLVE, "The whole search was run", why, "The answer is exact.")
+    return Limit(_limits.SOLVE, "The whole search was run", why, "The answer is exact among the methods offered.")
 
 
 def lumped_limit(item_states: int, shown: int) -> Limit:
@@ -543,7 +548,7 @@ def add_risk(plan: Plan) -> Plan:
     else:
         risk = evaluate_risk(plan.solution.policy, plan.start, plan.abstraction.is_goal, plan.solution.values[plan.start], free_cost=free)
         found = risk_limits(risk)
-    return replace(plan, risk=risk, limits=with_limits(plan.limits, found), risk_seconds=time.perf_counter() - began)
+    return replace(plan, risk=risk, limits=with_limits(plan.limits, found, _limits.RISK), risk_seconds=time.perf_counter() - began)
 
 
 RISK_BINS = 200_000  # the default `max_bins` of `risk.evaluate`
@@ -602,7 +607,7 @@ def _pruned_limits(pruned: Pruned) -> tuple[Limit, ...]:
                 _limits.PROVED,
                 "Not searched",
                 "same outcome as a cheaper offer",
-                "The answer is exact: a cheaper action does the same.",
+                "The answer is exact among the methods offered: a cheaper action does the same.",
                 tuple(dropped for dropped, _ in pruned.twins),
             )
         )
@@ -612,7 +617,7 @@ def _pruned_limits(pruned: Pruned) -> tuple[Limit, ...]:
                 _limits.PROVED,
                 "Not searched",
                 "the game refuses it on this item wherever it can be",
-                "The answer is exact: the game never lets these be used here.",
+                "The answer is exact among the methods offered: the game never lets these be used here.",
                 tuple(pruned.inapplicable),
             )
         )
@@ -622,7 +627,7 @@ def _pruned_limits(pruned: Pruned) -> tuple[Limit, ...]:
                 _limits.PROVED,
                 "Not searched",
                 "proved never better: even its best case costs more than the plan",
-                "The answer is exact: none of these can beat the plan.",
+                "The answer is exact among the methods offered: none of these can beat the plan.",
                 tuple(pruned.bounded),
             )
         )
