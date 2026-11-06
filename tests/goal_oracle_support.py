@@ -13,14 +13,11 @@ and never writes a tier by hand:
   * an implicit (ticket #416): `Item.build(..., implicits=(ImplicitMod(mod id, grade, values),))` with the grade the planner gives
     it (`eldritch_grade` of an Eldritch mod, 0 for an implicit of the base), the way the target parser builds a start implicit;
   * a quality (#416): `Item.build(..., quality=Quality(CatalystType(type), percent))`, or `PlainQuality(percent)`;
-  * the goal item (#416): the mods, the implicit and the quality of the oracle's goal spec combined on one item, then its influences
-    replaced (`dataclasses.replace`, which does not validate: the planner cannot make an item without the influence its mods need,
-    the goal check can still be asked about one). `Target.is_met_by` has no influence condition, so this is the one place where
-    the planner's whole-target verdict is compared.
+An influence is not probed: it is a start input of the target, not a condition on the finished item (decided on #444).
 
 Then the planner's verdict is `Target.unmet(item)` (the goal check) for the node, and the oracle's is `Oracle.node_met` on
 the same mods, given only as ids and values; for an implicit or the quality it is the same `unmet` against `Oracle.implicit_met` /
-`quality_met`, and for the influences `Target.is_met_by` against `Oracle.target_met`.
+`quality_met`.
 """
 
 import random
@@ -37,7 +34,6 @@ from crafting_system.items import (
     CatalystType,
     ExplicitMod,
     ImplicitMod,
-    Influence,
     Item,
     ItemError,
     PlainQuality,
@@ -95,7 +91,7 @@ class Result:
     disagreements: list[Disagreement] = None
     skipped: list[str] = None
     unjudged: tuple[str, ...] = ()
-    met_paths: set[str] = None  # the implicit, quality and influence requirements (#416) that some probe met on both sides
+    met_paths: set[str] = None  # the implicit and quality requirements (#416) that some probe met on both sides
 
     def __post_init__(self) -> None:
         self.disagreements = [] if self.disagreements is None else self.disagreements
@@ -187,7 +183,6 @@ def oracle_item(item: Item) -> g.OItem:
         tuple(g.OMod(m.mod_id, m.values, m.fractured) for m in item.mods),
         tuple(g.OImplicit(entry.mod_id, entry.values) for entry in item.implicits),
         quality,
-        frozenset(influence.value for influence in item.influences),
     )
 
 
@@ -206,16 +201,6 @@ def quality_item(data, target, probe: g.QualityProbe) -> Item:
     """A rare item of the target's base holding catalyst quality of a type, or plain quality; `ValueError` for a type the planner lacks."""
     held = PlainQuality(probe.percent) if probe.type is None else Quality(CatalystType(probe.type), probe.percent)
     return base_item(data, target).changed(data, quality=held)
-
-
-def goal_item(data, target, goal: g.GoalSpec, fillers: tuple[ExplicitMod, ...]) -> Item:
-    """One item holding every mod, the implicits and the quality of the oracle's goal spec, with the target's influences."""
-    item = base_item(data, target)
-    for spec in goal.mods:
-        item = combine(data, item, probe_item(data, target, spec, fillers))
-    implicits = tuple(implicit_item(data, target, probe).implicits[0] for probe in goal.implicits)
-    quality = None if goal.quality is None else quality_item(data, target, goal.quality).quality
-    return item.changed(data, implicits=implicits, quality=quality)
 
 
 def compare_target(data, export: g.Export, stem: str) -> Result:
@@ -274,12 +259,12 @@ def compare_target(data, export: g.Export, stem: str) -> Result:
                     judge(index, f"{probe.path} | {probe.label} + {other_path} | {anchor.label}", item)
         if target.start_item.mods:
             judge(index, "start item", target.start_item)
-    compare_other_kinds(data, export, stem, target, spec, oracle, result, fillers)
+    compare_other_kinds(data, export, stem, target, spec, oracle, result)
     return result
 
 
-def compare_other_kinds(data, export: g.Export, stem: str, target, spec: g.OracleTarget, oracle: g.Oracle, result: Result, fillers) -> None:
-    """The implicits, the quality and the influences of the target (#416): the probes of the oracle against the planner's goal check."""
+def compare_other_kinds(data, export: g.Export, stem: str, target, spec: g.OracleTarget, oracle: g.Oracle, result: Result) -> None:
+    """The implicits and the quality of the target (#416): the probes of the oracle against the planner's goal check."""
 
     def record(path: str, label: str, planner: bool, verdict: bool) -> None:
         result.probes += 1
@@ -314,19 +299,3 @@ def compare_other_kinds(data, export: g.Export, stem: str, target, spec: g.Oracl
             if (item := build(probe.path, probe.label, lambda: quality_item(data, target, probe))) is not None:
                 judge_condition(probe.path, f"{probe.path} | {probe.label}", item, condition, lambda o: oracle.quality_met(spec.quality, o.quality))
         judge_condition(spec.quality.path, "start item", target.start_item, condition, lambda o: oracle.quality_met(spec.quality, o.quality))
-
-    influence = g.influence_probes(export, spec)
-    if influence:  # the planner's goal check has no influence condition, so the whole target is asked about a goal item with other influences
-        goal = g.goal_spec(export, spec)
-        item = None if goal is None else build("influence", "goal item", lambda: goal_item(data, target, goal, fillers))
-        if item is None:
-            result.skipped.append("influence: no goal item could be made, so no influence probe was asked")
-            return
-        planner, verdict = target.is_met_by(item), oracle.target_met(oracle_item(item))
-        if not (planner and verdict):  # a baseline that fails on something else would hide the influence
-            result.skipped.append(f"influence: the goal item is not met by both sides (planner {planner}, oracle {verdict}), so no influence probe was asked")
-            return
-        record("influence", "influence | influence the target's own (the goal item)", planner, verdict)
-        for probe in influence:
-            other = replace(item, influences=frozenset(Influence(name) for name in probe.influences))
-            record(probe.path, f"{probe.path} | {probe.label}", target.is_met_by(other), oracle.target_met(oracle_item(other)))

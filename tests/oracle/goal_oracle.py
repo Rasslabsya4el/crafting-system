@@ -40,8 +40,11 @@ The natural ladder of a family on a base, worked out from the raw mods in `indep
     level is at most the item level.
 
 The other requirement kinds (ticket #416, read from the export and the owner's rules, not from the planner)
-  * Influence. The target's `influence:` list is the influences the finished item carries: every one of them must be
-    on the item. Another influence on top is not judged (an open point of #416: `docs/owner-rules.md` says nothing).
+  * Influence is NOT judged (decided on #416 and #444). The target's `influence:` list is the influences on the base the
+    route starts from (`src/crafting_system/targets/__init__.py`: "absent means a fresh normal item of the base, level and
+    influence"; R08 line 34), a start input. Nothing in `docs/owner-rules.md` or an ADR makes it a condition on the finished
+    item, so the oracle uses it only to find the mods that can spawn (the item's tags). Whether a target's influence must be
+    bought or may be added mid-route is a start-item question of rebuild step 4.
   * Implicits (`implicits:`). An implicit mod is one of the mods an item of the base can hold as an implicit: the base's own
     (`base_items.json` `implicits`) and the Eldritch implicits (generation types `searing_exarch_implicit` and
     `eater_of_worlds_implicit`) whose spawn weight on the base's tags is above zero. The selector (`family`, `stat`) counts a
@@ -50,7 +53,7 @@ The other requirement kinds (ticket #416, read from the export and the owner's r
     only by `mod:` naming one (OR-2). `mod:` is exactly that mod. The Eldritch grade (1 Lesser to 6 Perfect) is the digit
     that ends the mod's id: the value ranges of one family rise with it (AvoidShockEldritchImplicit1 33-35 ... 6 48-50);
     a base implicit has grade 0. `min_roll` is a roll with no grade (OR-4); `min_grade` is the lowest grade. An implicit
-    counts when the item lists it; a base implicit the item does not list is absent (an open point of #416).
+    counts when the item lists it; a base implicit the item does not list is absent (an open point, issue #449).
   * Quality (`quality:`). A catalyst quality (`type` given) is met by quality of that catalyst type, at least `min_percent`;
     quality with no `type` is plain quality (a weapon's or armour's), at least `min_percent`. The catalyst types are the
     `* Catalyst` currencies of the export whose description says "Adds quality that enhances" (so the Tainted Catalyst,
@@ -454,7 +457,6 @@ class OItem:
     mods: tuple[OMod, ...]
     implicits: tuple[OImplicit, ...] = ()
     quality: OQuality | None = None
-    influences: frozenset[str] = frozenset()
 
 
 # --- the judge ------------------------------------------------------------------------------------------------------
@@ -543,11 +545,7 @@ class Oracle:
         """Whether the item meets every top-level explicit requirement (`requirements:` only; the other kinds have their own method)."""
         return all(self.node_met(node, item) for node in self.target.requirements)
 
-    # -- influence, implicits, quality (#416) --------------------------------------------------------------------
-
-    def influence_met(self, item: OItem) -> bool:
-        """Whether the item carries every influence the target lists. An influence beyond them is not judged (open point of #416)."""
-        return self.target.influences <= item.influences
+    # -- implicits, quality (#416) -------------------------------------------------------------------------------
 
     def implicit_counts(self, req: OImplicitReq, entry: OImplicit) -> bool:
         """Whether this one implicit of the item satisfies the implicit requirement."""
@@ -573,12 +571,11 @@ class Oracle:
         return held is not None and held.type == req.type and held.percent >= req.min_percent
 
     def target_met(self, item: OItem) -> bool:
-        """Whether the item is the target's goal: the explicit requirements, the implicits, the quality and the influences."""
+        """Whether the item is the target's goal: the explicit requirements, the implicits and the quality (not the influences)."""
         return (
             self.requirements_met(item)
             and all(self.implicit_met(req, item) for req in self.target.implicits)
             and (self.target.quality is None or self.quality_met(self.target.quality, item.quality))
-            and self.influence_met(item)
         )
 
 
@@ -727,15 +724,6 @@ class QualityProbe:
     percent: int
 
 
-@dataclass(frozen=True)
-class InfluenceProbe:
-    """A set of influences for the finished item (a goal item whose influences are replaced)."""
-
-    path: str
-    label: str
-    influences: frozenset[str]
-
-
 def implicit_probes(export: Export, target: OracleTarget) -> list[ImplicitProbe]:
     """The probes of every implicit requirement: each implicit mod the selector counts, or would count but for the Presence rule, at
     its lowest and highest roll, and a roll one below and at each `min_roll`. A corrupted entry has none (not judged)."""
@@ -784,74 +772,3 @@ def quality_probes(export: Export, target: OracleTarget) -> list[QualityProbe]:
         if item_class in classes
         for percent in percents
     ]
-
-
-def influence_probes(export: Export, target: OracleTarget) -> list[InfluenceProbe]:
-    """The influence sets a finished item may carry instead of the target's: none, each one influence the target does not list, and the
-    target's list less one of its influences. Empty when the target lists none (nothing is asked then)."""
-    if not target.influences:
-        return []
-    wanted = sorted(target.influences)
-    sets: list[tuple[str, frozenset[str]]] = [("none", frozenset())]
-    sets += [(f"only {name}", frozenset({name})) for name in sorted(shared.INFLUENCE_TAG) if name not in target.influences]
-    if len(wanted) > 1:
-        sets += [(f"missing {name}", frozenset(target.influences - {name})) for name in wanted]
-    return [InfluenceProbe("influence", f"influence {label}", influences) for label, influences in sets]
-
-
-@dataclass(frozen=True)
-class GoalSpec:
-    """The mods, implicits and quality of one item that the oracle says is the target's goal (the influences are the target's own)."""
-
-    mods: tuple[ProbeSpec, ...]
-    implicits: tuple[ImplicitProbe, ...]
-    quality: QualityProbe | None
-
-
-def goal_spec(export: Export, target: OracleTarget) -> GoalSpec | None:
-    """An item the oracle judges to be the goal, described without a planner type; None when no probe set reaches every requirement.
-
-    For each explicit leaf the probe that names the mod, else the top tier, that the oracle counts; for a k-of-n group the first
-    `at_least` members that have one; the first implicit probe that counts for each implicit; the first quality probe that counts.
-    """
-    oracle = Oracle(export, target)
-    probes = probe_specs(export, target)
-    priority = {"named": 0, "top": 1}
-
-    def pick(leaf: OReq) -> ProbeSpec | None:
-        fits = [p for p in probes if p.path == leaf.path and oracle.counts(leaf, OMod(p.mod_id, p.values, p.fractured))]
-        # the named mod, else the top tier, else any rolled or named probe the oracle counts (a mod with one fixed value has no `role`)
-        return min(fits, key=lambda p: (priority.get(p.role, 2), p.fractured), default=None)
-
-    def choose(node: ONode) -> list[ProbeSpec] | None:
-        if isinstance(node, OReq):
-            found = pick(node)
-            return None if found is None else [found]
-        chosen: list[ProbeSpec] = []
-        met = 0
-        for member in node.members:
-            sub = choose(member)
-            if sub is not None and met < node.at_least:
-                chosen += sub
-                met += 1
-        return chosen if met >= node.at_least else None
-
-    mods: list[ProbeSpec] = []
-    for node in target.requirements:
-        got = choose(node)
-        if got is None:
-            return None
-        mods += got
-    implicits: list[ImplicitProbe] = []
-    all_implicits = implicit_probes(export, target)
-    for req in target.implicits:
-        found = next((p for p in all_implicits if p.path == req.path and oracle.implicit_counts(req, OImplicit(p.mod_id, p.values))), None)
-        if found is None:
-            return None
-        implicits.append(found)
-    quality = None
-    if target.quality is not None:
-        quality = next((p for p in quality_probes(export, target) if oracle.quality_met(target.quality, OQuality(p.type, p.percent))), None)
-        if quality is None:
-            return None
-    return GoalSpec(tuple(mods), tuple(implicits), quality)

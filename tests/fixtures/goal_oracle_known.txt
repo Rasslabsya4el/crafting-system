@@ -2,7 +2,7 @@
 # <target> :: <top-level requirement> :: <probe>, a tab, the direction. Their classes, issues and rules are in
 # tests/test_goal_oracle_comparison.py (KNOWN). The comparison test fails on any difference, in either direction.
 # When a rebuild fixes a class, delete its lines and its KNOWN entry.
-# Ticket #416 added the `influence` lines (issue #444); the implicit and quality probes found no disagreement.
+# Ticket #416: the implicit and quality probes found no disagreement; influence is a start input of a target, not probed (#444).
 r05-strength-ring :: requirements[2] :: requirements[2].of[0] | bench EinharMasterIncreasedLife2 high	planner=met oracle=not-met
 r05-strength-ring :: requirements[2] :: requirements[2].of[0] | bench EinharMasterIncreasedLife2 low	planner=met oracle=not-met
 r05-strength-ring :: requirements[2] :: requirements[2].of[0] | bench EinharMasterIncreasedLife3 high	planner=met oracle=not-met
@@ -27,12 +27,6 @@ r05-strength-ring :: requirements[2] :: requirements[2].of[3] | bench EinharMast
 r05-strength-ring :: requirements[2] :: requirements[2].of[3] | bench EinharMasterLightningResist2 low	planner=met oracle=not-met
 r05-strength-ring :: requirements[2] :: requirements[2].of[3] | bench HelenaMasterLightningResist1 high	planner=met oracle=not-met
 r05-strength-ring :: requirements[2] :: requirements[2].of[3] | bench HelenaMasterLightningResist1 low	planner=met oracle=not-met
-r06-strength-heavy-belt :: influence :: influence | influence none	planner=met oracle=not-met
-r06-strength-heavy-belt :: influence :: influence | influence only crusader	planner=met oracle=not-met
-r06-strength-heavy-belt :: influence :: influence | influence only elder	planner=met oracle=not-met
-r06-strength-heavy-belt :: influence :: influence | influence only redeemer	planner=met oracle=not-met
-r06-strength-heavy-belt :: influence :: influence | influence only shaper	planner=met oracle=not-met
-r06-strength-heavy-belt :: influence :: influence | influence only warlord	planner=met oracle=not-met
 r06-strength-heavy-belt :: requirements[0] :: requirements[0].of[0] | bench EinharMasterIncreasedLife2 high	planner=met oracle=not-met
 r06-strength-heavy-belt :: requirements[0] :: requirements[0].of[0] | bench EinharMasterIncreasedLife2 low	planner=met oracle=not-met
 r06-strength-heavy-belt :: requirements[0] :: requirements[0].of[0] | bench EinharMasterIncreasedLife3 high	planner=met oracle=not-met
@@ -94,9 +88,3 @@ r13-life-resist-belt :: requirements[2] :: requirements[2].of[1] | natural T5 We
 r13-life-resist-belt :: requirements[2] :: requirements[2].of[1] | natural T5 WeaponElementalDamage2 low	planner=met oracle=not-met
 r13-life-resist-belt :: requirements[2] :: requirements[2].of[1] | natural T6 WeaponElementalDamage1 high	planner=met oracle=not-met
 r13-life-resist-belt :: requirements[2] :: requirements[2].of[1] | natural T6 WeaponElementalDamage1 low	planner=met oracle=not-met
-r14-hunter-bow :: influence :: influence | influence none	planner=met oracle=not-met
-r14-hunter-bow :: influence :: influence | influence only crusader	planner=met oracle=not-met
-r14-hunter-bow :: influence :: influence | influence only elder	planner=met oracle=not-met
-r14-hunter-bow :: influence :: influence | influence only redeemer	planner=met oracle=not-met
-r14-hunter-bow :: influence :: influence | influence only shaper	planner=met oracle=not-met
-r14-hunter-bow :: influence :: influence | influence only warlord	planner=met oracle=not-met

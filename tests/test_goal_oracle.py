@@ -435,28 +435,20 @@ def test_quality_of_the_wanted_catalyst_type_and_at_least_the_percent():
     assert not g.Oracle(tiny_export(), plain).quality_met(plain.quality, g.OQuality("intrinsic", 20))
 
 
-def test_the_influences_the_target_lists_must_all_be_on_the_item_and_another_is_not_judged():
-    spec = g.OracleTarget.from_text("base: Test Ring\nitem_level: 70\ninfluence: [hunter, redeemer]\nrequirements:\n  - family: Life\n")
-    oracle = g.Oracle(tiny_export(), spec)
-    assert oracle.influence_met(g.OItem((), influences=frozenset({"hunter", "redeemer"})))
-    assert oracle.influence_met(g.OItem((), influences=frozenset({"hunter", "redeemer", "elder"})))  # an extra influence: open point, not judged
-    assert not oracle.influence_met(g.OItem((), influences=frozenset({"hunter"})))
-    assert not oracle.influence_met(g.OItem(()))
-    assert g.Oracle(tiny_export(), target(LIFE)).influence_met(g.OItem(()))  # `influence: []` asks nothing
-
-
-def test_the_whole_target_needs_the_explicit_mods_the_implicits_the_quality_and_the_influences():
+def test_the_whole_target_needs_the_explicit_mods_the_implicits_and_the_quality_and_does_not_judge_influence():
+    """`influence:` is a start input (decided on #416 and #444): it finds the mods that can spawn, and the item carries no influence to judge."""
     spec = g.OracleTarget.from_text(
         "base: Test Ring\nitem_level: 70\ninfluence: [hunter]\nrequirements:\n  - family: Life\n"
         "implicits:\n  - family: RingResist\n    min_roll: 8\nquality: {type: intrinsic, min_percent: 20}\n"
     )
     oracle = g.Oracle(tiny_export(), spec)
-    good = g.OItem((g.OMod("Life3", (39,)),), (g.OImplicit("RingImplicit1", (9,)),), g.OQuality("intrinsic", 20), frozenset({"hunter"}))
-    assert oracle.target_met(good)
-    assert not oracle.target_met(g.OItem((g.OMod("Life2", (29,)),), good.implicits, good.quality, good.influences))  # a mod below the top tier
-    assert not oracle.target_met(g.OItem(good.mods, (g.OImplicit("RingImplicit1", (7,)),), good.quality, good.influences))
-    assert not oracle.target_met(g.OItem(good.mods, good.implicits, g.OQuality("intrinsic", 19), good.influences))
-    assert not oracle.target_met(g.OItem(good.mods, good.implicits, good.quality, frozenset()))
+    good = g.OItem((g.OMod("Life3", (39,)),), (g.OImplicit("RingImplicit1", (9,)),), g.OQuality("intrinsic", 20))
+    assert oracle.target_met(good)  # nothing about the Hunter influence is asked of the finished item
+    assert not hasattr(oracle, "influence_met") and not hasattr(good, "influences")
+    assert not oracle.target_met(g.OItem((g.OMod("Life2", (29,)),), good.implicits, good.quality))  # a mod below the top tier
+    assert not oracle.target_met(g.OItem(good.mods, (g.OImplicit("RingImplicit1", (7,)),), good.quality))
+    assert not oracle.target_met(g.OItem(good.mods, good.implicits, g.OQuality("intrinsic", 19)))
+    assert not oracle.target_met(g.OItem(good.mods, good.implicits, None))
 
 
 def test_the_probes_of_an_implicit():
@@ -473,7 +465,7 @@ def test_the_probes_of_an_implicit():
     assert g.implicit_probes(tiny_export(), boots_target()) == []
 
 
-def test_the_probes_of_the_quality_and_the_influences():
+def test_the_probes_of_the_quality():
     ring = target(LIFE, extra="quality: {type: intrinsic, min_percent: 20}\n")
     probes = {(p.type, p.percent) for p in g.quality_probes(tiny_export(), ring)}
     assert probes == {(kind, percent) for kind in ("intrinsic", "abrasive") for percent in (1, 19, 20)}  # every catalyst type, one below and at the percent
@@ -482,33 +474,7 @@ def test_the_probes_of_the_quality_and_the_influences():
     boots_catalyst = boots_target(extra="quality: {type: intrinsic, min_percent: 20}\n")
     assert g.quality_probes(tiny_export(), boots_catalyst) == []  # boots take no catalyst: nothing could be built, and the leaf shows as unmet
     assert g.quality_probes(tiny_export(), target(LIFE)) == []
-    hunter = g.OracleTarget.from_text("base: Test Ring\nitem_level: 70\ninfluence: [hunter]\nrequirements:\n  - family: Life\n")
-    sets = {p.influences for p in g.influence_probes(tiny_export(), hunter)}
-    assert sets == {frozenset(), *(frozenset({name}) for name in ("crusader", "elder", "redeemer", "shaper", "warlord"))}
-    two = g.OracleTarget.from_text("base: Test Ring\nitem_level: 70\ninfluence: [hunter, redeemer]\nrequirements:\n  - family: Life\n")
-    assert frozenset({"hunter"}) in {p.influences for p in g.influence_probes(tiny_export(), two)}
-    assert frozenset({"redeemer"}) in {p.influences for p in g.influence_probes(tiny_export(), two)}
-    assert g.influence_probes(tiny_export(), target(LIFE)) == []
 
-
-def test_the_goal_spec_is_an_item_the_oracle_calls_the_goal():
-    spec = g.OracleTarget.from_text(
-        "base: Test Ring\nitem_level: 70\ninfluence: [hunter]\nrequirements:\n  - family: Life\n"
-        "implicits:\n  - family: RingResist\n    min_roll: 8\nquality: {type: intrinsic, min_percent: 20}\n"
-    )
-    goal = g.goal_spec(tiny_export(), spec)
-    assert goal is not None and [p.mod_id for p in goal.mods] == ["Life3"]  # the top tier at item level 70
-    item = g.OItem(
-        tuple(g.OMod(p.mod_id, p.values, p.fractured) for p in goal.mods),
-        tuple(g.OImplicit(p.mod_id, p.values) for p in goal.implicits),
-        g.OQuality(goal.quality.type, goal.quality.percent),
-        spec.influences,
-    )
-    assert g.Oracle(tiny_export(), spec).target_met(item)
-    nothing = g.OracleTarget.from_text("base: Test Ring\nitem_level: 70\ninfluence: []\nrequirements:\n  - family: NoSuchFamily\n")
-    assert g.goal_spec(tiny_export(), nothing) is None  # a requirement no probe meets: no goal item
-    group = target("  - at_least: 1\n    of:\n      - family: NoSuchFamily\n      - family: Fire\n")
-    assert [p.mod_id for p in g.goal_spec(tiny_export(), group).mods] == ["Fire1"]
 
 
 # --- what the oracle does not judge ---------------------------------------------------------------------------------------

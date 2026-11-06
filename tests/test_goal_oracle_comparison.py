@@ -17,10 +17,11 @@ What is not here: the disagreements of #404 (a target that disagrees with the gu
 `r10-fractured-boots.yaml` asking Life tier 1 where the guide says "at least 70" is not a planner-against-oracle disagreement; the
 guide-to-target step is not checked here. Sockets, enchantment, corruption and the start item as a goal state are not judged (#416).
 
-The implicits, the quality and the influences of a target (ticket #416) are compared too. R03 and R06 ask an implicit, R06 a catalyst
-quality, R06 and R14 an influence. Each has probes of its own (`goal_oracle.implicit_probes`, `quality_probes`, `influence_probes`), and
-`test_the_implicit_quality_and_influence_requirements_are_each_met_by_a_probe` fails when a requirement of those kinds has no probe that
-both sides call met, so a comparison that asks nothing cannot pass.
+The implicits and the quality of a target (ticket #416) are compared too. R03 and R06 ask an implicit, R06 a catalyst quality. Each has
+probes of its own (`goal_oracle.implicit_probes`, `quality_probes`), and
+`test_the_implicit_and_quality_requirements_are_each_met_by_a_probe` fails when a requirement of those kinds has no probe that both
+sides call met, so a comparison that asks nothing cannot pass. The `influence:` list of a target (R06, R14) is not compared: it is a
+start input, the influences on the base the route starts from, not a condition on the finished item (decided on #416 and #444).
 """
 
 from dataclasses import dataclass
@@ -50,8 +51,7 @@ class Known:
     """A known class of disagreement: whose fault it is, and where the oracle's "not met" comes from.
 
     `cause` is `tier comparison` (the leaf has a natural ladder at the item level and the probe's tier or values lose on it) or
-    `empty ladder` (the leaf's family has no natural mod on this base at the item level, so only `mod:` can meet it; OR-2) or
-    `no condition` (a requirement kind of #416 whose planner goal check has no condition for it, so it can never say "not met").
+    `empty ladder` (the leaf's family has no natural mod on this base at the item level, so only `mod:` can meet it; OR-2).
     """
 
     issue: str
@@ -60,15 +60,9 @@ class Known:
     why: str
 
 
-NO_CONDITION = "no condition"
 BENCH = "bench craft"
 BELOW_TOP = "natural tier below the top"
 START = "start item"
-INFLUENCE = "influence"  # the class of a probe that replaces the finished item's influences
-NO_INFLUENCE_CONDITION = (
-    "`Target.is_met_by` has no influence condition (targets/model.py `unmet`), so a goal item whose influences are replaced still meets it; "
-    "the search compares the influence flag itself (abstraction/_inputs.py:90), the goal check does not"
-)
 BENCH_AS_TIER_1 = "a bench craft is stored as tier 1 (actions/bench.py:57) and a crafted mod meets a requirement with no `not_crafted`"
 
 KNOWN: dict[tuple[str, str, str], Known] = {
@@ -88,9 +82,6 @@ KNOWN: dict[tuple[str, str, str], Known] = {
     ("r13-life-resist-belt", "requirements[2].of[0]", BENCH): Known("#403", "OR-2, OR-1", EMPTY_LADDER, "All Damage has no natural mod on a belt, so by OR-2 the target should name the craft with `mod:`; a bench All Damage craft meets 'any tier of All Damage': " + BENCH_AS_TIER_1),
     ("r13-life-resist-belt", "requirements[2].of[1]", BELOW_TOP): Known("#403", "OR-1", TIER_COMPARISON, "an Elemental Damage with Attacks tier below the top meets a requirement with no tier"),
     ("r13-life-resist-belt", "requirements[2].of[1]", BENCH): Known("#403", "OR-2, OR-1", TIER_COMPARISON, "a bench Elemental Damage with Attacks craft meets the requirement with no tier: " + BENCH_AS_TIER_1),
-    # #416: the influence list of the target. No rule of docs/owner-rules.md speaks of it; the file's header says the list is the item's influences.
-    ("r06-strength-heavy-belt", "influence", INFLUENCE): Known("#444", "none (the target header: `influence` lists the item's influences)", NO_CONDITION, NO_INFLUENCE_CONDITION),
-    ("r14-hunter-bow", "influence", INFLUENCE): Known("#444", "none (the target header: `influence` lists the item's influences)", NO_CONDITION, NO_INFLUENCE_CONDITION),
 }  # fmt: skip
 
 
@@ -216,10 +207,6 @@ def test_known_disagreement(results, key):
 
 def test_the_cause_of_each_class_is_what_the_registry_says(export):
     for (stem, leaf_path, _), entry in KNOWN.items():
-        if entry.cause == NO_CONDITION:  # a requirement kind of #416: the target must ask for it
-            spec, _oracle = oracle_for(export, stem)
-            assert leaf_path == "influence" and spec.influences, (stem, leaf_path)
-            continue
         node_leaf = leaf_path  # a start-item class is keyed by its top-level requirement, which is a leaf in every target that has one
         assert (EMPTY_LADDER if empty_ladder(export, stem, node_leaf) else TIER_COMPARISON) == entry.cause, (stem, leaf_path)
 
@@ -278,33 +265,30 @@ def test_r05_bench_life_is_one_of_the_known_disagreements(results):
     assert KNOWN[("r05-strength-ring", "requirements[2].of[0]", BENCH)].issue == "#403"
 
 
-# --- implicits, quality and influence (#416) ---------------------------------------------------------------------------
+# --- implicits and quality (#416) --------------------------------------------------------------------------------------
 
 
 def other_kind_paths(spec: g.OracleTarget) -> set[str]:
-    """The requirements of the kinds of #416 that the target asks and the oracle judges: `implicits[i]`, `quality`, `influence`."""
+    """The requirements of the kinds of #416 that the target asks and the oracle judges: `implicits[i]` and `quality`."""
     paths = {req.path for req in spec.implicits if not req.corrupted}
     if spec.quality is not None:
         paths.add(spec.quality.path)
-    if spec.influences:
-        paths.add("influence")
     return paths
 
 
 @pytest.mark.parametrize("stem", target_stems())
-def test_the_implicit_quality_and_influence_requirements_are_each_met_by_a_probe(results, export, stem):
+def test_the_implicit_and_quality_requirements_are_each_met_by_a_probe(results, export, stem):
     """Every such requirement has at least one probe that planner and oracle both call met: the comparison cannot pass by asking nothing."""
     spec, _ = oracle_for(export, stem)
     assert results[stem].met_paths == other_kind_paths(spec)
 
 
 def test_the_benchmarks_ask_the_kinds_this_ticket_covers(export):
-    """The probes exist because targets ask for them: R03 and R06 an implicit, R06 a quality, R06 and R14 an influence."""
+    """The probes exist because targets ask for them: R03 and R06 an implicit, R06 a quality."""
     asked = {stem: other_kind_paths(oracle_for(export, stem)[0]) for stem in BENCHMARKS}
     assert {stem: paths for stem, paths in asked.items() if paths} == {
         "r03-avoid-shock-boots": {"implicits[0]"},
-        "r06-strength-heavy-belt": {"implicits[0]", "quality", "influence"},
-        "r14-hunter-bow": {"influence"},
+        "r06-strength-heavy-belt": {"implicits[0]", "quality"},
     }
 
 
@@ -316,10 +300,12 @@ def test_the_oracle_alone_reads_the_implicits_of_r03_and_r06_as_the_data_and_the
     assert not oracle3.implicit_counts(stat, g.OImplicit("AvoidShockEldritchImplicit3", (39,)))  # one below the roll asked
     assert oracle3.implicit_counts(stat, g.OImplicit("AvoidShockEldritchImplicit6", (48,)))  # a higher grade counts by its own roll
     assert not oracle3.implicit_counts(stat, g.OImplicit("AvoidShockEldritchImplicit1", (35,)))
-    # a "Unique Enemy in your Presence" variant is a conditional effect: the text selector does not count it, `mod:` does (OR-2)
+    # a "Unique Enemy in your Presence" variant is found by its Presence stat, which makes it a second value, so R03's one-entry
+    # `min_roll` rejects it by length whatever the Presence rule says: a real-data assertion of "the text selector does not count it"
+    # would be vacuous here, and the data has no variant with one value. The rule itself is tested without a `min_roll` in
+    # tests/test_goal_oracle.py::test_or2_a_presence_variant_is_counted_only_when_mod_names_it. Here: `mod:` does count it (OR-2).
     variant = "AvoidShockEldritchImplicitUniquePresence2"
     assert export.is_presence_variant(variant) and variant in export.implicit_candidates(oracle3.base_id)
-    assert not oracle3.implicit_counts(stat, g.OImplicit(variant, (45, 1)))
     named = g.OImplicitReq("implicits[0]", stat="#% chance to Avoid being Shocked", mod=variant, min_roll=(40, None))
     assert oracle3.implicit_counts(named, g.OImplicit(variant, (45, 1)))
     # an implicit that is not one of this base (the amulet's Strength, a corrupted Avoid Shock) never counts
