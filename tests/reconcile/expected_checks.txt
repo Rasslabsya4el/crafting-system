@@ -152,6 +152,12 @@ r12-lightning-amulet::price.pool
 r13-life-resist-belt::target.base
 r13-life-resist-belt::start_price.written
 r13-life-resist-belt::buy_spec.exists
+r13-life-resist-belt::buy.base
+r13-life-resist-belt::buy.category
+r13-life-resist-belt::buy.item_level
+r13-life-resist-belt::buy.rarity
+r13-life-resist-belt::buy.influence
+r13-life-resist-belt::buy.pool
 r13-life-resist-belt::price.entry
 r13-life-resist-belt::price.base
 r13-life-resist-belt::price.item_level
@@ -174,6 +180,12 @@ r14-hunter-bow::price.pool
 v01-minion-helmet::target.base
 v01-minion-helmet::start_price.written
 v01-minion-helmet::buy_spec.exists
+v01-minion-helmet::buy.base
+v01-minion-helmet::buy.category
+v01-minion-helmet::buy.item_level
+v01-minion-helmet::buy.rarity
+v01-minion-helmet::buy.influence
+v01-minion-helmet::buy.pool
 v01-minion-helmet::price.entry
 v01-minion-helmet::price.base
 v01-minion-helmet::price.item_level

@@ -88,7 +88,7 @@ Chooser = Callable[[CompressedState, Abstraction], str | None]
 
 def hand_input(start: Item, requirements: tuple[Requirement, ...], choose: Chooser, label: str = "Hand-made policy") -> RouteInput:
     """A route drawn from the policy `choose(state, abstraction)` (an offer label, or None for no action)."""
-    target = Target(BELT, LEVEL, frozenset(), requirements, start, start_price=START_NAME)
+    target = Target(BELT, LEVEL, frozenset(), requirements, start, buys_start_item=True)
     ab = Abstraction(DATA, Goal.from_target(target), BELT, LEVEL, ACTIONS)
     first = ab.compress(start)
     priced, _ = price_offers(OFFERS, PRICES)

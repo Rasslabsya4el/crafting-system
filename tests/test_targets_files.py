@@ -1,24 +1,23 @@
-"""Target files on disk: R12, R13, the B1 routes R10, R11, R05 with buy specs, and the price file path."""
+"""Target files on disk: R12, R13, the B1 routes R10, R11, R05 with their computed buy specs, and the price file path."""
 
 from pathlib import Path
 
 import pytest
-import yaml
 from abstraction_support import real_game_data
 from targets_support import AMULET, BELT, DATA, EXAMPLES, belt, roll
 
 from crafting_system.items import ExplicitMod, Rarity, mod_tier
-from crafting_system.prices.trade_query import load_buy_spec
-from crafting_system.targets import KOfN, Requirement, TargetError, load_target
+from crafting_system.prices import load_price_file
+from crafting_system.targets import KOfN, Requirement, TargetError, buy_spec_of, load_target, start_price_key
 
 R12 = EXAMPLES / "r12-lightning-amulet.yaml"
 R13 = EXAMPLES / "r13-life-resist-belt.yaml"
-BUY = EXAMPLES.parent / "buy"
-# route: target file, buy spec file, the trade-site text of the fractured mod of the start item, and its minimum
+PRICES = EXAMPLES.parents[1] / "tests" / "fixtures" / "prices" / "routes-allflame-2026-10-31.json"
+# route: target file, the text of the fractured mod of the start item as the buy spec searches it, and its minimum (the lowest roll of the mod)
 ROUTES = {
-    "r10": ("r10-fractured-boots.yaml", "r10-start-boots.yaml", "#% increased Movement Speed", 30),
-    "r11": ("r11-reservation-helmet.yaml", "r11-start-helmet.yaml", "+#% to Chaos Resistance", 31),
-    "r05": ("r05-strength-ring.yaml", "r05-start-ring.yaml", "+# to all Attributes", 13),
+    "r10": ("r10-fractured-boots.yaml", "30% increased Movement Speed", 30),
+    "r11": ("r11-reservation-helmet.yaml", "+(31-35)% to Chaos Resistance", 31),
+    "r05": ("r05-strength-ring.yaml", "+(13-16) to all Attributes", 13),
 }
 
 
@@ -216,30 +215,30 @@ def test_loading_works_from_a_relative_path(tmp_path, monkeypatch):
 # -- the B1 routes R10, R11 and R05 and their buy specs (ticket #60) -----------------------------
 
 
-@pytest.mark.parametrize("route", ROUTES)
-def test_a_route_buy_spec_loads_and_is_the_start_price_of_its_target(route):
-    target_file, buy_file, stat, minimum = ROUTES[route]
-    spec = load_buy_spec(BUY / buy_file)
-    start_price = yaml.safe_load((EXAMPLES / target_file).read_text(encoding="utf-8"))["start_price"]
-
-    assert spec.name == start_price
-    assert spec.rarity == "rare" and spec.corrupted is False
-    assert [(mod.stat, mod.minimum, mod.fractured) for mod in spec.mods] == [(stat, minimum, True)]
-
-
 @pytest.fixture(scope="module")
 def real():
     return real_game_data()
 
 
 @pytest.mark.parametrize("route", ROUTES)
+def test_the_buy_spec_computed_from_a_route_target_is_its_fractured_start_mod_and_is_priced_in_the_committed_file(real, route):
+    target_file, stat, minimum = ROUTES[route]
+    target = load_target(EXAMPLES / target_file, real)
+    spec = buy_spec_of(real, target)
+
+    assert spec.rarity == "rare" and spec.corrupted is False
+    assert [(mod.stat, mod.minimum, mod.fractured) for mod in spec.mods] == [(stat, minimum, True)]
+    assert spec.name == start_price_key(real, target) and spec.name in load_price_file(PRICES).prices
+
+
+@pytest.mark.parametrize("route", ROUTES)
 def test_a_route_target_loads_on_the_real_data_with_a_fractured_start_item(real, route):
-    target_file, buy_file, _, _ = ROUTES[route]
+    target_file, _, _ = ROUTES[route]
     target = load_target(EXAMPLES / target_file, real)
 
     assert target.start_item.rarity is Rarity.RARE
     assert [mod.fractured for mod in target.start_item.mods] == [True]
-    assert target.start_price == load_buy_spec(BUY / buy_file).name
+    assert target.buys_start_item
     assert not target.is_met_by(target.start_item)
 
 
@@ -277,10 +276,10 @@ def test_the_r10_target_asks_for_the_fractured_speed_the_essence_intelligence_to
 
 def test_the_r10_start_boots_carry_the_thirty_percent_speed_the_buy_spec_prices(real):
     target = load_target(EXAMPLES / "r10-fractured-boots.yaml", real)
-    spec = load_buy_spec(BUY / "r10-start-boots.yaml")
+    spec = buy_spec_of(real, target)
     start_mod = target.start_item.mods[0]
 
-    assert [(mod.stat, mod.minimum) for mod in spec.mods] == [("#% increased Movement Speed", 30)]
+    assert [(mod.stat, mod.minimum) for mod in spec.mods] == [("30% increased Movement Speed", 30)]
     assert (start_mod.mod_id, start_mod.values) == ("MovementVelocity5", (30,))
     assert start_mod.tier == mod_tier(real, target.base_id, "MovementVelocity5") == 2
     assert target.requirements[0].is_met_by(target.start_item)
@@ -339,12 +338,12 @@ def test_the_r11_target_asks_for_top_chaos_resistance_the_shrieking_reservation_
 
 def test_the_r11_start_helmet_is_the_top_chaos_resistance_and_the_buy_minimum_is_the_lowest_roll_of_it(real):
     target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
-    spec = load_buy_spec(BUY / "r11-start-helmet.yaml")
+    spec = buy_spec_of(real, target)
     top, next_down = real.mods["ChaosResist6"], real.mods["ChaosResist5"]
     minimum = spec.mods[0].minimum
 
     assert mod_tier(real, target.base_id, "ChaosResist6") == 1 and mod_tier(real, target.base_id, "ChaosResist5") == 2
-    assert [(mod.stat, mod.minimum) for mod in spec.mods] == [("+#% to Chaos Resistance", 31)]
+    assert [(mod.stat, mod.minimum) for mod in spec.mods] == [("+(31-35)% to Chaos Resistance", 31)]
     assert top.stats[0].min == minimum and next_down.stats[0].max < minimum  # tier 2 cannot pass the buy spec
     assert target.requirements[0].is_met_by(target.start_item)
 

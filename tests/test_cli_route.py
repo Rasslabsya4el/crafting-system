@@ -18,7 +18,8 @@ from targets_support import DATA
 
 from crafting_system.actions import ChaosOrb
 from crafting_system.cli import RouteError, RouteResult, evaluate_route, load_route, make_plan, parse_route
-from crafting_system.targets import load_target, parse_target
+from crafting_system.prices import PriceEntry
+from crafting_system.targets import load_target, parse_target, start_price_key
 
 ROUTE = R12.parents[1] / "routes" / "r12-lightning-amulet.yaml"
 GEM = "GlobalLightningGemLevel1"
@@ -30,6 +31,13 @@ REFORGE = "Harvest Reforge Lightning"
 
 def run(tmp_path, *arguments, prices="default", **fields):
     return run_command(tmp_path, *arguments, prices=price_file() if prices == "default" else prices, **fields)
+
+
+def priced_for(target):
+    """The fixture prices with the start item of `target` priced under the key computed from it (`START_PRICE` Chaos)."""
+    prices = price_file(start=None)
+    prices.prices[start_price_key(DATA, target)] = PriceEntry(START_PRICE, "trade-api")
+    return prices
 
 
 def route_file(tmp_path: Path, text: str, name: str = "route.yaml") -> Path:
@@ -295,10 +303,10 @@ requirements:
   - family: LightningResistance
 start_item:
   rarity: rare
-start_price: R12 start amulet
+buys_start_item: true
 """
     two = parse_target(text, DATA, source="two.yaml")
-    plan = make_plan(DATA, two, price_file())
+    plan = make_plan(DATA, two, priced_for(two))
     outcomes = ChaosOrb().outcomes(DATA, two.start_item)
     resists = [mod_id for mod_id, mod in DATA.mods.items() if "LightningResistance" in mod.families]
     gem_chance = float(outcomes.chance_all([GEM]))
@@ -464,11 +472,11 @@ def test_an_unknown_requirement_selector_lists_the_selectors_of_the_target(plan)
 def test_a_selector_that_names_two_leaves_is_ambiguous():
     twice = parse_target(
         f"base: Paua Amulet\nitem_level: 84\nrequirements:\n  - stat: \"{GEM_TEXT}\"\n  - stat: \"{GEM_TEXT}\"\n"
-        "start_item:\n  rarity: rare\nstart_price: R12 start amulet\n",
+        "start_item:\n  rarity: rare\nbuys_start_item: true\n",
         DATA,
         source="twice.yaml",
     )
-    plan = make_plan(DATA, twice, price_file())
+    plan = make_plan(DATA, twice, priced_for(twice))
 
     message = error_of(
         f'rules:\n  - when:\n      requirements:\n        - stat: "{GEM_TEXT}"\n          status: absent\n    do: Chaos Orb\n',

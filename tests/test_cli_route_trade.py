@@ -86,7 +86,7 @@ def test_influence_corruption_item_level_range_and_a_minimum_are_spelled_out():
     step = buy_step(spec, "Allflame", MODS, STATS)
 
     assert step.accepts == (
-        "Normal",
+        "Normal Onyx Amulet",  # the base is named (the page used to leave it out, #470 point 4)
         "item level 80 to 86",
         "Shaper influence",
         "corrupted",

@@ -34,12 +34,12 @@ swap in the new status. The recorded listings stay the price data of those tests
 
 ## Start items of the real routes (#163), 2026-10-31
 
-Four anonymous runs of `python -m crafting_system.prices trade --spec examples/buy/<spec>.yaml` against
+Four anonymous runs of `python -m crafting_system.prices trade --spec examples/buy/<spec>.yaml` (the command and the hand-written specs of that time; since #474 the spec is computed from the target and the command is `python -m crafting_system.cli trade TARGET.yaml`) against
 `Allflame` (patch 3.29), each one search and one fetch, with the #133 query: instant buyout (`status: securable`),
 no listing-age window, the mean of the 5 cheapest of the first 10 listings. `start_items/` keeps, per route
 (`r10` boots, `r11` helmet, `r05` ring, `r12` amulet):
 
-- `search_body_<route>.json`: the body that was sent (the buy spec of `examples/buy/` turned into stat ids).
+- `search_body_<route>.json`: the body that was sent (the buy spec of `examples/buy/` of that time turned into stat ids; the entries keep this body, which is why R05, R10, R11 and R12 are strict xfails in `tests/test_start_buy_real.py`, issue #483).
 - `search_<route>.json`, `headers_search_<route>.json`: the search answer, unchanged, and its headers.
 - `fetch_<route>.json`, `headers_fetch_<route>.json`: the first 10 listings, trimmed as above; price, listing date
   and the item's mods kept.

@@ -37,12 +37,12 @@ from trade_support import NOW, R12_SPEC, FakeTrade, api_row, make_client, price_
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 ROUTE_PRICES = FIXTURES / "prices" / "routes-allflame-2026-10-31.json"
 RECORDED = FIXTURES / "trade" / "recorded" / "start_items"
-BUY_SPECS = Path(__file__).resolve().parents[1] / "examples" / "buy"
-STARTS = {
-    "r10": ("r10-start-boots.yaml", "R10 start boots"),
-    "r11": ("r11-start-helmet.yaml", "R11 start helmet"),
-    "r05": ("r05-start-ring.yaml", "R05 start ring"),
-    "r12": ("r12-start-amulet.yaml", "R12 start amulet"),
+DERIVED_SPECS = Path(__file__).resolve().parents[1] / "tests" / "reconcile" / "derived_specs"  # what the planner computes from each target (#474)
+STARTS = {  # tag of the recording -> the target whose start item it priced
+    "r10": "r10-fractured-boots",
+    "r11": "r11-reservation-helmet",
+    "r05": "r05-strength-ring",
+    "r12": "r12-lightning-amulet",
 }
 TODAY = NOW.date()
 
@@ -80,9 +80,9 @@ def with_listings(trade, count, rows=None):
 
 @pytest.mark.parametrize("tag", STARTS)
 def test_the_recorded_start_items_give_the_stored_prices_and_are_quoted(tag):
-    spec_file, name = STARTS[tag]
     stored = load_price_file(ROUTE_PRICES)
-    spec = load_buy_spec(BUY_SPECS / spec_file)
+    spec = load_buy_spec(DERIVED_SPECS / f"{STARTS[tag]}.yaml")
+    name = spec.name
     search = json.loads((RECORDED / f"search_{tag}.json").read_text(encoding="utf-8"))
     body = json.loads((RECORDED / f"search_body_{tag}.json").read_text(encoding="utf-8"))
     fetched = json.loads((RECORDED / f"fetch_{tag}.json").read_text(encoding="utf-8"))["result"]
@@ -369,8 +369,9 @@ def test_an_entry_without_a_date_or_of_another_league_is_not_offered():
 def test_the_recorded_route_prices_are_offered_while_fresh_and_not_after_a_week():
     stored = load_price_file(ROUTE_PRICES)  # every start item was priced on 2026-10-31
 
-    fresh = [offer(stored, name, date(2026, 11, 7)) for _, name in STARTS.values()]
-    late = [offer(stored, name, date(2026, 11, 8)) for _, name in STARTS.values()]
+    names = [load_buy_spec(DERIVED_SPECS / f"{stem}.yaml").name for stem in STARTS.values()]
+    fresh = [offer(stored, name, date(2026, 11, 7)) for name in names]
+    late = [offer(stored, name, date(2026, 11, 8)) for name in names]
 
     assert all(found.offered for found in fresh)
     assert not any(found.offered for found in late)

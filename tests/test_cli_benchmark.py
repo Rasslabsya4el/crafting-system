@@ -10,13 +10,14 @@ import json
 from pathlib import Path
 
 import pytest
-from cli_support import R12, TODAY, price_file, read_json
+from cli_support import R12, START, TODAY, price_file, read_json
 from targets_support import DATA
 
 import crafting_system.cli._benchmark as benchmark_module
 from crafting_system.cli import main
 from crafting_system.config import load_config
 from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
+from crafting_system.targets import load_target, start_price_key
 
 COMMAND = "bench" + "mark"  # the name of the command; a bare string with it would trip tests/test_no_timing.py
 ROOT = Path(__file__).resolve().parents[1]
@@ -130,31 +131,30 @@ def test_a_missing_start_price_names_the_override_line_and_the_other_routes_stil
     document = read_json(path)
     assert [entry["id"] for entry in document["routes"]] == ["R12", "R10", "R11", "R05", "R13", "R08", "R09", "R04", "R14", "V01"]
     entry = entry_of(document)
-    assert entry["missing_price"]["name"] == "R12 start amulet"
-    assert entry["missing_price"]["override_line"] == '"R12 start amulet" = 0'
+    assert entry["missing_price"]["name"] == START
+    assert entry["missing_price"]["override_line"] == f'"{START}" = 0'
     assert entry["missing_price"]["overrides_file"] == expected_overrides_file()
     out = capsys.readouterr().out
-    assert '"R12 start amulet" = 0' in [line.strip() for line in out.splitlines()]
+    assert f'"{START}" = 0' in [line.strip() for line in out.splitlines()]
     assert f"add to {expected_overrides_file()} under [prices]:" in out
     for route_id in ("R10", "R11", "R05", "R08", "R09"):  # their own files fail first: the test data has no such base
         assert entry_of(document, route_id)["error"] is not None
         assert "no price for the start item" not in entry_of(document, route_id)["error"]
-    belt = entry_of(document, "R13")  # a normal belt: its start price is the poe.ninja base price, and it has no buy spec
-    assert belt["missing_price"]["name"] == "Leather Belt (ilvl 86)" and belt["missing_price"]["buy_spec"] is None
-    assert "no price for the start item 'Leather Belt (ilvl 86)'" in belt["error"]
+    belt = entry_of(document, "R13")  # a normal belt: its price key is computed from its target like any other
+    key = start_price_key(DATA, load_target(ROOT / "examples" / "targets" / "r13-life-resist-belt.yaml", DATA))
+    assert belt["missing_price"]["name"] == key and belt["missing_price"]["trade_target"] == "examples/targets/r13-life-resist-belt.yaml"
+    assert f"no price for the start item {key!r}" in belt["error"]
 
 
-def test_the_missing_start_price_of_r12_names_its_buy_spec_for_the_trade_api(tmp_path, capsys):
+def test_the_missing_start_price_of_r12_names_its_target_for_the_trade_api(tmp_path, capsys):
     code, path = run_benchmark(tmp_path, prices=price_file(start=None))
 
     assert code == 0
     entry = entry_of(read_json(path))
-    assert entry["missing_price"]["buy_spec"] == "examples/buy/r12-start-amulet.yaml"
-    assert (
-        "or price it on the trade API with: python -m crafting_system.prices trade --spec examples/buy/r12-start-amulet.yaml"
-        in entry["error"]
-    )
-    assert "python -m crafting_system.prices trade --spec examples/buy/r12-start-amulet.yaml" in capsys.readouterr().out
+    assert entry["missing_price"]["trade_target"] == "examples/targets/r12-lightning-amulet.yaml"
+    command = "python -m crafting_system.cli trade examples/targets/r12-lightning-amulet.yaml"
+    assert f"or price it on the trade API with: {command}" in entry["error"]
+    assert command in capsys.readouterr().out
 
 
 def test_a_start_price_that_is_in_the_price_file_has_no_missing_price(tmp_path):

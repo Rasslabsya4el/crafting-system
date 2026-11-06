@@ -7,7 +7,7 @@ table (count times price), not read from the registry.
 import datetime
 
 import pytest
-from cli_support import R12
+from cli_support import R12, START
 from harvest_reforge_support import BOW, HUNTER, INFLUENCE_COST, LIKELIHOOD_COST, TABLE, bow
 from items_support import AMULET, DATA
 
@@ -93,7 +93,7 @@ def test_the_influence_reforge_is_offered_for_an_influenced_item_and_priced_by_p
 def test_a_plan_with_all_the_reforges_priced_still_solves_the_r12_target():
     target = load_target(R12, DATA)
     prices = price_file()
-    prices.prices["R12 start amulet"] = PriceEntry(4.0, "trade-api")
+    prices.prices[START] = PriceEntry(4.0, "trade-api")
 
     plan = make_plan(DATA, target, prices)
 

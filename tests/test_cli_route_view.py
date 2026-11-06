@@ -17,6 +17,7 @@ from urllib.parse import unquote
 
 import pytest
 from cli_support import R12, TODAY, price_file
+from cli_support import START as START_KEY
 from items_support import DATA, roll
 from route_view_support import (
     COLD_REQ,
@@ -55,10 +56,10 @@ from crafting_system.cli._route_view import (
     route_input,
     write_route_page,
 )
-from crafting_system.prices import load_buy_spec
+from crafting_system.prices import PriceEntry, load_buy_spec
 from crafting_system.prices.trade_stats import parse_trade_stats
 from crafting_system.risk import evaluate
-from crafting_system.targets import Requirement, load_target, parse_target
+from crafting_system.targets import Requirement, load_target, parse_target, start_price_key
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "trade"
 SPEC = load_buy_spec(FIXTURES / "r12_buy_spec.yaml")
@@ -148,7 +149,7 @@ requirements:
   - family: LightningResistance
 start_item:
   rarity: rare
-start_price: R12 start amulet
+buys_start_item: true
 """
 RESTART_ROUTE = f"""\
 name: Restart on a lone gem
@@ -175,7 +176,10 @@ rules:
 
 @pytest.fixture(scope="module")
 def two_leaf_plan():
-    return make_plan(DATA, parse_target(TWO_LEAVES, DATA, source="two.yaml"), price_file())
+    target = parse_target(TWO_LEAVES, DATA, source="two.yaml")
+    prices = price_file(start=None)
+    prices.prices[start_price_key(DATA, target)] = PriceEntry(4.0, "trade-api")  # the start item is priced under the key computed from the target
+    return make_plan(DATA, target, prices)
 
 
 def given(plan, text: str) -> RouteInput:
@@ -192,7 +196,7 @@ def test_r12_is_a_buy_and_one_step_that_loops_until_the_gem(r12_plan):
     section = build_section(route_input(r12_plan), DATA)
 
     buy, reforge = section.rows
-    assert [row.title for row in section.rows] == ["Buy R12 start amulet", "Harvest Reforge Lightning"]
+    assert [row.title for row in section.rows] == [f"Buy {START_KEY}", "Harvest Reforge Lightning"]
     assert labels_of(buy) == ["Accepts", "Cost per use"]
     assert lines_of(buy, "Cost per use") == ["4 c"]
     assert labels_of(reforge) == ["Goal", "Accepts", "Chance per use", "Cost per use", "Uses on average", "Step cost", "On failure"]
@@ -249,8 +253,8 @@ def stats_cache(tmp_path) -> Path:
     return cache
 
 
-def test_golden_r12_through_the_command_with_a_buy_spec(tmp_path, stats_cache, capsys):
-    code, out = run_command(tmp_path, "--buy-spec", str(FIXTURES / "r12_buy_spec.yaml"), cache=stats_cache)
+def test_golden_r12_through_the_command_the_buy_spec_is_computed_from_the_target(tmp_path, stats_cache, capsys):
+    code, out = run_command(tmp_path, cache=stats_cache)
 
     assert code == 0
     page = out.parent / "r12-lightning-amulet.route.html"
@@ -284,41 +288,30 @@ def test_golden_a_given_route_that_differs_is_a_second_section_with_its_differin
     assert set(re.findall(r'href="#([^"]+)"', html)) <= set(ids)
 
 
-def test_the_command_writes_the_page_next_to_the_json_and_changes_nothing_else(tmp_path, capsys):
-    code, out = run_command(tmp_path / "a")
-    plain_text = capsys.readouterr().out
-    plain_json = json.loads(out.read_text(encoding="utf-8"))
-    code2, out2 = run_command(tmp_path / "b", "--buy-spec", str(FIXTURES / "r12_buy_spec.yaml"))
-    text_with = capsys.readouterr().out
+def test_the_command_writes_the_page_next_to_the_json(tmp_path, capsys):
+    code, out = run_command(tmp_path)
 
-    assert code == code2 == 0
-    page = out.parent / "r12-lightning-amulet.route.html"
-    assert page.exists() and (out2.parent / "r12-lightning-amulet.route.html").exists()
-    kept = [line for line in plain_text.splitlines() if not line.startswith(("Run time", "JSON policy", "Route view"))]
-    kept_with = [line for line in text_with.splitlines() if not line.startswith(("Run time", "JSON policy", "Route view"))]
-    assert kept == kept_with
-    plain_json.pop("timings_seconds")
-    other = json.loads(out2.read_text(encoding="utf-8"))
-    other.pop("timings_seconds")
-    assert plain_json == other
+    assert code == 0
+    assert (out.parent / "r12-lightning-amulet.route.html").exists()
+    assert "Route view written to" in capsys.readouterr().out
+    assert "buy_spec" not in json.loads(out.read_text(encoding="utf-8"))  # the page is a view; the JSON policy is the same with or without it
 
 
-def test_without_a_buy_spec_the_buy_step_has_no_trade_field_and_without_the_stat_list_the_mod_is_named(tmp_path):
-    run_command(tmp_path / "a")
-    run_command(tmp_path / "b", "--buy-spec", str(FIXTURES / "r12_buy_spec.yaml"))  # no stats.json in this cache
+def test_the_buy_step_of_a_bought_target_always_has_the_trade_link_and_without_the_stat_list_the_mod_is_named(tmp_path):
+    run_command(tmp_path / "a")  # no stats.json in this cache
 
-    plain = (tmp_path / "a" / "out" / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
-    unresolved = (tmp_path / "b" / "out" / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
+    page = (tmp_path / "a" / "out" / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
 
-    assert "Trade" not in plain and "http" not in plain
-    assert "Accepts" in plain and "fractured: +14% to Lightning Resistance" in plain  # the start item as the target gives it
-    assert "not in the link: +#% to Lightning Resistance" in unresolved and TRADE_LINK in unresolved
+    assert "Accepts" in page and "Rare Paua Amulet" in page and "item level 84 or more" in page
+    assert "fractured: +#% to Lightning Resistance (at least 12)" in page
+    assert "not in the link: +#% to Lightning Resistance" in page and TRADE_LINK in page
 
 
-def test_a_missing_buy_spec_file_is_an_error_not_a_crash(tmp_path, capsys):
-    code, _ = run_command(tmp_path, "--buy-spec", str(tmp_path / "nope.yaml"))
+def test_the_buy_spec_flag_is_gone_because_the_spec_is_computed_from_the_target(tmp_path):
+    with pytest.raises(SystemExit) as stop:
+        run_command(tmp_path, "--buy-spec", str(FIXTURES / "r12_buy_spec.yaml"))
 
-    assert code == 1 and "Error:" in capsys.readouterr().err
+    assert stop.value.code == 2
 
 
 # --- hand-made policies -------------------------------------------------------------------------------------
@@ -553,7 +546,7 @@ def test_a_restart_row_buys_again_and_goes_back_to_the_first_step(two_leaf_plan)
     section = build_section(given(two_leaf_plan, RESTART_ROUTE), DATA, buy)
 
     (restart,) = [row for row in section.rows if row.title.startswith("Restart")]
-    assert restart.title == "Restart: buy R12 start amulet again"
+    assert restart.title == f"Restart: buy {two_leaf_plan.start_price.name} again"
     assert labels_of(restart) == ["Trade", "Cost per use", "Uses on average", "Step cost", "On failure"]
     assert lines_of(restart, "Cost per use") == ["4 c"]
     failure = restart.fields[-1].lines[0]

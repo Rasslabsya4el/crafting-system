@@ -73,7 +73,7 @@ from crafting_system.cli._start_types import (
 from crafting_system.items import ExplicitMod, Item, Rarity
 from crafting_system.items.vendor_recipes import RECIPES
 from crafting_system.prices import load_prices, write_price_file
-from crafting_system.targets import load_target, parse_target
+from crafting_system.targets import load_target, parse_target, start_price_key
 
 FIVE_STEPS = BASE_PRICE + 5 * (FLASK_PRICE + AUGMENTATION_PRICE)  # the movement speed recipe to 30%: the base and five rounds of goods
 BOOTS_KEY = "vendor:boots_movement_speed:5"
@@ -365,7 +365,7 @@ def test_goods_dearer_than_the_best_total_are_listed_as_not_planned():
 
 
 def test_a_tie_goes_to_the_plain_start():
-    plain = starts_module.plain_candidate(toy_target(), prices(), None)
+    plain = starts_module.plain_candidate(TOY, toy_target(), prices(), None)
     twin = dataclasses.replace(plain, key="twin", source="bought", label="the same item, bought")
 
     plan = plan_with_starts(TOY, toy_target(), prices(), sources=(lambda context: StartList((twin,)),))
@@ -424,20 +424,20 @@ def test_a_target_no_recipe_takes_is_planned_as_before_even_with_the_setting_on(
 
 
 def test_a_plan_whose_every_start_fails_raises_the_plain_starts_error():
-    target = toy_target(BOOTS_TARGET.replace("start_item:", "start_price: Nowhere\nstart_item:"))  # a start price the file lacks
+    target = toy_target(BOOTS_TARGET.replace("start_item:", "buys_start_item: true\nstart_item:"))  # a start price the file lacks
 
-    with pytest.raises(PlanError, match="no price for the start item 'Nowhere'"):
+    with pytest.raises(PlanError, match=re.escape(f"no price for the start item '{start_price_key(TOY, target)}'")):
         plan_with_starts(TOY, target, prices(base=None, flask=None))
 
 
 def test_a_recipe_start_can_win_when_the_plain_start_has_no_price():
-    target = toy_target(BOOTS_TARGET.replace("start_item:", "start_price: Nowhere\nstart_item:"))
+    target = toy_target(BOOTS_TARGET.replace("start_item:", "buys_start_item: true\nstart_item:"))
 
     plan = plan_with_starts(TOY, target, prices())
 
     by_key = {row.candidate.key: row for row in plan.starts.considered}
     assert plan.starts.chosen.key == BOOTS_KEY
-    assert by_key["plain"].outcome == "failed" and "no price for the start item 'Nowhere'" in by_key["plain"].note
+    assert by_key["plain"].outcome == "failed" and f"no price for the start item '{start_price_key(TOY, target)}'" in by_key["plain"].note
 
 
 # --- the seam for research #337 ------------------------------------------------------------------------------------------

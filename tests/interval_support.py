@@ -89,7 +89,7 @@ def toy_report_plan(labels: tuple[str, ...] = LABELS, recombine: str = RECOMBINE
     The belt policy of the report body is only there to make the report.
     """
     start = belt(FRACTURED_COLD, roll("LifeRegeneration1"))
-    target = Target(BELT, LEVEL, frozenset(), (COLD_REQ, LIFE), start, start_price=START_NAME)
+    target = Target(BELT, LEVEL, frozenset(), (COLD_REQ, LIFE), start, buys_start_item=True)
     ab = Abstraction(DATA, Goal.from_target(target), BELT, LEVEL, ())
     donor = belt(roll("LifeRegeneration1"), rarity=Rarity.MAGIC)
     recombinator = Recombinator(donor)

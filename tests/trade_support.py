@@ -20,7 +20,9 @@ from crafting_system.prices.trade_http import (
 
 TRADE_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "trade"
 RECORDED = TRADE_FIXTURES / "recorded"
-R12_SPEC = TRADE_FIXTURES / "r12_buy_spec.yaml"
+R12_SPEC = TRADE_FIXTURES / "r12_buy_spec.yaml"  # a library test input tied to the recorded responses, not the planner's description of R12
+R12_TARGET = TRADE_FIXTURES / "r12_target.yaml"  # a target on the fixture data whose bought start item is priced by `cli trade`
+R12_KEY = "Paua Amulet, item level 84-100, fractured +(12-17)% to Lightning Resistance"  # its price key, hand-written
 SECRET = "SECRET-COOKIE-123"
 NOW = datetime(2026, 10, 30, 21, 30, 0, tzinfo=UTC)
 

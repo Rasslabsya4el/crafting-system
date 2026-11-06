@@ -9,11 +9,12 @@ from targets_support import DATA, EXAMPLES
 
 from crafting_system.cli import main
 from crafting_system.prices import PriceEntry, PriceFile
+from crafting_system.targets import load_target, start_price_key
 
 R12 = EXAMPLES / "r12-lightning-amulet.yaml"
 TODAY = datetime.date(2026, 10, 31)
 LIFEFORCE = "Primal Crystallised Lifeforce"
-START = "R12 start amulet"
+START = start_price_key(DATA, load_target(R12, DATA))  # the price key computed from the R12 target (#474)
 
 
 def price_file(lifeforce: float | None = 0.01, start: float | None = 4.0, divine: float = 300.0) -> PriceFile:
